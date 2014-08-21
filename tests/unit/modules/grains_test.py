@@ -33,10 +33,10 @@ class GrainsModuleTestCase(TestCase):
         res = grainsmod.filter_by(dict1, grain='xxx', default='C')
         self.assertEqual(res, {'D': {'E': 'F', 'G': 'H'}})
 
-        # add a merge dictionnary, F disapears
+        # add a merge dictionary, F disappears
         res = grainsmod.filter_by(dict1, grain='xxx', merge=mdict, default='C')
         self.assertEqual(res, {'D': {'E': 'I', 'G': 'H'}, 'J': 'K'})
-        # dict1 was altered, restablish
+        # dict1 was altered, reestablish
         dict1 = {'A': 'B', 'C': {'D': {'E': 'F', 'G': 'H'}}}
 
         # default is not present in dict1, check we only have merge in result
@@ -64,13 +64,13 @@ class GrainsModuleTestCase(TestCase):
         self.assertEqual(res, {'D': {'E': 'F', 'G': 'H'}})
         res = grainsmod.filter_by(dict1, merge=mdict, default='C')
         self.assertEqual(res, {'D': {'E': 'I', 'G': 'H'}, 'J': 'K'})
-        # dict1 was altered, restablish
+        # dict1 was altered, reestablish
         dict1 = {'A': 'B', 'C': {'D': {'E': 'F', 'G': 'H'}}}
         res = grainsmod.filter_by(dict1, merge=mdict, default='Z')
         self.assertEqual(res, mdict)
         res = grainsmod.filter_by(dict1, default='Z')
         self.assertIs(res, None)
-        # this one is in fact a traceback in updatedict, merging a string with a dictionnary
+        # this one is in fact a traceback in updatedict, merging a string with a dictionary
         self.assertRaises(
             TypeError,
             grainsmod.filter_by,
@@ -87,11 +87,11 @@ class GrainsModuleTestCase(TestCase):
         self.assertEqual(res, {'D': {'E': 'F', 'G': 'H'}})
         res = grainsmod.filter_by(dict1, merge=mdict, default='A')
         self.assertEqual(res, {'D': {'E': 'I', 'G': 'H'}, 'J': 'K'})
-        # dict1 was altered, restablish
+        # dict1 was altered, reestablish
         dict1 = {'A': 'B', 'MockedOS': {'D': {'E': 'F', 'G': 'H'}}}
         res = grainsmod.filter_by(dict1, merge=mdict, default='Z')
         self.assertEqual(res, {'D': {'E': 'I', 'G': 'H'}, 'J': 'K'})
-        # dict1 was altered, restablish
+        # dict1 was altered, reestablish
         dict1 = {'A': 'B', 'MockedOS': {'D': {'E': 'F', 'G': 'H'}}}
         res = grainsmod.filter_by(dict1, default='Z')
         self.assertEqual(res, {'D': {'E': 'F', 'G': 'H'}})

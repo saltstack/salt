@@ -7,7 +7,7 @@ Start interfaces used to remotely connect to the salt master
 Synopsis
 ========
 
-::
+.. code-block:: bash
 
     salt-api 
 

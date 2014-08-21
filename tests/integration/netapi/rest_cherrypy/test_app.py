@@ -1,6 +1,8 @@
 # coding: utf-8
+import mock
 import urllib
 
+from salt.exceptions import EauthAuthenticationError
 from tests.utils import BaseRestCherryPyTest
 
 # Import 3rd-party libs
@@ -47,6 +49,13 @@ class TestLogin(BaseRestCherryPyTest):
             ('password', 'saltdev'),
             ('eauth', 'auto'))
 
+    @mock.patch('salt.auth.Resolver', autospec=True)
+    def setUp(self, Resolver, *args, **kwargs):
+        super(TestLogin, self).setUp(*args, **kwargs)
+
+        self.app.salt.auth.Resolver = Resolver
+        self.Resolver = Resolver
+
     def test_good_login(self):
         '''
         Test logging in
@@ -66,6 +75,7 @@ class TestLogin(BaseRestCherryPyTest):
                 'content-type': 'application/x-www-form-urlencoded'
         })
         self.assertEqual(response.status, '200 OK')
+        return response
 
     def test_bad_login(self):
         '''
@@ -81,6 +91,65 @@ class TestLogin(BaseRestCherryPyTest):
         })
         self.assertEqual(response.status, '401 Unauthorized')
 
+    def test_logout(self):
+        ret = self.test_good_login()
+        token = ret.headers['X-Auth-Token']
+
+        body = urllib.urlencode({})
+        request, response = self.request('/logout', method='POST', body=body,
+            headers={
+                'content-type': 'application/x-www-form-urlencoded',
+                'X-Auth-Token': token,
+        })
+        self.assertEqual(response.status, '200 OK')
+
+
+class TestRun(BaseRestCherryPyTest):
+    auth_creds = (
+        ('username', 'saltdev'),
+        ('password', 'saltdev'),
+        ('eauth', 'auto'))
+
+    low = (
+        ('client', 'local'),
+        ('tgt', '*'),
+        ('fun', 'test.ping'),
+    )
+
+    def test_run_good_login(self):
+        '''
+        Test the run URL with good auth credentials
+        '''
+        cmd = dict(self.low, **dict(self.auth_creds))
+        body = urllib.urlencode(cmd)
+
+        # Mock the interaction with Salt so we can focus on the API.
+        with mock.patch.object(self.app.salt.netapi.NetapiClient, 'run',
+                return_value=True):
+            request, response = self.request('/run', method='POST', body=body,
+                headers={
+                    'content-type': 'application/x-www-form-urlencoded'
+            })
+
+        self.assertEqual(response.status, '200 OK')
+
+    def test_run_bad_login(self):
+        '''
+        Test the run URL with bad auth credentials
+        '''
+        cmd = dict(self.low, **{'totally': 'invalid_creds'})
+        body = urllib.urlencode(cmd)
+
+        # Mock the interaction with Salt so we can focus on the API.
+        with mock.patch.object(self.app.salt.netapi.NetapiClient, 'run',
+                side_effect=EauthAuthenticationError('Oh noes!')):
+            request, response = self.request('/run', method='POST', body=body,
+                headers={
+                    'content-type': 'application/x-www-form-urlencoded'
+            })
+
+        self.assertEqual(response.status, '401 Unauthorized')
+
 
 class TestWebhookDisableAuth(BaseRestCherryPyTest):
     __opts__ = {
@@ -90,6 +159,13 @@ class TestWebhookDisableAuth(BaseRestCherryPyTest):
             'webhook_disable_auth': True,
         },
     }
+
+    @mock.patch('salt.utils.event.get_event', autospec=True)
+    def setUp(self, get_event, *args, **kwargs):
+        super(TestWebhookDisableAuth, self).setUp(*args, **kwargs)
+
+        self.app.salt.utils.event.get_event = get_event
+        self.get_event = get_event
 
     def test_webhook_noauth(self):
         '''

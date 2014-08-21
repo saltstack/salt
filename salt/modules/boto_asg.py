@@ -2,7 +2,7 @@
 '''
 Connection module for Amazon Autoscale Groups
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 :configuration: This module accepts explicit autoscale credentials but can also
     utilize IAM roles assigned to the instance trough Instance Profiles.
@@ -78,7 +78,7 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
     if not conn:
         return False
     try:
-        conn.conn.get_all_groups(names=[name])
+        conn.get_all_groups(names=[name])
         return True
     except boto.exception.BotoServerError as e:
         log.debug(e)
@@ -120,6 +120,11 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
                     _tag['propagate_at_launch'] = tag.propagate_at_launch
                     _tags.append(_tag)
                 ret['tags'] = _tags
+            # Boto accepts a string or list as input for vpc_zone_identifier,
+            # but always returns a comma separated list. We require lists in
+            # states.
+            elif attr == 'vpc_zone_identifier':
+                ret[attr] = getattr(asg, attr).split(',')
             # convert SuspendedProcess objects to names
             elif attr == 'suspended_processes':
                 suspended_processes = getattr(asg, attr)
@@ -172,21 +177,22 @@ def create(name, launch_config_name, availability_zones, min_size, max_size,
         tags = json.loads(tags)
     # Make a list of tag objects from the dict.
     _tags = []
-    for tag in tags:
-        try:
-            key = tag.get('key')
-        except KeyError:
-            log.error('Tag missing key.')
-            return False
-        try:
-            value = tag.get('value')
-        except KeyError:
-            log.error('Tag missing value.')
-            return False
-        propagate_at_launch = tag.get('propagate_at_launch', False)
-        _tag = autoscale.Tag(key=key, value=value, resource_id=name,
-                             propagate_at_launch=propagate_at_launch)
-        _tags.append(_tag)
+    if tags:
+        for tag in tags:
+            try:
+                key = tag.get('key')
+            except KeyError:
+                log.error('Tag missing key.')
+                return False
+            try:
+                value = tag.get('value')
+            except KeyError:
+                log.error('Tag missing value.')
+                return False
+            propagate_at_launch = tag.get('propagate_at_launch', False)
+            _tag = autoscale.Tag(key=key, value=value, resource_id=name,
+                                 propagate_at_launch=propagate_at_launch)
+            _tags.append(_tag)
     if isinstance(termination_policies, string_types):
         termination_policies = json.loads(termination_policies)
     if isinstance(suspended_processes, string_types):
@@ -245,21 +251,22 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
         tags = json.loads(tags)
     # Make a list of tag objects from the dict.
     _tags = []
-    for tag in tags:
-        try:
-            key = tag.get('key')
-        except KeyError:
-            log.error('Tag missing key.')
-            return False
-        try:
-            value = tag.get('value')
-        except KeyError:
-            log.error('Tag missing value.')
-            return False
-        propagate_at_launch = tag.get('propagate_at_launch', False)
-        _tag = autoscale.Tag(key=key, value=value, resource_id=name,
-                             propagate_at_launch=propagate_at_launch)
-        _tags.append(_tag)
+    if tags:
+        for tag in tags:
+            try:
+                key = tag.get('key')
+            except KeyError:
+                log.error('Tag missing key.')
+                return False
+            try:
+                value = tag.get('value')
+            except KeyError:
+                log.error('Tag missing value.')
+                return False
+            propagate_at_launch = tag.get('propagate_at_launch', False)
+            _tag = autoscale.Tag(key=key, value=value, resource_id=name,
+                                 propagate_at_launch=propagate_at_launch)
+            _tags.append(_tag)
     if isinstance(termination_policies, string_types):
         termination_policies = json.loads(termination_policies)
     if isinstance(suspended_processes, string_types):
@@ -280,7 +287,8 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
         _asg.update()
         # Seems the update call doesn't handle tags, so we'll need to update
         # that separately.
-        conn.create_or_update_tags(_tags)
+        if _tags:
+            conn.create_or_update_tags(_tags)
         # update doesn't handle suspended_processes either
         # Resume all processes
         _asg.resume_processes()
@@ -384,7 +392,7 @@ def launch_configuration_exists(name, region=None, key=None, keyid=None,
         return False
 
 
-def create_launch_configuration(name, image_id=None, key_name=None,
+def create_launch_configuration(name, image_id, key_name=None,
                                 security_groups=None, user_data=None,
                                 instance_type='m1.small', kernel_id=None,
                                 ramdisk_id=None, block_device_mappings=None,

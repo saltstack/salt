@@ -463,6 +463,13 @@ class ReqServer(object):
         if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
             # IPv6 sockets work for both IPv6 and IPv4 addresses
             self.clients.setsockopt(zmq.IPV4ONLY, 0)
+        try:
+            self.clients.setsockopt(zmq.HWM, self.opts['rep_hwm'])
+        # in zmq >= 3.0, there are separate send and receive HWM settings
+        except AttributeError:
+            self.clients.setsockopt(zmq.SNDHWM, self.opts['rep_hwm'])
+            self.clients.setsockopt(zmq.RCVHWM, self.opts['rep_hwm'])
+
         self.workers = self.context.socket(zmq.DEALER)
         self.w_uri = 'ipc://{0}'.format(
             os.path.join(self.opts['sock_dir'], 'workers.ipc')
@@ -952,7 +959,7 @@ class AESFuncs(object):
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
-        file_recv_max_size = 1024*1024 * self.opts.get('file_recv_max_size', 100)
+        file_recv_max_size = 1024*1024 * self.opts['file_recv_max_size']
 
         if 'loc' in load and load['loc'] < 0:
             log.error('Invalid file pointer: load[loc] < 0')
@@ -1317,10 +1324,9 @@ class ClearFuncs(object):
                     'load': {'ret': False}}
         log.info('Authentication request from {id}'.format(**load))
 
-        minions = salt.utils.minions.CkMinions(self.opts).connected_ids()
-
         # 0 is default which should be 'unlimited'
         if self.opts['max_minions'] > 0:
+            minions = salt.utils.minions.CkMinions(self.opts).connected_ids()
             if not len(minions) < self.opts['max_minions']:
                 # we reject new minions, minions that are already
                 # connected must be allowed for the mine, highstate, etc.
@@ -1907,7 +1913,7 @@ class ClearFuncs(object):
         # check if the cmd is blacklisted
         for module_re in self.opts['client_acl_blacklist'].get('modules', []):
             # if this is a regular command, its a single function
-            if type(clear_load['fun']) == str:
+            if isinstance(clear_load['fun'], str):
                 funs_to_check = [clear_load['fun']]
             # if this a compound function
             else:
@@ -2195,6 +2201,11 @@ class ClearFuncs(object):
             'jid': clear_load['jid'],
             'ret': clear_load['ret'],
         }
+        # if you specified a master id, lets put that in the load
+        if 'master_id' in self.opts:
+            load['master_id'] = self.opts['master_id']
+        elif 'master_id' in extra:
+            load['master_id'] = extra['master_id']
 
         if 'id' in extra:
             load['id'] = extra['id']

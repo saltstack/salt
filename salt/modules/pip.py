@@ -73,6 +73,9 @@ def _get_cached_requirements(requirements, saltenv):
 
 
 def _get_env_activate(bin_env):
+    '''
+    Return the path to the activate binary
+    '''
     if not bin_env:
         raise CommandNotFoundError('Could not find a `activate` binary')
 
@@ -86,11 +89,12 @@ def _get_env_activate(bin_env):
     raise CommandNotFoundError('Could not find a `activate` binary')
 
 
-def install(pkgs=None,
+def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             requirements=None,
             env=None,
             bin_env=None,
             use_wheel=False,
+            no_use_wheel=False,
             log=None,
             proxy=None,
             timeout=None,
@@ -147,6 +151,8 @@ def install(pkgs=None,
         Deprecated, use bin_env now
     use_wheel
         Prefer wheel archives (requires pip>=1.4)
+    no_use_wheel
+        Force to not use wheel archives (requires pip>=1.4)
     log
         Log file where a complete (maximum verbosity) record will be kept
     proxy
@@ -189,7 +195,7 @@ def install(pkgs=None,
     ignore_installed
         Ignore the installed packages (reinstalling instead)
     exists_action
-        Default action when a path already exists: (s)witch, (i)gnore, (w)wipe,
+        Default action when a path already exists: (s)witch, (i)gnore, (w)ipe,
         (b)ackup
     no_deps
         Ignore package dependencies
@@ -248,7 +254,8 @@ def install(pkgs=None,
 
     Complicated CLI example::
 
-        salt '*' pip.install markdown,django editable=git+https://github.com/worldcompany/djangoembed.git#egg=djangoembed upgrade=True no_deps=True
+        salt '*' pip.install markdown,django \
+                editable=git+https://github.com/worldcompany/djangoembed.git#egg=djangoembed upgrade=True no_deps=True
 
     '''
     # Switching from using `pip_bin` and `env` to just `bin_env`
@@ -258,6 +265,11 @@ def install(pkgs=None,
     # but going fwd you should specify either a pip bin or an env with
     # the `bin_env` argument and we'll take care of the rest.
     if env and not bin_env:
+        salt.utils.warn_until(
+                'Boron',
+                'Passing \'env\' to the pip module is deprecated. Use bin_env instead. '
+                'This functionality will be removed in Salt Boron.'
+        )
         bin_env = env
 
     if isinstance(__env__, string_types):
@@ -342,6 +354,19 @@ def install(pkgs=None,
             )
         else:
             cmd.append('--use-wheel')
+
+    if no_use_wheel:
+        min_version = '1.4'
+        cur_version = __salt__['pip.version'](bin_env)
+        if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
+                                           ver2=min_version):
+            log.error(
+                ('The --no-use-wheel option is only supported in pip {0} and '
+                 'newer. The version of pip detected is {1}. This option '
+                 'will be ignored.'.format(min_version, cur_version))
+            )
+        else:
+            cmd.append('--no-use-wheel')
 
     if log:
         try:
@@ -537,7 +562,7 @@ def install(pkgs=None,
         for requirement in cleanup_requirements:
             try:
                 os.remove(requirement)
-            except Exception:
+            except OSError:
                 pass
 
 
@@ -562,7 +587,7 @@ def uninstall(pkgs=None,
     pkgs
         comma separated list of packages to install
     requirements
-        path to requirements
+        path to requirements.
     bin_env
         path to pip bin or path to virtualenv. If doing an uninstall from
         the system python and want to use a specific pip bin (pip-2.7,
@@ -693,6 +718,16 @@ def uninstall(pkgs=None,
     if pkgs:
         if isinstance(pkgs, string_types):
             pkgs = [p.strip() for p in pkgs.split(',')]
+        if requirements:
+            for requirement in requirements:
+                with salt.utils.fopen(requirement) as rq_:
+                    for req in rq_:
+                        try:
+                            req_pkg, _ = req.split('==')
+                            if req_pkg in pkgs:
+                                pkgs.remove(req_pkg)
+                        except ValueError:
+                            pass
         cmd.extend(pkgs)
 
     cmd_kwargs = dict(runas=user, cwd=cwd, saltenv=saltenv)
@@ -705,7 +740,7 @@ def uninstall(pkgs=None,
         for requirement in cleanup_requirements:
             try:
                 os.remove(requirement)
-            except Exception:
+            except OSError:
                 pass
 
 

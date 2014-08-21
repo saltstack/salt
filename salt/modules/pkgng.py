@@ -198,8 +198,8 @@ def refresh_db(jail=None, chroot=None, force=False):
         ``jail`` is specified)
 
     force
-        Force a full download of the repository catalogue without regard to the
-        respective ages of the local and remote copies of the catalogue.
+        Force a full download of the repository catalog without regard to the
+        respective ages of the local and remote copies of the catalog.
 
         CLI Example:
 
@@ -288,7 +288,7 @@ def list_pkgs(versions_as_list=False,
         List the packages in the specified jail
 
     chroot
-        List the pacakges in the specified chroot (ignored if ``jail`` is
+        List the packages in the specified chroot (ignored if ``jail`` is
         specified)
 
     with_origin : False
@@ -517,7 +517,7 @@ def restore(file_name, jail=None, chroot=None):
             salt '*' pkg.restore /tmp/pkg chroot=/path/to/chroot
     '''
     return __salt__['cmd.run'](
-        '{0} backup -r {0!r}'.format(_pkg(jail, chroot), file_name),
+        '{0} backup -r {1!r}'.format(_pkg(jail, chroot), file_name),
         output_loglevel='trace'
     )
 
@@ -589,7 +589,7 @@ def install(name=None,
         Install the package into the specified jail
 
     chroot
-        Install the paackage into the specified chroot (ignored if ``jail`` is
+        Install the package into the specified chroot (ignored if ``jail`` is
         specified)
 
     orphan
@@ -622,7 +622,7 @@ def install(name=None,
             salt '*' pkg.install <package name> glob=True
 
     local
-        Do not update the repository catalogues with ``pkg-update(8)``.  A
+        Do not update the repository catalogs with ``pkg-update(8)``.  A
         value of ``True`` here is equivalent to using the ``-U`` flag with
         ``pkg install``.
 
@@ -662,7 +662,7 @@ def install(name=None,
 
             salt '*' pkg.install <package name> reinstall_requires=True force=True
 
-        .. versionchanged:: Helium
+        .. versionchanged:: 2014.7.0
             ``require`` kwarg renamed to ``reinstall_requires``
 
     fromrepo
@@ -793,7 +793,7 @@ def remove(name=None,
         Delete the package from the specified jail
 
     chroot
-        Delete the paackage grom the specified chroot (ignored if ``jail`` is
+        Delete the package from the specified chroot (ignored if ``jail`` is
         specified)
 
     all_installed
@@ -949,7 +949,7 @@ def upgrade(jail=None, chroot=None, force=False, local=False, dryrun=False):
             salt '*' pkg.upgrade force=True
 
     local
-        Do not update the repository catalogues with ``pkg-update(8)``. A value
+        Do not update the repository catalogs with ``pkg-update(8)``. A value
         of ``True`` here is equivalent to using the ``-U`` flag with ``pkg
         upgrade``.
 
@@ -961,7 +961,7 @@ def upgrade(jail=None, chroot=None, force=False, local=False, dryrun=False):
 
     dryrun
         Dry-run mode: show what packages have updates available, but do not
-        perform any upgrades. Repository catalogues will be updated as usual
+        perform any upgrades. Repository catalogs will be updated as usual
         unless the local option is also given.
 
         CLI Example:
@@ -970,6 +970,11 @@ def upgrade(jail=None, chroot=None, force=False, local=False, dryrun=False):
 
             salt '*' pkg.upgrade dryrun=True
     '''
+    ret = {'changes': {},
+           'result': True,
+           'comment': '',
+           }
+
     opts = ''
     if force:
         opts += 'f'
@@ -982,10 +987,22 @@ def upgrade(jail=None, chroot=None, force=False, local=False, dryrun=False):
     if opts:
         opts = '-' + opts
 
-    return __salt__['cmd.run'](
+    old = list_pkgs()
+    call = __salt__['cmd.run_all'](
         '{0} upgrade {1}'.format(_pkg(jail, chroot), opts),
         output_loglevel='trace'
     )
+    if call['retcode'] != 0:
+        ret['result'] = False
+        if 'stderr' in call:
+            ret['comment'] += call['stderr']
+        if 'stdout' in call:
+            ret['comment'] += call['stdout']
+    else:
+        __context__.pop('pkg.list_pkgs', None)
+        new = list_pkgs()
+        ret['changes'] = salt.utils.compare_dicts(old, new)
+    return ret
 
 
 def clean(jail=None, chroot=None):
@@ -1456,7 +1473,7 @@ def fetch(name,
             salt '*' pkg.fetch <extended regular expression> pcre=True
 
     local
-        Skip updating the repository catalogues with pkg-update(8). Use the
+        Skip updating the repository catalogs with pkg-update(8). Use the
         local cache only.
 
         CLI Example:

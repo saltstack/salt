@@ -52,7 +52,7 @@ Example Usage
 If you're looking for the *one-liner* to install salt, please scroll to the 
 bottom and use the instructions for `Installing via an Insecure One-Liner`_
 
-.. Note::
+.. note::
     In every two-step example, you would be well-served to examine the downloaded file and examine
     it to ensure that it does what you expect.
 
@@ -132,9 +132,10 @@ Installing via an Insecure One-Liner
 
 The following examples illustrate how to install Salt via a one-liner.
 
-.. Note::
-    Warning! These methods do not involve a verification step and assume that the delivered file
-    is trustworthy.
+.. note::
+
+    Warning! These methods do not involve a verification step and assume that
+    the delivered file is trustworthy.
 
 
 Examples
@@ -231,7 +232,9 @@ passed):
 Command Line Options
 --------------------
 
-Here's a summary of the command line options::
+Here's a summary of the command line options:
+
+.. code-block:: bash
 
     $ sh bootstrap-salt.sh -h
     

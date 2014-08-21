@@ -474,10 +474,12 @@ def get_sum(path, form='md5'):
 
         salt '*' file.get_sum /etc/passwd sha512
     '''
+    if not os.path.isfile(path):
+        return 'File not found'
     return salt.utils.get_hash(path, form, 4096)
 
 
-def get_hash(path, form='md5', chunk_size=4096):
+def get_hash(path, form='md5', chunk_size=65536):
     '''
     Get the hash sum of a file
 
@@ -683,7 +685,7 @@ def sed(path,
     options : ``-r -e``
         Options to pass to sed
     flags : ``g``
-        Flags to modify the sed search; e.g., ``i`` for case-insensitve pattern
+        Flags to modify the sed search; e.g., ``i`` for case-insensitive pattern
         matching
     negate_match : False
         Negate the search command (``!``)
@@ -1051,16 +1053,16 @@ def replace(path,
     :param append_if_not_found: If pattern is not found and set to ``True``
         then, the content will be appended to the file.
 
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
     :param prepend_if_not_found: If pattern is not found and set to ``True``
         then, the content will be appended to the file.
 
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
     :param not_found_content: Content to use for append/prepend if not found. If
         None (default), uses repl. Useful when repl uses references to group in
         pattern.
 
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
     :param backup: The file extension to use for a backup of the file before
         editing. Set to ``False`` to skip making a backup.
     :param dry_run: Don't make any edits to the file
@@ -1218,13 +1220,13 @@ def blockreplace(path,
     marker_start
         The line content identifying a line as the start of the content block.
         Note that the whole line containing this marker will be considered, so
-        whitespaces or extra content before or after the marker is included in
+        whitespace or extra content before or after the marker is included in
         final output
 
     marker_end
         The line content identifying a line as the end of the content block.
         Note that the whole line containing this marker will be considered, so
-        whitespaces or extra content before or after the marker is included in
+        whitespace or extra content before or after the marker is included in
         final output
 
     content
@@ -1451,7 +1453,7 @@ def patch(originalfile, patchfile, options='', dry_run=False):
             dry_run_opt = ' --dry-run'
     else:
         dry_run_opt = ''
-    cmd = 'patch {0}{1} {2} {3}'.format(
+    cmd = 'patch {0}{1} "{2}" "{3}"'.format(
         options, dry_run_opt, originalfile, patchfile)
     return __salt__['cmd.run_all'](cmd)
 
@@ -1571,7 +1573,7 @@ def contains_glob(path, glob_expr):
         return False
 
 
-def append(path, *args):
+def append(path, *args, **kwargs):
     '''
     .. versionadded:: 0.9.5
 
@@ -1580,7 +1582,7 @@ def append(path, *args):
     path
         path to file
 
-    *args
+    `*args`
         strings to append to file
 
     CLI Example:
@@ -1590,8 +1592,27 @@ def append(path, *args):
         salt '*' file.append /etc/motd \\
                 "With all thine offerings thou shalt offer salt." \\
                 "Salt is what makes things taste bad when it isn't in them."
+
+    .. admonition:: Attention
+
+        If you need to pass a string to append and that string contains
+        an equal sign, you **must** include the argument name, args.
+        For example:
+
+        .. code-block:: bash
+
+            salt '*' file.append /etc/motd args='cheese=spam'
+
+            salt '*' file.append /etc/motd args="['cheese=spam','spam=cheese']"
+
     '''
     # Largely inspired by Fabric's contrib.files.append()
+
+    if 'args' in kwargs:
+        if isinstance(kwargs['args'], list):
+            args = kwargs['args']
+        else:
+            args = [kwargs['args']]
 
     with salt.utils.fopen(path, "r+") as ofile:
         # Make sure we have a newline at the end of the file
@@ -1616,16 +1637,16 @@ def append(path, *args):
     return 'Wrote {0} lines to "{1}"'.format(len(args), path)
 
 
-def prepend(path, *args):
+def prepend(path, *args, **kwargs):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Prepend text to the beginning of a file
 
     path
         path to file
 
-    *args
+    `*args`
         strings to prepend to the file
 
     CLI Example:
@@ -1635,7 +1656,27 @@ def prepend(path, *args):
         salt '*' file.prepend /etc/motd \\
                 "With all thine offerings thou shalt offer salt." \\
                 "Salt is what makes things taste bad when it isn't in them."
+
+    .. admonition:: Attention
+
+        If you need to pass a string to append and that string contains
+        an equal sign, you **must** include the argument name, args.
+        For example:
+
+        .. code-block:: bash
+
+            salt '*' file.prepend /etc/motd args='cheese=spam'
+
+            salt '*' file.prepend /etc/motd args="['cheese=spam','spam=cheese']"
+
     '''
+
+    if 'args' in kwargs:
+        if isinstance(kwargs['args'], list):
+            args = kwargs['args']
+        else:
+            args = [kwargs['args']]
+
     try:
         contents = salt.utils.fopen(path).readlines()
     except IOError:
@@ -1651,16 +1692,16 @@ def prepend(path, *args):
     return 'Prepended {0} lines to "{1}"'.format(len(args), path)
 
 
-def write(path, *args):
+def write(path, *args, **kwargs):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Write text to a file, overwriting any existing contents.
 
     path
         path to file
 
-    *args
+    `*args`
         strings to write to the file
 
     CLI Example:
@@ -1669,7 +1710,27 @@ def write(path, *args):
 
         salt '*' file.write /etc/motd \\
                 "With all thine offerings thou shalt offer salt."
+
+    .. admonition:: Attention
+
+        If you need to pass a string to append and that string contains
+        an equal sign, you **must** include the argument name, args.
+        For example:
+
+        .. code-block:: bash
+
+            salt '*' file.write /etc/motd args='cheese=spam'
+
+            salt '*' file.write /etc/motd args="['cheese=spam','spam=cheese']"
+
     '''
+
+    if 'args' in kwargs:
+        if isinstance(kwargs['args'], list):
+            args = kwargs['args']
+        else:
+            args = [kwargs['args']]
+
     contents = []
     for line in args:
         contents.append('{0}\n'.format(line))
@@ -1759,7 +1820,7 @@ def seek_write(path, data, offset):
     Seek to a position on a file and write to it
 
     path
-        path to fil
+        path to file
 
     data
         data to write to file
@@ -2426,6 +2487,10 @@ def get_managed(
         sfn = __salt__['cp.cache_file'](source, saltenv)
         if not os.path.exists(sfn):
             return sfn, {}, 'Source file {0} not found'.format(source)
+        if sfn == name:
+            raise SaltInvocationError(
+                'Source file cannot be the same as destination'
+            )
         if template in salt.utils.templates.TEMPLATE_REGISTRY:
             context_dict = defaults if defaults else {}
             if context:
@@ -2934,7 +2999,7 @@ def manage_file(name,
 
         salt '*' file.manage_file /etc/httpd/conf.d/httpd.conf '' '{}' salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' root root '755' base ''
 
-    .. versionchanged:: Helium
+    .. versionchanged:: 2014.7.0
         ``follow_symlinks`` option added
 
     '''
@@ -3084,7 +3149,8 @@ def manage_file(name,
 
         elif not ret['changes'] and ret['result']:
             ret['comment'] = 'File {0} is in the correct state'.format(name)
-        __clean_tmp(sfn)
+        if sfn:
+            __clean_tmp(sfn)
         return ret
     else:
         # Only set the diff if the file contents is managed
@@ -3215,7 +3281,8 @@ def manage_file(name,
             ret['comment'] = 'File ' + name + ' not updated'
         elif not ret['changes'] and ret['result']:
             ret['comment'] = 'File ' + name + ' is in the correct state'
-        __clean_tmp(sfn)
+        if sfn:
+            __clean_tmp(sfn)
         return ret
 
 
@@ -3248,23 +3315,31 @@ def makedirs_(path,
     '''
     Ensure that the directory containing this path is available.
 
+    .. note::
+
+        The path must end with a trailing slash otherwise the directory/directories
+        will be created upto the parent directory. For example if path is
+        ``/opt/code``, then it would be treated as ``/opt/`` but if the path
+        ends with a trailing slash like ``/opt/code/``, then it would be
+        treated as ``/opt/code/``.
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' file.makedirs /opt/code
+        salt '*' file.makedirs /opt/code/
     '''
     # walk up the directory structure until we find the first existing
     # directory
-    dirname = os.path.normpath(os.path.join(os.path.dirname(path), ''))
+    dirname = os.path.normpath(os.path.dirname(path))
 
     if os.path.isdir(dirname):
         # There's nothing for us to do
-        return 'Directory {0!r} already exists'.format(path)
+        return 'Directory {0!r} already exists'.format(dirname)
 
     if os.path.exists(dirname):
         return 'The path {0!r} already exists and is not a directory'.format(
-            path
+            dirname
         )
 
     directories_to_create = []
@@ -3611,6 +3686,9 @@ def list_backups(path, limit=None):
     # Figure out full path of location of backup file in minion cache
     bkdir = os.path.join(bkroot, parent_dir[1:])
 
+    if not os.path.isdir(bkdir):
+        return {}
+
     files = {}
     for fn in [x for x in os.listdir(bkdir)
                if os.path.isfile(os.path.join(bkdir, x))]:
@@ -3874,7 +3952,7 @@ def pardir():
     '''
     Return the relative parent directory path symbol for underlying OS
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     This can be useful when constructing Salt Formulas.
 
@@ -3896,7 +3974,7 @@ def join(*args):
     '''
     Return a normalized file system path for the underlying OS
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     This can be useful at the CLI but is frequently useful when scripting
     combining path variables:

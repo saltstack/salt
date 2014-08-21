@@ -76,7 +76,7 @@ def build_minion_target(options, vm_name):
     for grain in options.grain_target:
         target += ' and G@{0}'.format(grain)
     if options.grain_target:
-        return '-C "{0}"'.format(target)
+        return '"{0}"'.format(target)
     return target
 
 

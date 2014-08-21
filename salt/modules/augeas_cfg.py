@@ -32,7 +32,7 @@ import logging
 # Make sure augeas python interface is installed
 HAS_AUGEAS = False
 try:
-    from augeas import Augeas
+    from augeas import Augeas as _Augeas
     HAS_AUGEAS = True
 except ImportError:
     pass
@@ -58,7 +58,7 @@ def __virtual__():
 def _recurmatch(path, aug):
     '''
     Recursive generator providing the infrastructure for
-    augtools print behaviour.
+    augtools print behavior.
 
     This function is based on test_augeas.py from
     Harald Hoyer <harald@redhat.com>  in the python-augeas
@@ -88,6 +88,14 @@ def _lstrip_word(word, prefix):
 def execute(context=None, lens=None, commands=()):
     '''
     Execute Augeas commands
+
+    .. versionadded:: 2014.7.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' augeas.execute /files/etc/redis/redis.conf commands='["set bind 0.0.0.0", "set maxmemory 1G"]'
     '''
     ret = {'retval': False}
 
@@ -101,8 +109,8 @@ def execute(context=None, lens=None, commands=()):
         'remove': 'remove',
     }
 
-    flags = Augeas.NO_MODL_AUTOLOAD if lens else Augeas.NONE
-    aug = Augeas(flags=flags)
+    flags = _Augeas.NO_MODL_AUTOLOAD if lens else _Augeas.NONE
+    aug = _Augeas(flags=flags)
 
     if lens:
         aug.add_transform(lens, re.sub('^/files', '', context))
@@ -174,7 +182,7 @@ def get(path, value=''):
 
         salt '*' augeas.get /files/etc/hosts/1/ ipaddr
     '''
-    aug = Augeas()
+    aug = _Augeas()
     ret = {}
 
     path = path.rstrip('/')
@@ -231,7 +239,7 @@ def setvalue(*args):
 
         %wheel ALL = PASSWD : ALL , NOPASSWD : /usr/bin/apt-get , /usr/bin/aptitude
     '''
-    aug = Augeas()
+    aug = _Augeas()
     ret = {'retval': False}
 
     tuples = filter(lambda x: not str(x).startswith('prefix='), args)
@@ -275,7 +283,7 @@ def match(path, value=''):
 
         salt '*' augeas.match /files/etc/services/service-name ssh
     '''
-    aug = Augeas()
+    aug = _Augeas()
     ret = {}
 
     try:
@@ -301,7 +309,7 @@ def remove(path):
 
         salt '*' augeas.remove /files/etc/sysctl.conf/net.ipv4.conf.all.log_martians
     '''
-    aug = Augeas()
+    aug = _Augeas()
     ret = {'retval': False}
     try:
         count = aug.remove(path)
@@ -340,7 +348,7 @@ def ls(path):  # pylint: disable=C0103
             ret[_ma] = aug.get(_ma)
         return ret
 
-    aug = Augeas()
+    aug = _Augeas()
 
     path = path.rstrip('/') + '/'
     match_path = path + '*'
@@ -367,7 +375,7 @@ def tree(path):
 
         salt '*' augeas.tree /files/etc/
     '''
-    aug = Augeas()
+    aug = _Augeas()
 
     path = path.rstrip('/') + '/'
     match_path = path

@@ -10,6 +10,9 @@ import re
 
 # Import salt libs
 import salt.utils
+from salt.exceptions import (
+    CommandExecutionError
+)
 
 log = logging.getLogger(__name__)
 
@@ -31,7 +34,20 @@ def __virtual__():
 def _list(query=''):
     ret = {}
     cmd = 'port list {0}'.format(query)
-    out = __salt__['cmd.run'](cmd, output_loglevel='trace')
+    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+
+    if call['retcode'] != 0:
+        comment = ''
+        if 'stderr' in call:
+            comment += call['stderr']
+        if 'stdout' in call:
+            comment += call['stdout']
+        raise CommandExecutionError(
+            '{0}'.format(comment)
+        )
+    else:
+        out = call['stdout']
+
     for line in out.splitlines():
         try:
             name, version_num, category = re.split(r'\s+', line.lstrip())[0:3]
@@ -201,7 +217,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             salt '*' pkg.install <package name>
 
     version
-        Specify a version to pkg to install. Ignored if pkgs is sepcified.
+        Specify a version to pkg to install. Ignored if pkgs is specified.
 
         CLI Example:
 
@@ -211,7 +227,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             salt '*' pkg.install git-core version='1.8.5.5'
 
     variant
-        Specify a variant to pkg to install. Ignored if pkgs is sepcified.
+        Specify a variant to pkg to install. Ignored if pkgs is specified.
 
         CLI Example:
 
@@ -323,7 +339,15 @@ def refresh_db():
     '''
     Update ports with ``port selfupdate``
     '''
-    __salt__['cmd.run_all']('port selfupdate', output_loglevel='trace')
+    call = __salt__['cmd.run_all']('port selfupdate', output_loglevel='trace')
+    if call['retcode'] != 0:
+        comment = ''
+        if 'stderr' in call:
+            comment += call['stderr']
+
+        raise CommandExecutionError(
+            '{0}'.format(comment)
+        )
 
 
 def upgrade(refresh=True):
@@ -346,6 +370,10 @@ def upgrade(refresh=True):
 
         salt '*' pkg.upgrade
     '''
+    ret = {'changes': {},
+           'result': True,
+           'comment': '',
+           }
 
     old = list_pkgs()
 

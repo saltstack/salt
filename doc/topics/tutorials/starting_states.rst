@@ -167,7 +167,9 @@ The SLS files are laid out in a directory structure on the Salt master; an
 SLS is just a file and files to download are just files.
 
 The Apache example would be laid out in the root of the Salt file server like
-this::
+this:
+
+.. code-block:: text
 
     apache/init.sls
     apache/httpd.conf
@@ -241,7 +243,9 @@ the toolkit. Consider this SSH example:
     produce an identical result; the first way -- using `file.managed` --
     is merely a shortcut.
 
-Now our State Tree looks like this::
+Now our State Tree looks like this:
+
+.. code-block:: text
 
     apache/init.sls
     apache/httpd.conf
@@ -342,6 +346,7 @@ gives you a `"Pythonic"`_ interface to building state data.
 .. _`"Pythonic"`: http://legacy.python.org/dev/peps/pep-0008/
 
 .. note::
+
     The templating engines described above aren't just available in SLS files.
     They can also be used in :mod:`file.managed <salt.states.file.managed>`
     states, making file management much more dynamic and flexible. Some

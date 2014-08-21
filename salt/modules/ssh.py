@@ -75,6 +75,18 @@ def _format_auth_line(key, enc, comment, options):
     return line
 
 
+def _get_config_file(user, config):
+    '''
+    Get absolute path to a user's ssh_config.
+    '''
+    uinfo = __salt__['user.info'](user)
+    if not uinfo:
+        raise CommandExecutionError('User {0!r} does not exist'.format(user))
+    if not os.path.isabs(config):
+        config = os.path.join(uinfo['home'], config)
+    return config
+
+
 def _replace_auth_key(
         user,
         key,
@@ -89,11 +101,7 @@ def _replace_auth_key(
     auth_line = _format_auth_line(key, enc, comment, options or [])
 
     lines = []
-    uinfo = __salt__['user.info'](user)
-    if not uinfo:
-        raise CommandExecutionError('User {0!r} does not exist'.format(user))
-
-    full = os.path.join(uinfo['home'], config)
+    full = _get_config_file(user, config)
 
     try:
         # open the file for both reading AND writing
@@ -263,11 +271,14 @@ def auth_keys(user, config='.ssh/authorized_keys'):
 
         salt '*' ssh.auth_keys root
     '''
-    uinfo = __salt__['user.info'](user)
-    full = os.path.join(uinfo.get('home', ''), config)
-    if not uinfo or not os.path.isfile(full):
-        return {}
+    full = None
+    try:
+        full = _get_config_file(user, config)
+    except CommandExecutionError:
+        pass
 
+    if not full or not os.path.isfile(full):
+        return {}
     return _validate_keys(full)
 
 
@@ -374,14 +385,11 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
     linere = re.compile(r'^(.*?)\s?((?:ssh\-|ecds)[\w-]+\s.+)$')
     if key in current:
         # Remove the key
-        uinfo = __salt__['user.info'](user)
-        if not uinfo:
-            return 'User {0} does not exist'.format(user)
-        full = os.path.join(uinfo.get('home', ''), config)
+        full = _get_config_file(user, config)
 
         # Return something sensible if the file doesn't exist
         if not os.path.isfile(full):
-            return 'Authorized keys file {1} not present'.format(full)
+            return 'Authorized keys file {0} not present'.format(full)
 
         lines = []
         try:
@@ -532,9 +540,12 @@ def set_auth_key(
         return 'no change'
     else:
         auth_line = _format_auth_line(key, enc, comment, options)
-        if not os.path.isdir(uinfo.get('home', '')):
+        fconfig = _get_config_file(user, config)
+        # Fail if the key lives under the user's homedir, and the homedir
+        # doesn't exist
+        udir = uinfo.get('home', '')
+        if fconfig.startswith(udir) and not os.path.isdir(udir):
             return 'fail'
-        fconfig = os.path.join(uinfo['home'], config)
         if not os.path.isdir(os.path.dirname(fconfig)):
             dpath = os.path.dirname(fconfig)
             os.makedirs(dpath)
@@ -610,7 +621,7 @@ def get_known_host(user, hostname, config=None):
     '''
     full = _get_known_hosts_file(config=config, user=user)
 
-    if type(full) == dict:
+    if isinstance(full, dict):
         return full
 
     cmd = 'ssh-keygen -F "{0}" -f "{1}"'.format(hostname, full)
@@ -707,7 +718,7 @@ def rm_known_host(user=None, hostname=None, config=None):
 
     full = _get_known_hosts_file(config=config, user=user)
 
-    if type(full) == dict:
+    if isinstance(full, dict):
         return full
 
     if not os.path.isfile(full):
@@ -782,7 +793,7 @@ def set_known_host(user=None,
 
     full = _get_known_hosts_file(config=config, user=user)
 
-    if type(full) == dict:
+    if isinstance(full, dict):
         return full
 
     if key:
@@ -834,7 +845,7 @@ def user_keys(user=None, pubfile=None, prvfile=None):
 
     Return the user's ssh keys on the minion
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 
@@ -913,7 +924,7 @@ def hash_known_hosts(user=None, config=None):
 
     Hash all the hostnames in the known hosts file.
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 
@@ -924,7 +935,7 @@ def hash_known_hosts(user=None, config=None):
     '''
     full = _get_known_hosts_file(config=config, user=user)
 
-    if type(full) == dict:
+    if isinstance(full, dict):
         return full
 
     if not os.path.isfile(full):

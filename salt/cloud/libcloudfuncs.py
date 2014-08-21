@@ -92,18 +92,6 @@ def check_libcloud_version(reqver=LIBCLOUD_MINIMAL_VERSION, why=None):
     raise ImportError(errormsg)
 
 
-def libcloud_version():
-    '''
-    Require the minimal libcloud version
-    '''
-    salt.utils.warn_until(
-        'Helium',
-        'Please stop using \'salt.cloud.libcloudfuns.libcloud_version()\'. '
-        'Instead use \'salt.cloud.libcloudfuns.check_libcloud_version()\'.'
-    )
-    return check_libcloud_version()
-
-
 def get_node(conn, name):
     '''
     Return a libcloud node for the named VM
@@ -513,3 +501,22 @@ def conn_has_method(conn, method_name):
         )
     )
     return False
+
+
+def get_salt_interface(vm_):
+    '''
+    Return the salt_interface type to connect to. Either 'public_ips' (default)
+    or 'private_ips'.
+    '''
+    salt_host = config.get_cloud_config_value(
+        'salt_interface', vm_, __opts__, default=False,
+        search_global=False
+    )
+
+    if salt_host is False:
+        salt_host = config.get_cloud_config_value(
+            'ssh_interface', vm_, __opts__, default='public_ips',
+            search_global=False
+        )
+
+    return salt_host

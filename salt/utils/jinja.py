@@ -204,7 +204,7 @@ class SerializerExtension(Extension, object):
 
     **Format filters**
 
-    Allows to jsonify or yamlify any datastructure. For example, this dataset:
+    Allows to jsonify or yamlify any data structure. For example, this dataset:
 
     .. code-block:: python
 
@@ -255,7 +255,7 @@ class SerializerExtension(Extension, object):
     .. code-block:: jinja
 
         {%- set yaml_src = "{foo: it works}"|load_yaml %}
-        {%- set json_src = "{'bar': 'for real'}"|load_yaml %}
+        {%- set json_src = "{'bar': 'for real'}"|load_json %}
         Dude, {{ yaml_src.foo }} {{ json_src.bar }}!
 
     will be rendered has::
@@ -267,7 +267,7 @@ class SerializerExtension(Extension, object):
     Salt implements **import_yaml** and **import_json** tags. They work like
     the `import tag`_, except that the document is also deserialized.
 
-    Syntaxe are {% load_yaml as [VARIABLE] %}[YOUR DATA]{% endload %}
+    Syntaxes are {% load_yaml as [VARIABLE] %}[YOUR DATA]{% endload %}
     and {% load_json as [VARIABLE] %}[YOUR DATA]{% endload %}
 
     For example:

@@ -14,7 +14,7 @@ client is detailed below.
 
     Salt can be used from CLI scripts as well as via a REST interface.
 
-    See Salt's :ref:`outputter system <all-salt.output>` to retrive structured
+    See Salt's :ref:`outputter system <all-salt.output>` to retrieve structured
     data from Salt as JSON, or as shell-friendly text, or many other formats.
 
     See the :py:func:`state.event <salt.runners.state.event>` runner to utilize
@@ -88,13 +88,13 @@ RunnerClient
 ------------
 
 .. autoclass:: salt.runner.RunnerClient
-    :members:
+    :members: cmd, async, cmd_sync, cmd_async
 
 WheelClient
 -----------
 
 .. autoclass:: salt.wheel.WheelClient
-    :members:
+    :members: cmd, async, cmd_sync, cmd_async
 
 CloudClient
 -----------

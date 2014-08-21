@@ -3,7 +3,7 @@
 Manage ELBs
 =================
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 Create and destroy ELBs. Be aware that this interacts with Amazon's
 services, and so may incur charges.
@@ -97,8 +97,8 @@ def __virtual__():
 
 def present(
         name,
-        availability_zones,
         listeners,
+        availability_zones=None,
         subnets=None,
         security_groups=None,
         scheme='internet-facing',
@@ -199,6 +199,12 @@ def _elb_present(
         keyid,
         profile):
     ret = {'result': None, 'comment': '', 'changes': {}}
+    if not (availability_zones or subnets):
+        raise SaltInvocationError('Either availability_zones or subnets must'
+                                  ' be provided as arguments.')
+    if availability_zones and subnets:
+        raise SaltInvocationError('availability_zones and subnets are mutually'
+                                  ' exclusive arguments.')
     if not listeners:
         listeners = []
     _listeners = []
@@ -258,20 +264,22 @@ def _elb_present(
             ret['result'] = _ret['result']
             if ret['result'] is False:
                 return ret
-        _ret = _zones_present(name, availability_zones, region, key, keyid,
-                              profile)
-        ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
-        ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
-        if _ret['result'] is not None:
-            ret['result'] = _ret['result']
-            if ret['result'] is False:
-                return ret
-        _ret = _subnets_present(name, subnets, region, key, keyid,
-                                profile)
-        ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
-        ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
-        if _ret['result'] is not None:
-            ret['result'] = _ret['result']
+        if availability_zones:
+            _ret = _zones_present(name, availability_zones, region, key, keyid,
+                                  profile)
+            ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+            ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+            if _ret['result'] is not None:
+                ret['result'] = _ret['result']
+                if ret['result'] is False:
+                    return ret
+        elif subnets:
+            _ret = _subnets_present(name, subnets, region, key, keyid,
+                                    profile)
+            ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+            ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+            if _ret['result'] is not None:
+                ret['result'] = _ret['result']
     return ret
 
 
@@ -285,7 +293,7 @@ def _listeners_present(
     ret = {'result': None, 'comment': '', 'changes': {}}
     lb = __salt__['boto_elb.get_elb_config'](name, region, key, keyid, profile)
     if not lb:
-        msg = '{0} ELB configuration could not be retreived.'.format(name)
+        msg = '{0} ELB configuration could not be retrieved.'.format(name)
         ret['comment'] = msg
         ret['result'] = False
         return ret

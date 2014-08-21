@@ -152,13 +152,20 @@ def returner(ret):
 
     '''
 
-    cfg = __salt__['config.option']
-    c_cfg = cfg('carbon', {})
+    if 'config.option' in __salt__:
+        cfg = __salt__['config.option']
+        c_cfg = cfg('carbon', {})
 
-    host = c_cfg.get('host', cfg('carbon.host', None))
-    port = c_cfg.get('port', cfg('carbon.port', None))
-    skip = c_cfg.get('skip_on_error', cfg('carbon.skip_on_error', False))
-    mode = c_cfg.get('mode', cfg('carbon.mode', 'text')).lower()
+        host = c_cfg.get('host', cfg('carbon.host', None))
+        port = c_cfg.get('port', cfg('carbon.port', None))
+        skip = c_cfg.get('skip_on_error', cfg('carbon.skip_on_error', False))
+        mode = c_cfg.get('mode', cfg('carbon.mode', 'text')).lower()
+    else:
+        cfg = __opts__
+        host = cfg.get('cabon.host', None)
+        port = cfg.get('cabon.port', None)
+        skip = cfg.get('carbon.skip_on_error', False)
+        mode = cfg.get('carbon.mode', 'text').lower()
 
     log.debug('Carbon minion configured with host: {0}:{1}'.format(host, port))
     log.debug('Using carbon protocol: {0}'.format(mode))

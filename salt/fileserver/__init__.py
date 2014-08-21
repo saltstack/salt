@@ -18,6 +18,21 @@ import salt.utils
 log = logging.getLogger(__name__)
 
 
+def _unlock_cache(w_lock):
+    '''
+    Unlock a FS file/dir based lock
+    '''
+    if not os.path.exists(w_lock):
+        return
+    try:
+        if os.path.isdir(w_lock):
+            os.rmdir(w_lock)
+        elif os.path.isfile(w_lock):
+            os.unlink(w_lock)
+    except (OSError, IOError) as exc:
+        log.trace('Error removing lockfile {0}: {1}'.format(w_lock, exc))
+
+
 def _lock_cache(w_lock):
     try:
         os.mkdir(w_lock)
@@ -30,24 +45,24 @@ def _lock_cache(w_lock):
         return True
 
 
-def wait_lock(lk_fn, dest):
+def wait_lock(lk_fn, dest, wait_timeout=0):
     '''
     If the write lock is there, check to see if the file is actually being
     written. If there is no change in the file size after a short sleep,
     remove the lock and move forward.
     '''
-    if not os.path.isfile(lk_fn):
+    if not os.path.exists(lk_fn):
         return False
-    if not os.path.isfile(dest):
+    if not os.path.exists(dest):
         # The dest is not here, sleep for a bit, if the dest is not here yet
         # kill the lockfile and start the write
         time.sleep(1)
         if not os.path.isfile(dest):
-            try:
-                os.remove(lk_fn)
-            except (OSError, IOError):
-                pass
+            _unlock_cache(lk_fn)
             return False
+    timeout = None
+    if wait_timeout:
+        timeout = time.time() + wait_timeout
     # There is a lock file, the dest is there, stat the dest, sleep and check
     # that the dest is being written, if it is not being written kill the lock
     # file and continue. Also check if the lock file is gone.
@@ -55,20 +70,23 @@ def wait_lock(lk_fn, dest):
     s_size = os.stat(dest).st_size
     while True:
         time.sleep(1)
-        if not os.path.isfile(lk_fn):
+        if not os.path.exists(lk_fn):
             return False
         size = os.stat(dest).st_size
         if size == s_size:
             s_count += 1
             if s_count >= 3:
                 # The file is not being written to, kill the lock and proceed
-                try:
-                    os.remove(lk_fn)
-                except (OSError, IOError):
-                    pass
+                _unlock_cache(lk_fn)
                 return False
         else:
             s_size = size
+        if timeout:
+            if time.time() > timeout:
+                raise ValueError(
+                    'Timeout({0}s) for {1} '
+                    '(lock: {2}) elapsed'.format(
+                        wait_timeout, dest, lk_fn))
     return False
 
 
@@ -81,14 +99,23 @@ def check_file_list_cache(opts, form, list_cache, w_lock):
     refresh_cache = False
     save_cache = True
     serial = salt.payload.Serial(opts)
+    wait_lock(w_lock, list_cache, 5 * 60)
     if not os.path.isfile(list_cache) and _lock_cache(w_lock):
         refresh_cache = True
     else:
         attempt = 0
         while attempt < 11:
             try:
-                cache_stat = os.stat(list_cache)
-                age = time.time() - cache_stat.st_mtime
+                if os.path.exists(w_lock):
+                    # wait for a filelist lock for max 15min
+                    wait_lock(w_lock, list_cache, 15 * 60)
+                if os.path.exists(list_cache):
+                    # calculate filelist age is possible
+                    cache_stat = os.stat(list_cache)
+                    age = time.time() - cache_stat.st_mtime
+                else:
+                    # if filelist does not exists yet, mark it as expired
+                    age = opts.get('fileserver_list_cache_time', 30) + 1
                 if age < opts.get('fileserver_list_cache_time', 30):
                     # Young enough! Load this sucker up!
                     with salt.utils.fopen(list_cache, 'rb') as fp_:
@@ -118,10 +145,7 @@ def write_file_list_cache(opts, data, list_cache, w_lock):
     serial = salt.payload.Serial(opts)
     with salt.utils.fopen(list_cache, 'w+b') as fp_:
         fp_.write(serial.dumps(data))
-        try:
-            os.rmdir(w_lock)
-        except OSError as exc:
-            log.trace('Error removing lockfile {0}: {1}'.format(w_lock, exc))
+        _unlock_cache(w_lock)
         log.trace('Lockfile {0} removed'.format(w_lock))
 
 

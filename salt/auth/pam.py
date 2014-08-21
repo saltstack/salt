@@ -170,7 +170,7 @@ def auth(username, password, **kwargs):
 
 def groups(username, *args, **kwargs):
     '''
-    Retreive groups for a given user for this auth provider
+    Retrieve groups for a given user for this auth provider
 
     Uses system groups
     '''

@@ -10,14 +10,12 @@ import hashlib
 import os
 import shutil
 import time
-import subprocess
 import requests
 
-# Import third party libs
-import yaml
-
 # Import salt libs
-from salt.exceptions import MinionError, SaltReqTimeoutError
+from salt.exceptions import (
+    CommandExecutionError, MinionError, SaltReqTimeoutError
+)
 import salt.client
 import salt.crypt
 import salt.loader
@@ -505,6 +503,15 @@ class Client(object):
             saltenv = env
 
         url_data = urlparse(url)
+
+        if url_data.scheme in ('file', ''):
+            # Local filesystem
+            if not os.path.isabs(url_data.path):
+                raise CommandExecutionError(
+                    'Path {0!r} is not absolute'.format(url_data.path)
+                )
+            return url_data.path
+
         if url_data.scheme == 'salt':
             return self.get_file(url, dest, makedirs, saltenv)
         if dest:
@@ -545,7 +552,7 @@ class Client(object):
                                     verify_ssl=self.opts.get('s3.verify_ssl',
                                                               True))
                 return dest
-            except Exception as ex:
+            except Exception:
                 raise MinionError('Could not fetch from {0}'.format(url))
 
         if url_data.scheme == 'swift':
@@ -558,7 +565,7 @@ class Client(object):
                                       url_data.path[1:],
                                       dest)
                 return dest
-            except Exception as ex:
+            except Exception:
                 raise MinionError('Could not fetch from {0}'.format(url))
 
         if url_data.username is not None \
@@ -580,13 +587,13 @@ class Client(object):
             with salt.utils.fopen(dest, 'wb') as destfp:
                 destfp.write(req.content)
             return dest
-        except HTTPError as ex:
+        except HTTPError as exc:
             raise MinionError('HTTP error {0} reading {1}: {3}'.format(
-                ex.code,
+                exc.code,
                 url,
-                *BaseHTTPServer.BaseHTTPRequestHandler.responses[ex.code]))
-        except URLError as ex:
-            raise MinionError('Error reading {0}: {1}'.format(url, ex.reason))
+                *BaseHTTPServer.BaseHTTPRequestHandler.responses[exc.code]))
+        except URLError as exc:
+            raise MinionError('Error reading {0}: {1}'.format(url, exc.reason))
 
     def get_template(
             self,
@@ -821,8 +828,8 @@ class LocalClient(Client):
             else:
                 opts_hash_type = self.opts.get('hash_type', 'md5')
                 hash_type = getattr(hashlib, opts_hash_type)
-                with salt.utils.fopen(path, 'rb') as ifile:
-                    ret['hsum'] = hash_type(ifile.read()).hexdigest()
+                ret['hsum'] = salt.utils.get_hash(
+                    path, form=hash_type)
                 ret['hash_type'] = opts_hash_type
                 return ret
         path = self._find_file(path, saltenv)['path']
@@ -859,36 +866,18 @@ class LocalClient(Client):
 
     def ext_nodes(self):
         '''
-        Return the metadata derived from the external nodes system on the local
-        system
+        Originally returned information via the external_nodes subsystem.
+        External_nodes was deprecated and removed in
+        2014.1.6 in favor of master_tops (which had been around since pre-0.17).
+             salt-call --local state.show_top
+        ends up here, but master_tops has not been extended to support
+        show_top in a completely local environment yet.  It's worth noting
+        that originally this fn started with
+            if 'external_nodes' not in opts: return {}
+        So since external_nodes is gone now, we are just returning the
+        empty dict.
         '''
-        if not self.opts['external_nodes']:
-            return {}
-        if not salt.utils.which(self.opts['external_nodes']):
-            log.error(('Specified external nodes controller {0} is not'
-                       ' available, please verify that it is installed'
-                       '').format(self.opts['external_nodes']))
-            return {}
-        cmd = '{0} {1}'.format(self.opts['external_nodes'], self.opts['id'])
-        ndata = yaml.safe_load(subprocess.Popen(
-                               cmd,
-                               shell=True,
-                               stdout=subprocess.PIPE
-                               ).communicate()[0])
-        ret = {}
-        if 'environment' in ndata:
-            saltenv = ndata['environment']
-        else:
-            saltenv = 'base'
-
-        if 'classes' in ndata:
-            if isinstance(ndata['classes'], dict):
-                ret[saltenv] = list(ndata['classes'])
-            elif isinstance(ndata['classes'], list):
-                ret[saltenv] = ndata['classes']
-            else:
-                return ret
-        return ret
+        return {}
 
 
 class RemoteClient(Client):
@@ -1147,7 +1136,7 @@ class RemoteClient(Client):
                 ret = {}
                 hash_type = self.opts.get('hash_type', 'md5')
                 ret['hsum'] = salt.utils.get_hash(
-                    path, form=hash_type, chunk_size=4096)
+                    path, form=hash_type)
                 ret['hash_type'] = hash_type
                 return ret
         load = {'path': path,

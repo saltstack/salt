@@ -29,6 +29,15 @@ class NpmStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         ret = self.run_state('npm.removed', name='pm2')
         self.assertSaltTrueReturn(ret)
 
+    @destructiveTest
+    def test_npm_installed_pkgs(self):
+        '''
+        Basic test to determine if NPM module successfully installs multiple
+        packages.
+        '''
+        ret = self.run_state('npm.installed', name=None, pkgs=['pm2', 'grunt'])
+        self.assertSaltTrueReturn(ret)
+
 
 if __name__ == '__main__':
     from integration import run_tests

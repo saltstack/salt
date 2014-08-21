@@ -7,20 +7,23 @@ Package support for openSUSE via the zypper package manager
 import copy
 import logging
 import re
-from contextlib import contextmanager
+from contextlib import contextmanager as _contextmanager
 
 # Import salt libs
 import salt.utils
-from salt.utils.decorators import depends
+from salt.utils.decorators import depends as _depends
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError)
 
 log = logging.getLogger(__name__)
 
+HAS_ZYPP = False
+
 try:
     import zypp
-except ImportError as e:
-    log.trace('Failed to import zypp: {0}'.format(e))
+    HAS_ZYPP = True
+except ImportError:
+    pass
 
 # Define the module's virtual name
 __virtualname__ = 'pkg'
@@ -30,6 +33,8 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is openSUSE
     '''
+    if not HAS_ZYPP:
+        return False
     if __grains__.get('os_family', '') != 'Suse':
         return False
     # Not all versions of Suse use zypper, check that it is available
@@ -51,9 +56,21 @@ def list_upgrades(refresh=True):
     if salt.utils.is_true(refresh):
         refresh_db()
     ret = {}
-    out = __salt__['cmd.run_stdout'](
+    call = __salt__['cmd.run_stdout'](
         'zypper list-updates', output_loglevel='trace'
     )
+    if call['retcode'] != 0:
+        comment = ''
+        if 'stderr' in call:
+            comment += call['stderr']
+        if 'stdout' in call:
+            comment += call['stdout']
+        raise CommandExecutionError(
+            '{0}'.format(comment)
+        )
+    else:
+        out = call['stdout']
+
     for line in out.splitlines():
         if not line:
             continue
@@ -214,12 +231,15 @@ class _RepoInfo(object):
     Incapsulate all properties that are dumped in zypp._RepoInfo.dumpOn:
     http://doc.opensuse.org/projects/libzypp/HEAD/classzypp_1_1RepoInfo.html#a2ba8fdefd586731621435428f0ec6ff1
     '''
-    repo_types = {
-        zypp.RepoType.NONE_e: 'NONE',
-        zypp.RepoType.RPMMD_e: 'rpm-md',
-        zypp.RepoType.YAST2_e: 'yast2',
-        zypp.RepoType.RPMPLAINDIR_e: 'plaindir',
-    }
+    repo_types = {}
+
+    if HAS_ZYPP:
+        repo_types = {
+            zypp.RepoType.NONE_e: 'NONE',
+            zypp.RepoType.RPMMD_e: 'rpm-md',
+            zypp.RepoType.YAST2_e: 'yast2',
+            zypp.RepoType.RPMPLAINDIR_e: 'plaindir',
+        }
 
     def __init__(self, zypp_repo_info=None):
         self.zypp = zypp_repo_info if zypp_repo_info else zypp.RepoInfo()
@@ -227,9 +247,9 @@ class _RepoInfo(object):
     @property
     def options(self):
         class_items = self.__class__.__dict__.iteritems()
-        return {k: getattr(self, k) for k, v in class_items
-                if isinstance(v, property) and k != 'options'
-                and getattr(self, k) not in (None, '')}
+        return dict([(k, getattr(self, k)) for k, v in class_items
+                     if isinstance(v, property) and k != 'options'
+                     and getattr(self, k) not in (None, '')])
 
     def _check_only_mirrorlist_or_url(self):
         if all(x in self.options for x in ('mirrorlist', 'url')):
@@ -261,7 +281,7 @@ class _RepoInfo(object):
 
     @autorefresh.setter
     def autorefresh(self, value):
-        self.zypp.setAlias(value)
+        self.zypp.setAutorefresh(value)
 
     @property
     def enabled(self):
@@ -370,7 +390,7 @@ class _RepoInfo(object):
 
     @property
     def url(self):
-        return [url.asCompleteString() for url in self.zypp.baseUrls()]
+        return self.zypp.url().asCompleteString()
 
     @url.setter
     def url(self, value):
@@ -378,7 +398,7 @@ class _RepoInfo(object):
         # self._check_only_mirrorlist_or_url()
 
 
-@contextmanager
+@_contextmanager
 def _try_zypp():
     '''
     Convert errors like:
@@ -392,7 +412,7 @@ def _try_zypp():
         raise CommandExecutionError(re.sub(r'\[.*\] ', '', str(e)))
 
 
-@depends('zypp')
+@_depends('zypp')
 def _get_zypp_repo(repo, **kwargs):
     '''
     Get zypp._RepoInfo object by repo alias.
@@ -401,7 +421,7 @@ def _get_zypp_repo(repo, **kwargs):
         return zypp.RepoManager().getRepositoryInfo(repo)
 
 
-@depends('zypp')
+@_depends('zypp')
 def get_repo(repo, **kwargs):
     '''
     Display a repo.
@@ -416,7 +436,7 @@ def get_repo(repo, **kwargs):
     return r.options
 
 
-@depends('zypp')
+@_depends('zypp')
 def list_repos():
     '''
     Lists all repos.
@@ -428,11 +448,13 @@ def list_repos():
        salt '*' pkg.list_repos
     '''
     with _try_zypp():
-        return {r.alias(): get_repo(r.alias())
-                for r in zypp.RepoManager().knownRepositories()}
+        ret = {}
+        for r in zypp.RepoManager().knownRepositories():
+            ret[r.alias()] = get_repo(r.alias())
+        return ret
 
 
-@depends('zypp')
+@_depends('zypp')
 def del_repo(repo, **kwargs):
     '''
     Delete a repo.
@@ -451,7 +473,7 @@ def del_repo(repo, **kwargs):
         repo, r.path().c_str())
 
 
-@depends('zypp')
+@_depends('zypp')
 def mod_repo(repo, **kwargs):
     '''
     Modify one or more values for a repo. If the repo does not exist, it will
@@ -475,8 +497,10 @@ def mod_repo(repo, **kwargs):
         salt '*' pkg.mod_repo alias url= mirrorlist=http://host.com/
     '''
     # Filter out '__pub' arguments, as well as saltenv
-    repo_opts = {x: kwargs[x] for x in kwargs
-                 if not x.startswith('__') and x not in ('saltenv',)}
+    repo_opts = {}
+    for x in kwargs:
+        if not x.startswith('__') and x not in ('saltenv',):
+            repo_opts[x] = kwargs[x]
 
     repo_manager = zypp.RepoManager()
     try:
@@ -512,7 +536,18 @@ def refresh_db():
     '''
     cmd = 'zypper refresh'
     ret = {}
-    out = __salt__['cmd.run'](cmd, output_loglevel='trace')
+    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+    if call['retcode'] != 0:
+        comment = ''
+        if 'stderr' in call:
+            comment += call['stderr']
+
+        raise CommandExecutionError(
+            '{0}'.format(comment)
+        )
+    else:
+        out = call['stdout']
+
     for line in out.splitlines():
         if not line:
             continue
@@ -700,14 +735,27 @@ def upgrade(refresh=True):
 
         salt '*' pkg.upgrade
     '''
+    ret = {'changes': {},
+           'result': True,
+           'comment': '',
+           }
+
     if salt.utils.is_true(refresh):
         refresh_db()
     old = list_pkgs()
     cmd = 'zypper --non-interactive update --auto-agree-with-licenses'
-    __salt__['cmd.run'](cmd, output_loglevel='trace')
-    __context__.pop('pkg.list_pkgs', None)
-    new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+    if call['retcode'] != 0:
+        ret['result'] = False
+        if 'stderr' in call:
+            ret['comment'] += call['stderr']
+        if 'stdout' in call:
+            ret['comment'] += call['stdout']
+    else:
+        __context__.pop('pkg.list_pkgs', None)
+        new = list_pkgs()
+        ret['changes'] = salt.utils.compare_dicts(old, new)
+    return ret
 
 
 def _uninstall(action='remove', name=None, pkgs=None):

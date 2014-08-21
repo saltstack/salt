@@ -21,6 +21,7 @@ Full list of builtin state modules
     aws_sqs
     blockdev
     boto_asg
+    boto_cloudwatch_alarm
     boto_elasticache
     boto_elb
     boto_iam_role
@@ -97,6 +98,7 @@ Full list of builtin state modules
     postgres_user
     powerpath
     process
+    pyenv
     quota
     rabbitmq_cluster
     rabbitmq_plugin
@@ -109,6 +111,7 @@ Full list of builtin state modules
     reg
     rvm
     saltmod
+    schedule
     selinux
     serverdensity_device
     service
@@ -120,7 +123,6 @@ Full list of builtin state modules
     supervisord
     svn
     sysctl
-    syslog_ng
     test
     timezone
     tomcat
@@ -132,5 +134,8 @@ Full list of builtin state modules
     win_path
     win_servermanager
     win_system
+    win_update
+    winrepo
     xmpp
     zcbuildout
+    zk_concurrency

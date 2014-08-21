@@ -21,7 +21,7 @@ no disk space:
 
     > /var/log/messages:
       cmd.run:
-        - unless: echo 'foo' > /tmp/.test
+        - unless: echo 'foo' > /tmp/.test && rm -f /tmp/.test
 
 Only run if the file specified by ``creates`` does not exist, in this case
 touch /tmp/foo if it does not exist.
@@ -34,8 +34,7 @@ touch /tmp/foo if it does not exist.
 
 .. note::
 
-    The ``creates`` option will be supported starting with the feature release
-    codenamed Helium
+    The ``creates`` option was added to version 2014.7.0
 
 Salt determines whether the ``cmd`` state is successfully enforced based on the exit
 code returned by the command. If the command returns a zero exit code, then salt
@@ -283,6 +282,10 @@ def mod_run_check(cmd_kwargs, onlyif, unless, group, creates):
     * unless succeeded (unless == 0)
     else return True
     '''
+    # never use VT for onlyif/unless executions because this will lead
+    # to quote problems
+    cmd_kwargs = copy.deepcopy(cmd_kwargs)
+    cmd_kwargs['use_vt'] = False
     if group and HAS_GRP:
         try:
             egid = grp.getgrnam(group).gr_gid
@@ -338,7 +341,7 @@ def mod_run_check(cmd_kwargs, onlyif, unless, group, creates):
     elif isinstance(creates, list) and all([
         os.path.exists(path) for path in creates
     ]):
-        return {'comment': 'All files in creates exist'.format(creates),
+        return {'comment': 'All files in creates exist',
                 'result': True}
 
     # No reason to stop, return True
@@ -417,7 +420,7 @@ def wait(name,
     creates
         Only run if the file specified by ``creates`` does not exist.
 
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
 
     output_loglevel
         Control the loglevel at which the output from the command is logged.
@@ -630,7 +633,7 @@ def run(name,
     creates
         Only run if the file specified by ``creates`` does not exist.
 
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
 
     use_vt
         Use VT utils (saltstack) to stream the command output more
@@ -817,7 +820,7 @@ def script(name,
     creates
         Only run if the file specified by ``creates`` does not exist.
 
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
 
     use_vt
         Use VT utils (saltstack) to stream the command output more
@@ -892,8 +895,8 @@ def script(name,
 
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = 'Command {0!r} would have been executed'
-            ret['comment'] = ret['comment'].format(name)
+            ret['comment'] = 'Command {0!r} would have been ' \
+                             'executed'.format(name)
             return _reinterpreted_state(ret) if stateful else ret
 
         # Wow, we passed the test, run this sucker!

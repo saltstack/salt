@@ -750,7 +750,7 @@ def bootstrap(directory='.',
             gid = __salt__['user.info'](runas)['gid']
             os.chown('bootstrap.py', uid, gid)
     except (IOError, OSError) as exc:
-        # dont block here, try to execute it if can pass
+        # don't block here, try to execute it if can pass
         _logger.error('BUILDOUT bootstrap permissions error:'
                       ' {0}'.format(exc),
                   exc_info=_logger.isEnabledFor(logging.DEBUG))

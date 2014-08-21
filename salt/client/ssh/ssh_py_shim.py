@@ -5,7 +5,7 @@ then invoking thin.
 
 This is not intended to be instantiated as a module, rather it is a
 helper script used by salt.client.ssh.Single.  It is here, in a
-seperate file, for convenience of development.
+separate file, for convenience of development.
 '''
 
 import optparse
@@ -14,6 +14,7 @@ import tarfile
 import shutil
 import sys
 import os
+import stat
 
 THIN_ARCHIVE = 'salt-thin.tgz'
 
@@ -38,7 +39,7 @@ def parse_argv(argv):
         help="YAML configuration for salt thin",
     )
     oparser.add_option(
-        "-d", "--delimeter",
+        "-d", "--delimiter",
         help="Delimeter string (viz. magic string) to indicate beginning of salt output",
     )
     oparser.add_option(
@@ -66,7 +67,7 @@ def parse_argv(argv):
     (OPTIONS, ARGS) = oparser.parse_args(argv[argv.index('--')+1:])
 
     for option in (
-            'delimeter',
+            'delimiter',
             'saltdir',
             'checksum',
             'version',
@@ -82,8 +83,15 @@ def need_deployment():
     old_umask = os.umask(0077)
     os.makedirs(OPTIONS.saltdir)
     os.umask(old_umask)
+    # If SUDOing then also give the super user group write permissions
+    sudo_gid = os.environ.get('SUDO_GID')
+    if sudo_gid:
+        os.chown(OPTIONS.saltdir, -1, int(sudo_gid))
+        st = os.stat(OPTIONS.saltdir)
+        os.chmod(OPTIONS.saltdir, st.st_mode | stat.S_IWGRP | stat.S_IRGRP | stat.S_IXGRP)
+
     # Delimeter emitted on stdout *only* to indicate shim message to master.
-    sys.stdout.write("{0}\ndeploy\n".format(OPTIONS.delimeter))
+    sys.stdout.write("{0}\ndeploy\n".format(OPTIONS.delimiter))
     sys.exit(EX_THIN_DEPLOY)
 
 
@@ -146,6 +154,12 @@ def main(argv):
     with open(os.path.join(OPTIONS.saltdir, 'minion'), 'w') as config:
         config.write(OPTIONS.config + '\n')
 
+    #Fix parameter passing issue
+    if len(ARGS) == 1:
+        argv_prepared = ARGS[0].split()
+    else:
+        argv_prepared = ARGS
+
     salt_argv = [
         sys.executable,
         salt_call_path,
@@ -154,14 +168,15 @@ def main(argv):
         '-l', 'quiet',
         '-c', OPTIONS.saltdir,
         '--',
-    ] + ARGS
+    ] + argv_prepared
+
     sys.stderr.write('SALT_ARGV: {0}\n'.format(salt_argv))
 
     # Only emit the delimiter on *both* stdout and stderr when completely successful.
     # Yes, the flush() is necessary.
-    sys.stdout.write(OPTIONS.delimeter + '\n')
+    sys.stdout.write(OPTIONS.delimiter + '\n')
     sys.stdout.flush()
-    sys.stderr.write(OPTIONS.delimeter + '\n')
+    sys.stderr.write(OPTIONS.delimiter + '\n')
     sys.stderr.flush()
     os.execv(sys.executable, salt_argv)
 

@@ -626,9 +626,10 @@ def _parse_interfaces(interface_files=None):
     # ensure a consistent order
     for iface_name in adapters:
         for opt in ['ethtool', 'bonding', 'bridging']:
-            if opt in adapters[iface_name]['data']['inet']:
-                opt_keys = sorted(adapters[iface_name]['data']['inet'][opt].keys())
-                adapters[iface_name]['data']['inet'][opt + '_keys'] = opt_keys
+            if 'inet' in adapters[iface_name]['data']:
+                if opt in adapters[iface_name]['data']['inet']:
+                    opt_keys = sorted(adapters[iface_name]['data']['inet'][opt].keys())
+                    adapters[iface_name]['data']['inet'][opt + '_keys'] = opt_keys
 
     return adapters
 
@@ -1793,7 +1794,7 @@ def build_network_settings(**settings):
 
     # Write domainname to /etc/resolv.conf
     # TODO: how does this work with resolvconf?
-    if len(sline) > 0:
+    if len(sline) > 1:
         domainname = sline[1]
 
         contents = _parse_resolve()

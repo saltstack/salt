@@ -58,7 +58,7 @@ def get_local_client(
         mopts=None,
         skip_perm_errors=False):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Read in the config and return the correct LocalClient object based on
     the configured transport
@@ -207,7 +207,8 @@ class LocalClient(object):
 
         return self.get_returns(pub_data['jid'],
                                 minions,
-                                self._get_timeout(timeout))
+                                self._get_timeout(timeout),
+                                pending_tags=[jid])
 
     def _check_pub_data(self, pub_data):
         '''
@@ -821,23 +822,13 @@ class LocalClient(object):
             time_left = timeout_at - int(time.time())
             # Wait 0 == forever, use a minimum of 1s
             wait = max(1, time_left)
-            raw = self.event.get_event(wait, jid) if len(found.intersection(minions)) < len(minions) else None
-            if raw is None:
-                if len(found.intersection(minions)) >= len(minions):
-                    # All minions have returned, break out of the loop
-                    log.debug('jid {0} found all minions {1}'.format(jid, found))
-                    if self.opts['order_masters']:
-                        if syndic_wait < self.opts.get('syndic_wait', 1):
-                            syndic_wait += 1
-                            timeout_at = int(time.time()) + 1
-                            log.debug(
-                                'jid {0} syndic_wait {1} will now timeout at {2}'.format(
-                                    jid, syndic_wait, datetime.fromtimestamp(timeout_at).time()
-                                )
-                            )
-                            continue
-                    break
-            else:
+            raw = None
+            # Look for events if we haven't yet found all the minions or if we are still waiting for
+            # the syndics to report on how many minions they have forwarded the command to
+            if (len(found.intersection(minions)) < len(minions) or
+                    (self.opts['order_masters'] and syndic_wait < self.opts.get('syndic_wait', 1))):
+                raw = self.event.get_event(wait, jid)
+            if raw is not None:
                 if 'minions' in raw.get('data', {}):
                     minions.update(raw['data']['minions'])
                     continue
@@ -856,7 +847,17 @@ class LocalClient(object):
                         ret[raw['id']]['out'] = raw['out']
                     log.debug('jid {0} return from {1}'.format(jid, raw['id']))
                     yield ret
-
+                if len(found.intersection(minions)) >= len(minions):
+                    # All minions have returned, break out of the loop
+                    log.debug('jid {0} found all minions {1}'.format(jid, found))
+                    if self.opts['order_masters']:
+                        if syndic_wait < self.opts.get('syndic_wait', 1):
+                            syndic_wait += 1
+                            timeout_at = int(time.time()) + 1
+                            log.debug('jid {0} syndic_wait {1} will now timeout at {2}'.format(
+                                      jid, syndic_wait, datetime.fromtimestamp(timeout_at).time()))
+                            continue
+                    break
                 continue
             # Then event system timeout was reached and nothing was returned
             if len(found.intersection(minions)) >= len(minions):
@@ -909,7 +910,8 @@ class LocalClient(object):
             self,
             jid,
             minions,
-            timeout=None):
+            timeout=None,
+            pending_tags=None):
         '''
         Get the returns for the command line interface via the event system
         '''
@@ -1444,7 +1446,8 @@ class SSHClient(object):
         '''
         opts = copy.deepcopy(self.opts)
         opts.update(kwargs)
-        opts['timeout'] = timeout
+        if timeout:
+            opts['timeout'] = timeout
         arg = salt.utils.args.condition_input(arg, kwarg)
         opts['argv'] = [fun] + arg
         opts['selected_target_option'] = expr_form
@@ -1573,7 +1576,7 @@ class Caller(object):
 
     Note, a running master or minion daemon is not required to use this class.
     Running ``salt-call --local`` simply sets :conf_minion:`file_client` to
-    ``'local'``. The same can be achived at the Python level by including that
+    ``'local'``. The same can be achieved at the Python level by including that
     setting in a minion config file.
 
     Instantiate a new Caller() instance using a file system path to the minion
@@ -1587,7 +1590,7 @@ class Caller(object):
     Instantiate a new Caller() instance using a dictionary of the minion
     config:
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
         Pass the minion config as a dictionary.
 
     .. code-block:: python

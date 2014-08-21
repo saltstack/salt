@@ -143,6 +143,33 @@ def verify_signature(pubkey_path, message, signature):
     return result
 
 
+def gen_signature(priv_path, pub_path, sign_path):
+    '''
+    creates a signature for the given public-key with
+    the given private key and writes it to sign_path
+    '''
+
+    with salt.utils.fopen(pub_path) as fp_:
+        mpub_64 = fp_.read()
+
+    mpub_sig = sign_message(priv_path, mpub_64)
+    mpub_sig_64 = binascii.b2a_base64(mpub_sig)
+    if os.path.isfile(sign_path):
+        return False
+    log.trace('Calculating signature for {0} with {1}'
+              .format(os.path.basename(pub_path),
+                      os.path.basename(priv_path)))
+
+    if os.path.isfile(sign_path):
+        log.trace('Signature file {0} already exists, please '
+                  'remove it first and try again'.format(sign_path))
+    else:
+        with salt.utils.fopen(sign_path, 'w+') as sig_f:
+            sig_f.write(mpub_sig_64)
+        log.trace('Wrote signature to {0}'.format(sign_path))
+    return True
+
+
 class MasterKeys(dict):
     '''
     The Master Keys class is used to manage the public key pair used for
@@ -511,6 +538,17 @@ class Auth(object):
         and the decrypted aes key for transport decryption.
         '''
         auth = {}
+
+        auth_timeout = self.opts.get('auth_timeout', None)
+        if auth_timeout is not None:
+            timeout = auth_timeout
+        auth_safemode = self.opts.get('auth_safemode', None)
+        if auth_safemode is not None:
+            safe = auth_safemode
+        auth_tries = self.opts.get('auth_tries', None)
+        if auth_tries is not None:
+            tries = auth_tries
+
         m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
 
         sreq = salt.payload.SREQ(
@@ -703,11 +741,7 @@ class SAuth(Auth):
             acceptance_wait_time_max = acceptance_wait_time
 
         while True:
-            creds = self.sign_in(
-                self.opts.get('auth_timeout', 60),
-                self.opts.get('auth_safemode', self.opts.get('_safe_auth', True)),
-                self.opts.get('auth_tries', 1)
-            )
+            creds = self.sign_in()
             if creds == 'retry':
                 if self.opts.get('caller'):
                     print('Minion failed to authenticate with the master, '

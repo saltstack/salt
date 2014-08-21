@@ -53,7 +53,7 @@ Prerequisite Pillar Configuration for Authentication
   .. code-block:: yaml
 
       docker-registries:
-          https://index.docker.io/v1:
+          https://index.docker.io/v1/:
               email: foo@foo.com
               password: s3cr3t
               username: foo
@@ -64,13 +64,13 @@ Prerequisite Pillar Configuration for Authentication
   .. code-block:: yaml
 
       ac-docker-registries:
-          https://index.bar.io/v1:
+          https://index.bar.io/v1/:
               email: foo@foo.com
               password: s3cr3t
               username: foo
 
       ab-docker-registries:
-          https://index.foo.io/v1:
+          https://index.foo.io/v1/:
               email: foo@foo.com
               password: s3cr3t
               username: foo
@@ -80,11 +80,11 @@ Prerequisite Pillar Configuration for Authentication
   .. code-block:: yaml
 
       docker-registries:
-          https://index.bar.io/v1:
+          https://index.bar.io/v1/:
               email: foo@foo.com
               password: s3cr3t
               username: foo
-          https://index.foo.io/v1:
+          https://index.foo.io/v1/:
               email: foo@foo.com
               password: s3cr3t
               username: foo
@@ -107,6 +107,8 @@ _______
     - :py:func:`import_image<salt.modules.dockerio.import_image>`
     - :py:func:`build<salt.modules.dockerio.build>`
     - :py:func:`tag<salt.modules.dockerio.tag>`
+    - :py:func:`save<salt.modules.dockerio.save>`
+    - :py:func:`load<salt.modules.dockerio.load>`
 - Container Management
     - :py:func:`start<salt.modules.dockerio.start>`
     - :py:func:`stop<salt.modules.dockerio.stop>`
@@ -269,21 +271,21 @@ def _get_client(version=None, timeout=None):
 
     client = docker.Client(**kwargs)
     if not version:
-        # set version that match docker deamon
+        # set version that match docker daemon
         client._version = client.version()['ApiVersion']
-    client._auth_configs.update(_merge_auth_bits())
-    return client
 
-
-def _merge_auth_bits():
-    '''
-    Get the pillar configuration
-    '''
-    config = __pillar__.get('docker-registries', {})
+    # try to authenticate the client using credentials
+    # found in pillars
+    registry_auth_config = __pillar__.get('docker-registries', {})
     for k, data in __pillar__.items():
         if k.endswith('-docker-registries'):
-            config.update(data)
-    return config
+            registry_auth_config.update(data)
+
+    for registry, creds in registry_auth_config.items():
+        client.login(creds['username'], password=creds['password'],
+                     email=creds.get('email'), registry=registry)
+
+    return client
 
 
 def _get_image_infos(image):
@@ -1618,7 +1620,7 @@ def _push_assemble_error_status(status, ret, logs):
     return status
 
 
-def push(repo):
+def push(repo, quiet=False):
     '''
     Pushes an image from any registry. See documentation at top of this page to
     configure authenticated access
@@ -1626,11 +1628,14 @@ def push(repo):
     repo
         name of repository
 
+    quiet
+        set as ``True`` to quiet output, Default is ``False``
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' docker.push <repository>
+        salt '*' docker.push <repository> [quiet=True|False]
     '''
     client = _get_client()
     status = base_status.copy()
@@ -1640,7 +1645,10 @@ def push(repo):
         if ret:
             image_logs, infos = _parse_image_multilogs_string(ret, repo_name)
             if image_logs:
-                status['out'] = image_logs
+                if not quiet:
+                    status['out'] = image_logs
+                else:
+                    status['out'] = None
                 laststatus = image_logs[2].get('status', None)
                 if laststatus and (
                     ('already pushed' in laststatus)
@@ -1720,6 +1728,78 @@ def _run_wrapper(status, container, func, cmd, *args, **kwargs):
     except Exception:
         _invalid(status, id_=container,
                  comment=comment, out=traceback.format_exc())
+    return status
+
+
+def load(imagepath):
+    '''
+    Load the specified file at imagepath into docker that was generated from a docker save command
+    e.g. `docker load < imagepath`
+
+    imagepath
+        imagepath to docker tar file
+    '''
+
+    status = base_status.copy()
+    if os.path.isfile(imagepath):
+        try:
+            ret = __salt__['cmd.run']('docker load < ' + imagepath)
+            if ((isinstance(ret, dict) and
+                ('retcode' in ret) and
+                (ret['retcode'] != 0))):
+                return _invalid(status, id_=None,
+                                out=ret,
+                                comment='Command to load image {0} failed.'.format(imagepath))
+
+            _valid(status, id_=None, out=ret, comment='Image load success')
+        except Exception:
+            _invalid(status, id_=None,
+                    comment="Image not loaded.",
+                    out=traceback.format_exc())
+    else:
+        _invalid(status, id_=None,
+                comment='Image file {0} could not be found.'.format(imagepath),
+                out=traceback.format_exc())
+
+    return status
+
+
+def save(image, filename):
+    '''
+    Save the specified image to filename from docker
+    e.g. `docker save image > filename`
+
+    image
+        name of image
+
+    filename
+        The filename of the saved docker image
+    '''
+    status = base_status.copy()
+    ok = False
+    try:
+        _info = _get_image_infos(image)
+        ok = True
+    except Exception:
+        _invalid(status, id_=image,
+                comment="docker image {0} could not be found.".format(image),
+                out=traceback.format_exc())
+
+    if ok:
+        try:
+            ret = __salt__['cmd.run']('docker save ' + image + ' > ' + filename)
+            if ((isinstance(ret, dict) and
+                ('retcode' in ret) and
+                (ret['retcode'] != 0))):
+                return _invalid(status,
+                                id_=image,
+                                out=ret,
+                                comment='Command to save image {0} to {1} failed.'.format(image, filename))
+
+            _valid(status, id_=image, out=ret, comment='Image save success')
+        except Exception:
+            _invalid(status, id_=image, comment="Image not saved.", out=traceback.format_exc())
+
     return status
 
 

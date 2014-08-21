@@ -51,7 +51,7 @@ def get_running():
         salt '*' service.get_running
     '''
     ret = set()
-    cmd = '/usr/bin/svcs -H -o SVC,STATE -s SVC'
+    cmd = '/usr/bin/svcs -H -o FMRI,STATE -s FMRI'
     lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         comps = line.split()
@@ -73,7 +73,7 @@ def get_stopped():
         salt '*' service.get_stopped
     '''
     ret = set()
-    cmd = '/usr/bin/svcs -aH -o SVC,STATE -s SVC'
+    cmd = '/usr/bin/svcs -aH -o FMRI,STATE -s FMRI'
     lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         comps = line.split()
@@ -89,8 +89,8 @@ def available(name):
     Returns ``True`` if the specified service is available, otherwise returns
     ``False``.
 
-    The Solaris and SmartOS "if" statement uses svcs to return the service name from the
-    package name.
+    We look up the name with the svcs command to get back the FMRI
+    This allows users to use simpler service names
 
     CLI Example:
 
@@ -98,12 +98,9 @@ def available(name):
 
         salt '*' service.available net-snmp
     '''
-    if 'SmartOS' in __grains__['os'] or 'Solaris' in __grains__['os']:
-        cmd = '/usr/bin/svcs -H -o SVC {0}'.format(name)
-        name = __salt__['cmd.run'](cmd)
-        return name in get_all()
-    else:
-        return name in get_all()
+    cmd = '/usr/bin/svcs -H -o FMRI {0}'.format(name)
+    name = __salt__['cmd.run'](cmd)
+    return name in get_all()
 
 
 def missing(name):
@@ -118,12 +115,9 @@ def missing(name):
 
         salt '*' service.missing net-snmp
     '''
-    if 'SmartOS' in __grains__['os'] or 'Solaris' in __grains__['os']:
-        cmd = '/usr/bin/svcs -H -o SVC {0}'.format(name)
-        name = __salt__['cmd.run'](cmd)
-        return name not in get_all()
-    else:
-        return name not in get_all()
+    cmd = '/usr/bin/svcs -H -o FMRI {0}'.format(name)
+    name = __salt__['cmd.run'](cmd)
+    return name not in get_all()
 
 
 def get_all():
@@ -137,7 +131,7 @@ def get_all():
         salt '*' service.get_all
     '''
     ret = set()
-    cmd = '/usr/bin/svcs -aH -o SVC,STATE -s SVC'
+    cmd = '/usr/bin/svcs -aH -o FMRI,STATE -s FMRI'
     lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         comps = line.split()

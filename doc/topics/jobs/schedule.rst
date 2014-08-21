@@ -4,13 +4,15 @@ executions on minions or the master. The schedule system exposes the execution
 of any execution function on minions or any runner on the master.
 
 Scheduling is enabled via the ``schedule`` option on either the master or minion 
-config files, or via a minion's pillar data.
+config files, or via a minion's pillar data. Schedules that are impletemented via pillar data, only need to refresh the minion's pillar data, for example by using ``saltutil.refresh_pillar``. Schedules implemented in the master or minion config have to restart the application in order for the schedule to be implemented.
 
 .. note::
 
     The scheduler executes different functions on the master and minions. When
     running on the master the functions reference runner functions, when
     running on the minion the functions specify execution functions.
+
+A scheduled run has no output on the minion unless the config is set to info level or higher. Refer to :doc:`minion logging settings <ref/configuration/minion>`.
 
 Specify ``maxrunning`` to ensure that there are no more than N copies of
 a particular routine running.  Use this for jobs that may be long-running
@@ -66,7 +68,7 @@ This will schedule the command: state.sls httpd test=True every 3600 seconds
 This will schedule the command: state.sls httpd test=True every 3600 seconds
 (every hour) splaying the time between 10 and 15 seconds
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 Frequency of jobs can also be specified using date strings supported by
 the python dateutil library.
@@ -122,7 +124,7 @@ This will schedule the command: state.sls httpd test=True every 3600 seconds
 (every hour) between the hours of 8am and 5pm.  The range parameter must be a
 dictionary with the date strings using the dateutil format.
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 The scheduler also supports ensuring that there are no more than N copies of
 a particular routine running.  Use this for jobs that may be long-running
@@ -150,7 +152,7 @@ States
           - 'logger -t salt < /proc/loadavg'
         kwargs:
           stateful: False
-          shell: True
+          shell: \bin\sh
 
 Highstates
 ==========

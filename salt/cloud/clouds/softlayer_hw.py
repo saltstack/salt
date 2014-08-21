@@ -19,7 +19,7 @@ configuration at:
       apikey: JVkbSJDGHSDKUKSDJfhsdklfjgsjdkflhjlsdfffhgdgjkenrtuinv
       provider: softlayer_hw
 
-The SoftLayer Python Library needs to be installed in ordere to use the
+The SoftLayer Python Library needs to be installed in order to use the
 SoftLayer salt.cloud modules. See: https://pypi.python.org/pypi/SoftLayer
 
 :depends: softlayer
@@ -492,7 +492,7 @@ def create(vm_):
                 vm_['name'], exc.message
             ),
             # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -786,7 +786,7 @@ def destroy(name, call=None):
     response = conn.createCancelServerTicket(
         {
             'id': node['id'],
-            'reason': 'Salt Cloud Hardware Server Cancelation',
+            'reason': 'Salt Cloud Hardware Server Cancellation',
             'content': 'Please cancel this server',
             'cancelAssociatedItems': True,
             'attachmentType': 'HARDWARE',

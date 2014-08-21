@@ -1018,6 +1018,8 @@ def os_data():
     # architecture.
     if grains.get('os_family') == 'Debian':
         osarch = __salt__['cmd.run']('dpkg --print-architecture').strip()
+    elif grains.get('os') == 'Fedora':
+        osarch = __salt__['cmd.run']('rpm --eval %{_host_cpu}').strip()
     else:
         osarch = grains['cpuarch']
     grains['osarch'] = osarch
@@ -1183,6 +1185,9 @@ def ip_interfaces():
     for face in ifaces:
         iface_ips = []
         for inet in ifaces[face].get('inet', []):
+            if 'address' in inet:
+                iface_ips.append(inet['address'])
+        for inet in ifaces[face].get('inet6', []):
             if 'address' in inet:
                 iface_ips.append(inet['address'])
         for secondary in ifaces[face].get('secondary', []):

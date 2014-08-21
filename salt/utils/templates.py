@@ -58,6 +58,17 @@ def wrap_tmpl_func(render_str):
         assert 'opts' in context
         assert 'saltenv' in context
 
+        if 'sls' in context:
+            slspath = context['sls'].replace('.', '/')
+            if tmplpath is not None:
+                context['tplpath'] = tmplpath
+                if not tmplpath.lower().replace('\\', '/').endswith('/init.sls'):
+                    slspath = os.path.dirname(slspath)
+            context['slspathdot'] = slspath.replace('/', '.')
+            if slspath:
+                slspath = slspath + '/'
+            context['slspath'] = slspath
+
         if isinstance(tmplsrc, string_types):
             if from_str:
                 tmplstr = tmplsrc
@@ -78,7 +89,7 @@ def wrap_tmpl_func(render_str):
                         'Exception occurred while reading file '
                         '{0}: {1}'.format(tmplsrc, exc),
                         # Show full traceback if debug logging is enabled
-                        exc_info=log.isEnabledFor(logging.DEBUG)
+                        exc_info_on_loglevel=logging.DEBUG
                     )
                     raise exc
         else:  # assume tmplsrc is file-like.
@@ -352,6 +363,45 @@ def render_wempy_tmpl(tmplstr, context, tmplpath=None):
     return Template(tmplstr).render(**context)
 
 
+def render_genshi_tmpl(tmplstr, context, tmplpath=None):
+    '''
+    Render a Genshi template. A method should be passed in as part of the
+    context. If no method is passed in, xml is assumed. Valid methods are:
+
+    .. code-block:
+
+        - xml
+        - xhtml
+        - html
+        - text
+        - newtext
+        - oldtext
+
+    Note that the ``text`` method will call ``NewTextTemplate``. If ``oldtext``
+    is desired, it must be called explicitly
+    '''
+    method = context.get('method', 'xml')
+    if method == 'text' or method == 'newtext':
+        from genshi.template import NewTextTemplate
+        tmpl = NewTextTemplate(tmplstr)
+    elif method == 'oldtext':
+        from genshi.template import OldTextTemplate
+        tmpl = OldTextTemplate(tmplstr)
+    else:
+        from genshi.template import MarkupTemplate
+        tmpl = MarkupTemplate(tmplstr)
+
+    return tmpl.generate(**context).render(method)
+
+
+def render_cheetah_tmpl(tmplstr, context, tmplpath=None):
+    '''
+    Render a Cheetah template.
+    '''
+    from Cheetah.Template import Template
+    return str(Template(tmplstr, searchList=[context]))
+
+
 def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
     '''
     Render a template from a python source file
@@ -368,6 +418,14 @@ def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
             os.path.basename(sfn).split('.')[0],
             sfn
             )
+    # File templates need these set as __var__
+    if '__env__' not in kwargs and 'saltenv' in kwargs:
+        setattr(mod, '__env__', kwargs['saltenv'])
+        builtins = ['salt', 'grains', 'pillar', 'opts']
+        for builtin in builtins:
+            arg = '__{0}__'.format(builtin)
+            setattr(mod, arg, kwargs[builtin])
+
     for kwarg in kwargs:
         setattr(mod, kwarg, kwargs[kwarg])
 
@@ -390,10 +448,14 @@ def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
 JINJA = wrap_tmpl_func(render_jinja_tmpl)
 MAKO = wrap_tmpl_func(render_mako_tmpl)
 WEMPY = wrap_tmpl_func(render_wempy_tmpl)
+GENSHI = wrap_tmpl_func(render_genshi_tmpl)
+CHEETAH = wrap_tmpl_func(render_cheetah_tmpl)
 
 TEMPLATE_REGISTRY = {
     'jinja': JINJA,
     'mako': MAKO,
     'py': py,
     'wempy': WEMPY,
+    'genshi': GENSHI,
+    'cheetah': CHEETAH,
 }

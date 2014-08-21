@@ -6,6 +6,8 @@ To enable this returner the minion will need the python client for redis
 installed and the following values configured in the minion or master
 config, these are the defaults:
 
+.. code-block:: yaml
+
     redis.db: '0'
     redis.host: 'salt'
     redis.port: 6379
@@ -39,10 +41,17 @@ def _get_serv():
     '''
     Return a redis server object
     '''
-    return redis.Redis(
-            host=__salt__['config.option']('redis.host'),
-            port=__salt__['config.option']('redis.port'),
-            db=__salt__['config.option']('redis.db'))
+    if 'config.option' in __salt__:
+        return redis.Redis(
+                host=__salt__['config.option']('redis.host'),
+                port=__salt__['config.option']('redis.port'),
+                db=__salt__['config.option']('redis.db'))
+    else:
+        cfg = __opts__
+        return redis.Redis(
+                host=cfg.get('redis.host', None),
+                port=cfg.get('redis.port', None),
+                db=cfg.get('redis.db', None))
 
 
 def returner(ret):

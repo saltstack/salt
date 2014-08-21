@@ -17,7 +17,7 @@ multi-threaded, encrypted with SSL, and should be considered production-ready.
 Using a WSGI-compliant web server
 ---------------------------------
 
-This module may be deplayed on any WSGI-compliant server such as Apache with
+This module may be deployed on any WSGI-compliant server such as Apache with
 mod_wsgi or Nginx with FastCGI, to name just two (there are many).
 
 Note, external WSGI servers handle URLs, paths, and SSL certs directly. The

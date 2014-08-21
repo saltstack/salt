@@ -289,7 +289,7 @@ def create(vm_):
                 vm_['name'], exc.message
             ),
             # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -487,11 +487,11 @@ def query(action=None, command=None, args=None, method='GET', data=None):
     if command:
         path += '/{0}'.format(command)
 
-    if type(args) is not dict:
+    if not type(args, dict):
         args = {}
 
     kwargs = {'data': data}
-    if type(data) is str and '<?xml' in data:
+    if isinstance(data, str) and '<?xml' in data:
         kwargs['headers'] = {
             'Content-type': 'application/xml',
         }

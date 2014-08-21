@@ -69,8 +69,12 @@ except ImportError:
 # Import 3rd-party libs
 import yaml
 
+if os.uname()[0] == 'Darwin':
+    SYS_TMP_DIR = '/tmp'
+else:
+    SYS_TMP_DIR = os.environ.get('TMPDIR', tempfile.gettempdir())
+
 # Gentoo Portage prefers ebuild tests are rooted in ${TMPDIR}
-SYS_TMP_DIR = os.environ.get('TMPDIR', tempfile.gettempdir())
 TMP = os.path.join(SYS_TMP_DIR, 'salt-tests-tmpdir')
 FILES = os.path.join(INTEGRATION_TEST_DIR, 'files')
 PYEXEC = 'python{0}.{1}'.format(*sys.version_info)
@@ -919,6 +923,15 @@ class AdaptedConfigurationTestCaseMixIn(object):
     def get_config_file_path(self, filename):
         return os.path.join(TMP_CONF_DIR, filename)
 
+    @property
+    def master_opts(self):
+        '''
+        Return the options used for the minion
+        '''
+        return salt.config.master_config(
+            self.get_config_file_path('master')
+        )
+
 
 class SaltClientTestCaseMixIn(AdaptedConfigurationTestCaseMixIn):
 
@@ -1002,15 +1015,6 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
         '''
         return salt.config.minion_config(
             self.get_config_file_path('sub_minion')
-        )
-
-    @property
-    def master_opts(self):
-        '''
-        Return the options used for the minion
-        '''
-        return salt.config.master_config(
-            self.get_config_file_path('master')
         )
 
     def _check_state_return(self, ret, func='state.single'):

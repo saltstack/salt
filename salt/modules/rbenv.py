@@ -152,7 +152,7 @@ def install_ruby(ruby, runas=None):
         The version of Ruby to install, should match one of the
         versions listed by rbenv.list
 
-    Additionnal environment variables can be configured in pillar /
+    Additional environment variables can be configured in pillar /
     grains / master:
 
     .. code-block:: yaml
@@ -175,11 +175,9 @@ def install_ruby(ruby, runas=None):
         env_list.append('MAKE=gmake')
 
     if __salt__['config.get']('rbenv:build_env'):
-        build_env = __salt__['config.get']('rbenv:build_env')
+        env_list.append(__salt__['config.get']('rbenv:build_env'))
     elif __salt__['config.option']('rbenv.build_env'):
         env_list.append(__salt__['config.option']('rbenv.build_env'))
-    if build_env:
-        env_list.append(build_env)
 
     if env_list:
         env = ' '.join(env_list)

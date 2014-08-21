@@ -11,7 +11,9 @@ Example:
         rabbitmq_user.present:
             - password: password
             - force: True
-            - tags: administrator
+            - tags:
+                - monitoring
+                - user
             - perms:
               - '/':
                 - '.*'
@@ -52,7 +54,7 @@ def present(name,
     force
         If user exists, forcibly change the password
     tags
-        Optionally set user tags for user
+        Optional list of tags for the user
     perms
         A list of dicts with vhost keys and 3-tuple values
     runas
@@ -78,6 +80,11 @@ def present(name,
 
     else:
         changes = {'old': '', 'new': ''}
+
+        # Get it into the correct format
+        if tags and isinstance(tags, (list, tuple)):
+            tags = ' '.join(tags)
+
         if not user_exists:
             log.debug(
                 "User doesn't exist - Creating")
@@ -91,7 +98,7 @@ def present(name,
                 for vhost, perm in element.items():
                     result = __salt__['rabbitmq.set_permissions'](
                         vhost, name, perm[0], perm[1], perm[2], runas)
-                    changes['new'] += ' {0} {1} {2}'.format(vhost, name, tags)
+                    changes['new'] += tags
         elif force:
             log.debug('User exists and force is set - Overriding')
             if password is not None:
@@ -107,7 +114,7 @@ def present(name,
                 result.update(__salt__['rabbitmq.set_user_tags'](
                     name, tags, runas=runas)
                 )
-                changes['new'] += tags
+                changes['new'] += ' Tags: {0}'.format(', '.join(tags))
             for element in perms:
                 for vhost, perm in element.items():
                     result.update(__salt__['rabbitmq.set_permissions'](

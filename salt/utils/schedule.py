@@ -46,7 +46,7 @@ This will schedule the command: state.sls httpd test=True every 3600 seconds
 This will schedule the command: state.sls httpd test=True every 3600 seconds
 (every hour) splaying the time between 10 and 15 seconds
 
-    ... versionadded:: Helium
+    ... versionadded:: 2014.7.0
 
 Frequency of jobs can also be specified using date strings supported by
 the python dateutil library.
@@ -96,7 +96,7 @@ This will schedule the command: state.sls httpd test=True every 3600 seconds
 (every hour) between the hours of 8am and 5pm.  The range parameter must be a
 dictionary with the date strings using the dateutil format.
 
-    ... versionadded:: Helium
+    ... versionadded:: 2014.7.0
 
     schedule:
       job1:
@@ -221,9 +221,9 @@ class Schedule(object):
         python data-structures to make sure, you pass correct dictionaries.
         '''
 
-        # we dont do any checking here besides making sure its a dict.
+        # we don't do any checking here besides making sure its a dict.
         # eval() already does for us and raises errors accordingly
-        if not type(data) is dict:
+        if not isinstance(data, dict):
             raise ValueError('Scheduled jobs have to be of type dict.')
         if not len(data.keys()) == 1:
             raise ValueError('You can only schedule one new job at a time.')
@@ -365,21 +365,28 @@ class Schedule(object):
                 fn_ = os.path.join(salt.minion.get_proc_dir(self.opts['cachedir']), basefilename)
                 with salt.utils.fopen(fn_, 'r') as fp_:
                     job = salt.payload.Serial(self.opts).load(fp_)
-                    if 'schedule' in job:
-                        log.debug('schedule.handle_func: Checking job against '
-                                  'fun {0}: {1}'.format(ret['fun'], job))
-                        if ret['schedule'] == job['schedule'] and os_is_running(job['pid']):
-                            jobcount += 1
-                            log.debug(
-                                'schedule.handle_func: Incrementing jobcount, now '
-                                '{0}, maxrunning is {1}'.format(
-                                    jobcount, data['maxrunning']))
-                            if jobcount >= data['maxrunning']:
+                    if job:
+                        if 'schedule' in job:
+                            log.debug('schedule.handle_func: Checking job against '
+                                      'fun {0}: {1}'.format(ret['fun'], job))
+                            if ret['schedule'] == job['schedule'] and os_is_running(job['pid']):
+                                jobcount += 1
                                 log.debug(
-                                    'schedule.handle_func: The scheduled job {0} '
-                                    'was not started, {1} already running'.format(
-                                        ret['schedule'], data['maxrunning']))
-                                return False
+                                    'schedule.handle_func: Incrementing jobcount, now '
+                                    '{0}, maxrunning is {1}'.format(
+                                        jobcount, data['maxrunning']))
+                                if jobcount >= data['maxrunning']:
+                                    log.debug(
+                                        'schedule.handle_func: The scheduled job {0} '
+                                        'was not started, {1} already running'.format(
+                                            ret['schedule'], data['maxrunning']))
+                                    return False
+                    else:
+                        try:
+                            log.info('Invalid job file found.  Removing.')
+                            os.remove(fn_)
+                        except OSError:
+                            log.info('Unable to remove file: {0}.'.format(fn_))
 
         salt.utils.daemonize_if(self.opts)
 
@@ -677,7 +684,7 @@ class Schedule(object):
                                 continue
                         else:
                             log.error('schedule.handle_func: Invalid, range must be specified as a dictionary. \
-                                     Ignoring job {-1}.'.format(job))
+                                     Ignoring job {0}.'.format(job))
                             continue
 
             if not run:

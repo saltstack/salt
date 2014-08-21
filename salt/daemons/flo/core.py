@@ -110,7 +110,7 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
             'local': {'ipath': 'local',
                       'ival': {'name': 'master',
                                'main': False,
-                               'auto': True,
+                               'auto': None,
                                'eid': 0,
                                'sigkey': None,
                                'prikey': None}},
@@ -151,16 +151,18 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
                 prikey=prikey)
         txMsgs = self.txmsgs.value
         rxMsgs = self.rxmsgs.value
-        safe = salting.SaltSafe(opts=self.opts.value)
+
+        keep = salting.SaltKeep(opts=self.opts.value,
+                                basedirpath=basedirpath,
+                                stackname=name,
+                                auto=auto)
 
         self.stack.value = RoadStack(
                 local=local,
                 store=self.store,
                 name=name,
-                auto=auto,
                 main=main,
-                basedirpath=basedirpath,
-                safe=safe,
+                keep=keep,
                 txMsgs=txMsgs,
                 rxMsgs=rxMsgs,
                 period=3.0,
@@ -344,6 +346,8 @@ class SaltRaetRoadStackManager(ioflo.base.deeding.Deed):
                   'ival': odict()},
         aliveds={'ipath': '.salt.var.presence.aliveds',
                  'ival': odict()},
+        reapeds={'ipath': '.salt.var.presence.reapeds',
+                         'ival': odict()},
         availables={'ipath': '.salt.var.presence.availables',
                     'ival': set()},
         changeds={'ipath': '.salt.var.presence.changeds',
@@ -359,6 +363,7 @@ class SaltRaetRoadStackManager(ioflo.base.deeding.Deed):
             minus is set of names of newly unavailable remotes
         alloweds is dict of allowed remotes keyed by name
         aliveds is dict of alived remotes keyed by name
+        reapeds is dict of reaped remotes keyed by name
         '''
         stack = self.stack.value
         if stack and isinstance(stack, RoadStack):
@@ -369,21 +374,17 @@ class SaltRaetRoadStackManager(ioflo.base.deeding.Deed):
             self.changeds.update(minus=set(self.stack.value.changeds['minus']))
             self.alloweds.value = odict(self.stack.value.alloweds)
             self.aliveds.value = odict(self.stack.value.aliveds)
+            self.reapeds.value = odict(self.stack.value.reapeds)
 
             console.concise(" Manage {0}.\nAvailables: {1}\nChangeds:\nPlus: {2}\n"
-                            "Minus: {3}\nAlloweds: {4}\nAliveds{5}\n".format(
+                            "Minus: {3}\nAlloweds: {4}\nAliveds: {5}\nReapeds: {6}\n".format(
                     stack.name,
                     self.availables.value,
                     self.changeds.data.plus,
                     self.changeds.data.minus,
                     self.alloweds.value,
-                    self.aliveds.value))
-
-            # share .salt.var.presence.alloweds value is dict keyed by name of allowed remotes
-            # share .salt.var.presence.changeds has two fields,
-            #      plus is set of newly allowed remotes
-            #      minus is set of newly unallowed remotes
-
+                    self.aliveds.value,
+                    self.reapeds.value))
             # need to queue presence event message if either plus or minus is not empty
 
 
@@ -499,7 +500,10 @@ class LoadPillar(ioflo.base.deeding.Deed):
             while self.udp_stack.value.rxMsgs:
                 msg, sender = self.udp_stack.value.rxMsgs.popleft()
                 self.pillar.value = msg.get('return', {})
+                if self.pillar.value is None:
+                    continue
                 self.opts.value['pillar'] = self.pillar.value
+                self.pillar_refresh.value = False
                 return
             self.udp_stack.value.serviceAll()
         self.pillar_refresh.value = False
@@ -547,10 +551,10 @@ class SaltManorLaneSetup(ioflo.base.deeding.Deed):
     '''
     Ioinits = {'opts': '.salt.opts',
                'event_yards': '.salt.event.yards',
-               'local_cmd': '.salt.local.local_cmd',
-               'remote_cmd': '.salt.local.remote_cmd',
-               'publish': '.salt.local.publish',
-               'fun': '.salt.local.fun',
+               'local_cmd': '.salt.var.local_cmd',
+               'remote_cmd': '.salt.var.remote_cmd',
+               'publish': '.salt.var.publish',
+               'fun': '.salt.var.fun',
                'worker_verify': '.salt.var.worker_verify',
                'event': '.salt.event.events',
                'event_req': '.salt.event.event_req',
@@ -693,10 +697,10 @@ class Router(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = {'opts': '.salt.opts',
-               'local_cmd': '.salt.local.local_cmd',
-               'remote_cmd': '.salt.local.remote_cmd',
-               'publish': '.salt.local.publish',
-               'fun': '.salt.local.fun',
+               'local_cmd': '.salt.var.local_cmd',
+               'remote_cmd': '.salt.var.remote_cmd',
+               'publish': '.salt.var.publish',
+               'fun': '.salt.var.fun',
                'event': '.salt.event.events',
                'event_req': '.salt.event.event_req',
                'workers': '.salt.track.workers',
@@ -725,8 +729,9 @@ class Router(ioflo.base.deeding.Deed):
             return
         if d_yard is not None:
             # Meant for another yard, send it off!
-            if d_yard in self.uxd_stack.value.uids:
-                self.uxd_stack.value.transmit(msg, self.uxd_stack.value.uids[d_yard])
+            if d_yard in self.uxd_stack.value.nameRemotes:
+                self.uxd_stack.value.transmit(msg,
+                        self.uxd_stack.value.nameRemotes[d_yard].uid)
                 return
             return
         if d_share is None:
@@ -742,7 +747,7 @@ class Router(ioflo.base.deeding.Deed):
             if 'load' in msg:
                 msg['load']['id'] = sender
                 self.uxd_stack.value.transmit(msg,
-                        self.uxd_stack.value.uids.get(next(self.workers.value)))
+                        self.uxd_stack.value.fetchUidByName(next(self.workers.value)))
         elif d_share == 'fun':
             self.fun.value.append(msg)
 
@@ -765,7 +770,7 @@ class Router(ioflo.base.deeding.Deed):
             pass
         elif d_estate != self.udp_stack.value.local:
             # Forward to the correct estate
-            eid = self.udp_stack.value.uids.get(d_estate)
+            eid = self.udp_stack.value.fetchUidByName(d_estate)
             self.udp_stack.value.message(msg, eid)
             return
         if d_share == 'pub_ret':
@@ -775,8 +780,9 @@ class Router(ioflo.base.deeding.Deed):
             pass
         elif d_yard != self.uxd_stack.value.local.name:
             # Meant for another yard, send it off!
-            if d_yard in self.uxd_stack.value.uids:
-                self.uxd_stack.value.transmit(msg, self.uxd_stack.value.uids[d_yard])
+            if d_yard in self.uxd_stack.value.nameRemotes:
+                self.uxd_stack.value.transmit(msg,
+                        self.uxd_stack.value.nameRemotes[d_yard].uid)
                 return
             return
         if d_share is None:
@@ -785,7 +791,7 @@ class Router(ioflo.base.deeding.Deed):
             return
         elif d_share == 'local_cmd':
             self.uxd_stack.value.transmit(msg,
-                    self.uxd_stack.value.uids.get(next(self.workers.value)))
+                    self.uxd_stack.value.fetchUidByName(next(self.workers.value)))
         elif d_share == 'event_req':
             self.event_req.value.append(msg)
         elif d_share == 'event_fire':
@@ -835,14 +841,14 @@ class Eventer(ioflo.base.deeding.Deed):
         if event.get('tag') == 'module_refresh':
             self.module_refresh.value = True
         for y_name in self.event_yards.value:
-            if y_name not in self.uxd_stack.value.uids:
+            if y_name not in self.uxd_stack.value.nameRemotes:
                 rm_.append(y_name)
                 continue
             route = {'src': ('router', self.uxd_stack.value.local.name, None),
                      'dst': ('router', y_name, None)}
             msg = {'route': route, 'event': event}
             self.uxd_stack.value.transmit(msg,
-                    self.uxd_stack.value.uids.get(y_name))
+                    self.uxd_stack.value.fetchUidByName(y_name))
             self.uxd_stack.value.serviceAll()
         for y_name in rm_:
             self.event_yards.value.remove(y_name)
@@ -872,7 +878,7 @@ class SaltPublisher(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = {'opts': '.salt.opts',
-               'publish': '.salt.local.publish',
+               'publish': '.salt.var.publish',
                'stack': '.raet.udp.stack.stack',
                'availables': {'ipath': '.salt.var.presence.availables',
                               'ival': set()}, }
@@ -883,9 +889,9 @@ class SaltPublisher(ioflo.base.deeding.Deed):
         '''
         pub_data = pub_msg['return']
         # only publish to available minions by intersecting sets
-        minions = self.availables.value & set(self.stack.value.uids.keys())
+        minions = self.availables.value & set(self.stack.value.nameRemotes.keys())
         for minion in minions:
-            eid = self.stack.value.uids.get(minion)
+            eid = self.stack.value.fetchUidByName(minion)
             if eid:
                 route = {
                         'dst': (minion, None, 'fun'),
@@ -915,7 +921,7 @@ class NixExecutor(ioflo.base.deeding.Deed):
                'grains': '.salt.grains',
                'modules': '.salt.loader.modules',
                'returners': '.salt.loader.returners',
-               'fun': '.salt.local.fun',
+               'fun': '.salt.var.fun',
                'executors': '.salt.track.executors'}
 
     def postinitio(self):
@@ -969,7 +975,7 @@ class NixExecutor(ioflo.base.deeding.Deed):
             if isinstance(oput, str):
                 ret['out'] = oput
         msg = {'route': route, 'load': ret}
-        stack.transmit(msg, stack.uids.get('manor'))
+        stack.transmit(msg, stack.fetchUidByName('manor'))
         stack.serviceAll()
 
     def action(self):
@@ -1065,7 +1071,7 @@ class NixExecutor(ioflo.base.deeding.Deed):
                         function_name,
                         exc
                     ),
-                    exc_info=log.isEnabledFor(logging.DEBUG)
+                    exc_info_on_loglevel=logging.DEBUG
                 )
                 ret['return'] = 'ERROR: {0}'.format(exc)
             except SaltInvocationError as exc:
@@ -1074,7 +1080,7 @@ class NixExecutor(ioflo.base.deeding.Deed):
                         function_name,
                         exc
                     ),
-                    exc_info=log.isEnabledFor(logging.DEBUG)
+                    exc_info_on_loglevel=logging.DEBUG
                 )
                 ret['return'] = 'ERROR executing {0!r}: {1}'.format(
                     function_name, exc
@@ -1088,11 +1094,11 @@ class NixExecutor(ioflo.base.deeding.Deed):
                        'arguments issue:  {2}').format(function_name,
                                                        exc,
                                                        aspec)
-                log.warning(msg, exc_info=log.isEnabledFor(logging.DEBUG))
+                log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
                 ret['return'] = msg
             except Exception:
                 msg = 'The minion function caused an exception'
-                log.warning(msg, exc_info=log.isEnabledFor(logging.DEBUG))
+                log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
                 ret['return'] = '{0}: {1}'.format(msg, traceback.format_exc())
         else:
             ret['return'] = '{0!r} is not available.'.format(function_name)

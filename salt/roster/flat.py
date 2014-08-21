@@ -4,7 +4,6 @@ Read in the roster from a flat file using the renderer system
 '''
 
 # Import python libs
-import os
 import fnmatch
 import re
 
@@ -12,6 +11,10 @@ import re
 import salt.loader
 from salt.template import compile_template
 from salt._compat import string_types
+from salt.roster import get_roster_file
+
+import logging
+log = logging.getLogger(__name__)
 
 
 def targets(tgt, tgt_type='glob', **kwargs):
@@ -19,14 +22,8 @@ def targets(tgt, tgt_type='glob', **kwargs):
     Return the targets from the flat yaml file, checks opts for location but
     defaults to /etc/salt/roster
     '''
-    if __opts__.get('roster_file'):
-        template = __opts__.get('roster_file')
-    elif os.path.isfile(__opts__['conf_file']) or not os.path.exists(__opts__['conf_file']):
-        template = os.path.join(
-                os.path.dirname(__opts__['conf_file']),
-                'roster')
-    else:
-        template = os.path.join(__opts__['conf_file'], 'roster')
+    template = get_roster_file(__opts__)
+
     rend = salt.loader.render(__opts__, {})
     raw = compile_template(template, rend, __opts__['renderer'], **kwargs)
     rmatcher = RosterMatcher(raw, tgt, tgt_type, 'ipv4')
@@ -62,6 +59,7 @@ class RosterMatcher(object):
                 data = self.get_data(minion)
                 if data:
                     minions[minion] = data
+        log.info('minions list: {0}'.format(minions))
         return minions
 
     def ret_pcre_minions(self):

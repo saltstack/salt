@@ -17,41 +17,44 @@ options
           verify_ssl: True
           service_url: s3.amazonaws.com
 
-The `bucket=` parameter specifies the target S3 bucket. It is required.
+The ``bucket`` parameter specifies the target S3 bucket. It is required.
 
-The `keyid=` parameter specifies the key id to use when access the S3 bucket.
+The ``keyid`` parameter specifies the key id to use when access the S3 bucket.
 It is required.
 
-The `key=` parameter specifies the key to use when access the S3 bucket. It
+The ``key`` parameter specifies the key to use when access the S3 bucket. It
 is required.
 
-The `multiple_env=` defaults to False. It specifies whether the pillar should
+The ``multiple_env`` defaults to False. It specifies whether the pillar should
 interpret top level folders as pillar environments (see mode section below).
 
-The `environment=` defaults to 'base'. It specifies which environment the
+The ``environment`` defaults to 'base'. It specifies which environment the
 bucket represents when in single environments mode (see mode section below). It
 is ignored if multiple_env is True.
 
-The `verify_ssl=` parameter defaults to True. It specifies whether to check for
+The ``verify_ssl`` parameter defaults to True. It specifies whether to check for
 valid S3 SSL certificates. *NOTE* If you use bucket names with periods, this
 must be set to False else an invalid certificate error will be thrown (issue
 #12200).
 
-The `service_url=` parameter defaults to 's3.amazonaws.com'. It specifies the
+The ``service_url`` parameter defaults to 's3.amazonaws.com'. It specifies the
 base url to use for accessing S3.
 
 
 This pillar can operate in two modes, single environment per bucket or multiple
 environments per bucket.
 
-Single environment mode must have this bucket structure::
+Single environment mode must have this bucket structure:
 
-s3://<bucket name>/<files>
+.. code-block:: text
 
-Multiple environment mode must have this bucket structure::
+    s3://<bucket name>/<files>
 
-s3://<bucket name>/<environment>/<files>
+Multiple environment mode must have this bucket structure:
 
+.. code-block:: text
+
+    s3://<bucket name>/<environment>/<files>
 '''
 
 # Import python libs
@@ -193,7 +196,7 @@ def _refresh_buckets_cache_file(creds, cache_file, multiple_env, environment):
     '''
 
     # helper s3 query function
-    def __get_s3_meta(bucket):
+    def __get_s3_meta():
         return s3.query(
             key=creds.key,
             keyid=creds.keyid,
@@ -206,11 +209,11 @@ def _refresh_buckets_cache_file(creds, cache_file, multiple_env, environment):
     def __get_pillar_files_from_s3_meta(s3_meta):
         return filter(lambda k: 'Key' in k, s3_meta)
 
-    # pull out the environment dirs (eg. the root dirs)
-    def __get_pillar_environments_from_s3_meta(s3_meta):
-        environments = map(lambda k: (os.path.dirname(k['Key'])
-                           .split('/', 1))[0], files)
-
+    # pull out the environment dirs (e.g. the root dirs)
+    def __get_pillar_environments(files):
+        environments = map(
+            lambda k: (os.path.dirname(k['Key']).split('/', 1))[0], files
+        )
         return set(environments)
 
     log.debug('Refreshing S3 buckets pillar cache file')
@@ -223,7 +226,7 @@ def _refresh_buckets_cache_file(creds, cache_file, multiple_env, environment):
         log.debug('Single environment per bucket mode')
 
         bucket_files = {}
-        s3_meta = __get_s3_meta(bucket)
+        s3_meta = __get_s3_meta()
 
         # s3 query returned something
         if s3_meta:
@@ -234,12 +237,12 @@ def _refresh_buckets_cache_file(creds, cache_file, multiple_env, environment):
     else:
         # Multiple environments per buckets
         log.debug('Multiple environment per bucket mode')
-        s3_meta = __get_s3_meta(bucket)
+        s3_meta = __get_s3_meta()
 
         # s3 query returned data
         if s3_meta:
             files = __get_pillar_files_from_s3_meta(s3_meta)
-            environments = __get_pillar_environments_from_s3_meta(s3_meta)
+            environments = __get_pillar_environments(files)
 
             # pull out the files for the environment
             for saltenv in environments:

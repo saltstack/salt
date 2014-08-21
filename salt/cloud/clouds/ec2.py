@@ -79,10 +79,13 @@ import hashlib
 import binascii
 import datetime
 import urllib
+import urlparse
 import requests
 
 # Import salt libs
 import salt.utils
+from salt.utils import namespaced_function
+from salt.cloud.libcloudfuncs import get_salt_interface
 from salt._compat import ElementTree as ET
 
 # Import salt.cloud libs
@@ -99,6 +102,9 @@ from salt.cloud.exceptions import (
 
 # Get logging started
 log = logging.getLogger(__name__)
+
+# namespace libcloudfuncs
+get_salt_interface = namespaced_function(get_salt_interface, globals())
 
 SIZE_MAP = {
     'Micro Instance': 't1.micro',
@@ -221,7 +227,7 @@ def _xml_to_dict(xmltree):
             else:
                 xmldict[name] = item.text
         else:
-            if type(xmldict[name]) is not list:
+            if not isinstance(xmldict[name], list):
                 tempvar = xmldict[name]
                 xmldict[name] = []
                 xmldict[name].append(tempvar)
@@ -283,36 +289,47 @@ def query(params=None, setname=None, requesturl=None, location=None,
             location = get_location()
 
         if not requesturl:
-            method = 'GET'
-
             endpoint = provider.get(
                 'endpoint',
                 'ec2.{0}.{1}'.format(location, service_url)
             )
 
-            ec2_api_version = provider.get(
-                'ec2_api_version',
-                DEFAULT_EC2_API_VERSION
-            )
-
-            params_with_headers['AWSAccessKeyId'] = provider['id']
-            params_with_headers['SignatureVersion'] = '2'
-            params_with_headers['SignatureMethod'] = 'HmacSHA256'
-            params_with_headers['Timestamp'] = '{0}'.format(timestamp)
-            params_with_headers['Version'] = ec2_api_version
-            keys = sorted(params_with_headers.keys())
-            values = map(params_with_headers.get, keys)
-            querystring = urllib.urlencode(list(zip(keys, values)))
-
-            uri = '{0}\n{1}\n/\n{2}'.format(method.encode('utf-8'),
-                                            endpoint.encode('utf-8'),
-                                            querystring.encode('utf-8'))
-
-            hashed = hmac.new(provider['key'], uri, hashlib.sha256)
-            sig = binascii.b2a_base64(hashed.digest())
-            params_with_headers['Signature'] = sig.strip()
-
             requesturl = 'https://{0}/'.format(endpoint)
+        else:
+            endpoint = urlparse.urlparse(requesturl).netloc
+            if endpoint == '':
+                endpoint_err = 'Could not find a valid endpoint in the requesturl: {0}. Looking for something like https://some.ec2.endpoint/?args'.format(
+                    requesturl
+                )
+                log.error(endpoint_err)
+                if return_url is True:
+                    return {'error': endpoint_err}, requesturl
+                return {'error': endpoint_err}
+
+        log.debug('Using EC2 endpoint: {0}'.format(endpoint))
+        method = 'GET'
+
+        ec2_api_version = provider.get(
+            'ec2_api_version',
+            DEFAULT_EC2_API_VERSION
+        )
+
+        params_with_headers['AWSAccessKeyId'] = provider['id']
+        params_with_headers['SignatureVersion'] = '2'
+        params_with_headers['SignatureMethod'] = 'HmacSHA256'
+        params_with_headers['Timestamp'] = '{0}'.format(timestamp)
+        params_with_headers['Version'] = ec2_api_version
+        keys = sorted(params_with_headers.keys())
+        values = map(params_with_headers.get, keys)
+        querystring = urllib.urlencode(list(zip(keys, values)))
+
+        uri = '{0}\n{1}\n/\n{2}'.format(method.encode('utf-8'),
+                                        endpoint.encode('utf-8'),
+                                        querystring.encode('utf-8'))
+
+        hashed = hmac.new(provider['key'], uri, hashlib.sha256)
+        sig = binascii.b2a_base64(hashed.digest())
+        params_with_headers['Signature'] = sig.strip()
 
         log.debug('EC2 Request: {0}'.format(requesturl))
         log.trace('EC2 Request Parameters: {0}'.format(params_with_headers))
@@ -690,7 +707,7 @@ def avail_images(kwargs=None, call=None):
             '-f or --function, or with the --list-images option'
         )
 
-    if type(kwargs) is not dict:
+    if not isinstance(kwargs, dict):
         kwargs = {}
 
     if 'owner' in kwargs:
@@ -1008,7 +1025,7 @@ def _request_eip(interface):
     return None
 
 
-def _create_eni(interface, eip=None):
+def _create_eni(interface):
     '''
     Create and return an Elastic Interface
     '''
@@ -1431,7 +1448,7 @@ def request_instance(vm_=None, call=None):
                 'Error getting root device name for image id {0} for '
                 'VM {1}: \n{2}'.format(image_id, vm_['name'], exc),
                 # Show the traceback if the debug logging level is enabled
-                exc_info=log.isEnabledFor(logging.DEBUG)
+                exc_info_on_loglevel=logging.DEBUG
             )
             raise
 
@@ -1446,7 +1463,7 @@ def request_instance(vm_=None, call=None):
         if rd_data[0]['blockDeviceMapping'] is None:
             # Some ami instances do not have a root volume. Ignore such cases
             rd_name = None
-        elif type(rd_data[0]['blockDeviceMapping']['item']) is list:
+        elif isinstance(rd_data[0]['blockDeviceMapping']['item'], list):
             rd_name = rd_data[0]['blockDeviceMapping']['item'][0]['deviceName']
         else:
             rd_name = rd_data[0]['blockDeviceMapping']['item']['deviceName']
@@ -1506,7 +1523,7 @@ def request_instance(vm_=None, call=None):
                 vm_['name'], exc
             ),
             # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         raise
 
@@ -1777,7 +1794,7 @@ def wait_for_instance(
                                         gateway=ssh_gateway_config
                                         ):
         # If a known_hosts_file is configured, this instance will not be
-        # accessable until it has a host key. Since this is provided on
+        # accessible until it has a host key. Since this is provided on
         # supported instances by cloud-init, and viewable to us only from the
         # console output (which may take several minutes to become available,
         # we have some more waiting to do here.
@@ -1926,10 +1943,10 @@ def create(vm_=None, call=None):
         for instance in data:
             vm_['instance_id_list'].append(instance['instanceId'])
 
-    vm_['instance_id'] = vm_['instance_id_list'].pop()
-    if len(vm_['instance_id_list']) > 0:
-        # Multiple instances were spun up, get one now, and queue the rest
-        queue_instances(vm_['instance_id_list'])
+        vm_['instance_id'] = vm_['instance_id_list'].pop()
+        if len(vm_['instance_id_list']) > 0:
+            # Multiple instances were spun up, get one now, and queue the rest
+            queue_instances(vm_['instance_id_list'])
 
     # Wait for vital information, such as IP addresses, to be available
     # for the new instance
@@ -1986,14 +2003,24 @@ def create(vm_=None, call=None):
     # bootstrapped, once the necessary port is available.
     log.info('Created node {0}'.format(vm_['name']))
 
+    instance = data[0]['instancesSet']['item']
+
     # Wait for the necessary port to become available to bootstrap
     if ssh_interface(vm_) == 'private_ips':
-        ip_address = data[0]['instancesSet']['item']['privateIpAddress']
+        ip_address = instance['privateIpAddress']
         log.info('Salt node data. Private_ip: {0}'.format(ip_address))
     else:
-        ip_address = data[0]['instancesSet']['item']['ipAddress']
+        ip_address = instance['ipAddress']
         log.info('Salt node data. Public_ip: {0}'.format(ip_address))
     vm_['ssh_host'] = ip_address
+
+    if get_salt_interface(vm_) == 'private_ips':
+        salt_ip_address = instance['privateIpAddress']
+        log.info('Salt interface set to: {0}'.format(salt_ip_address))
+    else:
+        salt_ip_address = instance['ipAddress']
+        log.debug('Salt interface set to: {0}'.format(salt_ip_address))
+    vm_['salt_host'] = salt_ip_address
 
     display_ssh_output = config.get_cloud_config_value(
         'display_ssh_output', vm_, __opts__, default=True
@@ -2003,17 +2030,8 @@ def create(vm_=None, call=None):
         vm_, data, ip_address, display_ssh_output
     )
 
-    # The instance is booted and accessable, let's Salt it!
-    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
-
-    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
-    log.debug(
-        '{0[name]!r} VM creation details:\n{1}'.format(
-            vm_, pprint.pformat(data[0]['instancesSet']['item'])
-        )
-    )
-
-    ret.update(data[0]['instancesSet']['item'])
+    # The instance is booted and accessible, let's Salt it!
+    ret = instance.copy()
 
     # Get ANY defined volumes settings, merging data, in the following order
     # 1. VM config
@@ -2044,16 +2062,30 @@ def create(vm_=None, call=None):
         )
         ret['Attached Volumes'] = created
 
+    for key, value in salt.utils.cloud.bootstrap(vm_, __opts__).items():
+        ret.setdefault(key, value)
+
+    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.debug(
+        '{0[name]!r} VM creation details:\n{1}'.format(
+            vm_, pprint.pformat(instance)
+        )
+    )
+
+    event_data = {
+        'name': vm_['name'],
+        'profile': vm_['profile'],
+        'provider': vm_['provider'],
+        'instance_id': vm_['instance_id'],
+    }
+    if volumes:
+        event_data['volumes'] = volumes
+
     salt.utils.cloud.fire_event(
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        {
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['provider'],
-            'instance_id': vm_['instance_id'],
-        },
+        event_data,
         transport=__opts__['transport']
     )
 
@@ -2090,7 +2122,7 @@ def create_attach_volumes(name, kwargs, call=None):
     if 'instance_id' not in kwargs:
         kwargs['instance_id'] = _get_node(name)['instanceId']
 
-    if type(kwargs['volumes']) is str:
+    if isinstance(kwargs['volumes'], str):
         volumes = yaml.safe_load(kwargs['volumes'])
     else:
         volumes = kwargs['volumes']
@@ -2224,7 +2256,7 @@ def set_tags(name=None,
 
         if resource_id is None:
             if instance_id is None:
-                instance_id = _get_node(name, location)['instanceId']
+                instance_id = _get_node(name, location)[name]['instanceId']
         else:
             instance_id = resource_id
 
@@ -2408,7 +2440,7 @@ def destroy(name, call=None):
         )
 
     node_metadata = _get_node(name)
-    instance_id = node_metadata['instanceId']
+    instance_id = node_metadata[name]['instanceId']
     sir_id = node_metadata.get('spotInstanceRequestId')
     protected = show_term_protect(
         name=name,
@@ -2616,7 +2648,7 @@ def _vm_provider_driver(vm_):
 def _extract_name_tag(item):
     if 'tagSet' in item:
         tagset = item['tagSet']
-        if type(tagset['item']) is list:
+        if isinstance(tagset['item'], list):
             for tag in tagset['item']:
                 if tag['key'] == 'Name':
                     return tag['value']
@@ -2888,7 +2920,7 @@ def show_delvol_on_destroy(name, kwargs=None, call=None):
 
     blockmap = data[0]['instancesSet']['item']['blockDeviceMapping']
 
-    if type(blockmap['item']) != list:
+    if not isinstance(blockmap['item'], list):
         blockmap['item'] = [blockmap['item']]
 
     items = []
@@ -2983,7 +3015,7 @@ def _toggle_delvol(name=None, instance_id=None, device=None, volume_id=None,
     params = {'Action': 'ModifyInstanceAttribute',
               'InstanceId': instance_id}
 
-    if type(blockmap['item']) != list:
+    if not isinstance(blockmap['item'], list):
         blockmap['item'] = [blockmap['item']]
 
     for idx, item in enumerate(blockmap['item']):

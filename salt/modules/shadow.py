@@ -137,6 +137,8 @@ def set_mindays(name, mindays):
 
 def gen_password(password, crypt_salt=None, algorithm='sha512'):
     '''
+    .. versionadded:: 2014.7.0
+
     Generate hashed password
 
     password
@@ -171,6 +173,8 @@ def gen_password(password, crypt_salt=None, algorithm='sha512'):
 
 def del_password(name):
     '''
+    .. versionadded:: 2014.7.0
+
     Delete the password from name user
 
     CLI Example:
@@ -279,7 +283,7 @@ def set_date(name, date):
 
 def set_expire(name, expire):
     '''
-    .. versionchanged:: Helium
+    .. versionchanged:: 2014.7.0
 
     Sets the value for the date the account expires as days since the epoch
     (January 1, 1970). Using a value of -1 will clear expiration. See man

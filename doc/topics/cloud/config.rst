@@ -551,11 +551,11 @@ For in-house OpenStack Essex installation, libcloud needs the service_type :
 
 
 
-Digital Ocean
+DigitalOcean
 -------------
 
-Using Salt for Digital Ocean requires a client_key and an api_key. These can be
-found in the Digital Ocean web interface, in the "My Settings" section, under
+Using Salt for DigitalOcean requires a client_key and an api_key. These can be
+found in the DigitalOcean web interface, in the "My Settings" section, under
 the API Access tab.
 
 * Using the old format:
@@ -632,8 +632,8 @@ lxc
 ---
 
 The lxc driver is a new, experimental driver for installing Salt on
-newly provisionned (via saltcloud) lxc containers. It will in turn use saltify to install
-salt an rattach the lxc container as a new lxc minion.
+newly provisioned (via saltcloud) lxc containers. It will in turn use saltify
+to install salt and reattach the lxc container as a new lxc minion.
 As soon as we can, we manage baremetal operation over SSH.
 You can also destroy those containers via this driver.
 

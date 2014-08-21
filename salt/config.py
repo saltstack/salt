@@ -86,7 +86,6 @@ VALID_OPTS = {
     'file_roots': dict,
     'pillar_roots': dict,
     'hash_type': str,
-    'external_nodes': str,
     'disable_modules': list,
     'disable_returners': list,
     'whitelist_modules': list,
@@ -128,7 +127,6 @@ VALID_OPTS = {
     'acceptance_wait_time_max': float,
     'rejected_retry': bool,
     'loop_interval': float,
-    'dns_check': bool,
     'verify_env': bool,
     'grains': dict,
     'permissive_pki_access': bool,
@@ -149,6 +147,8 @@ VALID_OPTS = {
     'interface': str,
     'publish_port': int,
     'auth_mode': int,
+    'pub_hwm': int,
+    'rep_hwm': int,
     'worker_threads': int,
     'ret_port': int,
     'keep_jobs': int,
@@ -190,6 +190,7 @@ VALID_OPTS = {
     'external_auth': dict,
     'token_expire': int,
     'file_recv': bool,
+    'file_recv_max_size': int,
     'file_ignore_regex': bool,
     'file_ignore_glob': bool,
     'fileserver_backend': list,
@@ -243,7 +244,6 @@ VALID_OPTS = {
     'raet_port': int,
     'sqlite_queue_dir': str,
     'queue_dirs': list,
-    'restart_on_error': bool,
     'ping_interval': int,
     'cli_summary': bool,
     'max_minions': int,
@@ -293,7 +293,6 @@ DEFAULT_MINION_OPTS = {
         'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR],
     },
     'hash_type': 'md5',
-    'external_nodes': '',
     'disable_modules': [],
     'disable_returners': [],
     'whitelist_modules': [],
@@ -337,7 +336,6 @@ DEFAULT_MINION_OPTS = {
     'acceptance_wait_time_max': 0,
     'rejected_retry': False,
     'loop_interval': 1,
-    'dns_check': True,
     'verify_env': True,
     'grains': {},
     'permissive_pki_access': False,
@@ -362,7 +360,7 @@ DEFAULT_MINION_OPTS = {
     'keysize': 4096,
     'transport': 'zeromq',
     'auth_timeout': 60,
-    'auth_tries': 1,
+    'auth_tries': 7,
     'auth_safemode': False,
     'random_master': False,
     'minion_floscript': os.path.join(FLO_DIR, 'minion.flo'),
@@ -370,7 +368,6 @@ DEFAULT_MINION_OPTS = {
     'ioflo_period': 0.1,
     'ioflo_realtime': True,
     'raet_port': 4510,
-    'restart_on_error': False,
     'ping_interval': 0,
     'username': None,
     'password': None,
@@ -381,6 +378,7 @@ DEFAULT_MASTER_OPTS = {
     'interface': '0.0.0.0',
     'publish_port': '4505',
     'pub_hwm': 1000,
+    'rep_hwm': 50000,
     'auth_mode': 1,
     'user': 'root',
     'worker_threads': 5,
@@ -441,6 +439,7 @@ DEFAULT_MASTER_OPTS = {
     'external_auth': {},
     'token_expire': 43200,
     'file_recv': False,
+    'file_recv_max_size': 100,
     'file_buffer_size': 1048576,
     'file_ignore_regex': None,
     'file_ignore_glob': None,
@@ -457,7 +456,6 @@ DEFAULT_MASTER_OPTS = {
     'failhard': False,
     'state_top': 'top.sls',
     'master_tops': {},
-    'external_nodes': '',
     'order_masters': False,
     'job_cache': True,
     'ext_job_cache': '',
@@ -716,7 +714,7 @@ def load_config(path, env_var, default_path=None):
                 previous_frame.function, previous_frame.filename, env_var
             )
         )
-        # In this case, maintain old behaviour
+        # In this case, maintain old behavior
         default_path = DEFAULT_MASTER_OPTS['conf_file']
 
     # Default to the environment variable path, if it exists
@@ -822,7 +820,6 @@ def insert_system_path(opts, paths):
 def minion_config(path,
                   env_var='SALT_MINION_CONFIG',
                   defaults=None,
-                  check_dns=None,
                   minion_id=False):
     '''
     Reads in the minion configuration file and sets up special options
@@ -836,19 +833,6 @@ def minion_config(path,
         import salt.client
         minion_opts = salt.config.minion_config('/etc/salt/minion')
     '''
-    if check_dns is not None:
-        # All use of the `check_dns` arg was removed in `598d715`. The keyword
-        # argument was then removed in `9d893e4` and `**kwargs` was then added
-        # in `5d60f77` in order not to break backwards compatibility.
-        #
-        # Showing a deprecation for 0.17.0 and 2014.1.0 should be enough for any
-        # api calls to be updated in order to stop its use.
-        salt.utils.warn_until(
-            'Helium',
-            'The functionality behind the \'check_dns\' keyword argument is '
-            'no longer required, as such, it became unnecessary and is now '
-            'deprecated. \'check_dns\' will be removed in Salt {version}.'
-        )
     if defaults is None:
         defaults = DEFAULT_MINION_OPTS
 
@@ -901,6 +885,7 @@ def syndic_config(master_config_path,
     opts.update(master_opts)
     opts.update(minion_opts)
     syndic_opts = {
+        '__role': 'syndic',
         'root_dir': opts.get('root_dir', salt.syspaths.ROOT_DIR),
         'pidfile': opts.get('syndic_pidfile', 'salt-syndic.pid'),
         'log_file': opts.get('syndic_log_file', 'salt-syndic.log'),
@@ -968,63 +953,16 @@ def apply_sdb(opts, sdb_opts=None):
 def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
                  master_config_path=None, master_config=None,
                  providers_config_path=None, providers_config=None,
-                 vm_config_path=None, vm_config=None,
                  profiles_config_path=None, profiles_config=None):
     '''
     Read in the salt cloud config and return the dict
     '''
-    if vm_config and profiles_config:
-        # This is a bad API usage
-        raise RuntimeError(
-            '`vm_config` and `profiles_config` are mutually exclusive and '
-            '`vm_config` is being deprecated in favor of `profiles_config`.'
-        )
-    elif vm_config:
-        salt.utils.warn_until(
-            'Helium',
-            'The support for `vm_config` has been deprecated and will be '
-            'removed in Salt Helium. Please use `profiles_config`.'
-        )
-        profiles_config = vm_config
-        vm_config = None
-    if vm_config_path and profiles_config_path:
-        # This is a bad API usage
-        raise RuntimeError(
-            '`vm_config_path` and `profiles_config_path` are mutually '
-            'exclusive and `vm_config_path` is being deprecated in favor of '
-            '`profiles_config_path`'
-        )
-    elif vm_config_path:
-        salt.utils.warn_until(
-            'Helium',
-            'The support for `vm_config_path` has been deprecated and will be '
-            'removed in Salt Helium. Please use `profiles_config_path`.'
-        )
-        profiles_config_path = vm_config_path
-        vm_config_path = None
-
     # Load the cloud configuration
     overrides = load_config(
         path,
         env_var,
         os.path.join(salt.syspaths.CONFIG_DIR, 'cloud')
     )
-
-    if 'vm_config' in overrides and 'profiles_config' in overrides:
-        raise salt.cloud.exceptions.SaltCloudConfigError(
-            '`vm_config` and `profiles_config` are mutually exclusive and '
-            '`vm_config` is being deprecated in favor of `profiles_config`.'
-        )
-    elif 'vm_config' in overrides:
-        salt.utils.warn_until(
-            'Helium',
-            'The support for `vm_config` has been deprecated and will be '
-            'removed in Salt Helium. Please use `profiles_config`.'
-            'Please update the could configuration file(s).'
-
-        )
-        overrides['profiles_config'] = overrides.pop('vm_config')
-
     if path:
         config_dir = os.path.dirname(path)
     else:
@@ -1844,7 +1782,7 @@ def _cache_id(minion_id, cache_file):
         log.error('Could not cache minion ID: {0}'.format(exc))
 
 
-def get_id(root_dir=None, minion_id=False, cache=True):
+def get_id(opts, minion_id=False):
     '''
     Guess the id of the minion.
 
@@ -1855,8 +1793,10 @@ def get_id(root_dir=None, minion_id=False, cache=True):
     Returns two values: the detected ID, and a boolean value noting whether or
     not an IP address is being used for the ID.
     '''
-    if root_dir is None:
+    if opts['root_dir'] is None:
         root_dir = salt.syspaths.ROOT_DIR
+    else:
+        root_dir = opts['root_dir']
 
     config_dir = salt.syspaths.CONFIG_DIR
     if config_dir.startswith(salt.syspaths.ROOT_DIR):
@@ -1867,7 +1807,7 @@ def get_id(root_dir=None, minion_id=False, cache=True):
                             config_dir.lstrip(os.path.sep),
                             'minion_id')
 
-    if cache:
+    if opts.get('minion_id_caching', True):
         try:
             with salt.utils.fopen(id_cache) as idf:
                 name = idf.read().strip()
@@ -1885,7 +1825,7 @@ def get_id(root_dir=None, minion_id=False, cache=True):
 
     newid = salt.utils.network.generate_minion_id()
     log.info('Found minion id from generate_minion_id(): {0}'.format(newid))
-    if minion_id and cache:
+    if minion_id and opts.get('minion_id_caching', True):
         _cache_id(newid, id_cache)
     is_ipv4 = newid.count('.') == 3 and not any(c.isalpha() for c in newid)
     return newid, is_ipv4
@@ -1893,29 +1833,15 @@ def get_id(root_dir=None, minion_id=False, cache=True):
 
 def apply_minion_config(overrides=None,
                         defaults=None,
-                        check_dns=None,
                         minion_id=False):
     '''
     Returns minion configurations dict.
     '''
-    if check_dns is not None:
-        # All use of the `check_dns` arg was removed in `598d715`. The keyword
-        # argument was then removed in `9d893e4` and `**kwargs` was then added
-        # in `5d60f77` in order not to break backwards compatibility.
-        #
-        # Showing a deprecation for 0.17.0 and 2014.1.0 should be enough for any
-        # api calls to be updated in order to stop its use.
-        salt.utils.warn_until(
-            'Helium',
-            'The functionality behind the \'check_dns\' keyword argument is '
-            'no longer required, as such, it became unnecessary and is now '
-            'deprecated. \'check_dns\' will be removed in Salt {version}.'
-        )
-
     if defaults is None:
         defaults = DEFAULT_MINION_OPTS
 
     opts = defaults.copy()
+    opts['__role'] = 'minion'
     if overrides:
         opts.update(overrides)
 
@@ -1926,9 +1852,8 @@ def apply_minion_config(overrides=None,
     using_ip_for_id = False
     if opts['id'] is None:
         opts['id'], using_ip_for_id = get_id(
-                opts['root_dir'],
-                minion_id=minion_id,
-                cache=opts.get('minion_id_caching', True))
+                opts,
+                minion_id=minion_id)
 
     # it does not make sense to append a domain to an IP based id
     if not using_ip_for_id and 'append_domain' in opts:
@@ -2021,6 +1946,7 @@ def apply_master_config(overrides=None, defaults=None):
         defaults = DEFAULT_MASTER_OPTS
 
     opts = defaults.copy()
+    opts['__role'] = 'master'
     if overrides:
         opts.update(overrides)
 
@@ -2193,4 +2119,4 @@ def api_config(path):
     # Let's override them with salt-api's required defaults
     defaults.update(DEFAULT_API_OPTS)
 
-    return master_config(path, defaults=defaults)
+    return client_config(path, defaults=defaults)

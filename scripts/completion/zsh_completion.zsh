@@ -55,7 +55,7 @@ _master_options=(
     '(-T --make-token)'{-T,--make-token}'[Generate and save an authentication token for re-use.]'
     "--return[Set an alternative return method.]:Returners:_path_files -W '$salt_dir/returners' -g '[^_]*.py(\:r)'"
     '(-d --doc --documentation)'{-d,--doc,--documentation}"[Return the documentation for the specified module]:Module:_path_files -W '$salt_dir/modules' -g '[^_]*.py(\:r)'"
-    '--args-separator[Set the special argument used as a delimiter between command arguments of compound commands.]:Arg seperator:'
+    '--args-separator[Set the special argument used as a delimiter between command arguments of compound commands.]:Arg separator:'
 )
 
 _minion_options=(

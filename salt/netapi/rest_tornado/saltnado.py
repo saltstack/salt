@@ -275,7 +275,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):
 
     def _verify_auth(self):
         '''
-        Boolean wether the request is auth'd
+        Boolean whether the request is auth'd
         '''
 
         return self.token and bool(self.application.auth.get_tok(self.token))
@@ -357,7 +357,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):
                 yaml.safe_load, default_flow_style=False),
             'text/yaml': functools.partial(
                 yaml.safe_load, default_flow_style=False),
-            # because people are terrible and dont mean what they say
+            # because people are terrible and don't mean what they say
             'text/plain': json.loads
         }
 

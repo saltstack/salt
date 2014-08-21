@@ -5,14 +5,16 @@ Test the lxc module
 '''
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath, requires_salt_modules
+from salttesting import skipIf
+from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+import salt.utils
 
 
-@requires_salt_modules('lxc.list')
+@skipIf(salt.utils.which('lxc-start') is None, 'LXC is not installed or minimal version not met')
 class LXCModuleTest(integration.ModuleCase):
     '''
     Test the lxc module
@@ -79,7 +81,7 @@ class LXCModuleTest(integration.ModuleCase):
 
         self.run_function('lxc.init', [self.prefix],
                           profile='sshd', nic='macvlan',
-                          seed=False)
+                          seed=False, start=False)
 
         f = '/var/lib/lxc/{0}/config'.format(self.prefix)
         conf = self.run_function('lxc.read_conf', [f])

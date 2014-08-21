@@ -175,7 +175,7 @@ class OptionParser(optparse.OptionParser):
                     self.config['conf_file']
                 )
             )
-        # Retain the standard behaviour of optparse to return options and args
+        # Retain the standard behavior of optparse to return options and args
         return options, args
 
     def _populate_option_list(self, option_list, add_help=True):
@@ -237,8 +237,8 @@ class MergeConfigMixIn(object):
                     self.config[option.dest] = value
             elif value is not None and value != default:
                 # Only set the value in the config file IF it's not the default
-                # value, this allows to tweak settings on the configuration
-                # files bypassing the shell option flags
+                # value, this makes it possible to tweak settings on the
+                # configuration files bypassing the shell option flags
                 self.config[option.dest] = value
             elif option.dest in self.config:
                 # Let's update the option value with the one from the
@@ -261,8 +261,9 @@ class MergeConfigMixIn(object):
                         self.config[option.dest] = value
                 elif value is not None and value != default:
                     # Only set the value in the config file IF it's not the
-                    # default value, this allows to tweak settings on the
-                    # configuration files bypassing the shell option flags
+                    # default value, this makes it possible to tweak settings
+                    # on the configuration files bypassing the shell option
+                    # flags
                     self.config[option.dest] = value
                 elif option.dest in self.config:
                     # Let's update the option value with the one from the
@@ -987,6 +988,13 @@ class OutputOptionsMixIn(object):
             help='Write the output to the specified file'
         )
         group.add_option(
+            '--out-file-append', '--output-file-append',
+            action='store_true',
+            dest='output_file_append',
+            default=False,
+            help='Append the output to the specified file'
+        )
+        group.add_option(
             '--no-color', '--no-colour',
             default=False,
             action='store_true',
@@ -1014,10 +1022,13 @@ class OutputOptionsMixIn(object):
         self.selected_output_option = self.options.output
 
     def process_output_file(self):
-        if self.options.output_file is not None:
+        if self.options.output_file is not None and self.options.output_file_append is False:
             if os.path.isfile(self.options.output_file):
                 try:
-                    os.remove(self.options.output_file)
+                    with utils.fopen(self.option.output_file, 'w') as ofh:
+                        # Make this a zero length filename instead of removing
+                        # it. This way we keep the file permissions.
+                        ofh.write('')
                 except (IOError, OSError) as exc:
                     self.error(
                         '{0}: Access denied: {1}'.format(
@@ -1043,155 +1054,6 @@ class OutputOptionsMixIn(object):
                 ]))
             )
         self.config['selected_output_option'] = self.selected_output_option
-
-
-class OutputOptionsWithTextMixIn(OutputOptionsMixIn):
-    # This should also be removed
-    _include_text_out_ = True
-
-    def __new__(cls, *args, **kwargs):
-        instance = super(OutputOptionsWithTextMixIn, cls).__new__(
-            cls, *args, **kwargs
-        )
-        utils.warn_until(
-            'Helium',
-            '\'OutputOptionsWithTextMixIn\' has been deprecated. Please '
-            'start using \'OutputOptionsMixIn\'; your code should not need '
-            'any further changes.'
-        )
-        return instance
-
-
-class CloudConfigMixIn(object):
-    __metaclass__ = MixInMeta
-    _mixin_prio_ = -11    # Evaluate before ConfigDirMixin
-
-    def _mixin_setup(self):
-        group = self.config_group = optparse.OptionGroup(
-            self,
-            'Configuration Options',
-            # Include description here as a string
-        )
-        group.add_option(
-            '-C', '--cloud-config',
-            default=None,
-            help='DEPRECATED. The location of the salt-cloud config file.'
-        )
-        group.add_option(
-            '-M', '--master-config',
-            default=None,
-            help='DEPRECATED. The location of the salt master config file.'
-        )
-        group.add_option(
-            '-V', '--profiles', '--vm_config',
-            dest='vm_config',
-            default=None,
-            help='DEPRECATED. The location of the salt.cloud VM config file.'
-        )
-        group.add_option(
-            '--providers-config',
-            default=None,
-            help='DEPRECATED. The location of the salt cloud VM providers '
-                 'configuration file.'
-        )
-        self.add_option_group(group)
-
-    def __assure_absolute_paths(self, name):
-        # Need to check if file exists?
-        optvalue = getattr(self.options, name)
-        if optvalue:
-            setattr(self.options, name, os.path.abspath(optvalue))
-
-    def _mixin_after_parsed(self):
-        for option in self.config_group.option_list:
-            if option.dest is None:
-                # This should not happen.
-                #
-                # --version does not have dest attribute set for example.
-                # All options defined by us, even if not explicitly(by kwarg),
-                # will have the dest attribute set
-                continue
-            self.__assure_absolute_paths(option.dest)
-
-        # Grab data from the 4 sources (done in self.process_cloud_config)
-        # 1st - Master config
-        # 2nd - Override master config with salt-cloud config
-        # 3rd - Include Cloud Providers
-        # 4th - Include VM config
-        # 5th - Override config with cli options
-        # Done in parsers.MergeConfigMixIn.__merge_config_with_cli()
-
-        # Remove log_level_logfile from config if set to None so it can be
-        # equal to console log_level
-        if self.config['log_level_logfile'] is None:
-            self.config.pop('log_level_logfile')
-
-    def process_cloud_config(self):
-        if self.options.cloud_config is not None:
-
-            utils.warn_until(
-                'Helium',
-                'Don\'t forget to remove this support in Helium',
-                _dont_call_warnings=True
-            )
-            logging.getLogger(__name__).info(
-                'Passing \'--cloud-config\' has been deprecated. Instead, store '
-                'all of the salt cloud related configuration files in a single '
-                'directory and pass that directory to \'--config-dir\'. This '
-                'support will be removed in Salt Helium. Note that the '
-                '\'SALT_CLOUD_CONFIG\' environment variable is still valid.'
-            )
-
-    def process_vm_config(self):
-        if self.options.vm_config is not None:
-            utils.warn_until(
-                'Helium',
-                'Don\'t forget to remove this support in Helium',
-                _dont_call_warnings=True
-            )
-            logging.getLogger(__name__).info(
-                'Passing \'--vm_config\' has been deprecated. Instead, store all '
-                'of the salt cloud related configuration files in a single '
-                'directory and pass that directory to \'--config-dir\'. This '
-                'support will be removed in Salt Helium. Note that the '
-                '\'SALT_CLOUDVM_CONFIG\' environment variable is still valid and '
-                'you can also set an absolute path to this setting on the main '
-                'cloud configuration file under \'vm_config\'.'
-            )
-
-    def process_providers_config(self):
-        if self.options.providers_config is not None:
-            utils.warn_until(
-                'Helium',
-                'Don\'t forget to remove this support in Helium',
-                _dont_call_warnings=True
-            )
-            logging.getLogger(__name__).info(
-                'Passing \'--providers-config\' has been deprecated. Instead, '
-                'store all of the salt cloud related configuration files in a '
-                'single directory and pass that directory to \'--config-dir\'. '
-                'This support will be removed in Salt Helium. Note that the '
-                '\'SALT_CLOUD_PROVIDERS_CONFIG\' environment variable is still '
-                'valid and you can also set an absolute path to this setting on '
-                'the main cloud configuration file under \'providers_config\'.'
-            )
-
-    def process_master_config(self):
-        if self.options.master_config is not None:
-            utils.warn_until(
-                'Helium',
-                'Don\'t forget to remove this support in Helium',
-                _dont_call_warnings=True
-            )
-            logging.getLogger(__name__).info(
-                'Passing \'--master-config\' has been deprecated. Instead, store '
-                'all of the salt cloud related configuration files in a single '
-                'directory and pass that directory to \'--config-dir\'. This '
-                'support will be removed in Salt Helium. Note that the '
-                '\'SALT_MASTER_CONFIG\' environment variable is still valid and '
-                'you can also set an absolute path to this setting on the main '
-                'cloud configuration file under \'providers_config\'.'
-            )
 
 
 class ExecutionOptionsMixIn(object):
@@ -1949,9 +1811,49 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   '; default=%default')
         )
 
+        key_options_group.add_option(
+            '--gen-signature',
+            default=False,
+            action='store_true',
+            help=('Create a signature file of the masters public-key named '
+                  'master_pubkey_signature. The signature can be send to a '
+                  'minion in the masters auth-reply and enables the minion '
+                  'to verify the masters public-key cryptographically. '
+                  'This requires a new signing-key-pair which can be auto-created '
+                  'with the --auto-create parameter')
+        )
+
+        key_options_group.add_option(
+            '--priv',
+            default='',
+            type=str,
+            help=('The private-key file to create a signature with')
+        )
+
+        key_options_group.add_option(
+            '--signature-path',
+            default='',
+            type=str,
+            help=('The path where the signature file should be written')
+        )
+
+        key_options_group.add_option(
+            '--pub',
+            default='',
+            type=str,
+            help=('The public-key file to create a signature for')
+        )
+
+        key_options_group.add_option(
+            '--auto-create',
+            default=False,
+            action='store_true',
+            help=('Auto-create a signing key-pair if it does not yet exist')
+        )
+
     def process_config_dir(self):
         if self.options.gen_keys:
-            # We're generating keys, override the default behaviour of this
+            # We're generating keys, override the default behavior of this
             # function if we don't have any access to the configuration
             # directory.
             if not os.access(self.options.config_dir, os.R_OK):
@@ -2337,7 +2239,6 @@ class SaltCloudParser(OptionParser,
                       MergeConfigMixIn,
                       OutputOptionsMixIn,
                       ConfigDirMixIn,
-                      CloudConfigMixIn,
                       CloudQueriesMixIn,
                       ExecutionOptionsMixIn,
                       CloudProvidersListsMixIn,
@@ -2382,11 +2283,6 @@ class SaltCloudParser(OptionParser,
 
     def setup_config(self):
         try:
-            return config.cloud_config(
-                self.options.cloud_config or self.get_config_file_path(),
-                master_config_path=self.options.master_config,
-                providers_config_path=self.options.providers_config,
-                profiles_config_path=self.options.vm_config
-            )
+            return config.cloud_config(self.get_config_file_path())
         except salt.cloud.exceptions.SaltCloudConfigError as exc:
             self.error(exc)

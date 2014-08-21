@@ -3,7 +3,7 @@
 A REST API for Salt
 ===================
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 .. py:currentmodule:: salt.netapi.rest_cherrypy.app
 
@@ -259,11 +259,6 @@ def salt_ip_verify_tool():
                         'return': "Bad IP",
                     }
 
-    # Add simple CORS support
-    cherrypy.response.headers['Access-Control-Allow-Origin'] = '*'
-    cherrypy.response.headers['Access-Control-Allow-Credentials'] = 'true'
-    cherrypy.response.headers['Access-Control-Expose-Headers'] = 'X-Auth-Token'
-
 
 def salt_auth_tool():
     '''
@@ -275,6 +270,50 @@ def salt_auth_tool():
 
     # Session is authenticated; inform caches
     cherrypy.response.headers['Cache-Control'] = 'private'
+
+
+def cors_handler(*args, **kwargs):
+    '''
+    Check a CORS preflight request and return a valid response
+    '''
+    req_head = cherrypy.request.headers
+    resp_head = cherrypy.response.headers
+
+    ac_method = req_head.get('Access-Control-Request-Method', None)
+
+    allowed_methods = ['GET', 'POST']
+    allowed_headers = ['X-Auth-Token', 'Content-Type']
+
+    if ac_method and ac_method in allowed_methods:
+        resp_head['Access-Control-Allow-Methods'] = ', '.join(allowed_methods)
+        resp_head['Access-Control-Allow-Headers'] = ', '.join(allowed_headers)
+
+        resp_head['Connection'] = 'keep-alive'
+        resp_head['Access-Control-Max-Age'] = '1400'
+
+    return {}
+
+
+def cors_tool():
+    '''
+    Handle both simple and complex CORS requests
+
+    Add CORS headers to each response. If the request is a CORS preflight
+    request swap out the default handler with a simple, single-purpose handler
+    that verifies the request and provides a valid CORS response.
+    '''
+    req_head = cherrypy.request.headers
+    resp_head = cherrypy.response.headers
+
+    # Always set response headers necessary for 'simple' CORS.
+    resp_head['Access-Control-Allow-Origin'] = req_head.get('Origin', '*')
+    resp_head['Access-Control-Expose-Headers'] = 'GET, POST'
+    resp_head['Access-Control-Allow-Credentials'] = 'true'
+
+    # If this is a non-simple CORS preflight request swap out the handler.
+    if cherrypy.request.method == 'OPTIONS':
+        cherrypy.serving.request.handler = cors_handler
+
 
 # Be conservative in what you send
 # Maps Content-Type to serialization functions; this is a tuple of tuples to
@@ -339,8 +378,6 @@ def hypermedia_out():
     request = cherrypy.serving.request
     request._hypermedia_inner_handler = request.handler
     request.handler = hypermedia_handler
-
-    cherrypy.response.headers['Access-Control-Allow-Origin'] = '*'
 
 
 @functools.wraps
@@ -487,6 +524,8 @@ cherrypy.tools.salt_auth = cherrypy.Tool('before_request_body',
         salt_auth_tool, priority=60)
 cherrypy.tools.hypermedia_in = cherrypy.Tool('before_request_body',
         hypermedia_in)
+cherrypy.tools.cors_tool = cherrypy.Tool('before_handler',
+        cors_tool, priority=30)
 cherrypy.tools.lowdata_fmt = cherrypy.Tool('before_handler',
         lowdata_fmt, priority=40)
 cherrypy.tools.hypermedia_out = cherrypy.Tool('before_handler',
@@ -532,10 +571,11 @@ class LowDataAdapter(object):
         # Release the session lock before executing any potentially
         # long-running Salt commands. This allows different threads to execute
         # Salt commands concurrently without blocking.
-        cherrypy.session.release_lock()
+        if cherrypy.request.config.get('tools.sessions.on', False):
+            cherrypy.session.release_lock()
 
         # if the lowstate loaded isn't a list, lets notify the client
-        if type(lowstate) != list:
+        if not isinstance(lowstate, list):
             raise cherrypy.HTTPError(400, 'Lowstates must be a list')
 
         # Make any requested additions or modifications to each lowstate, then
@@ -664,30 +704,6 @@ class LowDataAdapter(object):
             'return': list(self.exec_lowstate(
                 token=cherrypy.session.get('token')))
         }
-
-    def OPTIONS(self):
-        '''
-        Handle a CORS preflight request
-        '''
-        req_head = cherrypy.request.headers
-        resp_head = cherrypy.response.headers
-
-        method = req_head.get('Access-Control-Request-Method', None)
-        headers = req_head.get('Access-Control-Request-Headers', None)
-
-        allowed_methods = ['GET', 'POST', 'OPTIONS']
-        allowed_headers = ['X-Auth-Token']
-
-        if method and method in allowed_methods:
-            resp_head['Access-Control-Allow-Methods'] = ', '.join(allowed_methods)
-
-            if req_head.get('Access-Control-Allow-Headers') in allowed_headers:
-                resp_head['Access-Control-Allow-Headers'] = 'X-Auth-Token'
-
-                resp_head['Connection'] = 'keep-alive'
-                resp_head['Access-Control-Max-Age '] = '1400'
-
-        return {}
 
 
 class Minions(LowDataAdapter):
@@ -922,7 +938,7 @@ class Jobs(LowDataAdapter):
 
 class Login(LowDataAdapter):
     '''
-    Log in to recieve a session token
+    Log in to receive a session token
 
     :ref:`Authentication information <rest_cherrypy-auth>`.
     '''
@@ -1074,6 +1090,8 @@ class Logout(LowDataAdapter):
     _cp_config = dict(LowDataAdapter._cp_config, **{
         'tools.salt_token.on': True,
         'tools.salt_auth.on': True,
+
+        'tools.lowdata_fmt.on': False,
     })
 
     def POST(self):
@@ -1189,13 +1207,6 @@ class Events(object):
         This stream is formatted per the Server Sent Events (SSE) spec. Each
         event is formatted as JSON.
 
-        Browser clients currently lack Cross-origin resource sharing (CORS)
-        support for the ``EventSource()`` API. Cross-domain requests from a
-        browser may instead pass the :mailheader:`X-Auth-Token` value as an URL
-        parameter::
-
-            % curl -NsS localhost:8000/events/6d1b722e
-
         .. http:get:: /events
 
             :status 200: |200|
@@ -1234,6 +1245,18 @@ class Events(object):
         source.onopen = function() { console.debug('opening') };
         source.onerror = function(e) { console.debug('error!', e) };
         source.onmessage = function(e) { console.debug(e.data) };
+
+    Or using CORS:
+
+    .. code-block:: javascript
+
+        var source = new EventSource('/events', {withCredentials: true});
+
+    Some browser clients lack CORS support for the ``EventSource()`` API. Such
+    clients may instead pass the :mailheader:`X-Auth-Token` value as an URL
+    parameter::
+
+        % curl -NsS localhost:8000/events/6d1b722e
 
     It is also possible to consume the stream via the shell.
 
@@ -1778,6 +1801,8 @@ class API(object):
                 'tools.gzip.on': True,
 
                 'tools.cpstats.on': self.apiopts.get('collect_stats', False),
+
+                'tools.cors_tool.on': True,
             },
         }
 

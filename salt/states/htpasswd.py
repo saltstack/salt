@@ -2,7 +2,7 @@
 '''
 Support for htpasswd module
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 .. code-block:: yaml
 

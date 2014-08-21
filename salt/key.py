@@ -11,8 +11,8 @@ import stat
 import shutil
 import fnmatch
 import hashlib
-import msgpack
 import json
+import msgpack
 
 # Import salt libs
 import salt.crypt
@@ -279,12 +279,84 @@ class KeyCLI(object):
                 'key',
                 self.opts)
 
+    def prep_signature(self):
+        '''
+        Searches for usable keys to create the
+        master public-key signature
+        '''
+        self.privkey = None
+        self.pubkey = None
+
+        # check given pub-key
+        if self.opts['pub']:
+            if not os.path.isfile(self.opts['pub']):
+                print('Public-key {0} does not exist'.format(self.opts['pub']))
+                return
+            self.pubkey = self.opts['pub']
+
+        # default to master.pub
+        else:
+            mpub = self.opts['pki_dir'] + '/' + 'master.pub'
+            if os.path.isfile(mpub):
+                self.pubkey = mpub
+
+        # check given priv-key
+        if self.opts['priv']:
+            if not os.path.isfile(self.opts['priv']):
+                print('Private-key {0} does not exist'.format(self.opts['priv']))
+                return
+            self.privkey = self.opts['priv']
+
+        # default to master_sign.pem
+        else:
+            mpriv = self.opts['pki_dir'] + '/' + 'master_sign.pem'
+            if os.path.isfile(mpriv):
+                self.privkey = mpriv
+
+        if not self.privkey:
+            if self.opts['auto_create']:
+                print('Generating new signing key-pair {0}.* in {1}'
+                      ''.format(self.opts['master_sign_key_name'],
+                                self.opts['pki_dir']))
+                salt.crypt.gen_keys(self.opts['pki_dir'],
+                                    self.opts['master_sign_key_name'],
+                                    self.opts['keysize'],
+                                    self.opts.get('user'))
+
+                self.privkey = self.opts['pki_dir'] + '/' + self.opts['master_sign_key_name'] + '.pem'
+            else:
+                print('No usable private-key found')
+                return
+
+        if not self.pubkey:
+            print('No usable public-key found')
+            return
+
+        print('Using public-key {0}'.format(self.pubkey))
+        print('Using private-key {0}'.format(self.privkey))
+
+        if self.opts['signature_path']:
+            if not os.path.isdir(self.opts['signature_path']):
+                print('target directory {0} does not exist'
+                      ''.format(self.opts['signature_path']))
+        else:
+            self.opts['signature_path'] = self.opts['pki_dir']
+
+        sign_path = self.opts['signature_path'] + '/' + self.opts['master_pubkey_signature']
+
+        self.key.gen_signature(self.privkey,
+                               self.pubkey,
+                               sign_path)
+
     def run(self):
         '''
         Run the logic for saltkey
         '''
         if self.opts['gen_keys']:
             self.key.gen_keys()
+            return
+        elif self.opts['gen_signature']:
+            self.prep_signature()
             return
         if self.opts['list']:
             self.list_status(self.opts['list'])
@@ -352,6 +424,14 @@ class Key(object):
                 self.opts['keysize'])
         return
 
+    def gen_signature(self, privkey, pubkey, sig_path):
+        '''
+        Generate master public-key-signature
+        '''
+        return salt.crypt.gen_signature(privkey,
+                                        pubkey,
+                                        sig_path)
+
     def check_minion_cache(self):
         '''
         Check the minion cache to make sure that old minion data is cleared
@@ -389,12 +469,21 @@ class Key(object):
         else:
             matches = self.list_keys()
         ret = {}
+        if ',' in match and isinstance(match, str):
+            match = match.split(',')
         for status, keys in matches.items():
             for key in salt.utils.isorted(keys):
-                if fnmatch.fnmatch(key, match):
-                    if status not in ret:
-                        ret[status] = []
-                    ret[status].append(key)
+                if isinstance(match, list):
+                    for match_item in match:
+                        if fnmatch.fnmatch(key, match_item):
+                            if status not in ret:
+                                ret[status] = []
+                            ret[status].append(key)
+                else:
+                    if fnmatch.fnmatch(key, match):
+                        if status not in ret:
+                            ret[status] = []
+                        ret[status].append(key)
         return ret
 
     def dict_match(self, match_dict):
@@ -725,32 +814,37 @@ class RaetKey(Key):
         '''
         Check the minion cache to make sure that old minion data is cleared
         '''
-        m_cache = os.path.join(self.opts['cachedir'], 'minions')
-        road_cache = os.path.join(
-            self.opts['cachedir'],
-            'raet',
-            'master',
-            'remote')
-        if not os.path.isdir(m_cache):
-            return
         keys = self.list_keys()
         minions = []
         for key, val in keys.items():
             minions.extend(val)
-        for minion in os.listdir(m_cache):
-            if minion not in minions:
-                shutil.rmtree(os.path.join(m_cache, minion))
-        for road in os.listdir(road_cache):
-            path = os.path.join(road_cache, road)
-            with open(path, 'rb') as fp_:
-                if road.endswith('.msgpack'):
-                    data = msgpack.loads(fp_.read())
-                elif road.endswith('.json'):
-                    data = json.loads(fp_.read())
-                else:
-                    data = msgpack.loads(fp_.read())
-            if data['name'] not in minions:
-                os.remove(path)
+
+        m_cache = os.path.join(self.opts['cachedir'], 'minions')
+        if os.path.isdir(m_cache):
+            for minion in os.listdir(m_cache):
+                if minion not in minions:
+                    shutil.rmtree(os.path.join(m_cache, minion))
+
+        road_cache = os.path.join(self.opts['cachedir'],
+                                  'raet',
+                                  self.opts.get('id', 'master'),
+                                  'remote')
+        if os.path.isdir(road_cache):
+            for road in os.listdir(road_cache):
+                root, ext = os.path.splitext(road)
+                if ext not in ['.json', '.msgpack']:
+                    continue
+                prefix, sep, name = root.partition('.')
+                if not name or prefix != 'estate':
+                    continue
+                path = os.path.join(road_cache, road)
+                with salt.utils.fopen(path, 'rb') as fp_:
+                    if ext == '.json':
+                        data = json.load(fp_)
+                    elif ext == '.msgpack':
+                        data = msgpack.load(fp_)
+                    if data['role'] not in minions:
+                        os.remove(path)
 
     def gen_keys(self):
         '''
@@ -780,7 +874,7 @@ class RaetKey(Key):
             ret['local'].append(fn_)
         return ret
 
-    def status(self, minion_id, device_id, pub, verify):
+    def status(self, minion_id, pub, verify):
         '''
         Accepts the minion id, device id, curve public and verify keys.
         If the key is not present, put it in pending and return "pending",
@@ -794,16 +888,9 @@ class RaetKey(Key):
         # open mode is turned on, force accept the key
         keydata = {
                 'minion_id': minion_id,
-                'device_id': device_id,
                 'pub': pub,
                 'verify': verify}
-        if self.opts['open_mode']:
-            if os.path.isfile(acc_path):
-                # The minion id has been accepted, verify the key strings
-                with salt.utils.fopen(acc_path, 'rb') as fp_:
-                    keydata = self.serial.loads(fp_.read())
-                if keydata['pub'] == pub and keydata['verify'] == verify:
-                    return 'accepted'
+        if self.opts['open_mode']:  # always accept and overwrite
             with salt.utils.fopen(acc_path, 'w+b') as fp_:
                 fp_.write(self.serial.dumps(keydata))
                 return 'accepted'
@@ -1088,7 +1175,7 @@ class RaetKey(Key):
                 keydata = self.read_remote(mid, status)
                 if keydata:
                     keydata['acceptance'] = status
-                    data[keydata['device_id']] = keydata
+                    data[mid] = keydata
 
         return data
 

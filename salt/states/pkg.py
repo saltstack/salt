@@ -137,9 +137,9 @@ def _find_install_targets(name=None,
     # dict for packages that fail pkg.verify and their altered files
     altered_files = {}
     # Get the ignore_types list if any from the pkg_verify argument
-    if type(pkg_verify) is list and any(x.get('ignore_types') is not None
+    if isinstance(pkg_verify, list) and any(x.get('ignore_types') is not None
                                         for x in pkg_verify
-                                        if type(x) is OrderedDict
+                                        if isinstance(x, OrderedDict)
                                         and 'ignore_types' in x):
         ignore_types = next(x.get('ignore_types')
                             for x in pkg_verify
@@ -391,7 +391,7 @@ def installed(
         pkg_verify=False,
         **kwargs):
     '''
-    Verify that the package is installed, and that it is the correct version
+    Ensure that the package is installed, and that it is the correct version
     (if specified).
 
     name
@@ -514,14 +514,14 @@ def installed(
         Force the package to be held at the current installed version.
         Currently works with YUM & APT based systems.
 
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
 
     allow_updates
         Allow the package to be updated outside Salt's control (e.g. auto updates on Windows).
         This means a package on the Minion can have a newer version than the latest available
         in the repository without enforcing a re-installation of the package.
 
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
 
     Example:
 
@@ -537,7 +537,7 @@ def installed(
             - hold: False
 
     pkg_verify
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
 
         For requested packages that are already installed and would not be targeted for
         upgrade or downgrade, use pkg.verify to determine if any of the files installed
@@ -667,9 +667,9 @@ def installed(
         salt.utils.is_true(refresh)
         or (os.path.isfile(rtag) and refresh is not False)
     )
-    if type(pkg_verify) is not list:
+    if not isinstance(pkg_verify, list):
         pkg_verify = pkg_verify is True
-    if (pkg_verify or type(pkg_verify) is list) and 'pkg.verify' not in __salt__:
+    if (pkg_verify or isinstance(pkg_verify, list)) and 'pkg.verify' not in __salt__:
         return {'name': name,
                 'changes': {},
                 'result': False,
@@ -905,7 +905,7 @@ def installed(
                 changes[change_name]['old'] += '\n'
             changes[change_name]['old'] += '{0}'.format(i['changes']['old'])
 
-    # Any requested packages that were not targetted for install or reinstall
+    # Any requested packages that were not targeted for install or reinstall
     if not_modified:
         if sources:
             summary = ', '.join(not_modified)
@@ -946,9 +946,9 @@ def installed(
         result = False
 
     # Get the ignore_types list if any from the pkg_verify argument
-    if type(pkg_verify) is list and any(x.get('ignore_types') is not None
+    if isinstance(pkg_verify, list) and any(x.get('ignore_types') is not None
                                         for x in pkg_verify
-                                        if type(x) is OrderedDict
+                                        if isinstance(x, OrderedDict)
                                         and 'ignore_types' in x):
         ignore_types = next(x.get('ignore_types')
                             for x in pkg_verify
@@ -1006,8 +1006,8 @@ def latest(
         pkgs=None,
         **kwargs):
     '''
-    Verify that the named package is installed and the latest available
-    package. If the package can be updated this state function will update
+    Ensure that the named package is installed and the latest available
+    package. If the package can be updated, this state function will update
     the package. Generally it is better for the
     :mod:`installed <salt.states.pkg.installed>` function to be
     used, as :mod:`latest <salt.states.pkg.latest>` will update the package
@@ -1065,10 +1065,19 @@ def latest(
         desired_pkgs = [name]
 
     cur = __salt__['pkg.version'](*desired_pkgs, **kwargs)
-    avail = __salt__['pkg.latest_version'](*desired_pkgs,
-                                           fromrepo=fromrepo,
-                                           refresh=refresh,
-                                           **kwargs)
+    try:
+        avail = __salt__['pkg.latest_version'](*desired_pkgs,
+                                               fromrepo=fromrepo,
+                                               refresh=refresh,
+                                               **kwargs)
+    except CommandExecutionError as exc:
+        return {'name': name,
+                'changes': {},
+                'result': False,
+                'comment': 'An error was encountered while checking the '
+                           'newest available version of package(s): {0}'
+                           .format(exc)}
+
     # Remove the rtag if it exists, ensuring only one refresh per salt run
     # (unless overridden with refresh=True)
     if os.path.isfile(rtag) and refresh:
@@ -1351,7 +1360,7 @@ def purged(name, pkgs=None, **kwargs):
 
 def uptodate(name, refresh=False):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Verify that the system is completely up to date.
 
@@ -1372,7 +1381,11 @@ def uptodate(name, refresh=False):
         return ret
 
     if isinstance(refresh, bool):
-        packages = __salt__['pkg.list_upgrades'](refresh=refresh)
+        try:
+            packages = __salt__['pkg.list_upgrades'](refresh=refresh)
+        except Exception, e:
+            ret['comment'] = str(e)
+            return ret
     else:
         ret['comment'] = 'refresh must be a boolean.'
         return ret
@@ -1388,7 +1401,9 @@ def uptodate(name, refresh=False):
 
     updated = __salt__['pkg.upgrade'](refresh=refresh)
 
-    if updated:
+    if updated.get('result') is False:
+        ret.update(updated)
+    elif updated:
         ret['changes'] = updated
         ret['comment'] = 'Upgrade successful.'
         ret['result'] = True

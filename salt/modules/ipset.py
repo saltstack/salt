@@ -121,7 +121,7 @@ def version():
 
 def new_set(set=None, set_type=None, family='ipv4', comment=False, **kwargs):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Create new custom set
 
@@ -174,7 +174,7 @@ def new_set(set=None, set_type=None, family='ipv4', comment=False, **kwargs):
 
 def delete_set(set=None, family='ipv4'):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Delete ipset set.
 
@@ -201,7 +201,7 @@ def delete_set(set=None, family='ipv4'):
 
 def rename_set(set=None, new_set=None, family='ipv4'):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Delete ipset set.
 
@@ -239,7 +239,7 @@ def rename_set(set=None, new_set=None, family='ipv4'):
 
 def list_sets(family='ipv4'):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     List all ipset sets.
 
@@ -250,7 +250,7 @@ def list_sets(family='ipv4'):
         salt '*' ipset.list_sets
 
     '''
-    cmd = '{0} list -t'.format(_ipset_cmd(), set)
+    cmd = '{0} list -t'.format(_ipset_cmd())
     out = __salt__['cmd.run'](cmd)
 
     _tmp = out.split('\n')
@@ -270,7 +270,7 @@ def list_sets(family='ipv4'):
 
 def check_set(set=None, family='ipv4'):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Check that given ipset set exists.
 

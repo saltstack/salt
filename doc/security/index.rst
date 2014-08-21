@@ -11,7 +11,7 @@ Security disclosure policy
 
 .. code-block:: text
 
-    -----BEGIN PGP PUBLIC KEY BLOCK----
+    -----BEGIN PGP PUBLIC KEY BLOCK-----
     Version: GnuPG/MacGPG2 v2.0.22 (Darwin)
 
     mQINBFO15mMBEADa3CfQwk5ED9wAQ8fFDku277CegG3U1hVGdcxqKNvucblwoKCb
@@ -72,7 +72,7 @@ non-publicly until such time as the issue can be resolved and a security-fix
 release can be prepared. At that time we will release the fix and make a public
 announcement with upgrade instructions and download locations.
 
-Security response proceedure
+Security response procedure
 ============================
 
 SaltStack takes security and the trust of our customers and users very
@@ -90,19 +90,19 @@ quickly and safely as is possible.
     actively supported. Back-ports of the fix are made to any old releases that
     are actively supported.
 
-4.  Packagers are notified via the |salt-packagers| mailing list that an issue
+4.  Packagers are notified via the `salt-packagers`_ mailing list that an issue
     was reported and resolved, and that an announcement is incoming.
 
 5.  A new release is created and pushed to all affected repositories. The
     release documentation provides a full description of the issue, plus any
     upgrade instructions or other relevant details.
 
-6.  An announcement is made to the |salt-users| and |salt-announce| mailing
+6.  An announcement is made to the `salt-users`_ and `salt-announce`_ mailing
     lists. The announcement contains a description of the issue and a link to
     the full release documentation and download locations.
 
 Receiving security announcemnts
 ===============================
 
-The fastest place to receive security announcements is via the |salt-announce|
+The fastest place to receive security announcements is via the `salt-announce`_
 mailing list. This list is low-traffic.

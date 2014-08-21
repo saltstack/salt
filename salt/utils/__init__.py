@@ -401,7 +401,7 @@ def which(exe=None):
                 # Allows both 'cmd' and 'cmd.exe' to be matched.
                 for ext in ext_list:
                     # Windows filesystem is case insensitive so we
-                    # safely rely on that behaviour
+                    # safely rely on that behavior
                     if os.access(full_path + ext, os.X_OK):
                         return full_path + ext
         log.trace(
@@ -1365,7 +1365,13 @@ def is_linux():
     # This is a hack.  If a proxy minion is started by other
     # means, e.g. a custom script that creates the minion objects
     # then this will fail.
-    if 'salt-proxy-minion' in main.__file__:
+    is_proxy = False
+    try:
+        if 'salt-proxy-minion' in main.__file__:
+            is_proxy = True
+    except AttributeError:
+        pass
+    if is_proxy:
         return False
     else:
         return sys.platform.startswith('linux')
@@ -1715,7 +1721,7 @@ def safe_walk(top, topdown=True, onerror=None, followlinks=True, _seen=None):
         yield top, dirs, nondirs
 
 
-def get_hash(path, form='md5', chunk_size=4096):
+def get_hash(path, form='md5', chunk_size=65536):
     '''
     Get the hash sum of a file
 
@@ -2075,21 +2081,6 @@ def argspec_report(functions, module=''):
     return ret
 
 
-def memoize(func):
-    '''
-    Deprecation warning wrapper since memoize is now on salt.utils.decorators
-    '''
-    warn_until(
-        'Helium',
-        'The \'memoize\' decorator was moved to \'salt.utils.decorators\', '
-        'please start importing it from there. This warning and wrapper '
-        'will be removed in Salt {version}.',
-        stacklevel=3
-
-    )
-    return real_memoize(func)
-
-
 def decode_list(data):
     '''
     JSON decodes as unicode, Jinja needs bytes...
@@ -2419,8 +2410,8 @@ def chugid(runas):
     # this does not appear to be strictly true.
     group_list = get_group_dict(runas, include_default=True)
     if sys.platform == 'darwin':
-        group_list = [a for a in group_list
-                      if not a.startswith('_')]
+        group_list = dict((k, v) for k, v in group_list.iteritems()
+                          if not k.startswith('_'))
     for group_name in group_list:
         gid = group_list[group_name]
         if (gid not in supgroups_seen

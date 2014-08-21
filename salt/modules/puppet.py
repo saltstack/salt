@@ -63,10 +63,10 @@ class _Puppet(object):
         the default locations.
         '''
         self.subcmd = 'agent'
-        self.subcmd_args = []  # eg. /a/b/manifest.pp
+        self.subcmd_args = []  # e.g. /a/b/manifest.pp
 
-        self.kwargs = {'color': 'false'}       # eg. --tags=apache::server
-        self.args = []         # eg. --noop
+        self.kwargs = {'color': 'false'}       # e.g. --tags=apache::server
+        self.args = []         # e.g. --noop
 
         if salt.utils.is_windows():
             self.vardir = 'C:\\ProgramData\\PuppetLabs\\puppet\\var'
@@ -137,7 +137,7 @@ def run(*args, **kwargs):
     Execute a puppet run and return a dict with the stderr, stdout,
     return code, etc. The first positional argument given is checked as a
     subcommand. Following positional arguments should be ordered with arguments
-    required by the subcommand first, followed by non-keyvalue pair options.
+    required by the subcommand first, followed by non-keyword arguments.
     Tags are specified by a tag keyword and comma separated list of values. --
     http://docs.puppetlabs.com/puppet/latest/reference/lang_tags.html
 
@@ -190,7 +190,7 @@ def noop(*args, **kwargs):
 
 def enable():
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Enable the puppet agent
 
@@ -218,7 +218,7 @@ def enable():
 
 def disable():
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Disable the puppet agent
 
@@ -249,7 +249,7 @@ def disable():
 
 def status():
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Display puppet agent status
 
@@ -290,7 +290,7 @@ def status():
 
 def summary():
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Show a summary of the last puppet agent run
 

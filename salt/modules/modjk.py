@@ -321,7 +321,7 @@ def bulk_stop(workers, lbn, profile='default'):
 
     ret = {}
 
-    if type(workers) == str:
+    if isinstance(workers, str):
         workers = workers.split(',')
 
     for worker in workers:
@@ -350,7 +350,7 @@ def bulk_activate(workers, lbn, profile='default'):
 
     ret = {}
 
-    if type(workers) == str:
+    if isinstance(workers, str):
         workers = workers.split(',')
 
     for worker in workers:
@@ -379,7 +379,7 @@ def bulk_disable(workers, lbn, profile='default'):
 
     ret = {}
 
-    if type(workers) == str:
+    if isinstance(workers, str):
         workers = workers.split(',')
 
     for worker in workers:
@@ -408,7 +408,7 @@ def bulk_recover(workers, lbn, profile='default'):
 
     ret = {}
 
-    if type(workers) == str:
+    if isinstance(workers, str):
         workers = workers.split(',')
 
     for worker in workers:

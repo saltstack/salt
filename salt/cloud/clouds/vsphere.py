@@ -3,7 +3,7 @@
 vSphere Cloud Module
 ====================
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 The vSphere cloud module is used to control access to VMWare vSphere.
 
@@ -21,6 +21,15 @@ configuration at:
       user: myuser
       password: verybadpass
       url: 'https://10.1.1.1:443'
+
+Note: Your URL may or may not look like any of the following, depending on how
+your VMWare installation is configured:
+
+    10.1.1.1
+    10.1.1.1:443
+    https://10.1.1.1:443
+    https://10.1.1.1:443/sdk
+    10.1.1.1:443/sdk
 
 folder: Name of the folder that will contain the new VM. If not set, the VM will
         be added to the folder the original VM belongs to.
@@ -156,7 +165,7 @@ def avail_images():
                 name = item.Val
             elif item.Name == 'config.template':
                 is_template = item.Val
-        if type(is_template) is bool and is_template is True:
+        if is_template is True:
             ret[name] = {'Name': name}
     return ret
 
@@ -229,7 +238,7 @@ def create(vm_):
                 vm_['name'], exc.message
             ),
             # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -563,7 +572,7 @@ def list_hosts(kwargs=None, call=None):  # pylint: disable=W0613
 
 def list_datacenters(kwargs=None, call=None):  # pylint: disable=W0613
     '''
-    List the datacenters for this VMware environment
+    List the data centers for this VMware environment
     '''
     if call != 'function':
         log.error(

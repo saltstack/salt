@@ -3,7 +3,7 @@
 Manage Elasticache
 ==================
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 Create, destroy and update Elasticache clusters. Be aware that this interacts
 with Amazon's services, and so may incur charges.
@@ -104,7 +104,6 @@ def present(
         notification_topic_arn=None,
         preferred_maintenance_window=None,
         wait=True,
-        cache_nodes=None,
         region=None,
         key=None,
         keyid=None,
@@ -198,7 +197,7 @@ def present(
     config = __salt__['boto_elasticache.get_config'](name, region, key, keyid,
                                                      profile)
     if config is None:
-        msg = 'Failed to retrive cache cluster info from AWS.'.format(name)
+        msg = 'Failed to retrieve cache cluster info from AWS.'
         ret['comment'] = msg
         return ret
     elif not config:

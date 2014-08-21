@@ -13,6 +13,7 @@ ensure_in_syspath('../../')
 from salt.modules import ps
 
 HAS_PSUTIL = ps.__virtual__()
+HAS_PSUTIL_VERSION = False
 
 if HAS_PSUTIL:
     import psutil
@@ -35,6 +36,9 @@ if HAS_PSUTIL:
         1000, 2000, 500, 600, 2000, 3000)
     STUB_USER = psutil._compat.namedtuple('user', 'name, terminal, host, started')('bdobbs', 'ttys000', 'localhost',
                                                                                    0.0)
+    if psutil.version_info >= (0, 6, 0):
+        HAS_PSUTIL_VERSION = True
+
 else:
     (STUB_CPU_TIMES,
      STUB_VIRT_MEM,
@@ -104,31 +108,17 @@ class PsTestCase(TestCase):
     def test_cpu_times(self):
         self.assertDictEqual({'idle': 4, 'nice': 2, 'system': 3, 'user': 1}, ps.cpu_times())
 
+    @skipIf(HAS_PSUTIL_VERSION is False, 'psutil 0.6.0 or greater is required for this test')
     @patch('psutil.virtual_memory', new=MagicMock(return_value=STUB_VIRT_MEM))
     def test_virtual_memory(self):
         self.assertDictEqual({'used': 500, 'total': 1000, 'available': 500, 'percent': 50, 'free': 500},
                              ps.virtual_memory())
 
+    @skipIf(HAS_PSUTIL_VERSION is False, 'psutil 0.6.0 or greater is required for this test')
     @patch('psutil.swap_memory', new=MagicMock(return_value=STUB_SWAP_MEM))
     def test_swap_memory(self):
         self.assertDictEqual({'used': 500, 'total': 1000, 'percent': 50, 'free': 500, 'sin': 0, 'sout': 0},
                              ps.swap_memory())
-
-    @patch('psutil.phymem_usage', new=MagicMock(return_value=STUB_PHY_MEM_USAGE))
-    def test_physical_memory_usage(self):
-        self.assertDictEqual({'used': 500, 'total': 1000, 'percent': 50, 'free': 500}, ps.physical_memory_usage())
-
-    @patch('psutil.virtmem_usage', new=MagicMock(return_value=STUB_PHY_MEM_USAGE))
-    def test_virtual_memory_usage(self):
-        self.assertDictEqual({'used': 500, 'total': 1000, 'percent': 50, 'free': 500}, ps.virtual_memory_usage())
-
-    # ps.cached_physical_memory is deprecated! See #9301
-    # def test_cached_physical_memory(self):
-    # pass
-
-    #ps.physical_memory_buffers is deprecated! See #9301
-    # def test_physical_memory_buffers(self):
-    #     pass
 
     @patch('psutil.disk_partitions', new=MagicMock(return_value=[STUB_DISK_PARTITION]))
     def test_disk_partitions(self):

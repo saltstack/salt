@@ -12,8 +12,7 @@ import time
 import datetime
 
 # Import salt libs
-import salt.utils
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 # Import third party libs
 try:
@@ -344,9 +343,13 @@ def cpu_times(per_cpu=False):
 
 def virtual_memory():
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Return a dict that describes statistics about system memory usage.
+
+    .. note::
+
+        This function is only available in psutil version 0.6.0 and above.
 
     CLI Example:
 
@@ -354,14 +357,21 @@ def virtual_memory():
 
         salt '*' ps.virtual_memory
     '''
+    if psutil.version_info < (0, 6, 0):
+        msg = 'virtual_memory is only available in psutil 0.6.0 or greater'
+        raise CommandExecutionError(msg)
     return dict(psutil.virtual_memory()._asdict())
 
 
 def swap_memory():
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Return a dict that describes swap memory statistics.
+
+    .. note::
+
+        This function is only available in psutil version 0.6.0 and above.
 
     CLI Example:
 
@@ -369,96 +379,10 @@ def swap_memory():
 
         salt '*' ps.swap_memory
     '''
+    if psutil.version_info < (0, 6, 0):
+        msg = 'swap_memory is only available in psutil 0.6.0 or greater'
+        raise CommandExecutionError(msg)
     return dict(psutil.swap_memory()._asdict())
-
-
-def physical_memory_usage():
-    '''
-    .. deprecated:: Helium
-        Use :mod:`ps.virtual_memory <salt.modules.ps.virtual_memory>` instead.
-
-    Return a dict that describes free and available physical memory.
-
-    CLI Examples:
-
-    .. code-block:: bash
-
-        salt '*' ps.physical_memory_usage
-    '''
-    salt.utils.warn_until(
-        'Helium',
-        '\'ps.physical_memory_usage\' is deprecated.  Please use'
-        '\'ps.virtual_memory\' instead.  This functionality will'
-        'be removed in Salt {version}.'
-    )
-    return dict(psutil.phymem_usage()._asdict())
-
-
-def virtual_memory_usage():
-    '''
-    .. deprecated:: Helium
-        Use :mod:`ps.virtual_memory <salt.modules.ps.virtual_memory>` instead.
-
-    Return a dict that describes free and available memory, both physical
-    and virtual.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' ps.virtual_memory_usage
-    '''
-    salt.utils.warn_until(
-        'Helium',
-        '\'ps.virtual_memory_usage\' is deprecated.  Please use'
-        '\'ps.virtual_memory\' instead.  This functionality will'
-        'be removed in Salt {version}.'
-    )
-    return dict(psutil.virtmem_usage()._asdict())
-
-
-def cached_physical_memory():
-    '''
-    .. deprecated:: Helium
-        Use :mod:`ps.virtual_memory <salt.modules.ps.virtual_memory>` instead.
-
-    Return the amount cached memory.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' ps.cached_physical_memory
-    '''
-    salt.utils.warn_until(
-        'Helium',
-        '\'ps.cached_physical_memory\' is deprecated.  Please use'
-        '\'ps.virtual_memory\' instead.  This functionality will'
-        'be removed in Salt {version}.'
-    )
-    return psutil.cached_phymem()
-
-
-def physical_memory_buffers():
-    '''
-    .. deprecated:: Helium
-        Use :mod:`ps.virtual_memory <salt.modules.ps.virtual_memory>` instead.
-
-    Return the amount of physical memory buffers.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' ps.physical_memory_buffers
-    '''
-    salt.utils.warn_until(
-        'Helium',
-        '\'ps.physical_memory_buffers\' is deprecated.  Please use'
-        '\'ps.virtual_memory\' instead.  This functionality will'
-        'be removed in Salt {version}.'
-    )
-    return psutil.phymem_buffers()
 
 
 def disk_partitions(all=False):
@@ -585,7 +509,7 @@ def boot_time(time_format=None):
 
 def network_io_counters(interface=None):
     '''
-    Return network I/O statisitics.
+    Return network I/O statistics.
 
     CLI Example:
 
@@ -607,7 +531,7 @@ def network_io_counters(interface=None):
 
 def disk_io_counters(device=None):
     '''
-    Return disk I/O statisitics.
+    Return disk I/O statistics.
 
     CLI Example:
 

@@ -6,7 +6,10 @@ try:
 except ImportError:
     HAS_CHERRYPY = False
 
-import mock
+import os
+
+import salt.config
+from ..integration import TMP_CONF_DIR
 
 if HAS_CHERRYPY:
     from . cptestcase import BaseCherryPyTestCase
@@ -31,23 +34,18 @@ class BaseRestCherryPyTest(BaseCherryPyTestCase):
     '''
     __opts__ = None
 
-    @mock.patch('salt.netapi.NetapiClient', autospec=True)
-    @mock.patch('salt.auth.Resolver', autospec=True)
-    @mock.patch('salt.auth.LoadAuth', autospec=True)
-    @mock.patch('salt.utils.event.get_event', autospec=True)
-    def setUp(self, get_event, LoadAuth, Resolver, NetapiClient):  # pylint: disable=W0221
-        app.salt.netapi.NetapiClient = NetapiClient
-        app.salt.auth.Resolver = Resolver
-        app.salt.auth.LoadAuth = LoadAuth
-        app.salt.utils.event.get_event = get_event
+    def __init__(self, *args, **kwargs):
+        super(BaseRestCherryPyTest, self).__init__(*args, **kwargs)
 
-        # Make local references to mocked objects so individual tests can
-        # access and modify the mocked interfaces.
-        self.Resolver = Resolver
-        self.NetapiClient = NetapiClient
-        self.get_event = get_event
+        master_conf = os.path.join(TMP_CONF_DIR, 'master')
+        self.config = salt.config.client_config(master_conf)
 
-        __opts__ = self.__opts__ or {
+    def setUp(self, *args, **kwargs):
+        # Make a local reference to the CherryPy app so we can mock attributes.
+        self.app = app
+
+        __opts__ = self.config.copy()
+        __opts__.update(self.__opts__ or {
             'external_auth': {
                 'auto': {
                     'saltdev': [
@@ -61,7 +59,7 @@ class BaseRestCherryPyTest(BaseCherryPyTestCase):
                 'port': 8000,
                 'debug': True,
             },
-        }
+        })
 
         root, apiopts, conf = app.get_app(__opts__)
 

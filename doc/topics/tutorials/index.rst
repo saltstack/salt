@@ -43,6 +43,7 @@ Advanced Topics
     minionfs
     esky
     multimaster
+    multimaster_pki
     preseed_key
     salt_bootstrap
     gitfs
@@ -67,8 +68,5 @@ Using Salt at scale
 ===================
 .. toctree::
     :maxdepth: 2
+
     intro_scale
-    the_master
-    the_minion
-
-

@@ -90,10 +90,24 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                     sys.exit(2)
                 eauth.update(res)
                 eauth['eauth'] = self.options.eauth
-            batch = salt.cli.batch.Batch(self.config, eauth)
-            # Printing the output is already taken care of in run() itself
-            for res in batch.run():
-                pass
+
+            if self.options.static:
+
+                batch = salt.cli.batch.Batch(self.config, quiet=True)
+
+                ret = {}
+
+                for res in batch.run():
+                    ret.update(res)
+
+                self._output_ret(ret, '')
+
+            else:
+                batch = salt.cli.batch.Batch(self.config)
+                # Printing the output is already taken care of in run() itself
+                for res in batch.run():
+                    pass
+
         else:
             if self.options.timeout <= 0:
                 self.options.timeout = local.opts['timeout']
@@ -392,7 +406,8 @@ class SaltCall(parsers.SaltCallOptionParser):
         # Setup file logging!
         self.setup_logfile_logger()
 
-        caller = salt.cli.caller.Caller(self.config)
+        #caller = salt.cli.caller.Caller(self.config)
+        caller = salt.cli.caller.Caller.factory(self.config)
 
         if self.options.doc:
             caller.print_docs()

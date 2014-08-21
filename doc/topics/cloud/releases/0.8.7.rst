@@ -15,7 +15,7 @@ their cloud offering:
 
 http://xmission.com/cloud_hosting
 
-We would also like to thank Digital Ocean for their help and resources while
+We would also like to thank DigitalOcean for their help and resources while
 developing the driver for their cloud offering. The folks over there have been
 very friendly and helpful! Please take a moment to check them out:
 
@@ -61,11 +61,11 @@ provider.
     PARALLELS.url: https://api.cloud.xmission.com:4465/paci/v1.0/
 
 
-Added Digital Ocean Support
+Added DigitalOcean Support
 ===========================
-Digital Ocean has been a highly-requested cloud provider, and we are pleased to
+DigitalOcean has been a highly-requested cloud provider, and we are pleased to
 be able to meet the demand. Only a ``client_key`` and an ``api_key`` are
-required for Digital Ocean.
+required for DigitalOcean.
 
 * Using the legacy configuration format:
 

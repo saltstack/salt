@@ -14,6 +14,7 @@ import tempfile
 import salt.crypt
 import salt.utils
 import salt.config
+import salt.syspaths
 
 
 # Set up logging
@@ -128,9 +129,10 @@ def apply_(path, id_=None, config=None, approve_key=True, install=True,
                  '{0}'.format(mpt))
         res = _install(mpt)
     elif prep_install:
-        _prep_bootstrap(mpt)
-        log.info('{0} is ready for salt-minion installation'.format(mpt))
-        res = True
+        log.error('The prep_install option is no longer supported. Please use '
+                  'the bootstrap script installed with Salt, located at {0}.'
+                  .format(salt.syspaths.BOOTSTRAP))
+        res = False
     else:
         log.warn('No useful action performed on '
                  '{0}'.format(mpt))
@@ -140,24 +142,16 @@ def apply_(path, id_=None, config=None, approve_key=True, install=True,
     return res
 
 
-def _prep_bootstrap(mpt):
-    # Verify that the boostrap script is downloaded
-    bs_ = __salt__['config.gather_bootstrap_script']()
-
-    # Copy script into tmp
-    shutil.copy(bs_, os.path.join(mpt, 'tmp'))
-
-
 def mkconfig(config=None, tmp=None, id_=None, approve_key=True,
             pub_key=None, priv_key=None):
     '''
     Generate keys and config and put them in a tmp directory.
 
     pub_key
-        absolute path or file content of an optionnal preseeded salt key
+        absolute path or file content of an optional preseeded salt key
 
     priv_key
-        absolute path or file content of an optionnal preseeded salt key
+        absolute path or file content of an optional preseeded salt key
 
     CLI Example:
 
@@ -208,11 +202,10 @@ def _install(mpt):
     Return True if install is successful or already installed.
     '''
 
-    _prep_bootstrap(mpt)
     _check_resolv(mpt)
     # Exec the chroot command
     cmd = 'if type salt-minion; then exit 0; '
-    cmd += 'else sh /tmp/bootstrap-salt.sh -c /tmp; fi'
+    cmd += 'else sh {0} -c /tmp; fi'.format(salt.syspaths.BOOTSTRAP)
     return not __salt__['cmd.run_chroot'](mpt, cmd)['retcode']
 
 

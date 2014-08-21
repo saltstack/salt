@@ -10,7 +10,14 @@ try:
     HAS_RANDOM = True
 except ImportError:
     HAS_RANDOM = False
-import crypt
+
+try:
+    # Windows does not have the crypt module
+    import crypt
+    HAS_CRYPT = True
+except ImportError:
+    HAS_CRYPT = False
+
 import re
 import string
 import random
@@ -36,6 +43,9 @@ def gen_hash(crypt_salt=None, password=None, algorithm='sha512'):
     '''
     Generate /etc/shadow hash
     '''
+    if not HAS_CRYPT:
+        raise SaltInvocationError('No crypt module for windows')
+
     hash_algorithms = dict(
         md5='$1$', blowfish='$2a$', sha256='$5$', sha512='$6$'
     )

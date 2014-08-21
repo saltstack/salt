@@ -13,7 +13,7 @@ so:
 The `root=` parameter is optional and used to set the subdirectory from where
 to look for Pillar files (such as ``top.sls``).
 
-.. versionchanged:: Helium
+.. versionchanged:: 2014.7.0
     The optional ``root`` parameter will be added.
 
 Note that this is not the same thing as configuring pillar data using the
@@ -147,7 +147,7 @@ class GitPillar(object):
         '''
         Ensure you are following the latest changes on the remote
 
-        Return boolean wether it worked
+        Return boolean whether it worked
         '''
         try:
             log.debug('Updating fileserver for git_pillar module')

@@ -3,7 +3,7 @@
 Execution of MySQL queries
 ==========================
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 :depends:   - MySQLdb Python module
 :configuration: See :py:mod:`salt.modules.mysql` for setup instructions.
@@ -70,7 +70,7 @@ def run(name,
         grain to store the output (need output=grain)
 
     key:
-        the specified grain will be treated as a dictionnary, the result
+        the specified grain will be treated as a dictionary, the result
         of this state will be stored under the specified key.
 
     overwrite:

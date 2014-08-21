@@ -84,8 +84,8 @@ provided in ``tests/integration/files/conf/cloud.providers.d/``. In order to run
 the cloud provider tests, valid credentials, which differ per provider, must be
 supplied. Each credential item that must be supplied is indicated by an empty
 string value and should be edited by the user before running the tests. For
-example, Digital Ocean requires a client key and an api key to operate. Therefore,
-the default cloud provider configuration file for Digital Ocean looks like this:
+example, DigitalOcean requires a client key and an api key to operate. Therefore,
+the default cloud provider configuration file for DigitalOcean looks like this:
 
 .. code-block:: yaml
 

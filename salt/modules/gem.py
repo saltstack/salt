@@ -35,7 +35,9 @@ def install(gems,           # pylint: disable=C0103
             runas=None,
             version=None,
             rdoc=False,
-            ri=False):      # pylint: disable=C0103
+            ri=False,
+            pre_releases=False,
+            proxy=None):      # pylint: disable=C0103
     '''
     Installs one or several gems.
 
@@ -52,6 +54,11 @@ def install(gems,           # pylint: disable=C0103
         Generate RDoc documentation for the gem(s).
     ri : False
         Generate RI documentation for the gem(s).
+    pre_releases
+        Include pre-releases in the available versions
+    proxy : None
+        Use the specified HTTP proxy server for all outgoing traffic.
+        Format: http://hostname[:port]
 
     CLI Example:
 
@@ -59,15 +66,21 @@ def install(gems,           # pylint: disable=C0103
 
         salt '*' gem.install vagrant
     '''
-    options = ''
+    options = []
     if version:
-        options += ' --version {0}'.format(version)
+        options.append('--version {0}'.format(version))
     if not rdoc:
-        options += ' --no-rdoc'
+        options.append('--no-rdoc')
     if not ri:
-        options += ' --no-ri'
+        options.append('--no-ri')
+    if pre_releases:
+        options.append('--pre')
+    if proxy:
+        options.append('-p {0}'.format(proxy))
 
-    return _gem('install {gems} {options}'.format(gems=gems, options=options),
+    cmdline_args = ' '.join(options)
+    return _gem('install {gems} {options}'.format(gems=gems,
+                                                  options=cmdline_args),
                 ruby,
                 runas=runas)
 

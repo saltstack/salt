@@ -52,9 +52,15 @@ def __virtual__():
         'ALT',
         'OEL',
         'SUSE  Enterprise Server',
+        'SUSE',
         'McAfee  OS Server'
     ))
     if __grains__['os'] in enable:
+        if __grains__['os'] == 'SUSE':
+            if __grains__['osrelease'].startswith('11'):
+                return __virtualname__
+            else:
+                return False
         try:
             osrelease = float(__grains__.get('osrelease', 0))
         except ValueError:

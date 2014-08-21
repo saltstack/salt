@@ -9,7 +9,13 @@ A state module for creating or destroying software RAID devices.
 
     /dev/md0:
       raid.present:
-        - opts: level=1 chunk=256 raid-devices=2 /dev/xvdd /dev/xvde
+        - level: 5
+        - devices:
+          - /dev/xvdd
+          - /dev/xvde
+          - /dev/xvdf
+        - chunk: 256
+        - run: True
 '''
 
 # Import python libs
@@ -39,12 +45,11 @@ def __virtual__():
 def present(name,
             level,
             devices,
-            raid_devices=None,
             **kwargs):
     '''
     Verify that the raid is present
 
-    .. versionchanged:: Helium
+    .. versionchanged:: 2014.7.0
 
     name
         The name of raid device to be created
@@ -54,9 +59,6 @@ def present(name,
 
     devices
         A list of devices used to build the array.
-
-    raid_devices
-        The number of devices in the array.  If not specified, the number of devices will be counted.
 
     Example:
 
@@ -88,7 +90,6 @@ def present(name,
         res = __salt__['raid.create'](name,
                                       level,
                                       devices,
-                                      raid_devices,
                                       test_mode=True,
                                       **kwargs)
         ret['comment'] = 'Raid will be created with: {0}'.format(res)
@@ -99,7 +100,6 @@ def present(name,
     __salt__['raid.create'](name,
                             level,
                             devices,
-                            raid_devices,
                             **kwargs)
 
     raids = __salt__['raid.list']()

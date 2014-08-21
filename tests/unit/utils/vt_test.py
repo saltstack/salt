@@ -10,8 +10,10 @@
 '''
 
 # Import python libs
+import os
 import sys
 import random
+import subprocess
 
 # Import Salt Testing libs
 from salttesting import TestCase
@@ -19,7 +21,7 @@ from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import salt libs
-from salt.utils import vt
+from salt.utils import fopen, is_darwin, vt
 
 
 class VTTestCase(TestCase):
@@ -47,11 +49,31 @@ class VTTestCase(TestCase):
 
     def test_issue_10404_ptys_not_released(self):
         n_executions = 15
-        # Get current number of PTY's
-        try:
-            nr_ptys = int(open('/proc/sys/kernel/pty/nr').read().strip())
-        except (ValueError, OSError, IOError):
-            self.fail('Unable to find out how many PTY\'s are open')
+
+        def current_pty_count():
+            # Get current number of PTY's
+            try:
+                if os.path.exists('/proc/sys/kernel/pty/nr'):
+                    with fopen('/proc/sys/kernel/pty/nr') as fh_:
+                        return int(fh_.read().strip())
+
+                proc = subprocess.Popen(
+                    'sysctl -a 2> /dev/null | grep pty.nr | awk \'{print $3}\'',
+                    shell=True,
+                    stdout=subprocess.PIPE
+                )
+                stdout, _ = proc.communicate()
+                return int(stdout.strip())
+            except (ValueError, OSError, IOError):
+                if is_darwin():
+                    # We're unable to findout how many PTY's are open
+                    self.skipTest(
+                        'Unable to find out how many PTY\'s are open on Darwin - '
+                        'Skipping for now'
+                    )
+                self.fail('Unable to find out how many PTY\'s are open')
+
+        nr_ptys = current_pty_count()
 
         # Using context manager's
         for idx in range(0, nr_ptys + n_executions):
@@ -62,7 +84,7 @@ class VTTestCase(TestCase):
                                 stream_stderr=False) as terminal:
                     terminal.wait()
                 try:
-                    if int(open('/proc/sys/kernel/pty/nr').read().strip()) > (nr_ptys + (n_executions/2)):
+                    if current_pty_count() > (nr_ptys + (n_executions/2)):
                         self.fail('VT is not cleaning up PTY\'s')
                 except (ValueError, OSError, IOError):
                     self.fail('Unable to find out how many PTY\'s are open')
@@ -82,7 +104,7 @@ class VTTestCase(TestCase):
                                        stream_stderr=False)
                 terminal.wait()
                 try:
-                    if int(open('/proc/sys/kernel/pty/nr').read().strip()) > (nr_ptys + (n_executions/2)):
+                    if current_pty_count() > (nr_ptys + (n_executions/2)):
                         self.fail('VT is not cleaning up PTY\'s')
                 except (ValueError, OSError, IOError):
                     self.fail('Unable to find out how many PTY\'s are open')

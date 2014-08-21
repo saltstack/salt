@@ -59,7 +59,7 @@ def serialize(obj, **options):
     """
     Serialize Python data to YAML.
 
-    :param obj: the datastructure to serialize
+    :param obj: the data structure to serialize
     :param options: options given to lower yaml module.
     """
 

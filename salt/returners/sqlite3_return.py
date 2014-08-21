@@ -79,18 +79,24 @@ def _get_conn():
     '''
     # Possible todo: support detect_types, isolation_level, check_same_thread,
     # factory, cached_statements. Do we really need to though?
-    if not __salt__['config.option']('returner.sqlite3.database'):
+    if 'config.option' in __salt__:
+        database = __salt__['config.option']('returner.sqlite3.database')
+        timeout = __salt__['config.option']('returner.sqlite3.timeout')
+    else:
+        cfg = __opts__
+        database = cfg.get('returner.sqlite3.database', None)
+        timeout = cfg.get('returner.sqlite3.timeout', None)
+
+    if not database:
         raise Exception(
                 'sqlite3 config option "returner.sqlite3.database" is missing')
-    if not __salt__['config.option']('returner.sqlite3.timeout'):
+    if not timeout:
         raise Exception(
                 'sqlite3 config option "returner.sqlite3.timeout" is missing')
     log.debug('Connecting the sqlite3 database: {0} timeout: {1}'.format(
-              __salt__['config.option']('returner.sqlite3.database'),
-              __salt__['config.option']('returner.sqlite3.timeout')))
-    conn = sqlite3.connect(
-                  __salt__['config.option']('returner.sqlite3.database'),
-        timeout=float(__salt__['config.option']('returner.sqlite3.timeout')))
+              database,
+              timeout))
+    conn = sqlite3.connect(database, timeout=float(timeout))
     return conn
 
 

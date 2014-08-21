@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 Provides access to randomness generators.
 '''
@@ -24,7 +24,7 @@ def __virtual__():
 
 def hash(value, algorithm='sha512'):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Encodes a value with the specified encoder.
 
@@ -53,7 +53,7 @@ def hash(value, algorithm='sha512'):
 
 def str_encode(value, encoder='base64'):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     value
         The value to be encoded.
@@ -79,7 +79,7 @@ def str_encode(value, encoder='base64'):
 
 def get_str(length=20):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Returns a random string of the specified length.
 

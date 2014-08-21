@@ -1028,20 +1028,46 @@ def managed(name,
             sha1        40
             md5         32
 
-        The file can contain several checksums for several files. Each line
-        must contain both the file name and the hash.  If no file name is
-        matched, the first hash encountered will be used, otherwise the most
-        secure hash with the correct source file name will be used.
+        **Using a Source Hash File**
+            The file can contain several checksums for several files. Each line
+            must contain both the file name and the hash.  If no file name is
+            matched, the first hash encountered will be used, otherwise the most
+            secure hash with the correct source file name will be used.
 
-        Debian file type ``*.dsc`` is supported.
+            When using a source hash file the source_hash argument needs to be a
+            url, the standard download urls are supported, ftp, http, salt etc:
 
-        Examples:
+            Example:
 
-        .. code-block:: text
+            .. code-block:: yaml
 
-            /etc/rc.conf ef6e82e4006dee563d98ada2a2a80a27
-            sha254c8525aee419eb649f0233be91c151178b30f0dff8ebbdcc8de71b1d5c8bcc06a  /etc/resolv.conf
-            ead48423703509d37c4a90e6a0d53e143b6fc268
+                tomdroid-src-0.7.3.tar.gz:
+                  file.managed:
+                    - name: /tmp/tomdroid-src-0.7.3.tar.gz
+                    - source: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz
+                    - source_hash: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.hash
+
+            The following is an example of the supported source_hash format:
+
+            .. code-block:: text
+
+                /etc/rc.conf ef6e82e4006dee563d98ada2a2a80a27
+                sha254c8525aee419eb649f0233be91c151178b30f0dff8ebbdcc8de71b1d5c8bcc06a  /etc/resolv.conf
+                ead48423703509d37c4a90e6a0d53e143b6fc268
+
+            Debian file type ``*.dsc`` files are also supported.
+
+        **Inserting the Source Hash in the sls Data**
+            Examples:
+
+            .. code-block:: yaml
+
+                tomdroid-src-0.7.3.tar.gz:
+                  file.managed:
+                    - name: /tmp/tomdroid-src-0.7.3.tar.gz
+                    - source: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz
+                    - source_hash: md5=79eef25f9b0b2c642c62b7f737d4f53f
+
 
         Known issues:
             If the remote server URL has the hash file as an apparent
@@ -1157,25 +1183,26 @@ def managed(name,
             spaces.
 
     contents_grains
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
 
         Same as contents_pillar, but with grains
 
     contents_newline
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
 
-        When using contents, contents_pillar, or contents_grains, a newline is
-        inserted into the data. When loading some data this newline is better
-        left off.  Setting contents_newline to False will omit this newline.
+        When using contents, contents_pillar, or contents_grains, this option
+        ensures the file will have a newline at the end.
+        When loading some data this newline is better left off. Setting
+        contents_newline to False will omit this final newline.
 
     follow_symlinks : True
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
 
         If the desired path is a symlink follow it and make changes to the
         file to which the symlink points.
 
     check_cmd
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
 
         Do run the state only if the check_cmd succeeds
 
@@ -1192,7 +1219,7 @@ def managed(name,
             'Neither \'source\' nor \'contents\' nor \'contents_pillar\' nor \'contents_grains\' '
             'was defined, yet \'replace\' was set to \'True\'. As there is '
             'no source to replace the file with, \'replace\' has been set '
-            'to \'False\' to avoid reading the file unnecessarily'.format(name)
+            'to \'False\' to avoid reading the file unnecessarily'
         )
 
     user = _test_owner(kwargs, user=user)
@@ -1225,7 +1252,7 @@ def managed(name,
         msg = (
             'Passing a salt environment should be done using \'saltenv\' not '
             '\'env\'. This warning will go away in Salt Boron and this '
-            'will be the default and expected behaviour. Please update your '
+            'will be the default and expected behavior. Please update your '
             'state files.'
         )
         salt.utils.warn_until('Boron', msg)
@@ -1242,6 +1269,9 @@ def managed(name,
     elif not isinstance(context, dict):
         return _error(
             ret, 'Context must be formed as a dict')
+    if defaults and not isinstance(defaults, dict):
+        return _error(
+            ret, 'Defaults must be formed as a dict')
 
     if len(filter(None, [contents, contents_pillar, contents_grains])) > 1:
         return _error(
@@ -1435,7 +1465,8 @@ def directory(name,
         Enforce user/group ownership and mode of directory recursively. Accepts
         a list of strings representing what you would like to recurse.  If
         'mode' is defined, will recurse on both 'file_mode' and 'dir_mode' if
-        they are defined.
+        they are defined.  If ignore_files or ignore_dirs is included, files or
+        directories will be left unchanged respectively.
         Example:
 
         .. code-block:: yaml
@@ -1450,6 +1481,34 @@ def directory(name,
                     - user
                     - group
                     - mode
+
+        .. Leave files or directories unchanged respectively.
+        .. versionadded:: Lithium
+
+            /var/log/httpd:
+                file.directory:
+                - user: root
+                - group: root
+                - dir_mode: 755
+                - file_mode: 644
+                - recurse:
+                    - user
+                    - group
+                    - mode
+                    - ignore_files
+
+            /var/log/httpd:
+                file.directory:
+                - user: root
+                - group: root
+                - dir_mode: 755
+                - file_mode: 644
+                - recurse:
+                    - user
+                    - group
+                    - mode
+                    - ignore_dirs
+
 
     dir_mode / mode
         The permissions mode to set any directories created. Not supported on
@@ -1491,7 +1550,7 @@ def directory(name,
         make room for the directory, unless backupname is set,
         then it will be renamed.
 
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
 
     backupname
         If the name of the directory exists and is not a directory, it will be
@@ -1499,7 +1558,7 @@ def directory(name,
         exists and force is False, the state will fail. Otherwise, the
         backupname will be removed first.
 
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
 
     '''
     # Remove trailing slash, if present
@@ -1608,11 +1667,17 @@ def directory(name,
         if not isinstance(recurse, list):
             ret['result'] = False
             ret['comment'] = '"recurse" must be formed as a list of strings'
-        elif not set(['user', 'group', 'mode']) >= set(recurse):
+        elif not set(['user', 'group', 'mode', 'ignore_files', 'ignore_dirs']) >= set(recurse):
             ret['result'] = False
             ret['comment'] = 'Types for "recurse" limited to "user", ' \
-                             '"group" and "mode"'
+                             '"group", "mode", "ignore_files, and "ignore_dirs"'
         else:
+            if 'ignore_files' in recurse and 'ignore_dirs' in recurse:
+                ret['result'] = False
+                ret['comment'] = 'Can not specify "recurse" options "ignore_files" ' \
+                                 'and "ignore_dirs" at the same time.'
+                return ret
+
             if 'user' in recurse:
                 if user:
                     uid = __salt__['file.user_to_uid'](user)
@@ -1638,7 +1703,7 @@ def directory(name,
                     if isinstance(gid, string_types):
                         ret['result'] = False
                         ret['comment'] = 'Failed to enforce group ownership ' \
-                                         'for group {0}'.format(group, user)
+                                         'for group {0}'.format(group)
                 else:
                     ret['result'] = False
                     ret['comment'] = 'group not specified, but configured ' \
@@ -1651,25 +1716,37 @@ def directory(name,
                 file_mode = None
                 dir_mode = None
 
+            if 'ignore_files' in recurse:
+                ignore_files = True
+            else:
+                ignore_files = False
+
+            if 'ignore_dirs' in recurse:
+                ignore_dirs = True
+            else:
+                ignore_dirs = False
+
             for root, dirs, files in os.walk(name):
-                for fn_ in files:
-                    full = os.path.join(root, fn_)
-                    ret, perms = __salt__['file.check_perms'](
-                        full,
-                        ret,
-                        user,
-                        group,
-                        file_mode,
-                        follow_symlinks)
-                for dir_ in dirs:
-                    full = os.path.join(root, dir_)
-                    ret, perms = __salt__['file.check_perms'](
-                        full,
-                        ret,
-                        user,
-                        group,
-                        dir_mode,
-                        follow_symlinks)
+                if not ignore_files:
+                    for fn_ in files:
+                        full = os.path.join(root, fn_)
+                        ret, perms = __salt__['file.check_perms'](
+                            full,
+                            ret,
+                            user,
+                            group,
+                            file_mode,
+                            follow_symlinks)
+                if not ignore_dirs:
+                    for dir_ in dirs:
+                        full = os.path.join(root, dir_)
+                        ret, perms = __salt__['file.check_perms'](
+                            full,
+                            ret,
+                            user,
+                            group,
+                            dir_mode,
+                            follow_symlinks)
 
     if clean:
         keep = _gen_keep_files(name, require)
@@ -1860,7 +1937,7 @@ def recurse(name,
         msg = (
             'Passing a salt environment should be done using \'saltenv\' not '
             '\'env\'. This warning will go away in Salt Boron and this '
-            'will be the default and expected behaviour. Please update your '
+            'will be the default and expected behavior. Please update your '
             'state files.'
         )
         salt.utils.warn_until('Boron', msg)
@@ -2242,11 +2319,11 @@ def blockreplace(
     :param name: Filesystem path to the file to be edited
     :param marker_start: The line content identifying a line as the start of
         the content block. Note that the whole line containing this marker will
-        be considered, so whitespaces or extra content before or after the
+        be considered, so whitespace or extra content before or after the
         marker is included in final output
     :param marker_end: The line content identifying a line as the end of
         the content block. Note that the whole line containing this marker will
-        be considered, so whitespaces or extra content before or after the
+        be considered, so whitespace or extra content before or after the
         marker is included in final output.
         Note: you can use file.accumulated and target this state. All
         accumulated data dictionaries content will be added as new lines in the
@@ -2983,7 +3060,7 @@ def prepend(name,
                   - salt://motd/hr-messages.tmpl
                   - salt://motd/general-messages.tmpl
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
@@ -3166,7 +3243,7 @@ def patch(name,
         msg = (
             'Passing a salt environment should be done using \'saltenv\' not '
             '\'env\'. This warning will go away in Salt Boron and this '
-            'will be the default and expected behaviour. Please update your '
+            'will be the default and expected behavior. Please update your '
             'state files.'
         )
         salt.utils.warn_until('Boron', msg)
@@ -3305,6 +3382,7 @@ def copy(name, source, force=False, makedirs=False):
         'comment': '',
         'result': True}
 
+    changed = True
     if not os.path.isabs(name):
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
@@ -3313,11 +3391,14 @@ def copy(name, source, force=False, makedirs=False):
         return _error(ret, 'Source file "{0}" is not present'.format(source))
 
     if os.path.lexists(source) and os.path.lexists(name):
+        # if this is a file which did not changed, do not update
+        if force and os.path.isfile(name):
+            hash1 = salt.utils.get_hash(name)
+            hash2 = salt.utils.get_hash(source)
+            if hash1 != hash2:
+                changed = False
         if not force:
-            ret['comment'] = ('The target file "{0}" exists and will not be '
-                              'overwritten'.format(name))
-            ret['result'] = True
-            return ret
+            changed = False
         elif not __opts__['test']:
             # Remove the destination to prevent problems later
             try:
@@ -3340,6 +3421,12 @@ def copy(name, source, force=False, makedirs=False):
             name
         )
         ret['result'] = None
+        return ret
+
+    if not changed:
+        ret['comment'] = ('The target file "{0}" exists and will not be '
+                          'overwritten'.format(name))
+        ret['result'] = True
         return ret
 
     # Run makedirs
@@ -3551,8 +3638,8 @@ def accumulated(name, filename, text, **kwargs):
 def _merge_dict(obj, k, v):
     changes = {}
     if k in obj:
-        if type(obj[k]) is list:
-            if type(v) is list:
+        if isinstance(obj[k], list):
+            if isinstance(v, list):
                 for a in v:
                     if a not in obj[k]:
                         changes[k] = a
@@ -3561,10 +3648,10 @@ def _merge_dict(obj, k, v):
                 if obj[k] != v:
                     changes[k] = v
                     obj[k] = v
-        elif type(obj[k]) is dict:
-            if type(v) is dict:
+        elif isinstance(obj[k], dict):
+            if isinstance(v, dict):
                 for a, b in v.iteritems():
-                    if (type(b) is dict) or (type(b) is list):
+                    if isinstance(b, dict) or isinstance(b, list):
                         updates = _merge_dict(obj[k], a, b)
                         for x, y in updates.iteritems():
                             changes[k + "." + x] = y
@@ -3646,7 +3733,7 @@ def serialize(name,
         be parsed and the dataset passed in will be merged with the existing
         content
 
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
 
     For example, this state:
 
@@ -3689,7 +3776,7 @@ def serialize(name,
         msg = (
             'Passing a salt environment should be done using \'saltenv\' not '
             '\'env\'. This warning will go away in Salt Boron and this '
-            'will be the default and expected behaviour. Please update your '
+            'will be the default and expected behavior. Please update your '
             'state files.'
         )
         salt.utils.warn_until('Boron', msg)

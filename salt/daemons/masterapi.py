@@ -217,7 +217,7 @@ def fileserver_update(fileserver):
     except Exception as exc:
         log.error(
             'Exception {0} occurred in file server update'.format(exc),
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
 
 
@@ -598,7 +598,7 @@ class RemoteFuncs(object):
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
-        file_recv_max_size = 1024*1024 * self.opts.get('file_recv_max_size', 100)
+        file_recv_max_size = 1024*1024 * self.opts['file_recv_max_size']
 
         if 'loc' in load and load['loc'] < 0:
             log.error('Invalid file pointer: load[loc] < 0')
@@ -1268,7 +1268,7 @@ class LocalFuncs(object):
         # check if the cmd is blacklisted
         for module_re in self.opts['client_acl_blacklist'].get('modules', []):
             # if this is a regular command, its a single function
-            if type(load['fun']) == str:
+            if isinstance(load['fun'], str):
                 funs_to_check = [load['fun']]
             # if this a compound function
             else:
