@@ -8,43 +8,43 @@ salt as different environments.
 To enable, add ``git`` to the :conf_master:`fileserver_backend` option in the
 master config file.
 
-As of the next feature release, the Git fileserver backend will support
-`GitPython`_, `pygit2`_, and `dulwich`_ to provide the Python interface to git.
-If more than one of these are present, the order of preference for which one
-will be chosen is the same as the order in which they were listed: GitPython,
-pygit2, dulwich (keep in mind, this order is subject to change).
-
-**pygit2 and dulwich support presently exist only in the develop branch and are
-not yet available in an official release**
+As of Salt 2014.7.0, the Git fileserver backend supports GitPython_, pygit2_,
+and dulwich_ to provide the Python interface to git. If more than one of these
+are present, the order of preference for which one will be chosen is the same
+as the order in which they were listed: pygit2, GitPython, dulwich (keep in
+mind, this order is subject to change).
 
 An optional master config parameter (:conf_master:`gitfs_provider`) can be used
 to specify which provider should be used.
 
 .. note:: Minimum requirements
 
-    Using `GitPython`_ requires a minimum GitPython version of 0.3.0, as well
-    as git itself. Instructions for installing GitPython can be found
-    :ref:`here <gitfs-dependencies>`.
+    To use GitPython_ for gitfs requires a minimum GitPython version of 0.3.0,
+    as well as the git CLI utility. Instructions for installing GitPython can
+    be found :ref:`here <gitfs-dependencies>`.
 
-    Using `pygit2`_ requires a minimum pygit2 version of 0.21.0. Additionally,
-    using pygit2 as a provider requires `libgit2`_ 0.21.0 or newer, as well as
-    git itself. pygit2 and libgit2 are developed alongside one another, so it
-    is recommended to keep them both at the same major release to avoid
-    unexpected behavior.
+    To use pygit2_ for gitfs requires a minimum pygit2_ version of 0.20.3.
+    pygit2_ 0.20.3 requires libgit2_ 0.20.0. pygit2_ and libgit2_ are developed
+    alongside one another, so it is recommended to keep them both at the same
+    major release to avoid unexpected behavior. For example, pygit2_ 0.21.x
+    requires libgit2_ 0.21.x, pygit2_ 0.22.x will require libgit2_ 0.22.x, etc.
+
+    To find stale refs, pygit2 additionally requires the git CLI utility to be
+    installed.
 
 .. warning::
 
-    `pygit2`_ does not yet support supplying passing SSH credentials, so at
+    pygit2_ does not yet support supplying passing SSH credentials, so at
     this time only ``http://``, ``https://``, and ``file://`` URLs are
     supported as valid :conf_master:`gitfs_remotes` entries if pygit2 is being
     used.
 
-    Additionally, `pygit2`_ does not yet support passing http/https credentials
+    Additionally, pygit2_ does not yet support passing http/https credentials
     via a `.netrc`_ file.
 
 .. _GitPython: https://github.com/gitpython-developers/GitPython
 .. _pygit2: https://github.com/libgit2/pygit2
-.. _libgit2: https://github.com/libgit2/pygit2#quick-install-guide
+.. _libgit2: https://libgit2.github.com/
 .. _dulwich: https://www.samba.org/~jelmer/dulwich/
 .. _.netrc: https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-File.html
 '''
@@ -188,22 +188,27 @@ def _verify_pygit2(quiet=False):
         if HAS_DULWICH and not quiet:
             log.error(_RECOMMEND_DULWICH)
         return False
+
     pygit2ver = distutils.version.LooseVersion(pygit2.__version__)
+    pygit2_minver_str = '0.20.3'
+    pygit2_minver = distutils.version.LooseVersion(pygit2_minver_str)
+
     libgit2ver = distutils.version.LooseVersion(pygit2.LIBGIT2_VERSION)
-    minver_str = '0.21.0'
-    minver = distutils.version.LooseVersion(minver_str)
+    libgit2_minver_str = '0.20.0'
+    libgit2_minver = distutils.version.LooseVersion(libgit2_minver_str)
+
     errors = []
-    if pygit2ver < minver:
+    if pygit2ver < pygit2_minver:
         errors.append(
             'Git fileserver backend is enabled in master config file, but '
             'pygit2 version is earlier than {0}. Version {1} detected.'
-            .format(minver_str, pygit2.__version__)
+            .format(pygit2_minver_str, pygit2.__version__)
         )
-    if libgit2ver < minver:
+    if libgit2ver < libgit2_minver:
         errors.append(
             'Git fileserver backend is enabled in master config file, but '
             'libgit2 version is earlier than {0}. Version {1} detected.'
-            .format(minver_str, pygit2.__version__)
+            .format(libgit2_minver_str, pygit2.LIBGIT2_VERSION)
         )
     if not salt.utils.which('git'):
         errors.append(
@@ -244,7 +249,7 @@ def _verify_dulwich(quiet=False):
 
 def _get_provider():
     '''
-    Determin which gitfs_provider to use
+    Determine which gitfs_provider to use
     '''
     # Don't re-perform all the verification if we already have a verified
     # provider
@@ -252,7 +257,6 @@ def _get_provider():
         return __opts__['verified_gitfs_provider']
     provider = __opts__.get('gitfs_provider', '').lower()
     if not provider:
-        # Prefer GitPython if it's available and verified
         if _verify_pygit2(quiet=True):
             return 'pygit2'
         elif _verify_gitpython(quiet=True):
@@ -891,11 +895,18 @@ def update():
                     # No credentials configured for this repo
                     pass
                 fetch = origin.fetch()
+                try:
+                    # pygit2.Remote.fetch() returns a dict in pygit2 < 0.21.0
+                    received_objects = fetch['received_objects']
+                except AttributeError:
+                    # pygit2.Remote.fetch() returns a class instance in
+                    # pygit2 >= 0.21.0
+                    received_objects = fetch.received_objects
                 log.debug(
                     'Gitfs received {0} objects for remote {1}'
-                    .format(fetch.received_objects, repo['url'])
+                    .format(received_objects, repo['url'])
                 )
-                if fetch.received_objects:
+                if received_objects:
                     data['changed'] = True
             elif provider == 'dulwich':
                 client, path = \
