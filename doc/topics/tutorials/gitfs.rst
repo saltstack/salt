@@ -7,7 +7,7 @@ Gitfs Backend Walkthrough
 .. note::
 
     This walkthrough assumes basic knowledge of Salt. To get up to speed, check
-    out the :doc:`walkthrough </topics/tutorials/walkthrough>`.
+    out the :doc:`Salt Walkthrough </topics/tutorials/walkthrough>`.
 
 The gitfs backend allows Salt to serve files from git repositories. It can be
 enabled by adding ``git`` to the :conf_master:`fileserver_backend` list, and
@@ -36,15 +36,23 @@ Dulwich_.
 pygit2
 ------
 
-The minimum supported version of pygit2_ is 0.21.0. Availability for this
-version of pygit2_ is still limited. The SaltStack team is working to get
-compatible versions available, but in the meantime it may be necessary to build
-your own copies. Installation instructions and requirements for pygit2_ can be
-found here__.
+The minimum supported version of pygit2_ is 0.20.3. Availability for this
+version of pygit2_ is still limited, though the SaltStack team is working to
+get compatible versions available for as many platforms as possible.
 
-When it is packaged, it is typically called **python-pygit2**.
+For the Fedora/EPEL versions which have a new enough version packaged, the
+following command would be used to install pygit2_:
 
-.. __: http://www.pygit2.org/install.html
+.. code-block:: bash
+
+    # yum install python-pygit2
+
+Provided a valid version, the package name would be the same for Debian/Ubuntu,
+so the following would be used to install it:
+
+.. code-block:: bash
+
+    # apt-get install python-pygit2
 
 GitPython
 ---------
@@ -456,7 +464,7 @@ pygit2
 
 .. versionadded:: 2014.7.0
 
-Both HTTPS and SSH authentication are supported as of version 0.21.0, which is
+Both HTTPS and SSH authentication are supported as of version 0.20.3, which is
 the earliest version of pygit2_ supported by Salt for gitfs.
 
 .. note::
