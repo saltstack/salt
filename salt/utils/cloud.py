@@ -1448,8 +1448,11 @@ def scp_file(dest_path, contents, kwargs):
             )
         ])
 
-    cmd = 'scp {0} {1} {2[username]}@{2[hostname]}:{3}'.format(
-        ' '.join(ssh_args), tmppath, kwargs, dest_path
+    cmd = (
+        'scp {0} {1} {2[username]}@{2[hostname]}:{3} || '
+        'rsync -avz -e "ssh {0}" {1} {2[username]}@{2[hostname]}:{3}'.format(
+            ' '.join(ssh_args), tmppath, kwargs, dest_path
+        )
     )
     log.debug('SCP command: {0!r}'.format(cmd))
     retcode = _exec_ssh_cmd(cmd,
