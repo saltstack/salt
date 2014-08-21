@@ -1225,6 +1225,17 @@ class LocalClient(object):
                                 'Execution is still running on {0}'.format(id_)
                             )
                         more_time = True
+                if not more_time:
+                    cache_jinfo = self.get_cache_returns(jid)
+                    for id_ in cache_jinfo:
+                        if id_ == tgt:
+                            found.add(cache_jinfo.get('id'))
+                            ret = {id_: {'ret': cache_jinfo[id_]['ret']}}
+                            if 'out' in cache_jinfo[id_]:
+                                ret[id_]['out'] = cache_jinfo[id_]['out']
+                            if 'retcode' in cache_jinfo[id_]:
+                                ret[id_]['retcode'] = cache_jinfo[id_]['retcode']
+                            yield ret
                 if more_time:
                     timeout_at = time.time() + timeout
                     continue

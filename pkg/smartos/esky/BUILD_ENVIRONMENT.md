@@ -13,18 +13,18 @@ HERE=$(pwd)
 
 mv /opt/local /opt/local.backup ; hash -r
 cd /
-curl http://pkgsrc.joyent.com/packages/SmartOS/bootstrap/bootstrap-2013Q4-x86_64.tar.gz | gtar xz
+curl http://pkgsrc.joyent.com/packages/SmartOS/bootstrap/bootstrap-2014Q2-x86_64.tar.gz | gtar xz
 hash -r
 
 pkgin -y up
-pkgin -y in build-essential salt swig py27-pip unzip py27-mysqldb
-pkgin -y rm salt
+pkgin -y in build-essential salt swig py27-pip unzip py27-mysqldb libsodium
+pkgin -y rm salt py27-zmq
 
 cd /opt/local/bin
 curl -kO 'https://us-east.manta.joyent.com/nahamu/public/smartos/bins/patchelf'
 chmod +x patchelf
 
-pip install esky bbfreeze
+pip install --egg esky bbfreeze
 
 cd $HERE
 curl -kO 'https://pypi.python.org/packages/source/b/bbfreeze-loader/bbfreeze-loader-1.1.0.zip'
@@ -38,11 +38,20 @@ patchelf --set-rpath '$ORIGIN:$ORIGIN/../lib' $HERE/console.exe
 
 find /opt/local -name console.exe -exec mv $HERE/console.exe {} \;
 
-git clone git://github.com/saltstack/salt -b 2014.1
+git clone git://github.com/saltstack/salt -b 2014.7
 cd $HERE/salt
-pip install -r requirements.txt
-# packages not in main requirements file that are nice to have
-pip install -r pkg/smartos/esky/requirements.txt
+
+# install all requirements
+# (installing them as eggs seems to trigger esky pulling in the whole egg)
+# this step is buggy... I had to run them repeatedly until they succeeded...
+pip install --egg -r pkg/smartos/esky/zeromq_requirements.txt
+pip install --egg -r pkg/smartos/esky/raet_requirements.txt
+
+# install the sodium_grabber library
+python pkg/smartos/esky/sodium_grabber_installer.py install
+
+# at this point you have a build environment that you could set aside and reuse to run further builds.
+
 bash pkg/smartos/esky/build-tarball.sh
 
 # Upload packages into Manta
