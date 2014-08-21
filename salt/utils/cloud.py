@@ -1517,7 +1517,7 @@ def win_cmd(command, **kwargs):
     return 1
 
 
-def root_cmd(command, tty, sudo, **kwargs):
+def root_cmd(command, tty, sudo, allow_failure=False, **kwargs):
     '''
     Wrapper for commands to be run as root
     '''
@@ -1608,7 +1608,7 @@ def root_cmd(command, tty, sudo, **kwargs):
         ' '.join(ssh_args), kwargs, pipes.quote(command)
     )
     log.debug('SSH command: {0!r}'.format(cmd))
-    retcode = _exec_ssh_cmd(cmd, **kwargs)
+    retcode = _exec_ssh_cmd(cmd, allow_failure=allow_failure, **kwargs)
     return retcode
 
 
