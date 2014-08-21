@@ -403,6 +403,11 @@ def install(name=None,
 
         .. versionadded:: 0.17.4
 
+    install_recommends
+        Whether to install the packages marked as recommended.  Default is True.
+
+        .. versionadded:: Lithium
+
     Returns a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
@@ -485,6 +490,8 @@ def install(name=None,
             cmd.append('--force-yes')
         cmd = cmd + ['-o', 'DPkg::Options::=--force-confold']
         cmd = cmd + ['-o', 'DPkg::Options::=--force-confdef']
+        if 'install_recommends' in kwargs and not kwargs['install_recommends']:
+            cmd.append('--no-install-recommends')
         if skip_verify:
             cmd.append('--allow-unauthenticated')
         if fromrepo:
