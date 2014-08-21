@@ -1162,7 +1162,7 @@ def replace(path,
         if None == not_found_content:
             not_found_content = repl
         if prepend_if_not_found:
-            new_file.insert(not_found_content + '\n')
+            new_file.insert(0, not_found_content + '\n')
         else:
             # append_if_not_found
             # Make sure we have a newline at the end of the file
