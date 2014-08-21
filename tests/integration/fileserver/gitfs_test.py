@@ -13,6 +13,7 @@ ensure_in_syspath('../..')
 # Import Python libs
 import copy
 import os
+import getpass
 import shutil
 
 # Import salt libs
@@ -78,6 +79,8 @@ class GitFSTest(integration.ModuleCase):
 
         repo.index.add([x for x in os.listdir(self.tmp_repo_dir)
                         if x != '.git'])
+        if 'USERNAME' not in os.environ:
+            os.environ['username'] = getpass.getuser()
         repo.index.commit('Test')
 
         with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
