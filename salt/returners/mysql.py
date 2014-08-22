@@ -125,7 +125,7 @@ def _get_serv(commit=False):
         yield cursor
     except MySQLdb.DatabaseError as err:
         error, = err.args
-        sys.stderr.write(error.message)
+        sys.stderr.write(str(error))
         cursor.execute("ROLLBACK")
         raise err
     else:
