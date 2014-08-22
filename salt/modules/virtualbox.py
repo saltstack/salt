@@ -31,10 +31,6 @@ def __virtual__():
     return __virtualname__
 
 
-def test():
-    return True
-
-
 def guest_additions_mount():
     '''
     Mount VirtualBox Guest Additions CD to the temp directory
