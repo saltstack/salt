@@ -8,14 +8,18 @@ from __future__ import with_statement
 HAS_NOVA = False
 try:
     from novaclient.v1_1 import client
+    from novaclient.shell import OpenStackComputeShell
+    import novaclient.utils
     import novaclient.auth_plugin
     import novaclient.exceptions
     import novaclient.extension
+    import novaclient.base
     HAS_NOVA = True
 except ImportError:
     pass
 
 # Import python libs
+import inspect
 import time
 import logging
 
@@ -87,7 +91,7 @@ def sanatize_novaclient(kwargs):
 
 
 # Function alias to not shadow built-ins
-class SaltNova(object):
+class SaltNova(OpenStackComputeShell):
     '''
     Class for all novaclient functions
     '''
@@ -108,11 +112,19 @@ class SaltNova(object):
             return None
 
         self.kwargs = kwargs.copy()
+
+        if not novaclient.utils.HookableMixin._hooks_map:
+            self.extensions = self._discover_extensions('1.1')
+            for extension in self.extensions:
+                extension.run_hooks('__pre_parse_args__')
+            self.kwargs['extensions'] = self.extensions
+
         self.kwargs['username'] = username
         self.kwargs['project_id'] = project_id
         self.kwargs['auth_url'] = auth_url
         self.kwargs['region_name'] = region_name
         self.kwargs['service_type'] = 'compute'
+
         if os_auth_plugin is not None:
             novaclient.auth_plugin.discover_auth_systems()
             auth_plugin = novaclient.auth_plugin.load_plugin(os_auth_plugin)
@@ -121,15 +133,6 @@ class SaltNova(object):
 
         if not self.kwargs.get('api_key', None):
             self.kwargs['api_key'] = password
-        extensions = []
-        if 'extensions' in kwargs:
-            exts = []
-            for key, item in self.kwargs['extensions'].items():
-                mod = __import__(item.replace('-', '_'))
-                exts.append(
-                    novaclient.extension.Extension(key, mod)
-                )
-            self.kwargs['extensions'] = exts
 
         self.kwargs = sanatize_novaclient(self.kwargs)
 
@@ -156,6 +159,10 @@ class SaltNova(object):
                 region_name
             )['publicURL']
 
+        if hasattr(self, 'extensions'):
+            for extension in self.extensions:
+                extension.run_hooks('__post_parse_args__', self.kwargs)
+
         self.compute_conn = client.Client(**self.kwargs)
 
         if region_name is not None:
@@ -172,6 +179,20 @@ class SaltNova(object):
 
         self.kwargs['service_type'] = 'volume'
         self.volume_conn = client.Client(**self.kwargs)
+        if hasattr(self, 'extensions'):
+            self.expand_extensions()
+
+    def expand_extensions(self):
+        for connection in (self.compute_conn, self.volume_conn):
+            for extension in self.extensions:
+                for attr in extension.module.__dict__:
+                    if not inspect.isclass(getattr(extension.module, attr)):
+                        continue
+                    for key, value in connection.__dict__.items():
+                        if not isinstance(value, novaclient.base.Manager):
+                            continue
+                        if value.__class__.__name__ == attr:
+                            setattr(connection, key, getattr(connection, extension.name))
 
     def get_catalog(self):
         '''
@@ -197,6 +218,9 @@ class SaltNova(object):
         Boot a cloud server.
         '''
         nt_ks = self.compute_conn
+        for key in ('name', 'flavor', 'image'):
+            if key in kwargs:
+                del kwargs[key]
         response = nt_ks.servers.create(
             name=name, flavor=flavor_id, image=image_id, **kwargs
         )
