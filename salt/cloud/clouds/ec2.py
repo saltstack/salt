@@ -1608,7 +1608,7 @@ def request_instance(vm_=None, call=None):
             except SaltCloudSystemExit:
                 pass
             finally:
-                raise SaltCloudSystemExit(exc.message)
+                raise SaltCloudSystemExit(str(exc))
 
     return data, vm_
 
@@ -1712,7 +1712,7 @@ def query_instance(vm_=None, call=None):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(exc.message)
+            raise SaltCloudSystemExit(str(exc))
 
     if 'reactor' in vm_ and vm_['reactor'] is True:
         salt.utils.cloud.fire_event(
