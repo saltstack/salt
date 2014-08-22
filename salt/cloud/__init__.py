@@ -1562,7 +1562,6 @@ class Map(Cloud):
             )
             return {}
 
-
         if 'include' in map_:
             map_ = salt.config.include_config(
                 map_, self.opts['map'], verbose=False
