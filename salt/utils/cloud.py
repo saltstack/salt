@@ -919,7 +919,7 @@ def fire_event(key, msg, tag, args=None, sock_dir=None):
     time.sleep(0.025)
 
 
-def scp_file(dest_path, contents, kwargs):
+def scp_file(dest_path, contents, kwargs, allow_failure=False):
     '''
     Use scp to copy a file to a server
     '''
@@ -954,6 +954,13 @@ def scp_file(dest_path, contents, kwargs):
     cmd = 'scp {0} {1} {2[username]}@{2[hostname]}:{3}'.format(
         ' '.join(ssh_args), tmppath, kwargs, dest_path
     )
+    cmd = (
+        'scp {0} {1} {2[username]}@{2[hostname]}:{3} || '
+        'echo "put {1} {3}" | sftp {0} {2[username]}@{2[hostname]} || '
+        'rsync -avz -e "ssh {0}" {1} {2[username]}@{2[hostname]}:{3}'.format(
+            ' '.join(ssh_args), tmppath, kwargs, dest_path
+        )
+    )
     log.debug('SCP command: {0!r}'.format(cmd))
 
     try:
@@ -967,12 +974,12 @@ def scp_file(dest_path, contents, kwargs):
         )
         log.debug('Uploading file(PID {0}): {1!r}'.format(proc.pid, dest_path))
 
-        sent_password = False
+        sent_password = 0
         while proc.isalive():
             stdout, stderr = proc.recv()
             if stdout and SSH_PASSWORD_PROMP_RE.match(stdout):
-                if sent_password:
-                    # second time??? Wrong password?
+                if sent_password > 2:
+                    # 3rd time??? Wrong password?
                     log.warning(
                         'Asking for password again. Wrong one provided???'
                     )
@@ -980,10 +987,16 @@ def scp_file(dest_path, contents, kwargs):
                     return 1
 
                 proc.sendline(kwargs['password'])
-                sent_password = True
+                sent_password += 1
 
             time.sleep(0.025)
         proc.close(force=True)
+        if allow_failure is False:
+            raise SaltCloudSystemExit(
+                'Failed to upload {0} to {1}. Exit code: {2}'.format(
+                    tmppath, dest_path, proc.exitstatus
+                )
+            )
         return proc.exitstatus
     except vt.TerminalException as err:
         log.error(
