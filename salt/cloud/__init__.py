@@ -32,20 +32,13 @@ import salt.utils
 import salt.utils.cloud
 from salt.utils import context
 from salt._compat import string_types
+from salt.template import compile_template
 
 # Import third party libs
 import yaml
 
 # Get logging started
 log = logging.getLogger(__name__)
-
-try:
-    from mako.template import Template
-    from mako.exceptions import MakoException
-    MAKO_AVAILABLE = True
-except ImportError:
-    log.debug('Mako not available')
-    MAKO_AVAILABLE = False
 
 
 def communicator(func):
@@ -1541,17 +1534,6 @@ class Map(Cloud):
                         vm_names.append(vm_name)
         return vm_names
 
-    def _mako_read(self, fp):
-        try:
-            # open mako file
-            temp_ = Template(fp.read())
-            # render as yaml
-            yaml_str_ = temp_.render()
-            map_ = yaml.safe_load(yaml_str_)
-        except MakoException:
-            map_ = yaml.safe_load(fp.read())
-        return map_
-
     def read(self):
         '''
         Read in the specified map file and return the map structure
@@ -1566,11 +1548,11 @@ class Map(Cloud):
                 )
             )
         try:
-            with open(self.opts['map'], 'rb') as fp_:
-                if MAKO_AVAILABLE:
-                    map_ = self._mako_read(fp_)
-                else:
-                    map_ = yaml.safe_load(fp_.read())
+            renderer = self.opts.get('renderer', 'yaml_jinja')
+            rend = salt.loader.render(self.opts, {})
+            map_ = compile_template(
+                self.opts['map'], rend, renderer
+            )
         except Exception as exc:
             log.error(
                 'Rendering map {0} failed, render error:\n{1}'.format(
