@@ -725,7 +725,7 @@ def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
                 log.debug('Using {0} as the key_filename'.format(key_filename))
             elif password:
                 kwargs['password'] = password
-                log.debug('Using password authentication'.format(password))
+                log.debug('Using password authentication')
 
             trycount += 1
             log.debug(
@@ -794,7 +794,6 @@ def deploy_windows(host,
                              username=username, password=password,
                              timeout=port_timeout * 60):
         log.debug('SMB port {0} on {1} is available'.format(port, host))
-        newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
         log.debug(
             'Logging into {0}:{1} as {2}'.format(
                 host, port, username
@@ -1338,9 +1337,9 @@ def fire_event(key, msg, tag, args=None, sock_dir=None, transport='zeromq'):
     time.sleep(0.025)
 
 
-def _exec_ssh_cmd(cmd,
-                  error_msg='A wrong password has been issued while establishing ssh session',
-                  **kwargs):
+def _exec_ssh_cmd(cmd, error_msg=None, allow_failure=False, **kwargs):
+    if error_msg is None:
+        error_msg = 'A wrong password has been issued while establishing ssh session'
     password_retries = kwargs.get('password_retries', 3)
     try:
         stdout, stderr = None, None
@@ -1350,7 +1349,8 @@ def _exec_ssh_cmd(cmd,
             log_stdout=True,
             log_stderr=True,
             stream_stdout=kwargs.get('display_ssh_output', True),
-            stream_stderr=kwargs.get('display_ssh_output', True))
+            stream_stderr=kwargs.get('display_ssh_output', True)
+        )
         sent_password = 0
         while proc.isalive():
             stdout, stderr = proc.recv()
@@ -1365,6 +1365,13 @@ def _exec_ssh_cmd(cmd,
                     raise SaltCloudPasswordError(error_msg)
             # 0.0125 is really too fast on some systems
             time.sleep(0.5)
+        if proc.exitstatus != 0:
+            if allow_failure is False:
+                raise SaltCloudSystemExit(
+                    'Command {0!r} failed. Exit code: {1}'.format(
+                        cmd, proc.exitstatus
+                    )
+                )
         return proc.exitstatus
     except vt.TerminalException as err:
         trace = traceback.format_exc()
@@ -1440,12 +1447,17 @@ def scp_file(dest_path, contents, kwargs):
             )
         ])
 
-    cmd = 'scp {0} {1} {2[username]}@{2[hostname]}:{3}'.format(
-        ' '.join(ssh_args), tmppath, kwargs, dest_path
+    cmd = (
+        'scp {0} {1} {2[username]}@{2[hostname]}:{3} || '
+        'echo "put {1} {3}" | sftp {0} {2[username]}@{2[hostname]} || '
+        'rsync -avz -e "ssh {0}" {1} {2[username]}@{2[hostname]}:{3}'.format(
+            ' '.join(ssh_args), tmppath, kwargs, dest_path
+        )
     )
     log.debug('SCP command: {0!r}'.format(cmd))
     retcode = _exec_ssh_cmd(cmd,
                             error_msg='Failed to upload file {0!r}: {1}\n{2}',
+                            password_retries=3,
                             **kwargs)
     return retcode
 
@@ -1507,7 +1519,7 @@ def win_cmd(command, **kwargs):
     return 1
 
 
-def root_cmd(command, tty, sudo, **kwargs):
+def root_cmd(command, tty, sudo, allow_failure=False, **kwargs):
     '''
     Wrapper for commands to be run as root
     '''
@@ -1598,7 +1610,7 @@ def root_cmd(command, tty, sudo, **kwargs):
         ' '.join(ssh_args), kwargs, pipes.quote(command)
     )
     log.debug('SSH command: {0!r}'.format(cmd))
-    retcode = _exec_ssh_cmd(cmd, **kwargs)
+    retcode = _exec_ssh_cmd(cmd, allow_failure=allow_failure, **kwargs)
     return retcode
 
 
@@ -2211,7 +2223,7 @@ def diff_node_cache(prov_dir, node, new_data, opts):
     with salt.utils.fopen(path, 'r') as fh_:
         try:
             cache_data = msgpack.load(fh_)
-        except ValueError as exc:
+        except ValueError:
             log.warning('Cache for {0} was corrupt: Deleting'.format(node))
             cache_data = {}
 
