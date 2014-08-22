@@ -489,7 +489,7 @@ can be provided like so:
 .. _gitfs-insecure-auth:
 
 If the repository is served over HTTP instead of HTTPS, then Salt will by
-default refuse to authenticate to it. This behavior can be overidden by adding
+default refuse to authenticate to it. This behavior can be overridden by adding
 an ``insecure_auth`` parameter:
 
 .. code-block:: yaml

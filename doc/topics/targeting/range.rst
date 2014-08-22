@@ -14,7 +14,7 @@ Learn more about range here:
 
 https://github.com/ytoolshed/range/wiki/
 
-Prerequsites
+Prerequisites
 ============
 
 To utilize range support in Salt, a range server is required. Setting up a
@@ -27,7 +27,7 @@ on writing YAML range files is here:
 
 https://github.com/ytoolshed/range/wiki/%22yamlfile%22-module-file-spec
 
-Additionally, the Python seco range libraries must be instaled on the salt
+Additionally, the Python seco range libraries must be installed on the salt
 master. One can verify that they have been installed correctly via the
 following command:
 

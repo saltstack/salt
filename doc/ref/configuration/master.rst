@@ -139,7 +139,7 @@ drop down to 1 worker otherwise.
     When the master daemon starts, it is expected behaviour to see
     multiple salt-master processes, even if 'worker_threads' is set to '1'. At
     a minimum, a controlling process will start along with a Publisher, an
-    EventPublisher, and a number of MWorker procsses will be started. The
+    EventPublisher, and a number of MWorker processes will be started. The
     number of MWorker processes is tuneable by the 'worker_threads'
     configuration value while the others are not.
 
@@ -348,8 +348,8 @@ Default: ``True``
 
 The minion data cache is a cache of information about the minions stored on the
 master, this information is primarily the pillar and grains data. The data is
-cached in the Master cachedir under the name of the minion and used to pre
-determine what minions are expected to reply from executions.
+cached in the Master cachedir under the name of the minion and used to
+predetermine what minions are expected to reply from executions.
 
 .. code-block:: yaml
 
@@ -585,7 +585,7 @@ security purposes.
 
 Default: ``False``
 
-Sign the master auth-replies with a cryptographical signature of the masters
+Sign the master auth-replies with a cryptographic signature of the masters
 public key. Please see the tutorial how to use these settings in the
 `Multimaster-PKI with Failover Tutorial <http://docs.saltstack.com/en/latest/topics/tutorials/multimaster_pki.html>`_
 
