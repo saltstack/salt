@@ -216,8 +216,8 @@ update_cachedir
 ~~~~~~~~~~~~~~~
 
 On supported cloud providers, whether or not to maintain a cache of nodes
-returned from a --full-query. The data will be stored in ``json`` format under
-``<SALT_CACHEDIR>/cloud/active/<DRIVER>/<PROVIDER>/<NODE_NAME>.json``. This
+returned from a --full-query. The data will be stored in ``msgpack`` format
+under ``<SALT_CACHEDIR>/cloud/active/<DRIVER>/<PROVIDER>/<NODE_NAME>.p``. This
 setting can be True or False.
 
 
