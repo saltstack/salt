@@ -421,7 +421,9 @@ def request_instance(vm_=None, call=None):
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
     salt.utils.cloud.check_name(vm_['name'], 'a-zA-Z0-9._-')
     conn = get_conn()
-    kwargs = vm_.copy()
+    kwargs = {
+        'name': vm_['name']
+    }
 
     try:
         kwargs['image_id'] = get_image(conn, vm_)

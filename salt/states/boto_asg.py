@@ -225,7 +225,7 @@ def present(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
     '''
-    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     if vpc_zone_identifier:
         vpc_id = __salt__['boto_vpc.get_subnet_association'](vpc_zone_identifier, region, key, keyid, profile)
         log.debug('Auto Scaling Group {0} is associated with VPC ID {1}'
@@ -237,7 +237,7 @@ def present(
     # if launch_config is defined, manage the launch config first.
     # hash the launch_config dict to create a unique name suffix and then
     # ensure it is present
-    if launch_config and not __opts__['test']:
+    if launch_config:
         launch_config_name = launch_config_name + "-" + hashlib.md5(str(launch_config)).hexdigest()
         args = {
             'name':  launch_config_name,
@@ -263,12 +263,13 @@ def present(
 
         for d in launch_config:
             args.update(d)
-        lc_ret = __salt__["state.single"]('boto_lc.present', **args)
-        lc_ret = lc_ret.values()[0]
-        if lc_ret["result"] is True:
-            if "launch_config" not in ret["changes"]:
-                ret["changes"]["launch_config"] = {}
-            ret["changes"]["launch_config"] = lc_ret["changes"]
+        if not __opts__['test']:
+            lc_ret = __salt__["state.single"]('boto_lc.present', **args)
+            lc_ret = lc_ret.values()[0]
+            if lc_ret["result"] is True and lc_ret["changes"]:
+                if "launch_config" not in ret["changes"]:
+                    ret["changes"]["launch_config"] = {}
+                ret["changes"]["launch_config"] = lc_ret["changes"]
 
     asg = __salt__['boto_asg.get_config'](name, region, key, keyid, profile)
     if asg is None:
@@ -278,6 +279,7 @@ def present(
         if __opts__['test']:
             msg = 'Autoscale group set to be created.'
             ret['comment'] = msg
+            ret['result'] = None
             return ret
         created = __salt__['boto_asg.create'](name, launch_config_name,
                                               availability_zones, min_size,
@@ -292,7 +294,6 @@ def present(
                                               scaling_policies, region,
                                               key, keyid, profile)
         if created:
-            ret['result'] = True
             ret['changes']['old'] = None
             asg = __salt__['boto_asg.get_config'](name, region, key, keyid,
                                                   profile)
@@ -339,12 +340,15 @@ def present(
             if asg_property in asg:
                 _value = asg[asg_property]
                 if not _recursive_compare(value, _value):
+                    log_msg = '{0} asg_property differs from {1}'
+                    log.debug(log_msg.format(value, _value))
                     need_update = True
                     break
         if need_update:
             if __opts__['test']:
                 msg = 'Autoscale group set to be updated.'
                 ret['comment'] = msg
+                ret['result'] = None
                 return ret
             updated = __salt__['boto_asg.update'](name, launch_config_name,
                                                   availability_zones, min_size,
@@ -367,7 +371,6 @@ def present(
                         ret["changes"]["launch_config"] = {}
                     ret["changes"]["launch_config"]["deleted"] = asg["launch_config_name"]
             if updated:
-                ret['result'] = True
                 ret['changes']['old'] = asg
                 asg = __salt__['boto_asg.get_config'](name, region, key, keyid,
                                                       profile)
@@ -456,20 +459,19 @@ def absent(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
     '''
-    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     asg = __salt__['boto_asg.get_config'](name, region, key, keyid, profile)
     if asg is None:
         ret['result'] = False
         ret['comment'] = 'Failed to check autoscale group existence.'
     elif asg:
         if __opts__['test']:
-            ret['result'] = None
             ret['comment'] = 'Autoscale group set to be deleted.'
+            ret['result'] = None
             return ret
         deleted = __salt__['boto_asg.delete'](name, force, region, key, keyid,
                                               profile)
         if deleted:
-            ret['result'] = True
             ret['changes']['old'] = asg
             ret['changes']['new'] = None
             ret['comment'] = 'Deleted autoscale group.'

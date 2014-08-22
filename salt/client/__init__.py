@@ -1199,13 +1199,19 @@ class LocalClient(object):
                             or tgt_type in ('glob', 'pcre', 'list'):
                         if len(found) < len(minions):
                             fail = sorted(list(minions.difference(found)))
-                            for minion in fail:
-                                yield({
-                                    minion: {
-                                        'out': 'no_return',
-                                        'ret': 'Minion did not return'
-                                    }
-                                })
+                            # May incur heavy disk access
+                            connected_minions = salt.utils.minions.CkMinions(self.opts).connected_ids()
+                            for failed in fail:
+                                if connected_minions and failed not in connected_minions:
+                                    yield {failed: {'out': 'no_return',
+                                                    'ret': 'Minion did not return. [Not connected]'}}
+                                else:
+                                    yield({
+                                        failed: {
+                                            'out': 'no_return',
+                                            'ret': 'Minion did not return. [No response]'
+                                        }
+                                    })
                 break
             if time.time() > timeout_at:
                 # The timeout has been reached, check the jid to see if the
@@ -1219,6 +1225,17 @@ class LocalClient(object):
                                 'Execution is still running on {0}'.format(id_)
                             )
                         more_time = True
+                if not more_time:
+                    cache_jinfo = self.get_cache_returns(jid)
+                    for id_ in cache_jinfo:
+                        if id_ == tgt:
+                            found.add(cache_jinfo.get('id'))
+                            ret = {id_: {'ret': cache_jinfo[id_]['ret']}}
+                            if 'out' in cache_jinfo[id_]:
+                                ret[id_]['out'] = cache_jinfo[id_]['out']
+                            if 'retcode' in cache_jinfo[id_]:
+                                ret[id_]['retcode'] = cache_jinfo[id_]['retcode']
+                            yield ret
                 if more_time:
                     timeout_at = time.time() + timeout
                     continue
