@@ -956,6 +956,7 @@ def scp_file(dest_path, contents, kwargs, allow_failure=False):
     )
     cmd = (
         'scp {0} {1} {2[username]}@{2[hostname]}:{3} || '
+        'echo "put {1} {3}" | sftp {0} {2[username]}@{2[hostname]} || '
         'rsync -avz -e "ssh {0}" {1} {2[username]}@{2[hostname]}:{3}'.format(
             ' '.join(ssh_args), tmppath, kwargs, dest_path
         )
@@ -977,8 +978,8 @@ def scp_file(dest_path, contents, kwargs, allow_failure=False):
         while proc.isalive():
             stdout, stderr = proc.recv()
             if stdout and SSH_PASSWORD_PROMP_RE.match(stdout):
-                if sent_password > 1:
-                    # second time??? Wrong password?
+                if sent_password > 2:
+                    # 3rd time??? Wrong password?
                     log.warning(
                         'Asking for password again. Wrong one provided???'
                     )
