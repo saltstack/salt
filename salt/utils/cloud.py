@@ -1449,6 +1449,7 @@ def scp_file(dest_path, contents, kwargs):
 
     cmd = (
         'scp {0} {1} {2[username]}@{2[hostname]}:{3} || '
+        'echo "put {1} {3}" | sftp {0} {2[username]}@{2[hostname]} || '
         'rsync -avz -e "ssh {0}" {1} {2[username]}@{2[hostname]}:{3}'.format(
             ' '.join(ssh_args), tmppath, kwargs, dest_path
         )
@@ -1456,6 +1457,7 @@ def scp_file(dest_path, contents, kwargs):
     log.debug('SCP command: {0!r}'.format(cmd))
     retcode = _exec_ssh_cmd(cmd,
                             error_msg='Failed to upload file {0!r}: {1}\n{2}',
+                            password_retries=3,
                             **kwargs)
     return retcode
 
