@@ -1211,6 +1211,8 @@ class Map(Cloud):
         try:
             with open(self.opts['map'], 'rb') as fp_:
                 if MAKO_AVAILABLE:
+                    log.warn('DEPRECATED: Mako will no longer be the default '
+                        'renderer for Salt Cloud maps in the Lithium release')
                     map_ = self._mako_read(fp_)
                 else:
                     map_ = yaml.safe_load(fp_.read())
