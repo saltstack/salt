@@ -47,7 +47,7 @@ def _find_chocolatey():
     '''
     try:
         return __context__['chocolatey._path']
-    except KeyError:
+    except KeyError as err:
         choc_defaults = ['C:\\Chocolatey\\bin\\chocolatey.bat',
                          'C:\\ProgramData\\Chocolatey\\bin\\chocolatey.exe', ]
 
