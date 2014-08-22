@@ -404,7 +404,7 @@ def create(vm_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(exc.message)
+            raise SaltCloudSystemExit(str(exc))
 
     if tags:
         set_tags(vm_['name'], tags, call='action')
@@ -774,7 +774,7 @@ def destroy(name):
         result = libcloudfuncs_destroy(newname, get_conn())
         ret.update({'Destroyed': result})
     except Exception as exc:
-        if not exc.message.startswith('OperationNotPermitted'):
+        if not str(exc).startswith('OperationNotPermitted'):
             log.exception(exc)
             raise exc
 

@@ -265,7 +265,7 @@ def create(vm_):
             except SaltCloudSystemExit:
                 pass
             finally:
-                raise SaltCloudSystemExit(exc.message)
+                raise SaltCloudSystemExit(str(exc))
 
     data = reformat_node(data)
 

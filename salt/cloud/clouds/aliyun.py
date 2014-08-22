@@ -586,7 +586,7 @@ def create(vm_):
             'The following exception was thrown when trying to '
             'run the initial deployment: {1}'.format(
                 vm_['name'],
-                exc.message
+                str(exc)
             ),
             # Show the traceback if the debug logging level is enabled
             exc_info_on_loglevel=logging.DEBUG
@@ -617,7 +617,7 @@ def create(vm_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(exc.message)
+            raise SaltCloudSystemExit(str(exc))
 
     public_ip = data['PublicIpAddress'][0]
     log.debug('VM {0} is now running'.format(public_ip))
