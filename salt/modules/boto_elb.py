@@ -547,12 +547,11 @@ def get_instance_health(name, region=None, key=None, keyid=None, profile=None, i
         instance_states = conn.describe_instance_health(name, instances)
         ret = []
         for _instance in instance_states:
-            ret.append( {
-                         "instance_id": _instance.instance_id,
-                         "description": _instance.description,
-                         "state": _instance.state,
-                         "reason_code": _instance.reason_code
-                         } )
+            ret.append({'instance_id': _instance.instance_id,
+                        'description': _instance.description,
+                        'state': _instance.state,
+                        'reason_code': _instance.reason_code
+                        })
         return ret
     except boto.exception.BotoServerError as e:
         log.debug(e)
