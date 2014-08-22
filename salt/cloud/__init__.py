@@ -44,7 +44,6 @@ try:
     from mako.exceptions import MakoException
     MAKO_AVAILABLE = True
 except ImportError:
-    log.debug('Mako not available')
     MAKO_AVAILABLE = False
 
 
