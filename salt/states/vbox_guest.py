@@ -30,7 +30,8 @@ def additions_installed(name, reboot=False, upgrade_os=True):
         ret['comment'] = 'System already in the correct state'
         return ret
     if __opts__['test'] == True:
-        ret['comment'] = 'The state of VirtualBox Guest Additions will be changed.'
+        ret['comment'] = ('The state of VirtualBox Guest Additions will be '
+                          'changed.')
         ret['changes'] = {
             'old': current_state,
             'new': True,
@@ -55,6 +56,9 @@ def additions_removed(name, force=False):
     Ensure that the VirtualBox Guest Additions are removed. Uses the CD,
     connected by VirtualBox.
 
+    To connect VirtualBox Guest Additions via VirtualBox graphical interface
+    press 'Host+D' ('Host' is usually 'Right Ctrl').
+
     name
         The name has no functional value and is only used as a tracking
         reference.
@@ -68,7 +72,8 @@ def additions_removed(name, force=False):
         ret['comment'] = 'System already in the correct state'
         return ret
     if __opts__['test'] == True:
-        ret['comment'] = 'The state of VirtualBox Guest Additions will be changed.'
+        ret['comment'] = ('The state of VirtualBox Guest Additions will be '
+                          'changed.')
         ret['changes'] = {
             'old': current_state,
             'new': True,
