@@ -34,6 +34,12 @@ def __virtual__():
 def guest_additions_mount():
     '''
     Mount VirtualBox Guest Additions CD to the temp directory
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virtualbox.guest_additions_mount
     '''
     mount_point = tempfile.mkdtemp()
     __salt__['mount.mount'](mount_point, '/dev/cdrom')
@@ -43,6 +49,12 @@ def guest_additions_mount():
 def guest_additions_umount(mount_point):
     '''
     Unmount VirtualBox Guest Additions CD from the temp directory
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virtualbox.guest_additions_umount
     '''
     ret = __salt__['mount.umount'](mount_point)
     if ret:
