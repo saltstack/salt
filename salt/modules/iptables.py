@@ -498,9 +498,9 @@ def check(table='filter', chain=None, rule=None, family='ipv4'):
         __salt__['cmd.run']('{0} -F {1}'.format(_iptables_cmd(family), _chain_name))
         __salt__['cmd.run']('{0} -X {1}'.format(_iptables_cmd(family), _chain_name))
 
-        for i in out.split('\n'):
+        for i in out.splitlines():
             if i.startswith('-A {0}'.format(_chain_name)):
-                if i.replace(_chain_name, chain) in out.split('\n'):
+                if i.replace(_chain_name, chain) in out.splitlines():
                     return True
                 
         return False
