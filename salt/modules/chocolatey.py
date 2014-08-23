@@ -47,7 +47,7 @@ def _find_chocolatey():
     '''
     try:
         return __context__['chocolatey._path']
-    except KeyError as err:
+    except KeyError:
         choc_defaults = ['C:\\Chocolatey\\bin\\chocolatey.bat',
                          'C:\\ProgramData\\Chocolatey\\bin\\chocolatey.exe', ]
 
@@ -57,7 +57,7 @@ def _find_chocolatey():
                 if __salt__['cmd.has_exec'](choc_dir):
                     choc_path = choc_dir
         if not choc_path:
-            msg = ('Chocolatey not installed. Use chocolatey.bootstrap to '
+            err = ('Chocolatey not installed. Use chocolatey.bootstrap to '
                    'install the Chocolatey package manager.')
             log.error(err)
             raise CommandExecutionError(err)
