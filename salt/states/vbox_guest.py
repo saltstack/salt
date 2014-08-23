@@ -9,7 +9,7 @@ import logging
 log = logging.getLogger(__name__)
 
 
-def guest_additions_installed(name, reboot=False, upgrade_os=True):
+def additions_installed(name, reboot=False, upgrade_os=True):
     '''
     Ensure that the VirtualBox Guest Additions are installed. Uses the CD,
     connected by VirtualBox.
@@ -23,7 +23,7 @@ def guest_additions_installed(name, reboot=False, upgrade_os=True):
         installed)
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
-    current_state = __salt__['virtualbox.guest_additions_version']()
+    current_state = __salt__['vbox_guest.additions_version']()
     if current_state:
         ret['result'] = True
         ret['comment'] = 'System already in the correct state'
@@ -37,7 +37,7 @@ def guest_additions_installed(name, reboot=False, upgrade_os=True):
         ret['result'] = None
         return ret
 
-    new_state = __salt__['virtualbox.guest_additions_install'](
+    new_state = __salt__['vbox_guest.additions_install'](
         reboot=reboot, upgrade_os=upgrade_os)
 
     ret['comment'] = 'The state of VirtualBox Guest Additions was changed!'
@@ -49,7 +49,7 @@ def guest_additions_installed(name, reboot=False, upgrade_os=True):
     return ret
 
 
-def guest_additions_removed(name, force=False):
+def additions_removed(name, force=False):
     '''
     Ensure that the VirtualBox Guest Additions are removed. Uses the CD,
     connected by VirtualBox.
@@ -60,7 +60,7 @@ def guest_additions_removed(name, force=False):
         Force VirtualBox Guest Additions removing
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
-    current_state = __salt__['virtualbox.guest_additions_version']()
+    current_state = __salt__['vbox_guest.additions_version']()
     if not current_state:
         ret['result'] = True
         ret['comment'] = 'System already in the correct state'
@@ -74,7 +74,7 @@ def guest_additions_removed(name, force=False):
         ret['result'] = None
         return ret
 
-    new_state = __salt__['virtualbox.guest_additions_remove'](force=force)
+    new_state = __salt__['vbox_guest.additions_remove'](force=force)
 
     ret['comment'] = 'The state of VirtualBox Guest Additions was changed!'
     ret['changes'] = {

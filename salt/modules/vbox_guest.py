@@ -19,13 +19,13 @@ from salt.exceptions import CommandExecutionError
 log = logging.getLogger(__name__)
 
 
-__virtualname__ = 'virtualbox'
+__virtualname__ = 'vbox_guest'
 
-_guest_additions_dir_prefix = 'VBoxGuestAdditions'
+_additions_dir_prefix = 'VBoxGuestAdditions'
 
 def __virtual__():
     '''
-    Set the virtualbox module if the OS Linux
+    Set the vbox_guest module if the OS Linux
     '''
     if __grains__.get('kernel', '') not in ('Linux'):
         return False
@@ -33,7 +33,7 @@ def __virtual__():
 
 
 
-def guest_additions_mount():
+def additions_mount():
     '''
     Mount VirtualBox Guest Additions CD to the temp directory
 
@@ -41,7 +41,7 @@ def guest_additions_mount():
 
     .. code-block:: bash
 
-        salt '*' virtualbox.guest_additions_mount
+        salt '*' vbox_guest.additions_mount
     '''
     mount_point = tempfile.mkdtemp()
     ret = __salt__['mount.mount'](mount_point, '/dev/cdrom')
@@ -51,7 +51,7 @@ def guest_additions_mount():
         raise OSError(ret)
 
 
-def guest_additions_umount(mount_point):
+def additions_umount(mount_point):
     '''
     Unmount VirtualBox Guest Additions CD from the temp directory
 
@@ -59,7 +59,7 @@ def guest_additions_umount(mount_point):
 
     .. code-block:: bash
 
-        salt '*' virtualbox.guest_additions_umount
+        salt '*' vbox_guest.additions_umount
     '''
     ret = __salt__['mount.umount'](mount_point)
     if ret:
@@ -68,10 +68,10 @@ def guest_additions_umount(mount_point):
 
 
 @contextlib.contextmanager
-def _guest_additions_mounted():
-    mount_point = guest_additions_mount()
+def _additions_mounted():
+    mount_point = additions_mount()
     yield mount_point
-    guest_additions_umount(mount_point)
+    additions_umount(mount_point)
 
 
 def _return_mount_error(f):
@@ -84,7 +84,7 @@ def _return_mount_error(f):
     return wrapper
 
 
-def _guest_additions_install_program_path(mount_point):
+def _additions_install_program_path(mount_point):
     return os.path.join(mount_point, {
         'Linux': 'VBoxLinuxAdditions.run',
         'Solaris': 'VBoxSolarisAdditions.pkg',
@@ -92,7 +92,7 @@ def _guest_additions_install_program_path(mount_point):
     }[__grains__.get('kernel', '')])
 
 
-def _guest_additions_install_opensuse(**kwargs):
+def _additions_install_opensuse(**kwargs):
     upgrade_os = kwargs.pop('upgrade_os', True)
     if upgrade_os:
         __salt__['pkg.upgrade']()
@@ -103,16 +103,16 @@ def _guest_additions_install_opensuse(**kwargs):
     return ret
 
 
-def _guest_additions_install_linux(mount_point, **kwargs):
+def _additions_install_linux(mount_point, **kwargs):
     reboot = kwargs.pop('reboot', False)
     restart_x11 = kwargs.pop('restart_x11', False)
     # dangerous: do not call variable `os` as it will hide os module
     guest_os = __grains__.get('os', '')
     if guest_os == 'openSUSE':
-        _guest_additions_install_opensuse(**kwargs)
+        _additions_install_opensuse(**kwargs)
     else:
         raise NotImplementedError("{} is not supported yet.".format(guest_os))
-    installer_path = _guest_additions_install_program_path(mount_point)
+    installer_path = _additions_install_program_path(mount_point)
     installer_ret = __salt__['cmd.run_all'](installer_path)
     if installer_ret['retcode'] in (0, 1):
         if reboot:
@@ -125,7 +125,7 @@ def _guest_additions_install_linux(mount_point, **kwargs):
             # for service in ('vboxadd', 'vboxadd-service', 'vboxadd-x11'):
             #     __salt__['service.start'](service)
             pass
-        return guest_additions_version()
+        return additions_version()
     elif installer_ret['retcode'] in (127, '127'):
         return ("'{}' not found on CD. Make sure that VirtualBox Guest "
                 "Additions CD is attached to the CD IDE Controller.".format(
@@ -136,7 +136,7 @@ def _guest_additions_install_linux(mount_point, **kwargs):
 
 
 @_return_mount_error
-def guest_additions_install(**kwargs):
+def additions_install(**kwargs):
     '''
     Install VirtualBox Guest Additions. Uses the CD, connected by VirtualBox
 
@@ -144,62 +144,62 @@ def guest_additions_install(**kwargs):
 
     .. code-block:: bash
 
-        salt '*' virtualbox.guest_additions_install
-        salt '*' virtualbox.guest_additions_install reboot=True
-        salt '*' virtualbox.guest_additions_install upgrade_os=False
+        salt '*' vbox_guest.additions_install
+        salt '*' vbox_guest.additions_install reboot=True
+        salt '*' vbox_guest.additions_install upgrade_os=False
     '''
-    with _guest_additions_mounted() as mount_point:
+    with _additions_mounted() as mount_point:
         kernel = __grains__.get('kernel', '')
         if kernel == 'Linux':
-            return _guest_additions_install_linux(mount_point, **kwargs)
+            return _additions_install_linux(mount_point, **kwargs)
 
 
-def _guest_additions_dir():
+def _additions_dir():
     root = '/opt'
-    dirs = glob.glob(os.path.join(root, _guest_additions_dir_prefix) + '*')
+    dirs = glob.glob(os.path.join(root, _additions_dir_prefix) + '*')
     if dirs:
         return dirs[0]
     else:
         raise EnvironmentError('No VirtualBox Guest Additions dirs found!')
 
 
-def _guest_additions_remove_linux_run(cmd):
+def _additions_remove_linux_run(cmd):
     uninstaller_ret = __salt__['cmd.run_all'](cmd)
     return uninstaller_ret['retcode'] in (0, )
 
 
-def _guest_additions_remove_linux(**kwargs):
+def _additions_remove_linux(**kwargs):
     try:
-        return _guest_additions_remove_linux_run(
-                os.path.join(_guest_additions_dir(), 'uninstall.sh'))
+        return _additions_remove_linux_run(
+                os.path.join(_additions_dir(), 'uninstall.sh'))
     except EnvironmentError:
         return False
 
 
-def _guest_additions_remove_linux_use_cd(mount_point, **kwargs):
+def _additions_remove_linux_use_cd(mount_point, **kwargs):
     force = kwargs.pop('force', False)
     args = ''
     if force:
         args += '--force'
-    return _guest_additions_remove_linux_run('{program} uninstall {args}'.format(
-        program=_guest_additions_install_program_path(mount_point), args=args))
+    return _additions_remove_linux_run('{program} uninstall {args}'.format(
+        program=_additions_install_program_path(mount_point), args=args))
 
 
 @_return_mount_error
-def _guest_additions_remove_use_cd(**kwargs):
+def _additions_remove_use_cd(**kwargs):
     '''
     Remove VirtualBox Guest Additions.
 
     It uses the CD, connected by VirtualBox.
     '''
 
-    with _guest_additions_mounted() as mount_point:
+    with _additions_mounted() as mount_point:
         kernel = __grains__.get('kernel', '')
         if kernel == 'Linux':
-            return _guest_additions_remove_linux_use_cd(mount_point, **kwargs)
+            return _additions_remove_linux_use_cd(mount_point, **kwargs)
 
 
-def guest_additions_remove(**kwargs):
+def additions_remove(**kwargs):
     '''
     Remove VirtualBox Guest Additions.
 
@@ -211,18 +211,18 @@ def guest_additions_remove(**kwargs):
 
     .. code-block:: bash
 
-        salt '*' virtualbox.guest_additions_remove
-        salt '*' virtualbox.guest_additions_remove force=True
+        salt '*' vbox_guest.additions_remove
+        salt '*' vbox_guest.additions_remove force=True
     '''
     kernel = __grains__.get('kernel', '')
     if kernel == 'Linux':
-        ret = _guest_additions_remove_linux()
+        ret = _additions_remove_linux()
     if not ret:
-        ret = _guest_additions_remove_use_cd(**kwargs)
+        ret = _additions_remove_use_cd(**kwargs)
     return ret
 
 
-def guest_additions_version():
+def additions_version():
     '''
     Check VirtualBox Guest Additions version.
 
@@ -230,13 +230,13 @@ def guest_additions_version():
 
     .. code-block:: bash
 
-        salt '*' virtualbox.guest_additions_version
+        salt '*' vbox_guest.additions_version
     '''
     try:
-        d = _guest_additions_dir()
+        d = _additions_dir()
     except EnvironmentError:
         return False
     if d and len(os.listdir(d)) > 0:
-        return re.sub(r'^{}-'.format(_guest_additions_dir_prefix), '',
+        return re.sub(r'^{}-'.format(_additions_dir_prefix), '',
                 os.path.basename(d))
     return False
