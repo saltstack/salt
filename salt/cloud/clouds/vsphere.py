@@ -376,7 +376,7 @@ def create(vm_):
     return ret
 
 
-def list_nodes_full():
+def list_nodes_full(kwargs=None, call=None):  # pylint: disable=W0613
     '''
     Return a list of the VMs that are on the provider
     '''
@@ -405,7 +405,7 @@ def list_nodes_full():
     return ret
 
 
-def list_nodes_min():
+def list_nodes_min(kwargs=None, call=None):  # pylint: disable=W0613
     '''
     Return a list of the nodes in the provider, with no details
     '''
@@ -421,7 +421,7 @@ def list_nodes_min():
     return ret
 
 
-def list_nodes():
+def list_nodes(kwargs=None, call=None):  # pylint: disable=W0613
     '''
     Return a list of the VMs that are on the provider
     '''
