@@ -12,23 +12,18 @@ import os
 import re
 import tempfile
 
-# Import salt libs
-import salt.utils
-from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
-
-
 __virtualname__ = 'vbox_guest'
-
 _additions_dir_prefix = 'VBoxGuestAdditions'
 _shared_folders_group = 'vboxsf'
+
 
 def __virtual__():
     '''
     Set the vbox_guest module if the OS Linux
     '''
-    if __grains__.get('kernel', '') not in ('Linux'):
+    if __grains__.get('kernel', '') not in ('Linux', ):
         return False
     return __virtualname__
 
@@ -100,10 +95,10 @@ def _additions_install_opensuse(**kwargs):
     if upgrade_os:
         __salt__['pkg.upgrade']()
     kernel_type = re.sub(
-        r'^(\d|\.|-)*', '',  __grains__.get('kernelrelease', ''))
-    kernel_devel = 'kernel-{}-devel'.format(kernel_type)
+        r'^(\d|\.|-)*', '', __grains__.get('kernelrelease', ''))
+    kernel_devel = 'kernel-{0}-devel'.format(kernel_type)
     ret = __salt__['state.single']('pkg.installed', 'devel packages',
-                                   pkgs=['make','gcc', kernel_devel])
+                                   pkgs=['make', 'gcc', kernel_devel])
     return ret
 
 
@@ -115,7 +110,7 @@ def _additions_install_linux(mount_point, **kwargs):
     if guest_os == 'openSUSE':
         _additions_install_opensuse(**kwargs)
     else:
-        raise NotImplementedError("{} is not supported yet.".format(guest_os))
+        raise NotImplementedError("{0} is not supported yet.".format(guest_os))
     installer_path = _additions_install_program_path(mount_point)
     installer_ret = __salt__['cmd.run_all'](installer_path)
     if installer_ret['retcode'] in (0, 1):
@@ -131,12 +126,11 @@ def _additions_install_linux(mount_point, **kwargs):
             pass
         return additions_version()
     elif installer_ret['retcode'] in (127, '127'):
-        return ("'{}' not found on CD. Make sure that VirtualBox Guest "
+        return ("'{0}' not found on CD. Make sure that VirtualBox Guest "
                 "Additions CD is attached to the CD IDE Controller.".format(
                     os.path.basename(installer_path)))
     else:
         return installer_ret['stderr']
-
 
 
 @_return_mount_error
@@ -244,7 +238,7 @@ def additions_version():
     except EnvironmentError:
         return False
     if d and len(os.listdir(d)) > 0:
-        return re.sub(r'^{}-'.format(_additions_dir_prefix), '',
+        return re.sub(r'^{0}-'.format(_additions_dir_prefix), '',
                 os.path.basename(d))
     return False
 
@@ -274,17 +268,17 @@ def grant_access_to_shared_folders_to(name, users=None):
                         "them firstly. You can do it with the help of command "
                         "vbox_guest.additions_install.")
             else:
-                return ("VirtualBox Guest Additions seems to be installed, but "
-                        "group '{}' not found. Check your installation and fix "
-                        "it. You can uninstall VirtualBox Guest Additions with "
-                        "the help of command vbox_guest.additions_remove (it "
-                        "has `force` argument to fix complex situations; use "
-                        "it with care) and then install it again. You can do "
-                        "it with the help of command "
-                        "vbox_guest.additions_install."
-                        "".format(_shared_folders_group))
+                return (
+                    "VirtualBox Guest Additions seems to be installed, but "
+                    "group '{0}' not found. Check your installation and fix "
+                    "it. You can uninstall VirtualBox Guest Additions with "
+                    "the help of command vbox_guest.additions_remove (it "
+                    "has `force` argument to fix complex situations; use "
+                    "it with care) and then install it again. You can do "
+                    "it with the help of command vbox_guest.additions_install."
+                    "".format(_shared_folders_group))
         else:
-            return ("Cannot replace members of the '{}' group."
+            return ("Cannot replace members of the '{0}' group."
                     "".format(_shared_folders_group))
 
 
