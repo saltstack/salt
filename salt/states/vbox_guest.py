@@ -15,12 +15,13 @@ def additions_installed(name, reboot=False, upgrade_os=True):
     connected by VirtualBox.
 
     name
-        The name has no functional value and is only used as a tracking reference
+        The name has no functional value and is only used as a tracking
+        reference.
     reboot : False
-        Restart OS to complete installation
+        Restart OS to complete installation.
     upgrade_os : True
         Upgrade OS (to ensure the latests version of kernel and developer tools
-        installed)
+        installed).
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
     current_state = __salt__['vbox_guest.additions_version']()
@@ -45,7 +46,7 @@ def additions_installed(name, reboot=False, upgrade_os=True):
         'old': current_state,
         'new': new_state,
     }
-    ret['result'] = True
+    ret['result'] = bool(new_state)
     return ret
 
 
@@ -55,9 +56,10 @@ def additions_removed(name, force=False):
     connected by VirtualBox.
 
     name
-        The name has no functional value and is only used as a tracking reference
+        The name has no functional value and is only used as a tracking
+        reference.
     force
-        Force VirtualBox Guest Additions removing
+        Force VirtualBox Guest Additions removing.
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
     current_state = __salt__['vbox_guest.additions_version']()
@@ -77,6 +79,50 @@ def additions_removed(name, force=False):
     new_state = __salt__['vbox_guest.additions_remove'](force=force)
 
     ret['comment'] = 'The state of VirtualBox Guest Additions was changed!'
+    ret['changes'] = {
+        'old': current_state,
+        'new': new_state,
+    }
+    ret['result'] = bool(new_state)
+    return ret
+
+
+def grant_access_to_shared_folders_to(name, users=None):
+    '''
+    Grant access to auto-mounted shared folders to the users.
+
+    User is specified by it's name. To grant access for several users use
+    argument `users`.
+
+    name
+        Name of the user to grant access to auto-mounted shared folders to.
+    users
+        List of names of users to grant access to auto-mounted shared folders to.
+        If specified, `name` will not be taken into account.
+    '''
+    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+    current_state = __salt__['vbox_guest.list_shared_folders_users']()
+    if users is None:
+        users = [name]
+    if current_state == users:
+        ret['result'] = True
+        ret['comment'] = 'System already in the correct state'
+        return ret
+    if __opts__['test'] == True:
+        ret['comment'] = ('List of users who have access to auto-mounted '
+                          'shared folders will be changed')
+        ret['changes'] = {
+            'old': current_state,
+            'new': users,
+        }
+        ret['result'] = None
+        return ret
+
+    new_state = __salt__['vbox_guest.grant_access_to_shared_folders_to'](
+        name=name, users=users)
+
+    ret['comment'] = ('List of users who have access to auto-mounted shared '
+                      'folders was changed')
     ret['changes'] = {
         'old': current_state,
         'new': new_state,
