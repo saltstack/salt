@@ -149,16 +149,18 @@ def verify_files(files, user):
         return True
     import pwd  # after confirming not running Windows
     try:
-        pwnam = pwd.getpwnam(user)
-        uid = pwnam[2]
-
+        uid = pwd.getpwnam(user).pw_uid
+        gid = pwd.getpwnam(user).pw_gid
     except KeyError:
         err = ('Failed to prepare the Salt environment for user '
                '{0}. The user is not available.\n').format(user)
         sys.stderr.write(err)
         sys.exit(os.EX_NOUSER)
+
     for fn_ in files:
         dirname = os.path.dirname(fn_)
+        os.chown(dirname, uid, gid)
+        os.chown(fn_, uid, gid)
         try:
             if not os.path.isdir(dirname):
                 os.makedirs(dirname)
