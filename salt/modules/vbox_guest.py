@@ -40,6 +40,8 @@ def additions_mount():
     .. code-block:: bash
 
         salt '*' vbox_guest.additions_mount
+
+    :return: True or OSError exception
     '''
     mount_point = tempfile.mkdtemp()
     ret = __salt__['mount.mount'](mount_point, '/dev/cdrom')
@@ -58,6 +60,9 @@ def additions_umount(mount_point):
     .. code-block:: bash
 
         salt '*' vbox_guest.additions_umount
+
+    :param mount_point: directory VirtualBox Guest Additions is mounted to
+    :return: True or an string with error
     '''
     ret = __salt__['mount.umount'](mount_point)
     if ret:
@@ -148,6 +153,12 @@ def additions_install(**kwargs):
         salt '*' vbox_guest.additions_install
         salt '*' vbox_guest.additions_install reboot=True
         salt '*' vbox_guest.additions_install upgrade_os=False
+
+    :param reboot: reboot computer to complete installation
+    :type reboot: bool
+    :param upgrade_os: upgrade OS (to ensure the latests version of kernel and developer tools are installed)
+    :type upgrade_os: bool
+    :return: version of VirtualBox Guest Additions or string with error
     '''
     with _additions_mounted() as mount_point:
         kernel = __grains__.get('kernel', '')
@@ -214,6 +225,11 @@ def additions_remove(**kwargs):
 
         salt '*' vbox_guest.additions_remove
         salt '*' vbox_guest.additions_remove force=True
+
+    :param force: force VirtualBox Guest Additions removing
+    :type force: bool
+    :return: True if VirtualBox Guest Additions were removed successfully else False
+
     '''
     kernel = __grains__.get('kernel', '')
     if kernel == 'Linux':
@@ -232,6 +248,8 @@ def additions_version():
     .. code-block:: bash
 
         salt '*' vbox_guest.additions_version
+
+    :return: version of VirtualBox Guest Additions or False if they are not installed
     '''
     try:
         d = _additions_dir()
@@ -249,6 +267,7 @@ def grant_access_to_shared_folders_to(name, users=None):
 
     User is specified by it's name. To grant access for several users use argument `users`.
     See https://www.virtualbox.org/manual/ch04.html#sf_mount_auto for more information.
+    Access will be denied to the users not listed in `users` argument.
 
     CLI Example:
 
@@ -256,6 +275,12 @@ def grant_access_to_shared_folders_to(name, users=None):
 
         salt '*' vbox_guest.grant_access_to_shared_folders_to fred
         salt '*' vbox_guest.grant_access_to_shared_folders_to users ['fred', 'roman']
+
+    :param name: name of the user to grant access to auto-mounted shared folders to
+    :type name: str
+    :param users: list of names of users to grant access to auto-mounted shared folders to (if specified, `name` will not be taken into account)
+    :type users: list of str
+    :return: list of users who have access to auto-mounted shared folders
     '''
     if users is None:
         users = [name]
@@ -272,10 +297,12 @@ def grant_access_to_shared_folders_to(name, users=None):
                     "VirtualBox Guest Additions seems to be installed, but "
                     "group '{0}' not found. Check your installation and fix "
                     "it. You can uninstall VirtualBox Guest Additions with "
-                    "the help of command vbox_guest.additions_remove (it "
-                    "has `force` argument to fix complex situations; use "
+                    "the help of command :py:func:`vbox_guest.additions_remove "
+                    "<salt.modules.vbox_guest.additions_remove> (it has "
+                    "`force` argument to fix complex situations; use "
                     "it with care) and then install it again. You can do "
-                    "it with the help of command vbox_guest.additions_install."
+                    "it with the help of :py:func:`vbox_guest.additions_install "
+                    "<salt.modules.vbox_guest.additions_install>`."
                     "".format(_shared_folders_group))
         else:
             return ("Cannot replace members of the '{0}' group."
@@ -293,6 +320,8 @@ def list_shared_folders_users():
     .. code-block:: bash
 
         salt '*' vbox_guest.list_shared_folders_users
+
+    :return: list of users who have access to auto-mounted shared folders
     '''
     try:
         return __salt__['group.info'](_shared_folders_group)['members']
