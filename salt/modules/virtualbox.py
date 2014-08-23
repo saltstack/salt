@@ -5,6 +5,7 @@ VirtualBox Guest Additions installer
 
 # Import python libs
 import contextlib
+import functools
 import glob
 import logging
 import os
@@ -31,6 +32,7 @@ def __virtual__():
     return __virtualname__
 
 
+
 def guest_additions_mount():
     '''
     Mount VirtualBox Guest Additions CD to the temp directory
@@ -42,8 +44,11 @@ def guest_additions_mount():
         salt '*' virtualbox.guest_additions_mount
     '''
     mount_point = tempfile.mkdtemp()
-    __salt__['mount.mount'](mount_point, '/dev/cdrom')
-    return mount_point
+    ret = __salt__['mount.mount'](mount_point, '/dev/cdrom')
+    if ret is True:
+        return mount_point
+    else:
+        raise OSError(ret)
 
 
 def guest_additions_umount(mount_point):
@@ -69,6 +74,16 @@ def _guest_additions_mounted():
     guest_additions_umount(mount_point)
 
 
+def _return_mount_error(f):
+    @functools.wraps(f)
+    def wrapper(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except OSError as e:
+            return str(e)
+    return wrapper
+
+
 def _guest_additions_install_program_path(mount_point):
     return os.path.join(mount_point, {
         'Linux': 'VBoxLinuxAdditions.run',
@@ -91,29 +106,36 @@ def _guest_additions_install_opensuse(**kwargs):
 def _guest_additions_install_linux(mount_point, **kwargs):
     reboot = kwargs.pop('reboot', False)
     restart_x11 = kwargs.pop('restart_x11', False)
-    os = __grains__.get('os', '')
-    if os == 'openSUSE':
+    # dangerous: do not call variable `os` as it will hide os module
+    guest_os = __grains__.get('os', '')
+    if guest_os == 'openSUSE':
         _guest_additions_install_opensuse(**kwargs)
     else:
-        raise NotImplementedError('{} is not supported yet'.format(os))
-    installer_ret = __salt__['cmd.run_all'](
-            _guest_additions_install_program_path(mount_point))
+        raise NotImplementedError("{} is not supported yet.".format(guest_os))
+    installer_path = _guest_additions_install_program_path(mount_point)
+    installer_ret = __salt__['cmd.run_all'](installer_path)
     if installer_ret['retcode'] in (0, 1):
         if reboot:
             __salt__['system.reboot']()
         elif restart_x11:
-            raise NotImplementedError('Restarting x11 is not supported yet')
+            raise NotImplementedError("Restarting x11 is not supported yet.")
         else:
-            # VirtualBox script enables module itself, need to restart os anyway,
-            # probably don't need that.
+            # VirtualBox script enables module itself, need to restart OS
+            # anyway, probably don't need that.
             # for service in ('vboxadd', 'vboxadd-service', 'vboxadd-x11'):
             #     __salt__['service.start'](service)
             pass
         return guest_additions_version()
+    elif installer_ret['retcode'] in (127, '127'):
+        return ("'{}' not found on CD. Make sure that VirtualBox Guest "
+                "Additions CD is attached to the CD IDE Controller.".format(
+                    os.path.basename(installer_path)))
     else:
-        return False
+        return installer_ret['stderr']
 
 
+
+@_return_mount_error
 def guest_additions_install(**kwargs):
     '''
     Install VirtualBox Guest Additions. Uses the CD, connected by VirtualBox
@@ -163,6 +185,7 @@ def _guest_additions_remove_linux_use_cd(mount_point, **kwargs):
         program=_guest_additions_install_program_path(mount_point), args=args))
 
 
+@_return_mount_error
 def _guest_additions_remove_use_cd(**kwargs):
     '''
     Remove VirtualBox Guest Additions.
