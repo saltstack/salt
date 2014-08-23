@@ -1,7 +1,8 @@
-# -*- coding: utf-8 -*-
-'''
+"""
 Manage cygwin packages.
-'''
+
+Module file to accompany the cyg state.
+"""
 
 # Import python libs
 import logging
@@ -14,14 +15,15 @@ from salt.exceptions import SaltInvocationError
 
 LOG = logging.getLogger(__name__)
 
+DEFAULT_MIRROR = "ftp://mirrors.kernel.org/sourceware/cygwin/"
+DEFAULT_MIRROR_KEY = ""
+
 # Define the module's virtual name
 __virtualname__ = 'cyg'
 
 
 def __virtual__():
-    '''
-    Only works on Windows systems
-    '''
+    """Only works on Windows systems."""
     if salt.utils.is_windows():
         return __virtualname__
     return False
@@ -32,9 +34,7 @@ __func_alias__ = {
 
 
 def _get_cyg_dir(cyg_arch='x86_64'):
-    '''
-    Returns the cygwin install directory based on the architecture
-    '''
+    """Return the cygwin install directory based on the architecture."""
     if cyg_arch == 'x86_64':
         return 'cygwin64'
     elif cyg_arch == 'x86':
@@ -45,12 +45,12 @@ def _get_cyg_dir(cyg_arch='x86_64'):
 
 
 def _check_cygwin_installed(cyg_arch='x86_64'):
-    '''
-    Returns True or False if the given architecture of cygwin is installed
-    '''
-    # Use the cygcheck executable to check install.
-    # It is installed as part of the base package,
-    # and we use it to check packages
+    """
+    Return True or False if cygwin is installed.
+
+    Use the cygcheck executable to check install. It is installed as part of
+    the base package, and we use it to check packages
+    """
     path_to_cygcheck = os.sep.join(['C:',
                                     _get_cyg_dir(cyg_arch),
                                     'bin', 'cygcheck.exe'])
@@ -61,12 +61,9 @@ def _check_cygwin_installed(cyg_arch='x86_64'):
     return True
 
 
-def _get_all_packages(mirror="ftp://mirrors.kernel.org/sourceware/cygwin/",
+def _get_all_packages(mirror=DEFAULT_MIRROR,
                       cyg_arch='x86_64'):
-    '''
-    Returns the list of packages based on the mirror
-    provided.
-    '''
+    """Return the list of packages based on the mirror provided."""
     if 'cyg.all_packages' not in __context__:
         __context__['cyg.all_packages'] = {}
     if mirror not in __context__['cyg.all_packages']:
@@ -75,9 +72,9 @@ def _get_all_packages(mirror="ftp://mirrors.kernel.org/sourceware/cygwin/",
         pkg_source = '/'.join([mirror, cyg_arch, 'setup.bz2'])
 
         file_data = urlopen(pkg_source).read()
-        file_lines = bz2.decompress(file_data
-                                    ).decode('utf_8',
-                                             errors='replace').splitlines()
+        file_lines = bz2.decompress(file_data).decode('utf_8',
+                                                      errors='replace'
+                                                     ).splitlines()
 
         packages = [re.search('^@ ([^ ]+)', line).group(1) for
                     line in file_lines if re.match('^@ [^ ]+', line)]
@@ -88,13 +85,13 @@ def _get_all_packages(mirror="ftp://mirrors.kernel.org/sourceware/cygwin/",
 
 
 def check_valid_package(package,
-                        mirrors=None,
-                        cyg_arch='x86_64'):
-    '''
-    Checks if the package is valid on the given mirrors
-    '''
+                        cyg_arch='x86_64',
+                        mirrors=None):
+    """Check if the package is valid on the given mirrors."""
     if mirrors is None:
-        mirrors = ['ftp://mirrors.kernel.org/sourceware/cygwin/']
+        mirrors = {DEFAULT_MIRROR: DEFAULT_MIRROR_KEY}
+
+    LOG.debug('Checking Valid Mirrors: {0}'.format(mirrors))
 
     for mirror in mirrors:
         if package in _get_all_packages(mirror, cyg_arch):
@@ -102,11 +99,15 @@ def check_valid_package(package,
     return False
 
 
-def _run_silent_cygwin(cyg_arch='x86_64', args=None):
-    '''
-    Retrieves the correct setup.exe and runs it with the correct
-    arguments to get the bare minumum cygwin installation up and running.
-    '''
+def _run_silent_cygwin(cyg_arch='x86_64',
+                       args=None,
+                       mirrors=None):
+    """
+    Retrieve the correct setup.exe.
+
+    Run it with the correct arguments to get the bare minimum cygwin
+    installation up and running.
+    """
     cyg_cache_dir = os.sep.join(['c:', 'cygcache'])
     cyg_setup = 'setup-{0}.exe'.format(cyg_arch)
     cyg_setup_path = os.sep.join([cyg_cache_dir, cyg_setup])
@@ -126,9 +127,13 @@ def _run_silent_cygwin(cyg_arch='x86_64', args=None):
     setup_command = cyg_setup_path
     options = []
     options.append('--local-package-dir {0}'.format(cyg_cache_dir))
-    # options.append('--site ftp://ftp.cygwinports.org/pub/cygwinports/')
-    # options.append('--pubkey http://cygwinports.org/ports.gpg')
-    options.append('--site ftp://mirrors.kernel.org/sourceware/cygwin/')
+
+    if mirrors is None:
+        mirrors = {DEFAULT_MIRROR: DEFAULT_MIRROR_KEY}
+    for mirror, key in mirrors.items():
+        options.append('--site {}'.format(mirror))
+        if key:
+            options.append('--pubkey {}'.format(key))
     options.append('--no-desktop')
     options.append('--quiet-mode')
     options.append('--disable-buggy-antivirus')
@@ -150,9 +155,7 @@ def _run_silent_cygwin(cyg_arch='x86_64', args=None):
 
 
 def _cygcheck(args, cyg_arch='x86_64'):
-    '''
-    Runs the cygcheck executable
-    '''
+    """Run the cygcheck executable."""
     bashcmd = ' '.join([
         os.sep.join(['c:', _get_cyg_dir(cyg_arch), 'bin', 'bash']),
         '--login', '-c'])
@@ -170,9 +173,10 @@ def _cygcheck(args, cyg_arch='x86_64'):
 
 
 def install(packages=None,
-            cyg_arch='x86_64'):
-    '''
-    Installs one or several packages.
+            cyg_arch='x86_64',
+            mirrors=None):
+    """
+    Install one or several packages.
 
     packages : None
         The packages to install
@@ -186,7 +190,7 @@ def install(packages=None,
     .. code-block:: bash
 
         salt '*' cyg.install dos2unix
-    '''
+    """
     args = []
     # If we want to install packages
     if packages is not None:
@@ -196,12 +200,13 @@ def install(packages=None,
             # install just the base system
             _run_silent_cygwin(cyg_arch=cyg_arch)
 
-    return _run_silent_cygwin(cyg_arch=cyg_arch, args=args)
+    return _run_silent_cygwin(cyg_arch=cyg_arch, args=args, mirrors=mirrors)
 
 
 def uninstall(packages,
-              cyg_arch='x86_64'):
-    '''
+              cyg_arch='x86_64',
+              mirrors=None):
+    """
     Uninstall one or several packages.
 
     packages
@@ -216,22 +221,20 @@ def uninstall(packages,
     .. code-block:: bash
 
         salt '*' cyg.uninstall dos2unix
-    '''
-    LOG.debug('Entered cyg.uninstall')
+    """
     args = []
     if packages is not None:
-        LOG.debug('We have packages: {0}'.format(packages))
         args.append('--remove-packages {pkgs}'.format(pkgs=packages))
         LOG.debug('args: {0}'.format(args))
         if not _check_cygwin_installed(cyg_arch):
             LOG.debug('We\'re convinced cygwin isn\'t installed')
             return True
 
-    return _run_silent_cygwin(cyg_arch=cyg_arch, args=args)
+    return _run_silent_cygwin(cyg_arch=cyg_arch, args=args, mirrors=mirrors)
 
 
-def update(cyg_arch='x86_64'):
-    '''
+def update(cyg_arch='x86_64', mirrors=None):
+    """
     Update all packages.
 
     cyg_arch : x86_64
@@ -243,7 +246,7 @@ def update(cyg_arch='x86_64'):
     .. code-block:: bash
 
         salt '*' cyg.update
-    '''
+    """
     args = []
     args.append('--upgrade-also')
 
@@ -253,11 +256,11 @@ def update(cyg_arch='x86_64'):
                   could not update'.format(cyg_arch))
         return False
 
-    return _run_silent_cygwin(cyg_arch=cyg_arch, args=args)
+    return _run_silent_cygwin(cyg_arch=cyg_arch, args=args, mirrors=mirrors)
 
 
 def list_(package='', cyg_arch='x86_64'):
-    '''
+    """
     List locally installed packages.
 
     package : ''
@@ -272,13 +275,13 @@ def list_(package='', cyg_arch='x86_64'):
     .. code-block:: bash
 
         salt '*' cyg.list
-    '''
+    """
     pkgs = {}
     args = ' '.join(['-c', '-d', package])
     stdout = _cygcheck(args, cyg_arch=cyg_arch)
     lines = []
     if isinstance(stdout, str):
-        lines = stdout.splitlines()
+        lines = str(stdout).splitlines()
     for line in lines:
         match = re.match(r'^([^ ]+) *([^ ]+)', line)
         if match:
@@ -289,7 +292,7 @@ def list_(package='', cyg_arch='x86_64'):
 
 
 # def sources_add(source_uri, ruby=None, runas=None):
-#     '''
+#     """
 #     Add a gem source.
 
 #     source_uri
@@ -304,13 +307,13 @@ def list_(package='', cyg_arch='x86_64'):
 #     .. code-block:: bash
 
 #         salt '*' gem.sources_add http://rubygems.org/
-#     '''
+#     """
 #     return _gem('sources --add {source_uri}'.
 #                 format(source_uri=source_uri), ruby, runas=runas)
 
 
 # def sources_remove(source_uri, ruby=None, runas=None):
-#     '''
+#     """
 #     Remove a gem source.
 
 #     source_uri
@@ -325,13 +328,13 @@ def list_(package='', cyg_arch='x86_64'):
 #     .. code-block:: bash
 
 #         salt '*' gem.sources_remove http://rubygems.org/
-#     '''
+#     """
 #     return _gem('sources --remove {source_uri}'.
 #                 format(source_uri=source_uri), ruby, runas=runas)
 
 
 # def sources_list(ruby=None, runas=None):
-#     '''
+#     """
 #     List the configured gem sources.
 
 #     ruby : None
@@ -344,6 +347,6 @@ def list_(package='', cyg_arch='x86_64'):
 #     .. code-block:: bash
 
 #         salt '*' gem.sources_list
-#     '''
+#     """
 #     ret = _gem('sources', ruby, runas=runas)
 #     return [] if ret is False else ret.splitlines()[2:]
