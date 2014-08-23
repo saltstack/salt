@@ -217,6 +217,12 @@ def show(module):
 def show_config():
     '''
     Return a dict of CPAN configuration values
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cpan.show_config
     '''
     ret = {}
     cmd = 'cpan -J'
