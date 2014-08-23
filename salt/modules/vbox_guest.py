@@ -96,9 +96,6 @@ def _additions_install_program_path(mount_point):
 
 
 def _additions_install_opensuse(**kwargs):
-    upgrade_os = kwargs.pop('upgrade_os', True)
-    if upgrade_os:
-        __salt__['pkg.upgrade']()
     kernel_type = re.sub(
         r'^(\d|\.|-)*', '', __grains__.get('kernelrelease', ''))
     kernel_devel = 'kernel-{0}-devel'.format(kernel_type)
@@ -107,15 +104,34 @@ def _additions_install_opensuse(**kwargs):
     return ret
 
 
+def _additions_install_ubuntu(**kwargs):
+    ret = __salt__['state.single']('pkg.installed', 'devel packages',
+                                   pkgs=['dkms', ])
+    return ret
+
+
+def _additions_install_fedora(**kwargs):
+    ret = __salt__['state.single']('pkg.installed', 'devel packages',
+                                   pkgs=['dkms', 'gcc'])
+    return ret
+
+
 def _additions_install_linux(mount_point, **kwargs):
     reboot = kwargs.pop('reboot', False)
     restart_x11 = kwargs.pop('restart_x11', False)
+    upgrade_os = kwargs.pop('upgrade_os', True)
+    if upgrade_os:
+        __salt__['pkg.upgrade']()
     # dangerous: do not call variable `os` as it will hide os module
     guest_os = __grains__.get('os', '')
     if guest_os == 'openSUSE':
         _additions_install_opensuse(**kwargs)
+    elif guest_os == 'ubuntu':
+        _additions_install_ubuntu(**kwargs)
+    elif guest_os == 'fedora':
+        _additions_install_fedora(**kwargs)
     else:
-        raise NotImplementedError("{0} is not supported yet.".format(guest_os))
+        log.warning("{0} is not fully supported yet.".format(guest_os))
     installer_path = _additions_install_program_path(mount_point)
     installer_ret = __salt__['cmd.run_all'](installer_path)
     if installer_ret['retcode'] in (0, 1):
@@ -145,6 +161,8 @@ def additions_install(**kwargs):
 
     To connect VirtualBox Guest Additions via VirtualBox graphical interface
     press 'Host+D' ('Host' is usually 'Right Ctrl').
+
+    See https://www.virtualbox.org/manual/ch04.html#idp52733088 for more details.
 
     CLI Example:
 
@@ -266,8 +284,9 @@ def grant_access_to_shared_folders_to(name, users=None):
     Grant access to auto-mounted shared folders to the users.
 
     User is specified by it's name. To grant access for several users use argument `users`.
-    See https://www.virtualbox.org/manual/ch04.html#sf_mount_auto for more information.
     Access will be denied to the users not listed in `users` argument.
+
+    See https://www.virtualbox.org/manual/ch04.html#sf_mount_auto for more details.
 
     CLI Example:
 
@@ -313,7 +332,7 @@ def list_shared_folders_users():
     '''
     List users who have access to auto-mounted shared folders.
 
-    See https://www.virtualbox.org/manual/ch04.html#sf_mount_auto for more information.
+    See https://www.virtualbox.org/manual/ch04.html#sf_mount_auto for more details.
 
     CLI Example:
 
