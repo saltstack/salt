@@ -29,7 +29,7 @@ def additions_installed(name, reboot=False, upgrade_os=True):
         ret['result'] = True
         ret['comment'] = 'System already in the correct state'
         return ret
-    if __opts__['test'] == True:
+    if __opts__['test']:
         ret['comment'] = ('The state of VirtualBox Guest Additions will be '
                           'changed.')
         ret['changes'] = {
@@ -71,7 +71,7 @@ def additions_removed(name, force=False):
         ret['result'] = True
         ret['comment'] = 'System already in the correct state'
         return ret
-    if __opts__['test'] == True:
+    if __opts__['test']:
         ret['comment'] = ('The state of VirtualBox Guest Additions will be '
                           'changed.')
         ret['changes'] = {
@@ -113,7 +113,7 @@ def grant_access_to_shared_folders_to(name, users=None):
         ret['result'] = True
         ret['comment'] = 'System already in the correct state'
         return ret
-    if __opts__['test'] == True:
+    if __opts__['test']:
         ret['comment'] = ('List of users who have access to auto-mounted '
                           'shared folders will be changed')
         ret['changes'] = {
