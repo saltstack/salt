@@ -22,6 +22,7 @@ log = logging.getLogger(__name__)
 __virtualname__ = 'vbox_guest'
 
 _additions_dir_prefix = 'VBoxGuestAdditions'
+_shared_folders_group = 'vboxsf'
 
 def __virtual__():
     '''
@@ -30,7 +31,6 @@ def __virtual__():
     if __grains__.get('kernel', '') not in ('Linux'):
         return False
     return __virtualname__
-
 
 
 def additions_mount():
@@ -138,7 +138,7 @@ def _additions_install_linux(mount_point, **kwargs):
 @_return_mount_error
 def additions_install(**kwargs):
     '''
-    Install VirtualBox Guest Additions. Uses the CD, connected by VirtualBox
+    Install VirtualBox Guest Additions. Uses the CD, connected by VirtualBox.
 
     CLI Example:
 
@@ -240,3 +240,57 @@ def additions_version():
         return re.sub(r'^{}-'.format(_additions_dir_prefix), '',
                 os.path.basename(d))
     return False
+
+
+def grant_access_to_shared_folders_to(name, users=None):
+    '''
+    Grant access to auto-mounted shared folders to the users.
+
+    User is specified by it's name. To grant access for several users use argument `users`.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' vbox_guest.grant_access_to_shared_folders_to fred
+        salt '*' vbox_guest.grant_access_to_shared_folders_to users ['fred', 'roman']
+    '''
+    if users is None:
+        users = [name]
+    if __salt__['group.members'](_shared_folders_group, ','.join(users)):
+        return users
+    else:
+        if not __salt__['group.info'](_shared_folders_group):
+            if not additions_version:
+                return ("VirtualBox Guest Additions are not installed. Ιnstall "
+                        "them firstly. You can do it with the help of command "
+                        "vbox_guest.additions_install.")
+            else:
+                return ("VirtualBox Guest Additions seems to be installed, but "
+                        "group '{}' not found. Check your installation and fix "
+                        "it. You can uninstall VirtualBox Guest Additions with "
+                        "the help of command vbox_guest.additions_remove (it "
+                        "has `force` argument to fix complex situations; use "
+                        "it with care) and then install it again. You can do "
+                        "it with the help of command "
+                        "vbox_guest.additions_install."
+                        "".format(_shared_folders_group))
+        else:
+            return ("Cannot replace members of the '{}' group."
+                    "".format(_shared_folders_group))
+
+
+def list_shared_folders_users():
+    '''
+    List users who have access to auto-mounted shared folders.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' vbox_guest.list_shared_folders_users
+    '''
+    try:
+        return __salt__['group.info'](_shared_folders_group)['members']
+    except KeyError:
+        return []
