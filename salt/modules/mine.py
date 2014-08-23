@@ -114,7 +114,7 @@ def send(func, *args, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' mine.send network.interfaces eth0
+        salt '*' mine.send network.ip_addrs eth0
         salt '*' mine.send eth0_ip_addrs mine_function=network.ip_addrs eth0
     '''
     mine_func = kwargs.pop('mine_function', func)
