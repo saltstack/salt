@@ -95,7 +95,7 @@ def remove(module, details=False):
 
     ret['old'] = version
 
-    if not 'cpan build dirs' in info:
+    if 'cpan build dirs' not in info:
         return {
             'error': 'No CPAN data available to use for uninstalling'
         }
@@ -106,7 +106,7 @@ def remove(module, details=False):
     files = []
     for build_dir in info['cpan build dirs']:
         contents = os.listdir(build_dir)
-        if not 'MANIFEST' in contents:
+        if 'MANIFEST' not in contents:
             continue
         mfile = os.path.join(build_dir, 'MANIFEST')
         with salt.utils.fopen(mfile, 'r') as fh_:
@@ -192,7 +192,7 @@ def show(module):
     comps = info[3].split(':')
     if len(comps) > 1:
         ret['installed version'] = comps[1].strip()
-    if not 'installed version' in ret or not ret['installed version']:
+    if 'installed version' not in ret or not ret['installed version']:
         ret['installed version'] = None
     comps = info[4].split(':')
     comps = comps[1].split()
