@@ -35,7 +35,10 @@ def __virtual__():
 
 def additions_mount():
     '''
-    Mount VirtualBox Guest Additions CD to the temp directory
+    Mount VirtualBox Guest Additions CD to the temp directory.
+
+    To connect VirtualBox Guest Additions via VirtualBox graphical interface
+    press 'Host+D' ('Host' is usually 'Right Ctrl').
 
     CLI Example:
 
@@ -53,7 +56,7 @@ def additions_mount():
 
 def additions_umount(mount_point):
     '''
-    Unmount VirtualBox Guest Additions CD from the temp directory
+    Unmount VirtualBox Guest Additions CD from the temp directory.
 
     CLI Example:
 
@@ -96,10 +99,11 @@ def _additions_install_opensuse(**kwargs):
     upgrade_os = kwargs.pop('upgrade_os', True)
     if upgrade_os:
         __salt__['pkg.upgrade']()
-    kernel_type = re.sub(r'^(\d|\.|-)*', '',  __grains__.get('kernelrelease', ''))
+    kernel_type = re.sub(
+        r'^(\d|\.|-)*', '',  __grains__.get('kernelrelease', ''))
     kernel_devel = 'kernel-{}-devel'.format(kernel_type)
-    ret = __salt__['state.single'](
-            'pkg.installed', 'devel packages', pkgs=['make','gcc', kernel_devel])
+    ret = __salt__['state.single']('pkg.installed', 'devel packages',
+                                   pkgs=['make','gcc', kernel_devel])
     return ret
 
 
@@ -139,6 +143,9 @@ def _additions_install_linux(mount_point, **kwargs):
 def additions_install(**kwargs):
     '''
     Install VirtualBox Guest Additions. Uses the CD, connected by VirtualBox.
+
+    To connect VirtualBox Guest Additions via VirtualBox graphical interface
+    press 'Host+D' ('Host' is usually 'Right Ctrl').
 
     CLI Example:
 
@@ -247,6 +254,7 @@ def grant_access_to_shared_folders_to(name, users=None):
     Grant access to auto-mounted shared folders to the users.
 
     User is specified by it's name. To grant access for several users use argument `users`.
+    See https://www.virtualbox.org/manual/ch04.html#sf_mount_auto for more information.
 
     CLI Example:
 
@@ -283,6 +291,8 @@ def grant_access_to_shared_folders_to(name, users=None):
 def list_shared_folders_users():
     '''
     List users who have access to auto-mounted shared folders.
+
+    See https://www.virtualbox.org/manual/ch04.html#sf_mount_auto for more information.
 
     CLI Example:
 
