@@ -1,6 +1,14 @@
 # coding: utf-8
-import mock
+
+# Import python libs
 import urllib
+
+# Import salttesting libs
+from salttesting import mock
+from salttesting.unit import skipIf
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../../')
+
 
 from salt.exceptions import EauthAuthenticationError
 from tests.utils import BaseRestCherryPyTest
@@ -13,6 +21,7 @@ except ImportError:
     HAS_CHERRYPY = False
 
 
+@skipIf(HAS_CHERRYPY is False, 'CherryPy not installed')
 class TestAuth(BaseRestCherryPyTest):
     def test_get_root_noauth(self):
         '''
