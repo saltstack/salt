@@ -12,9 +12,6 @@ or removed.
 """
 import logging
 
-# Import salt libs
-import salt.utils
-
 LOG = logging.getLogger(__name__)
 
 
@@ -177,13 +174,11 @@ def updated(name=None, cyg_arch='x86_64', mirrors=None):
     return ret
 
 
-"""
-https://github.com/hughdbrown/dictdiffer
-DictDiffer is licensed as MIT code
-A dictionary difference calculator
-Originally posted as:
-http://stackoverflow.com/a/1165552
-"""
+# https://github.com/hughdbrown/dictdiffer
+# DictDiffer is licensed as MIT code
+# A dictionary difference calculator
+# Originally posted as:
+# http://stackoverflow.com/a/1165552
 
 
 class DictDiffer(object):
