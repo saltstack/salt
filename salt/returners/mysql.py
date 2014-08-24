@@ -17,6 +17,16 @@ config, these are the defaults::
     mysql.db: 'salt'
     mysql.port: 3306
 
+Alternative configuration values can be used by prefacing the configuration.
+Any values not found in the alternative configuration will be pulled from
+the default location::
+
+    alternative.mysql.host: 'salt'
+    alternative.mysql.user: 'salt'
+    alternative.mysql.pass: 'salt'
+    alternative.mysql.db: 'salt'
+    alternative.mysql.port: 3306
+
 Use the following mysql database schema::
 
     CREATE DATABASE  `salt`
@@ -59,6 +69,10 @@ Required python modules: MySQLdb
   To use the mysql returner, append '--return mysql' to the salt command. ex:
 
     salt '*' test.ping --return mysql
+
+  To use the alternative configuration, append '--return_config alternative' to the salt command. ex:
+
+    salt '*' test.ping --return mysql --return_config alternative
 '''
 # Let's not allow PyLint complain about string substitution
 # pylint: disable=W1321,E1321
@@ -78,6 +92,9 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'mysql'
+
 
 def __virtual__():
     if not HAS_MYSQL:
@@ -85,22 +102,48 @@ def __virtual__():
     return True
 
 
-def _get_options():
+def _get_options(ret):
     '''
     Returns options used for the MySQL connection.
     '''
+    ret_config = '{0}'.format(ret['ret_config']) if 'ret_config' in ret else ''
+
     defaults = {'host': 'salt',
                 'user': 'salt',
                 'pass': 'salt',
                 'db': 'salt',
                 'port': 3306}
+
+    attrs = {'host': 'host',
+             'user': 'user',
+             'pass': 'pass',
+             'db': 'db',
+             'port': 'port'}
+
     _options = {}
     for attr in defaults:
         if 'config.option' in __salt__:
-            _attr = __salt__['config.option']('mysql.{0}'.format(attr))
+            cfg = __salt__['config.option']
+            c_cfg = cfg('{0}'.format(__virtualname__), {})
+            if ret_config:
+                ret_cfg = cfg('{0}.{1}'.format(ret_config, __virtualname__), {})
+                if ret_cfg.get(attrs[attr], cfg('{0}.{1}.{2}'.format(ret_config, __virtualname__, attrs[attr]))):
+                    _attr = ret_cfg.get(attrs[attr], cfg('{0}.{1}.{2}'.format(ret_config, __virtualname__, attrs[attr])))
+                else:
+                    _attr = c_cfg.get(attrs[attr], cfg('{0}.{1}'.format(__virtualname__, attrs[attr])))
+            else:
+                _attr = c_cfg.get(attrs[attr], cfg('{0}.{1}'.format(__virtualname__, attrs[attr])))
         else:
             cfg = __opts__
-            _attr = cfg.get('mysql.{0}'.format(attr), None)
+            c_cfg = cfg.get('{0}'.format(__virtualname__), {})
+            if ret_config:
+                ret_cfg = cfg.get('{0}.{1}'.format(ret_config, __virtualname__), {})
+                if ret_cfg.get(attrs[attr], cfg.get('{0}.{1}.{2}'.format(ret_config, __virtualname__, attrs[attr]))):
+                    _attr = ret_cfg.get(attrs[attr], cfg.get('{0}.{1}.{2}'.format(ret_config, __virtualname__, attrs[attr])))
+                else:
+                    _attr = c_cfg.get(attrs[attr], cfg.get('{0}.{1}'.format(__virtualname__, attrs[attr])))
+            else:
+                _attr = c_cfg.get(attrs[attr], cfg.get('{0}.{1}'.format(__virtualname__, attrs[attr])))
         if not _attr:
             log.debug('Using default for MySQL {0}'.format(attr))
             _options[attr] = defaults[attr]
@@ -109,17 +152,16 @@ def _get_options():
             _options[attr] = int(_attr)
         else:
             _options[attr] = _attr
-
     return _options
 
 
 @contextmanager
-def _get_serv(commit=False):
+def _get_serv(ret, commit=False):
     '''
     Return a mysql cursor
     '''
-    _options = _get_options()
-    conn = MySQLdb.connect(host=_options['host'], user=_options['user'], passwd=_options['pass'], db=_options['db'], port=_options['port'])
+    _options = _get_options(ret)
+    conn = MySQLdb.connect(host=_options.get('host'), user=_options.get('user'), passwd=_options.get('pass'), db=_options.get('db'), port=_options.get('port'))
     cursor = conn.cursor()
     try:
         yield cursor
@@ -141,7 +183,7 @@ def returner(ret):
     '''
     Return data to a mysql server
     '''
-    with _get_serv(commit=True) as cur:
+    with _get_serv(ret, commit=True) as cur:
         sql = '''INSERT INTO `salt_returns`
                 (`fun`, `jid`, `return`, `id`, `success`, `full_ret` )
                 VALUES (%s, %s, %s, %s, %s, %s)'''

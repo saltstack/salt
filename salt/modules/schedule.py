@@ -249,7 +249,7 @@ def build_schedule_item(name, **kwargs):
         else:
             schedule[name]['splay'] = kwargs['splay']
 
-    for item in ['range', 'when', 'cron', 'returner']:
+    for item in ['range', 'when', 'cron', 'returner', 'return_config']:
         if item in kwargs:
             schedule[name][item] = kwargs[item]
 
@@ -270,7 +270,6 @@ def add(name, **kwargs):
     ret = {'comment': [],
            'result': True}
 
-    log.debug('kwargs {0}'.format(kwargs))
     current_schedule = __opts__['schedule'].copy()
     if 'schedule' in __pillar__:
         current_schedule.update(__pillar__['schedule'])
