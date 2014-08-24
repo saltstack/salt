@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Installation of Cygwin packages.
 
@@ -42,9 +43,10 @@ def installed(name,
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     if cyg_arch not in ['x86', 'x86_64']:
-        return _fail(ret,
-                     'The \'cyg_arch\' argument must\
- be one of \'x86\' or \'x86_64\'')
+        ret['result'] = False
+        ret['comment'] = 'The \'cyg_arch\' argument must\
+ be one of \'x86\' or \'x86_64\''
+        return ret
 
     LOG.debug('Installed State: Initial Mirror list: {0}'.format(mirrors))
 
@@ -97,9 +99,10 @@ def removed(name, cyg_arch='x86_64', mirrors=None):
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     if cyg_arch not in ['x86', 'x86_64']:
-        return _fail(ret,
-                     'The \'cyg_arch\' argument must\
- be one of \'x86\' or \'x86_64\'')
+        ret['result'] = False
+        ret['comment'] = 'The \'cyg_arch\' argument must\
+ be one of \'x86\' or \'x86_64\''
+        return ret
 
     if not __salt__['cyg.check_valid_package'](name,
                                                cyg_arch=cyg_arch,
@@ -144,9 +147,10 @@ def updated(name=None, cyg_arch='x86_64', mirrors=None):
     ret = {'name': 'cyg.updated', 'result': None, 'comment': '', 'changes': {}}
 
     if cyg_arch not in ['x86', 'x86_64']:
-        return _fail(ret,
-                     'The \'cyg_arch\' argument must\
- be one of \'x86\' or \'x86_64\'')
+        ret['result'] = False
+        ret['comment'] = 'The \'cyg_arch\' argument must\
+ be one of \'x86\' or \'x86_64\''
+        return ret
 
     if __opts__['test']:
         ret['comment'] = 'All packages would have been updated'
@@ -178,7 +182,7 @@ https://github.com/hughdbrown/dictdiffer
 DictDiffer is licensed as MIT code
 A dictionary difference calculator
 Originally posted as:
-http://stackoverflow.com/questions/1165352/fast-comparison-between-two-python-dictionary/1165552#1165552
+http://stackoverflow.com/a/1165552
 """
 
 

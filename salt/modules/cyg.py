@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Manage cygwin packages.
 
@@ -54,7 +55,7 @@ def _check_cygwin_installed(cyg_arch='x86_64'):
     path_to_cygcheck = os.sep.join(['C:',
                                     _get_cyg_dir(cyg_arch),
                                     'bin', 'cygcheck.exe'])
-    LOG.debug('Path to cygcheck.exe: {}'.format(path_to_cygcheck))
+    LOG.debug('Path to cygcheck.exe: {0}'.format(path_to_cygcheck))
     if not os.path.exists(path_to_cygcheck):
         LOG.debug('Could not find cygcheck.exe')
         return False
@@ -131,9 +132,9 @@ def _run_silent_cygwin(cyg_arch='x86_64',
     if mirrors is None:
         mirrors = {DEFAULT_MIRROR: DEFAULT_MIRROR_KEY}
     for mirror, key in mirrors.items():
-        options.append('--site {}'.format(mirror))
+        options.append('--site {0}'.format(mirror))
         if key:
-            options.append('--pubkey {}'.format(key))
+            options.append('--pubkey {0}'.format(key))
     options.append('--no-desktop')
     options.append('--quiet-mode')
     options.append('--disable-buggy-antivirus')
@@ -252,7 +253,7 @@ def update(cyg_arch='x86_64', mirrors=None):
 
     # Can't update something that isn't installed
     if not _check_cygwin_installed(cyg_arch):
-        LOG.debug('Cygwin ({}) not installed,\
+        LOG.debug('Cygwin ({0}) not installed,\
                   could not update'.format(cyg_arch))
         return False
 
