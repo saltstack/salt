@@ -502,7 +502,7 @@ def check(table='filter', chain=None, rule=None, family='ipv4'):
             if i.startswith('-A {0}'.format(_chain_name)):
                 if i.replace(_chain_name, chain) in out.splitlines():
                     return True
-                
+
         return False
     else:
         cmd = '{0} -t {1} -C {2} {3}'.format(_iptables_cmd(family), table, chain, rule)

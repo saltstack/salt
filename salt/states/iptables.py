@@ -178,7 +178,13 @@ at some point be deprecated in favor of a more generic `firewall` state.
         - sport: 1025:65535
         - save: True
 
+.. note::
 
+    Various functions of the ``iptables`` module use the ``--check`` option. If
+    the version of ``iptables`` on the target system does not include this
+    option, an alternate version of this check will be performed using the
+    output of iptables-save. This may have unintended consequences on legacy
+    releases of ``iptables``.
 '''
 
 # Import salt libs
