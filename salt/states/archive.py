@@ -96,6 +96,9 @@ def extracted(name,
             name, ','.join(valid_archives))
         return ret
 
+    if not name.endswith('/'):
+        name += '/'
+
     if if_missing is None:
         if_missing = name
     if (
