@@ -16,6 +16,16 @@ the following values configured in the minion or master config::
     returner.postgres.db: 'salt'
     returner.postgres.port: 5432
 
+Alternative configuration values can be used by prefacing the configuration.
+Any values not found in the alternative configuration will be pulled from
+the default location::
+
+    alternative.returner.postgres.host: 'salt'
+    alternative.returner.postgres.user: 'salt'
+    alternative.returner.postgres.passwd: 'salt'
+    alternative.returner.postgres.db: 'salt'
+    alternative.returner.postgres.port: 5432
+
 Running the following commands as the postgres user should create the database
 correctly::
 
@@ -59,6 +69,10 @@ Required python modules: psycopg2
   To use the postgres returner, append '--return postgres' to the salt command. ex:
 
     salt '*' test.ping --return postgres
+
+  To use the alternative configuration, append '--return_config alternative' to the salt command. ex:
+
+    salt '*' test.ping --return postgres --return_config alternative
 '''
 # Let's not allow PyLint complain about string substitution
 # pylint: disable=W1321,E1321
@@ -74,32 +88,76 @@ try:
 except ImportError:
     HAS_POSTGRES = False
 
+__virtualname__ = 'postgres'
+
 
 def __virtual__():
     if not HAS_POSTGRES:
         return False
-    return 'postgres'
+    return __virtualname__
 
 
-def _get_conn():
+def _get_options(ret):
+    '''
+    Get the odbc options from salt.
+    '''
+    ret_config = '{0}'.format(ret['ret_config']) if 'ret_config' in ret else ''
+
+    attrs = {'host': 'host',
+             'user': 'user',
+             'passwd': 'passwd',
+             'db': 'db',
+             'port': 'port'}
+
+    _options = {}
+    for attr in attrs:
+        if 'config.option' in __salt__:
+            cfg = __salt__['config.option']
+            c_cfg = cfg('returner.{0}'.format(__virtualname__), {})
+            if ret_config:
+                ret_cfg = cfg('{0}.returner.{1}'.format(ret_config, __virtualname__), {})
+                if ret_cfg.get(attrs[attr], cfg('{0}.returner.{1}.{2}'.format(ret_config, __virtualname__, attrs[attr]))):
+                    _attr = ret_cfg.get(attrs[attr], cfg('{0}.returner.{1}.{2}'.format(ret_config, __virtualname__, attrs[attr])))
+                else:
+                    _attr = c_cfg.get(attrs[attr], cfg('returner.{0}.{1}'.format(__virtualname__, attrs[attr])))
+            else:
+                _attr = c_cfg.get(attrs[attr], cfg('returner.{0}.{1}'.format(__virtualname__, attrs[attr])))
+        else:
+            cfg = __opts__
+            c_cfg = cfg.get('returner.{0}'.format(__virtualname__), {})
+            if ret_config:
+                ret_cfg = cfg.get('{0}.returner.{1}'.format(ret_config, __virtualname__), {})
+                if ret_cfg.get(attrs[attr], cfg.get('{0}.returner.{1}.{2}'.format(ret_config, __virtualname__, attrs[attr]))):
+                    _attr = ret_cfg.get(attrs[attr], cfg.get('{0}.returner.{1}.{2}'.format(ret_config, __virtualname__, attrs[attr])))
+                else:
+                    _attr = c_cfg.get(attrs[attr], cfg.get('returner.{0}.{1}'.format(__virtualname__, attrs[attr])))
+            else:
+                _attr = c_cfg.get(attrs[attr], cfg.get('returner.{0}.{1}'.format(__virtualname__, attrs[attr])))
+        if not _attr:
+            _options[attr] = None
+            continue
+        _options[attr] = _attr
+    return _options
+
+
+def _get_conn(ret):
     '''
     Return a postgres connection.
     '''
-    if 'config.option' in __salt__:
-        return psycopg2.connect(
-                host=__salt__['config.option']('returner.postgres.host'),
-                user=__salt__['config.option']('returner.postgres.user'),
-                password=__salt__['config.option']('returner.postgres.passwd'),
-                database=__salt__['config.option']('returner.postgres.db'),
-                port=__salt__['config.option']('returner.postgres.port'))
-    else:
-        cfg = __opts__
-        return psycopg2.connect(
-                host=cfg.get('returner.postgres.host', None),
-                user=cfg.get('returner.postgres.user', None),
-                password=cfg.get('returner.postgres.passwd', None),
-                database=cfg.get('returner.postgres.db', None),
-                port=cfg.get('returner.postgres.port', None))
+    _options = _get_options()
+
+    host = _options.get('host')
+    user = _options.get('user')
+    passwd = _options.get('passwd')
+    db = _options.get('db')
+    port = _options.get('port')
+
+    return psycopg2.connect(
+            host=host,
+            user=user,
+            password=passwd,
+            database=db,
+            port=port)
 
 
 def _close_conn(conn):
@@ -111,7 +169,7 @@ def returner(ret):
     '''
     Return data to a postgres server
     '''
-    conn = _get_conn()
+    conn = _get_conn(ret)
     cur = conn.cursor()
     sql = '''INSERT INTO salt_returns
             (fun, jid, return, id, success)
