@@ -323,7 +323,7 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
     return salt.utils.compare_dicts(old, new)
 
 
-def list_upgrades():
+def list_upgrades(refresh=True):
     '''
     Check whether or not an upgrade is available for all packages
 
@@ -333,6 +333,9 @@ def list_upgrades():
 
         salt '*' pkg.list_upgrades
     '''
+    if refresh:
+        refresh_db()
+
     cmd = 'brew outdated'
     call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
     if call['retcode'] != 0:
