@@ -25,6 +25,7 @@ class FSTimer(Thread):
         self.stopped = event
         self.daemon = True
         self.serial = salt.payload.Serial(opts.get('serial', ''))
+        self.timer_sock = os.path.join(self.opts['sock_dir'], 'fsc_timer.ipc')
 
     def run(self):
         '''
@@ -34,7 +35,7 @@ class FSTimer(Thread):
         # the socket for outgoing timer events
         socket = context.socket(zmq.PUSH)
         socket.setsockopt(zmq.LINGER, 100)
-        socket.bind("ipc:///tmp/fsc_timer")
+        socket.bind('ipc:///' + self.timer_sock)
 
         count = 0
         log.debug("FSCache-Timer started")
@@ -77,6 +78,9 @@ class FSCache(multiprocessing.Process):
         self.timer = FSTimer(self.opts, self.timer_stop)
         self.timer.start()
         self.running = True
+        self.cache_sock = os.path.join(self.opts['sock_dir'], 'fsc_cache.ipc')
+        self.update_sock = os.path.join(self.opts['sock_dir'], 'fsc_upd.ipc')
+        self.upd_t_sock = os.path.join(self.opts['sock_dir'], 'fsc_timer.ipc')
 
     def signal_handler(self, sig, frame):
         '''
@@ -126,17 +130,17 @@ class FSCache(multiprocessing.Process):
         # the socket for incoming cache requests
         creq_in = context.socket(zmq.REP)
         creq_in.setsockopt(zmq.LINGER, 100)
-        creq_in.bind("ipc:///tmp/fsc_cache")
+        creq_in.bind('ipc:///' + self.cache_sock)
 
         # the socket for incoming cache-updates from workers
         cupd_in = context.socket(zmq.REP)
         cupd_in.setsockopt(zmq.LINGER, 100)
-        cupd_in.bind("ipc:///tmp/fsc_upd")
+        cupd_in.bind('ipc:///' + self.update_sock)
 
         # the socket for the timer-event
         timer_in = context.socket(zmq.PULL)
         timer_in.setsockopt(zmq.LINGER, 100)
-        timer_in.connect("ipc:///tmp/fsc_timer")
+        timer_in.connect('ipc:///' + self.upd_t_sock)
 
         poller = zmq.Poller()
         poller.register(creq_in, zmq.POLLIN)
