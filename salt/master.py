@@ -46,6 +46,7 @@ from salt.utils.debug import enable_sigusr1_handler, enable_sigusr2_handler, ins
 from salt.exceptions import MasterExit
 from salt.utils.event import tagify
 import binascii
+import salt.caches
 
 # Import halite libs
 try:
@@ -311,6 +312,9 @@ class Master(SMaster):
         reqserv.start_event_publisher()
         reqserv.start_reactor()
         reqserv.start_halite()
+
+        if self.opts['fs_cache']:
+            self.cache = salt.caches.FSCache(self.opts)
 
         def sigterm_clean(signum, frame):
             '''
