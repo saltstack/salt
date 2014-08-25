@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Classes for salts filesystem cache for larger installations.
 '''
@@ -7,7 +8,7 @@ import multiprocessing
 import zmq
 import time
 import os
-from fsworker import FSWorker
+from salt.caches.fsworker import FSWorker
 from threading import Thread, Event
 import signal
 import logging
@@ -46,6 +47,7 @@ class FSTimer(Thread):
             count += 1
             if count >= 60:
                 count = 0
+
 
 class FSCache(multiprocessing.Process):
     '''
@@ -116,7 +118,7 @@ class FSCache(multiprocessing.Process):
         # make sure new jobs have all variables set
         for var in req_vars:
             if var not in kwargs:
-                raise AttributeError, 'missing variable {0}'.format(var)
+                raise AttributeError('missing variable {0}'.format(var))
         job_name = kwargs['name']
         del kwargs['name']
         self.jobs[job_name] = {}
@@ -278,14 +280,14 @@ if __name__ == '__main__':
     wlk.add_job(**{
                     'name': 'grains',
                     'path': '/var/cache/salt/master/minions',
-                    'ival': [2,12,22],
+                    'ival': [2, 12, 22],
                     'patt': '^.*$'
                   })
 
     wlk.add_job(**{
                     'name': 'mine',
                     'path': '/var/cache/salt/master/jobs/',
-                    'ival': [4,14,24,34,44,54],
+                    'ival': [4, 14, 24, 34, 44, 54],
                     'patt': '^.*$'
                 })
     wlk.start()
