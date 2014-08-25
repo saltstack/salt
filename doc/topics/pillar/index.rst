@@ -293,6 +293,23 @@ is being traversed. The below example would match minions with a pillar named
     salt -I 'foo:bar:baz*' test.ping
 
 
+Set Pillar Data at the Command Line
+===================================
+
+Pillar data can be set at the command line like the following example:
+
+.. code-block:: bash
+
+    salt '*' state.highstate pillar='{"cheese": "spam"}'
+
+This will create a dict with a key of 'cheese' and a value of 'spam'. A list
+can be created like this:
+
+.. code-block:: bash
+
+    salt '*' state.highstate pillar='["cheese", "milk", "bread"]'
+
+
 Master Config In Pillar
 =======================
 
