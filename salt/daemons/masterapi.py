@@ -1007,7 +1007,7 @@ class LocalFuncs(object):
                         'introspecting {0}: {1}'.format(fun, exc))
                 return dict(error=dict(name=exc.__class__.__name__,
                                        args=exc.args,
-                                      message=exc.message))
+                                      message=str(exc)))
 
         if 'eauth' not in load:
             msg = ('Authentication failure of type "eauth" occurred for '
@@ -1058,7 +1058,7 @@ class LocalFuncs(object):
                         'introspecting {0}: {1}'.format(fun, exc))
                 return dict(error=dict(name=exc.__class__.__name__,
                                        args=exc.args,
-                                       message=exc.message))
+                                       message=str(exc)))
 
         except Exception as exc:
             log.error(
@@ -1066,7 +1066,7 @@ class LocalFuncs(object):
             )
             return dict(error=dict(name=exc.__class__.__name__,
                                    args=exc.args,
-                                   message=exc.message))
+                                   message=str(exc)))
 
     def wheel(self, load):
         '''
@@ -1212,7 +1212,7 @@ class LocalFuncs(object):
             )
             return dict(error=dict(name=exc.__class__.__name__,
                                    args=exc.args,
-                                   message=exc.message))
+                                   message=str(exc)))
 
     def mk_token(self, load):
         '''

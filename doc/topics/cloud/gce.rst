@@ -49,23 +49,24 @@ Google Compute Engine Setup
    To set up authorization, navigate to *APIs & auth* section and then the
    *Credentials* link and click the *CREATE NEW CLIENT ID* button. Select
    *Service Account* and click the *Create Client ID* button. This will
-   prompt you to save a private key file.  Look for a new *Service Account*
-   section in the page and record the generated email address for the
-   matching key/fingerprint.  The email address will be used in the
-   ``service_account_email_address`` of your ``/etc/salt/cloud``
-   file.
+   automatically download a ``.json`` file, which should be ignored. Look for
+   a new *Service Account* section in the page and record the generated email
+   address for the matching key/fingerprint. The email address will be used
+   in the ``service_account_email_address`` of the ``/etc/salt/cloud`` file.
 
 #. Key Format
 
-   You will need to convert the private key to a format compatible with
-   libcloud.  The original Google-generated private key was encrypted using
-   *notasecret* as a passphrase.  Use the following command and record the
-   location of the converted private key and record the location for use
-   in the ``service_account_private_key`` of your ``/etc/salt/cloud`` file:
+   In the new *Service Account* section, click *Generate new P12 key*, which
+   will automatically download a ``.p12`` private key file. The ``.p12``
+   private key needs to be converted to a format compatible with libcloud.
+   This new Google-generated private key was encrypted using *notasecret* as
+   a passphrase. Use the following command and record the location of the
+   converted private key and record the location for use in the
+   ``service_account_private_key`` of the ``/etc/salt/cloud`` file:
 
    .. code-block:: bash
 
-       openssl pkcs12 -in ORIG.pkey -passin pass:notasecret \
+       openssl pkcs12 -in ORIG.p12 -passin pass:notasecret \
        -nodes -nocerts | openssl rsa -out NEW.pem
 
 
@@ -83,7 +84,7 @@ Set up the cloud config at ``/etc/salt/cloud``:
       gce-config:
         # Set up the Project name and Service Account authorization
         #
-        project: "your-project-name"
+        project: "your-project-id"
         service_account_email_address: "123-a5gt@developer.gserviceaccount.com"
         service_account_private_key: "/path/to/your/NEW.pem"
 
@@ -102,7 +103,8 @@ Set up the cloud config at ``/etc/salt/cloud``:
 
 .. note::
 
-    The value provided for ``project`` must not contain underscores or spaces.
+    The value provided for ``project`` must not contain underscores or spaces and
+    is labeled as "Project ID" on the Google Developers Console.
 
 
 Cloud Profiles

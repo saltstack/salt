@@ -1294,7 +1294,7 @@ class Cloud(object):
             except (SaltCloudSystemExit, SaltCloudConfigError) as exc:
                 if len(names) == 1:
                     raise
-                ret[name] = {'Error': exc.message}
+                ret[name] = {'Error': str(exc)}
 
         return ret
 

@@ -539,18 +539,41 @@ supported.
       - ssh://git@github.com/example/salt-states.git
 
 Since GitPython_ wraps the git CLI, the private key must be located in
-``~/.ssh/id_rsa`` for the user under which the Master is running. If a
-different key needs to be used, then ``~/.ssh/config`` can be configured to use
+``~/.ssh/id_rsa`` for the user under which the Master is running, and should
+have permissions of ``0600``. Also, in the absence of a user in the repo URL,
+GitPython_ will (just as SSH does) attempt to login as the current user (in
+other words, the user under which the Master is running, usually ``root``).
+
+If a key needs to be used, then ``~/.ssh/config`` can be configured to use
 the desired key. Information on how to do this can be found by viewing the
-manpage for ``ssh_config``.
+manpage for ``ssh_config``. Here's an example entry which can be added to the
+``~/.ssh/config`` to use an alternate key for gitfs:
+
+.. code-block:: text
+
+    Host github.com
+        IdentityFile /root/.ssh/id_rsa_gitfs
+
+The ``Host`` parameter should be a hostname (or hostname glob) that matches the
+domain name of the git repository.
 
 It is also necessary to make :ref:`add the SSH host key to the known_hosts file
-<gitfs-ssh-fingerprint>`.
+<gitfs-ssh-fingerprint>`. The exception to this would be if strict host key
+checking is disabled, which can be done by adding ``StrictHostKeyChecking no``
+to the entry in ``~/.ssh/config``
+
+.. code-block:: text
+
+    Host github.com
+        IdentityFile /root/.ssh/id_rsa_gitfs
+        StrictHostKeyChecking no
+
+However, this is generally regarded as insecure, and is not recommended.
 
 .. _gitfs-ssh-fingerprint:
 
-Adding the SSH Host Key to known_hosts File
--------------------------------------------
+Adding the SSH Host Key to the known_hosts File
+-----------------------------------------------
 
 To use SSH authentication, it is necessary to have the remote repository's SSH
 host key in the ``~/.ssh/known_hosts`` file. If the master is also a minion,

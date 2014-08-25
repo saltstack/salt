@@ -236,7 +236,7 @@ def get_image(conn, vm_):
         raise SaltCloudNotFound(
             'The specified image, {0!r}, could not be found: {1}'.format(
                 vm_image,
-                exc.message
+                str(exc)
             )
         )
 
@@ -696,7 +696,7 @@ def create(vm_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(exc.message)
+            raise SaltCloudSystemExit(str(exc))
 
     log.debug('VM is now running')
 

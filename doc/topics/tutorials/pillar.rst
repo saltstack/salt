@@ -96,7 +96,14 @@ This top file associates the data.sls file to all minions. Now the
 
     info: some data
 
-Now that the file has been saved, the minions' pillars will be updated:
+To ensure that the minions have the new pillar data, issue a command
+to them asking that they fetch their pillars from the master:
+
+.. code-block:: bash
+    
+    salt '*' saltutil.pillar_refresh
+
+Now that the minions have the new pillar, it can be retreived:
 
 .. code-block:: bash
 
