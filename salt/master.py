@@ -46,6 +46,7 @@ from salt.utils.debug import enable_sigusr1_handler, enable_sigusr2_handler, ins
 from salt.exceptions import MasterExit
 from salt.utils.event import tagify
 import binascii
+import salt.caches
 
 # Import halite libs
 try:
@@ -311,6 +312,7 @@ class Master(SMaster):
         reqserv.start_event_publisher()
         reqserv.start_reactor()
         reqserv.start_halite()
+        reqserv.init_caches()
 
         def sigterm_clean(signum, frame):
             '''
@@ -330,6 +332,8 @@ class Master(SMaster):
                 clean_proc(reqserv.halite)
             if hasattr(reqserv, 'reactor'):
                 clean_proc(reqserv.reactor)
+            if hasattr(reqserv, 'fscache'):
+                clean_proc(reqserv.fscache)
             for proc in reqserv.work_procs:
                 clean_proc(proc)
             raise MasterExit
@@ -544,6 +548,27 @@ class ReqServer(object):
         if self.opts.get('reactor'):
             self.reactor = salt.utils.event.Reactor(self.opts)
             self.reactor.start()
+
+    def init_caches(self):
+        '''
+        start all available caches if configured
+        '''
+
+        if self.opts['fs_cache']:
+            self.fscache = salt.caches.FSCache(self.opts)
+
+            # add a job that caches grains and mine data every 30 seconds
+            self.fscache.add_job(
+                **{
+                    'name':'minions',
+                    'path':'/var/cache/salt/master/minions',
+                    'ival':[0, 30],
+                    'patt':'^.*$'
+                   }
+                )
+            self.fscache.start()
+
+
 
     def start_halite(self):
         '''

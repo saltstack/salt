@@ -256,6 +256,7 @@ VALID_OPTS = {
     'username': str,
     'password': str,
     'zmq_filtering': bool,
+    'fs_cache' : bool,
 }
 
 # default configurations
@@ -542,6 +543,7 @@ DEFAULT_MASTER_OPTS = {
     'master_pubkey_signature': 'master_pubkey_signature',
     'master_use_pubkey_signature': False,
     'zmq_filtering': False,
+    'fs_cache' : True,
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
