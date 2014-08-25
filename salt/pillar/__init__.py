@@ -523,7 +523,6 @@ class Pillar(object):
                 ext = None
         return pillar
 
-
     def merge_sources(self, obj_a, obj_b):
         strategy = self.merge_strategy
 
