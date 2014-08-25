@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/python
 '''
 Classes for salts filesystem cache for larger installations.
@@ -76,7 +77,7 @@ class FSCacheTest(object):
         self.setup()
 
         self.stats = {
-                       'req_total' : 0,
+                       'req_total': 0,
                        'hits': 0,
                        'misses': 0,
                        'bytes': 0,
@@ -104,7 +105,6 @@ class FSCacheTest(object):
             # send a request to the FSCache. If we get to here after
             # the cache was too slow before, the send() will fail but we try
             # anyway going by EAFP rules.
-#            print "MAIN:  Query: {0}".format(msg)
             self.cache_cli.send(self.serial.dumps(msg))
         except zmq.ZMQError:
             # on failure we do a dummy recv()and resend the last msg. That
@@ -132,13 +132,10 @@ class FSCacheTest(object):
                     # first field must be our matching request-id
                     if msgid == reply[0]:
                         if reply[1] is not None:
-#                            print "MAIN:  Reply: {0}:{1} bytes".format(reply[0], len(reply[1]))
                             self.stats['hits'] += 1
                             self.stats['bytes'] += sys.getsizeof(reply[1])
                         else:
-#                            print "MAIN:  Reply: {0}:miss".format(reply[0])
                             self.stats['misses'] += 1
-                        #print ""
                         # received reply for request, enable the
                         # break the loop to make way for next request
                         break
@@ -148,7 +145,7 @@ class FSCacheTest(object):
                 # we should never get here
                 else:
                     print "MAIN:  deformed packet {0}".format(reply)
-                    raise zmq.error.ZMQError, "invalid state in FSCache-communication"
+                    raise zmq.error.ZMQError("invalid state in FSCache-communication")
             # we wait a maximum time of cache_timeout*5, which means 100ms
             #to_count += cache_timeout
             to_count += 1
@@ -226,13 +223,13 @@ class FSCacheTest(object):
                     self.do_cache_req(file_n)
                 count += 1
             t_stop = int(time.time())
-            if t_stop  >= t_start+timeframe:
+            if t_stop >= t_start+timeframe:
                 break
         print "MAIN/{0}:  did {1} requests in: {2}".format(self.stats['runs'],
                                                            count,
                                                            timeframe)
 
-        return count 
+        return count
 
     def do_fs(self, num):
 
@@ -291,6 +288,5 @@ if __name__ == '__main__':
 
     # let the things settle and the cache
     # populate before we enter the loop
-    import trace
     test = FSCacheTest(opts, args['runs'], args['jtype'])
     test.run()
