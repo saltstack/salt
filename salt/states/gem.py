@@ -32,13 +32,8 @@ def installed(name,          # pylint: disable=C0103
               user=None,
               version=None,
               rdoc=False,
-<<<<<<< HEAD
-              ri=False):     # pylint: disable=C0103
-=======
               ri=False,
-              pre_releases=False,
               proxy=None):     # pylint: disable=C0103
->>>>>>> Issue 14304: add proxy parameter to gem state
     '''
     Make sure that a gem is installed.
 
@@ -67,16 +62,10 @@ def installed(name,          # pylint: disable=C0103
 
     ri : False
         Generate RI documentation for the gem(s).
-<<<<<<< HEAD
-=======
-
-    pre_releases : False
-        Install pre-release version of gem(s) if available.
 
     proxy : None
         Use the specified HTTP proxy server for all outgoing traffic.
         Format: http://hostname[:port]
->>>>>>> Issue 14304: add proxy parameter to gem state
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
@@ -122,13 +111,8 @@ def installed(name,          # pylint: disable=C0103
                                runas=user,
                                version=version,
                                rdoc=rdoc,
-<<<<<<< HEAD
-                               ri=ri):
-=======
                                ri=ri,
-                               pre_releases=pre_releases,
                                proxy=proxy):
->>>>>>> Issue 14304: add proxy parameter to gem state
         ret['result'] = True
         ret['changes'][name] = 'Installed'
         ret['comment'] = 'Gem was successfully installed'
