@@ -147,7 +147,7 @@ def print_job(jid, ext_source=None):
 
 def _get_returner(returner_types):
     '''
-    Helper to iterate over retuerner_types and pick the first one
+    Helper to iterate over returner_types and pick the first one
     '''
     for returner in returner_types:
         if returner:
