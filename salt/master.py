@@ -47,7 +47,7 @@ from salt.utils.debug import enable_sigusr1_handler, enable_sigusr2_handler, ins
 from salt.exceptions import MasterExit
 from salt.utils.event import tagify
 import binascii
-import salt.caches
+from salt.utils.master import Conimport salt.caches
 
 # Import halite libs
 try:
@@ -554,20 +554,8 @@ class ReqServer(object):
         '''
         start all available caches if configured
         '''
-
         if self.opts['fs_cache']:
-            self.fscache = salt.caches.FSCache(self.opts)
-
-            # add a job that caches grains and mine data every 30 seconds
-            self.fscache.add_job(
-                **{
-                    'name': 'minions',
-                    'path': '/var/cache/salt/master/minions',
-                    'ival': [0, 30],
-                    'patt': '^.*$'
-                   }
-                )
-            self.fscache.start()
+            log.debug('Start Caches')
 
     def start_halite(self):
         '''
