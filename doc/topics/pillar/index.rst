@@ -132,8 +132,7 @@ And the actual pillar file at '/srv/salt/common_pillar.sls':
 Pillar namespace flattened
 ==========================
 
-The separate pillar files all share the same namespace. Given 
-a ``top.sls`` of:
+The separate pillar files all share the same namespace. Given a ``top.sls`` of:
 
 .. code-block:: yaml
 
@@ -168,9 +167,9 @@ Including Other Pillars
 
 .. versionadded:: 0.16.0
 
-Pillar SLS files may include other pillar files, similar to State files.
-Two syntaxes are available for this purpose. The simple form simply includes
-the additional pillar as if it were part of the same file:
+Pillar SLS files may include other pillar files, similar to State files. Two
+syntaxes are available for this purpose. The simple form simply includes the
+additional pillar as if it were part of the same file:
 
 .. code-block:: yaml
 
