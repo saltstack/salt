@@ -213,8 +213,8 @@ def enable(name, **kwargs):
         salt '*' service.enable <service name>
         salt '*' service.enable <service name> flags=<flags>
     '''
-    flags = kwargs.get('flags', \
-                       __salt__['config.option']('service.flags', \
+    flags = kwargs.get('flags',
+                       __salt__['config.option']('service.flags',
                        default=''))
 
     if not flags:
