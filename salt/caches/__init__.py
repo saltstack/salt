@@ -1,4 +1,5 @@
+# -*- coding: utf-8 -*-
 '''
-Classes for salts cache systems 
+Classes for salts cache systems
 '''
-from fscache import FSCache
+from salt.caches.fscache import FSCache
