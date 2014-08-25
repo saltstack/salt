@@ -1,4 +1,5 @@
-"""
+# -*- coding: utf-8 -*-
+'''
 Two classes for traversing a directory-tree and collecting files and their data
 filtered by filename.
 
@@ -9,7 +10,8 @@ regular files.
 The FSWorker iterates over the results and filters them by filename. If
 a match is found, the file is opened and filename and data are saved in a dict.
 Once the directory is successfully traversed, all collected data is returned.
-"""
+'''
+
 import salt.utils
 import salt.payload
 import multiprocessing
@@ -22,7 +24,6 @@ import sys
 
 # try importing psutil to set ionice-ness
 try:
-    raise ImportError
     import psutil
 except ImportError:
     pass
