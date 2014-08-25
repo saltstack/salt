@@ -124,13 +124,13 @@ def list_jobs(ext_source=None):
 
 def print_job(jid, ext_source=None):
     '''
-    Print job available details, including return data.
+    Print a specific job details given by its jid, including return data.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt-run jobs.print_job
+        salt-run jobs.print_job 20130916125524463507
     '''
     ret = {}
 
