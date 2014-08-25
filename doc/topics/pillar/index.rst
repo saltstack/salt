@@ -127,7 +127,7 @@ And the actual pillar file at '/srv/salt/common_pillar.sls':
 .. code-block:: yaml
 
     foo: bar
-    boo: baz 
+    boo: baz
 
 Pillar namespace flattened
 ==========================
