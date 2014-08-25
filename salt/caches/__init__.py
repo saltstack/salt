@@ -38,7 +38,7 @@ class FSTimer(Thread):
         socket.bind('ipc:///' + self.timer_sock)
 
         count = 0
-        log.debug("FSCache-Timer started")
+        log.debug('FSCache-Timer started')
         while not self.stopped.wait(1):
             socket.send(self.serial.dumps(count))
 
@@ -60,7 +60,7 @@ class FSCache(multiprocessing.Process):
         starts the timer and inits the cache itself
         '''
         super(FSCache, self).__init__()
-        log.debug("FSCache initializing...")
+        log.debug('FSCache initializing...')
 
         # the possible settings for the cache
         self.opts = opts
@@ -97,7 +97,7 @@ class FSCache(multiprocessing.Process):
         # make sure new jobs have all variables set
         for var in req_vars:
             if var not in kwargs:
-                raise AttributeError, "missing variable {0}".format(var)
+                raise AttributeError, 'missing variable {0}'.format(var)
         job_name = kwargs['name']
         del kwargs['name']
         self.jobs[job_name] = {}
@@ -153,7 +153,7 @@ class FSCache(multiprocessing.Process):
         # register a signal handler
         signal.signal(signal.SIGINT, self.signal_handler)
 
-        log.info("FSCache started")
+        log.info('FSCache started')
 
         while self.running:
 
@@ -218,7 +218,7 @@ class FSCache(multiprocessing.Process):
                 if len(new_c_data) == 0:
                     log.debug('Got empty update from worker')
                 elif new_c_data.values()[0] is not None:
-                    log.debug('Got cache update with {0} item'.format(len(new_c_data)))
+                    log.debug('Got cache update with {0} item(s)'.format(len(new_c_data)))
                     self.path_data.update(new_c_data)
                 else:
                     log.debug('Got malformed result dict from worker')
