@@ -2,15 +2,12 @@
 Classes for salts filesystem cache for larger installations.
 '''
 import salt.utils
-
 import salt.config
-import time
 import multiprocessing
-import random
-import sys
 import zmq
+import os
 from fsworker import FSWorker
-from threading import Thread, Timer, Event
+from threading import Thread, Event
 import signal
 import logging
 import salt.log
