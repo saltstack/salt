@@ -514,7 +514,7 @@ class Pillar(object):
                                                          pillar_dirs,
                                                          key)
                     except TypeError as exc:
-                        if exc.message.startswith('ext_pillar() takes exactly '):
+                        if str(exc).startswith('ext_pillar() takes exactly '):
                             log.warning('Deprecation warning: ext_pillar "{0}"'
                                         ' needs to accept minion_id as first'
                                         ' argument'.format(key))

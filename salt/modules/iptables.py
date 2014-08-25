@@ -7,6 +7,7 @@ Support for iptables
 import os
 import re
 import sys
+import uuid
 import shlex
 
 # Import salt libs
@@ -485,15 +486,24 @@ def check(table='filter', chain=None, rule=None, family='ipv4'):
         HAS_CHECK = True
 
     if HAS_CHECK is False:
-        cmd = '{0}-save' . format(_iptables_cmd(family))
-        out = __salt__['cmd.run'](cmd).find('-A {0} {1}'.format(
-            chain,
-            rule,
-        ))
-        if out != -1:
-            out = ''
-        else:
-            return False
+        _chain_name = hex(uuid.getnode())
+
+        # Create temporary table
+        __salt__['cmd.run']('{0} -N {1}'.format(_iptables_cmd(family), _chain_name))
+        __salt__['cmd.run']('{0} -A {1} {2}'.format(_iptables_cmd(family), _chain_name, rule))
+
+        out = __salt__['cmd.run']('{0}-save'.format(_iptables_cmd(family)))
+
+        # Clean up temporary table
+        __salt__['cmd.run']('{0} -F {1}'.format(_iptables_cmd(family), _chain_name))
+        __salt__['cmd.run']('{0} -X {1}'.format(_iptables_cmd(family), _chain_name))
+
+        for i in out.splitlines():
+            if i.startswith('-A {0}'.format(_chain_name)):
+                if i.replace(_chain_name, chain) in out.splitlines():
+                    return True
+
+        return False
     else:
         cmd = '{0} -t {1} -C {2} {3}'.format(_iptables_cmd(family), table, chain, rule)
         out = __salt__['cmd.run'](cmd)

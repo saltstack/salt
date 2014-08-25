@@ -2006,7 +2006,15 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             default=False,
             action='store_true',
             help=('Force a refresh of the grains cache')
-    )
+        )
+        self.add_option(
+            '-t', '--timeout',
+            default=60,
+            dest='auth_timeout',
+            type=int,
+            help=('Change the timeout, if applicable, for the running '
+                  'command; default=60')
+        )
 
     def _mixin_after_parsed(self):
         if not self.args and not self.options.grains_run and not self.options.doc:

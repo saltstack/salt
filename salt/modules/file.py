@@ -457,7 +457,7 @@ def chgrp(path, group):
     return chown(path, user, group)
 
 
-def get_sum(path, form='md5'):
+def get_sum(path, form='sha256'):
     '''
     Return the sum for the given file, default is md5, sha1, sha224, sha256,
     sha384, sha512 are supported
@@ -479,7 +479,7 @@ def get_sum(path, form='md5'):
     return salt.utils.get_hash(path, form, 4096)
 
 
-def get_hash(path, form='md5', chunk_size=65536):
+def get_hash(path, form='sha256', chunk_size=65536):
     '''
     Get the hash sum of a file
 
@@ -2036,6 +2036,8 @@ def access(path, mode):
     Test whether the Salt process has the specified access to the file. One of
     the following modes must be specified:
 
+    .. code-block::text
+
         f: Test the existence of the path
         r: Test the readability of the path
         w: Test the writability of the path
@@ -2516,7 +2518,7 @@ def get_managed(
         if data['result']:
             sfn = data['data']
             hsum = get_hash(sfn)
-            source_sum = {'hash_type': 'md5',
+            source_sum = {'hash_type': 'sha256',
                           'hsum': hsum}
         else:
             __clean_tmp(sfn)
@@ -2558,7 +2560,7 @@ def get_managed(
     return sfn, source_sum, ''
 
 
-def extract_hash(hash_fn, hash_type='md5', file_name=''):
+def extract_hash(hash_fn, hash_type='sha256', file_name=''):
     '''
     This routine is called from the :mod:`file.managed
     <salt.states.file.managed>` state to pull a hash from a remote file.

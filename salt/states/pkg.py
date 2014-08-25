@@ -724,7 +724,7 @@ def installed(
                     return {'name': name,
                             'changes': {},
                             'result': False,
-                            'comment': exc.message}
+                            'comment': str(exc)}
 
                 if 'result' in hold_ret and not hold_ret['result']:
                     return {'name': name,
@@ -848,7 +848,7 @@ def installed(
                             name=name, pkgs=pkgs, sources=sources
                         )
                 except (CommandExecutionError, SaltInvocationError) as exc:
-                    comment.append(exc.message)
+                    comment.append(str(exc))
                     return {'name': name,
                             'changes': changes,
                             'result': False,

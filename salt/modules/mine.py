@@ -114,12 +114,14 @@ def send(func, *args, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' mine.send network.interfaces eth0
+        salt '*' mine.send network.ip_addrs eth0
+        salt '*' mine.send eth0_ip_addrs mine_function=network.ip_addrs eth0
     '''
-    if func not in __salt__:
+    mine_func = kwargs.pop('mine_function', func)
+    if mine_func not in __salt__:
         return False
     data = {}
-    arg_data = salt.utils.arg_lookup(__salt__[func])
+    arg_data = salt.utils.arg_lookup(__salt__[mine_func])
     func_data = copy.deepcopy(kwargs)
     for ind, _ in enumerate(arg_data.get('args', [])):
         try:
@@ -127,15 +129,15 @@ def send(func, *args, **kwargs):
         except IndexError:
             # Safe error, arg may be in kwargs
             pass
-    f_call = salt.utils.format_call(__salt__[func], func_data)
+    f_call = salt.utils.format_call(__salt__[mine_func], func_data)
     try:
         if 'kwargs' in f_call:
-            data[func] = __salt__[func](*f_call['args'], **f_call['kwargs'])
+            data[func] = __salt__[mine_func](*f_call['args'], **f_call['kwargs'])
         else:
-            data[func] = __salt__[func](*f_call['args'])
+            data[func] = __salt__[mine_func](*f_call['args'])
     except Exception as exc:
         log.error('Function {0} in mine.send failed to execute: {1}'
-                  .format(func, exc))
+                  .format(mine_func, exc))
         return False
     if __opts__['file_client'] == 'local':
         old = __salt__['data.getval']('mine_cache')

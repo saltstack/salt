@@ -135,16 +135,33 @@ def installed(name,
 
     pkgs_satisfied = []
     pkgs_to_install = []
-    for pkg_name in pkg_list:
-        prefix = pkg_name.split('@')[0].strip()
+    for pkg in pkg_list:
+        pkg_name, _, pkg_ver = pkg.partition('@')
+        pkg_name = pkg_name.strip().lower()
 
-        if prefix.lower() in installed_pkgs:
-            if force_reinstall is False:
-                pkgs_satisfied.append('{0}@{1}'.format(
-                        prefix,
-                        installed_pkgs[prefix.lower()]['version']))
-        else:
-            pkgs_to_install.append(pkg_name)
+        if force_reinstall is True:
+            pkgs_to_install.append(pkg)
+            continue
+
+        if pkg_name not in installed_pkgs:
+            pkgs_to_install.append(pkg)
+            continue
+
+        if pkg_name in installed_pkgs:
+            installed_name_ver = '{0}@{1}'.format(pkg_name,
+                    installed_pkgs[pkg_name]['version'])
+
+            # If given an explicit version check the installed version matches.
+            if pkg_ver:
+                if installed_pkgs[pkg_name].get('version') != pkg_ver:
+                    pkgs_to_install.append(pkg)
+                else:
+                    pkgs_satisfied.append(installed_name_ver)
+
+                continue
+            else:
+                pkgs_satisfied.append(installed_name_ver)
+                continue
 
     if __opts__['test']:
         ret['result'] = None
@@ -192,7 +209,7 @@ def installed(name,
     if call and (isinstance(call, list) or isinstance(call, dict)):
         ret['result'] = True
         ret['changes'] = {'old': [], 'new': pkgs_to_install}
-        ret['comment'] = 'Package(s) {0!r} were successfully installed'.format(
+        ret['comment'] = 'Package(s) {0!r} successfully installed'.format(
                 ', '.join(pkgs_to_install))
     else:
         ret['result'] = False

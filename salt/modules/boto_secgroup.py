@@ -84,7 +84,7 @@ def exists(name=None, region=None, key=None, keyid=None, profile=None,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    group = _get_group(conn, name, vpc_id, group_id)
+    group = _get_group(conn, name, vpc_id, group_id, region)
     if group:
         return True
     else:
@@ -171,7 +171,7 @@ def get_group_id(name, vpc_id=None, region=None, key=None, keyid=None, profile=N
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    group = _get_group(conn, name, vpc_id)
+    group = _get_group(conn, name, vpc_id, region)
     if group:
         return group.id
     else:
@@ -190,7 +190,7 @@ def get_config(name=None, group_id=None, region=None, key=None, keyid=None,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return None
-    sg = _get_group(conn, name, vpc_id, group_id)
+    sg = _get_group(conn, name, vpc_id, group_id, region)
     if sg:
         ret = odict.OrderedDict()
         ret['name'] = sg.name
@@ -272,7 +272,7 @@ def delete(name=None, group_id=None, region=None, key=None, keyid=None,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    group = _get_group(conn, name, vpc_id, group_id)
+    group = _get_group(conn, name, vpc_id, group_id, region)
     if group:
         deleted = conn.delete_security_group(group_id=group.id)
         if deleted:
@@ -303,7 +303,7 @@ def authorize(name=None, source_group_name=None,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    group = _get_group(conn, name, vpc_id, group_id)
+    group = _get_group(conn, name, vpc_id, group_id, region)
     if group:
         try:
             added = conn.authorize_security_group(
@@ -347,7 +347,7 @@ def revoke(name=None, source_group_name=None,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    group = _get_group(conn, name, vpc_id, group_id)
+    group = _get_group(conn, name, vpc_id, group_id, region)
     if group:
         try:
             revoked = conn.revoke_security_group(
