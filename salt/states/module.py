@@ -208,7 +208,7 @@ def run(name, **kwargs):
         ret['result'] = False
         return ret
     else:
-        if mret:
+        if mret is not None:
             ret['changes']['ret'] = mret
 
     if 'returner' in kwargs:
