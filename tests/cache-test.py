@@ -4,14 +4,14 @@ Classes for salts filesystem cache for larger installations.
 '''
 import salt.utils
 import salt.config
+import salt.caches
 import time
 import random
 from random import shuffle
 import sys
 import zmq
-from __init__ import FSCache
-from fsworker import Statwalker
 import argparse
+import os
 
 
 class Argparser(object):
@@ -39,7 +39,7 @@ class Argparser(object):
         self.main_parser.add_argument('-t',
                                       type=str,
                                       default='cache',
-                                      dest='type',
+                                      dest='jtype',
                                       required=False,
                                       help='wether to run the tests on cache or filesystem')
 
@@ -52,11 +52,13 @@ class FSCacheTest(object):
     run different tests for the FSCache
     '''
 
-    def __init__(self, opts, runs=1, type='cache'):
+    def __init__(self, opts, runs=1, jtype='cache'):
         self.opts = opts
         self.runs = runs
         self.serial = salt.payload.Serial("msgpack")
-        self.type = type
+        self.jtype = jtype
+        self.sock_adr = os.path.join(self.opts['sock_dir'], 'fsc_cache.ipc')
+        print self.sock_adr
 
         # the cache timeout in ms * 5 is the max time we allow
         # the cache to take to reply to the request
@@ -68,7 +70,7 @@ class FSCacheTest(object):
                     ]
 
         # the number of random files to load
-        self.rand_files = 3000
+        self.rand_files = 10
         self.files = []
         self.filelist = 'filelist'
         self.setup()
@@ -86,7 +88,7 @@ class FSCacheTest(object):
     def setup(self):
         self.context = zmq.Context()
         self.cache_cli = self.context.socket(zmq.REQ)
-        self.cache_cli.connect('ipc:///tmp/fsc_cache')
+        self.cache_cli.connect('ipc://' + self.sock_adr)
 
         self.poll = zmq.Poller()
         self.poll.register(self.cache_cli, zmq.POLLIN)
@@ -104,14 +106,14 @@ class FSCacheTest(object):
             # anyway going by EAFP rules.
 #            print "MAIN:  Query: {0}".format(msg)
             self.cache_cli.send(self.serial.dumps(msg))
-        except zmq.error.ZMQError:
+        except zmq.ZMQError:
             # on failure we do a dummy recv()and resend the last msg. That
             # keeps us from having to re-init the socket on failure.
             self.cache_cli.recv()
             print "MAIN:  Resend: {0}:{1}".format(msgid, msg)
             self.cache_cli.send(self.serial.dumps(msg))
 
-        to_max = self.cache_timeout*5
+        to_max = self.cache_timeout*500
         to_count = 0
 
         while 1:
@@ -249,15 +251,15 @@ class FSCacheTest(object):
 
     def pstats(self):
         print "Summary for {0} runs and test-type '{1}'".format(self.stats['runs'],
-                                                             self.type)
+                                                             self.jtype)
         print "Requests: {0},  Hits: {1},  Misses: {2}".format(self.stats['req_total'],
                                                                self.stats['hits'],
                                                                self.stats['misses'])
-        if self.type == 'cached' or self.type == 'fs':
+        if self.jtype == 'cached' or self.jtype == 'fs':
             print "avg/100: {0},  avg/1000: {1},  bytes: {2}".format(self.stats['avg_100'] / self.stats['runs'],
                                                                      self.stats['avg_1000'] / self.stats['runs'],
                                                                      self.stats['bytes'])
-        elif self.type == 'timed':
+        elif self.jtype == 'timed':
             print "timeframe: 30s  reqs: {0}/s bytes: {1}".format(self.stats['req_total'] / 30,
                                                                   self.stats['bytes'])
         print ""
@@ -266,13 +268,13 @@ class FSCacheTest(object):
         for _ in range(self.runs):
             self.load_random()
 
-            if self.type == 'cache':
+            if self.jtype == 'cache':
                 self.stats['avg_100'] += self.do_random(100)
                 self.stats['avg_1000'] += self.do_random(1000)
-            elif self.type == 'fs':
+            elif self.jtype == 'fs':
                 self.stats['avg_100'] += self.do_random(100, cache=False)
                 self.stats['avg_1000'] += self.do_random(1000, cache=False)
-            elif self.type == 'timed':
+            elif self.jtype == 'timed':
                 self.loop_reqs()
             else:
                 print "unknown test type"
@@ -290,5 +292,5 @@ if __name__ == '__main__':
     # let the things settle and the cache
     # populate before we enter the loop
     import trace
-    test = FSCacheTest(opts, args['runs'], args['type'])
+    test = FSCacheTest(opts, args['runs'], args['jtype'])
     test.run()
