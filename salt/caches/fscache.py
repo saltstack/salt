@@ -92,20 +92,20 @@ class FSCache(multiprocessing.Process):
 
     def cleanup(self):
         log.debug('cleaning up')
-        if os.path.isfile(self.cache_sock):
+        if os.path.exists(self.cache_sock):
             os.remove(self.cache_sock)
-        if os.path.isfile(self.update_sock):
+        if os.path.exists(self.update_sock):
             os.remove(self.update_sock)
-        if os.path.isfile(self.upd_t_sock):
+        if os.path.exists(self.upd_t_sock):
             os.remove(self.upd_t_sock)
 
     def secure(self):
-        if os.path.isfile(self.cache_sock):
+        if os.path.exists(self.cache_sock):
             os.chmod(self.cache_sock, 0600)
-        if os.path.isfile(self.update_sock):
+        if os.path.exists(self.update_sock):
             os.chmod(self.update_sock, 0600)
-        if os.path.isfile(self.upd_t_sock):
-            os.chmod(self.cache_sock, 0600)
+        if os.path.exists(self.upd_t_sock):
+            os.chmod(self.upd_t_sock, 0600)
 
     def add_job(self, **kwargs):
         '''
