@@ -7,7 +7,7 @@ Render the pillar data
 import os
 import collections
 import logging
-import copy
+from copy import copy
 
 # Import salt libs
 import salt.loader
@@ -23,6 +23,11 @@ from salt.version import __version__
 
 
 log = logging.getLogger(__name__)
+
+
+def merge_recurse(obj_a, obj_b):
+    copied = copy(obj_a)
+    return update(copied, obj_b)
 
 
 def get_pillar(opts, grains, id_, saltenv=None, ext=None, env=None):
@@ -115,6 +120,9 @@ class Pillar(object):
         # location of file_roots. Issue 5951
         ext_pillar_opts = dict(self.opts)
         ext_pillar_opts['file_roots'] = self.actual_file_roots
+        self.merge_strategy = 'smart'
+        if opts.get('pillar_source_merging_strategy'):
+            self.merge_strategy = opts['pillar_source_merging_strategy']
         self.ext_pillars = salt.loader.pillars(ext_pillar_opts, self.functions)
 
     def __valid_ext(self, ext):
@@ -440,7 +448,37 @@ class Pillar(object):
 
         return pillar, errors
 
-    def ext_pillar(self, pillar):
+    def _external_pillar_data(self,
+                             pillar,
+                             val,
+                             pillar_dirs,
+                             key):
+        '''
+        Builds actual pillar data structure
+        and update
+        the variable ``pillar``
+        '''
+
+        ext = None
+
+        # try the new interface, which includes the minion ID
+        # as first argument
+        if isinstance(val, dict):
+            ext = self.ext_pillars[key](self.opts['id'], pillar, **val)
+        elif isinstance(val, list):
+            ext = self.ext_pillars[key](self.opts['id'], pillar, *val)
+        else:
+            if key == 'git':
+                ext = self.ext_pillars[key](self.opts['id'],
+                                            val,
+                                            pillar_dirs)
+            else:
+                ext = self.ext_pillars[key](self.opts['id'],
+                                            pillar,
+                                            val)
+        return ext
+
+    def ext_pillar(self, pillar, pillar_dirs):
         '''
         Render the external pillar data
         '''
@@ -449,6 +487,7 @@ class Pillar(object):
         if not isinstance(self.opts['ext_pillar'], list):
             log.critical('The "ext_pillar" option is malformed')
             return {}
+        ext = None
         for run in self.opts['ext_pillar']:
             if not isinstance(run, dict):
                 log.critical('The "ext_pillar" option is malformed')
@@ -461,32 +500,17 @@ class Pillar(object):
                     continue
                 try:
                     try:
-                        # try the new interface, which includes the minion ID
-                        # as first argument
-                        if isinstance(val, dict):
-                            ext = self.ext_pillars[key](self.opts['id'], pillar, **val)
-                        elif isinstance(val, list):
-                            ext = self.ext_pillars[key](self.opts['id'], pillar, *val)
-                        else:
-                            ext = self.ext_pillars[key](self.opts['id'], pillar, val)
-                        update(pillar, ext)
-
-                    except TypeError as e:
-                        if e.message.startswith('ext_pillar() takes exactly '):
+                        ext = self._external_pillar_data(pillar,
+                                                         val,
+                                                         pillar_dirs,
+                                                         key)
+                    except TypeError as exc:
+                        if exc.message.startswith('ext_pillar() takes exactly '):
                             log.warning('Deprecation warning: ext_pillar "{0}"'
                                         ' needs to accept minion_id as first'
                                         ' argument'.format(key))
                         else:
                             raise
-
-                        if isinstance(val, dict):
-                            ext = self.ext_pillars[key](pillar, **val)
-                        elif isinstance(val, list):
-                            ext = self.ext_pillars[key](pillar, *val)
-                        else:
-                            ext = self.ext_pillars[key](pillar, val)
-                        update(pillar, ext)
-
                 except Exception as exc:
                     log.exception(
                             'Failed to load ext_pillar {0}: {1}'.format(
@@ -494,16 +518,40 @@ class Pillar(object):
                                 exc
                                 )
                             )
+            if ext:
+                pillar = self.merge_sources(pillar, ext)
+                ext = None
         return pillar
 
-    def compile_pillar(self):
+
+    def merge_sources(self, obj_a, obj_b):
+        strategy = self.merge_strategy
+
+        if strategy == 'smart':
+            renderer = self.opts.get('renderer', 'yaml')
+            if renderer == 'yamlex' or renderer.startswith('yamlex_'):
+                strategy = 'aggregate'
+            else:
+                strategy = 'recurse'
+
+        if strategy == 'recurse':
+            merged = merge_recurse(obj_a, obj_b)
+        else:
+            log.warning('unknown merging strategy {0}, '
+                        'fallback to recurse'.format(strategy))
+            merged = merge_recurse(obj_a, obj_b)
+
+        return merged
+
+    def compile_pillar(self, ext=True, pillar_dirs=None):
         '''
         Render the pillar data and return
         '''
         top, terrors = self.get_top()
         matches = self.top_matches(top)
         pillar, errors = self.render_pillar(matches)
-        self.ext_pillar(pillar)
+        if ext:
+            pillar = self.ext_pillar(pillar, pillar_dirs)
         errors.extend(terrors)
         if self.opts.get('pillar_opts', True):
             mopts = dict(self.opts)
