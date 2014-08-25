@@ -315,6 +315,16 @@ class Master(SMaster):
 
         if self.opts['fs_cache']:
             self.cache = salt.caches.FSCache(self.opts)
+            # add a job that caches grains and mine data every 30 seconds
+            self.cache.add_job(
+                **{
+                    'name':'minions',
+                    'path':'/var/cache/salt/master/minions',
+                    'ival':[0, 30],
+                    'patt':'^.*$'
+                   }
+                )
+            self.cache.start()
 
         def sigterm_clean(signum, frame):
             '''
