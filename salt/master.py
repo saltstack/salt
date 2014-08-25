@@ -560,15 +560,13 @@ class ReqServer(object):
             # add a job that caches grains and mine data every 30 seconds
             self.fscache.add_job(
                 **{
-                    'name':'minions',
-                    'path':'/var/cache/salt/master/minions',
-                    'ival':[0, 30],
-                    'patt':'^.*$'
+                    'name': 'minions',
+                    'path': '/var/cache/salt/master/minions',
+                    'ival': [0, 30],
+                    'patt': '^.*$'
                    }
                 )
             self.fscache.start()
-
-
 
     def start_halite(self):
         '''
