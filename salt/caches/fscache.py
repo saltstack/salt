@@ -206,11 +206,10 @@ class FSCache(multiprocessing.Process):
 
                     fdata = self.path_data.get(file_n, None)
 
-                    if DEBUG:
-                        if fdata is not None:
-                            log.debug('Cache HIT')
-                        else:
-                            log.debug('Cache MISS')
+                    if fdata is not None:
+                        log.debug('Cache HIT')
+                    else:
+                        log.debug('Cache MISS')
 
                     # simulate slow caches
                     #randsleep = random.randint(0,3)
@@ -263,7 +262,6 @@ class FSCache(multiprocessing.Process):
                 for item in self.jobs:
                     if sec_event in self.jobs[item]['ival']:
                         self.run_job(item)
-            log.debug("running")
         self.stop()
         creq_in.close()
         cupd_in.close()
