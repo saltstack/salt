@@ -1207,7 +1207,13 @@ class CloudQueriesMixIn(object):
             '--list-providers',
             default=False,
             action='store_true',
-            help=('Display a list of configured providers.')
+            help='Display a list of configured providers.'
+        )
+        group.add_option(
+            '--list-profiles',
+            default=False,
+            action='store_true',
+            help='Display a list of configured profiles.'
         )
         self.add_option_group(group)
         self._create_process_functions()
@@ -1226,6 +1232,13 @@ class CloudQueriesMixIn(object):
                         if self.args:
                             self.error(
                                 '\'--list-providers\' does not accept any '
+                                'arguments'
+                            )
+                    elif opt.dest == 'list_profiles':
+                        query = 'list_profiles'
+                        if self.args:
+                            self.error(
+                                '\'--list-profiles\' does not accept any '
                                 'arguments'
                             )
                     self.selected_query_option = query

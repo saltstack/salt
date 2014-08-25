@@ -457,6 +457,19 @@ class Cloud(object):
             providers.add(alias)
         return providers
 
+    def get_configured_profiles(self):
+        '''
+        Return the configured profiles
+        '''
+        profiles = set()
+        for alias, drivers in self.opts['profiles'].iteritems():
+            if len(drivers) > 1:
+                for driver in drivers:
+                    profiles.add('{0}:{1}'.format(alias, driver))
+                continue
+            profiles.add(alias)
+        return profiles
+
     def lookup_providers(self, lookup):
         '''
         Get a dict describing the configured providers
@@ -502,6 +515,55 @@ class Cloud(object):
                 )
             )
         return providers
+
+    def lookup_profiles(self, lookup):
+        '''
+        Return a dictionary describing the configured profiles
+        '''
+        if lookup is None:
+            lookup = 'all'
+
+        if lookup == 'all':
+            profiles = set()
+            for alias, info in self.opts['profiles'].iteritems():
+                providers = info.get('provider')
+                if providers:
+                    provider = providers.split(':')[1]
+                    profiles.add((alias, provider))
+
+            if not profiles:
+                raise SaltCloudSystemExit(
+                    'There are no cloud profiles configured.'
+                )
+
+            return profiles
+
+        if ':' in lookup:
+            alias, driver = lookup.split(':')
+            if alias not in self.opts['profiles'] or \
+                    driver not in self.opts['profiles'][alias]:
+                raise SaltCloudSystemExit(
+                    'No cloud profiles matched {0!r}. Available: {1}'.format(
+                        lookup, ', '.join(self.get_configured_profiles())
+                    )
+                )
+
+            return set((alias, driver))
+
+        profiles = set()
+        for alias, drivers in self.opts['profiles'].iteritems():
+            for driver in drivers:
+                if lookup in (alias, driver):
+                    profiles.add((alias, driver))
+
+        if not profiles:
+            raise SaltCloudSystemExit(
+                'No cloud profiles matched {0!r}. '
+                'Available selections: {1}'.format(
+                    lookup, ', '.join(self.get_configured_profiles())
+                )
+            )
+        return profiles
 
     def map_providers(self, query='list_nodes', cached=False):
         '''
@@ -830,6 +892,23 @@ class Cloud(object):
         '''
         data = {}
         lookups = self.lookup_providers(lookup)
+        if not lookups:
+            return data
+
+        for alias, driver in lookups:
+            if alias not in data:
+                data[alias] = {}
+            if driver not in data[alias]:
+                data[alias][driver] = {}
+        return data
+
+    def profile_list(self, lookup='all'):
+        '''
+        Return a mapping of all configured profiles
+        '''
+        data = {}
+        lookups = self.lookup_profiles(lookup)
+
         if not lookups:
             return data
 
