@@ -81,12 +81,29 @@ class FSCache(multiprocessing.Process):
         self.cache_sock = os.path.join(self.opts['sock_dir'], 'fsc_cache.ipc')
         self.update_sock = os.path.join(self.opts['sock_dir'], 'fsc_upd.ipc')
         self.upd_t_sock = os.path.join(self.opts['sock_dir'], 'fsc_timer.ipc')
+        self.cleanup()
 
     def signal_handler(self, sig, frame):
         '''
         handle signals and shutdown
         '''
         self.stop()
+
+    def cleanup(self):
+        if os.path.isfile(self.cache_sock):
+            os.remove(self.cache_sock)
+        if os.path.isfile(self.update_sock):
+            os.remove(self.update_sock)
+        if os.path.isfile(self.upd_t_sock):
+            os.remove(self.upd_t_sock)
+
+    def secure(self):
+        if os.path.isfile(self.cache_sock):
+            os.chmod(self.cache_sock, 0600)
+        if os.path.isfile(self.update_sock):
+            os.chmod(self.update_sock, 0600)
+        if os.path.isfile(self.upd_t_sock):
+            os.chmod(self.cache_sock, 0600)
 
     def add_job(self, **kwargs):
         '''
@@ -116,6 +133,7 @@ class FSCache(multiprocessing.Process):
         shutdown cache process
         '''
         # avoid getting called twice
+        self.cleanup()
         if self.running:
             self.running = False
             self.timer_stop.set()
@@ -153,7 +171,11 @@ class FSCache(multiprocessing.Process):
         # register a signal handler
         signal.signal(signal.SIGINT, self.signal_handler)
 
+        # secure the sockets from the world
+        self.secure()
+
         log.info('FSCache started')
+        log.debug('FSCache started')
 
         while self.running:
 
@@ -235,6 +257,7 @@ class FSCache(multiprocessing.Process):
                 for item in self.jobs:
                     if sec_event in self.jobs[item]['ival']:
                         self.run_job(item)
+            log.debug("running")
         self.stop()
         creq_in.close()
         cupd_in.close()
