@@ -124,7 +124,7 @@ def list_jobs(ext_source=None):
 
 def print_job(jid, ext_source=None):
     '''
-    Print a specific job details given by its jid, including return data.
+    Print a specific job's details given by it's jid, including the return data.
 
     CLI Example:
 
