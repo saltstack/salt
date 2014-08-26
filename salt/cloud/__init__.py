@@ -503,6 +503,38 @@ class Cloud(object):
             )
         return providers
 
+    def lookup_profiles(self, provider, lookup):
+        '''
+        Return a dictionary describing the configured profiles
+        '''
+        if provider is None:
+            provider = 'all'
+        if lookup is None:
+            lookup = 'all'
+
+        if lookup == 'all':
+            profiles = set()
+            provider_profiles = set()
+            for alias, info in self.opts['profiles'].iteritems():
+                providers = info.get('provider')
+
+                if providers:
+                    prov_name = providers.split(':')[1]
+                    profiles.add((alias, prov_name))
+
+                    if prov_name == provider:
+                        provider_profiles.add((alias, prov_name))
+
+            if not profiles:
+                raise SaltCloudSystemExit(
+                    'There are no cloud profiles configured.'
+                )
+
+            if provider != 'all':
+                return provider_profiles
+
+            return profiles
+
     def map_providers(self, query='list_nodes', cached=False):
         '''
         Return a mapping of what named VMs are running on what VM providers
@@ -830,6 +862,23 @@ class Cloud(object):
         '''
         data = {}
         lookups = self.lookup_providers(lookup)
+        if not lookups:
+            return data
+
+        for alias, driver in lookups:
+            if alias not in data:
+                data[alias] = {}
+            if driver not in data[alias]:
+                data[alias][driver] = {}
+        return data
+
+    def profile_list(self, provider, lookup='all'):
+        '''
+        Return a mapping of all configured profiles
+        '''
+        data = {}
+        lookups = self.lookup_profiles(provider, lookup)
+
         if not lookups:
             return data
 

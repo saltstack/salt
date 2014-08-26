@@ -92,6 +92,14 @@ class SaltCloud(parsers.SaltCloudParser):
                     msg = 'There was an error listing providers: {0}'
                     self.handle_exception(msg, exc)
 
+            elif self.selected_query_option == 'list_profiles':
+                provider = self.options.list_profiles
+                try:
+                    ret = mapper.profile_list(provider)
+                except(SaltCloudException, Exception) as exc:
+                    msg = 'There was an error listing profiles: {0}'
+                    self.handle_exception(msg, exc)
+
             elif self.config.get('map', None):
                 log.info('Applying map from {0!r}.'.format(self.config['map']))
                 try:
