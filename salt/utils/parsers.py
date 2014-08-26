@@ -29,6 +29,7 @@ import salt.utils as utils
 import salt.version as version
 import salt.utils.args
 import salt.utils.xdg
+from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.validate.path import is_writeable
 
 if not utils.is_windows():
@@ -861,6 +862,19 @@ class TargetOptionsMixIn(object):
             help=('Instead of using shell globs to evaluate the target '
                   'use a range expression to identify targets. '
                   'Range expressions look like %cluster')
+        )
+
+        group = self.additional_target_options_group = optparse.OptionGroup(
+            self,
+            'Additional Target Options',
+            'Additional Options for Minion Targeting'
+        )
+        self.add_option_group(group)
+        group.add_option(
+            '--delimiter',
+            default=DEFAULT_TARGET_DELIM,
+            help=('Change the default delimiter for matching in multi-level '
+                  'data structures. default=\'%default\'')
         )
 
         self._create_process_functions()

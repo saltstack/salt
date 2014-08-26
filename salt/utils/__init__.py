@@ -97,6 +97,7 @@ except ImportError:
     HAS_SETPROCTITLE = False
 
 # Import salt libs
+from salt.defaults import DEFAULT_TARGET_DELIM
 import salt._compat
 import salt.log
 import salt.minion
@@ -1198,7 +1199,10 @@ def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
     return ret
 
 
-def subdict_match(data, expr, delim=':', regex_match=False):
+def subdict_match(data,
+                  expr,
+                  delimiter=DEFAULT_TARGET_DELIM,
+                  regex_match=False):
     '''
     Check for a match in a dictionary using a delimiter character to denote
     levels of subdicts, and also allowing the delimiter character to be
@@ -1216,13 +1220,13 @@ def subdict_match(data, expr, delim=':', regex_match=False):
         else:
             return fnmatch.fnmatch(str(target).lower(), pattern.lower())
 
-    for idx in range(1, expr.count(delim) + 1):
-        splits = expr.split(delim)
-        key = delim.join(splits[:idx])
-        matchstr = delim.join(splits[idx:])
+    for idx in range(1, expr.count(delimiter) + 1):
+        splits = expr.split(delimiter)
+        key = delimiter.join(splits[:idx])
+        matchstr = delimiter.join(splits[idx:])
         log.debug('Attempting to match {0!r} in {1!r} using delimiter '
-                  '{2!r}'.format(matchstr, key, delim))
-        match = traverse_dict_and_list(data, key, {}, delim=delim)
+                  '{2!r}'.format(matchstr, key, delimiter))
+        match = traverse_dict_and_list(data, key, {}, delimiter=delimiter)
         if match == {}:
             continue
         if isinstance(match, dict):
@@ -1246,15 +1250,15 @@ def subdict_match(data, expr, delim=':', regex_match=False):
     return False
 
 
-def traverse_dict(data, key, default, delim=':'):
+def traverse_dict(data, key, default, delimiter=DEFAULT_TARGET_DELIM):
     '''
-    Traverse a dict using a colon-delimited (or otherwise delimited, using
-    the "delim" param) target string. The target 'foo:bar:baz' will return
-    data['foo']['bar']['baz'] if this value exists, and will otherwise
-    return the dict in the default argument.
+    Traverse a dict using a colon-delimited (or otherwise delimited, using the
+    'delimiter' param) target string. The target 'foo:bar:baz' will return
+    data['foo']['bar']['baz'] if this value exists, and will otherwise return
+    the dict in the default argument.
     '''
     try:
-        for each in key.split(delim):
+        for each in key.split(delimiter):
             data = data[each]
     except (KeyError, IndexError, TypeError):
         # Encountered a non-indexable value in the middle of traversing
@@ -1262,10 +1266,10 @@ def traverse_dict(data, key, default, delim=':'):
     return data
 
 
-def traverse_dict_and_list(data, key, default, delim=':'):
+def traverse_dict_and_list(data, key, default, delimiter=DEFAULT_TARGET_DELIM):
     '''
     Traverse a dict or list using a colon-delimited (or otherwise delimited,
-    using the "delim" param) target string. The target 'foo:bar:0' will
+    using the 'delimiter' param) target string. The target 'foo:bar:0' will
     return data['foo']['bar'][0] if this value exists, and will otherwise
     return the dict in the default argument.
     Function will automatically determine the target type.
@@ -1273,7 +1277,7 @@ def traverse_dict_and_list(data, key, default, delim=':'):
     {'foo':{'bar':['baz']}} , if data like {'foo':{'bar':{'0':'baz'}}}
     then return data['foo']['bar']['0']
     '''
-    for each in key.split(delim):
+    for each in key.split(delimiter):
         if isinstance(data, list):
             try:
                 idx = int(each)

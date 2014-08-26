@@ -127,6 +127,8 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 except IOError:
                     kwargs['token'] = self.config['token']
 
+            kwargs['delimiter'] = self.options.delimiter
+
             if self.selected_target_option:
                 kwargs['expr_form'] = self.selected_target_option
             else:

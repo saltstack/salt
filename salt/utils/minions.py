@@ -13,6 +13,7 @@ import logging
 # Import salt libs
 import salt.payload
 import salt.utils
+from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import CommandExecutionError
 
 HAS_RANGE = False
@@ -150,7 +151,7 @@ class CkMinions(object):
         os.chdir(cwd)
         return ret
 
-    def _check_grain_minions(self, expr):
+    def _check_grain_minions(self, expr, delimiter):
         '''
         Return the minions found by looking via grains
         '''
@@ -170,11 +171,11 @@ class CkMinions(object):
                         grains = self.serial.load(fp_).get('grains')
                 except (IOError, OSError):
                     continue
-                if not salt.utils.subdict_match(grains, expr):
+                if not salt.utils.subdict_match(grains, expr, delimiter):
                     minions.remove(id_)
         return list(minions)
 
-    def _check_grain_pcre_minions(self, expr):
+    def _check_grain_pcre_minions(self, expr, delimiter):
         '''
         Return the minions found by looking via grains with PCRE
         '''
@@ -194,12 +195,12 @@ class CkMinions(object):
                         grains = self.serial.load(fp_).get('grains')
                 except (IOError, OSError):
                     continue
-                if not salt.utils.subdict_match(grains, expr,
-                                                delim=':', regex_match=True):
+                if not salt.utils.subdict_match(grains, expr, delimiter,
+                                                regex_match=True):
                     minions.remove(id_)
         return list(minions)
 
-    def _check_pillar_minions(self, expr):
+    def _check_pillar_minions(self, expr, delimiter):
         '''
         Return the minions found by looking via pillar
         '''
@@ -219,7 +220,7 @@ class CkMinions(object):
                         pillar = self.serial.load(fp_).get('pillar')
                 except (IOError, OSError):
                     continue
-                if not salt.utils.subdict_match(pillar, expr):
+                if not salt.utils.subdict_match(pillar, expr, delimiter):
                     minions.remove(id_)
         return list(minions)
 
@@ -443,7 +444,10 @@ class CkMinions(object):
         '''
         return os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
 
-    def check_minions(self, expr, expr_form='glob'):
+    def check_minions(self,
+                      expr,
+                      expr_form='glob',
+                      delimiter=DEFAULT_TARGET_DELIM):
         '''
         Check the passed regex against the available minions' public keys
         stored for authentication. This should return a set of ids which
@@ -451,16 +455,12 @@ class CkMinions(object):
         make sure everyone has checked back in.
         '''
         try:
-            minions = {'glob': self._check_glob_minions,
-                       'pcre': self._check_pcre_minions,
-                       'list': self._check_list_minions,
-                       'grain': self._check_grain_minions,
-                       'grain_pcre': self._check_grain_pcre_minions,
-                       'pillar': self._check_pillar_minions,
-                       'compound': self._check_compound_minions,
-                       'ipcidr': self._check_ipcidr_minions,
-                       'range': self._check_range_minions,
-                       }[expr_form](expr)
+            check_func = getattr(self, '_check_{0}_minions'.format(expr_form),
+                                 None)
+            if expr_form in ('grain', 'grain_pcre', 'pillar'):
+                minions = check_func(expr, delimiter)
+            else:
+                minions = check_func(expr)
         except Exception:
             log.exception(
                     'Failed matching available minions with {0} pattern: {1}'
