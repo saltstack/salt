@@ -92,7 +92,9 @@ Options
 
     .. versionadded:: 2014.7.0
 
-    Display a list of configured profiles.
+    Display a list of configured profiles. Pass in a cloud provider to view
+    the provider's associated profiles, such as ``digital_ocean``, or pass in
+    ``all`` to list all the configured profiles.
 
 .. option:: --list-images
 

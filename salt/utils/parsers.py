@@ -1211,9 +1211,12 @@ class CloudQueriesMixIn(object):
         )
         group.add_option(
             '--list-profiles',
-            default=False,
-            action='store_true',
-            help='Display a list of configured profiles.'
+            default=None,
+            action='store',
+            help='Display a list of configured profiles. Pass in a cloud '
+                 'provider to view the provider\'s associated profiles, '
+                 'such as digital_ocean, or pass in "all" to list all the '
+                 'configured profiles.'
         )
         self.add_option_group(group)
         self._create_process_functions()
@@ -1236,11 +1239,6 @@ class CloudQueriesMixIn(object):
                             )
                     elif opt.dest == 'list_profiles':
                         query = 'list_profiles'
-                        if self.args:
-                            self.error(
-                                '\'--list-profiles\' does not accept any '
-                                'arguments'
-                            )
                     self.selected_query_option = query
 
             funcname = 'process_{0}'.format(option.dest)
@@ -1249,7 +1247,8 @@ class CloudQueriesMixIn(object):
 
     def _mixin_after_parsed(self):
         group_options_selected = filter(
-            lambda option: getattr(self.options, option.dest) is not False,
+            lambda option: getattr(self.options, option.dest) is not False
+            and getattr(self.options, option.dest) is not None,
             self.cloud_queries_group.option_list
         )
         if len(group_options_selected) > 1:
