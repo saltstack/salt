@@ -1239,6 +1239,12 @@ class CloudQueriesMixIn(object):
                             )
                     elif opt.dest == 'list_profiles':
                         query = 'list_profiles'
+                        option_dict = vars(self.options)
+                        if option_dict.get('list_profiles') == '--list-providers':
+                            self.error(
+                                '\'--list-profiles\' does not accept '
+                                '\'--list-providers\' as an argument'
+                            )
                     self.selected_query_option = query
 
             funcname = 'process_{0}'.format(option.dest)
