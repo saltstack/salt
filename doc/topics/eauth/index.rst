@@ -117,7 +117,7 @@ To bind to a DN, a password is required
 
     auth.ldap.bindpw: mypassword
 
-Salt users a filter to find the DN associated with a user. Salt substitutes
+Salt uses a filter to find the DN associated with a user. Salt substitutes
 the ``{{ username }}`` value for the username when querying LDAP.
 
 .. code-block:: yaml
