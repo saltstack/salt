@@ -25,7 +25,7 @@ Please keep in mind that this is a beta release of RAET and we hope for bugs to
 be worked out, performance to be better realized and more in the Lithium
 release.
 
-Simply stated, users running salt with RAET should expect some hiccups as we
+Simply stated, users running Salt with RAET should expect some hiccups as we
 hammer out the update. This is a BETA release of Salt RAET.
 
 For information about how to use Salt with RAET please see the :doc:`tutorial </topics/transports/raet/programming_intro>`.
@@ -33,7 +33,7 @@ For information about how to use Salt with RAET please see the :doc:`tutorial </
 State System Enhancements
 =========================
 
-New Imperitive State Keyword "Listen"
+New Imperative State Keyword "Listen"
 -------------------------------------
 
 The new listen keyword allows for completely imperative states by calling the
@@ -42,8 +42,8 @@ mod_watch routine after all states have run instead of re-ordering the states.
 Mod Aggregate Runtime Manipulator
 ---------------------------------
 
-The new mod_aggragate system allows for the state system to rewrite the state
-data durring execution. This allows for state deffinitions to be aggregated
+The new mod_aggregate system allows for the state system to rewrite the state
+data during execution. This allows for state definitions to be aggregated
 dynamically at runtime.
 
 The best example is found in the pkg state. If mod_aggregate is turned on,
@@ -53,19 +53,40 @@ and install them all at once in the first pkg state.
 
 These runtime modifications make it easy groups of states together, in future
 versions we hope to fill out the mod_aggregate system to build in more and
-more optomizations.
+more optimizations.
 
-For more documentation on mod_aggregate please see ref/states/aggregate
+For more documentation on mod_aggregate, see :doc:`the documentation
+</ref/states/aggregate>`.
 
 New Requisites: onchanges and onfail
 ------------------------------------
 
 New requisites!
 
+
 Global onlyif and unless
 ------------------------
 
 The ``onlyif`` and ``unless`` options can now be used for any state declaration.
+
+Use ``names`` to expand and override values
+-------------------------------------------
+
+The :ref:`names declaration <names-declaration>` in Salt's state system can now
+override or add values to the expanded data structure. For example:
+
+.. code-block:: yaml
+
+    my_users:
+      user.present:
+        - names:
+          - larry
+          - curly
+          - moe:
+            - shell: /bin/zsh
+            - groups:
+              - wheel
+        - shell: /bin/bash
 
 Major Features
 ==============
@@ -73,8 +94,9 @@ Major Features
 Scheduler Additions
 -------------------
 
-The Salt scheduler system has received MAJOR enhancements, allowing for cron-like
-scheduling and much more granular timing routines.
+The Salt scheduler system has received MAJOR enhancements, allowing for
+cron-like scheduling and much more granular timing routines. See :mod:`here
+<salt.modules.schedule>` for more info.
 
 Red Hat 7 Family Support
 ------------------------
@@ -86,13 +108,23 @@ Amazon Execution Modules
 ------------------------
 
 An entire family of execution modules further enhancing Salt's Amazon Cloud
-support.
+support. They include the following:
+
+- :mod:`Autoscale Groups <salt.modules.boto_asg>` (includes :mod:`state support <salt.states.boto_asg>`)
+  - Related: :mod:`Launch Control <salt.states.boto_lc>` states
+- :mod:`Cloud Watch <salt.modules.boto_cloudwatch>` (includes :mod:`state support <salt.states.boto_cloudwatch_alarm>`)
+- :mod:`Elastic Cache <salt.modules.boto_elasticache>` (includes :mod:`state support <salt.states.boto_elasticache>`)
+- :mod:`Elastic Load Balancer <salt.modules.boto_elb>` (includes :mod:`state support <salt.states.boto_elb>`)
+- :mod:`IAM Identity and Access Management <salt.modules.boto_iam>` (includes :mod:`state support <salt.states.boto_iam_role>`)
+- :mod:`Route53 DNS <salt.modules.boto_route53>` (includes :mod:`state support <salt.states.boto_route53>`)
+- :mod:`Security Groups <salt.modules.boto_secgroup>` (includes :mod:`state support <salt.states.boto_secgroup>`)
+- :mod:`Simple Queue Service <salt.modules.boto_sqs>` (includes :mod:`state support <salt.states.boto_sqs>`)
 
 LXC Runner Enhancements
 -----------------------
 
 BETA
-The Salt LXC management system has recived a number of enhancements which make
+The Salt LXC management system has received a number of enhancements which make
 running an LXC cloud entirely from Salt an easy proposition.
 
 Next Gen Docker Management
@@ -126,7 +158,7 @@ Lots of new OpenStack stuff
 Queues System
 -------------
 
-Ran change external queue systems into salt events
+Ran change external queue systems into Salt events
 
 Multi Master Failover Additions
 -------------------------------
@@ -138,8 +170,8 @@ Chef Execution Module
 
 Managing Chef with Salt just got even easier!
 
-Fileserver Backend Enhacements
-------------------------------
+Fileserver Backend Enhancements
+-------------------------------
 
 All of the fileserver backends have been overhauled to be faster, lighter and more reliable
 
@@ -152,16 +184,50 @@ allows for construction of States using pure Python with an idiomatic object int
 New Modules
 ===========
 
-- Syslog-ng
-- Oracle
-- Random
-- Redis
+In addition to the Amazon modules mentioned above, there are also several other
+new execution modules:
+
+- :mod:`Oracle <salt.modules.oracle>`
+- :mod:`Random <salt.modules.mod_random>`
+- :mod:`Redis <salt.modules.redismod>`
+- :mod:`Amazon Simple Queue Service <salt.modules.aws_sqs>`
+- :mod:`Block Device Management <salt.modules.blockdev>`
+- :mod:`CoreOS etcd <salt.modules.etcd_mod>`
+- :mod:`Genesis <salt.modules.genesis>`
+- :mod:`InfluxDB <salt.modules.influx>`
+- :mod:`Server Density <salt.modules.serverdensity_device>`
+- :mod:`Twilio Notifications <salt.modules.twilio_notify>`
+- :mod:`Varnish <salt.modules.varnish>`
+- :mod:`ZNC IRC Bouncer <salt.modules.znc>`
+- :mod:`SMTP <salt.modules.smtp>`
+
+
+New Runners
+===========
+
+- :mod:`Map/Reduce Style <salt.runners.survey>`
+- :mod:`Queue <salt.runners.queue>`
+
+
+New External Pillars
+====================
+
+- :mod:`CoreOS etcd <salt.pillar.etcd_pillar>`
+
+
+New Salt-Cloud Providers
+========================
+
+- :mod:`Aliyun ECS Cloud <salt.cloud.clouds.aliyun>`
+- :mod:`LXC Containers <salt.cloud.clouds.lxc>`
+- :mod:`Proxmox KVM Containers <salt.cloud.clouds.proxmox>`
+
 
 Deprecations
 ============
 
-salt.modules.virturalenv_mod
-----------------------------
+:mod:`salt.modules.virturalenv_mod`
+-----------------------------------
 
 - Removed deprecated ``memoize`` function from ``salt/utils/__init__.py`` (deprecated)
 - Removed deprecated ``no_site_packages`` argument from ``create`` function (deprecated)
