@@ -269,10 +269,11 @@ def list_nodes_full(conn=None, call=None):
             role_instances = deploy_dict['role_instance_list']
             for role_instance in role_instances:
                 ip_address = role_instances[role_instance]['ip_address']
-                if salt.utils.cloud.is_public_ip(ip_address):
-                    ret[deployment]['public_ips'].append(ip_address)
-                else:
-                    ret[deployment]['private_ips'].append(ip_address)
+                if ip_address:
+                    if salt.utils.cloud.is_public_ip(ip_address):
+                        ret[deployment]['public_ips'].append(ip_address)
+                    else:
+                        ret[deployment]['private_ips'].append(ip_address)
                 ret[deployment]['size'] = role_instances[role_instance]['instance_size']
             roles = deploy_dict['role_list']
             for role in roles:
