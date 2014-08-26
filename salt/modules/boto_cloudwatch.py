@@ -258,7 +258,7 @@ def convert_to_arn(arns, region=None, key=None, keyid=None, profile=None):
 
     CLI Example::
 
-        salt '*' scaling_policy:
+        salt '*' convert_to_arn 'scaling_policy:'
     '''
     results = []
     for arn in arns:
