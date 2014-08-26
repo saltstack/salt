@@ -4820,3 +4820,9 @@ source_file = _build/locale/topics/releases/releasecandidate.pot
 source_lang = en
 source_name = topics/releases/releasecandidate.rst
 
+[salt.topics--targeting--range]
+file_filter = locale/<lang>/LC_MESSAGES/topics/targeting/range.po
+source_file = _build/locale/topics/targeting/range.pot
+source_lang = en
+source_name = topics/targeting/range.rst
+
