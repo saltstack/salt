@@ -35,7 +35,8 @@ def install(gems,           # pylint: disable=C0103
             runas=None,
             version=None,
             rdoc=False,
-            ri=False):      # pylint: disable=C0103
+            ri=False,
+            proxy=None):      # pylint: disable=C0103
     '''
     Installs one or several gems.
 
@@ -52,6 +53,9 @@ def install(gems,           # pylint: disable=C0103
         Generate RDoc documentation for the gem(s).
     ri : False
         Generate RI documentation for the gem(s).
+    proxy : None
+        Use the specified HTTP proxy server for all outgoing traffic.
+        Format: http://hostname[:port]
 
     CLI Example:
 
@@ -66,6 +70,8 @@ def install(gems,           # pylint: disable=C0103
         options += ' --no-rdoc'
     if not ri:
         options += ' --no-ri'
+    if proxy:
+        options += '-p {0}'.format(proxy)
 
     return _gem('install {gems} {options}'.format(gems=gems, options=options),
                 ruby,
