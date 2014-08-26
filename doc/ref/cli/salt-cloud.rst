@@ -84,6 +84,16 @@ Options
     Can be used in conjunction with -m to display only information about the
     specified map.
 
+.. option:: --list-providers
+
+    Display a list of configured providers.
+
+.. option:: --list-profiles
+
+    .. versionadded:: 2014.7.0
+
+    Display a list of configured profiles.
+
 .. option:: --list-images
 
     Display a list of images available in configured cloud providers.
