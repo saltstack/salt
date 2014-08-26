@@ -457,19 +457,6 @@ class Cloud(object):
             providers.add(alias)
         return providers
 
-    def get_configured_profiles(self):
-        '''
-        Return the configured profiles
-        '''
-        profiles = set()
-        for alias, drivers in self.opts['profiles'].iteritems():
-            if len(drivers) > 1:
-                for driver in drivers:
-                    profiles.add('{0}:{1}'.format(alias, driver))
-                continue
-            profiles.add(alias)
-        return profiles
-
     def lookup_providers(self, lookup):
         '''
         Get a dict describing the configured providers
