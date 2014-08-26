@@ -1938,10 +1938,10 @@ def create(vm_=None, call=None):
         for instance in data:
             vm_['instance_id_list'].append(instance['instanceId'])
 
-    vm_['instance_id'] = vm_['instance_id_list'].pop()
-    if len(vm_['instance_id_list']) > 0:
-        # Multiple instances were spun up, get one now, and queue the rest
-        queue_instances(vm_['instance_id_list'])
+        vm_['instance_id'] = vm_['instance_id_list'].pop()
+        if len(vm_['instance_id_list']) > 0:
+            # Multiple instances were spun up, get one now, and queue the rest
+            queue_instances(vm_['instance_id_list'])
 
     # Wait for vital information, such as IP addresses, to be available
     # for the new instance
