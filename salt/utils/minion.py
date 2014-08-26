@@ -1,12 +1,19 @@
+# -*- coding: utf-8 -*-
+'''
+Utility functions for minions
+'''
 import os
 import threading
 
 import salt.utils
 import salt.payload
 
+
 def running(opts):
+    '''
+    Return the running jobs on this minion
+    '''
     ret = []
-    current_thread = threading.currentThread().name
     proc_dir = os.path.join(opts['cachedir'], 'proc')
     if not os.path.isdir(proc_dir):
         return []
@@ -21,14 +28,15 @@ def running(opts):
             # the minion process that is executing the JID in question, so
             # we must ignore ENOENT during this process
             pass
-
     return ret
+
 
 def _read_proc_file(path, opts):
     '''
     Return a dict of JID metadata, or None
     '''
     serial = salt.payload.Serial(opts)
+    current_thread = threading.currentThread().name
     pid = os.getpid()
     with salt.utils.fopen(path, 'rb') as fp_:
         buf = fp_.read()
