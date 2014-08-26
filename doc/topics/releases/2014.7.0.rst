@@ -110,8 +110,7 @@ Amazon Execution Modules
 An entire family of execution modules further enhancing Salt's Amazon Cloud
 support. They include the following:
 
-- :mod:`Autoscale Groups <salt.modules.boto_asg>` (includes :mod:`state support <salt.states.boto_asg>`)
-  - Related: :mod:`Launch Control <salt.states.boto_lc>` states
+- :mod:`Autoscale Groups <salt.modules.boto_asg>` (includes :mod:`state support <salt.states.boto_asg>`) -- related: :mod:`Launch Control <salt.states.boto_lc>` states
 - :mod:`Cloud Watch <salt.modules.boto_cloudwatch>` (includes :mod:`state support <salt.states.boto_cloudwatch_alarm>`)
 - :mod:`Elastic Cache <salt.modules.boto_elasticache>` (includes :mod:`state support <salt.states.boto_elasticache>`)
 - :mod:`Elastic Load Balancer <salt.modules.boto_elb>` (includes :mod:`state support <salt.states.boto_elb>`)
