@@ -538,33 +538,6 @@ class Cloud(object):
 
             return profiles
 
-        if ':' in lookup:
-            alias, driver = lookup.split(':')
-            if alias not in self.opts['profiles'] or \
-                    driver not in self.opts['profiles'][alias]:
-                raise SaltCloudSystemExit(
-                    'No cloud profiles matched {0!r}. Available: {1}'.format(
-                        lookup, ', '.join(self.get_configured_profiles())
-                    )
-                )
-
-            return set((alias, driver))
-
-        profiles = set()
-        for alias, drivers in self.opts['profiles'].iteritems():
-            for driver in drivers:
-                if lookup in (alias, driver):
-                    profiles.add((alias, driver))
-
-        if not profiles:
-            raise SaltCloudSystemExit(
-                'No cloud profiles matched {0!r}. '
-                'Available selections: {1}'.format(
-                    lookup, ', '.join(self.get_configured_profiles())
-                )
-            )
-        return profiles
-
     def map_providers(self, query='list_nodes', cached=False):
         '''
         Return a mapping of what named VMs are running on what VM providers
