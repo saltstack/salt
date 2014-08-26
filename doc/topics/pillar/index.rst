@@ -162,6 +162,54 @@ hierarchy. For example your ``package.sls`` file could look like:
     packages:
       bind: bind9
 
+Pillar Namespace Merges
+=======================
+
+With some care, the pillar namespace can merge content from multiple pillar
+files under a single key, so long as conflicts are avoided as described above.
+
+For example, if the above example were modified as follows, the values are
+merged below a single key:
+
+.. code-block:: yaml
+
+    base:
+      '*':
+        - packages
+        - services
+
+And a ``packages.sls`` file like:
+
+.. code-block:: yaml
+    bind:
+      package-name: bind9
+      version: 9.9.5
+
+And a ``services.sls`` file like:
+
+.. code-block:: yaml
+    bind:
+      port: 53
+      listen-on: any
+
+The resulting pillar will be as follows:
+
+.. code-block:: bash
+    $ salt-call pillar.get bind
+    local:
+        ----------
+        listen-on:
+            any
+        package-name:
+            bind9
+        port:
+            53
+        version:
+            9.9.5
+
+.. note::
+       Remember: conflicting keys will be overwritten in a non-deterministic manner!
+
 Including Other Pillars
 =======================
 
