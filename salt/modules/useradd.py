@@ -29,7 +29,7 @@ __virtualname__ = 'user'
 
 def __virtual__():
     '''
-    Set the user module if the kernel is Linux or OpenBSD
+    Set the user module if the kernel is Linux, OpenBSD or NetBSD
     and remove some of the functionality on OS X
     '''
 
@@ -96,24 +96,43 @@ def add(name,
     if gid not in (None, ''):
         cmd.extend(['-g', str(gid)])
     elif groups is not None and name in groups:
-        try:
-            for line in salt.utils.fopen('/etc/login.defs'):
-                if 'USERGROUPS_ENAB' not in line[:15]:
-                    continue
+        if __grains__['kernel'] != 'OpenBSD':
+            try:
+                for line in salt.utils.fopen('/etc/login.defs'):
+                    if 'USERGROUPS_ENAB' not in line[:15]:
+                        continue
 
-                if 'yes' in line:
-                    cmd.extend([
-                        '-g', str(__salt__['file.group_to_gid'](name))
-                    ])
+                    if 'yes' in line:
+                        cmd.extend([
+                            '-g', str(__salt__['file.group_to_gid'](name))
+                        ])
 
-                # We found what we wanted, let's break out of the loop
-                break
-        except OSError:
-            log.debug('Error reading /etc/login.defs', exc_info=True)
+                    # We found what we wanted, let's break out of the loop
+                    break
+            except OSError:
+                log.debug('Error reading /etc/login.defs', exc_info=True)
+        else:
+            try:
+                for line in salt.utils.fopen('/etc/usermgmt.conf'):
+                    if 'group' not in line[:5]:
+                        continue
+
+                    for val in line.split(" "):
+                        cmd.extend([
+                            '-g', str(val[1])
+                        ])
+
+                    # We found what we wanted, let's break out of the loop
+                    break
+            except OSError:
+                # /etc/usermgmt.conf not present: defaults will be used
+                pass
 
     if createhome:
         cmd.append('-m')
-    elif createhome is False:
+    elif (createhome is False
+          and __grains__['kernel'] != 'NetBSD'
+          and __grains__['kernel'] != 'OpenBSD'):
         cmd.append('-M')
 
     if home is not None:
@@ -122,7 +141,9 @@ def add(name,
     if not unique:
         cmd.append('-o')
 
-    if system and __grains__['kernel'] != 'NetBSD':
+    if (system
+        and __grains__['kernel'] != 'NetBSD'
+        and __grains__['kernel'] != 'OpenBSD'):
         cmd.append('-r')
 
     cmd.append(name)
@@ -168,7 +189,7 @@ def delete(name, remove=False, force=False):
     if remove:
         cmd.append('-r')
 
-    if force:
+    if force and __grains__['kernel'] != 'OpenBSD':
         cmd.append('-f')
 
     cmd.append(name)
@@ -295,7 +316,7 @@ def chhome(name, home, persist=False):
     if home == pre_info['home']:
         return True
     cmd = 'usermod -d {0} '.format(home)
-    if persist:
+    if persist and __grains__['kernel'] != 'OpenBSD':
         cmd += ' -m '
     cmd += name
     __salt__['cmd.run'](cmd)
@@ -322,20 +343,29 @@ def chgroups(name, groups, append=False):
     if ugrps == set(groups):
         return True
     cmd = 'usermod '
-    if append:
-        cmd += '-a '
-    cmd += '-G "{0}" {1}'.format(','.join(groups), name)
+    if __grains__['kernel'] != 'OpenBSD':
+        if append:
+            cmd += '-a '
+    else:
+        if append:
+            cmd += '-G '
+        else:
+            cmd += '-S '
+    if __grains__['kernel'] != 'OpenBSD':
+        cmd += '-G '
+    cmd += '"{0}" {1}'.format(','.join(groups), name)
     cmdret = __salt__['cmd.run_all'](cmd)
     ret = not cmdret['retcode']
     # try to fallback on gpasswd to add user to localgroups
     # for old lib-pamldap support
-    if not ret and ('not found in' in cmdret['stderr']):
-        ret = True
-        for group in groups:
-            cmd = 'gpasswd -a {0} {1}'.format(name, group)
-            cmdret = __salt__['cmd.run_all'](cmd)
-            if cmdret['retcode']:
-                ret = False
+    if __grains__['kernel'] != 'OpenBSD':
+        if not ret and ('not found in' in cmdret['stderr']):
+            ret = True
+            for group in groups:
+                cmd = 'gpasswd -a {0} {1}'.format(name, group)
+                cmdret = __salt__['cmd.run_all'](cmd)
+                if cmdret['retcode']:
+                    ret = False
     return ret
 
 
