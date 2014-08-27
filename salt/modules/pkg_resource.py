@@ -70,6 +70,7 @@ def parse_targets(name=None,
                   pkgs=None,
                   sources=None,
                   saltenv='base',
+                  normalize=True,
                   **kwargs):
     '''
     Parses the input to pkg.install and returns back the package(s) to be
@@ -128,9 +129,12 @@ def parse_targets(name=None,
         return [x[2] for x in srcinfo], 'file'
 
     elif name:
-        _normalize_name = \
-            __salt__.get('pkg.normalize_name', lambda pkgname: pkgname)
-        packed = dict([(_normalize_name(x), None) for x in name.split(',')])
+        if normalize:
+            _normalize_name = \
+                __salt__.get('pkg.normalize_name', lambda pkgname: pkgname)
+            packed = dict([(_normalize_name(x), None) for x in name.split(',')])
+        else:
+            packed = dict([(x, None) for x in name.split(',')])
         return packed, 'repository'
 
     else:
