@@ -123,6 +123,13 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             action='store_true',
             help='Run unit tests'
         )
+        self.test_selection_group.add_option(
+            '-W',
+            '--wheel',
+            default=False,
+            action='store_true',
+            help='Run wheel tests'
+        )
 
         self.output_options_group.add_option(
             '--no-colors',
@@ -137,6 +144,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 self.options.module, self.options.cli, self.options.client,
                 self.options.shell, self.options.unit, self.options.state,
                 self.options.runner, self.options.loader, self.options.name,
+                self.options.wheel,
                 os.geteuid() != 0, not self.options.run_destructive)):
             self.error(
                 'No sense in generating the tests coverage report when '
@@ -149,7 +157,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         if not any((self.options.module, self.options.cli, self.options.client,
                     self.options.shell, self.options.unit, self.options.state,
                     self.options.runner, self.options.loader,
-                    self.options.name)):
+                    self.options.name, self.options.wheel)):
             self.options.module = True
             self.options.cli = True
             self.options.client = True
@@ -158,6 +166,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             self.options.runner = True
             self.options.state = True
             self.options.loader = True
+            self.options.wheel = True
 
         self.start_coverage(
             branch=True,
@@ -192,6 +201,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                  self.options.cli or
                  self.options.client or
                  self.options.loader or
+                 self.options.wheel or
                  named_tests):
             # We're either not running any of runner, state, module and client
             # tests, or, we're only running unittests by passing --unit or by
@@ -233,7 +243,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         if not any([self.options.client, self.options.client,
                     self.options.module, self.options.runner,
                     self.options.shell, self.options.state,
-                    self.options.loader, self.options.name]):
+                    self.options.loader, self.options.name,
+                    self.options.wheel]):
             return status
 
         with TestDaemon(self):
@@ -257,6 +268,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 status.append(self.run_integration_suite('client', 'Client'))
             if self.options.shell:
                 status.append(self.run_integration_suite('shell', 'Shell'))
+            if self.options.wheel:
+                status.append(self.run_integration_suite('wheel', 'Wheel'))
         return status
 
     def run_unit_tests(self):
