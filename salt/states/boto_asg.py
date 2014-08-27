@@ -103,6 +103,8 @@ as a passed in dict, or as a string to pull from pillars or minion config:
 
 import hashlib
 
+log = logging.getLogger(__name__)
+
 
 def __virtual__():
     '''
