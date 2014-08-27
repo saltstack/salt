@@ -65,6 +65,7 @@ def wrap_tmpl_func(render_str):
                 if not tmplpath.lower().replace('\\', '/').endswith('/init.sls'):
                     slspath = os.path.dirname(slspath)
             context['slsdotpath'] = slspath.replace('/', '.')
+            context['slscolonpath'] = slspath.replace('/', ':')
             if slspath:
                 slspath = slspath + '/'
             context['slspath'] = slspath
