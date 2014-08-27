@@ -131,6 +131,13 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             help='Run Fileserver tests'
         )
         self.test_selection_group.add_option(
+            '-W',
+            '--wheel',
+            action='store_true',
+            default=False,
+            help='Run wheel tests'
+        )
+        self.test_selection_group.add_option(
             '-o',
             '--outputter',
             action='store_true',
@@ -178,8 +185,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 self.options.module, self.options.cli, self.options.client,
                 self.options.shell, self.options.unit, self.options.state,
                 self.options.runner, self.options.loader, self.options.name,
-                self.options.outputter, self.options.fileserver, os.geteuid() != 0,
-                not self.options.run_destructive)):
+                self.options.outputter, self.options.fileserver, self.options.wheel,
+                os.geteuid() != 0, not self.options.run_destructive)):
             self.error(
                 'No sense in generating the tests coverage report when '
                 'not running the full test suite, including the '
@@ -192,7 +199,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                     self.options.shell, self.options.unit, self.options.state,
                     self.options.runner, self.options.loader, self.options.name,
                     self.options.outputter, self.options.cloud_provider_tests,
-                    self.options.fileserver, self.options.api)):
+                    self.options.fileserver, self.options.wheel, self.options.api)):
             self.options.module = True
             self.options.cli = True
             self.options.client = True
@@ -203,6 +210,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             self.options.loader = True
             self.options.outputter = True
             self.options.fileserver = True
+            self.options.wheel = True
             self.options.api = True
 
         self.start_coverage(
@@ -248,6 +256,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                  self.options.loader or
                  self.options.outputter or
                  self.options.fileserver or
+                 self.options.wheel or
                  self.options.cloud_provider_tests or
                  named_tests):
             # We're either not running any of runner, state, module and client
@@ -299,7 +308,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                     self.options.state, self.options.loader,
                     self.options.outputter, self.options.name,
                     self.options.cloud_provider_tests,
-                    self.options.api, self.options.fileserver]):
+                    self.options.api, self.options.fileserver,
+                    self.options.wheel]):
             return status
 
         with TestDaemon(self):
@@ -327,6 +337,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 status.append(self.run_integration_suite('output', 'Outputter'))
             if self.options.fileserver:
                 status.append(self.run_integration_suite('fileserver', 'Fileserver'))
+            if self.options.wheel:
+                status.append(self.run_integration_suite('wheel', 'Wheel'))
             if self.options.cloud_provider_tests:
                 status.append(self.run_integration_suite('cloud/providers', 'Cloud Provider'))
             if self.options.api:
