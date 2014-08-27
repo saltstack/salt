@@ -50,10 +50,14 @@ def info(name):
             'name': '',
             'passwd': ''}
 
-    # Get password aging info on FreeBSD
-    # TODO: Implement this for NetBSD, OpenBSD
+    cmd = ""
     if __salt__['cmd.has_exec']('pw'):
-        cmd = 'pw user show {0} | cut -f6,7 -d:'.format(name)
+        cmd = 'pw user show {0}'.format(name)
+    elif __grains__['kernel'] in ('NetBSD', 'OpenBSD'):
+        cmd = 'grep "^{0}:" /etc/master.passwd'.format(name)
+
+    if cmd:
+        cmd += '| cut -f6,7 -d:'
         try:
             change, expire = __salt__['cmd.run_all'](cmd)['stdout'].split(':')
         except ValueError:
