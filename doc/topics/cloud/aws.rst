@@ -887,6 +887,8 @@ image should be created. Then, edit your cloud.profiles file like so:-
 Specifying interface properties
 -------------------------------
 
+.. versionadded:: 2014.7.0
+
 Launching into a VPC allows you to specify more complex configurations for
 the network interfaces of your virtual machines, for example:-
 
