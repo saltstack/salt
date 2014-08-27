@@ -240,7 +240,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
 
         print_header('Setting up Salt daemons to execute tests', top=False)
         status = []
-        if not any([self.options.client, self.options.client,
+        if not any([self.options.cli, self.options.client,
                     self.options.module, self.options.runner,
                     self.options.shell, self.options.state,
                     self.options.loader, self.options.name,
