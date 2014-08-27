@@ -519,7 +519,7 @@ class Cloud(object):
                 providers = info.get('provider')
 
                 if providers:
-                    prov_name = providers.split(':')[1]
+                    prov_name = providers.split(':')[0]
                     profiles.add((alias, prov_name))
 
                     if prov_name == provider:
