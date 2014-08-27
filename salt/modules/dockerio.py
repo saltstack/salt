@@ -1486,7 +1486,8 @@ def _parse_image_multilogs_string(ret, repo):
                     buf = json.loads(buf)
                 except Exception:
                     pass
-                image_logs.append(buf)
+                else:
+                    image_logs.append(buf)
                 buf = ''
         image_logs.reverse()
         # search last layer grabbed
