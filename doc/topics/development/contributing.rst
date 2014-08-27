@@ -215,6 +215,75 @@ format-patch`_ and send them to the `salt-users`_ mailing list. The contributor
 will then get credit for the patch, and the Salt community will have an archive
 of the patch and a place for discussion.
 
+Backporting Pull Requests
+=========================
+
+If a bug is fixed on ``develop`` and the bug is also present on a
+currently-supported release branch it will need to be back-ported to all
+applicable branches.
+
+.. note:: Most Salt contributors can skip these instructions
+
+    These instructions do not need to be read in order to contribute to the
+    Salt project! The SaltStack team will back-port fixes on behalf of
+    contributors in order to keep the contribution process easy.
+
+    These instructions are intended for frequent Salt contributors, advanced
+    Git users, SaltStack employees, or independent souls who wish to back-port
+    changes themselves.
+
+It is often easiest to fix a bug on the oldest supported release branch and
+then merge that branch forward into ``develop`` (as described earlier in this
+document). When that is not possible the fix must be back-ported, or copied,
+into any other affected branches.
+
+These steps assume a pull request ``#1234`` has been merged into ``develop``.
+And ``upstream`` is the name of the remote pointing to the main Salt repo.
+
+1.  Identify the oldest supported release branch that is affected by the bug.
+
+2.  Create a new branch for the back-port by reusing the same branch from the
+    original pull request.
+
+    Name the branch ``bp-<NNNN>`` and use the number of the original pull
+    request.
+
+    .. code-block:: bash
+
+        git fetch upstream refs/pull/1234/head:bp-1234
+        git checkout bp-1234
+
+3.  Find the parent commit of the original pull request.
+
+    The parent commit of the original pull request must be known in order to
+    rebase onto a release branch. The easiest way to find this is on GitHub.
+
+    Open the original pull request on GitHub and find the first commit in the
+    list of commits. Select and copy the SHA for that commit. The parent of
+    that commit can be specified by appending ``~1`` to the end.
+
+4.  Rebase the new branch on top of the release branch.
+
+    * ``<release-branch>`` is the branch identified in step #1.
+
+    * ``<orig-base>`` is the SHA identified in step #3 -- don't forget to add
+      ``~1`` to the end!
+
+    .. code-block:: bash
+
+        git rebase --onto <release-branch> <orig-base> bp-1234
+
+    Note, release branches prior to ``2014.7`` will not be able to make use of
+    rebase and must use cherry-picking instead.
+
+5.  Push the back-port branch to GitHub and open a new pull request.
+
+    Opening a pull request for the back-port allows for the test suite and
+    normal code-review process.
+
+    .. code-block:: bash
+
+        git push -u origin bp-1234
 
 .. _`saltstack/salt`: https://github.com/saltstack/salt
 .. _`GitHub Fork a Repo Guide`: https://help.github.com/articles/fork-a-repo
