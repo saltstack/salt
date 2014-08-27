@@ -27,8 +27,8 @@ configuration file.
 '''
 
 from __future__ import generators, with_statement
-from time import strftime
 
+import time
 import logging
 import salt
 import os
@@ -94,6 +94,8 @@ class Buildable(object):
     Base class of most classes, which have a build method.
 
     It contains a common build function.
+
+    Does not need examples:.
     '''
 
     def __init__(self, iterable, join_body_on='', append_extra_newline=True):
@@ -145,6 +147,8 @@ class Statement(Buildable):
     '''
     It represents a syslog-ng configuration statement, e.g. source, destination,
     filter.
+
+    Does not need examples:.
     '''
 
     def __init__(self, type, id='', options=None, has_name=True):
@@ -171,6 +175,8 @@ class Statement(Buildable):
 class NamedStatement(Statement):
     '''
     It represents a configuration statement, which has a name, e.g. a source.
+
+    Does not need examples:.
     '''
     def __init__(self, type, id='', options=None):
         super(NamedStatement, self).__init__(type, id, options, has_name=True)
@@ -180,6 +186,8 @@ class UnnamedStatement(Statement):
     '''
     It represents a configuration statement, which doesn't have a name, e.g. a
     log path.
+
+    Does not need examples:.
     '''
 
     def __init__(self, type, options=None):
@@ -190,6 +198,8 @@ class GivenStatement(Buildable):
     '''
     This statement returns a string without modification. It can be used to
      use existing configuration snippets.
+
+    Does not need examples:.
     '''
 
     def __init__(self, value, add_newline=True):
@@ -209,6 +219,8 @@ class Option(Buildable):
     A Statement class contains Option instances.
 
     An instance of Option can represent a file(), tcp(), udp(), etc.  option.
+
+    Does not need examples:.
     '''
 
     def __init__(self, type='', params=None):
@@ -231,6 +243,8 @@ class Option(Buildable):
 class Parameter(Buildable):
     '''
     An Option has one or more Parameter instances.
+
+    Does not need examples:.
     '''
 
     def __init__(self, iterable=None, join_body_on=''):
@@ -251,6 +265,7 @@ class SimpleParameter(Parameter):
 
     "/var/log/messages" is a SimpleParameter.
 
+    Does not need examples:.
     '''
 
     def __init__(self, value=''):
@@ -272,6 +287,8 @@ class TypedParameter(Parameter):
     };
 
     ip(127.0.0.1) is a TypedParameter.
+
+    Does not need examples:.
     '''
 
     def __init__(self, type='', values=None):
@@ -294,6 +311,8 @@ class TypedParameter(Parameter):
 class ParameterValue(Buildable):
     '''
     A TypedParameter can have one or more values.
+
+    Does not need examples:.
     '''
 
     def __init__(self, iterable=None, join_body_on=''):
@@ -305,6 +324,8 @@ class SimpleParameterValue(ParameterValue):
     A ParameterValuem which holds a simple type, like a string or a number.
 
     For example in ip(127.0.0.1) 127.0.0.1 is a SimpleParameterValue.
+
+    Does not need examples:.
     '''
 
     def __init__(self, value=''):
@@ -332,6 +353,8 @@ class TypedParameterValue(ParameterValue):
             )
         );
     };
+
+    Does not need examples:.
     '''
 
     def __init__(self, type='', arguments=None):
@@ -355,6 +378,8 @@ class Argument(object):
     '''
     A TypedParameterValue has one or more Arguments. For example this can be
     the value of key_file.
+
+    Does not need examples:.
     '''
 
     def __init__(self, value=''):
@@ -608,6 +633,13 @@ def config(name,
     config : the parsed YAML code
     write : if True, it writes  the config into the configuration file,
     otherwise just returns it
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' syslog_ng.config name="s_local" config="[{'tcp':[{'ip':'127.0.0.1'},{'port':1233}]}]"
+
     '''
 
     _build_config_tree(name, config)
@@ -627,10 +659,17 @@ def config(name,
 def set_binary_path(name):
     '''
     Sets the path, where the syslog-ng binary can be found. This function is
-    intended to be used from the state module.
+    intended to be used from states.
 
     If syslog-ng is installed via a package manager, users don't need to use
     this function.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' syslog_ng.set_binary_path name="/usr/sbin"
+
     '''
     global __SYSLOG_NG_BINARY_PATH
     old = __SYSLOG_NG_BINARY_PATH
@@ -641,8 +680,14 @@ def set_binary_path(name):
 
 def set_config_file(name):
     '''
-    Sets the configuration's name. This function is intended to be used from
-    the state module.
+    Sets the configuration's name. This function is intended to be used from states.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' syslog_ng.set_config_file name="/etc/syslog-ng"
+
     '''
     global __SYSLOG_NG_CONFIG_FILE
     old = __SYSLOG_NG_CONFIG_FILE
@@ -654,6 +699,13 @@ def set_config_file(name):
 def get_config_file():
     '''
     Returns the configuration directory, which contains syslog-ng.conf.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' syslog_ng.get_config_file
+
     '''
     return __SYSLOG_NG_CONFIG_FILE
 
@@ -709,7 +761,8 @@ def set_parameters(version=None,
     if config_file:
         set_config_file(config_file)
     if version:
-        _determine_config_version(__SYSLOG_NG_BINARY_PATH)
+        version = _determine_config_version(__SYSLOG_NG_BINARY_PATH)
+        write_version(version)
 
     return _format_return_data(0)
 
@@ -907,8 +960,15 @@ def stop(name=None):
     Kills syslog-ng. This function is intended to be used from the state module.
 
     Users shouldn't use this function, if the service module is available on
-    their system.  If :mod:`syslog_ng.set_config_file <salt.modules.syslog_ng.set_binary_path>`,
+    their system.  If :mod:`syslog_ng.set_config_file <salt.modules.syslog_ng.set_binary_path>`
     is called before, this function will use the set binary path.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' syslog_ng.stop
+
     '''
     pids = __salt__['ps.pgrep'](pattern='syslog-ng')
 
@@ -954,6 +1014,13 @@ def start(name=None,
     Users shouldn't use this function, if the service module is available on
     their system.  If :mod:`syslog_ng.set_config_file <salt.modules.syslog_ng.set_binary_path>`,
     is called before, this function will use the set binary path.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' syslog_ng.start
+
     '''
     params = []
     _add_cli_param(params, 'user', user)
@@ -1003,11 +1070,17 @@ def start(name=None,
 
 def reload(name):
     '''
-    Reloads syslog-ng. This function is intended to be used from the state
-    module.
+    Reloads syslog-ng. This function is intended to be used from states.
 
     If :mod:`syslog_ng.set_config_file <salt.modules.syslog_ng.set_binary_path>`,
     is called before, this function will use the set binary path.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' syslog_ng.reload
+
     '''
     if __SYSLOG_NG_BINARY_PATH:
         syslog_ng_ctl_binary = os.path.join(__SYSLOG_NG_BINARY_PATH, 'syslog-ng-ctl')
@@ -1025,17 +1098,24 @@ def _format_generated_config_header():
     '''
     Formats a header, which is prepended to all appended config.
     '''
-    now = strftime('%Y-%m-%d %H:%M:%S')
+    now = time.strftime('%Y-%m-%d %H:%M:%S')
     return __SALT_GENERATED_CONFIG_HEADER.format(now)
 
 
 def write_config(config, newlines=2):
     '''
     Writes the given parameter config into the config file. This function is
-    intended to be used from the state module.
+    intended to be used from states.
 
     If :mod:`syslog_ng.set_config_file <salt.modules.syslog_ng.set_config_file>`,
     is called before, this function will use the set config file.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' syslog_ng.write_config config="# comment"
+
     '''
     succ = _write_config(config, newlines)
     changes = _format_changes(new=config)
@@ -1069,10 +1149,17 @@ def _write_config(config, newlines=2):
 def write_version(name):
     '''
     Removes the previous configuration file, then creates a new one and writes the name line.
-    This function is intended to be used from the state module.
+    This function is intended to be used from states.
 
     If :mod:`syslog_ng.set_config_file <salt.modules.syslog_ng.set_config_file>`,
     is called before, this function will use the set config file.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' syslog_ng.write_version name="3.6"
+
     '''
     line = '@version: {0}'.format(name)
     try:
