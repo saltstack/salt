@@ -122,7 +122,13 @@ def salt_minion():
 
     # keep one minion subprocess running
     while True:
-        q = multiprocessing.Queue()
+        try:
+            q = multiprocessing.Queue()
+        except Exception:
+            # This breaks in containers
+            minion = salt.Minion()
+            minion.start()
+            return
         p = multiprocessing.Process(target=minion_process, args=(q,))
         p.start()
         try:
@@ -139,7 +145,7 @@ def salt_minion():
                 break
             # delay restart to reduce flooding and allow network resources to close
             time.sleep(restart_delay)
-        except KeyboardInterrupt, err:
+        except KeyboardInterrupt:
             break
         # need to reset logging because new minion objects
         # cause extra log handlers to accumulate
