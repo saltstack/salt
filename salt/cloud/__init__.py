@@ -519,11 +519,13 @@ class Cloud(object):
                 providers = info.get('provider')
 
                 if providers:
-                    prov_name = providers.split(':')[1]
-                    profiles.add((alias, prov_name))
-
-                    if prov_name == provider:
-                        provider_profiles.add((alias, prov_name))
+                    given_prov_name = providers.split(':')[0]
+                    salt_prov_name = providers.split(':')[1]
+                    if given_prov_name == provider:
+                        provider_profiles.add((alias, given_prov_name))
+                    elif salt_prov_name == provider:
+                        provider_profiles.add((alias, salt_prov_name))
+                    profiles.add((alias, given_prov_name))
 
             if not profiles:
                 raise SaltCloudSystemExit(
