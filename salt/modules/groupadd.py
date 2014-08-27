@@ -143,10 +143,10 @@ def adduser(name, username):
     '''
     if __grains__['kernel'] == 'Linux':
         retcode = __salt__['cmd.retcode']('gpasswd --add {0} {1}'.format(
-            username,name))
+            username, name))
     else:
         retcode = __salt__['cmd.retcode']('usermod -G {0} {1}'.format(
-            name,username))
+            name, username))
 
     return not retcode
 
@@ -210,7 +210,7 @@ def members(name, members_list):
             for user in members_list.split(","):
                 if user:
                     retcode = __salt__['cmd.retcode'](
-                        'usermod -G {0} {1}'.format(name,user))
+                        'usermod -G {0} {1}'.format(name, user))
                     if not retcode == 0:
                         break
                 # provided list is '': users previously deleted from group
