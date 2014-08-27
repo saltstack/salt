@@ -123,6 +123,7 @@ def _find_install_targets(name=None,
                           sources=None,
                           skip_suggestions=False,
                           pkg_verify=False,
+                          normalize=True,
                           **kwargs):
     '''
     Inspect the arguments to pkg.installed and discover what packages need to
@@ -174,8 +175,13 @@ def _find_install_targets(name=None,
                                    'repository.'.format(name)}
             if version is None:
                 version = _get_latest_pkg_version(pkginfo)
-        _normalize_name = __salt__.get('pkg.normalize_name', lambda pkgname: pkgname)
-        desired = {_normalize_name(name): version}
+
+        if normalize:
+            _normalize_name = __salt__.get('pkg.normalize_name', lambda pkgname: pkgname)
+            desired = {_normalize_name(name): version}
+        else:
+            desired = {name: version}
+
         to_unpurge = _find_unpurge_targets(desired)
 
         cver = cur_pkgs.get(name, [])
@@ -389,6 +395,7 @@ def installed(
         sources=None,
         allow_updates=False,
         pkg_verify=False,
+        normalize=True,
         **kwargs):
     '''
     Ensure that the package is installed, and that it is the correct version
@@ -660,6 +667,35 @@ def installed(
               - bar: http://somesite.org/bar.rpm
               - baz: ftp://someothersite.org/baz.rpm
               - qux: /minion/path/to/qux.rpm
+
+    install_recommends
+        Whether to install the packages marked as recommended.  Default is True.
+        Currently only works with APT based systems.
+
+        .. versionadded:: Lithium
+
+    .. code-block:: yaml
+
+        httpd:
+          pkg.installed:
+            - install_recommends: False
+
+
+    normalize
+        Normalize the package name by removing the architecture.  Default is True.
+        This is useful for poorly created packages which might include the
+        architecture as an actual part of the name such as kernel modules
+        which match a specific kernel version.
+
+        .. versionadded:: 2014.7.0
+
+    Example:
+
+    .. code-block:: yaml
+
+        gpfs.gplbin-2.6.32-279.31.1.el6.x86_64:
+          pkg.installed:
+            - normalize: False
     '''
     kwargs['saltenv'] = __env__
     rtag = __gen_rtag()
@@ -683,6 +719,7 @@ def installed(
                                    fromrepo=fromrepo,
                                    skip_suggestions=skip_suggestions,
                                    pkg_verify=pkg_verify,
+                                   normalize=normalize,
                                    **kwargs)
 
     try:
@@ -802,6 +839,7 @@ def installed(
                                             pkgs=pkgs,
                                             sources=sources,
                                             reinstall=reinstall,
+                                            normalize=normalize,
                                             **kwargs)
 
             if os.path.isfile(rtag) and refresh:
