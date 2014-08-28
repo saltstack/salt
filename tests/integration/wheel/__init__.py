@@ -28,7 +28,7 @@ class WheelModuleTest(integration.ClientCase):
             'client': 'wheel',
             'fun': 'key.list_all',
             'eauth': 'auto',
-            'username': 'saltdev',
+            'username': 'saltdev_auto',
             'password': 'saltdev',
         })
 
@@ -46,7 +46,7 @@ class WheelModuleTest(integration.ClientCase):
 
         auth = salt.auth.LoadAuth(opts)
         token = auth.mk_token({
-            'username': 'saltdev',
+            'username': 'saltdev_auto',
             'password': 'saltdev',
             'eauth': 'auto',
         })

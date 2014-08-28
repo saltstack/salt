@@ -287,3 +287,15 @@ It is highly recommended that this option is *not* set, unless the user has
 verified that the provider supports this functionality, and that the image
 being used is capable of providing the necessary information. At this time,
 only the EC2 driver supports this functionality.
+
+SSH Agent
+=========
+
+.. versionadded:: Lithium
+
+If the ssh key is not stored on the server salt-cloud is being run on, set
+ssh_agent and salt-cloud will use the forwarded ssh-agent to authenticate.
+
+.. code-block:: yaml
+
+    ssh_agent: True

@@ -256,6 +256,7 @@ VALID_OPTS = {
     'username': str,
     'password': str,
     'zmq_filtering': bool,
+    'fs_cache': bool,
 }
 
 # default configurations
@@ -352,7 +353,7 @@ DEFAULT_MINION_OPTS = {
     'recon_max': 10000,
     'recon_default': 1000,
     'recon_randomize': True,
-    'random_reauth_delay': 60,
+    'random_reauth_delay': 10,
     'win_repo_cachefile': 'salt://win/repo/winrepo.p',
     'pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-minion.pid'),
     'range_server': 'range:80',
@@ -542,6 +543,7 @@ DEFAULT_MASTER_OPTS = {
     'master_pubkey_signature': 'master_pubkey_signature',
     'master_use_pubkey_signature': False,
     'zmq_filtering': False,
+    'fs_cache': False,
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
