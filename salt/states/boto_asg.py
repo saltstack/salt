@@ -101,6 +101,7 @@ as a passed in dict, or as a string to pull from pillars or minion config:
         - force: True
 '''
 
+import logging
 import hashlib
 
 log = logging.getLogger(__name__)
