@@ -34,7 +34,7 @@ def _check_zfs():
 
 def _available_commands():
     '''
-    List available commands based on 'zfs help'. Returns a dict.
+    List available commands based on 'zfs ?'. Returns a dict.
     '''
     zfs_path = _check_zfs()
     if not zfs_path:
@@ -43,10 +43,10 @@ def _available_commands():
     ret = {}
     # Note that we append '|| :' as a unix hack to force return code to be 0.
     res = salt_cmd.run_stderr(
-        '{0} help || :'.format(zfs_path), output_loglevel='trace'
+        '{0} ? || :'.format(zfs_path), output_loglevel='trace'
     )
 
-    # This bit is dependent on specific output from `zfs help` - any major changes
+    # This bit is dependent on specific output from `zfs ?` - any major changes
     # in how this works upstream will require a change.
     for line in res.splitlines():
         if re.match('	[a-zA-Z]', line):
