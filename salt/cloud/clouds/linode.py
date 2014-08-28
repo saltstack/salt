@@ -146,7 +146,7 @@ def get_auth(vm_):
     else:
         raise SaltCloudConfigError(
             'The Linode driver requires either a password or ssh_pubkey with '
-            'corresponding ssh_private_key.'
+            'corresponding ssh_private_key.')
 
 
 def get_priv_key_filename(vm_):
