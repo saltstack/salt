@@ -35,6 +35,12 @@ def check_nova():
     return HAS_NOVA
 
 
+# kwargs has to be an object instead of a dictionary for the __post_parse_arg__
+class KwargsStruct(object):
+    def __init__(self, **entries):
+        self.__dict__.update(entries)
+
+
 class NovaServer(object):
     def __init__(self, name, server, password=None):
         '''
@@ -125,6 +131,10 @@ class SaltNova(OpenStackComputeShell):
         self.kwargs['region_name'] = region_name
         self.kwargs['service_type'] = 'compute'
 
+        # used in novaclient extensions to see if they are rackspace or not, to know if it needs to load
+        # the hooks for that extension or not.  This is cleaned up by sanatize_novaclient
+        self.kwargs['os_auth_url'] = auth_url
+
         if os_auth_plugin is not None:
             novaclient.auth_plugin.discover_auth_systems()
             auth_plugin = novaclient.auth_plugin.load_plugin(os_auth_plugin)
@@ -133,6 +143,14 @@ class SaltNova(OpenStackComputeShell):
 
         if not self.kwargs.get('api_key', None):
             self.kwargs['api_key'] = password
+
+        # This has to be run before sanatize_novaclient before extra variables are cleaned out.
+        if hasattr(self, 'extensions'):
+            # needs an object, not a dictionary
+            self.kwargstruct = KwargsStruct(**self.kwargs)
+            for extension in self.extensions:
+                extension.run_hooks('__post_parse_args__', self.kwargstruct)
+            self.kwargs = self.kwargstruct.__dict__
 
         self.kwargs = sanatize_novaclient(self.kwargs)
 
@@ -158,10 +176,6 @@ class SaltNova(OpenStackComputeShell):
                 'region',
                 region_name
             )['publicURL']
-
-        if hasattr(self, 'extensions'):
-            for extension in self.extensions:
-                extension.run_hooks('__post_parse_args__', self.kwargs)
 
         self.compute_conn = client.Client(**self.kwargs)
 
