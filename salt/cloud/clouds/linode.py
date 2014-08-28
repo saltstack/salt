@@ -125,6 +125,7 @@ def get_password(vm_):
         ), search_global=False
     )
 
+
 def get_pubkey(vm_):
     '''
     Return the SSH pubkey to use
@@ -134,6 +135,7 @@ def get_pubkey(vm_):
             'ssh_pubkey', vm_, __opts__, search_global=False
         ), search_global=False
     )
+
 
 def get_auth(vm_):
     '''
@@ -146,6 +148,7 @@ def get_auth(vm_):
         return NodeAuthPassword(get_password(vm_))
     else:
         return None
+
 
 def get_private_ip(vm_):
     '''
