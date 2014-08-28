@@ -368,8 +368,15 @@ class MultiMinion(object):
             s_opts['master'] = master
             try:
                 minions.append(Minion(s_opts, 5, False))
-            except SaltClientError:
-                minions.append(s_opts)
+            except SaltClientError as exc:
+                log.error('Error while bringing up minion for multi-master. Is master at {0} responding?'.format(master))
+
+        if len(minions) == 0:
+            err = 'Error while bringing up minion for multi-master. Can\'t connect to any of the masters!!!'
+            log.error(err)
+            raise SaltClientError(err)
+
+
         return minions
 
     def minions(self):
@@ -1071,7 +1078,7 @@ class Minion(object):
         while True:
             creds = auth.sign_in(timeout, safe)
             if creds != 'retry':
-                log.info('Authentication with master successful!')
+                log.info('Authentication with master at {0} successful!'.format(self.opts['master_ip']))
                 break
             log.info('Waiting for minion key to be accepted by the master.')
             time.sleep(acceptance_wait_time)
