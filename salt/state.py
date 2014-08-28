@@ -2407,9 +2407,13 @@ class BaseHighState(object):
                         self.merge_included_states(highstate, state, errors)
                     for i, error in enumerate(errors[:]):
                         if 'is not available on the salt master' in error:
-                            errors[i] = (
-                                'No matching sls found for {0!r} '
-                                'in env {1!r}'.format(sls_match, saltenv))
+                            # match SLS foobar in environment
+                            this_sls = 'SLS {0} in environment'.format(
+                                sls_match)
+                            if this_sls in error:
+                                errors[i] = (
+                                    'No matching sls found for {0!r} '
+                                    'in env {1!r}'.format(sls_match, saltenv))
                     all_errors.extend(errors)
 
         self.clean_duplicate_extends(highstate)
