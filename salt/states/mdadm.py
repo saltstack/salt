@@ -85,32 +85,54 @@ def present(name,
         ret['comment'] = 'Raid {0} already present'.format(name)
         return ret
 
-    # If running with test use the test_mode with create
+    # Decide whether to create or assemble
+    do_assemble = False
+    verb = 'created'
+    for dev in devices:
+        if do_assemble:
+            verb = 'assembled'
+            break
+        # mdadm -E exits with 0 iff all devices given are part of an array
+        cmd = 'mdadm -E {0}'.format(dev)
+        do_assemble = __salt__['cmd.run'](cmd)['result']
+
+    # If running with test use the test_mode with create or assemble
     if __opts__['test']:
-        res = __salt__['raid.create'](name,
-                                      level,
-                                      devices,
-                                      test_mode=True,
-                                      **kwargs)
-        ret['comment'] = 'Raid will be created with: {0}'.format(res)
+        if do_assemble:
+            res = __salt__['raid.assemble'](name,
+                                            devices,
+                                            test_mode=True,
+                                            **kwargs)
+        else:
+            res = __salt__['raid.create'](name,
+                                          level,
+                                          devices,
+                                          test_mode=True,
+                                          **kwargs)
+        ret['comment'] = 'Raid will be {0} with: {1}'.format(verb, res)
         ret['result'] = None
         return ret
 
-    # Attempt to create the array
-    __salt__['raid.create'](name,
-                            level,
-                            devices,
-                            **kwargs)
+    # Attempt to create or assemble the array
+    if do_assemble:
+        __salt__['raid.assemble'](name,
+                                  devices,
+                                  **kwargs)
+    else:
+        __salt__['raid.create'](name,
+                                level,
+                                devices,
+                                **kwargs)
 
     raids = __salt__['raid.list']()
     changes = raids.get(name)
     if changes:
-        ret['comment'] = 'Raid {0} created.'.format(name)
+        ret['comment'] = 'Raid {0} {1}.'.format(name, verb)
         ret['changes'] = changes
         # Saving config
         __salt__['raid.save_config']()
     else:
-        ret['comment'] = 'Raid {0} failed to be created.'.format(name)
+        ret['comment'] = 'Raid {0} failed to be {1}.'.format(name, verb)
         ret['result'] = False
 
     return ret
