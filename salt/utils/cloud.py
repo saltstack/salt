@@ -1519,7 +1519,7 @@ def win_cmd(command, **kwargs):
     return 1
 
 
-def root_cmd(command, tty, sudo, allow_failure=False, **kwargs):
+def root_cmd(command, tty, sudo, allow_failure=True, **kwargs):
     '''
     Wrapper for commands to be run as root
     '''
