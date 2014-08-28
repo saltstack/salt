@@ -966,7 +966,7 @@ def deploy_script(host,
 
             def remote_exists(path):
                 return not root_cmd('test -e \\"{0}\\"'.format(path),
-                                    tty, sudo, **kwargs)
+                                    tty, sudo, allow_failure=True, **kwargs)
             log.debug(
                 'Logging into {0}:{1} as {2}'.format(
                     host, port, username
