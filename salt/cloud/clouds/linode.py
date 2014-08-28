@@ -149,12 +149,12 @@ def get_auth(vm_):
             'corresponding ssh_private_key.')
 
 
-def get_priv_key_filename(vm_):
+def get_ssh_key_filename(vm_):
     '''
     Return path to filename if get_auth() returns a NodeAuthSSHKey.
     '''
     key_filename = config.get_cloud_config_value(
-        'ssh_private_key', vm_, __opts__,
+        'ssh_key_file', vm_, __opts__,
         default=config.get_cloud_config_value(
             'ssh_pubkey', vm_, __opts__, search_global=False
         ), search_global=False)
@@ -289,8 +289,8 @@ def create(vm_):
             'minion_conf': salt.utils.cloud.minion_config(__opts__, vm_)
         }
 
-        if get_priv_key_filename(vm_) is not None and get_pubkey(vm_) is not None:
-            deploy_kwargs['key_filename'] = get_priv_key_filename(vm_)
+        if get_ssh_key_filename(vm_) is not None and get_pubkey(vm_) is not None:
+            deploy_kwargs['key_filename'] = get_ssh_key_filename(vm_)
 
         # Deploy salt-master files, if necessary
         if config.get_cloud_config_value('make_master', vm_, __opts__) is True:
