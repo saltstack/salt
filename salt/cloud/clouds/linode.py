@@ -35,6 +35,7 @@ except ImportError:
 
 # Import salt cloud libs
 import salt.config as config
+from salt.cloud.exceptions import SaltCloudConfigError
 from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
 from salt.utils import namespaced_function
 
@@ -133,6 +134,7 @@ def get_pubkey(vm_):
     '''
     return config.get_cloud_config_value(
         'ssh_pubkey', vm_, __opts__, search_global=False)
+
 
 def get_auth(vm_):
     '''
