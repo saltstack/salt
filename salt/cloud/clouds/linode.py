@@ -27,7 +27,7 @@ import logging
 
 # Import libcloud
 try:
-    from libcloud.compute.base import NodeAuthPassword
+    from libcloud.compute.base import NodeAuthPassword, NodeAuthSSHKey
     HAS_LIBCLOUD = True
 except ImportError:
     HAS_LIBCLOUD = False
@@ -125,6 +125,27 @@ def get_password(vm_):
         ), search_global=False
     )
 
+def get_pubkey(vm_):
+    '''
+    Return the SSH pubkey to use
+    '''
+    return config.get_cloud_config_value(
+        'ssh_pubkey', vm_, __opts__, default=config.get_cloud_config_value(
+            'ssh_pubkey', vm_, __opts__, search_global=False
+        ), search_global=False
+    )
+
+def get_auth(vm_):
+    '''
+    Return either NodeAuthSSHKey or NodeAuthPassword, preferring
+    NodeAuthSSHKey if both are provided.
+    '''
+    if get_pubkey(vm_) is not None:
+        return NodeAuthSSHKey(get_pubkey(vm_))
+    elif get_password(vm_) is not None:
+        return NodeAuthPassword(get_password(vm_))
+    else:
+        return None
 
 def get_private_ip(vm_):
     '''
@@ -167,7 +188,7 @@ def create(vm_):
         'image': get_image(conn, vm_),
         'size': get_size(conn, vm_),
         'location': get_location(conn, vm_),
-        'auth': NodeAuthPassword(get_password(vm_)),
+        'auth': get_auth(vm_),
         'ex_private': get_private_ip(vm_),
         'ex_rsize': get_disk_size(vm_, get_size(conn, vm_), get_swap(vm_)),
         'ex_swap': get_swap(vm_)
