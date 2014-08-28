@@ -142,25 +142,28 @@ class FSWorker(multiprocessing.Process):
 
 # test code for the FSWalker class
 if __name__ == '__main__':
-    context = zmq.Context()
-    cupd_in = context.socket(zmq.REP)
-    cupd_in.setsockopt(zmq.LINGER, 100)
-    cupd_in.bind("ipc:///tmp/fsc_upd")
+    def run_test():
+        context = zmq.Context()
+        cupd_in = context.socket(zmq.REP)
+        cupd_in.setsockopt(zmq.LINGER, 100)
+        cupd_in.bind("ipc:///tmp/fsc_upd")
 
-    poller = zmq.Poller()
-    poller.register(cupd_in, zmq.POLLIN)
-    serial = salt.payload.Serial('msgpack')
-    fsw = FSWorker({'serial': 'msgpack'},
-                    'test',
-                    **{'path': '/tmp', 'patt': '.*'})
-    fsw.start()
+        poller = zmq.Poller()
+        poller.register(cupd_in, zmq.POLLIN)
+        serial = salt.payload.Serial('msgpack')
+        fsw = FSWorker({'serial': 'msgpack'},
+                        'test',
+                        **{'path': '/tmp', 'patt': '.*'})
+        fsw.start()
 
-    while 1:
-        socks = dict(poller.poll())
-        if socks.get(cupd_in) == zmq.POLLIN:
-            reply = serial.loads(cupd_in.recv())
-            print reply
-            cupd_in.send(serial.dumps('OK'))
-        break
-    fsw.join()
-    sys.exit(0)
+        while 1:
+            socks = dict(poller.poll())
+            if socks.get(cupd_in) == zmq.POLLIN:
+                reply = serial.loads(cupd_in.recv())
+                print reply
+                cupd_in.send(serial.dumps('OK'))
+            break
+        fsw.join()
+        sys.exit(0)
+
+    run_test()
