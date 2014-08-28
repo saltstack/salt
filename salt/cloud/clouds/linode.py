@@ -24,6 +24,7 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 import copy
 import pprint
 import logging
+from os.path import exists, expanduser
 
 # Import libcloud
 try:
@@ -131,11 +132,7 @@ def get_pubkey(vm_):
     Return the SSH pubkey to use
     '''
     return config.get_cloud_config_value(
-        'ssh_pubkey', vm_, __opts__, default=config.get_cloud_config_value(
-            'ssh_pubkey', vm_, __opts__, search_global=False
-        ), search_global=False
-    )
-
+        'ssh_pubkey', vm_, __opts__, search_global=False)
 
 def get_auth(vm_):
     '''
@@ -147,7 +144,23 @@ def get_auth(vm_):
     elif get_password(vm_) is not None:
         return NodeAuthPassword(get_password(vm_))
     else:
-        return None
+        raise SaltCloudConfigError(
+            'The Linode driver requires either a password or ssh_pubkey with '
+            'corresponding ssh_private_key.'
+
+
+def get_priv_key_filename(vm_):
+    '''
+    Return path to filename if get_auth() returns a NodeAuthSSHKey.
+    '''
+    key_filename = config.get_cloud_config_value(
+        'ssh_private_key', vm_, __opts__,
+        default=config.get_cloud_config_value(
+            'ssh_pubkey', vm_, __opts__, search_global=False
+        ), search_global=False)))
+    if exists(expanduser(key_filename)):
+        return expanduser(key_filename)
+    return None
 
 
 def get_private_ip(vm_):
@@ -275,6 +288,9 @@ def create(vm_):
             'script_env': config.get_cloud_config_value('script_env', vm_, __opts__),
             'minion_conf': salt.utils.cloud.minion_config(__opts__, vm_)
         }
+
+        if get_priv_key_filename(vm_) is not None and get_pubkey(vm_) is not None:
+            deploy_kwargs['key_filename'] = get_priv_key_filename(vm_)
 
         # Deploy salt-master files, if necessary
         if config.get_cloud_config_value('make_master', vm_, __opts__) is True:
