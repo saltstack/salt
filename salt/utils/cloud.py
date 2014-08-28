@@ -6,6 +6,7 @@ Utility functions for salt.cloud
 # Import python libs
 import os
 import sys
+import stat
 import codecs
 import shutil
 import hashlib
@@ -285,15 +286,19 @@ def bootstrap(vm_, opts):
                 key_filename
             )
         )
+    has_ssh_agent = False
+    if opts.get('ssh_agent', False) and 'SSH_AUTH_SOCK' in os.environ:
+        if stat.S_ISSOCK(os.stat(os.environ['SSH_AUTH_SOCK']).st_mode):
+            has_ssh_agent = True
 
-    if key_filename is None and salt.utils.which('sshpass') is None:
+    if key_filename is None and salt.utils.which('sshpass') is None and has_ssh_agent is False:
         raise SaltCloudSystemExit(
             'Cannot deploy salt in a VM if the \'ssh_keyfile\' setting '
             'is not set and \'sshpass\' binary is not present on the '
             'system for the password.'
         )
 
-    if key_filename is None and ('password' not in vm_ or not vm_['password']):
+    if key_filename is None and ('password' not in vm_ or not vm_['password']) and has_ssh_agent is False:
         raise SaltCloudSystemExit(
             'Cannot deploy salt in a VM if the \'ssh_keyfile\' setting '
             'is not set and there is no password set for the vm. '
@@ -320,6 +325,7 @@ def bootstrap(vm_, opts):
         'username': ssh_username,
         'script': deploy_script_code,
         'name': vm_['name'],
+        'has_ssh_agent': has_ssh_agent,
         'tmp_dir': salt.config.get_cloud_config_value(
             'tmp_dir', vm_, opts, default='/tmp/.saltcloud'
         ),
@@ -989,7 +995,7 @@ def deploy_script(host,
             if key_filename:
                 log.debug('Using {0} as the key_filename'.format(key_filename))
                 ssh_kwargs['key_filename'] = key_filename
-            elif password:
+            elif password and kwargs['has_ssh_agent'] is False:
                 log.debug('Using {0} as the password'.format(password))
                 ssh_kwargs['password'] = password
 
