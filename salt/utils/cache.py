@@ -87,3 +87,16 @@ class CacheCli(object):
         self.creq_out.send(msg)
         min_list = self.serial.loads(self.creq_out.recv())
         return min_list
+
+# test code for the CacheCli
+if __name__ == '__main__':
+
+    opts = salt.config.master_config('/etc/salt/master')
+
+    ccli = CacheCli(opts)
+
+    ccli.put_cache(['test1', 'test10', 'test34'])
+    ccli.put_cache(['test12'])
+    ccli.put_cache(['test18'])
+    ccli.put_cache(['test21'])
+    print "minions: ", ccli.get_cached()
