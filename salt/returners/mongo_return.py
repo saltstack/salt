@@ -110,11 +110,11 @@ def _get_options(ret):
     return _options
 
 
-def _get_conn():
+def _get_conn(ret):
     '''
     Return a mongodb connection object
     '''
-    _options = _get_options()
+    _options = _get_options(ret)
 
     host = _options.get('host')
     port = _options.get('port')
@@ -134,7 +134,7 @@ def returner(ret):
     '''
     Return data to a mongodb server
     '''
-    conn, mdb = _get_conn()
+    conn, mdb = _get_conn(ret)
     col = mdb[ret['id']]
 
     if isinstance(ret['return'], dict):

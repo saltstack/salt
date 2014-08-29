@@ -36,7 +36,7 @@ def __virtual__():
     return __virtualname__
 
 
-def _get_options(ret):
+def _get_options(ret=None):
     '''
     Get the couchdb options from salt.
     '''

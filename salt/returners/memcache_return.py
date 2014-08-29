@@ -95,7 +95,7 @@ def _get_serv(ret):
     Return a memcache server object
     '''
 
-    _options = _get_options()
+    _options = _get_options(ret)
     host = _options.get('host')
     port = _options.get('port')
 

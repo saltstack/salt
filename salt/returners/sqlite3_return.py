@@ -131,7 +131,7 @@ def _get_conn(ret):
     '''
     # Possible todo: support detect_types, isolation_level, check_same_thread,
     # factory, cached_statements. Do we really need to though?
-    _options = _get_options()
+    _options = _get_options(ret)
     database = _options.get('database')
     timeout = _options.get('timeout')
 

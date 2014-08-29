@@ -90,7 +90,7 @@ def _get_options(ret):
     return _options
 
 
-def _get_serv(ret):
+def _get_serv(ret=None):
     '''
     Return a redis server object
     '''
