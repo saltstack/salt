@@ -619,7 +619,7 @@ def upgrade(refresh=True, dist_upgrade=True):
     else:
         cmd = ['apt-get', '-q', '-y', '-o', 'DPkg::Options::=--force-confold',
                '-o', 'DPkg::Options::=--force-confdef', 'upgrade']
-    __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace')
+        __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace', env={'DEBIAN_FRONTEND': 'noninteractive'})
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)
