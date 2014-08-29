@@ -69,11 +69,14 @@ def _remove_dots(src):
     return output
 
 
-def _get_options(ret):
+def _get_options(ret=None):
     '''
     Get the mongo options from salt.
     '''
-    ret_config = '{0}'.format(ret['ret_config']) if 'ret_config' in ret else ''
+    if ret:
+        ret_config = '{0}'.format(ret['ret_config']) if 'ret_config' in ret else ''
+    else:
+        ret_config = None
 
     attrs = {'host': 'host',
              'port': 'port',
@@ -116,7 +119,7 @@ def _get_conn(ret):
     '''
     Return a mongodb connection object
     '''
-    _options = _get_options()
+    _options = _get_options(ret)
 
     host = _options.get('host')
     port = _options.get('port')
@@ -155,7 +158,7 @@ def save_load(jid, load):
     '''
     Save the load for a given job id
     '''
-    conn, mdb = _get_conn()
+    conn, mdb = _get_conn(ret=None)
     col = mdb[jid]
     col.insert(load)
 
@@ -164,7 +167,7 @@ def get_load(jid):
     '''
     Return the load associated with a given job id
     '''
-    conn, mdb = _get_conn()
+    conn, mdb = _get_conn(ret=None)
     return mdb[jid].find_one()
 
 
@@ -172,7 +175,7 @@ def get_jid(jid):
     '''
     Return the return information associated with a jid
     '''
-    conn, mdb = _get_conn()
+    conn, mdb = _get_conn(ret=None)
     ret = {}
     for collection in mdb.collection_names():
         rdata = mdb[collection].find_one({jid: {'$exists': 'true'}})
@@ -185,7 +188,7 @@ def get_fun(fun):
     '''
     Return the most recent jobs that have executed the named function
     '''
-    conn, mdb = _get_conn()
+    conn, mdb = _get_conn(ret=None)
     ret = {}
     for collection in mdb.collection_names():
         rdata = mdb[collection].find_one({'fun': fun})
@@ -198,7 +201,7 @@ def get_minions():
     '''
     Return a list of minions
     '''
-    conn, mdb = _get_conn()
+    conn, mdb = _get_conn(ret=None)
     ret = []
     for name in mdb.collection_names():
         if len(name) == 20:
@@ -215,7 +218,7 @@ def get_jids():
     '''
     Return a list of job ids
     '''
-    conn, mdb = _get_conn()
+    conn, mdb = _get_conn(ret=None)
     ret = []
     for name in mdb.collection_names():
         if len(name) == 20:

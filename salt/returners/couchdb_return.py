@@ -40,7 +40,10 @@ def _get_options(ret=None):
     '''
     Get the couchdb options from salt.
     '''
-    ret_config = '{0}'.format(ret['ret_config']) if 'ret_config' in ret else ''
+    if ret:
+        ret_config = '{0}'.format(ret['ret_config']) if 'ret_config' in ret else ''
+    else:
+        ret_config = None
 
     attrs = {'url': 'server_url',
              'db': 'db_name'}
@@ -161,7 +164,7 @@ def get_jid(jid):
     '''
     Get the document with a given JID.
     '''
-    options = _get_options()
+    options = _get_options(ret=None)
     _response = _request("GET", options['url'] + options['db'] + '/' + jid)
     if 'error' in _response:
         log.error('Unable to get JID "{0}" : "{1}"'.format(jid, _response))
@@ -173,7 +176,7 @@ def get_jids():
     '''
     List all the jobs that we have..
     '''
-    options = _get_options()
+    options = _get_options(ret=None)
     _response = _request("GET", options['url'] + options['db'] + "/_all_docs")
 
     # Make sure the 'total_rows' is returned.. if not error out.
@@ -210,7 +213,7 @@ def get_fun(fun):
     '''
 
     # Get the options..
-    options = _get_options()
+    options = _get_options(ret=None)
 
     # Define a simple return object.
     _ret = {}
@@ -252,7 +255,7 @@ def get_minions():
     '''
     Return a list of minion identifiers from a request of the view.
     '''
-    options = _get_options()
+    options = _get_options(ret=None)
 
     # Make sure the views are valid, which includes the minions..
     if not ensure_views():
@@ -283,7 +286,7 @@ def ensure_views():
     '''
 
     # Get the options so we have the URL and DB..
-    options = _get_options()
+    options = _get_options(ret=None)
 
     # Make a request to check if the design document exists.
     _response = _request("GET",
@@ -329,7 +332,7 @@ def set_salt_view():
     document. Uses get_valid_salt_views and some hardcoded values.
     '''
 
-    options = _get_options()
+    options = _get_options(ret=None)
 
     # Create the new object that we will shove in as the design doc.
     new_doc = {}

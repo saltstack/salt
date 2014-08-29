@@ -74,11 +74,14 @@ except ImportError:
 __virtualname__ = 'xmpp'
 
 
-def _get_options(ret):
+def _get_options(ret=None):
     '''
     Get the redis options from salt.
     '''
-    ret_config = '{0}'.format(ret['ret_config']) if 'ret_config' in ret else ''
+    if ret:
+        ret_config = '{0}'.format(ret['ret_config']) if 'ret_config' in ret else ''
+    else:
+        ret_config = None
 
     attrs = {'xmpp_profile': 'profile',
              'from_jid': 'jid',

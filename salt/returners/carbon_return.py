@@ -68,8 +68,10 @@ def _get_options(ret):
     '''
     Returns options used for the carbon returner.
     '''
-
-    ret_config = '{0}'.format(ret['ret_config']) if 'ret_config' in ret else ''
+    if ret:
+        ret_config = '{0}'.format(ret['ret_config']) if 'ret_config' in ret else ''
+    else:
+        ret_config = None
 
     attrs = {'host': 'host',
              'port': 'port',
@@ -208,7 +210,7 @@ def returner(ret):
         [module].[function].[minion_id].[metric path [...]].[metric name]
 
     '''
-    _options = _get_options()
+    _options = _get_options(ret)
 
     host = _options.get('host')
     port = _options.get('port')

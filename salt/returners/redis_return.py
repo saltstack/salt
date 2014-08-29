@@ -49,11 +49,14 @@ def __virtual__():
     return __virtualname__
 
 
-def _get_options(ret):
+def _get_options(ret=None):
     '''
     Get the redis options from salt.
     '''
-    ret_config = '{0}'.format(ret['ret_config']) if 'ret_config' in ret else ''
+    if ret:
+        ret_config = '{0}'.format(ret['ret_config']) if 'ret_config' in ret else ''
+    else:
+        ret_config = None
 
     attrs = {'host': 'host',
              'port': 'port',
@@ -120,7 +123,7 @@ def save_load(jid, load):
     '''
     Save the load to the specified jid
     '''
-    serv = _get_serv()
+    serv = _get_serv(ret=None)
     serv.set(jid, json.dumps(load))
     serv.sadd('jids', jid)
 
@@ -129,7 +132,7 @@ def get_load(jid):
     '''
     Return the load data that marks a specified jid
     '''
-    serv = _get_serv()
+    serv = _get_serv(ret=None)
     data = serv.get(jid)
     if data:
         return json.loads(data)
@@ -140,7 +143,7 @@ def get_jid(jid):
     '''
     Return the information returned when the specified job id was executed
     '''
-    serv = _get_serv()
+    serv = _get_serv(ret=None)
     ret = {}
     for minion in serv.smembers('minions'):
         data = serv.get('{0}:{1}'.format(minion, jid))
@@ -153,7 +156,7 @@ def get_fun(fun):
     '''
     Return a dict of the last function called for all minions
     '''
-    serv = _get_serv()
+    serv = _get_serv(ret=None)
     ret = {}
     for minion in serv.smembers('minions'):
         ind_str = '{0}:{1}'.format(minion, fun)
@@ -171,7 +174,7 @@ def get_jids():
     '''
     Return a list of all job ids
     '''
-    serv = _get_serv()
+    serv = _get_serv(ret=None)
     return list(serv.smembers('jids'))
 
 
@@ -179,5 +182,5 @@ def get_minions():
     '''
     Return a list of minions
     '''
-    serv = _get_serv()
+    serv = _get_serv(ret=None)
     return list(serv.smembers('minions'))
