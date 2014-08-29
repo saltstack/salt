@@ -102,11 +102,14 @@ def __virtual__():
     return True
 
 
-def _get_options(ret):
+def _get_options(ret=None):
     '''
     Returns options used for the MySQL connection.
     '''
-    ret_config = '{0}'.format(ret['ret_config']) if 'ret_config' in ret else ''
+    if ret:
+        ret_config = '{0}'.format(ret['ret_config']) if 'ret_config' in ret else ''
+    else:
+        ret_config = None
 
     defaults = {'host': 'salt',
                 'user': 'salt',
@@ -210,7 +213,7 @@ def get_load(jid):
     '''
     Return the load data that marks a specified jid
     '''
-    with _get_serv(commit=True) as cur:
+    with _get_serv(ret=None, commit=True) as cur:
 
         sql = '''SELECT load FROM `jids`
                 WHERE `jid` = '%s';'''
@@ -226,7 +229,7 @@ def get_jid(jid):
     '''
     Return the information returned when the specified job id was executed
     '''
-    with _get_serv(commit=True) as cur:
+    with _get_serv(ret=None, commit=True) as cur:
 
         sql = '''SELECT id, full_ret FROM `salt_returns`
                 WHERE `jid` = %s'''
@@ -244,7 +247,7 @@ def get_fun(fun):
     '''
     Return a dict of the last function called for all minions
     '''
-    with _get_serv(commit=True) as cur:
+    with _get_serv(ret=None, commit=True) as cur:
 
         sql = '''SELECT s.id,s.jid, s.full_ret
                 FROM `salt_returns` s
@@ -268,7 +271,7 @@ def get_jids():
     '''
     Return a list of all job ids
     '''
-    with _get_serv(commit=True) as cur:
+    with _get_serv(ret=None, commit=True) as cur:
 
         sql = '''SELECT DISTINCT jid
                 FROM `jids`'''
@@ -285,7 +288,7 @@ def get_minions():
     '''
     Return a list of minions
     '''
-    with _get_serv(commit=True) as cur:
+    with _get_serv(ret=None, commit=True) as cur:
 
         sql = '''SELECT DISTINCT id
                 FROM `salt_returns`'''

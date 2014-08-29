@@ -131,11 +131,14 @@ def __virtual__():
     return True
 
 
-def _get_options(ret):
+def _get_options(ret=None):
     '''
     Get the odbc options from salt.
     '''
-    ret_config = '{0}'.format(ret['ret_config']) if 'ret_config' in ret else ''
+    if ret:
+        ret_config = '{0}'.format(ret['ret_config']) if 'ret_config' in ret else ''
+    else:
+        ret_config = None
 
     attrs = {'dsn': 'dsn',
              'user': 'user',
@@ -218,7 +221,7 @@ def save_load(jid, load):
     '''
     Save the load to the specified jid id
     '''
-    conn = _get_conn()
+    conn = _get_conn(ret=None)
     cur = conn.cursor()
     sql = '''INSERT INTO jids (jid, load) VALUES (?, ?)'''
 
@@ -230,7 +233,7 @@ def get_load(jid):
     '''
     Return the load data that marks a specified jid
     '''
-    conn = _get_conn()
+    conn = _get_conn(ret=None)
     cur = conn.cursor()
     sql = '''SELECT load FROM jids WHERE jid = ?;'''
 
@@ -246,7 +249,7 @@ def get_jid(jid):
     '''
     Return the information returned when the specified job id was executed
     '''
-    conn = _get_conn()
+    conn = _get_conn(ret=None)
     cur = conn.cursor()
     sql = '''SELECT id, full_ret FROM salt_returns WHERE jid = ?'''
 
@@ -264,7 +267,7 @@ def get_fun(fun):
     '''
     Return a dict of the last function called for all minions
     '''
-    conn = _get_conn()
+    conn = _get_conn(ret=None)
     cur = conn.cursor()
     sql = '''SELECT s.id,s.jid, s.full_ret
             FROM salt_returns s
@@ -288,7 +291,7 @@ def get_jids():
     '''
     Return a list of all job ids
     '''
-    conn = _get_conn()
+    conn = _get_conn(ret=None)
     cur = conn.cursor()
     sql = '''SELECT distinct jid FROM jids'''
 
@@ -305,7 +308,7 @@ def get_minions():
     '''
     Return a list of minions
     '''
-    conn = _get_conn()
+    conn = _get_conn(ret=None)
     cur = conn.cursor()
     sql = '''SELECT DISTINCT id FROM salt_returns'''
 

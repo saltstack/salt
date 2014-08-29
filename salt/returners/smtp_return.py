@@ -86,11 +86,14 @@ def __virtual__():
     return __virtualname__
 
 
-def _get_options(ret):
+def _get_options(ret=None):
     '''
     Get the redis options from salt.
     '''
-    ret_config = '{0}'.format(ret['ret_config']) if 'ret_config' in ret else ''
+    if ret:
+        ret_config = '{0}'.format(ret['ret_config']) if 'ret_config' in ret else ''
+    else:
+        ret_config = None
 
     attrs = {'from': 'from',
              'to': 'to',

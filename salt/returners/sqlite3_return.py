@@ -85,11 +85,14 @@ def __virtual__():
     return __virtualname__
 
 
-def _get_options(ret):
+def _get_options(ret=None):
     '''
     Get the redis options from salt.
     '''
-    ret_config = '{0}'.format(ret['ret_config']) if 'ret_config' in ret else ''
+    if ret:
+        ret_config = '{0}'.format(ret['ret_config']) if 'ret_config' in ret else ''
+    else:
+        ret_config = None
 
     attrs = {'database': 'database',
              'timeout': 'timeout'}
@@ -125,7 +128,7 @@ def _get_options(ret):
     return _options
 
 
-def _get_conn(ret):
+def _get_conn(ret=None):
     '''
     Return a sqlite3 database connection
     '''
@@ -184,7 +187,7 @@ def save_load(jid, load):
     '''
     log.debug('sqlite3 returner <save_load> called jid:{0} load:{1}'
               .format(jid, load))
-    conn = _get_conn()
+    conn = _get_conn(ret=None)
     cur = conn.cursor()
     sql = '''INSERT INTO jids (jid, load) VALUES (:jid, :load)'''
     cur.execute(sql,
@@ -198,7 +201,7 @@ def get_load(jid):
     Return the load from a specified jid
     '''
     log.debug('sqlite3 returner <get_load> called jid: {0}'.format(jid))
-    conn = _get_conn()
+    conn = _get_conn(ret=None)
     cur = conn.cursor()
     sql = '''SELECT load FROM jids WHERE jid = :jid'''
     cur.execute(sql,
@@ -215,7 +218,7 @@ def get_jid(jid):
     Return the information returned from a specified jid
     '''
     log.debug('sqlite3 returner <get_jid> called jid: {0}'.format(jid))
-    conn = _get_conn()
+    conn = _get_conn(ret=None)
     cur = conn.cursor()
     sql = '''SELECT id, full_ret FROM salt_returns WHERE jid = :jid'''
     cur.execute(sql,
@@ -235,7 +238,7 @@ def get_fun(fun):
     Return a dict of the last function called for all minions
     '''
     log.debug('sqlite3 returner <get_fun> called fun: {0}'.format(fun))
-    conn = _get_conn()
+    conn = _get_conn(ret=None)
     cur = conn.cursor()
     sql = '''SELECT s.id, s.full_ret, s.jid
             FROM salt_returns s
@@ -263,7 +266,7 @@ def get_jids():
     Return a list of all job ids
     '''
     log.debug('sqlite3 returner <get_fun> called')
-    conn = _get_conn()
+    conn = _get_conn(ret=None)
     cur = conn.cursor()
     sql = '''SELECT jid FROM jids'''
     cur.execute(sql)
@@ -280,7 +283,7 @@ def get_minions():
     Return a list of minions
     '''
     log.debug('sqlite3 returner <get_minions> called')
-    conn = _get_conn()
+    conn = _get_conn(ret=None)
     cur = conn.cursor()
     sql = '''SELECT DISTINCT id FROM salt_returns'''
     cur.execute(sql)
