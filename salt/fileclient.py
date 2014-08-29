@@ -10,7 +10,7 @@ import hashlib
 import os
 import shutil
 import time
-import requests
+#import requests
 
 # Import salt libs
 from salt.exceptions import (
