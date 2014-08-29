@@ -290,7 +290,8 @@ def create_ca(ca_name,
               OU=None,
               emailAddress='xyz@pdq.net',
               fixmode=False,
-              cacert_path=None):
+              cacert_path=None,
+              digest='sha256'):
     '''
     Create a Certificate Authority (CA)
 
@@ -316,6 +317,10 @@ def create_ca(ca_name,
         email address for the CA owner, default is 'xyz@pdq.net'
     cacert_path
         absolute path to ca certificates root directory
+    digest
+        The message digest algorithm. Must be a string describing a digest
+        algorithm supported by OpenSSL (by EVP_get_digestbyname, specifically).
+        For example, "md5" or "sha1". Default: 'sha256'
 
     Writes out a CA certificate based upon defined config values. If the file
     already exists, the function just returns assuming the CA certificate
@@ -398,7 +403,7 @@ def create_ca(ca_name,
             False,
             'issuer:always,keyid:always',
             issuer=ca)])
-    ca.sign(key, 'sha1')
+    ca.sign(key, digest)
 
     # alway backup existing keys in case
     keycontent = OpenSSL.crypto.dump_privatekey(OpenSSL.crypto.FILETYPE_PEM,
@@ -446,7 +451,8 @@ def create_csr(ca_name,
                OU=None,
                emailAddress='xyz@pdq.net',
                subjectAltName=None,
-               cacert_path=None):
+               cacert_path=None,
+               digest='sha256'):
     '''
     Create a Certificate Signing Request (CSR) for a
     particular Certificate Authority (CA)
@@ -475,6 +481,10 @@ def create_csr(ca_name,
         this function with this value:  **['DNS:myapp.foo.comm']**
     cacert_path
         absolute path to ca certificates root directory
+    digest
+        The message digest algorithm. Must be a string describing a digest
+        algorithm supported by OpenSSL (by EVP_get_digestbyname, specifically).
+        For example, "md5" or "sha1". Default: 'sha256'
 
     Writes out a Certificate Signing Request (CSR) If the file already
     exists, the function just returns assuming the CSR already exists.
@@ -534,7 +544,7 @@ def create_csr(ca_name,
             OpenSSL.crypto.X509Extension(
                 'subjectAltName', False, ", ".join(subjectAltName))])
     req.set_pubkey(key)
-    req.sign(key, 'sha1')
+    req.sign(key, digest)
 
     # Write private key and request
     priv_key = salt.utils.fopen(
@@ -581,7 +591,8 @@ def create_self_signed_cert(tls_dir='tls',
                             O='SaltStack',
                             OU=None,
                             emailAddress='xyz@pdq.net',
-                            cacert_path=None):
+                            cacert_path=None,
+                            digest='sha256'):
     '''
     Create a Self-Signed Certificate (CERT)
 
@@ -606,6 +617,10 @@ def create_self_signed_cert(tls_dir='tls',
         email address for the request, default is 'xyz@pdq.net'
     cacert_path
         absolute path to ca certificates root directory
+    digest
+        The message digest algorithm. Must be a string describing a digest
+        algorithm supported by OpenSSL (by EVP_get_digestbyname, specifically).
+        For example, "md5" or "sha1". Default: 'sha256'
 
     Writes out a Self-Signed Certificate (CERT). If the file already
     exists, the function just returns.
@@ -668,7 +683,7 @@ def create_self_signed_cert(tls_dir='tls',
     cert.set_serial_number(_new_serial(tls_dir, CN))
     cert.set_issuer(cert.get_subject())
     cert.set_pubkey(key)
-    cert.sign(key, 'sha1')
+    cert.sign(key, digest)
 
     # Write private key and cert
     priv_key = salt.utils.fopen(
@@ -710,7 +725,7 @@ def create_self_signed_cert(tls_dir='tls',
     return ret
 
 
-def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None):
+def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None, digest='sha256'):
     '''
     Create a Certificate (CERT) signed by a
     named Certificate Authority (CA)
@@ -729,6 +744,10 @@ def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None):
     does not, this method does nothing.
     cacert_path
         absolute path to ca certificates root directory
+    digest
+        The message digest algorithm. Must be a string describing a digest
+        algorithm supported by OpenSSL (by EVP_get_digestbyname, specifically).
+        For example, "md5" or "sha1". Default: 'sha256'
 
     If the following values were set::
 
@@ -810,7 +829,7 @@ def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None):
     cert.set_serial_number(_new_serial(ca_name, CN))
     cert.set_issuer(ca_cert.get_subject())
     cert.set_pubkey(req.get_pubkey())
-    cert.sign(ca_key, 'sha1')
+    cert.sign(ca_key, digest)
 
     crt = salt.utils.fopen('{0}/{1}/certs/{2}.crt'.format(
         cert_base_path(),
