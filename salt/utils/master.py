@@ -10,7 +10,10 @@
 # Import python libs
 import os
 import logging
-
+from threading import Thread, Event
+import multiprocessing
+import zmq
+import signal
 # Import salt libs
 import salt.log
 import salt.client
@@ -19,13 +22,8 @@ import salt.utils
 import salt.utils.minions
 import salt.payload
 from salt.exceptions import SaltException
-
 import salt.config
-from threading import Thread, Event
-import multiprocessing
-import zmq
-import os
-import signal
+
 log = logging.getLogger(__name__)
 
 
