@@ -1,9 +1,3 @@
-salt (2014.7.0rc1-concache) unstable; urgency=low
-
-  * HE custom build
-
- -- Volker Schwicking <vs@hosteurope.de>  Fri, 29 Aug 2014 10:41:01 +0200
-
 salt (2014.1.0-1) unstable; urgency=low
 
   * New upstream version
