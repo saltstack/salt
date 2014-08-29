@@ -108,6 +108,8 @@ import re
 
 log = logging.getLogger(__name__)
 
+log = logging.getLogger(__name__)
+
 
 def __virtual__():
     '''

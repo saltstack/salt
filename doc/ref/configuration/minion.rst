@@ -939,6 +939,22 @@ This can be used to control logging levels more specifically. See also
 
 
 
+.. conf_minion:: failhard
+
+``failhard``
+------------
+
+Default: ``False``
+
+Set the global failhard flag, this informs all states to stop running states
+at the moment a single state fails
+
+
+
+.. code-block:: yaml
+
+    failhard: False
+
 Include Configuration
 =====================
 

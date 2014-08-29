@@ -642,7 +642,7 @@ def upgrade(refresh=True, dist_upgrade=True):
     else:
         cmd = ['apt-get', '-q', '-y', '-o', 'DPkg::Options::=--force-confold',
                '-o', 'DPkg::Options::=--force-confdef', 'upgrade']
-    call = __salt__['cmd.run_all'](cmd, python_shell=False, output_loglevel='trace')
+    call = __salt__['cmd.run_all'](cmd, python_shell=False, output_loglevel='trace', env={'DEBIAN_FRONTEND': 'noninteractive'})
     if call['retcode'] != 0:
         ret['result'] = False
         if 'stderr' in call:
