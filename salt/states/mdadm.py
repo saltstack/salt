@@ -89,12 +89,15 @@ def present(name,
     do_assemble = False
     verb = 'created'
     for dev in devices:
-        if do_assemble:
-            verb = 'assembled'
-            break
         # mdadm -E exits with 0 iff all devices given are part of an array
         cmd = 'mdadm -E {0}'.format(dev)
-        do_assemble = __salt__['cmd.run'](cmd)['result']
+        try:
+            __salt__['cmd.run'](cmd)
+            do_assemble = True
+            verb = 'assembled'
+            break
+        except CommandExecutionError as ex:
+            log.debug(ex)
 
     # If running with test use the test_mode with create or assemble
     if __opts__['test']:
