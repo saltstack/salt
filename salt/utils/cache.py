@@ -72,7 +72,6 @@ class CacheCli(object):
         self.cupd_out.setsockopt(zmq.LINGER, 1)
         self.cupd_out.connect('ipc://' + self.cache_upd_sock)
 
-
     def put_cache(self, minions):
         '''
         published the given minions to the ConCache

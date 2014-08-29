@@ -421,6 +421,7 @@ class CacheTimer(Thread):
             if count >= 60:
                 count = 0
 
+
 class ConnectedCache(multiprocessing.Process):
     '''
     Provides access to all minions ids that the master has
