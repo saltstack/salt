@@ -144,7 +144,7 @@ def _get_conn(ret):
     '''
     Return a postgres connection.
     '''
-    _options = _get_options()
+    _options = _get_options(ret)
 
     host = _options.get('host')
     user = _options.get('user')

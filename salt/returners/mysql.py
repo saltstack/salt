@@ -156,7 +156,7 @@ def _get_options(ret):
 
 
 @contextmanager
-def _get_serv(ret, commit=False):
+def _get_serv(ret=None, commit=False):
     '''
     Return a mysql cursor
     '''

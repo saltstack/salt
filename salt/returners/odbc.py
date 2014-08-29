@@ -172,7 +172,7 @@ def _get_options(ret):
     return _options
 
 
-def _get_conn(ret):
+def _get_conn(ret=None):
     '''
     Return a MSSQL connection.
     '''
