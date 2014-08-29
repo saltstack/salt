@@ -335,7 +335,7 @@ class Master(SMaster):
             if hasattr(reqserv, 'reactor'):
                 clean_proc(reqserv.reactor)
             if hasattr(reqserv, 'con_cache'):
-                clean_proc(reqserv.fscache)
+                clean_proc(reqserv.con_cache)
             for proc in reqserv.work_procs:
                 clean_proc(proc)
             raise MasterExit
