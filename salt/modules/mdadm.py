@@ -9,7 +9,7 @@ import logging
 
 # Import salt libs
 import salt.utils
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Set up logger
 log = logging.getLogger(__name__)
@@ -251,8 +251,11 @@ def save_config():
     else:
         cfg_file = '/etc/mdadm.conf'
 
-    if not __salt__['file.search'](cfg_file, scan):
-        __salt__['file.append'](cfg_file, scan)
+    try:
+        if not __salt__['file.search'](cfg_file, scan):
+            __salt__['file.append'](cfg_file, scan)
+    except SaltInvocationError: # File is missing
+        __salt__['file.write'](cfg_file, scan)
 
     return __salt__['cmd.run']('update-initramfs -u')
 
