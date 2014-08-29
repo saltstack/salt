@@ -1316,6 +1316,7 @@ class ClearFuncs(object):
         self.wheel_ = salt.wheel.Wheel(opts)
         self.masterapi = salt.daemons.masterapi.LocalFuncs(opts, key)
         self.auto_key = salt.daemons.masterapi.AutoKey(opts)
+        self.cache_cli = CacheCli(self.opts)
 
     def _auth(self, load):
         '''
@@ -1551,6 +1552,10 @@ class ClearFuncs(object):
             with salt.utils.fopen(pubfn, 'w+') as fp_:
                 fp_.write(load['pub'])
         pub = None
+
+        # the con_cache is enabled, send the minion id to the cache
+        if self.cache_cli:
+            self.cache_cli.put_cache([load['id']])
 
         # The key payload may sometimes be corrupt when using auto-accept
         # and an empty request comes in
