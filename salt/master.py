@@ -47,7 +47,8 @@ from salt.utils.debug import enable_sigusr1_handler, enable_sigusr2_handler, ins
 from salt.exceptions import MasterExit
 from salt.utils.event import tagify
 import binascii
-from salt.utils.master import Conimport salt.caches
+from salt.utils.master import ConnectedCache
+from salt.utils.cache import CacheCli
 
 # Import halite libs
 try:
@@ -333,7 +334,7 @@ class Master(SMaster):
                 clean_proc(reqserv.halite)
             if hasattr(reqserv, 'reactor'):
                 clean_proc(reqserv.reactor)
-            if hasattr(reqserv, 'fscache'):
+            if hasattr(reqserv, 'con_cache'):
                 clean_proc(reqserv.fscache)
             for proc in reqserv.work_procs:
                 clean_proc(proc)
@@ -554,8 +555,12 @@ class ReqServer(object):
         '''
         start all available caches if configured
         '''
-        if self.opts['fs_cache']:
-            log.debug('Start Caches')
+        if self.opts['con_cache']:
+            log.debug('Starting ConCache')
+            self.con_cache = ConnectedCache(self.opts)
+            self.con_cache.start()
+        else:
+            return False
 
     def start_halite(self):
         '''
