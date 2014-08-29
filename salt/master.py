@@ -1344,7 +1344,12 @@ class ClearFuncs(object):
 
         # 0 is default which should be 'unlimited'
         if self.opts['max_minions'] > 0:
-            minions = self.cache_cli.get_cached()
+            # use the ConCache if enabled, else use the minion utils
+            if self.cache_cli:
+                minions = self.cache_cli.get_cached()
+            else:
+                minions = self.ckminions.connected_ids()
+
             if not len(minions) < self.opts['max_minions']:
                 # we reject new minions, minions that are already
                 # connected must be allowed for the mine, highstate, etc.
