@@ -78,7 +78,8 @@ def add(name,
         roomnumber='',
         workphone='',
         homephone='',
-        createhome=True):
+        createhome=True,
+        loginclass=None):
     '''
     Add a user to the minion
 
@@ -145,6 +146,10 @@ def add(name,
         and __grains__['kernel'] != 'NetBSD'
         and __grains__['kernel'] != 'OpenBSD'):
         cmd.append('-r')
+
+    if __grains__['kernel'] == 'OpenBSD':
+        if loginclass is not None:
+            cmd.extend(['-L', loginclass])
 
     cmd.append(name)
 
@@ -473,6 +478,29 @@ def chhomephone(name, homephone):
     return False
 
 
+def chloginclass(name, loginclass):
+    '''
+    Change the default login class of the user
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' user.chloginclass foo staff
+    '''
+    if __grains__['kernel'] != 'OpenBSD':
+        return False
+    pre_info = get_loginclass(name)
+    if loginclass == pre_info['loginclass']:
+        return True
+    cmd = 'usermod -L {0} {1}'.format(loginclass, name)
+    __salt__['cmd.run'](cmd)
+    post_info = get_loginclass(name)
+    if post_info['loginclass'] != pre_info['loginclass']:
+        return post_info['loginclass'] == loginclass
+    return False
+
+
 def info(name):
     '''
     Return user information
@@ -489,6 +517,29 @@ def info(name):
         return {}
     else:
         return _format_info(data)
+
+
+def get_loginclass(name):
+    '''
+    Get the login class of the user
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' user.get_loginclass foo
+    '''
+    if __grains__['kernel'] != 'OpenBSD':
+        return False
+    info = __salt__['cmd.run_stdout']('userinfo {0}'.format(name),
+        output_loglevel='debug')
+    for line in info.splitlines():
+        if line.startswith("class"):
+            loginclass = line.split()
+    if len(loginclass) == 2:
+        return {'loginclass': loginclass[1]}
+    else:
+        return {'loginclass': '""'}
 
 
 def _format_info(data):
