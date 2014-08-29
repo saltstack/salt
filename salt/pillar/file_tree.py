@@ -52,6 +52,41 @@ will result in the following pillar tree for minion with ID "test-host"::
 
                 file2.txt:
                     Contents of file #2.
+
+To fill pillar data for minion in a node group, file_tree recursively iterates over
+``root_dir``/nodegroups/``nodegroup`` (where ``nodegroup`` is a minion node group), and constructs
+the same directory tree with contents of all the files inside the pillar tree.
+**IMPORTANT**: The host data take precedence over the node group data
+
+For example, the following ``root_dir`` tree::
+
+    ./nodegroups/
+    ./nodegroups/test-group/
+    ./nodegroups/test-group/files/
+    ./nodegroups/test-group/files/testdir/
+    ./nodegroups/test-group/files/testdir/file1.txt
+    ./nodegroups/test-group/files/testdir/file2.txt
+    ./nodegroups/test-group/files/another-testdir/
+    ./nodegroups/test-group/files/another-testdir/symlink-to-file1.txt
+
+will result in the following pillar tree for minion in the node group "test-group"::
+
+    test-host:
+        ----------
+        files:
+            ----------
+            another-testdir:
+                ----------
+                symlink-to-file1.txt:
+                    Contents of file #1.
+
+            testdir:
+                ----------
+                file1.txt:
+                    Contents of file #1.
+
+                file2.txt:
+                    Contents of file #2.
 '''
 # TODO: Add git support.
 
@@ -59,6 +94,10 @@ will result in the following pillar tree for minion with ID "test-host"::
 import logging
 import os
 import os.path
+
+#Import salt libs
+import salt.utils
+import salt.utils.minions
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -115,7 +154,7 @@ def _construct_pillar(top_dir, follow_dir_links):
     return pillar
 
 
-def ext_pillar(minion_id, pillar, root_dir=None, follow_dir_links=False):
+def ext_pillar(minion_id, pillar, root_dir=None, follow_dir_links=False, debug=False):
     '''
     Find pillar data for specified ID.
     '''
@@ -129,12 +168,34 @@ def ext_pillar(minion_id, pillar, root_dir=None, follow_dir_links=False):
         log.error('"%s" does not exist or not a directory', root_dir)
         return {}
 
+    tmp_pillar = {}
+    nodegroups_dir = os.path.join(root_dir,'nodegroups')
+    if os.path.exists(nodegroups_dir) and len(__opts__['nodegroups']) > 0:
+        master_nodegroups = __opts__['nodegroups']
+        ext_pillar_dirs = os.listdir(nodegroups_dir)
+        if len(ext_pillar_dirs) > 0:
+            for nodegroup in ext_pillar_dirs:
+                if os.path.isdir(nodegroups_dir):
+                    ckminions = salt.utils.minions.CkMinions(__opts__)
+                    match = ckminions.check_minions(master_nodegroups[nodegroup], 'compound')
+                    if minion_id in match:
+                        nodegroup_dir = os.path.join(nodegroups_dir,str(nodegroup))
+                        tmp_pillar.update(_construct_pillar(nodegroup_dir, follow_dir_links))
+        else:
+            if debug is True:
+                log.debug('File tree - No nodegroups found in file tree directory ext_pillar_dirs, skipping...')
+    else:
+        if debug is True:
+            log.debug('File tree - No nodegroups found in master configuration, skipping nodegroups pillar function...')
+
     host_dir = os.path.join(root_dir, 'hosts', minion_id)
     if not os.path.exists(host_dir):
         # No data for host with this ID.
-        return {}
+        return tmp_pillar
+
     if not os.path.isdir(host_dir):
         log.error('"%s" exists, but not a directory', host_dir)
-        return {}
+        return tmp_pillar
 
-    return _construct_pillar(host_dir, follow_dir_links)
+    tmp_pillar.update(_construct_pillar(host_dir, follow_dir_links))
+    return tmp_pillar
