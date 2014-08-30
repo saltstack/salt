@@ -94,6 +94,7 @@ will result in the following pillar tree for minion in the node group "test-grou
 import logging
 import os
 import os.path
+from copy import deepcopy
 
 #Import salt libs
 import salt.utils
@@ -108,6 +109,21 @@ def _on_walk_error(err):
     Log os.walk() error.
     '''
     log.error('"%s": %s', err.filename, err.strerror)
+
+# Thanks to Ross McFarland for the dict_merge function (Source: https://www.xormedia.com/recursively-merge-dictionaries-in-python/)
+def _dict_merge(a, b):
+    '''recursively merges dict's. not just simple a['key'] = b['key'], if
+    both a and bhave a key who's value is a dict then dict_merge is called
+    on both values and the result stored in the returned dictionary.'''
+    if not isinstance(b, dict):
+        return b
+    result = deepcopy(a)
+    for k, v in b.iteritems():
+        if k in result and isinstance(result[k], dict):
+                result[k] = _dict_merge(result[k], v)
+        else:
+            result[k] = deepcopy(v)
+    return result
 
 
 def _construct_pillar(top_dir, follow_dir_links):
@@ -168,7 +184,7 @@ def ext_pillar(minion_id, pillar, root_dir=None, follow_dir_links=False, debug=F
         log.error('"%s" does not exist or not a directory', root_dir)
         return {}
 
-    tmp_pillar = {}
+    nodegroup_pillar = {}
     nodegroups_dir = os.path.join(root_dir,'nodegroups')
     if os.path.exists(nodegroups_dir) and len(__opts__['nodegroups']) > 0:
         master_nodegroups = __opts__['nodegroups']
@@ -180,7 +196,7 @@ def ext_pillar(minion_id, pillar, root_dir=None, follow_dir_links=False, debug=F
                     match = ckminions.check_minions(master_nodegroups[nodegroup], 'compound')
                     if minion_id in match:
                         nodegroup_dir = os.path.join(nodegroups_dir,str(nodegroup))
-                        tmp_pillar.update(_construct_pillar(nodegroup_dir, follow_dir_links))
+                        nodegroup_pillar.update(_construct_pillar(nodegroup_dir, follow_dir_links))
         else:
             if debug is True:
                 log.debug('File tree - No nodegroups found in file tree directory ext_pillar_dirs, skipping...')
@@ -191,11 +207,11 @@ def ext_pillar(minion_id, pillar, root_dir=None, follow_dir_links=False, debug=F
     host_dir = os.path.join(root_dir, 'hosts', minion_id)
     if not os.path.exists(host_dir):
         # No data for host with this ID.
-        return tmp_pillar
+        return nodegroup_pillar
 
     if not os.path.isdir(host_dir):
         log.error('"%s" exists, but not a directory', host_dir)
-        return tmp_pillar
+        return nodegroup_pillar
 
-    tmp_pillar.update(_construct_pillar(host_dir, follow_dir_links))
-    return tmp_pillar
+    host_pillar = _construct_pillar(host_dir, follow_dir_links)
+    return _dict_merge(nodegroup_pillar, host_pillar)
