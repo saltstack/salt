@@ -645,7 +645,7 @@ def config(name,
     _build_config_tree(name, config)
     configs = _render_configuration()
 
-    if __opts__['test']:
+    if __opts__.get('test', False):
         comment = "State syslog_ng will write '{0}' into {1}".format(configs, __SYSLOG_NG_CONFIG_FILE)
         return _format_state_result(name, result=None, comment=comment)
 
@@ -977,7 +977,7 @@ def stop(name=None):
                                     result=False,
                                     comment='Syslog-ng is not running')
 
-    if __opts__['test']:
+    if __opts__.get('test', False):
         comment = "Syslog_ng state module will kill {0} pids"
         return _format_state_result(name, result=None, comment=comment)
 
@@ -1044,7 +1044,7 @@ def start(name=None,
         syslog_ng_binary = os.path.join(__SYSLOG_NG_BINARY_PATH, 'syslog-ng')
         command = syslog_ng_binary + ' ' + cli_params
 
-        if __opts__['test']:
+        if __opts__.get('test', False):
             comment = "Syslog_ng state module will start {0}".format(command)
             return _format_state_result(name, result=None, comment=comment)
 
@@ -1052,7 +1052,7 @@ def start(name=None,
     else:
         command = 'syslog-ng ' + cli_params
 
-        if __opts__['test']:
+        if __opts__.get('test', False):
             comment = "Syslog_ng state module will start {0}".format(command)
             return _format_state_result(name, result=None, comment=comment)
 
