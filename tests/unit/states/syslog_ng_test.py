@@ -281,8 +281,7 @@ GIVEN_CONFIG = {
                   );
                };
 """
-    ) 
-
+    )
 }
 
 _SALT_VAR_WITH_MODULE_METHODS = {
