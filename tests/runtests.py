@@ -100,12 +100,20 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             help='Run shell tests'
         )
         self.test_selection_group.add_option(
-            '-r',
+            '-R',
             '--runner',
             dest='runner',
             default=False,
             action='store_true',
-            help='Run runner tests'
+            help='Run salt/runner.py tests'
+        )
+        self.test_selection_group.add_option(
+            '-r',
+            '--runners',
+            dest='runners',
+            default=False,
+            action='store_true',
+            help='Run salt/runners/*.py tests'
         )
         self.test_selection_group.add_option(
             '-l',
@@ -131,7 +139,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             help='Run Fileserver tests'
         )
         self.test_selection_group.add_option(
-            '-W',
+            '-w',
             '--wheel',
             action='store_true',
             default=False,
@@ -184,9 +192,10 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         if self.options.coverage and any((
                 self.options.module, self.options.cli, self.options.client,
                 self.options.shell, self.options.unit, self.options.state,
-                self.options.runner, self.options.loader, self.options.name,
-                self.options.outputter, self.options.fileserver, self.options.wheel,
-                os.geteuid() != 0, not self.options.run_destructive)):
+                self.options.runner, self.options.runners, self.options.loader,
+                self.options.name, self.options.outputter, self.options.fileserver,
+                self.options.wheel, os.geteuid() != 0,
+                not self.options.run_destructive)):
             self.error(
                 'No sense in generating the tests coverage report when '
                 'not running the full test suite, including the '
@@ -197,15 +206,17 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         # Set test suite defaults if no specific suite options are provided
         if not any((self.options.module, self.options.client, self.options.cli,
                     self.options.shell, self.options.unit, self.options.state,
-                    self.options.runner, self.options.loader, self.options.name,
-                    self.options.outputter, self.options.cloud_provider_tests,
-                    self.options.fileserver, self.options.wheel, self.options.api)):
+                    self.options.runner, self.options.runners, self.options.loader,
+                    self.options.name, self.options.outputter,
+                    self.options.cloud_provider_tests, self.options.fileserver,
+                    self.options.wheel, self.options.api)):
             self.options.module = True
             self.options.cli = True
             self.options.client = True
             self.options.shell = True
             self.options.unit = True
             self.options.runner = True
+            self.options.runners = True
             self.options.state = True
             self.options.loader = True
             self.options.outputter = True
@@ -249,6 +260,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
 
         if (self.options.unit or named_unit_test) and not \
                 (self.options.runner or
+                 self.options.runners or
                  self.options.state or
                  self.options.module or
                  self.options.cli or
@@ -304,7 +316,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
 
         status = []
         if not any([self.options.cli, self.options.client, self.options.module,
-                    self.options.runner, self.options.shell,
+                    self.options.runner, self.options.runners, self.options.shell,
                     self.options.state, self.options.loader,
                     self.options.outputter, self.options.name,
                     self.options.cloud_provider_tests,
@@ -322,7 +334,9 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             if self.options.loader:
                 status.append(self.run_integration_suite('loader', 'Loader'))
             if self.options.runner:
-                status.append(self.run_integration_suite('runners', 'Runner'))
+                status.append(self.run_integration_suite('runner', 'Runner'))
+            if self.options.runners:
+                status.append(self.run_integration_suite('runners', 'Runners'))
             if self.options.module:
                 status.append(self.run_integration_suite('modules', 'Module'))
             if self.options.state:
