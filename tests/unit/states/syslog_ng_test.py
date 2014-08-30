@@ -7,7 +7,6 @@ import yaml
 import re
 import tempfile
 import os
-import pdb
 
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
