@@ -50,7 +50,10 @@ def available(name):
 
         salt '*' service.available sshd
     '''
-    return name in get_all()
+    cmd = '{0} status {1}'.format(_cmd(), name)
+    if __salt__['cmd.retcode'](cmd) == 2:
+        return False
+    return True
 
 
 def missing(name):
@@ -64,7 +67,7 @@ def missing(name):
 
         salt '*' service.missing sshd
     '''
-    return name not in get_all()
+    return not available(name)
 
 
 def get_all():
