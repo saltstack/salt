@@ -435,7 +435,6 @@ def _parse_typed_parameter_typed_value(values):
     '''
     Creates Arguments in a TypedParametervalue.
     '''
-    global _current_parameter_value
     type, value = _expand_one_key_dictionary(values)
 
     _current_parameter_value.type = type
@@ -452,7 +451,7 @@ def _parse_typed_parameter(param):
     '''
     Parses a TypedParameter and fills it with values.
     '''
-    global _current_parameter, _current_parameter_value
+    global _current_parameter_value
     type, value = _expand_one_key_dictionary(param)
     _current_parameter.type = type
 
@@ -474,7 +473,7 @@ def _create_and_add_parameters(params):
     '''
     Parses the configuration and creates Parameter instances.
     '''
-    global _current_parameter, _current_option
+    global _current_parameter
     if _is_simple_type(params):
         _current_parameter = SimpleParameter(params)
         _current_option.add_parameter(_current_parameter)
@@ -493,7 +492,7 @@ def _create_and_add_option(option):
     '''
     Parses the configuration and creates an Option instance.
     '''
-    global _current_option, _current_statement
+    global _current_option
 
     _current_option = Option()
     type, params = _expand_one_key_dictionary(option)
@@ -561,7 +560,6 @@ def _add_junction(item):
     '''
     Adds a junction to the _current_statement.
     '''
-    global _current_statement
     type, channels = _expand_one_key_dictionary(item)
     junction = UnnamedStatement(type='junction')
     for ch in channels:
@@ -580,7 +578,6 @@ def _parse_log_statement(options):
     '''
     Parses a log path.
     '''
-    global _current_statement
     for i in options:
         if _is_reference(i):
             _add_reference(i, _current_statement)
@@ -616,7 +613,6 @@ def _render_configuration():
     '''
     Renders the configuration tree into syslog-ng's configuration syntax.
     '''
-    global _current_statement, _INDENT
     text_repr = _current_statement.build()
     _INDENT = ''
     return text_repr
@@ -673,9 +669,9 @@ def set_binary_path(name):
     '''
     global __SYSLOG_NG_BINARY_PATH
     old = __SYSLOG_NG_BINARY_PATH
-    _SYSLOG_NG_BINARY_PATH = name
+    __SYSLOG_NG_BINARY_PATH = name
     changes = _format_changes(old, name)
-    return _format_state_result(name, result=True,changes=changes)
+    return _format_state_result(name, result=True, changes=changes)
 
 
 def set_config_file(name):
