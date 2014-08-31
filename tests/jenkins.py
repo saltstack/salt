@@ -428,7 +428,7 @@ def run(opts):
         except ValueError:
             print('Failed to load any JSON from {0!r}'.format(stdout.strip()))
 
-    if opts.cloud_only is True:
+    if opts.cloud_only:
         # Run Cloud Provider tests preparation SLS
         time.sleep(3)
         cmd = (
@@ -476,7 +476,7 @@ def run(opts):
             delete_vm(opts)
         sys.exit(retcode)
 
-    if opts.cloud_only is True:
+    if opts.cloud_only:
         time.sleep(3)
         # Run Cloud Provider tests pillar preparation SLS
         cmd = (
