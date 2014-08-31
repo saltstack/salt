@@ -480,7 +480,7 @@ def run(opts):
         time.sleep(3)
         # Run Cloud Provider tests pillar preparation SLS
         cmd = (
-            'salt -t 600 {target} state.sls {cloud_config_sls} pillar="{pillar}" '
+            'salt -t 600 {target} state.sls {cloud_prep_sls} pillar="{pillar}" '
             '--no-color'.format(
                 target=build_minion_target(opts, vm_name),
                 cloud_prep_sls='cloud-test-configs',
