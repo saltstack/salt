@@ -121,7 +121,7 @@ def resize2fs(device):
         salt '*' blockdev.resize2fs /dev/sda1
     '''
     ret = {}
-    cmd='resize2fs {0}'.format(device)
+    cmd = 'resize2fs {0}'.format(device)
     try:
         out = __salt__['cmd.run_all'](cmd)
     except subprocess.CalledProcessError as err:
