@@ -340,3 +340,5 @@ def lvremove(lvname, vgname):
     cmd = 'lvremove -f {0}/{1}'.format(vgname, lvname)
     out = __salt__['cmd.run'](cmd)
     return out.strip()
+
+
