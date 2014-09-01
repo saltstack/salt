@@ -181,6 +181,7 @@ merged below a single key:
 And a ``packages.sls`` file like:
 
 .. code-block:: yaml
+
     bind:
       package-name: bind9
       version: 9.9.5
@@ -188,6 +189,7 @@ And a ``packages.sls`` file like:
 And a ``services.sls`` file like:
 
 .. code-block:: yaml
+
     bind:
       port: 53
       listen-on: any
@@ -195,6 +197,7 @@ And a ``services.sls`` file like:
 The resulting pillar will be as follows:
 
 .. code-block:: bash
+
     $ salt-call pillar.get bind
     local:
         ----------
