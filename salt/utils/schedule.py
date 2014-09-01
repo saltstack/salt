@@ -624,7 +624,7 @@ class Schedule(object):
                         if data['_when_run']:
                             data['_when_run'] = False
                             run = True
-                if 'cron' in data:
+                elif 'cron' in data:
                     if seconds == 1:
                         run = True
                 else:
@@ -644,7 +644,7 @@ class Schedule(object):
                         if data['_when_run']:
                             data['_when_run'] = False
                             run = True
-                if 'cron' in data:
+                elif 'cron' in data:
                     if seconds == 1:
                         run = True
                 else:

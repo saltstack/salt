@@ -1035,7 +1035,7 @@ def os_data():
 
     # Load additional OS family grains
     if grains['os_family'] == "RedHat":
-        grains['osmajorrelease'] = grains['osrelease'].split('.', 1)
+        grains['osmajorrelease'] = grains['osrelease'].split('.', 1)[0]
 
         grains['osfinger'] = '{os}-{ver}'.format(
             os=grains['osfullname'],
