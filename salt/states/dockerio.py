@@ -342,9 +342,9 @@ def loaded(name, source=None, source_hash='', force=False):
 
             .. note::
 
-            See first the documentation for salt file.managed
-            <http://docs.saltstack.com/en/latest/ref/states/all/_
-            salt.states.file.html#salt.states.file.managed>
+                See first the documentation for salt file.managed
+                <http://docs.saltstack.com/en/latest/ref/states/all/_
+                salt.states.file.html#salt.states.file.managed>
 
     force
         Load even if the image exists
