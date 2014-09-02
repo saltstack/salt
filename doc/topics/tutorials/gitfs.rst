@@ -560,7 +560,7 @@ manpage for ``ssh_config``. Here's an example entry which can be added to the
 The ``Host`` parameter should be a hostname (or hostname glob) that matches the
 domain name of the git repository.
 
-It is also necessary to make :ref:`add the SSH host key to the known_hosts file
+It is also necessary to :ref:`add the SSH host key to the known_hosts file
 <gitfs-ssh-fingerprint>`. The exception to this would be if strict host key
 checking is disabled, which can be done by adding ``StrictHostKeyChecking no``
 to the entry in ``~/.ssh/config``
