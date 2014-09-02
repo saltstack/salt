@@ -402,6 +402,7 @@ def _memdata(osdata):
             grains['mem_total'] = int(tot_bytes / (1024 ** 2))
     return grains
 
+
 def _windows_virtual(osdata):
     '''
     Returns what type of virtual hardware is under the hood, kvm or physical
@@ -413,29 +414,29 @@ def _windows_virtual(osdata):
     if osdata['kernel'] != 'Windows':
         return grains
 
-    if 'QEMU' in osdata.get('manufacturer',''):
+    if 'QEMU' in osdata.get('manufacturer', ''):
         # FIXME: Make this detect between kvm or qemu
         grains['virtual'] = 'kvm'
-    if 'Bochs' in osdata.get('manufacturer',''):
+    if 'Bochs' in osdata.get('manufacturer', ''):
         grains['virtual'] = 'kvm'
     # Product Name: (oVirt) www.ovirt.org
     # Red Hat Community virtualization Project based on kvm
-    elif 'oVirt' in osdata.get('productname',''):
+    elif 'oVirt' in osdata.get('productname', ''):
         grains['virtual'] = 'kvm'
         grains['virtual_subtype'] = 'oVirt'
     # Red Hat Enterprise Virtualization
-    elif 'RHEV Hypervisor' in osdata.get('productname',''):
+    elif 'RHEV Hypervisor' in osdata.get('productname', ''):
         grains['virtual'] = 'kvm'
         grains['virtual_subtype'] = 'rhev'
     # Product Name: VirtualBox
-    elif 'VirtualBox' in osdata.get('productname',''):
+    elif 'VirtualBox' in osdata.get('productname', ''):
         grains['virtual'] = 'VirtualBox'
     # Product Name: VMware Virtual Platform
-    elif 'VMware Virtual Platform' in osdata.get('productname',''):
+    elif 'VMware Virtual Platform' in osdata.get('productname', ''):
         grains['virtual'] = 'VMware'
     # Manufacturer: Microsoft Corporation
     # Product Name: Virtual Machine
-    elif 'Microsoft' in osdata.get('manufacturer','') and \
+    elif 'Microsoft' in osdata.get('manufacturer', '') and \
          'Virtual Machine' in osdata.get('productname', ''):
         grains['virtual'] = 'VirtualPC'
     # Manufacturer: Parallels Software International Inc.
@@ -445,6 +446,7 @@ def _windows_virtual(osdata):
     if HAS_WMI:
         pass
     return grains
+
 
 def _virtual(osdata):
     '''
