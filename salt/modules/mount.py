@@ -127,7 +127,7 @@ def _active_mounts_openbsd(ret):
         ret[comps[3]] = {'device': comps[0],
                          'fstype': comps[5],
                          'opts': parens[1].split(", "),
-                         'major': str(nod[4].replace(",", "")),
+                         'major': str(nod[4].strip(",")),
                          'minor': str(nod[5]),
                          'device_uuid': parens[0]}
     return ret
