@@ -954,8 +954,6 @@ Walkthrough <gitfs-per-remote-config>`.
 
 .. versionadded:: 2014.7.0
 
-Default: ``gitpython``
-
 Specify the provider to be used for gitfs. More information can be found in the
 :ref:`Gitfs Walkthrough <gitfs-dependencies>`.
 
