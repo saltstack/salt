@@ -1093,6 +1093,8 @@ class Minion(MinionBase):
             ret['master_id'] = data['master_id']
         minion_instance._return_pub(ret)
         if data['ret']:
+            if 'ret_config' in data:
+                ret['ret_config'] = data['ret_config']
             ret['id'] = opts['id']
             for returner in set(data['ret'].split(',')):
                 try:
@@ -1145,6 +1147,8 @@ class Minion(MinionBase):
             ret['fun_args'] = data['arg']
         minion_instance._return_pub(ret)
         if data['ret']:
+            if 'ret_config' in data:
+                ret['ret_config'] = data['ret_config']
             for returner in set(data['ret'].split(',')):
                 ret['id'] = opts['id']
                 try:

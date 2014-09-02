@@ -1525,6 +1525,15 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'systems, databases or applications.')
         )
         self.add_option(
+            '--return_config',
+            default='',
+            metavar='RETURNER_CONF',
+            help=('Set an alternative return method. By default salt will '
+                  'send the return data from the command back to the master, '
+                  'but the return data can be redirected into any number of '
+                  'systems, databases or applications.')
+        )
+        self.add_option(
             '-d', '--doc', '--documentation',
             dest='doc',
             default=False,

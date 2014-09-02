@@ -2259,6 +2259,10 @@ class ClearFuncs(object):
         if 'to' in clear_load:
             load['to'] = clear_load['to']
 
+        if 'kwargs' in clear_load:
+            if 'ret_config' in clear_load['kwargs']:
+                load['ret_config'] = clear_load['kwargs'].get('ret_config')
+
         if 'user' in clear_load:
             log.info(
                 'User {user} Published command {fun} with jid {jid}'.format(

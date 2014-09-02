@@ -137,6 +137,9 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             if getattr(self.options, 'return'):
                 kwargs['ret'] = getattr(self.options, 'return')
 
+            if getattr(self.options, 'return_config'):
+                kwargs['ret_config'] = getattr(self.options, 'return_config')
+
             # If using eauth and a token hasn't already been loaded into
             # kwargs, prompt the user to enter auth credentials
             if 'token' not in kwargs and self.options.eauth:
