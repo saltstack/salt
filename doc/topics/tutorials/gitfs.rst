@@ -57,9 +57,9 @@ so the following would be used to install it:
 GitPython
 ---------
 
-The gitfs backend requires GitPython_, version 0.3.0 or newer. For RHEL-based
-Linux distros, a compatible version is available in EPEL, and can be easily
-installed on the master using yum:
+GitPython_ 0.3.0 or newer is required to use GitPython for gitfs. For
+RHEL-based Linux distros, a compatible version is available in EPEL, and can be
+easily installed on the master using yum:
 
 .. code-block:: bash
 
