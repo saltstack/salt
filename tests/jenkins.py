@@ -57,7 +57,8 @@ def build_pillar_data(options):
     '''
     Build a YAML formatted string to properly pass pillar data
     '''
-    pillar = {'test_transport': options.test_transport}
+    pillar = {'test_transport': options.test_transport,
+              'cloud_only': options.cloud_only}
     if options.test_git_commit is not None:
         pillar['test_git_commit'] = options.test_git_commit
     if options.test_git_url is not None:
@@ -427,16 +428,28 @@ def run(opts):
         except ValueError:
             print('Failed to load any JSON from {0!r}'.format(stdout.strip()))
 
-    # Run preparation SLS
-    time.sleep(3)
-    cmd = (
-        'salt -t 1800 {target} state.sls {prep_sls} pillar="{pillar}" '
-        '--no-color'.format(
-            target=build_minion_target(opts, vm_name),
-            prep_sls=opts.prep_sls,
-            pillar=build_pillar_data(opts),
+    if opts.cloud_only:
+        # Run Cloud Provider tests preparation SLS
+        time.sleep(3)
+        cmd = (
+            'salt -t 900 {target} state.sls {cloud_prep_sls} pillar="{pillar}" '
+            '--no-color'.format(
+                target=build_minion_target(opts, vm_name),
+                cloud_prep_sls='cloud-only',
+                pillar=build_pillar_data(opts),
+            )
         )
-    )
+    else:
+        # Run standard preparation SLS
+        time.sleep(3)
+        cmd = (
+            'salt -t 1800 {target} state.sls {prep_sls} pillar="{pillar}" '
+            '--no-color'.format(
+                target=build_minion_target(opts, vm_name),
+                prep_sls=opts.prep_sls,
+                pillar=build_pillar_data(opts),
+            )
+        )
     print('Running CMD: {0}'.format(cmd))
     sys.stdout.flush()
 
@@ -462,6 +475,44 @@ def run(opts):
         if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
             delete_vm(opts)
         sys.exit(retcode)
+
+    if opts.cloud_only:
+        time.sleep(3)
+        # Run Cloud Provider tests pillar preparation SLS
+        cmd = (
+            'salt -t 600 {target} state.sls {cloud_prep_sls} pillar="{pillar}" '
+            '--no-color'.format(
+                target=build_minion_target(opts, vm_name),
+                cloud_prep_sls='cloud-test-configs',
+                pillar=build_pillar_data(opts),
+            )
+        )
+        print('Running CMD: {0}'.format(cmd))
+        sys.stdout.flush()
+
+        proc = subprocess.Popen(
+            cmd,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+        stdout, stderr = proc.communicate()
+
+        if stdout:
+            # DO NOT print the state return here!
+            print('Cloud configuration files provisioned via pillar.')
+        sys.stdout.flush()
+        if stderr:
+            print(stderr)
+        sys.stderr.flush()
+
+        retcode = proc.returncode
+        if retcode != 0:
+            print('Failed to execute the preparation SLS file. Exit code: {0}'.format(retcode))
+            sys.stdout.flush()
+            if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
+                delete_vm(opts)
+            sys.exit(retcode)
 
     if opts.prep_sls_2 is not None:
         time.sleep(3)
@@ -768,6 +819,12 @@ def parse():
         action='append',
         default=[],
         help='Match minions using compound matchers, the minion ID, plus the passed grain.'
+    )
+    parser.add_option(
+        '--cloud-only',
+        default=False,
+        action='store_true',
+        help='Run the cloud provider tests only.'
     )
 
     options, args = parser.parse_args()

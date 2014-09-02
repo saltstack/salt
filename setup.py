@@ -736,24 +736,27 @@ if WITH_SETUPTOOLS:
         'https://github.com/saltstack/salt-testing/tarball/develop#egg=SaltTesting'
     ]
     SETUP_KWARGS['tests_require'] = ['SaltTesting']
-else:
-    SETUP_KWARGS['scripts'] = ['scripts/salt-call',
-                               'scripts/salt-cp',
-                               'scripts/salt-minion',
-                               'scripts/salt-unity',
-                               ]
 
-    if IS_WINDOWS_PLATFORM is False:
-        SETUP_KWARGS['scripts'].extend([
-            'scripts/salt',
-            'scripts/salt-api',
-            'scripts/salt-cloud',
-            'scripts/salt-key',
-            'scripts/salt-master',
-            'scripts/salt-run',
-            'scripts/salt-ssh',
-            'scripts/salt-syndic',
-        ])
+# When WITH_SETUPTOOLS is True, esky builds would fail to include the scripts,
+# and, if WITH_SETUPTOOLS is True, having scripts and console_scripts defined
+# does not, apparently, break the build, so, let's have both
+SETUP_KWARGS['scripts'] = ['scripts/salt-call',
+                            'scripts/salt-cp',
+                            'scripts/salt-minion',
+                            'scripts/salt-unity',
+                            ]
+
+if IS_WINDOWS_PLATFORM is False:
+    SETUP_KWARGS['scripts'].extend([
+        'scripts/salt',
+        'scripts/salt-api',
+        'scripts/salt-cloud',
+        'scripts/salt-key',
+        'scripts/salt-master',
+        'scripts/salt-run',
+        'scripts/salt-ssh',
+        'scripts/salt-syndic',
+    ])
 
 if __name__ == '__main__':
     setup(**SETUP_KWARGS)

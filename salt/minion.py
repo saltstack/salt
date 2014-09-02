@@ -570,13 +570,22 @@ class Minion(MinionBase):
         self._running = None
 
         # Warn if ZMQ < 3.2
-        if HAS_ZMQ and (not(hasattr(zmq, 'zmq_version_info')) or
-                        zmq.zmq_version_info() < (3, 2)):
-            # PyZMQ 2.1.9 does not have zmq_version_info
-            log.warning('You have a version of ZMQ less than ZMQ 3.2! There '
-                        'are known connection keep-alive issues with ZMQ < '
-                        '3.2 which may result in loss of contact with '
-                        'minions. Please upgrade your ZMQ!')
+        if HAS_ZMQ:
+            try:
+                zmq_version_info = zmq.zmq_version_info()
+            except AttributeError:
+                # PyZMQ <= 2.1.9 does not have zmq_version_info, fall back to
+                # using zmq.zmq_version() and build a version info tuple.
+                zmq_version_info = tuple(
+                    [int(x) for x in zmq.zmq_version().split('.')]
+                )
+            if zmq_version_info < (3, 2):
+                log.warning(
+                    'You have a version of ZMQ less than ZMQ 3.2! There are '
+                    'known connection keep-alive issues with ZMQ < 3.2 which '
+                    'may result in loss of contact with minions. Please '
+                    'upgrade your ZMQ!'
+                )
         # Late setup the of the opts grains, so we can log from the grains
         # module
         opts['grains'] = salt.loader.grains(opts)
@@ -2554,13 +2563,22 @@ class ProxyMinion(Minion):
 
         self._running = None
         # Warn if ZMQ < 3.2
-        if HAS_ZMQ and (not(hasattr(zmq, 'zmq_version_info')) or
-                        zmq.zmq_version_info() < (3, 2)):
-            # PyZMQ 2.1.9 does not have zmq_version_info
-            log.warning('You have a version of ZMQ less than ZMQ 3.2! There '
-                        'are known connection keep-alive issues with ZMQ < '
-                        '3.2 which may result in loss of contact with '
-                        'minions. Please upgrade your ZMQ!')
+        if HAS_ZMQ:
+            try:
+                zmq_version_info = zmq.zmq_version_info()
+            except AttributeError:
+                # PyZMQ <= 2.1.9 does not have zmq_version_info, fall back to
+                # using zmq.zmq_version() and build a version info tuple.
+                zmq_version_info = tuple(
+                    [int(x) for x in zmq.zmq_version().split('.')]
+                )
+            if zmq_version_info < (3, 2):
+                log.warning(
+                    'You have a version of ZMQ less than ZMQ 3.2! There are '
+                    'known connection keep-alive issues with ZMQ < 3.2 which '
+                    'may result in loss of contact with minions. Please '
+                    'upgrade your ZMQ!'
+                )
         # Late setup the of the opts grains, so we can log from the grains
         # module
         # print opts['proxymodule']

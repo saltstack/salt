@@ -130,6 +130,9 @@ def send(func, *args, **kwargs):
             # Safe error, arg may be in kwargs
             pass
     f_call = salt.utils.format_call(__salt__[mine_func], func_data)
+    for arg in args:
+        if arg not in f_call['args']:
+            f_call['args'].append(arg)
     try:
         if 'kwargs' in f_call:
             data[func] = __salt__[mine_func](*f_call['args'], **f_call['kwargs'])
