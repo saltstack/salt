@@ -488,13 +488,13 @@ def swaps():
                                  'priority': comps[4]}
     else:
         for line in __salt__['cmd.run_stdout']('swapctl -kl').splitlines():
-            type = "file"
             if line.startswith(('Device', 'Total')):
                 continue
+            swap_type = "file"
             comps = line.split()
             if comps[0].startswith('/dev/'):
-                type = "partition"
-            ret[comps[0]] = {'type': type,
+                swap_type = "partition"
+            ret[comps[0]] = {'type': swap_type,
                              'size': comps[1],
                              'used': comps[2],
                              'priority': comps[5]}
