@@ -788,12 +788,7 @@ Master File Server Settings
 ``fileserver_backend``
 ----------------------
 
-Default:
-
-.. code-block:: yaml
-
-    fileserver_backend:
-      - roots
+Default: ``['roots']``
 
 Salt supports a modular fileserver backend system, this system allows the salt
 master to link directly to third party systems to gather and manage the files
