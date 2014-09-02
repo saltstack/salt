@@ -15,6 +15,21 @@ The following fields can be set in the minion conf file::
     smtp.gpgowner (optional)
     smtp.fields (optional)
 
+Alternative configuration values can be used by prefacing the configuration.
+Any values not found in the alternative configuration will be pulled from
+the default location::
+
+    alternative.smtp.from
+    alternative.smtp.to
+    alternative.smtp.host
+    alternative.smtp.port
+    alternative.smtp.username
+    alternative.smtp.password
+    alternative.smtp.tls
+    alternative.smtp.subject
+    alternative.smtp.gpgowner
+    alternative.smtp.fields
+
 There are a few things to keep in mind:
 
 * If a username is used, a password is also required. It is recommended (but
@@ -42,6 +57,10 @@ There are a few things to keep in mind:
 
     salt '*' test.ping --return smtp
 
+  To use the alternative configuration, append '--return_config alternative' to the salt command. ex:
+
+    salt '*' test.ping --return smtp --return_config alternative
+
 '''
 
 # Import python libs
@@ -67,34 +86,72 @@ def __virtual__():
     return __virtualname__
 
 
+def _get_options(ret=None):
+    '''
+    Get the redis options from salt.
+    '''
+    if ret:
+        ret_config = '{0}'.format(ret['ret_config']) if 'ret_config' in ret else ''
+    else:
+        ret_config = None
+
+    attrs = {'from': 'from',
+             'to': 'to',
+             'host': 'host',
+             'username': 'username',
+             'password': 'password',
+             'subject': 'subject',
+             'gpgowner': 'gpgowner',
+             'fields': 'fields',
+             'tls': 'tls'}
+
+    _options = {}
+    for attr in attrs:
+        if 'config.option' in __salt__:
+            cfg = __salt__['config.option']
+            c_cfg = cfg('{0}'.format(__virtualname__), {})
+            if ret_config:
+                ret_cfg = cfg('{0}.{1}'.format(ret_config, __virtualname__), {})
+                if ret_cfg.get(attrs[attr], cfg('{0}.{1}.{2}'.format(ret_config, __virtualname__, attrs[attr]))):
+                    _attr = ret_cfg.get(attrs[attr], cfg('{0}.{1}.{2}'.format(ret_config, __virtualname__, attrs[attr])))
+                else:
+                    _attr = c_cfg.get(attrs[attr], cfg('{0}.{1}'.format(__virtualname__, attrs[attr])))
+            else:
+                _attr = c_cfg.get(attrs[attr], cfg('{0}.{1}'.format(__virtualname__, attrs[attr])))
+        else:
+            cfg = __opts__
+            c_cfg = cfg.get('{0}'.format(__virtualname__), {})
+            if ret_config:
+                ret_cfg = cfg.get('{0}.{1}'.format(ret_config, __virtualname__), {})
+                if ret_cfg.get(attrs[attr], cfg.get('{0}.{1}.{2}'.format(ret_config, __virtualname__, attrs[attr]))):
+                    _attr = ret_cfg.get(attrs[attr], cfg.get('{0}.{1}.{2}'.format(ret_config, __virtualname__, attrs[attr])))
+                else:
+                    _attr = c_cfg.get(attrs[attr], cfg.get('{0}.{1}'.format(__virtualname__, attrs[attr])))
+            else:
+                _attr = c_cfg.get(attrs[attr], cfg.get('{0}.{1}'.format(__virtualname__, attrs[attr])))
+        if not _attr:
+            _options[attr] = None
+            continue
+        _options[attr] = _attr
+    return _options
+
+
 def returner(ret):
     '''
     Send an email with the data
     '''
 
-    if 'config.option' in __salt__:
-        from_addr = __salt__['config.option']('smtp.from')
-        to_addrs = __salt__['config.option']('smtp.to')
-        host = __salt__['config.option']('smtp.host')
-        port = __salt__['config.option']('smtp.port')
-        user = __salt__['config.option']('smtp.username')
-        passwd = __salt__['config.option']('smtp.password')
-        subject = __salt__['config.option']('smtp.subject')
-        gpgowner = __salt__['config.option']('smtp.gpgowner')
-        fields = __salt__['config.option']('smtp.fields').split(',')
-        smtp_tls = __salt__['config.option']('smtp.tls')
-    else:
-        cfg = __opts__
-        from_addr = cfg.get('smtp.from', None)
-        to_addrs = cfg.get('smtp.to', None)
-        host = cfg.get('smtp.host', None)
-        port = cfg.get('smtp.port', None)
-        user = cfg.get('smtp.username', None)
-        passwd = cfg.get('smtp.password', None)
-        subject = cfg.get('smtp.subject', None)
-        gpgowner = cfg.get('smtp.gpgowner', None)
-        fields = cfg.get('smtp.fields', '').split(',')
-        smtp_tls = cfg('smtp.tls', False)
+    _options = _get_options(ret)
+    from_addr = _options.get('from')
+    to_addrs = _options.get('to')
+    host = _options.get('host')
+    port = _options.get('port')
+    user = _options.get('username')
+    passwd = _options.get('password')
+    subject = _options.get('subject')
+    gpgowner = _options.get('gpgowner')
+    fields = _options.get('fields').split(',') if 'fields' in _options else []
+    smtp_tls = _options.get('tls')
 
     if not port:
         port = 25
@@ -105,10 +162,10 @@ def returner(ret):
     log.debug("smtp_return: Subject is '{0}'".format(subject))
 
     content = ('id: {0}\r\n'
-            'function: {1}\r\n'
-            'function args: {2}\r\n'
-            'jid: {3}\r\n'
-            'return: {4}\r\n').format(
+               'function: {1}\r\n'
+               'function args: {2}\r\n'
+               'jid: {3}\r\n'
+               'return: {4}\r\n').format(
                     ret.get('id'),
                     ret.get('fun'),
                     ret.get('fun_args'),

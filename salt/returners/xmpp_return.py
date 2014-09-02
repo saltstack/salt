@@ -7,6 +7,40 @@ The following fields can be set in the minion conf file::
     xmpp.jid (required)
     xmpp.password (required)
     xmpp.recipient (required)
+    xmpp.profile (optional)
+
+Alternative configuration values can be used by prefacing the configuration.
+Any values not found in the alternative configuration will be pulled from
+the default location::
+
+    xmpp.jid
+    xmpp.password
+    xmpp.recipient
+    xmpp.profile
+
+XMPP settings may also be configured as::
+
+    xmpp:
+        jid: user@xmpp.domain.com/resource
+        password: password
+        recipient: user@xmpp.example.com
+
+    alternative.xmpp:
+        jid: user@xmpp.domain.com/resource
+        password: password
+        recipient: someone@xmpp.example.com
+
+    xmpp_profile:
+        jid: user@xmpp.domain.com/resource
+        password: password
+
+    xmpp:
+        profile: xmpp_profile
+        recipient: user@xmpp.example.com
+
+    alternative.xmpp:
+        profile: xmpp_profile
+        recipient: someone-else@xmpp.example.com
 
   To use the XMPP returner, append '--return xmpp' to the salt command. ex:
 
@@ -14,6 +48,9 @@ The following fields can be set in the minion conf file::
 
     salt '*' test.ping --return xmpp
 
+  To use the alternative configuration, append '--return_config alternative' to the salt command. ex:
+
+    salt '*' test.ping --return xmpp --return_config alternative
 '''
 
 # Import python libs
@@ -35,6 +72,65 @@ except ImportError:
 
 
 __virtualname__ = 'xmpp'
+
+
+def _get_options(ret=None):
+    '''
+    Get the redis options from salt.
+    '''
+    if ret:
+        ret_config = '{0}'.format(ret['ret_config']) if 'ret_config' in ret else ''
+    else:
+        ret_config = None
+
+    attrs = {'xmpp_profile': 'profile',
+             'from_jid': 'jid',
+             'password': 'password',
+             'recipient_jid': 'recipient'}
+
+    _options = {}
+    for attr in attrs:
+        if 'config.option' in __salt__:
+            cfg = __salt__['config.option']
+            c_cfg = cfg('{0}'.format(__virtualname__), {})
+            if ret_config:
+                ret_cfg = cfg('{0}.{1}'.format(ret_config, __virtualname__), {})
+                if ret_cfg.get(attrs[attr], cfg('{0}.{1}.{2}'.format(ret_config, __virtualname__, attrs[attr]))):
+                    _attr = ret_cfg.get(attrs[attr], cfg('{0}.{1}.{2}'.format(ret_config, __virtualname__, attrs[attr])))
+                    log.debug('_attr {0}'.format(_attr))
+                else:
+                    _attr = c_cfg.get(attrs[attr], cfg('{0}.{1}'.format(__virtualname__, attrs[attr])))
+            else:
+                _attr = c_cfg.get(attrs[attr], cfg('{0}.{1}'.format(__virtualname__, attrs[attr])))
+        else:
+            cfg = __opts__
+            c_cfg = cfg.get('{0}'.format(__virtualname__), {})
+            if ret_config:
+                ret_cfg = cfg.get('{0}.{1}'.format(ret_config, __virtualname__), {})
+                if ret_cfg.get(attrs[attr], cfg.get('{0}.{1}.{2}'.format(ret_config, __virtualname__, attrs[attr]))):
+                    _attr = ret_cfg.get(attrs[attr], cfg.get('{0}.{1}.{2}'.format(ret_config, __virtualname__, attrs[attr])))
+                else:
+                    _attr = c_cfg.get(attrs[attr], cfg.get('{0}.{1}'.format(__virtualname__, attrs[attr])))
+            else:
+                _attr = c_cfg.get(attrs[attr], cfg.get('{0}.{1}'.format(__virtualname__, attrs[attr])))
+        if not _attr:
+            _options[attr] = None
+            continue
+        _options[attr] = _attr
+
+    # If we're using an xmpp_profile
+    # pull from_jid and password from there
+    if 'xmpp_profile' in _options:
+        log.info('Using xmpp.profile {0}'.format(_options['xmpp_profile']))
+        if 'config.option' in __salt__:
+            creds = cfg(_options['xmpp_profile'])
+        else:
+            creds = cfg.get(_options['xmpp_profile'])
+        if creds:
+            _options['from_jid'] = creds.get('xmpp.jid')
+            _options['password'] = creds.get('xmpp.password')
+
+    return _options
 
 
 def __virtual__():
@@ -78,29 +174,11 @@ def returner(ret):
     Send an xmpp message with the data
     '''
 
-    if 'config.option' in __salt__:
-        cfg = __salt__['config.option']
-        c_cfg = cfg('xmpp', {})
-        xmpp_profile = c_cfg.get('xmpp_profile', cfg('xmpp.profile', None))
-        if xmpp_profile:
-            creds = __salt__['config.option'](xmpp_profile)
-            from_jid = creds.get('xmpp.jid')
-            password = creds.get('xmpp.password')
-        else:
-            from_jid = c_cfg.get('from_jid', cfg('xmpp.jid', None))
-            password = c_cfg.get('password', cfg('xmpp.password', None))
-        recipient_jid = c_cfg.get('recipient_jid', cfg('xmpp.recipient', None))
-    else:
-        cfg = __opts__
-        xmpp_profile = cfg.get('xmpp.profile', None)
-        if xmpp_profile:
-            creds = cfg.get(xmpp_profile)
-            from_jid = creds.get('xmpp.jid', None)
-            password = creds.get('xmpp.password', None)
-        else:
-            from_jid = cfg.get('xmpp.jid', None)
-            password = cfg.get('xmpp.password', None)
-        recipient_jid = cfg.get('xmpp.recipient', None)
+    _options = _get_options(ret)
+
+    from_jid = _options.get('from_jid')
+    password = _options.get('password')
+    recipient_jid = _options.get('recipient_jid')
 
     if not from_jid:
         log.error('xmpp.jid not defined in salt config')

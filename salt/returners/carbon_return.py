@@ -25,9 +25,23 @@ Carbon settings may also be configured as::
         skip_on_error: True
         mode: (pickle|text)
 
+Alternative configuration values can be used by prefacing the configuration.
+Any values not found in the alternative configuration will be pulled from
+the default location::
+
+    alternative.carbon:
+        host: <server IP or hostname>
+        port: <carbon port>
+        skip_on_error: True
+        mode: (pickle|text)
+
   To use the carbon returner, append '--return carbon' to the salt command. ex:
 
     salt '*' test.ping --return carbon
+
+  To use the alternative configuration, append '--return_config alternative' to the salt command. ex:
+
+    salt '*' test.ping --return carbon --return_config alternative
 '''
 
 
@@ -48,6 +62,51 @@ __virtualname__ = 'carbon'
 
 def __virtual__():
     return __virtualname__
+
+
+def _get_options(ret):
+    '''
+    Returns options used for the carbon returner.
+    '''
+    if ret:
+        ret_config = '{0}'.format(ret['ret_config']) if 'ret_config' in ret else ''
+    else:
+        ret_config = None
+
+    attrs = {'host': 'host',
+             'port': 'port',
+             'skip': 'skip_on_error',
+             'mode': 'mode'}
+
+    _options = {}
+    for attr in attrs:
+        if 'config.option' in __salt__:
+            cfg = __salt__['config.option']
+            c_cfg = cfg('{0}'.format(__virtualname__), {})
+            if ret_config:
+                ret_cfg = cfg('{0}.{1}'.format(ret_config, __virtualname__), {})
+                if ret_cfg.get(attrs[attr], cfg('{0}.{1}.{2}'.format(ret_config, __virtualname__, attrs[attr]))):
+                    _attr = ret_cfg.get(attrs[attr], cfg('{0}.{1}.{2}'.format(ret_config, __virtualname__, attrs[attr])))
+                else:
+                    _attr = c_cfg.get(attrs[attr], cfg('{0}.{1}'.format(__virtualname__, attrs[attr])))
+            else:
+                _attr = c_cfg.get(attrs[attr], cfg('{0}.{1}'.format(__virtualname__, attrs[attr])))
+        else:
+            cfg = __opts__
+            c_cfg = cfg.get('{0}'.format(__virtualname__), {})
+            if ret_config:
+                ret_cfg = cfg.get('{0}.{1}'.format(ret_config, __virtualname__), {})
+                if ret_cfg.get(attrs[attr], cfg.get('{0}.{1}.{2}'.format(ret_config, __virtualname__, attrs[attr]))):
+                    _attr = ret_cfg.get(attrs[attr], cfg.get('{0}.{1}.{2}'.format(ret_config, __virtualname__, attrs[attr])))
+                else:
+                    _attr = c_cfg.get(attrs[attr], cfg.get('{0}.{1}'.format(__virtualname__, attrs[attr])))
+            else:
+                _attr = c_cfg.get(attrs[attr], cfg.get('{0}.{1}'.format(__virtualname__, attrs[attr])))
+        if not _attr:
+            _options[attr] = None
+            continue
+        _options[attr] = _attr
+    return _options
 
 
 @contextmanager
@@ -151,21 +210,13 @@ def returner(ret):
         [module].[function].[minion_id].[metric path [...]].[metric name]
 
     '''
+    _options = _get_options(ret)
 
-    if 'config.option' in __salt__:
-        cfg = __salt__['config.option']
-        c_cfg = cfg('carbon', {})
-
-        host = c_cfg.get('host', cfg('carbon.host', None))
-        port = c_cfg.get('port', cfg('carbon.port', None))
-        skip = c_cfg.get('skip_on_error', cfg('carbon.skip_on_error', False))
-        mode = c_cfg.get('mode', cfg('carbon.mode', 'text')).lower()
-    else:
-        cfg = __opts__
-        host = cfg.get('cabon.host', None)
-        port = cfg.get('cabon.port', None)
-        skip = cfg.get('carbon.skip_on_error', False)
-        mode = cfg.get('carbon.mode', 'text').lower()
+    host = _options.get('host')
+    port = _options.get('port')
+    skip = _options.get('skip')
+    if 'mode' in _options:
+        mode = _options.get('mode').lower()
 
     log.debug('Carbon minion configured with host: {0}:{1}'.format(host, port))
     log.debug('Using carbon protocol: {0}'.format(mode))
