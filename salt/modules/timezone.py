@@ -56,9 +56,8 @@ def get_zone():
     elif 'Gentoo' in __grains__['os_family']:
         with salt.utils.fopen('/etc/timezone', 'r') as ofh:
             return ofh.read()
-    elif 'FreeBSD' in __grains__['os_family']:
-        return ('FreeBSD does not store a human-readable timezone. Please'
-                'consider using timezone.get_zonecode or timezone.zonecompare')
+    elif __grains__['os_family'] in ('FreeBSD', 'OpenBSD', 'NetBSD'):
+        return os.readlink('/etc/localtime').lstrip('/usr/share/zoneinfo/')
     elif 'Solaris' in __grains__['os_family']:
         cmd = 'grep "TZ=" /etc/TIMEZONE'
     out = __salt__['cmd.run'](cmd).split('=')
