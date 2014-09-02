@@ -172,7 +172,7 @@ def _run(cmd,
             'instead.'
         )
 
-    if not _is_valid_shell(shell):
+    if _is_valid_shell(shell) is False:
         log.warning(
             'Attempt to run a shell command with what may be an invalid shell! '
             'Check to ensure that the shell <{0}> is valid for this user.'
