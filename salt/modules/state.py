@@ -329,7 +329,6 @@ def sls(mods,
         exclude=None,
         queue=False,
         env=None,
-        concurrent=False,
         **kwargs):
     '''
     Execute a set list of state modules from an environment.
@@ -367,6 +366,7 @@ def sls(mods,
 
         salt '*' state.sls myslsfile pillar="{foo: 'Foo!', bar: 'Bar!'}"
     '''
+    concurrent = kwargs.get('concurrent', False)
     if env is not None:
         salt.utils.warn_until(
             'Boron',
