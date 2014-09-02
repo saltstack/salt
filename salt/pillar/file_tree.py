@@ -53,9 +53,10 @@ will result in the following pillar tree for minion with ID "test-host"::
                 file2.txt:
                     Contents of file #2.
 
-To fill pillar data for minion in a node group, file_tree recursively iterates over
-``root_dir``/nodegroups/``nodegroup`` (where ``nodegroup`` is a minion node group), and constructs
-the same directory tree with contents of all the files inside the pillar tree.
+To fill pillar data for minion in a node group, file_tree recursively
+iterates over ``root_dir``/nodegroups/``nodegroup`` (where ``nodegroup`` is a
+minion node group), and constructs the same directory tree with contents of all
+the files inside the pillar tree.
 **IMPORTANT**: The host data take precedence over the node group data
 
 For example, the following ``root_dir`` tree::
@@ -69,7 +70,8 @@ For example, the following ``root_dir`` tree::
     ./nodegroups/test-group/files/another-testdir/
     ./nodegroups/test-group/files/another-testdir/symlink-to-file1.txt
 
-will result in the following pillar tree for minion in the node group "test-group"::
+will result in the following pillar tree for minion in the node group
+"test-group"::
 
     test-host:
         ----------
@@ -88,7 +90,6 @@ will result in the following pillar tree for minion in the node group "test-grou
                 file2.txt:
                     Contents of file #2.
 '''
-# TODO: Add git support.
 
 # Import python libs
 import logging
@@ -96,7 +97,7 @@ import os
 import os.path
 from copy import deepcopy
 
-#Import salt libs
+# Import salt libs
 import salt.utils
 import salt.utils.minions
 
@@ -110,19 +111,23 @@ def _on_walk_error(err):
     '''
     log.error('"%s": %s', err.filename, err.strerror)
 
-# Thanks to Ross McFarland for the dict_merge function (Source: https://www.xormedia.com/recursively-merge-dictionaries-in-python/)
-def _dict_merge(a, b):
-    '''recursively merges dict's. not just simple a['key'] = b['key'], if
-    both a and bhave a key who's value is a dict then dict_merge is called
-    on both values and the result stored in the returned dictionary.'''
-    if not isinstance(b, dict):
-        return b
-    result = deepcopy(a)
-    for k, v in b.iteritems():
-        if k in result and isinstance(result[k], dict):
-                result[k] = _dict_merge(result[k], v)
+
+# Thanks to Ross McFarland for the dict_merge function
+# (Source: https://www.xormedia.com/recursively-merge-dictionaries-in-python/)
+def _dict_merge(dict_a, dict_b):
+    '''
+    recursively merges dict's. not just simple dict_a['key'] = dict_b['key'], if
+    both dict_a and dict_b have a key who's value is a dict then _dict_merge
+    is called on both values and the result stored in the returned dictionary.
+    '''
+    if not isinstance(dict_b, dict):
+        return dict_b
+    result = deepcopy(dict_a)
+    for key, value in dict_b.iteritems():
+        if key in result and isinstance(result[key], dict):
+            result[key] = _dict_merge(result[key], value)
         else:
-            result[k] = deepcopy(v)
+            result[key] = deepcopy(value)
     return result
 
 
@@ -163,14 +168,13 @@ def _construct_pillar(top_dir, follow_dir_links):
                 pillar_node[file_name] = open(file_path, 'rb').read()
             except IOError as err:
                 log.error('%s', str(err))
-            except:
-                log.error('Unknown exception while reading "%s"', file_path,
-                          exc_info=True)
 
     return pillar
 
 
-def ext_pillar(minion_id, pillar, root_dir=None, follow_dir_links=False, debug=False):
+def ext_pillar(
+        minion_id, pillar, root_dir=None,
+        follow_dir_links=False, debug=False):
     '''
     Find pillar data for specified ID.
     '''
@@ -184,34 +188,41 @@ def ext_pillar(minion_id, pillar, root_dir=None, follow_dir_links=False, debug=F
         log.error('"%s" does not exist or not a directory', root_dir)
         return {}
 
-    nodegroup_pillar = {}
-    nodegroups_dir = os.path.join(root_dir,'nodegroups')
+    ngroup_pillar = {}
+    nodegroups_dir = os.path.join(root_dir, 'nodegroups')
     if os.path.exists(nodegroups_dir) and len(__opts__['nodegroups']) > 0:
-        master_nodegroups = __opts__['nodegroups']
+        master_ngroups = __opts__['nodegroups']
         ext_pillar_dirs = os.listdir(nodegroups_dir)
         if len(ext_pillar_dirs) > 0:
             for nodegroup in ext_pillar_dirs:
-                if os.path.isdir(nodegroups_dir):
+                if (os.path.isdir(nodegroups_dir) and
+                        nodegroup in master_ngroups):
                     ckminions = salt.utils.minions.CkMinions(__opts__)
-                    match = ckminions.check_minions(master_nodegroups[nodegroup], 'compound')
+                    match = ckminions.check_minions(
+                        master_ngroups[nodegroup],
+                        'compound')
                     if minion_id in match:
-                        nodegroup_dir = os.path.join(nodegroups_dir,str(nodegroup))
-                        nodegroup_pillar.update(_construct_pillar(nodegroup_dir, follow_dir_links))
+                        ngroup_dir = os.path.join(
+                            nodegroups_dir, str(nodegroup))
+                        ngroup_pillar.update(
+                            _construct_pillar(ngroup_dir, follow_dir_links))
         else:
             if debug is True:
-                log.debug('File tree - No nodegroups found in file tree directory ext_pillar_dirs, skipping...')
+                log.debug('File tree - No nodegroups found in file tree \
+                            directory ext_pillar_dirs, skipping...')
     else:
         if debug is True:
-            log.debug('File tree - No nodegroups found in master configuration, skipping nodegroups pillar function...')
+            log.debug('File tree - No nodegroups found in master configuration,\
+                        skipping nodegroups pillar function...')
 
     host_dir = os.path.join(root_dir, 'hosts', minion_id)
     if not os.path.exists(host_dir):
         # No data for host with this ID.
-        return nodegroup_pillar
+        return ngroup_pillar
 
     if not os.path.isdir(host_dir):
         log.error('"%s" exists, but not a directory', host_dir)
-        return nodegroup_pillar
+        return ngroup_pillar
 
     host_pillar = _construct_pillar(host_dir, follow_dir_links)
-    return _dict_merge(nodegroup_pillar, host_pillar)
+    return _dict_merge(ngroup_pillar, host_pillar)
