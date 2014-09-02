@@ -531,9 +531,9 @@ def get_loginclass(name):
     '''
     if __grains__['kernel'] != 'OpenBSD':
         return False
-    info = __salt__['cmd.run_stdout']('userinfo {0}'.format(name),
+    userinfo = __salt__['cmd.run_stdout']('userinfo {0}'.format(name),
         output_loglevel='debug')
-    for line in info.splitlines():
+    for line in userinfo.splitlines():
         if line.startswith("class"):
             loginclass = line.split()
     if len(loginclass) == 2:
