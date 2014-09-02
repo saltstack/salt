@@ -50,6 +50,10 @@ until pip install --egg -r pkg/smartos/esky/raet_requirements.txt ; do sleep 1 ;
 # install the sodium_grabber library
 python2.7 pkg/smartos/esky/sodium_grabber_installer.py install
 
+# ugly workaround for odd zeromq linking breakage
+cp /opt/local/lib/libzmq.so.3 /opt/local/lib/python2.7/site-packages/pyzmq-13.1.0-py2.7-solaris-2.11-i86pc.64bit.egg/zmq/
+patchelf --set-rpath '$ORIGIN:$ORIGIN/../lib' /opt/local/lib/python2.7/site-packages/pyzmq-13.1.0-py2.7-solaris-2.11-i86pc.64bit.egg/zmq/libzmq.so.3
+
 # at this point you have a build environment that you could set aside and reuse to run further builds.
 
 bash pkg/smartos/esky/build-tarball.sh

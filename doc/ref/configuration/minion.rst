@@ -638,6 +638,25 @@ directed to look on the minion by setting this parameter to ``local``.
 
     file_client: remote
 
+.. conf_minion:: fileserver_backend
+
+``fileserver_backend``
+----------------------
+
+Default: ``['roots']``
+
+When using a local :conf_minion:`file_client`, this parameter is used to
+specify what fileserver backends to use. It operates identically to the
+:conf_master:`master config parameter<file_roots>` of the same name.
+
+Example:
+
+.. code-block:: yaml
+
+    fileserver_backend:
+      - roots
+      - git
+
 .. conf_minion:: file_roots
 
 ``file_roots``
@@ -652,7 +671,7 @@ Default:
 
 When using a local :conf_minion:`file_client`, this parameter is used to setup
 the fileserver's environments. This parameter operates identically to the
-:conf_master:`master config parameter of the same name <file_roots>`.
+:conf_master:`master config parameter <file_roots>` of the same name.
 
 .. code-block:: yaml
 
@@ -666,7 +685,7 @@ the fileserver's environments. This parameter operates identically to the
         - /srv/salt/prod/services
         - /srv/salt/prod/states
 
-.. conf_master:: hash_type
+.. conf_minion:: hash_type
 
 ``hash_type``
 -------------
