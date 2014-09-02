@@ -999,7 +999,8 @@ def deploy_script(host,
                 log.debug('Using {0} as the password'.format(password))
                 ssh_kwargs['password'] = password
 
-            if root_cmd('test -e \\"{0}\\"'.format(tmp_dir), tty, sudo, **ssh_kwargs):
+            if root_cmd('test -e \\"{0}\\"'.format(tmp_dir), tty, sudo,
+                        allow_failure=True, **ssh_kwargs):
                 ret = root_cmd(('sh -c "( mkdir -p \\"{0}\\" &&'
                                 ' chmod 700 \\"{0}\\" )"').format(tmp_dir),
                                tty, sudo, **ssh_kwargs)
