@@ -86,18 +86,23 @@ def present(name,
         return ret
 
     # Decide whether to create or assemble
-    do_assemble = False
-    verb = 'created'
+    can_assemble = []
     for dev in devices:
         # mdadm -E exits with 0 iff all devices given are part of an array
         cmd = 'mdadm -E {0}'.format(dev)
-        try:
-            __salt__['cmd.run'](cmd)
-            do_assemble = True
-            verb = 'assembled'
-            break
-        except CommandExecutionError as ex:
-            log.debug(ex)
+        can_assemble.append(__salt__['cmd.retcode'](cmd) == 0)
+
+    if True in can_assemble and False in can_assemble:
+        ret['comment'] = 'Devices {0} are a mix of RAID constituents and non-'\
+                         'RAID-constituents.'.format(devices)
+        ret['result'] = False
+        return ret
+    elif can_assemble[0]:
+        do_assemble = True
+        verb = 'assembled'
+    else:
+        do_assemble = False
+        verb = 'created'
 
     # If running with test use the test_mode with create or assemble
     if __opts__['test']:
