@@ -418,7 +418,12 @@ def arp():
         comps = line.split()
         if len(comps) < 4:
             continue
-        ret[comps[3]] = comps[1].strip('(').strip(')')
+        if not __grains__['kernel'] == 'OpenBSD':
+            ret[comps[3]] = comps[1].strip('(').strip(')')
+        else:
+            if comps[0] == 'Host' or comps[1] == '(incomplete)':
+                continue
+            ret[comps[1]] = comps[0]
     return ret
 
 
@@ -610,6 +615,9 @@ def mod_hostname(hostname):
                     fh.write(i)
     elif __grains__['os_family'] == 'Debian':
         with salt.utils.fopen('/etc/hostname', 'w') as fh:
+            fh.write(hostname + '\n')
+    elif __grains__['os_family'] == 'OpenBSD':
+        with salt.utils.fopen('/etc/myname', 'w') as fh:
             fh.write(hostname + '\n')
 
     return True
