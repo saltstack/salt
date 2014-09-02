@@ -964,9 +964,6 @@ def deploy_script(host,
                            display_ssh_output=display_ssh_output,
                            gateway=gateway, known_hosts_file=known_hosts_file):
 
-            def remote_exists(path):
-                return not root_cmd('test -e \\"{0}\\"'.format(path),
-                                    tty, sudo, allow_failure=True, **kwargs)
             log.debug(
                 'Logging into {0}:{1} as {2}'.format(
                     host, port, username
@@ -992,7 +989,8 @@ def deploy_script(host,
                 log.debug('Using {0} as the password'.format(password))
                 kwargs['password'] = password
 
-            if not remote_exists(tmp_dir):
+            if root_cmd('test -e \\"{0}\\"'.format(tmp_dir), tty, sudo,
+                        allow_failure=True, **kwargs):
                 ret = root_cmd(('sh -c "( mkdir -p \\"{0}\\" &&'
                                 ' chmod 700 \\"{0}\\" )"').format(tmp_dir),
                                tty, sudo, **kwargs)
