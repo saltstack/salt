@@ -419,11 +419,11 @@ def arp():
         if len(comps) < 4:
             continue
         if not __grains__['kernel'] == 'OpenBSD':
-           ret[comps[3]] = comps[1].strip('(').strip(')')
+            ret[comps[3]] = comps[1].strip('(').strip(')')
         else:
-           if comps[0] == 'Host' or comps[1] == '(incomplete)':
-               continue
-           ret[comps[1]] = comps[0]
+            if comps[0] == 'Host' or comps[1] == '(incomplete)':
+                continue
+            ret[comps[1]] = comps[0]
     return ret
 
 
