@@ -45,7 +45,7 @@ modules <all-salt.runners>` the following ``@`` syntax must be used:
           - '@runner'
 
 .. note:: 
-    Globs will not match wheel or runners! They must be explicitely
+    Globs will not match wheel or runners! They must be explicitly
     allowed with @wheel or @runner.
 
 The external authentication system can then be used from the command-line by
