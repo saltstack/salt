@@ -1011,15 +1011,13 @@ def remotes_on_remote_tcp_port(port):
     remotes = set()
 
     if salt.utils.is_sunos():
-        '''
-        [root@salt-master ~]# netstat -f inet -n
-
-        TCP: IPv4
-           Local Address        Remote Address    Swind Send-Q Rwind Recv-Q    State
-           -------------------- -------------------- ----- ------ ----- ------ -----------
-           10.0.0.101.4505      10.0.0.1.45329       1064800      0 1055864      0 ESTABLISHED
-           10.0.0.101.4505      10.0.0.100.50798     1064800      0 1055864      0 ESTABLISHED
-        '''
+        # [root@salt-master ~]# netstat -f inet -n
+        #
+        # TCP: IPv4
+        #    Local Address        Remote Address    Swind Send-Q Rwind Recv-Q    State
+        #    -------------------- -------------------- ----- ------ ----- ------ -----------
+        #    10.0.0.101.4505      10.0.0.1.45329       1064800      0 1055864      0 ESTABLISHED
+        #    10.0.0.101.4505      10.0.0.100.50798     1064800      0 1055864      0 ESTABLISHED
         try:
             data = subprocess.check_output(['netstat', '-f', 'inet', '-n'])
         except subprocess.CalledProcessError as exc:
