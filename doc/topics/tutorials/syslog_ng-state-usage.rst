@@ -95,7 +95,7 @@ statement) it's purpose is like a mandatory comment.
 
 You can use ``set_binary_path`` to set the directory which contains the
 syslog-ng and syslog-ng-ctl binaries. If this directory is in your PATH,
-you dont't need to use this function.
+you don't need to use this function.
 
 Under ``auto_start_or_reload`` you can see a Jinja template. If
 syslog-ng isn't running it will start it, otherwise reload it. It uses

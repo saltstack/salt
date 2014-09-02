@@ -154,9 +154,9 @@
 #    ping_interval: 90
 #    restart_on_error: True
 #
-# Minions wont know master is missing until a ping fails.  After the ping fail,
+# Minions won't know master is missing until a ping fails.  After the ping fail,
 # the minion will attempt authentication and likely fails out and cause a restart.
-# When the minion restarts it will resolve the Masters IP and attempt to reconnect.
+# When the minion restarts it will resolve the masters IP and attempt to reconnect.
 
 
 # If you don't have any problems with syn-floods, don't bother with the
