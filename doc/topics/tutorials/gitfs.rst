@@ -281,7 +281,7 @@ In the example configuration above, the following is true:
    ``base`` environment, while the second one will use the ``salt-base``
    branch/tag as the ``base`` environment.
 
-2. The first remote will serve all files in the repository. The the second
+2. The first remote will serve all files in the repository. The second
    remote will only serve files from the ``salt`` directory (and its
    subdirectories), while the third remote will only serve files from the
    ``salt/states`` directory (and its subdirectories).

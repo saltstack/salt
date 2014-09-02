@@ -191,7 +191,7 @@ def _format_host(host, data):
                 u'    {tcolor}  Result: {ret[result]!s}{colors[ENDC]}',
                 u'    {tcolor} Comment: {comment}{colors[ENDC]}',
                 u'    {tcolor} Started: {ret[start_time]!s}{colors[ENDC]}',
-                u'    {tcolor} Duration: {ret[duration]!s}{colors[ENDC]}'
+                u'    {tcolor}Duration: {ret[duration]!s}{colors[ENDC]}'
             ]
             # This isn't the prettiest way of doing this, but it's readable.
             if comps[1] != comps[2]:
