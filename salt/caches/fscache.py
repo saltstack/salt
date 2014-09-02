@@ -272,22 +272,24 @@ class FSCache(multiprocessing.Process):
         log.debug('Shutting down')\
 
 if __name__ == '__main__':
+    def run_test():
+        opts = salt.config.master_config('./master')
 
-    opts = salt.config.master_config('./master')
+        wlk = FSCache(opts)
+        # add two jobs for jobs and cache-files
+        wlk.add_job(**{
+                        'name': 'grains',
+                        'path': '/var/cache/salt/master/minions',
+                        'ival': [2, 12, 22],
+                        'patt': '^.*$'
+                      })
 
-    wlk = FSCache(opts)
-    # add two jobs for jobs and cache-files
-    wlk.add_job(**{
-                    'name': 'grains',
-                    'path': '/var/cache/salt/master/minions',
-                    'ival': [2, 12, 22],
-                    'patt': '^.*$'
-                  })
+        wlk.add_job(**{
+                        'name': 'mine',
+                        'path': '/var/cache/salt/master/jobs/',
+                        'ival': [4, 14, 24, 34, 44, 54],
+                        'patt': '^.*$'
+                    })
+        wlk.start()
 
-    wlk.add_job(**{
-                    'name': 'mine',
-                    'path': '/var/cache/salt/master/jobs/',
-                    'ival': [4, 14, 24, 34, 44, 54],
-                    'patt': '^.*$'
-                })
-    wlk.start()
+    run_test()
