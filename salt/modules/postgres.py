@@ -83,6 +83,8 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None,
         if not host or host.startswith('/'):
             if 'FreeBSD' in __grains__['os_family']:
                 runas = 'pgsql'
+            if 'OpenBSD' in __grains__['os_family']:
+                runas = '_postgresql'
             else:
                 runas = 'postgres'
 
