@@ -57,7 +57,7 @@ def get_zone():
         with salt.utils.fopen('/etc/timezone', 'r') as ofh:
             return ofh.read()
     elif __grains__['os_family'] in ('FreeBSD', 'OpenBSD', 'NetBSD'):
-        return os.readlink('/etc/localtime').replace('/usr/share/zoneinfo/','')
+        return os.readlink('/etc/localtime').lstrip('/usr/share/zoneinfo/')
     elif 'Solaris' in __grains__['os_family']:
         cmd = 'grep "TZ=" /etc/TIMEZONE'
     out = __salt__['cmd.run'](cmd).split('=')
