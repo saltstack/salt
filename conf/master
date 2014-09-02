@@ -90,6 +90,9 @@
 # Set the default outputter used by the salt command. The default is "nested"
 #output: nested
 
+# Return minions that timeout when running commands like test.ping
+#show_timeout: True
+
 # By default output is colored, to disable colored output set the color value
 # to False
 #color: True

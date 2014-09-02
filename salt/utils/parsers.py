@@ -1479,10 +1479,11 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'queries')
         )
         self.add_option(
-            '--show-timeout',
-            default=False,
-            action='store_true',
-            help=('Display minions that timeout without the additional output of --verbose')
+            '--hide-timeout',
+            dest='show_timeout',
+            default=True,
+            action='store_false',
+            help=('Hide minions that timeout')
         )
         self.add_option(
             '--show-jid',
