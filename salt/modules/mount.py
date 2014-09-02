@@ -479,13 +479,13 @@ def swaps():
     if __grains__['os'] != 'OpenBSD':
         with salt.utils.fopen('/proc/swaps') as fp_:
             for line in fp_:
-               if line.startswith('Filename'):
-                  continue
-               comps = line.split()
-               ret[comps[0]] = {'type': comps[1],
-                                'size': comps[2],
-                                'used': comps[3],
-                                'priority': comps[4]}
+                if line.startswith('Filename'):
+                    continue
+                comps = line.split()
+                ret[comps[0]] = {'type': comps[1],
+                                 'size': comps[2],
+                                 'used': comps[3],
+                                 'priority': comps[4]}
     else:
         for line in __salt__['cmd.run_stdout']('swapctl -kl').splitlines():
             type = "file"
