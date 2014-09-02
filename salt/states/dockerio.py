@@ -342,9 +342,9 @@ def loaded(name, source=None, source_hash='', force=False):
 
             .. note::
 
-            See first the documentation for salt file.managed
-            <http://docs.saltstack.com/en/latest/ref/states/all/_
-            salt.states.file.html#salt.states.file.managed>
+                See first the documentation for salt file.managed
+                <http://docs.saltstack.com/en/latest/ref/states/all/_
+                salt.states.file.html#salt.states.file.managed>
 
     force
         Load even if the image exists
@@ -560,26 +560,43 @@ def absent(name):
     '''
     ins_container = __salt__['docker.inspect_container']
     cinfos = ins_container(name)
+    changes = {}
+
     if cinfos['status']:
         cid = cinfos['id']
+        changes[cid] = {}
         is_running = __salt__['docker.is_running'](cid)
-        # destroy if we found meat to do
+
+        # Stop container gracefully, if running
         if is_running:
+            changes[cid]['old'] = 'running'
             __salt__['docker.stop'](cid)
             is_running = __salt__['docker.is_running'](cid)
             if is_running:
-                return _invalid(
-                    comment=('Container {0!r}'
-                             ' could not be stopped'.format(cid)))
+                return _invalid(comment=("Container {0!r} could not be stopped"
+                                         .format(cid)))
             else:
-                return _valid(comment=('Container {0!r}'
-                                       ' was stopped,'.format(cid)),
-                              changes={name: True})
+                changes[cid]['new'] = 'stopped'
         else:
-            return _valid(comment=('Container {0!r}'
-                                   ' is stopped,'.format(cid)))
+            changes[cid]['old'] = 'stopped'
+
+        # Remove the stopped container
+        removal = __salt__['docker.remove_container'](cid)
+
+        if removal['status'] is True:
+            changes[cid]['new'] = 'removed'
+            return _valid(comment=("Container {0!r} has been destroyed"
+                                   .format(cid)),
+                          changes=changes)
+        else:
+            if 'new' not in changes[cid]:
+                changes = None
+            return _invalid(comment=("Container {0!r} could not be destroyed"
+                                     .format(cid)),
+                            changes=changes)
+
     else:
-        return _valid(comment='Container {0!r} not found'.format(name))
+        return _valid(comment="Container {0!r} not found".format(name))
 
 
 def present(name):

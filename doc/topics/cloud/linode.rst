@@ -23,6 +23,8 @@ instances also needs to be set:
     my-linode-config:
       apikey: asldkgfakl;sdfjsjaslfjaklsdjf;askldjfaaklsjdfhasldsadfghdkf
       password: F00barbaz
+      ssh_pubkey: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKHEOLLbeXgaqRQT9NBAopVz366SdYc0KKX33vAnq+2R user@host
+      ssh_key_file: ~/.ssh/id_ed25519
       provider: linode
 
 The password needs to be 8 characters and contain lowercase, uppercase and 
