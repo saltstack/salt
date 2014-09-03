@@ -98,7 +98,8 @@ def _get_user(user, runas):
         salt.utils.warn_until(
             'Lithium',
             'The \'runas\' argument to pip.install is deprecated, and will be '
-            'removed in Salt {version}. Please use \'user\' instead.'
+            'removed in Salt {version}. Please use \'user\' instead.',
+            stacklevel=3
         )
 
     # "There can only be one"
