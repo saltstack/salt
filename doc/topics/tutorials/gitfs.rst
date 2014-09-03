@@ -47,12 +47,21 @@ following command would be used to install pygit2_:
 
     # yum install python-pygit2
 
-Provided a valid version, the package name would be the same for Debian/Ubuntu,
-so the following would be used to install it:
+Provided a valid version is packaged for Debian/Ubuntu (which is not currently
+the case), the package name would be the same, and the following command would
+be used to install it:
 
 .. code-block:: bash
 
     # apt-get install python-pygit2
+
+
+If pygit2_ is not packaged for the platform on which the Master is running, the
+pygit2_ website has installation instructions here__. Keep in mind however that
+following these instructions will install libgit2 and pygit2_ without system
+packages.
+
+.. __: http://www.pygit2.org/install.html
 
 GitPython
 ---------
