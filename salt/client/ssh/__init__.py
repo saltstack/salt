@@ -44,7 +44,7 @@ except ImportError:
     HAS_ZMQ = False
 
 # The directory where salt thin is deployed
-DEFAULT_THIN_DIR = '/tmp/.salt'
+DEFAULT_THIN_DIR = '/tmp/.%%USER%%_salt'
 
 # RSTR is just a delimiter to distinguish the beginning of salt STDOUT
 # and STDERR.  There is no special meaning.  Messages prior to RSTR in
@@ -490,6 +490,10 @@ class Single(object):
             tty=False,
             **kwargs):
         self.opts = opts
+        if user:
+            self.thin_dir = DEFAULT_THIN_DIR.replace('%%USER%%', user)
+        else:
+            self.thin_dir = DEFAULT_THIN_DIR.replace('%%USER%%', 'root')
 
         if isinstance(argv, string_types):
             self.argv = [argv]
@@ -510,7 +514,7 @@ class Single(object):
         self.shell = salt.client.ssh.shell.Shell(opts, **args)
         self.minion_config = yaml.dump(
                 {
-                    'root_dir': os.path.join(DEFAULT_THIN_DIR, 'running_data'),
+                    'root_dir': os.path.join(self.thin_dir, 'running_data'),
                     'id': self.id,
                 }).strip()
         self.target = kwargs
@@ -559,7 +563,7 @@ class Single(object):
         thin = salt.utils.thin.gen_thin(self.opts['cachedir'])
         self.shell.send(
             thin,
-            os.path.join(DEFAULT_THIN_DIR, 'salt-thin.tgz'),
+            os.path.join(self.thin_dir, 'salt-thin.tgz'),
         )
         return True
 
@@ -685,7 +689,7 @@ class Single(object):
         ssh_py_shim_args = [
             '--config', self.minion_config,
             '--delimiter', RSTR,
-            '--saltdir', DEFAULT_THIN_DIR,
+            '--saltdir', self.thin_dir,
             '--checksum', thin_sum,
             '--hashfunc', 'sha1',
             '--version', salt.__version__,
@@ -896,7 +900,7 @@ class Single(object):
         trans_tar = prep_trans_tar(self.opts, chunks, file_refs)
         self.shell.send(
             trans_tar,
-            os.path.join(DEFAULT_THIN_DIR, 'salt_state.tgz'),
+            os.path.join(self.thin_dir, 'salt_state.tgz'),
         )
         self.argv = ['state.pkg', '/tmp/.salt/salt_state.tgz', 'test={0}'.format(test)]
 
