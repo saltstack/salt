@@ -3145,7 +3145,6 @@ def prepend(name,
 
     if __opts__['test']:
         nlines = test_lines + slines
-        ret['result'] = None
         if slines != nlines:
             if not salt.utils.istextfile(name):
                 ret['changes']['diff'] = 'Replace binary file'
@@ -3154,8 +3153,10 @@ def prepend(name,
                 ret['changes']['diff'] = (
                     ''.join(difflib.unified_diff(slines, nlines))
                 )
+            ret['result'] = None
         else:
             ret['comment'] = 'File {0} is in correct state'.format(name)
+            ret['result'] = True
         return ret
 
     __salt__['file.prepend'](name, *preface)
