@@ -443,7 +443,8 @@ def init(cwd, opts=None, user=None):
         salt '*' git.init /path/to/repo.git opts='--bare'
     '''
     _check_git()
-
+    if not opts:
+        opts = ''
     cmd = 'git init {0} {1}'.format(cwd, opts)
     return _git_run(cmd, runas=user)
 
