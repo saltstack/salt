@@ -115,7 +115,7 @@ def _active_mounts_solaris(ret):
     return ret
 
 
-def active():
+def active(extended=False):
     '''
     List the active mounts.
 
@@ -131,9 +131,12 @@ def active():
     elif __grains__['os'] == 'Solaris':
         _active_mounts_solaris(ret)
     else:
-        try:
-            _active_mountinfo(ret)
-        except CommandExecutionError:
+        if extended:
+            try:
+                _active_mountinfo(ret)
+            except CommandExecutionError:
+                _active_mounts(ret)
+        else:
             _active_mounts(ret)
     return ret
 
