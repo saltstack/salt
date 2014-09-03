@@ -71,7 +71,7 @@ def __virtual__():
     if __opts__['hgfs_branch_method'] not in VALID_BRANCH_METHODS:
         log.error(
             'Invalid hgfs_branch_method {0!r}. Valid methods are: {1}'
-            .format(VALID_BRANCH_METHODS)
+            .format(__opts__['hgfs_branch_method'], VALID_BRANCH_METHODS)
         )
         return False
     return __virtualname__
@@ -324,7 +324,7 @@ def update():
             log.error(
                 'Exception {0} caught while updating hgfs remote {1}'
                 .format(exc, repo['uri']),
-                exc_info=log.isEnabledFor(logging.DEBUG)
+                exc_info_on_loglevel=logging.DEBUG
             )
         else:
             newtip = repo['repo'].tip()

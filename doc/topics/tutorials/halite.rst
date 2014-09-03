@@ -221,8 +221,8 @@ Starting Halite
 Once you've configured the halite section of your /etc/salt/master, you can
 restart the salt-master service, and your halite instance will be available.
 Depending on your configuration, the instance will be available either at
-http://localhost:8080/app, http://domain:8080/app, or 
-http://123.456.789.012:8080/app .
+https://localhost:8080/app, https://domain:8080/app, or
+https://123.456.789.012:8080/app .
 
 .. note::
 

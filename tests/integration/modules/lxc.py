@@ -14,7 +14,7 @@ import integration
 import salt.utils
 
 
-@skipIf(salt.utils.which('lxc') is None, 'Skipping - lxc must be installed.')
+@skipIf(salt.utils.which('lxc-start') is None, 'LXC is not installed or minimal version not met')
 class LXCModuleTest(integration.ModuleCase):
     '''
     Test the lxc module

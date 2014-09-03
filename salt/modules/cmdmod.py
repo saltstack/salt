@@ -172,7 +172,7 @@ def _run(cmd,
             'instead.'
         )
 
-    if not _is_valid_shell(shell):
+    if _is_valid_shell(shell) is False:
         log.warning(
             'Attempt to run a shell command with what may be an invalid shell! '
             'Check to ensure that the shell <{0}> is valid for this user.'
@@ -250,8 +250,8 @@ def _run(cmd,
             py_code = 'import os, json;' \
                       'print(json.dumps(os.environ.__dict__))'
             if __grains__['os'] in ['MacOS', 'Darwin']:
-                env_cmd = ('sudo -i -u {1} -- "{2}"'
-                           ).format(shell, runas, sys.executable)
+                env_cmd = ('sudo -i -u {0} -- "{1}"'
+                           ).format(runas, sys.executable)
             elif __grains__['os'] in ['FreeBSD']:
                 env_cmd = ('su - {1} -c "{0} -c \'{2}\'"'
                            ).format(shell, runas, sys.executable)
@@ -432,7 +432,7 @@ def _run(cmd,
                 except vt.TerminalException as exc:
                     log.error(
                         'VT: {0}'.format(exc),
-                        exc_info=log.isEnabledFor(logging.DEBUG))
+                        exc_info_on_loglevel=logging.DEBUG)
                     ret = {'retcode': 1, 'pid': '2'}
                     break
                 # only set stdout on sucess as we already mangled in other
@@ -1000,7 +1000,7 @@ def script(source,
            shell=DEFAULT_SHELL,
            python_shell=True,
            env=None,
-           template='jinja',
+           template=None,
            umask=None,
            output_loglevel='debug',
            quiet=False,
@@ -1226,6 +1226,35 @@ def exec_code(lang, code, cwd=None):
     ret = run(cmd, cwd=cwd)
     os.remove(codefile)
     return ret
+
+
+def tty(device, echo=None):
+    '''
+    Echo a string to a specific tty
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cmd.tty tty0 'This is a test'
+        salt '*' cmd.tty pts3 'This is a test'
+    '''
+    if device.startswith('tty'):
+        teletype = '/dev/{0}'.format(device)
+    elif device.startswith('pts'):
+        teletype = '/dev/{0}'.format(device.replace('pts', 'pts/'))
+    else:
+        return {'Error': 'The specified device is not a valid TTY'}
+    try:
+        with salt.utils.fopen(teletype, 'wb') as tty_device:
+            tty_device.write(echo)
+        return {
+            'Success': 'Message was successfully echoed to {0}'.format(teletype)
+        }
+    except IOError:
+        return {
+            'Error': 'Echoing to {0} returned error'.format(teletype)
+        }
 
 
 def run_chroot(root, cmd):

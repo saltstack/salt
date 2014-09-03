@@ -9,18 +9,27 @@
     Test salt's "hacked" logging
 '''
 
+# Import python libs
+import logging
+from cStringIO import StringIO
+
 # Import Salt Testing libs
-from salttesting import TestCase
+from salttesting.case import TestCase
 from salttesting.helpers import ensure_in_syspath, TestsLoggingHandler
 
 ensure_in_syspath('../')
 
+# Import Salt libs
+from salt.log import setup as saltlog
+from salt.log.handlers import StreamHandler
+
 
 class TestLog(TestCase):
-    '''Test several logging settings'''
+    '''
+    Test several logging settings
+    '''
 
     def test_issue_2853_regex_TypeError(self):
-        from salt.log import setup as saltlog
         # Now, python's logging logger class is ours.
         # Let's make sure we have at least one instance
         log = saltlog.SaltLoggingClass(__name__)
@@ -62,6 +71,111 @@ class TestLog(TestCase):
 
             # Remove the testing handler
             log.removeHandler(handler)
+
+    def test_exc_info_on_loglevel(self):
+        def raise_exception_on_purpose():
+            1/0  # pylint: disable=pointless-statement
+
+        log = saltlog.SaltLoggingClass(__name__)
+
+        # Only stream2 should contain the traceback
+        stream1 = StringIO()
+        stream2 = StringIO()
+        handler1 = StreamHandler(stream1)
+        handler2 = StreamHandler(stream2)
+
+        handler1.setLevel(logging.INFO)
+        handler2.setLevel(logging.DEBUG)
+
+        log.addHandler(handler1)
+        log.addHandler(handler2)
+
+        try:
+            raise_exception_on_purpose()
+        except ZeroDivisionError as exc:
+            log.error('Exception raised on purpose caught: {0}'.format(exc),
+                      exc_info_on_loglevel=logging.DEBUG)
+
+        try:
+            self.assertIn(
+                'Exception raised on purpose caught: integer division or modulo by zero\n',
+                stream1.getvalue()
+            )
+            self.assertNotIn('Traceback (most recent call last)', stream1.getvalue())
+            self.assertIn(
+                'Exception raised on purpose caught: integer division or modulo by zero\n',
+                stream2.getvalue()
+            )
+            self.assertIn('Traceback (most recent call last)', stream2.getvalue())
+        finally:
+            log.removeHandler(handler1)
+            log.removeHandler(handler2)
+
+        # Both streams should contain the traceback
+        stream1 = StringIO()
+        stream2 = StringIO()
+        handler1 = StreamHandler(stream1)
+        handler2 = StreamHandler(stream2)
+
+        handler1.setLevel(logging.INFO)
+        handler2.setLevel(logging.DEBUG)
+
+        log.addHandler(handler1)
+        log.addHandler(handler2)
+
+        try:
+            raise_exception_on_purpose()
+        except ZeroDivisionError as exc:
+            log.error('Exception raised on purpose caught: {0}'.format(exc),
+                      exc_info_on_loglevel=logging.INFO)
+
+        try:
+            self.assertIn(
+                'Exception raised on purpose caught: integer division or modulo by zero\n',
+                stream1.getvalue()
+            )
+            self.assertIn('Traceback (most recent call last)', stream1.getvalue())
+            self.assertIn(
+                'Exception raised on purpose caught: integer division or modulo by zero\n',
+                stream2.getvalue()
+            )
+            self.assertIn('Traceback (most recent call last)', stream2.getvalue())
+        finally:
+            log.removeHandler(handler1)
+            log.removeHandler(handler2)
+
+        # No streams should contain the traceback
+        stream1 = StringIO()
+        stream2 = StringIO()
+        handler1 = StreamHandler(stream1)
+        handler2 = StreamHandler(stream2)
+
+        handler1.setLevel(logging.ERROR)
+        handler2.setLevel(logging.INFO)
+
+        log.addHandler(handler1)
+        log.addHandler(handler2)
+
+        try:
+            raise_exception_on_purpose()
+        except ZeroDivisionError as exc:
+            log.error('Exception raised on purpose caught: {0}'.format(exc),
+                      exc_info_on_loglevel=logging.DEBUG)
+
+        try:
+            self.assertIn(
+                'Exception raised on purpose caught: integer division or modulo by zero',
+                stream1.getvalue()
+            )
+            self.assertNotIn('Traceback (most recent call last)', stream1.getvalue())
+            self.assertIn(
+                'Exception raised on purpose caught: integer division or modulo by zero',
+                stream2.getvalue()
+            )
+            self.assertNotIn('Traceback (most recent call last)', stream2.getvalue())
+        finally:
+            log.removeHandler(handler1)
+            log.removeHandler(handler2)
 
 
 if __name__ == '__main__':

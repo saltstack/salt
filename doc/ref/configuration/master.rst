@@ -61,6 +61,20 @@ The network port to set up the publication interface
 
     publish_port: 4505
 
+.. conf_master:: master_id
+
+``master_id``
+----------------
+
+Default: ``None``
+
+The id to be passed in the publish job to minions. This is used for MultiSyndics
+to return the job to the requesting master. Note, this must be the same string
+as the syndic is configured with.
+
+.. code-block:: yaml
+
+    master_id: MasterOfMaster
 
 .. conf_master:: user
 
@@ -120,6 +134,14 @@ worker_threads value.
 
 Worker threads should not be put below 3 when using the peer system, but can
 drop down to 1 worker otherwise.
+
+.. note::
+    When the master daemon starts, it is expected behaviour to see
+    multiple salt-master processes, even if 'worker_threads' is set to '1'. At
+    a minimum, a controlling process will start along with a Publisher, an
+    EventPublisher, and a number of MWorker processes will be started. The
+    number of MWorker processes is tuneable by the 'worker_threads'
+    configuration value while the others are not.
 
 .. code-block:: yaml
 
@@ -326,8 +348,8 @@ Default: ``True``
 
 The minion data cache is a cache of information about the minions stored on the
 master, this information is primarily the pillar and grains data. The data is
-cached in the Master cachedir under the name of the minion and used to pre
-determine what minions are expected to reply from executions.
+cached in the Master cachedir under the name of the minion and used to
+predetermine what minions are expected to reply from executions.
 
 .. code-block:: yaml
 
@@ -563,7 +585,7 @@ security purposes.
 
 Default: ``False``
 
-Sign the master auth-replies with a cryptographical signature of the masters
+Sign the master auth-replies with a cryptographic signature of the masters
 public key. Please see the tutorial how to use these settings in the
 `Multimaster-PKI with Failover Tutorial <http://docs.saltstack.com/en/latest/topics/tutorials/multimaster_pki.html>`_
 
@@ -574,7 +596,7 @@ public key. Please see the tutorial how to use these settings in the
 .. conf_master:: master_sign_key_name
 
 ``master_sign_key_name``
------------------------
+------------------------
 
 Default: ``master_sign``
 
@@ -788,12 +810,7 @@ Master File Server Settings
 ``fileserver_backend``
 ----------------------
 
-Default:
-
-.. code-block:: yaml
-
-    fileserver_backend:
-      - roots
+Default: ``['roots']``
 
 Salt supports a modular fileserver backend system, this system allows the salt
 master to link directly to third party systems to gather and manage the files
@@ -939,28 +956,13 @@ translated into salt environments.
 
 .. note::
 
-    ``file://`` repos will be treated as a remote, so refs you want used must
-    exist in that repo as *local* refs.
+    ``file://`` repos will be treated as a remote and copied into the master's
+    gitfs cache, so only the *local* refs for those repos will be exposed as
+    fileserver environments.
 
-.. note::
-
-    As of 2014.7.0, it is possible to have per-repo versions of the
-    :conf_master:`gitfs_base`, :conf_master:`gitfs_root`, and
-    :conf_master:`gitfs_mountpoint` parameters. For example:
-
-    .. code-block:: yaml
-
-        gitfs_remotes:
-          - https://foo.com/foo.git
-          - https://foo.com/bar.git:
-            - root: salt
-            - mountpoint: salt://foo/bar/baz
-            - base: salt-base
-          - https://foo.com/baz.git:
-            - root: salt/states
-
-For more information on GitFS remotes, see the :ref:`GitFS Backend Walkthrough
-<tutorial-gitfs>`.
+As of 2014.7.0, it is possible to have per-repo versions of several of the
+gitfs configuration parameters. For more information, see the :ref:`Gitfs
+Walkthrough <gitfs-per-remote-config>`.
 
 .. conf_master:: gitfs_provider
 
@@ -969,34 +971,29 @@ For more information on GitFS remotes, see the :ref:`GitFS Backend Walkthrough
 
 .. versionadded:: 2014.7.0
 
-Default: ``gitpython``
+Specify the provider to be used for gitfs. More information can be found in the
+:ref:`Gitfs Walkthrough <gitfs-dependencies>`.
 
-GitFS defaults to using GitPython_, but this parameter allows for either
-pygit2_ or dulwich_ to be used instead. If using pygit2, both libgit2 and git
-itself must also be installed. More information can be found in the :mod:`GitFS
-backend documentation <salt.fileserver.gitfs>` and the :doc:`GitFS walkthrough
-</topics/tutorials/gitfs>`.
-
-.. _GitPython: https://github.com/gitpython-developers/GitPython
 .. _pygit2: https://github.com/libgit2/pygit2
+.. _GitPython: https://github.com/gitpython-developers/GitPython
 .. _dulwich: https://www.samba.org/~jelmer/dulwich/
 
 .. code-block:: yaml
 
-    gitfs_provider: pygit2
+    gitfs_provider: dulwich
 
 .. conf_master:: gitfs_ssl_verify
 
 ``gitfs_ssl_verify``
 ********************
 
-Default: ``[]``
+Default: ``True``
 
 The ``gitfs_ssl_verify`` option specifies whether to ignore SSL certificate
-errors when contacting the gitfs backend. You might want to set this to
-false if you're using a git backend that uses a self-signed certificate but
-keep in mind that setting this flag to anything other than the default of True
-is a security concern, you may want to try using the ssh transport.
+errors when contacting the gitfs backend. You might want to set this to false
+if you're using a git backend that uses a self-signed certificate but keep in
+mind that setting this flag to anything other than the default of ``True`` is a
+security concern, you may want to try using the ssh transport.
 
 .. code-block:: yaml
 
@@ -1013,7 +1010,7 @@ Default: ``''``
 
 Specifies a path on the salt fileserver from which gitfs remotes are served.
 Can be used in conjunction with :conf_master:`gitfs_root`. Can also be
-configured on a per-remote basis, see :conf_master:`here <gitfs_remotes>` for
+configured on a per-remote basis, see :ref:`here <gitfs-per-remote-config>` for
 more info.
 
 .. code-block:: yaml
@@ -1044,7 +1041,7 @@ available to the Salt fileserver. Can be used in conjunction with
 .. versionchanged:: 2014.7.0
 
    Ability to specify gitfs roots on a per-remote basis was added. See
-   :conf_master:`here <gitfs_remotes>` for more info.
+   :ref:`here <gitfs-per-remote-config>` for more info.
 
 .. conf_master:: gitfs_base
 
@@ -1055,13 +1052,13 @@ Default: ``master``
 
 Defines which branch/tag should be used as the ``base`` environment.
 
-.. versionchanged:: 2014.7.0
-    Can also be configured on a per-remote basis, see :conf_master:`here
-    <gitfs_remotes>` for more info.
-
 .. code-block:: yaml
 
     gitfs_base: salt
+
+.. versionchanged:: 2014.7.0
+    Ability to specify the base on a per-remote basis was added. See :ref:`here
+    <gitfs-per-remote-config>` for more info.
 
 .. conf_master:: gitfs_env_whitelist
 
@@ -1073,16 +1070,9 @@ Defines which branch/tag should be used as the ``base`` environment.
 Default: ``[]``
 
 Used to restrict which environments are made available. Can speed up state runs
-if your gitfs remotes contain many branches/tags. Full names, globs, and
-regular expressions are supported. If using a regular expression, the
-expression must match the entire minion ID.
-
-If used, only branches/tags/SHAs which match one of the specified expressions
-will be exposed as fileserver environments.
-
-If used in conjunction with :conf_master:`gitfs_env_blacklist`, then the subset
-of branches/tags/SHAs which match the whitelist but do *not* match the
-blacklist will be exposed as fileserver environments.
+if the repos in :conf_master:`gitfs_remotes` contain many branches/tags.  More
+information can be found in the :ref:`Gitfs Walkthrough
+<gitfs-whitelist-blacklist>`.
 
 .. code-block:: yaml
 
@@ -1101,16 +1091,9 @@ blacklist will be exposed as fileserver environments.
 Default: ``[]``
 
 Used to restrict which environments are made available. Can speed up state runs
-if your gitfs remotes contain many branches/tags. Full names, globs, and
-regular expressions are supported. If using a regular expression, the
-expression must match the entire minion ID.
-
-If used, branches/tags/SHAs which match one of the specified expressions will
-*not* be exposed as fileserver environments.
-
-If used in conjunction with :conf_master:`gitfs_env_whitelist`, then the subset
-of branches/tags/SHAs which match the whitelist but do *not* match the
-blacklist will be exposed as fileserver environments.
+if the repos in :conf_master:`gitfs_remotes` contain many branches/tags. More
+information can be found in the :ref:`Gitfs Walkthrough
+<gitfs-whitelist-blacklist>`.
 
 .. code-block:: yaml
 
@@ -1118,6 +1101,115 @@ blacklist will be exposed as fileserver environments.
       - base
       - v1.*
       - 'mybranch\d+'
+
+
+Gitfs Authentication Options
+****************************
+
+These parameters only currently apply to the pygit2 gitfs provider. Examples of
+how to use these can be found in the :ref:`Gitfs Walkthrough
+<gitfs-authentication>`.
+
+.. conf_master:: gitfs_user
+
+``gitfs_user``
+~~~~~~~~~~~~~~
+
+.. versionadded:: 2014.7.0
+
+Default: ``''``
+
+Along with :conf_master:`gitfs_password`, is used to authenticate to HTTPS
+remotes.
+
+.. code-block:: yaml
+
+    gitfs_user: git
+
+.. conf_master:: gitfs_password
+
+``gitfs_password``
+~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 2014.7.0
+
+Default: ``''``
+
+Along with :conf_master:`gitfs_user`, is used to authenticate to HTTPS remotes.
+This parameter is not required if the repository does not use authentication.
+
+.. code-block:: yaml
+
+    gitfs_password: mypassword
+
+.. conf_master:: gitfs_insecure_auth
+
+``gitfs_insecure_auth``
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 2014.7.0
+
+Default: ``False``
+
+By default, Salt will not authenticate to an HTTP (non-HTTPS) remote. This
+parameter enables authentication over HTTP. **Enable this at your own risk.**
+
+.. code-block:: yaml
+
+    gitfs_insecure_auth: True
+
+.. conf_master:: gitfs_pubkey
+
+``gitfs_pubkey``
+~~~~~~~~~~~~~~~~
+
+.. versionadded:: 2014.7.0
+
+Default: ``''``
+
+Along with :conf_master:`gitfs_privkey` (and optionally
+:conf_master:`gitfs_passphrase`), is used to authenticate to SSH remotes. This
+parameter (or its :ref:`per-remote counterpart <gitfs-per-remote-config>`) is
+required for SSH remotes.
+
+.. code-block:: yaml
+
+    gitfs_pubkey: /path/to/key.pub
+
+.. conf_master:: gitfs_privkey
+
+``gitfs_privkey``
+~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 2014.7.0
+
+Default: ``''``
+
+Along with :conf_master:`gitfs_pubkey` (and optionally
+:conf_master:`gitfs_passphrase`), is used to authenticate to SSH remotes. This
+parameter (or its :ref:`per-remote counterpart <gitfs-per-remote-config>`) is
+required for SSH remotes.
+
+.. code-block:: yaml
+
+    gitfs_privkey: /path/to/key
+
+.. conf_master:: gitfs_passphrase
+
+``gitfs_passphrase``
+~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 2014.7.0
+
+Default: ``''``
+
+This parameter is optional, required only when the SSH key being used to
+authenticate is protected by a passphrase.
+
+.. code-block:: yaml
+
+    gitfs_passphrase: mypassphrase
+
 
 hg: Mercurial Remote File Server Backend
 ----------------------------------------
@@ -1660,15 +1752,32 @@ Default: ``None``
 
 There are additional details at :ref:`salt-pillars`
 
+.. conf_master:: ext_pillar_first
+
+``ext_pillar_first``
+--------------
+
+The ext_pillar_first option allows for external pillar sources to populate
+before file system pillar. This allows for targeting file system pillar from
+ext_pillar.
+
+Default: ``False``
+
+.. code-block:: yaml
+
+    ext_pillar_first: False
+
 .. conf_master:: pillar_source_merging_strategy
 
 ``pillar_source_merging_strategy``
 ----------------------------------
 
+.. versionadded:: 2014.7.0
+
 Default: ``smart``
 
-The pillar_source_merging_strategy option allows to configure merging strategy
-between different sources. It accepts 3 values:
+The pillar_source_merging_strategy option allows you to configure merging
+strategy between different sources. It accepts 3 values:
 
 * recurse:
 
@@ -2058,7 +2167,7 @@ Range Cluster Settings
 Default: ``''``
 
 The range server (and optional port) that serves your cluster information
-https://github.com/grierj/range/wiki/Introduction-to-Range-with-YAML-files
+https://github.com/ytoolshed/range/wiki/%22yamlfile%22-module-file-spec
 
 .. code-block:: yaml
 

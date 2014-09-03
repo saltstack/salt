@@ -469,12 +469,21 @@ class Key(object):
         else:
             matches = self.list_keys()
         ret = {}
+        if ',' in match and isinstance(match, str):
+            match = match.split(',')
         for status, keys in matches.items():
             for key in salt.utils.isorted(keys):
-                if fnmatch.fnmatch(key, match):
-                    if status not in ret:
-                        ret[status] = []
-                    ret[status].append(key)
+                if isinstance(match, list):
+                    for match_item in match:
+                        if fnmatch.fnmatch(key, match_item):
+                            if status not in ret:
+                                ret[status] = []
+                            ret[status].append(key)
+                else:
+                    if fnmatch.fnmatch(key, match):
+                        if status not in ret:
+                            ret[status] = []
+                        ret[status].append(key)
         return ret
 
     def dict_match(self, match_dict):

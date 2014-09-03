@@ -25,21 +25,20 @@ does.
 
 See (admittedly degenerate and probably not complete) example:
 
+.. code-block:: text
 
-```
-classes:
-  - basepackages
-  - database
-```
+    classes:
+      - basepackages
+      - database
 
-The above essentially is the same as a top.sls containing
+The above essentially is the same as a top.sls containing:
 
-```
-base:
-  '*':
-    - basepackages
-    - database
+.. code-block:: yaml
 
+    base:
+      '*':
+        - basepackages
+        - database
 '''
 
 # Import python libs

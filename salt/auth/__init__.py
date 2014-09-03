@@ -322,8 +322,7 @@ class Resolver(object):
         elif self.opts['transport'] == 'raet':
             sreq = salt.transport.Channel.factory(
                     self.opts)
-            sreq.route['dst'] = (None, None, 'local_cmd')
-            sreq.route['src'] = (None, sreq.stack.local.name, None)
+            sreq.dst = (None, None, 'local_cmd')
             tdata = sreq.send(load)
             return tdata
 

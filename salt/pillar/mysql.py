@@ -95,6 +95,20 @@ returned by MySQL.
 
 Thus subsequent results overwrite previous ones when they collide.
 
+The ignore_null option can be used to change the overwrite behavior so that
+only non-NULL values in subsequent results will overwrite.  This can be used
+to selectively overwrite default values.
+
+.. code-block:: yaml
+
+  ext_pillar:
+    - mysql:
+        - query: "SELECT pillar,value FROM pillars WHERE minion_id = 'default' and minion_id != %s"
+          depth: 2
+        - query: "SELECT pillar,value FROM pillars WHERE minion_id = %s"
+          depth: 2
+          ignore_null: True
+
 If you specify `as_list: True` in the mapping expression it will convert
 collisions to lists.
 
@@ -242,6 +256,7 @@ class merger(object):
     depth = 0
     as_list = False
     with_lists = None
+    ignore_null = False
 
     def __init__(self):
         self.result = self.focus = {}
@@ -288,7 +303,8 @@ class merger(object):
             defaults = {'query': '',
                         'depth': 0,
                         'as_list': False,
-                        'with_lists': None
+                        'with_lists': None,
+                        'ignore_null': False
                         }
             if isinstance(qb[1], str):
                 defaults['query'] = qb[1]
@@ -392,8 +408,8 @@ class merger(object):
                         crd[ret[nk]] = []
                     crd[ret[nk]].append(ret[self.num_fields-1])
                 else:
-                    # No clobber checks then
-                    crd[ret[nk]] = ret[self.num_fields-1]
+                    if not self.ignore_null or ret[self.num_fields-1]:
+                        crd[ret[nk]] = ret[self.num_fields-1]
             else:
                 # Otherwise, the field name is the key but we have a spare.
                 # The spare results because of {c: d} vs {c: {"d": d, "e": e }}
@@ -426,7 +442,8 @@ class merger(object):
                         else:
                             crd[nk] = [crd[nk], ret[i]]
                     else:
-                        crd[nk] = ret[i]
+                        if not self.ignore_null or ret[i]:
+                            crd[nk] = ret[i]
         # Get key list and work backwards.  This is inner-out processing
         ks = listify_dicts.keys()
         ks.reverse()
@@ -467,6 +484,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
                 return_data.with_lists = details['with_lists']
             else:
                 return_data.with_lists = []
+            return_data.ignore_null = details['ignore_null']
             return_data.process_results(cur.fetchall())
 
             log.debug('ext_pillar MySQL: Return data: {0}'.format(

@@ -217,7 +217,7 @@ def fileserver_update(fileserver):
     except Exception as exc:
         log.error(
             'Exception {0} occurred in file server update'.format(exc),
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
 
 
@@ -598,7 +598,7 @@ class RemoteFuncs(object):
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
-        file_recv_max_size = 1024*1024 * self.opts.get('file_recv_max_size', 100)
+        file_recv_max_size = 1024*1024 * self.opts['file_recv_max_size']
 
         if 'loc' in load and load['loc'] < 0:
             log.error('Invalid file pointer: load[loc] < 0')
@@ -1007,7 +1007,7 @@ class LocalFuncs(object):
                         'introspecting {0}: {1}'.format(fun, exc))
                 return dict(error=dict(name=exc.__class__.__name__,
                                        args=exc.args,
-                                      message=exc.message))
+                                      message=str(exc)))
 
         if 'eauth' not in load:
             msg = ('Authentication failure of type "eauth" occurred for '
@@ -1058,7 +1058,7 @@ class LocalFuncs(object):
                         'introspecting {0}: {1}'.format(fun, exc))
                 return dict(error=dict(name=exc.__class__.__name__,
                                        args=exc.args,
-                                       message=exc.message))
+                                       message=str(exc)))
 
         except Exception as exc:
             log.error(
@@ -1066,7 +1066,7 @@ class LocalFuncs(object):
             )
             return dict(error=dict(name=exc.__class__.__name__,
                                    args=exc.args,
-                                   message=exc.message))
+                                   message=str(exc)))
 
     def wheel(self, load):
         '''
@@ -1212,7 +1212,7 @@ class LocalFuncs(object):
             )
             return dict(error=dict(name=exc.__class__.__name__,
                                    args=exc.args,
-                                   message=exc.message))
+                                   message=str(exc)))
 
     def mk_token(self, load):
         '''

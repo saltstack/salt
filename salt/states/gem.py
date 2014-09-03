@@ -33,7 +33,8 @@ def installed(name,          # pylint: disable=C0103
               version=None,
               rdoc=False,
               ri=False,
-              pre_releases=False):     # pylint: disable=C0103
+              pre_releases=False,
+              proxy=None):     # pylint: disable=C0103
     '''
     Make sure that a gem is installed.
 
@@ -65,6 +66,10 @@ def installed(name,          # pylint: disable=C0103
 
     pre_releases : False
         Install pre-release version of gem(s) if available.
+
+    proxy : None
+        Use the specified HTTP proxy server for all outgoing traffic.
+        Format: http://hostname[:port]
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
@@ -111,7 +116,8 @@ def installed(name,          # pylint: disable=C0103
                                version=version,
                                rdoc=rdoc,
                                ri=ri,
-                               pre_releases=pre_releases):
+                               pre_releases=pre_releases,
+                               proxy=proxy):
         ret['result'] = True
         ret['changes'][name] = 'Installed'
         ret['comment'] = 'Gem was successfully installed'

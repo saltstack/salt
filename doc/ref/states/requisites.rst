@@ -76,6 +76,8 @@ Each direct requisite also has a corresponding requisite_in: ``require_in``,
 All of the requisites define specific relationships and always work with the
 dependency logic defined above.
 
+.. _requisites-require:
+
 require
 ~~~~~~~
 
@@ -102,6 +104,8 @@ including the sls file and then setting a state to ``require`` the included sls 
       pkg.installed:
         - require:
           - sls: foo
+
+.. _requisites-watch:
 
 watch
 ~~~~~
@@ -185,6 +189,8 @@ to Salt ensuring that the service is running.
       file.managed:
         - name: /etc/ntp.conf
         - source: salt://ntp/files/ntp.conf
+
+.. _requisites-prereq:
 
 prereq
 ~~~~~~
@@ -409,7 +415,7 @@ even more stateful.  The check_cmds option helps ensure that the result of a
 state is evaluated correctly.
 
 Unless
-~~~~~~
+------
 
 .. versionadded:: 2014.7.0
 
@@ -428,7 +434,7 @@ This state will not run if the vim-enhanced package is already installed, or if
 run.
 
 Onlyif
-~~~~~~
+------
 
 .. versionadded:: 2014.7.0
 
@@ -458,7 +464,7 @@ This will ensure that the stop_volume and delete modules are only run if the
 gluster commands return back a 0 ret value.
 
 Listen/Listen_in
-~~~~~~~~~~~~~~~~
+----------------
 
 .. versionadded:: 2014.7.0
 
@@ -472,15 +478,15 @@ at the end of a state run, after all states have completed.
 .. code-block:: yaml
 
  restart-apache2:
- service.running:
- - name: apache2
- - listen:
- - file: /etc/apache2/apache2.conf
+   service.running:
+     - name: apache2
+     - listen:
+     - file: /etc/apache2/apache2.conf
 
  configure-apache2:
- file.managed:
- - path: /etc/apache2/apache2.conf
- - source: salt://apache2/apache2.conf
+   file.managed:
+     - path: /etc/apache2/apache2.conf
+     - source: salt://apache2/apache2.conf
 
 This example will cause apache2 to be restarted when the apache2.conf file is
 changed, but the apache2 restart will happen at the end of the state run.
@@ -488,21 +494,21 @@ changed, but the apache2 restart will happen at the end of the state run.
 .. code-block:: yaml
 
  restart-apache2:
- service.running:
- - name: apache2
+   service.running:
+     - name: apache2
 
  configure-apache2:
- file.managed:
- - path: /etc/apache2/apache2.conf
- - source: salt://apache2/apache2.conf
- - listen_in:
- - service: apache2
+   file.managed:
+     - path: /etc/apache2/apache2.conf
+     - source: salt://apache2/apache2.conf
+     - listen_in:
+     - service: apache2
 
 This example does the same as the above example, but puts the state argument
 on the file resource, rather than the service resource.
 
 Check_Cmd
-~~~~~~~~~
+---------
 
 .. versionadded:: 2014.7.0
 
@@ -532,9 +538,9 @@ Overriding Checks
 
 There are two commands used for the above checks.
 
-`mod_run_check` is used to check for onlyif and unless.  If the goal is to
-override the global check for these to variables, include a mod_run_check in the
+``mod_run_check`` is used to check for ``onlyif`` and ``unless``.  If the goal is to
+override the global check for these to variables, include a ``mod_run_check`` in the
 salt/states/ file.
 
-`mod_run_check_cmd` is used to check for the check_cmd options.  To override
-this one, include a mod_run_check_cmd in the states file for the state.
+``mod_run_check_cmd`` is used to check for the check_cmd options.  To override
+this one, include a ``mod_run_check_cmd`` in the states file for the state.

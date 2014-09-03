@@ -87,7 +87,7 @@ def set_option(file_name, sections=None, summary=True):
                                                  sections[section][option]})
             except Exception:
                 ret.update({'error':
-                            'while setting option {0} in section {0}'.
+                            'while setting option {0} in section {1}'.
                             format(option, section)})
                 err_flag = True
                 break

@@ -20,6 +20,7 @@ import salt.client
 import salt.output
 import salt.utils.minions
 import salt.wheel
+import salt.version
 
 FINGERPRINT_REGEX = re.compile(r'^([a-f0-9]{2}:){15}([a-f0-9]{2})$')
 
@@ -137,7 +138,7 @@ def up():  # pylint: disable=C0103
 def present(subset=None, show_ipv4=False):
     '''
     Print a list of all minions that are up according to Salt's presence
-    detection, no commands will be sent
+    detection (no commands will be sent)
 
     subset : None
         Pass in a CIDR range to filter minions by IP address.
@@ -157,6 +158,40 @@ def present(subset=None, show_ipv4=False):
     connected = dict(minions) if show_ipv4 else sorted(minions)
 
     salt.output.display_output(connected, '', __opts__)
+    return connected
+
+
+def not_present(subset=None, show_ipv4=False):
+    '''
+    Print a list of all minions that are NOT up according to Salt's presence
+    detection (no commands will be sent)
+
+    subset : None
+        Pass in a CIDR range to filter minions by IP address.
+
+    show_ipv4 : False
+        Also show the IP address each minion is connecting from.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run manage.not_present
+    '''
+    ckminions = salt.utils.minions.CkMinions(__opts__)
+
+    minions = ckminions.connected_ids(show_ipv4=show_ipv4, subset=subset)
+    connected = dict(minions) if show_ipv4 else sorted(minions)
+
+    key = salt.key.Key(__opts__)
+    keys = key.list_keys()
+
+    not_connected = []
+    for minion in keys['minions']:
+        if minion not in connected:
+            not_connected.append(minion)
+
+    salt.output.display_output(not_connected, '', __opts__)
     return connected
 
 
@@ -234,24 +269,18 @@ def versions():
 
     version_status = {}
 
-    comps = salt.__version__.split('-')
-    if len(comps) == 3:
-        master_version = '-'.join(comps[0:2])
-    else:
-        master_version = salt.__version__
+    master_version = salt.version.__saltstack_version__
+
     for minion in minions:
-        comps = minions[minion].split('-')
-        if len(comps) == 3:
-            minion_version = '-'.join(comps[0:2])
-        else:
-            minion_version = minions[minion]
+        minion_version = salt.version.SaltStackVersion.parse(minions[minion])
         ver_diff = cmp(minion_version, master_version)
 
         if ver_diff not in version_status:
             version_status[ver_diff] = {}
-        version_status[ver_diff][minion] = minion_version
+        version_status[ver_diff][minion] = minion_version.string
+
     # Add version of Master to output
-    version_status[2] = salt.__version__
+    version_status[2] = master_version.string
 
     ret = {}
     for key in version_status:

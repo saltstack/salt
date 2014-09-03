@@ -79,6 +79,7 @@ list_nodes = namespaced_function(list_nodes, globals())
 list_nodes_full = namespaced_function(list_nodes_full, globals())
 list_nodes_select = namespaced_function(list_nodes_select, globals())
 show_instance = namespaced_function(show_instance, globals())
+get_salt_interface = namespaced_function(get_salt_interface, globals())
 
 
 # Only load in this module is the RACKSPACE configurations are in place
@@ -240,7 +241,7 @@ def create(vm_):
                 vm_['name'], exc
             ),
             # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -261,7 +262,7 @@ def create(vm_):
                     err
                 ),
                 # Show the traceback if the debug logging level is enabled
-                exc_info=log.isEnabledFor(logging.DEBUG)
+                exc_info_on_loglevel=logging.DEBUG
             )
             # Trigger a failure in the wait for IP function
             return False
@@ -320,7 +321,7 @@ def create(vm_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(exc.message)
+            raise SaltCloudSystemExit(str(exc))
 
     log.debug('VM is now running')
     if ssh_interface(vm_) == 'private_ips':
@@ -328,6 +329,13 @@ def create(vm_):
     else:
         ip_address = preferred_ip(vm_, data.public_ips)
     log.debug('Using IP address {0}'.format(ip_address))
+
+    if get_salt_interface(vm_) == 'private_ips':
+        salt_ip_address = preferred_ip(vm_, data.private_ips)
+        log.info('Salt interface set to: {0}'.format(salt_ip_address))
+    else:
+        salt_ip_address = preferred_ip(vm_, data.public_ips)
+        log.debug('Salt interface set to: {0}'.format(salt_ip_address))
 
     if not ip_address:
         raise SaltCloudSystemExit(
@@ -344,6 +352,7 @@ def create(vm_):
         deploy_kwargs = {
             'opts': __opts__,
             'host': ip_address,
+            'salt_host': salt_ip_address,
             'username': ssh_username,
             'password': data.extra['password'],
             'script': deploy_script.script,
@@ -406,9 +415,11 @@ def create(vm_):
             deploy_kwargs['username'] = config.get_cloud_config_value(
                 'win_username', vm_, __opts__, default='Administrator'
             )
-            deploy_kwargs['password'] = config.get_cloud_config_value(
+            win_pass = config.get_cloud_config_value(
                 'win_password', vm_, __opts__, default=''
             )
+            if win_pass:
+                deploy_kwargs['password'] = win_pass
 
         # Store what was used to the deploy the VM
         event_kwargs = copy.deepcopy(deploy_kwargs)

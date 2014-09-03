@@ -16,6 +16,7 @@ import logging
 # Import salt libs
 import salt.utils
 import salt.utils.dictupdate
+from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
 
 __proxyenabled__ = ['*']
@@ -61,7 +62,7 @@ _SANITIZERS = {
 }
 
 
-def get(key, default='', delim=':'):
+def get(key, default='', delimiter=DEFAULT_TARGET_DELIM):
     '''
     Attempt to retrieve the named value from grains, if the named value is not
     available return the passed default. The default return is an empty string.
@@ -77,7 +78,7 @@ def get(key, default='', delim=':'):
         pkg:apache
 
 
-    delim
+    delimiter
         Specify an alternate delimiter to use when traversing a nested dict
 
         .. versionadded:: 2014.7.0
@@ -88,7 +89,10 @@ def get(key, default='', delim=':'):
 
         salt '*' grains.get pkg:apache
     '''
-    return salt.utils.traverse_dict_and_list(__grains__, key, default, delim)
+    return salt.utils.traverse_dict_and_list(__grains__,
+                                             key,
+                                             default,
+                                             delimiter)
 
 
 def has_value(key):
@@ -359,8 +363,7 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default'):
         {% set apache = salt['grains.filter_by']({
             'Debian': {'pkg': 'apache2', 'srv': 'apache2'},
             'RedHat': {'pkg': 'httpd', 'srv': 'httpd'},
-            'default': 'Debian',
-        }) %}
+        }, default='Debian') %}
 
         myapache:
           pkg:
@@ -439,7 +442,7 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default'):
     return ret
 
 
-def _dict_from_path(path, val, delim=':'):
+def _dict_from_path(path, val, delimiter=DEFAULT_TARGET_DELIM):
     '''
     Given a lookup string in the form of 'foo:bar:baz" return a nested
     dictionary of the appropriate depth with the final segment as a value.
@@ -448,7 +451,7 @@ def _dict_from_path(path, val, delim=':'):
     {"foo": {"bar": {"baz": "somevalue"}}
     '''
     nested_dict = _infinitedict()
-    keys = path.rsplit(delim)
+    keys = path.rsplit(delimiter)
     lastplace = reduce(operator.getitem, keys[:-1], nested_dict)
     lastplace[keys[-1]] = val
 

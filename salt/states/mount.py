@@ -38,7 +38,7 @@ def mounted(name,
             device,
             fstype,
             mkmnt=False,
-            opts=None,
+            opts='defaults',
             dump=0,
             pass_num=0,
             config='/etc/fstab',
@@ -89,8 +89,6 @@ def mounted(name,
     # string
     if isinstance(opts, string_types):
         opts = opts.split(',')
-    elif opts is None:
-        opts = ['defaults']
 
     # remove possible trailing slash
     if not name == '/':
@@ -133,14 +131,14 @@ def mounted(name,
                 device_list.append(uuid_device)
             if opts:
                 for opt in opts:
-                    if opt not in active[real_name]['opts']:
+                    if opt not in active[real_name]['opts'] and opt != 'defaults':
                         if __opts__['test']:
                             ret['result'] = None
                             ret['comment'] = "Remount would be forced because options changed"
                             return ret
                         else:
                             ret['changes']['umount'] = "Forced remount because " \
-                                                        + "options changed"
+                                                       + "options changed"
                             remount_result = __salt__['mount.remount'](real_name, device, mkmnt=mkmnt, fstype=fstype, opts=opts)
                             ret['result'] = remount_result
                             return ret
@@ -165,8 +163,19 @@ def mounted(name,
             # The mount is not present! Mount it
             if __opts__['test']:
                 ret['result'] = None
-                ret['comment'] = '{0} would be mounted'.format(name)
+                if os.path.exists(name):
+                    ret['comment'] = '{0} would be mounted'.format(name)
+                else:
+                    ret['comment'] = '{0} will be created and mounted'.format(name)
                 return ret
+
+            if not os.path.exists(name):
+                if mkmnt:
+                    __salt__['file.mkdir'](name)
+                else:
+                    ret['result'] = False
+                    ret['comment'] = 'Mount directory is not present'
+                    return ret
 
             out = __salt__['mount.mount'](name, device, mkmnt, fstype, opts)
             active = __salt__['mount.active']()

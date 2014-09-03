@@ -235,9 +235,9 @@ def ext_pillar(minion_id,
 
         return {pillar_name: django_pillar}
     except ImportError as e:
-        log.error('Failed to import library: {0}'.format(e.message))
+        log.error('Failed to import library: {0}'.format(str(e)))
         return {}
     except Exception as e:
-        log.error('Failed on Error: {0}'.format(e.message))
+        log.error('Failed on Error: {0}'.format(str(e)))
         log.debug('django_orm traceback', exc_info=True)
         return {}

@@ -7,6 +7,7 @@ Support for iptables
 import os
 import re
 import sys
+import uuid
 import shlex
 
 # Import salt libs
@@ -291,6 +292,10 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         after_jump.append('--reject-with {0} '.format(kwargs['reject-with']))
         del kwargs['reject-with']
 
+    if 'set-mark' in kwargs:
+        after_jump.append('--set-mark {0} '.format(kwargs['set-mark']))
+        del kwargs['set-mark']
+
     for item in kwargs:
         if str(kwargs[item]).startswith('!') or str(kwargs[item]).startswith('not'):
             kwargs[item] = re.sub(bang_not_pat, '', kwargs[item])
@@ -485,16 +490,24 @@ def check(table='filter', chain=None, rule=None, family='ipv4'):
         HAS_CHECK = True
 
     if HAS_CHECK is False:
-        cmd = '{0}-save' . format(_iptables_cmd(family))
-        out = __salt__['cmd.run'](cmd).find('-A {1} {2}'.format(
-            table,
-            chain,
-            rule,
-        ))
-        if out != -1:
-            out = ''
-        else:
-            return False
+        _chain_name = hex(uuid.getnode())
+
+        # Create temporary table
+        __salt__['cmd.run']('{0} -N {1}'.format(_iptables_cmd(family), _chain_name))
+        __salt__['cmd.run']('{0} -A {1} {2}'.format(_iptables_cmd(family), _chain_name, rule))
+
+        out = __salt__['cmd.run']('{0}-save'.format(_iptables_cmd(family)))
+
+        # Clean up temporary table
+        __salt__['cmd.run']('{0} -F {1}'.format(_iptables_cmd(family), _chain_name))
+        __salt__['cmd.run']('{0} -X {1}'.format(_iptables_cmd(family), _chain_name))
+
+        for i in out.splitlines():
+            if i.startswith('-A {0}'.format(_chain_name)):
+                if i.replace(_chain_name, chain) in out.splitlines():
+                    return True
+
+        return False
     else:
         cmd = '{0} -t {1} -C {2} {3}'.format(_iptables_cmd(family), table, chain, rule)
         out = __salt__['cmd.run'](cmd)
@@ -524,7 +537,7 @@ def check_chain(table='filter', chain=None, family='ipv4'):
         return 'Error: Chain needs to be specified'
 
     cmd = '{0}-save -t {1}'.format(_iptables_cmd(family), table)
-    out = __salt__['cmd.run'](cmd).find(':{1} '.format(table, chain))
+    out = __salt__['cmd.run'](cmd).find(':{0} '.format(chain))
 
     if out != -1:
         out = True

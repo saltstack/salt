@@ -82,7 +82,13 @@ accept them
       os_auth_plugin: rackspace
       tenant: <userid>
       provider: nova
+      networks:
+        - net-id: 47a38ff2-fe21-4800-8604-42bd1848e743
+        - net-id: 00000000-0000-0000-0000-000000000000
+        - net-id: 11111111-1111-1111-1111-111111111111
 
+Note: You must include the default net-ids when setting networks or the server
+will be created without the rest of the interfaces
 '''
 # pylint: disable=E0102
 
@@ -96,7 +102,12 @@ import pprint
 
 # Import generic libcloud functions
 from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
-from salt.utils.openstack import nova
+try:
+    from salt.utils.openstack import nova
+    HAS_NOVA = True
+except NameError as exc:
+    HAS_NOVA = False
+
 import salt.utils.cloud
 
 # Import nova libs
@@ -132,6 +143,9 @@ except ImportError:
 log = logging.getLogger(__name__)
 request_log = logging.getLogger('requests')
 
+# namespace libcloudfuncs
+get_salt_interface = namespaced_function(get_salt_interface, globals())
+
 
 # Some of the libcloud functions need to be in the same namespace as the
 # functions defined in the module, so we create new function objects inside
@@ -146,7 +160,7 @@ def __virtual__():
     Check for Nova configurations
     '''
     request_log.setLevel(getattr(logging, __opts__.get('requests_log_level', 'warning').upper()))
-    return nova.HAS_NOVA
+    return HAS_NOVA
 
 
 def get_configured_provider():
@@ -222,7 +236,7 @@ def get_image(conn, vm_):
         raise SaltCloudNotFound(
             'The specified image, {0!r}, could not be found: {1}'.format(
                 vm_image,
-                exc.message
+                str(exc)
             )
         )
 
@@ -412,9 +426,7 @@ def request_instance(vm_=None, call=None):
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
     salt.utils.cloud.check_name(vm_['name'], 'a-zA-Z0-9._-')
     conn = get_conn()
-    kwargs = {
-        'name': vm_['name']
-    }
+    kwargs = vm_.copy()
 
     try:
         kwargs['image_id'] = get_image(conn, vm_)
@@ -464,8 +476,8 @@ def request_instance(vm_=None, call=None):
     if avz is not None:
         kwargs['availability_zone'] = avz
 
-    networks = config.get_cloud_config_value(
-        'networks', vm_, __opts__, search_global=False
+    kwargs['nics'] = config.get_cloud_config_value(
+        'networks', vm_, __opts__, search_global=False, default=None
     )
 
     files = config.get_cloud_config_value(
@@ -590,7 +602,7 @@ def create(vm_):
                     err
                 ),
                 # Show the traceback if the debug logging level is enabled
-                exc_info=log.isEnabledFor(logging.DEBUG)
+                exc_info_on_loglevel=logging.DEBUG
             )
             # Trigger a failure in the wait for IP function
             return False
@@ -684,7 +696,7 @@ def create(vm_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(exc.message)
+            raise SaltCloudSystemExit(str(exc))
 
     log.debug('VM is now running')
 
@@ -696,10 +708,21 @@ def create(vm_):
         ip_address = preferred_ip(vm_, data.public_ips)
     log.debug('Using IP address {0}'.format(ip_address))
 
+    if get_salt_interface(vm_) == 'private_ips':
+        salt_ip_address = preferred_ip(vm_, data.private_ips)
+        log.info('Salt interface set to: {0}'.format(salt_ip_address))
+    elif rackconnect(vm_) is True and get_salt_interface(vm_) != 'private_ips':
+        salt_ip_address = data.public_ips
+    else:
+        salt_ip_address = preferred_ip(vm_, data.public_ips)
+        log.debug('Salt interface set to: {0}'.format(salt_ip_address))
+
     if not ip_address:
         raise SaltCloudSystemExit('A valid IP address was not found')
 
     vm_['ssh_host'] = ip_address
+    vm_['salt_host'] = salt_ip_address
+
     ret = salt.utils.cloud.bootstrap(vm_, __opts__)
 
     ret.update(data.__dict__)

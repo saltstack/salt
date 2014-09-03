@@ -75,6 +75,7 @@ class TestLogin(BaseRestCherryPyTest):
                 'content-type': 'application/x-www-form-urlencoded'
         })
         self.assertEqual(response.status, '200 OK')
+        return response
 
     def test_bad_login(self):
         '''
@@ -89,6 +90,18 @@ class TestLogin(BaseRestCherryPyTest):
                 'content-type': 'application/x-www-form-urlencoded'
         })
         self.assertEqual(response.status, '401 Unauthorized')
+
+    def test_logout(self):
+        ret = self.test_good_login()
+        token = ret.headers['X-Auth-Token']
+
+        body = urllib.urlencode({})
+        request, response = self.request('/logout', method='POST', body=body,
+            headers={
+                'content-type': 'application/x-www-form-urlencoded',
+                'X-Auth-Token': token,
+        })
+        self.assertEqual(response.status, '200 OK')
 
 
 class TestRun(BaseRestCherryPyTest):

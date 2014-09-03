@@ -17,7 +17,7 @@ import fnmatch
 import time
 import sys
 import copy
-import threading
+from urllib2 import URLError
 
 # Import salt libs
 import salt
@@ -26,6 +26,7 @@ import salt.state
 import salt.client
 import salt.utils
 import salt.utils.process
+import salt.utils.minion
 import salt.transport
 from salt.exceptions import (
     SaltReqTimeoutError, SaltRenderError, CommandExecutionError
@@ -37,6 +38,7 @@ __proxyenabled__ = ['*']
 # Import third party libs
 try:
     import esky
+    from esky import EskyVersionError
     HAS_ESKY = True
 except ImportError:
     HAS_ESKY = False
@@ -183,7 +185,11 @@ def _list_emptydirs(rootdir):
 def update(version=None):
     '''
     Update the salt minion from the URL defined in opts['update_url']
+    SaltStack, Inc provides the latest builds here:
+    update_url: http://docs.saltstack.com/downloads/
 
+    Be aware that as of 2014-8-11 there's a bug in esky such that only the
+    latest version available in the update_url can be downloaded and installed.
 
     This feature requires the minion to be running a bdist_esky build.
 
@@ -196,31 +202,50 @@ def update(version=None):
 
     .. code-block:: bash
 
+        salt '*' saltutil.update
         salt '*' saltutil.update 0.10.3
     '''
+    ret = {}
     if not HAS_ESKY:
-        return 'Esky not available as import'
+        ret['_error'] = 'Esky not available as import'
+        return ret
     if not getattr(sys, 'frozen', False):
-        return 'Minion is not running an Esky build'
+        ret['_error'] = 'Minion is not running an Esky build'
+        return ret
     if not __salt__['config.option']('update_url'):
-        return '"update_url" not configured on this minion'
+        ret['_error'] = '"update_url" not configured on this minion'
+        return ret
     app = esky.Esky(sys.executable, __opts__['update_url'])
     oldversion = __grains__['saltversion']
-    try:
-        if not version:
+    if not version:
+        try:
             version = app.find_update()
-        if not version:
-            return 'No updates available'
+        except URLError as exc:
+            ret['_error'] = 'Could not connect to update_url. Error: {0}'.format(exc)
+            return ret
+    if not version:
+        ret['_error'] = 'No updates available'
+        return ret
+    try:
         app.fetch_version(version)
+    except EskyVersionError as exc:
+        ret['_error'] = 'Unable to fetch version {0}. Error: {1}'.format(version, exc)
+        return ret
+    try:
         app.install_version(version)
+    except EskyVersionError as exc:
+        ret['_error'] = 'Unable to install version {0}. Error: {1}'.format(version, exc)
+        return ret
+    try:
         app.cleanup()
-    except Exception as err:
-        return err
+    except Exception as exc:
+        ret['_error'] = 'Unable to cleanup. Error: {0}'.format(exc)
     restarted = {}
     for service in __opts__['update_restart_services']:
         restarted[service] = __salt__['service.restart'](service)
-    return {'comment': 'Updated from {0} to {1}'.format(oldversion, version),
-            'restarted': restarted}
+    ret['comment'] = 'Updated from {0} to {1}'.format(oldversion, version)
+    ret['restarted'] = restarted
+    return ret
 
 
 def sync_modules(saltenv=None, refresh=True):
@@ -392,7 +417,12 @@ def refresh_pillar():
 
         salt '*' saltutil.refresh_pillar
     '''
-    return __salt__['event.fire']({}, 'pillar_refresh')
+    try:
+        ret = __salt__['event.fire']({}, 'pillar_refresh')
+    except KeyError:
+        log.error('Event module not available. Module refresh failed.')
+        ret = False  # Effectively a no-op, since we can't really return without an event system
+    return ret
 
 
 def refresh_modules():
@@ -405,7 +435,12 @@ def refresh_modules():
 
         salt '*' saltutil.refresh_modules
     '''
-    return __salt__['event.fire']({}, 'module_refresh')
+    try:
+        ret = __salt__['event.fire']({}, 'module_refresh')
+    except KeyError:
+        log.error('Event module not available. Module refresh failed.')
+        ret = False  # Effectively a no-op, since we can't really return without an event system
+    return ret
 
 
 def is_running(fun):
@@ -437,63 +472,7 @@ def running():
 
         salt '*' saltutil.running
     '''
-    ret = []
-    serial = salt.payload.Serial(__opts__)
-    pid = os.getpid()
-    current_thread = threading.currentThread().name
-    proc_dir = os.path.join(__opts__['cachedir'], 'proc')
-    if not os.path.isdir(proc_dir):
-        return []
-
-    def _read_proc_file(path):
-        '''
-        Return a dict of JID metadata, or None
-        '''
-        with salt.utils.fopen(path, 'rb') as fp_:
-            buf = fp_.read()
-            fp_.close()
-            if buf:
-                data = serial.loads(buf)
-            else:
-                # Proc file is empty, remove
-                os.remove(path)
-                return None
-        if not isinstance(data, dict):
-            # Invalid serial object
-            return None
-        if not salt.utils.process.os_is_running(data['pid']):
-            # The process is no longer running, clear out the file and
-            # continue
-            os.remove(path)
-            return None
-        if __opts__['multiprocessing']:
-            if data.get('pid') == pid:
-                return None
-        else:
-            if data.get('pid') != pid:
-                os.remove(path)
-                return None
-            if data.get('jid') == current_thread:
-                return None
-            if not data.get('jid') in [x.name for x in threading.enumerate()]:
-                os.remove(path)
-                return None
-
-        return data
-
-    for fn_ in os.listdir(proc_dir):
-        path = os.path.join(proc_dir, fn_)
-        try:
-            data = _read_proc_file(path)
-            if data is not None:
-                ret.append(data)
-        except IOError:
-            # proc files may be removed at any time during this process by
-            # the minion process that is executing the JID in question, so
-            # we must ignore ENOENT during this process
-            pass
-
-    return ret
+    return salt.utils.minion.running(__opts__)
 
 
 def clear_cache():

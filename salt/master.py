@@ -42,10 +42,13 @@ import salt.utils.event
 import salt.utils.verify
 import salt.utils.minions
 import salt.utils.gzip_util
+from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.debug import enable_sigusr1_handler, enable_sigusr2_handler, inspect_stack
 from salt.exceptions import MasterExit
 from salt.utils.event import tagify
 import binascii
+from salt.utils.master import ConnectedCache
+from salt.utils.cache import CacheCli
 
 # Import halite libs
 try:
@@ -127,13 +130,21 @@ class Master(SMaster):
         Create a salt master server instance
         '''
         # Warn if ZMQ < 3.2
-        if not(hasattr(zmq, 'zmq_version_info')) or \
-                zmq.zmq_version_info() < (3, 2):
-            # PyZMQ 2.1.9 does not have zmq_version_info
-            log.warning('You have a version of ZMQ less than ZMQ 3.2! There '
-                        'are known connection keep-alive issues with ZMQ < '
-                        '3.2 which may result in loss of contact with '
-                        'minions. Please upgrade your ZMQ!')
+        try:
+            zmq_version_info = zmq.zmq_version_info()
+        except AttributeError:
+            # PyZMQ <= 2.1.9 does not have zmq_version_info, fall back to
+            # using zmq.zmq_version() and build a version info tuple.
+            zmq_version_info = tuple(
+                [int(x) for x in zmq.zmq_version().split('.')]
+            )
+        if zmq_version_info < (3, 2):
+            log.warning(
+                'You have a version of ZMQ less than ZMQ 3.2! There are '
+                'known connection keep-alive issues with ZMQ < 3.2 which '
+                'may result in loss of contact with minions. Please '
+                'upgrade your ZMQ!'
+            )
         SMaster.__init__(self, opts)
 
     def _clear_old_jobs(self):
@@ -311,6 +322,7 @@ class Master(SMaster):
         reqserv.start_event_publisher()
         reqserv.start_reactor()
         reqserv.start_halite()
+        reqserv.init_caches()
 
         def sigterm_clean(signum, frame):
             '''
@@ -330,6 +342,8 @@ class Master(SMaster):
                 clean_proc(reqserv.halite)
             if hasattr(reqserv, 'reactor'):
                 clean_proc(reqserv.reactor)
+            if hasattr(reqserv, 'con_cache'):
+                clean_proc(reqserv.con_cache)
             for proc in reqserv.work_procs:
                 clean_proc(proc)
             raise MasterExit
@@ -463,6 +477,13 @@ class ReqServer(object):
         if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
             # IPv6 sockets work for both IPv6 and IPv4 addresses
             self.clients.setsockopt(zmq.IPV4ONLY, 0)
+        try:
+            self.clients.setsockopt(zmq.HWM, self.opts['rep_hwm'])
+        # in zmq >= 3.0, there are separate send and receive HWM settings
+        except AttributeError:
+            self.clients.setsockopt(zmq.SNDHWM, self.opts['rep_hwm'])
+            self.clients.setsockopt(zmq.RCVHWM, self.opts['rep_hwm'])
+
         self.workers = self.context.socket(zmq.DEALER)
         self.w_uri = 'ipc://{0}'.format(
             os.path.join(self.opts['sock_dir'], 'workers.ipc')
@@ -537,6 +558,17 @@ class ReqServer(object):
         if self.opts.get('reactor'):
             self.reactor = salt.utils.event.Reactor(self.opts)
             self.reactor.start()
+
+    def init_caches(self):
+        '''
+        start all available caches if configured
+        '''
+        if self.opts['con_cache']:
+            log.debug('Starting ConCache')
+            self.con_cache = ConnectedCache(self.opts)
+            self.con_cache.start()
+        else:
+            return False
 
     def start_halite(self):
         '''
@@ -952,7 +984,7 @@ class AESFuncs(object):
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
-        file_recv_max_size = 1024*1024 * self.opts.get('file_recv_max_size', 100)
+        file_recv_max_size = 1024*1024 * self.opts['file_recv_max_size']
 
         if 'loc' in load and load['loc'] < 0:
             log.error('Invalid file pointer: load[loc] < 0')
@@ -1292,6 +1324,7 @@ class ClearFuncs(object):
         self.wheel_ = salt.wheel.Wheel(opts)
         self.masterapi = salt.daemons.masterapi.LocalFuncs(opts, key)
         self.auto_key = salt.daemons.masterapi.AutoKey(opts)
+        self.cache_cli = CacheCli(self.opts)
 
     def _auth(self, load):
         '''
@@ -1317,10 +1350,18 @@ class ClearFuncs(object):
                     'load': {'ret': False}}
         log.info('Authentication request from {id}'.format(**load))
 
-        minions = salt.utils.minions.CkMinions(self.opts).connected_ids()
-
         # 0 is default which should be 'unlimited'
         if self.opts['max_minions'] > 0:
+            # use the ConCache if enabled, else use the minion utils
+            if self.cache_cli:
+                minions = self.cache_cli.get_cached()
+            else:
+                minions = self.ckminions.connected_ids()
+                if len(minions) > 1000:
+                    log.info('With large numbers of minions it is advised '
+                             'to enable the ConCache with \'con_cache: True\' '
+                             'in the masters configuration file.')
+
             if not len(minions) < self.opts['max_minions']:
                 # we reject new minions, minions that are already
                 # connected must be allowed for the mine, highstate, etc.
@@ -1529,6 +1570,10 @@ class ClearFuncs(object):
                 fp_.write(load['pub'])
         pub = None
 
+        # the con_cache is enabled, send the minion id to the cache
+        if self.cache_cli:
+            self.cache_cli.put_cache([load['id']])
+
         # The key payload may sometimes be corrupt when using auto-accept
         # and an empty request comes in
         try:
@@ -1646,7 +1691,7 @@ class ClearFuncs(object):
                           'introspecting {0}: {1}'.format(fun, exc))
                 return dict(error=dict(name=exc.__class__.__name__,
                                        args=exc.args,
-                                       message=exc.message))
+                                       message=str(exc)))
 
         if 'eauth' not in clear_load:
             msg = ('Authentication failure of type "eauth" occurred for '
@@ -1697,7 +1742,7 @@ class ClearFuncs(object):
                           'introspecting {0}: {1}'.format(fun, exc))
                 return dict(error=dict(name=exc.__class__.__name__,
                                        args=exc.args,
-                                       message=exc.message))
+                                       message=str(exc)))
 
         except Exception as exc:
             log.error(
@@ -1705,7 +1750,7 @@ class ClearFuncs(object):
             )
             return dict(error=dict(name=exc.__class__.__name__,
                                    args=exc.args,
-                                   message=exc.message))
+                                   message=str(exc)))
 
     def wheel(self, clear_load):
         '''
@@ -1851,7 +1896,7 @@ class ClearFuncs(object):
             )
             return dict(error=dict(name=exc.__class__.__name__,
                                    args=exc.args,
-                                   message=exc.message))
+                                   message=str(exc)))
 
     def mk_token(self, clear_load):
         '''
@@ -2108,10 +2153,12 @@ class ClearFuncs(object):
                 )
                 return ''
         # Retrieve the minions list
+        delimiter = clear_load.get('kwargs', {}).get('delimiter', DEFAULT_TARGET_DELIM)
         minions = self.ckminions.check_minions(
             clear_load['tgt'],
-            clear_load.get('tgt_type', 'glob')
-            )
+            clear_load.get('tgt_type', 'glob'),
+            delimiter
+        )
         # If we order masters (via a syndic), don't short circuit if no minions
         # are found
         if not self.opts.get('order_masters'):
@@ -2195,6 +2242,15 @@ class ClearFuncs(object):
             'jid': clear_load['jid'],
             'ret': clear_load['ret'],
         }
+        # if you specified a master id, lets put that in the load
+        if 'master_id' in self.opts:
+            load['master_id'] = self.opts['master_id']
+        elif 'master_id' in extra:
+            load['master_id'] = extra['master_id']
+
+        # Only add the delimiter to the pub data if it is non-default
+        if delimiter != DEFAULT_TARGET_DELIM:
+            load['delimiter'] = delimiter
 
         if 'id' in extra:
             load['id'] = extra['id']
@@ -2202,6 +2258,10 @@ class ClearFuncs(object):
             load['tgt_type'] = clear_load['tgt_type']
         if 'to' in clear_load:
             load['to'] = clear_load['to']
+
+        if 'kwargs' in clear_load:
+            if 'ret_config' in clear_load['kwargs']:
+                load['ret_config'] = clear_load['kwargs'].get('ret_config')
 
         if 'user' in clear_load:
             log.info(

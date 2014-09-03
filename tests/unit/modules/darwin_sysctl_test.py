@@ -8,9 +8,16 @@ from salt.modules import darwin_sysctl
 from salt.exceptions import CommandExecutionError
 
 # Import Salt Testing Libs
-from salttesting import TestCase
+from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import MagicMock, mock_open, patch, call
+from salttesting.mock import (
+    MagicMock,
+    mock_open,
+    patch,
+    call,
+    NO_MOCK,
+    NO_MOCK_REASON
+)
 
 ensure_in_syspath('../../')
 
@@ -18,6 +25,7 @@ ensure_in_syspath('../../')
 darwin_sysctl.__salt__ = {}
 
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class DarwinSysctlTestCase(TestCase):
     '''
     TestCase for salt.modules.darwin_sysctl module

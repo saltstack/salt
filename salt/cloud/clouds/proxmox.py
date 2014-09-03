@@ -191,7 +191,7 @@ def _getVmById(vmid, allDetails=False):
 
 def _get_next_vmid():
     '''
-    Proxmox allows to use alternative ids instead of autoincrementing.
+    Proxmox allows the use of alternative ids instead of autoincrementing.
     Because of that its required to query what the first available ID is.
     '''
     return int(query('get', 'cluster/nextid'))
@@ -505,10 +505,10 @@ def create(vm_):
             'Error creating {0} on PROXMOX\n\n'
             'The following exception was thrown when trying to '
             'run the initial deployment: \n{1}'.format(
-                vm_['name'], exc.message
+                vm_['name'], str(exc)
             ),
             # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -714,7 +714,7 @@ def create_node(vm_):
     newnode['vmid'] = _get_next_vmid()
 
     for prop in ('cpuunits', 'description', 'memory', 'onboot'):
-        if prop in vm_:  # if the propery is set, use it for the VM request
+        if prop in vm_:  # if the property is set, use it for the VM request
             newnode[prop] = vm_[prop]
 
     if vm_['technology'] == 'openvz':
@@ -724,12 +724,12 @@ def create_node(vm_):
 
         # optional VZ settings
         for prop in ('cpus', 'disk', 'ip_address', 'nameserver', 'password', 'swap', 'poolid'):
-            if prop in vm_:  # if the propery is set, use it for the VM request
+            if prop in vm_:  # if the property is set, use it for the VM request
                 newnode[prop] = vm_[prop]
     elif vm_['technology'] == 'qemu':
         # optional Qemu settings
         for prop in ('acpi', 'cores', 'cpu', 'pool'):
-            if prop in vm_:  # if the propery is set, use it for the VM request
+            if prop in vm_:  # if the property is set, use it for the VM request
                 newnode[prop] = vm_[prop]
 
     # The node is ready. Lets request it to be added
@@ -851,8 +851,15 @@ def destroy(name, call=None):
 
     vmobj = _getVmByName(name)
     if vmobj is not None:
-        query('delete', 'nodes/{0}/{1}/{2}'.format(
-            vmobj['host'], vmobj['type'], vmobj['id']
+        # stop the vm
+        stop(name, vmobj['vmid'], 'action')
+
+        # wait until stopped
+        if not wait_for_state(vmobj['vmid'], vmobj['node'], vmobj['type'], 'stopped'):
+            return {'Error': 'Unable to stop {0}, command timed out'.format(name)}
+
+        query('delete', 'nodes/{0}/{1}'.format(
+            vmobj['node'], vmobj['id']
         ))
         salt.utils.cloud.fire_event(
             'event',

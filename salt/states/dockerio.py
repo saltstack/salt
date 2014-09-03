@@ -57,6 +57,16 @@ Available Functions
           - name: mysuperdocker
           - hostname: superdocker
           - image: corp/mysuperdocker_img
+
+- loaded
+
+  .. code-block:: yaml
+
+      mysuperdocker-file:
+        docker.loaded:
+          - name: mysuperdocker
+          - source: salt://_files/tmp/docker_image.tar
+
 - running
 
   .. code-block:: yaml
@@ -304,6 +314,74 @@ def pushed(name):
     return _ret_status(returned, name, changes=changes)
 
 
+def loaded(name, source=None, source_hash='', force=False):
+    '''
+    Load an image into the local docker registry (`docker load`)
+
+    name
+        Name of the docker image
+
+    source
+        The source .tar file to download to the minion, created by docker save
+        this source file can be hosted on either the salt master server,
+        or on an HTTP or FTP server.
+
+        If the file is hosted on a HTTP or FTP server then the source_hash
+        argument is also required
+
+        .. note::
+
+            See first the documentation for salt file.managed
+            <http://docs.saltstack.com/en/latest/ref/states/all/_
+            salt.states.file.html#salt.states.file.managed>
+
+    source_hash
+        This can be one of the following:
+            1. a source hash string
+            2. the URI of a file that contains source hash strings
+
+            .. note::
+
+                See first the documentation for salt file.managed
+                <http://docs.saltstack.com/en/latest/ref/states/all/_
+                salt.states.file.html#salt.states.file.managed>
+
+    force
+        Load even if the image exists
+    '''
+
+    inspect_image = __salt__['docker.inspect_image']
+    image_infos = inspect_image(name)
+    if image_infos['status'] and not force:
+        return _valid(
+            name=name,
+            comment='Image already loaded: {0}'.format(name))
+
+    tmp_filename = salt.utils.mkstemp()
+    __salt__['state.single']('file.managed', name=tmp_filename, source=source, source_hash=source_hash)
+    changes = {}
+
+    if image_infos['status']:
+        changes['old'] = image_infos['out']['Id']
+        remove_image = __salt__['docker.remove_image']
+        remove_info = remove_image(name)
+        if not remove_info['status']:
+            return _invalid(name=name,
+                            comment='Image could not be removed: {0}'.format(name))
+
+    load = __salt__['docker.load']
+    returned = load(tmp_filename)
+
+    image_infos = inspect_image(name)
+    if image_infos['status']:
+        changes['new'] = image_infos['out']['Id']
+    else:
+        return _invalid(name=name,
+                        comment='Image {0} was not loaded into docker'.format(name))
+
+    return _ret_status(returned, name, changes=changes)
+
+
 def built(name,
           path=None,
           quiet=False,
@@ -482,26 +560,43 @@ def absent(name):
     '''
     ins_container = __salt__['docker.inspect_container']
     cinfos = ins_container(name)
+    changes = {}
+
     if cinfos['status']:
         cid = cinfos['id']
+        changes[cid] = {}
         is_running = __salt__['docker.is_running'](cid)
-        # destroy if we found meat to do
+
+        # Stop container gracefully, if running
         if is_running:
+            changes[cid]['old'] = 'running'
             __salt__['docker.stop'](cid)
             is_running = __salt__['docker.is_running'](cid)
             if is_running:
-                return _invalid(
-                    comment=('Container {0!r}'
-                             ' could not be stopped'.format(cid)))
+                return _invalid(comment=("Container {0!r} could not be stopped"
+                                         .format(cid)))
             else:
-                return _valid(comment=('Container {0!r}'
-                                       ' was stopped,'.format(cid)),
-                              changes={name: True})
+                changes[cid]['new'] = 'stopped'
         else:
-            return _valid(comment=('Container {0!r}'
-                                   ' is stopped,'.format(cid)))
+            changes[cid]['old'] = 'stopped'
+
+        # Remove the stopped container
+        removal = __salt__['docker.remove_container'](cid)
+
+        if removal['status'] is True:
+            changes[cid]['new'] = 'removed'
+            return _valid(comment=("Container {0!r} has been destroyed"
+                                   .format(cid)),
+                          changes=changes)
+        else:
+            if 'new' not in changes[cid]:
+                changes = None
+            return _invalid(comment=("Container {0!r} could not be destroyed"
+                                     .format(cid)),
+                            changes=changes)
+
     else:
-        return _valid(comment='Container {0!r} not found'.format(name))
+        return _valid(comment="Container {0!r} not found".format(name))
 
 
 def present(name):
@@ -730,7 +825,7 @@ def running(name, container=None, port_bindings=None, binds=None,
             else:
                 return _invalid(
                     comment=(
-                        'Container {0!r} cannot be started\n{0!s}'
+                        'Container {0!r} cannot be started\n{1!s}'
                         .format(
                             container,
                             started['out'],

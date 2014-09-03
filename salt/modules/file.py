@@ -457,7 +457,7 @@ def chgrp(path, group):
     return chown(path, user, group)
 
 
-def get_sum(path, form='md5'):
+def get_sum(path, form='sha256'):
     '''
     Return the sum for the given file, default is md5, sha1, sha224, sha256,
     sha384, sha512 are supported
@@ -474,10 +474,12 @@ def get_sum(path, form='md5'):
 
         salt '*' file.get_sum /etc/passwd sha512
     '''
+    if not os.path.isfile(path):
+        return 'File not found'
     return salt.utils.get_hash(path, form, 4096)
 
 
-def get_hash(path, form='md5', chunk_size=4096):
+def get_hash(path, form='sha256', chunk_size=65536):
     '''
     Get the hash sum of a file
 
@@ -1144,7 +1146,7 @@ def replace(path,
                     found = True
 
                 # Identity check each potential change until one change is made
-                if has_changes is False and result is not line:
+                if has_changes is False and result != line:
                     has_changes = True
 
                 if show_changes:
@@ -1160,7 +1162,7 @@ def replace(path,
         if None == not_found_content:
             not_found_content = repl
         if prepend_if_not_found:
-            new_file.insert(not_found_content + '\n')
+            new_file.insert(0, not_found_content + '\n')
         else:
             # append_if_not_found
             # Make sure we have a newline at the end of the file
@@ -1451,7 +1453,7 @@ def patch(originalfile, patchfile, options='', dry_run=False):
             dry_run_opt = ' --dry-run'
     else:
         dry_run_opt = ''
-    cmd = 'patch {0}{1} {2} {3}'.format(
+    cmd = 'patch {0}{1} "{2}" "{3}"'.format(
         options, dry_run_opt, originalfile, patchfile)
     return __salt__['cmd.run_all'](cmd)
 
@@ -1571,7 +1573,7 @@ def contains_glob(path, glob_expr):
         return False
 
 
-def append(path, *args):
+def append(path, *args, **kwargs):
     '''
     .. versionadded:: 0.9.5
 
@@ -1580,7 +1582,7 @@ def append(path, *args):
     path
         path to file
 
-    *args
+    `*args`
         strings to append to file
 
     CLI Example:
@@ -1590,8 +1592,27 @@ def append(path, *args):
         salt '*' file.append /etc/motd \\
                 "With all thine offerings thou shalt offer salt." \\
                 "Salt is what makes things taste bad when it isn't in them."
+
+    .. admonition:: Attention
+
+        If you need to pass a string to append and that string contains
+        an equal sign, you **must** include the argument name, args.
+        For example:
+
+        .. code-block:: bash
+
+            salt '*' file.append /etc/motd args='cheese=spam'
+
+            salt '*' file.append /etc/motd args="['cheese=spam','spam=cheese']"
+
     '''
     # Largely inspired by Fabric's contrib.files.append()
+
+    if 'args' in kwargs:
+        if isinstance(kwargs['args'], list):
+            args = kwargs['args']
+        else:
+            args = [kwargs['args']]
 
     with salt.utils.fopen(path, "r+") as ofile:
         # Make sure we have a newline at the end of the file
@@ -1616,7 +1637,7 @@ def append(path, *args):
     return 'Wrote {0} lines to "{1}"'.format(len(args), path)
 
 
-def prepend(path, *args):
+def prepend(path, *args, **kwargs):
     '''
     .. versionadded:: 2014.7.0
 
@@ -1625,7 +1646,7 @@ def prepend(path, *args):
     path
         path to file
 
-    *args
+    `*args`
         strings to prepend to the file
 
     CLI Example:
@@ -1635,7 +1656,27 @@ def prepend(path, *args):
         salt '*' file.prepend /etc/motd \\
                 "With all thine offerings thou shalt offer salt." \\
                 "Salt is what makes things taste bad when it isn't in them."
+
+    .. admonition:: Attention
+
+        If you need to pass a string to append and that string contains
+        an equal sign, you **must** include the argument name, args.
+        For example:
+
+        .. code-block:: bash
+
+            salt '*' file.prepend /etc/motd args='cheese=spam'
+
+            salt '*' file.prepend /etc/motd args="['cheese=spam','spam=cheese']"
+
     '''
+
+    if 'args' in kwargs:
+        if isinstance(kwargs['args'], list):
+            args = kwargs['args']
+        else:
+            args = [kwargs['args']]
+
     try:
         contents = salt.utils.fopen(path).readlines()
     except IOError:
@@ -1651,7 +1692,7 @@ def prepend(path, *args):
     return 'Prepended {0} lines to "{1}"'.format(len(args), path)
 
 
-def write(path, *args):
+def write(path, *args, **kwargs):
     '''
     .. versionadded:: 2014.7.0
 
@@ -1660,7 +1701,7 @@ def write(path, *args):
     path
         path to file
 
-    *args
+    `*args`
         strings to write to the file
 
     CLI Example:
@@ -1669,7 +1710,27 @@ def write(path, *args):
 
         salt '*' file.write /etc/motd \\
                 "With all thine offerings thou shalt offer salt."
+
+    .. admonition:: Attention
+
+        If you need to pass a string to append and that string contains
+        an equal sign, you **must** include the argument name, args.
+        For example:
+
+        .. code-block:: bash
+
+            salt '*' file.write /etc/motd args='cheese=spam'
+
+            salt '*' file.write /etc/motd args="['cheese=spam','spam=cheese']"
+
     '''
+
+    if 'args' in kwargs:
+        if isinstance(kwargs['args'], list):
+            args = kwargs['args']
+        else:
+            args = [kwargs['args']]
+
     contents = []
     for line in args:
         contents.append('{0}\n'.format(line))
@@ -1974,6 +2035,8 @@ def access(path, mode):
 
     Test whether the Salt process has the specified access to the file. One of
     the following modes must be specified:
+
+    .. code-block::text
 
         f: Test the existence of the path
         r: Test the readability of the path
@@ -2455,7 +2518,7 @@ def get_managed(
         if data['result']:
             sfn = data['data']
             hsum = get_hash(sfn)
-            source_sum = {'hash_type': 'md5',
+            source_sum = {'hash_type': 'sha256',
                           'hsum': hsum}
         else:
             __clean_tmp(sfn)
@@ -2497,7 +2560,7 @@ def get_managed(
     return sfn, source_sum, ''
 
 
-def extract_hash(hash_fn, hash_type='md5', file_name=''):
+def extract_hash(hash_fn, hash_type='sha256', file_name=''):
     '''
     This routine is called from the :mod:`file.managed
     <salt.states.file.managed>` state to pull a hash from a remote file.
@@ -2995,8 +3058,10 @@ def manage_file(name,
                             salt.utils.fopen(real_name, 'rb')) as (src, name_):
                         slines = src.readlines()
                         nlines = name_.readlines()
-                    ret['changes']['diff'] = \
-                        ''.join(difflib.unified_diff(nlines, slines))
+
+                    sndiff = ''.join(difflib.unified_diff(nlines, slines))
+                    if sndiff:
+                        ret['changes']['diff'] = sndiff
 
             # Pre requisites are met, and the file needs to be replaced, do it
             try:
@@ -3088,7 +3153,8 @@ def manage_file(name,
 
         elif not ret['changes'] and ret['result']:
             ret['comment'] = 'File {0} is in the correct state'.format(name)
-        __clean_tmp(sfn)
+        if sfn:
+            __clean_tmp(sfn)
         return ret
     else:
         # Only set the diff if the file contents is managed
@@ -3219,7 +3285,8 @@ def manage_file(name,
             ret['comment'] = 'File ' + name + ' not updated'
         elif not ret['changes'] and ret['result']:
             ret['comment'] = 'File ' + name + ' is in the correct state'
-        __clean_tmp(sfn)
+        if sfn:
+            __clean_tmp(sfn)
         return ret
 
 

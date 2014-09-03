@@ -227,7 +227,20 @@ def highstate(test=None, queue=False, **kwargs):
     '''
     Retrieve the state data from the salt master for this minion and execute it
 
-    Custom Pillar data can be passed with the ``pillar`` kwarg.
+    test
+        Notify states to execute in test-only (dry-run) mode.
+
+        Sets the ``test`` variable in the minion ``opts`` for the duration of
+        the state run.
+    pillar
+        Custom Pillar data can be passed with the ``pillar`` kwarg. Values
+        passed here will override hard-coded Pillar values.
+    queue : ``False``
+        Instead of failing immediately when another state run is in progress,
+        queue the new state run to begin running once the other has finished.
+
+        This option starts a new thread for each queued state run so use this
+        option sparingly.
 
     CLI Example:
 
@@ -319,12 +332,27 @@ def sls(mods,
         concurrent=False,
         **kwargs):
     '''
-    Execute a set list of state modules from an environment. The default
-    environment is ``base``, use ``saltenv`` (``env`` in Salt 0.17.x and older)
-    to specify a different environment
+    Execute a set list of state modules from an environment.
 
-    Custom Pillar data can be passed with the ``pillar`` kwarg.
+    test
+        Notify states to execute in test-only (dry-run) mode.
 
+        Sets the ``test`` variable in the minion ``opts`` for the duration of
+        the state run.
+    pillar
+        Custom Pillar data can be passed with the ``pillar`` kwarg. Values
+        passed here will override hard-coded Pillar values.
+    queue : ``False``
+        Instead of failing immediately when another state run is in progress,
+        queue the new state run to begin running once the other has finished.
+
+        This option starts a new thread for each queued state run so use this
+        option sparingly.
+    saltenv : base
+        Specify a ``file_roots`` environment.
+
+        .. versionchanged:: 0.17.0
+            Argument name changed from ``env`` to ``saltenv``.
     concurrent:
         WARNING: This flag is potentially dangerous. It is designed
         for use when multiple state runs can safely be run at the same

@@ -9,8 +9,25 @@ systems that cannot or should not host a minion agent.
 # Import salt libs
 import salt.loader
 
+import os
 import logging
 log = logging.getLogger(__name__)
+
+
+def get_roster_file(options):
+    if options.get('roster_file'):
+        template = options.get('roster_file')
+    elif os.path.isfile(options['conf_file']) or not os.path.exists(options['conf_file']):
+        template = os.path.join(
+                os.path.dirname(options['conf_file']),
+                'roster')
+    else:
+        template = os.path.join(options['conf_file'], 'roster')
+
+    if not os.path.isfile(template):
+        raise IOError('No roster file found')
+
+    return template
 
 
 class Roster(object):
@@ -52,7 +69,10 @@ class Roster(object):
                 targets.update(self.rosters[f_str](tgt, tgt_type))
             except salt.exceptions.SaltRenderError as exc:
                 log.debug('Unable to render roster file: {0}'.format(exc.error))
+            except IOError as exc:
+                pass
 
         if not targets:
-            raise salt.exceptions.SaltRenderError('Unable to render any roster.')
+            raise salt.exceptions.SaltSystemExit('Unable to render any roster.')
+
         return targets

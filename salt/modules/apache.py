@@ -2,10 +2,11 @@
 '''
 Support for Apache
 
-Please note: The functions in here are generic functions designed to work with
-all implementations of Apache. Debian-specific functions have been moved into
-deb_apache.py, but will still load under the ``apache`` namespace when a
-Debian-based system is detected.
+.. note::
+    The functions in here are generic functions designed to work with
+    all implementations of Apache. Debian-specific functions have been moved into
+    deb_apache.py, but will still load under the ``apache`` namespace when a
+    Debian-based system is detected.
 '''
 
 # Python3 generators
@@ -272,7 +273,7 @@ def userdel(pwfile, user):
     '''
     Delete HTTP user from the specified ``htpasswd`` file.
 
-    CLI Examples:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -427,7 +428,7 @@ def config(name, config, edit=True):
         This function is not meant to be used from the command line.
         Config is meant to be an ordered dict of all of the apache configs.
 
-    CLI Examples:
+    CLI Example:
 
     .. code-block:: bash
 

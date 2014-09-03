@@ -345,21 +345,6 @@ seconds each iteration.
 
     acceptance_wait_time_max: None
 
-.. conf_minion:: dns_check
-
-``dns_check``
--------------
-
-Default: ``True``
-
-When healing, a dns_check is run. This is to make sure that the originally
-resolved dns has not changed. If this is something that does not happen in your
-environment, set this value to ``False``.
-
-.. code-block:: yaml
-
-    dns_check: True
-
 .. conf_minion:: ipc_mode
 
 ``ipc_mode``
@@ -653,6 +638,25 @@ directed to look on the minion by setting this parameter to ``local``.
 
     file_client: remote
 
+.. conf_minion:: fileserver_backend
+
+``fileserver_backend``
+----------------------
+
+Default: ``['roots']``
+
+When using a local :conf_minion:`file_client`, this parameter is used to
+specify what fileserver backends to use. It operates identically to the
+:conf_master:`master config parameter<file_roots>` of the same name.
+
+Example:
+
+.. code-block:: yaml
+
+    fileserver_backend:
+      - roots
+      - git
+
 .. conf_minion:: file_roots
 
 ``file_roots``
@@ -667,7 +671,7 @@ Default:
 
 When using a local :conf_minion:`file_client`, this parameter is used to setup
 the fileserver's environments. This parameter operates identically to the
-:conf_master:`master config parameter of the same name <file_roots>`.
+:conf_master:`master config parameter <file_roots>` of the same name.
 
 .. code-block:: yaml
 
@@ -681,7 +685,7 @@ the fileserver's environments. This parameter operates identically to the
         - /srv/salt/prod/services
         - /srv/salt/prod/states
 
-.. conf_master:: hash_type
+.. conf_minion:: hash_type
 
 ``hash_type``
 -------------
@@ -770,7 +774,7 @@ to ``True`` in the master configuration file.
 
 Default: ``master_sign``
 
-The filename without the *.pub-suffix of the public that should be used for
+The filename without the \*.pub-suffix of the public that should be used for
 verifying the signature from the master. The file must be located in the minions
 pki-directory.
 
@@ -953,6 +957,22 @@ This can be used to control logging levels more specifically. See also
 :conf_log:`log_granular_levels`.
 
 
+
+.. conf_minion:: failhard
+
+``failhard``
+------------
+
+Default: ``False``
+
+Set the global failhard flag, this informs all states to stop running states
+at the moment a single state fails
+
+
+
+.. code-block:: yaml
+
+    failhard: False
 
 Include Configuration
 =====================

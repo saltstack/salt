@@ -138,7 +138,7 @@ class SaltInfo(object):
 
         self.publish_minions()
 
-    def process_presense_events(self, event_data, token, opts):
+    def process_presence_events(self, event_data, token, opts):
         '''
         Check if any minions have connected or dropped.
         Send a message to the client if they have.
@@ -200,5 +200,5 @@ class SaltInfo(object):
                     self.process_minion_update(salt_data)
         if parts[1] == 'key':
             self.process_key_event(salt_data)
-        if parts[1] == 'presense':
-            self.process_presense_events(salt_data, token, opts)
+        if parts[1] == 'presence':
+            self.process_presence_events(salt_data, token, opts)

@@ -90,6 +90,9 @@
 # Set the default outputter used by the salt command. The default is "nested"
 #output: nested
 
+# Return minions that timeout when running commands like test.ping
+#show_timeout: True
+
 # By default output is colored, to disable colored output set the color value
 # to False
 #color: True
@@ -150,7 +153,7 @@
 # public keys from the minions. Note that this is insecure.
 #auto_accept: False
 
-# Time in minutes that a incomming public key with a matching name found in
+# Time in minutes that a incoming public key with a matching name found in
 # pki_dir/minion_autosign/keyid is automatically accepted. Expired autosign keys
 # are removed when the master checks the minion_autosign directory.
 # 0 equals no timeout
@@ -456,6 +459,11 @@
 #  - hiera: /etc/hiera.yaml
 #  - cmd_yaml: cat /etc/salt/yaml
 
+# The ext_pillar_first option allows for external pillar sources to populate
+# before file system pillar. This allows for targeting file system pillar from
+# ext_pillar.
+#ext_pillar_first: False
+
 # The pillar_gitfs_ssl_verify option specifies whether to ignore ssl certificate
 # errors when contacting the pillar gitfs backend. You might want to set this to
 # false if you're using a git backend that uses a self-signed certificate but
@@ -615,7 +623,7 @@
 #####     Range Cluster settings     #####
 ##########################################
 # The range server (and optional port) that serves your cluster information
-# https://github.com/grierj/range/wiki/Introduction-to-Range-with-YAML-files
+# https://github.com/ytoolshed/range/wiki/%22yamlfile%22-module-file-spec
 #
 #range_server: range:80
 

@@ -46,7 +46,6 @@ def list_pkgs(*packages):
 
         salt '*' lowpkg.list_pkgs
     '''
-    errors = []
     pkgs = {}
     if not packages:
         cmd = 'rpm -qa --qf \'%{NAME} %{VERSION}\\n\''
@@ -57,7 +56,6 @@ def list_pkgs(*packages):
     out = __salt__['cmd.run'](cmd, output_loglevel='trace')
     for line in out.splitlines():
         if 'is not installed' in line:
-            errors.append(line)
             continue
         comps = line.split()
         pkgs[comps[0]] = comps[1]

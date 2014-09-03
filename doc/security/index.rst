@@ -11,7 +11,7 @@ Security disclosure policy
 
 .. code-block:: text
 
-    -----BEGIN PGP PUBLIC KEY BLOCK----
+    -----BEGIN PGP PUBLIC KEY BLOCK-----
     Version: GnuPG/MacGPG2 v2.0.22 (Darwin)
 
     mQINBFO15mMBEADa3CfQwk5ED9wAQ8fFDku277CegG3U1hVGdcxqKNvucblwoKCb
@@ -72,7 +72,7 @@ non-publicly until such time as the issue can be resolved and a security-fix
 release can be prepared. At that time we will release the fix and make a public
 announcement with upgrade instructions and download locations.
 
-Security response proceedure
+Security response procedure
 ============================
 
 SaltStack takes security and the trust of our customers and users very

@@ -71,8 +71,7 @@ class RAETChannel(Channel):
         not already setup such as in salt-call to communicate to-from the minion
 
         '''
-        import wingdbstub
-        mid = self.opts['id']
+        mid = self.opts.get('id', 'master')
         yid = nacling.uuid(size=18)
         name = 'channel' + yid
         stack = LaneStack(name=name,
@@ -114,7 +113,7 @@ class RAETChannel(Channel):
         self.__prep_stack()
         tried = 1
         start = time.time()
-        mid = self.opts.get('id', 'master')
+        mid = self.opts.get('id', None)
         track = nacling.uuid(18)
         src = (mid, self.stack.local.name, track)
         self.route = {'src': src, 'dst': self.dst}

@@ -531,6 +531,33 @@ def deregister_instances(name, instances, region=None, key=None, keyid=None,
     return load_balancer.deregister_instances(instances)
 
 
+def get_instance_health(name, region=None, key=None, keyid=None, profile=None, instances=None):
+    '''
+    Get a list of instances and their health state
+
+    CLI example::
+
+        salt myminion boto_elb.get_instance_health myelb
+        salt myminion boto_elb.get_instance_health myelb region=us-east-1 instances="[instance_id,instance_id]"
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return []
+    try:
+        instance_states = conn.describe_instance_health(name, instances)
+        ret = []
+        for _instance in instance_states:
+            ret.append({'instance_id': _instance.instance_id,
+                        'description': _instance.description,
+                        'state': _instance.state,
+                        'reason_code': _instance.reason_code
+                        })
+        return ret
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        return []
+
+
 def _get_conn(region, key, keyid, profile):
     '''
     Get a boto connection to ELB.

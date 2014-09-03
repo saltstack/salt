@@ -655,17 +655,17 @@ def push(path):
             'path': path.lstrip(os.sep),
             'tok': auth.gen_token('salt')}
     sreq = salt.transport.Channel.factory(__opts__)
-    # sreq = salt.payload.SREQ(__opts__['master_uri'])
     with salt.utils.fopen(path, 'rb') as fp_:
         while True:
             load['loc'] = fp_.tell()
             load['data'] = fp_.read(__opts__['file_buffer_size'])
             if not load['data']:
                 return True
-
-            # ret = sreq.send('aes', auth.crypticle.dumps(load))
             ret = sreq.send(load)
             if not ret:
+                log.error('cp.push Failed transfer failed. Ensure master has '
+                '\'file_recv\' set to \'True\' and that the file is not '
+                'larger than the \'file_recv_size_max\' setting on the master.')
                 return ret
 
 

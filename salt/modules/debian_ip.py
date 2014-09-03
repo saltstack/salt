@@ -232,7 +232,7 @@ def _parse_domainname():
     Parse /etc/resolv.conf and return domainname
     '''
     contents = _read_file(_DEB_RESOLV_FILE)
-    pattern = r'(?P<tag>\S+)\s+(?P<domain_name>\S+)'
+    pattern = r'domain\s+(?P<domain_name>\S+)'
     prog = re.compile(pattern)
     for item in contents:
         match = prog.match(item)
@@ -267,10 +267,8 @@ def _parse_current_network_settings():
     hostname = _parse_hostname()
     domainname = _parse_domainname()
 
-    if domainname:
-        hostname = '{0}.{1}'.format(hostname, domainname)
-
     opts['hostname'] = hostname
+    opts['domainname'] = domainname
     return opts
 
 
@@ -1476,7 +1474,7 @@ def build_bond(iface, **settings):
         return ''
     data = template.render({'name': iface, 'bonding': opts})
 
-    if settings['test']:
+    if 'test' in settings and settings['test']:
         return _read_temp(data)
 
     _write_file(iface, data, _DEB_NETWORK_CONF_FILES, '{0}.conf'.format(iface))
@@ -1682,18 +1680,32 @@ def get_network_settings():
         int(__grains__['osrelease'].split('.')[0]) >= 12)
 
     if skip_etc_default_networking:
-        return ''
+        settings = {}
+        if __salt__['service.available']('networking'):
+            if __salt__['service.status']('networking'):
+                settings['networking'] = "yes"
+            else:
+                settings['networking'] = "no"
+        else:
+            settings['networking'] = "no"
+
+        hostname = _parse_hostname()
+        domainname = _parse_domainname()
+
+        settings['hostname'] = hostname
+        settings['domainname'] = domainname
+
     else:
         settings = _parse_current_network_settings()
 
-        try:
-            template = JINJA.get_template('network.jinja')
-        except jinja2.exceptions.TemplateNotFound:
-            log.error('Could not load template network.jinja')
-            return ''
+    try:
+        template = JINJA.get_template('display-network.jinja')
+    except jinja2.exceptions.TemplateNotFound:
+        log.error('Could not load template display-network.jinja')
+        return ''
 
-        network = template.render(settings)
-        return _read_temp(network)
+    network = template.render(settings)
+    return _read_temp(network)
 
 
 def get_routes(iface):
@@ -1729,16 +1741,33 @@ def apply_network_settings(**settings):
     if 'require_reboot' not in settings:
         settings['require_reboot'] = False
 
+    if 'apply_hostname' not in settings:
+        settings['apply_hostname'] = False
+
+    hostname_res = True
+    if settings['apply_hostname'] in _CONFIG_TRUE:
+        if 'hostname' in settings:
+            hostname_res = __salt__['network.mod_hostname'](settings['hostname'])
+        else:
+            log.warning(
+                'The network state sls is trying to apply hostname '
+                'changes but no hostname is defined.'
+            )
+            hostname_res = False
+
+    res = True
     if settings['require_reboot'] in _CONFIG_TRUE:
         log.warning(
             'The network state sls is requiring a reboot of the system to '
             'properly apply network configuration.'
         )
-        return True
+        res = True
     else:
         stop = __salt__['service.stop']('networking')
         time.sleep(2)
-        return stop and __salt__['service.start']('networking')
+        res = stop and __salt__['service.start']('networking')
+
+    return hostname_res and res
 
 
 def build_network_settings(**settings):
@@ -1751,6 +1780,8 @@ def build_network_settings(**settings):
 
         salt '*' ip.build_network_settings <settings>
     '''
+    changes = []
+
     # Read current configuration and store default values
     current_network_settings = _parse_current_network_settings()
 
@@ -1782,7 +1813,7 @@ def build_network_settings(**settings):
             return ''
         network = template.render(opts)
 
-        if settings['test']:
+        if 'test' in settings and settings['test']:
             return _read_temp(network)
         # Write settings
         _write_file_network(network, _DEB_NETWORKING_FILE, True)
@@ -1790,16 +1821,32 @@ def build_network_settings(**settings):
     # Write hostname to /etc/hostname
     sline = opts['hostname'].split('.', 1)
     hostname = '{0}\n' . format(sline[0])
-    _write_file_network(hostname, _DEB_HOSTNAME_FILE)
+    current_domainname = current_network_settings['domainname']
 
-    # Write domainname to /etc/resolv.conf
-    # TODO: how does this work with resolvconf?
-    if len(sline) > 0:
-        domainname = sline[1]
+    # Only write the hostname if it has changed
+    if not opts['hostname'] == current_network_settings['hostname']:
+        # TODO  replace wiht a call to network.mod_hostname instead
+        _write_file_network(hostname, _DEB_HOSTNAME_FILE)
 
+    new_domain = False
+    if len(sline) > 1:
+        new_domainname = sline[1]
+        if new_domainname != current_domainname:
+            domainname = new_domainname
+            opts['domainname'] = new_domainname
+            new_domain = True
+        else:
+            domainname = current_domainname
+            opts['domainname'] = domainname
+    else:
+        domainname = current_domainname
+        opts['domainname'] = domainname
+
+    # If the domain changes, then we should write the resolv.conf file.
+    if new_domain:
+        # Look for existing domain line and update if necessary
         contents = _parse_resolve()
-        pattern = r'domain\s+(?P<domain_name>\S+)'
-        prog = re.compile(pattern)
+        prog = re.compile(r'domain\s+(?P<domain_name>\S+)')
         new_contents = []
         found_domain = False
         for item in contents:
@@ -1810,22 +1857,22 @@ def build_network_settings(**settings):
             else:
                 new_contents.append(item)
 
-        # Not found add to beginning
+        # A domain line didn't exist so we'll add one in
+        # with the new domainname
         if not found_domain:
             new_contents.insert(0, 'domain {0}\n' . format(domainname))
-
         new_resolv = ''.join(new_contents)
 
+        # Write /etc/resolv.conf
         _write_file_network(new_resolv, _DEB_RESOLV_FILE)
 
+    #  used for returning the results back
     try:
-        template = JINJA.get_template('network.jinja')
+        template = JINJA.get_template('display-network.jinja')
     except jinja2.exceptions.TemplateNotFound:
-        log.error('Could not load template network.jinja')
+        log.error('Could not load template display-network.jinja')
         return ''
+    network = template.render(opts)
+    changes.extend(_read_temp(network))
 
-    if not skip_etc_default_networking:
-        network = template.render(opts)
-        return _read_temp(network)
-    else:
-        return ''  # TODO
+    return changes

@@ -203,3 +203,17 @@ the ``root_dir`` setting. This can result in unintended behavior if you are
 expecting files such as ``/etc/salt/pki`` to be pulled from the location
 specified with ``-c``. Modify the ``root_dir`` setting to address this
 behavior.
+
+Salt Master Doesn't Return Anything While Running jobs
+======================================================
+
+When a command being run via Salt takes a very long time to return
+(package installations, certain scripts, etc.) the master may drop you back
+to the shell. In most situations the job is still running but Salt has
+exceeded the set timeout before returning. Querying the job queue will 
+provide the data of the job but is inconvenient. This can be resolved by
+either manually using the ``-t`` option to set a longer timeout when running
+commands (by default it is 5 seconds) or by modifying the master
+configuration file: ``/etc/salt/master`` and setting the ``timeout`` value to
+change the default timeout for all commands, and then restarting the
+salt-master service.

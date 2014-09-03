@@ -321,6 +321,10 @@ def _verify_install(desired, new_pkgs):
         elif not __salt__['pkg_resource.version_clean'](pkgver):
             ok.append(pkgname)
             continue
+        elif pkgver.endswith("*") and cver[0].startswith(pkgver[:-1]):
+            ok.append(pkgname)
+            continue
+
         match = re.match('^([<>])?(=)?([^<>=]+)$', pkgver)
         gt_lt, eq, verstr = match.groups()
         comparison = gt_lt or ''
@@ -660,6 +664,20 @@ def installed(
               - bar: http://somesite.org/bar.rpm
               - baz: ftp://someothersite.org/baz.rpm
               - qux: /minion/path/to/qux.rpm
+
+    install_recommends
+        Whether to install the packages marked as recommended.  Default is True.
+        Currently only works with APT based systems.
+
+        .. versionadded:: Lithium
+
+    .. code-block:: yaml
+
+        httpd:
+          pkg.installed:
+            - install_recommends: False
+
+
     '''
     kwargs['saltenv'] = __env__
     rtag = __gen_rtag()
@@ -706,7 +724,7 @@ def installed(
                     return {'name': name,
                             'changes': {},
                             'result': False,
-                            'comment': exc.message}
+                            'comment': str(exc)}
 
                 if 'result' in hold_ret and not hold_ret['result']:
                     return {'name': name,
@@ -830,7 +848,7 @@ def installed(
                             name=name, pkgs=pkgs, sources=sources
                         )
                 except (CommandExecutionError, SaltInvocationError) as exc:
-                    comment.append(exc.message)
+                    comment.append(str(exc))
                     return {'name': name,
                             'changes': changes,
                             'result': False,
@@ -905,7 +923,7 @@ def installed(
                 changes[change_name]['old'] += '\n'
             changes[change_name]['old'] += '{0}'.format(i['changes']['old'])
 
-    # Any requested packages that were not targetted for install or reinstall
+    # Any requested packages that were not targeted for install or reinstall
     if not_modified:
         if sources:
             summary = ', '.join(not_modified)
@@ -1040,6 +1058,19 @@ def latest(
               - foo
               - bar
               - baz
+
+    install_recommends
+        Whether to install the packages marked as recommended.  Default is True.
+        Currently only works with APT based systems.
+
+        .. versionadded:: Lithium
+
+    .. code-block:: yaml
+
+        httpd:
+          pkg.latest:
+            - install_recommends: False
+
     '''
     rtag = __gen_rtag()
     refresh = bool(
@@ -1065,10 +1096,19 @@ def latest(
         desired_pkgs = [name]
 
     cur = __salt__['pkg.version'](*desired_pkgs, **kwargs)
-    avail = __salt__['pkg.latest_version'](*desired_pkgs,
-                                           fromrepo=fromrepo,
-                                           refresh=refresh,
-                                           **kwargs)
+    try:
+        avail = __salt__['pkg.latest_version'](*desired_pkgs,
+                                               fromrepo=fromrepo,
+                                               refresh=refresh,
+                                               **kwargs)
+    except CommandExecutionError as exc:
+        return {'name': name,
+                'changes': {},
+                'result': False,
+                'comment': 'An error was encountered while checking the '
+                           'newest available version of package(s): {0}'
+                           .format(exc)}
+
     # Remove the rtag if it exists, ensuring only one refresh per salt run
     # (unless overridden with refresh=True)
     if os.path.isfile(rtag) and refresh:
@@ -1372,7 +1412,11 @@ def uptodate(name, refresh=False):
         return ret
 
     if isinstance(refresh, bool):
-        packages = __salt__['pkg.list_upgrades'](refresh=refresh)
+        try:
+            packages = __salt__['pkg.list_upgrades'](refresh=refresh)
+        except Exception, e:
+            ret['comment'] = str(e)
+            return ret
     else:
         ret['comment'] = 'refresh must be a boolean.'
         return ret
@@ -1388,7 +1432,9 @@ def uptodate(name, refresh=False):
 
     updated = __salt__['pkg.upgrade'](refresh=refresh)
 
-    if updated:
+    if updated.get('result') is False:
+        ret.update(updated)
+    elif updated:
         ret['changes'] = updated
         ret['comment'] = 'Upgrade successful.'
         ret['result'] = True

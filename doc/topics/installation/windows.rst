@@ -20,6 +20,10 @@ minion exe>` should match the contents of the corresponding md5 file.
 
 .. admonition:: Download here
 
+    * 2014.1.10
+    * `Salt-Minion-2014.1.10-win32-Setup.exe <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.10-win32-Setup.exe>`__ | `md5 <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.10-win32-Setup.exe.md5>`__
+    * `Salt-Minion-2014.1.10-AMD64-Setup.exe <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.10-AMD64-Setup.exe>`__ | `md5 <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.10-AMD64-Setup.exe.md5>`__
+
     * 2014.1.7
     * `Salt-Minion-2014.1.7-win32-Setup.exe <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.7-win32-Setup.exe>`__ | `md5 <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.7-win32-Setup.exe.md5>`__
     * `Salt-Minion-2014.1.7-AMD64-Setup.exe <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.7-AMD64-Setup.exe>`__ | `md5 <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.7-AMD64-Setup.exe.md5>`__
@@ -325,7 +329,7 @@ Packages management under Windows 2003
 
 On windows Server 2003, you need to install optional component "wmi windows
 installer provider" to have full list of installed packages. If you don't have
-this, salt-minion can't report some installed softwares.
+this, salt-minion can't report some installed packages.
 
 
 .. _http://csa-net.dk/salt: http://csa-net.dk/salt

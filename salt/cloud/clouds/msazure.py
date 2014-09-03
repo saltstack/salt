@@ -269,10 +269,11 @@ def list_nodes_full(conn=None, call=None):
             role_instances = deploy_dict['role_instance_list']
             for role_instance in role_instances:
                 ip_address = role_instances[role_instance]['ip_address']
-                if salt.utils.cloud.is_public_ip(ip_address):
-                    ret[deployment]['public_ips'].append(ip_address)
-                else:
-                    ret[deployment]['private_ips'].append(ip_address)
+                if ip_address:
+                    if salt.utils.cloud.is_public_ip(ip_address):
+                        ret[deployment]['public_ips'].append(ip_address)
+                    else:
+                        ret[deployment]['private_ips'].append(ip_address)
                 ret[deployment]['size'] = role_instances[role_instance]['instance_size']
             roles = deploy_dict['role_list']
             for role in roles:
@@ -494,10 +495,10 @@ def create(vm_):
             'Error creating {0} on Azure\n\n'
             'The following exception was thrown when trying to '
             'run the initial deployment: \n{1}'.format(
-                vm_['name'], exc.message
+                vm_['name'], str(exc)
             ),
             # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 

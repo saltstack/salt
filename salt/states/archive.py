@@ -79,8 +79,8 @@ def extracted(name,
         this archive, such as 'J' for LZMA.
         Using this option means that the tar executable on the target will
         be used, which is less platform independent.
-        Main operators like -x, --extract, --get, -c, etc. and -f/--file are
-        **shoult not be used** here.
+        Main operators like -x, --extract, --get, -c, etc. and -f/--file
+        **should not be used** here.
         If this option is not set, then the Python tarfile module is used.
         The tarfile module supports gzip and bz2 in Python 2.
 
@@ -95,6 +95,9 @@ def extracted(name,
         ret['comment'] = '{0} is not supported, valids: {1}'.format(
             name, ','.join(valid_archives))
         return ret
+
+    if not name.endswith('/'):
+        name += '/'
 
     if if_missing is None:
         if_missing = name
@@ -114,8 +117,7 @@ def extracted(name,
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = \
-                'Archive {0} would have been downloaded in cache'.format(
-                    source, name)
+                'Archive {0} would have been downloaded in cache'.format(source)
             return ret
 
         log.debug('Archive file {0} is not in cache, download it'.format(source))

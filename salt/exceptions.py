@@ -118,7 +118,7 @@ class SaltRenderError(SaltException):
 
 class SaltClientTimeout(SaltException):
     '''
-    Thrown when a job sent through one of the *Client interfaces times out
+    Thrown when a job sent through one of the Client interfaces times out
 
     Takes the ``jid`` as a parameter
     '''

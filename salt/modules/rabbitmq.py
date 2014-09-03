@@ -49,7 +49,8 @@ def _get_rabbitmq_plugin():
     if rabbitmq is None:
         version = __salt__['pkg.version']('rabbitmq-server').split('-')[0]
 
-        path = '/usr/lib/rabbitmq/lib/rabbitmq_server-{0}/sbin/rabbitmq-plugins'
+        path = '/usr/lib/rabbitmq/lib/rabbitmq_server-{0}/\
+                sbin/rabbitmq-plugins'
         rabbitmq = path.format(version)
 
     return rabbitmq
@@ -249,7 +250,7 @@ def delete_vhost(vhost, runas=None):
 
 
 def set_permissions(vhost, user, conf='.*', write='.*', read='.*',
-        runas=None):
+                    runas=None):
     '''
     Sets permissions for vhost via rabbitmqctl set_permissions
 
@@ -349,7 +350,7 @@ def cluster_status(user=None):
     return res
 
 
-def join_cluster(host, user='rabbit', runas=None):
+def join_cluster(host, user='rabbit', ram_node=None, runas=None):
     '''
     Join a rabbit cluster
 
@@ -357,13 +358,15 @@ def join_cluster(host, user='rabbit', runas=None):
 
     .. code-block:: bash
 
-        salt '*' rabbitmq.join_cluster 'rabbit' 'rabbit.example.com'
+        salt '*' rabbitmq.join_cluster 'rabbit.example.com' 'rabbit'
     '''
+    if ram_node:
+        cmd = 'rabbitmqctl join_cluster --ram {0}@{1}'.format(user, host)
+    else:
+        cmd = 'rabbitmqctl join_cluster {0}@{1}'.format(user, host)
 
     stop_app(runas)
-    res = __salt__['cmd.run'](
-        'rabbitmqctl join_cluster {0}@{1}'.format(user, host),
-        runas=runas)
+    res = __salt__['cmd.run'](cmd, runas=runas)
     start_app(runas)
 
     return _format_response(res, 'Join')
@@ -465,8 +468,8 @@ def list_queues_vhost(vhost, *kwargs):
 
         salt '*' rabbitmq.list_queues messages consumers
     '''
-    res = __salt__['cmd.run'](
-        'rabbitmqctl list_queues -p {0} {1}'.format(vhost, ' '.join(list(kwargs))))
+    res = __salt__['cmd.run']('rabbitmqctl list_queues -p\
+                              {0} {1}'.format(vhost, ' '.join(list(kwargs))))
     return res
 
 

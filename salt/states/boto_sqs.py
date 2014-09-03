@@ -96,7 +96,7 @@ def present(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
     '''
-    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     is_present = __salt__['boto_sqs.exists'](name, region, key, keyid, profile)
 
@@ -104,11 +104,11 @@ def present(
         if __opts__['test']:
             msg = 'AWS SQS queue {0} is set to be created.'.format(name)
             ret['comment'] = msg
+            ret['result'] = None
             return ret
         created = __salt__['boto_sqs.create'](name, region, key, keyid,
                                               profile)
         if created:
-            ret['result'] = True
             ret['changes']['old'] = None
             ret['changes']['new'] = {'queue': name}
         else:
@@ -128,13 +128,12 @@ def present(
     attr_names = ','.join(attrs_to_set.keys())
     if attrs_to_set:
         if __opts__['test']:
-            ret['result'] = None
             ret['comment'] = 'Attribute(s) {0} to be set on {1}.'.format(
                 attr_names, name)
+            ret['result'] = None
             return ret
         msg = (' Setting {0} attribute(s).'.format(attr_names))
         ret['comment'] = ret['comment'] + msg
-        ret['result'] = True
         if 'new' in ret['changes']:
             ret['changes']['new']['attributes_set'] = []
         else:
@@ -177,7 +176,7 @@ def absent(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
     '''
-    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     is_present = __salt__['boto_sqs.exists'](name, region, key, keyid, profile)
 
@@ -185,11 +184,11 @@ def absent(
         if __opts__['test']:
             ret['comment'] = 'AWS SQS queue {0} is set to be removed.'.format(
                 name)
+            ret['result'] = None
             return ret
         deleted = __salt__['boto_sqs.delete'](name, region, key, keyid,
                                               profile)
         if deleted:
-            ret['result'] = True
             ret['changes']['old'] = name
             ret['changes']['new'] = None
         else:

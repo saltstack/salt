@@ -52,7 +52,7 @@ def ext_pillar(minion_id, pillar, key=None, only=()):
     try:
         server = xmlrpclib.Server(url, allow_none=True)
         if user:
-            server = xmlrpclib.Server(server, server.login(user, password))
+            server.login(user, password)
         result = server.get_blended_data(None, minion_id)
     except Exception:
         log.exception(

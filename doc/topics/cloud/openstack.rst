@@ -128,3 +128,13 @@ bootstrapped.
 .. code-block:: yaml
 
     change_password: True
+
+
+userdata_file
+~~~~~~~~~~~~~
+Use `userdata_file` to specify the userdata file to upload for use with
+cloud-init if available.
+
+.. code-block:: yaml
+
+    userdata_file: /etc/salt/cloud-init/packages.yml

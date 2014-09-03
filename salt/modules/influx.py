@@ -285,7 +285,7 @@ def user_create(name, passwd, database, user=None, password=None, host=None,
         salt '*' influxdb.user_create <name> <passwd> <database> <user> <password> <host> <port>
     """
     if user_exists(name, database):
-        log.info('User {0!r} already exists for DB {0!r}'.format(
+        log.info('User {0!r} already exists for DB {1!r}'.format(
             name, database))
         return False
     client = _client(user=user, password=password, host=host, port=port)
@@ -327,7 +327,7 @@ def user_chpass(dbuser, passwd, database, user=None, password=None, host=None,
         salt '*' influxdb.user_chpass <dbuser> <passwd> <database> <user> <password> <host> <port>
     """
     if not user_exists(dbuser, database):
-        log.info('User {0!r} does not exist for DB {0!r}'.format(
+        log.info('User {0!r} does not exist for DB {1!r}'.format(
             dbuser, database))
         return False
     client = _client(user=user, password=password, host=host, port=port)
@@ -369,7 +369,7 @@ def user_remove(name, database, user=None, password=None, host=None,
         salt '*' influxdb.user_remove <name> <database> <user> <password> <host> <port>
     """
     if not user_exists(name, database):
-        log.info('User {0!r} does not exist for DB {0!r}'.format(
+        log.info('User {0!r} does not exist for DB {1!r}'.format(
             name, database))
         return False
     client = _client(user=user, password=password, host=host, port=port)

@@ -207,3 +207,13 @@ external pillar, add something like this to your master config:
 
     ext_pillar:
       - cmd_json: 'echo {\"arg\":\"value\"}'
+
+Reminder
+--------
+
+Just as with traditional pillars, external pillars must be refreshed in order for 
+minions to see any fresh data:
+
+.. code-block:: bash
+
+    salt '*' saltutil.refresh_pillar

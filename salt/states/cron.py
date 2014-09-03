@@ -151,13 +151,18 @@ def _check_cron(user,
         month = str(month).lower()
     if dayweek is not None:
         dayweek = str(dayweek).lower()
+    if identifier is not None:
+        identifier = str(identifier)
+    if cmd is not None:
+        cmd = str(cmd)
     lst = __salt__['cron.list_tab'](user)
     for cron in lst['crons']:
         if _cron_matched(cron, cmd, identifier):
             if any([_needs_change(x, y) for x, y in
                     ((cron['minute'], minute), (cron['hour'], hour),
                      (cron['daymonth'], daymonth), (cron['month'], month),
-                     (cron['dayweek'], dayweek), (cron['comment'], comment))]):
+                     (cron['dayweek'], dayweek), (cron['identifier'], identifier),
+                     (cron['cmd'], cmd), (cron['comment'], comment))]):
                 return 'update'
             return 'present'
     return 'absent'
@@ -296,7 +301,7 @@ def present(name,
         return ret
 
     if data == 'updated':
-        ret['comment'] = 'Cron {0} updated'.format(name, user)
+        ret['comment'] = 'Cron {0} updated'.format(name)
         ret['changes'] = {user: name}
         return ret
     ret['comment'] = ('Cron {0} for user {1} failed to commit with error \n{2}'
@@ -576,7 +581,7 @@ def env_present(name,
         return ret
 
     if data == 'updated':
-        ret['comment'] = 'Cron env {0} updated'.format(name, user)
+        ret['comment'] = 'Cron env {0} updated'.format(name)
         ret['changes'] = {user: name}
         return ret
     ret['comment'] = ('Cron env {0} for user {1} failed to commit with error \n{2}'

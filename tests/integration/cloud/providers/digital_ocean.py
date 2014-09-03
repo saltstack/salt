@@ -33,7 +33,7 @@ except ImportError:
 @skipIf(HAS_REQUESTS is False, 'salt-cloud requires python requests library')
 class DigitalOceanTest(integration.ShellCase):
     '''
-    Integration tests for the Digital Ocean cloud provider in Salt-Cloud
+    Integration tests for the DigitalOcean cloud provider in Salt-Cloud
     '''
 
     @expensiveTest
@@ -76,7 +76,7 @@ class DigitalOceanTest(integration.ShellCase):
 
     def test_instance(self):
         '''
-        Test creating an instance on Digital Ocean
+        Test creating an instance on DigitalOcean
         '''
         name = 'digitalocean-testing'
 

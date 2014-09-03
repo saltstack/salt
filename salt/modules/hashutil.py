@@ -32,7 +32,7 @@ def base64_decodestring(instr):
 
     .. code-block:: bash
 
-        salt '*' hashutil.base64_decodestring 'Z2V0IHNhbHRlZA==\n'
+        salt '*' hashutil.base64_decodestring 'Z2V0IHNhbHRlZA==\\n'
     '''
     return base64.decodestring(instr)
 

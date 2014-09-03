@@ -46,7 +46,7 @@ This will schedule the command: state.sls httpd test=True every 3600 seconds
 This will schedule the command: state.sls httpd test=True every 3600 seconds
 (every hour) splaying the time between 10 and 15 seconds
 
-    ... versionadded:: 2014.7.0
+    .. versionadded:: 2014.7.0
 
 Frequency of jobs can also be specified using date strings supported by
 the python dateutil library.
@@ -221,7 +221,7 @@ class Schedule(object):
         python data-structures to make sure, you pass correct dictionaries.
         '''
 
-        # we dont do any checking here besides making sure its a dict.
+        # we don't do any checking here besides making sure its a dict.
         # eval() already does for us and raises errors accordingly
         if not isinstance(data, dict):
             raise ValueError('Scheduled jobs have to be of type dict.')
@@ -422,6 +422,8 @@ class Schedule(object):
 
             data_returner = data.get('returner', None)
             if data_returner or self.schedule_returner:
+                if 'returner_config' in data:
+                    ret['ret_config'] = data['returner_config']
                 rets = []
                 for returner in [data_returner, self.schedule_returner]:
                     if isinstance(returner, str):
@@ -624,7 +626,7 @@ class Schedule(object):
                         if data['_when_run']:
                             data['_when_run'] = False
                             run = True
-                if 'cron' in data:
+                elif 'cron' in data:
                     if seconds == 1:
                         run = True
                 else:
@@ -644,7 +646,7 @@ class Schedule(object):
                         if data['_when_run']:
                             data['_when_run'] = False
                             run = True
-                if 'cron' in data:
+                elif 'cron' in data:
                     if seconds == 1:
                         run = True
                 else:
@@ -684,7 +686,7 @@ class Schedule(object):
                                 continue
                         else:
                             log.error('schedule.handle_func: Invalid, range must be specified as a dictionary. \
-                                     Ignoring job {-1}.'.format(job))
+                                     Ignoring job {0}.'.format(job))
                             continue
 
             if not run:

@@ -13,10 +13,11 @@ import sys
 import atexit
 import logging
 import threading
+import logging.handlers
 
 # Import salt libs
 from salt._compat import Queue
-from salt.log.mixins import NewStyleClassMixIn
+from salt.log.mixins import NewStyleClassMixIn, ExcInfoOnLogLevelFormatMixIn
 
 log = logging.getLogger(__name__)
 
@@ -84,3 +85,28 @@ class TemporaryLoggingHandler(logging.NullHandler):
                     # it should not handle the log record
                     continue
                 handler.handle(record)
+
+
+class StreamHandler(ExcInfoOnLogLevelFormatMixIn, logging.StreamHandler, NewStyleClassMixIn):
+    '''
+    Stream handler which properly handles exc_info on a per handler basis
+    '''
+
+
+class FileHandler(ExcInfoOnLogLevelFormatMixIn, logging.FileHandler, NewStyleClassMixIn):
+    '''
+    File handler which properly handles exc_info on a per handler basis
+    '''
+
+
+class SysLogHandler(ExcInfoOnLogLevelFormatMixIn, logging.handlers.SysLogHandler, NewStyleClassMixIn):
+    '''
+    Syslog handler which properly handles exc_info on a per handler basis
+    '''
+
+
+if sys.version_info > (2, 6):
+    class WatchedFileHandler(ExcInfoOnLogLevelFormatMixIn, logging.handlers.WatchedFileHandler, NewStyleClassMixIn):
+        '''
+        Watched file handler which properly handles exc_info on a per handler basis
+        '''

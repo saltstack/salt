@@ -1028,20 +1028,46 @@ def managed(name,
             sha1        40
             md5         32
 
-        The file can contain several checksums for several files. Each line
-        must contain both the file name and the hash.  If no file name is
-        matched, the first hash encountered will be used, otherwise the most
-        secure hash with the correct source file name will be used.
+        **Using a Source Hash File**
+            The file can contain several checksums for several files. Each line
+            must contain both the file name and the hash.  If no file name is
+            matched, the first hash encountered will be used, otherwise the most
+            secure hash with the correct source file name will be used.
 
-        Debian file type ``*.dsc`` is supported.
+            When using a source hash file the source_hash argument needs to be a
+            url, the standard download urls are supported, ftp, http, salt etc:
 
-        Examples:
+            Example:
 
-        .. code-block:: text
+            .. code-block:: yaml
 
-            /etc/rc.conf ef6e82e4006dee563d98ada2a2a80a27
-            sha254c8525aee419eb649f0233be91c151178b30f0dff8ebbdcc8de71b1d5c8bcc06a  /etc/resolv.conf
-            ead48423703509d37c4a90e6a0d53e143b6fc268
+                tomdroid-src-0.7.3.tar.gz:
+                  file.managed:
+                    - name: /tmp/tomdroid-src-0.7.3.tar.gz
+                    - source: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz
+                    - source_hash: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.hash
+
+            The following is an example of the supported source_hash format:
+
+            .. code-block:: text
+
+                /etc/rc.conf ef6e82e4006dee563d98ada2a2a80a27
+                sha254c8525aee419eb649f0233be91c151178b30f0dff8ebbdcc8de71b1d5c8bcc06a  /etc/resolv.conf
+                ead48423703509d37c4a90e6a0d53e143b6fc268
+
+            Debian file type ``*.dsc`` files are also supported.
+
+        **Inserting the Source Hash in the sls Data**
+            Examples:
+
+            .. code-block:: yaml
+
+                tomdroid-src-0.7.3.tar.gz:
+                  file.managed:
+                    - name: /tmp/tomdroid-src-0.7.3.tar.gz
+                    - source: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz
+                    - source_hash: md5=79eef25f9b0b2c642c62b7f737d4f53f
+
 
         Known issues:
             If the remote server URL has the hash file as an apparent
@@ -1193,7 +1219,7 @@ def managed(name,
             'Neither \'source\' nor \'contents\' nor \'contents_pillar\' nor \'contents_grains\' '
             'was defined, yet \'replace\' was set to \'True\'. As there is '
             'no source to replace the file with, \'replace\' has been set '
-            'to \'False\' to avoid reading the file unnecessarily'.format(name)
+            'to \'False\' to avoid reading the file unnecessarily'
         )
 
     user = _test_owner(kwargs, user=user)
@@ -1243,6 +1269,9 @@ def managed(name,
     elif not isinstance(context, dict):
         return _error(
             ret, 'Context must be formed as a dict')
+    if defaults and not isinstance(defaults, dict):
+        return _error(
+            ret, 'Defaults must be formed as a dict')
 
     if len(filter(None, [contents, contents_pillar, contents_grains])) > 1:
         return _error(
@@ -1436,7 +1465,8 @@ def directory(name,
         Enforce user/group ownership and mode of directory recursively. Accepts
         a list of strings representing what you would like to recurse.  If
         'mode' is defined, will recurse on both 'file_mode' and 'dir_mode' if
-        they are defined.
+        they are defined.  If ignore_files or ignore_dirs is included, files or
+        directories will be left unchanged respectively.
         Example:
 
         .. code-block:: yaml
@@ -1451,6 +1481,34 @@ def directory(name,
                     - user
                     - group
                     - mode
+
+        .. Leave files or directories unchanged respectively.
+        .. versionadded:: Lithium
+
+            /var/log/httpd:
+                file.directory:
+                - user: root
+                - group: root
+                - dir_mode: 755
+                - file_mode: 644
+                - recurse:
+                    - user
+                    - group
+                    - mode
+                    - ignore_files
+
+            /var/log/httpd:
+                file.directory:
+                - user: root
+                - group: root
+                - dir_mode: 755
+                - file_mode: 644
+                - recurse:
+                    - user
+                    - group
+                    - mode
+                    - ignore_dirs
+
 
     dir_mode / mode
         The permissions mode to set any directories created. Not supported on
@@ -1609,11 +1667,17 @@ def directory(name,
         if not isinstance(recurse, list):
             ret['result'] = False
             ret['comment'] = '"recurse" must be formed as a list of strings'
-        elif not set(['user', 'group', 'mode']) >= set(recurse):
+        elif not set(['user', 'group', 'mode', 'ignore_files', 'ignore_dirs']) >= set(recurse):
             ret['result'] = False
             ret['comment'] = 'Types for "recurse" limited to "user", ' \
-                             '"group" and "mode"'
+                             '"group", "mode", "ignore_files, and "ignore_dirs"'
         else:
+            if 'ignore_files' in recurse and 'ignore_dirs' in recurse:
+                ret['result'] = False
+                ret['comment'] = 'Can not specify "recurse" options "ignore_files" ' \
+                                 'and "ignore_dirs" at the same time.'
+                return ret
+
             if 'user' in recurse:
                 if user:
                     uid = __salt__['file.user_to_uid'](user)
@@ -1639,7 +1703,7 @@ def directory(name,
                     if isinstance(gid, string_types):
                         ret['result'] = False
                         ret['comment'] = 'Failed to enforce group ownership ' \
-                                         'for group {0}'.format(group, user)
+                                         'for group {0}'.format(group)
                 else:
                     ret['result'] = False
                     ret['comment'] = 'group not specified, but configured ' \
@@ -1652,25 +1716,37 @@ def directory(name,
                 file_mode = None
                 dir_mode = None
 
+            if 'ignore_files' in recurse:
+                ignore_files = True
+            else:
+                ignore_files = False
+
+            if 'ignore_dirs' in recurse:
+                ignore_dirs = True
+            else:
+                ignore_dirs = False
+
             for root, dirs, files in os.walk(name):
-                for fn_ in files:
-                    full = os.path.join(root, fn_)
-                    ret, perms = __salt__['file.check_perms'](
-                        full,
-                        ret,
-                        user,
-                        group,
-                        file_mode,
-                        follow_symlinks)
-                for dir_ in dirs:
-                    full = os.path.join(root, dir_)
-                    ret, perms = __salt__['file.check_perms'](
-                        full,
-                        ret,
-                        user,
-                        group,
-                        dir_mode,
-                        follow_symlinks)
+                if not ignore_files:
+                    for fn_ in files:
+                        full = os.path.join(root, fn_)
+                        ret, perms = __salt__['file.check_perms'](
+                            full,
+                            ret,
+                            user,
+                            group,
+                            file_mode,
+                            follow_symlinks)
+                if not ignore_dirs:
+                    for dir_ in dirs:
+                        full = os.path.join(root, dir_)
+                        ret, perms = __salt__['file.check_perms'](
+                            full,
+                            ret,
+                            user,
+                            group,
+                            dir_mode,
+                            follow_symlinks)
 
     if clean:
         keep = _gen_keep_files(name, require)
@@ -2912,6 +2988,7 @@ def append(name,
                 )
         else:
             ret['comment'] = 'File {0} is in correct state'.format(name)
+            ret['result'] = True
         return ret
 
     with salt.utils.fopen(name, 'rb') as fp_:

@@ -591,7 +591,7 @@ def tenant_list(profile=None, **connection_args):
     return ret
 
 
-def tenant_update(tenant_id=None, name=None, email=None,
+def tenant_update(tenant_id=None, name=None, description=None,
                   enabled=None, profile=None, **connection_args):
     '''
     Update a tenant's information (keystone tenant-update)
@@ -617,11 +617,11 @@ def tenant_update(tenant_id=None, name=None, email=None,
     tenant = kstone.tenants.get(tenant_id)
     if not name:
         name = tenant.name
-    if not email:
-        email = tenant.email
+    if not description:
+        description = tenant.description
     if enabled is None:
         enabled = tenant.enabled
-    kstone.tenants.update(tenant_id, name, email, enabled)
+    kstone.tenants.update(tenant_id, name, description, enabled)
 
 
 def token_get(profile=None, **connection_args):

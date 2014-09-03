@@ -134,17 +134,28 @@
 #auth_timeout: 60
 
 # Number of consecutive SaltReqTimeoutError that are acceptable when trying to authenticate.
-#auth_tries: 1
+#auth_tries: 7
 
-# If authentication failes due to SaltReqTimeoutError during a ping_interval,
-# cause sub minion proccess to restart.
+# If authentication fails due to SaltReqTimeoutError during a ping_interval,
+# cause sub minion process to restart.
 #auth_safemode: False
 
 # Ping Master to ensure connection is alive (minutes).
 # TODO: perhaps could update the scheduler to raise Exception in main thread after /mine_interval (60 minutes)/ fails
 #ping_interval: 90
 
-# If you don't have any problems with syn-floods, dont bother with the
+# To auto recover minions if master changes IP address (DDNS)
+#
+#    auth_tries: 10
+#    auth_safemode: False
+#    ping_interval: 90
+#    restart_on_error: True
+#
+# Minions won't know master is missing until a ping fails.  After the ping fail,
+# the minion will attempt authentication and likely fails out and cause a restart.
+# When the minion restarts it will resolve the masters IP and attempt to reconnect.
+
+# If you don't have any problems with syn-floods, don't bother with the
 # three recon_* settings described below, just leave the defaults!
 #
 # The ZeroMQ pull-socket that binds to the masters publishing interface tries
@@ -234,12 +245,6 @@
 # with fresh data. Defaults to 5 minutes. Will have no effect if 'grains_cache'
 # is not enabled.
 # grains_cache_expiration: 300
-
-
-# When healing, a dns_check is run. This is to make sure that the originally
-# resolved dns has not changed. If this is something that does not happen in
-# your environment, set this value to False.
-#dns_check: True
 
 # Windows platforms lack posix IPC and must rely on slower TCP based inter-
 # process communications. Set ipc_mode to 'tcp' on such systems
@@ -444,7 +449,7 @@
 #state_output: full
 #
 # The state_output_diff setting changes whether or not the output from
-# sucessful states is returned. Useful when even the terse output of these
+# successful states is returned. Useful when even the terse output of these
 # states is cluttering the logs. Set it to True to ignore them.
 #state_output_diff: False
 #

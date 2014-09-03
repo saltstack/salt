@@ -82,7 +82,7 @@ def list_upgrades(refresh=True):
     return upgrades
 
 
-def upgrade(refresh=True, **kwargs):
+def upgrade(refresh=True):
     '''
     Upgrade all of the packages to the latest available version.
 

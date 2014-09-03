@@ -139,7 +139,7 @@ def list_upgrades(refresh=True):
         refresh_db()
 
     ret = {}
-    for name, data in get_repo_data().items():
+    for name, data in get_repo_data().get('repo', {}).items():
         if version(name):
             latest = latest_version(name)
             if latest:
@@ -195,17 +195,7 @@ def version(*names, **kwargs):
         return ''
     if len(names) > 1:
         reverse_dict = {}
-        for name in names:
-            ret[name] = ''
-            versions = _get_package_info(name)
-            if versions:
-                for val in versions.itervalues():
-                    if 'full_name' in val and len(val.get('full_name', '')) > 0:
-                        reverse_dict[val.get('full_name', '')] = name
-                        win_names.append(val.get('full_name', ''))
-            else:
-                win_names.append(name)
-        nums = __salt__['pkg_resource.version'](*win_names, **kwargs)
+        nums = __salt__['pkg_resource.version'](*names, **kwargs)
         if len(nums):
             for num, val in nums.iteritems():
                 if len(val) > 0:
@@ -508,7 +498,7 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
     if salt.utils.is_true(refresh):
         refresh_db()
 
-    # Ignore pkg_type from parse_targets, Windows does not suport the "sources"
+    # Ignore pkg_type from parse_targets, Windows does not support the "sources"
     # argument
     pkg_params = __salt__['pkg_resource.parse_targets'](name,
                                                         pkgs,

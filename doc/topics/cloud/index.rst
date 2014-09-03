@@ -46,7 +46,7 @@ Cloud Provider Specifics
 
         Getting Started With Aliyun <aliyun>
         Getting Started With Azure <azure>
-        Getting Started With Digital Ocean <digitalocean>
+        Getting Started With DigitalOcean <digitalocean>
         Getting Started With EC2 <aws>
         Getting Started With GoGrid <gogrid>
         Getting Started With Google Compute Engine <gce>

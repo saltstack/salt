@@ -110,46 +110,46 @@ def ext_pillar(minion_id, pillar, resource, sequence):
     roots = __opts__['pepa_roots']
 
     # Default input
-    input = {}
-    input['default'] = 'default'
-    input['hostname'] = minion_id
+    inp = {}
+    inp['default'] = 'default'
+    inp['hostname'] = minion_id
 
     if 'environment' in pillar:
-        input['environment'] = pillar['environment']
+        inp['environment'] = pillar['environment']
     elif 'environment' in __grains__:
-        input['environment'] = __grains__['environment']
+        inp['environment'] = __grains__['environment']
     else:
-        input['environment'] = 'base'
+        inp['environment'] = 'base'
 
     # Load templates
-    output = input
+    output = inp
     output['pepa_templates'] = []
 
-    for name, info in [s.items()[0] for s in sequence]:
-        if name not in input:
-            log.warn("Category is not defined: {0}".format(name))
+    for categ, info in [s.items()[0] for s in sequence]:
+        if categ not in inp:
+            log.warn("Category is not defined: {0}".format(categ))
             continue
 
         alias = None
         if isinstance(info, dict) and 'name' in info:
             alias = info['name']
         else:
-            alias = name
+            alias = categ
 
         templdir = None
         if info and 'base_only' in info and info['base_only']:
             templdir = join(roots['base'], resource, alias)
         else:
-            templdir = join(roots[input['environment']], resource, alias)
+            templdir = join(roots[inp['environment']], resource, alias)
 
         entries = []
-        if isinstance(input[name], list):
-            entries = input[name]
-        elif not input[name]:
-            log.warn("Category has no value set: {0}".format(name))
+        if isinstance(inp[categ], list):
+            entries = inp[categ]
+        elif not inp[categ]:
+            log.warn("Category has no value set: {0}".format(categ))
             continue
         else:
-            entries = [input[name]]
+            entries = [inp[categ]]
 
         for entry in entries:
             results = None

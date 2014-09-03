@@ -97,6 +97,7 @@ import shlex
 import json
 import salt.utils
 import subprocess
+from salt.roster import get_roster_file
 
 
 CONVERSION = {
@@ -116,19 +117,13 @@ def targets(tgt, tgt_type='glob', **kwargs):
     '''
     if tgt == 'all':
         tgt = '*'
-    if __opts__.get('roster_file', False) is not False:
-        hosts = __opts__.get('roster_file')
-    elif os.path.isfile(__opts__['conf_file']) or not os.path.exists(__opts__['conf_file']):
-        hosts = os.path.join(
-                os.path.dirname(__opts__['conf_file']),
-                'roster')
-    else:
-        hosts = os.path.join(__opts__['conf_file'], 'roster')
 
-    if os.path.isfile(hosts) and os.access(hosts, os.X_OK):
-        imatcher = Script(tgt, tgt_type='glob', inventory_file=hosts)
+    inventory_file = get_roster_file(__opts__)
+
+    if os.path.isfile(inventory_file) and os.access(inventory_file, os.X_OK):
+        imatcher = Script(tgt, tgt_type='glob', inventory_file=inventory_file)
     else:
-        imatcher = Inventory(tgt, tgt_type='glob', inventory_file=hosts)
+        imatcher = Inventory(tgt, tgt_type='glob', inventory_file=inventory_file)
     return imatcher.targets()
 
 
@@ -199,8 +194,10 @@ class Inventory(Target):
                     else:
                         proc = '_parse_group_line'
                         varname = line.strip('[]')
-                    continue
-                getattr(self, proc)(line, varname)
+
+                    getattr(self, proc)(line, varname)
+
+                continue
 
     def _parse_group_line(self, line, varname):
         '''

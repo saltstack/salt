@@ -109,7 +109,7 @@ class Shell(object):
 
         if self.passwd:
             options.extend(['PasswordAuthentication=yes',
-                            'PubkeyAuthentication=no'])
+                            'PubkeyAuthentication=yes'])
         else:
             options.extend(['PasswordAuthentication=no',
                             'PubkeyAuthentication=yes',

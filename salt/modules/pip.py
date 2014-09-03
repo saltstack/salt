@@ -94,6 +94,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             env=None,
             bin_env=None,
             use_wheel=False,
+            no_use_wheel=False,
             log=None,
             proxy=None,
             timeout=None,
@@ -150,6 +151,8 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         Deprecated, use bin_env now
     use_wheel
         Prefer wheel archives (requires pip>=1.4)
+    no_use_wheel
+        Force to not use wheel archives (requires pip>=1.4)
     log
         Log file where a complete (maximum verbosity) record will be kept
     proxy
@@ -351,6 +354,19 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             )
         else:
             cmd.append('--use-wheel')
+
+    if no_use_wheel:
+        min_version = '1.4'
+        cur_version = __salt__['pip.version'](bin_env)
+        if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
+                                           ver2=min_version):
+            log.error(
+                ('The --no-use-wheel option is only supported in pip {0} and '
+                 'newer. The version of pip detected is {1}. This option '
+                 'will be ignored.'.format(min_version, cur_version))
+            )
+        else:
+            cmd.append('--no-use-wheel')
 
     if log:
         try:
@@ -703,14 +719,15 @@ def uninstall(pkgs=None,
         if isinstance(pkgs, string_types):
             pkgs = [p.strip() for p in pkgs.split(',')]
         if requirements:
-            with salt.utils.fopen(requirement) as rq_:
-                for req in rq_:
-                    try:
-                        req_pkg, _ = req.split('==')
-                        if req_pkg in pkgs:
-                            pkgs.remove(req_pkg)
-                    except ValueError:
-                        pass
+            for requirement in requirements:
+                with salt.utils.fopen(requirement) as rq_:
+                    for req in rq_:
+                        try:
+                            req_pkg, _ = req.split('==')
+                            if req_pkg in pkgs:
+                                pkgs.remove(req_pkg)
+                        except ValueError:
+                            pass
         cmd.extend(pkgs)
 
     cmd_kwargs = dict(runas=user, cwd=cwd, saltenv=saltenv)

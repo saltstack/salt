@@ -94,6 +94,7 @@ def installed(name,
               env=None,
               bin_env=None,
               use_wheel=False,
+              no_use_wheel=False,
               log=None,
               proxy=None,
               timeout=None,
@@ -159,6 +160,9 @@ def installed(name,
 
     use_wheel : False
         Prefer wheel archives (requires pip>=1.4)
+
+    no_use_wheel : False
+        Force to not use wheel archives (requires pip>=1.4)
 
     bin_env : None
         Absolute path to a virtual environment directory or absolute path to
@@ -254,6 +258,17 @@ def installed(name,
                                            ver2=min_version):
             ret['result'] = False
             ret['comment'] = ('The \'use_wheel\' option is only supported in '
+                              'pip {0} and newer. The version of pip detected '
+                              'was {1}.').format(min_version, cur_version)
+            return ret
+
+    if no_use_wheel:
+        min_version = '1.4'
+        cur_version = __salt__['pip.version'](bin_env)
+        if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
+                                           ver2=min_version):
+            ret['result'] = False
+            ret['comment'] = ('The \'no_use_wheel\' option is only supported in '
                               'pip {0} and newer. The version of pip detected '
                               'was {1}.').format(min_version, cur_version)
             return ret
@@ -403,6 +418,7 @@ def installed(name,
         requirements=requirements,
         bin_env=bin_env,
         use_wheel=use_wheel,
+        no_use_wheel=no_use_wheel,
         log=log,
         proxy=proxy,
         timeout=timeout,

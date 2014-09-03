@@ -47,9 +47,14 @@ def __virtual__():
     if __grains__['kernel'] != 'Linux':
         return False
     # Suse >=12.0 uses systemd
-    if __grains__.get('os', '') == 'openSUSE':
+    if __grains__.get('os_family', '') == 'Suse':
         try:
-            if int(__grains__.get('osrelease', '').split('.')[0]) >= 12:
+            # osrelease might be in decimal format (e.g. "12.1"), or for
+            # SLES might include service pack (e.g. "11 SP3"), so split on
+            # non-digit characters, and the zeroth element is the major
+            # number (it'd be so much simpler if it was always "X.Y"...)
+            import re
+            if int(re.split(r'\D+', __grains__.get('osrelease', ''))[0]) >= 12:
                 return False
         except ValueError:
             return False

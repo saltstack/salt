@@ -538,6 +538,17 @@ class Auth(object):
         and the decrypted aes key for transport decryption.
         '''
         auth = {}
+
+        auth_timeout = self.opts.get('auth_timeout', None)
+        if auth_timeout is not None:
+            timeout = auth_timeout
+        auth_safemode = self.opts.get('auth_safemode', None)
+        if auth_safemode is not None:
+            safe = auth_safemode
+        auth_tries = self.opts.get('auth_tries', None)
+        if auth_tries is not None:
+            tries = auth_tries
+
         m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
 
         sreq = salt.payload.SREQ(
@@ -730,11 +741,7 @@ class SAuth(Auth):
             acceptance_wait_time_max = acceptance_wait_time
 
         while True:
-            creds = self.sign_in(
-                self.opts.get('auth_timeout', 60),
-                self.opts.get('auth_safemode', self.opts.get('_safe_auth', True)),
-                self.opts.get('auth_tries', 1)
-            )
+            creds = self.sign_in()
             if creds == 'retry':
                 if self.opts.get('caller'):
                     print('Minion failed to authenticate with the master, '

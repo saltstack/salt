@@ -84,6 +84,8 @@ import requests
 
 # Import salt libs
 import salt.utils
+from salt.utils import namespaced_function
+from salt.cloud.libcloudfuncs import get_salt_interface
 from salt._compat import ElementTree as ET
 
 # Import salt.cloud libs
@@ -100,6 +102,9 @@ from salt.cloud.exceptions import (
 
 # Get logging started
 log = logging.getLogger(__name__)
+
+# namespace libcloudfuncs
+get_salt_interface = namespaced_function(get_salt_interface, globals())
 
 SIZE_MAP = {
     'Micro Instance': 't1.micro',
@@ -1443,7 +1448,7 @@ def request_instance(vm_=None, call=None):
                 'Error getting root device name for image id {0} for '
                 'VM {1}: \n{2}'.format(image_id, vm_['name'], exc),
                 # Show the traceback if the debug logging level is enabled
-                exc_info=log.isEnabledFor(logging.DEBUG)
+                exc_info_on_loglevel=logging.DEBUG
             )
             raise
 
@@ -1518,7 +1523,7 @@ def request_instance(vm_=None, call=None):
                 vm_['name'], exc
             ),
             # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         raise
 
@@ -1608,7 +1613,7 @@ def request_instance(vm_=None, call=None):
             except SaltCloudSystemExit:
                 pass
             finally:
-                raise SaltCloudSystemExit(exc.message)
+                raise SaltCloudSystemExit(str(exc))
 
     return data, vm_
 
@@ -1712,7 +1717,7 @@ def query_instance(vm_=None, call=None):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(exc.message)
+            raise SaltCloudSystemExit(str(exc))
 
     if 'reactor' in vm_ and vm_['reactor'] is True:
         salt.utils.cloud.fire_event(
@@ -1789,7 +1794,7 @@ def wait_for_instance(
                                         gateway=ssh_gateway_config
                                         ):
         # If a known_hosts_file is configured, this instance will not be
-        # accessable until it has a host key. Since this is provided on
+        # accessible until it has a host key. Since this is provided on
         # supported instances by cloud-init, and viewable to us only from the
         # console output (which may take several minutes to become available,
         # we have some more waiting to do here.
@@ -1938,10 +1943,10 @@ def create(vm_=None, call=None):
         for instance in data:
             vm_['instance_id_list'].append(instance['instanceId'])
 
-    vm_['instance_id'] = vm_['instance_id_list'].pop()
-    if len(vm_['instance_id_list']) > 0:
-        # Multiple instances were spun up, get one now, and queue the rest
-        queue_instances(vm_['instance_id_list'])
+        vm_['instance_id'] = vm_['instance_id_list'].pop()
+        if len(vm_['instance_id_list']) > 0:
+            # Multiple instances were spun up, get one now, and queue the rest
+            queue_instances(vm_['instance_id_list'])
 
     # Wait for vital information, such as IP addresses, to be available
     # for the new instance
@@ -1998,14 +2003,24 @@ def create(vm_=None, call=None):
     # bootstrapped, once the necessary port is available.
     log.info('Created node {0}'.format(vm_['name']))
 
+    instance = data[0]['instancesSet']['item']
+
     # Wait for the necessary port to become available to bootstrap
     if ssh_interface(vm_) == 'private_ips':
-        ip_address = data[0]['instancesSet']['item']['privateIpAddress']
+        ip_address = instance['privateIpAddress']
         log.info('Salt node data. Private_ip: {0}'.format(ip_address))
     else:
-        ip_address = data[0]['instancesSet']['item']['ipAddress']
+        ip_address = instance['ipAddress']
         log.info('Salt node data. Public_ip: {0}'.format(ip_address))
     vm_['ssh_host'] = ip_address
+
+    if get_salt_interface(vm_) == 'private_ips':
+        salt_ip_address = instance['privateIpAddress']
+        log.info('Salt interface set to: {0}'.format(salt_ip_address))
+    else:
+        salt_ip_address = instance['ipAddress']
+        log.debug('Salt interface set to: {0}'.format(salt_ip_address))
+    vm_['salt_host'] = salt_ip_address
 
     display_ssh_output = config.get_cloud_config_value(
         'display_ssh_output', vm_, __opts__, default=True
@@ -2015,17 +2030,8 @@ def create(vm_=None, call=None):
         vm_, data, ip_address, display_ssh_output
     )
 
-    # The instance is booted and accessable, let's Salt it!
-    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
-
-    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
-    log.debug(
-        '{0[name]!r} VM creation details:\n{1}'.format(
-            vm_, pprint.pformat(data[0]['instancesSet']['item'])
-        )
-    )
-
-    ret.update(data[0]['instancesSet']['item'])
+    # The instance is booted and accessible, let's Salt it!
+    ret = instance.copy()
 
     # Get ANY defined volumes settings, merging data, in the following order
     # 1. VM config
@@ -2056,16 +2062,30 @@ def create(vm_=None, call=None):
         )
         ret['Attached Volumes'] = created
 
+    for key, value in salt.utils.cloud.bootstrap(vm_, __opts__).items():
+        ret.setdefault(key, value)
+
+    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.debug(
+        '{0[name]!r} VM creation details:\n{1}'.format(
+            vm_, pprint.pformat(instance)
+        )
+    )
+
+    event_data = {
+        'name': vm_['name'],
+        'profile': vm_['profile'],
+        'provider': vm_['provider'],
+        'instance_id': vm_['instance_id'],
+    }
+    if volumes:
+        event_data['volumes'] = volumes
+
     salt.utils.cloud.fire_event(
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        {
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['provider'],
-            'instance_id': vm_['instance_id'],
-        },
+        event_data,
         transport=__opts__['transport']
     )
 

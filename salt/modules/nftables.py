@@ -364,7 +364,7 @@ def get_rule_handle(table='filter', chain=None, rule=None, family='ipv4'):
                 format(table, family)
 
     if not check_chain(table, chain, family=family):
-        return 'Error: chain {0} in table {1} in family {1} does not exist'.\
+        return 'Error: chain {0} in table {1} in family {2} does not exist'.\
                 format(chain, table, family)
 
     if not check(table, chain, rule, family=family):
@@ -416,7 +416,7 @@ def check(table='filter', chain=None, rule=None, family='ipv4'):
                 format(table, family)
 
     if not check_chain(table, chain, family=family):
-        return 'Error: chain {0} in table {1} in family {1} does not exist'.\
+        return 'Error: chain {0} in table {1} in family {2} does not exist'.\
                 format(chain, table, family)
 
     nft_family = _NFTABLES_FAMILIES[family]
@@ -590,7 +590,7 @@ def new_chain(table='filter', chain=None, table_type=None, hook=None, priority=N
                 format(table, family)
 
     if check_chain(table, chain, family=family):
-        return 'Error: chain {0} in table {1} in family {1} already exists'.\
+        return 'Error: chain {0} in table {1} in family {2} already exists'.\
                 format(chain, table, family)
 
     nft_family = _NFTABLES_FAMILIES[family]
@@ -601,9 +601,8 @@ def new_chain(table='filter', chain=None, table_type=None, hook=None, priority=N
             cmd = r'{0} \{{ type {1} hook {2} priority {3}\; \}}'.\
                     format(cmd, table_type, hook, priority)
         else:
-            # Specifiy one, rqeuire all
-            return 'Error: table_type hook and priority required'.\
-                    format(table, family)
+            # Specify one, rqeuire all
+            return 'Error: table_type hook and priority required'
 
     out = __salt__['cmd.run'](cmd)
 
@@ -640,7 +639,7 @@ def delete_chain(table='filter', chain=None, family='ipv4'):
                 format(table, family)
 
     if not check_chain(table, chain, family=family):
-        return 'Error: chain {0} in table {1} in family {1} does not exist'.\
+        return 'Error: chain {0} in table {1} in family {2} does not exist'.\
                 format(chain, table, family)
 
     nft_family = _NFTABLES_FAMILIES[family]
@@ -684,7 +683,7 @@ def append(table='filter', chain=None, rule=None, family='ipv4'):
                 format(table, family)
 
     if not check_chain(table, chain, family=family):
-        return 'Error: chain {0} in table {1} in family {1} does not exist'.\
+        return 'Error: chain {0} in table {1} in family {2} does not exist'.\
                 format(chain, table, family)
 
     if check(table, chain, rule, family=family):
@@ -741,7 +740,7 @@ def insert(table='filter', chain=None, position=None, rule=None, family='ipv4'):
                 format(table, family)
 
     if not check_chain(table, chain, family=family):
-        return 'Error: chain {0} in table {1} in family {1} does not exist'.\
+        return 'Error: chain {0} in table {1} in family {2} does not exist'.\
                 format(chain, table, family)
 
     if check(table, chain, rule, family=family):
@@ -798,7 +797,7 @@ def delete(table, chain=None, position=None, rule=None, family='ipv4'):
                 format(table, family)
 
     if not check_chain(table, chain, family=family):
-        return 'Error: chain {0} in table {1} in family {1} does not exist'.\
+        return 'Error: chain {0} in table {1} in family {2} does not exist'.\
                 format(chain, table, family)
 
     if not check(table, chain, rule, family=family):
@@ -845,7 +844,7 @@ def flush(table='filter', chain='', family='ipv4'):
 
     if chain:
         if not check_chain(table, chain, family=family):
-            return 'Error: chain {0} in table {1} in family {1} does not exist'.\
+            return 'Error: chain {0} in table {1} in family {2} does not exist'.\
                     format(chain, table, nft_family)
         cmd = '{0} flush chain {1} {2} {3}'.\
                 format(_nftables_cmd(), nft_family, table, chain)

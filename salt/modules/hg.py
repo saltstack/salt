@@ -114,11 +114,11 @@ def archive(cwd, output, rev='tip', fmt=None, prefix=None, user=None):
     '''
     _check_hg()
 
-    cmd = 'hg archive {output}{rev}{fmt}'.format(
+    cmd = 'hg archive {output}{rev}{fmt}{prefix}'.format(
         rev=' --rev {0}'.format(rev),
         output=output,
         fmt=' --type {0}'.format(fmt) if fmt else '',
-        prefix=' --prefix "{0}"'.format(prefix if prefix else ''))
+        prefix=' --prefix "{0}"'.format(prefix) if prefix else '')
 
     return __salt__['cmd.run'](cmd, cwd=cwd, runas=user)
 
