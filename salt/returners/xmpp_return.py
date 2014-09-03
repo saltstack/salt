@@ -58,7 +58,7 @@ import distutils.version
 import logging
 import pprint
 
-log = logging.getLogger(__name__)
+import salt.returners.utils
 
 HAS_LIBS = False
 try:
@@ -70,66 +70,32 @@ except ImportError:
         Fake class in order not to raise errors
         '''
 
+log = logging.getLogger(__name__)
 
 __virtualname__ = 'xmpp'
 
 
 def _get_options(ret=None):
     '''
-    Get the redis options from salt.
+    Get the xmpp options from salt.
     '''
-    if ret:
-        ret_config = '{0}'.format(ret['ret_config']) if 'ret_config' in ret else ''
-    else:
-        ret_config = None
-
     attrs = {'xmpp_profile': 'profile',
              'from_jid': 'jid',
              'password': 'password',
              'recipient_jid': 'recipient'}
 
-    _options = {}
-    for attr in attrs:
-        if 'config.option' in __salt__:
-            cfg = __salt__['config.option']
-            c_cfg = cfg('{0}'.format(__virtualname__), {})
-            if ret_config:
-                ret_cfg = cfg('{0}.{1}'.format(ret_config, __virtualname__), {})
-                if ret_cfg.get(attrs[attr], cfg('{0}.{1}.{2}'.format(ret_config, __virtualname__, attrs[attr]))):
-                    _attr = ret_cfg.get(attrs[attr], cfg('{0}.{1}.{2}'.format(ret_config, __virtualname__, attrs[attr])))
-                    log.debug('_attr {0}'.format(_attr))
-                else:
-                    _attr = c_cfg.get(attrs[attr], cfg('{0}.{1}'.format(__virtualname__, attrs[attr])))
-            else:
-                _attr = c_cfg.get(attrs[attr], cfg('{0}.{1}'.format(__virtualname__, attrs[attr])))
-        else:
-            cfg = __opts__
-            c_cfg = cfg.get('{0}'.format(__virtualname__), {})
-            if ret_config:
-                ret_cfg = cfg.get('{0}.{1}'.format(ret_config, __virtualname__), {})
-                if ret_cfg.get(attrs[attr], cfg.get('{0}.{1}.{2}'.format(ret_config, __virtualname__, attrs[attr]))):
-                    _attr = ret_cfg.get(attrs[attr], cfg.get('{0}.{1}.{2}'.format(ret_config, __virtualname__, attrs[attr])))
-                else:
-                    _attr = c_cfg.get(attrs[attr], cfg.get('{0}.{1}'.format(__virtualname__, attrs[attr])))
-            else:
-                _attr = c_cfg.get(attrs[attr], cfg.get('{0}.{1}'.format(__virtualname__, attrs[attr])))
-        if not _attr:
-            _options[attr] = None
-            continue
-        _options[attr] = _attr
+    profile_attr = 'xmpp_profile'
 
-    # If we're using an xmpp_profile
-    # pull from_jid and password from there
-    if 'xmpp_profile' in _options:
-        log.info('Using xmpp.profile {0}'.format(_options['xmpp_profile']))
-        if 'config.option' in __salt__:
-            creds = cfg(_options['xmpp_profile'])
-        else:
-            creds = cfg.get(_options['xmpp_profile'])
-        if creds:
-            _options['from_jid'] = creds.get('xmpp.jid')
-            _options['password'] = creds.get('xmpp.password')
+    profile_attrs = {'from_jid': 'jid',
+                     'password': 'password'}
 
+    _options = salt.returners.utils.get_returner_options(__virtualname__,
+                                                         ret,
+                                                         attrs,
+                                                         profile_attr=profile_attr,
+                                                         profile_attrs=profile_attrs,
+                                                         __salt__=__salt__,
+                                                         __opts__=__opts__)
     return _options
 
 

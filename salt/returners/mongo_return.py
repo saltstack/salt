@@ -37,6 +37,8 @@ the default location::
 # Import python libs
 import logging
 
+import salt.returners.utils
+
 # Import third party libs
 try:
     import pymongo
@@ -71,45 +73,17 @@ def _get_options(ret):
     '''
     Get the monogo_return options from salt.
     '''
-    if ret:
-        ret_config = '{0}'.format(ret['ret_config']) if 'ret_config' in ret else ''
-    else:
-        ret_config = None
-
     attrs = {'host': 'host',
              'port': 'port',
              'db': 'db',
              'username': 'username',
              'password': 'password'}
 
-    _options = {}
-    for attr in attrs:
-        if 'config.option' in __salt__:
-            cfg = __salt__['config.option']
-            c_cfg = cfg('{0}'.format(__virtualname__), {})
-            if ret_config:
-                ret_cfg = cfg('{0}.{1}'.format(ret_config, __virtualname__), {})
-                if ret_cfg.get(attrs[attr], cfg('{0}.{1}.{2}'.format(ret_config, __virtualname__, attrs[attr]))):
-                    _attr = ret_cfg.get(attrs[attr], cfg('{0}.{1}.{2}'.format(ret_config, __virtualname__, attrs[attr])))
-                else:
-                    _attr = c_cfg.get(attrs[attr], cfg('{0}.{1}'.format(__virtualname__, attrs[attr])))
-            else:
-                _attr = c_cfg.get(attrs[attr], cfg('{0}.{1}'.format(__virtualname__, attrs[attr])))
-        else:
-            cfg = __opts__
-            c_cfg = cfg.get('{0}'.format(__virtualname__), {})
-            if ret_config:
-                ret_cfg = cfg.get('{0}.{1}'.format(ret_config, __virtualname__), {})
-                if ret_cfg.get(attrs[attr], cfg.get('{0}.{1}.{2}'.format(ret_config, __virtualname__, attrs[attr]))):
-                    _attr = ret_cfg.get(attrs[attr], cfg.get('{0}.{1}.{2}'.format(ret_config, __virtualname__, attrs[attr])))
-                else:
-                    _attr = c_cfg.get(attrs[attr], cfg.get('{0}.{1}'.format(__virtualname__, attrs[attr])))
-            else:
-                _attr = c_cfg.get(attrs[attr], cfg.get('{0}.{1}'.format(__virtualname__, attrs[attr])))
-        if not _attr:
-            _options[attr] = None
-            continue
-        _options[attr] = _attr
+    _options = salt.returners.utils.get_returner_options(__virtualname__,
+                                                         ret,
+                                                         attrs,
+                                                         __salt__=__salt__,
+                                                         __opts__=__opts__)
     return _options
 
 
