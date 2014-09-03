@@ -256,7 +256,7 @@ def disabled(name):
     return not __salt__['cmd.retcode'](cmd) == 0
 
 
-def enabled(name):
+def enabled(name, **kwargs):
     '''
     Return True if the named service is enabled at boot, False otherwise.
 

@@ -380,7 +380,7 @@ def _enabled(name):
     return is_enabled or _templated_instance_enabled(name)
 
 
-def enabled(name):
+def enabled(name, **kwargs):
     '''
     Return if the named service is enabled to start on boot
 
