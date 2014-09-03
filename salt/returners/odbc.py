@@ -112,7 +112,7 @@ correctly.  Replace with equivalent SQL for other ODBC-compliant servers::
 # Import python libs
 import json
 
-import salt.returners.utils
+import salt.returners
 
 # FIXME We'll need to handle this differently for Windows.
 # Import third party libs
@@ -141,11 +141,11 @@ def _get_options(ret=None):
              'user': 'user',
              'passwd': 'passwd'}
 
-    _options = salt.returners.utils.get_returner_options('returner.{0}'.format(__virtualname__),
-                                                         ret,
-                                                         attrs,
-                                                         __salt__=__salt__,
-                                                         __opts__=__opts__)
+    _options = salt.returners.get_returner_options('returner.{0}'.format(__virtualname__),
+                                                   ret,
+                                                   attrs,
+                                                   __salt__=__salt__,
+                                                   __opts__=__opts__)
     return _options
 
 
