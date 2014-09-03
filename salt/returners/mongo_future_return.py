@@ -41,7 +41,7 @@ in the future and should not be considered API stable yet.
 # Import python libs
 import logging
 
-import salt.returners.utils
+import salt.returners
 
 # Import third party libs
 try:
@@ -81,11 +81,11 @@ def _get_options(ret=None):
              'username': 'username',
              'password': 'password'}
 
-    _options = salt.returners.utils.get_returner_options(__virtualname__,
-                                                         ret,
-                                                         attrs,
-                                                         __salt__=__salt__,
-                                                         __opts__=__opts__)
+    _options = salt.returners.get_returner_options(__virtualname__,
+                                                   ret,
+                                                   attrs,
+                                                   __salt__=__salt__,
+                                                   __opts__=__opts__)
     return _options
 
 

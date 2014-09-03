@@ -31,7 +31,7 @@ python2-memcache uses 'localhost' and '11211' as syntax on connection.
 import json
 import logging
 
-import salt.returners.utils
+import salt.returners
 
 log = logging.getLogger(__name__)
 
@@ -59,11 +59,11 @@ def _get_options(ret=None):
     attrs = {'host': 'host',
              'port': 'port'}
 
-    _options = salt.returners.utils.get_returner_options(__virtualname__,
-                                                         ret,
-                                                         attrs,
-                                                         __salt__=__salt__,
-                                                         __opts__=__opts__)
+    _options = salt.returners.get_returner_options(__virtualname__,
+                                                   ret,
+                                                   attrs,
+                                                   __salt__=__salt__,
+                                                   __opts__=__opts__)
     return _options
 
 

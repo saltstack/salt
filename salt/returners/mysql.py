@@ -83,7 +83,7 @@ import sys
 import json
 import logging
 
-import salt.returners.utils
+import salt.returners
 
 # Import third party libs
 try:
@@ -120,12 +120,12 @@ def _get_options(ret=None):
              'db': 'db',
              'port': 'port'}
 
-    _options = salt.returners.utils.get_returner_options(__virtualname__,
-                                                         ret,
-                                                         attrs,
-                                                         __salt__=__salt__,
-                                                         __opts__=__opts__,
-                                                         defaults=defaults)
+    _options = salt.returners.get_returner_options(__virtualname__,
+                                                   ret,
+                                                   attrs,
+                                                   __salt__=__salt__,
+                                                   __opts__=__opts__,
+                                                   defaults=defaults)
     # Ensure port is an int
     if 'port' in _options:
         _options['port'] = int(_options['port'])

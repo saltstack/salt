@@ -58,7 +58,7 @@ import distutils.version
 import logging
 import pprint
 
-import salt.returners.utils
+import salt.returners
 
 HAS_LIBS = False
 try:
@@ -89,13 +89,13 @@ def _get_options(ret=None):
     profile_attrs = {'from_jid': 'jid',
                      'password': 'password'}
 
-    _options = salt.returners.utils.get_returner_options(__virtualname__,
-                                                         ret,
-                                                         attrs,
-                                                         profile_attr=profile_attr,
-                                                         profile_attrs=profile_attrs,
-                                                         __salt__=__salt__,
-                                                         __opts__=__opts__)
+    _options = salt.returners.get_returner_options(__virtualname__,
+                                                   ret,
+                                                   attrs,
+                                                   profile_attr=profile_attr,
+                                                   profile_attrs=profile_attrs,
+                                                   __salt__=__salt__,
+                                                   __opts__=__opts__)
     return _options
 
 

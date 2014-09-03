@@ -54,7 +54,7 @@ import socket
 import struct
 import time
 
-import salt.returners.utils
+import salt.returners
 
 log = logging.getLogger(__name__)
 
@@ -75,11 +75,11 @@ def _get_options(ret):
              'skip': 'skip_on_error',
              'mode': 'mode'}
 
-    _options = salt.returners.utils.get_returner_options(__virtualname__,
-                                                         ret,
-                                                         attrs,
-                                                         __salt__=__salt__,
-                                                         __opts__=__opts__)
+    _options = salt.returners.get_returner_options(__virtualname__,
+                                                   ret,
+                                                   attrs,
+                                                   __salt__=__salt__,
+                                                   __opts__=__opts__)
     return _options
 
 

@@ -26,7 +26,7 @@ import time
 import urllib2
 import json
 
-import salt.returners.utils
+import salt.returners
 
 log = logging.getLogger(__name__)
 
@@ -45,11 +45,11 @@ def _get_options(ret=None):
     attrs = {'url': 'server_url',
              'db': 'db_name'}
 
-    _options = salt.returners.utils.get_returner_options(__virtualname__,
-                                                         ret,
-                                                         attrs,
-                                                         __salt__=__salt__,
-                                                         __opts__=__opts__)
+    _options = salt.returners.get_returner_options(__virtualname__,
+                                                   ret,
+                                                   attrs,
+                                                   __salt__=__salt__,
+                                                   __opts__=__opts__)
     server_url = _options.get('server_url')
     db_name = _options.get('db_name')
 

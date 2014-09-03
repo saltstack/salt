@@ -80,7 +80,7 @@ Required python modules: psycopg2
 # Import python libs
 import json
 
-import salt.returners.utils
+import salt.returners
 
 # Import third party libs
 try:
@@ -109,11 +109,11 @@ def _get_options(ret=None):
              'db': 'db',
              'port': 'port'}
 
-    _options = salt.returners.utils.get_returner_options('returner.{0}'.format(__virtualname__),
-                                                         ret,
-                                                         attrs,
-                                                         __salt__=__salt__,
-                                                         __opts__=__opts__)
+    _options = salt.returners.get_returner_options('returner.{0}'.format(__virtualname__),
+                                                   ret,
+                                                   attrs,
+                                                   __salt__=__salt__,
+                                                   __opts__=__opts__)
     return _options
 
 
