@@ -28,7 +28,7 @@ import salt.utils
 import salt.utils.network
 import integration
 from salt import config as sconfig
-from salt.cloud.exceptions import SaltCloudConfigError
+from salt.exceptions import SaltCloudConfigError
 
 # Import Third-Party Libs
 import yaml
