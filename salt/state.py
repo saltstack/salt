@@ -1823,8 +1823,13 @@ class State(object):
             else:
                 running[tag] = self.call(low, chunks, running)
         elif status == 'fail':
+            # if the requisite that failed was due to a prereq on this low state
+            # show the normal error
             if tag in self.pre:
                 running[tag] = self.pre[tag]
+                running[tag]['__run_num__'] = self.__run_num
+                running[tag]['__sls__'] = low['__sls__']
+            # otherwise the failure was due to a requisite down the chain
             else:
                 running[tag] = {'changes': {},
                                 'result': False,
