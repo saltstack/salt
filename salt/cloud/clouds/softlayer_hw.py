@@ -696,7 +696,7 @@ def list_nodes_full(mask='mask[id, hostname, primaryIpAddress, \
 
     ret = {}
     conn = get_conn(service='Account')
-    response = conn.getBareMetalInstances(mask=mask)
+    response = conn.getHardware(mask=mask)
 
     for node in response:
         ret[node['hostname']] = node
