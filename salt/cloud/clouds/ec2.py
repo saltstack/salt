@@ -89,7 +89,7 @@ from salt._compat import ElementTree as ET
 # Import salt.cloud libs
 import salt.utils.cloud
 import salt.config as config
-from salt.cloud.exceptions import (
+from salt.exceptions import (
     SaltCloudException,
     SaltCloudSystemExit,
     SaltCloudConfigError,

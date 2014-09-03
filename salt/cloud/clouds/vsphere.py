@@ -53,7 +53,7 @@ import time
 # Import salt libs
 import salt.utils.cloud
 import salt.utils.xmlutil
-from salt.cloud.exceptions import SaltCloudSystemExit
+from salt.exceptions import SaltCloudSystemExit
 
 # Import salt cloud libs
 import salt.config as config

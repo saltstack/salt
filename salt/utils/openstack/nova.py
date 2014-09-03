@@ -25,7 +25,7 @@ import logging
 
 # Import salt libs
 import salt.utils
-from salt.cloud.exceptions import SaltCloudSystemExit
+from salt.exceptions import SaltCloudSystemExit
 
 # Get logging started
 log = logging.getLogger(__name__)

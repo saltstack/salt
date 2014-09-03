@@ -31,9 +31,6 @@ import salt.utils.args
 import salt.utils.xdg
 from salt.utils.validate.path import is_writeable
 
-if not utils.is_windows():
-    import salt.cloud.exceptions
-
 
 def _sorted(mixins_or_funcs):
     return sorted(
@@ -2294,5 +2291,5 @@ class SaltCloudParser(OptionParser,
     def setup_config(self):
         try:
             return config.cloud_config(self.get_config_file_path())
-        except salt.cloud.exceptions.SaltCloudConfigError as exc:
+        except salt.exceptions.SaltCloudConfigError as exc:
             self.error(exc)
