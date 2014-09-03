@@ -23,10 +23,8 @@ except Exception:
 
 # Import salt libs
 import salt.crypt
-import salt.loader
 import salt.utils
 import salt.utils.network
-import salt.pillar
 import salt.syspaths
 import salt.utils.validate.path
 import salt.utils.xdg

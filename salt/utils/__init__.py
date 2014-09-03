@@ -99,7 +99,6 @@ except ImportError:
 # Import salt libs
 import salt._compat
 import salt.log
-import salt.minion
 import salt.payload
 import salt.version
 from salt._compat import string_types
