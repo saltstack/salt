@@ -1823,11 +1823,14 @@ class State(object):
             else:
                 running[tag] = self.call(low, chunks, running)
         elif status == 'fail':
-            running[tag] = {'changes': {},
-                            'result': False,
-                            'comment': 'One or more requisite failed',
-                            '__run_num__': self.__run_num,
-                            '__sls__': low['__sls__']}
+            if tag in self.pre:
+                running[tag] = self.pre[tag]
+            else:
+                running[tag] = {'changes': {},
+                                'result': False,
+                                'comment': 'One or more requisite failed',
+                                '__run_num__': self.__run_num,
+                                '__sls__': low['__sls__']}
             self.__run_num += 1
         elif status == 'change' and not low.get('__prereq__'):
             ret = self.call(low, chunks, running)
