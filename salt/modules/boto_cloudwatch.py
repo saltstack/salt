@@ -208,7 +208,7 @@ def create_or_update_alarm(
     if evaluation_periods:
         evaluation_periods = int(evaluation_periods)
     if isinstance(dimensions, string_types):
-        dimensions = json.decodestring(dimensions)
+        dimensions = json.loads(dimensions)
         if not isinstance(dimensions, dict):
             log.error("could not parse dimensions argument: must be json encoding of a dict: '{0}'".format(dimensions))
             return False

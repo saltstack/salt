@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Manage Cloudwatch alarms
-=================
+========================
 
 .. versionadded:: 2014.7.0
 
@@ -170,7 +170,6 @@ def present(
 
 def absent(
         name,
-        attributes=None,
         region=None,
         key=None,
         keyid=None,
