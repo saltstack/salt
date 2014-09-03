@@ -1981,6 +1981,15 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'retcode')
         )
         self.add_option(
+            '--metadata',
+            default=False,
+            dest='metadata',
+            action='store_true',
+            help=('Print out the execution metadata as well as the return. '
+                  'This will print out the outputter data, the return code, '
+                  'etc.')
+        )
+        self.add_option(
             '--id',
             default='',
             dest='id',
