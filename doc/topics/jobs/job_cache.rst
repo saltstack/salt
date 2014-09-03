@@ -43,7 +43,7 @@ The master job cache setting makes the built in job cache on the master
 modular. This system allows for the default cache to be swapped out by the Salt
 returner system. To configure the master job cache, set up an external returner
 database based on the instuctions included with each returner and then simply
-the following configuration to the master configuration file:
+add the following configuration to the master configuration file:
 
 .. code_block:: yaml
 
