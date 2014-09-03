@@ -2153,6 +2153,15 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'reached.')
         )
         self.add_option(
+            '--no-minion-cache',
+            dest='ssh_minion_cache',
+            default=True,
+            action='store_false',
+            help=('Set this flag to disable the ssh minion cache, this will '
+                  'prevent information about the target systems from being '
+                  'stored on the originating system.')
+        )
+        self.add_option(
             '--max-procs',
             dest='ssh_max_procs',
             default=25,
