@@ -1095,7 +1095,7 @@ def replace(path,
     show_changes
         Output a unified diff of the old file and the new
         file. If ``False`` return a boolean if any changes were made.
-        Default is ``True``        
+        Default is ``True``
 
         .. note::
 
