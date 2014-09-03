@@ -597,6 +597,8 @@ class Single(object):
         '''
         # Ensure that opts/grains are up to date
         # Execute routine
+        data_cache = self.opts.get('ssh_minion_cache', True)
+        data = None
         cdir = os.path.join(self.opts['cachedir'], 'minions', self.id)
         if not os.path.isdir(cdir):
             os.makedirs(cdir)
@@ -609,6 +611,8 @@ class Single(object):
             if passed_time > self.opts.get('cache_life', 60):
                 refresh = True
         if self.opts.get('refresh_cache'):
+            refresh = True
+        if not data_cache:
             refresh = True
         if refresh:
             # Make the datap
@@ -638,16 +642,17 @@ class Single(object):
             pillar_data = pillar.compile_pillar()
 
             # TODO: cache minion opts in datap in master.py
-            with salt.utils.fopen(datap, 'w+b') as fp_:
-                fp_.write(
-                        self.serial.dumps(
-                            {'opts': opts_pkg,
-                                'grains': opts_pkg['grains'],
-                                'pillar': pillar_data}
+            data = {'opts': opts_pkg,
+                    'grains': opts_pkg['grains'],
+                    'pillar': pillar_data}
+            if data_cache:
+                with salt.utils.fopen(datap, 'w+b') as fp_:
+                    fp_.write(
+                            self.serial.dumps(data)
                             )
-                        )
-        with salt.utils.fopen(datap, 'rb') as fp_:
-            data = self.serial.load(fp_)
+        if not data and data_cache:
+            with salt.utils.fopen(datap, 'rb') as fp_:
+                data = self.serial.load(fp_)
         opts = data.get('opts', {})
         opts['grains'] = data.get('grains')
         opts['pillar'] = data.get('pillar')
