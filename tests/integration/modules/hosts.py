@@ -142,7 +142,7 @@ class HostsModuleTest(integration.ModuleCase):
         self.assertTrue(
             self.run_function('hosts.add_host', ['127.0.0.1', 'othernameip'])
         )
-        self.assertEqual(len(self.run_function('hosts.list_hosts')), 7)
+        self.assertEqual(len(self.run_function('hosts.list_hosts')), 11)
 
     def test_rm_host(self):
         self.__clean_hosts()
