@@ -1593,10 +1593,11 @@ class State(object):
             return not running[tag]['result']
         return False
 
-    def check_requisite(self, low, running, chunks, pre=False):
+    def check_requisite(self, low, running, chunks):
         '''
         Look into the running data to check the status of all requisite
-        states
+        states. This includes all requisites that this state depends on (this
+        does not include states that prerequire this specific lowstate)
         '''
         present = False
         # If mod_watch is not available make it a require
@@ -1626,8 +1627,6 @@ class State(object):
                 'prereq': [],
                 'onfail': [],
                 'onchanges': []}
-        if pre:
-            reqs['prerequired'] = []
         for r_state in reqs:
             if r_state in low and low[r_state] is not None:
                 for req in low[r_state]:
@@ -1721,9 +1720,7 @@ class State(object):
         requisites = ['require', 'watch', 'prereq', 'onfail', 'onchanges']
         if not low.get('__prereq__'):
             requisites.append('prerequired')
-            status = self.check_requisite(low, running, chunks, True)
-        else:
-            status = self.check_requisite(low, running, chunks)
+        status = self.check_requisite(low, running, chunks)
         if status == 'unmet':
             lost = {}
             reqs = []
