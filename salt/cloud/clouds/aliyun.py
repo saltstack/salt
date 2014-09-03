@@ -41,7 +41,7 @@ from hashlib import sha1
 # Import salt cloud libs
 import salt.utils.cloud
 import salt.config as config
-from salt.cloud.exceptions import (
+from salt.exceptions import (
     SaltCloudNotFound,
     SaltCloudSystemExit,
     SaltCloudExecutionFailure,
