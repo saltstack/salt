@@ -2031,6 +2031,15 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'retcode')
         )
         self.add_option(
+            '--metadata',
+            default=False,
+            dest='metadata',
+            action='store_true',
+            help=('Print out the execution metadata as well as the return. '
+                  'This will print out the outputter data, the return code, '
+                  'etc.')
+        )
+        self.add_option(
             '--id',
             default='',
             dest='id',
@@ -2200,6 +2209,15 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'target\'s data. This is needed if a target\'s grains have '
                   'been changed and the auto refresh timeframe has not been '
                   'reached.')
+        )
+        self.add_option(
+            '--no-minion-cache',
+            dest='ssh_minion_cache',
+            default=True,
+            action='store_false',
+            help=('Set this flag to disable the ssh minion cache, this will '
+                  'prevent information about the target systems from being '
+                  'stored on the originating system.')
         )
         self.add_option(
             '--max-procs',

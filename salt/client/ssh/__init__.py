@@ -44,7 +44,7 @@ except ImportError:
     HAS_ZMQ = False
 
 # The directory where salt thin is deployed
-DEFAULT_THIN_DIR = '/tmp/.salt'
+DEFAULT_THIN_DIR = '/tmp/.%%USER%%_salt'
 
 # RSTR is just a delimiter to distinguish the beginning of salt STDOUT
 # and STDERR.  There is no special meaning.  Messages prior to RSTR in
@@ -453,9 +453,11 @@ class SSH(object):
             host = ret.keys()[0]
             self.cache_job(jid, host, ret[host])
             ret = self.key_deploy(host, ret)
+            outputter = ret[host].get('out', self.opts.get('output', 'nested'))
+            p_data = {host: ret[host].get('return', {})}
             salt.output.display_output(
-                    ret,
-                    self.opts.get('output', 'nested'),
+                    p_data,
+                    outputter,
                     self.opts)
             if self.event:
                 self.event.fire_event(
@@ -488,6 +490,10 @@ class Single(object):
             tty=False,
             **kwargs):
         self.opts = opts
+        if user:
+            self.thin_dir = DEFAULT_THIN_DIR.replace('%%USER%%', user)
+        else:
+            self.thin_dir = DEFAULT_THIN_DIR.replace('%%USER%%', 'root')
 
         if isinstance(argv, string_types):
             self.argv = [argv]
@@ -508,7 +514,7 @@ class Single(object):
         self.shell = salt.client.ssh.shell.Shell(opts, **args)
         self.minion_config = yaml.dump(
                 {
-                    'root_dir': os.path.join(DEFAULT_THIN_DIR, 'running_data'),
+                    'root_dir': os.path.join(self.thin_dir, 'running_data'),
                     'id': self.id,
                 }).strip()
         self.target = kwargs
@@ -557,7 +563,7 @@ class Single(object):
         thin = salt.utils.thin.gen_thin(self.opts['cachedir'])
         self.shell.send(
             thin,
-            os.path.join(DEFAULT_THIN_DIR, 'salt-thin.tgz'),
+            os.path.join(self.thin_dir, 'salt-thin.tgz'),
         )
         return True
 
@@ -595,6 +601,8 @@ class Single(object):
         '''
         # Ensure that opts/grains are up to date
         # Execute routine
+        data_cache = self.opts.get('ssh_minion_cache', True)
+        data = None
         cdir = os.path.join(self.opts['cachedir'], 'minions', self.id)
         if not os.path.isdir(cdir):
             os.makedirs(cdir)
@@ -609,12 +617,12 @@ class Single(object):
 
         if self.opts.get('refresh_cache'):
             refresh = True
-
         conf_grains = {}
         #Save conf file grains before they get clobbered
         if 'ssh_grains' in self.opts:
             conf_grains = self.opts['ssh_grains']
-
+        if not data_cache:
+            refresh = True
         if refresh:
             # Make the datap
             # TODO: Auto expire the datap
@@ -643,16 +651,17 @@ class Single(object):
             pillar_data = pillar.compile_pillar()
 
             # TODO: cache minion opts in datap in master.py
-            with salt.utils.fopen(datap, 'w+b') as fp_:
-                fp_.write(
-                        self.serial.dumps(
-                            {'opts': opts_pkg,
-                                'grains': opts_pkg['grains'],
-                                'pillar': pillar_data}
+            data = {'opts': opts_pkg,
+                    'grains': opts_pkg['grains'],
+                    'pillar': pillar_data}
+            if data_cache:
+                with salt.utils.fopen(datap, 'w+b') as fp_:
+                    fp_.write(
+                            self.serial.dumps(data)
                             )
-                        )
-        with salt.utils.fopen(datap, 'rb') as fp_:
-            data = self.serial.load(fp_)
+        if not data and data_cache:
+            with salt.utils.fopen(datap, 'rb') as fp_:
+                data = self.serial.load(fp_)
         opts = data.get('opts', {})
         opts['grains'] = data.get('grains')
 
@@ -675,9 +684,11 @@ class Single(object):
         # Mimic the json data-structure that "salt-call --local" will
         # emit (as seen in ssh_py_shim.py)
         if 'local' in result:
-            return json.dumps(result)
+            result['local']['return'] = result['local']
+            ret = json.dumps(result)
         else:
-            return json.dumps({'local': result})
+            ret = json.dumps({'local': {'return': result}})
+        return ret
 
     def _cmd_str(self):
         '''
@@ -692,7 +703,7 @@ class Single(object):
         ssh_py_shim_args = [
             '--config', self.minion_config,
             '--delimiter', RSTR,
-            '--saltdir', DEFAULT_THIN_DIR,
+            '--saltdir', self.thin_dir,
             '--checksum', thin_sum,
             '--hashfunc', 'sha1',
             '--version', salt.__version__,
@@ -903,7 +914,7 @@ class Single(object):
         trans_tar = prep_trans_tar(self.opts, chunks, file_refs)
         self.shell.send(
             trans_tar,
-            os.path.join(DEFAULT_THIN_DIR, 'salt_state.tgz'),
+            os.path.join(self.thin_dir, 'salt_state.tgz'),
         )
         self.argv = ['state.pkg', '/tmp/.salt/salt_state.tgz', 'test={0}'.format(test)]
 
