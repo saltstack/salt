@@ -57,4 +57,3 @@ class SaltCloudPasswordError(SaltCloudException):
     '''
     Raise when virtual terminal password input failed
     '''
-
