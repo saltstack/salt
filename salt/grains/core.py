@@ -1095,7 +1095,7 @@ def os_data():
         grains['osfinger'] = '{os}-{ver}'.format(
             os=grains['osfullname'],
             ver=grains['osrelease'])
-    elif grains['osfullname'] == "Debian":
+    elif grains.get('osfullname') == "Debian":
         grains['osmajorrelease'] = grains['osrelease'].split('.', 1)[0]
 
         grains['osfinger'] = '{os}-{ver}'.format(
