@@ -130,8 +130,12 @@ def mounted(name,
             if uuid_device and uuid_device not in device_list:
                 device_list.append(uuid_device)
             if opts:
+                mount_invisible_options = ['defaults', 'comment', 'nobootwait']
                 for opt in opts:
-                    if opt not in active[real_name]['opts'] and opt != 'defaults':
+                    comment_option = opt.split('=')[0]
+                    if comment_option == 'comment':
+                        opt = comment_option
+                    if opt not in active[real_name]['opts'] and opt not in mount_invisible_options:
                         if __opts__['test']:
                             ret['result'] = None
                             ret['comment'] = "Remount would be forced because options changed"
