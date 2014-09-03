@@ -2153,7 +2153,7 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'reached.')
         )
         self.add_option(
-            '--no_minion_cache',
+            '--no-minion-cache',
             dest='ssh_minion_cache',
             default=True,
             action='store_false',
