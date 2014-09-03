@@ -133,7 +133,7 @@ def _active_mounts_openbsd(ret):
     return ret
 
 
-def active():
+def active(extended=False):
     '''
     List the active mounts.
 
@@ -151,9 +151,12 @@ def active():
     if __grains__['os'] == 'OpenBSD':
         _active_mounts_openbsd(ret)
     else:
-        try:
-            _active_mountinfo(ret)
-        except CommandExecutionError:
+        if extended:
+            try:
+                _active_mountinfo(ret)
+            except CommandExecutionError:
+                _active_mounts(ret)
+        else:
             _active_mounts(ret)
     return ret
 
