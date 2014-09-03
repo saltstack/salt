@@ -89,6 +89,72 @@ def _get_env_activate(bin_env):
     raise CommandNotFoundError('Could not find a `activate` binary')
 
 
+def _get_user(user, runas):
+    '''
+    Return user to use and handle runas dperecation mwarnings
+    '''
+    if runas is not None:
+        # The user is using a deprecated argument, warn!
+        salt.utils.warn_until(
+            'Lithium',
+            'The \'runas\' argument to pip.install is deprecated, and will be '
+            'removed in Salt {version}. Please use \'user\' instead.',
+            stacklevel=3
+        )
+
+    # "There can only be one"
+    if runas is not None and user:
+        raise CommandExecutionError(
+            'The \'runas\' and \'user\' arguments are mutually exclusive. '
+            'Please use \'user\' as \'runas\' is being deprecated.'
+        )
+
+    # Support deprecated 'runas' arg
+    elif runas is not None and not user:
+        user = str(runas)
+
+    return user
+
+
+def _process_requirements(requirements, cmd, saltenv, user, no_chown):
+    '''
+    Process the requirements argument
+    '''
+    cleanup_requirements = []
+    if requirements is not None:
+        if isinstance(requirements, string_types):
+            requirements = [r.strip() for r in requirements.split(',')]
+
+        for requirement in requirements:
+            treq = None
+            if requirement.startswith('salt://'):
+                cached_requirements = _get_cached_requirements(
+                    requirement, saltenv
+                )
+                if not cached_requirements:
+                    ret = {'result': False,
+                           'comment': 'pip requirements file {0!r} not found'.format(
+                               requirement
+                               )
+                           }
+                    return None, ret
+                requirement = cached_requirements
+
+            if user and not no_chown:
+                # Need to make a temporary copy since the user will, most
+                # likely, not have the right permissions to read the file
+                treq = salt.utils.mkstemp()
+                shutil.copyfile(requirement, treq)
+                logger.debug(
+                    'Changing ownership of requirements file {0!r} to '
+                    'user {1!r}'.format(treq, user)
+                )
+                __salt__['file.chown'](treq, user, None)
+                cleanup_requirements.append(treq)
+            cmd.append('--requirement={0!r}'.format(treq or requirement))
+    return cleanup_requirements, None
+
+
 def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             requirements=None,
             env=None,
@@ -266,9 +332,9 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     # the `bin_env` argument and we'll take care of the rest.
     if env and not bin_env:
         salt.utils.warn_until(
-                'Boron',
-                'Passing \'env\' to the pip module is deprecated. Use bin_env instead. '
-                'This functionality will be removed in Salt Boron.'
+            'Boron',
+            'Passing \'env\' to the pip module is deprecated. Use bin_env instead. '
+            'This functionality will be removed in Salt Boron.'
         )
         bin_env = env
 
@@ -282,24 +348,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         # Backwards compatibility
         saltenv = __env__
 
-    if runas is not None:
-        # The user is using a deprecated argument, warn!
-        salt.utils.warn_until(
-            'Lithium',
-            'The \'runas\' argument to pip.install is deprecated, and will be '
-            'removed in Salt {version}. Please use \'user\' instead.'
-        )
-
-    # "There can only be one"
-    if runas is not None and user:
-        raise CommandExecutionError(
-            'The \'runas\' and \'user\' arguments are mutually exclusive. '
-            'Please use \'user\' as \'runas\' is being deprecated.'
-        )
-
-    # Support deprecated 'runas' arg
-    elif runas is not None and not user:
-        user = str(runas)
+    user = _get_user(user, runas)
 
     cmd = [_get_pip_bin(bin_env), 'install']
 
@@ -307,40 +356,11 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         if not salt.utils.is_windows():
             cmd = ['.', _get_env_activate(bin_env), '&&'] + cmd
 
-    cleanup_requirements = []
-    if requirements is not None:
-        if isinstance(requirements, string_types):
-            requirements = [r.strip() for r in requirements.split(',')]
-
-        for requirement in requirements:
-            treq = None
-            if requirement.startswith('salt://'):
-                cached_requirements = _get_cached_requirements(
-                    requirement, saltenv
-                )
-                if not cached_requirements:
-                    return {
-                        'result': False,
-                        'comment': (
-                            'pip requirements file {0!r} not found'.format(
-                                requirement
-                            )
-                        )
-                    }
-                requirement = cached_requirements
-
-            if user and not no_chown:
-                # Need to make a temporary copy since the user will, most
-                # likely, not have the right permissions to read the file
-                treq = salt.utils.mkstemp()
-                shutil.copyfile(requirement, treq)
-                logger.debug(
-                    'Changing ownership of requirements file {0!r} to '
-                    'user {1!r}'.format(treq, user)
-                )
-                __salt__['file.chown'](treq, user, None)
-                cleanup_requirements.append(treq)
-            cmd.append('--requirement={0!r}'.format(treq or requirement))
+    cleanup_requirements, error = _process_requirements(requirements=requirements, cmd=cmd,
+                                                        saltenv=saltenv, user=user,
+                                                        no_chown=no_chown)
+    if error:
+        return error
 
     if use_wheel:
         min_version = '1.4'
@@ -640,59 +660,13 @@ def uninstall(pkgs=None,
         # Backwards compatibility
         saltenv = __env__
 
-    if runas is not None:
-        # The user is using a deprecated argument, warn!
-        salt.utils.warn_until(
-            'Lithium',
-            'The \'runas\' argument to pip.install is deprecated, and will be '
-            'removed in Salt {version}. Please use \'user\' instead.'
-        )
+    user = _get_user(user, runas)
 
-    # "There can only be one"
-    if runas is not None and user:
-        raise CommandExecutionError(
-            'The \'runas\' and \'user\' arguments are mutually exclusive. '
-            'Please use \'user\' as \'runas\' is being deprecated.'
-        )
-
-    # Support deprecated 'runas' arg
-    elif runas is not None and not user:
-        user = str(runas)
-
-    cleanup_requirements = []
-    if requirements is not None:
-        if isinstance(requirements, string_types):
-            requirements = [r.strip() for r in requirements.split(',')]
-
-        for requirement in requirements:
-            treq = None
-            if requirement.startswith('salt://'):
-                cached_requirements = _get_cached_requirements(
-                    requirement, saltenv
-                )
-                if not cached_requirements:
-                    return {
-                        'result': False,
-                        'comment': (
-                            'pip requirements file {0!r} not found'.format(
-                                requirement
-                            )
-                        )
-                    }
-                requirement = cached_requirements
-
-            if user and not no_chown:
-                # Need to make a temporary copy since the user will, most
-                # likely, not have the right permissions to read the file
-                treq = salt.utils.mkstemp()
-                shutil.copyfile(requirement, treq)
-                logger.debug(
-                    'Changing ownership of requirements file {0!r} to '
-                    'user {1!r}'.format(treq, user)
-                )
-                __salt__['file.chown'](treq, user, None)
-                cleanup_requirements.append(treq)
-            cmd.append('--requirement={0!r}'.format(treq or requirement))
+    cleanup_requirements, error = _process_requirements(requirements=requirements, cmd=cmd,
+                                                        saltenv=saltenv, user=user,
+                                                        no_chown=no_chown)
+    if error:
+        return error
 
     if log:
         try:
@@ -774,24 +748,7 @@ def freeze(bin_env=None,
 
         salt '*' pip.freeze /home/code/path/to/virtualenv/
     '''
-    if runas is not None:
-        # The user is using a deprecated argument, warn!
-        salt.utils.warn_until(
-            'Lithium',
-            'The \'runas\' argument to pip.install is deprecated, and will be '
-            'removed in Salt {version}. Please use \'user\' instead.'
-        )
-
-    # "There can only be one"
-    if runas is not None and user:
-        raise CommandExecutionError(
-            'The \'runas\' and \'user\' arguments are mutually exclusive. '
-            'Please use \'user\' as \'runas\' is being deprecated.'
-        )
-
-    # Support deprecated 'runas' arg
-    elif runas is not None and not user:
-        user = str(runas)
+    user = _get_user(user, runas)
 
     cmd = [_get_pip_bin(bin_env), 'freeze']
     cmd_kwargs = dict(runas=user, cwd=cwd)
@@ -826,24 +783,7 @@ def list_(prefix=None,
     pip_version_cmd = [pip_bin, '--version']
     cmd = [pip_bin, 'freeze']
 
-    if runas is not None:
-        # The user is using a deprecated argument, warn!
-        salt.utils.warn_until(
-            'Lithium',
-            'The \'runas\' argument to pip.install is deprecated, and will be '
-            'removed in Salt {version}. Please use \'user\' instead.'
-        )
-
-    # "There can only be one"
-    if runas is not None and user:
-        raise CommandExecutionError(
-            'The \'runas\' and \'user\' arguments are mutually exclusive. '
-            'Please use \'user\' as \'runas\' is being deprecated.'
-        )
-
-    # Support deprecated 'runas' arg
-    elif runas is not None and not user:
-        user = str(runas)
+    user = _get_user(user, runas)
 
     cmd_kwargs = dict(runas=user, cwd=cwd)
     if bin_env and os.path.isdir(bin_env):
