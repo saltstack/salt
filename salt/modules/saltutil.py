@@ -728,7 +728,7 @@ def cmd_iter(tgt,
 
     .. code-block:: bash
 
-        salt '*' saltutil.cmd
+        salt '*' saltutil.cmd_iter
     '''
     if ssh:
         client = salt.client.SSHClient(__opts__['conf_file'])
