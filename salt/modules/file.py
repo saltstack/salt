@@ -541,7 +541,9 @@ def find(path, **kwargs):
     Approximate the Unix ``find(1)`` command and return a list of paths that
     meet the specified criteria.
 
-    The options include match criteria::
+    The options include match criteria:
+
+    .. code-block:: text
 
         name    = path-glob                 # case sensitive
         iname   = path-glob                 # case insensitive
@@ -554,15 +556,19 @@ def find(path, **kwargs):
         mtime   = interval                  # modified since date
         grep    = regex                     # search file contents
 
-    and/or actions::
+    and/or actions:
+
+    .. code-block:: text
 
         delete [= file-types]               # default type = 'f'
         exec    = command [arg ...]         # where {} is replaced by pathname
         print  [= print-opts]
 
-    The default action is 'print=path'.
+    The default action is ``print=path``
 
-    file-glob::
+    ``path-glob``:
+
+    .. code-block:: text
 
         *                = match zero or more chars
         ?                = match any char
@@ -572,9 +578,11 @@ def find(path, **kwargs):
         [!x-y] or [^x-y] = match anything except chars x through y
         {a,b,c}          = match a or b or c
 
-    path-regex: a Python re (regular expression) pattern to match pathnames
+    ``path-regex``: a Python Regex (regular expression) pattern to match pathnames
 
-    file-types: a string of one or more of the following::
+    ``file-types``: a string of one or more of the following:
+
+    .. code-block:: text
 
         a: all file types
         b: block device
@@ -585,11 +593,13 @@ def find(path, **kwargs):
         l: symlink
         s: socket
 
-    users: a space and/or comma separated list of user names and/or uids
+    ``users``: a space and/or comma separated list of user names and/or uids
 
-    groups: a space and/or comma separated list of group names and/or gids
+    ``groups``: a space and/or comma separated list of group names and/or gids
 
-    size-unit::
+    ``size-unit``:
+
+    .. code-block:: text
 
         b: bytes
         k: kilobytes
@@ -597,7 +607,9 @@ def find(path, **kwargs):
         g: gigabytes
         t: terabytes
 
-    interval::
+    interval:
+
+    .. code-block:: text
 
         [<num>w] [<num>d] [<num>h] [<num>m] [<num>s]
 
@@ -609,7 +621,9 @@ def find(path, **kwargs):
             s: second
 
     print-opts: a comma and/or space separated list of one or more of the
-    following::
+    following:
+
+    .. code-block:: text
 
         group: group name
         md5:   MD5 digest of file contents
@@ -666,7 +680,9 @@ def sed(path,
 
     Make a simple edit to a file
 
-    Equivalent to::
+    Equivalent to:
+
+    .. code-block:: bash
 
         sed <backup> <options> "/<limit>/ s/<before>/<after>/<flags> <file>"
 
@@ -790,7 +806,9 @@ def psed(path,
 
     Make a simple edit to a file (pure Python version)
 
-    Equivalent to::
+    Equivalent to:
+
+    .. code-block:: bash
 
         sed <backup> <options> "/<limit>/ s/<before>/<after>/<flags> <file>"
 
@@ -1026,55 +1044,64 @@ def replace(path,
 
     This is a pure Python implementation that wraps Python's :py:func:`~re.sub`.
 
-    :param path: Filesystem path to the file to be edited
-    :param pattern: Python's regular expression search
+    path
+        Filesystem path to the file to be edited
+    pattern
+        Python's regular expression search
         https://docs.python.org/2/library/re.html
-
-    .. code-block:: bash
-
-        salt '*' file.replace /path/to/file pattern="bind-address\\s*=" repl='bind-address:'
-
-    :param repl: The replacement text
-    :param count: Maximum number of pattern occurrences to be replaced
-    :param flags: A list of flags defined in the :ref:`re module documentation
+    repl
+        The replacement text
+    count
+        Maximum number of pattern occurrences to be replaced
+    flags (list or int)
+        A list of flags defined in the :ref:`re module documentation
         <contents-of-module-re>`. Each list item should be a string that will
         correlate to the human-friendly flag name. E.g., ``['IGNORECASE',
         'MULTILINE']``. Note: multiline searches must specify ``file`` as the
         ``bufsize`` argument below.
-
-    :type flags: list or int
-    :param bufsize: How much of the file to buffer into memory at once. The
+    bufsize (int or str)
+        How much of the file to buffer into memory at once. The
         default value ``1`` processes one line at a time. The special value
         ``file`` may be specified which will read the entire file into memory
         before processing. Note: multiline searches must specify ``file``
         buffering.
-    :type bufsize: int or str
-
-    :param append_if_not_found: If pattern is not found and set to ``True``
-        then, the content will be appended to the file.
-
+    append_if_not_found
         .. versionadded:: 2014.7.0
-    :param prepend_if_not_found: If pattern is not found and set to ``True``
-        then, the content will be appended to the file.
 
+        If pattern is not found and set to ``True``
+        then, the content will be appended to the file.
+        Default is ``False``
+    prepend_if_not_found
         .. versionadded:: 2014.7.0
-    :param not_found_content: Content to use for append/prepend if not found. If
-        None (default), uses repl. Useful when repl uses references to group in
+
+        If pattern is not found and set to ``True``
+        then, the content will be appended to the file.
+        Default is ``False``
+    not_found_content
+        .. versionadded:: 2014.7.0
+
+        Content to use for append/prepend if not found. If
+        None (default), uses ``repl``. Useful when ``repl`` uses references to group in
         pattern.
-
-        .. versionadded:: 2014.7.0
-    :param backup: The file extension to use for a backup of the file before
-        editing. Set to ``False`` to skip making a backup.
-    :param dry_run: Don't make any edits to the file
-    :param search_only: Just search for the pattern; ignore the replacement;
-        stop on the first match
-    :param show_changes: Output a unified diff of the old file and the new
+    backup
+        The file extension to use for a backup of the file before
+        editing. Set to ``False`` to skip making a backup. Default
+        is ``.bak``
+    dry_run
+        Don't make any edits to the file, Default is ``False``
+    search_only
+        Just search for the pattern; ignore the replacement;
+        stop on the first match. Default is ``False``
+    show_changes
+        Output a unified diff of the old file and the new
         file. If ``False`` return a boolean if any changes were made.
-        Note: using this option will store two copies of the file in-memory
-        (the original version and the edited version) in order to generate the
-        diff.
+        Default is ``True``
 
-    :rtype: bool or str
+        .. note::
+
+            Using this option will store two copies of the file in-memory
+            (the original version and the edited version) in order to generate the
+            diff.
 
     If an equal sign (``=``) appears in an argument to a Salt command it is
     interpreted as a keyword argument in the format ``key=val``. That
@@ -1084,8 +1111,9 @@ def replace(path,
     .. code-block:: bash
 
         salt '*' file.replace /path/to/file pattern='=' repl=':'
+        salt '*' file.replace /path/to/file pattern="bind-address\\s*=" repl='bind-address:'
 
-    CLI Example:
+    CLI Examples:
 
     .. code-block:: bash
 
@@ -1429,7 +1457,9 @@ def patch(originalfile, patchfile, options='', dry_run=False):
 
     Apply a patch to a file
 
-    Equivalent to::
+    Equivalent to:
+
+    .. code-block:: bash
 
         patch <options> <originalfile> <patchfile>
 
@@ -3637,11 +3667,11 @@ def mknod(name,
 
     CLI Examples:
 
-   .. code-block:: bash
+    .. code-block:: bash
 
-      salt '*' file.mknod /dev/chr c 180 31
-      salt '*' file.mknod /dev/blk b 8 999
-      salt '*' file.nknod /dev/fifo p
+        salt '*' file.mknod /dev/chr c 180 31
+        salt '*' file.mknod /dev/blk b 8 999
+        salt '*' file.nknod /dev/fifo p
     '''
     ret = False
     makedirs_(name, user, group)
@@ -3879,6 +3909,8 @@ def open_files(by_pid=False):
     Return a list of all physical open files on the system.
 
     CLI Examples:
+
+    .. code-block:: bash
 
         salt '*' file.open_files
         salt '*' file.open_files by_pid=True
