@@ -150,7 +150,7 @@ import salt.utils.cloud
 import salt.utils.pycrypto as sup
 import salt.config as config
 from salt.utils import namespaced_function
-from salt.cloud.exceptions import (
+from salt.exceptions import (
     SaltCloudConfigError,
     SaltCloudNotFound,
     SaltCloudSystemExit,
