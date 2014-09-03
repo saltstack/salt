@@ -33,7 +33,7 @@ import logging
 # Import salt cloud libs
 import salt.config as config
 import salt.utils.cloud
-from salt.cloud.exceptions import SaltCloudSystemExit
+from salt.exceptions import SaltCloudSystemExit
 
 # Import azure libs
 HAS_LIBS = False
