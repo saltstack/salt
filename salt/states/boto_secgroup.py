@@ -290,6 +290,19 @@ def _rules_present(
         ret['comment'] = msg.format(name)
         ret['result'] = False
         return ret
+    if vpc_id:
+        for rule in rules:
+            _source_group_name = rule.get('source_group_name', None)
+            if _source_group_name:
+                _group_id = __salt__['boto_secgroup.get_group_id'](
+                    _source_group_name, vpc_id, region, key, keyid, profile
+                )
+                if not _group_id:
+                    msg = ('source_group_name {0} does not map to a valid'
+                           ' source group id.')
+                    raise SaltInvocationError(msg.format(_source_group_name))
+                rule['source_group_name'] = None
+                rule['source_group_group_id'] = _group_id
     # rules = rules that exist in salt state
     # sg['rules'] = that exist in present group
     to_delete, to_create = _get_rule_changes(rules, sg['rules'])
