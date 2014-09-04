@@ -146,6 +146,7 @@ def destroy(device):
 def create(name,
            level,
            devices,
+           metadata="default",
            test_mode=False,
            **kwargs):
     '''
@@ -177,6 +178,9 @@ def create(name,
     devices
         A list of devices used to build the array.
 
+    metadata
+        Version of metadata to use when creating the array.
+
     kwargs
         Optional arguments to be passed to mdadm.
 
@@ -206,9 +210,10 @@ def create(name,
             else:
                 opts += '--{0}={1} '.format(key, kwargs[key])
 
-    cmd = "mdadm -C {0} -v {1}-l {2} -n {3} {4}".format(name,
+    cmd = "mdadm -C {0} -v {1}-l {2} -e {3} -n {4} {5}".format(name,
             opts,
             level,
+            metadata,
             len(devices),
             ' '.join(devices))
 
