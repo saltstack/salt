@@ -243,7 +243,7 @@ def get_enabled():
     return sorted(set(get_all()) & set(services))
 
 
-def enabled(name):
+def enabled(name, **kwargs):
     '''
     .. versionadded:: 2014.7.0
 
