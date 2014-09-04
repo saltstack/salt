@@ -7,6 +7,8 @@ The Linode cloud module is used to control access to the Linode VPS system
 
 Use of this module only requires the ``apikey`` parameter.
 
+:depends: libcloud >= 0.13.2
+
 Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 ``/etc/salt/cloud.providers.d/linode.conf``:
 
