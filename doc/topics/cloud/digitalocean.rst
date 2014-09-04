@@ -5,11 +5,6 @@ Getting Started With DigitalOcean
 DigitalOcean is a public cloud provider that specializes in Linux instances.
 
 
-Dependencies
-============
-This driver requires the Python ``requests`` library to be installed.
-
-
 Configuration
 =============
 Using Salt for DigitalOcean requires a client_key, an api_key, an ssh_key_file,

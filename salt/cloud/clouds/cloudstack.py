@@ -6,6 +6,8 @@ CloudStack Cloud Module
 The CloudStack cloud module is used to control access to a CloudStack based
 Public Cloud.
 
+:depends: libcloud
+
 Use of this module requires the ``apikey``, ``secretkey``, ``host`` and
 ``path`` parameters.
 
