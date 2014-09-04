@@ -70,7 +70,7 @@ class CMDModuleTest(integration.ModuleCase):
         from salt.modules import cmdmod
 
         cmdmod.__grains__ = {'os': 'darwin'}
-        if sys.platform.startswith('freebsd'):
+        if sys.platform.startswith(('freebsd', 'openbsd')):
             shell = '/bin/sh'
         else:
             shell = '/bin/bash'
@@ -102,7 +102,7 @@ class CMDModuleTest(integration.ModuleCase):
         '''
         cmd.run_stderr
         '''
-        if sys.platform.startswith('freebsd'):
+        if sys.platform.startswith(('freebsd', 'openbsd')):
             shell = '/bin/sh'
         else:
             shell = '/bin/bash'
@@ -119,7 +119,7 @@ class CMDModuleTest(integration.ModuleCase):
         '''
         from salt._compat import string_types
 
-        if sys.platform.startswith('freebsd'):
+        if sys.platform.startswith(('freebsd', 'openbsd')):
             shell = '/bin/sh'
         else:
             shell = '/bin/bash'
