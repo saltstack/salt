@@ -156,7 +156,7 @@ def present(
         to the cache cluster during the maintenance window. A value of True
         allows these upgrades to occur; False disables automatic upgrades.
 
-    security_groups_ids
+    security_group_ids
         One or more VPC security groups associated with the cache cluster. Use
         this parameter only when you are creating a cluster in a VPC.
 
@@ -194,6 +194,18 @@ def present(
         that contains a dict with region, key and keyid.
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    if cache_security_group_names and cache_subnet_group_name:
+        _subnet_group = __salt__['boto_elasticache.get_cache_subnet_group'](
+            cache_subnet_group_name, region, key, keyid, profile
+        )
+        vpc_id = _subnet_group['vpc_id']
+        if not security_group_ids:
+            security_group_ids = []
+        _security_group_ids = __salt__['boto_secgroup.convert_to_group_ids'](
+            cache_security_group_names, vpc_id, region, key, keyid, profile
+        )
+        security_group_ids.extend(_security_group_ids)
+        cache_security_group_names = None
     config = __salt__['boto_elasticache.get_config'](name, region, key, keyid,
                                                      profile)
     if config is None:

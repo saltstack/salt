@@ -104,9 +104,6 @@ as a passed in dict, or as a string to pull from pillars or minion config:
 # Import Python libs
 import hashlib
 import logging
-import re
-
-log = logging.getLogger(__name__)
 
 log = logging.getLogger(__name__)
 
@@ -261,7 +258,11 @@ def present(
             # to group ids
             if sg_index:
                 log.debug('security group associations found in launch config')
-                launch_config[sg_index]['security_groups'] = _convert_to_group_ids(launch_config[sg_index]['security_groups'], vpc_id, region, key, keyid, profile)
+                _group_ids = __salt__['boto_secgroup.convert_to_group_ids'](
+                    launch_config[sg_index]['security_groups'], vpc_id, region,
+                    key, keyid, profile
+                )
+                launch_config[sg_index]['security_groups'] = _group_ids
 
         for d in launch_config:
             args.update(d)
@@ -384,28 +385,6 @@ def present(
         else:
             ret['comment'] = 'Autoscale group present.'
     return ret
-
-
-def _convert_to_group_ids(groups, vpc_id, region, key, keyid, profile):
-    '''
-    given a list of security groups _convert_to_group_ids will convert all
-    list items in the given list to security group ids
-    '''
-    log.debug('security group contents {0} pre-conversion'.format(groups))
-    group_ids = []
-    for group in groups:
-        if re.match('sg-.*', group):
-            log.debug('group {0} is a group id. get_group_id not called.'
-                      .format(group))
-            group_ids.append(group)
-        else:
-            log.debug('calling boto_secgroup.get_group_id for'
-                      ' group name {0}'.format(group))
-            group_id = __salt__['boto_secgroup.get_group_id'](group, vpc_id, region, key, keyid, profile)
-            log.debug('group name {0} has group id {1}'.format(group, group_id))
-            group_ids.append(str(group_id))
-    log.debug('security group contents {0} post-conversion'.format(group_ids))
-    return group_ids
 
 
 def _recursive_compare(v1, v2):
