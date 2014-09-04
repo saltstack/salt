@@ -42,7 +42,7 @@ Master Job Cache
 The master job cache setting makes the built in job cache on the master
 modular. This system allows for the default cache to be swapped out by the Salt
 returner system. To configure the master job cache, set up an external returner
-database based on the instuctions included with each returner and then simply
+database based on the instructions included with each returner and then simply
 add the following configuration to the master configuration file:
 
 .. code_block:: yaml
@@ -55,7 +55,7 @@ External Job Cache
 The external job cache setting instructs the minions to directly contact the
 data store. This scenario is helpful when the data store needs to be made
 available to the minions. This can be an effective way to share historic data
-across an infrastructure as data can be retrived from the external job cache
+across an infrastructure as data can be retrieved from the external job cache
 via the ``ret`` execution module.
 
 To configure the external job cache, set up a returner database in the manner
