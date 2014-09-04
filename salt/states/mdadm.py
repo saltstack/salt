@@ -93,8 +93,8 @@ def present(name,
         can_assemble[dev] = __salt__['cmd.retcode'](cmd) == 0
 
     if True in can_assemble.values() and False in can_assemble.values():
-        in_raid = [x[0] for x in devices.items() if x[1]]
-        not_in_raid = [x[0] for x in devices.items() if not x[1]]
+        in_raid = sorted([x[0] for x in can_assemble.items() if x[1]])
+        not_in_raid = sorted([x[0] for x in can_assemble.items() if not x[1]])
         ret['comment'] = 'Devices are a mix of RAID constituents ({0}) and '\
             'non-RAID-constituents({1}).'.format(in_raid, not_in_raid)
         ret['result'] = False
