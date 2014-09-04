@@ -304,8 +304,8 @@ class CloudClient(object):
 
         .. code-block:: python
 
-            >>> cloudclient= salt.cloud.CloudClient(path='/etc/salt/cloud')
-            >>> cloudclient.profile('do_512_git', names=['minion01',])
+            >>> client= salt.cloud.CloudClient(path='/etc/salt/cloud')
+            >>> client.profile('do_512_git', names=['minion01',])
             {'minion01': {u'backups_active': 'False',
                     u'created_at': '2014-09-04T18:10:15Z',
                     u'droplet': {u'event_id': 31000502,
