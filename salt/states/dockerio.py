@@ -277,7 +277,7 @@ def pulled(name, tag=None, force=False, *args, **kwargs):
     return _ret_status(returned, name, changes=changes)
 
 
-def pushed(name):
+def pushed(name, tag=None):
     '''
     Push an image from a docker registry. (`docker push`)
 
@@ -295,6 +295,10 @@ def pushed(name):
 
     name
         Name of the image
+
+    tag
+        Tag of the image [Optional]
+
     '''
 
     if __opts__['test']:
@@ -305,7 +309,7 @@ def pushed(name):
                 'comment': comment}
 
     push = __salt__['docker.push']
-    returned = push(name)
+    returned = push(name, tag=tag)
     log.debug("Returned: "+str(returned))
     if returned['status']:
         changes = {name: {'Rev': returned['id']}}
