@@ -494,6 +494,7 @@ class Single(object):
             self.thin_dir = DEFAULT_THIN_DIR.replace('%%USER%%', user)
         else:
             self.thin_dir = DEFAULT_THIN_DIR.replace('%%USER%%', 'root')
+        self.opts['_thin_dir'] = self.thin_dir
 
         if isinstance(argv, string_types):
             self.argv = [argv]
@@ -902,7 +903,7 @@ class Single(object):
             trans_tar,
             os.path.join(self.thin_dir, 'salt_state.tgz'),
         )
-        self.argv = ['state.pkg', '/tmp/.salt/salt_state.tgz', 'test={0}'.format(test)]
+        self.argv = ['state.pkg', '{0}/salt_state.tgz', 'test={1}'.format(self.thin_dir, test)]
 
 
 class SSHState(salt.state.State):
