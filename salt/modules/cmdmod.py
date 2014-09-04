@@ -264,7 +264,7 @@ def _run(cmd,
                 stdout=subprocess.PIPE
             ).communicate(py_code)[0]
             import itertools
-            env_runas = dict(itertools.izip_longest(*[iter(env_encoded.split(b'\0'))]*2))
+            env_runas = dict(itertools.izip(*[iter(env_encoded.split(b'\0'))]*2))
             env_runas.update(env)
             env = env_runas
         except ValueError:
