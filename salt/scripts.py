@@ -25,7 +25,7 @@ log = logging.getLogger(__name__)
 
 def _handle_interrupt(exc, original_exc, hardfail=False, trace=''):
     '''
-    if hardfalling:
+    if hardfailing:
         If we got the original stacktrace, log it
         If all cases, raise the original exception
         but this is logically part the initial
@@ -50,12 +50,12 @@ def salt_master():
 
 
 def minion_process(q):
-    # salt_minion spawns this function in a new proccess
+    # salt_minion spawns this function in a new process
 
     def suicide_when_without_parent(parent_pid):
         # have the minion suicide if the parent process is gone
         # there is a small race issue where the parent PID could be replace
-        # with another proccess with the same PID
+        # with another process with the same PID
         while True:
             time.sleep(5)
             try:
