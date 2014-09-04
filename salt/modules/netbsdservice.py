@@ -258,7 +258,7 @@ def disable(name, **kwargs):
     return _rcconf_status(name, 'NO')
 
 
-def enabled(name):
+def enabled(name, **kwargs):
     '''
     Return True if the named service is enabled, false otherwise
 
