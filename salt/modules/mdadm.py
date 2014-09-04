@@ -304,7 +304,7 @@ def assemble(name,
 
     # Devices may have been written with a blob:
     if type(devices) is str:
-        devices = [devices]
+        devices = devices.split(',')
     cmd = 'mdadm -A {0} -v {1}{2}'.format(name, opts, ' '.join(devices))
 
     if test_mode is True:
