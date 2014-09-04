@@ -86,18 +86,20 @@ def present(name,
         return ret
 
     # Decide whether to create or assemble
-    can_assemble = []
+    can_assemble = {}
     for dev in devices:
         # mdadm -E exits with 0 iff all devices given are part of an array
         cmd = 'mdadm -E {0}'.format(dev)
-        can_assemble.append(__salt__['cmd.retcode'](cmd) == 0)
+        can_assemble[dev] = __salt__['cmd.retcode'](cmd) == 0
 
-    if True in can_assemble and False in can_assemble:
-        ret['comment'] = 'Devices {0} are a mix of RAID constituents and non-'\
-                         'RAID-constituents.'.format(devices)
+    if True in can_assemble.values() and False in can_assemble.values():
+        in_raid = [x[0] for x in devices.items() if x[1]]
+        not_in_raid = [x[0] for x in devices.items() if not x[1]]
+        ret['comment'] = 'Devices are a mix of RAID constituents ({0}) and '\
+            'non-RAID-constituents({1}).'.format(in_raid, not_in_raid)
         ret['result'] = False
         return ret
-    elif can_assemble[0]:
+    elif can_assemble.values()[0]:
         do_assemble = True
         verb = 'assembled'
     else:
