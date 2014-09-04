@@ -725,6 +725,8 @@ def symlink(
         The permissions to set on this file, aka 644, 0775, 4664. Not supported
         on Windows
     '''
+    name = os.path.expanduser(name)
+
     # Make sure that leading zeros stripped by YAML loader are added back
     mode = __salt__['config.manage_mode'](mode)
 
@@ -881,6 +883,8 @@ def absent(name):
     name
         The path which should be deleted
     '''
+    name = os.path.expanduser(name)
+
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -931,6 +935,8 @@ def exists(name):
     name
         Absolute path which must exist
     '''
+    name = os.path.expanduser(name)
+
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -950,6 +956,8 @@ def missing(name):
     name
         Absolute path which must NOT exist
     '''
+    name = os.path.expanduser(name)
+
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -1219,6 +1227,8 @@ def managed(name,
         Do run the state only if the check_cmd succeeds
 
     '''
+    name = os.path.expanduser(name)
+
     # Make sure that leading zeros stripped by YAML loader are added back
     mode = __salt__['config.manage_mode'](mode)
 
@@ -1573,6 +1583,7 @@ def directory(name,
         .. versionadded:: 2014.7.0
 
     '''
+    name = os.path.expanduser(name)
     # Remove trailing slash, if present
     if name[-1] == '/':
         name = name[:-1]
@@ -1910,6 +1921,8 @@ def recurse(name,
         recursively removed so that symlink creation can proceed. This
         option is usually not needed except in special circumstances.
     '''
+    name = os.path.expanduser(name)
+
     user = _test_owner(kwargs, user=user)
     if salt.utils.is_windows():
         if group is not None:
@@ -2277,6 +2290,8 @@ def replace(name,
     Params are identical to :py:func:`~salt.modules.file.replace`.
 
     '''
+    name = os.path.expanduser(name)
+
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
     check_res, check_msg = _check_file(name)
@@ -2398,6 +2413,8 @@ def blockreplace(
         text 4
         # END managed zone 42 --
     '''
+    name = os.path.expanduser(name)
+
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
     check_res, check_msg = _check_file(name)
@@ -2508,6 +2525,8 @@ def sed(name,
 
     .. versionadded:: 0.9.5
     '''
+    name = os.path.expanduser(name)
+
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
     check_res, check_msg = _check_file(name)
@@ -2613,6 +2632,8 @@ def comment(name, regex, char='#', backup='.bak'):
 
     .. versionadded:: 0.9.5
     '''
+    name = os.path.expanduser(name)
+
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
     check_res, check_msg = _check_file(name)
@@ -2693,6 +2714,8 @@ def uncomment(name, regex, char='#', backup='.bak'):
 
     .. versionadded:: 0.9.5
     '''
+    name = os.path.expanduser(name)
+
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
     check_res, check_msg = _check_file(name)
@@ -2896,6 +2919,8 @@ def append(name,
 
     .. versionadded:: 0.9.5
     '''
+    name = os.path.expanduser(name)
+
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
     if sources is None:
@@ -3075,6 +3100,8 @@ def prepend(name,
 
     .. versionadded:: 2014.7.0
     '''
+    name = os.path.expanduser(name)
+
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
     if sources is None:
@@ -3240,6 +3267,8 @@ def patch(name,
             - source: salt://file.patch
             - hash: md5=e138491e9d5b97023cea823fe17bac22
     '''
+    name = os.path.expanduser(name)
+
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
     check_res, check_msg = _check_file(name)
     if not check_res:
@@ -3335,6 +3364,8 @@ def touch(name, atime=None, mtime=None, makedirs=False):
 
     .. versionadded:: 0.9.5
     '''
+    name = os.path.expanduser(name)
+
     ret = {
         'name': name,
         'changes': {},
@@ -3390,6 +3421,9 @@ def copy(name, source, force=False, makedirs=False):
         If the target subdirectories don't exist create them
 
     '''
+    name = os.path.expanduser(name)
+    source = os.path.expanduser(source)
+
     ret = {
         'name': name,
         'changes': {},
@@ -3484,6 +3518,9 @@ def rename(name, source, force=False, makedirs=False):
         If the target subdirectories don't exist create them
 
     '''
+    name = os.path.expanduser(name)
+    source = os.path.expanduser(source)
+
     ret = {
         'name': name,
         'changes': {},
@@ -3780,6 +3817,7 @@ def serialize(name,
           "name": "naive"
         }
     '''
+    name = os.path.expanduser(name)
 
     ret = {'changes': {},
            'comment': '',
@@ -3941,6 +3979,8 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
 
     .. versionadded:: 0.17.0
     '''
+    name = os.path.expanduser(name)
+
     ret = {'name': name,
            'changes': {},
            'comment': '',
