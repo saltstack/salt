@@ -44,8 +44,8 @@ def _get_flags(**kwargs):
     '''
     Return the configured service flags.
     '''
-    flags = kwargs.get('flags', \
-                       __salt__['config.option']('service.flags', \
+    flags = kwargs.get('flags',
+                       __salt__['config.option']('service.flags',
                        default=''))
     return flags
 
