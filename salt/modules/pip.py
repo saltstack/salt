@@ -843,3 +843,60 @@ def version(bin_env=None):
         return re.match(r'^pip (\S+)', output).group(1)
     except AttributeError:
         return None
+
+
+def list_upgrades(bin_env=None,
+                  user=None,
+                  runas=None,
+                  cwd=None):
+    '''
+    Check whether or not an upgrade is available for all packages
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pip.list_upgrades
+    '''
+
+    pip_bin = _get_pip_bin(bin_env)
+    cmd = [pip_bin, "list", "--outdated"]
+
+    user = _get_user(user, runas)
+
+    cmd_kwargs = dict(runas=user, cwd=cwd)
+    if bin_env and os.path.isdir(bin_env):
+        cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
+
+    result = __salt__['cmd.run_all'](' '.join(cmd), **cmd_kwargs)
+    if result['retcode'] > 0:
+        logger.error(result['stderr'])
+        raise CommandExecutionError(result['stderr'])
+
+    packages = {}
+    for line in result['stdout'].splitlines():
+        match = re.search(r"(\S*)\s+\(.*Latest:\s+(.*)\)", line)
+        if match:
+            name, version_ = match.groups()
+        else:
+            logger.error('Can\'t parse line {0!r}'.format(line))
+            continue
+        packages[name] = version_
+    return packages
+
+
+def upgrade_available(pkg,
+                      bin_env=None,
+                      user=None,
+                      runas=None,
+                      cwd=None):
+    '''
+    Check whether or not an upgrade is available for a given package
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pip.upgrade_available <package name>
+    '''
+    return pkg in list_upgrades(bin_env=bin_env, user=user, runas=runas, cwd=cwd)
