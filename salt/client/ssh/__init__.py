@@ -691,7 +691,8 @@ class Single(object):
             debug = '1'
         ssh_py_shim_args = []
         for mod in self.mods:
-            ssh_py_shim_args += ['--{0}'.format(mod), '{0}'.format(self.mods[mod])]
+            if self.mods[mod]:
+                ssh_py_shim_args += ['--{0}'.format(mod), '{0}'.format(self.mods[mod])]
 
         ssh_py_shim_args += [
             '--config', self.minion_config,
