@@ -195,7 +195,7 @@ def highstate(test=None, **kwargs):
     single = salt.client.ssh.Single(
             __opts__,
             cmd,
-            **__salt__.kwargs)
+            **kwargs)
     single.shell.send(
             trans_tar,
             '{0}/salt_state.tgz'.format(__opts__['_thin_dir']))
