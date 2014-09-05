@@ -82,15 +82,11 @@ class NestDisplay(object):
             for line in lines:
                 if strip_colors:
                     line = salt.output.strip_esc_sequence(line)
-                try:
-                    out += self.ustring(
-                        ' ' * indent,
-                        self.colors['GREEN'],
-                        line,
-                        prefix=prefix)
-                except:
-                    import pdb;pdb.set_trace()  ## Breakpoint ##
-
+                out += self.ustring(
+                    ' ' * indent,
+                    self.colors['GREEN'],
+                    line,
+                    prefix=prefix)
         elif isinstance(ret, list) or isinstance(ret, tuple):
             for ind in ret:
                 if isinstance(ind, (list, tuple, dict)):
