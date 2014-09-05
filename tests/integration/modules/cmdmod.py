@@ -48,9 +48,7 @@ class CMDModuleTest(integration.ModuleCase):
 
     @patch('pwd.getpwnam')
     @patch('subprocess.Popen')
-    @patch('json.loads')
     def test_os_environment_remains_intact(self,
-                                           loads_mock,
                                            popen_mock,
                                            getpwnam_mock):
         '''
@@ -64,8 +62,6 @@ class CMDModuleTest(integration.ModuleCase):
             pid=lambda: 1,
             retcode=0
         )
-
-        loads_mock.return_value = {'data': {'USER': 'foo'}}
 
         from salt.modules import cmdmod
 
@@ -86,7 +82,6 @@ class CMDModuleTest(integration.ModuleCase):
             self.assertEqual(environment, environment2)
 
             getpwnam_mock.assert_called_with('foobar')
-            loads_mock.assert_called_with('{}')
         finally:
             delattr(cmdmod, '__grains__')
 
