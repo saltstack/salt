@@ -987,6 +987,35 @@ def salt_refs(data):
     return ret
 
 
+def mod_data(opts):
+    '''
+    Generate the module arguments for the shim data
+    '''
+    # TODO, change out for a fileserver backend
+    sync_refs = [
+            'modules',
+            'states',
+            'grains',
+            'renderers',
+            'returners',
+            ]
+    ret = {}
+    for env in opts['file_roots']:
+        for path in opts['file_roots']:
+            for ref in sync_refs:
+                mod_str = ''
+                pl_dir = os.path.join(path, '_{0}'.format(ref))
+                if os.path.isdir(pl_dir):
+                    for fn_ in os.listdir(pl_dir):
+                        mod_path = os.path.join(pl_dir, fn_)
+                        with open(mod_path) as fp_:
+                            code_str = fp_.read().encode('base64')
+                        mod_str += '{0}|{1},'.format(fn_, code_str)
+                mod_str = mod_str.rstrip(',')
+                ret[ref] = mod_str
+    return ret
+
+
 def prep_trans_tar(opts, chunks, file_refs):
     '''
     Generate the execution package from the env file refs and a low state
