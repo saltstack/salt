@@ -13,6 +13,9 @@ import salt._compat
 import salt.syspaths as syspaths
 import salt.utils.sdb as sdb
 
+import logging
+log = logging.getLogger(__name__)
+
 __proxyenabled__ = ['*']
 
 # Set up the default values for all systems

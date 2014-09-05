@@ -316,7 +316,7 @@ Refreshing Pillar Data
 When pillar data is changed on the master the minions need to refresh the data
 locally. This is done with the ``saltutil.refresh_pillar`` function.
 
-.. code-block:: yaml
+.. code-block:: bash
 
     salt '*' saltutil.refresh_pillar
 

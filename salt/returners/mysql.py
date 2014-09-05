@@ -83,6 +83,8 @@ import sys
 import json
 import logging
 
+import salt.returners
+
 # Import third party libs
 try:
     import MySQLdb
@@ -106,11 +108,6 @@ def _get_options(ret=None):
     '''
     Returns options used for the MySQL connection.
     '''
-    if ret:
-        ret_config = '{0}'.format(ret['ret_config']) if 'ret_config' in ret else ''
-    else:
-        ret_config = None
-
     defaults = {'host': 'salt',
                 'user': 'salt',
                 'pass': 'salt',
@@ -123,38 +120,15 @@ def _get_options(ret=None):
              'db': 'db',
              'port': 'port'}
 
-    _options = {}
-    for attr in defaults:
-        if 'config.option' in __salt__:
-            cfg = __salt__['config.option']
-            c_cfg = cfg('{0}'.format(__virtualname__), {})
-            if ret_config:
-                ret_cfg = cfg('{0}.{1}'.format(ret_config, __virtualname__), {})
-                if ret_cfg.get(attrs[attr], cfg('{0}.{1}.{2}'.format(ret_config, __virtualname__, attrs[attr]))):
-                    _attr = ret_cfg.get(attrs[attr], cfg('{0}.{1}.{2}'.format(ret_config, __virtualname__, attrs[attr])))
-                else:
-                    _attr = c_cfg.get(attrs[attr], cfg('{0}.{1}'.format(__virtualname__, attrs[attr])))
-            else:
-                _attr = c_cfg.get(attrs[attr], cfg('{0}.{1}'.format(__virtualname__, attrs[attr])))
-        else:
-            cfg = __opts__
-            c_cfg = cfg.get('{0}'.format(__virtualname__), {})
-            if ret_config:
-                ret_cfg = cfg.get('{0}.{1}'.format(ret_config, __virtualname__), {})
-                if ret_cfg.get(attrs[attr], cfg.get('{0}.{1}.{2}'.format(ret_config, __virtualname__, attrs[attr]))):
-                    _attr = ret_cfg.get(attrs[attr], cfg.get('{0}.{1}.{2}'.format(ret_config, __virtualname__, attrs[attr])))
-                else:
-                    _attr = c_cfg.get(attrs[attr], cfg.get('{0}.{1}'.format(__virtualname__, attrs[attr])))
-            else:
-                _attr = c_cfg.get(attrs[attr], cfg.get('{0}.{1}'.format(__virtualname__, attrs[attr])))
-        if not _attr:
-            log.debug('Using default for MySQL {0}'.format(attr))
-            _options[attr] = defaults[attr]
-            continue
-        if attr == 'port':
-            _options[attr] = int(_attr)
-        else:
-            _options[attr] = _attr
+    _options = salt.returners.get_returner_options(__virtualname__,
+                                                   ret,
+                                                   attrs,
+                                                   __salt__=__salt__,
+                                                   __opts__=__opts__,
+                                                   defaults=defaults)
+    # Ensure port is an int
+    if 'port' in _options:
+        _options['port'] = int(_options['port'])
     return _options
 
 

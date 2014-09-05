@@ -32,9 +32,6 @@ import salt.utils.xdg
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.validate.path import is_writeable
 
-if not utils.is_windows():
-    import salt.cloud.exceptions
-
 
 def _sorted(mixins_or_funcs):
     return sorted(
@@ -2031,6 +2028,15 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'retcode')
         )
         self.add_option(
+            '--metadata',
+            default=False,
+            dest='metadata',
+            action='store_true',
+            help=('Print out the execution metadata as well as the return. '
+                  'This will print out the outputter data, the return code, '
+                  'etc.')
+        )
+        self.add_option(
             '--id',
             default='',
             dest='id',
@@ -2202,6 +2208,15 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'reached.')
         )
         self.add_option(
+            '--no-minion-cache',
+            dest='ssh_minion_cache',
+            default=True,
+            action='store_false',
+            help=('Set this flag to disable the ssh minion cache, this will '
+                  'prevent information about the target systems from being '
+                  'stored on the originating system.')
+        )
+        self.add_option(
             '--max-procs',
             dest='ssh_max_procs',
             default=25,
@@ -2334,5 +2349,5 @@ class SaltCloudParser(OptionParser,
     def setup_config(self):
         try:
             return config.cloud_config(self.get_config_file_path())
-        except salt.cloud.exceptions.SaltCloudConfigError as exc:
+        except salt.exceptions.SaltCloudConfigError as exc:
             self.error(exc)

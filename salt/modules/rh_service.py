@@ -465,7 +465,7 @@ def disable(name, **kwargs):
         return _sysv_disable(name)
 
 
-def enabled(name):
+def enabled(name, **kwargs):
     '''
     Check to see if the named service is enabled to start on boot
 

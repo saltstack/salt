@@ -48,7 +48,7 @@ from salt.utils.validate.path import is_writeable
 
 # Import salt cloud libs
 import salt.cloud
-from salt.cloud.exceptions import (
+from salt.exceptions import (
     SaltCloudConfigError,
     SaltCloudException,
     SaltCloudSystemExit,

@@ -40,6 +40,16 @@ def _cmd():
     return rcctl
 
 
+def _get_flags(**kwargs):
+    '''
+    Return the configured service flags.
+    '''
+    flags = kwargs.get('flags',
+                       __salt__['config.option']('service.flags',
+                       default=''))
+    return flags
+
+
 def available(name):
     '''
     Return True if the named service is available.
@@ -216,15 +226,8 @@ def enable(name, **kwargs):
         salt '*' service.enable <service name>
         salt '*' service.enable <service name> flags=<flags>
     '''
-    flags = kwargs.get('flags',
-                       __salt__['config.option']('service.flags',
-                       default=''))
-
-    if not flags:
-        cmd = '{0} enable {1}'.format(_cmd(), name)
-    else:
-        cmd = '{0} enable {1} flags {2}'.format(_cmd(), name, flags)
-
+    flags = _get_flags(**kwargs)
+    cmd = '{0} enable {1} flags {2}'.format(_cmd(), name, flags)
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -256,9 +259,10 @@ def disabled(name):
     return not __salt__['cmd.retcode'](cmd) == 0
 
 
-def enabled(name):
+def enabled(name, **kwargs):
     '''
-    Return True if the named service is enabled at boot, False otherwise.
+    Return True if the named service is enabled at boot and the provided
+    flags match the configured ones (if any). Return False otherwise.
 
     name
         Service name
@@ -268,6 +272,15 @@ def enabled(name):
     .. code-block:: bash
 
         salt '*' service.enabled <service name>
+        salt '*' service.enabled <service name> flags=<flags>
     '''
     cmd = '{0} status {1}'.format(_cmd(), name)
-    return not __salt__['cmd.retcode'](cmd)
+    if not __salt__['cmd.retcode'](cmd):
+        # also consider a service disabled if the current flags are different
+        # than the configured ones so we have a chance to update them
+        flags = _get_flags(**kwargs)
+        cur_flags = __salt__['cmd.run_stdout']('{0} status {1}'.format(_cmd(), name))
+        if format(flags) == format(cur_flags):
+            return True
+
+    return False

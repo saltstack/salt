@@ -7,7 +7,6 @@
 import os
 
 # Import Salt Testing Libs
-from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath, expensiveTest
 
 ensure_in_syspath('../../../')
@@ -15,22 +14,7 @@ ensure_in_syspath('../../../')
 import integration
 from salt.config import cloud_providers_config
 
-# Import Third-Party Libs
-try:
-    import libcloud  # pylint: disable=W0611
-    HAS_LIBCLOUD = True
-except ImportError:
-    HAS_LIBCLOUD = False
 
-try:
-    import requests  # pylint: disable=W0611
-    HAS_REQUESTS = True
-except ImportError:
-    HAS_REQUESTS = False
-
-
-@skipIf(HAS_LIBCLOUD is False, 'salt-cloud requires >= libcloud 0.13.2')
-@skipIf(HAS_REQUESTS is False, 'salt-cloud requires python requests library')
 class DigitalOceanTest(integration.ShellCase):
     '''
     Integration tests for the DigitalOcean cloud provider in Salt-Cloud

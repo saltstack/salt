@@ -164,6 +164,7 @@ def main(argv):
         sys.executable,
         salt_call_path,
         '--local',
+        '--metadata',
         '--out', 'json',
         '-l', 'quiet',
         '-c', OPTIONS.saltdir,

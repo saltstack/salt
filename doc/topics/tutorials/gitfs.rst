@@ -47,12 +47,21 @@ following command would be used to install pygit2_:
 
     # yum install python-pygit2
 
-Provided a valid version, the package name would be the same for Debian/Ubuntu,
-so the following would be used to install it:
+Provided a valid version is packaged for Debian/Ubuntu (which is not currently
+the case), the package name would be the same, and the following command would
+be used to install it:
 
 .. code-block:: bash
 
     # apt-get install python-pygit2
+
+
+If pygit2_ is not packaged for the platform on which the Master is running, the
+pygit2_ website has installation instructions here__. Keep in mind however that
+following these instructions will install libgit2 and pygit2_ without system
+packages.
+
+.. __: http://www.pygit2.org/install.html
 
 GitPython
 ---------
@@ -119,7 +128,7 @@ To use the gitfs backend, only two configuration changes are required on the
 master:
 
 1. Include ``git`` in the :conf_master:`fileserver_backend` list in the master
-   config file (or minion config file, if running a standalone minion):
+   config file:
 
    .. code-block:: yaml
 
@@ -146,16 +155,13 @@ master:
    Information on how to authenticate to SSH remotes can be found :ref:`here
    <gitfs-authentication>`.
 
-3. Restart the master (or minion, if running a standalone minion) to load the
-   new configuration.
+3. Restart the master to load the new configuration.
    
 
 .. note::
 
-    In a master/minion setup, files from a gitfs remote are cached once by
-    the master; so minions do not need direct access 
-    to the git repository. In a standalone minion configuration, files from
-    each gitfs remote are cached by the minion.
+    In a master/minion setup, files from a gitfs remote are cached once by the
+    master, so minions do not need direct access to the git repository.
 
 
 Multiple Remotes
@@ -602,12 +608,6 @@ this can be done using the :mod:`ssh.set_known_host
             None
         status:
             updated
-
-.. note::
-
-    For a masterless minion, the same could be accomplished using ``salt-call
-    --local ssh.set_known_host user=root hostname=github.com``.
-
 
 If not, then the easiest way to add the key is to su to the user (usually
 ``root``) under which the salt-master runs and attempt to login to the

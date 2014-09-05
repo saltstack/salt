@@ -38,7 +38,7 @@ import logging
 # Import salt.cloud libs
 import salt.config as config
 from salt.utils import namespaced_function
-from salt.cloud.exceptions import SaltCloudException, SaltCloudSystemExit
+from salt.exceptions import SaltCloudException, SaltCloudSystemExit
 
 # Import libcloudfuncs and libcloud_aws, required to latter patch __opts__
 try:

@@ -223,8 +223,12 @@ class ZeroMQCaller(object):
         '''
         try:
             ret = self.call()
+            if self.opts['metadata']:
+                print_ret = ret
+            else:
+                print_ret = ret.get('return', {})
             salt.output.display_output(
-                    {'local': ret.get('return', {})},
+                    {'local': print_ret},
                     ret.get('out', 'nested'),
                     self.opts)
             if self.opts.get('retcode_passthrough', False):
@@ -256,8 +260,12 @@ class RAETCaller(ZeroMQCaller):
             self.stack.server.close()
             salt.transport.jobber_stack = None
 
+            if self.opts['metadata']:
+                print_ret = ret
+            else:
+                print_ret = ret.get('return', {})
             salt.output.display_output(
-                    {'local': ret.get('return', {})},
+                    {'local': print_ret},
                     ret.get('out', 'nested'),
                     self.opts)
             if self.opts.get('retcode_passthrough', False):

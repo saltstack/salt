@@ -1755,7 +1755,7 @@ There are additional details at :ref:`salt-pillars`
 .. conf_master:: ext_pillar_first
 
 ``ext_pillar_first``
---------------
+--------------------
 
 The ext_pillar_first option allows for external pillar sources to populate
 before file system pillar. This allows for targeting file system pillar from

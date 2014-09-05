@@ -11,6 +11,14 @@ will *not* work with OpenStack-based instances. Unless you explicitly have a
 reason to use it, it is highly recommended that you use the `openstack` driver
 instead.
 
+
+Dependencies
+============
+* Libcloud >= 0.13.2
+
+
+Configuration
+=============
 To use the `openstack` driver (recommended), set up the cloud configuration at 
   ``/etc/salt/cloud.providers`` or 
   ``/etc/salt/cloud.providers.d/rackspace.conf``:

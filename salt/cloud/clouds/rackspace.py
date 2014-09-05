@@ -7,6 +7,8 @@ The Rackspace cloud module. This module uses the preferred means to set up a
 libcloud based cloud module and should be used as the general template for
 setting up additional libcloud based modules.
 
+:depends: libcloud >= 0.13.2
+
 Please note that the `rackspace` driver is only intended for 1st gen instances,
 aka, "the old cloud" at Rackspace. It is required for 1st gen instances, but
 will *not* work with OpenStack-based instances. Unless you explicitly have a
@@ -55,7 +57,7 @@ import salt.utils
 import salt.utils.cloud
 import salt.config as config
 from salt.utils import namespaced_function
-from salt.cloud.exceptions import (
+from salt.exceptions import (
     SaltCloudSystemExit,
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout

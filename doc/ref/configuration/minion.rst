@@ -638,25 +638,6 @@ directed to look on the minion by setting this parameter to ``local``.
 
     file_client: remote
 
-.. conf_minion:: fileserver_backend
-
-``fileserver_backend``
-----------------------
-
-Default: ``['roots']``
-
-When using a local :conf_minion:`file_client`, this parameter is used to
-specify what fileserver backends to use. It operates identically to the
-:conf_master:`master config parameter<file_roots>` of the same name.
-
-Example:
-
-.. code-block:: yaml
-
-    fileserver_backend:
-      - roots
-      - git
-
 .. conf_minion:: file_roots
 
 ``file_roots``

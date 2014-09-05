@@ -6,6 +6,8 @@ OpenStack Cloud Module
 OpenStack is an open source project that is in use by a number a cloud
 providers, each of which have their own ways of using it.
 
+:depends: libcloud >- 0.13.2
+
 OpenStack provides a number of ways to authenticate. This module uses password-
 based authentication, using auth v2.0. It is likely to start supporting other
 methods of authentication provided by OpenStack in the future.
@@ -150,7 +152,7 @@ import salt.utils.cloud
 import salt.utils.pycrypto as sup
 import salt.config as config
 from salt.utils import namespaced_function
-from salt.cloud.exceptions import (
+from salt.exceptions import (
     SaltCloudConfigError,
     SaltCloudNotFound,
     SaltCloudSystemExit,
