@@ -1618,13 +1618,16 @@ def _push_assemble_error_status(status, ret, logs):
     return status
 
 
-def push(repo, quiet=False):
+def push(repo, tag=None, quiet=False):
     '''
-    Pushes an image from any registry. See documentation at top of this page to
+    Pushes an image to any registry. See documentation at top of this page to
     configure authenticated access
 
     repo
         name of repository
+
+    tag
+        specific tag to push (Optional)
 
     quiet
         set as ``True`` to quiet output, Default is ``False``
@@ -1633,16 +1636,19 @@ def push(repo, quiet=False):
 
     .. code-block:: bash
 
-        salt '*' docker.push <repository> [quiet=True|False]
+        salt '*' docker.push <repository> [tag] [quiet=True|False]
     '''
     client = _get_client()
     status = base_status.copy()
     registry, repo_name = docker.auth.resolve_repository_name(repo)
     try:
-        ret = client.push(repo)
+        ret = client.push(repo, tag=tag)
         if ret:
             image_logs, infos = _parse_image_multilogs_string(ret, repo_name)
             if image_logs:
+                repotag = repo_name
+                if tag:
+                    repotag = '{0}:{1}'.format(repo, tag)
                 if not quiet:
                     status['out'] = image_logs
                 else:
@@ -1656,7 +1662,7 @@ def push(repo, quiet=False):
                     status['status'] = True
                     status['id'] = _get_image_infos(repo)['Id']
                     status['comment'] = 'Image {0}({1}) was pushed'.format(
-                        repo, status['id'])
+                        repotag, status['id'])
                 else:
                     _push_assemble_error_status(status, ret, image_logs)
             else:
