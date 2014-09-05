@@ -9,7 +9,6 @@ access to the master root execution access to all salt minions.
 # Import python libs
 import time
 import functools
-import json
 import glob
 import logging
 import os
