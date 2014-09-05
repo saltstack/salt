@@ -292,6 +292,31 @@ class CloudClient(object):
 
             vm_overrides is a special dict that will be per node options
             overrides
+
+        Example:
+
+        .. code-block:: python
+
+            >>> client= salt.cloud.CloudClient(path='/etc/salt/cloud')
+            >>> client.profile('do_512_git', names=['minion01',])
+            {'minion01': {u'backups_active': 'False',
+                    u'created_at': '2014-09-04T18:10:15Z',
+                    u'droplet': {u'event_id': 31000502,
+                                 u'id': 2530006,
+                                 u'image_id': 5140006,
+                                 u'name': u'minion01',
+                                 u'size_id': 66},
+                    u'id': '2530006',
+                    u'image_id': '5140006',
+                    u'ip_address': '107.XXX.XXX.XXX',
+                    u'locked': 'True',
+                    u'name': 'minion01',
+                    u'private_ip_address': None,
+                    u'region_id': '4',
+                    u'size_id': '66',
+                    u'status': 'new'}}
+
+
         '''
         if not vm_overrides:
             vm_overrides = {}
@@ -332,10 +357,12 @@ class CloudClient(object):
 
         Example:
 
-        client.create(names=['myinstance'], provider='my-ec2-config',
-            kwargs={'image': 'ami-1624987f', 'size': 'Micro Instance',
-                    'ssh_username': 'ec2-user', 'securitygroup': 'default',
-                    'delvol_on_destroy': True})
+        .. code-block:: python
+
+            client.create(names=['myinstance'], provider='my-ec2-config',
+                kwargs={'image': 'ami-1624987f', 'size': 'Micro Instance',
+                        'ssh_username': 'ec2-user', 'securitygroup': 'default',
+                        'delvol_on_destroy': True})
         '''
         mapper = salt.cloud.Map(self._opts_defaults())
         providers = mapper.map_providers_parallel()

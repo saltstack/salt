@@ -900,3 +900,52 @@ def upgrade_available(pkg,
         salt '*' pip.upgrade_available <package name>
     '''
     return pkg in list_upgrades(bin_env=bin_env, user=user, runas=runas, cwd=cwd)
+
+
+def upgrade(bin_env=None,
+            user=None,
+            runas=None,
+            cwd=None):
+    '''
+    Upgrades outdated pip packages
+
+    Returns a dict containing the changes.
+
+        {'<package>':  {'old': '<old-version>',
+                        'new': '<new-version>'}}
+
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pip.upgrade
+    '''
+    ret = {'changes': {},
+           'result': True,
+           'comment': '',
+           }
+    user = _get_user(user, runas)
+    pip_bin = _get_pip_bin(bin_env)
+
+    old = list_(bin_env=bin_env, user=user, cwd=cwd)
+
+    cmd = [pip_bin, "install", "-U"]
+    cmd_kwargs = dict(runas=user, cwd=cwd)
+    if bin_env and os.path.isdir(bin_env):
+        cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
+    errors = False
+    for pkg in old:
+        result = __salt__['cmd.run_all'](' '.join(cmd+[pkg]), **cmd_kwargs)
+        if result['retcode'] != 0:
+            errors = True
+        if 'stderr' in result:
+            ret['comment'] += result['stderr']
+    if errors:
+        ret['result'] = False
+
+    new = list_(bin_env=bin_env, user=user, cwd=cwd)
+
+    ret['changes'] = salt.utils.compare_dicts(old, new)
+
+    return ret

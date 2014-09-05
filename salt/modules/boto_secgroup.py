@@ -36,6 +36,7 @@ Connection module for Amazon Security Groups
 
 # Import Python libs
 import logging
+import re
 from distutils.version import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
@@ -124,7 +125,7 @@ def _get_group(conn, name=None, vpc_id=None, group_id=None, region=None):
     '''
     if name:
         if vpc_id is None:
-            logging.debug('getting group for {0}'.format(name))
+            log.debug('getting group for {0}'.format(name))
             group_filter = {'group-name': name}
             filtered_groups = conn.get_all_security_groups(filters=group_filter)
             # security groups can have the same name if groups exist in both
@@ -137,7 +138,7 @@ def _get_group(conn, name=None, vpc_id=None, group_id=None, region=None):
                     return group
             return None
         elif vpc_id:
-            logging.debug('getting group for {0} in vpc_id {1}'.format(name, vpc_id))
+            log.debug('getting group for {0} in vpc_id {1}'.format(name, vpc_id))
             group_filter = {'group-name': name, 'vpc_id': vpc_id}
             filtered_groups = conn.get_all_security_groups(filters=group_filter)
             if len(filtered_groups) == 1:
@@ -178,6 +179,35 @@ def get_group_id(name, vpc_id=None, region=None, key=None, keyid=None, profile=N
         return False
 
 
+def convert_to_group_ids(groups, vpc_id, region=None, key=None, keyid=None,
+                         profile=None):
+    '''
+    Given a list of security groups and a vpc_id, convert_to_group_ids will
+    convert all list items in the given list to security group ids.
+
+    CLI example::
+
+        salt myminion boto_secgroup.convert_to_group_ids mysecgroup vpc-89yhh7h
+    '''
+    log.debug('security group contents {0} pre-conversion'.format(groups))
+    group_ids = []
+    for group in groups:
+        if re.match('sg-.*', group):
+            log.debug('group {0} is a group id. get_group_id not called.'
+                      .format(group))
+            group_ids.append(group)
+        else:
+            log.debug('calling boto_secgroup.get_group_id for'
+                      ' group name {0}'.format(group))
+            group_id = get_group_id(group, vpc_id, region, key, keyid, profile)
+            log.debug('group name {0} has group id {1}'.format(
+                group, group_id)
+            )
+            group_ids.append(str(group_id))
+    log.debug('security group contents {0} post-conversion'.format(group_ids))
+    return group_ids
+
+
 def get_config(name=None, group_id=None, region=None, key=None, keyid=None,
                profile=None, vpc_id=None):
     '''
@@ -202,7 +232,7 @@ def get_config(name=None, group_id=None, region=None, key=None, keyid=None,
         # TODO: add support for tags
         _rules = []
         for rule in sg.rules:
-            logging.debug('examining rule {0} for group {1}'.format(rule, sg.id))
+            log.debug('examining rule {0} for group {1}'.format(rule, sg.id))
             attrs = ['ip_protocol', 'from_port', 'to_port', 'grants']
             _rule = odict.OrderedDict()
             for attr in attrs:
@@ -212,7 +242,7 @@ def get_config(name=None, group_id=None, region=None, key=None, keyid=None,
                 if attr == 'grants':
                     _grants = []
                     for grant in val:
-                        logging.debug('examining grant {0} for'.format(grant))
+                        log.debug('examining grant {0} for'.format(grant))
                         g_attrs = {'name': 'source_group_name',
                                    'owner_id': 'source_group_owner_id',
                                    'group_id': 'source_group_group_id',

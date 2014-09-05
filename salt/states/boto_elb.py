@@ -237,6 +237,20 @@ def _elb_present(
         if 'certificate' in listener:
             _listener.append(listener['certificate'])
         _listeners.append(_listener)
+    if subnets:
+        vpc_id = __salt__['boto_vpc.get_subnet_association'](
+            subnets, region, key, keyid, profile
+        )
+        if not vpc_id:
+            msg = 'Subnets {0} do not map to a valid vpc id.'.format(subnets)
+            raise SaltInvocationError(msg)
+        security_groups = __salt__['boto_secgroup.convert_to_group_ids'](
+            security_groups, vpc_id, region, key, keyid, profile
+        )
+        if not security_groups:
+            msg = 'Security groups {0} do not map to valid security group ids.'
+            msg = msg.format(security_groups)
+            raise SaltInvocationError(msg)
     exists = __salt__['boto_elb.exists'](name, region, key, keyid, profile)
     if not exists:
         if __opts__['test']:
