@@ -583,7 +583,7 @@ def deregister_instances(name, instances, region=None, key=None, keyid=None,
     deregister_failures = set(instances).intersection(set(registered_instance_ids))
     if deregister_failures:
         log.warn('Instance(s): {0} not deregistered from ELB {1}.'
-                 .format(list(deregister_failures)), name)
+                 .format(list(deregister_failures), name))
         deregister_result = False
     else:
         deregister_result = True
