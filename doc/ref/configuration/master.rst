@@ -349,6 +349,23 @@ local job cache on the master
 
     ext_job_cache: redis
 
+.. conf_master:: master_job_cache
+
+``master_job_cache``
+--------------------
+
+.. versionadded:: 2014.7
+
+Default: 'local_cache'
+
+Specify the returner to use for ther job cache. The job cache will only be
+interacted with from the salt master and therefore does not need to be
+accesible from the minions.
+
+.. code-block:: yaml
+
+    master_job_cache: redis
+
 .. conf_master:: enforce_mine_cache
 
 ``enforce_mine_cache``
@@ -364,6 +381,8 @@ only the cache for the mine system.
 
     enforce_mine_cache: False
 
+.. conf_master:: max_minions
+
 ``max_minions``
 ---------------
 
@@ -378,6 +397,8 @@ this can slow down the authentication process a bit in large setups.
 
     max_minions: 100
 
+.. conf_master:: presence_events
+
 ``presence_events``
 ----------------------
 
@@ -390,6 +411,18 @@ and newly connected minions on the eventbus.
 
     presence_events: False
 
+.. conf_master:: roster_file
+
+``roster_file``
+---------------
+
+Default: '/etc/salt/roster'
+
+Pass in an alternative location for the salt-ssh roster file
+
+.. code-block:: yaml
+
+    roster_file: /root/roster
 
 Master Security Settings
 ========================
