@@ -37,6 +37,8 @@ LOG_LEVELS = {
     'warning': logging.WARNING,
 }
 
+log = logging.getLogger(__name__)
+
 # FUNCTIONS
 
 
@@ -316,7 +318,6 @@ if __name__ == '__main__':
                         format=log_format,
                         datefmt=log_datefmt,
                         level=LOG_LEVELS[opts.log_level])
-    log = logging.getLogger(__name__)
     if opts.log_level not in LOG_LEVELS:
         log.error('Invalid log level {0!r}, falling back to \'warning\''
                   .format(opts.log_level))
