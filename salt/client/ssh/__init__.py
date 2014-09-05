@@ -702,7 +702,7 @@ class Single(object):
             '--hashfunc', 'sha1',
             '--version', salt.__version__,
             '--',
-        ] 
+        ]
         ssh_py_shim_args += self.argv
 
         cmd = SSH_SH_SHIM.format(
