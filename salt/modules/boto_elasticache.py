@@ -141,6 +141,52 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
     return ret
 
 
+def get_cache_subnet_group(name, region=None, key=None, keyid=None,
+                           profile=None):
+    '''
+    Get information about a cache subnet group.
+
+    CLI example::
+
+        salt myminion boto_elasticache.get_cache_subnet_group mycache_subnet_group
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+    try:
+        csg = conn.describe_cache_subnet_groups(name)
+        csg = csg['DescribeCacheSubnetGroupsResponse']
+        csg = csg['DescribeCacheSubnetGroupsResult']['CacheSubnetGroups'][0]
+    except boto.exception.BotoServerError as e:
+        msg = 'Failed to get cache subnet group {0}.'.format(name)
+        log.error(msg)
+        log.debug(e)
+        return False
+    except (IndexError, TypeError, KeyError):
+        msg = 'Failed to get cache subnet group {0} (2).'.format(name)
+        log.error(msg)
+        return False
+    ret = {}
+    for key, val in csg.iteritems():
+        if key == 'CacheSubnetGroupName':
+            ret['cache_subnet_group_name'] = val
+        elif key == 'CacheSubnetGroupDescription':
+            ret['cache_subnet_group_description'] = val
+        elif key == 'VpcId':
+            ret['vpc_id'] = val
+        elif key == 'Subnets':
+            ret['subnets'] = []
+            for subnet in val:
+                _subnet = {}
+                _subnet['subnet_id'] = subnet['SubnetIdentifier']
+                _az = subnet['SubnetAvailabilityZone']['Name']
+                _subnet['subnet_availability_zone'] = _az
+                ret['subnets'].append(_subnet)
+        else:
+            ret[key] = val
+    return ret
+
+
 def create(name, num_cache_nodes, engine, cache_node_type,
            replication_group_id=None, engine_version=None,
            cache_parameter_group_name=None, cache_subnet_group_name=None,

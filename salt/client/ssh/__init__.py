@@ -224,6 +224,7 @@ class SSH(object):
         }
         self.serial = salt.payload.Serial(opts)
         self.returners = salt.loader.returners(self.opts, {})
+        self.mods = mod_data(self.opts)
 
     def verify_env(self):
         '''
@@ -321,6 +322,7 @@ class SSH(object):
                 opts,
                 opts['argv'],
                 host,
+                mods=self.mods,
                 **target)
         ret = {'id': single.id}
         stdout, stderr, retcode = single.run()
@@ -488,12 +490,14 @@ class Single(object):
             timeout=None,
             sudo=False,
             tty=False,
+            mods=None,
             **kwargs):
         self.opts = opts
         if user:
             self.thin_dir = DEFAULT_THIN_DIR.replace('%%USER%%', user)
         else:
             self.thin_dir = DEFAULT_THIN_DIR.replace('%%USER%%', 'root')
+        self.opts['_thin_dir'] = self.thin_dir
 
         if isinstance(argv, string_types):
             self.argv = [argv]
@@ -521,6 +525,7 @@ class Single(object):
         self.target.update(args)
         self.serial = salt.payload.Serial(opts)
         self.wfuncs = salt.loader.ssh_wrapper(opts)
+        self.mods = mods
 
     def __arg_comps(self):
         '''
@@ -699,8 +704,12 @@ class Single(object):
         debug = ''
         if salt.log.LOG_LEVELS['debug'] >= salt.log.LOG_LEVELS[self.opts['log_level']]:
             debug = '1'
+        ssh_py_shim_args = []
+        for mod in self.mods:
+            if self.mods[mod]:
+                ssh_py_shim_args += ['--{0}'.format(mod), '{0}'.format(self.mods[mod])]
 
-        ssh_py_shim_args = [
+        ssh_py_shim_args += [
             '--config', self.minion_config,
             '--delimiter', RSTR,
             '--saltdir', self.thin_dir,
@@ -708,7 +717,8 @@ class Single(object):
             '--hashfunc', 'sha1',
             '--version', salt.__version__,
             '--',
-        ] + self.argv
+        ]
+        ssh_py_shim_args += self.argv
 
         cmd = SSH_SH_SHIM.format(
             DEBUG=debug,
@@ -916,7 +926,7 @@ class Single(object):
             trans_tar,
             os.path.join(self.thin_dir, 'salt_state.tgz'),
         )
-        self.argv = ['state.pkg', '/tmp/.salt/salt_state.tgz', 'test={0}'.format(test)]
+        self.argv = ['state.pkg', '{0}/salt_state.tgz', 'test={1}'.format(self.thin_dir, test)]
 
 
 class SSHState(salt.state.State):
@@ -998,6 +1008,35 @@ def salt_refs(data):
             if isinstance(comp, str):
                 if comp.startswith(proto):
                     ret.append(comp)
+    return ret
+
+
+def mod_data(opts):
+    '''
+    Generate the module arguments for the shim data
+    '''
+    # TODO, change out for a fileserver backend
+    sync_refs = [
+            'modules',
+            'states',
+            'grains',
+            'renderers',
+            'returners',
+            ]
+    ret = {}
+    for env in opts['file_roots']:
+        for path in opts['file_roots'][env]:
+            for ref in sync_refs:
+                mod_str = ''
+                pl_dir = os.path.join(path, '_{0}'.format(ref))
+                if os.path.isdir(pl_dir):
+                    for fn_ in os.listdir(pl_dir):
+                        mod_path = os.path.join(pl_dir, fn_)
+                        with open(mod_path) as fp_:
+                            code_str = fp_.read().encode('base64')
+                        mod_str += '{0}|{1},'.format(fn_, code_str)
+                mod_str = mod_str.rstrip(',')
+                ret[ref] = mod_str
     return ret
 
 
