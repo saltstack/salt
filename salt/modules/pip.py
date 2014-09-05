@@ -935,7 +935,7 @@ def upgrade(bin_env=None,
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
     errors = False
-    for pkg in old:
+    for pkg in list_upgrades(bin_env=bin_env, user=user, cwd=cwd):
         result = __salt__['cmd.run_all'](' '.join(cmd+[pkg]), **cmd_kwargs)
         if result['retcode'] != 0:
             errors = True
