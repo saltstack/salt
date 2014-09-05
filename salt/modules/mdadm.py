@@ -6,6 +6,7 @@ Salt module to manage RAID arrays with mdadm
 # Import python libs
 import os
 import logging
+import re
 
 # Import salt libs
 import salt.utils
@@ -240,27 +241,29 @@ def save_config():
         salt '*' raid.save_config
 
     '''
-    scan = __salt__['cmd.run']('mdadm --detail --scan').split()
-    # Issue with mdadm and ubuntu
+    scan = __salt__['cmd.run']('mdadm --detail --scan').splitlines()
+    # Issue with mdadm and ubuntu requires removal of name and metadata tags
     # REF: http://askubuntu.com/questions/209702/why-is-my-raid-dev-md1-showing-up-as-dev-md126-is-mdadm-conf-being-ignored
     if __grains__['os'] == 'Ubuntu':
         buggy_ubuntu_tags = ['name', 'metadata']
-        for bad_tag in buggy_ubuntu_tags:
-            for i, elem in enumerate(scan):
-                if not elem.find(bad_tag):
-                    del scan[i]
+        for i, elem in enumerate(scan):
+            for bad_tag in buggy_ubuntu_tags:
+                pattern = r'\s{0}=\S+'.format(re.escape(bad_tag))
+                pattern = re.compile(pattern, flags=re.I)
+                scan[i] = re.sub(pattern, '', scan[i])
 
-    scan = ' '.join(scan)
     if __grains__.get('os_family') == 'Debian':
         cfg_file = '/etc/mdadm/mdadm.conf'
     else:
         cfg_file = '/etc/mdadm.conf'
 
     try:
-        if not __salt__['file.search'](cfg_file, scan):
-            __salt__['file.append'](cfg_file, scan)
+        vol_d = {line.split()[1]: line for line in scan}
+        for vol in vol_d:
+            pattern = r'^ARRAY\s+{0}'.format(re.escape(vol))
+            __salt__['file.replace'](cfg_file, pattern, vol_d[vol], append_if_not_found=True)
     except SaltInvocationError:  # File is missing
-        __salt__['file.write'](cfg_file, scan)
+        __salt__['file.write'](cfg_file, args=scan)
 
     return __salt__['cmd.run']('update-initramfs -u')
 
