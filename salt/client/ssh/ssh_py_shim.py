@@ -168,14 +168,14 @@ def write_modules():
         dest_dir = os.path.join(modcache, mtype)
         if not os.path.isdir(dest_dir):
             os.makedirs(dest_dir)
-        for chunks in getattr(OPTIONS, mtype):
-            if not chunks:
-                continue
-            for chunk in chunks.split(','):
-                name, raw = chunk.split('|')
-                dest = os.path.join(dest_dir, name)
-                with open(dest, 'w+') as fp_:
-                    fp_.write(raw.decode('base64'))
+        chunks = getattr(OPTIONS, mtype)
+        if not chunks:
+            continue
+        for chunk in chunks.split(','):
+            name, raw = chunk.split('|')
+            dest = os.path.join(dest_dir, name)
+            with open(dest, 'w+') as fp_:
+                fp_.write(raw.decode('base64'))
 
 
 def main(argv):
