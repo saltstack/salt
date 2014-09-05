@@ -57,27 +57,27 @@ def parse_argv(argv):
         help='Hash function for computing checksum',
     )
     oparser.add_option(
-        '-M',
+        '--modules',
         dest='modules',
         help='base64 modules, comma delim'
         )
     oparser.add_option(
-        '-S',
+        '--states',
         dest='states',
         help='base64 states, comma delim'
         )
     oparser.add_option(
-        '-G',
+        '--grains',
         dest='grains',
         help='base64 grains, comma delim'
         )
     oparser.add_option(
-        '-R',
+        '--returners',
         dest='returners',
         help='base64 returners, comma delim'
         )
     oparser.add_option(
-        '-F',
+        '--renderers',
         dest='renderers',
         help='base64 renderers, comma delim'
         )
