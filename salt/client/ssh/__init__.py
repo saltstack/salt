@@ -1010,7 +1010,7 @@ def mod_data(opts):
             ]
     ret = {}
     for env in opts['file_roots']:
-        for path in opts['file_roots']:
+        for path in opts['file_roots'][env]:
             for ref in sync_refs:
                 mod_str = ''
                 pl_dir = os.path.join(path, '_{0}'.format(ref))
