@@ -32,33 +32,58 @@ def parse_argv(argv):
     global OPTIONS
     global ARGS
 
-    oparser = optparse.OptionParser(usage="%prog -- [SHIM_OPTIONS] -- [SALT_OPTIONS]")
+    oparser = optparse.OptionParser(usage='%prog -- [SHIM_OPTIONS] -- [SALT_OPTIONS]')
     oparser.add_option(
-        "-c", "--config",
+        '-c', '--config',
         default='',
-        help="YAML configuration for salt thin",
+        help='YAML configuration for salt thin',
     )
     oparser.add_option(
-        "-d", "--delimiter",
-        help="Delimeter string (viz. magic string) to indicate beginning of salt output",
+        '-d', '--delimiter',
+        help='Delimeter string (viz. magic string) to indicate beginning of salt output',
     )
     oparser.add_option(
-        "-s", "--saltdir",
-        help="Directory where salt thin is or will be installed.",
+        '-s', '--saltdir',
+        help='Directory where salt thin is or will be installed.',
     )
     oparser.add_option(
-        "--sum", "--checksum",
-        dest="checksum",
-        help="Salt thin checksum",
+        '--sum', '--checksum',
+        dest='checksum',
+        help='Salt thin checksum',
     )
     oparser.add_option(
-        "--hashfunc",
+        '--hashfunc',
         default='sha1',
-        help="Hash function for computing checksum",
+        help='Hash function for computing checksum',
     )
     oparser.add_option(
-        "-v", "--version",
-        help="Salt thin version to be deployed/verified",
+        '--modules',
+        dest='modules',
+        help='base64 modules, comma delim'
+        )
+    oparser.add_option(
+        '--states',
+        dest='states',
+        help='base64 states, comma delim'
+        )
+    oparser.add_option(
+        '--grains',
+        dest='grains',
+        help='base64 grains, comma delim'
+        )
+    oparser.add_option(
+        '--returners',
+        dest='returners',
+        help='base64 returners, comma delim'
+        )
+    oparser.add_option(
+        '--renderers',
+        dest='renderers',
+        help='base64 renderers, comma delim'
+        )
+    oparser.add_option(
+        '-v', '--version',
+        help='Salt thin version to be deployed/verified',
     )
 
     if argv and '--' not in argv:
@@ -83,6 +108,15 @@ def need_deployment():
     old_umask = os.umask(0077)
     os.makedirs(OPTIONS.saltdir)
     os.umask(old_umask)
+    # Verify perms on saltdir
+    euid = os.geteuid()
+    dstat = os.stat(OPTIONS.saltdir)
+    if dstat.st_uid != euid:
+        # Attack detected, try again
+        need_deployment()
+    if dstat.st_mode != 16832:
+        # Attack detected
+        need_deployment()
     # If SUDOing then also give the super user group write permissions
     sudo_gid = os.environ.get('SUDO_GID')
     if sudo_gid:
@@ -96,7 +130,7 @@ def need_deployment():
 
 
 # Adapted from salt.utils.get_hash()
-def get_hash(path, form='md5', chunk_size=4096):
+def get_hash(path, form='sha1', chunk_size=4096):
     try:
         hash_type = getattr(hashlib, form)
     except AttributeError:
@@ -114,6 +148,34 @@ def unpack_thin(thin_path):
     tfile.extractall(path=OPTIONS.saltdir)
     tfile.close()
     os.unlink(thin_path)
+
+
+def write_modules():
+    mtypes = ('modules',
+              'states',
+              'grains',
+              'returners',
+              'renderers')
+    modcache = os.path.join(
+            OPTIONS.saltdir,
+            'running_data',
+            'var',
+            'cache',
+            'salt',
+            'minion',
+            'extmods')
+    for mtype in mtypes:
+        dest_dir = os.path.join(modcache, mtype)
+        if not os.path.isdir(dest_dir):
+            os.makedirs(dest_dir)
+        chunks = getattr(OPTIONS, mtype)
+        if not chunks:
+            continue
+        for chunk in chunks.split(','):
+            name, raw = chunk.split('|')
+            dest = os.path.join(dest_dir, name)
+            with open(dest, 'w+') as fp_:
+                fp_.write(raw.decode('base64'))
 
 
 def main(argv):
@@ -153,7 +215,7 @@ def main(argv):
 
     with open(os.path.join(OPTIONS.saltdir, 'minion'), 'w') as config:
         config.write(OPTIONS.config + '\n')
-
+    write_modules()
     #Fix parameter passing issue
     if len(ARGS) == 1:
         argv_prepared = ARGS[0].split()
@@ -181,5 +243,5 @@ def main(argv):
     sys.stderr.flush()
     os.execv(sys.executable, salt_argv)
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     sys.exit(main(sys.argv))
