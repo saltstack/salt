@@ -5,6 +5,8 @@ import os
 import signal
 import time
 import sys
+import multiprocessing
+import signal
 
 # Import salt libs
 import salt.utils
@@ -109,3 +111,72 @@ def os_is_running(pid):
             return True
         except OSError:
             return False
+
+class ProcessManager(object):
+    '''
+    A class which will manage processes that should be running
+    '''
+    def __init__(self):
+        # pid -> {fun: foo, Process: object, args: args, kwargs: kwargs}
+        self._process_map = {}
+
+    def add_process(self, fun, args=[], kwargs={}):
+        '''
+        Create a processes with target fun and args + kwargs
+        '''
+        p = multiprocessing.Process(target=fun, args=args, kwargs=kwargs)
+        p.start()
+        log.debug("Started '{0}'(*{1}, **{2} with pid {3}".format(fun,
+                                                                  args,
+                                                                  kwargs,
+                                                                  p.pid))
+        self._process_map[p.pid] = {'fun': fun,
+                                    'args': args,
+                                    'kwargs': kwargs,
+                                    'Process': p}
+
+    def restart_process(self, pid):
+        '''
+        Create new process (assuming this one is dead), then remove the old one
+        '''
+        log.info(('Process {0} ({1}) died with exit status {2},'
+                  ' restarting...').format(self._process_map[pid]['fun'],
+                                           pid,
+                                           self._process_map[pid]['Process'].exitcode))
+        self._process_map[pid]['Process'].join(1)
+
+        self.add_process(self._process_map[pid]['fun'],
+                         self._process_map[pid]['args'],
+                         self._process_map[pid]['kwargs'])
+
+        del self._process_map[pid]
+
+    def run(self):
+        '''
+        Load and start all available api modules
+        '''
+        # make sure to kill the subprocesses if the parent is killed
+        signal.signal(signal.SIGTERM, self.kill_children)
+
+        while True:
+            pid, exit_status = os.wait()
+            if pid not in self._process_map:
+                log.debug(('Process of pid {0} died, not a known'
+                           ' process, will not restart').format(pid))
+                continue
+            self.restart_process(pid)
+
+            # in case someone died while we were waiting...
+            for pid, mapping in self._process_map.iteritems():
+                if not mapping['Process'].is_alive():
+                    self.restart_process(pid)
+
+
+    def kill_children(self, *args):
+        '''
+        Kill all of the children
+        '''
+        for pid, p_map in self._process_map.items():
+            p_map['Process'].terminate()
+            p_map['Process'].join()
+            del self.pid_map[pid]
