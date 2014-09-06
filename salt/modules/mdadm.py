@@ -254,10 +254,11 @@ def save_config():
     try:
         if not __salt__['file.search'](cfg_file, scan):
             __salt__['file.append'](cfg_file, scan)
-    except SaltInvocationError: # File is missing
+    except SaltInvocationError:  # File is missing
         __salt__['file.write'](cfg_file, scan)
 
     return __salt__['cmd.run']('update-initramfs -u')
+
 
 def assemble(name,
              devices,
