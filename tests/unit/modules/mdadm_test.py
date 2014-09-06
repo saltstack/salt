@@ -37,7 +37,7 @@ class MdadmTestCase(TestCase):
             )
             self.assertEqual('salt', ret)
             mock.assert_called_once_with(
-                    'mdadm -C /dev/md0 -v --chunk=256 --force -l 5 -n 3 '
+                    'mdadm -C /dev/md0 -v --chunk=256 --force -l 5 -e default -n 3 '
                     '/dev/sdb1 /dev/sdc1 /dev/sdd1'
             )
 
@@ -53,7 +53,7 @@ class MdadmTestCase(TestCase):
                     chunk=256,
                     test_mode=True
             )
-            self.assertEqual('mdadm -C /dev/md0 -v --chunk=256 --force -l 5 -n 3 '
+            self.assertEqual('mdadm -C /dev/md0 -v --chunk=256 --force -l 5 -e default -n 3 '
                     '/dev/sdb1 /dev/sdc1 /dev/sdd1', ret)
             assert not mock.called, 'test mode failed, cmd.run called'
 
