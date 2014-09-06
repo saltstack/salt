@@ -490,7 +490,7 @@ class ReqServer(object):
                 os.remove(dfn)
             except os.error:
                 pass
-        self.process_manager = salt.utils.process.ProcessManager()
+        self.process_manager = salt.utils.process.ProcessManager(name='ReqServer_ProcessManager')
 
         for ind in range(int(self.opts['worker_threads'])):
             self.process_manager.add_process(MWorker,

@@ -116,9 +116,13 @@ class ProcessManager(object):
     '''
     A class which will manage processes that should be running
     '''
-    def __init__(self):
+    def __init__(self, name=None):
         # pid -> {tgt: foo, Process: object, args: args, kwargs: kwargs}
         self._process_map = {}
+
+        self.name = name
+        if self.name is None:
+            self.name = self.__class__.__name__
 
     def add_process(self, tgt, args=[], kwargs={}):
         '''
@@ -157,13 +161,11 @@ class ProcessManager(object):
 
         del self._process_map[pid]
 
-    def run(self, name=None):
+    def run(self):
         '''
         Load and start all available api modules
         '''
-        if name is None:
-            name = self.__class__.__name__
-        salt.utils.appendproctitle(name)
+        salt.utils.appendproctitle(self.name)
         # make sure to kill the subprocesses if the parent is killed
         signal.signal(signal.SIGTERM, self.kill_children)
 
