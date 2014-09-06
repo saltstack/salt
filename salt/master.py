@@ -436,6 +436,11 @@ class ReqServer(object):
     def __init__(self, opts, crypticle, key, mkey):
         self.opts = opts
         self.master_key = mkey
+        # Prepare the AES key
+        self.key = key
+        self.crypticle = crypticle
+
+    def zmq_device(self):
         self.context = zmq.Context(self.opts['worker_threads'])
         # Prepare the zeromq sockets
         self.uri = 'tcp://{interface}:{ret_port}'.format(**self.opts)
@@ -454,35 +459,9 @@ class ReqServer(object):
         self.w_uri = 'ipc://{0}'.format(
             os.path.join(self.opts['sock_dir'], 'workers.ipc')
         )
-        # Prepare the AES key
-        self.key = key
-        self.crypticle = crypticle
 
-    def __bind(self):
-        '''
-        Binds the reply server
-        '''
-        dfn = os.path.join(self.opts['cachedir'], '.dfn')
-        if os.path.isfile(dfn):
-            try:
-                os.remove(dfn)
-            except os.error:
-                pass
         log.info('Setting up the master communication server')
         self.clients.bind(self.uri)
-        self.work_procs = []
-
-        for ind in range(int(self.opts['worker_threads'])):
-            self.work_procs.append(MWorker(self.opts,
-                                           self.master_key,
-                                           self.key,
-                                           self.crypticle,
-                                           )
-                                   )
-
-        for ind, proc in enumerate(self.work_procs):
-            log.info('Starting Salt worker process {0}'.format(ind))
-            proc.start()
 
         self.workers.bind(self.w_uri)
 
@@ -500,6 +479,33 @@ class ReqServer(object):
                 if exc.errno == errno.EINTR:
                     continue
                 raise exc
+
+    def __bind(self):
+        '''
+        Binds the reply server
+        '''
+        dfn = os.path.join(self.opts['cachedir'], '.dfn')
+        if os.path.isfile(dfn):
+            try:
+                os.remove(dfn)
+            except os.error:
+                pass
+        self.process_manager = salt.utils.process.ProcessManager()
+
+        for ind in range(int(self.opts['worker_threads'])):
+            self.process_manager.add_process(MWorker,
+                                             args=(self.opts,
+                                                   self.master_key,
+                                                   self.key,
+                                                   self.crypticle,
+                                                   ),
+                                             )
+        self.process_manager.add_process(self.zmq_device)
+
+        # start zmq device
+        self.process_manager.run()
+
+
 
     def run(self):
         '''

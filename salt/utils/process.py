@@ -157,10 +157,13 @@ class ProcessManager(object):
 
         del self._process_map[pid]
 
-    def run(self):
+    def run(self, name=None):
         '''
         Load and start all available api modules
         '''
+        if name is None:
+            name = self.__class__.__name__
+        salt.utils.appendproctitle(name)
         # make sure to kill the subprocesses if the parent is killed
         signal.signal(signal.SIGTERM, self.kill_children)
 
