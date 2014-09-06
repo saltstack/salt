@@ -9,7 +9,6 @@ import os
 import re
 import time
 import errno
-import signal
 import shutil
 import logging
 import hashlib
@@ -45,7 +44,6 @@ import salt.utils.gzip_util
 import salt.utils.process
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.debug import enable_sigusr1_handler, enable_sigusr2_handler, inspect_stack
-from salt.exceptions import MasterExit
 from salt.utils.event import tagify
 import binascii
 from salt.utils.master import ConnectedCache

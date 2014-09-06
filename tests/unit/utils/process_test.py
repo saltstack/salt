@@ -7,12 +7,11 @@ import signal
 import multiprocessing
 
 # Import Salt Testing libs
-from salttesting import skipIf, TestCase
+from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import salt libs
-import integration
 import salt.utils.process
 
 
@@ -72,9 +71,9 @@ class TestProcessManager(TestCase):
         counter = multiprocessing.Value('i', 0)
         process_manager = salt.utils.process.ProcessManager()
         process_manager.add_process(incr, args=(counter, 2))
-        time.sleep(0.1)
+        time.sleep(1)
         process_manager.check_children()
-        time.sleep(0.1)
+        time.sleep(1)
         # we should have had 2 processes go at it
         assert counter.value == 4
         process_manager.kill_children()

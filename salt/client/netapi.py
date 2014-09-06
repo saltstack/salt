@@ -4,9 +4,6 @@ The main entry point for salt-api
 '''
 # Import python libs
 import logging
-import multiprocessing
-import signal
-import os
 
 # Import salt-api libs
 import salt.loader

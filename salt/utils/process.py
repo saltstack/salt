@@ -112,6 +112,7 @@ def os_is_running(pid):
         except OSError:
             return False
 
+
 class ProcessManager(object):
     '''
     A class which will manage processes that should be running
@@ -124,12 +125,18 @@ class ProcessManager(object):
         if self.name is None:
             self.name = self.__class__.__name__
 
-    def add_process(self, tgt, args=[], kwargs={}):
+    def add_process(self, tgt, args=None, kwargs=None):
         '''
         Create a processes and args + kwargs
         This will deterimine if it is a Process class, otherwise it assumes
         it is a function
         '''
+        if args is None:
+            args = []
+
+        if kwargs is None:
+            kwargs = {}
+
         if type(multiprocessing.Process) == type(tgt) and issubclass(tgt, multiprocessing.Process):
             p = tgt(*args, **kwargs)
         else:
