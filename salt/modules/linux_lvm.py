@@ -353,6 +353,7 @@ def lvresize(size='',lvpath=''):
         salt '*' lvm.lvresize +12M /dev/mapper/vg1-test
     '''
 
+
     ret = {}
     cmd = 'lvresize -L {0} {1}'.format(size,lvpath)
     cmd_ret = __salt__['cmd.run_all'](cmd)
