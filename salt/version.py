@@ -444,7 +444,8 @@ def __get_version(saltstack_version):
         kwargs = dict(
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            cwd=cwd
+            cwd=cwd,
+            shell=True
         )
 
         if not sys.platform.startswith('win'):
@@ -452,7 +453,10 @@ def __get_version(saltstack_version):
             kwargs['close_fds'] = True
 
         process = subprocess.Popen(
-                ['git', 'describe', '--tags', '--match', 'v[0-9]*', '--always'], **kwargs)
+            'git describe --tags --first-parent --match \'v[0-9]*\' --always 2>/dev/null || '
+            'git describe --tags --match \'v[0-9]*\' --always',
+            **kwargs
+        )
         out, err = process.communicate()
         out = out.strip()
         err = err.strip()
