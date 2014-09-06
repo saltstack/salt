@@ -42,6 +42,7 @@ import salt.utils.event
 import salt.utils.verify
 import salt.utils.minions
 import salt.utils.gzip_util
+import salt.utils.process
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.debug import enable_sigusr1_handler, enable_sigusr2_handler, inspect_stack
 from salt.exceptions import MasterExit
@@ -65,33 +66,6 @@ except ImportError:
 
 
 log = logging.getLogger(__name__)
-
-
-def clean_proc(proc, wait_for_kill=10):
-    '''
-    Generic method for cleaning up multiprocessing procs
-    '''
-    # NoneType and other fun stuff need not apply
-    if not proc:
-        return
-    try:
-        waited = 0
-        while proc.is_alive():
-            proc.terminate()
-            waited += 1
-            time.sleep(0.1)
-            if proc.is_alive() and (waited >= wait_for_kill):
-                log.error(
-                    'Process did not die with terminate(): {0}'.format(
-                        proc.pid
-                    )
-                )
-                os.kill(proc.pid, signal.SIGKILL)
-    except (AssertionError, AttributeError):
-        # Catch AssertionError when the proc is evaluated inside the child
-        # Catch AttributeError when the process dies between proc.is_alive()
-        # and proc.terminate() and turns into a NoneType
-        pass
 
 
 class SMaster(object):
@@ -313,48 +287,40 @@ class Master(SMaster):
         clear_old_jobs_proc = multiprocessing.Process(
             target=self._clear_old_jobs)
         clear_old_jobs_proc.start()
-        reqserv = ReqServer(
-            self.opts,
-            self.crypticle,
-            self.key,
-            self.master_key)
-        reqserv.start_publisher()
-        reqserv.start_event_publisher()
-        reqserv.start_reactor()
-        reqserv.start_halite()
-        reqserv.init_caches()
+        process_manager = salt.utils.process.ProcessManager()
 
-        def sigterm_clean(signum, frame):
-            '''
-            Cleaner method for stopping multiprocessing processes when a
-            SIGTERM is encountered.  This is required when running a salt
-            master under a process minder like daemontools
-            '''
-            log.warn(
-                'Caught signal {0}, stopping the Salt Master'.format(
-                    signum
-                )
-            )
-            clean_proc(clear_old_jobs_proc)
-            clean_proc(reqserv.publisher)
-            clean_proc(reqserv.eventpublisher)
-            if hasattr(reqserv, 'halite'):
-                clean_proc(reqserv.halite)
-            if hasattr(reqserv, 'reactor'):
-                clean_proc(reqserv.reactor)
-            if hasattr(reqserv, 'con_cache'):
-                clean_proc(reqserv.con_cache)
-            for proc in reqserv.work_procs:
-                clean_proc(proc)
-            raise MasterExit
+        process_manager.add_process(Publisher, args=(self.opts,))
+        process_manager.add_process(salt.utils.event.EventPublisher, args=(self.opts,))
 
-        signal.signal(signal.SIGTERM, sigterm_clean)
+        if self.opts.get('reactor'):
+            process_manager.add_process(salt.utils.event.Reactor, args=(self.opts,))
 
-        try:
+        if HAS_HALITE and 'halite' in self.opts:
+            log.info('Halite: Starting up ...')
+            process_manager.add_process(Halite, args=(self.opts['halite'],))
+        elif 'halite' in self.opts:
+            log.info('Halite: Not configured, skipping.')
+        else:
+            log.debug('Halite: Unavailable.')
+
+        if self.opts['con_cache']:
+            log.debug('Starting ConCache')
+            process_manager.add_process(ConnectedCache, args=(self.opts,))
+
+        def run_reqserver():
+            reqserv = ReqServer(
+                self.opts,
+                self.crypticle,
+                self.key,
+                self.master_key)
             reqserv.run()
+        process_manager.add_process(run_reqserver)
+        try:
+            process_manager.run()
         except KeyboardInterrupt:
             # Shut the master down gracefully on SIGINT
             log.warn('Stopping the Salt Master')
+            process_manager.kill_children()
             raise SystemExit('\nExiting on Ctrl-c')
 
 
@@ -534,54 +500,6 @@ class ReqServer(object):
                 if exc.errno == errno.EINTR:
                     continue
                 raise exc
-
-    def start_publisher(self):
-        '''
-        Start the salt publisher interface
-        '''
-        # Start the publisher
-        self.publisher = Publisher(self.opts)
-        self.publisher.start()
-
-    def start_event_publisher(self):
-        '''
-        Start the salt publisher interface
-        '''
-        # Start the publisher
-        self.eventpublisher = salt.utils.event.EventPublisher(self.opts)
-        self.eventpublisher.start()
-
-    def start_reactor(self):
-        '''
-        Start the reactor, but only if the reactor interface is configured
-        '''
-        if self.opts.get('reactor'):
-            self.reactor = salt.utils.event.Reactor(self.opts)
-            self.reactor.start()
-
-    def init_caches(self):
-        '''
-        start all available caches if configured
-        '''
-        if self.opts['con_cache']:
-            log.debug('Starting ConCache')
-            self.con_cache = ConnectedCache(self.opts)
-            self.con_cache.start()
-        else:
-            return False
-
-    def start_halite(self):
-        '''
-        If halite is configured and installed, fire it up!
-        '''
-        if HAS_HALITE and 'halite' in self.opts:
-            log.info('Halite: Starting up ...')
-            self.halite = Halite(self.opts['halite'])
-            self.halite.start()
-        elif 'halite' in self.opts:
-            log.info('Halite: Not configured, skipping.')
-        else:
-            log.debug('Halite: Unavailable.')
 
     def run(self):
         '''
