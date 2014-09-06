@@ -1,8 +1,8 @@
 # salt-call completion for fish shell
-# See salt.fish in the same folder for the information
+# See salt_common.fish in the same folder for the information
 
-# hack to load functions from salt.fish completion
-complete --do-complete='salt --' > /dev/null
+# hack to load functions from salt_common completion
+complete --do-complete='salt_common --' >/dev/null
 
 # salt-call general options (from --help)
 complete -c salt-call        -r      -l file-root            -d "Set this directory as the base file root."
@@ -20,4 +20,4 @@ complete -c salt-call        -f      -l skip-grains          -d "Do not load gra
 complete -c salt-call    -f  -a '(__fish_salt_list_function)'
 # complete -c salt         -f -n 'not __fish_salt_extract_function' -a '(__fish_salt_list_function)'
 # arguments and name values
-# complete -c salt-call    -f -n '__fish_salt_extract_function'                                       -a '(__fish_salt_list_arg_name) (__fish_salt_list_arg_value)'
+complete -c salt-call    -f -n '__fish_salt_extract_function'                                       -a '(__fish_salt_list_arg_name) (__fish_salt_list_arg_value)'
