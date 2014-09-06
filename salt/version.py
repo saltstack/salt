@@ -453,8 +453,8 @@ def __get_version(saltstack_version):
             kwargs['close_fds'] = True
 
         process = subprocess.Popen(
-            'git describe --tags --first-parent --match \'v[0-9]*\' --always 2>/dev/null || '
-            'git describe --tags --match \'v[0-9]*\' --always',
+            'git describe --tags --first-parent --match \'v[0-9]*\' --always 2>{0} || '
+            'git describe --tags --match \'v[0-9]*\' --always'.format(os.devnull),
             **kwargs
         )
         out, err = process.communicate()
