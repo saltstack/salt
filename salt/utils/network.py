@@ -358,18 +358,6 @@ def cidr_to_ipv4_netmask(cidr_bits):
             cidr_bits = 0
     return netmask
 
-def netmask_to_prefixlen(netmask):
-    '''
-    Takes a netmask like '255.255.255.0'
-    and returns a prefix length like '24'.
-    '''
-    netmask = netmask.split('.')
-    sum = 0
-    for idx in range(3,-1,-1):
-        sum += int(netmask[idx]) << (idx * 8)
-    prefixlen = format(sum,'0b').count('1')
-    return prefixlen
-
 def _number_of_set_bits_to_ipv4_netmask(set_bits):  # pylint: disable=C0103
     '''
     Returns an IPv4 netmask from the integer representation of that mask.
@@ -694,6 +682,10 @@ def get_net_start(ipaddr, netmask):
 
 
 def get_net_size(mask):
+    '''
+    Turns an IPv4 netmask into it's corresponding prefix length
+    (255.255.255.0 -> 24 as in 192.168.1.10/24).
+    '''
     binary_str = ''
     for octet in mask.split('.'):
         binary_str += bin(int(octet))[2:].zfill(8)
@@ -701,6 +693,10 @@ def get_net_size(mask):
 
 
 def calculate_subnet(ipaddr, netmask):
+    '''
+    Takes IP and netmask and returns the network in CIDR-notation.
+    (The IP can be any IP inside this subnet.)
+    '''
     return '{0}/{1}'.format(get_net_start(ipaddr, netmask),
                             get_net_size(netmask))
 

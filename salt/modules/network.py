@@ -786,7 +786,7 @@ def get_route(iface=None, dest=None):
     else:
         return routes
 
-def netmask_to_prefixlen(netmask):
+def get_net_size(netmask):
     '''
     Returns the prefix length of a given quad-dotted netmask 
     (like 255.255.255.0 -> 24 or 255.224.0.0 -> 11).
@@ -795,14 +795,18 @@ def netmask_to_prefixlen(netmask):
 
     .. code-block:: bash
 
-        salt '*' network.netmask_to_prefixlen 255.224.0.0
+        salt '*' network.get_net_size 255.224.0.0
     '''
-    if 'netmask_to_prefixlen' in dir(salt.utils.network):
-        return salt.utils.network.netmask_to_prefixlen(netmask)
-    else:
-        netmask = netmask.split('.')
-        bitmask = 0
-        for idx in range(3, -1, -1):
-            bitmask += int(netmask[idx]) << (idx * 8)
-        prefixlen = format(bitmask, '0b').count('1')
-        return prefixlen
+    return salt.utils.network.get_net_size(netmask)
+
+def prefixlen_to_netmask(prefixlen):
+    '''
+    Turns a prefix length into a IPv4 netmask.
+         
+    CLI-Example:
+             
+    .. code-block:: bash
+        
+        salt '*' network.prefixlen_to_netmask 23
+    '''
+    return salt.utils.network.cidr_to_ipv4_netmask(prefixlen)
