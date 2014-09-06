@@ -452,8 +452,16 @@ def __get_version(saltstack_version):
             kwargs['close_fds'] = True
 
         process = subprocess.Popen(
-                ['git', 'describe', '--tags', '--match', 'v[0-9]*', '--always'], **kwargs)
+            ['git', 'describe', '--tags', '--first-parent', '--match', 'v[0-9]*', '--always'], **kwargs)
+
         out, err = process.communicate()
+
+        if process.returncode != 0:
+            # The git version running this might not support --first-parent
+            # Revert to old command
+            process = subprocess.Popen(
+                ['git', 'describe', '--tags', '--match', 'v[0-9]*', '--always'], **kwargs)
+            out, err = process.communicate()
         out = out.strip()
         err = err.strip()
 
