@@ -503,8 +503,6 @@ class ReqServer(object):
         # start zmq device
         self.process_manager.run()
 
-
-
     def run(self):
         '''
         Start up the ReqServer
