@@ -156,6 +156,9 @@ class EventListener(object):
         # request_obj -> list of (tag, future)
         self.request_map = defaultdict(list)
 
+        # are we currently watching for things
+        self.listening = False
+
     def clean_timeout_futures(self, request):
         '''
         Remove all futures that were waiting for request `request` since it is done waiting
@@ -173,6 +176,7 @@ class EventListener(object):
             # if that was the last of them, remove the key all together
             if len(self.tag_map[tag]) == 0:
                 del self.tag_map[tag]
+        del self.request_map[request]
 
     def get_event(self,
                   request,
@@ -187,10 +191,15 @@ class EventListener(object):
             def handle_future(future):
                 response = future.result()
                 self.io_loop.add_callback(callback, response)
+                del self.request_map[request]
             future.add_done_callback(handle_future)
         # add this tag and future to the callbacks
         self.tag_map[tag].append(future)
         self.request_map[request].append((tag, future))
+
+        if self.listening is False:
+            tornado.ioloop.IOLoop.instance().add_callback(self.iter_events)
+            self.listening = True
 
         return future
 
@@ -209,8 +218,11 @@ class EventListener(object):
                         future.set_result(data)
                     del self.tag_map[tag_prefix]
 
-            # call yourself back!
-            tornado.ioloop.IOLoop.instance().add_callback(self.iter_events)
+            # call yourself back, if someone is waiting for something
+            if self.tag_map:
+                tornado.ioloop.IOLoop.instance().add_callback(self.iter_events)
+            else:
+                self.listening = False
 
         except zmq.ZMQError as e:
             # TODO: not sure what other errors we can get...
