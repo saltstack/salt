@@ -156,7 +156,7 @@ class EventListener(object):
 
     def start_listening(self):
         if self.listening is True:
-            raise Exception()
+            raise Exception('Unable to start_listening, we are already listening')
         self.event = salt.utils.event.get_event(
             'master',
             self.opts['sock_dir'],
@@ -166,7 +166,7 @@ class EventListener(object):
 
     def stop_listening(self):
         if self.listening is False:
-            raise Exception()
+            raise Exception('Unable to stop_listening, we already stopped')
         del self.event
         self.listening = False
 
@@ -218,7 +218,6 @@ class EventListener(object):
         '''
         try:
             data = self.event.get_event_noblock()
-            print data['tag']
             # see if we have any futures that need this info:
             for tag_prefix, futures in self.tag_map.items():
                 if data['tag'].startswith(tag_prefix):
