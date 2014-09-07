@@ -1415,7 +1415,7 @@ def scp_file(dest_path, contents, kwargs):
         ])
 
     if 'port' in kwargs:
-        ssh_args.extend(['-P {0}'.format(kwargs['port'])])
+        ssh_args.append('-oPort={0}'.format(kwargs['port']))
 
     if 'ssh_gateway' in kwargs:
         ssh_gateway = kwargs['ssh_gateway']
@@ -1431,21 +1431,21 @@ def scp_file(dest_path, contents, kwargs):
         if 'ssh_gateway_user' in kwargs:
             ssh_gateway_user = kwargs['ssh_gateway_user']
 
-        ssh_args.extend([
+        ssh_args.append(
             # Setup ProxyCommand
             '-oProxyCommand="ssh {0} {1} {2} {3} {4}@{5} -p {6} nc -q0 %h %p"'.format(
-            # Don't add new hosts to the host key database
-            '-oStrictHostKeyChecking=no',
-            # Set hosts key database path to /dev/null, ie, non-existing
-            '-oUserKnownHostsFile=/dev/null',
-            # Don't re-use the SSH connection. Less failures.
-            '-oControlPath=none',
+                # Don't add new hosts to the host key database
+                '-oStrictHostKeyChecking=no',
+                # Set hosts key database path to /dev/null, ie, non-existing
+                '-oUserKnownHostsFile=/dev/null',
+                # Don't re-use the SSH connection. Less failures.
+                '-oControlPath=none',
                 ssh_gateway_key,
                 ssh_gateway_user,
                 ssh_gateway,
                 ssh_gateway_port
             )
-        ])
+        )
 
     cmd = (
         'scp {0} {1} {2[username]}@{2[hostname]}:{3} || '
