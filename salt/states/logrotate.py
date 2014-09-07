@@ -6,7 +6,6 @@ Logrotate state module
 Manage logrotate configuration on POSIX-based systems
 '''
 
-import os
 import logging
 
 # Import salt libs
@@ -50,7 +49,7 @@ def show_conf(name='/etc/logrotate.conf', *args, **kwargs):
         return ret
 
     returned = __salt__['logrotate.show_conf'](name)
-    log.debug("logrotate.show_conf('{0}') returned the following dict: \n".format(name) +str(returned))
+    log.debug("logrotate.show_conf('{0}') returned the following dict: \n{1}".format(name, returned))
 
     if returned:
         ret['changes'] = returned
