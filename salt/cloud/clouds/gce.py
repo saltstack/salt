@@ -700,12 +700,14 @@ def create_fwrule(kwargs=None, call=None):
     allow = _parse_allow(kwargs['allow'])
     src_range = kwargs.get('src_range', '0.0.0.0/0')
     src_tags = kwargs.get('src_tags', None)
+    dst_tags = kwargs.get('dst_tags', None)
 
     if src_range:
         src_range = src_range.split(',')
     if src_tags:
         src_tags = src_tags.split(',')
-
+    if dst_tags:
+        dst_tags = dst_tags.split(',')
     conn = get_conn()
 
     salt.utils.cloud.fire_event(
@@ -724,7 +726,8 @@ def create_fwrule(kwargs=None, call=None):
         name, allow,
         network=network_name,
         source_ranges=src_range,
-        source_tags=src_tags
+        source_tags=src_tags,
+        target_tags=dst_tags
     )
 
     salt.utils.cloud.fire_event(
