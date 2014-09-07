@@ -146,7 +146,6 @@ class EventListener(object):
         self.mod_opts = mod_opts
         self.opts = opts
 
-
         # tag -> list of futures
         self.tag_map = defaultdict(list)
 
