@@ -17,12 +17,11 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
-    Only work on POSIX-like systems
+    Only work if logrotate is available
     '''
-    if salt.utils.is_windows():
-        return False
-    return 'logrotate'
-
+    if __salt__['cmd.has_exec']('logrotate'):
+        return 'logrotate'
+    return False
 
 def show_conf(name='/etc/logrotate.conf', *args, **kwargs):
     '''
