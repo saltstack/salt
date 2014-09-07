@@ -484,8 +484,10 @@ class TestDaemon(object):
                     FILES,
                     'ext.yaml'
                 )
-            )}
+            ),
+             'ext_nodes': True}
         )
+        master_opts['master_tops']['ext_nodes'] = os.path.join(FILES, 'ext_nodes.py')
 
         # We need to copy the extension modules into the new master root_dir or
         # it will be prefixed by it

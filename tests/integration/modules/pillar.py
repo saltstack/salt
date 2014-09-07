@@ -88,6 +88,14 @@ class PillarModuleTest(integration.ModuleCase):
                 self.run_function('pillar.data')['ext_spam'], 'eggs'
                 )
 
+    def test_ext_nodes(self):
+        '''
+        pillar.data for ext_nodes command
+        '''
+        self.assertEqual(
+               self.run_function('pillar.data')['unicorns'], 'rainbows'
+               )
+
     def test_issue_5951_actual_file_roots_in_opts(self):
         self.assertIn(
             integration.TMP_STATE_TREE,
