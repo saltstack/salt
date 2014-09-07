@@ -157,7 +157,7 @@ class EventListener(object):
 
     def start_listening(self):
         if self.listening is True:
-            raise Exception
+            raise Exception()
         self.event = salt.utils.event.get_event(
             'master',
             self.opts['sock_dir'],
@@ -167,7 +167,7 @@ class EventListener(object):
 
     def stop_listening(self):
         if self.listening is False:
-            raise Exception
+            raise Exception()
         del self.event
         self.listening = False
 
