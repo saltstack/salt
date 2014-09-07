@@ -145,10 +145,7 @@ class EventListener(object):
     def __init__(self, mod_opts, opts):
         self.mod_opts = mod_opts
         self.opts = opts
-        self.event = salt.utils.event.get_event(
-            'master',
-            opts['sock_dir'],
-            opts['transport'])
+
 
         # tag -> list of futures
         self.tag_map = defaultdict(list)
@@ -156,7 +153,22 @@ class EventListener(object):
         # request_obj -> list of (tag, future)
         self.request_map = defaultdict(list)
 
-        # are we currently watching for things
+        self.listening = False
+
+    def start_listening(self):
+        if self.listening is True:
+            raise Exception
+        self.event = salt.utils.event.get_event(
+            'master',
+            self.opts['sock_dir'],
+            self.opts['transport'])
+        tornado.ioloop.IOLoop.instance().add_callback(self.iter_events)
+        self.listening = True
+
+    def stop_listening(self):
+        if self.listening is False:
+            raise Exception
+        del self.event
         self.listening = False
 
     def clean_timeout_futures(self, request):
@@ -197,8 +209,7 @@ class EventListener(object):
         self.request_map[request].append((tag, future))
 
         if self.listening is False:
-            tornado.ioloop.IOLoop.instance().add_callback(self.iter_events)
-            self.listening = True
+            self.start_listening()
 
         return future
 
@@ -208,6 +219,7 @@ class EventListener(object):
         '''
         try:
             data = self.event.get_event_noblock()
+            print data['tag']
             # see if we have any futures that need this info:
             for tag_prefix, futures in self.tag_map.items():
                 if data['tag'].startswith(tag_prefix):
@@ -221,7 +233,7 @@ class EventListener(object):
             if self.tag_map:
                 tornado.ioloop.IOLoop.instance().add_callback(self.iter_events)
             else:
-                self.listening = False
+                self.stop_listening()
 
         except zmq.ZMQError as e:
             # TODO: not sure what other errors we can get...
