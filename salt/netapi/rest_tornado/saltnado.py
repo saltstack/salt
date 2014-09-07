@@ -191,7 +191,6 @@ class EventListener(object):
             def handle_future(future):
                 response = future.result()
                 self.io_loop.add_callback(callback, response)
-                del self.request_map[request]
             future.add_done_callback(handle_future)
         # add this tag and future to the callbacks
         self.tag_map[tag].append(future)
