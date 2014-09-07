@@ -9,7 +9,7 @@ import logging
 
 # Import salt libs
 import salt.utils
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Set up logger
 log = logging.getLogger(__name__)
@@ -256,7 +256,64 @@ def save_config():
     else:
         cfg_file = '/etc/mdadm.conf'
 
-    if not __salt__['file.search'](cfg_file, scan):
-        __salt__['file.append'](cfg_file, scan)
+    try:
+        if not __salt__['file.search'](cfg_file, scan):
+            __salt__['file.append'](cfg_file, scan)
+    except SaltInvocationError:  # File is missing
+        __salt__['file.write'](cfg_file, scan)
 
     return __salt__['cmd.run']('update-initramfs -u')
+
+
+def assemble(name,
+             devices,
+             test_mode=False,
+             **kwargs):
+    '''
+    Assemble a RAID device.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' raid.assemble /dev/md0 ['/dev/xvdd', '/dev/xvde']
+
+    .. note::
+
+        Adding ``test_mode=True`` as an argument will print out the mdadm
+        command that would have been run.
+
+    name
+        The name of the array to assemble.
+
+    devices
+        The list of devices comprising the array to assemble.
+
+    kwargs
+        Optional arguments to be passed to mdadm.
+
+    returns
+        test_mode=True:
+            Prints out the full command.
+        test_mode=False (Default):
+            Executes command on the host(s) and prints out the mdadm output.
+
+    For more info, read the ``mdadm`` manpage.
+    '''
+    opts = ''
+    for key in kwargs:
+        if not key.startswith('__'):
+            if kwargs[key] is True:
+                opts += '--{0} '.format(key)
+            else:
+                opts += '--{0}={1} '.format(key, kwargs[key])
+
+    # Devices may have been written with a blob:
+    if type(devices) is str:
+        devices = devices.split(',')
+    cmd = 'mdadm -A {0} -v {1}{2}'.format(name, opts, ' '.join(devices))
+
+    if test_mode is True:
+        return cmd
+    elif test_mode is False:
+        return __salt__['cmd.run'](cmd)
