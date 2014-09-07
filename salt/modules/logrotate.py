@@ -28,6 +28,7 @@ def __virtual__():
         return True
     return False
 
+
 def _parse_conf(conf_file=default_conf):
     '''
     Parse a logrotate configuration file.
