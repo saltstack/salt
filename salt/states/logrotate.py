@@ -8,9 +8,6 @@ Manage logrotate configuration on POSIX-based systems
 
 import logging
 
-# Import salt libs
-import salt.utils
-
 # Enable proper logging
 log = logging.getLogger(__name__)
 
@@ -22,6 +19,7 @@ def __virtual__():
     if __salt__['cmd.has_exec']('logrotate'):
         return 'logrotate'
     return False
+
 
 def show_conf(name='/etc/logrotate.conf', *args, **kwargs):
     '''
