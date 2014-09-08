@@ -1,18 +1,15 @@
-#!/usr/bin/python
-
+# -*- coding: utf-8 -*-
 import logging
 import salt.utils
 
 try:
-    import nsnitro
-    from nsnitro.nsnitro import *
-    from nsnitro.nsutil import *
+    from nsnitro.nsnitro import NSNitro
+    from nsnitro.nsexceptions import NSNitroError
     from nsnitro.nsresources.nsserver import NSServer
     from nsnitro.nsresources.nsservice import NSService
     from nsnitro.nsresources.nsservicegroup import NSServiceGroup
     from nsnitro.nsresources.nsservicegroupserverbinding import NSServiceGroupServerBinding
     from nsnitro.nsresources.nslbvserver import NSLBVServer
-    from nsnitro.nsresources.nslbvserverservicebinding import NSLBVServerServiceBinding
     from nsnitro.nsresources.nslbvserverservicegroupbinding import NSLBVServerServiceGroupBinding
     from nsnitro.nsresources.nssslvserversslcertkeybinding import NSSSLVServerSSLCertKeyBinding
     HAS_NSNITRO = True
@@ -20,6 +17,7 @@ except ImportError:
     HAS_NSNITRO = False
 
 log = logging.getLogger(__name__)
+
 
 def __virtual__():
     '''
@@ -31,12 +29,13 @@ def __virtual__():
         return 'netscaler'
     return False
 
-def _connect(**kwargs): 
+
+def _connect(**kwargs):
     '''
     Initialise netscaler connection
     '''
     connargs = dict()
-    
+
     # Shamelessy ripped from the mysql module
     def __connarg(name, key=None):
         '''
@@ -66,14 +65,15 @@ def _connect(**kwargs):
     __connarg('netscaler_pass', 'pass')
     # useSSL = True will be enforced
     #_connarg('connection_useSSL', 'useSSL')
-  
+
     nitro = NSNitro(connargs['host'], connargs['user'], connargs['pass'], True)
     try: 
         nitro.login()
     except NSNitroError, e:
         log.debug('netscaler module error - NSNitro.login() failed: {0}'.format(e.message))
         return None
-    return nitro 
+    return nitro
+
 
 def _disconnect(nitro):
     try:
@@ -101,6 +101,7 @@ def _servicegroup_get(sg_name, **connection_args):
     _disconnect(nitro)
     return sg
 
+
 def _servicegroup_get_servers(sg_name, **connection_args):
     '''
     Returns a list of members of a servicegroup or None
@@ -118,6 +119,7 @@ def _servicegroup_get_servers(sg_name, **connection_args):
     _disconnect(nitro)
     return sg
 
+
 def _servicegroup_get_server(sg_name, s_name, s_port=None, **connection_args):
     '''
     Returns a member of a service group or None
@@ -132,11 +134,12 @@ def _servicegroup_get_server(sg_name, s_name, s_port=None, **connection_args):
                 ret = None
             ret = server
     return ret
-    
+
+
 def servicegroup_exists(sg_name, sg_type=None, **connection_args):
     '''
     Checks if a service group exists
-    
+
     CLI Example:
 
     .. code-block:: bash
@@ -149,6 +152,7 @@ def servicegroup_exists(sg_name, sg_type=None, **connection_args):
     if sg_type is not None and sg_type.upper() != sg.get_servicetype():
         return False
     return True
+
 
 def servicegroup_add(sg_name, sg_type='HTTP', **connection_args):
     '''
@@ -180,6 +184,7 @@ def servicegroup_add(sg_name, sg_type='HTTP', **connection_args):
     _disconnect(nitro)
     return ret
 
+
 def servicegroup_delete(sg_name, **connection_args):
     '''
     Delete a new service group
@@ -193,7 +198,7 @@ def servicegroup_delete(sg_name, **connection_args):
     ret = True
     sg = _servicegroup_get(sg_name, **connection_args)
     if sg is None:
-        return False    
+        return False
     nitro = _connect(**connection_args)
     if nitro is None:
         return False
@@ -204,6 +209,7 @@ def servicegroup_delete(sg_name, **connection_args):
         ret = False
     _disconnect(nitro)
     return ret
+
 
 def servicegroup_server_exists(sg_name, s_name, s_port=None, **connection_args):
     '''
@@ -217,10 +223,11 @@ def servicegroup_server_exists(sg_name, s_name, s_port=None, **connection_args):
     '''
     return _servicegroup_get_server(sg_name, s_name, s_port, **connection_args) is not None
 
+
 def servicegroup_server_up(sg_name, s_name, s_port, **connection_args):
     '''
     Check if a server:port combination is in state UP in a servicegroup
-    
+
     CLI Example:
 
     .. code-block:: bash
@@ -230,6 +237,7 @@ def servicegroup_server_up(sg_name, s_name, s_port, **connection_args):
     server = _servicegroup_get_server(sg_name, s_name, s_port, **connection_args)
     #log.debug('state of {0}:{1} is {2}'.format(server.get_servername(), server.get_port(), server.get_svrstate()))
     return server is not None and server.get_svrstate() == 'UP'
+
 
 def servicegroup_server_enable(sg_name, s_name, s_port, **connection_args):
     '''
@@ -256,6 +264,7 @@ def servicegroup_server_enable(sg_name, s_name, s_port, **connection_args):
     _disconnect(nitro)
     return ret
 
+
 def servicegroup_server_disable(sg_name, s_name, s_port, **connection_args):
     '''
     Disable a server:port member of a servicegroup
@@ -281,6 +290,7 @@ def servicegroup_server_disable(sg_name, s_name, s_port, **connection_args):
     _disconnect(nitro)
     return ret
 
+
 def servicegroup_server_add(sg_name, s_name, s_port, **connection_args):
     '''
     Add a server:port member to a servicegroup
@@ -302,14 +312,15 @@ def servicegroup_server_add(sg_name, s_name, s_port, **connection_args):
     sgsb = NSServiceGroupServerBinding()
     sgsb.set_servicegroupname(sg_name)
     sgsb.set_servername(s_name)
-    sgsb.set_port(s_port)    
+    sgsb.set_port(s_port)
     try:
-       NSServiceGroupServerBinding.add(nitro, sgsb)
+        NSServiceGroupServerBinding.add(nitro, sgsb)
     except NSNitroError, e:
         log.debug('netscaler module error - NSServiceGroupServerBinding() failed: {0}'.format(e.message))
         ret = False
     _disconnect(nitro)
     return ret
+
 
 def servicegroup_server_delete(sg_name, s_name, s_port, **connection_args):
     '''
@@ -334,12 +345,13 @@ def servicegroup_server_delete(sg_name, s_name, s_port, **connection_args):
     sgsb.set_servername(s_name)
     sgsb.set_port(s_port)
     try:
-       NSServiceGroupServerBinding.delete(nitro, sgsb)
+        NSServiceGroupServerBinding.delete(nitro, sgsb)
     except NSNitroError, e:
         log.debug('netscaler module error - NSServiceGroupServerBinding() failed: {0}'.format(e.message))
         ret = False
     _disconnect(nitro)
     return ret
+
 
 def _service_get(s_name, **connection_args):
     '''
@@ -358,6 +370,7 @@ def _service_get(s_name, **connection_args):
     _disconnect(nitro)
     return service
 
+
 def service_exists(s_name, **connection_args):
     '''
     Checks if a service exists
@@ -369,6 +382,7 @@ def service_exists(s_name, **connection_args):
         salt '*' netscaler.service_exists 'serviceName'
     '''
     return _service_get(s_name, **connection_args) is not None
+
 
 def service_up(s_name, **connection_args):
     '''
@@ -382,6 +396,7 @@ def service_up(s_name, **connection_args):
     '''
     service = _service_get(s_name, **connection_args)
     return service is not None and service.get_svrstate() == 'UP'
+
 
 def service_enable(s_name, **connection_args):
     '''
@@ -408,6 +423,7 @@ def service_enable(s_name, **connection_args):
         ret = False
     _disconnect(nitro)
     return ret
+
 
 def service_disable(s_name, s_delay=None, **connection_args):
     '''
@@ -437,6 +453,7 @@ def service_disable(s_name, s_delay=None, **connection_args):
     _disconnect(nitro)
     return ret
 
+
 def _server_get(s_name, **connection_args):
     nitro = _connect(**connection_args)
     if nitro is None:
@@ -451,8 +468,9 @@ def _server_get(s_name, **connection_args):
     _disconnect(nitro)
     return server
 
+
 def server_exists(s_name, ip=None, s_state=None, **connection_args):
-    ''' 
+    '''
     Checks if a server exists
 
     CLI Example:
@@ -469,6 +487,7 @@ def server_exists(s_name, ip=None, s_state=None, **connection_args):
     if s_state is not None and s_state.upper() != server.get_state():
         return False
     return True
+
 
 def server_add(s_name, s_ip, s_state=None, **connection_args):
     '''
@@ -499,7 +518,8 @@ def server_add(s_name, s_ip, s_state=None, **connection_args):
         log.debug('netscaler module error - NSServer.add() failed: {0}'.format(e.message))
         ret = False
     _disconnect(nitro)
-    return ret    
+    return ret
+
 
 def server_delete(s_name, **connection_args):
     '''
@@ -526,6 +546,7 @@ def server_delete(s_name, **connection_args):
     _disconnect(nitro)
     return ret
 
+
 def server_update(s_name, s_ip, **connection_args):
     '''
     Update a server's attributes
@@ -539,27 +560,28 @@ def server_update(s_name, s_ip, **connection_args):
     altered = False
     cur_server = _server_get(s_name, **connection_args)
     if cur_server is None:
-       return False
+        return False
     alt_server = NSServer()
     alt_server.set_name(s_name)
     if cur_server.get_ipaddress() != s_ip:
-       alt_server.set_ipaddress(s_ip)
-       altered = True
+        alt_server.set_ipaddress(s_ip)
+        altered = True
     # Nothing to update, the server is already idem
     if altered is False:
-       return False
+        return False
     # Perform the update
     nitro = _connect(**connection_args)
     if nitro is None:
-       return False
+        return False
     ret = True
     try:
-       NSServer.update(nitro, alt_server)
+        NSServer.update(nitro, alt_server)
     except NSNitroError, e:
-       log.debug('netscaler module error - NSServer.update() failed: {0}'.format(e.message))
-       ret = False
+        log.debug('netscaler module error - NSServer.update() failed: {0}'.format(e.message))
+        ret = False
     _disconnect(nitro)
     return ret
+
 
 def server_enabled(s_name, **connection_args):
     '''
@@ -573,6 +595,7 @@ def server_enabled(s_name, **connection_args):
     '''
     server = _server_get(s_name, **connection_args)
     return server is not None and server.get_state() == 'ENABLED'
+
 
 def server_enable(s_name, **connection_args):
     '''
@@ -588,7 +611,7 @@ def server_enable(s_name, **connection_args):
     server = _server_get(s_name, **connection_args)
     if server is None:
         return False
-    if server.get_state() == 'ENABLED': 
+    if server.get_state() == 'ENABLED':
         return True
     nitro = _connect(**connection_args)
     if nitro is None:
@@ -600,6 +623,7 @@ def server_enable(s_name, **connection_args):
         ret = False
     _disconnect(nitro)
     return ret
+
 
 def server_disable(s_name, **connection_args):
     '''
@@ -628,6 +652,7 @@ def server_disable(s_name, **connection_args):
     _disconnect(nitro)
     return ret
 
+
 def _vserver_get(v_name, **connection_args):
     nitro = _connect(**connection_args)
     vserver = NSLBVServer()
@@ -641,7 +666,8 @@ def _vserver_get(v_name, **connection_args):
         vserver = None
     _disconnect(nitro)
     return vserver
-    
+
+
 def vserver_exists(v_name, v_ip=None, v_port=None, v_type=None, **connection_args):
     '''
     Checks if a vserver exists
@@ -662,7 +688,8 @@ def vserver_exists(v_name, v_ip=None, v_port=None, v_type=None, **connection_arg
     if v_type is not None and vserver.get_servicetype().upper() != v_type.upper():
         return False
     return True
-   
+
+
 def vserver_add(v_name, v_ip, v_port, v_type, **connection_args):
     '''
     Add a new lb vserver
@@ -693,7 +720,7 @@ def vserver_add(v_name, v_ip, v_port, v_type, **connection_args):
     _disconnect(nitro)
     return ret
 
-## create a vserver_delete function
+
 def vserver_delete(v_name, **connection_args):
     '''
     Delete a lb vserver
@@ -719,6 +746,7 @@ def vserver_delete(v_name, **connection_args):
     _disconnect(nitro)
     return ret
 
+
 def _vserver_servicegroup_get(v_name, sg_name, **connection_args):
     ret = None
     nitro = _connect(**connection_args)
@@ -727,7 +755,7 @@ def _vserver_servicegroup_get(v_name, sg_name, **connection_args):
     vsg = NSLBVServerServiceGroupBinding()
     vsg.set_name(v_name)
     try:
-         vsgs = NSLBVServerServiceGroupBinding.get(nitro, vsg)
+        vsgs = NSLBVServerServiceGroupBinding.get(nitro, vsg)
     except NSNitroError, e:
         log.debug('netscaler module error - NSLBVServerServiceGroupBinding.get() failed: {0}'.format(e.message))
         return None
@@ -736,6 +764,7 @@ def _vserver_servicegroup_get(v_name, sg_name, **connection_args):
             ret = vsg
     _disconnect(nitro)
     return ret
+
 
 def vserver_servicegroup_exists(v_name, sg_name, **connection_args):
     '''
@@ -748,6 +777,7 @@ def vserver_servicegroup_exists(v_name, sg_name, **connection_args):
         salt '*' netscaler.vserver_servicegroup_exists 'vserverName' 'serviceGroupName'
     '''
     return _vserver_servicegroup_get(v_name, sg_name, **connection_args) is not None
+
 
 def vserver_servicegroup_add(v_name, sg_name, **connection_args):
     '''
@@ -776,6 +806,7 @@ def vserver_servicegroup_add(v_name, sg_name, **connection_args):
     _disconnect(nitro)
     return ret
 
+
 def vserver_servicegroup_delete(v_name, sg_name, **connection_args):
     '''
     Unbind a servicegroup from a vserver
@@ -803,6 +834,7 @@ def vserver_servicegroup_delete(v_name, sg_name, **connection_args):
     _disconnect(nitro)
     return ret
 
+
 def _vserver_sslcert_get(v_name, sc_name, **connection_args):
     ret = None
     nitro = _connect(**connection_args)
@@ -820,6 +852,7 @@ def _vserver_sslcert_get(v_name, sc_name, **connection_args):
             ret = sslcert
     return ret
 
+
 def vserver_sslcert_exists(v_name, sc_name, **connection_args): 
     '''
     Checks if a SSL certificate is tied to a vserver
@@ -831,6 +864,7 @@ def vserver_sslcert_exists(v_name, sc_name, **connection_args):
         salt '*' netscaler.vserver_sslcert_exists 'vserverName' 'sslCertificateName'
     '''
     return _vserver_sslcert_get(v_name, sc_name, **connection_args) is not None
+
 
 def vserver_sslcert_add(v_name, sc_name, **connection_args):
     '''
@@ -858,6 +892,7 @@ def vserver_sslcert_add(v_name, sc_name, **connection_args):
         ret = False
     _disconnect(nitro) 
     return ret
+
 
 def vserver_sslcert_delete(v_name, sc_name, **connection_args):
     '''
