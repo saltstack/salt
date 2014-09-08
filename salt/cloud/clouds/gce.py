@@ -242,6 +242,9 @@ def get_conn():
             provider, __opts__)
     private_key = config.get_cloud_config_value('service_account_private_key',
             provider, __opts__)
+    if not os.path.exists(private_key):
+        raise SaltCloudException('Private key at %r not found / not available'
+                                 % private_key)
     gce = driver(email, private_key, project=project)
     gce.connection.user_agent_append('{0}/{1}'.format(_UA_PRODUCT,
                                                       _UA_VERSION))
