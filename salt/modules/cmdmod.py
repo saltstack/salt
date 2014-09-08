@@ -9,7 +9,6 @@ access to the master root execution access to all salt minions.
 # Import python libs
 import time
 import functools
-import json
 import glob
 import logging
 import os
@@ -247,8 +246,7 @@ def _run(cmd,
         try:
             # Getting the environment for the runas user
             # There must be a better way to do this.
-            py_code = 'import os, json;' \
-                      'print(json.dumps(os.environ.__dict__))'
+            py_code = '''import os, itertools; print \"\\0\".join(itertools.chain(*os.environ.items()))'''
             if __grains__['os'] in ['MacOS', 'Darwin']:
                 env_cmd = ('sudo -i -u {0} -- "{1}"'
                            ).format(runas, sys.executable)
@@ -258,15 +256,14 @@ def _run(cmd,
             else:
                 env_cmd = ('su -s {0} - {1} -c "{2}"'
                            ).format(shell, runas, sys.executable)
-            env_json = subprocess.Popen(
+            env_encoded = subprocess.Popen(
                 env_cmd,
                 shell=python_shell,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE
             ).communicate(py_code)[0]
-            env_json = (filter(lambda x: x.startswith('{') and x.endswith('}'),
-                               env_json.splitlines()) or ['{}']).pop()
-            env_runas = json.loads(env_json).get('data', {})
+            import itertools
+            env_runas = dict(itertools.izip(*[iter(env_encoded.split(b'\0'))]*2))
             env_runas.update(env)
             env = env_runas
         except ValueError:
