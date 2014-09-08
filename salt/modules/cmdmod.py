@@ -141,6 +141,16 @@ def _check_loglevel(level='info', quiet=False):
     return LOG_LEVELS[level]
 
 
+def _parse_env(env):
+    if not env:
+        env = {}
+    if isinstance(env, list):
+        env = salt.utils.repack_dictlist(env)
+    if not isinstance(env, dict):
+        env = {}
+    return env
+
+
 def _run(cmd,
          cwd=None,
          stdin=None,
@@ -221,10 +231,7 @@ def _run(cmd,
 
     ret = {}
 
-    if not env:
-        env = {}
-    if isinstance(env, list):
-        env = salt.utils.repack_dictlist(env)
+    env = _parse_env(env)
 
     for bad_env_key in (x for x, y in env.iteritems() if y is None):
         log.error('Environment variable {0!r} passed without a value. '
