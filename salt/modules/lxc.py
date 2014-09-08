@@ -2018,8 +2018,7 @@ def bootstrap(name, config=None, approve_key=True,
                     return {'error': 'tmpdir {0} creation failed'}
                 cp(name,
                    bs_,
-                   '{0}/bootstrap.sh'.format(dest_dir),
-                   mkdir=True)
+                   '{0}/bootstrap.sh'.format(dest_dir))
                 cp(name, cfg_files['config'],
                    os.path.join(configdir, 'minion'))
                 cp(name, cfg_files['privkey'],
