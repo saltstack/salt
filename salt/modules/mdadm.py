@@ -212,11 +212,10 @@ def create(name,
 
     cmd = ['mdadm',
            '-C', name,
-           '-v',
-           opts,
+           '-v'] + opts + [
            '-l', level,
            '-e', metadata,
-           '-n', len(devices), devices]
+           '-n', len(devices)] + devices
 
     if test_mode is True:
         return cmd
