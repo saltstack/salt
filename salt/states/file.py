@@ -3535,6 +3535,10 @@ def accumulated(name, filename, text, **kwargs):
         'result': True,
         'comment': ''
     }
+    if text is None:
+        ret['result'] = False
+        ret['comment'] = 'No text supplied for accumulator'
+        return ret
     require_in = __low__.get('require_in', [])
     watch_in = __low__.get('watch_in', [])
     deps = require_in + watch_in
