@@ -282,4 +282,3 @@ def gather_bootstrap_script(bootstrap=None):
     ret = salt.utils.cloud.update_bootstrap(__opts__, url=bootstrap)
     if 'Success' in ret and len(ret['Success']['Files updated']) > 0:
         return ret['Success']['Files updated'][0]
-
