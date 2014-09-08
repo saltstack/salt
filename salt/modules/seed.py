@@ -40,8 +40,12 @@ def prep_bootstrap(mpt):
     '''
     # Verify that the boostrap script is downloaded
     bs_ = __salt__['config.gather_bootstrap_script']()
-    fp_ = os.path.join(mpt, 'tmp', '{0}-{1}'.format(
-        uuid.uuid4(), os.path.basename(bs_)))
+    fpd_ = os.path.join(mpt, 'tmp', "{0}".format(
+        uuid.uuid4()))
+    if not os.path.exists(fpd_):
+        os.makedirs(fpd_)
+    os.chmod(fpd_, 0700)
+    fp_ = os.path.join(fpd_, os.path.basename(bs_))
     # Copy script into tmp
     shutil.copy(bs_, fp_)
     return fp_
