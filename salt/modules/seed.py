@@ -37,6 +37,13 @@ def _file_or_content(file_):
 def prep_bootstrap(mpt):
     '''
     Update and get the random script to a random place
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' seed.prep_bootstrap /tmp
+
     '''
     # Verify that the boostrap script is downloaded
     bs_ = __salt__['config.gather_bootstrap_script']()
