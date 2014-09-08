@@ -125,6 +125,9 @@ class Master(SMaster):
         controller for the Salt master. This is where any data that needs to
         be cleanly maintained from the master is maintained.
         '''
+        # TODO: move to a seperate class, with a better name
+        salt.utils.appendproctitle('_clear_old_jobs')
+
         # Set up search object
         search = salt.search.Search(self.opts)
         # Make Start Times
@@ -282,10 +285,9 @@ class Master(SMaster):
         enable_sigusr2_handler()
 
         self.__set_max_open_files()
-        clear_old_jobs_proc = multiprocessing.Process(
-            target=self._clear_old_jobs)
-        clear_old_jobs_proc.start()
         process_manager = salt.utils.process.ProcessManager()
+
+        process_manager.add_process(self._clear_old_jobs)
 
         process_manager.add_process(Publisher, args=(self.opts,))
         process_manager.add_process(salt.utils.event.EventPublisher, args=(self.opts,))
@@ -439,6 +441,7 @@ class ReqServer(object):
         self.crypticle = crypticle
 
     def zmq_device(self):
+        salt.utils.appendproctitle('MWorkerQueue')
         self.context = zmq.Context(self.opts['worker_threads'])
         # Prepare the zeromq sockets
         self.uri = 'tcp://{interface}:{ret_port}'.format(**self.opts)
