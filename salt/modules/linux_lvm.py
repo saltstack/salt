@@ -341,7 +341,8 @@ def lvremove(lvname, vgname):
     out = __salt__['cmd.run'](cmd)
     return out.strip()
 
-def lvresize(size='',lvpath=''):
+
+def lvresize(size, lvpath):
     '''
     Return information about the logical volume(s)
 
@@ -352,13 +353,9 @@ def lvresize(size='',lvpath=''):
 
         salt '*' lvm.lvresize +12M /dev/mapper/vg1-test
     '''
-
-
     ret = {}
-    cmd = 'lvresize -L {0} {1}'.format(size,lvpath)
-    cmd_ret = __salt__['cmd.run_all'](cmd)
-
+    cmd = ['lvresize', '-L', str(size), lvpath]
+    cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     if cmd_ret['retcode'] != 0:
         return {}
-
     return ret
