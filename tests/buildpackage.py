@@ -59,47 +59,68 @@ def _abort(msgs):
 
 def _init():
     '''
-    Parse CLI options
+    Parse CLI options.
     '''
     parser = OptionParser()
     parser.add_option('--platform',
                       dest='platform',
                       help='Platform (\'os\' grain)')
-    parser.add_option('--source-dir',
-                    dest='source_dir',
-                    default='/testing',
-                    help='Source directory. Must be a git checkout. '
-                         'Default: %default')
-    parser.add_option('--dest-dir',
-                      dest='dest_dir',
-                      default='/tmp/saltpkg',
-                      help='Destination directory, will be removed if it '
-                           'exists prior to running script. '
-                           'Default: %default')
-    parser.add_option('--artifact-dir',
-                      dest='artifact_dir',
-                      default='/tmp/build_artifacts',
-                      help='Location where build artifacts should be placed, '
-                           'the jenkins master will grab all of these. '
-                           'Default: %default')
-    parser.add_option('--log-file',
-                      dest='log_file',
-                      default='/tmp/salt-buildpackage.log',
-                      help='Log results to a file. Default: %default')
     parser.add_option('--log-level',
                       dest='log_level',
                       default='warning',
                       help='Control verbosity of logging. Default: %default')
-    # RPM option group
-    group = OptionGroup(parser, 'RPM-specific Options')
-    group.add_option('--spec',
-                     dest='spec_file',
-                     default='/tmp/salt.spec',
-                     help='Spec file to use as a template to build RPM. '
-                          'Default: %default')
-    parser.add_option_group(group)
+
+    # All arguments dealing with file paths (except for platform-specific ones
+    # like those for SPEC files) should be placed in this group so that
+    # relative paths are properly expanded.
+    path_group = OptionGroup(parser, 'File/Directory Options')
+    path_group.add_option('--source-dir',
+                          dest='source_dir',
+                          default='/testing',
+                          help='Source directory. Must be a git checkout. '
+                               'Default: %default')
+    path_group.add_option('--dest-dir',
+                          dest='dest_dir',
+                          default='/tmp/saltpkg',
+                          help='Destination directory, will be removed if it '
+                               'exists prior to running script. '
+                               'Default: %default')
+    path_group.add_option('--artifact-dir',
+                          dest='artifact_dir',
+                          default='/tmp/salt-packages',
+                          help='Location where build artifacts should be '
+                               'placed, the jenkins master will grab all of '
+                               'these. Default: %default')
+    path_group.add_option('--log-file',
+                          dest='log_file',
+                          default='/tmp/salt-buildpackage.log',
+                          help='Log results to a file. Default: %default')
+    parser.add_option_group(path_group)
+
+    # This group should also consist of nothing but file paths, which will be
+    # normalized below.
+    rpm_group = OptionGroup(parser, 'RPM-specific File/Directory Options')
+    rpm_group.add_option('--spec',
+                         dest='spec_file',
+                         default='/tmp/salt.spec',
+                         help='Spec file to use as a template to build RPM. '
+                              'Default: %default')
+    parser.add_option_group(rpm_group)
 
     opts = parser.parse_args()[0]
+
+    # Expand any relative paths
+    for group in (path_group, rpm_group):
+        for path_opt in [opt.dest for opt in group.option_list]:
+            path = getattr(opts, path_opt)
+            if not os.path.isabs(path):
+                # Expand ~ or ~user
+                path = os.path.expanduser(path)
+                if not os.path.isabs(path):
+                    # Still not absolute, resolve '..'
+                    path = os.path.realpath(path)
+                # Update attribute with absolute path
+                setattr(opts, path_opt, path)
 
     # Sanity checks
     problems = []
@@ -111,7 +132,7 @@ def _init():
     try:
         shutil.rmtree(opts.dest_dir)
     except OSError as exc:
-        if exc.errno != errno.ENOTDIR:
+        if exc.errno not in (errno.ENOENT, errno.ENOTDIR):
             problems.append('Unable to remove pre-existing destination '
                             'directory {0}: {1}'.format(opts.dest_dir, exc))
     finally:
@@ -123,7 +144,7 @@ def _init():
     try:
         shutil.rmtree(opts.artifact_dir)
     except OSError as exc:
-        if exc.errno != errno.ENOTDIR:
+        if exc.errno not in (errno.ENOENT, errno.ENOTDIR):
             problems.append('Unable to remove pre-existing artifact directory '
                             '{0}: {1}'.format(opts.artifact_dir, exc))
     finally:
@@ -338,3 +359,4 @@ if __name__ == '__main__':
         shutil.copy(artifact, opts.artifact_dir)
         log.info('Copied {0} to artifact directory'.format(artifact))
     log.info('Done!')
+    shutil.copy(opts.log_file, opts.artifact_dir)
