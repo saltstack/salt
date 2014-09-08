@@ -256,3 +256,57 @@ def save_config():
         __salt__['file.append'](cfg_file, scan)
 
     return __salt__['cmd.run']('update-initramfs -u')
+
+
+def assemble(name,
+             devices,
+             test_mode=False,
+             **kwargs):
+    '''
+    Assemble a RAID device.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' raid.assemble /dev/md0 ['/dev/xvdd', '/dev/xvde']
+
+    .. note::
+
+        Adding ``test_mode=True`` as an argument will print out the mdadm
+        command that would have been run.
+
+    name
+        The name of the array to assemble.
+
+    devices
+        The list of devices comprising the array to assemble.
+
+    kwargs
+        Optional arguments to be passed to mdadm.
+
+    returns
+        test_mode=True:
+            Prints out the full command.
+        test_mode=False (Default):
+            Executes command on the host(s) and prints out the mdadm output.
+
+    For more info, read the ``mdadm`` manpage.
+    '''
+    opts = []
+    for key in kwargs:
+        if not key.startswith('__'):
+            opts.append('--{0}'.format(key))
+            if kwargs[key] is not True:
+                opts.append(kwargs[key])
+
+    # Devices may have been written with a blob:
+    if type(devices) is str:
+        devices = devices.split(',')
+
+    cmd = ['mdadm', '-A', name, '-v', opts] + devices
+
+    if test_mode is True:
+        return cmd
+    elif test_mode is False:
+        return __salt__['cmd.run'](cmd, python_shell=False)
