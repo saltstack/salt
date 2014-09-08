@@ -10,6 +10,7 @@ This script is intended to be shell-centric!!
 
 # Import python libs
 from __future__ import print_function
+import glob
 import os
 import re
 import sys
@@ -310,6 +311,52 @@ def download_remote_logs(options):
         time.sleep(0.25)
 
 
+def download_packages(options):
+    print('Downloading packages...')
+    sys.stdout.flush()
+
+    workspace = options.workspace
+    vm_name = options.download_packages
+
+    for fglob in ('salt-*.rpm',
+                  'salt-*.deb',
+                  'salt-*.pkg.xz',
+                  os.path.basename(options.package_log_file)):
+        for fname in glob.glob(os.path.join(workspace, fglob)):
+            if os.path.isfile(fname):
+                os.unlink(fname)
+
+    cmds = [
+        ('salt {{0}} archive.tar czf {0}.tar.gz sources=\'*.*\' cwd={0}'
+         .format(options.package_dir)),
+        'salt {{0}} cp.push {0}.gz'.format(options.package_dir),
+        ('tar -C {{2}} -xzf /var/cache/salt/master/minions/{{1}}{0}.gz'
+         .format(options.package_dir)),
+    ]
+
+    for cmd in cmds:
+        cmd = cmd.format(build_minion_target(options, vm_name), vm_name, workspace)
+        print('Running CMD: {0}'.format(cmd))
+        sys.stdout.flush()
+
+        proc = NonBlockingPopen(
+            cmd,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            stream_stds=True
+        )
+        proc.poll_and_read_until_finish()
+        proc.communicate()
+        if proc.returncode != 0:
+            print(
+                '\nFailed to execute command. Exit code: {0}'.format(
+                    proc.returncode
+                )
+            )
+        time.sleep(0.25)
+
+
 def run(opts):
     '''
     RUN!
@@ -322,6 +369,7 @@ def run(opts):
     if opts.download_remote_reports:
         opts.download_coverage_report = vm_name
         opts.download_unittest_reports = vm_name
+        opts.download_packages = vm_name
 
     if opts.bootstrap_salt_commit is not None:
         if opts.bootstrap_salt_url is None:
@@ -428,6 +476,7 @@ def run(opts):
         except ValueError:
             print('Failed to load any JSON from {0!r}'.format(stdout.strip()))
 
+    '''
     if opts.cloud_only:
         # Run Cloud Provider tests preparation SLS
         time.sleep(3)
@@ -686,12 +735,46 @@ def run(opts):
         if stdout:
             # Anything else, raise the exception
             raise
+    '''
 
+    retcode = 0  # testing, remove this
+    if retcode == 0:
+        # Build packages
+        time.sleep(3)
+        cmd = (
+            'salt -t 1800 {target} state.sls buildpackage pillar="{pillar}" --no-color'.format(
+                pillar=build_pillar_data(opts),
+                target=build_minion_target(opts, vm_name),
+            )
+        )
+        print('Running CMD: {0}'.format(cmd))
+        sys.stdout.flush()
+
+        proc = subprocess.Popen(
+            cmd,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        stdout, stderr = proc.communicate()
+
+        if stdout:
+            print(stdout)
+        sys.stdout.flush()
+        if stderr:
+            print(stderr)
+        sys.stderr.flush()
+
+        # Download packages
+        download_packages(opts)
+
+    '''
     if opts.download_remote_reports:
         # Download unittest reports
         download_unittest_reports(opts)
         # Download coverage report
         download_coverage_report(opts)
+    '''
 
     if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
         delete_vm(opts)
@@ -826,6 +909,18 @@ def parse():
         action='store_true',
         help='Run the cloud provider tests only.'
     )
+    parser.add_option(
+        '--build-packages',
+        default=True,
+        action='store_true',
+        help='Run buildpackage.py to create packages off of the git build.'
+    )
+    parser.add_option(
+        '--package-dir',
+        default='/tmp/salt-packages',
+        help='Location on the minion from which built packages should be '
+             'retrieved (default: %default)',
+    )
 
     options, args = parser.parse_args()
 
@@ -857,6 +952,11 @@ def parse():
 
     if not options.test_git_commit and not options.pull_request:
         parser.exit('--commit or --pull-request is required')
+
+    # Might want to make this configurable eventually, passed to the
+    # buildpackage SLS file via pillar data.
+    if options.build_packages:
+        options.package_log_file = '/tmp/salt-buildpackage.log'
 
     return options
 
