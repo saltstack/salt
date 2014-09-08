@@ -504,7 +504,7 @@ def install(name=None,
         refresh_db()
 
     env = _parse_env(kwargs.get('env'))
-    env.update(copy.deepcopy(DPKG_ENV_VARS))
+    env.update(DPKG_ENV_VARS.copy())
     __salt__['cmd.run'](cmd, python_shell=False, env=env)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -646,7 +646,7 @@ def upgrade(refresh=True, dist_upgrade=True):
         cmd = ['apt-get', '-q', '-y', '-o', 'DPkg::Options::=--force-confold',
                '-o', 'DPkg::Options::=--force-confdef', 'upgrade']
     call = __salt__['cmd.run_all'](cmd, python_shell=False, output_loglevel='trace',
-                                   env=copy.deepcopy(DPKG_ENV_VARS))
+                                   env=DPKG_ENV_VARS.copy())
     if call['retcode'] != 0:
         ret['result'] = False
         if 'stderr' in call:
