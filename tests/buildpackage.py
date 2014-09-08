@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Maintainer: Erik Johnson (https://github.com/terminalmage)
 #
 # WARNING: This script will recursively remove the dest_dir (by default,
@@ -254,7 +255,7 @@ def build_centos(opts):
     # Example tarball names:
     #   - Git checkout: salt-2014.7.0rc1-1584-g666602e.tar.gz
     #   - Tagged release: salt-2014.7.0.tar.gz
-    tarball_re = re.compile('^salt-([^-]+)(?:-(\d+)-(g[0-9a-f]+))?\.tar\.gz$')
+    tarball_re = re.compile(r'^salt-([^-]+)(?:-(\d+)-(g[0-9a-f]+))?\.tar\.gz$')
     try:
         base, offset, oid = tarball_re.match(os.path.basename(sdist)).groups()
     except AttributeError:
@@ -354,7 +355,7 @@ if __name__ == '__main__':
     msg = ('Build complete. Artifacts will be stored in {0}'
            .format(opts.artifact_dir))
     log.info(msg)
-    print(msg)
+    print(msg)  # pylint: disable=C0325
     for artifact in artifacts:
         shutil.copy(artifact, opts.artifact_dir)
         log.info('Copied {0} to artifact directory'.format(artifact))
