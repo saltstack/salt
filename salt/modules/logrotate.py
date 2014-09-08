@@ -22,11 +22,11 @@ __func_alias__ = {
 
 def __virtual__():
     '''
-    Only work on POSIX-like systems
+    Only work if logrotate is available
     '''
-    if salt.utils.is_windows():
-        return False
-    return True
+    if __salt__['cmd.has_exec']('logrotate'):
+        return True
+    return False
 
 
 def _parse_conf(conf_file=default_conf):
