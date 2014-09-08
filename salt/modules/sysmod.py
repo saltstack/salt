@@ -195,6 +195,39 @@ def returner_doc(*args):
     return _strip_rst(docs)
 
 
+def renderer_doc(*args):
+    '''
+    .. versionadded:: Lithium
+
+    Return the docstrings for all renderers. Optionally, specify a renderer or a
+    function to narrow the selection.
+
+    The strings are aggregated into a single document on the master for easy
+    reading.
+
+    Multiple renderers can be specified.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' sys.renderer_doc
+        salt '*' sys.renderer_doc cheetah
+        salt '*' sys.renderer_doc jinja json
+    '''
+    renderers_ = salt.loader.render(__opts__, [])
+    docs = {}
+    if not args:
+        for fun in renderers_.keys():
+            docs[fun] = renderers_[fun].__doc__
+        return _strip_rst(docs)
+
+    for module in args:
+        for fun in renderers_.keys():
+            docs[fun] = renderers_[fun].__doc__
+    return _strip_rst(docs)
+
+
 def list_functions(*args, **kwargs):
     '''
     List the functions for all modules. Optionally, specify a module or modules
@@ -208,8 +241,8 @@ def list_functions(*args, **kwargs):
         salt '*' sys.list_functions sys
         salt '*' sys.list_functions sys user
     '''
-    ### NOTE: **kwargs is used here to prevent a traceback when garbage
-    ###       arguments are tacked on to the end.
+    # ## NOTE: **kwargs is used here to prevent a traceback when garbage
+    # ##       arguments are tacked on to the end.
 
     if not args:
         # We're being asked for all functions
@@ -275,6 +308,63 @@ def argspec(module=''):
         salt '*' sys.argspec
     '''
     return salt.utils.argspec_report(__salt__, module)
+
+
+def state_argspec(module=''):
+    '''
+    .. versionadded:: Lithium
+
+    Return the argument specification of functions in Salt state
+    modules.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' sys.state_argspec pkg.installed
+        salt '*' sys.state_argspec file
+        salt '*' sys.state_argspec
+    '''
+    st_ = salt.state.State(__opts__)
+    return salt.utils.argspec_report(st_.states, module)
+
+
+def returner_argspec(module=''):
+    '''
+    .. versionadded:: Lithium
+
+    Return the argument specification of functions in Salt returner
+    modules.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' sys.returner_argspec xmpp
+        salt '*' sys.returner_argspec xmpp smtp
+        salt '*' sys.returner_argspec
+    '''
+    returners_ = salt.loader.returners(__opts__, [])
+    return salt.utils.argspec_report(returners_, module)
+
+
+def runner_argspec(module=''):
+    '''
+    .. versionadded:: Lithium
+
+    Return the argument specification of functions in Salt runner
+    modules.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' sys.runner_argspec state
+        salt '*' sys.runner_argspec http
+        salt '*' sys.runner_argspec
+    '''
+    run_ = salt.runner.Runner(__opts__)
+    return salt.utils.argspec_report(run_.functions, module)
 
 
 def list_state_functions(*args, **kwargs):
@@ -371,8 +461,8 @@ def list_runner_functions(*args, **kwargs):
         salt '*' sys.list_runner_functions state
         salt '*' sys.list_runner_functions state virt
     '''
-    ### NOTE: **kwargs is used here to prevent a traceback when garbage
-    ###       arguments are tacked on to the end.
+    # ## NOTE: **kwargs is used here to prevent a traceback when garbage
+    # ##       arguments are tacked on to the end.
 
     run_ = salt.runner.Runner(__opts__)
     if not args:
@@ -446,3 +536,22 @@ def list_returner_functions(*args, **kwargs):
             if func.startswith(module):
                 names.add(func)
     return sorted(names)
+
+
+def list_renderers():
+    '''
+    .. versionadded:: Lithium
+
+    List the renderers loaded on the minion
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' sys.list_renderers
+    '''
+    ren_ = salt.loader.render(__opts__, [])
+    ren = set()
+    for func in ren_.keys():
+        ren.add(func)
+    return sorted(ren)

@@ -1,8 +1,9 @@
 # salt-key completion for fish shell
-# See salt.fish in the same folder for the information
+# See salt_common.fish in the same folder for the information
 
-# hack to load functions from salt.fish completion
-complete --do-complete='salt --' > /dev/null
+# hack to load functions from salt_common completion
+complete --do-complete='salt_common --' >/dev/null
+
 
 # salt-key general options (from --help)
 complete -c salt-key         -f -s A -l accept-all           -d "Accept all pending keys"

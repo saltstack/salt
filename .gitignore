@@ -39,6 +39,7 @@ htmlcov/
 /.pydevproject
 /.idea
 /.ropeproject
+.ropeproject
 /*.iml
 *.sublime-project
 *.sublime-workspace

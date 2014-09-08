@@ -597,3 +597,54 @@ def removed(name,
         ret['result'] = False
         ret['comment'] = 'Could not remove package.'
     return ret
+
+
+def uptodate(name,
+             bin_env=None,
+             user=None,
+             runas=None,
+             cwd=None):
+    '''
+    Verify that the system is completely up to date.
+
+    name
+        The name has no functional value and is only used as a tracking
+        reference
+    user
+        The user under which to run pip
+    bin_env
+        the pip executable or virtualenenv to use
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': 'Failed to update.'}
+
+    try:
+        packages = __salt__['pip.list_upgrades'](bin_env=bin_env, user=user,
+                                                 runas=runas, cwd=cwd)
+    except Exception as e:
+        ret['comment'] = str(e)
+        return ret
+
+    if not packages:
+        ret['comment'] = 'System is already up-to-date.'
+        ret['result'] = True
+        return ret
+    elif __opts__['test']:
+        ret['comment'] = 'System update will be performed'
+        ret['result'] = None
+        return ret
+
+    updated = __salt__['pip.upgrade'](bin_env=bin_env, user=user, runas=runas, cwd=cwd)
+
+    if updated.get('result') is False:
+        ret.update(updated)
+    elif updated:
+        ret['changes'] = updated
+        ret['comment'] = 'Upgrade successful.'
+        ret['result'] = True
+    else:
+        ret['comment'] = 'Upgrade failed.'
+
+    return ret

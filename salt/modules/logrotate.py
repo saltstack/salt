@@ -110,7 +110,9 @@ def set_(key, value, setting=None, conf_file=default_conf):
         salt '*' logrotate.set rotate 2
 
     Can also be used to set a single value inside a multiline configuration
-    block. For instance, to change rotate in the following block::
+    block. For instance, to change rotate in the following block:
+
+    .. code-block:: text
 
         /var/log/wtmp {
             monthly

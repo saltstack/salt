@@ -4826,3 +4826,15 @@ source_file = _build/locale/topics/targeting/range.pot
 source_lang = en
 source_name = topics/targeting/range.rst
 
+[salt.ref--modules--all--salt_modules_boto_cloudwatch]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.boto_cloudwatch.po
+source_file = _build/locale/ref/modules/all/salt.modules.boto_cloudwatch.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.boto_cloudwatch.rst
+
+[salt.ref--states--all--salt_states_boto_cloudwatch_alarm]
+file_filter = locale/<lang>/LC_MESSAGES/ref/states/all/salt.states.boto_cloudwatch_alarm.po
+source_file = _build/locale/ref/states/all/salt.states.boto_cloudwatch_alarm.pot
+source_lang = en
+source_name = ref/states/all/salt.states.boto_cloudwatch_alarm.rst
+
