@@ -1992,7 +1992,9 @@ def bootstrap(name, config=None, approve_key=True,
     else:
         needs_install = True
     seeded = not __salt__['lxc.run_cmd'](
-        name, 'test -e \"{0}\"'.format(SEED_MARKER), stdout=False, stderr=False)
+        name,
+        'test -e \"{0}\"'.format(SEED_MARKER),
+        stdout=False, stderr=False)
     tmp = tempfile.mkdtemp()
     if seeded and not unconditional_install:
         res = True
@@ -2009,13 +2011,15 @@ def bootstrap(name, config=None, approve_key=True,
                 bs_ = __salt__['config.gather_bootstrap_script'](
                     bootstrap=bootstrap_url)
                 dest_dir = os.path.join('/tmp', rstr)
-                if run_cmd(
-                    name,
-                    'mkdir -p {0} && '
+                for cmd in [
+                    'mkdir -p {0}'.format(dest_dir),
                     'chmod 700 {0}'.format(dest_dir),
-                    stdout=False
-                ):
-                    return {'error': 'tmpdir {0} creation failed'}
+                ]:
+                    if run_cmd(name, cmd, stdout=True):
+                        log.error(
+                            ('tmpdir {0} creation'
+                             ' failed ({1}').format(dest_dir, cmd))
+                        return False
                 cp(name,
                    bs_,
                    '{0}/bootstrap.sh'.format(dest_dir))
