@@ -732,6 +732,7 @@ class MWorker(multiprocessing.Process):
                 aes = fp_.read()
             if len(aes) != 76:
                 return
+            log.debug('New master AES key found by pid {0}'.format(os.getpid()))
             self.crypticle = salt.crypt.Crypticle(self.opts, aes)
             self.clear_funcs.crypticle = self.crypticle
             self.clear_funcs.opts['aes'] = aes
