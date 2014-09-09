@@ -3549,13 +3549,13 @@ def get_password_data(
     for item in data:
         ret[item.keys()[0]] = item.values()[0]
 
+    if not HAS_PYCRYPTO:
+        return ret
+
     if not 'key' in kwargs:
         if 'key_file' in kwargs:
             with salt.utils.fopen(kwargs['key_file'], 'r') as kf_:
                 kwargs['key'] = kf_.read()
-
-    if not HAS_PYCRYPTO:
-        return ret
 
     if 'key' in kwargs:
         pwdata = ret.get('passwordData', None)
