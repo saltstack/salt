@@ -2587,7 +2587,7 @@ def extract_hash(hash_fn, hash_type='sha256', file_name=''):
     '''
     source_sum = None
     partial_id = False
-    name_sought = re.findall(r'^(.+)/([^/]+)$', '/x' + file_name)[0][1]
+    name_sought = os.path.basename(file_name)
     log.debug('modules.file.py - extract_hash(): Extracting hash for file '
               'named: {0}'.format(name_sought))
     hash_fn_fopen = salt.utils.fopen(hash_fn, 'r')
