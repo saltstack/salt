@@ -366,4 +366,3 @@ def get_resource_content(venv, package_or_requirement, resource_name):
         raise salt.exceptions.CommandExecutionError("Path does not appear to be a virtualenv: '{0}'".format(bin_path))
 
     return __salt__['cmd.exec_code'](bin_path, "import pkg_resources; print pkg_resources.resource_string('{0}', '{1}')".format(package_or_requirement, resource_name))
-
