@@ -216,7 +216,7 @@ def ext_pillar(minion_id, pillar, resource, sequence, subkey=False, subkey_only=
                             del output[rkey]
                         except KeyError:
                             pass
-                    elif operator != None:
+                    elif operator is not None:
                         log.warning('Unsupported operator {0}, skipping key {1}'.format(operator, rkey))
                     else:
                         log.debug("Substitute key {0}: {1}".format(key, results[key]))
