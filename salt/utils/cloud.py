@@ -1455,12 +1455,9 @@ def scp_file(dest_path, contents, kwargs):
                 ssh_gateway,
                 ssh_gateway_port
             )
-        )
-
-    cmd = (
-        'scp {0} {1} {2[username]}@{2[hostname]}:{3} || '
-        'echo "put {1} {3}" | sftp {0} {2[username]}@{2[hostname]} || '
-        'rsync -avz -e "ssh {0}" {1} {2[username]}@{2[hostname]}:{3}'.format(
+        ])
+    if kwargs.get('use_sftp', False) is True:
+        cmd = 'sftp {0} {2[username]}@{2[hostname]} <<< "put {1} {3}"'.format(
             ' '.join(ssh_args), tmppath, kwargs, dest_path
         )
         log.debug('SFTP command: {0!r}'.format(cmd))
