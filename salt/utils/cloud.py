@@ -1014,14 +1014,14 @@ def deploy_script(host,
 
             # Minion configuration
             if minion_pem:
-                scp_file('{0}/minion.pem'.format(tmp_dir), minion_pem, kwargs)
+                sftp_file('{0}/minion.pem'.format(tmp_dir), minion_pem, kwargs)
                 ret = root_cmd('chmod 600 {0}/minion.pem'.format(tmp_dir),
                                tty, sudo, **kwargs)
                 if ret:
                     raise SaltCloudSystemExit(
                         'Cant set perms on {0}/minion.pem'.format(tmp_dir))
             if minion_pub:
-                scp_file('{0}/minion.pub'.format(tmp_dir), minion_pub, kwargs)
+                sftp_file('{0}/minion.pub'.format(tmp_dir), minion_pub, kwargs)
 
             if minion_conf:
                 if not isinstance(minion_conf, dict):
@@ -1034,12 +1034,12 @@ def deploy_script(host,
                     )
                 minion_grains = minion_conf.pop('grains', {})
                 if minion_grains:
-                    scp_file(
+                    sftp_file(
                         '{0}/grains'.format(tmp_dir),
                         salt_config_to_yaml(minion_grains),
                         kwargs
                     )
-                scp_file(
+                sftp_file(
                     '{0}/minion'.format(tmp_dir),
                     salt_config_to_yaml(minion_conf),
                     kwargs
@@ -1047,7 +1047,7 @@ def deploy_script(host,
 
             # Master configuration
             if master_pem:
-                scp_file('{0}/master.pem'.format(tmp_dir), master_pem, kwargs)
+                sftp_file('{0}/master.pem'.format(tmp_dir), master_pem, kwargs)
                 ret = root_cmd('chmod 600 {0}/master.pem'.format(tmp_dir),
                                tty, sudo, **kwargs)
                 if ret:
@@ -1055,7 +1055,7 @@ def deploy_script(host,
                         'Cant set perms on {0}/master.pem'.format(tmp_dir))
 
             if master_pub:
-                scp_file('{0}/master.pub'.format(tmp_dir), master_pub, kwargs)
+                sftp_file('{0}/master.pub'.format(tmp_dir), master_pub, kwargs)
 
             if master_conf:
                 if not isinstance(master_conf, dict):
@@ -1067,7 +1067,7 @@ def deploy_script(host,
                         'Loading from YAML ...'
                     )
 
-                scp_file(
+                sftp_file(
                     '{0}/master'.format(tmp_dir),
                     salt_config_to_yaml(master_conf),
                     kwargs
@@ -1106,7 +1106,7 @@ def deploy_script(host,
                     rpath = os.path.join(
                         preseed_minion_keys_tempdir, minion_id
                     )
-                    scp_file(rpath, minion_key, kwargs)
+                    sftp_file(rpath, minion_key, kwargs)
 
                 if kwargs['username'] != 'root':
                     root_cmd(
@@ -1124,7 +1124,7 @@ def deploy_script(host,
             if script:
                 # got strange escaping issues with sudoer, going onto a
                 # subshell fixes that
-                scp_file('{0}/deploy.sh'.format(tmp_dir), script, kwargs)
+                sftp_file('{0}/deploy.sh'.format(tmp_dir), script, kwargs)
                 ret = root_cmd(
                     ('sh -c "( chmod +x \\"{0}/deploy.sh\\" )";'
                      'exit $?').format(tmp_dir),
@@ -1186,7 +1186,7 @@ def deploy_script(host,
                     environ_script_contents.append(deploy_command)
 
                     # Upload our environ setter wrapper
-                    scp_file(
+                    sftp_file(
                         '{0}/environ-deploy-wrapper.sh'.format(tmp_dir),
                         '\n'.join(environ_script_contents),
                         kwargs
@@ -1415,7 +1415,7 @@ def scp_file(dest_path, contents, kwargs):
         ])
 
     if 'port' in kwargs:
-        ssh_args.extend(['-P {0}'.format(kwargs['port'])])
+        ssh_args.append('-oPort={0}'.format(kwargs['port']))
 
     if 'ssh_gateway' in kwargs:
         ssh_gateway = kwargs['ssh_gateway']
@@ -1431,21 +1431,21 @@ def scp_file(dest_path, contents, kwargs):
         if 'ssh_gateway_user' in kwargs:
             ssh_gateway_user = kwargs['ssh_gateway_user']
 
-        ssh_args.extend([
+        ssh_args.append(
             # Setup ProxyCommand
             '-oProxyCommand="ssh {0} {1} {2} {3} {4}@{5} -p {6} nc -q0 %h %p"'.format(
-            # Don't add new hosts to the host key database
-            '-oStrictHostKeyChecking=no',
-            # Set hosts key database path to /dev/null, ie, non-existing
-            '-oUserKnownHostsFile=/dev/null',
-            # Don't re-use the SSH connection. Less failures.
-            '-oControlPath=none',
+                # Don't add new hosts to the host key database
+                '-oStrictHostKeyChecking=no',
+                # Set hosts key database path to /dev/null, ie, non-existing
+                '-oUserKnownHostsFile=/dev/null',
+                # Don't re-use the SSH connection. Less failures.
+                '-oControlPath=none',
                 ssh_gateway_key,
                 ssh_gateway_user,
                 ssh_gateway,
                 ssh_gateway_port
             )
-        ])
+        )
 
     cmd = (
         'scp {0} {1} {2[username]}@{2[hostname]}:{3} || '
@@ -1486,6 +1486,82 @@ def smb_file(dest_path, contents, kwargs):
     )
     log.debug('SCP command: {0!r}'.format(cmd))
     win_cmd(cmd)
+
+
+def sftp_file(dest_path, contents, kwargs):
+    '''
+    Use sftp to upload a file to a server
+    '''
+    tmpfh, tmppath = tempfile.mkstemp()
+    with salt.utils.fopen(tmppath, 'w') as tmpfile:
+        tmpfile.write(contents)
+
+    log.debug('Uploading {0} to {1} (sfcp)'.format(dest_path, kwargs['hostname']))
+
+    ssh_args = [
+        # Don't add new hosts to the host key database
+        '-oStrictHostKeyChecking=no',
+        # Set hosts key database path to /dev/null, ie, non-existing
+        '-oUserKnownHostsFile=/dev/null',
+        # Don't re-use the SSH connection. Less failures.
+        '-oControlPath=none'
+    ]
+    if 'key_filename' in kwargs:
+        # There should never be both a password and an ssh key passed in, so
+        ssh_args.extend([
+            # tell SSH to skip password authentication
+            '-oPasswordAuthentication=no',
+            '-oChallengeResponseAuthentication=no',
+            # Make sure public key authentication is enabled
+            '-oPubkeyAuthentication=yes',
+            # No Keyboard interaction!
+            '-oKbdInteractiveAuthentication=no',
+            # Also, specify the location of the key file
+            '-i {0}'.format(kwargs['key_filename'])
+        ])
+
+    if 'port' in kwargs:
+        ssh_args.append('-oPort={0}'.format(kwargs['port']))
+
+    if 'ssh_gateway' in kwargs:
+        ssh_gateway = kwargs['ssh_gateway']
+        ssh_gateway_port = 22
+        ssh_gateway_key = ''
+        ssh_gateway_user = 'root'
+        if ':' in ssh_gateway:
+            ssh_gateway, ssh_gateway_port = ssh_gateway.split(':')
+        if 'ssh_gateway_port' in kwargs:
+            ssh_gateway_port = kwargs['ssh_gateway_port']
+        if 'ssh_gateway_key' in kwargs:
+            ssh_gateway_key = '-i {0}'.format(kwargs['ssh_gateway_key'])
+        if 'ssh_gateway_user' in kwargs:
+            ssh_gateway_user = kwargs['ssh_gateway_user']
+
+        ssh_args.append(
+            # Setup ProxyCommand
+            '-oProxyCommand="ssh {0} {1} {2} {3} {4}@{5} -p {6} nc -q0 %h %p"'.format(
+                # Don't add new hosts to the host key database
+                '-oStrictHostKeyChecking=no',
+                # Set hosts key database path to /dev/null, ie, non-existing
+                '-oUserKnownHostsFile=/dev/null',
+                # Don't re-use the SSH connection. Less failures.
+                '-oControlPath=none',
+                ssh_gateway_key,
+                ssh_gateway_user,
+                ssh_gateway,
+                ssh_gateway_port
+            )
+        )
+
+    cmd = 'echo "put {0} {1}" | sftp {2} {3[username]}@{3[hostname]}'.format(
+        tmppath, dest_path, ' '.join(ssh_args), kwargs
+    )
+    log.debug('SFTP command: {0!r}'.format(cmd))
+    retcode = _exec_ssh_cmd(cmd,
+                            error_msg='Failed to upload file {0!r}: {1}\n{2}',
+                            password_retries=3,
+                            **kwargs)
+    return retcode
 
 
 def win_cmd(command, **kwargs):
