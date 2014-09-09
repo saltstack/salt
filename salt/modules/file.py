@@ -1989,9 +1989,9 @@ def symlink(src, path):
 
         salt '*' file.symlink /path/to/file /path/to/link
     '''
-    src = os.path.expanduser(src)
+    path = os.path.expanduser(path)
 
-    if not os.path.isabs(src):
+    if not os.path.isabs(path):
         raise SaltInvocationError('File path must be absolute.')
 
     try:
