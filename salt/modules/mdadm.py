@@ -147,7 +147,7 @@ def destroy(device):
 def create(name,
            level,
            devices,
-           metadata="default",
+           metadata='default',
            test_mode=False,
            **kwargs):
     '''
@@ -203,25 +203,24 @@ def create(name,
 
     For more info, read the ``mdadm(8)`` manpage
     '''
-    opts = ''
+    opts = []
     for key in kwargs:
         if not key.startswith('__'):
-            if kwargs[key] is True:
-                opts += '--{0} '.format(key)
-            else:
-                opts += '--{0}={1} '.format(key, kwargs[key])
+            opts.append('--{0}'.format(key))
+            if kwargs[key] is not True:
+                opts.append(kwargs[key])
 
-    cmd = "mdadm -C {0} -v {1}-l {2} -e {3} -n {4} {5}".format(name,
-            opts,
-            level,
-            metadata,
-            len(devices),
-            ' '.join(devices))
+    cmd = ['mdadm',
+           '-C', name,
+           '-v'] + opts + [
+           '-l', level,
+           '-e', metadata,
+           '-n', len(devices)] + devices
 
     if test_mode is True:
         return cmd
     elif test_mode is False:
-        return __salt__['cmd.run'](cmd)
+        return __salt__['cmd.run'](cmd, python_shell=False)
 
 
 def save_config():
@@ -303,20 +302,20 @@ def assemble(name,
 
     For more info, read the ``mdadm`` manpage.
     '''
-    opts = ''
+    opts = []
     for key in kwargs:
         if not key.startswith('__'):
-            if kwargs[key] is True:
-                opts += '--{0} '.format(key)
-            else:
-                opts += '--{0}={1} '.format(key, kwargs[key])
+            opts.append('--{0}'.format(key))
+            if kwargs[key] is not True:
+                opts.append(kwargs[key])
 
     # Devices may have been written with a blob:
     if type(devices) is str:
         devices = devices.split(',')
-    cmd = 'mdadm -A {0} -v {1}{2}'.format(name, opts, ' '.join(devices))
+
+    cmd = ['mdadm', '-A', name, '-v', opts] + devices
 
     if test_mode is True:
         return cmd
     elif test_mode is False:
-        return __salt__['cmd.run'](cmd)
+        return __salt__['cmd.run'](cmd, python_shell=False)
