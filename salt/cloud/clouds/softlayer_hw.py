@@ -34,7 +34,7 @@ import time
 
 # Import salt cloud libs
 import salt.config as config
-from salt.cloud.exceptions import SaltCloudSystemExit
+from salt.exceptions import SaltCloudSystemExit
 from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
 from salt.utils import namespaced_function
 
@@ -696,7 +696,7 @@ def list_nodes_full(mask='mask[id, hostname, primaryIpAddress, \
 
     ret = {}
     conn = get_conn(service='Account')
-    response = conn.getBareMetalInstances(mask=mask)
+    response = conn.getHardware(mask=mask)
 
     for node in response:
         ret[node['hostname']] = node

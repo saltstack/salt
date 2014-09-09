@@ -27,7 +27,7 @@ from salt.utils.verify import check_user, verify_env, verify_files
 
 # Import salt.cloud libs
 import salt.cloud
-from salt.cloud.exceptions import SaltCloudException, SaltCloudSystemExit
+from salt.exceptions import SaltCloudException, SaltCloudSystemExit
 
 log = logging.getLogger(__name__)
 
@@ -90,6 +90,14 @@ class SaltCloud(parsers.SaltCloudParser):
                     ret = mapper.provider_list()
                 except (SaltCloudException, Exception) as exc:
                     msg = 'There was an error listing providers: {0}'
+                    self.handle_exception(msg, exc)
+
+            elif self.selected_query_option == 'list_profiles':
+                provider = self.options.list_profiles
+                try:
+                    ret = mapper.profile_list(provider)
+                except(SaltCloudException, Exception) as exc:
+                    msg = 'There was an error listing profiles: {0}'
                     self.handle_exception(msg, exc)
 
             elif self.config.get('map', None):

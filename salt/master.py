@@ -9,7 +9,6 @@ import os
 import re
 import time
 import errno
-import signal
 import shutil
 import logging
 import hashlib
@@ -42,10 +41,13 @@ import salt.utils.event
 import salt.utils.verify
 import salt.utils.minions
 import salt.utils.gzip_util
+import salt.utils.process
+from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.debug import enable_sigusr1_handler, enable_sigusr2_handler, inspect_stack
-from salt.exceptions import MasterExit
 from salt.utils.event import tagify
 import binascii
+from salt.utils.master import ConnectedCache
+from salt.utils.cache import CacheCli
 
 # Import halite libs
 try:
@@ -62,33 +64,6 @@ except ImportError:
 
 
 log = logging.getLogger(__name__)
-
-
-def clean_proc(proc, wait_for_kill=10):
-    '''
-    Generic method for cleaning up multiprocessing procs
-    '''
-    # NoneType and other fun stuff need not apply
-    if not proc:
-        return
-    try:
-        waited = 0
-        while proc.is_alive():
-            proc.terminate()
-            waited += 1
-            time.sleep(0.1)
-            if proc.is_alive() and (waited >= wait_for_kill):
-                log.error(
-                    'Process did not die with terminate(): {0}'.format(
-                        proc.pid
-                    )
-                )
-                os.kill(proc.pid, signal.SIGKILL)
-    except (AssertionError, AttributeError):
-        # Catch AssertionError when the proc is evaluated inside the child
-        # Catch AttributeError when the process dies between proc.is_alive()
-        # and proc.terminate() and turns into a NoneType
-        pass
 
 
 class SMaster(object):
@@ -127,13 +102,21 @@ class Master(SMaster):
         Create a salt master server instance
         '''
         # Warn if ZMQ < 3.2
-        if not(hasattr(zmq, 'zmq_version_info')) or \
-                zmq.zmq_version_info() < (3, 2):
-            # PyZMQ 2.1.9 does not have zmq_version_info
-            log.warning('You have a version of ZMQ less than ZMQ 3.2! There '
-                        'are known connection keep-alive issues with ZMQ < '
-                        '3.2 which may result in loss of contact with '
-                        'minions. Please upgrade your ZMQ!')
+        try:
+            zmq_version_info = zmq.zmq_version_info()
+        except AttributeError:
+            # PyZMQ <= 2.1.9 does not have zmq_version_info, fall back to
+            # using zmq.zmq_version() and build a version info tuple.
+            zmq_version_info = tuple(
+                [int(x) for x in zmq.zmq_version().split('.')]
+            )
+        if zmq_version_info < (3, 2):
+            log.warning(
+                'You have a version of ZMQ less than ZMQ 3.2! There are '
+                'known connection keep-alive issues with ZMQ < 3.2 which '
+                'may result in loss of contact with minions. Please '
+                'upgrade your ZMQ!'
+            )
         SMaster.__init__(self, opts)
 
     def _clear_old_jobs(self):
@@ -142,6 +125,9 @@ class Master(SMaster):
         controller for the Salt master. This is where any data that needs to
         be cleanly maintained from the master is maintained.
         '''
+        # TODO: move to a seperate class, with a better name
+        salt.utils.appendproctitle('_clear_old_jobs')
+
         # Set up search object
         search = salt.search.Search(self.opts)
         # Make Start Times
@@ -299,48 +285,42 @@ class Master(SMaster):
         enable_sigusr2_handler()
 
         self.__set_max_open_files()
-        clear_old_jobs_proc = multiprocessing.Process(
-            target=self._clear_old_jobs)
-        clear_old_jobs_proc.start()
-        reqserv = ReqServer(
-            self.opts,
-            self.crypticle,
-            self.key,
-            self.master_key)
-        reqserv.start_publisher()
-        reqserv.start_event_publisher()
-        reqserv.start_reactor()
-        reqserv.start_halite()
+        process_manager = salt.utils.process.ProcessManager()
 
-        def sigterm_clean(signum, frame):
-            '''
-            Cleaner method for stopping multiprocessing processes when a
-            SIGTERM is encountered.  This is required when running a salt
-            master under a process minder like daemontools
-            '''
-            log.warn(
-                'Caught signal {0}, stopping the Salt Master'.format(
-                    signum
-                )
-            )
-            clean_proc(clear_old_jobs_proc)
-            clean_proc(reqserv.publisher)
-            clean_proc(reqserv.eventpublisher)
-            if hasattr(reqserv, 'halite'):
-                clean_proc(reqserv.halite)
-            if hasattr(reqserv, 'reactor'):
-                clean_proc(reqserv.reactor)
-            for proc in reqserv.work_procs:
-                clean_proc(proc)
-            raise MasterExit
+        process_manager.add_process(self._clear_old_jobs)
 
-        signal.signal(signal.SIGTERM, sigterm_clean)
+        process_manager.add_process(Publisher, args=(self.opts,))
+        process_manager.add_process(salt.utils.event.EventPublisher, args=(self.opts,))
 
-        try:
+        if self.opts.get('reactor'):
+            process_manager.add_process(salt.utils.event.Reactor, args=(self.opts,))
+
+        if HAS_HALITE and 'halite' in self.opts:
+            log.info('Halite: Starting up ...')
+            process_manager.add_process(Halite, args=(self.opts['halite'],))
+        elif 'halite' in self.opts:
+            log.info('Halite: Not configured, skipping.')
+        else:
+            log.debug('Halite: Unavailable.')
+
+        if self.opts['con_cache']:
+            log.debug('Starting ConCache')
+            process_manager.add_process(ConnectedCache, args=(self.opts,))
+
+        def run_reqserver():
+            reqserv = ReqServer(
+                self.opts,
+                self.crypticle,
+                self.key,
+                self.master_key)
             reqserv.run()
+        process_manager.add_process(run_reqserver)
+        try:
+            process_manager.run()
         except KeyboardInterrupt:
             # Shut the master down gracefully on SIGINT
             log.warn('Stopping the Salt Master')
+            process_manager.kill_children()
             raise SystemExit('\nExiting on Ctrl-c')
 
 
@@ -456,6 +436,12 @@ class ReqServer(object):
     def __init__(self, opts, crypticle, key, mkey):
         self.opts = opts
         self.master_key = mkey
+        # Prepare the AES key
+        self.key = key
+        self.crypticle = crypticle
+
+    def zmq_device(self):
+        salt.utils.appendproctitle('MWorkerQueue')
         self.context = zmq.Context(self.opts['worker_threads'])
         # Prepare the zeromq sockets
         self.uri = 'tcp://{interface}:{ret_port}'.format(**self.opts)
@@ -474,35 +460,9 @@ class ReqServer(object):
         self.w_uri = 'ipc://{0}'.format(
             os.path.join(self.opts['sock_dir'], 'workers.ipc')
         )
-        # Prepare the AES key
-        self.key = key
-        self.crypticle = crypticle
 
-    def __bind(self):
-        '''
-        Binds the reply server
-        '''
-        dfn = os.path.join(self.opts['cachedir'], '.dfn')
-        if os.path.isfile(dfn):
-            try:
-                os.remove(dfn)
-            except os.error:
-                pass
         log.info('Setting up the master communication server')
         self.clients.bind(self.uri)
-        self.work_procs = []
-
-        for ind in range(int(self.opts['worker_threads'])):
-            self.work_procs.append(MWorker(self.opts,
-                                           self.master_key,
-                                           self.key,
-                                           self.crypticle,
-                                           )
-                                   )
-
-        for ind, proc in enumerate(self.work_procs):
-            log.info('Starting Salt worker process {0}'.format(ind))
-            proc.start()
 
         self.workers.bind(self.w_uri)
 
@@ -521,42 +481,30 @@ class ReqServer(object):
                     continue
                 raise exc
 
-    def start_publisher(self):
+    def __bind(self):
         '''
-        Start the salt publisher interface
+        Binds the reply server
         '''
-        # Start the publisher
-        self.publisher = Publisher(self.opts)
-        self.publisher.start()
+        dfn = os.path.join(self.opts['cachedir'], '.dfn')
+        if os.path.isfile(dfn):
+            try:
+                os.remove(dfn)
+            except os.error:
+                pass
+        self.process_manager = salt.utils.process.ProcessManager(name='ReqServer_ProcessManager')
 
-    def start_event_publisher(self):
-        '''
-        Start the salt publisher interface
-        '''
-        # Start the publisher
-        self.eventpublisher = salt.utils.event.EventPublisher(self.opts)
-        self.eventpublisher.start()
+        for ind in range(int(self.opts['worker_threads'])):
+            self.process_manager.add_process(MWorker,
+                                             args=(self.opts,
+                                                   self.master_key,
+                                                   self.key,
+                                                   self.crypticle,
+                                                   ),
+                                             )
+        self.process_manager.add_process(self.zmq_device)
 
-    def start_reactor(self):
-        '''
-        Start the reactor, but only if the reactor interface is configured
-        '''
-        if self.opts.get('reactor'):
-            self.reactor = salt.utils.event.Reactor(self.opts)
-            self.reactor.start()
-
-    def start_halite(self):
-        '''
-        If halite is configured and installed, fire it up!
-        '''
-        if HAS_HALITE and 'halite' in self.opts:
-            log.info('Halite: Starting up ...')
-            self.halite = Halite(self.opts['halite'])
-            self.halite.start()
-        elif 'halite' in self.opts:
-            log.info('Halite: Not configured, skipping.')
-        else:
-            log.debug('Halite: Unavailable.')
+        # start zmq device
+        self.process_manager.run()
 
     def run(self):
         '''
@@ -707,6 +655,7 @@ class MWorker(multiprocessing.Process):
                 aes = fp_.read()
             if len(aes) != 76:
                 return
+            log.debug('New master AES key found by pid {0}'.format(os.getpid()))
             self.crypticle = salt.crypt.Crypticle(self.opts, aes)
             self.clear_funcs.crypticle = self.crypticle
             self.clear_funcs.opts['aes'] = aes
@@ -1299,6 +1248,7 @@ class ClearFuncs(object):
         self.wheel_ = salt.wheel.Wheel(opts)
         self.masterapi = salt.daemons.masterapi.LocalFuncs(opts, key)
         self.auto_key = salt.daemons.masterapi.AutoKey(opts)
+        self.cache_cli = CacheCli(self.opts)
 
     def _auth(self, load):
         '''
@@ -1326,7 +1276,16 @@ class ClearFuncs(object):
 
         # 0 is default which should be 'unlimited'
         if self.opts['max_minions'] > 0:
-            minions = salt.utils.minions.CkMinions(self.opts).connected_ids()
+            # use the ConCache if enabled, else use the minion utils
+            if self.cache_cli:
+                minions = self.cache_cli.get_cached()
+            else:
+                minions = self.ckminions.connected_ids()
+                if len(minions) > 1000:
+                    log.info('With large numbers of minions it is advised '
+                             'to enable the ConCache with \'con_cache: True\' '
+                             'in the masters configuration file.')
+
             if not len(minions) < self.opts['max_minions']:
                 # we reject new minions, minions that are already
                 # connected must be allowed for the mine, highstate, etc.
@@ -1534,6 +1493,10 @@ class ClearFuncs(object):
             with salt.utils.fopen(pubfn, 'w+') as fp_:
                 fp_.write(load['pub'])
         pub = None
+
+        # the con_cache is enabled, send the minion id to the cache
+        if self.cache_cli:
+            self.cache_cli.put_cache([load['id']])
 
         # The key payload may sometimes be corrupt when using auto-accept
         # and an empty request comes in
@@ -2114,10 +2077,12 @@ class ClearFuncs(object):
                 )
                 return ''
         # Retrieve the minions list
+        delimiter = clear_load.get('kwargs', {}).get('delimiter', DEFAULT_TARGET_DELIM)
         minions = self.ckminions.check_minions(
             clear_load['tgt'],
-            clear_load.get('tgt_type', 'glob')
-            )
+            clear_load.get('tgt_type', 'glob'),
+            delimiter
+        )
         # If we order masters (via a syndic), don't short circuit if no minions
         # are found
         if not self.opts.get('order_masters'):
@@ -2207,12 +2172,20 @@ class ClearFuncs(object):
         elif 'master_id' in extra:
             load['master_id'] = extra['master_id']
 
+        # Only add the delimiter to the pub data if it is non-default
+        if delimiter != DEFAULT_TARGET_DELIM:
+            load['delimiter'] = delimiter
+
         if 'id' in extra:
             load['id'] = extra['id']
         if 'tgt_type' in clear_load:
             load['tgt_type'] = clear_load['tgt_type']
         if 'to' in clear_load:
             load['to'] = clear_load['to']
+
+        if 'kwargs' in clear_load:
+            if 'ret_config' in clear_load['kwargs']:
+                load['ret_config'] = clear_load['kwargs'].get('ret_config')
 
         if 'user' in clear_load:
             log.info(

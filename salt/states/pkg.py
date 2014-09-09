@@ -117,6 +117,84 @@ def _find_unpurge_targets(desired):
     ]
 
 
+def _find_remove_targets(name=None,
+                         version=None,
+                         pkgs=None,
+                         **kwargs):
+    '''
+    Inspect the arguments to pkg.removed and discover what packages need to
+    be removed. Return a dict of packages to remove.
+    '''
+    cur_pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
+    if pkgs:
+        to_remove = _repack_pkgs(pkgs)
+
+        if not to_remove:
+            # Badly-formatted SLS
+            return {'name': name,
+                    'changes': {},
+                    'result': False,
+                    'comment': 'Invalidly formatted pkgs parameter. See '
+                               'minion log.'}
+    else:
+        _normalize_name = __salt__.get('pkg.normalize_name', lambda pkgname: pkgname)
+        to_remove = {_normalize_name(name): version}
+
+        cver = cur_pkgs.get(name, [])
+
+    version_spec = False
+    # Find out which packages will be targeted in the call to pkg.remove
+    # Check current versions against specified versions
+    targets = []
+    problems = []
+    for pkgname, pkgver in to_remove.iteritems():
+        cver = cur_pkgs.get(pkgname, [])
+        # Package not installed, no need to remove
+        if not cver:
+            continue
+        # No version specified and pkg is installed
+        elif __salt__['pkg_resource.version_clean'](pkgver) is None:
+            targets.append(pkgname)
+            continue
+        version_spec = True
+        match = re.match('^([<>])?(=)?([^<>=]+)$', pkgver)
+        if not match:
+            msg = 'Invalid version specification {0!r} for package ' \
+                  '{1!r}.'.format(pkgver, pkgname)
+            problems.append(msg)
+        else:
+            gt_lt, eq, verstr = match.groups()
+            comparison = gt_lt or ''
+            comparison += eq or ''
+            # A comparison operator of "=" is redundant, but possible.
+            # Change it to "==" so that the version comparison works
+            if comparison in ['=', '']:
+                comparison = '=='
+            if not _fulfills_version_spec(cver, comparison, verstr):
+                log.debug('Current version ({0} did not match ({1}) specified ({2}), skipping remove {3}'.format(cver, comparison, verstr, pkgname))
+            else:
+                targets.append(pkgname)
+
+    if problems:
+        return {'name': name,
+                'changes': {},
+                'result': False,
+                'comment': ' '.join(problems)}
+
+    if not targets:
+        # All specified packages are already absent
+        msg = (
+            'All specified packages{0} are already absent.'
+            .format(' (matching specified versions)' if version_spec else '')
+        )
+        return {'name': name,
+                'changes': {},
+                'result': True,
+                'comment': msg}
+
+    return targets
+
+
 def _find_install_targets(name=None,
                           version=None,
                           pkgs=None,
@@ -1261,7 +1339,7 @@ def latest(
                 'comment': comment}
 
 
-def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
+def _uninstall(action='remove', name=None, version=None, pkgs=None, **kwargs):
     '''
     Common function for package removal
     '''
@@ -1280,8 +1358,15 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
                 'result': False,
                 'comment': 'An error was encountered while parsing targets: '
                            '{0}'.format(exc)}
-    old = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
-    targets = [x for x in pkg_params if x in old]
+    targets = _find_remove_targets(name, version, pkgs, **kwargs)
+    if isinstance(targets, dict) and 'result' in targets:
+        return targets
+    elif not isinstance(targets, list):
+        return {'name': name,
+                'changes': {},
+                'result': False,
+                'comment': 'An error was encountered while checking targets: '
+                           '{0}'.format(targets)}
     if action == 'purge':
         old_removed = __salt__['pkg.list_pkgs'](versions_as_list=True,
                                                 removed=True,
@@ -1337,7 +1422,7 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
             'comment': ' '.join(comments)}
 
 
-def removed(name, pkgs=None, **kwargs):
+def removed(name, version=None, pkgs=None, **kwargs):
     '''
     Verify that a package is not installed, calling ``pkg.remove`` if necessary
     to remove the package.
@@ -1345,17 +1430,23 @@ def removed(name, pkgs=None, **kwargs):
     name
         The name of the package to be removed.
 
+    version
+        The version of the package that should be removed. Don't do anything if
+        the package is installed with an unmatching version.
+
 
     Multiple Package Options:
 
     pkgs
         A list of packages to remove. Must be passed as a python list. The
-        ``name`` parameter will be ignored if this option is passed.
+        ``name`` parameter will be ignored if this option is passed. It accepts
+        version numbers as well.
 
     .. versionadded:: 0.16.0
     '''
     try:
-        return _uninstall(action='remove', name=name, pkgs=pkgs, **kwargs)
+        return _uninstall(action='remove', name=name, version=version,
+                          pkgs=pkgs, **kwargs)
     except CommandExecutionError as exc:
         return {'name': name,
                 'changes': {},
@@ -1363,7 +1454,7 @@ def removed(name, pkgs=None, **kwargs):
                 'comment': str(exc)}
 
 
-def purged(name, pkgs=None, **kwargs):
+def purged(name, version=None, pkgs=None, **kwargs):
     '''
     Verify that a package is not installed, calling ``pkg.purge`` if necessary
     to purge the package. All configuration files are also removed.
@@ -1371,17 +1462,23 @@ def purged(name, pkgs=None, **kwargs):
     name
         The name of the package to be purged.
 
+    version
+        The version of the package that should be removed. Don't do anything if
+        the package is installed with an unmatching version.
+
 
     Multiple Package Options:
 
     pkgs
         A list of packages to purge. Must be passed as a python list. The
-        ``name`` parameter will be ignored if this option is passed.
+        ``name`` parameter will be ignored if this option is passed. It accepts
+        version numbers as well.
 
     .. versionadded:: 0.16.0
     '''
     try:
-        return _uninstall(action='purge', name=name, pkgs=pkgs, **kwargs)
+        return _uninstall(action='purge', name=name, version=version,
+                          pkgs=pkgs, **kwargs)
     except CommandExecutionError as exc:
         return {'name': name,
                 'changes': {},

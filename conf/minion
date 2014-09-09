@@ -144,6 +144,17 @@
 # TODO: perhaps could update the scheduler to raise Exception in main thread after /mine_interval (60 minutes)/ fails
 #ping_interval: 90
 
+# To auto recover minions if master changes IP address (DDNS)
+#
+#    auth_tries: 10
+#    auth_safemode: False
+#    ping_interval: 90
+#    restart_on_error: True
+#
+# Minions won't know master is missing until a ping fails.  After the ping fail,
+# the minion will attempt authentication and likely fails out and cause a restart.
+# When the minion restarts it will resolve the masters IP and attempt to reconnect.
+
 # If you don't have any problems with syn-floods, don't bother with the
 # three recon_* settings described below, just leave the defaults!
 #

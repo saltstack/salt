@@ -17,7 +17,7 @@ import multiprocessing
 from itertools import groupby
 
 # Import salt.cloud libs
-from salt.cloud.exceptions import (
+from salt.exceptions import (
     SaltCloudNotFound,
     SaltCloudException,
     SaltCloudSystemExit,
@@ -292,6 +292,31 @@ class CloudClient(object):
 
             vm_overrides is a special dict that will be per node options
             overrides
+
+        Example:
+
+        .. code-block:: python
+
+            >>> client= salt.cloud.CloudClient(path='/etc/salt/cloud')
+            >>> client.profile('do_512_git', names=['minion01',])
+            {'minion01': {u'backups_active': 'False',
+                    u'created_at': '2014-09-04T18:10:15Z',
+                    u'droplet': {u'event_id': 31000502,
+                                 u'id': 2530006,
+                                 u'image_id': 5140006,
+                                 u'name': u'minion01',
+                                 u'size_id': 66},
+                    u'id': '2530006',
+                    u'image_id': '5140006',
+                    u'ip_address': '107.XXX.XXX.XXX',
+                    u'locked': 'True',
+                    u'name': 'minion01',
+                    u'private_ip_address': None,
+                    u'region_id': '4',
+                    u'size_id': '66',
+                    u'status': 'new'}}
+
+
         '''
         if not vm_overrides:
             vm_overrides = {}
@@ -332,10 +357,12 @@ class CloudClient(object):
 
         Example:
 
-        client.create(names=['myinstance'], provider='my-ec2-config',
-            kwargs={'image': 'ami-1624987f', 'size': 'Micro Instance',
-                    'ssh_username': 'ec2-user', 'securitygroup': 'default',
-                    'delvol_on_destroy': True})
+        .. code-block:: python
+
+            client.create(names=['myinstance'], provider='my-ec2-config',
+                kwargs={'image': 'ami-1624987f', 'size': 'Micro Instance',
+                        'ssh_username': 'ec2-user', 'securitygroup': 'default',
+                        'delvol_on_destroy': True})
         '''
         mapper = salt.cloud.Map(self._opts_defaults())
         providers = mapper.map_providers_parallel()
@@ -502,6 +529,40 @@ class Cloud(object):
                 )
             )
         return providers
+
+    def lookup_profiles(self, provider, lookup):
+        '''
+        Return a dictionary describing the configured profiles
+        '''
+        if provider is None:
+            provider = 'all'
+        if lookup is None:
+            lookup = 'all'
+
+        if lookup == 'all':
+            profiles = set()
+            provider_profiles = set()
+            for alias, info in self.opts['profiles'].iteritems():
+                providers = info.get('provider')
+
+                if providers:
+                    given_prov_name = providers.split(':')[0]
+                    salt_prov_name = providers.split(':')[1]
+                    if given_prov_name == provider:
+                        provider_profiles.add((alias, given_prov_name))
+                    elif salt_prov_name == provider:
+                        provider_profiles.add((alias, salt_prov_name))
+                    profiles.add((alias, given_prov_name))
+
+            if not profiles:
+                raise SaltCloudSystemExit(
+                    'There are no cloud profiles configured.'
+                )
+
+            if provider != 'all':
+                return provider_profiles
+
+            return profiles
 
     def map_providers(self, query='list_nodes', cached=False):
         '''
@@ -830,6 +891,23 @@ class Cloud(object):
         '''
         data = {}
         lookups = self.lookup_providers(lookup)
+        if not lookups:
+            return data
+
+        for alias, driver in lookups:
+            if alias not in data:
+                data[alias] = {}
+            if driver not in data[alias]:
+                data[alias][driver] = {}
+        return data
+
+    def profile_list(self, provider, lookup='all'):
+        '''
+        Return a mapping of all configured profiles
+        '''
+        data = {}
+        lookups = self.lookup_profiles(provider, lookup)
+
         if not lookups:
             return data
 

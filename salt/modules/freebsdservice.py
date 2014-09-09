@@ -209,7 +209,7 @@ def disable(name, **kwargs):
     return _switch(name, False, **kwargs)
 
 
-def enabled(name):
+def enabled(name, **kwargs):
     '''
     Return True if the named service is enabled, false otherwise
 

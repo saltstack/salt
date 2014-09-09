@@ -13,7 +13,6 @@ import urlparse
 from copy import deepcopy
 import time
 import codecs
-
 # import third party libs
 import yaml
 try:
@@ -24,19 +23,15 @@ except Exception:
 
 # Import salt libs
 import salt.crypt
-import salt.loader
 import salt.utils
 import salt.utils.network
-import salt.pillar
 import salt.syspaths
 import salt.utils.validate.path
 import salt.utils.xdg
+import salt.exceptions
 from salt._compat import string_types
 
 import sys
-# can't use salt.utils.is_windows, because config.py is included from salt.utils
-if not sys.platform.lower().startswith('win'):
-    import salt.cloud.exceptions
 
 log = logging.getLogger(__name__)
 
@@ -256,6 +251,7 @@ VALID_OPTS = {
     'username': str,
     'password': str,
     'zmq_filtering': bool,
+    'con_cache': bool,
 }
 
 # default configurations
@@ -352,7 +348,7 @@ DEFAULT_MINION_OPTS = {
     'recon_max': 10000,
     'recon_default': 1000,
     'recon_randomize': True,
-    'random_reauth_delay': 60,
+    'random_reauth_delay': 10,
     'win_repo_cachefile': 'salt://win/repo/winrepo.p',
     'pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-minion.pid'),
     'range_server': 'range:80',
@@ -423,7 +419,7 @@ DEFAULT_MASTER_OPTS = {
     'hgfs_branch_method': 'branches',
     'hgfs_env_whitelist': [],
     'hgfs_env_blacklist': [],
-    'show_timeout': False,
+    'show_timeout': True,
     'show_jid': False,
     'svnfs_remotes': [],
     'svnfs_mountpoint': '',
@@ -542,6 +538,7 @@ DEFAULT_MASTER_OPTS = {
     'master_pubkey_signature': 'master_pubkey_signature',
     'master_use_pubkey_signature': False,
     'zmq_filtering': False,
+    'con_cache': False,
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
@@ -1077,7 +1074,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
     # Grab data from the 4 sources
     # 1st - Master config
     if master_config_path is not None and master_config is not None:
-        raise salt.cloud.exceptions.SaltCloudConfigError(
+        raise salt.exceptions.SaltCloudConfigError(
             'Only pass `master_config` or `master_config_path`, not both.'
         )
     elif master_config_path is None and master_config is None:
@@ -1101,7 +1098,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
     overrides = master_config
 
     if providers_config_path is not None and providers_config is not None:
-        raise salt.cloud.exceptions.SaltCloudConfigError(
+        raise salt.exceptions.SaltCloudConfigError(
             'Only pass `providers_config` or `providers_config_path`, '
             'not both.'
         )
@@ -1114,7 +1111,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
         )
 
     if profiles_config_path is not None and profiles_config is not None:
-        raise salt.cloud.exceptions.SaltCloudConfigError(
+        raise salt.exceptions.SaltCloudConfigError(
             'Only pass `profiles_config` or `profiles_config_path`, not both.'
         )
     elif profiles_config_path is None and profiles_config is None:
@@ -1131,7 +1128,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
     # 3rd - Include Cloud Providers
     if 'providers' in opts:
         if providers_config is not None:
-            raise salt.cloud.exceptions.SaltCloudConfigError(
+            raise salt.exceptions.SaltCloudConfigError(
                 'Do not mix the old cloud providers configuration with '
                 'the passing a pre-configured providers configuration '
                 'dictionary.'
@@ -1145,7 +1142,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
 
             if (os.path.isfile(providers_config_path) or
                     glob.glob(providers_confd)):
-                raise salt.cloud.exceptions.SaltCloudConfigError(
+                raise salt.exceptions.SaltCloudConfigError(
                     'Do not mix the old cloud providers configuration with '
                     'the new one. The providers configuration should now go '
                     'in the file `{0}` or a separate `*.conf` file within '
@@ -1198,7 +1195,7 @@ def apply_cloud_config(overrides, defaults=None):
             if isinstance(details, list):
                 for detail in details:
                     if 'provider' not in detail:
-                        raise salt.cloud.exceptions.SaltCloudConfigError(
+                        raise salt.exceptions.SaltCloudConfigError(
                             'The cloud provider alias {0!r} has an entry '
                             'missing the required setting \'provider\''.format(
                                 alias
@@ -1217,7 +1214,7 @@ def apply_cloud_config(overrides, defaults=None):
                     config['providers'][alias][driver] = detail
             elif isinstance(details, dict):
                 if 'provider' not in details:
-                    raise salt.cloud.exceptions.SaltCloudConfigError(
+                    raise salt.exceptions.SaltCloudConfigError(
                         'The cloud provider alias {0!r} has an entry '
                         'missing the required setting \'provider\''.format(
                             alias
@@ -1318,7 +1315,7 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
         if key in ('conf_file', 'include', 'default_include', 'user'):
             continue
         if not isinstance(val, dict):
-            raise salt.cloud.exceptions.SaltCloudConfigError(
+            raise salt.exceptions.SaltCloudConfigError(
                 'The VM profiles configuration found in {0[conf_file]!r} is '
                 'not in the proper format'.format(config)
             )
@@ -1499,7 +1496,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
                         'single entry for EC2, Joyent, Openstack, and so '
                         'forth.'
                     )
-                    raise salt.cloud.exceptions.SaltCloudConfigError(
+                    raise salt.exceptions.SaltCloudConfigError(
                         'The cloud provider alias {0!r} has multiple entries '
                         'for the {1[provider]!r} driver.'.format(key, details)
                     )
@@ -1534,7 +1531,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
                 if ':' in extends:
                     alias, provider = extends.split(':')
                     if alias not in providers:
-                        raise salt.cloud.exceptions.SaltCloudConfigError(
+                        raise salt.exceptions.SaltCloudConfigError(
                             'The {0!r} cloud provider entry in {1!r} is '
                             'trying to extend data from {2!r} though {2!r} '
                             'is not defined in the salt cloud providers '
@@ -1546,7 +1543,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
                         )
 
                     if provider not in providers.get(alias):
-                        raise salt.cloud.exceptions.SaltCloudConfigError(
+                        raise salt.exceptions.SaltCloudConfigError(
                             'The {0!r} cloud provider entry in {1!r} is '
                             'trying to extend data from \'{2}:{3}\' though '
                             '{3!r} is not defined in {1!r}'.format(
@@ -1560,7 +1557,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
                     # change provider details '-only-extendable-' to extended provider name
                     details['provider'] = provider
                 elif providers.get(extends):
-                    raise salt.cloud.exceptions.SaltCloudConfigError(
+                    raise salt.exceptions.SaltCloudConfigError(
                         'The {0!r} cloud provider entry in {1!r} is trying '
                         'to extend from {2!r} and no provider was specified. '
                         'Not extending!'.format(
@@ -1568,7 +1565,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
                         )
                     )
                 elif extends not in providers:
-                    raise salt.cloud.exceptions.SaltCloudConfigError(
+                    raise salt.exceptions.SaltCloudConfigError(
                         'The {0!r} cloud provider entry in {1!r} is trying '
                         'to extend data from {2!r} though {2!r} is not '
                         'defined in the salt cloud providers loaded '

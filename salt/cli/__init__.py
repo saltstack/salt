@@ -127,6 +127,8 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 except IOError:
                     kwargs['token'] = self.config['token']
 
+            kwargs['delimiter'] = self.options.delimiter
+
             if self.selected_target_option:
                 kwargs['expr_form'] = self.selected_target_option
             else:
@@ -134,6 +136,9 @@ class SaltCMD(parsers.SaltCMDOptionParser):
 
             if getattr(self.options, 'return'):
                 kwargs['ret'] = getattr(self.options, 'return')
+
+            if getattr(self.options, 'return_config'):
+                kwargs['ret_config'] = getattr(self.options, 'return_config')
 
             # If using eauth and a token hasn't already been loaded into
             # kwargs, prompt the user to enter auth credentials

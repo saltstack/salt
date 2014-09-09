@@ -18,12 +18,6 @@ from random import randint
 import salt
 from salt.exceptions import SaltSystemExit, SaltClientError, SaltReqTimeoutError
 import salt.cli
-try:
-    import salt.cloud.cli
-    HAS_SALTCLOUD = True
-except ImportError:
-    # No salt cloud on Windows
-    HAS_SALTCLOUD = False
 
 
 log = logging.getLogger(__name__)
@@ -31,7 +25,7 @@ log = logging.getLogger(__name__)
 
 def _handle_interrupt(exc, original_exc, hardfail=False, trace=''):
     '''
-    if hardfalling:
+    if hardfailing:
         If we got the original stacktrace, log it
         If all cases, raise the original exception
         but this is logically part the initial
@@ -56,12 +50,12 @@ def salt_master():
 
 
 def minion_process(q):
-    # salt_minion spawns this function in a new proccess
+    # salt_minion spawns this function in a new process
 
     def suicide_when_without_parent(parent_pid):
         # have the minion suicide if the parent process is gone
         # there is a small race issue where the parent PID could be replace
-        # with another proccess with the same PID
+        # with another process with the same PID
         while True:
             time.sleep(5)
             try:
@@ -122,7 +116,13 @@ def salt_minion():
 
     # keep one minion subprocess running
     while True:
-        q = multiprocessing.Queue()
+        try:
+            q = multiprocessing.Queue()
+        except Exception:
+            # This breaks in containers
+            minion = salt.Minion()
+            minion.start()
+            return
         p = multiprocessing.Process(target=minion_process, args=(q,))
         p.start()
         try:
@@ -139,7 +139,7 @@ def salt_minion():
                 break
             # delay restart to reduce flooding and allow network resources to close
             time.sleep(restart_delay)
-        except KeyboardInterrupt, err:
+        except KeyboardInterrupt:
             break
         # need to reset logging because new minion objects
         # cause extra log handlers to accumulate
@@ -283,6 +283,12 @@ def salt_cloud():
     '''
     The main function for salt-cloud
     '''
+    try:
+        import salt.cloud.cli
+        HAS_SALTCLOUD = True
+    except ImportError:
+        # No salt cloud on Windows
+        HAS_SALTCLOUD = False
     if '' in sys.path:
         sys.path.remove('')
 

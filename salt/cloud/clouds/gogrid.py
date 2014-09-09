@@ -8,6 +8,8 @@ service. To use Salt Cloud with GoGrid log into the GoGrid web interface and
 create an api key. Do this by clicking on "My Account" and then going to the
 API Keys tab.
 
+:depends: libcloud >= 0.13.2
+
 Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 ``/etc/salt/cloud.providers.d/gogrid.conf``:
 
@@ -36,7 +38,7 @@ from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
 # Import salt cloud libs
 import salt.config as config
 from salt.utils import namespaced_function
-from salt.cloud.exceptions import SaltCloudSystemExit
+from salt.exceptions import SaltCloudSystemExit
 
 # Get logging started
 log = logging.getLogger(__name__)

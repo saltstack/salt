@@ -47,19 +47,28 @@ following command would be used to install pygit2_:
 
     # yum install python-pygit2
 
-Provided a valid version, the package name would be the same for Debian/Ubuntu,
-so the following would be used to install it:
+Provided a valid version is packaged for Debian/Ubuntu (which is not currently
+the case), the package name would be the same, and the following command would
+be used to install it:
 
 .. code-block:: bash
 
     # apt-get install python-pygit2
 
+
+If pygit2_ is not packaged for the platform on which the Master is running, the
+pygit2_ website has installation instructions here__. Keep in mind however that
+following these instructions will install libgit2 and pygit2_ without system
+packages.
+
+.. __: http://www.pygit2.org/install.html
+
 GitPython
 ---------
 
-The gitfs backend requires GitPython_, version 0.3.0 or newer. For RHEL-based
-Linux distros, a compatible version is available in EPEL, and can be easily
-installed on the master using yum:
+GitPython_ 0.3.0 or newer is required to use GitPython for gitfs. For
+RHEL-based Linux distros, a compatible version is available in EPEL, and can be
+easily installed on the master using yum:
 
 .. code-block:: bash
 
@@ -119,7 +128,7 @@ To use the gitfs backend, only two configuration changes are required on the
 master:
 
 1. Include ``git`` in the :conf_master:`fileserver_backend` list in the master
-   config file (or minion config file, if running a standalone minion):
+   config file:
 
    .. code-block:: yaml
 
@@ -146,16 +155,13 @@ master:
    Information on how to authenticate to SSH remotes can be found :ref:`here
    <gitfs-authentication>`.
 
-3. Restart the master (or minion, if running a standalone minion) to load the
-   new configuration.
+3. Restart the master to load the new configuration.
    
 
 .. note::
 
-    In a master/minion setup, files from a gitfs remote are cached once by
-    the master; so minions do not need direct access 
-    to the git repository. In a standalone minion configuration, files from
-    each gitfs remote are cached by the minion.
+    In a master/minion setup, files from a gitfs remote are cached once by the
+    master, so minions do not need direct access to the git repository.
 
 
 Multiple Remotes
@@ -174,25 +180,6 @@ If the ``gitfs_remotes`` option specifies three remotes:
       - git://github.com/example/first.git
       - https://github.com/example/second.git
       - file:///root/third
-
-.. note::
-
-    This example is purposefully contrived to illustrate the behavior of the
-    gitfs backend. This example should not be read as a recommended way to lay
-    out files and git repos.
-
-    The :strong:`file://` prefix denotes a git repository in a local directory.
-    However, it will still use the given :strong:`file://` URL as a remote,
-    rather than copying the git repo to the salt cache.  This means that any
-    refs you want accessible must exist as *local* refs in the specified repo.
-
-.. warning::
-
-    Salt versions prior to 2014.1.0 are not tolerant of changing the
-    order of remotes or modifying the URI of existing remotes. In those
-    versions, when modifying remotes it is a good idea to remove the gitfs
-    cache directory (``/var/cache/salt/master/gitfs``) before restarting the
-    salt-master service.
 
 And each repository contains some files:
 
@@ -218,10 +205,29 @@ repository in the order in which they are defined in the configuration. The
 If the requested file is found, then it is served and no further searching
 is executed. For example:
 
-* A request for :strong:`salt://haproxy/init.sls` will be pulled from the
-  :strong:`https://github.com/example/second.git` git repo.
-* A request for :strong:`salt://haproxy/haproxy.conf` will be pulled from the
+* A request for the file :strong:`salt://haproxy/init.sls` will be served from
+  the :strong:`https://github.com/example/second.git` git repo.
+* A request for the file :strong:`salt://haproxy/haproxy.conf` will be served from the
   :strong:`file:///root/third` repo.
+
+.. note::
+
+    This example is purposefully contrived to illustrate the behavior of the
+    gitfs backend. This example should not be read as a recommended way to lay
+    out files and git repos.
+
+    The :strong:`file://` prefix denotes a git repository in a local directory.
+    However, it will still use the given :strong:`file://` URL as a remote,
+    rather than copying the git repo to the salt cache.  This means that any
+    refs you want accessible must exist as *local* refs in the specified repo.
+
+.. warning::
+
+    Salt versions prior to 2014.1.0 are not tolerant of changing the
+    order of remotes or modifying the URI of existing remotes. In those
+    versions, when modifying remotes it is a good idea to remove the gitfs
+    cache directory (``/var/cache/salt/master/gitfs``) before restarting the
+    salt-master service.
 
 
 .. _gitfs-per-remote-config:
@@ -281,9 +287,10 @@ In the example configuration above, the following is true:
    ``base`` environment, while the second one will use the ``salt-base``
    branch/tag as the ``base`` environment.
 
-2. The first remote will serve all files in the repository, while the second
-   and third will only serve files from the ``salt`` and ``salt/states``
-   directories (and their subdirectories), respectively.
+2. The first remote will serve all files in the repository. The second
+   remote will only serve files from the ``salt`` directory (and its
+   subdirectories), while the third remote will only serve files from the
+   ``salt/states`` directory (and its subdirectories).
 
 3. The files from the second remote will be located under
    ``salt://foo/bar/baz``, while the files from the first and third remotes
@@ -342,7 +349,7 @@ rather than needing to reorganize a repository or design it around the layout
 of the Salt fileserver.
 
 Before the addition of this feature, if a file being served up via gitfs was
-located several directories down from the root (for example,
+deeply nested within the root directory (for example,
 ``salt://webapps/foo/files/foo.conf``, it would be necessary to ensure that the
 file was properly located in the remote repository, and that all of the the
 parent directories were present (for example, the directories
@@ -427,8 +434,9 @@ Environment Whitelist/Blacklist
 The :conf_master:`gitfs_env_whitelist` and :conf_master:`gitfs_env_blacklist`
 parameters allow for greater control over which branches/tags are exposed as
 fileserver environments. Exact matches, globs, and regular expressions are
-supported. If using a regular expression, ``^`` and ``$`` must be omitted, and
-the expression must match the entire branch/tag.
+supported, and are evaluated in that order. If using a regular expression,
+``^`` and ``$`` must be omitted, and the expression must match the entire
+branch/tag.
 
 .. code-block:: yaml
 
@@ -440,7 +448,8 @@ the expression must match the entire branch/tag.
 .. note::
 
     ``v1.*``, in this example, will match as both a glob and a regular
-    expression.
+    expression (though it will have been matched as a glob, since globs are
+    evaluated before regular expressions).
 
 The behavior of the blacklist/whitelist will differ depending on which
 combination of the two options is used:
@@ -557,7 +566,7 @@ manpage for ``ssh_config``. Here's an example entry which can be added to the
 The ``Host`` parameter should be a hostname (or hostname glob) that matches the
 domain name of the git repository.
 
-It is also necessary to make :ref:`add the SSH host key to the known_hosts file
+It is also necessary to :ref:`add the SSH host key to the known_hosts file
 <gitfs-ssh-fingerprint>`. The exception to this would be if strict host key
 checking is disabled, which can be done by adding ``StrictHostKeyChecking no``
 to the entry in ``~/.ssh/config``
@@ -646,7 +655,7 @@ Another way is to check one's own known_hosts file, using this one-liner:
 
 .. code-block:: bash
 
-    $ ssh-keygen -H -F github.com | sed 1d | awk '{print $3}' | tr -d '\n' | base64 -d | md5sum | awk '{print $1}' | sed 's/\([^:]\{2\}\)/\1:/g' | sed 's/:$//'
+    $ ssh-keygen -l -f /dev/stdin <<<`ssh-keyscan -t rsa github.com 2>/dev/null` | awk '{print $2}'
     16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48
 
 

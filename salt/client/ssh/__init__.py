@@ -44,7 +44,7 @@ except ImportError:
     HAS_ZMQ = False
 
 # The directory where salt thin is deployed
-DEFAULT_THIN_DIR = '/tmp/.salt'
+DEFAULT_THIN_DIR = '/tmp/.%%USER%%_salt'
 
 # RSTR is just a delimiter to distinguish the beginning of salt STDOUT
 # and STDERR.  There is no special meaning.  Messages prior to RSTR in
@@ -224,6 +224,7 @@ class SSH(object):
         }
         self.serial = salt.payload.Serial(opts)
         self.returners = salt.loader.returners(self.opts, {})
+        self.mods = mod_data(self.opts)
 
     def verify_env(self):
         '''
@@ -321,6 +322,7 @@ class SSH(object):
                 opts,
                 opts['argv'],
                 host,
+                mods=self.mods,
                 **target)
         ret = {'id': single.id}
         stdout, stderr, retcode = single.run()
@@ -453,9 +455,11 @@ class SSH(object):
             host = ret.keys()[0]
             self.cache_job(jid, host, ret[host])
             ret = self.key_deploy(host, ret)
+            outputter = ret[host].get('out', self.opts.get('output', 'nested'))
+            p_data = {host: ret[host].get('return', {})}
             salt.output.display_output(
-                    ret,
-                    self.opts.get('output', 'nested'),
+                    p_data,
+                    outputter,
                     self.opts)
             if self.event:
                 self.event.fire_event(
@@ -486,8 +490,14 @@ class Single(object):
             timeout=None,
             sudo=False,
             tty=False,
+            mods=None,
             **kwargs):
         self.opts = opts
+        if user:
+            self.thin_dir = DEFAULT_THIN_DIR.replace('%%USER%%', user)
+        else:
+            self.thin_dir = DEFAULT_THIN_DIR.replace('%%USER%%', 'root')
+        self.opts['_thin_dir'] = self.thin_dir
 
         if isinstance(argv, string_types):
             self.argv = [argv]
@@ -508,13 +518,14 @@ class Single(object):
         self.shell = salt.client.ssh.shell.Shell(opts, **args)
         self.minion_config = yaml.dump(
                 {
-                    'root_dir': os.path.join(DEFAULT_THIN_DIR, 'running_data'),
+                    'root_dir': os.path.join(self.thin_dir, 'running_data'),
                     'id': self.id,
                 }).strip()
         self.target = kwargs
         self.target.update(args)
         self.serial = salt.payload.Serial(opts)
         self.wfuncs = salt.loader.ssh_wrapper(opts)
+        self.mods = mods
 
     def __arg_comps(self):
         '''
@@ -557,7 +568,7 @@ class Single(object):
         thin = salt.utils.thin.gen_thin(self.opts['cachedir'])
         self.shell.send(
             thin,
-            os.path.join(DEFAULT_THIN_DIR, 'salt-thin.tgz'),
+            os.path.join(self.thin_dir, 'salt-thin.tgz'),
         )
         return True
 
@@ -595,6 +606,8 @@ class Single(object):
         '''
         # Ensure that opts/grains are up to date
         # Execute routine
+        data_cache = self.opts.get('ssh_minion_cache', True)
+        data = None
         cdir = os.path.join(self.opts['cachedir'], 'minions', self.id)
         if not os.path.isdir(cdir):
             os.makedirs(cdir)
@@ -609,12 +622,12 @@ class Single(object):
 
         if self.opts.get('refresh_cache'):
             refresh = True
-
         conf_grains = {}
         #Save conf file grains before they get clobbered
         if 'ssh_grains' in self.opts:
             conf_grains = self.opts['ssh_grains']
-
+        if not data_cache:
+            refresh = True
         if refresh:
             # Make the datap
             # TODO: Auto expire the datap
@@ -643,16 +656,17 @@ class Single(object):
             pillar_data = pillar.compile_pillar()
 
             # TODO: cache minion opts in datap in master.py
-            with salt.utils.fopen(datap, 'w+b') as fp_:
-                fp_.write(
-                        self.serial.dumps(
-                            {'opts': opts_pkg,
-                                'grains': opts_pkg['grains'],
-                                'pillar': pillar_data}
+            data = {'opts': opts_pkg,
+                    'grains': opts_pkg['grains'],
+                    'pillar': pillar_data}
+            if data_cache:
+                with salt.utils.fopen(datap, 'w+b') as fp_:
+                    fp_.write(
+                            self.serial.dumps(data)
                             )
-                        )
-        with salt.utils.fopen(datap, 'rb') as fp_:
-            data = self.serial.load(fp_)
+        if not data and data_cache:
+            with salt.utils.fopen(datap, 'rb') as fp_:
+                data = self.serial.load(fp_)
         opts = data.get('opts', {})
         opts['grains'] = data.get('grains')
 
@@ -675,9 +689,11 @@ class Single(object):
         # Mimic the json data-structure that "salt-call --local" will
         # emit (as seen in ssh_py_shim.py)
         if 'local' in result:
-            return json.dumps(result)
+            result['local']['return'] = result['local']
+            ret = json.dumps(result)
         else:
-            return json.dumps({'local': result})
+            ret = json.dumps({'local': {'return': result}})
+        return ret
 
     def _cmd_str(self):
         '''
@@ -688,16 +704,21 @@ class Single(object):
         debug = ''
         if salt.log.LOG_LEVELS['debug'] >= salt.log.LOG_LEVELS[self.opts['log_level']]:
             debug = '1'
+        ssh_py_shim_args = []
+        for mod in self.mods:
+            if self.mods[mod]:
+                ssh_py_shim_args += ['--{0}'.format(mod), '{0}'.format(self.mods[mod])]
 
-        ssh_py_shim_args = [
+        ssh_py_shim_args += [
             '--config', self.minion_config,
             '--delimiter', RSTR,
-            '--saltdir', DEFAULT_THIN_DIR,
+            '--saltdir', self.thin_dir,
             '--checksum', thin_sum,
             '--hashfunc', 'sha1',
             '--version', salt.__version__,
             '--',
-        ] + self.argv
+        ]
+        ssh_py_shim_args += self.argv
 
         cmd = SSH_SH_SHIM.format(
             DEBUG=debug,
@@ -903,9 +924,9 @@ class Single(object):
         trans_tar = prep_trans_tar(self.opts, chunks, file_refs)
         self.shell.send(
             trans_tar,
-            os.path.join(DEFAULT_THIN_DIR, 'salt_state.tgz'),
+            os.path.join(self.thin_dir, 'salt_state.tgz'),
         )
-        self.argv = ['state.pkg', '/tmp/.salt/salt_state.tgz', 'test={0}'.format(test)]
+        self.argv = ['state.pkg', '{0}/salt_state.tgz'.format(self.thin_dir), 'test={0}'.format(test)]
 
 
 class SSHState(salt.state.State):
@@ -987,6 +1008,35 @@ def salt_refs(data):
             if isinstance(comp, str):
                 if comp.startswith(proto):
                     ret.append(comp)
+    return ret
+
+
+def mod_data(opts):
+    '''
+    Generate the module arguments for the shim data
+    '''
+    # TODO, change out for a fileserver backend
+    sync_refs = [
+            'modules',
+            'states',
+            'grains',
+            'renderers',
+            'returners',
+            ]
+    ret = {}
+    for env in opts['file_roots']:
+        for path in opts['file_roots'][env]:
+            for ref in sync_refs:
+                mod_str = ''
+                pl_dir = os.path.join(path, '_{0}'.format(ref))
+                if os.path.isdir(pl_dir):
+                    for fn_ in os.listdir(pl_dir):
+                        mod_path = os.path.join(pl_dir, fn_)
+                        with open(mod_path) as fp_:
+                            code_str = fp_.read().encode('base64')
+                        mod_str += '{0}|{1},'.format(fn_, code_str)
+                mod_str = mod_str.rstrip(',')
+                ret[ref] = mod_str
     return ret
 
 

@@ -160,6 +160,7 @@ def latest(name,
 
     if not target:
         return _fail(ret, '"target" option is required')
+    target = os.path.expanduser(target)
 
     salt.utils.warn_until(
         'Lithium',
@@ -408,6 +409,7 @@ def present(name, bare=True, runas=None, user=None, force=False):
         Force-create a new repository into an pre-existing non-git directory
         (deletes contents)
     '''
+    name = os.path.expanduser(name)
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     salt.utils.warn_until(

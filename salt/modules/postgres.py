@@ -83,6 +83,8 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None,
         if not host or host.startswith('/'):
             if 'FreeBSD' in __grains__['os_family']:
                 runas = 'pgsql'
+            if 'OpenBSD' in __grains__['os_family']:
+                runas = '_postgresql'
             else:
                 runas = 'postgres'
 
@@ -633,6 +635,7 @@ def _role_cmd_args(name,
                    typ_='role',
                    encrypted=None,
                    login=None,
+                   connlimit=None,
                    inherit=None,
                    createdb=None,
                    createuser=None,
@@ -685,6 +688,10 @@ def _role_cmd_args(name,
          'skip': skip_superuser},
         {'flag': 'REPLICATION', 'test': replication},
         {'flag': 'LOGIN', 'test': login},
+        {'flag': 'CONNECTION LIMIT',
+         'test': bool(connlimit),
+         'addtxt': str(connlimit),
+         'skip': connlimit is None},
         {'flag': 'ENCRYPTED',
          'test': (encrypted is not None and bool(rolepassword)),
          'skip': skip_passwd or isinstance(rolepassword, bool),
@@ -716,6 +723,7 @@ def _role_create(name,
                  encrypted=None,
                  superuser=None,
                  login=None,
+                 connlimit=None,
                  inherit=None,
                  replication=None,
                  rolepassword=None,
@@ -739,6 +747,7 @@ def _role_create(name,
         typ_=typ_,
         encrypted=encrypted,
         login=login,
+        connlimit=connlimit,
         inherit=inherit,
         createdb=createdb,
         createroles=createroles,
@@ -767,6 +776,7 @@ def user_create(username,
                 createroles=None,
                 inherit=None,
                 login=None,
+                connlimit=None,
                 encrypted=None,
                 superuser=None,
                 replication=None,
@@ -796,6 +806,7 @@ def user_create(username,
                         createroles=createroles,
                         inherit=inherit,
                         login=login,
+                        connlimit=connlimit,
                         encrypted=encrypted,
                         superuser=superuser,
                         replication=replication,
@@ -816,6 +827,7 @@ def _role_update(name,
                  createroles=None,
                  inherit=None,
                  login=None,
+                 connlimit=None,
                  encrypted=None,
                  superuser=None,
                  replication=None,
@@ -844,6 +856,7 @@ def _role_update(name,
         name,
         encrypted=encrypted,
         login=login,
+        connlimit=connlimit,
         inherit=inherit,
         createdb=createdb,
         createuser=createuser,
@@ -875,18 +888,19 @@ def user_update(username,
                 superuser=None,
                 inherit=None,
                 login=None,
+                connlimit=None,
                 replication=None,
                 rolepassword=None,
                 groups=None,
                 runas=None):
     '''
-    Creates a Postgres user.
+    Updates a Postgres user.
 
     CLI Examples:
 
     .. code-block:: bash
 
-        salt '*' postgres.user_create 'username' user='user' \\
+        salt '*' postgres.user_update 'username' user='user' \\
                 host='hostname' port='port' password='password' \\
                 rolepassword='rolepassword'
     '''
@@ -899,6 +913,7 @@ def user_update(username,
                         typ_='user',
                         inherit=inherit,
                         login=login,
+                        connlimit=connlimit,
                         createdb=createdb,
                         createuser=createuser,
                         createroles=createroles,
@@ -1057,13 +1072,13 @@ def is_available_extension(name,
                            password=None,
                            runas=None):
     '''
-    Test if a specific extension is installed
+    Test if a specific extension is available
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' postgres.is_installed_extension
+        salt '*' postgres.is_available_extension
 
     '''
     exts = available_extensions(user=user,
@@ -1406,7 +1421,7 @@ def group_update(groupname,
                  groups=None,
                  runas=None):
     '''
-    Updated a postgres group
+    Updates a postgres group
 
     CLI Examples:
 

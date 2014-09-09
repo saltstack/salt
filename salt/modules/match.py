@@ -11,6 +11,7 @@ import sys
 # Import salt libs
 import salt.minion
 import salt.utils
+from salt.defaults import DEFAULT_TARGET_DELIM
 from salt._compat import string_types
 
 __func_alias__ = {
@@ -68,7 +69,7 @@ def ipcidr(tgt):
         return False
 
 
-def pillar(tgt, delimiter=':', delim=None):
+def pillar(tgt, delimiter=DEFAULT_TARGET_DELIM, delim=None):
     '''
     Return True if the minion matches the given pillar target. The
     ``delimiter`` argument can be used to specify a different delimiter.
@@ -102,7 +103,7 @@ def pillar(tgt, delimiter=':', delim=None):
 
     matcher = salt.minion.Matcher({'pillar': __pillar__}, __salt__)
     try:
-        return matcher.pillar_match(tgt, delim=delimiter)
+        return matcher.pillar_match(tgt, delimiter=delimiter)
     except Exception as exc:
         log.exception(exc)
         return False
@@ -126,7 +127,7 @@ def data(tgt):
         return False
 
 
-def grain_pcre(tgt, delimiter=':', delim=None):
+def grain_pcre(tgt, delimiter=DEFAULT_TARGET_DELIM, delim=None):
     '''
     Return True if the minion matches the given grain_pcre target. The
     ``delimiter`` argument can be used to specify a different delimiter.
@@ -160,13 +161,13 @@ def grain_pcre(tgt, delimiter=':', delim=None):
 
     matcher = salt.minion.Matcher({'grains': __grains__}, __salt__)
     try:
-        return matcher.grain_pcre_match(tgt, delim=delimiter)
+        return matcher.grain_pcre_match(tgt, delimiter=delimiter)
     except Exception as exc:
         log.exception(exc)
         return False
 
 
-def grain(tgt, delimiter=':', delim=None):
+def grain(tgt, delimiter=DEFAULT_TARGET_DELIM, delim=None):
     '''
     Return True if the minion matches the given grain target. The ``delimiter``
     argument can be used to specify a different delimiter.
@@ -200,7 +201,7 @@ def grain(tgt, delimiter=':', delim=None):
 
     matcher = salt.minion.Matcher({'grains': __grains__}, __salt__)
     try:
-        return matcher.grain_match(tgt, delim=delimiter)
+        return matcher.grain_match(tgt, delimiter=delimiter)
     except Exception as exc:
         log.exception(exc)
         return False

@@ -292,6 +292,10 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         after_jump.append('--reject-with {0} '.format(kwargs['reject-with']))
         del kwargs['reject-with']
 
+    if 'set-mark' in kwargs:
+        after_jump.append('--set-mark {0} '.format(kwargs['set-mark']))
+        del kwargs['set-mark']
+
     for item in kwargs:
         if str(kwargs[item]).startswith('!') or str(kwargs[item]).startswith('not'):
             kwargs[item] = re.sub(bang_not_pat, '', kwargs[item])

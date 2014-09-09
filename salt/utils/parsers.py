@@ -29,10 +29,8 @@ import salt.utils as utils
 import salt.version as version
 import salt.utils.args
 import salt.utils.xdg
+from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.validate.path import is_writeable
-
-if not utils.is_windows():
-    import salt.cloud.exceptions
 
 
 def _sorted(mixins_or_funcs):
@@ -666,7 +664,8 @@ class LogLevelMixIn(object):
                     # Yep, the user is in ACL!
                     # Let's write the logfile to its home directory instead.
                     xdg_dir = salt.utils.xdg.xdg_config_dir()
-                    user_salt_dir = xdg_dir if os.path.isdir(xdg_dir) else '~/.salt'
+                    user_salt_dir = (xdg_dir if os.path.isdir(xdg_dir) else
+                                     os.path.expanduser('~/.salt'))
 
                     if not os.path.isdir(user_salt_dir):
                         os.makedirs(user_salt_dir, 0750)
@@ -861,6 +860,19 @@ class TargetOptionsMixIn(object):
             help=('Instead of using shell globs to evaluate the target '
                   'use a range expression to identify targets. '
                   'Range expressions look like %cluster')
+        )
+
+        group = self.additional_target_options_group = optparse.OptionGroup(
+            self,
+            'Additional Target Options',
+            'Additional Options for Minion Targeting'
+        )
+        self.add_option_group(group)
+        group.add_option(
+            '--delimiter',
+            default=DEFAULT_TARGET_DELIM,
+            help=('Change the default delimiter for matching in multi-level '
+                  'data structures. default=\'%default\'')
         )
 
         self._create_process_functions()
@@ -1207,7 +1219,16 @@ class CloudQueriesMixIn(object):
             '--list-providers',
             default=False,
             action='store_true',
-            help=('Display a list of configured providers.')
+            help='Display a list of configured providers.'
+        )
+        group.add_option(
+            '--list-profiles',
+            default=None,
+            action='store',
+            help='Display a list of configured profiles. Pass in a cloud '
+                 'provider to view the provider\'s associated profiles, '
+                 'such as digital_ocean, or pass in "all" to list all the '
+                 'configured profiles.'
         )
         self.add_option_group(group)
         self._create_process_functions()
@@ -1228,6 +1249,14 @@ class CloudQueriesMixIn(object):
                                 '\'--list-providers\' does not accept any '
                                 'arguments'
                             )
+                    elif opt.dest == 'list_profiles':
+                        query = 'list_profiles'
+                        option_dict = vars(self.options)
+                        if option_dict.get('list_profiles') == '--list-providers':
+                            self.error(
+                                '\'--list-profiles\' does not accept '
+                                '\'--list-providers\' as an argument'
+                            )
                     self.selected_query_option = query
 
             funcname = 'process_{0}'.format(option.dest)
@@ -1236,7 +1265,8 @@ class CloudQueriesMixIn(object):
 
     def _mixin_after_parsed(self):
         group_options_selected = filter(
-            lambda option: getattr(self.options, option.dest) is not False,
+            lambda option: getattr(self.options, option.dest) is not False
+            and getattr(self.options, option.dest) is not None,
             self.cloud_queries_group.option_list
         )
         if len(group_options_selected) > 1:
@@ -1447,10 +1477,11 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'queries')
         )
         self.add_option(
-            '--show-timeout',
-            default=False,
-            action='store_true',
-            help=('Display minions that timeout without the additional output of --verbose')
+            '--hide-timeout',
+            dest='show_timeout',
+            default=True,
+            action='store_false',
+            help=('Hide minions that timeout')
         )
         self.add_option(
             '--show-jid',
@@ -1486,6 +1517,15 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             '--return',
             default='',
             metavar='RETURNER',
+            help=('Set an alternative return method. By default salt will '
+                  'send the return data from the command back to the master, '
+                  'but the return data can be redirected into any number of '
+                  'systems, databases or applications.')
+        )
+        self.add_option(
+            '--return_config',
+            default='',
+            metavar='RETURNER_CONF',
             help=('Set an alternative return method. By default salt will '
                   'send the return data from the command back to the master, '
                   'but the return data can be redirected into any number of '
@@ -1989,6 +2029,15 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'retcode')
         )
         self.add_option(
+            '--metadata',
+            default=False,
+            dest='metadata',
+            action='store_true',
+            help=('Print out the execution metadata as well as the return. '
+                  'This will print out the outputter data, the return code, '
+                  'etc.')
+        )
+        self.add_option(
             '--id',
             default='',
             dest='id',
@@ -2160,6 +2209,15 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'reached.')
         )
         self.add_option(
+            '--no-minion-cache',
+            dest='ssh_minion_cache',
+            default=True,
+            action='store_false',
+            help=('Set this flag to disable the ssh minion cache, this will '
+                  'prevent information about the target systems from being '
+                  'stored on the originating system.')
+        )
+        self.add_option(
             '--max-procs',
             dest='ssh_max_procs',
             default=25,
@@ -2292,5 +2350,5 @@ class SaltCloudParser(OptionParser,
     def setup_config(self):
         try:
             return config.cloud_config(self.get_config_file_path())
-        except salt.cloud.exceptions.SaltCloudConfigError as exc:
+        except salt.exceptions.SaltCloudConfigError as exc:
             self.error(exc)

@@ -6,6 +6,7 @@ Utility functions for salt.cloud
 # Import python libs
 import os
 import sys
+import stat
 import codecs
 import shutil
 import hashlib
@@ -47,7 +48,7 @@ from salt.utils.validate.path import is_writeable
 
 # Import salt cloud libs
 import salt.cloud
-from salt.cloud.exceptions import (
+from salt.exceptions import (
     SaltCloudConfigError,
     SaltCloudException,
     SaltCloudSystemExit,
@@ -285,15 +286,19 @@ def bootstrap(vm_, opts):
                 key_filename
             )
         )
+    has_ssh_agent = False
+    if opts.get('ssh_agent', False) and 'SSH_AUTH_SOCK' in os.environ:
+        if stat.S_ISSOCK(os.stat(os.environ['SSH_AUTH_SOCK']).st_mode):
+            has_ssh_agent = True
 
-    if key_filename is None and salt.utils.which('sshpass') is None:
+    if key_filename is None and salt.utils.which('sshpass') is None and has_ssh_agent is False:
         raise SaltCloudSystemExit(
             'Cannot deploy salt in a VM if the \'ssh_keyfile\' setting '
             'is not set and \'sshpass\' binary is not present on the '
             'system for the password.'
         )
 
-    if key_filename is None and ('password' not in vm_ or not vm_['password']):
+    if key_filename is None and ('password' not in vm_ or not vm_['password']) and has_ssh_agent is False:
         raise SaltCloudSystemExit(
             'Cannot deploy salt in a VM if the \'ssh_keyfile\' setting '
             'is not set and there is no password set for the vm. '
@@ -320,6 +325,7 @@ def bootstrap(vm_, opts):
         'username': ssh_username,
         'script': deploy_script_code,
         'name': vm_['name'],
+        'has_ssh_agent': has_ssh_agent,
         'tmp_dir': salt.config.get_cloud_config_value(
             'tmp_dir', vm_, opts, default='/tmp/.saltcloud'
         ),
@@ -989,11 +995,12 @@ def deploy_script(host,
             if key_filename:
                 log.debug('Using {0} as the key_filename'.format(key_filename))
                 ssh_kwargs['key_filename'] = key_filename
-            elif password:
+            elif password and kwargs['has_ssh_agent'] is False:
                 log.debug('Using {0} as the password'.format(password))
                 ssh_kwargs['password'] = password
 
-            if root_cmd('test -e \\"{0}\\"'.format(tmp_dir), tty, sudo, **ssh_kwargs):
+            if root_cmd('test -e \\"{0}\\"'.format(tmp_dir), tty, sudo,
+                        allow_failure=True, **ssh_kwargs):
                 ret = root_cmd(('sh -c "( mkdir -p \\"{0}\\" &&'
                                 ' chmod 700 \\"{0}\\" )"').format(tmp_dir),
                                tty, sudo, **ssh_kwargs)
@@ -1353,7 +1360,7 @@ def _exec_ssh_cmd(cmd, error_msg=None, allow_failure=False, **kwargs):
             stream_stderr=kwargs.get('display_ssh_output', True)
         )
         sent_password = 0
-        while proc.isalive():
+        while True:
             stdout, stderr = proc.recv()
             if stdout and SSH_PASSWORD_PROMP_RE.search(stdout):
                 if (
@@ -1364,6 +1371,8 @@ def _exec_ssh_cmd(cmd, error_msg=None, allow_failure=False, **kwargs):
                     proc.sendline(kwargs['password'])
                 else:
                     raise SaltCloudPasswordError(error_msg)
+            if not proc.isalive():
+                break
             # 0.0125 is really too fast on some systems
             time.sleep(0.5)
         if proc.exitstatus != 0:

@@ -55,9 +55,10 @@ class FunctionWrapper(dict):
             stdout, _, _ = single.cmd_block()
             try:
                 ret = json.loads(stdout, object_hook=salt.utils.decode_dict)
+                if len(ret) < 2 and 'local' in ret:
+                    ret = ret['local']
+                ret = ret.get('return', {})
             except ValueError:
                 ret = {'_error': 'Failed to return clean data'}
-            if len(ret) < 2 and 'local' in ret:
-                ret = ret['local']
             return ret
         return caller

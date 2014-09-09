@@ -54,7 +54,7 @@ def usage(args=None):
         salt '*' disk.usage
     '''
     flags = _clean_flags(args, 'disk.usage')
-    if not os.path.isfile('/etc/mtab') and __grains__['kernel'] != 'Darwin':
+    if not os.path.isfile('/etc/mtab') and __grains__['kernel'] == 'Linux':
         log.warn('df cannot run without /etc/mtab')
         if __grains__.get('virtual_subtype') == 'LXC':
             log.warn('df command failed and LXC detected. If you are running '

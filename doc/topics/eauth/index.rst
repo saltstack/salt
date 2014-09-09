@@ -43,6 +43,10 @@ modules <all-salt.runners>` the following ``@`` syntax must be used:
           - '@wheel'
           - '@runner'
 
+.. note:: 
+    Globs will not match wheel or runners! They must be explicitly
+    allowed with @wheel or @runner.
+
 The external authentication system can then be used from the command-line by
 any user on the same system as the master with the ``-a`` option:
 
@@ -117,7 +121,7 @@ To bind to a DN, a password is required
 
     auth.ldap.bindpw: mypassword
 
-Salt users a filter to find the DN associated with a user. Salt substitutes
+Salt uses a filter to find the DN associated with a user. Salt substitutes
 the ``{{ username }}`` value for the username when querying LDAP.
 
 .. code-block:: yaml

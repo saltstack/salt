@@ -16,6 +16,7 @@ import logging
 # Import salt libs
 import salt.utils
 import salt.utils.dictupdate
+from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
 
 __proxyenabled__ = ['*']
@@ -61,7 +62,7 @@ _SANITIZERS = {
 }
 
 
-def get(key, default='', delimiter=':'):
+def get(key, default='', delimiter=DEFAULT_TARGET_DELIM):
     '''
     Attempt to retrieve the named value from grains, if the named value is not
     available return the passed default. The default return is an empty string.
@@ -441,7 +442,7 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default'):
     return ret
 
 
-def _dict_from_path(path, val, delimiter=':'):
+def _dict_from_path(path, val, delimiter=DEFAULT_TARGET_DELIM):
     '''
     Given a lookup string in the form of 'foo:bar:baz" return a nested
     dictionary of the appropriate depth with the final segment as a value.

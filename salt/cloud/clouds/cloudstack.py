@@ -6,6 +6,8 @@ CloudStack Cloud Module
 The CloudStack cloud module is used to control access to a CloudStack based
 Public Cloud.
 
+:depends: libcloud
+
 Use of this module requires the ``apikey``, ``secretkey``, ``host`` and
 ``path`` parameters.
 
@@ -30,7 +32,7 @@ import logging
 import salt.config as config
 from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
 from salt.utils import namespaced_function
-from salt.cloud.exceptions import SaltCloudSystemExit
+from salt.exceptions import SaltCloudSystemExit
 
 # CloudStackNetwork will be needed during creation of a new node
 try:
@@ -269,7 +271,8 @@ def create(vm_):
                     exc_info_on_loglevel=logging.DEBUG
                 )
                 return False
-
+    else:
+        ex_blockdevicemapping = {}
     try:
         data = conn.create_node(**kwargs)
     except Exception as exc:
@@ -292,7 +295,7 @@ def create(vm_):
                 'Error attaching volume {0} on CLOUDSTACK\n\n'
                 'The following exception was thrown by libcloud when trying to '
                 'attach a volume: \n{1}'.format(
-                    ex_blockdevicemapping['VirtualName'], exc.message
+                    ex_blockdevicemapping.get('VirtualName', 'UNKNOWN'), exc.message
                 ),
                 # Show the traceback if the debug logging level is enabled
                 exc_info=log.isEnabledFor(logging.DEBUG)

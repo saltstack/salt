@@ -652,7 +652,7 @@ Default:
 
 When using a local :conf_minion:`file_client`, this parameter is used to setup
 the fileserver's environments. This parameter operates identically to the
-:conf_master:`master config parameter of the same name <file_roots>`.
+:conf_master:`master config parameter <file_roots>` of the same name.
 
 .. code-block:: yaml
 
@@ -666,7 +666,7 @@ the fileserver's environments. This parameter operates identically to the
         - /srv/salt/prod/services
         - /srv/salt/prod/states
 
-.. conf_master:: hash_type
+.. conf_minion:: hash_type
 
 ``hash_type``
 -------------
@@ -938,6 +938,22 @@ This can be used to control logging levels more specifically. See also
 :conf_log:`log_granular_levels`.
 
 
+
+.. conf_minion:: failhard
+
+``failhard``
+------------
+
+Default: ``False``
+
+Set the global failhard flag, this informs all states to stop running states
+at the moment a single state fails
+
+
+
+.. code-block:: yaml
+
+    failhard: False
 
 Include Configuration
 =====================

@@ -422,6 +422,8 @@ class Schedule(object):
 
             data_returner = data.get('returner', None)
             if data_returner or self.schedule_returner:
+                if 'returner_config' in data:
+                    ret['ret_config'] = data['returner_config']
                 rets = []
                 for returner in [data_returner, self.schedule_returner]:
                     if isinstance(returner, str):
@@ -624,7 +626,7 @@ class Schedule(object):
                         if data['_when_run']:
                             data['_when_run'] = False
                             run = True
-                if 'cron' in data:
+                elif 'cron' in data:
                     if seconds == 1:
                         run = True
                 else:
@@ -644,7 +646,7 @@ class Schedule(object):
                         if data['_when_run']:
                             data['_when_run'] = False
                             run = True
-                if 'cron' in data:
+                elif 'cron' in data:
                     if seconds == 1:
                         run = True
                 else:

@@ -386,7 +386,7 @@ of where the data comes from. Production data will vary from development data
 will vary from data from one company to another, however the state itself stays
 the same.
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% set user_list = [
         {'name': 'larry', 'shell': 'bash'},
@@ -473,7 +473,9 @@ Jinja macros to encapsulate logic or conditionals are discouraged in favor of
 Repository structure
 ====================
 
-A basic Formula repository should have the following layout::
+A basic Formula repository should have the following layout:
+
+.. code-block:: text
 
     foo-formula
     |-- foo/

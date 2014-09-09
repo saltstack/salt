@@ -9,16 +9,16 @@ Documentation: https://github.com/mickep76/pepa
 __author__ = 'Michael Persson <michael.ake.persson@gmail.com>'
 __copyright__ = 'Copyright (c) 2013 Michael Persson'
 __license__ = 'Apache License, Version 2.0'
-__version__ = '0.6.3'
+__version__ = '0.6.4'
 
 # Import python libs
 import logging
 import sys
 
 
-# Only used when called from a TTY (terminal)
+# Only used when called from a terminal
 log = None
-if __name__ == '__main__' and sys.stdout.isatty():
+if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser()
@@ -60,9 +60,7 @@ __opts__ = {
     'pepa_roots': {
         'base': '/srv/salt'
     },
-    'pepa_delimiter': '..',
-    'pepa_subkey': False,
-    'pepa_subkey_only': False
+    'pepa_delimiter': '..'
 }
 
 # Import libraries
@@ -103,9 +101,9 @@ def key_value_to_tree(data):
     return tree
 
 
-def ext_pillar(minion_id, pillar, resource, sequence):
+def ext_pillar(minion_id, pillar, resource, sequence, subkey=False, subkey_only=False):
     '''
-    Convert key/value to tree
+    Evaluate Pepa templates
     '''
     roots = __opts__['pepa_roots']
 
@@ -124,6 +122,7 @@ def ext_pillar(minion_id, pillar, resource, sequence):
     # Load templates
     output = inp
     output['pepa_templates'] = []
+    immutable = {}
 
     for categ, info in [s.items()[0] for s in sequence]:
         if categ not in inp:
@@ -168,22 +167,74 @@ def ext_pillar(minion_id, pillar, resource, sequence):
 
             if results is not None:
                 for key in results:
-                    log.debug("Substituting key {0}: {1}".format(key, results[key]))
-                    output[key] = results[key]
+                    skey = key.rsplit(__opts__['pepa_delimiter'], 1)
+                    rkey = None
+                    operator = None
+                    if len(skey) > 1 and key.rfind('()') > 0:
+                        rkey = skey[0].rstrip(__opts__['pepa_delimiter'])
+                        operator = skey[1]
+
+                    if key in immutable:
+                        log.warning('Key {0} is immutable, changes are not allowed'.format(key))
+                    elif rkey in immutable:
+                        log.warning("Key {0} is immutable, changes are not allowed".format(rkey))
+                    elif operator == 'merge()':
+                        log.debug("Merge key {0}: {1}".format(rkey, results[key]))
+                        if rkey in output and type(results[key]) != type(output[rkey]):
+                            log.warning('You can''t merge different types for key {0}'.format(rkey))
+                        elif type(results[key]) is dict:
+                            output[rkey].update(results[key])
+                        elif type(results[key]) is list:
+                            output[rkey].extend(results[key])
+                        else:
+                            log.warning('Unsupported type need to be list or dict for key {0}'.format(rkey))
+                    elif operator == 'unset()':
+                        log.debug("Unset key {0}".format(rkey))
+                        try:
+                            del output[rkey]
+                        except KeyError:
+                            pass
+                    elif operator == 'immutable()':
+                        log.debug("Set immutable and substitute key {0}: {1}".format(rkey, results[key]))
+                        immutable[rkey] = True
+                        output[rkey] = results[key]
+                    elif operator == 'imerge()':
+                        log.debug("Set immutable and merge key {0}: {1}".format(rkey, results[key]))
+                        immutable[rkey] = True
+                        if rkey in output and type(results[key]) != type(output[rkey]):
+                            log.warning('You can''t merge different types for key {0}'.format(rkey))
+                        elif type(results[key]) is dict:
+                            output[rkey].update(results[key])
+                        elif type(results[key]) is list:
+                            output[rkey].extend(results[key])
+                        else:
+                            log.warning('Unsupported type need to be list or dict for key {0}'.format(rkey))
+                    elif operator == 'iunset()':
+                        log.debug("Set immutable and unset key {0}".format(rkey))
+                        immutable[rkey] = True
+                        try:
+                            del output[rkey]
+                        except KeyError:
+                            pass
+                    elif operator is not None:
+                        log.warning('Unsupported operator {0}, skipping key {1}'.format(operator, rkey))
+                    else:
+                        log.debug("Substitute key {0}: {1}".format(key, results[key]))
+                        output[key] = results[key]
 
     tree = key_value_to_tree(output)
     pillar_data = {}
-    if __opts__['pepa_subkey_only']:
-        pillar_data['pepa'] = tree.copy()
-    elif __opts__['pepa_subkey']:
+    if subkey_only:
+        pillar_data[resource] = tree.copy()
+    elif subkey:
         pillar_data = tree
-        pillar_data['pepa'] = tree.copy()
+        pillar_data[resource] = tree.copy()
     else:
         pillar_data = tree
     return pillar_data
 
-# Only used when called from a TTY (terminal)
-if __name__ == '__main__' and sys.stdout.isatty():
+# Only used when called from a terminal
+if __name__ == '__main__':
     # Load configuration file
     if not isfile(args.config):
         log.critical("Configuration file doesn't exist: {0}".format(args.config))
@@ -198,18 +249,21 @@ if __name__ == '__main__' and sys.stdout.isatty():
             break
         loc += 1
 
+    # Get grains
     __grains__ = {}
     if 'pepa_grains' in __opts__:
         __grains__ = __opts__['pepa_grains']
     if args.grains:
         __grains__.update(yaml.load(args.grains))
 
+    # Get pillars
     __pillar__ = {}
     if 'pepa_pillar' in __opts__:
         __pillar__ = __opts__['pepa_pillar']
     if args.pillar:
         __pillar__.update(yaml.load(args.pillar))
 
+    # Print results
     result = ext_pillar(args.hostname, __pillar__, __opts__['ext_pillar'][loc]['pepa']['resource'], __opts__['ext_pillar'][loc]['pepa']['sequence'])
 
     yaml.dumper.SafeDumper.ignore_aliases = lambda self, data: True

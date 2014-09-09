@@ -55,12 +55,14 @@ These runtime modifications make it easy groups of states together, in future
 versions we hope to fill out the mod_aggregate system to build in more and
 more optimizations.
 
-For more documentation on mod_aggregate please see [salt.states.mod_aggregate](http://docs.saltstack.com/en/latest/ref/states/aggregate.html)
+For more documentation on mod_aggregate, see :doc:`the documentation
+</ref/states/aggregate>`.
 
 New Requisites: onchanges and onfail
 ------------------------------------
 
 New requisites!
+
 
 Global onlyif and unless
 ------------------------
@@ -92,8 +94,9 @@ Major Features
 Scheduler Additions
 -------------------
 
-The Salt scheduler system has received MAJOR enhancements, allowing for cron-like
-scheduling and much more granular timing routines. See: [salt.modules.schedule](http://docs.saltstack.com/en/latest/ref/modules/all/salt.modules.schedule.html)
+The Salt scheduler system has received MAJOR enhancements, allowing for
+cron-like scheduling and much more granular timing routines. See :mod:`here
+<salt.modules.schedule>` for more info.
 
 Red Hat 7 Family Support
 ------------------------
@@ -105,17 +108,16 @@ Amazon Execution Modules
 ------------------------
 
 An entire family of execution modules further enhancing Salt's Amazon Cloud
-support.
+support. They include the following:
 
-- Autoscale Groups - [salt.modules.boto_asg](http://docs.saltstack.com/en/latest/ref/modules/all/salt.modules.boto_asg.html) and [salt.states.boto_asg](http://docs.saltstack.com/en/latest/ref/states/all/salt.states.boto_asg.html)
-- Cloud Watch - [salt.modules.boto_cloudwatch](http://docs.saltstack.com/en/latest/ref/modules/all/salt.modules.boto_cloudwatch.html) and [salt.states.boto_cloudwatch_alarm](http://docs.saltstack.com/en/latest/ref/states/all/salt.states.boto_cloudwatch_alarm.html)
-- Elastic Cache - [salt.modules.boto_elasticache](http://docs.saltstack.com/en/latest/ref/modules/all/salt.modules.boto_elasticache.html) and [salt.states.boto_elasticache](http://docs.saltstack.com/en/latest/ref/states/all/salt.states.boto_elasticache.html)
-- Elastic Load Balancer - [salt.modules.boto_elb](http://docs.saltstack.com/en/latest/ref/modules/all/salt.modules.boto_elb.html) and [salt.states.boto_elb](http://docs.saltstack.com/en/latest/ref/states/all/salt.states.boto_elb.html)
-- IAM Identity and Access Management - [salt.modules.boto_iam](http://docs.saltstack.com/en/latest/ref/modules/all/salt.modules.boto_iam.html), [salt.states.boto_iam_role](http://docs.saltstack.com/en/latest/ref/states/all/salt.states.boto_iam_role.html)
-- Launch Control - [salt.states.boto_lc](http://docs.saltstack.com/en/latest/ref/states/all/salt.states.boto_lc.html)
-- Route53 DNS - [salt.modules.boto_route53](http://docs.saltstack.com/en/latest/ref/modules/all/salt.modules.boto_route53.html) and [salt.states.boto_route53.html](http://docs.saltstack.com/en/latest/ref/states/all/salt.states.boto_route53.html)
-- Security Groups - [salt.modules.boto_secgroup](http://docs.saltstack.com/en/latest/ref/modules/all/salt.modules.boto_secgroup.html) and [salt.states.boto_secgroup](http://docs.saltstack.com/en/latest/ref/states/all/salt.states.boto_secgroup.html)
-- Simple Queue Service - [salt.modules.boto_sqs](http://docs.saltstack.com/en/latest/ref/modules/all/salt.modules.boto_sqs.html) and [salt.states.boto_sqs](http://docs.saltstack.com/en/latest/ref/states/all/salt.states.boto_sqs.html)
+- :mod:`Autoscale Groups <salt.modules.boto_asg>` (includes :mod:`state support <salt.states.boto_asg>`) -- related: :mod:`Launch Control <salt.states.boto_lc>` states
+- :mod:`Cloud Watch <salt.modules.boto_cloudwatch>` (includes :mod:`state support <salt.states.boto_cloudwatch_alarm>`)
+- :mod:`Elastic Cache <salt.modules.boto_elasticache>` (includes :mod:`state support <salt.states.boto_elasticache>`)
+- :mod:`Elastic Load Balancer <salt.modules.boto_elb>` (includes :mod:`state support <salt.states.boto_elb>`)
+- :mod:`IAM Identity and Access Management <salt.modules.boto_iam>` (includes :mod:`state support <salt.states.boto_iam_role>`)
+- :mod:`Route53 DNS <salt.modules.boto_route53>` (includes :mod:`state support <salt.states.boto_route53>`)
+- :mod:`Security Groups <salt.modules.boto_secgroup>` (includes :mod:`state support <salt.states.boto_secgroup>`)
+- :mod:`Simple Queue Service <salt.modules.boto_sqs>` (includes :mod:`state support <salt.states.boto_sqs>`)
 
 LXC Runner Enhancements
 -----------------------
@@ -181,35 +183,50 @@ allows for construction of States using pure Python with an idiomatic object int
 New Modules
 ===========
 
-- Syslog-ng: [Usage Guide](http://docs.saltstack.com/en/latest/topics/tutorials/syslog_ng-state-usage.html)
-- Oracle: [salt.modules.oracle](http://docs.saltstack.com/en/latest/ref/modules/all/salt.modules.oracle.html)
-- Random: [salt.modules.mod_random](http://docs.saltstack.com/en/latest/ref/modules/all/salt.modules.mod_random.html)
-- Redis: [salt.modules.redismod](http://docs.saltstack.com/en/latest/ref/modules/all/salt.modules.redismod.html), [salt.pillar.etcd_pillar](http://docs.saltstack.com/en/latest/ref/pillar/all/salt.pillar.etcd_pillar.html)
-- Amazon Simple Queue Service - [salt.modules.aws_sqs](http://docs.saltstack.com/en/latest/ref/modules/all/salt.modules.aws_sqs.html)
-- Manage block devices [salt.modules.blockdev](http://docs.saltstack.com/en/latest/ref/modules/all/salt.modules.blockdev.html)
-- CoreOS etcd - [salt.modules.etcd_mod](http://docs.saltstack.com/en/latest/ref/modules/all/salt.modules.etcd_mod.html)
-- Genesis [salt.modules.genesis](http://docs.saltstack.com/en/latest/ref/modules/all/salt.modules.genesis.html)
-- InfluxDB - [salt.modules.influx](http://docs.saltstack.com/en/latest/ref/modules/all/salt.modules.influx.html)
-- Server Density - [salt.modules.serverdensity_device](http://docs.saltstack.com/en/latest/ref/modules/all/salt.modules.serverdensity_device.html)
-- Twilio Notifications - [salt.modules.twilio_notify](http://docs.saltstack.com/en/latest/ref/modules/all/salt.modules.twilio_notify.html)
-- Varnish Cache - [salt.modules.varnish](http://docs.saltstack.com/en/latest/ref/modules/all/salt.modules.varnish.html)
-- ZNC IRC Bouncer - [salt.modules.znc](http://docs.saltstack.com/en/latest/ref/modules/all/salt.modules.znc.html)
-- map/reduce style runner - [salt.runners.survey](http://docs.saltstack.com/en/latest/ref/runners/all/salt.runners.survey.html)
-- Queues for runners - [salt.runners.queue](http://docs.saltstack.com/en/latest/ref/runners/all/salt.runners.queue.html)
-- Sending messages via SMTP - [salt.modules.smtp](http://docs.saltstack.com/en/latest/ref/modules/all/salt.modules.smtp.html)
+In addition to the Amazon modules mentioned above, there are also several other
+new execution modules:
 
-New clouds
-==========
+- :mod:`Oracle <salt.modules.oracle>`
+- :mod:`Random <salt.modules.mod_random>`
+- :mod:`Redis <salt.modules.redismod>`
+- :mod:`Amazon Simple Queue Service <salt.modules.aws_sqs>`
+- :mod:`Block Device Management <salt.modules.blockdev>`
+- :mod:`CoreOS etcd <salt.modules.etcd_mod>`
+- :mod:`Genesis <salt.modules.genesis>`
+- :mod:`InfluxDB <salt.modules.influx>`
+- :mod:`Server Density <salt.modules.serverdensity_device>`
+- :mod:`Twilio Notifications <salt.modules.twilio_notify>`
+- :mod:`Varnish <salt.modules.varnish>`
+- :mod:`ZNC IRC Bouncer <salt.modules.znc>`
+- :mod:`SMTP <salt.modules.smtp>`
 
-- Aliyun ECS Cloud - [salt.cloud.clouds.aliyun](http://docs.saltstack.com/en/latest/ref/clouds/all/salt.cloud.clouds.aliyun.html)
-- LXC Containers - [salt.cloud.clouds.lxc](http://docs.saltstack.com/en/latest/ref/clouds/all/salt.cloud.clouds.lxc.html)
-- Proxmox KVM Containers - [salt.cloud.clouds.proxmox](http://docs.saltstack.com/en/latest/ref/clouds/all/salt.cloud.clouds.proxmox.html)
+
+New Runners
+===========
+
+- :mod:`Map/Reduce Style <salt.runners.survey>`
+- :mod:`Queue <salt.runners.queue>`
+
+
+New External Pillars
+====================
+
+- :mod:`CoreOS etcd <salt.pillar.etcd_pillar>`
+
+
+New Salt-Cloud Providers
+========================
+
+- :mod:`Aliyun ECS Cloud <salt.cloud.clouds.aliyun>`
+- :mod:`LXC Containers <salt.cloud.clouds.lxc>`
+- :mod:`Proxmox KVM Containers <salt.cloud.clouds.proxmox>`
+
 
 Deprecations
 ============
 
-salt.modules.virturalenv_mod
-----------------------------
+:mod:`salt.modules.virturalenv_mod`
+-----------------------------------
 
 - Removed deprecated ``memoize`` function from ``salt/utils/__init__.py`` (deprecated)
 - Removed deprecated ``no_site_packages`` argument from ``create`` function (deprecated)

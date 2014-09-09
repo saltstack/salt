@@ -371,6 +371,23 @@ local job cache on the master
 
     ext_job_cache: redis
 
+.. conf_master:: master_job_cache
+
+``master_job_cache``
+--------------------
+
+.. versionadded:: 2014.7
+
+Default: 'local_cache'
+
+Specify the returner to use for ther job cache. The job cache will only be
+interacted with from the salt master and therefore does not need to be
+accesible from the minions.
+
+.. code-block:: yaml
+
+    master_job_cache: redis
+
 .. conf_master:: enforce_mine_cache
 
 ``enforce_mine_cache``
@@ -386,6 +403,8 @@ only the cache for the mine system.
 
     enforce_mine_cache: False
 
+.. conf_master:: max_minions
+
 ``max_minions``
 ---------------
 
@@ -400,6 +419,8 @@ this can slow down the authentication process a bit in large setups.
 
     max_minions: 100
 
+.. conf_master:: presence_events
+
 ``presence_events``
 ----------------------
 
@@ -412,6 +433,18 @@ and newly connected minions on the eventbus.
 
     presence_events: False
 
+.. conf_master:: roster_file
+
+``roster_file``
+---------------
+
+Default: '/etc/salt/roster'
+
+Pass in an alternative location for the salt-ssh roster file
+
+.. code-block:: yaml
+
+    roster_file: /root/roster
 
 Master Security Settings
 ========================
@@ -810,12 +843,7 @@ Master File Server Settings
 ``fileserver_backend``
 ----------------------
 
-Default:
-
-.. code-block:: yaml
-
-    fileserver_backend:
-      - roots
+Default: ``['roots']``
 
 Salt supports a modular fileserver backend system, this system allows the salt
 master to link directly to third party systems to gather and manage the files
@@ -975,8 +1003,6 @@ Walkthrough <gitfs-per-remote-config>`.
 ******************
 
 .. versionadded:: 2014.7.0
-
-Default: ``gitpython``
 
 Specify the provider to be used for gitfs. More information can be found in the
 :ref:`Gitfs Walkthrough <gitfs-dependencies>`.
@@ -1758,6 +1784,21 @@ Default: ``None``
           inventory_base_uri: /etc/reclass
 
 There are additional details at :ref:`salt-pillars`
+
+.. conf_master:: ext_pillar_first
+
+``ext_pillar_first``
+--------------------
+
+The ext_pillar_first option allows for external pillar sources to populate
+before file system pillar. This allows for targeting file system pillar from
+ext_pillar.
+
+Default: ``False``
+
+.. code-block:: yaml
+
+    ext_pillar_first: False
 
 .. conf_master:: pillar_source_merging_strategy
 
