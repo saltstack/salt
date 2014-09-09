@@ -1360,7 +1360,7 @@ def _exec_ssh_cmd(cmd, error_msg=None, allow_failure=False, **kwargs):
             stream_stderr=kwargs.get('display_ssh_output', True)
         )
         sent_password = 0
-        while proc.isalive():
+        while True:
             stdout, stderr = proc.recv()
             if stdout and SSH_PASSWORD_PROMP_RE.search(stdout):
                 if (
@@ -1371,6 +1371,8 @@ def _exec_ssh_cmd(cmd, error_msg=None, allow_failure=False, **kwargs):
                     proc.sendline(kwargs['password'])
                 else:
                     raise SaltCloudPasswordError(error_msg)
+            if not proc.isalive():
+                break
             # 0.0125 is really too fast on some systems
             time.sleep(0.5)
         if proc.exitstatus != 0:

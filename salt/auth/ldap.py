@@ -187,6 +187,7 @@ def _bind(username, password):
     try:
         ldap_conn = _LDAPConnection(**connargs).ldap
     except Exception:
+        connargs.pop('bindpw', None)  # Don't log the password
         log.warn('Failed to authenticate user dn via LDAP: {0}'.format(connargs))
         log.debug('Error authenticating user dn via LDAP:', exc_info=True)
         return False
