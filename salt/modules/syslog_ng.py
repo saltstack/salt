@@ -89,7 +89,7 @@ def _indentln(string):
     return _indent(string + "\n")
 
 
-class Buildable(object):
+class _Buildable(object):
     '''
     Base class of most classes, which have a build method.
 
@@ -143,7 +143,7 @@ class Buildable(object):
         return header + body + tail
 
 
-class Statement(Buildable):
+class _Statement(_Buildable):
     '''
     It represents a syslog-ng configuration statement, e.g. source, destination,
     filter.
@@ -152,7 +152,7 @@ class Statement(Buildable):
     '''
 
     def __init__(self, type, id='', options=None, has_name=True):
-        super(Statement, self).__init__(options, join_body_on='', append_extra_newline=False)
+        super(_Statement, self).__init__(options, join_body_on='', append_extra_newline=False)
         self.type = type
         self.id = id
         self.options = options if options else []
@@ -172,17 +172,17 @@ class Statement(Buildable):
         self.options.append(option)
 
 
-class NamedStatement(Statement):
+class _NamedStatement(_Statement):
     '''
     It represents a configuration statement, which has a name, e.g. a source.
 
     Does not need examples:.
     '''
     def __init__(self, type, id='', options=None):
-        super(NamedStatement, self).__init__(type, id, options, has_name=True)
+        super(_NamedStatement, self).__init__(type, id, options, has_name=True)
 
 
-class UnnamedStatement(Statement):
+class _UnnamedStatement(_Statement):
     '''
     It represents a configuration statement, which doesn't have a name, e.g. a
     log path.
@@ -191,10 +191,10 @@ class UnnamedStatement(Statement):
     '''
 
     def __init__(self, type, options=None):
-        super(UnnamedStatement, self).__init__(type, id='', options=options, has_name=False)
+        super(_UnnamedStatement, self).__init__(type, id='', options=options, has_name=False)
 
 
-class GivenStatement(Buildable):
+class _GivenStatement(_Buildable):
     '''
     This statement returns a string without modification. It can be used to
      use existing configuration snippets.
@@ -203,7 +203,7 @@ class GivenStatement(Buildable):
     '''
 
     def __init__(self, value, add_newline=True):
-        super(GivenStatement, self).__init__(iterable=None)
+        super(_GivenStatement, self).__init__(iterable=None)
         self.value = value
         self.add_newline = add_newline
 
@@ -214,7 +214,7 @@ class GivenStatement(Buildable):
             return self.value
 
 
-class Option(Buildable):
+class _Option(_Buildable):
     '''
     A Statement class contains Option instances.
 
@@ -224,7 +224,7 @@ class Option(Buildable):
     '''
 
     def __init__(self, type='', params=None):
-        super(Option, self).__init__(params, ",\n")
+        super(_Option, self).__init__(params, ",\n")
         self.type = type
         self.params = params if params else []
         self.iterable = self.params
@@ -240,7 +240,7 @@ class Option(Buildable):
         self.params.append(param)
 
 
-class Parameter(Buildable):
+class _Parameter(_Buildable):
     '''
     An Option has one or more Parameter instances.
 
@@ -248,10 +248,10 @@ class Parameter(Buildable):
     '''
 
     def __init__(self, iterable=None, join_body_on=''):
-        super(Parameter, self).__init__(iterable, join_body_on)
+        super(_Parameter, self).__init__(iterable, join_body_on)
 
 
-class SimpleParameter(Parameter):
+class _SimpleParameter(_Parameter):
     '''
     A Parameter is a SimpleParameter, if it's just a simple type, like a string.
 
@@ -269,14 +269,14 @@ class SimpleParameter(Parameter):
     '''
 
     def __init__(self, value=''):
-        super(SimpleParameter, self).__init__()
+        super(_SimpleParameter, self).__init__()
         self.value = value
 
     def build(self):
         return _indent(self.value)
 
 
-class TypedParameter(Parameter):
+class _TypedParameter(_Parameter):
     '''
     A Parameter, which has a type:
 
@@ -292,7 +292,7 @@ class TypedParameter(Parameter):
     '''
 
     def __init__(self, type='', values=None):
-        super(TypedParameter, self).__init__(values, ",\n")
+        super(_TypedParameter, self).__init__(values, ",\n")
         self.type = type
         self.values = values if values else []
         self.iterable = self.values
@@ -308,7 +308,7 @@ class TypedParameter(Parameter):
         self.values.append(value)
 
 
-class ParameterValue(Buildable):
+class _ParameterValue(_Buildable):
     '''
     A TypedParameter can have one or more values.
 
@@ -316,10 +316,10 @@ class ParameterValue(Buildable):
     '''
 
     def __init__(self, iterable=None, join_body_on=''):
-        super(ParameterValue, self).__init__(iterable, join_body_on)
+        super(_ParameterValue, self).__init__(iterable, join_body_on)
 
 
-class SimpleParameterValue(ParameterValue):
+class _SimpleParameterValue(_ParameterValue):
     '''
     A ParameterValuem which holds a simple type, like a string or a number.
 
@@ -329,14 +329,14 @@ class SimpleParameterValue(ParameterValue):
     '''
 
     def __init__(self, value=''):
-        super(SimpleParameterValue, self).__init__()
+        super(_SimpleParameterValue, self).__init__()
         self.value = value
 
     def build(self):
         return _indent(self.value)
 
 
-class TypedParameterValue(ParameterValue):
+class _TypedParameterValue(_ParameterValue):
     '''
     We have to go deeper...
 
@@ -358,7 +358,7 @@ class TypedParameterValue(ParameterValue):
     '''
 
     def __init__(self, type='', arguments=None):
-        super(TypedParameterValue, self).__init__(arguments, "\n")
+        super(_TypedParameterValue, self).__init__(arguments, "\n")
         self.type = type
         self.arguments = arguments if arguments else []
         self.iterable = self.arguments
@@ -374,7 +374,7 @@ class TypedParameterValue(ParameterValue):
         self.arguments.append(arg)
 
 
-class Argument(object):
+class _Argument(object):
     '''
     A TypedParameterValue has one or more Arguments. For example this can be
     the value of key_file.
@@ -439,11 +439,11 @@ def _parse_typed_parameter_typed_value(values):
 
     _current_parameter_value.type = type
     if _is_simple_type(value):
-        a = Argument(value)
+        a = _Argument(value)
         _current_parameter_value.add_argument(a)
     elif isinstance(value, list):
         for i in value:
-            a = Argument(i)
+            a = _Argument(i)
             _current_parameter_value.add_argument(a)
 
 
@@ -456,15 +456,15 @@ def _parse_typed_parameter(param):
     _current_parameter.type = type
 
     if _is_simple_type(value) and value != '':
-        _current_parameter_value = SimpleParameterValue(value)
+        _current_parameter_value = _SimpleParameterValue(value)
         _current_parameter.add_value(_current_parameter_value)
     elif isinstance(value, list):
         for i in value:
             if _is_simple_type(i):
-                _current_parameter_value = SimpleParameterValue(i)
+                _current_parameter_value = _SimpleParameterValue(i)
                 _current_parameter.add_value(_current_parameter_value)
             elif isinstance(i, dict):
-                _current_parameter_value = TypedParameterValue()
+                _current_parameter_value = _TypedParameterValue()
                 _parse_typed_parameter_typed_value(i)
                 _current_parameter.add_value(_current_parameter_value)
 
@@ -475,15 +475,15 @@ def _create_and_add_parameters(params):
     '''
     global _current_parameter
     if _is_simple_type(params):
-        _current_parameter = SimpleParameter(params)
+        _current_parameter = _SimpleParameter(params)
         _current_option.add_parameter(_current_parameter)
     else:
         # must be a list
         for i in params:
             if _is_simple_type(i):
-                _current_parameter = SimpleParameter(i)
+                _current_parameter = _SimpleParameter(i)
             else:
-                _current_parameter = TypedParameter()
+                _current_parameter = _TypedParameter()
                 _parse_typed_parameter(i)
             _current_option.add_parameter(_current_parameter)
 
@@ -494,7 +494,7 @@ def _create_and_add_option(option):
     '''
     global _current_option
 
-    _current_option = Option()
+    _current_option = _Option()
     type, params = _expand_one_key_dictionary(option)
     _current_option.type = type
     _create_and_add_parameters(params)
@@ -528,8 +528,8 @@ def _add_reference(reference, statement):
     Adds a reference to statement.
     '''
     type, value = _expand_one_key_dictionary(reference)
-    o = Option(type)
-    p = SimpleParameter(value)
+    o = _Option(type)
+    p = _SimpleParameter(value)
     o.add_parameter(p)
     statement.add_child(o)
 
@@ -549,7 +549,7 @@ def _add_inline_definition(item, statement):
     backup = _current_statement
 
     type, options = _expand_one_key_dictionary(item)
-    _current_statement = UnnamedStatement(type=type)
+    _current_statement = _UnnamedStatement(type=type)
     _parse_statement(options)
     statement.add_child(_current_statement)
 
@@ -561,10 +561,10 @@ def _add_junction(item):
     Adds a junction to the _current_statement.
     '''
     type, channels = _expand_one_key_dictionary(item)
-    junction = UnnamedStatement(type='junction')
+    junction = _UnnamedStatement(type='junction')
     for ch in channels:
         type, value = _expand_one_key_dictionary(ch)
-        channel = UnnamedStatement(type='channel')
+        channel = _UnnamedStatement(type='channel')
         for j in value:
             if _is_reference(j):
                 _add_reference(j, channel)
@@ -597,15 +597,15 @@ def _build_config_tree(name, configuration):
     global _INDENT, _current_statement
     _INDENT = ''
     if type == 'config':
-        _current_statement = GivenStatement(options)
+        _current_statement = _GivenStatement(options)
     elif type == 'log':
-        _current_statement = UnnamedStatement(type='log')
+        _current_statement = _UnnamedStatement(type='log')
         _parse_log_statement(options)
     else:
         if _is_statement_unnamed(type):
-            _current_statement = UnnamedStatement(type=type)
+            _current_statement = _UnnamedStatement(type=type)
         else:
-            _current_statement = NamedStatement(type=type, id=id)
+            _current_statement = _NamedStatement(type=type, id=id)
         _parse_statement(options)
 
 
