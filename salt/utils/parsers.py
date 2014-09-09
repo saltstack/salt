@@ -1824,6 +1824,15 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help='Answer Yes to all questions presented, defaults to False'
         )
 
+        self.add_option(
+            '--no-key-rotate',
+            default=False,
+            action='store_true',
+            help=('This option prevents the master from refreshing the key '
+                  'session when keys are deleted or rejected, this lowers '
+                  'the security of the key deletion/rejection operation.')
+        )
+
         key_options_group = optparse.OptionGroup(
             self, 'Key Generation Options'
         )

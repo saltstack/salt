@@ -1415,10 +1415,14 @@ def managed(name,
                    'comment': '',
                    'name': name,
                    'result': True}
+            check_cmd_opts = {
+                'cmd': check_cmd,
+                'cwd': tmp_filename,
+            }
+            if 'shell' in __grains__:
+                check_cmd_opts['shell'] = __grains__['shell']
 
-            cret = mod_run_check_cmd(
-                check_cmd, tmp_filename
-            )
+            cret = mod_run_check_cmd(**check_cmd_opts)
             if isinstance(cret, dict):
                 ret.update(cret)
                 return ret
@@ -3655,6 +3659,10 @@ def accumulated(name, filename, text, **kwargs):
         'result': True,
         'comment': ''
     }
+    if text is None:
+        ret['result'] = False
+        ret['comment'] = 'No text supplied for accumulator'
+        return ret
     require_in = __low__.get('require_in', [])
     watch_in = __low__.get('watch_in', [])
     deps = require_in + watch_in
