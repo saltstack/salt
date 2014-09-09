@@ -5,7 +5,7 @@
 Synopsis
 ========
 
-::
+.. code-block:: bash
 
     salt-call [options]
 

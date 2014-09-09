@@ -175,7 +175,9 @@ def stop(name, lbn, target, profile='default', expr_form='glob'):
     Stop the named worker from the lbn load balancers at the targeted minions
     The worker won't get any traffic from the lbn
 
-    Example::
+    Example:
+
+    .. code-block:: yaml
 
         disable-before-deploy:
           modjk_worker.stop:
@@ -193,7 +195,9 @@ def activate(name, lbn, target, profile='default', expr_form='glob'):
     Activate the named worker from the lbn load balancers at the targeted
     minions
 
-    Example::
+    Example:
+
+    .. code-block:: yaml
 
         disable-before-deploy:
           modjk_worker.activate:
@@ -213,7 +217,9 @@ def disable(name, lbn, target, profile='default', expr_form='glob'):
     The worker will get traffic only for current sessions and won't get new
     ones.
 
-    Example::
+    Example:
+
+    .. code-block:: yaml
 
         disable-before-deploy:
           modjk_worker.disable:

@@ -51,6 +51,17 @@ argument, to avoid a collision with the ``name`` argument. For example:
       module.run:
         - name: service.disable
         - m_name: nfs
+
+Note that some modules read all or some of the arguments from a list of keyword
+arguments. For example:
+
+.. code-block:: yaml
+
+    mine.send:
+      module.run:
+        - func: network.ip_addrs
+        - kwargs:
+            interface: eth0
 '''
 # Import python libs
 import datetime
@@ -192,12 +203,12 @@ def run(name, **kwargs):
             mret = __salt__[name](*args, **nkwargs)
         else:
             mret = __salt__[name](*args)
-    except Exception:
-        ret['comment'] = 'Module function {0} threw an exception'.format(name)
+    except Exception as e:
+        ret['comment'] = 'Module function {0} threw an exception. Exception: {1}'.format(name, e)
         ret['result'] = False
         return ret
     else:
-        if mret:
+        if mret is not None:
             ret['changes']['ret'] = mret
 
     if 'returner' in kwargs:

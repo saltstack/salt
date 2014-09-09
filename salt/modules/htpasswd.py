@@ -2,7 +2,7 @@
 '''
 Support for htpasswd command
 
-.. versionadded:: 2014.1.0 (Hydrogen)
+.. versionadded:: 2014.1.0
 
 The functions here will load inside the webutil module. This allows other
 functions that don't use htpasswd to use the webutil module name.

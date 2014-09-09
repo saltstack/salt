@@ -38,7 +38,8 @@ if salt.utils.which('initctl'):
 
 def __virtual__():
     '''
-    Only work on systems which default to systemd
+    Only work on select distros which still use Red Hat's /usr/bin/service for
+    management of either sysvinit or a hybrid sysvinit/upstart init system.
     '''
     # Enable on these platforms only.
     enable = set((
@@ -51,14 +52,24 @@ def __virtual__():
         'ALT',
         'OEL',
         'SUSE  Enterprise Server',
+        'SUSE',
         'McAfee  OS Server'
     ))
     if __grains__['os'] in enable:
-        if __grains__['os'] == 'Fedora':
-            if __grains__.get('osrelease', 0) > 15:
+        if __grains__['os'] == 'SUSE':
+            if __grains__['osrelease'].startswith('11'):
+                return __virtualname__
+            else:
                 return False
-        if __grains__['os'] == 'RedHat':
-            if __grains__.get('osrelease', 0) >= 7:
+        try:
+            osrelease = float(__grains__.get('osrelease', 0))
+        except ValueError:
+            return False
+        if __grains__['os'] == 'Fedora':
+            if osrelease > 15:
+                return False
+        if __grains__['os'] in ('RedHat', 'CentOS', 'ScientificLinux'):
+            if osrelease >= 7:
                 return False
         return __virtualname__
     return False
@@ -119,7 +130,7 @@ def _service_is_chkconfig(name):
     Return True if the service is managed by chkconfig.
     '''
     cmdline = '/sbin/chkconfig --list {0}'.format(name)
-    return __salt__['cmd.retcode'](cmdline) == 0
+    return __salt__['cmd.retcode'](cmdline, ignore_retcode=True) == 0
 
 
 def _sysv_is_enabled(name, runlevel=None):
@@ -306,7 +317,7 @@ def available(name, limit=''):
     elif limit == 'sysvinit':
         return _service_is_sysv(name)
     else:
-        return _service_is_upstart(name) or _service_is_sysv(name)
+        return _service_is_upstart(name) or _service_is_sysv(name) or _service_is_chkconfig(name)
 
 
 def missing(name, limit=''):
@@ -419,7 +430,7 @@ def status(name, sig=None):
     if sig:
         return bool(__salt__['status.pid'](sig))
     cmd = '/sbin/service {0} status'.format(name)
-    return __salt__['cmd.retcode'](cmd) == 0
+    return __salt__['cmd.retcode'](cmd, ignore_retcode=True) == 0
 
 
 def enable(name, **kwargs):
@@ -454,7 +465,7 @@ def disable(name, **kwargs):
         return _sysv_disable(name)
 
 
-def enabled(name):
+def enabled(name, **kwargs):
     '''
     Check to see if the named service is enabled to start on boot
 

@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-The 'sysbench' module is used to analyse the
+The 'sysbench' module is used to analyze the
 performance of the minions, right from the master!
 It measures various system parameters such as
-CPU, Memory, FileI/O, Threads and Mutex.
+CPU, Memory, File I/O, Threads and Mutex.
 '''
 
 import re

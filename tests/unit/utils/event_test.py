@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2012-2013 by the SaltStack Team, see AUTHORS for more details
-    :license: Apache 2.0, see LICENSE for more details.
 
 
     tests.unit.utils.event_test
@@ -25,7 +23,7 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
-from salt.master import clean_proc
+from salt.utils.process import clean_proc
 from salt.utils import event
 
 SOCK_DIR = os.path.join(integration.TMP, 'test-socks')
@@ -107,7 +105,7 @@ class TestSaltEvent(TestCase):
 
     def test_minion_event(self):
         opts = dict(id='foo', sock_dir=SOCK_DIR)
-        id_hash = hashlib.md5(opts['id']).hexdigest()
+        id_hash = hashlib.md5(opts['id']).hexdigest()[:10]
         me = event.MinionEvent(opts)
         self.assertEqual(
             me.puburi,
@@ -134,7 +132,7 @@ class TestSaltEvent(TestCase):
 
     def test_minion_event_no_id(self):
         me = event.MinionEvent(dict(sock_dir=SOCK_DIR))
-        id_hash = hashlib.md5('').hexdigest()
+        id_hash = hashlib.md5('').hexdigest()[:10]
         self.assertEqual(
             me.puburi,
             'ipc://{0}'.format(

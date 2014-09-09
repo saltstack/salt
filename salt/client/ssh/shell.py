@@ -45,7 +45,7 @@ class Shell(object):
         self.host = host
         self.user = user
         self.port = port
-        self.passwd = passwd
+        self.passwd = str(passwd) if passwd else passwd
         self.priv = priv
         self.timeout = timeout
         self.sudo = sudo
@@ -109,7 +109,7 @@ class Shell(object):
 
         if self.passwd:
             options.extend(['PasswordAuthentication=yes',
-                            'PubkeyAuthentication=no'])
+                            'PubkeyAuthentication=yes'])
         else:
             options.extend(['PasswordAuthentication=no',
                             'PubkeyAuthentication=yes',

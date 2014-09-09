@@ -16,6 +16,7 @@ import logging
 # Import salt libs
 import salt.utils
 import salt.utils.dictupdate
+from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
 
 __proxyenabled__ = ['*']
@@ -61,7 +62,7 @@ _SANITIZERS = {
 }
 
 
-def get(key, default='', delim=':'):
+def get(key, default='', delimiter=DEFAULT_TARGET_DELIM):
     '''
     Attempt to retrieve the named value from grains, if the named value is not
     available return the passed default. The default return is an empty string.
@@ -77,10 +78,10 @@ def get(key, default='', delim=':'):
         pkg:apache
 
 
-    delim
+    delimiter
         Specify an alternate delimiter to use when traversing a nested dict
 
-        .. versionadded:: Helium
+        .. versionadded:: 2014.7.0
 
     CLI Example:
 
@@ -88,7 +89,10 @@ def get(key, default='', delim=':'):
 
         salt '*' grains.get pkg:apache
     '''
-    return salt.utils.traverse_dict(__grains__, key, default, delim)
+    return salt.utils.traverse_dict_and_list(__grains__,
+                                             key,
+                                             default,
+                                             delimiter)
 
 
 def has_value(key):
@@ -109,7 +113,7 @@ def has_value(key):
 
         salt '*' grains.has_value pkg:apache
     '''
-    return True if salt.utils.traverse_dict(__grains__, key, False) else False
+    return True if salt.utils.traverse_dict_and_list(__grains__, key, False) else False
 
 
 def items(sanitize=False):
@@ -178,7 +182,7 @@ def setvals(grains, destructive=False):
 
     .. code-block:: bash
 
-        salt '*' grains.setvals "{'key1': 'vali1', 'key2': 'val2'}"
+        salt '*' grains.setvals "{'key1': 'val1', 'key2': 'val2'}"
     '''
     new_grains = grains
     if not isinstance(new_grains, collections.Mapping):
@@ -256,11 +260,23 @@ def setval(key, val, destructive=False):
     return setvals({key: val}, destructive)
 
 
-def append(key, val):
+def append(key, val, convert=False):
     '''
     .. versionadded:: 0.17.0
 
-    Append a value to a list in the grains config file
+    Append a value to a list in the grains config file. If the grain doesn't
+    exist, the grain key is added and the value is appended to the new grain
+    as a list item.
+
+    key
+        The grain key to be appended to
+
+    val
+        The value to append to the grain key
+
+    :param convert: If convert is True, convert non-list contents into a list.
+        If convert is False and the grain contains non-list contents, an error
+        is given. Defaults to False.
 
     CLI Example:
 
@@ -269,6 +285,8 @@ def append(key, val):
         salt '*' grains.append key val
     '''
     grains = get(key, [])
+    if not isinstance(grains, list) and convert is True:
+        grains = [grains]
     if not isinstance(grains, list):
         return 'The key {0} is not a valid list'.format(key)
     if val in grains:
@@ -345,8 +363,7 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default'):
         {% set apache = salt['grains.filter_by']({
             'Debian': {'pkg': 'apache2', 'srv': 'apache2'},
             'RedHat': {'pkg': 'httpd', 'srv': 'httpd'},
-            'default': 'Debian',
-        }) %}
+        }, default='Debian') %}
 
         myapache:
           pkg:
@@ -393,7 +410,7 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default'):
     :param default: default lookup_dict's key used if the grain does not exists
          or if the grain value has no match on lookup_dict.
 
-         .. versionadded:: 2014.1.0 (Hydrogen)
+         .. versionadded:: 2014.1.0
 
     CLI Example:
 
@@ -425,7 +442,7 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default'):
     return ret
 
 
-def _dict_from_path(path, val, delim=':'):
+def _dict_from_path(path, val, delimiter=DEFAULT_TARGET_DELIM):
     '''
     Given a lookup string in the form of 'foo:bar:baz" return a nested
     dictionary of the appropriate depth with the final segment as a value.
@@ -434,7 +451,7 @@ def _dict_from_path(path, val, delim=':'):
     {"foo": {"bar": {"baz": "somevalue"}}
     '''
     nested_dict = _infinitedict()
-    keys = path.rsplit(delim)
+    keys = path.rsplit(delimiter)
     lastplace = reduce(operator.getitem, keys[:-1], nested_dict)
     lastplace[keys[-1]] = val
 
@@ -459,7 +476,7 @@ def get_or_set_hash(name,
           mysql_user:
             - present
             - host: localhost
-            - password: {{ grains.get_or_set_hash('mysql:some_mysql_user') }}
+            - password: {{ salt['grains.get_or_set_hash']('mysql:some_mysql_user') }}
 
     CLI Example:
 

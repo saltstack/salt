@@ -1,7 +1,7 @@
 #
 # spec file for package salt
 #
-# Copyright (c) 2013 SUSE LINUX Products GmbH, Nuernberg, Germany.
+# Copyright (c) 2014 SUSE LINUX Products GmbH, Nuernberg, Germany.
 #
 # All modifications and additions to the file contributed by third parties
 # remain the property of their copyright owners, unless otherwise agreed
@@ -17,13 +17,21 @@
 
 
 Name:           salt
-Version:        2014.1.4
+Version:        2014.1.7
 Release:        0
 Summary:        A parallel remote execution system
 License:        Apache-2.0
 Group:          System/Monitoring
 Url:            http://saltstack.org/
 Source0:        http://pypi.python.org/packages/source/s/%{name}/%{name}-%{version}.tar.gz
+# PATCH-FIX-UPSTREAM allow-systemd-units-no-unit-files.patch tserong@suse.com -- allow salt to detect init script services
+Patch1:         allow-systemd-units-no-unit-files.patch
+# PATCH-FIX-UPSTREAM allow-systemd-units-no-unit-files.patch tserong@suse.com -- part 2 of above fix
+Patch2:         allow-systemd-parameterized-services.patch
+# PATCH-FIX-UPSTREAM pass-all-systemd-list-units.patch tserong@suse.com -- part 3 of above fix
+Patch3:         pass-all-systemd-list-units.patch
+# PATCH-FIX-OPENSUSE use-forking-daemon.patch tserong@suse.com -- We don't have python-systemd, so notify can't work
+Patch4:         use-forking-daemon.patch
 
 #for building
 BuildRequires:  fdupes
@@ -31,14 +39,14 @@ BuildRequires:  logrotate
 BuildRequires:  python-Jinja2
 BuildRequires:  python-M2Crypto
 BuildRequires:  python-PyYAML
-BuildRequires:  python-yaml
+BuildRequires:  python-apache-libcloud >= 0.14.0
 BuildRequires:  python-devel
 BuildRequires:  python-msgpack-python
+BuildRequires:  python-psutil
 BuildRequires:  python-pycrypto
 BuildRequires:  python-pyzmq
-BuildRequires:  python-psutil
 BuildRequires:  python-requests
-BuildRequires:  python-apache-libcloud >= 0.14.0
+BuildRequires:  python-yaml
 
 %if 0%{?sles_version}
 BuildRequires:  python
@@ -65,17 +73,27 @@ BuildRequires:  python-sphinx
 
 Requires:       logrotate
 Requires:       python-Jinja2
-Requires:       python-yaml
 Requires:       python-PyYAML
-Requires:       python-yaml
 Requires:       python-apache-libcloud
-Requires:       python-xml
 Requires:       python-psutil
 Requires:       python-requests
+Requires:       python-xml
+Requires:       python-yaml
+Requires:       python-yaml
 Requires(pre): %fillup_prereq
 %if 0%{?suse_version} < 1210
 Requires(pre): %insserv_prereq
 %endif
+
+%if 0%{?sles_version} > 10 && 0%{?sles_version} < 12
+%define with_bashcomp 0
+%else
+%define with_bashcomp 1
+%endif
+
+%if %with_bashcomp
+BuildRequires:  bash-completion
+%endif #with_bashcomp
 
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 %if 0%{?suse_version} && 0%{?suse_version} <= 1110
@@ -86,7 +104,6 @@ BuildArch:      noarch
 
 Recommends:     python-botocore
 Recommends:     python-netaddr
-
 
 %description
 Salt is a distributed remote execution system used to execute commands and
@@ -197,8 +214,26 @@ Requires(pre):  %fillup_prereq
 Salt ssh is a master running without zmq.
 it enables the management of minions over a ssh connection.
 
+%if %with_bashcomp
+
+%package bash-completion
+Summary:        Bash Completion for %{name}
+Group:          System/Management
+Requires:       %{name} = %{version}
+Requires:       bash-completion
+BuildArch:      noarch
+
+%description bash-completion
+Bash command line completion support for %{name}.
+
+%endif # with_bashcomp
+
 %prep
 %setup -q
+%patch1 -p1
+%patch2 -p1
+%patch3 -p1
+%patch4 -p1
 
 %build
 python setup.py build
@@ -228,7 +263,7 @@ mkdir -p %{buildroot}/var/log/salt
 mkdir -p %{buildroot}/srv/salt
 mkdir -p %{buildroot}/srv/pillar
 mkdir -p %{buildroot}%{_docdir}/salt
-#
+
 ## install init and systemd scripts
 %if 0%{?_unitdir:1}
 install -Dpm 0644 pkg/salt-master.service %{buildroot}%_unitdir/salt-master.service
@@ -261,12 +296,16 @@ install -Dpm 0644  pkg/salt-common.logrotate %{buildroot}%{_sysconfdir}/logrotat
 #
 ## install SuSEfirewall2 rules
 install -Dpm 0644  pkg/suse/salt.SuSEfirewall2 %{buildroot}%{_sysconfdir}/sysconfig/SuSEfirewall2.d/services/salt
+#
+## install completion scripts
+%if %with_bashcomp
+install -Dpm 0644 pkg/salt.bash "%{buildroot}/etc/bash_completion.d/%{name}"
+%endif #with_bashcomp
 
 %check
-# don't test on factory because of ssl2 method deprication
-#%%if 0%{?suse_version} < 1310
+%if 0%{?suse_version} < 1310
 %{__python} setup.py test --runtests-opts=-u
-#%%endif
+%endif
 
 %preun syndic
 %if 0%{?_unitdir:1}
@@ -416,6 +455,14 @@ install -Dpm 0644  pkg/suse/salt.SuSEfirewall2 %{buildroot}%{_sysconfdir}/syscon
 %config(noreplace) %{_sysconfdir}/logrotate.d/salt
 %attr(755,root,root)%{python_sitelib}/salt/cloud/deploy/*.sh
 %{python_sitelib}/*
-%doc LICENSE AUTHORS README.rst HACKING.rst 
+%doc LICENSE AUTHORS README.rst HACKING.rst
+
+%if %with_bashcomp
+
+%files bash-completion
+%defattr(-,root,root)
+%config %{_sysconfdir}/bash_completion.d/%{name}
+
+%endif #with_bashcomp
 
 %changelog

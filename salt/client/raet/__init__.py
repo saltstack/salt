@@ -9,7 +9,7 @@ import time
 import logging
 
 # Import Salt libs
-from raet import raeting
+from raet import raeting, nacling
 from raet.lane.stacking import LaneStack
 from raet.lane.yarding import RemoteYard
 import salt.config
@@ -28,7 +28,6 @@ class LocalClient(salt.client.LocalClient):
                  c_path=os.path.join(syspaths.CONFIG_DIR, 'master'),
                  mopts=None):
 
-        #import  wingdbstub
         salt.client.LocalClient.__init__(self, c_path, mopts)
 
     def pub(self,
@@ -52,15 +51,18 @@ class LocalClient(salt.client.LocalClient):
                 jid=jid,
                 timeout=timeout,
                 **kwargs)
-        yid = salt.utils.gen_jid()
+        yid = nacling.uuid(size=18)
         stack = LaneStack(
+                name=('client' + yid),
                 yid=yid,
                 lanename='master',
                 sockdirpath=self.opts['sock_dir'])
         stack.Pk = raeting.packKinds.pack
         router_yard = RemoteYard(
+                stack=stack,
                 lanename='master',
                 yid=0,
+                name='manor',
                 dirpath=self.opts['sock_dir'])
         stack.addRemote(router_yard)
         route = {'dst': (None, router_yard.name, 'local_cmd'),
@@ -71,5 +73,11 @@ class LocalClient(salt.client.LocalClient):
         while True:
             time.sleep(0.01)
             stack.serviceAll()
-            for msg in stack.rxMsgs:
-                return msg.get('return', {}).get('ret', {})
+            while stack.rxMsgs:
+                msg, sender = stack.rxMsgs.popleft()
+                ret = msg.get('return', {})
+                if 'ret' in ret:
+                    stack.server.close()
+                    return ret['ret']
+                stack.server.close()
+                return ret

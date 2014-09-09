@@ -2,7 +2,7 @@
 '''
 Module for Sending Messages via SMTP
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 :depends:   - smtplib python module
 :configuration: This module can be used by either passing a jid and password
@@ -105,7 +105,7 @@ def send_msg(recipient,
         log.debug("Exception: {0}" . format(_error))
         return False
 
-    if not use_ssl in ['True', 'true']:
+    if use_ssl not in ('True', 'true'):
         smtpconn.ehlo()
         if smtpconn.has_extn('STARTTLS'):
             try:

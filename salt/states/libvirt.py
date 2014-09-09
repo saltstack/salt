@@ -27,7 +27,7 @@ def keys(name, basepath='/etc/pki'):
         The name variable used to track the execution
 
     basepath
-        Defaults to `/etc/pki`, this is the root location used for libvirt
+        Defaults to ``/etc/pki``, this is the root location used for libvirt
         keys on the hypervisor
     '''
     #libvirt.serverkey.pem

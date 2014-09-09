@@ -4,7 +4,7 @@ Installing and Configuring Halite
 
 In this tutorial, we'll walk through installing and setting up Halite.  The
 current version of Halite is considered pre-alpha and is supported only in Salt
-``v2014.1.0 (Hydrogen)`` or greater. Additional information is available on GitHub:
+``v2014.1.0`` or greater. Additional information is available on GitHub:
 https://github.com/saltstack/halite
 
 Before beginning this tutorial, ensure that the salt-master is installed. To
@@ -13,7 +13,7 @@ http://docs.saltstack.com/topics/installation/index.html
 
 .. note::
 
-    Halite only works with Salt versions greater than 2014.1.0 (Hydrogen).
+    Halite only works with Salt versions greater than 2014.1.0.
 
 Installing Halite Via Package
 =============================
@@ -77,7 +77,7 @@ install that piece as well. On RHEL based distros, use one of the following:
     $ yum install python-devel
     $ yum install gcc
     $ pip install gevent
-
+    $ pip install pyopenssl
 
 On Debian based distributions:
 
@@ -97,6 +97,7 @@ On Debian based distributions:
     $ apt-get install python-dev
     $ apt-get install libevent-dev
     $ pip install gevent
+    $ pip install pyopenssl
 
 
 Configuring Halite Permissions
@@ -201,14 +202,7 @@ module:
 
 .. note::
 
-    You might wish to target only a specific minion. The example below
-    targets all connected minions.
-
-.. code-block:: bash
-
-    salt '*' tls.create_self_signed_cert test 
-
-You can also use ``salt-call`` to create a self-signed cert.
+    The following command needs to be run on your salt master.
 
 .. code-block:: bash
 
@@ -227,8 +221,8 @@ Starting Halite
 Once you've configured the halite section of your /etc/salt/master, you can
 restart the salt-master service, and your halite instance will be available.
 Depending on your configuration, the instance will be available either at
-http://localhost:8080/app, http://domain:8080/app, or 
-http://123.456.789.012:8080/app .
+https://localhost:8080/app, https://domain:8080/app, or
+https://123.456.789.012:8080/app .
 
 .. note::
 

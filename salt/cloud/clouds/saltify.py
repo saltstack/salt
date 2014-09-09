@@ -22,7 +22,7 @@ import salt.utils
 # Import salt cloud libs
 import salt.utils.cloud
 import salt.config as config
-from salt.cloud.exceptions import SaltCloudConfigError, SaltCloudSystemExit
+from salt.exceptions import SaltCloudConfigError, SaltCloudSystemExit
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -135,6 +135,8 @@ def create(vm_):
     }
     if 'ssh_port' in vm_:
         deploy_kwargs.update({'port': vm_['ssh_port']})
+    if 'salt_host' in vm_:
+        deploy_kwargs.update({'salt_host': vm_['salt_host']})
 
     # forward any info about possible ssh gateway to deploy script
     # as some providers need also a 'gateway' configuration

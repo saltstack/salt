@@ -29,7 +29,7 @@ def _get_upgradable(rec=False, restart=False):
     { 'updatename': '1.2.3-45', ... }
     '''
     cmd = 'softwareupdate --list'
-    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run_stdout'](cmd)
     # rexp parses lines that look like the following:
     #    * Safari6.1.2MountainLion-6.1.2
     #         Safari (6.1.2), 51679K [recommended]
@@ -97,7 +97,7 @@ def list_upgrades(rec=False, restart=False):
 def ignore(*updates):
     '''
     Ignore a specific program update. When an update is ignored the '-' and
-    version number at the end will be omited, so "SecUpd2014-001-1.0" becomes
+    version number at the end will be omitted, so "SecUpd2014-001-1.0" becomes
     "SecUpd2014-001". It will be removed automatically if present. An update
     is successfully ignored when it no longer shows up after list_upgrades.
 
@@ -120,8 +120,7 @@ def ignore(*updates):
 
     for name in to_ignore:
         cmd = ['softwareupdate', '--ignore', name]
-        __salt__['cmd.run_stdout'](cmd, python_shell=False,
-                                      output_loglevel='debug')
+        __salt__['cmd.run_stdout'](cmd, python_shell=False)
 
     return list_ignored()
 
@@ -139,7 +138,7 @@ def list_ignored():
        salt '*' softwareupdate.list_ignored
     '''
     cmd = 'softwareupdate --list --ignore'
-    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run_stdout'](cmd)
 
     # rep parses lines that look like the following:
     #     "Safari6.1.2MountainLion-6.1.2",
@@ -172,7 +171,7 @@ def reset_ignored():
     ignored_updates = list_ignored()
 
     if ignored_updates:
-        __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+        __salt__['cmd.run_stdout'](cmd)
         ret = ignored_updates
     else:
         ret = None
@@ -183,8 +182,8 @@ def reset_ignored():
 def schedule(*status):
     '''
     Decide if automatic checking for upgrades should be on or off.
-    If no argumentsare given it will return the current status.
-    Appaend on or off to change the status.
+    If no arguments are given it will return the current status.
+    Append on or off to change the status.
 
     Return values:
     - ``True``: Automatic checking is now on,
@@ -207,7 +206,7 @@ def schedule(*status):
     else:
         return None
 
-    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run_stdout'](cmd)
 
     current_status = out.split()[-1]
     if current_status == 'off':
@@ -251,8 +250,7 @@ def upgrade(rec=False, restart=True):
 
     for update in to_upgrade:
         cmd = ['softwareupdate', '--install', update]
-        __salt__['cmd.run_stdout'](cmd, python_shell=False,
-                                   output_loglevel='debug')
+        __salt__['cmd.run_stdout'](cmd, python_shell=False)
 
     ret = {}
     upgrades_left = _get_upgradable()
@@ -292,8 +290,7 @@ def install(*updates):
 
     for name in updates:
         cmd = ['softwareupdate', '--install', name]
-        __salt__['cmd.run_stdout'](cmd, python_shell=False,
-                                      output_loglevel='debug')
+        __salt__['cmd.run_stdout'](cmd, python_shell=False)
 
     upgrades_left = _get_upgradable()
 
@@ -367,8 +364,7 @@ def download(*updates):
     '''
     for name in updates:
         cmd = ['softwareupdate', '--download', name]
-        __salt__['cmd.run_stdout'](cmd, python_shell=False,
-                                   output_loglevel='debug')
+        __salt__['cmd.run_stdout'](cmd, python_shell=False)
 
     return list_downloads()
 
@@ -398,7 +394,6 @@ def download_all(rec=False, restart=True):
 
     for name in to_download:
         cmd = ['softwareupdate', '--download', name]
-        __salt__['cmd.run_stdout'](cmd, python_shell=False,
-                                   output_loglevel='debug')
+        __salt__['cmd.run_stdout'](cmd, python_shell=False)
 
     return list_downloads()

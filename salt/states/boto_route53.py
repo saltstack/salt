@@ -3,28 +3,31 @@
 Manage Route53 records
 ======================
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 Create and delete Route53 records. Be aware that this interacts with Amazon's
 services, and so may incur charges.
 
-This module uses boto, which can be installed via package, or pip.
+This module uses ``boto``, which can be installed via package, or pip.
 
 This module accepts explicit route53 credentials but can also utilize
-IAM roles assigned to the instance trough Instance Profiles. Dynamic
+IAM roles assigned to the instance through Instance Profiles. Dynamic
 credentials are then automatically obtained from AWS API and no further
-configuration is necessary. More Information available at::
+configuration is necessary. More information available `here
+<http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html>`_.
 
-   http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
+If IAM roles are not used you need to specify them either in a pillar file or
+in the minion's config file:
 
-If IAM roles are not used you need to specify them either in a pillar or
-in the minion's config file::
+.. code-block:: yaml
 
     route53.keyid: GKTADJGHEIQSXMKKRBJ08H
     route53.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
-It's also possible to specify key, keyid and region via a profile, either
-as a passed in dict, or as a string to pull from pillars or minion config:
+It's also possible to specify ``key``, ``keyid`` and ``region`` via a profile, either
+passed in as a dict, or as a string to pull from pillars or minion config:
+
+.. code-block:: yaml
 
     myprofile:
         keyid: GKTADJGHEIQSXMKKRBJ08H
@@ -39,7 +42,7 @@ as a passed in dict, or as a string to pull from pillars or minion config:
             - value: my-elb.us-east-1.elb.amazonaws.com.
             - zone: example.com.
             - ttl: 60
-            - type: CNAME
+            - record_type: CNAME
             - region: us-east-1
             - keyid: GKTADJGHEIQSXMKKRBJ08H
             - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
@@ -51,7 +54,7 @@ as a passed in dict, or as a string to pull from pillars or minion config:
             - value: 1.1.1.1
             - zone: example.com.
             - ttl: 60
-            - type: A
+            - record_type: A
             - region: us-east-1
             - profile: myprofile
 
@@ -62,7 +65,7 @@ as a passed in dict, or as a string to pull from pillars or minion config:
             - value: 1.1.1.1
             - zone: example.com.
             - ttl: 60
-            - type: A
+            - record_type: A
             - region: us-east-1
             - profile:
                 keyid: GKTADJGHEIQSXMKKRBJ08H
@@ -122,7 +125,7 @@ def present(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
     '''
-    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     record = __salt__['boto_route53.get_record'](name, zone, record_type,
                                                  False, region, key, keyid,
@@ -131,13 +134,13 @@ def present(
     if isinstance(record, dict) and not record:
         if __opts__['test']:
             ret['comment'] = 'Route53 record {0} set to be added.'.format(name)
+            ret['result'] = None
             return ret
         added = __salt__['boto_route53.add_record'](name, value, zone,
                                                     record_type, identifier,
                                                     ttl, region, key, keyid,
                                                     profile)
         if added:
-            ret['result'] = True
             ret['changes']['old'] = None
             ret['changes']['new'] = {'name': name,
                                      'value': value,
@@ -169,6 +172,7 @@ def present(
             if __opts__['test']:
                 msg = 'Route53 record {0} set to be updated.'.format(name)
                 ret['comment'] = msg
+                ret['result'] = None
                 return ret
             updated = __salt__['boto_route53.update_record'](name, value, zone,
                                                              record_type,
@@ -176,7 +180,6 @@ def present(
                                                              region, key,
                                                              keyid, profile)
             if updated:
-                ret['result'] = True
                 ret['changes']['old'] = record
                 ret['changes']['new'] = {'name': name,
                                          'value': value,
@@ -226,7 +229,7 @@ def absent(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
     '''
-    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     record = __salt__['boto_route53.get_record'](name, zone, record_type,
                                                  False, region, key, keyid,
@@ -235,6 +238,7 @@ def absent(
         if __opts__['test']:
             msg = 'Route53 record {0} set to be deleted.'.format(name)
             ret['comment'] = msg
+            ret['result'] = None
             return ret
         deleted = __salt__['boto_route53.delete_record'](name, zone,
                                                          record_type,
@@ -242,7 +246,6 @@ def absent(
                                                          region, key, keyid,
                                                          profile)
         if deleted:
-            ret['result'] = True
             ret['changes']['old'] = record
             ret['changes']['new'] = None
             ret['comment'] = 'Deleted {0} Route53 record.'.format(name)

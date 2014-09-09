@@ -20,6 +20,7 @@ import salt.client
 import salt.output
 import salt.utils.minions
 import salt.wheel
+import salt.version
 
 FINGERPRINT_REGEX = re.compile(r'^([a-f0-9]{2}:){15}([a-f0-9]{2})$')
 
@@ -137,7 +138,7 @@ def up():  # pylint: disable=C0103
 def present(subset=None, show_ipv4=False):
     '''
     Print a list of all minions that are up according to Salt's presence
-    detection, no commands will be sent
+    detection (no commands will be sent)
 
     subset : None
         Pass in a CIDR range to filter minions by IP address.
@@ -157,6 +158,40 @@ def present(subset=None, show_ipv4=False):
     connected = dict(minions) if show_ipv4 else sorted(minions)
 
     salt.output.display_output(connected, '', __opts__)
+    return connected
+
+
+def not_present(subset=None, show_ipv4=False):
+    '''
+    Print a list of all minions that are NOT up according to Salt's presence
+    detection (no commands will be sent)
+
+    subset : None
+        Pass in a CIDR range to filter minions by IP address.
+
+    show_ipv4 : False
+        Also show the IP address each minion is connecting from.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run manage.not_present
+    '''
+    ckminions = salt.utils.minions.CkMinions(__opts__)
+
+    minions = ckminions.connected_ids(show_ipv4=show_ipv4, subset=subset)
+    connected = dict(minions) if show_ipv4 else sorted(minions)
+
+    key = salt.key.Key(__opts__)
+    keys = key.list_keys()
+
+    not_connected = []
+    for minion in keys['minions']:
+        if minion not in connected:
+            not_connected.append(minion)
+
+    salt.output.display_output(not_connected, '', __opts__)
     return connected
 
 
@@ -229,46 +264,50 @@ def versions():
         -1: 'Minion requires update',
         0: 'Up to date',
         1: 'Minion newer than master',
+        2: 'Master',
     }
 
     version_status = {}
 
-    comps = salt.__version__.split('-')
-    if len(comps) == 3:
-        master_version = '-'.join(comps[0:2])
-    else:
-        master_version = salt.__version__
+    master_version = salt.version.__saltstack_version__
+
     for minion in minions:
-        comps = minions[minion].split('-')
-        if len(comps) == 3:
-            minion_version = '-'.join(comps[0:2])
-        else:
-            minion_version = minions[minion]
+        minion_version = salt.version.SaltStackVersion.parse(minions[minion])
         ver_diff = cmp(minion_version, master_version)
 
         if ver_diff not in version_status:
             version_status[ver_diff] = {}
-        version_status[ver_diff][minion] = minion_version
+        version_status[ver_diff][minion] = minion_version.string
+
+    # Add version of Master to output
+    version_status[2] = master_version.string
 
     ret = {}
     for key in version_status:
-        for minion in sorted(version_status[key]):
-            ret.setdefault(labels[key], {})[minion] = version_status[key][minion]
-
+        if key == 2:
+            ret[labels[key]] = version_status[2]
+        else:
+            for minion in sorted(version_status[key]):
+                ret.setdefault(labels[key], {})[minion] = version_status[key][minion]
     salt.output.display_output(ret, '', __opts__)
     return ret
 
 
 def bootstrap(version="develop",
               script=None,
-              hosts=""):
+              hosts="",
+              root_user=True):
     '''
     Bootstrap minions with salt-bootstrap
 
-    Options:
-        version: git tag of version to install [default: develop]
-        script: Script to execute [default: https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh]
-        hosts: Comma separated hosts [example: hosts="host1.local,host2.local"]
+    version : develop
+        Git tag of version to install
+    script : https://bootstrap.saltstack.com
+        Script to execute
+    hosts
+        Comma separated hosts [example: hosts="host1.local,host2.local"]
+    root_user : True
+        Prepend ``root@`` to each host.
 
     CLI Example:
 
@@ -276,16 +315,19 @@ def bootstrap(version="develop",
 
         salt-run manage.bootstrap hosts="host1,host2"
         salt-run manage.bootstrap hosts="host1,host2" version="v0.17"
-        salt-run manage.bootstrap hosts="host1,host2" version="v0.17" script="https://raw.githubusercontent.com/saltstack/salt-bootstrap/develop/bootstrap-salt.sh"
+        salt-run manage.bootstrap hosts="host1,host2" version="v0.17" script="https://bootstrap.saltstack.com/develop"
+        salt-run manage.bootstrap hosts="ec2-user@host1,ec2-user@host2" root_user=False
 
     '''
     if script is None:
-        script = 'https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh'
+        script = 'https://bootstrap.saltstack.com'
     for host in hosts.split(","):
         # Could potentially lean on salt-ssh utils to make
         # deployment easier on existing hosts (i.e. use sshpass,
         # or expect, pass better options to ssh etc)
-        subprocess.call(["ssh", "root@" + host, "python -c 'import urllib; "
+        subprocess.call(["ssh",
+                        "root@" if root_user else "" + host,
+                        "python -c 'import urllib; "
                         "print urllib.urlopen("
                         "\"" + script + "\""
                         ").read()' | sh -s -- git " + version])

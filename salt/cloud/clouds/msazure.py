@@ -33,7 +33,7 @@ import logging
 # Import salt cloud libs
 import salt.config as config
 import salt.utils.cloud
-from salt.cloud.exceptions import SaltCloudSystemExit
+from salt.exceptions import SaltCloudSystemExit
 
 # Import azure libs
 HAS_LIBS = False
@@ -216,6 +216,14 @@ def avail_sizes(call=None):
             'name': 'A7',
             'description': '8 cores, 56GB RAM',
         },
+        'A8': {
+            'name': 'A8',
+            'description': '8 cores, 56GB RAM, 40 Gbit/s InfiniBand',
+        },
+        'A9': {
+            'name': 'A9',
+            'description': '16 cores, 112GB RAM, 40 Gbit/s InfiniBand',
+        },
     }
 
 
@@ -261,10 +269,11 @@ def list_nodes_full(conn=None, call=None):
             role_instances = deploy_dict['role_instance_list']
             for role_instance in role_instances:
                 ip_address = role_instances[role_instance]['ip_address']
-                if salt.utils.cloud.is_public_ip(ip_address):
-                    ret[deployment]['public_ips'].append(ip_address)
-                else:
-                    ret[deployment]['private_ips'].append(ip_address)
+                if ip_address:
+                    if salt.utils.cloud.is_public_ip(ip_address):
+                        ret[deployment]['public_ips'].append(ip_address)
+                    else:
+                        ret[deployment]['private_ips'].append(ip_address)
                 ret[deployment]['size'] = role_instances[role_instance]['instance_size']
             roles = deploy_dict['role_list']
             for role in roles:
@@ -393,6 +402,7 @@ def show_instance(name, call=None):
         )
 
     nodes = list_nodes_full()
+    salt.utils.cloud.cache_node(nodes[name], __active_provider_name__, __opts__)
     return nodes[name]
 
 
@@ -485,10 +495,10 @@ def create(vm_):
             'Error creating {0} on Azure\n\n'
             'The following exception was thrown when trying to '
             'run the initial deployment: \n{1}'.format(
-                vm_['name'], exc.message
+                vm_['name'], str(exc)
             ),
             # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -676,6 +686,8 @@ def destroy(name, conn=None, call=None):
     ret[name] = {
         'request_id': del_vm.request_id,
     }
+    if __opts__.get('update_cachedir', False) is True:
+        salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
     return ret
 
 

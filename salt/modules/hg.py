@@ -54,7 +54,7 @@ def revision(cwd, rev='tip', short=False, user=None):
 
 def describe(cwd, rev='tip', user=None):
     '''
-    Mimick git describe and return an identifier for the given revision
+    Mimic git describe and return an identifier for the given revision
 
     cwd
         The path to the Mercurial repository
@@ -114,11 +114,11 @@ def archive(cwd, output, rev='tip', fmt=None, prefix=None, user=None):
     '''
     _check_hg()
 
-    cmd = 'hg archive {output}{rev}{fmt}'.format(
+    cmd = 'hg archive {output}{rev}{fmt}{prefix}'.format(
         rev=' --rev {0}'.format(rev),
         output=output,
         fmt=' --type {0}'.format(fmt) if fmt else '',
-        prefix=' --prefix "{0}"'.format(prefix if prefix else ''))
+        prefix=' --prefix "{0}"'.format(prefix) if prefix else '')
 
     return __salt__['cmd.run'](cmd, cwd=cwd, runas=user)
 

@@ -17,12 +17,18 @@ def __virtual__():
     return 'ps.pkill' in __salt__
 
 
-def absent(name):
+def absent(name, user=None, signal=None):
     '''
     Ensures that the named command is not running.
 
     name
         The pattern to match.
+
+    user
+        The user process belongs
+
+    signal
+        Signal to send to the process(es).
     '''
     ret = {'name': name,
            'changes': {},
@@ -30,15 +36,20 @@ def absent(name):
            'comment': ''}
 
     if __opts__['test']:
-        running = __salt__['ps.pgrep'](name)
+        running = __salt__['ps.pgrep'](name, user=user)
         ret['result'] = None
         if running:
-            ret['comment'] = '{0} processes will be killed'.format(len(running))
+            ret['comment'] = ('{0} processes will '
+                              'be killed').format(len(running))
         else:
             ret['comment'] = 'No matching processes running'
         return ret
 
-    status = __salt__['ps.pkill'](name, full=True)
+    if signal:
+        status = __salt__['ps.pkill'](name, user=user,
+                                      signal=signal, full=True)
+    else:
+        status = __salt__['ps.pkill'](name, user=user, full=True)
 
     ret['result'] = True
     if status:

@@ -78,13 +78,13 @@ def select_query(query_type='list_nodes_select'):
     return info
 
 
-def profile(prof, names, **kwargs):
+def profile(prof, instances, **kwargs):
     '''
-    Create a cloud vm with the given profile and names, names can be a list
+    Create a cloud vm with the given profile and instances, instances can be a list
     or comma delimited string
     '''
     client = _get_client()
-    info = client.profile(prof, names, **kwargs)
+    info = client.profile(prof, instances, **kwargs)
     return info
 
 
@@ -97,19 +97,19 @@ def map_run(path, **kwargs):
     return info
 
 
-def destroy(names):
+def destroy(instances):
     '''
     Destroy the named vm(s)
     '''
     client = _get_client()
-    info = client.destroy(names)
+    info = client.destroy(instances)
     return info
 
 
 def action(
         fun=None,
         cloudmap=None,
-        names=None,
+        instances=None,
         provider=None,
         instance=None,
         **kwargs):
@@ -117,5 +117,26 @@ def action(
     Execute a single action on the given map/provider/instance
     '''
     client = _get_client()
-    info = client.action(fun, cloudmap, names, provider, instance, kwargs)
+    info = client.action(fun, cloudmap, instances, provider, instance, kwargs)
+    return info
+
+
+def create(provider, instances, **kwargs):
+    '''
+    Create an instance using Salt Cloud
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run cloud.create my-ec2-config myinstance \
+            image=ami-1624987f size='Micro Instance' ssh_username=ec2-user \
+            securitygroup=default delvol_on_destroy=True
+    '''
+    create_kwargs = {}
+    for kwarg in kwargs:
+        if not kwarg.startswith('__'):
+            create_kwargs[kwarg] = kwargs[kwarg]
+    client = _get_client()
+    info = client.create(provider, instances, **create_kwargs)
     return info

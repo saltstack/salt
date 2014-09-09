@@ -611,12 +611,12 @@ def init(name,
 
     if kwargs.get('seed') and seedable:
         install = kwargs.get('install', True)
-        __salt__['seed.apply'](img_dest,
-                               id_=name,
-                               config=kwargs.get('config'),
-                               install=install)
-    elif kwargs.get('seed_cmd') and seedable:
-        __salt__[kwargs['seed_cmd']](img_dest, name, kwargs.get('config'))
+        seed_cmd = kwargs.get('seed_cmd', 'seed.apply')
+
+        __salt__[seed_cmd](img_dest,
+                           id_=name,
+                           config=kwargs.get('config'),
+                           install=install)
     if start:
         create(name)
 
@@ -1098,7 +1098,9 @@ def get_profiles(hypervisor=None):
      - nic
      - disk
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.get_profiles
         salt '*' virt.get_profiles hypervisor=esxi

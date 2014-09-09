@@ -20,10 +20,9 @@ class ArgumentTestCase(integration.ModuleCase):
         checks for invalid kwargs is located in salt/minion.py, within the
         'parse_args_and_kwargs' function.
         '''
-        self.assertEqual(
-            self.run_function('test.ping', ['foo=bar']),
-            ("ERROR executing 'test.ping': The following keyword arguments "
-             "are not valid: foo=bar")
+        self.assertIn(
+            ("ERROR executing 'test.ping': The following keyword arguments"),
+            self.run_function('test.ping', ['foo=bar'])
         )
 
     def test_kwarg_name_containing_dashes(self):

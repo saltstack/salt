@@ -713,7 +713,7 @@ def toggle(device, partition, flag):
                        'swap', 'hidden', 'raid', 'LVM', 'PALO', 'PREP', 'DIAG']):
         raise CommandExecutionError('Invalid flag passed to partition.toggle')
 
-    cmd = 'parted -m -s {0} toggle {1} {2} {3}'.format(device, partition, flag)
+    cmd = 'parted -m -s {0} toggle {1} {2}'.format(device, partition, flag)
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
 
@@ -743,7 +743,7 @@ def get_block_device():
     '''
     Retrieve a list of disk devices
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 

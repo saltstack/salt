@@ -81,7 +81,7 @@ class TestModulesGrains(integration.ModuleCase):
                     'grains.setval',
                     ['setgrain', 'grainval']),
                 {'setgrain': 'grainval'})
-        time.sleep(1)
+        time.sleep(5)
         ret = self.run_function('grains.item', ['setgrain'])
         if not ret:
             # Sleep longer, sometimes test systems get bogged down

@@ -921,7 +921,7 @@ class PipTestCase(TestCase):
             )
 
         mock = MagicMock(side_effect=[
-            {'retcode': 0, 'stdout': 'pip 1.4.0 /path/to/site-pacakges/pip'},
+            {'retcode': 0, 'stdout': 'pip 1.4.0 /path/to/site-packages/pip'},
             {'retcode': 0, 'stdout': ''}
         ])
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):

@@ -1,17 +1,16 @@
 # -*- coding: utf-8 -*-
 
-# Import python libs
-import os
-
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+from salt import config, version
 
 
-class TestModuleTest(integration.ModuleCase):
+class TestModuleTest(integration.ModuleCase,
+                     integration.AdaptedConfigurationTestCaseMixIn):
     '''
     Validate the test module
     '''
@@ -31,8 +30,8 @@ class TestModuleTest(integration.ModuleCase):
         '''
         test.version
         '''
-        import salt
-        self.assertEqual(self.run_function('test.version'), salt.__version__)
+        self.assertEqual(self.run_function('test.version'),
+                         version.__saltstack_version__.string)
 
     def test_conf_test(self):
         '''
@@ -44,17 +43,13 @@ class TestModuleTest(integration.ModuleCase):
         '''
         test.get_opts
         '''
-        import salt.config
-        opts = salt.config.minion_config(
-                os.path.join(
-                    integration.INTEGRATION_TEST_DIR,
-                    'files/conf/minion'
-                    )
-                )
+        opts = config.minion_config(
+            self.get_config_file_path('minion')
+        )
         self.assertEqual(
-                self.run_function('test.get_opts')['cachedir'],
-                opts['cachedir']
-                )
+            self.run_function('test.get_opts')['cachedir'],
+            opts['cachedir']
+        )
 
     def test_cross_test(self):
         '''

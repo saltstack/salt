@@ -95,7 +95,12 @@ def getfacl(*args):
             for entity in ('other', 'mask'):
                 if entity in vals.keys():
                     del vals[entity]
-                    ret[dentry][entity] = vals
+                    if acl_type == 'acl':
+                        ret[dentry][entity] = vals
+                    elif acl_type == 'default':
+                        if 'defaults' not in ret[dentry].keys():
+                            ret[dentry]['defaults'] = {}
+                        ret[dentry]['defaults'][entity] = vals
     return ret
 
 

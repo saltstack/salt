@@ -81,6 +81,7 @@ stop() {
     if [ -f $SUSE_RELEASE ]; then
         killproc -TERM $SALTMINION
         rc_status -v
+        RETVAL=$?
     elif [ -f $DEBIAN_VERSION ]; then
         # Added this since Debian's start-stop-daemon doesn't support spawned processes
         if ps -ef | grep "$PYTHON $SALTMINION" | grep -v grep | awk '{print $2}' | xargs kill &> /dev/null; then
@@ -92,8 +93,18 @@ stop() {
         fi
     else
         killproc $PROCESS
+        RETVAL=$?
+        # tidy up any rogue processes:
+        PROCS=`ps -ef | grep "$SALTMINION" | grep -v grep | awk '{print $2}'`
+        if [ -n "$PROCS" ]; then
+            kill $PROCS &> /dev/null
+            sleep 1
+            PROCS=`ps -ef | grep "$SALTMINION" | grep -v grep | awk '{print $2}'`
+            if [ -n "$PROCS" ]; then
+                kill -9 $PROCS &> /dev/null
+            fi
+        fi
     fi
-    RETVAL=$?
     echo
 }
 

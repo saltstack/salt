@@ -6,6 +6,13 @@ Fileserver backend  which serves files pushed to master by :mod:`cp.push
 :conf_master:`file_recv` needs to be enabled in the master config file in order
 to use this backend, and ``minion`` must also be present in the
 :conf_master:`fileserver_backends` list.
+
+Other minionfs settings include: :conf_master:`minionfs_whitelist`,
+:conf_master:`minionfs_blacklist`, :conf_master:`minionfs_mountpoint`, and
+:conf_master:`minionfs_env`.
+
+.. seealso:: :ref:`tutorial-minionfs`
+
 '''
 
 # Import python libs
@@ -27,7 +34,7 @@ def __virtual__():
     '''
     Only load if file_recv is enabled
     '''
-    if not __virtualname__ in __opts__['fileserver_backend']:
+    if __virtualname__ not in __opts__['fileserver_backend']:
         return False
     return __virtualname__ if __opts__['file_recv'] else False
 

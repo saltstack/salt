@@ -50,7 +50,7 @@ then a new cron job will be added to the user's crontab.
 
 The current behavior is still relying on that mechanism, but you can also
 specify an identifier to identify your crontabs:
-.. versionadded:: 2014.2
+
 .. code-block:: yaml
 
     date > /tmp/crontest:
@@ -60,8 +60,10 @@ specify an identifier to identify your crontabs:
         - minute: 7
         - hour: 2
 
+.. versionadded:: 2014.1.2
+
 And, some months later, you modify it:
-.. versionadded:: 2014.2
+
 .. code-block:: yaml
 
     superscript > /tmp/crontest:
@@ -70,6 +72,8 @@ And, some months later, you modify it:
         - user: root
         - minute: 3
         - hour: 4
+
+.. versionadded:: 2014.1.2
 
 The old **date > /tmp/crontest** will be replaced by
 **superscript > /tmp/crontest**.
@@ -147,13 +151,18 @@ def _check_cron(user,
         month = str(month).lower()
     if dayweek is not None:
         dayweek = str(dayweek).lower()
+    if identifier is not None:
+        identifier = str(identifier)
+    if cmd is not None:
+        cmd = str(cmd)
     lst = __salt__['cron.list_tab'](user)
     for cron in lst['crons']:
         if _cron_matched(cron, cmd, identifier):
             if any([_needs_change(x, y) for x, y in
                     ((cron['minute'], minute), (cron['hour'], hour),
                      (cron['daymonth'], daymonth), (cron['month'], month),
-                     (cron['dayweek'], dayweek), (cron['comment'], comment))]):
+                     (cron['dayweek'], dayweek), (cron['identifier'], identifier),
+                     (cron['cmd'], cmd), (cron['comment'], comment))]):
                 return 'update'
             return 'present'
     return 'absent'
@@ -292,7 +301,7 @@ def present(name,
         return ret
 
     if data == 'updated':
-        ret['comment'] = 'Cron {0} updated'.format(name, user)
+        ret['comment'] = 'Cron {0} updated'.format(name)
         ret['changes'] = {user: name}
         return ret
     ret['comment'] = ('Cron {0} for user {1} failed to commit with error \n{2}'
@@ -376,7 +385,7 @@ def file(name,
         hosted on either the salt master server, or on an HTTP or FTP server.
         For files hosted on the salt file server, if the file is located on
         the master in the directory named spam, and is called eggs, the source
-        string is salt://spam/eggs.
+        string is ``salt://spam/eggs``
 
         If the file is hosted on a HTTP or FTP server then the source_hash
         argument is also required
@@ -385,7 +394,7 @@ def file(name,
         This can be either a file which contains a source hash string for
         the source, or a source hash string. The source hash string is the
         hash algorithm followed by the hash of the file:
-        md5=e138491e9d5b97023cea823fe17bac22
+        ``md5=e138491e9d5b97023cea823fe17bac22``
 
     user
         The user to whom the crontab should be assigned. This defaults to
@@ -430,7 +439,7 @@ def file(name,
         msg = (
             'Passing a salt environment should be done using \'saltenv\' not '
             '\'env\'. This warning will go away in Salt Boron and this '
-            'will be the default and expected behaviour. Please update your '
+            'will be the default and expected behavior. Please update your '
             'state files.'
         )
         salt.utils.warn_until('Boron', msg)
@@ -572,7 +581,7 @@ def env_present(name,
         return ret
 
     if data == 'updated':
-        ret['comment'] = 'Cron env {0} updated'.format(name, user)
+        ret['comment'] = 'Cron env {0} updated'.format(name)
         ret['changes'] = {user: name}
         return ret
     ret['comment'] = ('Cron env {0} for user {1} failed to commit with error \n{2}'

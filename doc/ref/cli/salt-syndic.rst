@@ -8,7 +8,9 @@ higher master
 Synopsis
 ========
 
-salt-syndic [ options ]
+.. code-block:: bash
+
+    salt-syndic [ options ]
 
 Description
 ===========

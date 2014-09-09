@@ -43,18 +43,21 @@ and each event tag has a list of reactor SLS files to be run.
 
 .. code-block:: yaml
 
-    reactor:                           # Master config section "reactor"
+    reactor:                            # Master config section "reactor"
 
-      - 'salt/minion/*/start':                # Match tag "salt/minion/*/start"
-        - /srv/reactor/start.sls       # Things to do when a minion starts
-        - /srv/reactor/monitor.sls     # Other things to do
+      - 'salt/minion/*/start':          # Match tag "salt/minion/*/start"
+        - /srv/reactor/start.sls        # Things to do when a minion starts
+        - /srv/reactor/monitor.sls      # Other things to do
 
-      - 'salt/cloud/*/destroyed':     # Globs can be used to matching tags
-        - /srv/reactor/decommision.sls # Things to do when a server is removed
+      - 'salt/cloud/*/destroyed':       # Globs can be used to matching tags
+        - /srv/reactor/destroy/*.sls    # Globs can be used to match file names
+
+      - 'myco/custom/event/tag':        # React to custom event tags
+        - salt://reactor/mycustom.sls   # Put reactor files under file_roots
 
 
 Reactor sls files are similar to state and pillar sls files.  They are
-by default yaml + Jinja templates and are passed familar context variables.
+by default yaml + Jinja templates and are passed familiar context variables.
 
 They differ because of the addition of the ``tag`` and ``data`` variables.
 
@@ -159,7 +162,9 @@ what the master does in response to that event, and it will also include the
 rendered SLS file (or any errors generated while rendering the SLS file).
 
 1.  Stop the master.
-2.  Start the master manually::
+2.  Start the master manually:
+
+    .. code-block:: bash
 
         salt-master -l debug
 
@@ -297,7 +302,7 @@ won't yet direct traffic to it.
         {% endif %}
         {% endfor %}
 
-A complete example
+A Complete Example
 ==================
 
 In this example, we're going to assume that we have a group of servers that
@@ -327,9 +332,9 @@ In this sls file, we say that if the key was rejected we will delete the key on
 the master and then also tell the master to ssh in to the minion and tell it to
 restart the minion, since a minion process will die if the key is rejected.
 
-We also say that if the key is pending and the id starts with ink we will accept
-the key. A minion that is waiting on a pending key will retry authentication
-authentication every ten second by default.
+We also say that if the key is pending and the id starts with ink we will
+accept the key. A minion that is waiting on a pending key will retry
+authentication every ten seconds by default.
 
 :file:`/srv/reactor/auth-pending.sls`:
 
@@ -365,3 +370,40 @@ Ink servers in the master configuration.
     highstate_run:
       cmd.state.highstate:
         - tgt: {{ data['id'] }}
+
+.. _minion-start-reactor:
+
+Syncing Custom Types on Minion Start
+====================================
+
+Salt will sync all custom types (by running a :mod:`saltutil.sync_all
+<salt.modules.saltutil.sync_all>`) on every highstate. However, there is a
+chicken-and-egg issue where, on the initial highstate, a minion will not yet
+have these custom types synced when the top file is first compiled. This can be
+worked around with a simple reactor which watches for ``minion_start`` events,
+which each minion fires when it first starts up and connects to the master.
+
+On the master, create **/srv/reactor/sync_grains.sls** with the following
+contents:
+
+.. code-block:: yaml
+
+    sync_grains:
+      cmd.saltutil.sync_grains:
+        - tgt: {{ data['id'] }}
+
+And in the master config file, add the following reactor configuration:
+
+.. code-block:: yaml
+
+    reactor:
+      - 'minion_start':
+        - /srv/reactor/sync_grains.sls
+
+This will cause the master to instruct each minion to sync its custom grains
+when it starts, making these grains available when the initial highstate is
+executed.
+
+Other types can be synced by replacing ``cmd.saltutil.sync_grains`` with
+``cmd.saltutil.sync_modules``, ``cmd.saltutil.sync_all``, or whatever else
+suits the intended use case.

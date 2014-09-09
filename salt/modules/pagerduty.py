@@ -2,7 +2,7 @@
 '''
 Module for Firing Events via PagerDuty
 
-.. versionadded:: 2014.1.0 (Hydrogen)
+.. versionadded:: 2014.1.0
 
 :depends:   - pygerduty python module
 :configuration: This module can be used by either passing a jid and password

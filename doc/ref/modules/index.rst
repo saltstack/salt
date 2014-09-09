@@ -14,6 +14,8 @@ Salt execution modules are the functions called by the :command:`salt` command.
 
 Salt ships with many modules that cover a wide variety of tasks.
 
+.. _writing-execution-modules:
+
 Modules Are Easy to Write!
 ==========================
 

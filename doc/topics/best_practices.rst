@@ -42,7 +42,7 @@ available states:
 This directory structure would lead to these states being referenced in a top
 file in the following way:
 
-.. code-block:: bash
+.. code-block:: yaml 
 
     base:
       'web*':
@@ -70,7 +70,7 @@ Once again viewing how this would look in a top file:
 
 /srv/salt/top.sls:
 
-.. code-block:: bash
+.. code-block:: yaml
 
     base:
       'web*':

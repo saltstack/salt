@@ -11,12 +11,13 @@ The typical use-case would be to use ciphers in your pillar data, and keep a
 secret key on your master. You can put the public key in source control so that
 developers can add new secrets quickly and easily.
 
-This renderer requires the gnupg package.
+This renderer requires the python-gnupg package. Be careful to install the
+``python-gnupg`` package, not the ``gnupg`` package, or you will get errors.
 
 To set things up, you will first need to generate a keypair. On your master,
 run:
 
-.. code-block: bash
+.. code-block:: bash
 
     # gpg --gen-key --homedir /etc/salt/gpgkeys
 
@@ -25,33 +26,33 @@ for your application. Be sure to back up your gpg directory someplace safe!
 
 To retrieve the public key:
 
-.. code-block: bash
+.. code-block:: bash
 
     # gpg --armor --homedir /etc/salt/gpgkeys --armor --export <KEY-NAME> \
           > exported_pubkey.gpg
 
 Now, to encrypt secrets, copy the public key to your local machine and run:
 
-.. code-block: bash
+.. code-block:: bash
 
     $ gpg --import exported_pubkey.gpg
 
 To generate a cipher from a secret:
 
-.. code-block: bash
+.. code-block:: bash
 
    $ echo -n"supersecret" | gpg --homedir --armor --encrypt -r <KEY-name>
 
 Set up the renderer on your master by adding something like this line to your
 config:
 
-.. code-block: yaml
+.. code-block:: yaml
 
     renderer: jinja | yaml | gpg
 
 Now you can include your ciphers in your pillar data like so:
 
-.. code-block: yaml
+.. code-block:: yaml
 
     a-secret: |
       -----BEGIN PGP MESSAGE-----
@@ -70,9 +71,12 @@ Now you can include your ciphers in your pillar data like so:
 '''
 
 import re
+import salt.utils
 try:
     import gnupg
     HAS_GPG = True
+    if salt.utils.which('gpg') is None:
+        HAS_GPG = False
 except ImportError:
     HAS_GPG = False
 import logging
@@ -85,6 +89,11 @@ DEFAULT_GPG_KEYDIR = '/etc/salt/gpgkeys'
 
 
 def decrypt_ciphertext(c, gpg):
+    '''
+    Given a block of ciphertext as a string, and a gpg object, try to decrypt
+    the cipher and return the decrypted string. If the cipher cannot be
+    decrypted, log the error, and return the ciphertext back out.
+    '''
     decrypted_data = gpg.decrypt(c)
     if not decrypted_data.ok:
         log.info("Could not decrypt cipher {0}, received {1}".format(
@@ -95,6 +104,11 @@ def decrypt_ciphertext(c, gpg):
 
 
 def decrypt_object(o, gpg):
+    '''
+    Recursively try to decrypt any object. If the object is a string, and
+    it contains a valid GPG header, decrypt it, otherwise keep going until
+    a string is found.
+    '''
     if isinstance(o, str):
         if GPG_HEADER.search(o):
             return decrypt_ciphertext(o, gpg)
@@ -111,6 +125,10 @@ def decrypt_object(o, gpg):
 
 
 def render(data, saltenv='base', sls='', argline='', **kwargs):
+    '''
+    Create a gpg object given a gpg_keydir, and then use it to try to decrypt
+    the data to be rendered.
+    '''
     if not HAS_GPG:
         raise SaltRenderError('GPG unavailable')
     if isinstance(__salt__, dict):

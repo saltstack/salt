@@ -24,15 +24,15 @@ following working well:
 7.   shadow password management modules/states
 
 Salt is dependent on the following additional packages. These will
-automatically be installed as dependencies of the ``py_salt`` package.::
+automatically be installed as dependencies of the ``py_salt`` package:
 
-   py_yaml
-   py_pyzmq
-   py_jinja2
-   py_msgpack_python
-   py_m2crypto
-   py_crypto
-   python
+- py_yaml
+- py_pyzmq
+- py_jinja2
+- py_msgpack_python
+- py_m2crypto
+- py_crypto
+- python
 
 Installation
 ============

@@ -115,7 +115,7 @@ def __virtual__():
 
 def chain_present(name, table='filter', table_type=None, hook=None, priority=None, family='ipv4'):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Verify the chain is exist.
 
@@ -169,7 +169,7 @@ def chain_present(name, table='filter', table_type=None, hook=None, priority=Non
 
 def chain_absent(name, table='filter', family='ipv4'):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Verify the chain is absent.
 
@@ -281,7 +281,7 @@ def append(name, family='ipv4', **kwargs):
 
 def insert(name, family='ipv4', **kwargs):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Insert a rule into a chain
 
@@ -347,7 +347,7 @@ def insert(name, family='ipv4', **kwargs):
 
 def delete(name, family='ipv4', **kwargs):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Delete a rule to a chain
 
@@ -413,7 +413,7 @@ def delete(name, family='ipv4', **kwargs):
             if kwargs['save']:
                 __salt__['nftables.save'](filename=None, family=family)
                 ret['comment'] = ('Deleted and Saved nftables rule for {0} for {1}'
-                                  '{2}'.format(name, command.strip()), family)
+                                  '{2}'.format(name, command.strip(), family))
         return ret
     else:
         ret['result'] = False
@@ -426,7 +426,7 @@ def delete(name, family='ipv4', **kwargs):
 
 def flush(name, family='ipv4', **kwargs):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Flush current nftables state
 
@@ -443,7 +443,7 @@ def flush(name, family='ipv4', **kwargs):
         if ignore in kwargs:
             del kwargs[ignore]
 
-    if not 'table' in kwargs:
+    if 'table' not in kwargs:
         kwargs['table'] = 'filter'
 
     if not __salt__['nftables.check_table'](kwargs['table'], family=family):
@@ -454,12 +454,13 @@ def flush(name, family='ipv4', **kwargs):
         )
         return ret
 
-    if not 'chain' in kwargs:
+    if 'chain' not in kwargs:
         kwargs['chain'] = ''
     else:
         if not __salt__['nftables.check_chain'](kwargs['table'], kwargs['chain'], family=family):
             ret['result'] = False
             ret['comment'] = 'Failed to flush chain {0} in table {1} in family {2}, chain does not exist.'.format(
+                kwargs['chain'],
                 kwargs['table'],
                 family
             )

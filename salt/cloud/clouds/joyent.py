@@ -57,7 +57,7 @@ import salt.utils.cloud
 import salt.config as config
 from salt.utils import namespaced_function
 from salt.utils.cloud import is_public_ip
-from salt.cloud.exceptions import (
+from salt.exceptions import (
     SaltCloudSystemExit,
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout
@@ -65,6 +65,9 @@ from salt.cloud.exceptions import (
 
 # Get logging started
 log = logging.getLogger(__name__)
+
+# namespace libcloudfuncs
+get_salt_interface = namespaced_function(get_salt_interface, globals())
 
 JOYENT_API_HOST_SUFFIX = '.api.joyentcloud.com'
 JOYENT_API_VERSION = '~6.5'
@@ -77,9 +80,9 @@ JOYENT_LOCATIONS = {
 }
 DEFAULT_LOCATION = 'us-east-1'
 
-# joyent no longer reports on all datacenters, so setting this value to true
+# joyent no longer reports on all data centers, so setting this value to true
 # causes the list_nodes function to get information on machines from all
-# datacenters
+# data centers
 POLL_ALL_LOCATIONS = True
 
 VALID_RESPONSE_CODES = [
@@ -217,7 +220,7 @@ def create(vm_):
                 vm_['name'], str(exc)
             ),
             # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -265,7 +268,7 @@ def create(vm_):
             except SaltCloudSystemExit:
                 pass
             finally:
-                raise SaltCloudSystemExit(exc.message)
+                raise SaltCloudSystemExit(str(exc))
 
     data = reformat_node(data)
 
@@ -275,13 +278,17 @@ def create(vm_):
 
     if config.get_cloud_config_value('deploy', vm_, __opts__) is True:
         host = data['public_ips'][0]
+        salt_host = data['public_ips'][0]
         if ssh_interface(vm_) == 'private_ips':
             host = data['private_ips'][0]
+        if get_salt_interface(vm_) == 'private_ips':
+            salt_host = data['private_ips'][0]
 
         deploy_script = script(vm_)
         deploy_kwargs = {
             'opts': __opts__,
             'host': host,
+            'salt_host': salt_host,
             'username': ssh_username,
             'key_filename': key_filename,
             'script': deploy_script.script,
@@ -438,7 +445,7 @@ def destroy(name, call=None):
 
     :param name: name given to the machine
     :param call: call value in this case is 'action'
-    :return: array of booleans , true if successful;ly stopped and true if
+    :return: array of booleans , true if successfully stopped and true if
              successfully removed
 
     CLI Example:
@@ -473,6 +480,9 @@ def destroy(name, call=None):
         {'name': name},
         transport=__opts__['transport']
     )
+
+    if __opts__.get('update_cachedir', False) is True:
+        salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
 
     return ret[0] in VALID_RESPONSE_CODES
 
@@ -548,7 +558,7 @@ def take_action(name=None, call=None, command=None, data=None, method='GET',
     :command: api path
     :data: any data to be passed to the api, must be in json format
     :method: GET,POST,or DELETE
-    :location: datacenter to execute the command on
+    :location: data center to execute the command on
     :return: true if successful
     '''
     caller = inspect.stack()[1][3]
@@ -574,7 +584,7 @@ def take_action(name=None, call=None, command=None, data=None, method='GET',
             log.error(
                 'Failed to invoke {0} node {1}: {2}'.format(caller, name, exc),
                 # Show the traceback if the debug logging level is enabled
-                exc_info=log.isEnabledFor(logging.DEBUG)
+                exc_info_on_loglevel=logging.DEBUG
             )
             ret = [100, {}]
 
@@ -594,7 +604,7 @@ def ssh_interface(vm_):
 
 def get_location(vm_=None):
     '''
-    Return the joyent datacenter to use, in this order:
+    Return the joyent data center to use, in this order:
         - CLI parameter
         - VM parameter
         - Cloud profile setting
@@ -628,7 +638,7 @@ def avail_locations(call=None):
             'region': JOYENT_LOCATIONS[key]
         }
 
-    # this can be enabled when the bug in the joyent get datacenters call is
+    # this can be enabled when the bug in the joyent get data centers call is
     # corrected, currently only the european dc (new api) returns the correct
     # values
     # ret = {}
@@ -694,7 +704,7 @@ def get_node(name):
 
 def joyent_node_state(id_):
     '''
-    Convert joyent returned state to state common to other datacenter return
+    Convert joyent returned state to state common to other data center return
     values for consistency
 
     :param id_: joyent state value
@@ -737,13 +747,13 @@ def reformat_node(item=None, full=False):
 
     # add any undefined desired keys
     for key in desired_keys:
-        if not key in item.keys():
+        if key not in item.keys():
             item[key] = None
 
     # remove all the extra key value pairs to provide a brief listing
     if not full:
         for key in item.keys():
-            if not key in desired_keys:
+            if key not in desired_keys:
                 del item[key]
 
     if 'state' in item.keys():
@@ -989,7 +999,7 @@ def delete_key(kwargs=None, call=None):
 def get_location_path(location=DEFAULT_LOCATION):
     '''
     create url from location variable
-    :param location: joyent datacenter location
+    :param location: joyent data center location
     :return: url
     '''
     return 'https://{0}{1}'.format(location, JOYENT_API_HOST_SUFFIX)

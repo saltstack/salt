@@ -68,12 +68,17 @@ def installed(name,
            'comment': '',
            'changes': {}}
 
-    installed_pecls = __salt__['pecl.list']()
+    if '/' in name:
+        channel, package = name.split('/')
+    else:
+        channel = None
+        package = name
+    installed_pecls = __salt__['pecl.list'](channel)
 
-    if name in installed_pecls:
+    if package in installed_pecls:
         # The package is only installed if version is absent or matches
-        if (version is None or version in installed_pecls[name]) \
-                and preferred_state in installed_pecls[name]:
+        if (version is None or version in installed_pecls[package]) \
+                and preferred_state in installed_pecls[package]:
             ret['result'] = True
             ret['comment'] = ('Pecl extension {0} is already installed.'
                               .format(name))

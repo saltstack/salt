@@ -14,7 +14,7 @@ def _mk_client():
     '''
     Create a file client and add it to the context
     '''
-    if not 'cp.fileclient' in __context__:
+    if 'cp.fileclient' not in __context__:
         __context__['cp.fileclient'] = \
             salt.fileclient.get_file_client(__opts__)
 
@@ -92,7 +92,7 @@ def get(key, default=''):
         frame_args = inspect.getargvalues(frame[0]).locals
 
         for _sls in (
-            None if not type(frame_args.get('context')) is dict else frame_args.get('context').get('__sls__'),
+            None if not isinstance(frame_args.get('context'), dict) else frame_args.get('context').get('__sls__'),
             frame_args.get('mods', [None])[0],
             frame_args.get('sls')
         ):
@@ -121,7 +121,7 @@ def get(key, default=''):
     value = __salt__['pillar.get']('{0}:{1}'.format(pillar_name, key), None)
 
     if value is None:
-        value = salt.utils.traverse_dict(defaults, key, None)
+        value = salt.utils.traverse_dict_and_list(defaults, key, None)
 
     if value is None:
         value = default

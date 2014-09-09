@@ -4,12 +4,12 @@ States tutorial, part 2 - More Complex States, Requisites
 
 .. note:: 
 
-  This tutorial builds on topics covered in :doc:`part 1 <states_pt1>`. It is
-  recommended that you begin there.
+    This tutorial builds on topics covered in :doc:`part 1 <states_pt1>`. It is
+    recommended that you begin there.
 
-In the :doc:`last part <states_pt1>` of the Salt States tutorial we covered
-the basics of installing a package. We will now modify our ``webserver.sls``
-file to have requirements, and use even more Salt States.
+In the :doc:`last part <states_pt1>` of the Salt States tutorial we covered the
+basics of installing a package. We will now modify our ``webserver.sls`` file
+to have requirements, and use even more Salt States.
 
 Call multiple States
 ====================
@@ -32,29 +32,6 @@ You can specify multiple :ref:`state-declaration` under an
 
 Try stopping Apache before running ``state.highstate`` once again and observe
 the output.
-
-Expand the SLS module
-=====================
-
-As you have seen, SLS modules are appended with the file extension ``.sls`` and
-are referenced by name starting at the root of the state tree. An SLS module
-can be also defined as a directory. Demonstrate that now by creating a
-directory named ``webserver`` and moving and renaming ``webserver.sls`` to
-``webserver/init.sls``. Your state directory should now look like this::
-
-    |- top.sls
-    `- webserver/
-       `- init.sls
-
-.. admonition:: Organizing SLS modules
-
-    You can place additional ``.sls`` files in a state file directory. This
-    affords much cleaner organization of your state tree on the filesystem. For
-    example, if we created a ``webserver/django.sls`` file that module would be
-    referenced as ``webserver.django``.
-
-    In addition, States provide powerful includes and extending functionality
-    which we will cover in :doc:`Part 3 <states_pt3>`.
 
 Require other states
 ====================

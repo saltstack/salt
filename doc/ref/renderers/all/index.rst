@@ -10,6 +10,7 @@ Full list of builtin renderer modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    gpg
     jinja
     json
     mako
@@ -20,3 +21,4 @@ Full list of builtin renderer modules
     stateconf
     wempy
     yaml
+    yamlex

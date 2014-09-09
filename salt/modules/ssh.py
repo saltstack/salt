@@ -75,6 +75,18 @@ def _format_auth_line(key, enc, comment, options):
     return line
 
 
+def _get_config_file(user, config):
+    '''
+    Get absolute path to a user's ssh_config.
+    '''
+    uinfo = __salt__['user.info'](user)
+    if not uinfo:
+        raise CommandExecutionError('User {0!r} does not exist'.format(user))
+    if not os.path.isabs(config):
+        config = os.path.join(uinfo['home'], config)
+    return config
+
+
 def _replace_auth_key(
         user,
         key,
@@ -89,11 +101,7 @@ def _replace_auth_key(
     auth_line = _format_auth_line(key, enc, comment, options or [])
 
     lines = []
-    uinfo = __salt__['user.info'](user)
-    if not uinfo:
-        raise CommandExecutionError('User {0!r} does not exist'.format(user))
-
-    full = os.path.join(uinfo['home'], config)
+    full = _get_config_file(user, config)
 
     try:
         # open the file for both reading AND writing
@@ -196,6 +204,30 @@ def _fingerprint(public_key):
     return ':'.join(chunks)
 
 
+def _get_known_hosts_file(config=None, user=None):
+    if user:
+        config = config or '.ssh/known_hosts'
+    else:
+        config = config or '/etc/ssh/ssh_known_hosts'
+
+    if os.path.isabs(config):
+        full = config
+    else:
+        if user:
+            uinfo = __salt__['user.info'](user)
+            if not uinfo:
+                return {'status': 'error',
+                        'error': 'User {0} does not exist'.format(user)}
+            full = os.path.join(uinfo['home'], config)
+        else:
+            return {
+                'status': 'error',
+                'error': 'Cannot determine absolute path to file.'
+            }
+
+    return full
+
+
 def host_keys(keydir=None):
     '''
     Return the minion's host keys
@@ -229,22 +261,45 @@ def host_keys(keydir=None):
     return keys
 
 
-def auth_keys(user, config='.ssh/authorized_keys'):
+def auth_keys(user=None, config='.ssh/authorized_keys'):
     '''
-    Return the authorized keys for the specified user
+    Return the authorized keys for users
 
     CLI Example:
 
     .. code-block:: bash
 
+        salt '*' ssh.auth_keys
         salt '*' ssh.auth_keys root
+        salt '*' ssh.auth_keys user=root
+        salt '*' ssh.auth_keys user="[user1, user2]"
     '''
-    uinfo = __salt__['user.info'](user)
-    full = os.path.join(uinfo.get('home', ''), config)
-    if not uinfo or not os.path.isfile(full):
-        return {}
+    if not user:
+        user = __salt__['user.list_users']()
 
-    return _validate_keys(full)
+    old_output_when_one_user = False
+    if not isinstance(user, list):
+        user = [user]
+        old_output_when_one_user = True
+
+    keys = {}
+    for u in user:
+        full = None
+        try:
+            full = _get_config_file(u, config)
+        except CommandExecutionError:
+            pass
+
+        if full and os.path.isfile(full):
+            keys[u] = _validate_keys(full)
+
+    if old_output_when_one_user:
+        if user[0] in keys:
+            return keys[user[0]]
+        else:
+            return {}
+
+    return keys
 
 
 def check_key_file(user,
@@ -350,14 +405,11 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
     linere = re.compile(r'^(.*?)\s?((?:ssh\-|ecds)[\w-]+\s.+)$')
     if key in current:
         # Remove the key
-        uinfo = __salt__['user.info'](user)
-        if not uinfo:
-            return 'User {0} does not exist'.format(user)
-        full = os.path.join(uinfo.get('home', ''), config)
+        full = _get_config_file(user, config)
 
         # Return something sensible if the file doesn't exist
         if not os.path.isfile(full):
-            return 'Authorized keys file {1} not present'.format(full)
+            return 'Authorized keys file {0} not present'.format(full)
 
         lines = []
         try:
@@ -416,8 +468,7 @@ def set_auth_key_from_file(user,
 
     .. code-block:: bash
 
-        salt '*' ssh.set_auth_key_from_file <user>\
-                salt://ssh_keys/<user>.id_rsa.pub
+        salt '*' ssh.set_auth_key_from_file <user> salt://ssh_keys/<user>.id_rsa.pub
     '''
     if env is not None:
         salt.utils.warn_until(
@@ -508,9 +559,12 @@ def set_auth_key(
         return 'no change'
     else:
         auth_line = _format_auth_line(key, enc, comment, options)
-        if not os.path.isdir(uinfo.get('home', '')):
+        fconfig = _get_config_file(user, config)
+        # Fail if the key lives under the user's homedir, and the homedir
+        # doesn't exist
+        udir = uinfo.get('home', '')
+        if fconfig.startswith(udir) and not os.path.isdir(udir):
             return 'fail'
-        fconfig = os.path.join(uinfo['home'], config)
         if not os.path.isdir(os.path.dirname(fconfig)):
             dpath = os.path.dirname(fconfig)
             os.makedirs(dpath)
@@ -573,7 +627,7 @@ def _parse_openssh_output(lines):
 
 
 @decorators.which('ssh-keygen')
-def get_known_host(user, hostname, config='.ssh/known_hosts'):
+def get_known_host(user, hostname, config=None):
     '''
     Return information about known host from the configfile, if any.
     If there is no such key, return None.
@@ -584,13 +638,11 @@ def get_known_host(user, hostname, config='.ssh/known_hosts'):
 
         salt '*' ssh.get_known_host <user> <hostname>
     '''
-    if user:
-        uinfo = __salt__['user.info'](user)
-        full = os.path.join(uinfo.get('home', ''), config)
-        if not uinfo or not os.path.isfile(full):
-            return None
-    else:
-        full = '/etc/ssh/ssh_known_hosts'
+    full = _get_known_hosts_file(config=config, user=user)
+
+    if isinstance(full, dict):
+        return full
+
     cmd = 'ssh-keygen -F "{0}" -f "{1}"'.format(hostname, full)
     lines = __salt__['cmd.run'](cmd).splitlines()
     known_hosts = list(_parse_openssh_output(lines))
@@ -629,7 +681,7 @@ def recv_known_host(hostname, enc=None, port=None, hash_hostname=False):
 
 
 def check_known_host(user=None, hostname=None, key=None, fingerprint=None,
-                     config='.ssh/known_hosts'):
+                     config=None):
     '''
     Check the record in known_hosts file, either by its value or by fingerprint
     (it's enough to set up either key or fingerprint, you don't need to set up
@@ -652,9 +704,12 @@ def check_known_host(user=None, hostname=None, key=None, fingerprint=None,
         return {'status': 'error',
                 'error': 'hostname argument required'}
     if not user:
-        known_host = get_known_host(user, hostname, config='/etc/ssh/ssh_known_hosts')
+        config = config or '/etc/ssh/ssh_known_hosts'
     else:
-        known_host = get_known_host(user, hostname, config=config)
+        config = config or '.ssh/known_hosts'
+
+    known_host = get_known_host(user, hostname, config=config)
+
     if not known_host:
         return 'add'
     if key:
@@ -666,7 +721,7 @@ def check_known_host(user=None, hostname=None, key=None, fingerprint=None,
         return 'exists'
 
 
-def rm_known_host(user=None, hostname=None, config='.ssh/known_hosts'):
+def rm_known_host(user=None, hostname=None, config=None):
     '''
     Remove all keys belonging to hostname from a known_hosts file.
 
@@ -679,21 +734,21 @@ def rm_known_host(user=None, hostname=None, config='.ssh/known_hosts'):
     if not hostname:
         return {'status': 'error',
                 'error': 'hostname argument required'}
-    if user:
-        uinfo = __salt__['user.info'](user)
-        if not uinfo:
-            return {'status': 'error',
-                    'error': 'User {0} does not exist'.format(user)}
-        full = os.path.join(uinfo.get('home', ''), config)
-    else:
-        full = '/etc/ssh/ssh_known_hosts'
+
+    full = _get_known_hosts_file(config=config, user=user)
+
+    if isinstance(full, dict):
+        return full
+
     if not os.path.isfile(full):
         return {'status': 'error',
                 'error': 'Known hosts file {0} does not exist'.format(full)}
+
     cmd = 'ssh-keygen -R "{0}" -f "{1}"'.format(hostname, full)
     cmd_result = __salt__['cmd.run'](cmd)
     # ssh-keygen creates a new file, thus a chown is required.
     if os.geteuid() == 0 and user:
+        uinfo = __salt__['user.info'](user)
         os.chown(full, uinfo['uid'], uinfo['gid'])
     return {'status': 'removed', 'comment': cmd_result}
 
@@ -705,7 +760,7 @@ def set_known_host(user=None,
                    port=None,
                    enc=None,
                    hash_hostname=True,
-                   config='.ssh/known_hosts'):
+                   config=None):
     '''
     Download SSH public key from remote host "hostname", optionally validate
     its fingerprint against "fingerprint" variable and save the record in the
@@ -718,8 +773,7 @@ def set_known_host(user=None,
 
     .. code-block:: bash
 
-        salt '*' ssh.set_known_host <user> fingerprint='xx:xx:..:xx' \
-                 enc='ssh-rsa' config='.ssh/known_hosts'
+        salt '*' ssh.set_known_host <user> fingerprint='xx:xx:..:xx' enc='ssh-rsa' config='.ssh/known_hosts'
     '''
     if not hostname:
         return {'status': 'error',
@@ -754,28 +808,29 @@ def set_known_host(user=None,
     # remove everything we had in the config so far
     rm_known_host(user, hostname, config=config)
     # set up new value
-    if user:
-        uinfo = __salt__['user.info'](user)
-        if not uinfo:
-            return {'status': 'error',
-                    'error': 'User {0} does not exist'.format(user)}
-        full = os.path.join(uinfo['home'], config)
-    else:
-        full = '/etc/ssh/ssh_known_hosts'
+
+    full = _get_known_hosts_file(config=config, user=user)
+
+    if isinstance(full, dict):
+        return full
+
     if key:
         remote_host = {'hostname': hostname, 'enc': enc, 'key': key}
     line = '{hostname} {enc} {key}\n'.format(**remote_host)
 
     # ensure ~/.ssh exists
     ssh_dir = os.path.dirname(full)
+    if user:
+        uinfo = __salt__['user.info'](user)
+
     try:
         log.debug('Ensuring ssh config dir "{0}" exists'.format(ssh_dir))
         os.makedirs(ssh_dir)
     except OSError as exc:
-        if exc[1] == 'Permission denied':
+        if exc.args[1] == 'Permission denied':
             log.error('Unable to create directory {0}: '
-                      '{1}'.format(ssh_dir, exc[1]))
-        elif exc[1] == 'File exists':
+                      '{1}'.format(ssh_dir, exc.args[1]))
+        elif exc.args[1] == 'File exists':
             log.debug('{0} already exists, no need to create '
                       'it'.format(ssh_dir))
     else:
@@ -798,6 +853,8 @@ def set_known_host(user=None,
 
     if os.geteuid() == 0 and user:
         os.chown(full, uinfo['uid'], uinfo['gid'])
+    os.chmod(full, 0644)
+
     return {'status': 'updated', 'old': stored_host, 'new': remote_host}
 
 
@@ -806,23 +863,16 @@ def user_keys(user=None, pubfile=None, prvfile=None):
 
     Return the user's ssh keys on the minion
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' ssh.user_keys
-
         salt '*' ssh.user_keys user=user1
-
-        salt '*' ssh.user_keys user=user1 \
-                pubfile=/home/user1/.ssh/id_rsa.pub
-                prvfile=/home/user1/.ssh/id_rsa
-
-        salt '*' ssh.user_keys user="['user1','user2'] \
-                pubfile=id_rsa.pub prvfile=id_rsa
-
+        salt '*' ssh.user_keys user=user1 pubfile=/home/user1/.ssh/id_rsa.pub prvfile=/home/user1/.ssh/id_rsa
+        salt '*' ssh.user_keys user="['user1','user2'] pubfile=id_rsa.pub prvfile=id_rsa
     '''
     if not user:
         user = __salt__['user.list_users']()
@@ -836,7 +886,7 @@ def user_keys(user=None, pubfile=None, prvfile=None):
         keys[u] = {}
         userinfo = __salt__['user.info'](u)
 
-        if not 'home' in userinfo:
+        if 'home' not in userinfo:
             # no home directory, skip
             continue
 
@@ -846,13 +896,13 @@ def user_keys(user=None, pubfile=None, prvfile=None):
             userKeys.append(pubfile)
         else:
             # Add the default public keys
-            userKeys += ['id_rsa.pub', 'id_dsa.pub']
+            userKeys += ['id_rsa.pub', 'id_dsa.pub', 'id_ecdsa.pub', 'id_ed25519.pub']
 
         if prvfile:
             userKeys.append(prvfile)
         else:
             # Add the default private keys
-            userKeys += ['id_rsa', 'id_dsa']
+            userKeys += ['id_rsa', 'id_dsa', 'id_ecdsa', 'id_ed25519']
 
         for key in userKeys:
             if key.startswith('/'):
@@ -880,12 +930,12 @@ def user_keys(user=None, pubfile=None, prvfile=None):
 
 
 @decorators.which('ssh-keygen')
-def hash_known_hosts(user=None, config='.ssh/known_host'):
+def hash_known_hosts(user=None, config=None):
     '''
 
     Hash all the hostnames in the known hosts file.
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 
@@ -894,14 +944,11 @@ def hash_known_hosts(user=None, config='.ssh/known_host'):
         salt '*' ssh.hash_known_hosts
 
     '''
-    if user:
-        uinfo = __salt__['user.info'](user)
-        if not uinfo:
-            return {'status': 'error',
-                    'error': 'User {0} does not exist'.format(user)}
-        full = os.path.join(uinfo.get('home', ''), config)
-    else:
-        full = '/etc/ssh/ssh_known_hosts'
+    full = _get_known_hosts_file(config=config, user=user)
+
+    if isinstance(full, dict):
+        return full
+
     if not os.path.isfile(full):
         return {'status': 'error',
                 'error': 'Known hosts file {0} does not exist'.format(full)}
@@ -909,5 +956,6 @@ def hash_known_hosts(user=None, config='.ssh/known_host'):
     cmd_result = __salt__['cmd.run'](cmd)
     # ssh-keygen creates a new file, thus a chown is required.
     if os.geteuid() == 0 and user:
+        uinfo = __salt__['user.info'](user)
         os.chown(full, uinfo['uid'], uinfo['gid'])
     return {'status': 'updated', 'comment': cmd_result}

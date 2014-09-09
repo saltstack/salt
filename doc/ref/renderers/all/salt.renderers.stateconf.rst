@@ -29,14 +29,18 @@ Here's a list of features enabled by this renderer.
   files.
 
   For example, in the `salt://some/file.sls`, a state id such as ``.sls_params``
-  will be turned into ``some.file::sls_params``. Example::
+  will be turned into ``some.file::sls_params``. Example:
+  
+  .. code-block:: yaml
 
       #!stateconf yaml . jinja
 
       .vim:
         pkg.installed
 
-  Above will be translated into::
+  Above will be translated into:
+
+  .. code-block:: yaml
 
       some.file::vim:
         pkg.installed:
@@ -48,7 +52,9 @@ Here's a list of features enabled by this renderer.
 
   The leading dot trick can be used with extending state ids as well,
   so you can include relatively and extend relatively. For example, when
-  extending a state in `salt://some/other_file.sls`, e.g.,::
+  extending a state in `salt://some/other_file.sls`, e.g.,:
+
+  .. code-block:: yaml
 
       #!stateconf yaml . jinja
 
@@ -60,7 +66,9 @@ Here's a list of features enabled by this renderer.
           stateconf.set:
             - name1: something
 
-  Above will be pre-processed into::
+  Above will be pre-processed into:
+
+  .. code-block:: yaml
 
       include:
         - some.file
@@ -76,7 +84,9 @@ Here's a list of features enabled by this renderer.
 
 - Recognizes the special state function, ``stateconf.set``, that configures a
   default list of named arguments usable within the template context of
-  the salt file. Example::
+  the salt file. Example:
+
+  .. code-block:: yaml
 
       #!stateconf yaml . jinja
 
@@ -112,9 +122,11 @@ Here's a list of features enabled by this renderer.
   file. The regex that matches such marker can be configured via the
   ``stateconf_end_marker`` option in your master or minion config file.
 
-  Sometimes, you'd like to set a default argument value that's based on
-  earlier arguments in the same ``stateconf.set``. For example, you may be
-  tempted to do something like this::
+  Sometimes, it is desirable to set a default argument value that's based on
+  earlier arguments in the same ``stateconf.set``. For example, it may be
+  tempting to do something like this:
+
+  .. code-block:: yaml
 
       #!stateconf yaml . jinja
 
@@ -131,7 +143,9 @@ Here's a list of features enabled by this renderer.
           - name: echo '{{apache.url}}'
           - cwd: /
 
-  However, this won't work, but can be worked around like so::
+  However, this won't work. It can however be worked around like so:
+
+  .. code-block:: yaml
 
       #!stateconf yaml . jinja
 
@@ -149,7 +163,9 @@ Here's a list of features enabled by this renderer.
           - name: echo '{{apache.url}}'
           - cwd: /
 
-- Adds support for relative include and exclude of .sls files. Example::
+- Adds support for relative include and exclude of .sls files. Example:
+
+  .. code-block:: yaml
 
       #!stateconf yaml . jinja
 
@@ -163,7 +179,9 @@ Here's a list of features enabled by this renderer.
   If the above is written in a salt file at `salt://some/where.sls` then
   it will include `salt://some/apache.sls` and `salt://some/db/mysql.sls`,
   and exclude `salt://some/users.ssl`. Actually, it does that by rewriting
-  the above ``include`` and ``exclude`` into::
+  the above ``include`` and ``exclude`` into:
+
+  .. code-block:: yaml
 
       include:
         - some.apache
@@ -222,9 +240,11 @@ Here's a list of features enabled by this renderer.
   ``X``, ``require_in`` the first state defined in the included sls file.
 
 
-When writing sls files with this renderer, you should avoid using what can be
+When writing sls files with this renderer, one should avoid using what can be
 defined in a ``name`` argument of a state as the state's id. That is, avoid
-writing your states like this::
+writing states like this:
+
+.. code-block:: yaml
 
     /path/to/some/file:
       file.managed:
@@ -236,11 +256,13 @@ writing your states like this::
         - require:
           - file: /path/to/some/file
 
-Instead, you should define the state id and the ``name`` argument separately
-for each state, and the id should be something meaningful and easy to reference
-within a requisite (which I think is a good habit anyway, and such extra
-indirection would also makes your sls file easier to modify later). Thus, the
-above states should be written like this::
+Instead, define the state id and the ``name`` argument separately for each
+state. Also, the ID should be something meaningful and easy to reference within
+a requisite (which is a good habit anyway, and such extra indirection would
+also makes the sls file easier to modify later). Thus, the above states should
+be written like this:
+
+.. code-block:: yaml
 
     add-some-file:
       file.managed:

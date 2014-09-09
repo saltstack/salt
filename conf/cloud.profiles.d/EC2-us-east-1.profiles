@@ -34,7 +34,7 @@ centos_6:
     grains:
       cloud: ec2-us-east-1
 
-# official Debain, available at no-charge from ec2 marketplace:
+# official Debian, available at no-charge from ec2 marketplace:
 # http://wiki.debian.org/Cloud/AmazonEC2Image
 debian_squeeze_ec2:
   provider: my-ec2-config

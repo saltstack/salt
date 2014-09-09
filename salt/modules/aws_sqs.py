@@ -90,7 +90,7 @@ def receive_message(queue, region, num=1, opts=None, user=None):
         salt '*' aws_sqs.receive_message <sqs queue> <region>
         salt '*' aws_sqs.receive_message <sqs queue> <region> num=10
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     '''
     ret = {
@@ -134,7 +134,7 @@ def delete_message(queue, region, receipthandle, opts=None, user=None):
 
         salt '*' aws_sqs.delete_message <sqs queue> <region> receipthandle='<sqs ReceiptHandle>'
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     '''
     queues = list_queues(region, opts, user)

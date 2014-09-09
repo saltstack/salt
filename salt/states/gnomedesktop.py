@@ -22,7 +22,7 @@ Control the GNOME settings
         gnomedesktop.desktop_interface:
             - user: username
             - clock_show_date: true
-            - clock_show_format: 12h
+            - clock_format: 12h
 '''
 # Import python libs
 import logging

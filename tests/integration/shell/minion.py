@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2012-2013 by the SaltStack Team, see AUTHORS for more details
-    :license: Apache 2.0, see LICENSE for more details.
 
 
     tests.integration.shell.minion
@@ -48,7 +46,7 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
         ret = self.run_script(
             self._call_binary_,
-            '--config-dir {0} --pid-file {1} -l debug'.format(
+            '--disable-keepalive --config-dir {0} --pid-file {1} -l debug'.format(
                 config_dir,
                 pid_path
             ),

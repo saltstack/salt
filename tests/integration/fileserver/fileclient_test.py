@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 '''
-    :codauthor: :email:`Mike Place <mp@saltstack.com>`
+    :codeauthor: :email:`Mike Place <mp@saltstack.com>`
 '''
 
 # Import Salt Testing libs
 from salttesting.unit import skipIf
 from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
-ensure_in_syspath('../')
+ensure_in_syspath('../..')
 
 # Import salt libs
 import integration

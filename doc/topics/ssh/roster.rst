@@ -7,6 +7,8 @@ Salt rosters are pluggable systems added in Salt 0.17.0 to facilitate the
 The roster system was created because ``salt-ssh`` needs a means to
 identify which systems need to be targeted for execution.
 
+.. seealso:: :ref:`all-salt.roster`
+
 .. note::
     The Roster System is not needed or used in standard Salt because the
     master does not need to be initially aware of target systems, since the

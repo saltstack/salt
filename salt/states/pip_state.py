@@ -94,6 +94,7 @@ def installed(name,
               env=None,
               bin_env=None,
               use_wheel=False,
+              no_use_wheel=False,
               log=None,
               proxy=None,
               timeout=None,
@@ -123,7 +124,12 @@ def installed(name,
               no_chown=False,
               cwd=None,
               activate=False,
-              pre_releases=False):
+              pre_releases=False,
+              cert=None,
+              allow_all_external=False,
+              allow_external=None,
+              allow_unverified=None,
+              process_dependency_links=False):
     '''
     Make sure the package is installed
 
@@ -132,7 +138,9 @@ def installed(name,
         numbers here using the standard operators ``==, >=, <=``. If
         ``requirements`` is given, this parameter will be ignored.
 
-    Example::
+    Example:
+
+    .. code-block:: yaml
 
         django:
           pip.installed:
@@ -143,18 +151,27 @@ def installed(name,
     This will install the latest Django version greater than 1.6 but less
     than 1.7.
 
+    requirements
+        Path to a pip requirements file. If the path begins with salt://
+        the file will be transferred from the master file server.
+
     user
         The user under which to run pip
 
     use_wheel : False
         Prefer wheel archives (requires pip>=1.4)
 
+    no_use_wheel : False
+        Force to not use wheel archives (requires pip>=1.4)
+
     bin_env : None
         Absolute path to a virtual environment directory or absolute path to
         a pip executable. The example below assumes a virtual environment
         has been created at ``/foo/.virtualenvs/bar``.
 
-    Example::
+    Example:
+
+    .. code-block:: yaml
 
         django:
           pip.installed:
@@ -165,7 +182,9 @@ def installed(name,
 
     Or
 
-    Example::
+    Example:
+
+    .. code-block:: yaml
 
         django:
           pip.installed:
@@ -239,6 +258,17 @@ def installed(name,
                                            ver2=min_version):
             ret['result'] = False
             ret['comment'] = ('The \'use_wheel\' option is only supported in '
+                              'pip {0} and newer. The version of pip detected '
+                              'was {1}.').format(min_version, cur_version)
+            return ret
+
+    if no_use_wheel:
+        min_version = '1.4'
+        cur_version = __salt__['pip.version'](bin_env)
+        if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
+                                           ver2=min_version):
+            ret['result'] = False
+            ret['comment'] = ('The \'no_use_wheel\' option is only supported in '
                               'pip {0} and newer. The version of pip detected '
                               'was {1}.').format(min_version, cur_version)
             return ret
@@ -388,6 +418,7 @@ def installed(name,
         requirements=requirements,
         bin_env=bin_env,
         use_wheel=use_wheel,
+        no_use_wheel=no_use_wheel,
         log=log,
         proxy=proxy,
         timeout=timeout,
@@ -416,6 +447,11 @@ def installed(name,
         cwd=cwd,
         activate=activate,
         pre_releases=pre_releases,
+        cert=cert,
+        allow_all_external=allow_all_external,
+        allow_external=allow_external,
+        allow_unverified=allow_unverified,
+        process_dependency_links=process_dependency_links,
         saltenv=__env__
     )
 
@@ -425,9 +461,16 @@ def installed(name,
         if requirements or editable:
             comments = []
             if requirements:
+                for eachline in pip_install_call.get('stdout', '').split('\n'):
+                    if not eachline.startswith('Requirement already satisfied') and eachline != 'Cleaning up...':
+                        ret['changes']['requirements'] = True
+                if ret['changes'].get('requirements'):
+                    comments.append('Successfully processed requirements file '
+                                    '{0}.'.format(requirements))
+                else:
+                    comments.append('Requirements was successfully installed')
                 comments.append('Successfully processed requirements file '
                                 '{0}.'.format(requirements))
-                ret['changes']['requirements'] = True
             if editable:
                 comments.append('Package successfully installed from VCS '
                                 'checkout {0}.'.format(editable))
@@ -553,4 +596,55 @@ def removed(name,
     else:
         ret['result'] = False
         ret['comment'] = 'Could not remove package.'
+    return ret
+
+
+def uptodate(name,
+             bin_env=None,
+             user=None,
+             runas=None,
+             cwd=None):
+    '''
+    Verify that the system is completely up to date.
+
+    name
+        The name has no functional value and is only used as a tracking
+        reference
+    user
+        The user under which to run pip
+    bin_env
+        the pip executable or virtualenenv to use
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': 'Failed to update.'}
+
+    try:
+        packages = __salt__['pip.list_upgrades'](bin_env=bin_env, user=user,
+                                                 runas=runas, cwd=cwd)
+    except Exception as e:
+        ret['comment'] = str(e)
+        return ret
+
+    if not packages:
+        ret['comment'] = 'System is already up-to-date.'
+        ret['result'] = True
+        return ret
+    elif __opts__['test']:
+        ret['comment'] = 'System update will be performed'
+        ret['result'] = None
+        return ret
+
+    updated = __salt__['pip.upgrade'](bin_env=bin_env, user=user, runas=runas, cwd=cwd)
+
+    if updated.get('result') is False:
+        ret.update(updated)
+    elif updated:
+        ret['changes'] = updated
+        ret['comment'] = 'Upgrade successful.'
+        ret['result'] = True
+    else:
+        ret['comment'] = 'Upgrade failed.'
+
     return ret

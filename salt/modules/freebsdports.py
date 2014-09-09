@@ -2,10 +2,10 @@
 '''
 Install software from the FreeBSD ``ports(7)`` system
 
-.. versionadded:: 2014.1.0 (Hydrogen)
+.. versionadded:: 2014.1.0
 
 This module allows you to install ports using ``BATCH=yes`` to bypass
-configuration prompts. It is recommended to use the the :mod:`ports state
+configuration prompts. It is recommended to use the :mod:`ports state
 <salt.states.freebsdports>` to install ports, but it it also possible to use
 this module exclusively from the command line.
 
@@ -164,7 +164,7 @@ def install(name, clean=True):
         deinstall(name)
     result = __salt__['cmd.run_all'](
         'make install{0} BATCH=yes'.format(' clean' if clean else ''),
-        cwd=portpath
+        cwd=portpath, reset_system_locale=False
     )
     if result['retcode'] != 0:
         __context__['ports.install_error'] = result['stderr']

@@ -108,7 +108,7 @@ class TestFileState(TestCase):
         self.assertEqual(None, ret)
 
         # make sure the value is correct
-        self.assertEqual(expected, returner.call_args[0][-2])
+        self.assertEqual(expected, returner.call_args[0][-3])
 
 if __name__ == '__main__':
     from integration import run_tests

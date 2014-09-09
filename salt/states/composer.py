@@ -30,8 +30,8 @@ the location of composer in the state.
 
 
     # Without composer installed in your PATH
-
-    /path/to/composer:
+    # Note: composer.phar must be executable for state to work properly
+    /path/to/project:
       composer.installed:
         - composer: /path/to/composer.phar
         - php: /usr/local/bin/php
@@ -75,18 +75,18 @@ def installed(name,
         (i.e. /path/to/composer.phar)
 
     php
-        Location of the php executible to use with composer.
+        Location of the php executable to use with composer.
         (i.e. /usr/bin/php)
 
     runas
         Which system user to run composer as.
 
-        .. deprecated:: 2014.1.4 (Hydrogen)
+        .. deprecated:: 2014.1.4
 
     user
         Which system user to run composer as.
 
-        .. versionadded:: 2014.1.4 (Hydrogen)
+        .. versionadded:: 2014.1.4
 
     prefer_source
         --prefer-source option of composer.
@@ -117,7 +117,7 @@ def installed(name,
     salt.utils.warn_until(
         'Lithium',
         'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 2014.1.4 (Hydrogen).',
+        'added in 2014.1.4.',
         _dont_call_warnings=True
     )
     if runas:

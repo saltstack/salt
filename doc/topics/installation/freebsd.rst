@@ -7,7 +7,9 @@ Salt was added to the FreeBSD ports tree Dec 26th, 2011 by Christer Edwards
 releases.
 
 Salt is dependent on the following additional ports. These will be installed as
-dependencies of the ``sysutils/py-salt`` port. ::
+dependencies of the ``sysutils/py-salt`` port:
+
+.. code-block:: text
 
    /devel/py-yaml
    /devel/py-pyzmq

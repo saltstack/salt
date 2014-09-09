@@ -112,7 +112,7 @@ class MysqlDatabaseStateTest(integration.ModuleCase,
                 query='SELECT 1',
                 **kwargs
             )
-            if not isinstance(ret, dict) or not 'results' in ret:
+            if not isinstance(ret, dict) or 'results' not in ret:
                 raise AssertionError(
                     ('Unexpected result while testing connection'
                     ' on db {0!r}: {1}').format(

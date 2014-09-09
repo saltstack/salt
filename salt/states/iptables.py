@@ -178,7 +178,13 @@ at some point be deprecated in favor of a more generic `firewall` state.
         - sport: 1025:65535
         - save: True
 
+.. note::
 
+    Various functions of the ``iptables`` module use the ``--check`` option. If
+    the version of ``iptables`` on the target system does not include this
+    option, an alternate version of this check will be performed using the
+    output of iptables-save. This may have unintended consequences on legacy
+    releases of ``iptables``.
 '''
 
 # Import salt libs
@@ -194,7 +200,7 @@ def __virtual__():
 
 def chain_present(name, table='filter', family='ipv4'):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Verify the chain is exist.
 
@@ -246,7 +252,7 @@ def chain_present(name, table='filter', family='ipv4'):
 
 def chain_absent(name, table='filter', family='ipv4'):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Verify the chain is absent.
 
@@ -308,7 +314,7 @@ def append(name, family='ipv4', **kwargs):
         Network family, ipv4 or ipv6.
 
     All other arguments are passed in with the same name as the long option
-    that would normally be used for iptables, with one exception: `--state` is
+    that would normally be used for iptables, with one exception: ``--state`` is
     specified as `connstate` instead of `state` (not to be confused with
     `ctstate`).
     '''
@@ -348,7 +354,11 @@ def append(name, family='ipv4', **kwargs):
             family)
         if 'save' in kwargs:
             if kwargs['save']:
-                __salt__['iptables.save'](filename=None, family=family)
+                if kwargs['save'] is not True:
+                    filename = kwargs['save']
+                else:
+                    filename = None
+                __salt__['iptables.save'](filename, family=family)
                 ret['comment'] = ('Set and Saved iptables rule for {0} to: '
                                   '{1} for {2}'.format(name, command.strip(), family))
         return ret
@@ -363,7 +373,7 @@ def append(name, family='ipv4', **kwargs):
 
 def insert(name, family='ipv4', **kwargs):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Insert a rule into a chain
 
@@ -375,7 +385,7 @@ def insert(name, family='ipv4', **kwargs):
         Networking family, either ipv4 or ipv6
 
     All other arguments are passed in with the same name as the long option
-    that would normally be used for iptables, with one exception: `--state` is
+    that would normally be used for iptables, with one exception: ``--state`` is
     specified as `connstate` instead of `state` (not to be confused with
     `ctstate`).
     '''
@@ -430,7 +440,7 @@ def insert(name, family='ipv4', **kwargs):
 
 def delete(name, family='ipv4', **kwargs):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Delete a rule to a chain
 
@@ -442,7 +452,7 @@ def delete(name, family='ipv4', **kwargs):
         Networking family, either ipv4 or ipv6
 
     All other arguments are passed in with the same name as the long option
-    that would normally be used for iptables, with one exception: `--state` is
+    that would normally be used for iptables, with one exception: ``--state`` is
     specified as `connstate` instead of `state` (not to be confused with
     `ctstate`).
     '''
@@ -510,7 +520,7 @@ def delete(name, family='ipv4', **kwargs):
 
 def set_policy(name, family='ipv4', **kwargs):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Sets the default policy for iptables firewall tables
 
@@ -572,7 +582,7 @@ def set_policy(name, family='ipv4', **kwargs):
 
 def flush(name, family='ipv4', **kwargs):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Flush current iptables state
 
@@ -589,10 +599,10 @@ def flush(name, family='ipv4', **kwargs):
         if ignore in kwargs:
             del kwargs[ignore]
 
-    if not 'table' in kwargs:
+    if 'table' not in kwargs:
         kwargs['table'] = 'filter'
 
-    if not 'chain' in kwargs:
+    if 'chain' not in kwargs:
         kwargs['chain'] = ''
     if __opts__['test']:
         ret['comment'] = 'iptables rules in {0} table {1} chain {2} family needs to be flushed'.format(

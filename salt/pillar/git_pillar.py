@@ -13,7 +13,7 @@ so:
 The `root=` parameter is optional and used to set the subdirectory from where
 to look for Pillar files (such as ``top.sls``).
 
-.. versionchanged:: Helium
+.. versionchanged:: 2014.7.0
     The optional ``root`` parameter will be added.
 
 Note that this is not the same thing as configuring pillar data using the
@@ -50,6 +50,7 @@ section in it, like this:
 # Import python libs
 from copy import deepcopy
 import logging
+import hashlib
 import os
 
 # Import third party libs
@@ -102,54 +103,51 @@ class GitPillar(object):
         self.working_dir = ''
         self.repo = None
 
-        needle = '{0} {1}'.format(self.branch, self.rp_location)
-        for idx, opts_dict in enumerate(self.opts['ext_pillar']):
-            if opts_dict.get('git', '').startswith(needle):
-                rp_ = os.path.join(self.opts['cachedir'],
-                                   'pillar_gitfs', str(idx))
+        hash_type = getattr(hashlib, opts.get('hash_type', 'md5'))
+        hash_str = '{0} {1}'.format(self.branch, self.rp_location)
+        repo_hash = hash_type(hash_str).hexdigest()
+        rp_ = os.path.join(self.opts['cachedir'], 'pillar_gitfs', repo_hash)
 
-                if not os.path.isdir(rp_):
-                    os.makedirs(rp_)
+        if not os.path.isdir(rp_):
+            os.makedirs(rp_)
 
+        try:
+            self.repo = git.Repo.init(rp_)
+        except (git.exc.NoSuchPathError,
+                git.exc.InvalidGitRepositoryError) as exc:
+            log.error('GitPython exception caught while '
+                      'initializing the repo: {0}. Maybe '
+                      'git is not available.'.format(exc))
+
+        # Git directory we are working on
+        # Should be the same as self.repo.working_dir
+        self.working_dir = rp_
+
+        if isinstance(self.repo, git.Repo):
+            if not self.repo.remotes:
                 try:
-                    self.repo = git.Repo.init(rp_)
-                except (git.exc.NoSuchPathError,
-                        git.exc.InvalidGitRepositoryError) as exc:
-                    log.error('GitPython exception caught while '
-                              'initializing the repo: {0}. Maybe '
-                              'git is not available.'.format(exc))
-
-                # Git directory we are working on
-                # Should be the same as self.repo.working_dir
-                self.working_dir = rp_
-
-                if isinstance(self.repo, git.Repo):
-                    if not self.repo.remotes:
-                        try:
-                            self.repo.create_remote('origin', self.rp_location)
-                            # ignore git ssl verification if requested
-                            if self.opts.get('pillar_gitfs_ssl_verify', True):
-                                self.repo.git.config('http.sslVerify', 'true')
-                            else:
-                                self.repo.git.config('http.sslVerify', 'false')
-                        except os.error:
-                            # This exception occurs when two processes are
-                            # trying to write to the git config at once, go
-                            # ahead and pass over it since this is the only
-                            # write.
-                            # This should place a lock down.
-                            pass
+                    self.repo.create_remote('origin', self.rp_location)
+                    # ignore git ssl verification if requested
+                    if self.opts.get('pillar_gitfs_ssl_verify', True):
+                        self.repo.git.config('http.sslVerify', 'true')
                     else:
-                        if self.repo.remotes.origin.url != self.rp_location:
-                            self.repo.remotes.origin.config_writer.set('url', self.rp_location)
-
-                break
+                        self.repo.git.config('http.sslVerify', 'false')
+                except os.error:
+                    # This exception occurs when two processes are
+                    # trying to write to the git config at once, go
+                    # ahead and pass over it since this is the only
+                    # write.
+                    # This should place a lock down.
+                    pass
+            else:
+                if self.repo.remotes.origin.url != self.rp_location:
+                    self.repo.remotes.origin.config_writer.set('url', self.rp_location)
 
     def update(self):
         '''
         Ensure you are following the latest changes on the remote
 
-        Return boolean wether it worked
+        Return boolean whether it worked
         '''
         try:
             log.debug('Updating fileserver for git_pillar module')
@@ -209,24 +207,27 @@ def envs(branch, repo_location):
     return gitpil.envs()
 
 
-def _extract_key_val(kv, delim='='):
+def _extract_key_val(kv, delimiter='='):
     '''Extract key and value from key=val string.
 
     Example:
     >>> _extract_key_val('foo=bar')
     ('foo', 'bar')
     '''
-    delim = '='
-    pieces = kv.split(delim)
+    pieces = kv.split(delimiter)
     key = pieces[0]
-    val = delim.join(pieces[1:])
+    val = delimiter.join(pieces[1:])
     return key, val
 
 
-def ext_pillar(minion_id, pillar, repo_string):
+def ext_pillar(minion_id,
+               repo_string,
+               pillar_dirs):
     '''
     Execute a command and read the output as YAML
     '''
+    if pillar_dirs is None:
+        return
     # split the branch, repo name and optional extra (key=val) parameters.
     options = repo_string.strip().split()
     branch = options[0]
@@ -252,6 +253,13 @@ def ext_pillar(minion_id, pillar, repo_string):
 
     # normpath is needed to remove appended '/' if root is empty string.
     pillar_dir = os.path.normpath(os.path.join(gitpil.working_dir, root))
+
+    pillar_dirs.setdefault(pillar_dir, {})
+
+    if pillar_dirs[pillar_dir].get(branch, False):
+        return {}  # we've already seen this combo
+
+    pillar_dirs[pillar_dir].setdefault(branch, True)
 
     # Don't recurse forever-- the Pillar object will re-call the ext_pillar
     # function

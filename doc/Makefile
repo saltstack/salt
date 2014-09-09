@@ -64,7 +64,7 @@ help:
 
 clean:
 	rm -rf $(BUILDDIR)/*
-	find locale/ -name *.mo -exec rm {} \;
+	test -d 'locale' && find locale/ -name *.mo -exec rm {} \;
 
 html: translations
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
@@ -139,6 +139,12 @@ latexpdfja: translations
 	$(MAKE) -C $(BUILDDIR)/latex all-pdf-ja
 	@echo "pdflatex finished; the PDF files are in $(BUILDDIR)/latex."
 
+xetexpdf: translations
+	$(SPHINXBUILD) -b latex $(ALLSPHINXOPTS) $(BUILDDIR)/latex
+	@echo "Running LaTeX files through xelatex..."
+	cd $(BUILDDIR)/latex; xelatex *.tex && xelatex *.tex && xelatex *.tex; cd -
+	@echo "xelatex finished; the PDF files are in $(BUILDDIR)/latex."
+
 text: translations
 	$(SPHINXBUILD) -b text $(ALLSPHINXOPTS) $(BUILDDIR)/text
 	@echo
@@ -171,6 +177,12 @@ changes: translations
 	$(SPHINXBUILD) -b changes $(ALLSPHINXOPTS) $(BUILDDIR)/changes
 	@echo
 	@echo "The overview file is in $(BUILDDIR)/changes."
+
+spelling:
+	$(SPHINXBUILD) -b spelling $(ALLSPHINXOPTS) $(BUILDDIR)/spelling
+	@echo
+	@echo "Spell check complete; look for any errors in the above output " \
+	      "or in $(BUILDDIR)/spelling/output.txt."
 
 linkcheck:
 	$(SPHINXBUILD) -b linkcheck $(ALLSPHINXOPTS) $(BUILDDIR)/linkcheck

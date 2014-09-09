@@ -15,6 +15,7 @@ import traceback
 # Import salt libs
 import salt.loader
 import salt.utils
+from salt.utils import print_cli
 
 
 log = logging.getLogger(__name__)
@@ -47,7 +48,7 @@ def display_output(data, out=None, opts=None):
                 ofh.write('\n')
             return
         if display_data:
-            print(display_data)
+            print_cli(display_data)
     except IOError as exc:
         # Only raise if it's NOT a broken pipe
         if exc.errno != errno.EPIPE:
@@ -101,3 +102,14 @@ def out_format(data, out, opts=None):
     Return the formatted outputter string for the passed data
     '''
     return get_printout(out, opts)(data).rstrip()
+
+
+def strip_esc_sequence(txt):
+    '''
+    Replace ESC (ASCII 27/Oct 33) to prevent unsafe strings
+    from writing their own terminal manipulation commands
+    '''
+    if isinstance(txt, basestring):
+        return txt.replace('\033', '?')
+    else:
+        return txt

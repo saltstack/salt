@@ -15,7 +15,7 @@ def _parse_key(key):
     '''
     split the full path in the registry to the key and the rest
     '''
-    splt = key.split(r'\\')
+    splt = key.split("\\")
     hive = splt.pop(0)
     key = splt.pop(-1)
     path = r'\\'.join(splt)
@@ -27,14 +27,17 @@ def present(name, value, vtype='REG_DWORD', reflection=True):
     Set a registry entry
 
     Optionally set ``reflection`` to ``False`` to disable reflection.
-    ``reflection`` has no effect on 32-bit os.
+    ``reflection`` has no effect on a 32-bit OS.
 
     In the example below, this will prevent Windows from silently creating
-    the key in::
-    'HKEY_CURRENT_USER\\SOFTWARE\\Wow6432Node\\Salt\\version'
+    the key in:
+    ``HKEY_CURRENT_USER\\SOFTWARE\\Wow6432Node\\Salt\\version``
 
-    Example::
-        'HKEY_CURRENT_USER\\SOFTWARE\\Salt\\version':
+    Example:
+
+    .. code-block:: yaml
+
+        HKEY_CURRENT_USER\\SOFTWARE\\Salt\\version:
           reg.present:
             - value: 0.15.3
             - vtype: REG_SZ

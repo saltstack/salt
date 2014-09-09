@@ -5,6 +5,7 @@ Windows Service module.
 
 # Import python libs
 import salt.utils
+from subprocess import list2cmdline
 
 # Define the module's virtual name
 __virtualname__ = 'service'
@@ -31,7 +32,7 @@ def has_powershell():
 
         salt '*' service.has_powershell
     '''
-    return 'powershell' in __salt__['cmd.run']('where powershell', output_loglevel='debug')
+    return 'powershell' in __salt__['cmd.run']('where powershell')
 
 
 def get_enabled():
@@ -47,13 +48,13 @@ def get_enabled():
 
     if has_powershell():
         cmd = 'Get-WmiObject win32_service | where {$_.startmode -eq "Auto"} | select-object name'
-        lines = __salt__['cmd.run'](cmd, shell='POWERSHELL', output_loglevel='debug').splitlines()
+        lines = __salt__['cmd.run'](cmd, shell='POWERSHELL').splitlines()
         return sorted([line.strip() for line in lines[3:]])
     else:
         ret = set()
         services = []
         cmd = 'sc query type= service state= all bufsize= {0}'.format(BUFFSIZE)
-        lines = __salt__['cmd.run'](cmd, output_loglevel='debug').splitlines()
+        lines = __salt__['cmd.run'](cmd).splitlines()
         for line in lines:
             if 'SERVICE_NAME:' in line:
                 comps = line.split(':', 1)
@@ -61,8 +62,8 @@ def get_enabled():
                     continue
                 services.append(comps[1].strip())
         for service in services:
-            cmd2 = 'sc qc "{0}" {1}'.format(service, BUFFSIZE)
-            lines = __salt__['cmd.run'](cmd2, output_loglevel='debug').splitlines()
+            cmd2 = list2cmdline(['sc', 'qc', service, BUFFSIZE])
+            lines = __salt__['cmd.run'](cmd2).splitlines()
             for line in lines:
                 if 'AUTO_START' in line:
                     ret.add(service)
@@ -81,13 +82,13 @@ def get_disabled():
     '''
     if has_powershell():
         cmd = 'Get-WmiObject win32_service | where {$_.startmode -ne "Auto"} | select-object name'
-        lines = __salt__['cmd.run'](cmd, shell='POWERSHELL', output_loglevel='debug').splitlines()
+        lines = __salt__['cmd.run'](cmd, shell='POWERSHELL').splitlines()
         return sorted([line.strip() for line in lines[3:]])
     else:
         ret = set()
         services = []
         cmd = 'sc query type= service state= all bufsize= {0}'.format(BUFFSIZE)
-        lines = __salt__['cmd.run'](cmd, output_loglevel='debug').splitlines()
+        lines = __salt__['cmd.run'](cmd).splitlines()
         for line in lines:
             if 'SERVICE_NAME:' in line:
                 comps = line.split(':', 1)
@@ -95,8 +96,8 @@ def get_disabled():
                     continue
                 services.append(comps[1].strip())
         for service in services:
-            cmd2 = 'sc qc "{0}" {1}'.format(service, BUFFSIZE)
-            lines = __salt__['cmd.run'](cmd2, output_loglevel='debug').splitlines()
+            cmd2 = list2cmdline(['sc', 'qc', service, BUFFSIZE])
+            lines = __salt__['cmd.run'](cmd2).splitlines()
             for line in lines:
                 if 'DEMAND_START' in line:
                     ret.add(service)
@@ -131,7 +132,7 @@ def missing(name):
 
         salt '*' service.missing <service name>
     '''
-    return not name in get_all()
+    return name not in get_all()
 
 
 def get_all():
@@ -171,7 +172,7 @@ def get_service_name(*args):
     services = []
     display_names = []
     cmd = 'sc query type= service state= all bufsize= {0}'.format(BUFFSIZE)
-    lines = __salt__['cmd.run'](cmd, output_loglevel='debug').splitlines()
+    lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         if 'SERVICE_NAME:' in line:
             comps = line.split(':', 1)
@@ -205,7 +206,7 @@ def start(name):
 
         salt '*' service.start <service name>
     '''
-    cmd = 'net start "{0}"'.format(name)
+    cmd = list2cmdline(['net', 'start', name])
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -219,7 +220,7 @@ def stop(name):
 
         salt '*' service.stop <service name>
     '''
-    cmd = 'net stop "{0}"'.format(name)
+    cmd = list2cmdline(['net', 'stop', name])
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -233,6 +234,9 @@ def restart(name):
 
         salt '*' service.restart <service name>
     '''
+    if has_powershell():
+        cmd = 'Restart-Service {0}'.format(name)
+        return not __salt__['cmd.retcode'](cmd, shell='powershell')
     stop(name)
     return start(name)
 
@@ -249,8 +253,8 @@ def status(name, sig=None):
 
         salt '*' service.status <service name> [service signature]
     '''
-    cmd = 'sc query "{0}" {1}'.format(name, BUFFSIZE)
-    statuses = __salt__['cmd.run'](cmd, output_loglevel='debug').splitlines()
+    cmd = list2cmdline(['sc', 'query', name, BUFFSIZE])
+    statuses = __salt__['cmd.run'](cmd).splitlines()
     for line in statuses:
         if 'RUNNING' in line:
             return True
@@ -269,8 +273,8 @@ def getsid(name):
 
         salt '*' service.getsid <service name>
     '''
-    cmd = 'sc showsid "{0}"'.format(name)
-    lines = __salt__['cmd.run'](cmd, output_loglevel='debug').splitlines()
+    cmd = list2cmdline(['sc', 'showsid', name])
+    lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         if 'SERVICE SID:' in line:
             comps = line.split(':', 1)
@@ -290,7 +294,7 @@ def enable(name, **kwargs):
 
         salt '*' service.enable <service name>
     '''
-    cmd = 'sc config "{0}" start= auto'.format(name)
+    cmd = list2cmdline(['sc', 'config', name, 'start=', 'auto'])
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -304,11 +308,11 @@ def disable(name, **kwargs):
 
         salt '*' service.disable <service name>
     '''
-    cmd = 'sc config "{0}" start= demand'.format(name)
+    cmd = list2cmdline(['sc', 'config', name, 'start=', 'demand'])
     return not __salt__['cmd.retcode'](cmd)
 
 
-def enabled(name):
+def enabled(name, **kwargs):
     '''
     Check to see if the named service is enabled to start on boot
 

@@ -2,7 +2,7 @@
 '''
 Connection module for Amazon Route53
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 :configuration: This module accepts explicit route53 credentials but can also
     utilize IAM roles assigned to the instance trough Instance Profiles.

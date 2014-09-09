@@ -23,6 +23,7 @@ Full list of runner modules
     mine
     network
     pillar
+    queue
     search
     state
     survey

@@ -70,7 +70,9 @@ Running Salt
 .. admonition:: Having trouble?
 
     The simplest way to troubleshoot Salt is to run the master and minion in
-    the foreground with :option:`log level <salt-master -l>` set to ``debug``::
+    the foreground with :option:`log level <salt-master -l>` set to ``debug``:
+
+    .. code-block:: bash
 
         salt-master --log-level=debug
 

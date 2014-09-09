@@ -9,7 +9,7 @@ all interfaces are ignored unless specified.
 
 .. note::
 
-    Prior to version 2014.1.0 (Hydrogen), only RedHat-based systems (RHEL,
+    Prior to version 2014.1.0, only RedHat-based systems (RHEL,
     CentOS, Scientific Linux, etc.) are supported. Support for Debian/Ubuntu is
     new in 2014.1.0 and should be considered experimental.
 
@@ -153,6 +153,23 @@ all interfaces are ignored unless specified.
           - network: eth4
         - require:
           - network: eth4
+
+    system:
+        network.system:
+          - enabled: True
+          - hostname: server1.example.com
+          - gateway: 192.168.0.1
+          - gatewaydev: eth0
+          - nozeroconf: True
+          - nisdomain: example.com
+          - require_reboot: True
+          - apply_hostname: True
+
+    .. note::
+        Apply changes to hostname immediately.
+
+    .. versionadded:: Lithium
+
 '''
 
 # Import python libs
@@ -204,7 +221,7 @@ def managed(name, type, enabled=True, **kwargs):
         'result': True,
         'comment': 'Interface {0} is up to date.'.format(name),
     }
-    if not 'test' in kwargs:
+    if 'test' not in kwargs:
         kwargs['test'] = __opts__.get('test', False)
 
     # Build interface
@@ -236,7 +253,7 @@ def managed(name, type, enabled=True, **kwargs):
                 ret['changes']['interface'] = ''.join(diff)
     except AttributeError as error:
         ret['result'] = False
-        ret['comment'] = error.message
+        ret['comment'] = str(error)
         return ret
 
     # Setup up bond modprobe script if required
@@ -270,7 +287,7 @@ def managed(name, type, enabled=True, **kwargs):
         except AttributeError as error:
             #TODO Add a way of reversing the interface changes.
             ret['result'] = False
-            ret['comment'] = error.message
+            ret['comment'] = str(error)
             return ret
 
     if kwargs['test']:
@@ -297,7 +314,7 @@ def managed(name, type, enabled=True, **kwargs):
                 ret['changes']['status'] = 'Interface {0} down'.format(name)
     except Exception as error:
         ret['result'] = False
-        ret['comment'] = error.message
+        ret['comment'] = str(error)
         return ret
 
     load = _create_loader(__opts__, 'grains', 'grain', ext_dirs=False)
@@ -324,7 +341,7 @@ def routes(name, **kwargs):
         'comment': 'Interface {0} routes are up to date.'.format(name),
     }
     apply_routes = False
-    if not 'test' in kwargs:
+    if 'test' not in kwargs:
         kwargs['test'] = __opts__.get('test', False)
 
     # Build interface routes
@@ -355,7 +372,7 @@ def routes(name, **kwargs):
             ret['changes']['network_routes'] = ''.join(diff)
     except AttributeError as error:
         ret['result'] = False
-        ret['comment'] = error.message
+        ret['comment'] = str(error)
         return ret
 
     # Apply interface routes
@@ -364,7 +381,7 @@ def routes(name, **kwargs):
             __salt__['ip.apply_network_settings'](**kwargs)
         except AttributeError as error:
             ret['result'] = False
-            ret['comment'] = error.message
+            ret['comment'] = str(error)
             return ret
 
     return ret
@@ -415,7 +432,7 @@ def system(name, **kwargs):
             ret['changes']['network_settings'] = ''.join(diff)
     except AttributeError as error:
         ret['result'] = False
-        ret['comment'] = error.message
+        ret['comment'] = str(error)
         return ret
 
     # Apply global network settings
@@ -424,7 +441,7 @@ def system(name, **kwargs):
             __salt__['ip.apply_network_settings'](**kwargs)
         except AttributeError as error:
             ret['result'] = False
-            ret['comment'] = error.message
+            ret['comment'] = str(error)
             return ret
 
     return ret

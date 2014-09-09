@@ -15,6 +15,7 @@ from jinja2 import BaseLoader, Markup, TemplateNotFound, nodes
 from jinja2.environment import TemplateModule
 from jinja2.ext import Extension
 from jinja2.exceptions import TemplateRuntimeError
+import jinja2
 import yaml
 
 # Import salt libs
@@ -104,6 +105,8 @@ class SaltCacheLoader(BaseLoader):
             raise TemplateNotFound(template)
 
         self.check_cache(template)
+
+        # pylint: disable=cell-var-from-loop
         for spath in self.searchpath:
             filepath = path.join(spath, template)
             try:
@@ -120,6 +123,8 @@ class SaltCacheLoader(BaseLoader):
             except IOError:
                 # there is no file under current path
                 continue
+        # pylint: enable=cell-var-from-loop
+
         # there is no template file within searchpaths
         raise TemplateNotFound(template)
 
@@ -188,13 +193,18 @@ def ensure_sequence_filter(data):
     return data
 
 
+@jinja2.contextfunction
+def show_full_context(c):
+    return c
+
+
 class SerializerExtension(Extension, object):
     '''
     Yaml and Json manipulation.
 
     **Format filters**
 
-    Allows to jsonify or yamlify any datastructure. For example, this dataset:
+    Allows to jsonify or yamlify any data structure. For example, this dataset:
 
     .. code-block:: python
 
@@ -236,8 +246,7 @@ class SerializerExtension(Extension, object):
         foo: true
         qux: 2.0
 
-    Load filters
-    ~~~~~~~~~~~~
+    **Load filters**
 
     Strings and variables can be deserialized with **load_yaml** and
     **load_json** tags and filters. It allows one to manipulate data directly
@@ -246,7 +255,7 @@ class SerializerExtension(Extension, object):
     .. code-block:: jinja
 
         {%- set yaml_src = "{foo: it works}"|load_yaml %}
-        {%- set json_src = "{'bar': 'for real'}"|load_yaml %}
+        {%- set json_src = "{'bar': 'for real'}"|load_json %}
         Dude, {{ yaml_src.foo }} {{ json_src.bar }}!
 
     will be rendered has::
@@ -258,7 +267,7 @@ class SerializerExtension(Extension, object):
     Salt implements **import_yaml** and **import_json** tags. They work like
     the `import tag`_, except that the document is also deserialized.
 
-    Syntaxe are {% load_yaml as [VARIABLE] %}[YOUR DATA]{% endload %}
+    Syntaxes are {% load_yaml as [VARIABLE] %}[YOUR DATA]{% endload %}
     and {% load_json as [VARIABLE] %}[YOUR DATA]{% endload %}
 
     For example:

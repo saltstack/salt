@@ -26,6 +26,14 @@ Full list of builtin execution modules
     aws_sqs
     blockdev
     bluez
+    boto_asg
+    boto_cloudwatch
+    boto_elasticache
+    boto_elb
+    boto_iam
+    boto_route53
+    boto_secgroup
+    boto_sqs
     brew
     bridge
     bsd_shadow
@@ -82,6 +90,7 @@ Full list of builtin execution modules
     guestfs
     hadoop
     haproxyconn
+    hashutil
     hg
     hosts
     htpasswd
@@ -105,6 +114,7 @@ Full list of builtin execution modules
     linux_sysctl
     localemod
     locate
+    logadm
     logrotate
     lvs
     lxc
@@ -116,6 +126,7 @@ Full list of builtin execution modules
     mdadm
     memcached
     mine
+    mod_random
     modjk
     mongodb
     monit
@@ -136,6 +147,7 @@ Full list of builtin execution modules
     openbsdpkg
     openbsdservice
     openstack_config
+    oracle
     osxdesktop
     pacman
     pagerduty
@@ -149,6 +161,7 @@ Full list of builtin execution modules
     pkgng
     pkgutil
     portage_config
+    postfix
     postgres
     poudriere
     powerpath
@@ -157,12 +170,15 @@ Full list of builtin execution modules
     puppet
     pw_group
     pw_user
+    pyenv
     qemu_img
     qemu_nbd
     quota
     rabbitmq
+    raet_publish
     rbenv
     rdp
+    redismod
     reg
     rest_package
     rest_sample
@@ -177,8 +193,11 @@ Full list of builtin execution modules
     s3
     saltcloudmod
     saltutil
+    schedule
     seed
     selinux
+    sensors
+    serverdensity_device
     service
     shadow
     smartos_imgadm
@@ -206,9 +225,11 @@ Full list of builtin execution modules
     timezone
     tls
     tomcat
+    twilio_notify
     upstart
     useradd
     uwsgi
+    varnish
     virt
     virtualenv_mod
     win_autoruns
@@ -229,6 +250,7 @@ Full list of builtin execution modules
     win_status
     win_system
     win_timezone
+    win_update
     win_useradd
     xapi
     xmpp

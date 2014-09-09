@@ -45,7 +45,7 @@ def present(name,
         VHost name
     user
         Initial user permission to set on the VHost, if present
-        .. deprecated:: 0.17.0
+        .. deprecated:: Beryllium
     owner
         Initial owner permission to set on the VHost, if present
     conf
@@ -58,26 +58,33 @@ def present(name,
         Defaults to .*
     runas
         Name of the user to run the command
+        .. deprecated:: Beryllium
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    salt.utils.warn_until(
-        'Helium',
-        'Please start deprecating \'runas\' at this stage. Ping s0undt3ch for '
-        'additional information or see #6961.',
-        _dont_call_warnings=True
-    )
+    if runas:
+        salt.utils.warn_until(
+            'Beryllium',
+            'The support for \'runas\' has been deprecated and will be '
+            'removed in Salt Beryllium. Ping s0undt3ch for additional '
+            'information or see #6961.'
+        )
     if user:
         # Warn users about the deprecation
-        ret.setdefault('warnings', []).append(
+        salt.utils.warn_until(
+            'Beryllium',
             'The \'user\' argument is being deprecated in favor of \'owner\', '
-            'please update your state files.'
+            'and will be removed in Salt Beryllium. Please update your state '
+            'files.'
         )
     if user is not None and owner is not None:
         # owner wins over user but let warn about the deprecation.
-        ret.setdefault('warnings', []).append(
-            'Passed both the \'owner\' and \'user\' arguments. Please don\'t. '
-            '\'user\' is being ignored in favor of \'owner\'.'
+        salt.utils.warn_until(
+            'Beryllium',
+            'Passed both the \'owner\' and \'user\' arguments. \'user\' is '
+            'being ignored in favor of \'owner\' as the \'user\' argument is '
+            'being deprecated in favor of \'owner\' and will be removed in '
+            'Salt Beryllium. Please update your state files.'
         )
         user = None
     elif user is not None:
@@ -147,7 +154,14 @@ def absent(name,
         Name of the Virtual Host to remove
     runas
         User to run the command
+        .. deprecated:: Beryllium
     '''
+    if runas:
+        salt.utils.warn_until(
+            'Beryllium',
+            'The support for \'runas\' has been deprecated and will be '
+            'removed in Salt Beryllium.'
+        )
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     vhost_exists = __salt__['rabbitmq.vhost_exists'](name, runas=runas)

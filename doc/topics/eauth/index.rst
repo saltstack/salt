@@ -7,9 +7,8 @@ External Authentication System
 Salt's External Authentication System (eAuth) allows for Salt to  pass through
 command authorization to any external authentication system, such as PAM or LDAP.
 
-.. toctree::
-
-    access_control
+Access Control System
+---------------------
 
 The external authentication system allows for specific users to be granted
 access to execute specific functions on specific minions. Access is configured
@@ -44,6 +43,10 @@ modules <all-salt.runners>` the following ``@`` syntax must be used:
           - '@wheel'
           - '@runner'
 
+.. note:: 
+    Globs will not match wheel or runners! They must be explicitly
+    allowed with @wheel or @runner.
+
 The external authentication system can then be used from the command-line by
 any user on the same system as the master with the ``-a`` option:
 
@@ -62,7 +65,7 @@ append a ``%`` to the ID:
     external_auth:
       pam:
         admins%:
-          - '*'
+          - '*':
             - 'pkg.*'
 
 Tokens
@@ -118,7 +121,7 @@ To bind to a DN, a password is required
 
     auth.ldap.bindpw: mypassword
 
-Salt users a filter to find the DN associated with a user. Salt substitutes
+Salt uses a filter to find the DN associated with a user. Salt substitutes
 the ``{{ username }}`` value for the username when querying LDAP.
 
 .. code-block:: yaml

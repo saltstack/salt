@@ -93,7 +93,7 @@ from salt.state import HighState
 from salt._compat import string_types
 
 
-REQUISITES = set('require watch use require_in watch_in use_in'.split())
+REQUISITES = set('require watch prereq use require_in watch_in prereq_in use_in onchanges onfail'.split())
 
 
 class PyDslError(Exception):

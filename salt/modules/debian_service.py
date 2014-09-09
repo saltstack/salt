@@ -115,7 +115,7 @@ def missing(name):
 
         salt '*' service.missing sshd
     '''
-    return not name in get_all()
+    return name not in get_all()
 
 
 def get_all():
@@ -274,7 +274,7 @@ def disable(name, **kwargs):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def enabled(name):
+def enabled(name, **kwargs):
     '''
     Return True if the named service is enabled, false otherwise
 

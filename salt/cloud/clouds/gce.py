@@ -150,7 +150,7 @@ from salt.utils import namespaced_function
 import salt.utils.cloud
 import salt.config as config
 from salt.cloud.libcloudfuncs import *  # pylint: disable=W0401,W0614
-from salt.cloud.exceptions import (
+from salt.exceptions import (
     SaltCloudException,
     SaltCloudSystemExit,
 )
@@ -188,7 +188,7 @@ def __virtual__():
         if not os.path.exists(pathname):
             raise SaltCloudException(
                 'The GCE service account private key {0!r} used in '
-                'the {0!r} provider configuration does not exist\n'.format(
+                'the {1!r} provider configuration does not exist\n'.format(
                     details['service_account_private_key'], provider
                 )
             )
@@ -198,7 +198,7 @@ def __virtual__():
         if keymode not in ('0400', '0600'):
             raise SaltCloudException(
                 'The GCE service account private key {0!r} used in '
-                'the {0!r} provider configuration needs to be set to '
+                'the {1!r} provider configuration needs to be set to '
                 'mode 0400 or 0600\n'.format(
                     details['service_account_private_key'], provider
                 )
@@ -334,7 +334,9 @@ def show_instance(vm_name, call=None):
             'The show_instance action must be called with -a or --action.'
         )
     conn = get_conn()
-    return _expand_node(conn.ex_get_node(vm_name))
+    node = _expand_node(conn.ex_get_node(vm_name))
+    salt.utils.cloud.cache_node(node, __active_provider_name__, __opts__)
+    return node
 
 
 def avail_sizes(conn=None):
@@ -532,7 +534,9 @@ def create_network(kwargs=None, call=None):
     '''
     Create a GCE network.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f create_network gce name=mynet cidr=10.10.10.0/24
     '''
@@ -586,7 +590,9 @@ def delete_network(kwargs=None, call=None):
     '''
     Permanently delete a network.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f delete_network gce name=mynet
     '''
@@ -623,7 +629,7 @@ def delete_network(kwargs=None, call=None):
             'Nework {0} could not be found.\n'
             'The following exception was thrown by libcloud:\n{1}'.format(
                 name, exc),
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -643,7 +649,9 @@ def show_network(kwargs=None, call=None):
     '''
     Show the details of an existing network.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f show_network gce name=mynet
     '''
@@ -665,7 +673,9 @@ def create_fwrule(kwargs=None, call=None):
     '''
     Create a GCE firewall rule. The 'default' network is used if not specified.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f create_fwrule gce name=allow-http allow=tcp:80
     '''
@@ -690,12 +700,14 @@ def create_fwrule(kwargs=None, call=None):
     allow = _parse_allow(kwargs['allow'])
     src_range = kwargs.get('src_range', '0.0.0.0/0')
     src_tags = kwargs.get('src_tags', None)
+    dst_tags = kwargs.get('dst_tags', None)
 
     if src_range:
         src_range = src_range.split(',')
     if src_tags:
         src_tags = src_tags.split(',')
-
+    if dst_tags:
+        dst_tags = dst_tags.split(',')
     conn = get_conn()
 
     salt.utils.cloud.fire_event(
@@ -714,7 +726,8 @@ def create_fwrule(kwargs=None, call=None):
         name, allow,
         network=network_name,
         source_ranges=src_range,
-        source_tags=src_tags
+        source_tags=src_tags,
+        target_tags=dst_tags
     )
 
     salt.utils.cloud.fire_event(
@@ -735,7 +748,9 @@ def delete_fwrule(kwargs=None, call=None):
     '''
     Permanently delete a firewall rule.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f delete_fwrule gce name=allow-http
     '''
@@ -772,7 +787,7 @@ def delete_fwrule(kwargs=None, call=None):
             'Rule {0} could not be found.\n'
             'The following exception was thrown by libcloud:\n{1}'.format(
                 name, exc),
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -792,7 +807,9 @@ def show_fwrule(kwargs=None, call=None):
     '''
     Show the details of an existing firewall rule.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f show_fwrule gce name=allow-http
     '''
@@ -814,7 +831,9 @@ def create_hc(kwargs=None, call=None):
     '''
     Create an HTTP health check configuration.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f create_hc gce name=hc path=/healthy port=80
     '''
@@ -866,7 +885,7 @@ def create_hc(kwargs=None, call=None):
     salt.utils.cloud.fire_event(
         'event',
         'created health_check',
-        'salt/cloud/healthcheck/created'.format(name),
+        'salt/cloud/healthcheck/created',
         {
             'name': name,
             'host': host,
@@ -886,7 +905,9 @@ def delete_hc(kwargs=None, call=None):
     '''
     Permanently delete a health check.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f delete_hc gce name=hc
     '''
@@ -923,7 +944,7 @@ def delete_hc(kwargs=None, call=None):
             'Health check {0} could not be found.\n'
             'The following exception was thrown by libcloud:\n{1}'.format(
                 name, exc),
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -943,7 +964,9 @@ def show_hc(kwargs=None, call=None):
     '''
     Show the details of an existing health check.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f show_hc gce name=hc
     '''
@@ -965,7 +988,9 @@ def create_lb(kwargs=None, call=None):
     '''
     Create a load-balancer configuration.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f create_lb gce name=lb region=us-central1 ports=80
     '''
@@ -1040,7 +1065,9 @@ def delete_lb(kwargs=None, call=None):
     '''
     Permanently delete a load-balancer.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f delete_lb gce name=lb
     '''
@@ -1077,7 +1104,7 @@ def delete_lb(kwargs=None, call=None):
             'Load balancer {0} could not be found.\n'
             'The following exception was thrown by libcloud:\n{1}'.format(
                 name, exc),
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -1097,7 +1124,9 @@ def show_lb(kwargs=None, call=None):
     '''
     Show the details of an existing load-balancer.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f show_lb gce name=lb
     '''
@@ -1119,7 +1148,9 @@ def attach_lb(kwargs=None, call=None):
     '''
     Add an existing node/member to an existing load-balancer configuration.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f attach_lb gce name=lb member=myinstance
     '''
@@ -1169,7 +1200,9 @@ def detach_lb(kwargs=None, call=None):
     '''
     Remove an existing node/member from an existing load-balancer configuration.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f detach_lb gce name=lb member=myinstance
     '''
@@ -1232,7 +1265,9 @@ def delete_snapshot(kwargs=None, call=None):
     '''
     Permanently delete a disk snapshot.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f delete_snapshot gce name=disk-snap-1
     '''
@@ -1269,7 +1304,7 @@ def delete_snapshot(kwargs=None, call=None):
             'Snapshot {0} could not be found.\n'
             'The following exception was thrown by libcloud:\n{1}'.format(
                 name, exc),
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -1289,7 +1324,9 @@ def delete_disk(kwargs=None, call=None):
     '''
     Permanently delete a persistent disk.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f delete_disk gce disk_name=pd
     '''
@@ -1327,7 +1364,7 @@ def delete_disk(kwargs=None, call=None):
             'Disk {0} is in use and must be detached before deleting.\n'
             'The following exception was thrown by libcloud:\n{1}'.format(
                 disk.name, exc),
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -1351,7 +1388,9 @@ def create_disk(kwargs=None, call=None):
     Can also specify an `image` or `snapshot` but if neither of those are
     specified, a `size` (in GB) is required.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f create_disk gce disk_name=pd size=300 location=us-central1-b
     '''
@@ -1424,7 +1463,9 @@ def create_snapshot(kwargs=None, call=None):
     '''
     Create a new disk snapshot. Must specify `name` and  `disk_name`.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f create_snapshot gce name=snap1 disk_name=pd
     '''
@@ -1457,7 +1498,7 @@ def create_snapshot(kwargs=None, call=None):
             'Disk {0} could not be found.\n'
             'The following exception was thrown by libcloud:\n{1}'.format(
                 disk_name, exc),
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -1491,7 +1532,9 @@ def show_disk(name=None, kwargs=None, call=None):  # pylint: disable=W0613
     '''
     Show the details of an existing disk.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a show_disk myinstance disk_name=mydisk
         salt-cloud -f show_disk gce disk_name=mydisk
@@ -1510,7 +1553,9 @@ def show_snapshot(kwargs=None, call=None):
     '''
     Show the details of an existing snapshot.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f show_snapshot gce name=mysnapshot
     '''
@@ -1532,7 +1577,9 @@ def detach_disk(name=None, kwargs=None, call=None):
     '''
     Detach a disk from an instance.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a detach_disk myinstance disk_name=mydisk
     '''
@@ -1589,7 +1636,9 @@ def attach_disk(name=None, kwargs=None, call=None):
     '''
     Attach an existing disk to an existing instance.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a attach_disk myinstance disk_name=mydisk mode=READ_WRITE
     '''
@@ -1662,7 +1711,9 @@ def reboot(vm_name, call=None):
     '''
     Call GCE 'reset' on the instance.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a reboot myinstance
     '''
@@ -1680,7 +1731,9 @@ def destroy(vm_name, call=None):
     '''
     Call 'destroy' on the instance.  Can be called with "-a destroy" or -d
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a destroy myinstance1 myinstance2 ...
         salt-cloud -d myinstance1 myinstance2 ...
@@ -1701,7 +1754,7 @@ def destroy(vm_name, call=None):
             'run the initial deployment: \n{1}'.format(
                 vm_name, exc
             ),
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         raise SaltCloudSystemExit(
             'Could not find instance {0}.'.format(vm_name)
@@ -1739,7 +1792,7 @@ def destroy(vm_name, call=None):
             'run the initial deployment: \n{1}'.format(
                 vm_name, exc
             ),
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         raise SaltCloudSystemExit(
             'Could not destroy instance {0}.'.format(vm_name)
@@ -1776,7 +1829,7 @@ def destroy(vm_name, call=None):
                 'to run the initial deployment: \n{1}'.format(
                     vm_name, exc
                 ),
-                exc_info=log.isEnabledFor(logging.DEBUG)
+                exc_info_on_loglevel=logging.DEBUG
             )
         salt.utils.cloud.fire_event(
             'event',
@@ -1785,6 +1838,9 @@ def destroy(vm_name, call=None):
             {'name': vm_name},
             transport=__opts__['transport']
         )
+
+    if __opts__.get('update_cachedir', False) is True:
+        salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
 
     return inst_deleted
 
@@ -1841,11 +1897,11 @@ def create(vm_=None, call=None):
             'run the initial deployment: \n{1}'.format(
                 vm_['name'], exc
             ),
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
-    node_dict = _expand_node(node_data)
+    node_dict = show_instance(node_data['name'], 'action')
 
     if config.get_cloud_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)

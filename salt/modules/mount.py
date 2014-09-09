@@ -103,7 +103,37 @@ def _active_mounts_freebsd(ret):
     return ret
 
 
-def active():
+def _active_mounts_solaris(ret):
+    '''
+    List active mounts on Solaris systems
+    '''
+    for line in __salt__['cmd.run_stdout']('mount -v').split('\n'):
+        comps = re.sub(r"\s+", " ", line).split()
+        ret[comps[2]] = {'device': comps[0],
+                         'fstype': comps[4],
+                         'opts': comps[5].split('/')}
+    return ret
+
+
+def _active_mounts_openbsd(ret):
+    '''
+    List active mounts on OpenBSD systems
+    '''
+    for line in __salt__['cmd.run_stdout']('mount -v').split('\n'):
+        comps = re.sub(r"\s+", " ", line).split()
+        nod = __salt__['cmd.run_stdout']('ls -l {0}'.format(comps[0]))
+        nod = ' '.join(nod.split()).split(" ")
+        parens = re.findall(r'\((.*?)\)', line, re.DOTALL)
+        ret[comps[3]] = {'device': comps[0],
+                         'fstype': comps[5],
+                         'opts': parens[1].split(", "),
+                         'major': str(nod[4].strip(",")),
+                         'minor': str(nod[5]),
+                         'device_uuid': parens[0]}
+    return ret
+
+
+def active(extended=False):
     '''
     List the active mounts.
 
@@ -116,10 +146,17 @@ def active():
     ret = {}
     if __grains__['os'] == 'FreeBSD':
         _active_mounts_freebsd(ret)
+    elif __grains__['os'] == 'Solaris':
+        _active_mounts_solaris(ret)
+    if __grains__['os'] == 'OpenBSD':
+        _active_mounts_openbsd(ret)
     else:
-        try:
-            _active_mountinfo(ret)
-        except CommandExecutionError:
+        if extended:
+            try:
+                _active_mountinfo(ret)
+            except CommandExecutionError:
+                _active_mounts(ret)
+        else:
             _active_mounts(ret)
     return ret
 
@@ -370,13 +407,16 @@ def remount(name, device, mkmnt=False, fstype='', opts='defaults'):
     mnts = active()
     if name in mnts:
         # The mount point is mounted, attempt to remount it with the given data
-        if 'remount' not in opts:
+        if 'remount' not in opts and __grains__['os'] != 'OpenBSD':
             opts.append('remount')
         lopts = ','.join(opts)
         args = '-o {0}'.format(lopts)
         if fstype:
             args += ' -t {0}'.format(fstype)
-        cmd = 'mount {0} {1} {2} '.format(args, device, name)
+        if __grains__['os'] != 'OpenBSD':
+            cmd = 'mount {0} {1} {2} '.format(args, device, name)
+        else:
+            cmd = 'mount -u {0} {1} {2} '.format(args, device, name)
         out = __salt__['cmd.run_all'](cmd)
         if out['retcode']:
             return out['stderr']
@@ -439,15 +479,28 @@ def swaps():
         salt '*' mount.swaps
     '''
     ret = {}
-    with salt.utils.fopen('/proc/swaps') as fp_:
-        for line in fp_:
-            if line.startswith('Filename'):
+    if __grains__['os'] != 'OpenBSD':
+        with salt.utils.fopen('/proc/swaps') as fp_:
+            for line in fp_:
+                if line.startswith('Filename'):
+                    continue
+                comps = line.split()
+                ret[comps[0]] = {'type': comps[1],
+                                 'size': comps[2],
+                                 'used': comps[3],
+                                 'priority': comps[4]}
+    else:
+        for line in __salt__['cmd.run_stdout']('swapctl -kl').splitlines():
+            if line.startswith(('Device', 'Total')):
                 continue
+            swap_type = "file"
             comps = line.split()
-            ret[comps[0]] = {'type': comps[1],
-                             'size': comps[2],
-                             'used': comps[3],
-                             'priority': comps[4]}
+            if comps[0].startswith('/dev/'):
+                swap_type = "partition"
+            ret[comps[0]] = {'type': swap_type,
+                             'size': comps[1],
+                             'used': comps[2],
+                             'priority': comps[5]}
     return ret
 
 
@@ -491,7 +544,10 @@ def swapoff(name):
     '''
     on_ = swaps()
     if name in on_:
-        __salt__['cmd.run']('swapoff {0}'.format(name))
+        if __grains__['os'] != 'OpenBSD':
+            __salt__['cmd.run']('swapoff {0}'.format(name))
+        else:
+            __salt__['cmd.run']('swapctl -d {0}'.format(name))
         on_ = swaps()
         if name in on_:
             return False
@@ -501,7 +557,7 @@ def swapoff(name):
 
 def is_mounted(name):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Provide information if the path is mounted
 

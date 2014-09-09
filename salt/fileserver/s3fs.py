@@ -59,7 +59,7 @@ structure::
 
     s3://<bucket name>/<environment>/<files>
 
-.. note:: This fileserver back-end requires the use of the MD5 hashing algorightm.
+.. note:: This fileserver back-end requires the use of the MD5 hashing algorithm.
     MD5 may not be compliant with all security policies.
 '''
 
@@ -422,7 +422,7 @@ def _refresh_buckets_cache_file(cache_file):
             if not s3_meta:
                 continue
 
-            # pull out the environment dirs (eg. the root dirs)
+            # pull out the environment dirs (e.g. the root dirs)
             files = filter(lambda k: 'Key' in k, s3_meta)
             environments = map(lambda k: (os.path.dirname(k['Key']).split('/', 1))[0], files)
             environments = set(environments)

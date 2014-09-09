@@ -184,7 +184,7 @@ def missing(name):
 
         salt '*' daemontools.missing foo
     '''
-    return not name in get_all()
+    return name not in get_all()
 
 
 def get_all():

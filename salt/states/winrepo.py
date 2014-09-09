@@ -30,7 +30,9 @@ def genrepo(name, force=False, allow_empty=False):
     if force is True no checks will be made and the repository will be generated
     if allow_empty is True then the state will not return an error if there are 0 packages
 
-    Example::
+    Example:
+
+    .. code-block:: yaml
 
         winrepo:
           winrepo.genrepo

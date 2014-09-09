@@ -5,6 +5,7 @@ The management of salt command line utilities are stored in here
 
 # Import python libs
 from __future__ import print_function
+import logging
 import os
 import sys
 
@@ -14,18 +15,21 @@ import salt.cli.cp
 import salt.cli.batch
 import salt.client
 import salt.client.ssh
+import salt.client.netapi
 import salt.output
 import salt.runner
 import salt.auth
 import salt.key
 
-from salt.utils import parsers
+from salt.utils import parsers, print_cli
 from salt.utils.verify import check_user, verify_env, verify_files
 from salt.exceptions import (
     SaltInvocationError,
     SaltClientError,
     EauthAuthenticationError,
 )
+
+log = logging.getLogger(__name__)
 
 
 class SaltCMD(parsers.SaltCMDOptionParser):
@@ -53,7 +57,14 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         self.setup_logfile_logger()
 
         try:
-            local = salt.client.get_local_client(self.get_config_file_path())
+            # We don't need to bail on config file permission errors
+            # if the CLI
+            # process is run with the -a flag
+            skip_perm_errors = self.options.eauth != ''
+
+            local = salt.client.get_local_client(
+                self.get_config_file_path(),
+                skip_perm_errors=skip_perm_errors)
         except SaltClientError as exc:
             self.exit(2, '{0}\n'.format(exc))
             return
@@ -65,7 +76,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
 
             # If using eauth and a token hasn't already been loaded into
             # kwargs, prompt the user to enter auth credentials
-            if not 'token' in eauth and self.options.eauth:
+            if 'token' not in eauth and self.options.eauth:
                 resolver = salt.auth.Resolver(self.config)
                 res = resolver.cli(self.options.eauth)
                 if self.options.mktoken and res:
@@ -79,10 +90,24 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                     sys.exit(2)
                 eauth.update(res)
                 eauth['eauth'] = self.options.eauth
-            batch = salt.cli.batch.Batch(self.config, eauth)
-            # Printing the output is already taken care of in run() itself
-            for res in batch.run():
-                pass
+
+            if self.options.static:
+
+                batch = salt.cli.batch.Batch(self.config, quiet=True)
+
+                ret = {}
+
+                for res in batch.run():
+                    ret.update(res)
+
+                self._output_ret(ret, '')
+
+            else:
+                batch = salt.cli.batch.Batch(self.config)
+                # Printing the output is already taken care of in run() itself
+                for res in batch.run():
+                    pass
+
         else:
             if self.options.timeout <= 0:
                 self.options.timeout = local.opts['timeout']
@@ -102,6 +127,8 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 except IOError:
                     kwargs['token'] = self.config['token']
 
+            kwargs['delimiter'] = self.options.delimiter
+
             if self.selected_target_option:
                 kwargs['expr_form'] = self.selected_target_option
             else:
@@ -110,9 +137,12 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             if getattr(self.options, 'return'):
                 kwargs['ret'] = getattr(self.options, 'return')
 
+            if getattr(self.options, 'return_config'):
+                kwargs['ret_config'] = getattr(self.options, 'return_config')
+
             # If using eauth and a token hasn't already been loaded into
             # kwargs, prompt the user to enter auth credentials
-            if not 'token' in kwargs and self.options.eauth:
+            if 'token' not in kwargs and self.options.eauth:
                 resolver = salt.auth.Resolver(self.config)
                 res = resolver.cli(self.options.eauth)
                 if self.options.mktoken and res:
@@ -129,7 +159,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
 
             if self.config['async']:
                 jid = local.cmd_async(**kwargs)
-                print('Executed command with job ID: {0}'.format(jid))
+                print_cli('Executed command with job ID: {0}'.format(jid))
                 return
             retcodes = []
             try:
@@ -195,17 +225,16 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 not_return_minions.append(each_minion)
             else:
                 return_counter += 1
-        print('\n')
-        print('-------------------------------------------')
-        print('Summary')
-        print('-------------------------------------------')
+        print_cli('\n')
+        print_cli('-------------------------------------------')
+        print_cli('Summary')
+        print_cli('-------------------------------------------')
+        print_cli('# of Minions Targeted: {0}'.format(return_counter + not_return_counter))
+        print_cli('# of Minions Returned: {0}'.format(return_counter))
+        print_cli('# of Minions Did Not Return: {0}'.format(not_return_counter))
         if self.options.verbose:
-            print('# of Minions Targeted: {0}'.format(return_counter + not_return_counter))
-        print('# of Minions Returned: {0}'.format(return_counter))
-        if self.options.verbose:
-            print('# of Minions Did Not Return: {0}'.format(not_return_counter))
-            print('Minions Which Did Not Return: {0}'.format(" ".join(not_return_minions)))
-        print('-------------------------------------------')
+            print_cli('Minions Which Did Not Return: {0}'.format(" ".join(not_return_minions)))
+        print_cli('-------------------------------------------')
 
     def _output_ret(self, ret, out):
         '''
@@ -251,8 +280,8 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                         docs[fun] = ret[host][fun]
         for fun in sorted(docs):
             salt.output.display_output(fun + ':', 'text', self.config)
-            print(docs[fun])
-            print('')
+            print_cli(docs[fun])
+            print_cli('')
 
 
 class SaltCP(parsers.SaltCPOptionParser):
@@ -297,12 +326,20 @@ class SaltKey(parsers.SaltKeyOptionParser):
         if self.config['verify_env']:
             verify_env_dirs = []
             if not self.config['gen_keys']:
-                verify_env_dirs.extend([
-                    self.config['pki_dir'],
-                    os.path.join(self.config['pki_dir'], 'minions'),
-                    os.path.join(self.config['pki_dir'], 'minions_pre'),
-                    os.path.join(self.config['pki_dir'], 'minions_rejected'),
-                ])
+                if self.config['transport'] == 'raet':
+                    verify_env_dirs.extend([
+                        self.config['pki_dir'],
+                        os.path.join(self.config['pki_dir'], 'accepted'),
+                        os.path.join(self.config['pki_dir'], 'pending'),
+                        os.path.join(self.config['pki_dir'], 'rejected'),
+                    ])
+                elif self.config['transport'] == 'zeromq':
+                    verify_env_dirs.extend([
+                        self.config['pki_dir'],
+                        os.path.join(self.config['pki_dir'], 'minions'),
+                        os.path.join(self.config['pki_dir'], 'minions_pre'),
+                        os.path.join(self.config['pki_dir'], 'minions_rejected'),
+                    ])
 
             verify_env(
                 verify_env_dirs,
@@ -373,7 +410,8 @@ class SaltCall(parsers.SaltCallOptionParser):
         # Setup file logging!
         self.setup_logfile_logger()
 
-        caller = salt.cli.caller.Caller(self.config)
+        #caller = salt.cli.caller.Caller(self.config)
+        caller = salt.cli.caller.Caller.factory(self.config)
 
         if self.options.doc:
             caller.print_docs()
@@ -440,3 +478,47 @@ class SaltSSH(parsers.SaltSSHOptionParser):
 
         ssh = salt.client.ssh.SSH(self.config)
         ssh.run()
+
+
+class SaltAPI(parsers.OptionParser, parsers.ConfigDirMixIn,
+        parsers.LogLevelMixIn, parsers.PidfileMixin, parsers.DaemonMixIn,
+        parsers.MergeConfigMixIn):
+    '''
+    The cli parser object used to fire up the salt api system.
+    '''
+    __metaclass__ = parsers.OptionParserMeta
+
+    VERSION = salt.version.__version__
+
+    # ConfigDirMixIn config filename attribute
+    _config_filename_ = 'master'
+    # LogLevelMixIn attributes
+    _default_logging_logfile_ = '/var/log/salt/api'
+
+    def setup_config(self):
+        return salt.config.api_config(self.get_config_file_path())
+
+    def run(self):
+        '''
+        Run the api
+        '''
+        self.parse_args()
+        try:
+            if self.config['verify_env']:
+                logfile = self.config['log_file']
+                if logfile is not None and not logfile.startswith('tcp://') \
+                        and not logfile.startswith('udp://') \
+                        and not logfile.startswith('file://'):
+                    # Logfile is not using Syslog, verify
+                    salt.utils.verify.verify_files(
+                        [logfile], self.config['user']
+                    )
+        except OSError as err:
+            log.error(err)
+            sys.exit(err.errno)
+
+        self.setup_logfile_logger()
+        client = salt.client.netapi.NetapiClient(self.config)
+        self.daemonize_if_required()
+        self.set_pidfile()
+        client.run()

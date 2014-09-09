@@ -24,7 +24,7 @@ Versatility between massive scale deployments and smaller systems may seem
 daunting, but Salt is very simple to set up and maintain, regardless of the
 size of the project. The architecture of Salt is designed to work with any
 number of servers, from a handful of local network systems to international
-deployments across disparate datacenters. The topology is a simple
+deployments across disparate data centers. The topology is a simple
 server/client model with the needed functionality built into a single set of
 daemons. While the default configuration will work with little to no
 modification, Salt can be fine-tuned to meet specific needs.

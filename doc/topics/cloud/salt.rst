@@ -255,8 +255,8 @@ instance will be managed statefully.
 .. code-block:: yaml
 
     my-instance-name:
-      cloud.present:
-        - profile ec2-centos64-x64
+      cloud.profile:
+        - profile: ec2-centos64-x64
 
 cloud.absent
 ~~~~~~~~~~~~

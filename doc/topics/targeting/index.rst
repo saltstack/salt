@@ -28,6 +28,8 @@ There are many ways to target individual minions or groups of minions in Salt:
 
     globbing
     grains
-    nodegroups
+    ipcidr
     compound
+    nodegroups
     batch
+    range

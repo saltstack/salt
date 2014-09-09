@@ -200,7 +200,7 @@ Support has been added for matching minions with Yahoo's range library. This
 is handled by passing range syntax with *-R* or *--range* arguments to salt.
 
 More information at:
-https://github.com/grierj/range/wiki/Introduction-to-Range-with-YAML-files
+https://github.com/ytoolshed/range/wiki/%22yamlfile%22-module-file-spec
 
 
 Requisite "in"

@@ -6,7 +6,7 @@
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import MagicMock, patch
+from salttesting.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
 ensure_in_syspath('../../')
 
@@ -19,6 +19,7 @@ import pwd
 import grp
 
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class MacUserTestCase(TestCase):
     '''
     TestCase for the salt.modules.mac_user modules

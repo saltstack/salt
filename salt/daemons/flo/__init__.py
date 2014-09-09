@@ -16,6 +16,7 @@ opts['ioflo_period']
 opts['ioflo_realtime']
 opts['ioflo_verbose']
 '''
+import os
 
 # Import modules
 from . import core
@@ -62,11 +63,15 @@ class IofloMaster(object):
 
         port = self.opts['raet_port']
         '''
-        #import wingdbstub
-
         if behaviors is None:
             behaviors = []
         behaviors.extend(['salt.daemons.flo'])
+
+        console_logdir = self.opts.get('ioflo_console_logdir', '')
+        if console_logdir:
+            consolepath = os.path.join(console_logdir, 'master.log')
+        else:  # empty means log to std out
+            consolepath = ''
 
         ioflo.app.run.start(
                 name='master',
@@ -82,6 +87,7 @@ class IofloMaster(object):
                 metas=None,
                 preloads=self.preloads,
                 verbose=int(self.opts['ioflo_verbose']),
+                consolepath=consolepath,
                 )
 
 
@@ -101,13 +107,17 @@ class IofloMinion(object):
 
         port = self.opts['raet_port']
         '''
-        #import wingdbstub
-
         if behaviors is None:
             behaviors = []
         behaviors.extend(['salt.daemons.flo'])
 
         preloads = explode_opts(self.opts)
+
+        console_logdir = self.opts.get('ioflo_console_logdir', '')
+        if console_logdir:
+            consolepath = os.path.join(console_logdir, 'minion.log')
+        else:  # empty means log to std out
+            consolepath = ''
 
         ioflo.app.run.start(
                 name=self.opts['id'],
@@ -123,6 +133,7 @@ class IofloMinion(object):
                 metas=None,
                 preloads=preloads,
                 verbose=int(self.opts['ioflo_verbose']),
+                consolepath=consolepath,
                 )
 
     start = tune_in  # alias

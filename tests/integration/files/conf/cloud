@@ -1,3 +1,4 @@
 #
 master_config: master
 log_file: logs/cloud
+pki_dir: pki

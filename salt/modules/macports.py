@@ -10,6 +10,9 @@ import re
 
 # Import salt libs
 import salt.utils
+from salt.exceptions import (
+    CommandExecutionError
+)
 
 log = logging.getLogger(__name__)
 
@@ -31,7 +34,21 @@ def __virtual__():
 def _list(query=''):
     ret = {}
     cmd = 'port list {0}'.format(query)
-    for line in __salt__['cmd.run'](cmd).splitlines():
+    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+
+    if call['retcode'] != 0:
+        comment = ''
+        if 'stderr' in call:
+            comment += call['stderr']
+        if 'stdout' in call:
+            comment += call['stdout']
+        raise CommandExecutionError(
+            '{0}'.format(comment)
+        )
+    else:
+        out = call['stdout']
+
+    for line in out.splitlines():
         try:
             name, version_num, category = re.split(r'\s+', line.lstrip())[0:3]
             version_num = version_num[1:]
@@ -69,7 +86,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
     ret = {}
     cmd = 'port installed'
-    for line in __salt__['cmd.run'](cmd).splitlines():
+    out = __salt__['cmd.run'](cmd, output_loglevel='trace')
+    for line in out.splitlines():
         try:
             name, version_num, active = re.split(r'\s+', line.lstrip())[0:3]
             version_num = version_num[1:]
@@ -128,7 +146,7 @@ def latest_version(*names, **kwargs):
     ret = {}
 
     for k, v in available.items():
-        if not k in installed or salt.utils.compare_versions(ver1=installed[k], oper='<', ver2=v):
+        if k not in installed or salt.utils.compare_versions(ver1=installed[k], oper='<', ver2=v):
             ret[k] = v
         else:
             ret[k] = ''
@@ -178,7 +196,7 @@ def remove(name=None, pkgs=None, **kwargs):
     if not targets:
         return {}
     cmd = 'port uninstall {0}'.format(' '.join(targets))
-    __salt__['cmd.run_all'](cmd)
+    __salt__['cmd.run_all'](cmd, output_loglevel='trace')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return __salt__['pkg_resource.find_changes'](old, new)
@@ -199,7 +217,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             salt '*' pkg.install <package name>
 
     version
-        Specify a version to pkg to install. Ignored if pkgs is sepcified.
+        Specify a version to pkg to install. Ignored if pkgs is specified.
 
         CLI Example:
 
@@ -209,7 +227,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             salt '*' pkg.install git-core version='1.8.5.5'
 
     variant
-        Specify a variant to pkg to install. Ignored if pkgs is sepcified.
+        Specify a variant to pkg to install. Ignored if pkgs is specified.
 
         CLI Example:
 
@@ -277,7 +295,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
     old = list_pkgs()
     cmd = 'port install {0}'.format(formulas)
 
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd, output_loglevel='trace')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return __salt__['pkg_resource.find_changes'](old, new)
@@ -321,7 +339,15 @@ def refresh_db():
     '''
     Update ports with ``port selfupdate``
     '''
-    __salt__['cmd.run_all']('port selfupdate')
+    call = __salt__['cmd.run_all']('port selfupdate', output_loglevel='trace')
+    if call['retcode'] != 0:
+        comment = ''
+        if 'stderr' in call:
+            comment += call['stderr']
+
+        raise CommandExecutionError(
+            '{0}'.format(comment)
+        )
 
 
 def upgrade(refresh=True):
@@ -344,6 +370,10 @@ def upgrade(refresh=True):
 
         salt '*' pkg.upgrade
     '''
+    ret = {'changes': {},
+           'result': True,
+           'comment': '',
+           }
 
     old = list_pkgs()
 

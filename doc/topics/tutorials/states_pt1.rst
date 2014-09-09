@@ -116,6 +116,8 @@ in the :mod:`pkg state <salt.states.pkg>` module to call.
 
 .. _`DSLs`: http://en.wikipedia.org/wiki/Domain-specific_language
 
+.. _running-highstate:
+
 Install the package
 ===================
 
@@ -133,6 +135,15 @@ downloaded, compiled, and executed.
 
 Once completed, the minion will report back with a summary of all actions taken
 and all changes made.
+
+.. warning::
+
+    If you have created :ref:`custom grain modules <writing-grains>`, they will
+    not be available in the top file until after the first :ref:`highstate
+    <running-highstate>`. To make custom grains available on a minion's first
+    highstate, it is recommended to use :ref:`this example
+    <minion-start-reactor>` to ensure that the custom grains are synced when
+    the minion starts.
 
 .. _sls-file-namespace:
 .. admonition:: SLS File Namespace
@@ -152,7 +163,6 @@ and all changes made.
     4. If both ``webserver.sls`` and ``webserver/init.sls`` happen to exist,
        ``webserver/init.sls`` will be ignored and ``webserver.sls`` will be the
        file referred to as ``webserver``.
-
 
 .. admonition:: Troubleshooting Salt
 

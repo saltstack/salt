@@ -7,7 +7,7 @@ Execute a Salt runner
 Synopsis
 ========
 
-::
+.. code-block:: bash
 
     salt-run RUNNER
 

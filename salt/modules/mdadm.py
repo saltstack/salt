@@ -6,10 +6,11 @@ Salt module to manage RAID arrays with mdadm
 # Import python libs
 import os
 import logging
+import re
 
 # Import salt libs
 import salt.utils
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Set up logger
 log = logging.getLogger(__name__)
@@ -84,7 +85,7 @@ def detail(device='/dev/md0'):
             continue
         if ' ' not in line:
             continue
-        if not ':' in line:
+        if ':' not in line:
             if '/dev/' in line:
                 comps = line.split()
                 state = comps[4:-1]
@@ -143,85 +144,83 @@ def destroy(device):
         return False
 
 
-def create(*args):
+def create(name,
+           level,
+           devices,
+           metadata='default',
+           test_mode=False,
+           **kwargs):
     '''
     Create a RAID device.
+
+    .. versionchanged:: 2014.7.0
 
     .. warning::
         Use with CAUTION, as this function can be very destructive if not used
         properly!
 
-    Use this module just as a regular mdadm command.
-
-    For more info, read the ``mdadm(8)`` manpage
-
-    NOTE: It takes time to create a RAID array. You can check the progress in
-    "resync_status:" field of the results from the following command:
-
-    .. code-block:: bash
-
-        salt '*' raid.detail /dev/md0
-
     CLI Examples:
 
     .. code-block:: bash
 
-        salt '*' raid.create /dev/md0 level=1 chunk=256 raid-devices=2 /dev/xvdd /dev/xvde test_mode=True
+        salt '*' raid.create /dev/md0 level=1 chunk=256 ['/dev/xvdd', '/dev/xvde'] test_mode=True
 
-    .. note:: Test mode
+    .. note::
 
         Adding ``test_mode=True`` as an argument will print out the mdadm
         command that would have been run.
 
-    :param args: The arguments u pass to this function.
-    :param arguments:
-        arguments['new_array']: The name of the new RAID array that will be created.
-        arguments['opt_val']: Option with Value. Example: raid-devices=2
-        arguments['opt_raw']: Option without Value. Example: force
-        arguments['disks_to_array']: The disks that will be added to the new raid.
-    :return:
+    name
+        The name of the array to create.
+
+    level
+        The RAID level to use when creating the raid.
+
+    devices
+        A list of devices used to build the array.
+
+    metadata
+        Version of metadata to use when creating the array.
+
+    kwargs
+        Optional arguments to be passed to mdadm.
+
+    returns
         test_mode=True:
             Prints out the full command.
         test_mode=False (Default):
             Executes command on remote the host(s) and
             Prints out the mdadm output.
+
+    .. note::
+
+        It takes time to create a RAID array. You can check the progress in
+        "resync_status:" field of the results from the following command:
+
+        .. code-block:: bash
+
+            salt '*' raid.detail /dev/md0
+
+    For more info, read the ``mdadm(8)`` manpage
     '''
-    test_mode = False
-    arguments = {'new_array': '', 'opt_val': {}, 'opt_raw': [], "disks_to_array": []}
+    opts = []
+    for key in kwargs:
+        if not key.startswith('__'):
+            opts.append('--{0}'.format(key))
+            if kwargs[key] is not True:
+                opts.append(kwargs[key])
 
-    for arg in args:
-        if arg.startswith('test_mode'):
-            test_mode = bool(arg.split('=')[-1])
-        elif arg.startswith('/dev/') is True:
-            if arg.startswith('/dev/md') is True:
-                arguments['new_array'] = arg
-            else:
-                arguments['disks_to_array'].append(arg)
-        elif '=' in arg:
-            opt, val = arg.split('=')
-            arguments['opt_val'][opt] = val
-        elif str(arg) in ['readonly', 'run', 'force']:
-            arguments['opt_raw'].append(arg)
-        elif str(arg) in ['missing']:
-            arguments['disks_to_array'].append(arg)
-        else:
-            msg = "Invalid argument - {0} !"
-            raise CommandExecutionError(msg.format(arg))
-
-    cmd = "echo y | mdadm --create --verbose {new_array}{opts_raw}{opts_val} {disks_to_array}"
-    cmd = cmd.format(new_array=arguments['new_array'],
-                     opts_raw=(' --' + ' --'.join(arguments['opt_raw'])
-                               if len(arguments['opt_raw']) > 0
-                               else ''),
-                     opts_val=(' --' + ' --'.join(key + '=' + arguments['opt_val'][key] for key in arguments['opt_val'])
-                               if len(arguments['opt_val']) > 0
-                               else ''),
-                     disks_to_array=' '.join(arguments['disks_to_array']))
+    cmd = ['mdadm',
+           '-C', name,
+           '-v'] + opts + [
+           '-l', level,
+           '-e', metadata,
+           '-n', len(devices)] + devices
 
     if test_mode is True:
         return cmd
     elif test_mode is False:
-        return __salt__['cmd.run'](cmd)
+        return __salt__['cmd.run'](cmd, python_shell=False)
 
 
 def save_config():
@@ -241,23 +240,82 @@ def save_config():
         salt '*' raid.save_config
 
     '''
-    scan = __salt__['cmd.run']('mdadm --detail --scan').split()
-    # Issue with mdadm and ubuntu
+    scan = __salt__['cmd.run']('mdadm --detail --scan').splitlines()
+    # Issue with mdadm and ubuntu requires removal of name and metadata tags
     # REF: http://askubuntu.com/questions/209702/why-is-my-raid-dev-md1-showing-up-as-dev-md126-is-mdadm-conf-being-ignored
     if __grains__['os'] == 'Ubuntu':
         buggy_ubuntu_tags = ['name', 'metadata']
-        for bad_tag in buggy_ubuntu_tags:
-            for i, elem in enumerate(scan):
-                if not elem.find(bad_tag):
-                    del scan[i]
+        for i, elem in enumerate(scan):
+            for bad_tag in buggy_ubuntu_tags:
+                pattern = r'\s{0}=\S+'.format(re.escape(bad_tag))
+                pattern = re.compile(pattern, flags=re.I)
+                scan[i] = re.sub(pattern, '', scan[i])
 
-    scan = ' '.join(scan)
     if __grains__.get('os_family') == 'Debian':
         cfg_file = '/etc/mdadm/mdadm.conf'
     else:
         cfg_file = '/etc/mdadm.conf'
 
-    if not __salt__['file.search'](cfg_file, scan):
-        __salt__['file.append'](cfg_file, scan)
+    try:
+        vol_d = dict([(line.split()[1], line) for line in scan])
+        for vol in vol_d:
+            pattern = r'^ARRAY\s+{0}'.format(re.escape(vol))
+            __salt__['file.replace'](cfg_file, pattern, vol_d[vol], append_if_not_found=True)
+    except SaltInvocationError:  # File is missing
+        __salt__['file.write'](cfg_file, args=scan)
 
     return __salt__['cmd.run']('update-initramfs -u')
+
+
+def assemble(name,
+             devices,
+             test_mode=False,
+             **kwargs):
+    '''
+    Assemble a RAID device.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' raid.assemble /dev/md0 ['/dev/xvdd', '/dev/xvde']
+
+    .. note::
+
+        Adding ``test_mode=True`` as an argument will print out the mdadm
+        command that would have been run.
+
+    name
+        The name of the array to assemble.
+
+    devices
+        The list of devices comprising the array to assemble.
+
+    kwargs
+        Optional arguments to be passed to mdadm.
+
+    returns
+        test_mode=True:
+            Prints out the full command.
+        test_mode=False (Default):
+            Executes command on the host(s) and prints out the mdadm output.
+
+    For more info, read the ``mdadm`` manpage.
+    '''
+    opts = []
+    for key in kwargs:
+        if not key.startswith('__'):
+            opts.append('--{0}'.format(key))
+            if kwargs[key] is not True:
+                opts.append(kwargs[key])
+
+    # Devices may have been written with a blob:
+    if type(devices) is str:
+        devices = devices.split(',')
+
+    cmd = ['mdadm', '-A', name, '-v', opts] + devices
+
+    if test_mode is True:
+        return cmd
+    elif test_mode is False:
+        return __salt__['cmd.run'](cmd, python_shell=False)

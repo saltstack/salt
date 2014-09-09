@@ -142,6 +142,16 @@ significantly, the ``versionchanged`` directive can be used to clarify this:
         print 'Greetings! {0}\n\n{1}'.format(msg, signature)
 
 
+Dictionaries
+============
+
+Dictionaries should be initialized using `{}` instead of `dict()`.
+
+See here_ for an in-depth discussion of this topic.
+
+.. _here: http://doughellmann.com/2012/11/12/the-performance-impact-of-using-dict-instead-of-in-cpython-2-7-2.html
+
+
 Imports
 =======
 

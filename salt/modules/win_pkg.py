@@ -10,10 +10,8 @@ A module to manage software on Windows
 
 # Import third party libs
 try:
-    import win32com.client
     import win32api
     import win32con
-    import pywintypes
     HAS_DEPENDENCIES = True
 except ImportError:
     HAS_DEPENDENCIES = False
@@ -28,6 +26,7 @@ except ImportError:
 import os
 import locale
 from distutils.version import LooseVersion  # pylint: disable=E0611
+import re
 
 # Import salt libs
 import salt.utils
@@ -76,38 +75,35 @@ def latest_version(*names, **kwargs):
     if salt.utils.is_true(kwargs.get('refresh', True)):
         refresh_db()
 
-    pkgs = list_pkgs()
+    installed_pkgs = list_pkgs(versions_as_list=True)
+    log.trace('List of installed packages: {0}'.format(installed_pkgs))
+
+    # iterate over all requested package names
     for name in names:
-        candidate = '0'
-        version_num = '0'
-        pkginfo = _get_package_info(name)
-        if not pkginfo:
-            log.error('Unable to locate package {0}'.format(name))
-            continue
-        if len(pkginfo) == 1:
-            candidate = pkginfo.keys()[0]
-            full_name = pkginfo[candidate]['full_name']
-            ret[name] = ''
-            if full_name in pkgs:
-                version_num = pkgs[full_name]
-            if salt.utils.compare_versions(ver1=str(candidate),
+        latest_installed = '0'
+        latest_available = '0'
+
+        # get latest installed version of package
+        if name in installed_pkgs:
+            log.trace('Sorting out the latest available version of {0}'.format(name))
+            latest_installed = sorted(installed_pkgs[name], cmp=_reverse_cmp_pkg_versions).pop()
+            log.debug('Latest installed version of package {0} is {1}'.format(name, latest_installed))
+
+        # get latest available (from win_repo) version of package
+        pkg_info = _get_package_info(name)
+        log.trace('Raw win_repo pkg_info for {0} is {1}'.format(name, pkg_info))
+        latest_available = _get_latest_pkg_version(pkg_info)
+        if latest_available:
+            log.debug('Latest available version of package {0} is {1}'.format(name, latest_available))
+
+            # check, whether latest available version is newer than latest installed version
+            if salt.utils.compare_versions(ver1=str(latest_available),
                                            oper='>',
-                                           ver2=str(version_num)):
-                ret[name] = candidate
-            continue
-        for ver in pkginfo.keys():
-            if salt.utils.compare_versions(ver1=str(ver),
-                                           oper='>',
-                                           ver2=str(candidate)):
-                candidate = ver
-        full_name = pkginfo[candidate]['full_name']
-        ret[name] = ''
-        if full_name in pkgs:
-            version_num = pkgs[full_name]
-        if salt.utils.compare_versions(ver1=str(candidate),
-                                       oper='>',
-                                       ver2=str(version_num)):
-            ret[name] = candidate
+                                           ver2=str(latest_installed)):
+                log.debug('Upgrade of {0} from {1} to {2} is available'.format(name, latest_installed, latest_available))
+                ret[name] = latest_available
+            else:
+                log.debug('No newer version than {0} of {1} is available'.format(latest_installed, name))
     if len(names) == 1:
         return ret[names[0]]
     return ret
@@ -143,7 +139,7 @@ def list_upgrades(refresh=True):
         refresh_db()
 
     ret = {}
-    for name, data in get_repo_data().items():
+    for name, data in get_repo_data().get('repo', {}).items():
         if version(name):
             latest = latest_version(name)
             if latest:
@@ -176,6 +172,7 @@ def list_available(*names):
             if not pkginfo:
                 continue
             versions[name] = pkginfo.keys() if pkginfo else []
+    versions = sorted(versions, cmp=_reverse_cmp_pkg_versions)
     return versions
 
 
@@ -198,17 +195,7 @@ def version(*names, **kwargs):
         return ''
     if len(names) > 1:
         reverse_dict = {}
-        for name in names:
-            ret[name] = ''
-            versions = _get_package_info(name)
-            if versions:
-                for val in versions.itervalues():
-                    if 'full_name' in val and len(val.get('full_name', '')) > 0:
-                        reverse_dict[val.get('full_name', '')] = name
-                        win_names.append(val.get('full_name', ''))
-            else:
-                win_names.append(name)
-        nums = __salt__['pkg_resource.version'](*win_names, **kwargs)
+        nums = __salt__['pkg_resource.version'](*names, **kwargs)
         if len(nums):
             for num, val in nums.iteritems():
                 if len(val) > 0:
@@ -286,31 +273,51 @@ def _search_software(target):
 
 def _get_msi_software():
     '''
-    This searches the msi product databases and returns a dict keyed
-    on the product name and all the product properties in another dict
+    Uses powershell to search the msi product databases, returns a
+    dict keyed on the product name as the key and the version as the
+    value. If powershell is not available, returns `{}`
     '''
     win32_products = {}
-    this_computer = "."
-    wmi_service = win32com.client.Dispatch("WbemScripting.SWbemLocator")
-    swbem_services = wmi_service.ConnectServer(this_computer, "root\\cimv2")
 
-    # Find out whether the Windows Installer provider is present. It
-    # is optional on Windows Server 2003 and 64-bit operating systems See
-    # http://msdn.microsoft.com/en-us/library/windows/desktop/aa392726%28v=vs.85%29.aspx#windows_installer_provider
-    try:
-        swbem_services.Get("Win32_Product")
-    except pywintypes.com_error:
-        log.warning("Windows Installer (MSI) provider not found; package management will not work correctly on MSI packages")
-        return win32_products
+    # Don't use WMI to select from `Win32_product`, that has nasty
+    # side effects. Use the `WindowsInstaller.Installer` COM object's
+    # `ProductsEx`. Jumping through powershell because `ProductsEx` is
+    # a get property that takes 3 arguments, and `win32com` can't call
+    # that
+    #
+    # see https://github.com/saltstack/salt/issues/12550 for detail
 
-    products = swbem_services.ExecQuery("Select * from Win32_Product")
-    for product in products:
-        try:
-            prd_name = product.Name.encode('ascii', 'ignore')
-            prd_ver = product.Version.encode('ascii', 'ignore')
-            win32_products[prd_name] = prd_ver
-        except Exception:
-            pass
+    # powershell script to fetch (name, version) from COM, and write
+    # without word-wrapping. Attempting to target minimal powershell
+    # versions
+    ps = '''
+$msi = New-Object -ComObject WindowsInstaller.Installer;
+$msi.GetType().InvokeMember('ProductsEx', 'GetProperty', $null, $msi, ('', 's-1-1-0', 7))
+| select @{
+      name='name';
+      expression={$_.GetType().InvokeMember('InstallProperty', 'GetProperty', $null, $_, ('ProductName'))}
+    },
+    @{
+      name='version';
+      expression={$_.GetType().InvokeMember('InstallProperty', 'GetProperty', $null, $_, ('VersionString'))}
+    }
+| Write-host
+'''.replace('\n', ' ')  # make this a one-liner
+
+    ret = __salt__['cmd.run_all'](ps, shell='powershell')
+    # sometimes the powershell reflection fails on a single product,
+    # giving us a non-zero return code AND useful output. Ignore RC
+    # and just try to process stdout, which should empty if the cmd
+    # failed.
+    #
+    # each line of output looks like:
+    #
+    # `@{name=PRD_NAME; version=PRD_VER}`
+    pattern = r'@{name=(.+); version=(.+)}'
+    for m in re.finditer(pattern, ret['stdout']):
+        (prd_name, prd_ver) = m.groups()
+        win32_products[prd_name] = prd_ver
+
     return win32_products
 
 
@@ -376,7 +383,10 @@ def _get_reg_software():
                     "DisplayVersion")
                 if name not in ignore_list:
                     if prd_name != 'Not Found':
-                        reg_software[prd_name] = prd_ver
+                        # some MS Office updates don't register a product name which means
+                        # their information is useless
+                        if prd_name != '':
+                            reg_software[prd_name] = prd_ver
     return reg_software
 
 
@@ -488,7 +498,7 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
     if salt.utils.is_true(refresh):
         refresh_db()
 
-    # Ignore pkg_type from parse_targets, Windows does not suport the "sources"
+    # Ignore pkg_type from parse_targets, Windows does not support the "sources"
     # argument
     pkg_params = __salt__['pkg_resource.parse_targets'](name,
                                                         pkgs,
@@ -550,7 +560,7 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
             cached_pkg=cached_pkg,
             install_flags=install_flags
         )
-        __salt__['cmd.run'](cmd, output_loglevel='debug')
+        __salt__['cmd.run'](cmd, output_loglevel='trace')
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -646,7 +656,7 @@ def remove(name=None, pkgs=None, version=None, extra_uninstall_flags=None, **kwa
             cached_pkg)) + '"' + str(pkginfo[version].get('uninstall_flags', '') + " " + (extra_uninstall_flags or ''))
         if pkginfo[version].get('msiexec'):
             cmd = 'msiexec /x ' + cmd
-        __salt__['cmd.run'](cmd, output_loglevel='debug')
+        __salt__['cmd.run'](cmd, output_loglevel='trace')
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()

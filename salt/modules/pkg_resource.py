@@ -207,7 +207,9 @@ def sort_pkglist(pkgs):
     # so long as the sorting is consistent.
     try:
         for key in pkgs.keys():
-            pkgs[key].sort()
+            # Passing the pkglist to set() also removes duplicate version
+            # numbers (if present).
+            pkgs[key] = sorted(set(pkgs[key]))
     except AttributeError as e:
         log.exception(e)
 

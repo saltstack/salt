@@ -4,12 +4,18 @@ Module for gathering and managing network information
 '''
 
 # Import python libs
-import re
+import datetime
+import hashlib
 import logging
+import re
+import os
+import socket
 
 # Import salt libs
 import salt.utils
+import salt.utils.network
 from salt.exceptions import CommandExecutionError
+import salt.utils.validate.net
 
 
 log = logging.getLogger(__name__)
@@ -48,7 +54,7 @@ def _netstat_linux():
     '''
     ret = []
     cmd = 'netstat -tulpnea'
-    out = __salt__['cmd.run'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run'](cmd)
     for line in out.splitlines():
         comps = line.split()
         if line.startswith('tcp'):
@@ -84,7 +90,7 @@ def _netinfo_openbsd():
         r'internet(6)? (?:stream tcp 0x\S+ (\S+)|dgram udp (\S+))'
         r'(?: [<>=-]+ (\S+))?$'
     )
-    out = __salt__['cmd.run']('fstat', output_loglevel='debug')
+    out = __salt__['cmd.run']('fstat')
     for line in out.splitlines():
         try:
             user, cmd, pid, _, details = line.split(None, 4)
@@ -131,8 +137,7 @@ def _netinfo_freebsd_netbsd():
     out = __salt__['cmd.run'](
         'sockstat -46 {0} | tail -n+2'.format(
             '-n' if __grains__['kernel'] == 'NetBSD' else ''
-        ),
-        output_loglevel='debug'
+        )
     )
     for line in out.splitlines():
         user, cmd, pid, _, proto, local_addr, remote_addr = line.split()
@@ -153,7 +158,7 @@ def _ppid():
     '''
     ret = {}
     cmd = 'ps -ax -o pid,ppid | tail -n+2'
-    out = __salt__['cmd.run'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run'](cmd)
     for line in out.splitlines():
         pid, ppid = line.split()
         ret[pid] = ppid
@@ -168,7 +173,7 @@ def _netstat_bsd():
     if __grains__['kernel'] == 'NetBSD':
         for addr_family in ('inet', 'inet6'):
             cmd = 'netstat -f {0} -an | tail -n+3'.format(addr_family)
-            out = __salt__['cmd.run'](cmd, output_loglevel='debug')
+            out = __salt__['cmd.run'](cmd)
             for line in out.splitlines():
                 comps = line.split()
                 entry = {
@@ -184,7 +189,7 @@ def _netstat_bsd():
     else:
         # Lookup TCP connections
         cmd = 'netstat -p tcp -an | tail -n+3'
-        out = __salt__['cmd.run'](cmd, output_loglevel='debug')
+        out = __salt__['cmd.run'](cmd)
         for line in out.splitlines():
             comps = line.split()
             ret.append({
@@ -196,7 +201,7 @@ def _netstat_bsd():
                 'state': comps[5]})
         # Lookup UDP connections
         cmd = 'netstat -p udp -an | tail -n+3'
-        out = __salt__['cmd.run'](cmd, output_loglevel='debug')
+        out = __salt__['cmd.run'](cmd)
         for line in out.splitlines():
             comps = line.split()
             ret.append({
@@ -413,7 +418,12 @@ def arp():
         comps = line.split()
         if len(comps) < 4:
             continue
-        ret[comps[3]] = comps[1].strip('(').strip(')')
+        if not __grains__['kernel'] == 'OpenBSD':
+            ret[comps[3]] = comps[1].strip('(').strip(')')
+        else:
+            if comps[0] == 'Host' or comps[1] == '(incomplete)':
+                continue
+            ret[comps[1]] = comps[0]
     return ret
 
 
@@ -444,6 +454,32 @@ def hw_addr(iface):
 
 # Alias hwaddr to preserve backward compat
 hwaddr = hw_addr
+
+
+def interface(iface):
+    '''
+    Return the inet address for a given interface
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.interface eth0
+    '''
+    return salt.utils.network.interface(iface)
+
+
+def interface_ip(iface):
+    '''
+    Return the inet address for a given interface
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.interface_ip eth0
+    '''
+    return salt.utils.network.interface_ip(iface)
 
 
 def subnets():
@@ -544,41 +580,251 @@ def mod_hostname(hostname):
     if hostname is None:
         return False
 
-    #1.use shell command hostname
-    hostname = hostname
-    cmd1 = 'hostname {0}'.format(hostname)
+    hostname_cmd = salt.utils.which('hostname')
+    # Grab the old hostname so we know which hostname to change and then
+    # change the hostname using the hostname command
+    o_hostname = __salt__['cmd.run']('{0} -f'.format(hostname_cmd))
 
-    __salt__['cmd.run'](cmd1)
+    __salt__['cmd.run']('{0} {1}'.format(hostname_cmd, hostname))
 
-    #2.modify /etc/hosts hostname
-    f = open('/etc/hosts', 'r')
-    str_hosts = f.read()
-    f.close()
-    list_hosts = str_hosts.splitlines()
-    cmd2 = '127.0.0.1\t\tlocalhost.localdomain\t\tlocalhost\t\t{0}'.format(hostname)
-    #list_hosts[0]=cmd2
+    # Modify the /etc/hosts file to replace the old hostname with the
+    # new hostname
+    host_c = salt.utils.fopen('/etc/hosts', 'r').readlines()
 
-    for k in list_hosts:
-        if k.startswith('127.0.0.1'):
-            num = list_hosts.index(k)
-            list_hosts[num] = cmd2
+    with salt.utils.fopen('/etc/hosts', 'w') as fh:
+        for host in host_c:
+            host = host.split()
 
-    hostfile = '\n'.join(list_hosts)
-    f = open('/etc/hosts', 'w')
-    f.write(hostfile)
-    f.close()
+            try:
+                host[host.index(o_hostname)] = hostname
+            except ValueError:
+                pass
 
-    #3.modify /etc/sysconfig/network
-    f = open('/etc/sysconfig/network', 'r')
-    str_network = f.read()
-    list_network = str_network.splitlines()
-    cmd = 'HOSTNAME={0}'.format(hostname)
-    for k in list_network:
-        if k.startswith('HOSTNAME'):
-            num = list_network.index(k)
-            list_network[num] = cmd
-    networkfile = '\n'.join(list_network)
-    f = open('/etc/sysconfig/network', 'w')
-    f.write(networkfile)
-    f.close()
+            fh.write('\t'.join(host) + '\n')
+
+    # Modify the /etc/sysconfig/network configuration file to set the
+    # new hostname
+    if __grains__['os_family'] == 'RedHat':
+        network_c = salt.utils.fopen('/etc/sysconfig/network', 'r').readlines()
+
+        with salt.utils.fopen('/etc/sysconfig/network', 'w') as fh:
+            for i in network_c:
+                if i.startswith('HOSTNAME'):
+                    fh.write('HOSTNAME={0}\n'.format(hostname))
+                else:
+                    fh.write(i)
+    elif __grains__['os_family'] == 'Debian':
+        with salt.utils.fopen('/etc/hostname', 'w') as fh:
+            fh.write(hostname + '\n')
+    elif __grains__['os_family'] == 'OpenBSD':
+        with salt.utils.fopen('/etc/myname', 'w') as fh:
+            fh.write(hostname + '\n')
+
     return True
+
+
+def connect(host, port=None, **kwargs):
+    '''
+    Test connectivity to a host using a particular
+    port from the minion.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.connect archlinux.org 80
+
+        salt '*' network.connect archlinux.org 80 timeout=3
+
+        salt '*' network.connect archlinux.org 80 timeout=3 family=ipv4
+
+        salt '*' network.connect google-public-dns-a.google.com port=53 proto=udp timeout=3
+    '''
+
+    ret = {'result': None,
+           'comment': ''}
+
+    if not host:
+        ret['result'] = False
+        ret['comment'] = 'Required argument, host, is missing.'
+        return ret
+
+    if not port:
+        ret['result'] = False
+        ret['comment'] = 'Required argument, port, is missing.'
+        return ret
+
+    proto = kwargs.get('proto', 'tcp')
+    timeout = kwargs.get('timeout', 5)
+    family = kwargs.get('family', None)
+
+    if salt.utils.validate.net.ipv4_addr(host) or salt.utils.validate.net.ipv6_addr(host):
+        address = host
+    else:
+        address = '{0}'.format(salt.utils.network.sanitize_host(host))
+
+    try:
+        if proto == 'udp':
+            __proto = socket.SOL_UDP
+        else:
+            __proto = socket.SOL_TCP
+            proto = 'tcp'
+
+        if family:
+            if family == 'ipv4':
+                __family = socket.AF_INET
+            elif family == 'ipv6':
+                __family = socket.AF_INET6
+            else:
+                __family = 0
+        else:
+            __family = 0
+
+        (family,
+         socktype,
+         _proto,
+         garbage,
+         _address) = socket.getaddrinfo(address, port, __family, 0, __proto)[0]
+
+        s = socket.socket(family, socktype, _proto)
+        s.settimeout(timeout)
+
+        if proto == 'udp':
+            # Generate a random string of a
+            # decent size to test UDP connection
+            h = hashlib.md5()
+            h.update(datetime.datetime.now().strftime('%s'))
+            msg = h.hexdigest()
+            s.sendto(msg, _address)
+            recv, svr = s.recvfrom(255)
+            s.close()
+        else:
+            s.connect(_address)
+            s.shutdown(2)
+    except Exception, e:
+        ret['result'] = False
+        try:
+            errno, errtxt = e
+        except ValueError:
+            ret['comment'] = 'Unable to connect to {0} ({1}) on {2} port {3}'.format(host, _address[0], proto, port)
+        else:
+            ret['comment'] = '{0}'.format(errtxt)
+        return ret
+
+    ret['result'] = True
+    ret['comment'] = 'Successfully connected to {0} ({1}) on {2} port {3}'.format(host, _address[0], proto, port)
+    return ret
+
+
+def is_private(ip_addr):
+    '''
+    Check if the given IP address is a private address
+
+    .. versionadded:: Helium
+
+    CLI Example::
+
+        salt '*' network.is_private 10.0.0.3
+    '''
+    return salt.utils.network.IPv4Address(ip_addr).is_private
+
+
+def is_loopback(ip_addr):
+    '''
+    Check if the given IP address is a loopback address
+
+    .. versionadded:: Helium
+
+    CLI Example::
+
+        salt '*' network.is_loopback 127.0.0.1
+    '''
+    return salt.utils.network.IPv4Address(ip_addr).is_loopback
+
+
+def _get_bufsize_linux(iface):
+    '''
+    Return network interface buffer information using ethtool
+    '''
+    ret = {'result': False}
+
+    cmd = '/sbin/ethtool -g {0}'.format(iface)
+    out = __salt__['cmd.run'](cmd)
+    pat = re.compile(r'^(.+):\s+(\d+)$')
+    suffix = 'max-'
+    for line in out.splitlines():
+        res = pat.match(line)
+        if res:
+            ret[res.group(1).lower().replace(' ', '-') + suffix] = int(res.group(2))
+            ret['result'] = True
+        elif line.endswith('maximums:'):
+            suffix = '-max'
+        elif line.endswith('settings:'):
+            suffix = ''
+    if not ret['result']:
+        parts = out.split()
+        # remove shell cmd prefix from msg
+        if parts[0].endswith('sh:'):
+            out = ' '.join(parts[1:])
+        ret['comment'] = out
+    return ret
+
+
+def get_bufsize(iface):
+    '''
+    Return network buffer sizes as a dict
+
+    CLI Example::
+
+        salt '*' network.getbufsize
+    '''
+    if __grains__['kernel'] == 'Linux':
+        if os.path.exists('/sbin/ethtool'):
+            return _get_bufsize_linux(iface)
+
+    return {}
+
+
+def _mod_bufsize_linux(iface, *args, **kwargs):
+    '''
+    Modify network interface buffer sizes using ethtool
+    '''
+    ret = {'result': False,
+           'comment': 'Requires rx=<val> tx==<val> rx-mini=<val> and/or rx-jumbo=<val>'}
+    cmd = '/sbin/ethtool -G ' + iface
+    if not kwargs:
+        return ret
+    if args:
+        ret['comment'] = 'Unknown arguments: ' + ' '.join([str(item) for item in args])
+        return ret
+    eargs = ''
+    for kw in ['rx', 'tx', 'rx-mini', 'rx-jumbo']:
+        value = kwargs.get(kw)
+        if value is not None:
+            eargs += ' ' + kw + ' ' + str(value)
+    if not eargs:
+        return ret
+    cmd += eargs
+    print cmd
+    out = __salt__['cmd.run'](cmd)
+    if out:
+        ret['comment'] = out
+    else:
+        ret['comment'] = eargs.strip()
+        ret['result'] = True
+    return ret
+
+
+def mod_bufsize(iface, *args, **kwargs):
+    '''
+    Modify network interface buffers (currently linux only)
+
+    CLI Example::
+
+        salt '*' network.getBuffers
+    '''
+    if __grains__['kernel'] == 'Linux':
+        if os.path.exists('/sbin/ethtool'):
+            return _mod_bufsize_linux(iface, *args, **kwargs)
+
+    return False

@@ -4,6 +4,7 @@
 import os
 import yaml
 import shutil
+import time
 
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath
@@ -40,19 +41,23 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         data = '\n'.join(data)
         self.assertIn('minion', data)
         self.assertNotIn('sub_minion', data)
+        time.sleep(2)
         data = self.run_salt('-C "min* and not G@test_grain:foo" test.ping')
         data = '\n'.join(data)
         self.assertIn('minion', data)
         self.assertNotIn('sub_minion', data)
+        time.sleep(2)
         data = self.run_salt('-C "min* not G@test_grain:foo" test.ping')
         data = '\n'.join(data)
         self.assertIn('minion', data)
         self.assertNotIn('sub_minion', data)
+        time.sleep(2)
         match = 'P@test_grain:^cheese$ and * and G@test_grain:cheese'
         data = self.run_salt('-t 1 -C \'{0}\' test.ping'.format(match))
         data = '\n'.join(data)
         self.assertIn('minion', data)
         self.assertNotIn('sub_minion', data)
+        time.sleep(2)
         match = 'L@sub_minion and E@.*'
         data = self.run_salt('-t 1 -C "{0}" test.ping'.format(match))
         data = '\n'.join(data)
@@ -108,10 +113,18 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         self.assertIn('sub_minion', data)
         self.assertNotIn('minion', data.replace('sub_minion', 'stub'))
         data = self.run_salt('-G "planets:pluto" test.ping')
+        expect = None
+        if self.master_opts['transport'] == 'zeromq':
+            expect = (
+                'No minions matched the target. '
+                'No command was sent, no jid was '
+                'assigned.'
+            )
+        elif self.master_opts['transport'] == 'raet':
+            expect = ''
         self.assertEqual(
             ''.join(data),
-            'No minions matched the target. No command was sent, no jid was '
-            'assigned.'
+            expect
         )
         # Nested grain (string value)
         data = self.run_salt('-t 1 -G "level1:level2:foo" test.ping')
@@ -208,15 +221,15 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         '''
         Test to see if we're not auto-adding '*' and 'sys.doc' to the call
         '''
-        data = self.run_salt('-d')
+        data = self.run_salt('-d -t 20')
         self.assertIn('user.add:', data)
-        data = self.run_salt('\'*\' -d')
+        data = self.run_salt('\'*\' -d -t 20')
         self.assertIn('user.add:', data)
-        data = self.run_salt('\'*\' -d user')
+        data = self.run_salt('\'*\' -d user -t 20')
         self.assertIn('user.add:', data)
-        data = self.run_salt('\'*\' sys.doc -d user')
+        data = self.run_salt('\'*\' sys.doc -d user -t 20')
         self.assertIn('user.add:', data)
-        data = self.run_salt('\'*\' sys.doc user')
+        data = self.run_salt('\'*\' sys.doc user -t 20')
         self.assertIn('user.add:', data)
 
     def test_salt_documentation_too_many_arguments(self):

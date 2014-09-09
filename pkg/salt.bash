@@ -5,7 +5,6 @@
 # TODO: solve somehow completion for  salt -G pythonversion:[tab]
 #       (not sure what to do with lists)
 # TODO: --range[tab] --   how?
-# TODO: -E --exsel[tab] -- how?
 # TODO: --compound[tab] -- how?
 # TODO: use history to extract some words, esp. if ${cur} is empty
 # TODO: TEST EVERYTHING a lot
@@ -45,7 +44,7 @@ _salt(){
     opts="-h --help -d --doc --documentation --version --versions-report -c \
           --config-dir= -v --verbose -t --timeout= -s --static -b --batch= \
           --batch-size= -E --pcre -L --list -G --grain --grain-pcre -N \
-          --nodegroup -R --range -C --compound -X --exsel -I --pillar \
+          --nodegroup -R --range -C --compound -I --pillar \
           --return= -a --auth= --eauth= --extended-auth= -T --make-token -S \
           --ipcidr --out=pprint --out=yaml --out=overstatestage --out=json \
           --out=raw --out=highstate --out=key --out=txt --no-color --out-indent= "
@@ -108,9 +107,6 @@ _salt(){
         ;;
      -b|--batch|--batch-size)
         COMPREPLY=($(compgen -W "1 2 3 4 5 6 7 8 9 10 15 20 30 40 50 60 70 80 90 100 120 150 200"))
-        return 0
-        ;;
-     -X|--exsel) # TODO: finish this one? how?
         return 0
         ;;
      -N|--nodegroup)  
@@ -267,7 +263,7 @@ _saltcp(){
     opts="-t --timeout= -s --static -b --batch= --batch-size= \
           -h --help --version --versions-report -c --config-dir= \
           -E --pcre -L --list -G --grain --grain-pcre -N --nodegroup \ 
-          -R --range -C --compound -X --exsel -I --pillar \
+          -R --range -C --compound -I --pillar \
           --out=pprint --out=yaml --out=overstatestage --out=json --out=raw \
           --out=highstate --out=key --out=txt --no-color --out-indent= "
     if [[ "${cur}" == -* ]] ; then

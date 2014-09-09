@@ -162,11 +162,18 @@ Activate the virtualenv::
 
     source /path/to/your/virtualenv/bin/activate
 
-Install Salt (and dependencies) into the virtualenv::
+Install Salt (and dependencies) into the virtualenv.
 
-    pip install -r requirements.txt
+ZeroMQ Transport:
+
+.. code-block:: bash
+
+    pip install -r zeromq-requirements.txt
     pip install psutil
     pip install -e .
+
+
+.. note:: Installing M2Crypto
 
 .. note:: Installing M2Crypto
 
@@ -175,6 +182,15 @@ Install Salt (and dependencies) into the virtualenv::
     while installing M2Crypto, try installing it with the following command::
 
         env SWIG_FEATURES="-cpperraswarn -includeall -D__`uname -m`__ -I/usr/include/openssl" pip install M2Crypto
+
+
+RAET Transport:
+
+.. code-block:: bash
+
+    pip install -r raet-requirements.txt
+    pip install psutil
+    pip install -e .
 
 
 Running a self-contained development version
@@ -244,7 +260,7 @@ Once the minion starts, you may see an error like the following::
 
     zmq.core.error.ZMQError: ipc path "/path/to/your/virtualenv/var/run/salt/minion/minion_event_7824dcbcfd7a8f6755939af70b96249f_pub.ipc" is longer than 107 characters (sizeof(sockaddr_un.sun_path)).
 
-This means the the path to the socket the minion is using is too long. This is
+This means that the path to the socket the minion is using is too long. This is
 a system limitation, so the only workaround is to reduce the length of this
 path. This can be done in a couple different ways:
 

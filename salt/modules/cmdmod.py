@@ -3,12 +3,12 @@
 A module for shelling out
 
 Keep in mind that this module is insecure, in that it can give whomever has
-access to the master root execution access to all salt minions
+access to the master root execution access to all salt minions.
 '''
 
 # Import python libs
+import time
 import functools
-import json
 import glob
 import logging
 import os
@@ -16,6 +16,7 @@ import shutil
 import subprocess
 import sys
 import traceback
+from salt.utils import vt
 
 # Import salt libs
 import salt.utils
@@ -60,91 +61,6 @@ def _chroot_pids(chroot):
         except OSError:
             pass
     return pids
-
-
-def _chugid(runas):
-    uinfo = pwd.getpwnam(runas)
-    supgroups_seen = set()
-
-    # The line below used to exclude the current user's primary gid.
-    # However, when root belongs to more than one group
-    # this causes root's primary group of '0' to be dropped from
-    # his grouplist.  On FreeBSD, at least, this makes some
-    # command executions fail with 'access denied'.
-    #
-    # The Python documentation says that os.setgroups sets only
-    # the supplemental groups for a running process.  On FreeBSD
-    # this does not appear to be strictly true.
-
-    # supgroups = [
-    #     g.gr_gid for g in grp.getgrall()
-    #     if uinfo.pw_name in g.gr_mem and g.gr_gid != uinfo.pw_gid
-    #        and g.gr_gid not in supgroups_seen and not supgroups_seen.add(g.gr_gid)
-    # ]
-
-    group_list = __salt__['user.list_groups'](runas)
-    supgroups = []
-    for group_name in group_list:
-        gid = __salt__['group.info'](group_name)['gid']
-        if (gid not in supgroups_seen
-           and not supgroups_seen.add(gid)):
-            supgroups.append(gid)
-
-    # No logging can happen on this function
-    #
-    # 08:46:32,161 [salt.loaded.int.module.cmdmod:276 ][DEBUG   ] stderr: Traceback (most recent call last):
-    #   File "/usr/lib/python2.7/logging/__init__.py", line 870, in emit
-    #     self.flush()
-    #   File "/usr/lib/python2.7/logging/__init__.py", line 832, in flush
-    #     self.stream.flush()
-    # IOError: [Errno 9] Bad file descriptor
-    # Logged from file cmdmod.py, line 59
-    # 08:46:17,481 [salt.loaded.int.module.cmdmod:59  ][DEBUG   ] Switching user 0 -> 1008 and group 0 -> 1012 if needed
-    #
-    # apparently because we closed fd's on Popen, though if not closed, output
-    # would also go to its stderr
-
-    if os.getgid() != uinfo.pw_gid:
-        try:
-            os.setgid(uinfo.pw_gid)
-        except OSError as err:
-            raise CommandExecutionError(
-                'Failed to change from gid {0} to {1}. Error: {2}'.format(
-                    os.getgid(), uinfo.pw_gid, err
-                )
-            )
-
-    # Set supplemental groups
-    if sorted(os.getgroups()) != sorted(supgroups):
-        try:
-            os.setgroups(supgroups)
-        except OSError as err:
-            raise CommandExecutionError(
-                'Failed to set supplemental groups to {0}. Error: {1}'.format(
-                    supgroups, err
-                )
-            )
-
-    if os.getuid() != uinfo.pw_uid:
-        try:
-            os.setuid(uinfo.pw_uid)
-        except OSError as err:
-            raise CommandExecutionError(
-                'Failed to change from uid {0} to {1}. Error: {2}'.format(
-                    os.getuid(), uinfo.pw_uid, err
-                )
-            )
-
-
-def _chugid_and_umask(runas, umask):
-    '''
-    Helper method for for subprocess.Popen to initialise uid/gid and umask
-    for the new process.
-    '''
-    if runas is not None:
-        _chugid(runas)
-    if umask is not None:
-        os.umask(umask)
 
 
 def _render_cmd(cmd, cwd, template, saltenv='base'):
@@ -229,7 +145,7 @@ def _run(cmd,
          stdin=None,
          stdout=subprocess.PIPE,
          stderr=subprocess.PIPE,
-         output_loglevel='info',
+         output_loglevel='debug',
          quiet=False,
          runas=None,
          shell=DEFAULT_SHELL,
@@ -242,7 +158,8 @@ def _run(cmd,
          timeout=None,
          with_communicate=True,
          reset_system_locale=True,
-         saltenv='base'):
+         saltenv='base',
+         use_vt=False):
     '''
     Do the DRY thing and only call subprocess.Popen() once
     '''
@@ -254,10 +171,10 @@ def _run(cmd,
             'instead.'
         )
 
-    if not _is_valid_shell(shell):
+    if _is_valid_shell(shell) is False:
         log.warning(
             'Attempt to run a shell command with what may be an invalid shell! '
-            'Check to ensure that she shell <{0}> is valid for this user.'
+            'Check to ensure that the shell <{0}> is valid for this user.'
             .format(shell))
 
     # Set the default working directory to the home directory of the user
@@ -329,26 +246,24 @@ def _run(cmd,
         try:
             # Getting the environment for the runas user
             # There must be a better way to do this.
-            py_code = 'import os, json;' \
-                      'print(json.dumps(os.environ.__dict__))'
+            py_code = '''import os, itertools; print \"\\0\".join(itertools.chain(*os.environ.items()))'''
             if __grains__['os'] in ['MacOS', 'Darwin']:
-                env_cmd = ('sudo -i -u {1} -- "{2}"'
-                           ).format(shell, runas, sys.executable)
+                env_cmd = ('sudo -i -u {0} -- "{1}"'
+                           ).format(runas, sys.executable)
             elif __grains__['os'] in ['FreeBSD']:
                 env_cmd = ('su - {1} -c "{0} -c \'{2}\'"'
                            ).format(shell, runas, sys.executable)
             else:
                 env_cmd = ('su -s {0} - {1} -c "{2}"'
                            ).format(shell, runas, sys.executable)
-            env_json = subprocess.Popen(
+            env_encoded = subprocess.Popen(
                 env_cmd,
                 shell=python_shell,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE
             ).communicate(py_code)[0]
-            env_json = (filter(lambda x: x.startswith('{') and x.endswith('}'),
-                               env_json.splitlines()) or ['{}']).pop()
-            env_runas = json.loads(env_json).get('data', {})
+            import itertools
+            env_runas = dict(itertools.izip(*[iter(env_encoded.split(b'\0'))]*2))
             env_runas.update(env)
             env = env_runas
         except ValueError:
@@ -406,9 +321,9 @@ def _run(cmd,
 
     if runas or umask:
         kwargs['preexec_fn'] = functools.partial(
-                _chugid_and_umask,
-                runas,
-                _umask)
+            salt.utils.chugid_and_umask,
+            runas,
+            _umask)
 
     if not salt.utils.is_windows():
         # close_fds is not supported on Windows platforms if you redirect
@@ -423,38 +338,109 @@ def _run(cmd,
             .format(cwd)
         )
 
-    # This is where the magic happens
-    try:
-        proc = salt.utils.timed_subprocess.TimedProc(cmd, **kwargs)
-    except (OSError, IOError) as exc:
-        raise CommandExecutionError(
-            'Unable to run command {0!r} with the context {1!r}, reason: {2}'
-            .format(cmd, kwargs, exc)
-        )
+    if not use_vt:
+        # This is where the magic happens
+        try:
+            proc = salt.utils.timed_subprocess.TimedProc(cmd, **kwargs)
+        except (OSError, IOError) as exc:
+            raise CommandExecutionError(
+                'Unable to run command {0!r} with the context {1!r}, reason: {2}'
+                .format(cmd, kwargs, exc)
+            )
 
-    try:
-        proc.wait(timeout)
-    except TimedProcTimeoutError as exc:
-        ret['stdout'] = str(exc)
-        ret['stderr'] = ''
-        ret['retcode'] = None
+        try:
+            proc.wait(timeout)
+        except TimedProcTimeoutError as exc:
+            ret['stdout'] = str(exc)
+            ret['stderr'] = ''
+            ret['retcode'] = None
+            ret['pid'] = proc.process.pid
+            # ok return code for timeouts?
+            ret['retcode'] = 1
+            return ret
+
+        out, err = proc.stdout, proc.stderr
+
+        if rstrip:
+            if out is not None:
+                out = out.rstrip()
+            if err is not None:
+                err = err.rstrip()
         ret['pid'] = proc.process.pid
-        # ok return code for timeouts?
-        ret['retcode'] = 1
-        return ret
-
-    out, err = proc.stdout, proc.stderr
-
-    if rstrip:
-        if out is not None:
-            out = out.rstrip()
-        if err is not None:
-            err = err.rstrip()
-
-    ret['stdout'] = out
-    ret['stderr'] = err
-    ret['pid'] = proc.process.pid
-    ret['retcode'] = proc.process.returncode
+        ret['retcode'] = proc.process.returncode
+        ret['stdout'] = out
+        ret['stderr'] = err
+    else:
+        to = ''
+        if timeout:
+            to = ' (timeout: {0}s)'.format(timeout)
+        log.debug('Running {0} in VT{1}'.format(cmd, to))
+        stdout, stderr = '', ''
+        now = time.time()
+        if timeout:
+            will_timeout = now + timeout
+        else:
+            will_timeout = -1
+        try:
+            proc = vt.Terminal(cmd,
+                               shell=True,
+                               log_stdout=True,
+                               log_stderr=True,
+                               cwd=cwd,
+                               user=runas,
+                               umask=umask,
+                               env=env,
+                               log_stdin_level=output_loglevel,
+                               log_stdout_level=output_loglevel,
+                               log_stderr_level=output_loglevel,
+                               stream_stdout=True,
+                               stream_stderr=True)
+            # consume output
+            finished = False
+            ret['pid'] = proc.pid
+            while not finished:
+                try:
+                    try:
+                        time.sleep(0.5)
+                        try:
+                            cstdout, cstderr = proc.recv()
+                        except IOError:
+                            cstdout, cstderr = '', ''
+                        if cstdout:
+                            stdout += cstdout
+                        else:
+                            cstdout = ''
+                        if cstderr:
+                            stderr += cstderr
+                        else:
+                            cstderr = ''
+                        if not cstdout and not cstderr and not proc.isalive():
+                            finished = True
+                        if timeout and (time.time() > will_timeout):
+                            ret['stderr'] = (
+                                'SALT: Timeout after {0}s\n{1}').format(
+                                    timeout, stderr)
+                            ret['retcode'] = None
+                            break
+                    except KeyboardInterrupt:
+                        ret['stderr'] = 'SALT: User break\n{0}'.format(stderr)
+                        ret['retcode'] = 1
+                        break
+                except vt.TerminalException as exc:
+                    log.error(
+                        'VT: {0}'.format(exc),
+                        exc_info_on_loglevel=logging.DEBUG)
+                    ret = {'retcode': 1, 'pid': '2'}
+                    break
+                # only set stdout on sucess as we already mangled in other
+                # cases
+                ret['stdout'] = stdout
+                if finished:
+                    ret['stderr'] = stderr
+                    ret['retcode'] = proc.exitstatus
+                ret['pid'] = proc.pid
+        finally:
+            proc.close(terminate=True, kill=True)
     try:
         __context__['retcode'] = ret['retcode']
     except NameError:
@@ -536,12 +522,13 @@ def run(cmd,
         template=None,
         rstrip=True,
         umask=None,
-        output_loglevel='info',
+        output_loglevel='debug',
         quiet=False,
         timeout=None,
         reset_system_locale=True,
         ignore_retcode=False,
         saltenv='base',
+        use_vt=False,
         **kwargs):
     '''
     Execute the passed command and return the output as a string
@@ -576,6 +563,15 @@ def run(cmd,
     .. code-block:: bash
 
         salt '*' cmd.run "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
+
+    If an equal sign (``=``) appears in an argument to a Salt command it is
+    interpreted as a keyword argument in the format ``key=val``. That
+    processing can be bypassed in order to pass an equal sign through to the
+    remote shell command by manually specifying the kwarg:
+
+    .. code-block:: bash
+
+        salt '*' cmd.run cmd='sed -e s/=/:/g'
     '''
     ret = _run(cmd,
                runas=runas,
@@ -593,7 +589,8 @@ def run(cmd,
                quiet=quiet,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
-               saltenv=saltenv)
+               saltenv=saltenv,
+               use_vt=use_vt)
 
     if 'pid' in ret and '__pub_jid' in kwargs:
         # Stuff the child pid in the JID file
@@ -636,12 +633,13 @@ def run_stdout(cmd,
                template=None,
                rstrip=True,
                umask=None,
-               output_loglevel='info',
+               output_loglevel='debug',
                quiet=False,
                timeout=None,
                reset_system_locale=True,
                ignore_retcode=False,
                saltenv='base',
+               use_vt=False,
                **kwargs):
     '''
     Execute a command, and only return the standard out
@@ -686,7 +684,8 @@ def run_stdout(cmd,
                quiet=quiet,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
-               saltenv=saltenv)
+               saltenv=saltenv,
+               use_vt=use_vt)
 
     lvl = _check_loglevel(output_loglevel, quiet)
     if lvl is not None:
@@ -717,12 +716,13 @@ def run_stderr(cmd,
                template=None,
                rstrip=True,
                umask=None,
-               output_loglevel='info',
+               output_loglevel='debug',
                quiet=False,
                timeout=None,
                reset_system_locale=True,
                ignore_retcode=False,
                saltenv='base',
+               use_vt=False,
                **kwargs):
     '''
     Execute a command and only return the standard error
@@ -767,6 +767,7 @@ def run_stderr(cmd,
                quiet=quiet,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
+               use_vt=use_vt,
                saltenv=saltenv)
 
     lvl = _check_loglevel(output_loglevel, quiet)
@@ -798,12 +799,13 @@ def run_all(cmd,
             template=None,
             rstrip=True,
             umask=None,
-            output_loglevel='info',
+            output_loglevel='debug',
             quiet=False,
             timeout=None,
             reset_system_locale=True,
             ignore_retcode=False,
             saltenv='base',
+            use_vt=False,
             **kwargs):
     '''
     Execute the passed command and return a dict of return data
@@ -848,7 +850,8 @@ def run_all(cmd,
                quiet=quiet,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
-               saltenv=saltenv)
+               saltenv=saltenv,
+               use_vt=use_vt)
 
     lvl = _check_loglevel(output_loglevel, quiet)
     if lvl is not None:
@@ -878,12 +881,13 @@ def retcode(cmd,
             clean_env=False,
             template=None,
             umask=None,
-            output_loglevel='info',
+            output_loglevel='debug',
             quiet=False,
             timeout=None,
             reset_system_locale=True,
             ignore_retcode=False,
             saltenv='base',
+            use_vt=False,
             **kwargs):
     '''
     Execute a shell command and return the command's return code.
@@ -928,7 +932,8 @@ def retcode(cmd,
               quiet=quiet,
               timeout=timeout,
               reset_system_locale=reset_system_locale,
-              saltenv=saltenv)
+              saltenv=saltenv,
+              use_vt=use_vt)
 
     lvl = _check_loglevel(output_loglevel, quiet)
     if lvl is not None:
@@ -959,6 +964,7 @@ def _retcode_quiet(cmd,
                    reset_system_locale=True,
                    ignore_retcode=False,
                    saltenv='base',
+                   use_vt=False,
                    **kwargs):
     '''
     Helper for running commands quietly for minion startup.
@@ -979,6 +985,7 @@ def _retcode_quiet(cmd,
                    reset_system_locale=reset_system_locale,
                    ignore_retcode=ignore_retcode,
                    saltenv=saltenv,
+                   use_vt=use_vt,
                    **kwargs)
 
 
@@ -990,14 +997,15 @@ def script(source,
            shell=DEFAULT_SHELL,
            python_shell=True,
            env=None,
-           template='jinja',
+           template=None,
            umask=None,
-           output_loglevel='info',
+           output_loglevel='debug',
            quiet=False,
            timeout=None,
            reset_system_locale=True,
            __env__=None,
            saltenv='base',
+           use_vt=False,
            **kwargs):
     '''
     Download a script from a remote location and execute the script locally.
@@ -1082,7 +1090,8 @@ def script(source,
                umask=umask,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
-               saltenv=saltenv)
+               saltenv=saltenv,
+               use_vt=use_vt)
     _cleanup_tempfile(path)
     return ret
 
@@ -1100,6 +1109,8 @@ def script_retcode(source,
                    reset_system_locale=True,
                    __env__=None,
                    saltenv='base',
+                   output_loglevel='debug',
+                   use_vt=False,
                    **kwargs):
     '''
     Download a script from a remote location and execute the script locally.
@@ -1148,6 +1159,8 @@ def script_retcode(source,
                   timeout=timeout,
                   reset_system_locale=reset_system_locale,
                   saltenv=saltenv,
+                  output_loglevel=output_loglevel,
+                  use_vt=use_vt,
                   **kwargs)['retcode']
 
 
@@ -1203,7 +1216,7 @@ def exec_code(lang, code, cwd=None):
         salt '*' cmd.exec_code ruby 'puts "cheese"'
     '''
     codefile = salt.utils.mkstemp()
-    with salt.utils.fopen(codefile, 'w+') as fp_:
+    with salt.utils.fopen(codefile, 'w+t') as fp_:
         fp_.write(code)
 
     cmd = '{0} {1}'.format(lang, codefile)
@@ -1212,16 +1225,47 @@ def exec_code(lang, code, cwd=None):
     return ret
 
 
-def run_chroot(root, cmd):
+def tty(device, echo=None):
     '''
-    Chroot into a directory and run a cmd, this routines calls cmd.run_all
-    wrapped in `chroot` with dev and proc mounted in the chroot
+    Echo a string to a specific tty
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' cmd.chroot_run /var/lib/lxc/container_name/rootfs 'sh /tmp/bootstrap.sh'
+        salt '*' cmd.tty tty0 'This is a test'
+        salt '*' cmd.tty pts3 'This is a test'
+    '''
+    if device.startswith('tty'):
+        teletype = '/dev/{0}'.format(device)
+    elif device.startswith('pts'):
+        teletype = '/dev/{0}'.format(device.replace('pts', 'pts/'))
+    else:
+        return {'Error': 'The specified device is not a valid TTY'}
+    try:
+        with salt.utils.fopen(teletype, 'wb') as tty_device:
+            tty_device.write(echo)
+        return {
+            'Success': 'Message was successfully echoed to {0}'.format(teletype)
+        }
+    except IOError:
+        return {
+            'Error': 'Echoing to {0} returned error'.format(teletype)
+        }
+
+
+def run_chroot(root, cmd):
+    '''
+    .. versionadded:: 2014.7.0
+
+    This function runs :mod:`cmd.run_all <salt.modules.cmdmod.run_all>` wrapped
+    within a chroot, with dev and proc mounted in the chroot
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cmd.run_chroot /var/lib/lxc/container_name/rootfs 'sh /tmp/bootstrap.sh'
     '''
     __salt__['mount.mount'](
         os.path.join(root, 'dev'),

@@ -91,7 +91,7 @@ def traceroute(host):
     cmd = 'tracert {0}'.format(salt.utils.network.sanitize_host(host))
     lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
-        if not ' ' in line:
+        if ' ' not in line:
             continue
         if line.startswith('Trac'):
             continue
@@ -178,6 +178,25 @@ def dig(host):
     '''
     cmd = 'dig {0}'.format(salt.utils.network.sanitize_host(host))
     return __salt__['cmd.run'](cmd)
+
+
+def interfaces_names():
+    '''
+    Return a list of all the interfaces names
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.interfaces_names
+    '''
+
+    ret = []
+    with salt.utils.winapi.Com():
+        c = wmi.WMI()
+        for iface in c.Win32_NetworkAdapter(NetEnabled=True):
+            ret.append(iface.NetConnectionID)
+    return ret
 
 
 def interfaces():

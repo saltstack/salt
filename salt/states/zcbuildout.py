@@ -133,7 +133,9 @@ def installed(name,
               debug=False,
               verbose=False,
               unless=None,
-              onlyif=None):
+              onlyif=None,
+              use_vt=False,
+              loglevel='debug'):
     '''
     Install buildout in a specific directory
 
@@ -155,12 +157,12 @@ def installed(name,
     runas
         user used to run buildout as
 
-        .. deprecated:: 2014.1.4 (Hydrogen)
+        .. deprecated:: 2014.1.4
 
     user
         user used to run buildout as
 
-        .. versionadded:: 2014.1.4 (Hydrogen)
+        .. versionadded:: 2014.1.4
 
     env
         environment variables to set when running
@@ -198,13 +200,19 @@ def installed(name,
     verbose
         run buildout in verbose mode (-vvvvv)
 
+    use_vt
+        Use the new salt VT to stream output [experimental]
+
+    loglevel
+        loglevel for buildout commands
+
     '''
     ret = {}
 
     salt.utils.warn_until(
         'Lithium',
         'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 2014.1.4 (Hydrogen).',
+        'added in 2014.1.4.',
         _dont_call_warnings=True
     )
     if runas:
@@ -248,6 +256,7 @@ def installed(name,
         verbose=verbose,
         onlyif=onlyif,
         unless=unless,
+        use_vt=use_vt
     )
     ret.update(_ret_status(func(**kwargs), name, quiet=quiet))
     return ret

@@ -7,7 +7,9 @@ The Salt master daemon, used to control the Salt minions
 Synopsis
 ========
 
-salt-master [ options ]
+.. code-block:: bash
+
+    salt-master [ options ]
 
 Description
 ===========

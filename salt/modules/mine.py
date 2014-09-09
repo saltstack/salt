@@ -26,6 +26,14 @@ def _auth():
     return __context__['auth']
 
 
+def _mine_function_available(func):
+    if func not in __salt__:
+        log.error('Function {0} in mine_functions not available'
+                 .format(func))
+        return False
+    return True
+
+
 def update(clear=False):
     '''
     Execute the configured functions and send the data back up to the master
@@ -51,16 +59,24 @@ def update(clear=False):
     m_data = __salt__['config.option']('mine_functions', {})
     data = {}
     for func in m_data:
-        if func not in __salt__:
-            log.error('Function {0} in mine_functions not available'
-                      .format(func))
-            continue
         try:
             if m_data[func] and isinstance(m_data[func], dict):
-                data[func] = __salt__[func](**m_data[func])
+                mine_func = m_data[func].pop('mine_function', func)
+                if not _mine_function_available(mine_func):
+                    continue
+                data[func] = __salt__[mine_func](**m_data[func])
             elif m_data[func] and isinstance(m_data[func], list):
-                data[func] = __salt__[func](*m_data[func])
+                mine_func = func
+                if isinstance(m_data[func][0], dict) and 'mine_function' in m_data[func][0]:
+                    mine_func = m_data[func][0]['mine_function']
+                    m_data[func].pop(0)
+
+                if not _mine_function_available(mine_func):
+                    continue
+                data[func] = __salt__[mine_func](*m_data[func])
             else:
+                if not _mine_function_available(func):
+                    continue
                 data[func] = __salt__[func]()
         except Exception:
             log.error('Function {0} in mine_functions failed to execute'
@@ -73,14 +89,14 @@ def update(clear=False):
                 old.update(data)
                 data = old
         return __salt__['data.update']('mine_cache', data)
-    auth = _auth()
     load = {
             'cmd': '_mine',
             'data': data,
             'id': __opts__['id'],
             'clear': clear,
-            'tok': auth.gen_token('salt'),
     }
+    if __opts__.get('transport', '') == 'zeromq':
+        load['tok'] = _auth().gen_token('salt')
     # Changed for transport plugin
     # sreq = salt.payload.SREQ(__opts__['master_uri'])
     # ret = sreq.send('aes', auth.crypticle.dumps(load))
@@ -98,12 +114,14 @@ def send(func, *args, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' mine.send network.interfaces eth0
+        salt '*' mine.send network.ip_addrs eth0
+        salt '*' mine.send eth0_ip_addrs mine_function=network.ip_addrs eth0
     '''
-    if not func in __salt__:
+    mine_func = kwargs.pop('mine_function', func)
+    if mine_func not in __salt__:
         return False
     data = {}
-    arg_data = salt.utils.arg_lookup(__salt__[func])
+    arg_data = salt.utils.arg_lookup(__salt__[mine_func])
     func_data = copy.deepcopy(kwargs)
     for ind, _ in enumerate(arg_data.get('args', [])):
         try:
@@ -111,15 +129,18 @@ def send(func, *args, **kwargs):
         except IndexError:
             # Safe error, arg may be in kwargs
             pass
-    f_call = salt.utils.format_call(__salt__[func], func_data)
+    f_call = salt.utils.format_call(__salt__[mine_func], func_data)
+    for arg in args:
+        if arg not in f_call['args']:
+            f_call['args'].append(arg)
     try:
         if 'kwargs' in f_call:
-            data[func] = __salt__[func](*f_call['args'], **f_call['kwargs'])
+            data[func] = __salt__[mine_func](*f_call['args'], **f_call['kwargs'])
         else:
-            data[func] = __salt__[func](*f_call['args'])
+            data[func] = __salt__[mine_func](*f_call['args'])
     except Exception as exc:
         log.error('Function {0} in mine.send failed to execute: {1}'
-                  .format(func, exc))
+                  .format(mine_func, exc))
         return False
     if __opts__['file_client'] == 'local':
         old = __salt__['data.getval']('mine_cache')
@@ -127,13 +148,13 @@ def send(func, *args, **kwargs):
             old.update(data)
             data = old
         return __salt__['data.update']('mine_cache', data)
-    auth = _auth()
     load = {
             'cmd': '_mine',
             'data': data,
             'id': __opts__['id'],
-            'tok': auth.gen_token('salt'),
     }
+    if __opts__.get('transport', '') == 'zeromq':
+        load['tok'] = _auth().gen_token('salt')
     # Changed for transport plugin
     # sreq = salt.payload.SREQ(__opts__['master_uri'])
     # ret = sreq.send('aes', auth.crypticle.dumps(load))
@@ -182,15 +203,15 @@ def get(tgt, fun, expr_form='glob'):
             if isinstance(data, dict) and fun in data:
                 ret[__opts__['id']] = data[fun]
         return ret
-    auth = _auth()
     load = {
             'cmd': '_mine_get',
             'id': __opts__['id'],
             'tgt': tgt,
             'fun': fun,
             'expr_form': expr_form,
-            'tok': auth.gen_token('salt'),
     }
+    if __opts__.get('transport', '') == 'zeromq':
+        load['tok'] = _auth().gen_token('salt')
     # Changed for transport plugin
     # sreq = salt.payload.SREQ(__opts__['master_uri'])
     # ret = sreq.send('aes', auth.crypticle.dumps(load))
@@ -215,13 +236,13 @@ def delete(fun):
         if isinstance(data, dict) and fun in data:
             del data[fun]
         return __salt__['data.update']('mine_cache', data)
-    auth = _auth()
     load = {
             'cmd': '_mine_delete',
             'id': __opts__['id'],
             'fun': fun,
-            'tok': auth.gen_token('salt'),
     }
+    if __opts__.get('transport', '') == 'zeromq':
+        load['tok'] = _auth().gen_token('salt')
     # Changed for transport plugin
     # sreq = salt.payload.SREQ(__opts__['master_uri'])
     # ret = sreq.send('aes', auth.crypticle.dumps(load))
@@ -243,12 +264,12 @@ def flush():
     '''
     if __opts__['file_client'] == 'local':
         return __salt__['data.update']('mine_cache', {})
-    auth = _auth()
     load = {
             'cmd': '_mine_flush',
             'id': __opts__['id'],
-            'tok': auth.gen_token('salt'),
     }
+    if __opts__.get('transport', '') == 'zeromq':
+        load['tok'] = _auth().gen_token('salt')
     # Changed for transport plugin
     # sreq = salt.payload.SREQ(__opts__['master_uri'])
     # ret = sreq.send('aes', auth.crypticle.dumps(load))
@@ -305,8 +326,9 @@ def get_docker(interfaces=None, cidrs=None):
         else:
             for interface in interfaces:
                 if interface in containers['host']['interfaces']:
-                    for item in containers['host']['interfaces'][interface]['inet']:
-                        host_ips.append(item['address'])
+                    if 'inet' in containers['host']['interfaces'][interface]:
+                        for item in containers['host']['interfaces'][interface]['inet']:
+                            host_ips.append(item['address'])
         host_ips = list(set(host_ips))
 
         # Filter out ips from host_ips with cidrs
@@ -327,11 +349,11 @@ def get_docker(interfaces=None, cidrs=None):
                     # If port is 0.0.0.0, then we must get the docker host IP
                     if dock_port['IP'] == '0.0.0.0':
                         for ip_ in host_ips:
-                            proxy_lists[container['Image']].setdefault('ipv4', []).append(
+                            proxy_lists[container['Image']].setdefault('ipv4', {}).setdefault(dock_port['PrivatePort'], []).append(
                                 '{0}:{1}'.format(ip_, dock_port['PublicPort']))
-                            proxy_lists[container['Image']]['ipv4'] = list(set(proxy_lists[container['Image']]['ipv4']))
+                            proxy_lists[container['Image']]['ipv4'][dock_port['PrivatePort']] = list(set(proxy_lists[container['Image']]['ipv4'][dock_port['PrivatePort']]))
                     elif dock_port['IP']:
-                        proxy_lists[container['Image']].setdefault('ipv4', []).append(
+                        proxy_lists[container['Image']].setdefault('ipv4', {}).setdefault(dock_port['PrivatePort'], []).append(
                             '{0}:{1}'.format(dock_port['IP'], dock_port['PublicPort']))
-                        proxy_lists[container['Image']]['ipv4'] = list(set(proxy_lists[container['Image']]['ipv4']))
+                        proxy_lists[container['Image']]['ipv4'][dock_port['PrivatePort']] = list(set(proxy_lists[container['Image']]['ipv4'][dock_port['PrivatePort']]))
     return proxy_lists

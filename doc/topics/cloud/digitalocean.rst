@@ -1,20 +1,16 @@
 ==================================
-Getting Started With Digital Ocean
+Getting Started With DigitalOcean
 ==================================
 
-Digital Ocean is a public cloud provider that specializes in Linux instances.
-
-
-Dependencies
-============
-This driver requires the Python ``requests`` library to be installed.
+DigitalOcean is a public cloud provider that specializes in Linux instances.
 
 
 Configuration
 =============
-Using Salt for Digital Ocean requires a client_key and an api_key. These can be
-found in the Digital Ocean web interface, in the "My Settings" section, under
-the API Access tab.
+Using Salt for DigitalOcean requires a client_key, an api_key, an ssh_key_file,
+and an ssh_key_name. The client_key and api_key can be found in the Digital
+Ocean web interface, in the "My Settings" section, under the API Access tab.
+The ssh_key_name can be found under the "SSH Keys" section. 
 
 .. code-block:: yaml
 
@@ -25,6 +21,8 @@ the API Access tab.
       provider: digital_ocean
       client_key: wFGEwgregeqw3435gDger
       api_key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
+      ssh_key_file: /path/to/ssh/key/file
+      ssh_key_name: my-key-name
       location: New York 1
 
 
@@ -40,7 +38,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or in the
 
     digitalocean-ubuntu:
         provider: my-digitalocean-config
-        image: Ubuntu 12.10 x64
+        image: Ubuntu 14.04 x32
         size: 512MB
         location: New York 1
         private_networking: True
@@ -111,4 +109,4 @@ command:
 
 .. note::
 
-    Additional documentation is available from `Digital Ocean <https://www.digitalocean.com/community/articles/automated-provisioning-of-digitalocean-cloud-servers-with-salt-cloud-on-ubuntu-12-04>`_.
+    Additional documentation is available from `DigitalOcean <https://www.digitalocean.com/community/articles/automated-provisioning-of-digitalocean-cloud-servers-with-salt-cloud-on-ubuntu-12-04>`_.

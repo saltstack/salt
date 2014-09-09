@@ -6,7 +6,6 @@ Since the Salt minion contains such extensive functionality it can be useful
 to run it standalone. A standalone minion can be used to do a number of
 things:
 
-- Stand up a master server via States (Salting a Salt Master)
 - Use salt-call commands on a system without connectivity to a master
 - Masterless States, run states entirely from files local to the minion
 

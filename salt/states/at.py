@@ -36,12 +36,12 @@ def present(name, timespec, tag=None, runas=None, user=None, job=None):
     runas
         Users run the job.
 
-        .. deprecated:: 2014.1.4 (Hydrogen)
+        .. deprecated:: 2014.1.4
 
     user
         The user to run the at job
 
-        .. versionadded:: 2014.1.4 (Hydrogen)
+        .. versionadded:: 2014.1.4
 
     .. code-block:: yaml
 
@@ -64,7 +64,7 @@ def present(name, timespec, tag=None, runas=None, user=None, job=None):
     salt.utils.warn_until(
         'Lithium',
         'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 2014.1.4 (Hydrogen). Support will be removed in {version}.',
+        'added in 2014.1.4. Support will be removed in {version}.',
         _dont_call_warnings=True
     )
     if runas:
@@ -104,13 +104,13 @@ def present(name, timespec, tag=None, runas=None, user=None, job=None):
     else:
         cmd = '{0} "{1}" | {2} {3}'.format(echo_cmd, name, binary, timespec)
 
-    if runas:
-        luser = __salt__['user.info'](runas)
+    if user:
+        luser = __salt__['user.info'](user)
         if not luser:
-            ret['comment'] = 'User: {0} is not exists'.format(runas)
+            ret['comment'] = 'User: {0} is not exists'.format(user)
             ret['result'] = False
             return ret
-        ret['comment'] = __salt__['cmd.run']('{0}'.format(cmd), runas=runas)
+        ret['comment'] = __salt__['cmd.run']('{0}'.format(cmd), runas=user)
     else:
         ret['comment'] = __salt__['cmd.run']('{0}'.format(cmd))
 

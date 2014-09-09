@@ -28,7 +28,7 @@ __salt__ = {
 }
 log = logging.getLogger(__name__)
 
-SALT_BASE_PATH = os.path.dirname(salt.__file__)
+SALT_BASE_PATH = os.path.abspath(os.path.dirname(salt.__file__))
 LOADED_BASE_NAME = 'salt.loaded'
 
 # Because on the cloud drivers we do `from salt.cloud.libcloudfuncs import *`
@@ -121,7 +121,7 @@ def minion_mods(opts, context=None, whitelist=None):
         import salt.config
         import salt.loader
 
-        __opts__ salt.config.minion_config('/etc/salt/minion')
+        __opts__ = salt.config.minion_config('/etc/salt/minion')
         __salt__ = salt.loader.minion_mods(__opts__)
         __salt__['test.ping']()
     '''
@@ -151,7 +151,7 @@ def raw_mod(opts, name, functions):
         import salt.config
         import salt.loader
 
-        __opts__ salt.config.minion_config('/etc/salt/minion')
+        __opts__ = salt.config.minion_config('/etc/salt/minion')
         testmod = salt.loader.raw_mod(__opts__, 'test', None)
         testmod['test.ping']()
     '''
@@ -166,11 +166,7 @@ def proxy(opts, functions, whitelist=None):
     load = _create_loader(opts, 'proxy', 'proxy')
     pack = {'name': '__proxy__',
             'value': functions}
-    return LazyLoader(load,
-                      functions,
-                      pack,
-                      whitelist=whitelist,
-                      )
+    return load.gen_functions(pack, whitelist=whitelist)
 
 
 def returners(opts, functions, whitelist=None):
@@ -194,7 +190,7 @@ def pillars(opts, functions):
     load = _create_loader(opts, 'pillar', 'pillar')
     pack = {'name': '__salt__',
             'value': functions}
-    return LazyFilterLoader(load, 'ext_pillar', pack=pack)
+    return load.filter_func('ext_pillar', pack)
 
 
 def tops(opts):
@@ -205,7 +201,8 @@ def tops(opts):
         return {}
     whitelist = opts['master_tops'].keys()
     load = _create_loader(opts, 'tops', 'top')
-    return LazyFilterLoader(load, 'top', whitelist=whitelist)
+    topmodules = load.filter_func('top', whitelist=whitelist)
+    return topmodules
 
 
 def wheels(opts, whitelist=None):
@@ -213,7 +210,7 @@ def wheels(opts, whitelist=None):
     Returns the wheels modules
     '''
     load = _create_loader(opts, 'wheel', 'wheel')
-    return LazyLoader(load, whitelist=whitelist)
+    return load.gen_functions(whitelist=whitelist)
 
 
 def outputters(opts):
@@ -225,7 +222,7 @@ def outputters(opts):
         'output',
         'output',
         ext_type_dirs='outputter_dirs')
-    return LazyFilterLoader(load, 'output')
+    return load.filter_func('output')
 
 
 def auth(opts, whitelist=None):
@@ -233,7 +230,7 @@ def auth(opts, whitelist=None):
     Returns the auth modules
     '''
     load = _create_loader(opts, 'auth', 'auth')
-    return LazyLoader(load, whitelist=whitelist)
+    return load.gen_functions(whitelist=whitelist)
 
 
 def fileserver(opts, backends):
@@ -241,7 +238,7 @@ def fileserver(opts, backends):
     Returns the file server modules
     '''
     load = _create_loader(opts, 'fileserver', 'fileserver')
-    return LazyLoader(load, whitelist=backends)
+    return load.gen_functions(whitelist=backends)
 
 
 def roster(opts, whitelist=None):
@@ -249,7 +246,7 @@ def roster(opts, whitelist=None):
     Returns the roster modules
     '''
     load = _create_loader(opts, 'roster', 'roster')
-    return LazyLoader(load, whitelist=whitelist)
+    return load.gen_functions(whitelist=whitelist)
 
 
 def states(opts, functions, whitelist=None):
@@ -267,7 +264,7 @@ def states(opts, functions, whitelist=None):
     load = _create_loader(opts, 'states', 'states')
     pack = {'name': '__salt__',
             'value': functions}
-    return LazyLoader(load, pack=pack, whitelist=whitelist)
+    return load.gen_functions(pack, whitelist=whitelist)
 
 
 def search(opts, returners, whitelist=None):
@@ -291,7 +288,7 @@ def log_handlers(opts):
         int_type='handlers',
         base_path=os.path.join(SALT_BASE_PATH, 'log')
     )
-    return LazyFilterLoader(load, 'setup_handlers')
+    return load.filter_func('setup_handlers')
 
 
 def ssh_wrapper(opts, functions=None):
@@ -310,7 +307,7 @@ def ssh_wrapper(opts, functions=None):
     )
     pack = {'name': '__salt__',
             'value': functions}
-    return LazyLoader(load, pack=pack)
+    return load.gen_functions(pack)
 
 
 def render(opts, functions, states=None):
@@ -327,7 +324,7 @@ def render(opts, functions, states=None):
 
     if states:
         pack.append({'name': '__states__', 'value': states})
-    rend = LazyFilterLoader(load, 'render', pack=pack)
+    rend = load.filter_func('render', pack)
     if not check_render_pipe_str(opts['renderer'], rend):
         err = ('The renderer {0} is unavailable, this error is often because '
                'the needed software is unavailable'.format(opts['renderer']))
@@ -336,7 +333,7 @@ def render(opts, functions, states=None):
     return rend
 
 
-def grains(opts):
+def grains(opts, force_refresh=False):
     '''
     Return the functions for the dynamic grains and the values for the static
     grains.
@@ -374,9 +371,8 @@ def grains(opts):
             opts['grains'] = {}
     else:
         opts['grains'] = {}
-
-    load = _create_loader(opts, 'grains', 'grain')
-    grains_info = load.gen_grains()
+    load = _create_loader(opts, 'grains', 'grain', ext_type_dirs='grains_dirs')
+    grains_info = load.gen_grains(force_refresh)
     grains_info.update(opts['grains'])
     return grains_info
 
@@ -399,7 +395,7 @@ def runner(opts):
     load = _create_loader(
         opts, 'runners', 'runner', ext_type_dirs='runner_dirs'
     )
-    return LazyLoader(load)
+    return load.gen_functions()
 
 
 def queues(opts):
@@ -409,7 +405,21 @@ def queues(opts):
     load = _create_loader(
         opts, 'queues', 'queue', ext_type_dirs='queue_dirs'
     )
-    return LazyLoader(load)
+    return load.gen_functions()
+
+
+def sdb(opts, functions=None, whitelist=None):
+    '''
+    Make a very small database call
+    '''
+    load = _create_loader(opts, 'sdb', 'sdb')
+    pack = {'name': '__sdb__',
+            'value': functions}
+    return LazyLoader(load,
+                      functions,
+                      pack,
+                      whitelist=whitelist,
+                      )
 
 
 def clouds(opts):
@@ -440,6 +450,14 @@ def clouds(opts):
         )
         functions.pop(funcname, None)
     return functions
+
+
+def netapi(opts):
+    '''
+    Return the network api functions
+    '''
+    load = salt.loader._create_loader(opts, 'netapi', 'netapi')
+    return load.gen_functions()
 
 
 def _generate_module(name):
@@ -612,7 +630,7 @@ class Loader(object):
             )
             return mod
         except Exception:
-            log.warning(
+            log.error(
                 'Failed to import {0} {1}, this is due most likely to a '
                 'syntax error:\n'.format(
                     self.tag, name
@@ -782,11 +800,13 @@ class Loader(object):
         for mod in self.modules:
             if not hasattr(mod, '__salt__') or (
                 not in_pack(pack, '__salt__') and
-                not str(mod.__name__).startswith('salt.loaded.int.grain')
+                (not str(mod.__name__).startswith('salt.loaded.int.grain') and
+                 not str(mod.__name__).startswith('salt.loaded.ext.grain'))
             ):
                 mod.__salt__ = funcs
             elif not in_pack(pack, '__salt__') and \
-                    str(mod.__name__).startswith('salt.loaded.int.grain'):
+                    (str(mod.__name__).startswith('salt.loaded.int.grain') or
+                     str(mod.__name__).startswith('salt.loaded.ext.grain')):
                 mod.__salt__.update(funcs)
         return funcs
 
@@ -881,6 +901,7 @@ class Loader(object):
                         getattr(mod, sname) for sname in dir(mod) if
                         isinstance(getattr(mod, sname), mod.__class__)
                     ]
+
                     # reload only custom "sub"modules i.e is a submodule in
                     # parent module that are still available on disk (i.e. not
                     # removed during sync_modules)
@@ -909,7 +930,7 @@ class Loader(object):
                 )
                 continue
             except Exception:
-                log.warning(
+                log.error(
                     'Failed to import {0} {1}, this is due most likely to a '
                     'syntax error. Traceback raised:\n'.format(
                         self.tag, name
@@ -1054,7 +1075,7 @@ class Loader(object):
                 elif virtual is not True and module_name != virtual:
                     # The module is renaming itself. Updating the module name
                     # with the new name
-                    log.debug('Loaded {0} as virtual {1}'.format(
+                    log.trace('Loaded {0} as virtual {1}'.format(
                         module_name, virtual
                     ))
 
@@ -1148,7 +1169,7 @@ class Loader(object):
             funcs[key[key.rindex('.')] + 1:] = fun
         return funcs
 
-    def gen_grains(self):
+    def gen_grains(self, force_refresh=False):
         '''
         Read the grains directory and execute all of the public callable
         members. Then verify that the returns are python dict's and return
@@ -1162,7 +1183,7 @@ class Loader(object):
             if os.path.isfile(cfn):
                 grains_cache_age = int(time.time() - os.path.getmtime(cfn))
                 if self.opts.get('grains_cache_expiration', 300) >= grains_cache_age and not \
-                        self.opts.get('refresh_grains_cache', False):
+                        self.opts.get('refresh_grains_cache', False) and not force_refresh:
                     log.debug('Retrieving grains from cache')
                     try:
                         with salt.utils.fopen(cfn, 'rb') as fp_:
@@ -1171,18 +1192,28 @@ class Loader(object):
                     except (IOError, OSError):
                         pass
                 else:
-                    log.debug('Grains cache last modified {0} seconds ago and '
-                              'cache expiration is set to {1}. '
-                              'Grains cache expired. Refreshing.'.format(
-                                  grains_cache_age,
-                                  self.opts.get('grains_cache_expiration', 300)
-                              ))
+                    if force_refresh:
+                        log.debug('Grains refresh requested. Refreshing grains.')
+                    else:
+                        log.debug('Grains cache last modified {0} seconds ago and '
+                                  'cache expiration is set to {1}. '
+                                  'Grains cache expired. Refreshing.'.format(
+                                      grains_cache_age,
+                                      self.opts.get('grains_cache_expiration', 300)
+                                  ))
             else:
                 log.debug('Grains cache file does not exist.')
         grains_data = {}
         funcs = self.gen_functions()
         for key, fun in funcs.items():
-            if key[key.index('.') + 1:] == 'core':
+            if not key.startswith('core.'):
+                continue
+            ret = fun()
+            if not isinstance(ret, dict):
+                continue
+            grains_data.update(ret)
+        for key, fun in funcs.items():
+            if key.startswith('core.'):
                 continue
             try:
                 ret = fun()
@@ -1195,13 +1226,6 @@ class Loader(object):
                     exc_info=True
                 )
                 continue
-            if not isinstance(ret, dict):
-                continue
-            grains_data.update(ret)
-        for key, fun in funcs.items():
-            if key[key.index('.') + 1:] != 'core':
-                continue
-            ret = fun()
             if not isinstance(ret, dict):
                 continue
             grains_data.update(ret)
@@ -1298,6 +1322,7 @@ class LazyLoader(MutableMapping):
         if key not in self._dict and not self.loaded:
             # load the item
             self._load(key)
+            log.debug('LazyLoaded {0}'.format(key))
         return self._dict[key]
 
     def __len__(self):

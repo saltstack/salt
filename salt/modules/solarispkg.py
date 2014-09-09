@@ -97,7 +97,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
     # Package information returned two lines per package. On even-offset
     # lines, the package name is in the first column. On odd-offset lines, the
     # package version is in the second column.
-    lines = __salt__['cmd.run'](cmd, output_loglevel='debug').splitlines()
+    lines = __salt__['cmd.run'](cmd, output_loglevel='trace').splitlines()
     for index, line in enumerate(lines):
         if index % 2 == 0:
             name = line.split()[0].strip()
@@ -193,18 +193,18 @@ def install(name=None, sources=None, saltenv='base', **kwargs):
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
 
-    CLI Example, installing a datastream pkg that already exists on the
+    CLI Example, installing a data stream pkg that already exists on the
     minion::
 
         salt '*' pkg.install sources='[{"<pkg name>": "/dir/on/minion/<pkg filename>"}]'
         salt '*' pkg.install sources='[{"SMClgcc346": "/var/spool/pkg/gcc-3.4.6-sol10-sparc-local.pkg"}]'
 
-    CLI Example, installing a datastream pkg that exists on the salt master::
+    CLI Example, installing a data stream pkg that exists on the salt master::
 
         salt '*' pkg.install sources='[{"<pkg name>": "salt://pkgs/<pkg filename>"}]'
         salt '*' pkg.install sources='[{"SMClgcc346": "salt://pkgs/gcc-3.4.6-sol10-sparc-local.pkg"}]'
 
-    CLI Example, installing a datastream pkg that exists on a HTTP server::
+    CLI Example, installing a data stream pkg that exists on a HTTP server::
 
         salt '*' pkg.install sources='[{"<pkg name>": "http://packages.server.com/<pkg filename>"}]'
         salt '*' pkg.install sources='[{"SMClgcc346": "http://packages.server.com/gcc-3.4.6-sol10-sparc-local.pkg"}]'
@@ -216,7 +216,7 @@ def install(name=None, sources=None, saltenv='base', **kwargs):
     package in the global zone is to install it in all zones. This overrides
     that and installs the package only in the global.
 
-    CLI Example, installing a datastream package only in the global zone::
+    CLI Example, installing a data stream package only in the global zone::
 
         salt 'global_zone' pkg.install sources='[{"SMClgcc346": "/var/spool/pkg/gcc-3.4.6-sol10-sparc-local.pkg"}]' current_zone_only=True
 
@@ -313,13 +313,13 @@ def install(name=None, sources=None, saltenv='base', **kwargs):
     for pkg in pkg_params:
         temp_cmd = cmd + '-d {0} "all"'.format(pkg)
         # Install the package{s}
-        __salt__['cmd.run'](temp_cmd, output_loglevel='debug')
+        __salt__['cmd.run'](temp_cmd, output_loglevel='trace')
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
 
     # Remove the temp adminfile
-    if not 'admin_source' in kwargs:
+    if 'admin_source' not in kwargs:
         os.unlink(adminfile)
 
     return salt.utils.compare_dicts(old, new)
@@ -426,9 +426,9 @@ def remove(name=None, pkgs=None, saltenv='base', **kwargs):
     # Remove the package
     cmd = '/usr/sbin/pkgrm -n -a {0} {1}'.format(adminfile,
                                                  ' '.join(targets))
-    __salt__['cmd.run'](cmd, output_loglevel='debug')
+    __salt__['cmd.run'](cmd, output_loglevel='trace')
     # Remove the temp adminfile
-    if not 'admin_source' in kwargs:
+    if 'admin_source' not in kwargs:
         os.unlink(adminfile)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()

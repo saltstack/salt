@@ -14,6 +14,7 @@ import tempfile
 import salt.crypt
 import salt.utils
 import salt.config
+import salt.syspaths
 
 
 # Set up logging
@@ -23,6 +24,13 @@ log = logging.getLogger(__name__)
 __func_alias__ = {
     'apply_': 'apply'
 }
+
+
+def _file_or_content(file_):
+    if os.path.exists(file_):
+        with open(file_) as fic:
+            return fic.read()
+    return file_
 
 
 def _mount(path, ftype):
@@ -121,9 +129,10 @@ def apply_(path, id_=None, config=None, approve_key=True, install=True,
                  '{0}'.format(mpt))
         res = _install(mpt)
     elif prep_install:
-        _prep_bootstrap(mpt)
-        log.info('{0} is ready for salt-minion installation'.format(mpt))
-        res = True
+        log.error('The prep_install option is no longer supported. Please use '
+                  'the bootstrap script installed with Salt, located at {0}.'
+                  .format(salt.syspaths.BOOTSTRAP))
+        res = False
     else:
         log.warn('No useful action performed on '
                  '{0}'.format(mpt))
@@ -133,17 +142,16 @@ def apply_(path, id_=None, config=None, approve_key=True, install=True,
     return res
 
 
-def _prep_bootstrap(mpt):
-    # Verify that the boostrap script is downloaded
-    bs_ = __salt__['config.gather_bootstrap_script']()
-
-    # Copy script into tmp
-    shutil.copy(bs_, os.path.join(mpt, 'tmp'))
-
-
-def mkconfig(config=None, tmp=None, id_=None, approve_key=True):
+def mkconfig(config=None, tmp=None, id_=None, approve_key=True,
+            pub_key=None, priv_key=None):
     '''
     Generate keys and config and put them in a tmp directory.
+
+    pub_key
+        absolute path or file content of an optional preseeded salt key
+
+    priv_key
+        absolute path or file content of an optional preseeded salt key
 
     CLI Example:
 
@@ -156,7 +164,7 @@ def mkconfig(config=None, tmp=None, id_=None, approve_key=True):
         tmp = tempfile.mkdtemp()
     if config is None:
         config = {}
-    if not 'master' in config and __opts__['master'] != 'salt':
+    if 'master' not in config and __opts__['master'] != 'salt':
         config['master'] = __opts__['master']
     if id_:
         config['id'] = id_
@@ -167,11 +175,19 @@ def mkconfig(config=None, tmp=None, id_=None, approve_key=True):
         fp_.write(yaml.dump(config, default_flow_style=False))
 
     # Generate keys for the minion
-    salt.crypt.gen_keys(tmp, 'minion', 2048)
     pubkeyfn = os.path.join(tmp, 'minion.pub')
     privkeyfn = os.path.join(tmp, 'minion.pem')
-
-    if approve_key:
+    preseeded = pub_key and priv_key
+    if preseeded:
+        with open(pubkeyfn, 'w') as fic:
+            fic.write(_file_or_content(pub_key))
+        with open(privkeyfn, 'w') as fic:
+            fic.write(_file_or_content(priv_key))
+        os.chmod(pubkeyfn, 0600)
+        os.chmod(privkeyfn, 0600)
+    else:
+        salt.crypt.gen_keys(tmp, 'minion', 2048)
+    if approve_key and not preseeded:
         with salt.utils.fopen(pubkeyfn) as fp_:
             pubkey = fp_.read()
             __salt__['pillar.ext']({'virtkey': [id_, pubkey]})
@@ -186,11 +202,10 @@ def _install(mpt):
     Return True if install is successful or already installed.
     '''
 
-    _prep_bootstrap(mpt)
     _check_resolv(mpt)
     # Exec the chroot command
     cmd = 'if type salt-minion; then exit 0; '
-    cmd += 'else sh /tmp/bootstrap-salt.sh -c /tmp; fi'
+    cmd += 'else sh {0} -c /tmp; fi'.format(salt.syspaths.BOOTSTRAP)
     return not __salt__['cmd.run_chroot'](mpt, cmd)['retcode']
 
 
@@ -209,7 +224,7 @@ def _check_resolv(mpt):
     if not replace:
         with salt.utils.fopen(resolv, 'rb') as fp_:
             conts = fp_.read()
-            if not 'nameserver' in conts:
+            if 'nameserver' not in conts:
                 replace = True
     if replace:
         shutil.copy('/etc/resolv.conf', resolv)

@@ -2,7 +2,7 @@
 '''
 Use etcd data as a Pillar source
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 :depends:  - python-etcd
 
@@ -11,7 +11,7 @@ configuration file:
 
 .. code-block:: yaml
 
-    my_etd_config:
+    my_etcd_config:
       etcd.host: 127.0.0.1
       etcd.port: 4001
 
@@ -64,9 +64,9 @@ import logging
 
 # Import third party libs
 try:
-    from salt.utils import etcd_util
+    import salt.utils.etcd_util
     HAS_LIBS = True
-except Exception:
+except ImportError:
     HAS_LIBS = False
 
 __virtualname__ = 'etcd'
@@ -91,7 +91,7 @@ def ext_pillar(minion_id, pillar, conf):  # pylint: disable=W0613
     profile = None
     if comps[0]:
         profile = comps[0]
-    client = etcd_util.get_conn(__opts__, profile)
+    client = salt.utils.etcd_util.get_conn(__opts__, profile)
 
     path = '/'
     if len(comps) > 1 and comps[1].startswith('root='):
@@ -103,7 +103,7 @@ def ext_pillar(minion_id, pillar, conf):  # pylint: disable=W0613
     }
 
     try:
-        pillar = etcd_util.tree(client, path)
+        pillar = salt.utils.etcd_util.tree(client, path)
     except KeyError:
         log.error('No such key in etcd profile {0}: {1}'.format(profile, path))
         pillar = {}

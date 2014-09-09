@@ -12,13 +12,18 @@ Full list of builtin returner modules
 
     carbon_return
     cassandra_return
+    couchbase_return
     couchdb_return
+    elasticsearch_return
     etcd_return
     local
+    local_cache
     memcache_return
     mongo_future_return
     mongo_return
+    multi_returner
     mysql
+    odbc
     postgres
     redis_return
     sentry_return

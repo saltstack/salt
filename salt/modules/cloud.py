@@ -6,6 +6,7 @@ Salt-specific interface for calling Salt Cloud directly
 # Import python libs
 import os
 import logging
+import copy
 
 # Import salt libs
 try:
@@ -37,7 +38,8 @@ def _get_client():
     Return a cloud client
     '''
     client = salt.cloud.CloudClient(
-        os.path.join(os.path.dirname(__opts__['conf_file']), 'cloud')
+        os.path.join(os.path.dirname(__opts__['conf_file']), 'cloud'),
+        pillars=copy.deepcopy(__pillar__.get('cloud', {}))
     )
     return client
 
@@ -213,7 +215,7 @@ def volume_list(provider):
 
     '''
     client = _get_client()
-    info = client.volume_action(provider, 'name', action='list')
+    info = client.extra_action(action='volume_list', provider=provider, names='name')
     return info['name']
 
 
@@ -229,7 +231,7 @@ def volume_delete(provider, names, **kwargs):
 
     '''
     client = _get_client()
-    info = client.volume_action(provider, names, action='delete', **kwargs)
+    info = client.extra_action(provider=provider, names=names, action='volume_delete', **kwargs)
     return info
 
 
@@ -246,7 +248,7 @@ def volume_create(provider, names, **kwargs):
 
     '''
     client = _get_client()
-    info = client.volume_action(provider, names, action='create', **kwargs)
+    info = client.extra_action(action='volume_create', names=names, provider=provider, **kwargs)
     return info
 
 
@@ -264,7 +266,7 @@ def volume_attach(provider, names, **kwargs):
 
     '''
     client = _get_client()
-    info = client.volume_action(provider, names, action='attach', **kwargs)
+    info = client.extra_action(provider=provider, names=names, action='volume_attach', **kwargs)
     return info
 
 
@@ -281,5 +283,65 @@ def volume_detach(provider, names, **kwargs):
 
     '''
     client = _get_client()
-    info = client.volume_action(provider, names, action='detach', **kwargs)
+    info = client.extra_action(provider=provider, names=names, action='volume_detach', **kwargs)
     return info
+
+
+def network_list(provider):
+    '''
+    List private networks
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt minionname cloud.network_list my-nova
+
+    '''
+    client = _get_client()
+    return client.extra_action(action='network_list', provider=provider, names='names')
+
+
+def network_create(provider, names, **kwargs):
+    '''
+    Create private network
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt minionname cloud.network_create my-nova names=['salt'] cidr='192.168.100.0/24'
+
+    '''
+    client = _get_client()
+    return client.extra_action(provider=provider, names=names, action='network_create', **kwargs)
+
+
+def virtual_interface_list(provider, names, **kwargs):
+    '''
+    List virtual interfaces on a server
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt minionname cloud.virtual_interface_list my-nova names=['salt-master']
+
+    '''
+    client = _get_client()
+    return client.extra_action(provider=provider, names=names, action='virtual_interface_list', **kwargs)
+
+
+def virtual_interface_create(provider, names, **kwargs):
+    '''
+    Attach private interfaces to a server
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt minionname cloud.virtual_interface_create my-nova names=['salt-master'] net_name='salt'
+
+    '''
+    client = _get_client()
+    return client.extra_action(provider=provider, names=names, action='virtual_interface_create', **kwargs)

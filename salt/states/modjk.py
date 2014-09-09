@@ -66,7 +66,9 @@ def worker_stopped(name, workers=None, profile='default'):
     '''
     Stop all the workers in the modjk load balancer
 
-    Example::
+    Example:
+
+    .. code-block:: yaml
 
         loadbalancer:
           modjk.worker_stopped:
@@ -85,7 +87,9 @@ def worker_activated(name, workers=None, profile='default'):
     '''
     Activate all the workers in the modjk load balancer
 
-    Example::
+    Example:
+
+    .. code-block:: yaml
 
         loadbalancer:
           modjk.worker_activated:
@@ -104,7 +108,9 @@ def worker_disabled(name, workers=None, profile='default'):
     '''
     Disable all the workers in the modjk load balancer
 
-    Example::
+    Example:
+
+    .. code-block:: yaml
 
         loadbalancer:
           modjk.worker_disabled:
@@ -123,7 +129,9 @@ def worker_recover(name, workers=None, profile='default'):
     '''
     Recover all the workers in the modjk load balancer
 
-    Example::
+    Example:
+
+    .. code-block:: yaml
 
         loadbalancer:
           modjk.worker_recover:

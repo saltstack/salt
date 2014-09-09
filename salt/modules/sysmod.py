@@ -7,6 +7,7 @@ The sys module provides information about the available functions on the minion
 import logging
 
 # Import salt libs
+import salt.loader
 import salt.utils
 import salt.state
 from salt.utils.doc import strip_rst as _strip_rst
@@ -62,6 +63,171 @@ def doc(*args):
     return _strip_rst(docs)
 
 
+def state_doc(*args):
+    '''
+    .. versionadded:: 2014.7.0
+
+    Return the docstrings for all states. Optionally, specify a state or a
+    function to narrow the selection.
+
+    The strings are aggregated into a single document on the master for easy
+    reading.
+
+    Multiple states/functions can be specified.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' sys.state_doc
+        salt '*' sys.state_doc service
+        salt '*' sys.state_doc service.running
+        salt '*' sys.state_doc service.running ipables.append
+    '''
+    st_ = salt.state.State(__opts__)
+
+    docs = {}
+    if not args:
+        for fun in st_.states:
+            state = fun.split('.')[0]
+            if state not in docs:
+                if hasattr(st_.states[fun], '__globals__'):
+                    docs[state] = st_.states[fun].__globals__['__doc__']
+            docs[fun] = st_.states[fun].__doc__
+        return _strip_rst(docs)
+
+    for module in args:
+        if module:
+            # allow both "sys" and "sys." to match sys, without also matching
+            # sysctl
+            target_mod = module + '.' if not module.endswith('.') else module
+        else:
+            target_mod = ''
+        for fun in st_.states:
+            if fun == module or fun.startswith(target_mod):
+                state = module.split('.')[0]
+                if state not in docs:
+                    if hasattr(st_.states[fun], '__globals__'):
+                        docs[state] = st_.states[fun].__globals__['__doc__']
+                docs[fun] = st_.states[fun].__doc__
+    return _strip_rst(docs)
+
+
+def runner_doc(*args):
+    '''
+    .. versionadded:: 2014.7.0
+
+    Return the docstrings for all runners. Optionally, specify a runner or a
+    function to narrow the selection.
+
+    The strings are aggregated into a single document on the master for easy
+    reading.
+
+    Multiple runners/functions can be specified.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' sys.runner_doc
+        salt '*' sys.runner_doc cache
+        salt '*' sys.runner_doc cache.grains
+        salt '*' sys.runner_doc cache.grains mine.get
+    '''
+    run_ = salt.runner.Runner(__opts__)
+    docs = {}
+    if not args:
+        for fun in run_.functions:
+            docs[fun] = run_.functions[fun].__doc__
+        return _strip_rst(docs)
+
+    for module in args:
+        if module:
+            # allow both "sys" and "sys." to match sys, without also matching
+            # sysctl
+            target_mod = module + '.' if not module.endswith('.') else module
+        else:
+            target_mod = ''
+        for fun in run_.functions:
+            if fun == module or fun.startswith(target_mod):
+                docs[fun] = run_.functions[fun].__doc__
+    return _strip_rst(docs)
+
+
+def returner_doc(*args):
+    '''
+    .. versionadded:: 2014.7.0
+
+    Return the docstrings for all returners. Optionally, specify a returner or a
+    function to narrow the selection.
+
+    The strings are aggregated into a single document on the master for easy
+    reading.
+
+    Multiple returners/functions can be specified.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' sys.returner_doc
+        salt '*' sys.returner_doc sqlite3
+        salt '*' sys.returner_doc sqlite3.get_fun
+        salt '*' sys.returner_doc sqlite3.get_fun etcd.get_fun
+    '''
+    returners_ = salt.loader.returners(__opts__, [])
+    docs = {}
+    if not args:
+        for fun in returners_.keys():
+            docs[fun] = returners_[fun].__doc__
+        return _strip_rst(docs)
+
+    for module in args:
+        if module:
+            # allow both "sys" and "sys." to match sys, without also matching
+            # sysctl
+            target_mod = module + '.' if not module.endswith('.') else module
+        else:
+            target_mod = ''
+        for fun in returners_.keys():
+            if fun == module or fun.startswith(target_mod):
+                docs[fun] = returners_[fun].__doc__
+    return _strip_rst(docs)
+
+
+def renderer_doc(*args):
+    '''
+    .. versionadded:: Lithium
+
+    Return the docstrings for all renderers. Optionally, specify a renderer or a
+    function to narrow the selection.
+
+    The strings are aggregated into a single document on the master for easy
+    reading.
+
+    Multiple renderers can be specified.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' sys.renderer_doc
+        salt '*' sys.renderer_doc cheetah
+        salt '*' sys.renderer_doc jinja json
+    '''
+    renderers_ = salt.loader.render(__opts__, [])
+    docs = {}
+    if not args:
+        for fun in renderers_.keys():
+            docs[fun] = renderers_[fun].__doc__
+        return _strip_rst(docs)
+
+    for module in args:
+        for fun in renderers_.keys():
+            docs[fun] = renderers_[fun].__doc__
+    return _strip_rst(docs)
+
+
 def list_functions(*args, **kwargs):
     '''
     List the functions for all modules. Optionally, specify a module or modules
@@ -75,8 +241,8 @@ def list_functions(*args, **kwargs):
         salt '*' sys.list_functions sys
         salt '*' sys.list_functions sys user
     '''
-    ### NOTE: **kwargs is used here to prevent a traceback when garbage
-    ###       arguments are tacked on to the end.
+    # ## NOTE: **kwargs is used here to prevent a traceback when garbage
+    # ##       arguments are tacked on to the end.
 
     if not args:
         # We're being asked for all functions
@@ -144,8 +310,67 @@ def argspec(module=''):
     return salt.utils.argspec_report(__salt__, module)
 
 
+def state_argspec(module=''):
+    '''
+    .. versionadded:: Lithium
+
+    Return the argument specification of functions in Salt state
+    modules.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' sys.state_argspec pkg.installed
+        salt '*' sys.state_argspec file
+        salt '*' sys.state_argspec
+    '''
+    st_ = salt.state.State(__opts__)
+    return salt.utils.argspec_report(st_.states, module)
+
+
+def returner_argspec(module=''):
+    '''
+    .. versionadded:: Lithium
+
+    Return the argument specification of functions in Salt returner
+    modules.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' sys.returner_argspec xmpp
+        salt '*' sys.returner_argspec xmpp smtp
+        salt '*' sys.returner_argspec
+    '''
+    returners_ = salt.loader.returners(__opts__, [])
+    return salt.utils.argspec_report(returners_, module)
+
+
+def runner_argspec(module=''):
+    '''
+    .. versionadded:: Lithium
+
+    Return the argument specification of functions in Salt runner
+    modules.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' sys.runner_argspec state
+        salt '*' sys.runner_argspec http
+        salt '*' sys.runner_argspec
+    '''
+    run_ = salt.runner.Runner(__opts__)
+    return salt.utils.argspec_report(run_.functions, module)
+
+
 def list_state_functions(*args, **kwargs):
     '''
+    .. versionadded:: 2014.7.0
+
     List the functions for all state modules. Optionally, specify a state
     module or modules from which to list.
 
@@ -179,13 +404,15 @@ def list_state_functions(*args, **kwargs):
 
 def list_state_modules():
     '''
+    .. versionadded:: 2014.7.0
+
     List the modules loaded on the minion
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' sys.list_modules
+        salt '*' sys.list_state_modules
     '''
     st_ = salt.state.State(__opts__)
     modules = set()
@@ -195,3 +422,136 @@ def list_state_modules():
             continue
         modules.add(comps[0])
     return sorted(modules)
+
+
+def list_runners():
+    '''
+    .. versionadded:: 2014.7.0
+
+    List the runners loaded on the minion
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' sys.list_runners
+    '''
+    run_ = salt.runner.Runner(__opts__)
+    runners = set()
+    for func in run_.functions:
+        comps = func.split('.')
+        if len(comps) < 2:
+            continue
+        runners.add(comps[0])
+    return sorted(runners)
+
+
+def list_runner_functions(*args, **kwargs):
+    '''
+    .. versionadded:: 2014.7.0
+
+    List the functions for all runner modules. Optionally, specify a runner
+    module or modules from which to list.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' sys.list_runner_functions
+        salt '*' sys.list_runner_functions state
+        salt '*' sys.list_runner_functions state virt
+    '''
+    # ## NOTE: **kwargs is used here to prevent a traceback when garbage
+    # ##       arguments are tacked on to the end.
+
+    run_ = salt.runner.Runner(__opts__)
+    if not args:
+        # We're being asked for all functions
+        return sorted(run_.functions)
+
+    names = set()
+    for module in args:
+        if module:
+            # allow both "sys" and "sys." to match sys, without also matching
+            # sysctl
+            module = module + '.' if not module.endswith('.') else module
+        for func in run_.functions:
+            if func.startswith(module):
+                names.add(func)
+    return sorted(names)
+
+
+def list_returners():
+    '''
+    .. versionadded:: 2014.7.0
+
+    List the runners loaded on the minion
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' sys.list_returners
+    '''
+    returners_ = salt.loader.returners(__opts__, [])
+    returners = set()
+    for func in returners_.keys():
+        comps = func.split('.')
+        if len(comps) < 2:
+            continue
+        returners.add(comps[0])
+    return sorted(returners)
+
+
+def list_returner_functions(*args, **kwargs):
+    '''
+    .. versionadded:: 2014.7.0
+
+    List the functions for all returner modules. Optionally, specify a returner
+    module or modules from which to list.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' sys.list_returner_functions
+        salt '*' sys.list_returner_functions mysql
+        salt '*' sys.list_returner_functions mysql etcd
+    '''
+    ### NOTE: **kwargs is used here to prevent a traceback when garbage
+    ###       arguments are tacked on to the end.
+
+    returners_ = salt.loader.returners(__opts__, [])
+    if not args:
+        # We're being asked for all functions
+        return sorted(returners_.keys())
+
+    names = set()
+    for module in args:
+        if module:
+            # allow both "sys" and "sys." to match sys, without also matching
+            # sysctl
+            module = module + '.' if not module.endswith('.') else module
+        for func in returners_.keys():
+            if func.startswith(module):
+                names.add(func)
+    return sorted(names)
+
+
+def list_renderers():
+    '''
+    .. versionadded:: Lithium
+
+    List the renderers loaded on the minion
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' sys.list_renderers
+    '''
+    ren_ = salt.loader.render(__opts__, [])
+    ren = set()
+    for func in ren_.keys():
+        ren.add(func)
+    return sorted(ren)

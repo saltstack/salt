@@ -19,6 +19,7 @@ from jinja2 import Environment
 try:
     import ldap
     import ldap.modlist
+    import ldap.filter
     HAS_LDAP = True
 except ImportError:
     HAS_LDAP = False
@@ -76,13 +77,14 @@ class _LDAPConnection(object):
         self.server = server
         self.port = port
         self.tls = tls
+        schema = 'ldaps' if tls else 'ldap'
         self.binddn = binddn
         self.bindpw = bindpw
         if not HAS_LDAP:
             raise CommandExecutionError('Failed to connect to LDAP, module '
                                         'not loaded')
         if self.uri == '':
-            self.uri = 'ldap://{0}:{1}'.format(self.server, self.port)
+            self.uri = '{0}://{1}:{2}'.format(schema, self.server, self.port)
 
         try:
             if no_verify:
@@ -94,9 +96,6 @@ class _LDAPConnection(object):
             )
             self.ldap.protocol_version = 3  # ldap.VERSION3
             self.ldap.set_option(ldap.OPT_REFERRALS, 0)  # Needed for AD
-
-            if self.tls:
-                self.ldap.start_tls_s()
 
             if not anonymous:
                 self.ldap.simple_bind_s(self.binddn, self.bindpw)
@@ -140,9 +139,11 @@ def _bind(username, password):
         #   - cn={{ username }},ou=users,dc=company,dc=tld
         # so make sure to render it first before using it
         paramvalues['binddn'] = _render_template(paramvalues['binddn'], username)
+        paramvalues['binddn'] = ldap.filter.escape_filter_chars(paramvalues['binddn'])
 
     if paramvalues['filter']:
-        paramvalues['filter'] = _render_template(paramvalues['filter'], username)
+        escaped_username = ldap.filter.escape_filter_chars(username)
+        paramvalues['filter'] = _render_template(paramvalues['filter'], escaped_username)
 
     # Only add binddn/bindpw to the connargs when they're set, as they're not
     # mandatory for initializing the LDAP object, but if they're provided

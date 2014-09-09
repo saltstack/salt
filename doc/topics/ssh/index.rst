@@ -67,11 +67,16 @@ address. A more elaborate roster can be created:
       sudo: True         # Whether to sudo to root, not enabled by default
     web2:
       host: 192.168.42.2
+      
+.. note::
+
+    sudo works only if NOPASSWD is set for user in /etc/sudoers:
+    ``fred ALL=(ALL) NOPASSWD: ALL`` 
 
 Calling Salt SSH
 ================
 
-The ``salt-ssh`` command can be easily executed in the same was as a salt
+The ``salt-ssh`` command can be easily executed in the same way as a salt
 command:
 
 .. code-block:: bash
@@ -131,4 +136,24 @@ and ``cachedir``. Those should point to a full path writable for the user.
 
 It's recommed not to modify /etc/salt for this purpose. Create a private copy
 of /etc/salt for the user and run the command with ``-c /new/config/path``.
+
+Define CLI Options with Saltfile
+================================
+
+If you are commonly passing in CLI options to ``salt-ssh``, you can create
+a ``Saltfile`` to automatically use these options. This is common if you're
+managing several different salt projects on the same server.
+
+So if you ``cd`` into a directory with a Saltfile with the following
+contents:
+
+.. code-block:: yaml
+
+    salt-ssh:
+      config_dir: path/to/config/dir
+      max_prox: 30
+
+Instead of having to call
+``salt-ssh --config-dir=path/to/config/dir --max-procs=30 \* test.ping`` you
+can call ``salt-ssh \* test.ping``.
 

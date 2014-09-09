@@ -15,7 +15,9 @@ def dns_exists(name, servers=None, interface='Local Area Connection'):
     '''
     Configure the DNS server list in the specified interface
 
-    Example::
+    Example:
+
+    .. code-block:: yaml
 
         config_dns_servers:
           win_dns_client.dns_exists:
@@ -29,7 +31,7 @@ def dns_exists(name, servers=None, interface='Local Area Connection'):
            'comment': ''}
 
     # Validate syntax
-    if type(servers) != list:
+    if not isinstance(servers, list):
         ret['result'] = False
         ret['comment'] = 'servers entry is not a list !'
         return ret
@@ -99,7 +101,7 @@ def primary_suffix(name,
         suffix=None,
         updates=False):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Configure the global primary DNS suffix of a DHCP client.
 

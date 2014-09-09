@@ -6,8 +6,6 @@
     Salt cloud related exceptions.
 
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2013 by the SaltStack Team, see AUTHORS for more details.
-    :license: Apache 2.0, see LICENSE for more details.
 '''
 
 # Import salt libs
@@ -27,7 +25,7 @@ class SaltCloudSystemExit(SaltCloudException):
     '''
     def __init__(self, message, exit_code=salt.exitcodes.EX_GENERIC):
         SaltCloudException.__init__(self, message)
-        self.message = message
+        self.message = '{0} [WARNING: salt.cloud.exceptions is deprecated. Please migrate to salt.exceptions!]'.format(message)
         self.exit_code = exit_code
 
 

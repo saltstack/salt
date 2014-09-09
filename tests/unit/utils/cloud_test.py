@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2013 by the SaltStack Team, see AUTHORS for more details.
-    :license: Apache 2.0, see LICENSE for more details.
 
 
     tests.unit.utils.cloud_test
@@ -11,6 +9,9 @@
     Test the salt-cloud utilities module
 '''
 
+# Import Python libs
+import os
+
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
@@ -18,6 +19,16 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 from salt.utils import cloud
+from integration import TMP
+
+GPG_KEYDIR = os.path.join(TMP, 'gpg-keydir')
+
+# The keyring library uses `getcwd()`, let's make sure we in a good directory
+# before importing keyring
+if not os.path.isdir(GPG_KEYDIR):
+    os.makedirs(GPG_KEYDIR)
+
+os.chdir(GPG_KEYDIR)
 
 # Import external deps
 try:

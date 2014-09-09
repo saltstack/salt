@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2013 by the SaltStack Team, see AUTHORS for more details.
-    :license: Apache 2.0, see LICENSE for more details.
 
 
     salt.syspaths
@@ -23,10 +21,16 @@
 import sys
 import os.path
 
+if 'SETUP_DIRNAME' in globals():
+    # This is from the exec() call in Salt's setup.py
+    THIS_FILE = os.path.join(SETUP_DIRNAME, 'salt', 'syspaths.py')  # pylint: disable=E0602
+else:
+    THIS_FILE = __file__
+
 try:
     # Let's try loading the system paths from the generated module at
     # installation time.
-    from salt._syspaths import (  # pylint: disable=W0611,E0611
+    from salt._syspaths import (  # pylint: disable=W0611,E0611,import-error
         ROOT_DIR,                 # because pylint thinks that _syspaths is an
         CONFIG_DIR,               # attribute of salt.__init__
         CACHE_DIR,
@@ -60,3 +64,6 @@ except ImportError:
     BASE_MASTER_ROOTS_DIR = os.path.join(SRV_ROOT_DIR, 'salt-master')
     LOGS_DIR = os.path.join(ROOT_DIR, 'var', 'log', 'salt')
     PIDFILE_DIR = os.path.join(ROOT_DIR, 'var', 'run')
+    INSTALL_DIR = os.path.dirname(os.path.realpath(THIS_FILE))
+    CLOUD_DIR = os.path.join(INSTALL_DIR, 'cloud')
+    BOOTSTRAP = os.path.join(CLOUD_DIR, 'deploy', 'bootstrap-salt.sh')

@@ -111,7 +111,7 @@ deserialize = _deserialize
 serialize.__doc__ = '''
     Serialize Python data to MsgPack.
 
-    :param obj: the datastructure to serialize
+    :param obj: the data structure to serialize
     :param options: options given to lower msgpack module.
 '''
 

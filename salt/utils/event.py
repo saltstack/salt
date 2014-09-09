@@ -112,7 +112,10 @@ def get_event(node, sock_dir=None, transport='zeromq', opts=None, listen=True):
         return SaltEvent(node, sock_dir, opts)
     elif transport == 'raet':
         import salt.utils.raetevent
-        return salt.utils.raetevent.SaltEvent(node, sock_dir, listen)
+        return salt.utils.raetevent.SaltEvent(node,
+                                              sock_dir=sock_dir,
+                                              listen=listen,
+                                              opts=opts)
 
 
 def tagify(suffix='', prefix='', base=SALT):
@@ -159,12 +162,9 @@ class SaltEvent(object):
         use for firing and listening to events
         '''
         hash_type = getattr(hashlib, self.opts.get('hash_type', 'md5'))
-        # Substr the first 10 chars off, because some algorithms produce
-        # longer hashes than others, and may exceed the IPC maximum length
-        # for UNIX sockets.
-        id_hash = hash_type(self.opts.get('id', '')).hexdigest()
-        if self.opts.get('hash_type', 'md5') == 'sha256':
-            id_hash = id_hash[:10]
+        # Only use the first 10 chars to keep longer hashes from exceeding the
+        # max socket path length.
+        id_hash = hash_type(self.opts.get('id', '')).hexdigest()[:10]
         if node == 'master':
             puburi = 'ipc://{0}'.format(os.path.join(
                     sock_dir,
@@ -258,30 +258,29 @@ class SaltEvent(object):
         data = serial.loads(mdata)
         return mtag, data
 
-    def get_event(self, wait=5, tag='', full=False, use_pending=False):
-        '''
-        Get a single publication.
-        IF no publication available THEN block for up to wait seconds
-        AND either return publication OR None IF no publication available.
+    def _check_pending(self, tag, pending_tags):
+        """Check the pending_events list for events that match the tag
 
-        IF wait is 0 then block forever.
-
-        use_pending
-            Defines whether to keep all unconsumed events in a pending_events
-            list, or to discard events that don't match the requested tag.  If
-            set to True, MAY CAUSE MEMORY LEAKS.
-        '''
-        self.subscribe()
-
-        if use_pending:
-            for evt in [x for x in self.pending_events
-                        if x['tag'].startswith(tag)]:
-                self.pending_events.remove(evt)
-                if full:
-                    return evt
+        :param tag: The tag to search for
+        :type tag: str
+        :param pending_tags: List of tags to preserve
+        :type pending_tags: list[str]
+        :return:
+        """
+        old_events = self.pending_events
+        self.pending_events = []
+        ret = None
+        for evt in old_events:
+            if evt['tag'].startswith(tag):
+                if ret is None:
+                    ret = evt
                 else:
-                    return evt['data']
+                    self.pending_events.append(evt)
+            elif any(evt['tag'].startswith(ptag) for ptag in pending_tags):
+                self.pending_events.append(evt)
+        return ret
 
+    def _get_event(self, wait, tag, pending_tags):
         start = time.time()
         timeout_at = start + wait
         while not wait or time.time() <= timeout_at:
@@ -291,7 +290,8 @@ class SaltEvent(object):
                 continue
 
             try:
-                ret = self.get_event_noblock()
+                ret = self.get_event_block()  # Please do not use non-blocking mode here.
+                                              # Reliability is more important than pure speed on the event bus.
             except zmq.ZMQError as ex:
                 if ex.errno == errno.EAGAIN or ex.errno == errno.EINTR:
                     continue
@@ -299,21 +299,66 @@ class SaltEvent(object):
                     raise
 
             if not ret['tag'].startswith(tag):  # tag not match
-                if use_pending:
+                if any(ret['tag'].startswith(ptag) for ptag in pending_tags):
                     self.pending_events.append(ret)
                 wait = timeout_at - time.time()
                 continue
 
             log.trace('get_event() received = {0}'.format(ret))
-            if full:
-                return ret
-            return ret['data']
+            return ret
+
         return None
+
+    def get_event(self, wait=5, tag='', full=False, use_pending=False, pending_tags=None):
+        '''
+        Get a single publication.
+        IF no publication available THEN block for upto wait seconds
+        AND either return publication OR None IF no publication available.
+
+        IF wait is 0 then block forever.
+
+        New in Boron always checks the list of pending events
+
+        use_pending
+            Defines whether to keep all unconsumed events in a pending_events
+            list, or to discard events that don't match the requested tag.  If
+            set to True, MAY CAUSE MEMORY LEAKS.
+
+        pending_tags
+            Add any events matching the listed tags to the pending queue.
+            Still MAY CAUSE MEMORY LEAKS but less likely than use_pending
+            assuming you later get_event for the tags you've listed here
+
+            New in Boron
+        '''
+        self.subscribe()
+
+        if pending_tags is None:
+            pending_tags = []
+        if use_pending:
+            pending_tags = ['']
+
+        ret = self._check_pending(tag, pending_tags)
+        if ret is None:
+            ret = self._get_event(wait, tag, pending_tags)
+
+        if ret is None or full:
+            return ret
+        else:
+            return ret['data']
 
     def get_event_noblock(self):
         '''Get the raw event without blocking or any other niceties
         '''
         raw = self.sub.recv(zmq.NOBLOCK)
+        mtag, data = self.unpack(raw, self.serial)
+        return {'data': data, 'tag': mtag}
+
+    def get_event_block(self):
+        '''Get the raw event in a blocking fashion
+           Slower, but decreases the possibility of dropped events
+        '''
+        raw = self.sub.recv()
         mtag, data = self.unpack(raw, self.serial)
         return {'data': data, 'tag': mtag}
 
@@ -475,6 +520,7 @@ class EventPublisher(Process):
         '''
         Bind the pub and pull sockets for events
         '''
+        salt.utils.appendproctitle(self.__class__.__name__)
         linger = 5000
         # Set up the context
         self.context = zmq.Context(1)
@@ -538,12 +584,20 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         salt.state.Compiler.__init__(self, opts)
         self.wrap = ReactWrap(self.opts)
 
+        local_minion_opts = self.opts.copy()
+        local_minion_opts['file_client'] = 'local'
+        self.minion = salt.minion.MasterMinion(local_minion_opts)
+
     def render_reaction(self, glob_ref, tag, data):
         '''
         Execute the render system against a single reaction file and return
         the data structure
         '''
         react = {}
+
+        if glob_ref.startswith('salt://'):
+            glob_ref = self.minion.functions['cp.cache_file'](glob_ref)
+
         for fn_ in glob.glob(glob_ref):
             try:
                 react.update(self.render_template(
@@ -620,6 +674,7 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         '''
         Enter into the server loop
         '''
+        salt.utils.appendproctitle(self.__class__.__name__)
         self.event = SaltEvent('master', self.opts['sock_dir'])
         for data in self.event.iter_events(full=True):
             reactors = self.list_reactors(data['tag'])
@@ -673,7 +728,7 @@ class ReactWrap(object):
         '''
         if 'runner' not in self.client_cache:
             self.client_cache['runner'] = salt.runner.RunnerClient(self.opts)
-        return self.client_cache['runner'].low(fun, kwargs)
+        return self.client_cache['runner'].async(fun, kwargs)
 
     def wheel(self, fun, **kwargs):
         '''
@@ -702,7 +757,9 @@ class StateFire(object):
         '''
         Fire an event off on the master server
 
-        CLI Example::
+        CLI Example:
+
+        .. code-block:: bash
 
             salt '*' event.fire_master 'stuff to be in the event' 'tag'
         '''

@@ -16,6 +16,7 @@ import copy
 # Import salt libs
 import salt.utils
 from salt._compat import string_types
+from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -29,7 +30,7 @@ __virtualname__ = 'user'
 
 def __virtual__():
     '''
-    Set the user module if the kernel is Linux or OpenBSD
+    Set the user module if the kernel is Linux, OpenBSD or NetBSD
     and remove some of the functionality on OS X
     '''
 
@@ -78,7 +79,8 @@ def add(name,
         roomnumber='',
         workphone='',
         homephone='',
-        createhome=True):
+        createhome=True,
+        loginclass=None):
     '''
     Add a user to the minion
 
@@ -96,24 +98,43 @@ def add(name,
     if gid not in (None, ''):
         cmd.extend(['-g', str(gid)])
     elif groups is not None and name in groups:
-        try:
-            for line in salt.utils.fopen('/etc/login.defs'):
-                if not 'USERGROUPS_ENAB' in line[:15]:
-                    continue
+        if __grains__['kernel'] != 'OpenBSD':
+            try:
+                for line in salt.utils.fopen('/etc/login.defs'):
+                    if 'USERGROUPS_ENAB' not in line[:15]:
+                        continue
 
-                if 'yes' in line:
-                    cmd.extend([
-                        '-g', str(__salt__['file.group_to_gid'](name))
-                    ])
+                    if 'yes' in line:
+                        cmd.extend([
+                            '-g', str(__salt__['file.group_to_gid'](name))
+                        ])
 
-                # We found what we wanted, let's break out of the loop
-                break
-        except OSError:
-            log.debug('Error reading /etc/login.defs', exc_info=True)
+                    # We found what we wanted, let's break out of the loop
+                    break
+            except OSError:
+                log.debug('Error reading /etc/login.defs', exc_info=True)
+        else:
+            try:
+                for line in salt.utils.fopen('/etc/usermgmt.conf'):
+                    if 'group' not in line[:5]:
+                        continue
+
+                    for val in line.split(" "):
+                        cmd.extend([
+                            '-g', str(val[1])
+                        ])
+
+                    # We found what we wanted, let's break out of the loop
+                    break
+            except OSError:
+                # /etc/usermgmt.conf not present: defaults will be used
+                pass
 
     if createhome:
         cmd.append('-m')
-    elif createhome is False:
+    elif (createhome is False
+          and __grains__['kernel'] != 'NetBSD'
+          and __grains__['kernel'] != 'OpenBSD'):
         cmd.append('-M')
 
     if home is not None:
@@ -122,8 +143,14 @@ def add(name,
     if not unique:
         cmd.append('-o')
 
-    if system and __grains__['kernel'] != 'NetBSD':
+    if (system
+        and __grains__['kernel'] != 'NetBSD'
+        and __grains__['kernel'] != 'OpenBSD'):
         cmd.append('-r')
+
+    if __grains__['kernel'] == 'OpenBSD':
+        if loginclass is not None:
+            cmd.extend(['-L', loginclass])
 
     cmd.append(name)
 
@@ -168,7 +195,7 @@ def delete(name, remove=False, force=False):
     if remove:
         cmd.append('-r')
 
-    if force:
+    if force and __grains__['kernel'] != 'OpenBSD':
         cmd.append('-f')
 
     cmd.append(name)
@@ -295,7 +322,7 @@ def chhome(name, home, persist=False):
     if home == pre_info['home']:
         return True
     cmd = 'usermod -d {0} '.format(home)
-    if persist:
+    if persist and __grains__['kernel'] != 'OpenBSD':
         cmd += ' -m '
     cmd += name
     __salt__['cmd.run'](cmd)
@@ -322,10 +349,30 @@ def chgroups(name, groups, append=False):
     if ugrps == set(groups):
         return True
     cmd = 'usermod '
-    if append:
-        cmd += '-a '
-    cmd += '-G "{0}" {1}'.format(','.join(groups), name)
-    return not __salt__['cmd.retcode'](cmd)
+    if __grains__['kernel'] != 'OpenBSD':
+        if append:
+            cmd += '-a '
+    else:
+        if append:
+            cmd += '-G '
+        else:
+            cmd += '-S '
+    if __grains__['kernel'] != 'OpenBSD':
+        cmd += '-G '
+    cmd += '"{0}" {1}'.format(','.join(groups), name)
+    cmdret = __salt__['cmd.run_all'](cmd)
+    ret = not cmdret['retcode']
+    # try to fallback on gpasswd to add user to localgroups
+    # for old lib-pamldap support
+    if __grains__['kernel'] != 'OpenBSD':
+        if not ret and ('not found in' in cmdret['stderr']):
+            ret = True
+            for group in groups:
+                cmd = 'gpasswd -a {0} {1}'.format(name, group)
+                cmdret = __salt__['cmd.run_all'](cmd)
+                if cmdret['retcode']:
+                    ret = False
+    return ret
 
 
 def chfullname(name, fullname):
@@ -432,6 +479,29 @@ def chhomephone(name, homephone):
     return False
 
 
+def chloginclass(name, loginclass):
+    '''
+    Change the default login class of the user
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' user.chloginclass foo staff
+    '''
+    if __grains__['kernel'] != 'OpenBSD':
+        return False
+    pre_info = get_loginclass(name)
+    if loginclass == pre_info['loginclass']:
+        return True
+    cmd = 'usermod -L {0} {1}'.format(loginclass, name)
+    __salt__['cmd.run'](cmd)
+    post_info = get_loginclass(name)
+    if post_info['loginclass'] != pre_info['loginclass']:
+        return post_info['loginclass'] == loginclass
+    return False
+
+
 def info(name):
     '''
     Return user information
@@ -448,6 +518,29 @@ def info(name):
         return {}
     else:
         return _format_info(data)
+
+
+def get_loginclass(name):
+    '''
+    Get the login class of the user
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' user.get_loginclass foo
+    '''
+    if __grains__['kernel'] != 'OpenBSD':
+        return False
+    userinfo = __salt__['cmd.run_stdout']('userinfo {0}'.format(name),
+        output_loglevel='debug')
+    for line in userinfo.splitlines():
+        if line.startswith("class"):
+            loginclass = line.split()
+    if len(loginclass) == 2:
+        return {'loginclass': loginclass[1]}
+    else:
+        return {'loginclass': '""'}
 
 
 def _format_info(data):
@@ -497,3 +590,27 @@ def list_users():
         salt '*' user.list_users
     '''
     return sorted([user.pw_name for user in pwd.getpwall()])
+
+
+def rename(name, new_name):
+    '''
+    Change the username for a named user
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' user.rename name new_name
+    '''
+    current_info = info(name)
+    if not current_info:
+        raise CommandExecutionError('User {0!r} does not exist'.format(name))
+    new_info = info(new_name)
+    if new_info:
+        raise CommandExecutionError('User {0!r} already exists'.format(new_name))
+    cmd = 'usermod -l {0} {1}'.format(new_name, name)
+    __salt__['cmd.run'](cmd)
+    post_info = info(new_name)
+    if post_info['name'] != current_info['name']:
+        return post_info['name'] == new_name
+    return False

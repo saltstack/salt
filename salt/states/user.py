@@ -34,7 +34,7 @@ import salt.utils
 log = logging.getLogger(__name__)
 
 
-def _group_changes(cur, wanted, remove=True):
+def _group_changes(cur, wanted, remove=False):
     '''
     Determine if the groups need to be changed
     '''
@@ -55,11 +55,13 @@ def _changes(name,
              createhome=True,
              password=None,
              enforce_password=True,
+             empty_password=False,
              shell=None,
              fullname='',
              roomnumber='',
              workphone='',
              homephone='',
+             loginclass=None,
              date=0,
              mindays=0,
              maxdays=999999,
@@ -70,7 +72,7 @@ def _changes(name,
     Return a dict of the changes required for a user if the user is present,
     otherwise return False.
 
-    Updated in Helium to include support for shadow attributes, all
+    Updated in 2014.7.0 to include support for shadow attributes, all
     attributes supported as integers only.
     '''
 
@@ -145,6 +147,12 @@ def _changes(name,
     if 'user.chhomephone' in __salt__:
         if homephone is not None and lusr['homephone'] != homephone:
             change['homephone'] = homephone
+    # OpenBSD login class
+    if __grains__['kernel'] == 'OpenBSD':
+        if not loginclass:
+            loginclass = '""'
+        if __salt__['user.get_loginclass'](name)['loginclass'] != loginclass:
+            change['loginclass'] = loginclass
 
     return change
 
@@ -160,6 +168,7 @@ def present(name,
             createhome=True,
             password=None,
             enforce_password=True,
+            empty_password=False,
             shell=None,
             unique=True,
             system=False,
@@ -167,6 +176,7 @@ def present(name,
             roomnumber=None,
             workphone=None,
             homephone=None,
+            loginclass=None,
             date=None,
             mindays=None,
             maxdays=None,
@@ -188,7 +198,7 @@ def present(name,
 
     gid_from_name
         If True, the default group id will be set to the id of the group with
-        the same name as the user.
+        the same name as the user, Default is ``False``.
 
     groups
         A list of groups to assign the user to, pass a list object. If a group
@@ -206,15 +216,15 @@ def present(name,
 
     remove_groups
         Remove groups that the user is a member of that weren't specified in
-        the state, True by default
+        the state, Default is ``True``.
 
     home
         The location of the home directory to manage
 
     createhome
-        If True, the home directory will be created if it doesn't exist.
+        If False, the home directory will not be created if it doesn't exist.
         Please note that directories leading up to the home directory
-        will NOT be created.
+        will NOT be created, Default is ``True``.
 
     password
         A password hash to set for the user. This field is only supported on
@@ -227,19 +237,26 @@ def present(name,
         Set to False to keep the password from being changed if it has already
         been set and the password hash differs from what is specified in the
         "password" field. This option will be ignored if "password" is not
-        specified.
+        specified, Default is ``True``.
+
+    empty_password
+        Set to True to enable password-less login for user, Default is ``False``.
 
     shell
         The login shell, defaults to the system default shell
 
     unique
-        Require a unique UID, True by default
+        Require a unique UID, Default is ``True``.
 
     system
-        Choose UID in the range of FIRST_SYSTEM_UID and LAST_SYSTEM_UID.
+        Choose UID in the range of FIRST_SYSTEM_UID and LAST_SYSTEM_UID, Default is
+        ``False``.
 
+    loginclass
+        The login class, defaults to empty
+        (BSD only)
 
-    User comment field (GECOS) support (currently Linux, FreeBSD, and MacOS
+    User comment field (GECOS) support (currently Linux, BSD, and MacOS
     only):
 
     The below values should be specified as strings to avoid ambiguities when
@@ -259,7 +276,7 @@ def present(name,
         The user's home phone number (not supported in MacOS)
 
 
-    .. versionchanged:: Helium
+    .. versionchanged:: 2014.7.0
        Shadow attribute support added.
 
     Shadow attributes support (currently Linux only):
@@ -325,6 +342,9 @@ def present(name,
     if gid_from_name:
         gid = __salt__['file.group_to_gid'](name)
 
+    if empty_password:
+        __salt__['shadow.del_password'](name)
+
     changes = _changes(name,
                        uid,
                        gid,
@@ -335,6 +355,7 @@ def present(name,
                        createhome,
                        password,
                        enforce_password,
+                       empty_password,
                        shell,
                        fullname,
                        roomnumber,
@@ -358,9 +379,11 @@ def present(name,
         # The user is present
         if 'shadow.info' in __salt__:
             lshad = __salt__['shadow.info'](name)
+        if __grains__['kernel'] == 'OpenBSD':
+            lcpre = __salt__['user.get_loginclass'](name)
         pre = __salt__['user.info'](name)
         for key, val in changes.items():
-            if key == 'passwd':
+            if key == 'passwd' and not empty_password:
                 __salt__['shadow.set_password'](name, password)
                 continue
             if key == 'date':
@@ -399,6 +422,8 @@ def present(name,
         if 'shadow.info' in __salt__:
             if lshad['passwd'] != password:
                 spost = __salt__['shadow.info'](name)
+        if __grains__['kernel'] == 'OpenBSD':
+            lcpost = __salt__['user.get_loginclass'](name)
         # See if anything changed
         for key in post:
             if post[key] != pre[key]:
@@ -407,6 +432,9 @@ def present(name,
             for key in spost:
                 if lshad[key] != spost[key]:
                     ret['changes'][key] = spost[key]
+        if __grains__['kernel'] == 'OpenBSD':
+            if lcpost['loginclass'] != lcpre['loginclass']:
+                ret['changes']['loginclass'] = lcpost['loginclass']
         if ret['changes']:
             ret['comment'] = 'Updated user {0}'.format(name)
         changes = _changes(name,
@@ -419,11 +447,13 @@ def present(name,
                            createhome,
                            password,
                            enforce_password,
+                           empty_password,
                            shell,
                            fullname,
                            roomnumber,
                            workphone,
                            homephone,
+                           loginclass,
                            date,
                            mindays,
                            maxdays,
@@ -460,11 +490,12 @@ def present(name,
                                 roomnumber=roomnumber,
                                 workphone=workphone,
                                 homephone=homephone,
+                                loginclass=loginclass,
                                 createhome=createhome):
             ret['comment'] = 'New user {0} created'.format(name)
             ret['changes'] = __salt__['user.info'](name)
             if 'shadow.info' in __salt__ and not salt.utils.is_windows():
-                if password:
+                if password and not empty_password:
                     __salt__['shadow.set_password'](name, password)
                     spost = __salt__['shadow.info'](name)
                     if spost['passwd'] != password:
@@ -542,12 +573,13 @@ def absent(name, purge=False, force=False):
         The name of the user to remove
 
     purge
-        Set purge to delete all of the user's files as well as the user
+        Set purge to True to delete all of the user's files as well as the user,
+        Default is ``False``.
 
     force
-        If the user is logged in the absent state will fail, set the force
+        If the user is logged in, the absent state will fail. Set the force
         option to True to remove the user even if they are logged in. Not
-        supported in FreeBSD and Solaris.
+        supported in FreeBSD and Solaris, Default is ``False``.
     '''
     ret = {'name': name,
            'changes': {},

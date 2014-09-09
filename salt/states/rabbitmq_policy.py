@@ -80,7 +80,6 @@ def present(name,
             ret['comment'] = 'Policy {0} {1} is set to be created'.format(vhost, name)
         elif updates:
             ret['comment'] = 'Policy {0} {1} is set to be updated'.format(vhost, name)
-        ret['comment'] = ret['comment'].format(name)
     else:
         changes = {'new': '', 'old': ''}
         if not policy:

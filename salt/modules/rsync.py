@@ -2,7 +2,7 @@
 '''
 Wrapper for rsync
 
-.. versionadded:: 2014.1.0 (Hydrogen)
+.. versionadded:: 2014.1.0
 
 This data can also be passed into :doc:`pillar </topics/tutorials/pillar>`.
 Options passed into opts will overwrite options passed into pillar.
@@ -37,9 +37,9 @@ def _check(delete, force, update, passwordfile, exclude, excludefrom):
         if exclude:
             exclude = None
     if exclude:
-        options.append(' --exclude={0}'.format(exclude))
+        options.append('--exclude={0}'.format(exclude))
 
-    return options
+    return ' '.join(options)
 
 
 def rsync(src,

@@ -68,14 +68,26 @@ def install(pecls, defaults=False, force=False, preferred_state='stable'):
                      defaults=defaults)
     else:
         _pecl('{0} install {1}'.format(preferred_state, pecls),
-                     defaults=defaults)
-        installed_pecls = list_()
-        for pecl in installed_pecls:
-            installed_pecl_with_version = '{0}-{1}'.format(pecl,
-                                                  installed_pecls.get(pecl)[0])
-            if pecls in installed_pecl_with_version:
-                return True
-        return False
+              defaults=defaults)
+        if not isinstance(pecls, list):
+            pecls = [pecls]
+        for pecl in pecls:
+            found = False
+            if '/' in pecl:
+                channel, pecl = pecl.split('/')
+            else:
+                channel = None
+            installed_pecls = list_(channel)
+            for pecl in installed_pecls:
+                installed_pecl_with_version = '{0}-{1}'.format(
+                    pecl,
+                    installed_pecls.get(pecl)[0]
+                )
+                if pecl in installed_pecl_with_version:
+                    found = True
+            if not found:
+                return False
+        return True
 
 
 def uninstall(pecls):
@@ -110,7 +122,7 @@ def update(pecls):
     return _pecl('install -U {0}'.format(pecls))
 
 
-def list_():
+def list_(channel=None):
     '''
     List installed pecl extensions.
 
@@ -121,7 +133,10 @@ def list_():
         salt '*' pecl.list
     '''
     pecls = {}
-    lines = _pecl('list').splitlines()
+    command = 'list'
+    if channel:
+        command = '{0} -c {1}'.format(command, channel)
+    lines = _pecl(command).splitlines()
     lines.pop(0)
     # Only one line if no package installed:
     # (no packages installed from channel pecl.php.net)

@@ -52,78 +52,78 @@ Example Usage
 If you're looking for the *one-liner* to install salt, please scroll to the 
 bottom and use the instructions for `Installing via an Insecure One-Liner`_
 
-.. Note::
+.. note::
     In every two-step example, you would be well-served to examine the downloaded file and examine
     it to ensure that it does what you expect.
 
 
 Using ``curl`` to install latest git:
 
-.. code:: console
+.. code:: bash
 
-  curl -L https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh -o install_salt.sh
+  curl -L https://bootstrap.saltstack.com -o install_salt.sh
   sudo sh install_salt.sh git develop
 
 
 Using ``wget`` to install your distribution's stable packages:
 
-.. code:: console
+.. code:: bash
 
-  wget -O install_salt.sh https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh
+  wget -O install_salt.sh https://bootstrap.saltstack.com
   sudo sh install_salt.sh
 
 
 Install a specific version from git using ``wget``:
 
-.. code:: console
+.. code:: bash
 
-  wget -O install_salt.sh https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh
+  wget -O install_salt.sh https://bootstrap.saltstack.com
   sudo sh install_salt.sh -P git v0.16.4
 
 If you already have python installed, ``python 2.6``, then it's as easy as:
 
-.. code:: console
+.. code:: bash
 
-  python -m urllib "https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh" > install_salt.sh
+  python -m urllib "https://bootstrap.saltstack.com" > install_salt.sh
   sudo sh install_salt.sh git develop
 
 
 All python versions should support the following one liner:
 
-.. code:: console
+.. code:: bash
 
-  python -c 'import urllib; print urllib.urlopen("https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh").read()' > install_salt.sh
+  python -c 'import urllib; print urllib.urlopen("https://bootstrap.saltstack.com").read()' > install_salt.sh
   sudo sh install_salt.sh git develop
 
 
 On a FreeBSD base system you usually don't have either of the above binaries available. You **do** 
 have ``fetch`` available though:
 
-.. code:: console
+.. code:: bash
 
-  fetch -o install_salt.sh https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh
+  fetch -o install_salt.sh https://bootstrap.saltstack.com
   sudo sh install_salt.sh
 
 
 If all you want is to install a ``salt-master`` using latest git:
 
-.. code:: console
+.. code:: bash
 
-  curl -o install_salt.sh.sh -L https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh
+  curl -o install_salt.sh.sh -L https://bootstrap.saltstack.com
   sudo sh install_salt.sh.sh -M -N git develop
 
 If you want to install a specific release version (based on the git tags):
 
-.. code:: console
+.. code:: bash
 
-  curl -o install_salt.sh.sh -L https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh
+  curl -o install_salt.sh.sh -L https://bootstrap.saltstack.com
   sudo sh install_salt.sh.sh git v0.16.4
 
 To install a specific branch from a git fork:
 
-.. code:: console
+.. code:: bash
 
-  curl -o install_salt.sh.sh -L https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh
+  curl -o install_salt.sh.sh -L https://bootstrap.saltstack.com
   sudo sh install_salt.sh.sh -g https://github.com/myuser/salt.git git mybranch
 
 
@@ -132,9 +132,10 @@ Installing via an Insecure One-Liner
 
 The following examples illustrate how to install Salt via a one-liner.
 
-.. Note::
-    Warning! These methods do not involve a verification step and assume that the delivered file
-    is trustworthy.
+.. note::
+
+    Warning! These methods do not involve a verification step and assume that
+    the delivered file is trustworthy.
 
 
 Examples
@@ -142,9 +143,9 @@ Examples
 
 Installing the latest develop branch of Salt:
 
-.. code:: console
+.. code:: bash
 
-  curl -L https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh | sudo sh -s -- git develop
+  curl -L https://bootstrap.saltstack.com | sudo sh -s -- git develop
 
 Any of the example above which use two-lines can be made to run in a single-line
 configuration with minor modifications.
@@ -160,42 +161,42 @@ For example, using ``curl`` to install your distribution's stable packages:
 
 .. code-block:: bash
 
-    curl -L https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh | sudo sh
+    curl -L https://bootstrap.saltstack.com | sudo sh
 
 
 Using ``wget`` to install your distribution's stable packages:
 
 .. code-block:: bash
 
-    wget -O - https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh | sudo sh
+    wget -O - https://bootstrap.saltstack.com | sudo sh
 
 
 Installing the latest version available from git with ``curl``:
 
 .. code-block:: bash
 
-    curl -L https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh | sudo sh -s -- git develop
+    curl -L https://bootstrap.saltstack.com | sudo sh -s -- git develop
 
 
 Install a specific version from git using ``wget``:
 
 .. code-block:: bash
 
-    wget -O - https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh | sh -s -- -P git v0.16.4
+    wget -O - https://bootstrap.saltstack.com | sh -s -- -P git v0.16.4
 
 
 If you already have python installed, ``python 2.6``, then it's as easy as:
 
 .. code-block:: bash
 
-    python -m urllib "https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh" | sudo sh -s -- git develop
+    python -m urllib "https://bootstrap.saltstack.com" | sudo sh -s -- git develop
 
 
 All python versions should support the following one liner:
 
 .. code-block:: bash
 
-    python -c 'import urllib; print urllib.urlopen("https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh").read()' | \
+    python -c 'import urllib; print urllib.urlopen("https://bootstrap.saltstack.com").read()' | \
     sudo  sh -s -- git develop
 
 
@@ -204,21 +205,21 @@ available. You **do** have ``fetch`` available though:
 
 .. code-block:: bash
 
-    fetch -o - https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh | sudo sh
+    fetch -o - https://bootstrap.saltstack.com | sudo sh
 
 
 If all you want is to install a ``salt-master`` using latest git:
 
 .. code-block:: bash
 
-    curl -L https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh | sudo sh -s -- -M -N git develop
+    curl -L https://bootstrap.saltstack.com | sudo sh -s -- -M -N git develop
 
 
 If you want to install a specific release version (based on the git tags):
 
 .. code-block:: bash
 
-    curl -L https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh | sudo sh -s -- git v0.16.4
+    curl -L https://bootstrap.saltstack.com | sudo sh -s -- git v0.16.4
 
 
 Downloading the develop branch (from here standard command line options may be
@@ -226,12 +227,14 @@ passed):
 
 .. code-block:: bash
 
-    wget https://raw.githubusercontent.com/saltstack/salt-bootstrap/develop/bootstrap-salt.sh
+    wget https://bootstrap.saltstack.com/develop
 
 Command Line Options
 --------------------
 
-Here's a summary of the command line options::
+Here's a summary of the command line options:
+
+.. code-block:: bash
 
     $ sh bootstrap-salt.sh -h
     

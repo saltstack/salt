@@ -6,6 +6,7 @@ This module is used to manage events via RAET
 '''
 
 # Import python libs
+import os
 import logging
 import time
 from collections import MutableMapping
@@ -15,7 +16,8 @@ import salt.payload
 import salt.loader
 import salt.state
 import salt.utils.event
-from raet import raeting
+from salt import syspaths
+from raet import raeting, nacling
 from raet.lane.stacking import LaneStack
 from raet.lane.yarding import RemoteYard
 
@@ -26,28 +28,34 @@ class SaltEvent(object):
     '''
     The base class used to manage salt events
     '''
-    def __init__(self, node, sock_dir=None, listen=True):
+    def __init__(self, node, sock_dir=None, listen=True, opts=None):
         '''
         Set up the stack and remote yard
         '''
-        #import  wingdbstub
-
         self.node = node
         self.sock_dir = sock_dir
         self.listen = listen
+        if opts is None:
+            opts = {}
+        self.opts = opts
         self.__prep_stack()
 
     def __prep_stack(self):
-        self.yid = salt.utils.gen_jid()
+        self.yid = nacling.uuid(size=18)
+        name = 'event' + self.yid
+        cachedir = self.opts.get('cachedir', os.path.join(syspaths.CACHE_DIR, self.node))
         self.connected = False
         self.stack = LaneStack(
+                name=name,
                 yid=self.yid,
                 lanename=self.node,
                 sockdirpath=self.sock_dir)
         self.stack.Pk = raeting.packKinds.pack
         self.router_yard = RemoteYard(
+                stack=self.stack,
                 lanename=self.node,
                 yid=0,
+                name='manor',
                 dirpath=self.sock_dir)
         self.stack.addRemote(self.router_yard)
         self.connect_pub()
@@ -107,7 +115,7 @@ class SaltEvent(object):
         while True:
             self.stack.serviceAll()
             if self.stack.rxMsgs:
-                msg = self.stack.rxMsgs.popleft()
+                msg, sender = self.stack.rxMsgs.popleft()
                 event = msg.get('event', {})
                 if 'tag' not in event and 'data' not in event:
                     # Invalid event, how did this get here?
@@ -130,7 +138,7 @@ class SaltEvent(object):
         self.connect_pub()
         self.stack.serviceAll()
         if self.stack.rxMsgs:
-            event = self.stack.rxMsgs.popleft()
+            event, sender = self.stack.rxMsgs.popleft()
             if 'tag' not in event and 'data' not in event:
                 # Invalid event, how did this get here?
                 return None
@@ -195,3 +203,10 @@ class SaltEvent(object):
                                        'job'))
                 except Exception:
                     pass
+
+    def destroy(self):
+        if hasattr(self, 'stack'):
+            self.stack.server.close()
+
+    def __del__(self):
+        self.destroy()

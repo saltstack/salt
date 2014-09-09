@@ -31,7 +31,7 @@ import logging
 # Import salt cloud libs
 import salt.utils.cloud
 import salt.config as config
-from salt.cloud.exceptions import (
+from salt.exceptions import (
     SaltCloudConfigError,
     SaltCloudNotFound,
     SaltCloudSystemExit,
@@ -335,15 +335,15 @@ def create(vm_):
             'The following exception was thrown when trying to '
             'run the initial deployment: {1}'.format(
                 vm_['name'],
-                exc.message
+                str(exc)
             ),
             # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
     def __query_node_data(vm_name):
-        data = _get_node(vm_name)
+        data = show_instance(vm_name, call='action')
         if not data:
             # Trigger an error in the wait_for_ip function
             return False
@@ -368,7 +368,7 @@ def create(vm_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(exc.message)
+            raise SaltCloudSystemExit(str(exc))
 
     ssh_username = config.get_cloud_config_value(
         'ssh_username', vm_, __opts__, default='root'
@@ -522,8 +522,9 @@ def show_instance(name, call=None):
         raise SaltCloudSystemExit(
             'The show_instance action must be called with -a or --action.'
         )
-
-    return _get_node(name)
+    node = _get_node(name)
+    salt.utils.cloud.cache_node(node, __active_provider_name__, __opts__)
+    return node
 
 
 def _get_node(name):
@@ -548,7 +549,9 @@ def destroy(name, call=None):
     '''
     Destroy a node. Will check termination protection and warn if enabled.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud --destroy mymachine
     '''
@@ -576,5 +579,8 @@ def destroy(name, call=None):
         'salt/cloud/{0}/destroyed'.format(name),
         {'name': name},
     )
+
+    if __opts__.get('update_cachedir', False) is True:
+        salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
 
     return node

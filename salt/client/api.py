@@ -223,7 +223,7 @@ class APIClient(object):
             client = parts[0]
             module = '.'.join(parts[1:])  # strip prefix
             if client == 'wheel':
-                functions = self.wheelClient.w_funcs
+                functions = self.wheelClient.functions
             elif client == 'runner':
                 functions = self.runnerClient.functions
             result = {'master': salt.utils.argspec_report(functions, module)}
@@ -273,7 +273,7 @@ class APIClient(object):
             raise EauthAuthenticationError(
                 "Authentication failed with {0}.".format(repr(ex)))
 
-        if not 'token' in tokenage:
+        if 'token' not in tokenage:
             raise EauthAuthenticationError("Authentication failed with provided credentials.")
 
         # Grab eauth config for the current backend for the current user

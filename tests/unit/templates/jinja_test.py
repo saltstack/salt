@@ -8,11 +8,13 @@ import datetime
 import pprint
 
 # Import Salt Testing libs
+from tests.integration import ModuleCase
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import salt libs
+import salt.loader
 import salt.utils
 from salt.exceptions import SaltRenderError
 from salt.utils import get_context
@@ -177,7 +179,7 @@ class TestGetTemplate(TestCase):
 
     def test_macro_additional_log_for_generalexc(self):
         '''
-        If we failed in a macro because of eg a typeerror, get
+        If we failed in a macro because of e.g. a TypeError, get
         more output from trace.
         '''
         expected = r'''Jinja error:.*division.*
@@ -373,7 +375,7 @@ class TestGetTemplate(TestCase):
 
     def test_render_with_undefined_variable(self):
         template = "hello\n\n{{ foo }}\n\nfoo"
-        expected = r'Jinja variable \'foo\' is undefined;.*\n\n---\nhello\n\n{{ foo }}.*'
+        expected = r'Jinja variable \'foo\' is undefined'
         self.assertRaisesRegexp(
             SaltRenderError,
             expected,
@@ -384,7 +386,7 @@ class TestGetTemplate(TestCase):
 
     def test_render_with_undefined_variable_utf8(self):
         template = "hello\xed\x95\x9c\n\n{{ foo }}\n\nfoo"
-        expected = r'Jinja variable \'foo\' is undefined;.*\n\n---\nhello\xed\x95\x9c\n\n{{ foo }}.*'
+        expected = r'Jinja variable \'foo\' is undefined'
         self.assertRaisesRegexp(
             SaltRenderError,
             expected,
@@ -395,7 +397,7 @@ class TestGetTemplate(TestCase):
 
     def test_render_with_undefined_variable_unicode(self):
         template = u"hello\ud55c\n\n{{ foo }}\n\nfoo"
-        expected = r'Jinja variable \'foo\' is undefined;.*\n\n---\nhello\xed\x95\x9c\n\n{{ foo }}.*'
+        expected = r'Jinja variable \'foo\' is undefined'
         self.assertRaisesRegexp(
             SaltRenderError,
             expected,
@@ -631,7 +633,51 @@ class TestCustomExtensions(TestCase):
     #     return
 
 
+class TestDotNotationLookup(ModuleCase):
+    '''
+    Tests to call Salt functions via Jinja with various lookup syntaxes
+    '''
+    def setUp(self, *args, **kwargs):
+        functions = {
+            'mocktest.ping': lambda: True,
+            'mockgrains.get': lambda x: 'jerry',
+        }
+        render = salt.loader.render(self.minion_opts, functions)
+        self.jinja = render.get('jinja')
+
+    def render(self, tmpl_str, context=None):
+        return self.jinja(tmpl_str, context=context or {}, from_str=True).read()
+
+    def test_normlookup(self):
+        '''
+        Sanity-check the normal dictionary-lookup syntax for our stub function
+        '''
+        tmpl_str = '''Hello, {{ salt['mocktest.ping']() }}.'''
+
+        ret = self.render(tmpl_str)
+        self.assertEqual(ret, 'Hello, True.')
+
+    def test_dotlookup(self):
+        '''
+        Check calling a stub function using awesome dot-notation
+        '''
+        tmpl_str = '''Hello, {{ salt.mocktest.ping() }}.'''
+
+        ret = self.render(tmpl_str)
+        self.assertEqual(ret, 'Hello, True.')
+
+    def test_shadowed_dict_method(self):
+        '''
+        Check calling a stub function with a name that shadows a ``dict``
+        method name
+        '''
+        tmpl_str = '''Hello, {{ salt.mockgrains.get('id') }}.'''
+
+        ret = self.render(tmpl_str)
+        self.assertEqual(ret, 'Hello, jerry.')
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(TestSaltCacheLoader, TestGetTemplate, TestCustomExtensions,
+            TestDotNotationLookup,
               needs_daemon=False)

@@ -25,7 +25,7 @@ Module to provide MySQL compatibility to salt.
 
         mysql.default_file: '/etc/mysql/debian.cnf'
 
-.. versionchanged:: 2014.1.0 (Hydrogen)
+.. versionchanged:: 2014.1.0
     charset connection argument added. This is a MySQL charset, not a python one
 .. versionchanged:: 0.16.2
     Connection arguments from the minion config file can be overridden on the
@@ -104,7 +104,7 @@ __ssl_options__ = __ssl_options_parameterized__ + [
 ]
 
 ################################################################################
-# DEVELOPPER NOTE: ABOUT arguments management, escapes, formats, arguments and
+# DEVELOPER NOTE: ABOUT arguments management, escapes, formats, arguments and
 # security of SQL.
 #
 # A general rule of SQL security is to use queries with _execute call in this
@@ -112,13 +112,17 @@ __ssl_options__ = __ssl_options_parameterized__ + [
 # Another way of escaping values arguments could be '{0!r}'.format(), using
 # __repr__ to ensure things get properly used as strings. But this could lead
 # to two problems:
-#  * in ANSI mode, which is available on MySQL, but not by default, double
+#
+#  * In ANSI mode, which is available on MySQL, but not by default, double
 # quotes " should not be used as a string delimiters, in ANSI mode this is an
 # identifier delimiter (like `).
-#  * some rare exploits with bad multibytes management, either on python or
+#
+#  * Some rare exploits with bad multibytes management, either on python or
 # MySQL could defeat this barrier, bindings internal escape functions
 # should manage theses cases.
+#
 # So query with arguments should use a paramstyle defined in PEP249:
+#
 # http://www.python.org/dev/peps/pep-0249/#paramstyle
 # We use pyformat, which means 'SELECT * FROM foo WHERE bar=%(myval)s'
 # used with {'myval': 'some user input'}
@@ -127,8 +131,8 @@ __ssl_options__ = __ssl_options_parameterized__ + [
 # are database names, table names and column names. Theses names are not values
 # and do not follow the same escape rules (see quote_identifier function for
 # details on `_ and % escape policies on identifiers). Using value escaping on
-# identifier could fool the SQL engine (badly escaping quotes and not doubling `
-# characters. So for identifiers a call to quote_identifier should be done and
+# identifier could fool the SQL engine (badly escaping quotes and not doubling
+# ` characters. So for identifiers a call to quote_identifier should be done and
 # theses identifiers should then be added in strings with format, but without
 # __repr__ filter.
 #
@@ -138,15 +142,18 @@ __ssl_options__ = __ssl_options_parameterized__ + [
 # quote_identifier. This is not the same as escaping '%' to '\%' or '_' to '\%'
 # when using a LIKE query (example in db_exists), as this escape is there to
 # avoid having _ or % characters interpreted in LIKE queries. The string parted
-# of the first query could become (still used with args dictionnary for myval):
+# of the first query could become (still used with args dictionary for myval):
 # 'SELECT * FROM {0} WHERE bar=%(myval)s'.format(quote_identifier('user input'))
 #
 # Check integration tests if you find a hole in theses strings and escapes rules
 #
 # Finally some examples to sum up.
+#
 # Given a name f_o%o`b'a"r, in python that would be '''f_o%o`b'a"r'''. I'll
 # avoid python syntax for clarity:
-# The MySQL way of writing this name is
+#
+# The MySQL way of writing this name is:
+#
 # value                         : 'f_o%o`b\'a"r' (managed by MySQLdb)
 # identifier                    : `f_o%o``b'a"r`
 # db identifier in general GRANT: `f\_o\%o``b'a"r`
@@ -154,7 +161,9 @@ __ssl_options__ = __ssl_options_parameterized__ + [
 # in mySQLdb, query with args   : `f_o%%o``b'a"r` (as identifier)
 # in mySQLdb, query without args: `f_o%o``b'a"r` (as identifier)
 # value in a LIKE query         : 'f\_o\%o`b\'a"r' (quotes managed by MySQLdb)
+#
 # And theses could be mixed, in a like query value with args: 'f\_o\%%o`b\'a"r'
+#
 ################################################################################
 
 
@@ -306,7 +315,7 @@ def _grant_to_tokens(grant):
 
     :param grant: An un-parsed MySQL GRANT statement str, like
         "GRANT SELECT, ALTER, LOCK TABLES ON `mydb`.* TO 'testuser'@'localhost'"
-        or a dictionnary with 'qry' and 'args' keys for 'user' and 'host'.
+        or a dictionary with 'qry' and 'args' keys for 'user' and 'host'.
     :return:
         A Python dict with the following keys/values:
             - user: MySQL User
@@ -318,7 +327,7 @@ def _grant_to_tokens(grant):
     dict_mode = False
     if isinstance(grant, dict):
         dict_mode = True
-        # Everything coming in dictionnary form was made for a MySQLdb execute
+        # Everything coming in dictionary form was made for a MySQLdb execute
         # call and contain a '%%' escaping of '%' characters for MySQLdb
         # that we should remove here.
         grant_sql = grant.get('qry', 'undefined').replace('%%', '%')
@@ -443,7 +452,7 @@ def quote_identifier(identifier, for_grants=False):
     r'''
     Return an identifier name (column, table, database, etc) escaped for MySQL
 
-    This means surrounded by "`" character and escaping this charater inside.
+    This means surrounded by "`" character and escaping this character inside.
     It also means doubling the '%' character for MySQLdb internal usage.
 
     :param identifier: the table, column or database identifier
@@ -475,7 +484,7 @@ def _execute(cur, qry, args=None):
     query. For example '%' characters on the query must be encoded as '%%' and
     will be restored as '%' when arguments are applied. But when there're no
     arguments the '%%' is not managed. We cannot apply Identifier quoting in a
-    predictible way if the query are not always applying the same filters. So
+    predictable way if the query are not always applying the same filters. So
     this wrapper ensure this escape is not made if no arguments are used.
     '''
     if args is None or args == {}:
@@ -1010,7 +1019,7 @@ def user_exists(user,
     '''
     dbc = _connect(**connection_args)
     # Did we fail to connect with the user we are checking
-    # Its password might have previousely change with the same command/state
+    # Its password might have previously change with the same command/state
     if dbc is None \
             and __context__['mysql.error'] \
                 .startswith("MySQL Error 1045: Access denied for user '{0}'@".format(user)) \
@@ -1436,7 +1445,7 @@ def __grant_normalize(grant):
     # Grants are paste directly in SQL, must filter it
     exploded_grants = grant.split(",")
     for chkgrant in exploded_grants:
-        if not chkgrant.strip().upper() in __grants__:
+        if chkgrant.strip().upper() not in __grants__:
             raise Exception('Invalid grant : {0!r}'.format(
                 chkgrant
             ))
@@ -1454,7 +1463,7 @@ def __ssl_option_sanitize(ssl_option):
 
         normal_key = key.strip().upper()
 
-        if not normal_key in __ssl_options__:
+        if normal_key not in __ssl_options__:
             raise Exception('Invalid SSL option : {0!r}'.format(
                 key
             ))
@@ -1505,7 +1514,7 @@ def __grant_generate(grant,
     args = {}
     args['user'] = user
     args['host'] = host
-    if isinstance(ssl_option, type([])) and len(ssl_option):
+    if isinstance(ssl_option, list) and len(ssl_option):
         qry += __ssl_option_sanitize(ssl_option)
     if salt.utils.is_true(grant_option):
         qry += ' WITH GRANT OPTION'
@@ -1572,9 +1581,13 @@ def grant_exists(grant,
         salt '*' mysql.grant_exists \
              'SELECT,INSERT,UPDATE,...' 'database.*' 'frank' 'localhost'
     '''
-    target = __grant_generate(
-        grant, database, user, host, grant_option, escape
-    )
+    try:
+        target = __grant_generate(
+            grant, database, user, host, grant_option, escape
+        )
+    except Exception:
+        log.error('Error during grant generation.')
+        return False
 
     grants = user_grants(user, host, **connection_args)
 
@@ -1636,7 +1649,11 @@ def grant_add(grant,
 
     # Avoid spaces problems
     grant = grant.strip()
-    qry = __grant_generate(grant, database, user, host, grant_option, escape, ssl_option)
+    try:
+        qry = __grant_generate(grant, database, user, host, grant_option, escape, ssl_option)
+    except Exception:
+        log.error('Error during grant generation')
+        return False
     try:
         _execute(cur, qry['qry'], qry['args'])
     except (MySQLdb.OperationalError, MySQLdb.ProgrammingError) as exc:

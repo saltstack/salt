@@ -54,7 +54,7 @@ def usage(args=None):
         salt '*' disk.usage
     '''
     flags = _clean_flags(args, 'disk.usage')
-    if not os.path.isfile('/etc/mtab'):
+    if not os.path.isfile('/etc/mtab') and __grains__['kernel'] == 'Linux':
         log.warn('df cannot run without /etc/mtab')
         if __grains__.get('virtual_subtype') == 'LXC':
             log.warn('df command failed and LXC detected. If you are running '
@@ -155,9 +155,11 @@ def inodeusage(args=None):
 
 def percent(args=None):
     '''
-    Return partion information for volumes mounted on this minion
+    Return partition information for volumes mounted on this minion
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' disk.percent /var
     '''
@@ -196,7 +198,9 @@ def blkid(device=None):
     '''
     Return block device attributes: UUID, LABEL, etc.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' disk.blkid
         salt '*' disk.blkid /dev/sda

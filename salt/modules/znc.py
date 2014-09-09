@@ -2,7 +2,7 @@
 '''
 znc - An advanced IRC bouncer
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 Provides an interface to basic ZNC functionality
 '''

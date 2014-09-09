@@ -9,6 +9,8 @@ import os
 import stat
 
 from ioflo.base.odicting import odict
+from ioflo.base.consoling import getConsole
+console = getConsole()
 
 import salt.daemons.flo
 
@@ -19,7 +21,7 @@ FLO_DIR_PATH = os.path.join(
 def test():
     """ Execute run.start """
 
-    pkiDirpath = os.path.join('/tmp', 'raet', 'keyo', 'minion', 'pki')
+    pkiDirpath = os.path.join('/tmp', 'raet', 'testo', 'minion', 'pki')
     if not os.path.exists(pkiDirpath):
         os.makedirs(pkiDirpath)
 
@@ -77,4 +79,5 @@ def test():
     minion.start(behaviors=['raet.flo.behaving'])
 
 if __name__ == '__main__':
+    console.reinit(verbosity=console.Wordage.concise)
     test()

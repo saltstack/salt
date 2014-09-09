@@ -50,7 +50,7 @@ def active():
     return ret
 
 
-def lookup_jid(jid, ext_source=None, output=True):
+def lookup_jid(jid, ext_source=None, missing=False):
     '''
     Return the printout from a previously executed job
 
@@ -72,6 +72,12 @@ def lookup_jid(jid, ext_source=None, output=True):
             ret[minion] = data[minion].get('return')
         if 'out' in data[minion]:
             out = data[minion]['out']
+    if missing:
+        ckminions = salt.utils.minions.CkMinions(__opts__)
+        exp = ckminions.check_minions(data['tgt'], data['tgt_type'])
+        for minion_id in exp:
+            if minion_id not in data:
+                ret[minion_id] = 'Minion did not return'
     salt.output.display_output(ret, opts=__opts__)
     return ret
 
@@ -118,13 +124,13 @@ def list_jobs(ext_source=None):
 
 def print_job(jid, ext_source=None):
     '''
-    Print job available details, including return data.
+    Print a specific job's detail given by it's jid, including the return data.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt-run jobs.print_job
+        salt-run jobs.print_job 20130916125524463507
     '''
     ret = {}
 
@@ -141,7 +147,7 @@ def print_job(jid, ext_source=None):
 
 def _get_returner(returner_types):
     '''
-    Helper to iterate over retuerner_types and pick the first one
+    Helper to iterate over returner_types and pick the first one
     '''
     for returner in returner_types:
         if returner:

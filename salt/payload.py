@@ -90,7 +90,14 @@ class Serial(object):
         '''
         Run the correct loads serialization format
         '''
-        return msgpack.loads(msg, use_list=True)
+        try:
+            return msgpack.loads(msg, use_list=True)
+        except Exception as exc:
+            log.critical('Could not deserialize msgpack message: {0}'
+                         'In an attempt to keep Salt running, returning an empty dict.'
+                         'This often happens when trying to read a file not in binary mode.'
+                         'Please open an issue and include the following error: {1}'.format(msg, exc))
+            return {}
 
     def load(self, fn_):
         '''
@@ -130,6 +137,10 @@ class Serial(object):
                     return obj
                 return obj
             return msgpack.dumps(odict_encoder(msg))
+        except SystemError as exc:
+            log.critical('Unable to serialize message! Consider upgrading msgpack. '
+                         'Message which failed was {failed_message} '
+                         'with exception {exception_message}').format(msg, exc)
 
     def dump(self, msg, fn_):
         '''
@@ -145,22 +156,46 @@ class SREQ(object):
     '''
     def __init__(self, master, id_='', serial='msgpack', linger=0):
         self.master = master
+        self.id_ = id_
         self.serial = Serial(serial)
+        self.linger = linger
         self.context = zmq.Context()
-        self.socket = self.context.socket(zmq.REQ)
-        if hasattr(zmq, 'RECONNECT_IVL_MAX'):
-            self.socket.setsockopt(
-                zmq.RECONNECT_IVL_MAX, 5000
-            )
-
-        if master.startswith('tcp://[') and hasattr(zmq, 'IPV4ONLY'):
-            # IPv6 sockets work for both IPv6 and IPv4 addresses
-            self.socket.setsockopt(zmq.IPV4ONLY, 0)
-        self.socket.linger = linger
-        if id_:
-            self.socket.setsockopt(zmq.IDENTITY, id_)
-        self.socket.connect(master)
         self.poller = zmq.Poller()
+
+    @property
+    def socket(self):
+        '''
+        Lazily create the socket.
+        '''
+        if not hasattr(self, '_socket'):
+            # create a new one
+            self._socket = self.context.socket(zmq.REQ)
+            if hasattr(zmq, 'RECONNECT_IVL_MAX'):
+                self._socket.setsockopt(
+                    zmq.RECONNECT_IVL_MAX, 5000
+                )
+
+            if self.master.startswith('tcp://') and hasattr(zmq, 'IPV4ONLY'):
+                # IPv6 sockets work for both IPv6 and IPv4 addresses
+                self._socket.setsockopt(zmq.IPV4ONLY, 0)
+            self._socket.linger = self.linger
+            if self.id_:
+                self._socket.setsockopt(zmq.IDENTITY, self.id_)
+            self._socket.connect(self.master)
+        return self._socket
+
+    def clear_socket(self):
+        '''
+        delete socket if you have it
+        '''
+        if hasattr(self, '_socket'):
+            if isinstance(self.poller.sockets, dict):
+                for socket in self.poller.sockets.keys():
+                    self.poller.unregister(socket)
+            else:
+                for socket in self.poller.sockets:
+                    self.poller.unregister(socket[0])
+            del self._socket
 
     def send(self, enc, load, tries=1, timeout=60):
         '''
@@ -181,6 +216,7 @@ class SREQ(object):
                 log.info('SaltReqTimeoutError: after {0} seconds. (Try {1} of {2})'.format(
                   timeout, tried, tries))
             if tried >= tries:
+                self.clear_socket()
                 raise SaltReqTimeoutError(
                     'SaltReqTimeoutError: after {0} seconds, ran {1} tries'.format(timeout * tried, tried)
                 )

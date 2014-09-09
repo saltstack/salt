@@ -11,12 +11,21 @@ aliases:
     username:
       alias.present:
         - target: user@example.com
+
+.. code-block:: yaml
+
+    thomas:
+      alias.present:
+        - target: thomas@example.com
 '''
 
 
 def present(name, target):
     '''
-    Ensures that the named alias is present with the given target
+    Ensures that the named alias is present with the given target or list of
+    targets. If the alias exists but the target differs from the previous
+    entry, the target(s) will be overwritten. If the alias does not exist, the
+    alias will be created.
 
     name
         The local user/address to assign an alias to

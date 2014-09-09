@@ -201,6 +201,63 @@ cloud provider alias. If the provider alias only has a single entry, use
 
 
 
+Pillar Configuration
+====================
+
+It is possible to configure cloud providers using pillars.  This is only used
+when inside the cloud module.  You can setup a variable called ``clouds`` that
+contains your profile and provider to pass that information to the cloud
+servers instead of having to copy the full configuration to every minion.
+
+In your pillar file, you would use something like this.
+
+.. code-block:: yaml
+
+    cloud:
+      ssh_key_name: saltstack
+      ssh_key_file: /root/.ssh/id_rsa
+      update_cachedir: True
+      diff_cache_events: True
+      change_password: True
+
+      providers:
+        my-nova:
+          identity_url: https://identity.api.rackspacecloud.com/v2.0/
+          compute_region: IAD
+          user: myuser
+          api_key: apikey
+          tenant: 123456
+          provider: nova
+
+        my-openstack:
+          identity_url: https://identity.api.rackspacecloud.com/v2.0/tokens
+          user: user2
+          apikey: apikey2
+          tenant: 654321
+          compute_region: DFW
+          provider: openstack
+          compute_name: cloudServersOpenStack
+
+      profiles:
+        ubuntu-nova:
+          provider: my-nova
+          size: performance1-8
+          image: bb02b1a3-bc77-4d17-ab5b-421d89850fca
+          script_args: git develop
+          flush_mine_on_destroy: True
+
+        ubuntu-openstack:
+          provider: my-openstack
+          size: performance1-8
+          image: bb02b1a3-bc77-4d17-ab5b-421d89850fca
+          script_args: git develop
+          flush_mine_on_destroy: True
+
+**NOTE**: This is only valid in the cloud module, so also in the cloud state.
+This does not work with the salt-cloud binary.
+
+
+
 Cloud Configurations
 ====================
 
@@ -296,6 +353,8 @@ be set:
     my-linode-config:
       apikey: asldkgfakl;sdfjsjaslfjaklsdjf;askldjfaaklsjdfhasldsadfghdkf
       password: F00barbaz
+      ssh_pubkey: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKHEOLLbeXgaqRQT9NBAopVz366SdYc0KKX33vAnq+2R user@host
+      ssh_key_file: ~/.ssh/id_ed25519
       provider: linode
 
 
@@ -494,11 +553,11 @@ For in-house OpenStack Essex installation, libcloud needs the service_type :
 
 
 
-Digital Ocean
+DigitalOcean
 -------------
 
-Using Salt for Digital Ocean requires a client_key and an api_key. These can be
-found in the Digital Ocean web interface, in the "My Settings" section, under
+Using Salt for DigitalOcean requires a client_key and an api_key. These can be
+found in the DigitalOcean web interface, in the "My Settings" section, under
 the API Access tab.
 
 * Using the old format:
@@ -575,8 +634,8 @@ lxc
 ---
 
 The lxc driver is a new, experimental driver for installing Salt on
-newly provisionned (via saltcloud) lxc containers. It will in turn use saltify to install
-salt an rattach the lxc container as a new lxc minion.
+newly provisioned (via saltcloud) lxc containers. It will in turn use saltify
+to install salt and reattach the lxc container as a new lxc minion.
 As soon as we can, we manage baremetal operation over SSH.
 You can also destroy those containers via this driver.
 
@@ -643,6 +702,18 @@ current profiles configuration, but, regarding the cloud providers
 configuration, **only** works in the new syntax and respective configuration
 files, i.e. ``/etc/salt/salt/cloud.providers`` or
 ``/etc/salt/cloud.providers.d/*.conf``.
+
+
+.. note::
+
+    Extending cloud profiles and providers is not recursive. For example, a
+    profile that is extended by a second profile is possible, but the second
+    profile cannot be extended by a third profile.
+
+    Also, if a profile (or provider) is extending another profile and each
+    contains a list of values, the lists from the extending profile will
+    override the list from the original profile. The lists are not merged
+    together.
 
 
 Extending Profiles

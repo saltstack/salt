@@ -60,7 +60,7 @@ if __name__ == '__main__':
 '''
 
 
-def gen_thin(cachedir, extra_mods='', overwrite=False):
+def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods=''):
     '''
     Generate the salt-thin tarball and print the location of the tarball
     Optional additional mods to include (e.g. mako) can be supplied as a comma
@@ -122,6 +122,12 @@ def gen_thin(cachedir, extra_mods='', overwrite=False):
                 # doesn't bail on import failure, so I followed that lead.
                 # And of course, any other failure still S/T's.
                 pass
+    for mod in [m for m in so_mods.split(',') if m]:
+        try:
+            locals()[mod] = __import__(mod)
+            tops.append(locals()[mod].__file__)
+        except ImportError:
+            pass   # As per comment above
     if HAS_MARKUPSAFE:
         tops.append(os.path.dirname(markupsafe.__file__))
     tfp = tarfile.open(thintar, 'w:gz', dereference=True)
