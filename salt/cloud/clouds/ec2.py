@@ -105,7 +105,7 @@ try:
     import Crypto
     from Crypto.Cipher import PKCS1_v1_5
     HAS_PYCRYPTO = True
-except:
+except ImportError:
     HAS_PYCRYPTO = False
 
 
@@ -3552,7 +3552,7 @@ def get_password_data(
     if not HAS_PYCRYPTO:
         return ret
 
-    if not 'key' in kwargs:
+    if 'key' not in kwargs:
         if 'key_file' in kwargs:
             with salt.utils.fopen(kwargs['key_file'], 'r') as kf_:
                 kwargs['key'] = kf_.read()
