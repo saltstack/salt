@@ -6,6 +6,7 @@ Salt module to manage RAID arrays with mdadm
 # Import python libs
 import os
 import logging
+import re
 
 # Import salt libs
 import salt.utils
@@ -146,7 +147,7 @@ def destroy(device):
 def create(name,
            level,
            devices,
-           metadata="default",
+           metadata='default',
            test_mode=False,
            **kwargs):
     '''
@@ -202,25 +203,24 @@ def create(name,
 
     For more info, read the ``mdadm(8)`` manpage
     '''
-    opts = ''
+    opts = []
     for key in kwargs:
         if not key.startswith('__'):
-            if kwargs[key] is True:
-                opts += '--{0} '.format(key)
-            else:
-                opts += '--{0}={1} '.format(key, kwargs[key])
+            opts.append('--{0}'.format(key))
+            if kwargs[key] is not True:
+                opts.append(kwargs[key])
 
-    cmd = "mdadm -C {0} -v {1}-l {2} -e {3} -n {4} {5}".format(name,
-            opts,
-            level,
-            metadata,
-            len(devices),
-            ' '.join(devices))
+    cmd = ['mdadm',
+           '-C', name,
+           '-v'] + opts + [
+           '-l', level,
+           '-e', metadata,
+           '-n', len(devices)] + devices
 
     if test_mode is True:
         return cmd
     elif test_mode is False:
-        return __salt__['cmd.run'](cmd)
+        return __salt__['cmd.run'](cmd, python_shell=False)
 
 
 def save_config():
@@ -240,27 +240,29 @@ def save_config():
         salt '*' raid.save_config
 
     '''
-    scan = __salt__['cmd.run']('mdadm --detail --scan').split()
-    # Issue with mdadm and ubuntu
+    scan = __salt__['cmd.run']('mdadm --detail --scan').splitlines()
+    # Issue with mdadm and ubuntu requires removal of name and metadata tags
     # REF: http://askubuntu.com/questions/209702/why-is-my-raid-dev-md1-showing-up-as-dev-md126-is-mdadm-conf-being-ignored
     if __grains__['os'] == 'Ubuntu':
         buggy_ubuntu_tags = ['name', 'metadata']
-        for bad_tag in buggy_ubuntu_tags:
-            for i, elem in enumerate(scan):
-                if not elem.find(bad_tag):
-                    del scan[i]
+        for i, elem in enumerate(scan):
+            for bad_tag in buggy_ubuntu_tags:
+                pattern = r'\s{0}=\S+'.format(re.escape(bad_tag))
+                pattern = re.compile(pattern, flags=re.I)
+                scan[i] = re.sub(pattern, '', scan[i])
 
-    scan = ' '.join(scan)
     if __grains__.get('os_family') == 'Debian':
         cfg_file = '/etc/mdadm/mdadm.conf'
     else:
         cfg_file = '/etc/mdadm.conf'
 
     try:
-        if not __salt__['file.search'](cfg_file, scan):
-            __salt__['file.append'](cfg_file, scan)
+        vol_d = dict([(line.split()[1], line) for line in scan])
+        for vol in vol_d:
+            pattern = r'^ARRAY\s+{0}'.format(re.escape(vol))
+            __salt__['file.replace'](cfg_file, pattern, vol_d[vol], append_if_not_found=True)
     except SaltInvocationError:  # File is missing
-        __salt__['file.write'](cfg_file, scan)
+        __salt__['file.write'](cfg_file, args=scan)
 
     return __salt__['cmd.run']('update-initramfs -u')
 
@@ -300,20 +302,20 @@ def assemble(name,
 
     For more info, read the ``mdadm`` manpage.
     '''
-    opts = ''
+    opts = []
     for key in kwargs:
         if not key.startswith('__'):
-            if kwargs[key] is True:
-                opts += '--{0} '.format(key)
-            else:
-                opts += '--{0}={1} '.format(key, kwargs[key])
+            opts.append('--{0}'.format(key))
+            if kwargs[key] is not True:
+                opts.append(kwargs[key])
 
     # Devices may have been written with a blob:
     if type(devices) is str:
         devices = devices.split(',')
-    cmd = 'mdadm -A {0} -v {1}{2}'.format(name, opts, ' '.join(devices))
+
+    cmd = ['mdadm', '-A', name, '-v', opts] + devices
 
     if test_mode is True:
         return cmd
     elif test_mode is False:
-        return __salt__['cmd.run'](cmd)
+        return __salt__['cmd.run'](cmd, python_shell=False)

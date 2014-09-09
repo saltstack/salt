@@ -145,16 +145,30 @@ class EventListener(object):
     def __init__(self, mod_opts, opts):
         self.mod_opts = mod_opts
         self.opts = opts
-        self.event = salt.utils.event.get_event(
-            'master',
-            opts['sock_dir'],
-            opts['transport'])
 
         # tag -> list of futures
         self.tag_map = defaultdict(list)
 
         # request_obj -> list of (tag, future)
         self.request_map = defaultdict(list)
+
+        self.listening = False
+
+    def start_listening(self):
+        if self.listening is True:
+            raise Exception('Unable to start_listening, we are already listening')
+        self.event = salt.utils.event.get_event(
+            'master',
+            self.opts['sock_dir'],
+            self.opts['transport'])
+        tornado.ioloop.IOLoop.instance().add_callback(self.iter_events)
+        self.listening = True
+
+    def stop_listening(self):
+        if self.listening is False:
+            raise Exception('Unable to stop_listening, we already stopped')
+        del self.event
+        self.listening = False
 
     def clean_timeout_futures(self, request):
         '''
@@ -173,6 +187,7 @@ class EventListener(object):
             # if that was the last of them, remove the key all together
             if len(self.tag_map[tag]) == 0:
                 del self.tag_map[tag]
+        del self.request_map[request]
 
     def get_event(self,
                   request,
@@ -192,6 +207,9 @@ class EventListener(object):
         self.tag_map[tag].append(future)
         self.request_map[request].append((tag, future))
 
+        if self.listening is False:
+            self.start_listening()
+
         return future
 
     def iter_events(self):
@@ -209,8 +227,11 @@ class EventListener(object):
                         future.set_result(data)
                     del self.tag_map[tag_prefix]
 
-            # call yourself back!
-            tornado.ioloop.IOLoop.instance().add_callback(self.iter_events)
+            # call yourself back, if someone is waiting for something
+            if self.tag_map:
+                tornado.ioloop.IOLoop.instance().add_callback(self.iter_events)
+            else:
+                self.stop_listening()
 
         except zmq.ZMQError as e:
             # TODO: not sure what other errors we can get...

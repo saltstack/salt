@@ -102,8 +102,7 @@ class NestDisplay(object):
                 out += self.ustring(
                     ' ' * indent,
                     self.colors['CYAN'],
-                    '-' * 10,
-                    endc='')
+                    '-' * 10)
             for key in sorted(ret):
                 val = ret[key]
                 out += self.ustring(
