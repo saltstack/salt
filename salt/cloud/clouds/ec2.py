@@ -103,6 +103,7 @@ from salt.exceptions import (
 # Try to import PyCrypto, which may not be installed on a RAET-based system
 try:
     import Crypto
+    # PKCS1_v1_5 was added in PyCrypto 2.5
     from Crypto.Cipher import PKCS1_v1_5
     HAS_PYCRYPTO = True
 except ImportError:
@@ -3523,6 +3524,8 @@ def get_password_data(
 
         salt-cloud -a get_password_data mymachine
         salt-cloud -a get_password_data mymachine key_file=/root/ec2key.pem
+
+    Note: PKCS1_v1_5 was added in PyCrypto 2.5
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
