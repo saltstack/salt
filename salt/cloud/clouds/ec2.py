@@ -3510,6 +3510,19 @@ def get_password_data(
     ):
     '''
     Return password data for a Windows instance.
+
+    By default only the encrypted password data will be returned. However, if a
+    key_file is passed in, then a decrypted password will also be returned.
+
+    Note that the key_file references the private key that was used to generate
+    the keypair associated with this instance. This private key will _not_ be
+    transmitted to Amazon; it is only used internally inside of Salt Cloud to
+    decrypt data _after_ it has been received from Amazon.
+
+    CLI Examples::
+
+        salt-cloud -a get_password_data mymachine
+        salt-cloud -a get_password_data mymachine key_file=/root/ec2key.pem
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
