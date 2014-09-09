@@ -882,13 +882,13 @@ def user_update(username,
                 groups=None,
                 runas=None):
     '''
-    Creates a Postgres user.
+    Updates a Postgres user.
 
     CLI Examples:
 
     .. code-block:: bash
 
-        salt '*' postgres.user_create 'username' user='user' \\
+        salt '*' postgres.user_update 'username' user='user' \\
                 host='hostname' port='port' password='password' \\
                 rolepassword='rolepassword'
     '''
@@ -1059,13 +1059,13 @@ def is_available_extension(name,
                            password=None,
                            runas=None):
     '''
-    Test if a specific extension is installed
+    Test if a specific extension is available
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' postgres.is_installed_extension
+        salt '*' postgres.is_available_extension
 
     '''
     exts = available_extensions(user=user,
@@ -1408,7 +1408,7 @@ def group_update(groupname,
                  groups=None,
                  runas=None):
     '''
-    Updated a postgres group
+    Updates a postgres group
 
     CLI Examples:
 
