@@ -624,7 +624,7 @@ class State(object):
         '''
         ret = {'result': False}
         cmd_opts = {}
-        if shell in salt.opts['grains']:
+        if 'shell' in salt.opts['grains']:
             cmd_opts['shell'] = salt.opts['grains'].get('shell')
         if 'onlyif' in low_data:
             if not isinstance(low_data['onlyif'], list):
@@ -664,7 +664,7 @@ class State(object):
         '''
         ret = {'result': False}
         cmd_opts = {}
-        if shell in salt.opts['grains']:
+        if 'shell' in salt.opts['grains']:
             cmd_opts['shell'] = salt.opts['grains'].get('shell')
         for entry in low_data['check_cmd']:
             cmd = self.functions['cmd.retcode'](entry, ignore_retcode=True, **cmd_opts)
