@@ -330,3 +330,40 @@ def _install_script(source, cwd, python, user, saltenv='base'):
         )
     finally:
         os.remove(tmppath)
+
+
+def get_resource_path(venv, package_or_requirement, resource_name):
+    '''
+    Returns the path to a resource of a package or a distribution inside a virtualenv
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virtualenv.get_resource_path /path/to/my/venv my_package my/resource.xml
+    '''
+    bin_path = os.path.join(venv, 'bin/python')
+
+    if not os.path.exists(bin_path):
+        raise salt.exceptions.CommandExecutionError("Path does not appear to be a virtualenv: '{0}'".format(bin_path))
+
+    return __salt__['cmd.exec_code'](bin_path, "import pkg_resources; print pkg_resources.resource_filename('{0}', '{1}')".format(package_or_requirement, resource_name))
+
+
+def get_resource_content(venv, package_or_requirement, resource_name):
+    '''
+    Returns the content of a resource of a package or a distribution inside a virtualenv
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virtualenv.get_resource_content /path/to/my/venv my_package my/resource.xml
+    '''
+    bin_path = os.path.join(venv, 'bin/python')
+
+    if not os.path.exists(bin_path):
+        raise salt.exceptions.CommandExecutionError("Path does not appear to be a virtualenv: '{0}'".format(bin_path))
+
+    return __salt__['cmd.exec_code'](bin_path, "import pkg_resources; print pkg_resources.resource_string('{0}', '{1}')".format(package_or_requirement, resource_name))
+
