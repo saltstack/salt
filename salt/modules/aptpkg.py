@@ -20,6 +20,7 @@ import json
 import yaml
 
 # Import salt libs
+from salt.modules.cmdmod import _parse_env
 import salt.utils
 from salt._compat import string_types
 from salt.exceptions import (
@@ -51,6 +52,12 @@ LP_PVT_SRC_FORMAT = 'deb https://{0}private-ppa.launchpad.net/{1}/{2}/ubuntu' \
 
 _MODIFY_OK = frozenset(['uri', 'comps', 'architectures', 'disabled',
                         'file', 'dist'])
+DPKG_ENV_VARS = {
+    'APT_LISTBUGS_FRONTEND': 'none',
+    'APT_LISTCHANGES_FRONTEND': 'none',
+    'DEBIAN_FRONTEND': 'noninteractive',
+    'UCF_FORCE_CONFFOLD': '1',
+}
 
 # Define the module's virtual name
 __virtualname__ = 'pkg'
@@ -72,14 +79,8 @@ def __init__():
     non-interactive.
     '''
     if __virtual__():
-        env_vars = {
-            'APT_LISTBUGS_FRONTEND': 'none',
-            'APT_LISTCHANGES_FRONTEND': 'none',
-            'DEBIAN_FRONTEND': 'noninteractive',
-            'UCF_FORCE_CONFFOLD': '1',
-        }
         # Export these puppies so they persist
-        os.environ.update(env_vars)
+        os.environ.update(DPKG_ENV_VARS)
 
 
 def _get_ppa_info_from_launchpad(owner_name, ppa_name):
@@ -502,7 +503,9 @@ def install(name=None,
     if refreshdb:
         refresh_db()
 
-    __salt__['cmd.run'](cmd, env=kwargs.get('env'), python_shell=False)
+    env = _parse_env(kwargs.get('env'))
+    env.update(DPKG_ENV_VARS.copy())
+    __salt__['cmd.run'](cmd, python_shell=False, env=env)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)
@@ -642,7 +645,8 @@ def upgrade(refresh=True, dist_upgrade=True):
     else:
         cmd = ['apt-get', '-q', '-y', '-o', 'DPkg::Options::=--force-confold',
                '-o', 'DPkg::Options::=--force-confdef', 'upgrade']
-    call = __salt__['cmd.run_all'](cmd, python_shell=False, output_loglevel='trace', env={'DEBIAN_FRONTEND': 'noninteractive'})
+    call = __salt__['cmd.run_all'](cmd, python_shell=False, output_loglevel='trace',
+                                   env=DPKG_ENV_VARS.copy())
     if call['retcode'] != 0:
         ret['result'] = False
         if 'stderr' in call:
