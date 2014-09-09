@@ -186,6 +186,8 @@ def latest(name,
         runas = None
 
     run_check_cmd_kwargs = {'runas': user}
+    if 'shell' in __grains__:
+        run_check_cmd_kwargs['shell'] = __grains__['shell']
 
     # check if git.latest should be applied
     cret = mod_run_check(
