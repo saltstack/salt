@@ -1455,7 +1455,7 @@ def scp_file(dest_path, contents, kwargs):
                 ssh_gateway,
                 ssh_gateway_port
             )
-        ])
+        )
     if kwargs.get('use_sftp', False) is True:
         cmd = 'sftp {0} {2[username]}@{2[hostname]} <<< "put {1} {3}"'.format(
             ' '.join(ssh_args), tmppath, kwargs, dest_path
