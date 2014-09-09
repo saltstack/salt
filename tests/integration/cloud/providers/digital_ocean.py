@@ -91,7 +91,7 @@ class DigitalOceanTest(integration.ShellCase):
 
         # delete the instance
         delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
-        ret_str = '            OK'
+        ret_str = '                OK'
         try:
             self.assertIn(ret_str, delete)
         except AssertionError:
