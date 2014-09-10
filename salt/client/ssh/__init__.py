@@ -457,7 +457,6 @@ class SSH(object):
             ret = self.key_deploy(host, ret)
             outputter = ret[host].get('out', self.opts.get('output', 'nested'))
             p_data = {host: ret[host].get('return', {})}
-            print(ret)
             salt.output.display_output(
                     p_data,
                     outputter,
