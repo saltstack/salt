@@ -370,6 +370,12 @@ Ink servers in the master configuration.
     highstate_run:
       cmd.state.highstate:
         - tgt: {{ data['id'] }}
+        - ret: smtp_return
+
+The above will also return the highstate result data using the `smtp_return`
+returner. The returner needs to be configured on the minion for this to 
+work. See :mod:`salt.returners.smtp_return <salt.returners.smtp_return>` documentation for
+that.
 
 .. _minion-start-reactor:
 
