@@ -689,8 +689,7 @@ class Single(object):
         # Mimic the json data-structure that "salt-call --local" will
         # emit (as seen in ssh_py_shim.py)
         if 'local' in result:
-            result['local']['return'] = result['local']
-            ret = json.dumps(result)
+            ret = json.dumps({'local': {'return': result['local']}})
         else:
             ret = json.dumps({'local': {'return': result}})
         return ret
