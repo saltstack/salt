@@ -342,6 +342,12 @@ def get_resource_path(venv, package_or_requirement, resource_name):
 
         salt '*' virtualenv.get_resource_path /path/to/my/venv my_package my/resource.xml
     '''
+    if not salt.utils.verify.safe_py_code(venv):
+        return ''
+    if not salt.utils.verify.safe_py_code(package_or_requirement):
+        return ''
+    if not salt.utils.verify.safe_py_code(resource_name):
+        return ''
     bin_path = os.path.join(venv, 'bin/python')
 
     if not os.path.exists(bin_path):
@@ -360,6 +366,12 @@ def get_resource_content(venv, package_or_requirement, resource_name):
 
         salt '*' virtualenv.get_resource_content /path/to/my/venv my_package my/resource.xml
     '''
+    if not salt.utils.verify.safe_py_code(venv):
+        return ''
+    if not salt.utils.verify.safe_py_code(package_or_requirement):
+        return ''
+    if not salt.utils.verify.safe_py_code(resource_name):
+        return ''
     bin_path = os.path.join(venv, 'bin/python')
 
     if not os.path.exists(bin_path):
