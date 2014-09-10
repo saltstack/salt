@@ -81,6 +81,7 @@ import datetime
 import urllib
 import urlparse
 import requests
+import base64
 
 # Import salt libs
 import salt.utils
@@ -98,6 +99,15 @@ from salt.exceptions import (
     SaltCloudExecutionTimeout,
     SaltCloudExecutionFailure
 )
+
+# Try to import PyCrypto, which may not be installed on a RAET-based system
+try:
+    import Crypto
+    # PKCS1_v1_5 was added in PyCrypto 2.5
+    from Crypto.Cipher import PKCS1_v1_5  # pylint: disable=E0611
+    HAS_PYCRYPTO = True
+except ImportError:
+    HAS_PYCRYPTO = False
 
 
 # Get logging started
@@ -3489,5 +3499,76 @@ def get_console_output(
             ret['output_decoded'] = binascii.a2b_base64(item.values()[0])
         else:
             ret[item.keys()[0]] = item.values()[0]
+
+    return ret
+
+
+def get_password_data(
+        name=None,
+        kwargs=None,
+        instance_id=None,
+        call=None,
+    ):
+    '''
+    Return password data for a Windows instance.
+
+    By default only the encrypted password data will be returned. However, if a
+    key_file is passed in, then a decrypted password will also be returned.
+
+    Note that the key_file references the private key that was used to generate
+    the keypair associated with this instance. This private key will _not_ be
+    transmitted to Amazon; it is only used internally inside of Salt Cloud to
+    decrypt data _after_ it has been received from Amazon.
+
+    CLI Examples::
+
+        salt-cloud -a get_password_data mymachine
+        salt-cloud -a get_password_data mymachine key_file=/root/ec2key.pem
+
+    Note: PKCS1_v1_5 was added in PyCrypto 2.5
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The get_password_data action must be called with '
+            '-a or --action.'
+        )
+
+    if not instance_id:
+        instance_id = _get_node(name)[name]['instanceId']
+
+    if kwargs is None:
+        kwargs = {}
+
+    if instance_id is None:
+        if 'instance_id' in kwargs:
+            instance_id = kwargs['instance_id']
+            del kwargs['instance_id']
+
+    params = {'Action': 'GetPasswordData',
+              'InstanceId': instance_id}
+
+    ret = {}
+    data = query(params, return_root=True)
+    for item in data:
+        ret[item.keys()[0]] = item.values()[0]
+
+    if not HAS_PYCRYPTO:
+        return ret
+
+    if 'key' not in kwargs:
+        if 'key_file' in kwargs:
+            with salt.utils.fopen(kwargs['key_file'], 'r') as kf_:
+                kwargs['key'] = kf_.read()
+
+    if 'key' in kwargs:
+        pwdata = ret.get('passwordData', None)
+        if pwdata is not None:
+            rsa_key = kwargs['key']
+            pwdata = base64.b64decode(pwdata)
+            dsize = Crypto.Hash.SHA.digest_size
+            sentinel = Crypto.Random.new().read(15 + dsize)
+            key_obj = Crypto.PublicKey.RSA.importKey(rsa_key)
+            key_obj = PKCS1_v1_5.new(key_obj)
+            ret['password'] = key_obj.decrypt(pwdata, sentinel)
 
     return ret
