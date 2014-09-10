@@ -26,6 +26,7 @@ __proxyenabled__ = ['*']
 
 __outputter__ = {
     'sls': 'highstate',
+    'pkg': 'highstate',
     'top': 'highstate',
     'single': 'highstate',
     'highstate': 'highstate',
