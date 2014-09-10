@@ -525,7 +525,7 @@ class Single(object):
         self.target.update(args)
         self.serial = salt.payload.Serial(opts)
         self.wfuncs = salt.loader.ssh_wrapper(opts)
-        self.mods = mods
+        self.mods = mods if mods else {}
 
     def __arg_comps(self):
         '''
@@ -619,8 +619,13 @@ class Single(object):
             passed_time = (time.time() - os.stat(datap).st_mtime) / 60
             if passed_time > self.opts.get('cache_life', 60):
                 refresh = True
+
         if self.opts.get('refresh_cache'):
             refresh = True
+        conf_grains = {}
+        #Save conf file grains before they get clobbered
+        if 'ssh_grains' in self.opts:
+            conf_grains = self.opts['ssh_grains']
         if not data_cache:
             refresh = True
         if refresh:
@@ -664,6 +669,15 @@ class Single(object):
                 data = self.serial.load(fp_)
         opts = data.get('opts', {})
         opts['grains'] = data.get('grains')
+
+        #Restore master grains
+        for grain in conf_grains:
+            opts['grains'][grain] = conf_grains[grain]
+        #Enable roster grains support
+        if 'grains' in self.target:
+            for grain in self.target['grains']:
+                opts['grains'][grain] = self.target['grains'][grain]
+
         opts['pillar'] = data.get('pillar')
         wrapper = salt.client.ssh.wrapper.FunctionWrapper(
             opts,
@@ -675,8 +689,7 @@ class Single(object):
         # Mimic the json data-structure that "salt-call --local" will
         # emit (as seen in ssh_py_shim.py)
         if 'local' in result:
-            result['local']['return'] = result['local']
-            ret = json.dumps(result)
+            ret = json.dumps({'local': result['local']})
         else:
             ret = json.dumps({'local': {'return': result}})
         return ret
@@ -912,7 +925,7 @@ class Single(object):
             trans_tar,
             os.path.join(self.thin_dir, 'salt_state.tgz'),
         )
-        self.argv = ['state.pkg', '{0}/salt_state.tgz', 'test={1}'.format(self.thin_dir, test)]
+        self.argv = ['state.pkg', '{0}/salt_state.tgz'.format(self.thin_dir), 'test={0}'.format(test)]
 
 
 class SSHState(salt.state.State):
