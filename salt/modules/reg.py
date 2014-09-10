@@ -167,5 +167,12 @@ def delete_key(hkey, path, key, reflection=True):
         _winreg.CloseKey(handle)
         return True
     except Exception:
+        pass
+
+    try:
+        _winreg.DeleteValue(handle, key)
         _winreg.CloseKey(handle)
-    return True
+        return True
+    except Exception:
+        _winreg.CloseKey(handle)
+        return False
