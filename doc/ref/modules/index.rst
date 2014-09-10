@@ -159,12 +159,16 @@ the module is loaded with the name of the string.
 This means that the package manager modules can be presented as the ``pkg`` module
 regardless of what the actual module is named.
 
-The package manager modules are the best example of using the ``__virtual__``
+Since ``__virtual__`` is called before the module is loaded, ``__salt__ `` will be
+unavailable as it will not have been packed into the module at this point in time.
+
+The package manager modules are among the best example of using the ``__virtual__``
 function. Some examples:
 
 - :blob:`pacman.py <salt/modules/pacman.py>`
 - :blob:`yumpkg.py <salt/modules/yumpkg.py>`
 - :blob:`aptpkg.py <salt/modules/aptpkg.py>`
+- :blob:`at.py` <salt/modules/at.py>`
 
 .. note::
     Modules which return a string from ``__virtual__`` that is already used by a module that
