@@ -831,9 +831,9 @@ def user_password_update(user_id=None, name=None, password=None,
 
     .. code-block:: bash
 
-        salt '*' keystone.user_delete c965f79c4f864eaaa9c3b41904e67082 password=12345
-        salt '*' keystone.user_delete user_id=c965f79c4f864eaaa9c3b41904e67082 password=12345
-        salt '*' keystone.user_delete name=nova password=12345
+        salt '*' keystone.user_password_update c965f79c4f864eaaa9c3b41904e67082 password=12345
+        salt '*' keystone.user_password_update user_id=c965f79c4f864eaaa9c3b41904e67082 password=12345
+        salt '*' keystone.user_password_update name=nova password=12345
     '''
     kstone = auth(profile, **connection_args)
     if name:
