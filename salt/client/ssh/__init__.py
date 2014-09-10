@@ -1030,6 +1030,8 @@ def mod_data(opts):
                 pl_dir = os.path.join(path, '_{0}'.format(ref))
                 if os.path.isdir(pl_dir):
                     for fn_ in os.listdir(pl_dir):
+                        if not os.path.isfile(fn_):
+                            continue
                         mod_path = os.path.join(pl_dir, fn_)
                         with open(mod_path) as fp_:
                             code_str = fp_.read().encode('base64')
