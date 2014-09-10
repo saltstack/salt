@@ -714,7 +714,10 @@ class State(object):
             # In case a package has been installed into the current python
             # process 'site-packages', the 'site' module needs to be reloaded in
             # order for the newly installed package to be importable.
-            reload(site)
+            try:
+                reload(site)
+            except RuntimeError:
+                log.error('Error encountered during module reload. Modules were not reloaded.')
         self.load_modules()
         if not self.opts.get('local', False) and self.opts.get('multiprocessing', True):
             self.functions['saltutil.refresh_modules']()
