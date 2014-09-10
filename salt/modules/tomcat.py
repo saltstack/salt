@@ -72,9 +72,11 @@ def __catalina_home():
     '''
     locations = ['/usr/share/tomcat*', '/opt/tomcat']
     for location in locations:
-        catalina_home = glob.glob(location)
-        if catalina_home:
-            return catalina_home[-1]
+        folders = glob.glob(location)
+        if folders:
+            for catalina_home in folders:
+                if os.path.isdir(catalina_home + "/bin"):
+                    return catalina_home
     return False
 
 
