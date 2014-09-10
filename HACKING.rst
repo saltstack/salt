@@ -172,9 +172,6 @@ ZeroMQ Transport:
     pip install psutil
     pip install -e .
 
-
-.. note:: Installing M2Crypto
-
 .. note:: Installing M2Crypto
 
     You may need ``swig`` and ``libssl-dev`` to build M2Crypto. If you
