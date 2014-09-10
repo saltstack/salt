@@ -24,7 +24,6 @@ from salt._compat import string_types
 from salt.log import LOG_LEVELS
 from salt.utils import print_cli
 
-import logging
 log = logging.getLogger(__name__)
 
 try:
@@ -224,13 +223,15 @@ class ZeroMQCaller(object):
         '''
         try:
             ret = self.call()
+            out = ret.get('out', 'nested')
             if self.opts['metadata']:
                 print_ret = ret
+                out = 'nested'
             else:
                 print_ret = ret.get('return', {})
             salt.output.display_output(
                     {'local': print_ret},
-                    ret.get('out', 'nested'),
+                    out,
                     self.opts)
             if self.opts.get('retcode_passthrough', False):
                 sys.exit(ret['retcode'])
