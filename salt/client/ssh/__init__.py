@@ -457,6 +457,7 @@ class SSH(object):
             ret = self.key_deploy(host, ret)
             outputter = ret[host].get('out', self.opts.get('output', 'nested'))
             p_data = {host: ret[host].get('return', {})}
+            print(ret)
             salt.output.display_output(
                     p_data,
                     outputter,
@@ -689,7 +690,7 @@ class Single(object):
         # Mimic the json data-structure that "salt-call --local" will
         # emit (as seen in ssh_py_shim.py)
         if 'local' in result:
-            ret = json.dumps({'local': {'return': result['local']}})
+            ret = json.dumps({'local': result['local']})
         else:
             ret = json.dumps({'local': {'return': result}})
         return ret
