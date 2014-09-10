@@ -105,7 +105,7 @@ def persist(name, value, config='/etc/sysctl.conf'):
                 nlines.append(line)
                 continue
             else:
-                rest = line.split('=', 1)
+                key, rest = line.split('=', 1)
                 if rest.startswith('"'):
                     _, rest_v, rest = rest.split('"', 2)
                 elif rest.startswith('\''):
@@ -115,7 +115,8 @@ def persist(name, value, config='/etc/sysctl.conf'):
                     rest = rest[len(rest_v):]
                 if rest_v == value:
                     return 'Already set'
-                nlines.append('{0}={1}\n'.format(name, value))
+                new_line = _formatfor(key, value, config, rest)
+                nlines.append(new_line)
                 edited = True
     if not edited:
         nlines.append('{0}={1}\n'.format(name, value))
