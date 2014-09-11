@@ -698,7 +698,6 @@ def run(opts):
         except ValueError:
             print('Failed to load any JSON from {0!r}'.format(stdout.strip()))
 
-    '''
     # Run tests here
     time.sleep(3)
     cmd = (
@@ -741,9 +740,7 @@ def run(opts):
         if stdout:
             # Anything else, raise the exception
             raise
-    '''
 
-    retcode = 0  # testing, remove this
     if retcode == 0:
         # Build packages
         time.sleep(3)
@@ -775,13 +772,11 @@ def run(opts):
         if 'Build complete' in stdout:
             download_packages(opts)
 
-    '''
     if opts.download_remote_reports:
         # Download unittest reports
         download_unittest_reports(opts)
         # Download coverage report
         download_coverage_report(opts)
-    '''
 
     if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
         delete_vm(opts)
