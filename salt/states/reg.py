@@ -69,6 +69,7 @@ def present(name, value, vtype='REG_DWORD', reflection=True):
 
     return ret
 
+
 def absent(name):
     '''
     Remove a registry key
