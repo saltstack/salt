@@ -329,7 +329,7 @@ def download_packages(options):
     cmds = [
         ('salt {{0}} archive.tar czf {0}.tar.gz sources=\'*.*\' cwd={0}'
          .format(options.package_dir)),
-        'salt {{0}} cp.push {0}.gz'.format(options.package_dir),
+        'salt {{0}} cp.push {0}.tar.gz'.format(options.package_dir),
         ('tar -C {{2}} -xzf /var/cache/salt/master/minions/{{1}}{0}.gz'
          .format(options.package_dir)),
     ]
