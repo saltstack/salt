@@ -425,8 +425,12 @@ def ext_pillar(minion_id, pillar, resource, sequence, subkey=False, subkey_only=
                         log.warning('Key {0} is immutable, changes are not allowed'.format(key))
                     elif rkey in immutable:
                         log.warning("Key {0} is immutable, changes are not allowed".format(rkey))
-                    elif operator == 'merge()':
-                        log.debug("Merge key {0}: {1}".format(rkey, results[key]))
+                    elif operator == 'merge()' or operator == 'imerge()':
+                        if operator == 'merge()':
+                            log.debug("Merge key {0}: {1}".format(rkey, results[key]))
+                        else:
+                            log.debug("Set immutable and merge key {0}: {1}".format(rkey, results[key]))
+                            immutable[rkey] = True
                         if rkey in output and type(results[key]) != type(output[rkey]):
                             log.warning('You can''t merge different types for key {0}'.format(rkey))
                         elif type(results[key]) is dict:
@@ -435,34 +439,18 @@ def ext_pillar(minion_id, pillar, resource, sequence, subkey=False, subkey_only=
                             output[rkey].extend(results[key])
                         else:
                             log.warning('Unsupported type need to be list or dict for key {0}'.format(rkey))
-                    elif operator == 'unset()':
-                        log.debug("Unset key {0}".format(rkey))
-                        try:
+                    elif operator == 'unset()' or operator == 'iunset()':
+                        if operator == 'unset()':
+                            log.debug("Unset key {0}".format(rkey))
+                        else:
+                            log.debug("Set immutable and unset key {0}".format(rkey))
+                            immutable[rkey] = True
+                        if rkey in output:
                             del output[rkey]
-                        except KeyError:
-                            pass
                     elif operator == 'immutable()':
                         log.debug("Set immutable and substitute key {0}: {1}".format(rkey, results[key]))
                         immutable[rkey] = True
                         output[rkey] = results[key]
-                    elif operator == 'imerge()':
-                        log.debug("Set immutable and merge key {0}: {1}".format(rkey, results[key]))
-                        immutable[rkey] = True
-                        if rkey in output and type(results[key]) != type(output[rkey]):
-                            log.warning('You can''t merge different types for key {0}'.format(rkey))
-                        elif type(results[key]) is dict:
-                            output[rkey].update(results[key])
-                        elif type(results[key]) is list:
-                            output[rkey].extend(results[key])
-                        else:
-                            log.warning('Unsupported type need to be list or dict for key {0}'.format(rkey))
-                    elif operator == 'iunset()':
-                        log.debug("Set immutable and unset key {0}".format(rkey))
-                        immutable[rkey] = True
-                        try:
-                            del output[rkey]
-                        except KeyError:
-                            pass
                     elif operator is not None:
                         log.warning('Unsupported operator {0}, skipping key {1}'.format(operator, rkey))
                     else:
