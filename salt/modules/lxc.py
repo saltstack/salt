@@ -117,10 +117,10 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     gateway
         network gateway for the container
     additional_ips
-        additionnal ips which will be wired on the main bridge (br0)
+        additional ips which will be wired on the main bridge (br0)
         which is connected to internet.
         Be aware that you may use manual virtual mac addresses
-        providen by you provider (online, ovh, etc).
+        provided by you provider (online, ovh, etc).
         This is a list of mappings ``{ip: '', mac: '',netmask:''}``
         Set gateway to ``None`` and an interface with a gateway
         to escape from another interface that's eth0.
@@ -316,7 +316,7 @@ def _lxc_profile(profile):
 
     Profiles can be defined in the config or pillar, e.g.:
 
-    Profile can be a string to be retrieven in config
+    Profile can be a string to be retrieved in config
     or a mapping.
 
     If is is a mapping and it contains a name, the name will
@@ -609,7 +609,7 @@ class _LXCConfig(object):
         if self.path:
             content = self.as_string()
             # 2 step rendering to be sure not to open/wipe the config
-            # before as_string suceeds.
+            # before as_string succeeds.
             with open(self.path, 'w') as fic:
                 fic.write(content)
                 fic.flush()
@@ -992,7 +992,7 @@ def init(name,
             changes['350_dns'] = 'DNS updated\n'
             if not cret['result']:
                 ret['result'] = False
-                changes['350_dns'] = 'DNS provisionning error\n'
+                changes['350_dns'] = 'DNS provisioning error\n'
             try:
                 lxcret = int(
                     __salt__['lxc.run_cmd'](
@@ -2057,7 +2057,7 @@ def bootstrap(name, config=None, approve_key=True,
             __salt__['lxc.stop'](name)
         elif prior_state == 'frozen':
             __salt__['lxc.freeze'](name)
-        # mark seeded upon sucessful install
+        # mark seeded upon successful install
         if res:
             __salt__['lxc.run_cmd'](
                 name, 'sh -c \'touch "{0}";\''.format(SEED_MARKER))
@@ -2106,7 +2106,7 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
     use_vt
         use saltstack utils.vt to stream output to console
     keep_env
-        A list of env vars to preserve. May be passed as commma-delimited list.
+        A list of env vars to preserve. May be passed as comma-delimited list.
         Defaults to http_proxy,https_proxy.
 
     .. note::
