@@ -476,7 +476,6 @@ def run(opts):
         except ValueError:
             print('Failed to load any JSON from {0!r}'.format(stdout.strip()))
 
-    '''
     if opts.cloud_only:
         # Run Cloud Provider tests preparation SLS
         time.sleep(3)
@@ -693,6 +692,7 @@ def run(opts):
         except ValueError:
             print('Failed to load any JSON from {0!r}'.format(stdout.strip()))
 
+    '''
     # Run tests here
     time.sleep(3)
     cmd = (
