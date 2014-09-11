@@ -1,7 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 '''
-Configuration templating using Hierarchical substitution and Jinja.
+Pepa
+====
+
+Configuration templating for SaltStack using Hierarchical substitution and Jinja.
 
 Configuring Pepa
 ================
@@ -322,19 +325,10 @@ __opts__ = {
     'pepa_validate': False
 }
 
-try:
-    import cerberus
-    HAS_CERBERUS = True
-except ImportError:
-    HAS_CERBERUS = False
-
 def __virtual__():
     '''
     Only return if all the modules are available
     '''
-    if not HAS_CERBERUS:
-        return False
-
     return True
 
 
@@ -492,6 +486,12 @@ def validate(output, resource):
     '''
     Validate Pepa templates
     '''
+    try:
+        import cerberus
+    except ImportError:
+        log.critical('You need module cerberus in order to use validation')
+        return
+
     roots = __opts__['pepa_roots']
 
     valdir = join(roots['base'], resource, 'validate')
