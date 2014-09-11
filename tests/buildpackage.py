@@ -92,10 +92,6 @@ def _init():
                           help='Location where build artifacts should be '
                                'placed, the jenkins master will grab all of '
                                'these. Default: %default')
-    path_group.add_option('--log-file',
-                          dest='log_file',
-                          default='/tmp/salt-buildpackage.log',
-                          help='Log results to a file. Default: %default')
     parser.add_option_group(path_group)
 
     # This group should also consist of nothing but file paths, which will be
@@ -154,6 +150,10 @@ def _init():
         except OSError as exc:
             problems.append('Unable to create artifact directory {0}: {1}'
                             .format(opts.artifact_dir, exc))
+
+    # Create log file in the artifact dir so it is sent back to master if the
+    # job fails
+    opts.log_file = os.path.join(opts.artifact_dir, 'salt-buildpackage.log')
 
     if problems:
         _abort(problems)
@@ -360,4 +360,3 @@ if __name__ == '__main__':
         shutil.copy(artifact, opts.artifact_dir)
         log.info('Copied {0} to artifact directory'.format(artifact))
     log.info('Done!')
-    shutil.copy(opts.log_file, opts.artifact_dir)
