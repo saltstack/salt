@@ -71,6 +71,7 @@ def dropfile(cachedir, user=None):
         log.warning('Waiting before writing {0}'.format(dfn))
         time.sleep(1)
 
+    log.info('Rotating AES key')
     aes = Crypticle.generate_key_string()
     mask = os.umask(191)
     with salt.utils.fopen(dfnt, 'w+') as fp_:

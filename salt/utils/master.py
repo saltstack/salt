@@ -382,3 +382,8 @@ class MasterPillarUtil(object):
         except (OSError, IOError):
             return True
         return True
+
+
+def ping_all_minions():
+    client = salt.client.LocalClient()
+    client.cmd('*', 'test.ping')
