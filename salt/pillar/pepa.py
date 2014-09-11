@@ -255,7 +255,7 @@ For more examples and information see <https://github.com/mickep76/pepa>.
 __author__ = 'Michael Persson <michael.ake.persson@gmail.com>'
 __copyright__ = 'Copyright (c) 2013 Michael Persson'
 __license__ = 'Apache License, Version 2.0'
-__version__ = '0.6.4'
+__version__ = '0.6.5'
 
 # Import python libs
 import logging
@@ -264,6 +264,7 @@ import glob
 import yaml
 import jinja2
 import re
+from os.path import isfile, join
 
 # Only used when called from a terminal
 log = None
@@ -315,12 +316,6 @@ __opts__ = {
 }
 
 try:
-    from os.path import isfile, join
-    HAS_OS_PATH = True
-except ImportError:
-    HAS_OS_PATH = False
-
-try:
     import cerberus
     HAS_CERBERUS = True
 except ImportError:
@@ -330,7 +325,7 @@ def __virtual__():
     '''
     Only return if all the modules are available
     '''
-    if not HAS_OS_PATH:
+    if not HAS_CERBERUS:
         return False
 
     return True
