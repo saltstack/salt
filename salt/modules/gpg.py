@@ -68,9 +68,9 @@ except ImportError:
 
 def _check_gpg():
     '''
-    Looks to see if zfs is present on the system.
+    Looks to see if gpg binary is present on the system.
     '''
-    # Get the path to the zfs binary.
+    # Get the path to the gpg binary.
     return salt.utils.which('gpg')
 
 
