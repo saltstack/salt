@@ -42,6 +42,14 @@ pepa_roots:                         # Base directory for each environment
 # Use a different delimiter for nested dictionaries, defaults to '..' since some keys may use '.' in the name
 #pepa_delimiter: ..
 
+# Supply Grains for Pepa, this should **ONLY** be used for testing or validation
+#pepa_grains:
+#  - environment: dev
+
+# Supply Pillar for Pepa, this should **ONLY** be used for testing or validation
+#pepa_pillars:
+#  - saltversion: 0.17.4
+
 # Enable debug for Pepa, and keep Salt on warning
 #log_level: debug
 
