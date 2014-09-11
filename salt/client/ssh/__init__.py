@@ -457,8 +457,11 @@ class SSH(object):
             host = ret.keys()[0]
             self.cache_job(jid, host, ret[host])
             ret = self.key_deploy(host, ret)
-            outputter = ret[host].get('out', self.opts.get('output', 'nested'))
-            p_data = {host: ret[host].get('return', {})}
+            if 'return' not in ret[host]:
+                p_data = ret
+            else:
+                outputter = ret[host].get('out', self.opts.get('output', 'nested'))
+                p_data = {host: ret[host].get('return', {})}
             if self.opts.get('static'):
                 sret.update(p_data)
             else:
