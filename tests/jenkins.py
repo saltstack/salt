@@ -765,8 +765,9 @@ def run(opts):
             print(stderr)
         sys.stderr.flush()
 
-        # Download packages
-        download_packages(opts)
+        # Download packages only if the script ran and was successful
+        if 'Build complete' in stdout:
+            download_packages(opts)
 
     '''
     if opts.download_remote_reports:
