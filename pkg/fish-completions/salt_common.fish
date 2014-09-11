@@ -119,12 +119,26 @@ function __fish_salt_clean_prefix
 	set prefix '^'$argv[1]
 	grep -E $prefix | sed "s/$prefix//g"
 end
+
 function __fish_salt_clean
 	if [ $argv[1] = yaml ]
 		__fish_salt_clean_prefix ' *- '
 	else if [ $argv[1] = nested ]
 		__fish_salt_clean_prefix '  *'
 	end
+end
+
+function __fish_salt_lines_between
+	set max 1024
+	grep -A$max $argv[1] | grep -B$max $argv[2]
+end
+
+function __fish_salt_add_help
+	sed "s/\$/\t$argv/"
+end
+
+function __fish_salt_underscore_to_space
+	sed 's/^\w/\u&/g; s/_/ /g'
 end
 
 # information extraction from commandline
@@ -216,7 +230,7 @@ function __fish_salt_list
 	begin
 		for arg_type in $argv
 			set f_list '__fish_salt_list_'$arg_type
-			eval $f_list
+			eval $f_list | __fish_salt_add_help (echo $arg_type | __fish_salt_underscore_to_space)
 		end
 	end
 end
@@ -274,8 +288,17 @@ _                             sys.doc                         : module
 '
 #_                             pkg.remove                      : package
 
+function __fish_salt_argspec_function
+	set function_line '^\s*'$argv[1]
+	__fish_salt_lines_between $function_line':' $function_line
+end
+
+function __fish_salt_argspec_args
+	__fish_salt_lines_between '^\s*args:' '^\s*defaults:' | grep -v ':' 
+end
+
 function __fish_salt_list_arg_name
-	__fish_salt_exec_output yaml sys.argspec (__fish_salt_function) | grep -A1024 '^ *args:' | grep -B1024 '^ *defaults:' | grep -v ':' | __fish_salt_clean yaml | sed 's/$/=/g'
+	__fish_salt_exec_output yaml sys.argspec (__fish_salt_function) | __fish_salt_argspec_function (__fish_salt_function) | __fish_salt_argspec_args | __fish_salt_clean yaml | sed 's/$/=/g'
 end
 
 function __fish_salt_list_arg_value
@@ -285,7 +308,7 @@ function __fish_salt_list_arg_value
 end
 
 function __fish_salt_list_function
-	__fish_salt_exec_and_clean yaml sys.list_functions $argv 
+	__fish_salt_exec_and_clean yaml sys.list_functions $argv
 end
 
 function __fish_salt_list_grain

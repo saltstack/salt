@@ -29,8 +29,10 @@ complete -c salt             -f -s v -l verbose              -d "Turn on command
 
 # salt arguments
 # minions
-complete -c salt         -f -n                                   'not __fish_salt_extract_minion'   -a '(__fish_salt_list_minion accepted)'
+complete -c salt         -f -n                                   'not __fish_salt_extract_minion'   -a '(__fish_salt_list_minion accepted)'                              -d 'Minion'
 # functions
-complete -c salt         -f -n '__fish_salt_extract_minion;   and not __fish_salt_extract_function' -a '(__fish_salt_list_function)'
-# arguments and name values
-complete -c salt         -f -n '__fish_salt_extract_function'                                       -a '(__fish_salt_list_arg_name) (__fish_salt_list_arg_value | __fish_salt_prefix_with_arg_name)'
+complete -c salt         -f -n '__fish_salt_extract_minion;   and not __fish_salt_extract_function' -a '(__fish_salt_list_function)'                                     -d 'Function'
+# arguments names
+complete -c salt         -f -n '__fish_salt_extract_function'                                       -a '(__fish_salt_list_arg_name)'                                     -d 'Argument'
+# arguments values
+complete -c salt         -f -n '__fish_salt_extract_function'                                       -a '(__fish_salt_list_arg_value | __fish_salt_prefix_with_arg_name)'
