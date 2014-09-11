@@ -2134,7 +2134,7 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         self.add_option(
             '--roster',
             dest='roster',
-            default='',
+            default='flat',
             help=('Define which roster system to use, this defines if a '
                   'database backend, scanner, or custom roster system is '
                   'used. Default is the flat file roster.')
