@@ -7,48 +7,48 @@ Configuring Pepa
 ================
 
 .. code-block:: yaml
+extension_modules: /srv/salt/ext
 
-  extension_modules: /srv/salt/ext
+ext_pillar:
+  - pepa:
+      resource: host                # Name of resource directory and sub-key in pillars
+      sequence:                     # Sequence used for hierarchical substitution
+        - hostname:                 # Name of key
+            name: input             # Alias used for template directory
+            base_only: True         # Only use templates from Base environment, i.e. no staging
+        - default:
+        - environment:
+        - location..region:
+            name: region
+        - location..country:
+            name: country
+        - location..datacenter:
+            name: datacenter
+        - roles:
+        - osfinger:
+            name: os
+        - hostname:
+            name: override
+            base_only: True
+      subkey: True                  # Create a sub-key in pillars, named after the resource in this case [host]
+      subkey_only: True             # Only create a sub-key, and leave the top level untouched
 
-  ext_pillar:
-    - pepa:
-        resource: host                # Name of resource directory and sub-key in pillars
-        sequence:                     # Sequence used for hierarchical substitution
-          - hostname:                 # Name of key
-              name: input             # Alias used for template directory
-              base_only: True         # Only use templates from Base environment, i.e. no staging
-          - default:
-          - environment:
-          - location..region:
-              name: region
-          - location..country:
-              name: country
-          - location..datacenter:
-              name: datacenter
-          - roles:
-          - osfinger:
-              name: os
-          - hostname:
-              name: override
-              base_only: True
-        subkey: True                  # Create a sub-key in pillars, named after the resource in this case [host]
-        subkey_only: True             # Only create a sub-key, and leave the top level untouched
+pepa_roots:                         # Base directory for each environment
+  base: /srv/pepa/base              # Path for base environment
+  dev: /srv/pepa/base               # Associate dev with base
+  qa: /srv/pepa/qa
+  prod: /srv/pepa/prod
 
-  pepa_roots:                         # Base directory for each environment
-    base: /srv/pepa/base              # Path for base environment
-    dev: /srv/pepa/base               # Associate dev with base
-    qa: /srv/pepa/qa
-    prod: /srv/pepa/prod
+# Use a different delimiter for nested dictionaries, defaults to '..' since some keys may use '.' in the name
+#pepa_delimiter: ..
 
-  # Use a different delimiter for nested dictionaries, defaults to '..' since some keys may use '.' in the name
-  #pepa_delimiter: ..
+# Enable debug for Pepa, and keep Salt on warning
+#log_level: debug
 
-  # Enable debug for Pepa, and keep Salt on warning
-  #log_level: debug
-
-  #log_granular_levels:
-  #  salt: warning
-  #  salt.loaded.ext.pillar.pepa: debug
+#log_granular_levels:
+#  salt: warning
+#  salt.loaded.ext.pillar.pepa: debug
+.. code-block:: yaml
 
 Pepa can also be used in Master-less SaltStack setup.
 
@@ -56,24 +56,24 @@ Command line
 ============
 
 .. code-block:: bash
+usage: pepa.py [-h] [-c CONFIG] [-d] [-g GRAINS] [-p PILLAR] [-n] [-v]
+               hostname
 
-  usage: pepa.py [-h] [-c CONFIG] [-d] [-g GRAINS] [-p PILLAR] [-n] [-v]
-                 hostname
+positional arguments:
+  hostname              Hostname
 
-  positional arguments:
-    hostname              Hostname
-
-  optional arguments:
-    -h, --help            show this help message and exit
-    -c CONFIG, --config CONFIG
-                          Configuration file
-    -d, --debug           Print debug info
-    -g GRAINS, --grains GRAINS
-                          Input Grains as YAML
-    -p PILLAR, --pillar PILLAR
-                          Input Pillar as YAML
-    -n, --no-color        No color output
-    -v, --validate        Validate output
+optional arguments:
+  -h, --help            show this help message and exit
+  -c CONFIG, --config CONFIG
+                        Configuration file
+  -d, --debug           Print debug info
+  -g GRAINS, --grains GRAINS
+                        Input Grains as YAML
+  -p PILLAR, --pillar PILLAR
+                        Input Pillar as YAML
+  -n, --no-color        No color output
+  -v, --validate        Validate output
+.. code-block:: bash
 
 Templates
 =========
@@ -83,36 +83,36 @@ Templates is configuration for a host or software, that can use information from
 **Example File:** host/input/test.example.com.yaml
 
 .. code-block:: yaml
-
-  location..region: emea
-  location..country: nl
-  location..datacenter: foobar
-  environment: dev
-  roles:
-    - salt.master
-  network..gateway: 10.0.0.254
-  network..interfaces..eth0..hwaddr: 00:20:26:a1:12:12
-  network..interfaces..eth0..dhcp: False
-  network..interfaces..eth0..ipv4: 10.0.0.3
-  network..interfaces..eth0..netmask: 255.255.255.0
-  network..interfaces..eth0..fqdn: {{ hostname }}
-  cobbler..profile: fedora-19-x86_64
+location..region: emea
+location..country: nl
+location..datacenter: foobar
+environment: dev
+roles:
+  - salt.master
+network..gateway: 10.0.0.254
+network..interfaces..eth0..hwaddr: 00:20:26:a1:12:12
+network..interfaces..eth0..dhcp: False
+network..interfaces..eth0..ipv4: 10.0.0.3
+network..interfaces..eth0..netmask: 255.255.255.0
+network..interfaces..eth0..fqdn: {{ hostname }}
+cobbler..profile: fedora-19-x86_64
+.. code-block:: yaml
 
 As you see in this example you can use Jinja directly inside the template.
 
 **Example File:** host/region/amer.yaml
 
 .. code-block:: yaml
-
-  network..dns..servers:
-    - 10.0.0.1
-    - 10.0.0.2
-  time..ntp..servers:
-    - ntp1.amer.example.com
-    - ntp2.amer.example.com
-    - ntp3.amer.example.com
-  time..timezone: America/Chihuahua
-  yum..mirror: yum.amer.example.com
+network..dns..servers:
+  - 10.0.0.1
+  - 10.0.0.2
+time..ntp..servers:
+  - ntp1.amer.example.com
+  - ntp2.amer.example.com
+  - ntp3.amer.example.com
+time..timezone: America/Chihuahua
+yum..mirror: yum.amer.example.com
+.. code-block:: yaml
 
 Each template is named after the value of the key using lowercase and all extended characters are replaced with underscore.
 
@@ -132,32 +132,32 @@ In order to create nested dictionaries as output you can use double dot **".."**
 **Example:**
 
 .. code-block:: yaml
-
-  network..dns..servers:
-    - 10.0.0.1
-    - 10.0.0.2
-  network..dns..options:
-    - timeout:2
-    - attempts:1
-    - ndots:1
-  network..dns..search:
-    - example.com
+network..dns..servers:
+  - 10.0.0.1
+  - 10.0.0.2
+network..dns..options:
+  - timeout:2
+  - attempts:1
+  - ndots:1
+network..dns..search:
+  - example.com
+.. code-block:: yaml
 
 **Would become:**
 
 .. code-block:: yaml
-
-  network:
-    dns:
-      servers:
-        - 10.0.0.1
-        - 10.0.0.2
-      options:
-        - timeout:2
-        - attempts:1
-        - ndots:1
-      search:
-        - example.com
+network:
+  dns:
+    servers:
+      - 10.0.0.1
+      - 10.0.0.2
+    options:
+      - timeout:2
+      - attempts:1
+      - ndots:1
+    search:
+      - example.com
+.. code-block:: yaml
 
 Operators
 =========
@@ -177,12 +177,74 @@ iunset()    Set immutable and unset
 **Example:**
 
 .. code-block:: yaml
+network..dns..search..merge():
+  - foobar.com
+  - dummy.nl
+owner..immutable(): Operations
+host..printers..unset():
+.. code-block:: yaml
 
-  network..dns..search..merge():
-    - foobar.com
-    - dummy.nl
-  owner..immutable(): Operations
-  host..printers..unset():
+Validation
+==========
+
+Since it's very hard to test Jinja as is, the best approach is to run all the permutations of input and validate the output, i.e. Unit Testing.
+
+To facilitate this in Pepa we use YAML, Jinja and Cerberus <https://github.com/nicolaiarocci/cerberus>.
+
+Schema
+======
+
+So this is a validation schema for network configuration, as you see it can be customized with Jinja just as Pepa templates.
+
+This can be run in master-less setup or without SaltStack. If you run it without SaltStack you can provide Grains/Pillar input using either the config file or command line arguments.
+
+**File Example: host/validation/network.yaml**
+
+.. code-block:: yaml
+network..dns..search:
+  type: list
+  allowed:
+    - example.com
+
+# Should be list of hash values
+network..dns..options:
+  type: list
+  allowed: ['timeout:2', 'attempts:1', 'ndots:1']
+
+network..dns..servers:
+  type: list
+  schema:
+    regex: ^([0-9]{1,3}\\.){3}[0-9]{1,3}$
+
+network..gateway:
+  type: string
+  regex: ^([0-9]{1,3}\\.){3}[0-9]{1,3}$
+
+{% if network.interfaces is defined %}
+{% for interface in network.interfaces %}
+
+network..interfaces..{{ interface }}..dhcp:
+  type: boolean
+
+network..interfaces..{{ interface }}..fqdn:
+  type: string
+  regex: ^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-zA-Z]{2,6}$
+
+network..interfaces..{{ interface }}..hwaddr:
+  type: string
+  regex: ^([0-9a-f]{1,2}\\:){5}[0-9a-f]{1,2}$
+
+network..interfaces..{{ interface }}..ipv4:
+  type: string
+  regex: ^([0-9]{1,3}\\.){3}[0-9]{1,3}$
+
+network..interfaces..{{ interface }}..netmask:
+  type: string
+  regex: ^([0-9]{1,3}\\.){3}[0-9]{1,3}$
+
+{% endfor %}
+{% endif %}
+.. code-block:: yaml
 
 Links
 =====
@@ -198,7 +260,10 @@ __version__ = '0.6.4'
 # Import python libs
 import logging
 import sys
-
+import glob
+import yaml
+import jinja2
+import re
 
 # Only used when called from a terminal
 log = None
@@ -212,6 +277,7 @@ if __name__ == '__main__':
     parser.add_argument('-g', '--grains', help='Input Grains as YAML')
     parser.add_argument('-p', '--pillar', help='Input Pillar as YAML')
     parser.add_argument('-n', '--no-color', action='store_true', help='No color output')
+    parser.add_argument('-v', '--validate', action='store_true', help='Validate output')
     args = parser.parse_args()
 
     LOG_LEVEL = logging.WARNING
@@ -244,13 +310,9 @@ __opts__ = {
     'pepa_roots': {
         'base': '/srv/salt'
     },
-    'pepa_delimiter': '..'
+    'pepa_delimiter': '..',
+    'pepa_validate': False
 }
-
-# Import libraries
-import yaml
-import jinja2
-import re
 
 try:
     from os.path import isfile, join
@@ -258,6 +320,11 @@ try:
 except ImportError:
     HAS_OS_PATH = False
 
+try:
+    import cerberus
+    HAS_CERBERUS = True
+except ImportError:
+    HAS_CERBERUS = False
 
 def __virtual__():
     '''
@@ -415,7 +482,38 @@ def ext_pillar(minion_id, pillar, resource, sequence, subkey=False, subkey_only=
         pillar_data[resource] = tree.copy()
     else:
         pillar_data = tree
+    if __opts__['pepa_validate']:
+        pillar_data['pepa_keys'] = output.copy()
     return pillar_data
+
+def validate(output, resource):
+    '''
+    Validate Pepa templates
+    '''
+    roots = __opts__['pepa_roots']
+
+    valdir = join(roots['base'], resource, 'validate')
+
+    all_schemas = {}
+    pepa_schemas = []
+    for fn in glob.glob(valdir + '/*.yaml'):
+        log.info("Loading schema: {0}".format(fn))
+        template = jinja2.Template(open(fn).read())
+        data = output
+        data['grains'] = __grains__.copy()
+        data['pillar'] = __pillar__.copy()
+        schema = yaml.load(template.render(data))
+        all_schemas.update(schema)
+        pepa_schemas.append(fn)
+
+    val = cerberus.Validator()
+    if not val.validate(output['pepa_keys'], all_schemas):
+        for ekey, error in val.errors.items():
+            log.warning('Validation failed for key {0}: {1}'.format(ekey, error))
+
+    output['pepa_schema_keys'] = all_schemas
+    output['pepa_schemas'] = pepa_schemas
+
 
 # Only used when called from a terminal
 if __name__ == '__main__':
@@ -447,8 +545,15 @@ if __name__ == '__main__':
     if args.pillar:
         __pillar__.update(yaml.load(args.pillar))
 
+    # Validate or not
+    if args.validate:
+        __opts__['pepa_validate'] = True
+
     # Print results
     result = ext_pillar(args.hostname, __pillar__, __opts__['ext_pillar'][loc]['pepa']['resource'], __opts__['ext_pillar'][loc]['pepa']['sequence'])
+
+    if __opts__['pepa_validate']:
+        validate(result, __opts__['ext_pillar'][loc]['pepa']['resource'])
 
     yaml.dumper.SafeDumper.ignore_aliases = lambda self, data: True
     if not args.no_color:
@@ -461,4 +566,3 @@ if __name__ == '__main__':
             print yaml.safe_dump(result, indent=4, default_flow_style=False)
     else:
         print yaml.safe_dump(result, indent=4, default_flow_style=False)
-
