@@ -2183,6 +2183,13 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             action='store_true',
             help=('Turn on command verbosity, display jid')
         )
+        self.add_option(
+            '-s', '--static',
+            default=False,
+            action='store_true',
+            help=('Return the data from minions as a group after they '
+                  'all return.')
+        )
 
         auth_group = optparse.OptionGroup(
             self, 'Authentication Options',
