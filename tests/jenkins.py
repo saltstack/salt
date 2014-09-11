@@ -68,6 +68,12 @@ def build_pillar_data(options):
         pillar['bootstrap_salt_url'] = options.bootstrap_salt_url
     if options.bootstrap_salt_commit is not None:
         pillar['bootstrap_salt_commit'] = options.bootstrap_salt_commit
+    if options.package_source_dir:
+        pillar['package_source_dir'] = options.package_source_dir
+    if options.package_build_dir:
+        pillar['package_build_dir'] = options.package_build_dir
+    if options.package_artifact_dir:
+        pillar['package_artifact_dir'] = options.package_artifact_dir
     if options.pillar:
         pillar.update(dict(options.pillar))
     return yaml.dump(pillar, default_flow_style=True, indent=0, width=sys.maxint).rstrip()
@@ -321,17 +327,17 @@ def download_packages(options):
     for fglob in ('salt-*.rpm',
                   'salt-*.deb',
                   'salt-*.pkg.xz',
-                  os.path.basename(options.package_log_file)):
+                  'salt-buildpackage.log'):
         for fname in glob.glob(os.path.join(workspace, fglob)):
             if os.path.isfile(fname):
                 os.unlink(fname)
 
     cmds = [
         ('salt {{0}} archive.tar czf {0}.tar.gz sources=\'*.*\' cwd={0}'
-         .format(options.package_dir)),
-        'salt {{0}} cp.push {0}.tar.gz'.format(options.package_dir),
+         .format(options.package_artifact_dir)),
+        'salt {{0}} cp.push {0}.tar.gz'.format(options.package_artifact_dir),
         ('tar -C {{2}} -xzf /var/cache/salt/master/minions/{{1}}/files{0}.tar.gz'
-         .format(options.package_dir)),
+         .format(options.package_artifact_dir)),
     ]
 
     for cmd in cmds:
@@ -911,10 +917,22 @@ def parse():
         action='store_true',
         help='Run buildpackage.py to create packages off of the git build.'
     )
+    # These next three options are ignored if --build-packages is False
     parser.add_option(
-        '--package-dir',
+        '--package-source-dir',
+        default='/testing',
+        help='Directory where the salt source code checkout is found '
+             '(default: %default)',
+    )
+    parser.add_option(
+        '--package-build-dir',
+        default='/tmp/salt-buildpackage',
+        help='Build root for automated package builds (default: %default)',
+    )
+    parser.add_option(
+        '--package-artifact-dir',
         default='/tmp/salt-packages',
-        help='Location on the minion from which built packages should be '
+        help='Location on the minion from which packages should be '
              'retrieved (default: %default)',
     )
 
@@ -948,11 +966,6 @@ def parse():
 
     if not options.test_git_commit and not options.pull_request:
         parser.exit('--commit or --pull-request is required')
-
-    # Might want to make this configurable eventually, passed to the
-    # buildpackage SLS file via pillar data.
-    if options.build_packages:
-        options.package_log_file = '/tmp/salt-buildpackage.log'
 
     return options
 
