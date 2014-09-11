@@ -196,7 +196,7 @@ Schema
 
 So this is a validation schema for network configuration, as you see it can be customized with Jinja just as Pepa templates.
 
-This can be run in master-less setup or without SaltStack. If you run it without SaltStack you can provide Grains/Pillar input using either the config file or command line arguments.
+This was designed to be run as a build job in Jenkins or similar tool. You can provide Grains/Pillar input using either the config file or command line arguments.
 
 **File Example: host/validation/network.yaml**
 
