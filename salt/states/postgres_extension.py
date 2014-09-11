@@ -77,7 +77,7 @@ def present(name,
     ret = {'name': name,
            'changes': {},
            'result': True,
-           'comment': 'Extention {0} is already present'.format(name)}
+           'comment': 'Extension {0} is already present'.format(name)}
     db_args = {
         'maintenance_db': maintenance_db,
         'runas': user,
