@@ -54,7 +54,7 @@ def extracted(name,
             - source: https://github.com/downloads/Graylog2/graylog2-server/graylog2-server-0.9.6p1.tar.gz
             - source_hash: md5=499ae16dcae71eeb7c3a30c75ea7a1a6
             - archive_format: tar
-            - tar_options: G
+            - tar_options: v
             - if_missing: /opt/graylog2-server-0.9.6p1/
 
     name
