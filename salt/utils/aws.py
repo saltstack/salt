@@ -10,18 +10,19 @@ This is a base library used by a number of AWS services.
 '''
 
 # Import Python libs
+import sys
+import time
 import binascii
 import datetime
 import hashlib
 import hmac
 import logging
 import urllib
+import urlparse
 import requests
 
 # Import Salt libs
-import salt.utils
 import salt.utils.xmlutil as xml
-import salt.utils.iam as iam
 from salt._compat import ElementTree as ET
 
 LOG = logging.getLogger(__name__)
@@ -160,7 +161,7 @@ def sig4(method, endpoint, params, provider, aws_api_version, location,
 
     headers = {
         'x-amz-date': amzdate,
-        'Authorization':authorization_header
+        'Authorization': authorization_header
     }
 
     requesturl = '{0}?{1}'.format(requesturl, querystring)
