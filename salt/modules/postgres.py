@@ -1629,7 +1629,7 @@ def schema_remove(dbname, name,
     if not schema_exists(dbname, name,
                          db_user=db_user, db_password=db_password,
                          db_host=db_host, db_port=db_port):
-        log.info('Schema {0!r} does not exist in {0!r}'.format(name, dbname))
+        log.info('Schema {0!r} does not exist in {1!r}'.format(name, dbname))
         return False
 
     # schema exists, proceed
