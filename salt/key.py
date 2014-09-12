@@ -468,6 +468,9 @@ class Key(object):
     def check_master(self):
         '''
         Log if the master is not running
+
+        :rtype: bool
+        :return: Whether or not the master is running
         '''
         if not os.path.exists(
                 os.path.join(
