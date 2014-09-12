@@ -1881,6 +1881,7 @@ class Syndic(Minion):
                        data['ret'],
                        data['jid'],
                        data['to'],
+                       {'user': data.get('user', '')},
                        **kwargs)
 
     def _setsockopts(self):
@@ -2331,8 +2332,6 @@ class Matcher(object):
     '''
     def __init__(self, opts, functions=None):
         self.opts = opts
-        if functions is None:
-            functions = salt.loader.minion_mods(self.opts)
         self.functions = functions
 
     def confirm_top(self, match, data, nodegroups=None):
@@ -2412,6 +2411,8 @@ class Matcher(object):
         '''
         Match based on the local data store on the minion
         '''
+        if self.functions is None:
+            self.functions = salt.loader.minion_mods(self.opts)
         comps = tgt.split(':')
         if len(comps) < 2:
             return False

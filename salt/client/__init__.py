@@ -1331,7 +1331,9 @@ class LocalClient(object):
             payload_kwargs['kwargs'] = kwargs
 
         # If we have a salt user, add it to the payload
-        if self.salt_user:
+        if self.opts['order_masters'] and 'user' in kwargs:
+            payload_kwargs['user'] = kwargs['user']
+        elif self.salt_user:
             payload_kwargs['user'] = self.salt_user
 
         # If we're a syndication master, pass the timeout
