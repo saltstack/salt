@@ -987,7 +987,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
 
         # Try to match stalled state functions
         orig[minion_tgt] = self._check_state_return(
-            orig[minion_tgt], func=function
+            orig[minion_tgt]
         )
 
         return orig[minion_tgt]
@@ -1017,7 +1017,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
             self.get_config_file_path('sub_minion')
         )
 
-    def _check_state_return(self, ret, func='state.single'):
+    def _check_state_return(self, ret):
         if isinstance(ret, dict):
             # This is the supposed return format for state calls
             return ret
