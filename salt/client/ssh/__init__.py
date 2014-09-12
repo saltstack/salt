@@ -457,6 +457,8 @@ class SSH(object):
             host = ret.keys()[0]
             self.cache_job(jid, host, ret[host])
             ret = self.key_deploy(host, ret)
+            if not isinstance(ret[host], dict):
+                p_data = {host: ret[host]}
             if 'return' not in ret[host]:
                 p_data = ret
             else:
