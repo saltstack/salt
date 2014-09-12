@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 # Maintainer: Erik Johnson (https://github.com/terminalmage)
 #
-# WARNING: This script will recursively remove the dest_dir (by default,
-# /tmp/saltpkg).
+# WARNING: This script will recursively remove the build and artifact
+# directories.
 #
 # This script is designed for speed, therefore it does not use mock and does not
 # run tests. It *will* install the build deps on the machine running the script.
@@ -76,22 +76,18 @@ def _init():
     # relative paths are properly expanded.
     path_group = OptionGroup(parser, 'File/Directory Options')
     path_group.add_option('--source-dir',
-                          dest='source_dir',
                           default='/testing',
                           help='Source directory. Must be a git checkout. '
-                               'Default: %default')
-    path_group.add_option('--dest-dir',
-                          dest='dest_dir',
-                          default='/tmp/saltpkg',
-                          help='Destination directory, will be removed if it '
-                               'exists prior to running script. '
-                               'Default: %default')
+                               '(default: %default)')
+    path_group.add_option('--build-dir',
+                          default='/tmp/salt-buildpackage',
+                          help='Build root, will be removed if it exists '
+                               'prior to running script. (default: %default)')
     path_group.add_option('--artifact-dir',
-                          dest='artifact_dir',
                           default='/tmp/salt-packages',
                           help='Location where build artifacts should be '
-                               'placed, the jenkins master will grab all of '
-                               'these. Default: %default')
+                               'placed for Jenkins to retrieve them '
+                               '(default: %default)')
     parser.add_option_group(path_group)
 
     # This group should also consist of nothing but file paths, which will be
@@ -101,7 +97,7 @@ def _init():
                          dest='spec_file',
                          default='/tmp/salt.spec',
                          help='Spec file to use as a template to build RPM. '
-                              'Default: %default')
+                              '(default: %default)')
     parser.add_option_group(rpm_group)
 
     opts = parser.parse_args()[0]
@@ -127,17 +123,17 @@ def _init():
         problems.append('Source directory {0} not found'
                         .format(opts.source_dir))
     try:
-        shutil.rmtree(opts.dest_dir)
+        shutil.rmtree(opts.build_dir)
     except OSError as exc:
         if exc.errno not in (errno.ENOENT, errno.ENOTDIR):
             problems.append('Unable to remove pre-existing destination '
-                            'directory {0}: {1}'.format(opts.dest_dir, exc))
+                            'directory {0}: {1}'.format(opts.build_dir, exc))
     finally:
         try:
-            os.makedirs(opts.dest_dir)
+            os.makedirs(opts.build_dir)
         except OSError as exc:
             problems.append('Unable to create destination directory {0}: {1}'
-                            .format(opts.dest_dir, exc))
+                            .format(opts.build_dir, exc))
     try:
         shutil.rmtree(opts.artifact_dir)
     except OSError as exc:
@@ -229,7 +225,7 @@ def build_centos(opts):
 
     define_opts = [
         '--define',
-        '_topdir {0}'.format(os.path.join(opts.dest_dir))
+        '_topdir {0}'.format(os.path.join(opts.build_dir))
     ]
     build_reqs = ['rpm-build']
     if major_release == 5:
@@ -272,8 +268,8 @@ def build_centos(opts):
     log.info('salt_srcver: {0}'.format(salt_srcver))
 
     # Setup build environment
-    for dest_dir in 'BUILD BUILDROOT RPMS SOURCES SPECS SRPMS'.split():
-        path = os.path.join(opts.dest_dir, dest_dir)
+    for build_dir in 'BUILD BUILDROOT RPMS SOURCES SPECS SRPMS'.split():
+        path = os.path.join(opts.build_dir, build_dir)
         try:
             os.makedirs(path)
         except OSError:
@@ -282,7 +278,7 @@ def build_centos(opts):
             _abort('Unable to make directory: {0}'.format(path))
 
     # Get sources into place
-    build_sources_path = os.path.join(opts.dest_dir, 'SOURCES')
+    build_sources_path = os.path.join(opts.build_dir, 'SOURCES')
     rpm_sources_path = os.path.join(opts.source_dir, 'pkg', 'rpm')
     _move(sdist, build_sources_path)
     for src in ('salt-master', 'salt-syndic', 'salt-minion', 'salt-api',
@@ -292,7 +288,7 @@ def build_centos(opts):
         shutil.copy(os.path.join(rpm_sources_path, src), build_sources_path)
 
     # Prepare SPEC file
-    spec_path = os.path.join(opts.dest_dir, 'SPECS', 'salt.spec')
+    spec_path = os.path.join(opts.build_dir, 'SPECS', 'salt.spec')
     with open(opts.spec_file, 'r') as spec:
         spec_lines = spec.read().splitlines()
     with open(spec_path, 'w') as fp_:
@@ -304,7 +300,7 @@ def build_centos(opts):
             fp_.write(line + '\n')
 
     # Do the thing
-    cmd = ['rpmbuild', '-bb']
+    cmd = ['rpmbuild', '-ba']
     cmd.extend(define_opts)
     cmd.append(spec_path)
     stdout, stderr, rcode = _run_command(cmd)
@@ -312,14 +308,24 @@ def build_centos(opts):
     if rcode != 0:
         _abort('Build failed.')
 
-    return glob.glob(
+    packages = glob.glob(
         os.path.join(
-            opts.dest_dir,
+            opts.build_dir,
             'RPMS',
             'noarch',
             'salt-*{0}*.noarch.rpm'.format(salt_pkgver)
         )
     )
+    packages.extend(
+        glob.glob(
+            os.path.join(
+                opts.build_dir,
+                'SRPMS',
+                'salt-{0}*.src.rpm'.format(salt_pkgver)
+            )
+        )
+    )
+    return packages
 
 
 # MAIN
