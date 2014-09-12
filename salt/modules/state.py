@@ -188,7 +188,10 @@ def high(data, queue=False, **kwargs):
 
 def template(tem, queue=False, **kwargs):
     '''
-    Execute the information stored in a template file on the minion
+    Execute the information stored in a template file on the minion.
+
+    This function does not ask a master for a SLS file to render but
+    instead directly processes the file at the provided path on the minion.
 
     CLI Example:
 
@@ -199,8 +202,14 @@ def template(tem, queue=False, **kwargs):
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
-    st_ = salt.state.State(__opts__)
-    ret = st_.call_template(tem)
+    st_ = salt.state.HighState(__opts__)
+    if not tem.endswith('.sls'):
+        tem = '{sls}.sls'.format(sls=tem)
+    high, errors = st_.render_state(tem, None, '', None, local=True)
+    if errors:
+        __context__['retcode'] = 1
+        return errors
+    ret = st_.state.call_high(high)
     _set_retcode(ret)
     return ret
 
