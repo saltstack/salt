@@ -455,8 +455,12 @@ class SSH(object):
             host = ret.keys()[0]
             self.cache_job(jid, host, ret[host])
             ret = self.key_deploy(host, ret)
-            outputter = ret[host].get('out', self.opts.get('output', 'nested'))
-            p_data = {host: ret[host].get('return', {})}
+            if not isinstance(ret[host], dict):
+                p_data = {host: ret[host]}
+                outputter = self.opts.get('output', 'nested')
+            else:
+                outputter = ret[host].get('out', self.opts.get('output', 'nested'))
+                p_data = {host: ret[host].get('return', {})}
             salt.output.display_output(
                     p_data,
                     outputter,
