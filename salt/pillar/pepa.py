@@ -14,6 +14,9 @@ __version__ = '0.6.4'
 # Import python libs
 import logging
 import sys
+import yaml
+import jinja2
+import re
 
 
 # Only used when called from a terminal
@@ -62,11 +65,6 @@ __opts__ = {
     },
     'pepa_delimiter': '..'
 }
-
-# Import libraries
-import yaml
-import jinja2
-import re
 
 try:
     from os.path import isfile, join
@@ -232,6 +230,42 @@ def ext_pillar(minion_id, pillar, resource, sequence, subkey=False, subkey_only=
     else:
         pillar_data = tree
     return pillar_data
+
+
+def validate(output, resource):
+    '''
+    Validate Pepa templates
+    '''
+    try:
+        import cerberus
+    except ImportError:
+        log.critical('You need module cerberus in order to use validation')
+        return
+
+    roots = __opts__['pepa_roots']
+
+    valdir = join(roots['base'], resource, 'validate')
+
+    all_schemas = {}
+    pepa_schemas = []
+    for fn in glob.glob(valdir + '/*.yaml'):
+        log.info("Loading schema: {0}".format(fn))
+        template = jinja2.Template(open(fn).read())
+        data = output
+        data['grains'] = __grains__.copy()
+        data['pillar'] = __pillar__.copy()
+        schema = yaml.load(template.render(data))
+        all_schemas.update(schema)
+        pepa_schemas.append(fn)
+
+    val = cerberus.Validator()
+    if not val.validate(output['pepa_keys'], all_schemas):
+        for ekey, error in val.errors.items():
+            log.warning('Validation failed for key {0}: {1}'.format(ekey, error))
+
+    output['pepa_schema_keys'] = all_schemas
+    output['pepa_schemas'] = pepa_schemas
+
 
 # Only used when called from a terminal
 if __name__ == '__main__':
