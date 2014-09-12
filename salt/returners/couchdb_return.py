@@ -1,23 +1,31 @@
 # -*- coding: utf-8 -*-
 '''
 Simple returner for CouchDB. Optional configuration
-settings are listed below, along with sane defaults.
+settings are listed below, along with sane defaults:
 
-couchdb.db:     'salt'
-couchdb.url:        'http://salt:5984/'
+.. code-block:: yaml
+
+    couchdb.db: 'salt'
+    couchdb.url: 'http://salt:5984/'
 
 Alternative configuration values can be used by prefacing the configuration.
 Any values not found in the alternative configuration will be pulled from
-the default location::
+the default location:
 
-alternative.couchdb.db:     'salt'
-alternative.couchdb.url:        'http://salt:5984/'
+.. code-block:: yaml
 
-  To use the couchdb returner, append '--return couchdb' to the salt command. ex:
+    alternative.couchdb.db: 'salt'
+    alternative.couchdb.url: 'http://salt:5984/'
+
+To use the couchdb returner, append ``--return couchdb`` to the salt command. Example:
+
+.. code-block:: bash
 
     salt '*' test.ping --return couchdb
 
-  To use the alternative configuration, append '--return_config alternative' to the salt command. ex:
+To use the alternative configuration, append ``--return_config alternative`` to the salt command. Example:
+
+.. code-block:: bash
 
     salt '*' test.ping --return couchdb --return_config alternative
 '''
