@@ -51,9 +51,9 @@ there are more examples [at the end](#examples) of this document.
 
 Quotation
 ---------
+
 The quotation can be tricky sometimes but here are some rules to follow:
- * when a string meant to be ``"string"`` in the generated configuration, it should be like
-  ``'"string"'`` in the YAML document
+ * when a string meant to be ``"string"`` in the generated configuration, it should be like ``'"string"'`` in the YAML document
  * similarly, users should write ``"'string'"`` to get ``'string'`` in the generated configuration
 
 Full example
