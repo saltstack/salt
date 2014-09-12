@@ -2349,14 +2349,22 @@ class BaseHighState(object):
             self.state.opts['pillar'] = self.state._gather_pillar()
         self.state.module_refresh()
 
-    def render_state(self, sls, saltenv, mods, matches):
+    def render_state(self, sls, saltenv, mods, matches, local=False):
         '''
         Render a state file and retrieve all of the include states
         '''
         err = ''
         errors = []
-        state_data = self.client.get_state(sls, saltenv)
-        fn_ = state_data.get('dest', False)
+        if not local:
+            state_data = self.client.get_state(sls, saltenv)
+            fn_ = state_data.get('dest', False)
+        else:
+            fn_ = sls
+            if not os.path.isfile(fn_):
+                errors.append(
+                    'Specified SLS {0} on local filesystem cannot '
+                    'be found.'.format(sls)
+                )
         if not fn_:
             errors.append(
                 'Specified SLS {0} in saltenv {1} is not '
@@ -2384,7 +2392,10 @@ class BaseHighState(object):
                 exc_info_on_loglevel=logging.DEBUG
             )
             errors.append('{0}\n{1}'.format(msg, traceback.format_exc()))
-        mods.add('{0}:{1}'.format(saltenv, sls))
+        try:
+            mods.add('{0}:{1}'.format(saltenv, sls))
+        except AttributeError:
+            pass
         if state:
             if not isinstance(state, dict):
                 errors.append(
