@@ -4,7 +4,9 @@ Module for handling openstack keystone calls.
 
 :optdepends:    - keystoneclient Python adapter
 :configuration: This module is not usable until the following are specified
-    either in a pillar or in the minion's config file::
+    either in a pillar or in the minion's config file:
+
+    .. code-block:: yaml
 
         keystone.user: admin
         keystone.password: verybadpass
@@ -12,14 +14,17 @@ Module for handling openstack keystone calls.
         keystone.tenant_id: f80919baedab48ec8931f200c65a50df
         keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
 
-        OR (for token based authentication)
+    OR (for token based authentication)
+
+    .. code-block:: yaml
 
         keystone.token: 'ADMIN'
         keystone.endpoint: 'http://127.0.0.1:35357/v2.0'
 
     If configuration for multiple openstack accounts is required, they can be
-    set up as different configuration profiles:
-    For example::
+    set up as different configuration profiles. For example:
+
+    .. code-block:: yaml
 
         openstack1:
           keystone.user: admin
@@ -37,7 +42,9 @@ Module for handling openstack keystone calls.
 
     With this configuration in place, any of the keystone functions can make use
     of a configuration profile by declaring it explicitly.
-    For example::
+    For example:
+
+    .. code-block:: bash
 
         salt '*' keystone.tenant_list profile=openstack1
 '''
@@ -119,8 +126,8 @@ def ec2_credentials_create(user_id=None, name=None,
 
         salt '*' keystone.ec2_credentials_create name=admin tenant=admin
         salt '*' keystone.ec2_credentials_create \
-            user_id=c965f79c4f864eaaa9c3b41904e67082 \
-            tenant_id=722787eb540849158668370dc627ec5f
+user_id=c965f79c4f864eaaa9c3b41904e67082 \
+tenant_id=722787eb540849158668370dc627ec5f
     '''
     kstone = auth(profile, **connection_args)
 
@@ -153,10 +160,9 @@ def ec2_credentials_delete(user_id=None, name=None, access_key=None,
     .. code-block:: bash
 
         salt '*' keystone.ec2_credentials_delete \
-            860f8c2c38ca4fab989f9bc56a061a64
-            access_key=5f66d2f24f604b8bb9cd28886106f442
+860f8c2c38ca4fab989f9bc56a061a64 access_key=5f66d2f24f604b8bb9cd28886106f442
         salt '*' keystone.ec2_credentials_delete name=admin \
-            access_key=5f66d2f24f604b8bb9cd28886106f442
+access_key=5f66d2f24f604b8bb9cd28886106f442
     '''
     kstone = auth(profile, **connection_args)
 
@@ -421,7 +427,7 @@ def service_create(name, service_type, description=None, profile=None,
     .. code-block:: bash
 
         salt '*' keystone.service_create nova compute \
-                'OpenStack Compute Service'
+'OpenStack Compute Service'
     '''
     kstone = auth(profile, **connection_args)
     service = kstone.services.create(name, service_type, description)
@@ -861,9 +867,9 @@ def user_role_add(user_id=None, user=None, tenant_id=None,
     .. code-block:: bash
 
         salt '*' keystone.user_role_add \
-            user_id=298ce377245c4ec9b70e1c639c89e654 \
-            tenant_id=7167a092ece84bae8cead4bf9d15bb3b \
-            role_id=ce377245c4ec9b70e1c639c89e8cead4
+user_id=298ce377245c4ec9b70e1c639c89e654 \
+tenant_id=7167a092ece84bae8cead4bf9d15bb3b \
+role_id=ce377245c4ec9b70e1c639c89e8cead4
         salt '*' keystone.user_role_add user=admin tenant=admin role=admin
     '''
     kstone = auth(profile, **connection_args)
@@ -910,9 +916,9 @@ def user_role_remove(user_id=None, user=None, tenant_id=None,
     .. code-block:: bash
 
         salt '*' keystone.user_role_remove \
-            user_id=298ce377245c4ec9b70e1c639c89e654 \
-            tenant_id=7167a092ece84bae8cead4bf9d15bb3b \
-            role_id=ce377245c4ec9b70e1c639c89e8cead4
+user_id=298ce377245c4ec9b70e1c639c89e654 \
+tenant_id=7167a092ece84bae8cead4bf9d15bb3b \
+role_id=ce377245c4ec9b70e1c639c89e8cead4
         salt '*' keystone.user_role_remove user=admin tenant=admin role=admin
     '''
     kstone = auth(profile, **connection_args)
@@ -957,8 +963,8 @@ def user_role_list(user_id=None, tenant_id=None, user_name=None,
     .. code-block:: bash
 
         salt '*' keystone.user_role_list \
-            user_id=298ce377245c4ec9b70e1c639c89e654 \
-            tenant_id=7167a092ece84bae8cead4bf9d15bb3b
+user_id=298ce377245c4ec9b70e1c639c89e654 \
+tenant_id=7167a092ece84bae8cead4bf9d15bb3b
         salt '*' keystone.user_role_list user_name=admin tenant_name=admin
     '''
     kstone = auth(profile, **connection_args)
