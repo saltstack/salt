@@ -525,7 +525,7 @@ class Single(object):
         self.target.update(args)
         self.serial = salt.payload.Serial(opts)
         self.wfuncs = salt.loader.ssh_wrapper(opts)
-        self.mods = mods
+        self.mods = mods if mods else {}
 
     def __arg_comps(self):
         '''
@@ -689,8 +689,7 @@ class Single(object):
         # Mimic the json data-structure that "salt-call --local" will
         # emit (as seen in ssh_py_shim.py)
         if 'local' in result:
-            result['local']['return'] = result['local']
-            ret = json.dumps(result)
+            ret = json.dumps({'local': result['local']})
         else:
             ret = json.dumps({'local': {'return': result}})
         return ret
@@ -1031,6 +1030,8 @@ def mod_data(opts):
                 pl_dir = os.path.join(path, '_{0}'.format(ref))
                 if os.path.isdir(pl_dir):
                     for fn_ in os.listdir(pl_dir):
+                        if not os.path.isfile(fn_):
+                            continue
                         mod_path = os.path.join(pl_dir, fn_)
                         with open(mod_path) as fp_:
                             code_str = fp_.read().encode('base64')

@@ -114,7 +114,7 @@ complete -c salt             -x      -l args-separator       -d "Set the special
 complete -c salt             -f      -l async                -d "Run the salt command but don't wait for a reply"
 complete -c salt             -f -s C -l compound             -d "The compound target option allows for multiple target types to be evaluated, allowing for greater granularity in target matching. The compound target is space delimited, targets other than globs are preceded with an identifier matching the specific targets argument type: salt \"G@os:RedHat and webser* or E@database.*\""
 complete -c salt             -f -s S -l ipcidr               -d "Match based on Subnet (CIDR notation) or IPv4 address."
-complete -c salt             -f -s T -l make-token           -d "Generate and save an authentication token for re-use. Thetoken is generated and made available for the period defined in the Salt Master."
+complete -c salt             -f -s T -l make-token           -d "Generate and save an authentication token for re-use. The token is generated and made available for the period defined in the Salt Master."
 complete -c salt             -x      -l password             -d "Password for external authentication"
 complete -c salt             -f -s I -l pillar               -d "Instead of using shell globs to evaluate the target use a pillar value to identify targets, the syntax for the target is the pillar key followed by a globexpression: "role:production*""
 complete -c salt             -f      -l show-timeout         -d "Display minions that timeout without the additional output of --verbose"
@@ -151,6 +151,9 @@ function __fish_salt_clean
 end
 
 # information extraction from commandline
+
+set -g __fish_salt_default_program 'salt'
+
 function __fish_salt_program
 	set result (commandline -pco)
 	if test -n "$result"
@@ -159,7 +162,7 @@ function __fish_salt_program
 		end
 		set result $result[1] $options
 	else
-		set result salt
+		set result $__fish_salt_default_program
 	end
 	echo $result
 end
@@ -221,10 +224,15 @@ function __fish_salt_exec
 	end
 	eval $exe $argv
 end
+
 function __fish_salt_exec_output
 	set -g __fish_salt_format_options_temp "--output=$argv[1]"
 	__fish_salt_exec $argv[2..-1]
 	set -e __fish_salt_format_options_temp
+end
+
+function __fish_salt_exec_and_clean
+	__fish_salt_exec_output $argv | __fish_salt_clean $argv[1]
 end
 
 function __fish_salt_list
@@ -237,6 +245,18 @@ function __fish_salt_list
 end
 
 set -g __fish_salt_args_types '
+_                             cmd.retcode                     : minion_cmd
+cmd                           cmd.retcode                     : minion_cmd
+_                             cmd.run                         : minion_cmd
+cmd                           cmd.run                         : minion_cmd
+_                             cmd.run_all                     : minion_cmd
+cmd                           cmd.run_all                     : minion_cmd
+_                             cmd.run_stderr                  : minion_cmd
+cmd                           cmd.run_stderr                  : minion_cmd
+_                             cmd.run_stdout                  : minion_cmd
+cmd                           cmd.run_stdout                  : minion_cmd
+_                             cmd.which                       : minion_file
+cmd                           cmd.which                       : minion_file
 _                             cp.get_dir                      : master_file
 _                             cp.get_dir                      : minion_file
 path                          cp.get_dir                      : master_file
@@ -280,26 +300,40 @@ _                             sys.doc                         : module
 function __fish_salt_list_arg_name
 	__fish_salt_exec_output yaml sys.argspec (__fish_salt_function) | grep -A1024 '^ *args:' | grep -B1024 '^ *defaults:' | grep -v ':' | __fish_salt_clean yaml | sed 's/$/=/g'
 end
+
 function __fish_salt_list_arg_value
-	set arg_path (__fish_salt_arg_name)' *'(__fish_salt_function)' *: *'
-	set arg_types (echo $__fish_salt_args_types | __fish_salt_clean_prefix $arg_path)
+	set arg_path_re (__fish_salt_arg_name)'\s*'(__fish_salt_function)'\s*:\s*'
+	set arg_types (echo $__fish_salt_args_types | __fish_salt_clean_prefix $arg_path_re)
 	__fish_salt_list $arg_types
 end
+
 function __fish_salt_list_function
-	 __fish_salt_exec_output yaml sys.list_functions $argv | __fish_salt_clean yaml
+	__fish_salt_exec_and_clean yaml sys.list_functions $argv 
 end
+
 function __fish_salt_list_grain
-	 __fish_salt_exec_output yaml grains.ls $argv | __fish_salt_clean yaml
+	 __fish_salt_exec_and_clean yaml grains.ls $argv
 end
+
 function __fish_salt_list_master_file_abs
-	__fish_salt_exec_output yaml cp.list_master | __fish_salt_clean yaml
+	__fish_salt_exec_and_clean yaml cp.list_master
 end
+
 function __fish_salt_list_master_file
 	__fish_salt_list_master_file_abs | sed 's/^/salt:\/\//g'
 end
+
 function __fish_salt_list_minion
 	salt-key --no-color --list=$argv[1] | grep -Ev '^(Accepted|Unaccepted|Rejected) Keys:$'
 end
+
+function __fish_salt_list_minion_cmd
+	set cmd (__fish_salt_arg_value | sed 's/^[\'"]//')
+	set complete_cmd_exe '"complete --do-complete=\''$cmd'\'"'
+	set cmd_without_last_word (echo $cmd | sed -E 's/\S*$//')
+	__fish_salt_exec_and_clean nested cmd.run shell=/usr/bin/fish cmd=$complete_cmd_exe | awk -v prefix="$cmd_without_last_word" '{print prefix $0}'
+end
+
 function __fish_salt_list_minion_file
 	if [ (count $argv) -eq 0 ]
 		set file (__fish_salt_arg_value)
@@ -309,12 +343,15 @@ function __fish_salt_list_minion_file
 	set exe '"ls --directory --file-type '$file'* 2> /dev/null"'
 	__fish_salt_exec_output nested cmd.run $exe | __fish_salt_clean nested
 end
+
 function __fish_salt_list_module
-	__fish_salt_exec_output yaml sys.list_modules $argv | __fish_salt_clean yaml
+	__fish_salt_exec_and_clean yaml sys.list_modules $argv
 end
+
 function __fish_salt_list_package
-	__fish_salt_exec_output yaml pkg.list_pkgs $argv | __fish_salt_clean yaml | sed 's/:.*//g'
+	__fish_salt_exec_and_clean yaml pkg.list_pkgs $argv | sed 's/:.*//g'
 end
+
 function __fish_salt_list_state
 	__fish_salt_list_master_file_abs | grep '.sls' | sed 's/\//./g;s/\.init\.sls/.sls/g;s/\.sls//g'
 end

@@ -1989,9 +1989,9 @@ def symlink(src, path):
 
         salt '*' file.symlink /path/to/file /path/to/link
     '''
-    src = os.path.expanduser(src)
+    path = os.path.expanduser(path)
 
-    if not os.path.isabs(src):
+    if not os.path.isabs(path):
         raise SaltInvocationError('File path must be absolute.')
 
     try:
@@ -2680,7 +2680,7 @@ def extract_hash(hash_fn, hash_type='sha256', file_name=''):
     '''
     source_sum = None
     partial_id = False
-    name_sought = re.findall(r'^(.+)/([^/]+)$', '/x' + file_name)[0][1]
+    name_sought = os.path.basename(file_name)
     log.debug('modules.file.py - extract_hash(): Extracting hash for file '
               'named: {0}'.format(name_sought))
     hash_fn_fopen = salt.utils.fopen(hash_fn, 'r')

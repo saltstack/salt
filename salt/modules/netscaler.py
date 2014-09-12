@@ -67,7 +67,7 @@ def _connect(**kwargs):
     #_connarg('connection_useSSL', 'useSSL')
 
     nitro = NSNitro(connargs['host'], connargs['user'], connargs['pass'], True)
-    try: 
+    try:
         nitro.login()
     except NSNitroError, e:
         log.debug('netscaler module error - NSNitro.login() failed: {0}'.format(e.message))
@@ -82,7 +82,7 @@ def _disconnect(nitro):
         log.debug('netscaler module error - NSNitro.logout() failed: {0}'.format(e.message))
         return None
     return nitro
-   
+
 
 def _servicegroup_get(sg_name, **connection_args):
     '''
@@ -113,7 +113,7 @@ def _servicegroup_get_servers(sg_name, **connection_args):
     sg.set_servicegroupname(sg_name)
     try:
         sg = NSServiceGroup.get_servers(nitro, sg)
-    except NSNitroError, e: 
+    except NSNitroError, e:
         log.debug('netscaler module error - NSServiceGroup.get_servers failed(): {0}'.format(e.message))
         sg = None
     _disconnect(nitro)
@@ -853,7 +853,7 @@ def _vserver_sslcert_get(v_name, sc_name, **connection_args):
     return ret
 
 
-def vserver_sslcert_exists(v_name, sc_name, **connection_args): 
+def vserver_sslcert_exists(v_name, sc_name, **connection_args):
     '''
     Checks if a SSL certificate is tied to a vserver
 
@@ -890,7 +890,7 @@ def vserver_sslcert_add(v_name, sc_name, **connection_args):
     except NSNitroError, e:
         log.debug('netscaler module error - NSSSLVServerSSLCertKeyBinding.add() failed: {0}'.format(e.message))
         ret = False
-    _disconnect(nitro) 
+    _disconnect(nitro)
     return ret
 
 

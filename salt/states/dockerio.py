@@ -787,7 +787,7 @@ def running(name, container=None, port_bindings=None, binds=None,
 
         .. code-block:: yaml
 
-            - dns:
+            - volumes_from:
                 - name_other_container
 
     network_mode
