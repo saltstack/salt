@@ -9,7 +9,7 @@ Module for getting information about syslog-ng
 :platform:      all
 
 This module is capable of managing syslog-ng instances which were installed
- via a package manager or from source. Users can use a directory as a parameter
+via a package manager or from source. Users can use a directory as a parameter
 in the case of most functions, which contains the syslog-ng and syslog-ng-ctl
 binaries.
 
@@ -95,7 +95,7 @@ class Buildable(object):
 
     It contains a common build function.
 
-    Does not need examples:.
+    Does not need examples.
     '''
 
     def __init__(self, iterable, join_body_on='', append_extra_newline=True):
@@ -148,7 +148,7 @@ class Statement(Buildable):
     It represents a syslog-ng configuration statement, e.g. source, destination,
     filter.
 
-    Does not need examples:.
+    Does not need examples.
     '''
 
     def __init__(self, type, id='', options=None, has_name=True):
@@ -176,7 +176,7 @@ class NamedStatement(Statement):
     '''
     It represents a configuration statement, which has a name, e.g. a source.
 
-    Does not need examples:.
+    Does not need examples.
     '''
     def __init__(self, type, id='', options=None):
         super(NamedStatement, self).__init__(type, id, options, has_name=True)
@@ -187,7 +187,7 @@ class UnnamedStatement(Statement):
     It represents a configuration statement, which doesn't have a name, e.g. a
     log path.
 
-    Does not need examples:.
+    Does not need examples.
     '''
 
     def __init__(self, type, options=None):
@@ -199,7 +199,7 @@ class GivenStatement(Buildable):
     This statement returns a string without modification. It can be used to
      use existing configuration snippets.
 
-    Does not need examples:.
+    Does not need examples.
     '''
 
     def __init__(self, value, add_newline=True):
@@ -220,7 +220,7 @@ class Option(Buildable):
 
     An instance of Option can represent a file(), tcp(), udp(), etc.  option.
 
-    Does not need examples:.
+    Does not need examples.
     '''
 
     def __init__(self, type='', params=None):
@@ -244,7 +244,7 @@ class Parameter(Buildable):
     '''
     An Option has one or more Parameter instances.
 
-    Does not need examples:.
+    Does not need examples.
     '''
 
     def __init__(self, iterable=None, join_body_on=''):
@@ -257,15 +257,17 @@ class SimpleParameter(Parameter):
 
     For example:
 
-    destination d_file {
-        file(
-            "/var/log/messages"
-        );
-    };
+    .. code-block:: text
 
-    "/var/log/messages" is a SimpleParameter.
+        destination d_file {
+            file(
+                "/var/log/messages"
+            );
+        };
 
-    Does not need examples:.
+    ``/var/log/messages`` is a SimpleParameter.
+
+    Does not need examples.
     '''
 
     def __init__(self, value=''):
@@ -280,15 +282,17 @@ class TypedParameter(Parameter):
     '''
     A Parameter, which has a type:
 
-    destination d_tcp {
-        tcp(
-            ip(127.0.0.1)
-        );
-    };
+    .. code-block:: text
 
-    ip(127.0.0.1) is a TypedParameter.
+        destination d_tcp {
+            tcp(
+                ip(127.0.0.1)
+            );
+        };
 
-    Does not need examples:.
+    ``ip(127.0.0.1)`` is a TypedParameter.
+
+    Does not need examples.
     '''
 
     def __init__(self, type='', values=None):
@@ -312,7 +316,7 @@ class ParameterValue(Buildable):
     '''
     A TypedParameter can have one or more values.
 
-    Does not need examples:.
+    Does not need examples.
     '''
 
     def __init__(self, iterable=None, join_body_on=''):
@@ -325,7 +329,7 @@ class SimpleParameterValue(ParameterValue):
 
     For example in ip(127.0.0.1) 127.0.0.1 is a SimpleParameterValue.
 
-    Does not need examples:.
+    Does not need examples.
     '''
 
     def __init__(self, value=''):
@@ -343,18 +347,20 @@ class TypedParameterValue(ParameterValue):
     A TypedParameter can have a 'parameter', which also have a type. For example
     key_file and cert_file:
 
-    source demo_tls_source {
-        tcp(
-            ip(0.0.0.0)
-            port(1999)
-            tls(
-                key_file("/opt/syslog-ng/etc/syslog-ng/key.d/syslog-ng.key")
-                cert_file("/opt/syslog-ng/etc/syslog-ng/cert.d/syslog-ng.cert")
-            )
-        );
-    };
+    .. code-block:: text
 
-    Does not need examples:.
+        source demo_tls_source {
+            tcp(
+                ip(0.0.0.0)
+                port(1999)
+                tls(
+                    key_file("/opt/syslog-ng/etc/syslog-ng/key.d/syslog-ng.key")
+                    cert_file("/opt/syslog-ng/etc/syslog-ng/cert.d/syslog-ng.cert")
+                )
+            );
+        };
+
+    Does not need examples.
     '''
 
     def __init__(self, type='', arguments=None):
@@ -379,7 +385,7 @@ class Argument(object):
     A TypedParameterValue has one or more Arguments. For example this can be
     the value of key_file.
 
-    Does not need examples:.
+    Does not need examples.
     '''
 
     def __init__(self, value=''):
