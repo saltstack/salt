@@ -761,7 +761,7 @@ def trust_key(keyid=None,
         ret['message'] = res['stderr']
     else:
         if res['stderr']:
-            _match = re.findall('\d', res['stderr'])
+            _match = re.findall(r'\d', res['stderr'])
             if len(_match) == 2:
                 ret['fingerprint'] = fingerprint
                 ret['message'] = 'Changing ownership trust from {0} to {1}.'.format(
