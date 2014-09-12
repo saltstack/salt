@@ -49,6 +49,11 @@ class SyslogNgError(Exception):
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
 
+# Don't shadow built-in's.
+__func_alias__ = {
+    'reload_': 'reload'
+}
+
 _INDENT = ""
 _INDENT_STEP = "    "
 
@@ -1064,7 +1069,7 @@ def start(name=None,
     )
 
 
-def reload(name):
+def reload_(name):
     '''
     Reloads syslog-ng. This function is intended to be used from states.
 
