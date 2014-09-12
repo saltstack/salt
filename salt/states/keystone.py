@@ -255,7 +255,7 @@ def user_absent(name, profile=None, **connection_args):
 
 def tenant_present(name, description=None, enabled=True, profile=None,
                    **connection_args):
-    ''''
+    '''
     Ensures that the keystone tenant exists
 
     name
