@@ -325,6 +325,7 @@ __opts__ = {
     'pepa_validate': False
 }
 
+
 def __virtual__():
     '''
     Only return if all the modules are available
@@ -469,6 +470,7 @@ def ext_pillar(minion_id, pillar, resource, sequence, subkey=False, subkey_only=
     if __opts__['pepa_validate']:
         pillar_data['pepa_keys'] = output.copy()
     return pillar_data
+
 
 def validate(output, resource):
     '''
