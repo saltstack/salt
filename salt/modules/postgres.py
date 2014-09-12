@@ -1549,3 +1549,237 @@ def owner_to(dbname,
                                    password=password,
                                    maintenance_db=dbname)
     return cmdret
+
+# Schema related actions
+
+
+def schema_create(dbname, name, owner=None,
+                  user=None,
+                  db_user=None, db_password=None,
+                  db_host=None, db_port=None):
+    '''
+    Creates a Postgres schema.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.schema_create dbname name owner='owner' \\
+                user='user' \\
+                db_user='user' db_password='password'
+                db_host='hostname' db_port='port'
+    '''
+
+    # check if schema exists
+    if schema_exists(dbname, name,
+                     db_user=db_user, db_password=db_password,
+                     db_host=db_host, db_port=db_port):
+        log.info('{0!r} already exists in {1!r}'.format(name, dbname))
+        return False
+
+    sub_cmd = 'CREATE SCHEMA {0}'.format(name)
+    if owner is not None:
+        sub_cmd = '{0} AUTHORIZATION {1}'.format(sub_cmd, owner)
+
+    ret = _psql_prepare_and_run(['-c', sub_cmd],
+                                user=db_user, password=db_password,
+                                port=db_port, host=db_host,
+                                maintenance_db=dbname, runas=user)
+
+    return ret['retcode'] == 0
+
+
+def schema_remove(dbname, name,
+                  user=None,
+                  db_user=None, db_password=None,
+                  db_host=None, db_port=None):
+    '''
+    Removes a schema from the Postgres server.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.schema_remove dbname schemaname
+
+    dbname
+        Database name we work on
+
+    schemaname
+        The schema's name we'll remove
+
+    user
+        System user all operations should be performed on behalf of
+
+    db_user
+        database username if different from config or default
+
+    db_password
+        user password if any password for a specified user
+
+    db_host
+        Database host if different from config or default
+
+    db_port
+        Database port if different from config or default
+
+    '''
+
+    # check if schema exists
+    if not schema_exists(dbname, name,
+                         db_user=db_user, db_password=db_password,
+                         db_host=db_host, db_port=db_port):
+        log.info('Schema {0!r} does not exist in {0!r}'.format(name, dbname))
+        return False
+
+    # schema exists, proceed
+    sub_cmd = 'DROP SCHEMA {0}'.format(name)
+    _psql_prepare_and_run(
+        ['-c', sub_cmd],
+        runas=user,
+        maintenance_db=dbname,
+        host=db_host, user=db_user, port=db_port, password=db_password)
+
+    if not schema_exists(dbname, name,
+                         db_user=db_user, db_password=db_password,
+                         db_host=db_host, db_port=db_port):
+        return True
+    else:
+        log.info('Failed to delete schema {0!r}.'.format(name))
+        return False
+
+
+def schema_exists(dbname, name,
+                  db_user=None, db_password=None,
+                  db_host=None, db_port=None):
+    '''
+    Checks if a schema exists on the Postgres server.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.schema_exists dbname schemaname
+
+    dbname
+        Database name we query on
+
+    name
+       Schema name we look for
+
+    db_user
+        database username if different from config or default
+
+    db_password
+        user password if any password for a specified user
+
+    db_host
+        Database host if different from config or default
+
+    db_port
+        Database port if different from config or default
+
+    '''
+    return bool(
+        schema_get(dbname, name,
+                   db_user=db_user,
+                   db_host=db_host,
+                   db_port=db_port,
+                   db_password=db_password))
+
+
+def schema_get(dbname, name,
+               db_user=None, db_password=None,
+               db_host=None, db_port=None):
+    '''
+    Return a dict with information about schemas in a database.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.schema_get dbname name
+
+    dbname
+        Database name we query on
+
+    name
+       Schema name we look for
+
+    db_user
+        database username if different from config or default
+
+    db_password
+        user password if any password for a specified user
+
+    db_host
+        Database host if different from config or default
+
+    db_port
+        Database port if different from config or default
+    '''
+    all_schemas = schema_list(dbname,
+                              db_user=db_user,
+                              db_host=db_host,
+                              db_port=db_port,
+                              db_password=db_password)
+    try:
+        return all_schemas.get(name, None)
+    except AttributeError:
+        log.error('Could not retrieve Postgres schema. Is Postgres running?')
+        return False
+
+
+def schema_list(dbname,
+                db_user=None, db_password=None,
+                db_host=None, db_port=None):
+    '''
+    Return a dict with information about schemas in a Postgres database.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.schema_list dbname
+
+    dbname
+        Database name we query on
+
+    db_user
+        database username if different from config or default
+
+    db_password
+        user password if any password for a specified user
+
+    db_host
+        Database host if different from config or default
+
+    db_port
+        Database port if different from config or default
+    '''
+
+    ret = {}
+
+    query = (''.join([
+        'SELECT '
+        'pg_namespace.nspname as "name",'
+        'pg_namespace.nspacl as "acl", '
+        'pg_roles.rolname as "owner" '
+        'FROM pg_namespace '
+        'LEFT JOIN pg_roles ON pg_roles.oid = pg_namespace.nspowner '
+    ]))
+
+    rows = psql_query(query,
+                      host=db_host,
+                      user=db_user,
+                      port=db_port,
+                      maintenance_db=dbname,
+                      password=db_password)
+
+    for row in rows:
+        retrow = {}
+        for key in ('owner', 'acl'):
+            retrow[key] = row[key]
+        ret[row['name']] = retrow
+
+    return ret
