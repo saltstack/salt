@@ -3873,7 +3873,7 @@ def list_backups_dir(path, limit=None):
         return {}
 
     files = {}
-    f = dict([(i, len(list(n))) for i, n in groupby([x.split("_")[0] for x in sorted(os.listdir(bkdir))])])
+    f = dict([(i, len(list(n))) for i, n in itertools.groupby([x.split("_")[0] for x in sorted(os.listdir(bkdir))])])
     ff = os.listdir(bkdir)
     for i, n in f.items():
         ssfile = {}
