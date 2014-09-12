@@ -923,7 +923,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         '''
         config = sconfig.cloud_config(self.get_config_file_path('cloud'))
         self.assertIn('ec2-config', config['providers'])
-        self.assertIn('Ubuntu-13.04-AMD64', config['profiles'])
+        self.assertIn('ec2-test', config['profiles'])
 
 # <---- Salt Cloud Configuration Tests ---------------------------------------------
 
