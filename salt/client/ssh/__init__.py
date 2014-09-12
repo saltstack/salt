@@ -453,9 +453,15 @@ class SSH(object):
             host = ret.keys()[0]
             self.cache_job(jid, host, ret[host])
             ret = self.key_deploy(host, ret)
+
+            opt=[]
+            try:
+                opt=self.opts.get('output', 'nested')
+            except AttributeError:
+                raise salt.exceptions.SaltClientError('Permission denied.')
             salt.output.display_output(
                     ret,
-                    self.opts.get('output', 'nested'),
+                    opt,
                     self.opts)
             if self.event:
                 self.event.fire_event(
