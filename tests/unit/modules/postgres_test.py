@@ -731,7 +731,7 @@ class PostgresTestCase(TestCase):
                    'acl': '{postgres=UC/postgres,=UC/postgres}',
                    'owner': 'postgres'
                }]))
-    def test_schema_get(self):
+    def test_schema_get_again(self):
         ret = postgres.schema_get(
             'template1',
             'pg_toast'

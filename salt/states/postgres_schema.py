@@ -12,13 +12,7 @@ The postgres_schemas module is used to create and manage Postgres schemas.
 '''
 
 # Import Python libs
-
-# Import salt libs
-import salt.utils
 import logging
-
-# Salt imports
-from salt.modules import postgres
 
 
 log = logging.getLogger(__name__)
