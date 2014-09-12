@@ -115,7 +115,7 @@ def persist(name, value, config='/etc/sysctl.conf'):
                     rest = rest[len(rest_v):]
                 if rest_v == value:
                     return 'Already set'
-                new_line = _formatfor(key, value, config, rest)
+                new_line = '{0}={1}{2}'.format(key, value, rest)
                 nlines.append(new_line)
                 edited = True
     if not edited:
