@@ -573,7 +573,24 @@ def installed(
             - pkg_verify:
               - ignore_types: [config,doc]
 
-    Multiple Package Installation Options: (not supported in Windows or pkgng)
+    normalize
+        Normalize the package name by removing the architecture.  Default is True.
+        This is useful for poorly created packages which might include the
+        architecture as an actual part of the name such as kernel modules
+        which match a specific kernel version.
+
+        .. versionadded:: 2014.7.0
+
+    Example:
+
+    .. code-block:: yaml
+
+        gpfs.gplbin-2.6.32-279.31.1.el6.x86_64:
+          pkg.installed:
+            - normalize: False
+
+    **Multiple Package Installation Options: (not supported in Windows or
+    pkgng)**
 
     pkgs
         A list of packages to install from a software repository. All packages
@@ -667,35 +684,6 @@ def installed(
               - bar: http://somesite.org/bar.rpm
               - baz: ftp://someothersite.org/baz.rpm
               - qux: /minion/path/to/qux.rpm
-
-    install_recommends
-        Whether to install the packages marked as recommended.  Default is True.
-        Currently only works with APT based systems.
-
-        .. versionadded:: Lithium
-
-    .. code-block:: yaml
-
-        httpd:
-          pkg.installed:
-            - install_recommends: False
-
-
-    normalize
-        Normalize the package name by removing the architecture.  Default is True.
-        This is useful for poorly created packages which might include the
-        architecture as an actual part of the name such as kernel modules
-        which match a specific kernel version.
-
-        .. versionadded:: 2014.7.0
-
-    Example:
-
-    .. code-block:: yaml
-
-        gpfs.gplbin-2.6.32-279.31.1.el6.x86_64:
-          pkg.installed:
-            - normalize: False
     '''
     kwargs['saltenv'] = __env__
     rtag = __gen_rtag()
