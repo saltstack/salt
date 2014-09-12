@@ -80,7 +80,7 @@ def _init():
                           help='Source directory. Must be a git checkout. '
                                '(default: %default)')
     path_group.add_option('--build-dir',
-                          default='/tmp/saltpkg',
+                          default='/tmp/salt-buildpackage',
                           help='Build root, will be removed if it exists '
                                'prior to running script. (default: %default)')
     path_group.add_option('--artifact-dir',
@@ -300,7 +300,7 @@ def build_centos(opts):
             fp_.write(line + '\n')
 
     # Do the thing
-    cmd = ['rpmbuild', '-bb']
+    cmd = ['rpmbuild', '-ba']
     cmd.extend(define_opts)
     cmd.append(spec_path)
     stdout, stderr, rcode = _run_command(cmd)
@@ -308,7 +308,7 @@ def build_centos(opts):
     if rcode != 0:
         _abort('Build failed.')
 
-    return glob.glob(
+    packages = glob.glob(
         os.path.join(
             opts.build_dir,
             'RPMS',
@@ -316,6 +316,16 @@ def build_centos(opts):
             'salt-*{0}*.noarch.rpm'.format(salt_pkgver)
         )
     )
+    packages.extend(
+        glob.glob(
+            os.path.join(
+                opts.build_dir,
+                'SRPMS',
+                'salt-{0}*.src.rpm'.format(salt_pkgver)
+            )
+        )
+    )
+    return packages
 
 
 # MAIN
