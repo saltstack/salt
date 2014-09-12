@@ -106,9 +106,6 @@ def sig4(method, endpoint, params, provider, aws_api_version, location,
 
     algorithm = 'AWS4-HMAC-SHA256'
 
-    # Canonical URI--the part of the URI from domain to query ('/' if no path)
-    canonical_uri = '/'
-
     # Create payload hash (hash of the request body content). For GET
     # requests, the payload is an empty string ('').
     payload_hash = hashlib.sha256('').hexdigest()
@@ -116,7 +113,7 @@ def sig4(method, endpoint, params, provider, aws_api_version, location,
     # Combine elements to create create canonical request
     canonical_request = '\n'.join((
         method,
-        canonical_uri,
+        uri,
         querystring,
         canonical_headers,
         signed_headers,
