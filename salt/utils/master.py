@@ -384,6 +384,7 @@ class MasterPillarUtil(object):
         return True
 
 
-def ping_all_minions():
+def ping_all_connected_minions(opts):
     client = salt.client.LocalClient()
-    client.cmd('*', 'test.ping')
+    ckminions = salt.utils.minions.CkMinions(opts)
+    client.cmd(list(ckminions.connected_ids()), 'test.ping', expr_form='list')
