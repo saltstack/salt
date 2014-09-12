@@ -1847,7 +1847,8 @@ class Syndic(Minion):
                        data['tgt_type'],
                        data['ret'],
                        data['jid'],
-                       data['to'])
+                       data['to'],
+                       {'user': data.get('user', '')})
 
     # Syndic Tune In
     def tune_in(self):
