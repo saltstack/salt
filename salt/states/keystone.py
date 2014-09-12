@@ -581,8 +581,8 @@ def endpoint_absent(name, profile=None, **connection_args):
             return ret
         # Delete service
         __salt__['keystone.endpoint_delete'](name,
-                                         profile=profile,
-                                         **connection_args)
+                                             profile=profile,
+                                             **connection_args)
         ret['comment'] = 'Endpoint for service "{0}" has been deleted'.format(name)
         ret['changes']['endpoint'] = 'Deleted'
     return ret
