@@ -15,7 +15,7 @@ complete -c salt             -x      -l args-separator       -d "Set the special
 complete -c salt             -f      -l async                -d "Run the salt command but don't wait for a reply"
 complete -c salt             -f -s C -l compound             -d "The compound target option allows for multiple target types to be evaluated, allowing for greater granularity in target matching. The compound target is space delimited, targets other than globs are preceded with an identifier matching the specific targets argument type: salt \"G@os:RedHat and webser* or E@database.*\""
 complete -c salt             -f -s S -l ipcidr               -d "Match based on Subnet (CIDR notation) or IPv4 address."
-complete -c salt             -f -s T -l make-token           -d "Generate and save an authentication token for re-use. Thetoken is generated and made available for the period defined in the Salt Master."
+complete -c salt             -f -s T -l make-token           -d "Generate and save an authentication token for re-use. The token is generated and made available for the period defined in the Salt Master."
 complete -c salt             -x      -l password             -d "Password for external authentication"
 complete -c salt             -f -s I -l pillar               -d "Instead of using shell globs to evaluate the target use a pillar value to identify targets, the syntax for the target is the pillar key followed by a globexpression: \"role:production*\""
 complete -c salt             -f      -l show-timeout         -d "Display minions that timeout without the additional output of --verbose"

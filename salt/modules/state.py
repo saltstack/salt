@@ -15,6 +15,7 @@ import datetime
 import tempfile
 
 # Import salt libs
+import salt.config
 import salt.utils
 import salt.state
 import salt.payload
@@ -26,6 +27,7 @@ __proxyenabled__ = ['*']
 
 __outputter__ = {
     'sls': 'highstate',
+    'pkg': 'highstate',
     'top': 'highstate',
     'single': 'highstate',
     'highstate': 'highstate',
@@ -187,7 +189,10 @@ def high(data, queue=False, **kwargs):
 
 def template(tem, queue=False, **kwargs):
     '''
-    Execute the information stored in a template file on the minion
+    Execute the information stored in a template file on the minion.
+
+    This function does not ask a master for a SLS file to render but
+    instead directly processes the file at the provided path on the minion.
 
     CLI Example:
 
@@ -198,8 +203,14 @@ def template(tem, queue=False, **kwargs):
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
-    st_ = salt.state.State(__opts__)
-    ret = st_.call_template(tem)
+    st_ = salt.state.HighState(__opts__)
+    if not tem.endswith('.sls'):
+        tem = '{sls}.sls'.format(sls=tem)
+    high, errors = st_.render_state(tem, None, '', None, local=True)
+    if errors:
+        __context__['retcode'] = 1
+        return errors
+    ret = st_.state.call_high(high)
     _set_retcode(ret)
     return ret
 
@@ -223,7 +234,10 @@ def template_str(tem, queue=False, **kwargs):
     return ret
 
 
-def highstate(test=None, queue=False, **kwargs):
+def highstate(test=None,
+              queue=False,
+              localconfig=None,
+              **kwargs):
     '''
     Retrieve the state data from the salt master for this minion and execute it
 
@@ -241,6 +255,11 @@ def highstate(test=None, queue=False, **kwargs):
 
         This option starts a new thread for each queued state run so use this
         option sparingly.
+    localconfig: ``None``
+        Instead of using running minion opts, load ``localconfig`` and merge that
+        with the running minion opts. This allows you to create "roots" of
+        salt directories (with their own minion config, pillars, file_roots) to
+        run highstate out of.
 
     CLI Example:
 
@@ -259,6 +278,9 @@ def highstate(test=None, queue=False, **kwargs):
         return conflict
     orig_test = __opts__.get('test', None)
     opts = copy.deepcopy(__opts__)
+
+    if localconfig:
+        opts = salt.config.minion_config(localconfig, defaults=opts)
 
     if test is None:
         if salt.utils.test_mode(test=test, **kwargs):

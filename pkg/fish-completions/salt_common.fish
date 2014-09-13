@@ -103,6 +103,7 @@ for program in $salt_programs_return
 	complete -c $program     -x      -l return               -d "Set an alternative return method. By default salt will send the return data from the command back to the master, but the return data can be redirected into any number of systems, databases or applications."
 end
 
+
 # convinience functions
 function __fish_salt_log
 	echo $argv >&2

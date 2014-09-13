@@ -1024,14 +1024,14 @@ def deploy_script(host,
 
             # Minion configuration
             if minion_pem:
-                sftp_file('{0}/minion.pem'.format(tmp_dir), minion_pem, kwargs)
+                sftp_file('{0}/minion.pem'.format(tmp_dir), minion_pem, ssh_kwargs)
                 ret = root_cmd('chmod 600 {0}/minion.pem'.format(tmp_dir),
                                tty, sudo, **ssh_kwargs)
                 if ret:
                     raise SaltCloudSystemExit(
                         'Cant set perms on {0}/minion.pem'.format(tmp_dir))
             if minion_pub:
-                sftp_file('{0}/minion.pub'.format(tmp_dir), minion_pub, kwargs)
+                sftp_file('{0}/minion.pub'.format(tmp_dir), minion_pub, ssh_kwargs)
 
             if minion_conf:
                 if not isinstance(minion_conf, dict):
@@ -1057,7 +1057,7 @@ def deploy_script(host,
 
             # Master configuration
             if master_pem:
-                sftp_file('{0}/master.pem'.format(tmp_dir), master_pem, kwargs)
+                sftp_file('{0}/master.pem'.format(tmp_dir), master_pem, ssh_kwargs)
                 ret = root_cmd('chmod 600 {0}/master.pem'.format(tmp_dir),
                                tty, sudo, **ssh_kwargs)
                 if ret:
@@ -1065,7 +1065,7 @@ def deploy_script(host,
                         'Cant set perms on {0}/master.pem'.format(tmp_dir))
 
             if master_pub:
-                sftp_file('{0}/master.pub'.format(tmp_dir), master_pub, kwargs)
+                sftp_file('{0}/master.pub'.format(tmp_dir), master_pub, ssh_kwargs)
 
             if master_conf:
                 if not isinstance(master_conf, dict):
@@ -1116,7 +1116,7 @@ def deploy_script(host,
                     rpath = os.path.join(
                         preseed_minion_keys_tempdir, minion_id
                     )
-                    sftp_file(rpath, minion_key, kwargs)
+                    sftp_file(rpath, minion_key, ssh_kwargs)
 
                 if ssh_kwargs['username'] != 'root':
                     root_cmd(
@@ -1134,7 +1134,7 @@ def deploy_script(host,
             if script:
                 # got strange escaping issues with sudoer, going onto a
                 # subshell fixes that
-                sftp_file('{0}/deploy.sh'.format(tmp_dir), script, kwargs)
+                sftp_file('{0}/deploy.sh'.format(tmp_dir), script, ssh_kwargs)
                 ret = root_cmd(
                     ('sh -c "( chmod +x \\"{0}/deploy.sh\\" )";'
                      'exit $?').format(tmp_dir),
