@@ -2057,12 +2057,11 @@ def argspec_report(functions, module=''):
     if module:
         # allow both "sys" and "sys." to match sys, without also matching
         # sysctl
-        comps = module.split('.')
-        comps = filter(None, comps)
-        if len(comps) < 2:
-            module = module + '.' if not module.endswith('.') else module
+        target_module = module + '.' if not module.endswith('.') else module
+    else:
+        target_module = ''
     for fun in functions:
-        if fun.startswith(module):
+        if fun == module or fun.startswith(target_module):
             try:
                 aspec = get_function_argspec(functions[fun])
             except TypeError:
