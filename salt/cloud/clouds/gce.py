@@ -1898,7 +1898,11 @@ def create(vm_=None, call=None):
         )
         return False
 
-    node_dict = show_instance(node_data['name'], 'action')
+    try:
+        node_dict = show_instance(node_data['name'], 'action')
+    except TypeError:
+        # node_data is a libcloud Node which is unsubscriptable
+        node_dict = show_instance(node_data.name, 'action')
 
     if config.get_cloud_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)
