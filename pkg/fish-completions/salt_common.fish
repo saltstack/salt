@@ -145,6 +145,9 @@ end
 
 set -g __fish_salt_default_program 'salt'
 
+# BUG: Completion doesn't work with correct commandline like
+# salt --out raw server test.ping
+# Consider rewriting using __fish_complete_subcommand
 function __fish_salt_program
 	set result (commandline -pco)
 	if test -n "$result"
@@ -158,7 +161,7 @@ function __fish_salt_program
 	echo $result
 end
 
-function __fish_salt_ignore_args
+function __fish_salt_save_first_commandline_token_not_matching_args_to
 	set -l cli (commandline -pco) 
 	for i in $cli
 		if echo "$i" | grep -Ev (__fish_salt_join '|' $argv)
@@ -169,13 +172,27 @@ function __fish_salt_ignore_args
 	return 1
 end
 
+function __fish_salt_commandline_tokens_not_matching_args
+	set tokens (commandline -pco)
+	set result 1
+	for token in $tokens
+		if echo "$token" | grep -Ev (__fish_salt_join '|' $argv)
+			set result 0
+		end
+	end
+	return $result
+end
+
 set __fish_salt_base_ignores (__fish_salt_join '|' $salt_programs '^-.*')
+
 function __fish_salt_ignores_minion
 	echo $__fish_salt_base_ignores
 end
+
 function __fish_salt_extract_minion
-	__fish_salt_ignore_args __fish_salt_extracted_minion (__fish_salt_ignores_minion)
+	__fish_salt_save_first_commandline_token_not_matching_args_to __fish_salt_extracted_minion (__fish_salt_ignores_minion)
 end
+
 function __fish_salt_minion
 	__fish_salt_extract_minion > /dev/null
 	echo $__fish_salt_extracted_minion
@@ -184,24 +201,41 @@ end
 function __fish_salt_ignores_function
 	__fish_salt_join '|' $__fish_salt_base_ignores (__fish_salt_minion)
 end
+
 function __fish_salt_extract_function
-	__fish_salt_ignore_args __fish_salt_extracted_function (__fish_salt_ignores_function)
+	__fish_salt_save_first_commandline_token_not_matching_args_to __fish_salt_extracted_function (__fish_salt_ignores_function)
 end
+
 function __fish_salt_function
 	__fish_salt_extract_function > /dev/null
 	echo $__fish_salt_extracted_function
 end
 
+function __fish_salt_ignores_args
+	__fish_salt_join '|' (__fish_salt_ignores_function) (__fish_salt_function)
+end
+
+function __fish_salt_args
+	__fish_salt_commandline_tokens_not_matching_args (__fish_salt_ignores_args)
+end
+
 set __fish_salt_arg_name_re '\w*='
+
 function __fish_salt_arg_name
-	set result (echo (commandline -ct) | grep -E --only-matching $__fish_salt_arg_name_re)
+	set result (commandline -ct | grep -E --only-matching $__fish_salt_arg_name_re)
 	if test -z $result
 		set result '_='
 	end
 	echo $result | sed 's/=$//g'
 end
+
 function __fish_salt_arg_value
-	echo (commandline -ct) | sed "s/$__fish_salt_arg_name_re//g"
+	commandline -ct | sed "s/$__fish_salt_arg_name_re//g"
+end
+
+function __fish_salt_arg_value_by_name
+	set arg_name "$argv="
+	__fish_salt_args | __fish_salt_clean_prefix $arg_name
 end
 
 # getting info from salt
@@ -238,16 +272,23 @@ end
 set -g __fish_salt_args_types '
 _                             cmd.retcode                     : minion_cmd
 cmd                           cmd.retcode                     : minion_cmd
+shell                         cmd.retcode                     : minion_file
 _                             cmd.run                         : minion_cmd
 cmd                           cmd.run                         : minion_cmd
+shell                         cmd.run                         : minion_file
 _                             cmd.run_all                     : minion_cmd
 cmd                           cmd.run_all                     : minion_cmd
+shell                         cmd.run_all                     : minion_file
 _                             cmd.run_stderr                  : minion_cmd
 cmd                           cmd.run_stderr                  : minion_cmd
+shell                         cmd.run_stderr                  : minion_file
 _                             cmd.run_stdout                  : minion_cmd
 cmd                           cmd.run_stdout                  : minion_cmd
-_                             cmd.which                       : minion_file
-cmd                           cmd.which                       : minion_file
+shell                         cmd.run_stdout                  : minion_file
+shell                         cmd.script                      : minion_file
+shell                         cmd.script_retcode              : minion_file
+_                             cmd.which                       : minion_cmd
+cmd                           cmd.which                       : minion_cmd
 _                             cp.get_dir                      : master_file
 _                             cp.get_dir                      : minion_file
 path                          cp.get_dir                      : master_file
@@ -331,7 +372,21 @@ function __fish_salt_list_minion_cmd
 	set cmd (__fish_salt_arg_value | sed 's/^[\'"]//')
 	set complete_cmd_exe '"complete --do-complete=\''$cmd'\'"'
 	set cmd_without_last_word (echo $cmd | sed -E 's/\S*$//')
-	__fish_salt_exec_and_clean nested cmd.run shell=/usr/bin/fish cmd=$complete_cmd_exe | awk -v prefix="$cmd_without_last_word" '{print prefix $0}'
+	# BUG: Static paths. Do we need to use which?
+	set bash_shell '/bin/bash'
+	set fish_shell '/usr/bin/fish'
+	set sh_shell '/bin/sh'
+	set zsh_shell '/usr/bin/zsh'
+	set shell (__fish_salt_arg_value_by_name shell); and test -z $shell; and set shell $sh_shell
+	switch $shell
+		case $fish_shell
+			__fish_salt_exec_and_clean nested cmd.run shell=$fish_shell cmd=$complete_cmd_exe | awk -v prefix="$cmd_without_last_word" '{print prefix $0}'
+		case $bash_shell $zsh_shell
+			# Not implemented; See
+			# https://github.com/fish-shell/fish-shell/issues/1679#issuecomment-55487388
+		case $sh_shell
+			# sh doesn't have completions
+	end
 end
 
 function __fish_salt_list_minion_file
