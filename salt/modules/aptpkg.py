@@ -1514,7 +1514,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
     if not mod_source:
         mod_source = sourceslist.SourceEntry(repo)
         if 'comments' in kwargs:
-            mod_source.comment = kwargs['comments'][0]
+            mod_source.comment = " ".join(str(c) for c in kwargs['comments'])
         sources.list.append(mod_source)
 
     # if all comps aren't part of the disable
