@@ -266,7 +266,7 @@ SHORT_FORM_EXPECTED = (
 GIVEN_CONFIG = {
     'id': "config.some_name",
     'config': (
-"""  |
+        """
                source s_gsoc {
                   tcp(
                       ip(
@@ -280,14 +280,14 @@ GIVEN_CONFIG = {
                       )
                   );
                };
-"""
+        """
     )
 }
 
 _SALT_VAR_WITH_MODULE_METHODS = {
     'syslog_ng.config': syslog_ng_module.config,
     'syslog_ng.start': syslog_ng_module.start,
-    'syslog_ng.reload': syslog_ng_module.reload,
+    'syslog_ng.reload': syslog_ng_module.reload_,
     'syslog_ng.stop': syslog_ng_module.stop,
     'syslog_ng.write_version': syslog_ng_module.write_version,
     'syslog_ng.write_config': syslog_ng_module.write_config
