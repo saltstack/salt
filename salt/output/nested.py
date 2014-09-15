@@ -4,6 +4,7 @@ Recursively display nested data, this is the default outputter.
 '''
 # Import python libs
 from numbers import Number
+import sys
 
 # Import salt libs
 import salt.utils
@@ -15,6 +16,7 @@ class NestDisplay(object):
     '''
     def __init__(self):
         self.colors = salt.utils.get_colors(__opts__.get('color'))
+        self.fse = sys.getfilesystemencoding()
 
     def display(self, ret, indent, prefix, out):
         '''
@@ -38,6 +40,10 @@ class NestDisplay(object):
         elif isinstance(ret, basestring):
             lines = ret.split('\n')
             for line in lines:
+                try:
+                    line = line.decode(self.fse)
+                except AttributeError:
+                    pass
                 out += '{0}{1}{2}{3}{4}\n'.format(
                         ' ' * indent,
                         self.colors['GREEN'],
@@ -62,6 +68,10 @@ class NestDisplay(object):
                         '-' * 10,
                         self.colors['ENDC'])
             for key in sorted(ret):
+                try:
+                    key = key.decode(self.fse)
+                except AttributeError:
+                    pass
                 val = ret[key]
                 out += '{0}{1}{2}{3}{4}:\n'.format(
                         ' ' * indent,
