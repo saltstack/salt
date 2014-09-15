@@ -58,6 +58,14 @@ INV_NUM_TRUST_DICT = {
     '6': 'Ultimately Trusted'
 }
 
+VERIFY_TRUST_LEVELS = {
+    '0': 'Undefined',
+    '1': 'Never',
+    '2': 'Marginal',
+    '3': 'Fully',
+    '4': 'Ultimate'
+}
+
 HAS_LIBS = False
 try:
     import gnupg
@@ -824,11 +832,20 @@ def sign(user=None,
     else:
         gpg_passphrase = None
 
+    # Check for at least one secret key to sign with
+
+    gnupg_version = distutils.version.LooseVersion(gnupg.__version__)
     if text:
-        signed_data = gpg.sign(text, passphrase=gpg_passphrase)
+        if gnupg_version >= '1.3.1':
+            signed_data = gpg.sign(text, default_key=keyid, passphrase=gpg_passphrase)
+        else:
+            signed_data = gpg.sign(text, keyid=keyid, passphrase=gpg_passphrase)
     elif filename:
         with salt.utils.flopen(filename, 'rb') as _fp:
-            signed_data = gpg.sign_file(_fp, passphrase=gpg_passphrase)
+            if gnupg_version >= '1.3.1':
+                signed_data = gpg.sign(text, default_key=keyid, passphrase=gpg_passphrase)
+            else:
+                signed_data = gpg.sign_file(_fp, keyid=keyid, passphrase=gpg_passphrase)
         if output:
             with salt.utils.flopen(output, 'w') as fout:
                 fout.write(signed_data.data)
@@ -879,11 +896,21 @@ def verify(user=None,
             verified = gpg.verify_file(_fp)
     else:
         raise SaltInvocationError('filename or text must be passed.')
-    return verified
+
+    ret = {}
+    if verified.trust_level is not None:
+        ret['res'] = True
+        ret['username'] = verified.username
+        ret['key_id'] = verified.key_id
+        ret['trust_level'] = VERIFY_TRUST_LEVELS[str(verified.trust_level)]
+        ret['message'] = 'The signature is verified.'
+    else:
+        ret['res'] = False
+        ret['message'] = 'The signature could not be verified.'
+    return ret
 
 
 def encrypt(user=None,
-            keyid=None,
             recipients=None,
             text=None,
             filename=None,
@@ -896,10 +923,6 @@ def encrypt(user=None,
     user
         Which user's keychain to access, defaults to user Salt is running as.  Passing
         the user as 'salt' will set the GPG home directory to /etc/salt/gpg.
-
-    keyid
-        The keyid of the key to use for encryption, defaults to first key in
-        the secret keyring.
 
     recipients
         The fingerprints for those recipient whom the data is being encrypted for.
@@ -953,7 +976,6 @@ def encrypt(user=None,
 
 
 def decrypt(user=None,
-            keyid=None,
             text=None,
             filename=None,
             output=None,
@@ -964,10 +986,6 @@ def decrypt(user=None,
     user
         Which user's keychain to access, defaults to user Salt is running as.  Passing
         the user as 'salt' will set the GPG home directory to /etc/salt/gpg.
-
-    keyid
-        The keyid of the key to set the trust level for, defaults to
-        first key in the secret keyring.
 
     text
         The encrypted text to decrypt.
