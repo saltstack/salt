@@ -127,6 +127,10 @@
 # they immediately reconnect. To disable this behaviour, set ping_on_rotate
 # to False.
 #
+# Note that ping_on_rotate may cause high load on the master immediately after
+# the key rotation event as minions reconnect. Consider this carefully if this
+# salt master is managing a large number of minions.
+#
 # If diabled, it is recommended to handle this event by listening for the 
 # 'aes_key_rotate' event with the 'key' tag and acting appropriately.
 #
