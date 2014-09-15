@@ -629,7 +629,7 @@ def export_key(keyids=None, secret=False, user=None):
 
     if isinstance(keyids, string_types):
         keyids = keyids.split(',')
-    return gpg.export_keys(keyids)
+    return gpg.export_keys(keyids, secret)
 
 
 def receive_keys(keyserver=None, keys=None, user=None):
