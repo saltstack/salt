@@ -1206,3 +1206,20 @@ class RaetKey(Key):
             fp_.write(self.serial.dumps(keydata))
             os.chmod(path, stat.S_IRUSR)
         os.umask(c_umask)
+
+    def delete_local(self):
+        '''
+        Delete the local private key file
+        '''
+        path = os.path.join(self.opts['pki_dir'], 'local.key')
+        if os.path.isfile(path):
+            os.remove(path)
+
+    def delete_pki_dir(self):
+        '''
+        Delete the private key directory
+        '''
+        path = self.opts['pki_dir']
+        if os.path.exists(path):
+            #os.rmdir(path)
+            shutil.rmtree(path)

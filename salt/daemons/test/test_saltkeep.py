@@ -187,8 +187,8 @@ class BasicTestCase(unittest.TestCase):
             main.serviceAll()
             if not (main.transactions or other.transactions):
                 break
-            self.store.advanceStamp(0.1)
-            time.sleep(0.1)
+            self.store.advanceStamp(0.05)
+            time.sleep(0.05)
 
     def testBasic(self):
         '''
@@ -862,7 +862,6 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(mainKeep.loadAllRemoteData(), {})
 
         main = self.createRoadStack(data=mainData,
-                                     uid=1,
                                      main=True,
                                      ha=None, #default ha is ("", raeting.RAET_PORT)
                                      keep=mainKeep)
@@ -872,16 +871,19 @@ class BasicTestCase(unittest.TestCase):
         self.assertTrue(main.keep.dirpath.endswith('main/raet/main'))
         self.assertTrue(main.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertIs(main.keep.auto, raeting.autoModes.never)
-        self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
-                                                         'name': mainData['name'],
-                                                         'ha': ['0.0.0.0', 7530],
+        self.assertDictEqual(main.keep.loadLocalData(), {'name': mainData['name'],
+                                                         'uid': 1,
+                                                         'ha': ['127.0.0.1', 7530],
                                                          'iha': None,
                                                          'natted': None,
+                                                         'fqdn': '1.0.0.127.in-addr.arpa',
+                                                         'dyned': None,
                                                          'sid': 0,
                                                          'puid': 1,
+                                                         'aha': ['0.0.0.0', 7530],
+                                                         'role': mainData['role'],
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
-                                                         'role': mainData['role'],
                                                          })
 
         # add multiple remotes all with same role
@@ -889,7 +891,6 @@ class BasicTestCase(unittest.TestCase):
                                     cachedirpath=opts['cachedir'],
                                     role='primary')
         main.addRemote(estating.RemoteEstate(stack=main,
-                                             uid=3,
                                              name=data1['name'],
                                              ha=('127.0.0.1', 7532),
                                              verkey=data1['verhex'],
@@ -900,7 +901,6 @@ class BasicTestCase(unittest.TestCase):
                                     cachedirpath=opts['cachedir'],
                                     role='primary')
         main.addRemote(estating.RemoteEstate(stack=main,
-                                             uid=4,
                                              name=data2['name'],
                                              ha=('127.0.0.1', 7533),
                                              verkey=data2['verhex'],
@@ -916,7 +916,7 @@ class BasicTestCase(unittest.TestCase):
                 'remote1':
                     {
                      'name': data1['name'],
-                     'uid': 3,
+                     'uid': 2,
                      'fuid': 0,
                      'ha': ['127.0.0.1', 7532],
                      'iha': None,
@@ -935,7 +935,7 @@ class BasicTestCase(unittest.TestCase):
                 'remote2':
                     {
                      'name': data2['name'],
-                     'uid': 4,
+                     'uid': 3,
                      'fuid': 0,
                      'ha': ['127.0.0.1', 7533],
                      'iha': None,
@@ -1003,7 +1003,6 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(mainKeep.loadAllRemoteData(), {})
 
         main = self.createRoadStack(data=mainData,
-                                     uid=1,
                                      main=True,
                                      ha=None, #default ha is ("", raeting.RAET_PORT)
                                      keep=mainKeep)
@@ -1013,16 +1012,20 @@ class BasicTestCase(unittest.TestCase):
         self.assertTrue(main.keep.dirpath.endswith('main/raet/main'))
         self.assertTrue(main.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertIs(main.keep.auto, raeting.autoModes.always)
-        self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
+        self.assertDictEqual(main.keep.loadLocalData(), {
                                                          'name': mainData['name'],
-                                                         'ha': ['0.0.0.0', 7530],
+                                                         'uid': 1,
+                                                         'ha': ['127.0.0.1', 7530],
                                                          'iha': None,
                                                          'natted': None,
+                                                         'fqdn': '1.0.0.127.in-addr.arpa',
+                                                         'dyned': None,
                                                          'sid': 0,
                                                          'puid': 1,
+                                                         'aha': ['0.0.0.0', 7530],
+                                                         'role': mainData['role'],
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
-                                                         'role': mainData['role'],
                                                          })
 
         # add multiple remotes all with same role
@@ -1030,7 +1033,6 @@ class BasicTestCase(unittest.TestCase):
                                     cachedirpath=opts['cachedir'],
                                     role='primary')
         main.addRemote(estating.RemoteEstate(stack=main,
-                                             uid=3,
                                              name=data1['name'],
                                              ha=('127.0.0.1', 7532),
                                              verkey=data1['verhex'],
@@ -1041,7 +1043,6 @@ class BasicTestCase(unittest.TestCase):
                                     cachedirpath=opts['cachedir'],
                                     role='primary')
         main.addRemote(estating.RemoteEstate(stack=main,
-                                             uid=4,
                                              name=data2['name'],
                                              ha=('127.0.0.1', 7533),
                                              verkey=data2['verhex'],
@@ -1055,7 +1056,7 @@ class BasicTestCase(unittest.TestCase):
                 'remote1':
                     {
                      'name': data1['name'],
-                     'uid': 3,
+                     'uid': 2,
                      'fuid': 0,
                      'ha': ['127.0.0.1', 7532],
                      'iha': None,
@@ -1074,7 +1075,7 @@ class BasicTestCase(unittest.TestCase):
                 'remote2':
                     {
                      'name': data2['name'],
-                     'uid': 4,
+                     'uid': 3,
                      'fuid': 0,
                      'ha': ['127.0.0.1', 7533],
                      'iha': None,
@@ -1143,7 +1144,6 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(mainKeep.loadAllRemoteData(), {})
 
         main = self.createRoadStack(data=mainData,
-                                     uid=1,
                                      main=True,
                                      ha=None, #default ha is ("", raeting.RAET_PORT)
                                      keep=mainKeep)
@@ -1153,16 +1153,20 @@ class BasicTestCase(unittest.TestCase):
         self.assertTrue(main.keep.dirpath.endswith('main/raet/main'))
         self.assertTrue(main.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertIs(main.keep.auto, raeting.autoModes.once)
-        self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
+        self.assertDictEqual(main.keep.loadLocalData(), {
                                                          'name': mainData['name'],
-                                                         'ha': ['0.0.0.0', 7530],
+                                                         'uid': 1,
+                                                         'ha': ['127.0.0.1', 7530],
                                                          'iha': None,
                                                          'natted': None,
+                                                         'fqdn': '1.0.0.127.in-addr.arpa',
+                                                         'dyned': None,
                                                          'sid': 0,
                                                          'puid': 1,
+                                                         'aha': ['0.0.0.0', 7530],
+                                                         'role': mainData['role'],
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
-                                                         'role': mainData['role'],
                                                          })
 
         # add multiple remotes all with same role but different keys
@@ -1170,7 +1174,6 @@ class BasicTestCase(unittest.TestCase):
                                     cachedirpath=opts['cachedir'],
                                     role='primary')
         main.addRemote(estating.RemoteEstate(stack=main,
-                                             uid=3,
                                              name=data1['name'],
                                              ha=('127.0.0.1', 7532),
                                              verkey=data1['verhex'],
@@ -1181,7 +1184,6 @@ class BasicTestCase(unittest.TestCase):
                                     cachedirpath=opts['cachedir'],
                                     role='primary')
         main.addRemote(estating.RemoteEstate(stack=main,
-                                             uid=4,
                                              name=data2['name'],
                                              ha=('127.0.0.1', 7533),
                                              verkey=data2['verhex'],
@@ -1198,7 +1200,7 @@ class BasicTestCase(unittest.TestCase):
                 'remote1':
                     {
                      'name': data1['name'],
-                     'uid': 3,
+                     'uid': 2,
                      'fuid': 0,
                      'ha': ['127.0.0.1', 7532],
                      'iha': None,
@@ -1217,7 +1219,7 @@ class BasicTestCase(unittest.TestCase):
                 'remote2':
                     {
                      'name': data2['name'],
-                     'uid': 4,
+                     'uid': 3,
                      'fuid': 0,
                      'ha': ['127.0.0.1', 7533],
                      'iha': None,
@@ -1266,11 +1268,11 @@ class BasicTestCase(unittest.TestCase):
 
         main.server.close()
 
-    def testBootstrapClean(self):
+    def testBootstrapNever(self):
         '''
-        Bootstap to allowed
+        Bootstap to allowed with never mode on main
         '''
-        console.terse("{0}\n".format(self.testBootstrapClean.__doc__))
+        console.terse("{0}\n".format(self.testBootstrapNever.__doc__))
 
         opts = self.createOpts(name='main',
                                dirpath=self.tempDirpath,
@@ -1285,7 +1287,6 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(mainKeep.loadAllRemoteData(), {})
 
         main = self.createRoadStack(data=mainData,
-                                     uid=1,
                                      main=True,
                                      ha=None, #default ha is ("", raeting.RAET_PORT)
                                      keep=mainKeep)
@@ -1295,23 +1296,28 @@ class BasicTestCase(unittest.TestCase):
         self.assertTrue(main.keep.dirpath.endswith('main/raet/main'))
         self.assertTrue(main.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertIs(main.keep.auto, raeting.autoModes.never)
-        self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
+        self.assertDictEqual(main.keep.loadLocalData(), {
                                                          'name': mainData['name'],
-                                                         'ha': ['0.0.0.0', 7530],
+                                                         'uid': 1,
+                                                         'ha': ['127.0.0.1', 7530],
                                                          'iha': None,
                                                          'natted': None,
+                                                         'fqdn': '1.0.0.127.in-addr.arpa',
+                                                         'dyned': None,
                                                          'sid': 0,
                                                          'puid': 1,
+                                                         'aha': ['0.0.0.0', 7530],
+                                                         'role': mainData['role'],
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
-                                                         'role': mainData['role'],
                                                          })
 
         opts = self.createOpts(name='other',
                                dirpath=self.tempDirpath,
                                openMode=False,
-                               autoAccept=False)
-        otherData = self.createRoadData(name='other', cachedirpath=opts['cachedir'] )
+                               autoAccept=True)
+        otherData = self.createRoadData(name='other',
+                                        cachedirpath=opts['cachedir'] )
         otherKeep = salting.SaltKeep(opts=opts,
                                       basedirpath=otherData['basedirpath'],
                                       stackname=otherData['name'])
@@ -1320,7 +1326,6 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(otherKeep.loadAllRemoteData(), {})
 
         other = self.createRoadStack(data=otherData,
-                                     uid=0,
                                      main=None,
                                      ha=("", raeting.RAET_TEST_PORT),
                                      keep=otherKeep)
@@ -1329,19 +1334,22 @@ class BasicTestCase(unittest.TestCase):
                 other.name, other.keep.dirpath))
         self.assertTrue(other.keep.dirpath.endswith('other/raet/other'))
         self.assertEqual(other.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
-        self.assertIs(other.keep.auto,  raeting.autoModes.never)
+        self.assertIs(other.keep.auto,  raeting.autoModes.once)
         self.assertDictEqual(other.keep.loadLocalData(),
                             {
-                                'uid': 0,
                                 'name': otherData['name'],
-                                'ha': ['0.0.0.0', 7531],
+                                'uid': 1,
+                                'ha': ['127.0.0.1', 7531],
                                 'iha': None,
                                 'natted': None,
+                                'fqdn': '1.0.0.127.in-addr.arpa',
+                                'dyned': None,
                                 'sid': 0,
                                 'puid': 1,
+                                'aha': ['0.0.0.0', 7531],
+                                'role': otherData['role'],
                                 'sighex': otherData['sighex'],
                                 'prihex': otherData['prihex'],
-                                'role': otherData['role'],
                             })
 
         self.join(other, main)
@@ -1372,17 +1380,18 @@ class BasicTestCase(unittest.TestCase):
 
         # now delete a key and see if road keep file is also deleted
         main.keep.saltRaetKey.delete_key(match=other.local.role)
-        remote = main.remotes[other.local.uid]
+        remote = main.remotes[2]
         path = os.path.join(main.keep.remotedirpath,
                 "{0}.{1}.{2}".format(main.keep.prefix, remote.name, main.keep.ext))
         self.assertFalse(os.path.exists(path))
 
-        main.server.close()
-        other.server.close()
+        for stack in [main, other]:
+            stack.server.close()
+            stack.clearAllKeeps()
 
     def testBootstrapOpen(self):
         '''
-        Bootstap to allowed
+        Bootstap to allowed with open mode on main
         '''
         console.terse("{0}\n".format(self.testBootstrapOpen.__doc__))
 
@@ -1399,7 +1408,6 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(mainKeep.loadAllRemoteData(), {})
 
         main = self.createRoadStack(data=mainData,
-                                     uid=1,
                                      main=True,
                                      ha=None, #default ha is ("", raeting.RAET_PORT)
                                      keep=mainKeep)
@@ -1409,21 +1417,25 @@ class BasicTestCase(unittest.TestCase):
         self.assertTrue(main.keep.dirpath.endswith('main/raet/main'))
         self.assertTrue(main.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertIs(main.keep.auto, raeting.autoModes.always)
-        self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
+        self.assertDictEqual(main.keep.loadLocalData(), {
                                                          'name': mainData['name'],
-                                                         'ha': ['0.0.0.0', 7530],
+                                                         'uid': 1,
+                                                         'ha': ['127.0.0.1', 7530],
                                                          'iha': None,
                                                          'natted': None,
+                                                         'fqdn': '1.0.0.127.in-addr.arpa',
+                                                         'dyned': None,
                                                          'sid': 0,
                                                          'puid': 1,
+                                                         'aha': ['0.0.0.0', 7530],
+                                                         'role': mainData['role'],
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
-                                                         'role': mainData['role'],
                                                          })
 
         opts = self.createOpts(name='other',
                                dirpath=self.tempDirpath,
-                               openMode=True,
+                               openMode=False,
                                autoAccept=True)
         otherData = self.createRoadData(name='other', cachedirpath=opts['cachedir'] )
         otherKeep = salting.SaltKeep(opts=opts,
@@ -1434,7 +1446,6 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(otherKeep.loadAllRemoteData(), {})
 
         other = self.createRoadStack(data=otherData,
-                                     uid=0,
                                      main=None,
                                      ha=("", raeting.RAET_TEST_PORT),
                                      keep=otherKeep)
@@ -1443,19 +1454,22 @@ class BasicTestCase(unittest.TestCase):
                 other.name, other.keep.dirpath))
         self.assertTrue(other.keep.dirpath.endswith('other/raet/other'))
         self.assertEqual(other.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
-        self.assertIs(other.keep.auto, raeting.autoModes.always)
+        self.assertIs(other.keep.auto, raeting.autoModes.once)
         self.assertDictEqual(other.keep.loadLocalData(),
                             {
-                                'uid': 0,
                                 'name': otherData['name'],
-                                'ha': ['0.0.0.0', 7531],
+                                'uid': 1,
+                                'ha': ['127.0.0.1', 7531],
                                 'iha': None,
                                 'natted': None,
+                                'fqdn': '1.0.0.127.in-addr.arpa',
+                                'dyned': None,
                                 'sid': 0,
                                 'puid': 1,
+                                'aha': ['0.0.0.0', 7531],
+                                'role': otherData['role'],
                                 'sighex': otherData['sighex'],
                                 'prihex': otherData['prihex'],
-                                'role': otherData['role'],
                             })
 
         self.join(other, main)
@@ -1482,17 +1496,18 @@ class BasicTestCase(unittest.TestCase):
 
         # now delete a key and see if road keep file is also deleted
         main.keep.saltRaetKey.delete_key(match=other.local.role)
-        remote = main.remotes[other.local.uid]
+        remote = main.remotes[2]
         path = os.path.join(main.keep.remotedirpath,
                 "{0}.{1}.{2}".format(main.keep.prefix, remote.name, main.keep.ext))
         self.assertFalse(os.path.exists(path))
 
-        main.server.close()
-        other.server.close()
+        for stack in [main, other]:
+            stack.server.close()
+            stack.clearAllKeeps()
 
     def testBootstrapAuto(self):
         '''
-        Bootstap to allowed
+        Bootstap to allowed with auto accept on main
         '''
         console.terse("{0}\n".format(self.testBootstrapAuto.__doc__))
 
@@ -1509,7 +1524,6 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(mainKeep.loadAllRemoteData(), {})
 
         main = self.createRoadStack(data=mainData,
-                                     uid=1,
                                      main=True,
                                      ha=None, #default ha is ("", raeting.RAET_PORT)
                                      keep=mainKeep)
@@ -1519,16 +1533,20 @@ class BasicTestCase(unittest.TestCase):
         self.assertTrue(main.keep.dirpath.endswith('main/raet/main'))
         self.assertEqual(main.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertIs(main.keep.auto, raeting.autoModes.once)
-        self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
+        self.assertDictEqual(main.keep.loadLocalData(), {
                                                          'name': mainData['name'],
-                                                         'ha': ['0.0.0.0', 7530],
+                                                         'uid': 1,
+                                                         'ha': ['127.0.0.1', 7530],
                                                          'iha': None,
                                                          'natted': None,
+                                                         'fqdn': '1.0.0.127.in-addr.arpa',
+                                                         'dyned': None,
                                                          'sid': 0,
                                                          'puid': 1,
+                                                         'aha': ['0.0.0.0', 7530],
+                                                         'role': mainData['role'],
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
-                                                         'role': mainData['role'],
                                                          })
 
         opts = self.createOpts(name='other',
@@ -1544,7 +1562,6 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(otherKeep.loadAllRemoteData(), {})
 
         other = self.createRoadStack(data=otherData,
-                                     uid=0,
                                      main=None,
                                      ha=("", raeting.RAET_TEST_PORT),
                                      keep=otherKeep)
@@ -1553,15 +1570,19 @@ class BasicTestCase(unittest.TestCase):
                 other.name, other.keep.dirpath))
         self.assertTrue(other.keep.dirpath.endswith('other/raet/other'))
         self.assertEqual(other.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
+        self.assertIs(other.keep.auto, raeting.autoModes.once)
         self.assertDictEqual(other.keep.loadLocalData(),
                             {
-                                'uid': 0,
                                 'name': otherData['name'],
-                                'ha': ['0.0.0.0', 7531],
+                                'uid': 1,
+                                'ha': ['127.0.0.1', 7531],
                                 'iha': None,
                                 'natted': None,
+                                'fqdn': '1.0.0.127.in-addr.arpa',
+                                'dyned': None,
                                 'sid': 0,
                                 'puid': 1,
+                                'aha': ['0.0.0.0', 7531],
                                 'sighex': otherData['sighex'],
                                 'prihex': otherData['prihex'],
                                 'role': otherData['role'],
@@ -1591,19 +1612,20 @@ class BasicTestCase(unittest.TestCase):
 
         # now delete a key and see if road keep file is also deleted
         main.keep.saltRaetKey.delete_key(match=other.local.role)
-        remote = main.remotes[other.local.uid]
+        remote = main.remotes[2]
         path = os.path.join(main.keep.remotedirpath,
                 "{0}.{1}.{2}".format(main.keep.prefix, remote.name, main.keep.ext))
         self.assertFalse(os.path.exists(path))
 
-        main.server.close()
-        other.server.close()
+        for stack in [main, other]:
+            stack.server.close()
+            stack.clearAllKeeps()
 
-    def testBootstrapRole(self):
+    def testBootstrapRoleNever(self):
         '''
-        Bootstap to allowed with multiple remotes using same role
+        Bootstap to allowed with multiple remotes using same role with never main
         '''
-        console.terse("{0}\n".format(self.testBootstrapRole.__doc__))
+        console.terse("{0}\n".format(self.testBootstrapRoleNever.__doc__))
 
         opts = self.createOpts(name='main',
                                dirpath=self.tempDirpath,
@@ -1618,7 +1640,6 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(mainKeep.loadAllRemoteData(), {})
 
         main = self.createRoadStack(data=mainData,
-                                     uid=1,
                                      main=True,
                                      ha=None, #default ha is ("", raeting.RAET_PORT)
                                      keep=mainKeep)
@@ -1628,22 +1649,26 @@ class BasicTestCase(unittest.TestCase):
         self.assertTrue(main.keep.dirpath.endswith('main/raet/main'))
         self.assertTrue(main.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertIs(main.keep.auto, raeting.autoModes.never)
-        self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
+        self.assertDictEqual(main.keep.loadLocalData(), {
                                                          'name': mainData['name'],
-                                                         'ha': ['0.0.0.0', 7530],
+                                                         'uid': 1,
+                                                         'ha': ['127.0.0.1', 7530],
                                                          'iha': None,
                                                          'natted': None,
+                                                         'fqdn': '1.0.0.127.in-addr.arpa',
+                                                         'dyned': None,
                                                          'sid': 0,
                                                          'puid': 1,
+                                                         'aha': ['0.0.0.0', 7530],
+                                                         'role': mainData['role'],
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
-                                                         'role': mainData['role'],
                                                          })
 
         opts = self.createOpts(name='other1',
                                dirpath=self.tempDirpath,
                                openMode=False,
-                               autoAccept=False)
+                               autoAccept=True)
         other1Data = self.createRoadData(name='other1',
                                          cachedirpath=opts['cachedir'],
                                          role='primary')
@@ -1655,7 +1680,6 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(other1Keep.loadAllRemoteData(), {})
 
         other1 = self.createRoadStack(data=other1Data,
-                                     uid=0,
                                      main=None,
                                      ha=("", raeting.RAET_TEST_PORT),
                                      keep=other1Keep)
@@ -1664,19 +1688,22 @@ class BasicTestCase(unittest.TestCase):
                 other1.name, other1.keep.dirpath))
         self.assertTrue(other1.keep.dirpath.endswith('other1/raet/other1'))
         self.assertEqual(other1.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
-        self.assertIs(other1.keep.auto, raeting.autoModes.never)
+        self.assertIs(other1.keep.auto, raeting.autoModes.once)
         self.assertDictEqual(other1.keep.loadLocalData(),
                             {
-                                'uid': 0,
                                 'name': other1Data['name'],
-                                'ha': ['0.0.0.0', 7531],
+                                'uid': 1,
+                                'ha': ['127.0.0.1', 7531],
                                 'iha': None,
                                 'natted': None,
+                                'fqdn': '1.0.0.127.in-addr.arpa',
+                                'dyned': None,
                                 'sid': 0,
                                 'puid': 1,
+                                'aha': ['0.0.0.0', 7531],
+                                'role': other1Data['role'],
                                 'sighex': other1Data['sighex'],
                                 'prihex': other1Data['prihex'],
-                                'role': other1Data['role'],
                             })
 
         self.join(other1, main)
@@ -1708,7 +1735,7 @@ class BasicTestCase(unittest.TestCase):
         opts = self.createOpts(name='other2',
                                dirpath=self.tempDirpath,
                                openMode=False,
-                               autoAccept=False)
+                               autoAccept=True)
         other2Data = self.createRoadData(name='other2',
                                          cachedirpath=opts['cachedir'],
                                          role='primary')
@@ -1720,7 +1747,6 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(other2Keep.loadAllRemoteData(), {})
 
         other2 = self.createRoadStack(data=other2Data,
-                                     uid=0,
                                      main=None,
                                      ha=("", 7532),
                                      keep=other2Keep)
@@ -1729,16 +1755,19 @@ class BasicTestCase(unittest.TestCase):
                 other2.name, other2.keep.dirpath))
         self.assertTrue(other2.keep.dirpath.endswith('other2/raet/other2'))
         self.assertEqual(other2.ha, ("0.0.0.0", 7532))
-        self.assertIs(other2.keep.auto, raeting.autoModes.never)
+        self.assertIs(other2.keep.auto, raeting.autoModes.once)
         self.assertDictEqual(other2.keep.loadLocalData(),
                             {
-                                'uid': 0,
                                 'name': other2Data['name'],
-                                'ha': ['0.0.0.0', 7532],
+                                'uid': 1,
+                                'ha': ['127.0.0.1', 7532],
                                 'iha': None,
                                 'natted': None,
+                                'fqdn': '1.0.0.127.in-addr.arpa',
+                                'dyned': None,
                                 'sid': 0,
                                 'puid': 1,
+                                'aha': ['0.0.0.0', 7532],
                                 'sighex': other2Data['sighex'],
                                 'prihex': other2Data['prihex'],
                                 'role': other2Data['role'],
@@ -1747,7 +1776,7 @@ class BasicTestCase(unittest.TestCase):
         # should not join since role same but keys different
         self.join(other2, main)
         self.assertEqual(len(main.transactions), 0) # rejected since not same keys
-        self.assertEqual(other2.remotes.values()[0].joined, False)
+        self.assertEqual(len(other2.remotes), 0)
         self.assertEqual(len(main.remotes), 1)
         #main.removeRemote(main.nameRemotes[other2.local.name], clear=True)
         other2.server.close()
@@ -1755,15 +1784,15 @@ class BasicTestCase(unittest.TestCase):
         path = os.path.join(main.keep.remotedirpath,
                                 "{0}.{1}.{2}".format(main.keep.prefix, other2.local.name, main.keep.ext))
         self.assertFalse(os.path.exists(path))
-        shutil.rmtree(opts['pki_dir'])
-
-
+        other2.keep.clearRoleDir()
+        self.assertFalse(os.path.exists(opts['pki_dir']))
+        #shutil.rmtree(opts['pki_dir'])
 
         # recreate other2 stack but use same role and same keys as other1
         opts = self.createOpts(name='other2',
                                dirpath=self.tempDirpath,
                                openMode=False,
-                               autoAccept=False)
+                               autoAccept=True)
         other2Data = self.createRoadData(name='other2',
                                          cachedirpath=opts['cachedir'],
                                          role='primary')
@@ -1777,7 +1806,6 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(other2Keep.loadAllRemoteData(), {})
 
         other2 = self.createRoadStack(data=other2Data,
-                                     uid=0,
                                      main=None,
                                      ha=("", 7532),
                                      keep=other2Keep)
@@ -1786,19 +1814,22 @@ class BasicTestCase(unittest.TestCase):
                 other2.name, other2.keep.dirpath))
         self.assertTrue(other2.keep.dirpath.endswith('other2/raet/other2'))
         self.assertEqual(other2.ha, ("0.0.0.0", 7532))
-        self.assertIs(other2.keep.auto, raeting.autoModes.never)
+        self.assertIs(other2.keep.auto, raeting.autoModes.once)
         self.assertDictEqual(other2.keep.loadLocalData(),
                             {
-                                'uid': 0,
                                 'name': other2Data['name'],
-                                'ha': ['0.0.0.0', 7532],
+                                'uid': 1,
+                                'ha': ['127.0.0.1', 7532],
                                 'iha': None,
                                 'natted': None,
+                                'fqdn': '1.0.0.127.in-addr.arpa',
+                                'dyned': None,
                                 'sid': 0,
                                 'puid': 1,
+                                'aha': ['0.0.0.0', 7532],
+                                'role': other2Data['role'],
                                 'sighex': other1Data['sighex'],
                                 'prihex': other1Data['prihex'],
-                                'role': other2Data['role'],
                             })
 
         # should join since same role and keys
@@ -1824,25 +1855,24 @@ class BasicTestCase(unittest.TestCase):
                     "{0}.{1}.{2}".format(main.keep.prefix, remote.name, main.keep.ext))
             self.assertTrue(os.path.exists(path))
 
-
         # now delete a key and see if both road keep file are also deleted
         main.keep.saltRaetKey.delete_key(match=other1.local.role)
-        remote = main.remotes[other1.local.uid]
+        remote = main.remotes[2]
         path = os.path.join(main.keep.remotedirpath,
                 "{0}.{1}.{2}".format(main.keep.prefix, remote.name, main.keep.ext))
         self.assertFalse(os.path.exists(path))
-        remote = main.remotes[other2.local.uid]
+        remote = main.remotes[4]
         path = os.path.join(main.keep.remotedirpath,
                         "{0}.{1}.{2}".format(main.keep.prefix, remote.name, main.keep.ext))
         self.assertFalse(os.path.exists(path))
 
-        main.server.close()
-        other1.server.close()
-        other2.server.close()
+        for stack in [main, other1, other2]:
+            stack.server.close()
+            stack.clearAllKeeps()
 
     def testBootstrapRoleAuto(self):
         '''
-        Bootstap to allowed with multiple remotes using same role
+        Bootstap to allowed with multiple remotes using same role with auto main
         '''
         console.terse("{0}\n".format(self.testBootstrapRoleAuto.__doc__))
 
@@ -1859,7 +1889,6 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(mainKeep.loadAllRemoteData(), {})
 
         main = self.createRoadStack(data=mainData,
-                                     uid=1,
                                      main=True,
                                      ha=None, #default ha is ("", raeting.RAET_PORT)
                                      keep=mainKeep)
@@ -1869,16 +1898,20 @@ class BasicTestCase(unittest.TestCase):
         self.assertTrue(main.keep.dirpath.endswith('main/raet/main'))
         self.assertTrue(main.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertIs(main.keep.auto, raeting.autoModes.once)
-        self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
+        self.assertDictEqual(main.keep.loadLocalData(), {
                                                          'name': mainData['name'],
-                                                         'ha': ['0.0.0.0', 7530],
+                                                         'uid': 1,
+                                                         'ha': ['127.0.0.1', 7530],
                                                          'iha': None,
                                                          'natted': None,
+                                                         'fqdn': '1.0.0.127.in-addr.arpa',
+                                                         'dyned': None,
                                                          'sid': 0,
                                                          'puid': 1,
+                                                         'aha': ['0.0.0.0', 7530],
+                                                          'role': mainData['role'],
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
-                                                         'role': mainData['role'],
                                                          })
 
         opts = self.createOpts(name='other1',
@@ -1896,7 +1929,6 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(other1Keep.loadAllRemoteData(), {})
 
         other1 = self.createRoadStack(data=other1Data,
-                                     uid=0,
                                      main=None,
                                      ha=("", raeting.RAET_TEST_PORT),
                                      keep=other1Keep)
@@ -1908,16 +1940,19 @@ class BasicTestCase(unittest.TestCase):
         self.assertIs(other1.keep.auto, raeting.autoModes.once)
         self.assertDictEqual(other1.keep.loadLocalData(),
                             {
-                                'uid': 0,
                                 'name': other1Data['name'],
-                                'ha': ['0.0.0.0', 7531],
+                                'uid': 1,
+                                'ha': ['127.0.0.1', 7531],
                                 'iha': None,
                                 'natted': None,
+                                'fqdn': '1.0.0.127.in-addr.arpa',
+                                'dyned': None,
                                 'sid': 0,
                                 'puid': 1,
+                                'aha': ['0.0.0.0', 7531],
+                                'role': other1Data['role'],
                                 'sighex': other1Data['sighex'],
                                 'prihex': other1Data['prihex'],
-                                'role': other1Data['role'],
                             })
 
         self.join(other1, main)
@@ -1945,7 +1980,7 @@ class BasicTestCase(unittest.TestCase):
         opts = self.createOpts(name='other2',
                                dirpath=self.tempDirpath,
                                openMode=False,
-                               autoAccept=False)
+                               autoAccept=True)
         other2Data = self.createRoadData(name='other2',
                                          cachedirpath=opts['cachedir'],
                                          role='primary')
@@ -1960,7 +1995,6 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(other2Keep.loadAllRemoteData(), {})
 
         other2 = self.createRoadStack(data=other2Data,
-                                     uid=0,
                                      main=None,
                                      ha=("", 7532),
                                      keep=other2Keep)
@@ -1969,22 +2003,25 @@ class BasicTestCase(unittest.TestCase):
                 other2.name, other2.keep.dirpath))
         self.assertTrue(other2.keep.dirpath.endswith('other2/raet/other2'))
         self.assertEqual(other2.ha, ("0.0.0.0", 7532))
-        self.assertIs(other2.keep.auto, raeting.autoModes.never)
+        self.assertIs(other2.keep.auto, raeting.autoModes.once)
         self.assertDictEqual(other2.keep.loadLocalData(),
                             {
-                                'uid': 0,
                                 'name': other2Data['name'],
-                                'ha': ['0.0.0.0', 7532],
+                                'uid': 1,
+                                'ha': ['127.0.0.1', 7532],
                                 'iha': None,
                                 'natted': None,
+                                'fqdn': '1.0.0.127.in-addr.arpa',
+                                'dyned': None,
                                 'sid': 0,
                                 'puid': 1,
+                                'aha': ['0.0.0.0', 7532],
+                                'role': other2Data['role'],
                                 'sighex': other2Data['sighex'],
                                 'prihex': other2Data['prihex'],
-                                'role': other2Data['role'],
                             })
 
-        # should join since same role and keys
+        # should join since open mode
         self.join(other2, main)
 
         self.assertEqual(len(main.transactions), 0)
@@ -2010,18 +2047,18 @@ class BasicTestCase(unittest.TestCase):
 
         # now delete a key and see if both road keep file are also deleted
         main.keep.saltRaetKey.delete_key(match=other1.local.role)
-        remote = main.remotes[other1.local.uid]
+        remote = main.remotes[2]
         path = os.path.join(main.keep.remotedirpath,
                 "{0}.{1}.{2}".format(main.keep.prefix, remote.name, main.keep.ext))
         self.assertFalse(os.path.exists(path))
-        remote = main.remotes[other2.local.uid]
+        remote = main.remotes[3]
         path = os.path.join(main.keep.remotedirpath,
                         "{0}.{1}.{2}".format(main.keep.prefix, remote.name, main.keep.ext))
         self.assertFalse(os.path.exists(path))
 
-        main.server.close()
-        other1.server.close()
-        other2.server.close()
+        for stack in [main, other1, other2]:
+            stack.server.close()
+            stack.clearAllKeeps()
 
 def runOne(test):
     '''
@@ -2042,10 +2079,10 @@ def runSome():
              'testBasicRole',
              'testBasicRoleOpen',
              'testBasicRoleAuto',
-             'testBootstrapClean',
+             'testBootstrapNever',
              'testBootstrapOpen',
              'testBootstrapAuto',
-             'testBootstrapRole',
+             'testBootstrapRoleNever',
              'testBootstrapRoleAuto',
              ]
 

@@ -58,11 +58,23 @@ class SaltKeep(Keep):
                                  raeting.autoModes.never)))
         self.saltRaetKey = RaetKey(opts)
 
+    def clearAllDir(self):
+        '''
+        Clear all keep directories
+        '''
+        super(SaltKeep, self).clearAllDir()
+        self.clearRoleDir()
+
+    def clearRoleDir(self):
+        '''
+        Clear the Role directory
+        '''
+        self.saltRaetKey.delete_pki_dir()
+
     def loadLocalData(self):
         '''
         Load and Return the data from the local estate
         '''
-
         data = super(SaltKeep, self).loadLocalData()
         if not data:
             return None
@@ -72,6 +84,18 @@ class SaltKeep(Keep):
         data.update([('sighex', srkdata['sign']),
                      ('prihex', srkdata['priv'])])
         return data
+
+    def clearLocalRoleData(self):
+        '''
+        Clear the local file
+        '''
+        self.saltRaetKey.delete_local()
+
+    def clearLocalRoleDir(self):
+        '''
+        Clear the Local Role directory
+        '''
+        self.saltRaetKey.delete_pki_dir()
 
     def loadRemoteData(self, name):
         '''
@@ -121,11 +145,23 @@ class SaltKeep(Keep):
                                      ('pubhex', keydata['pub'])])
         return keeps
 
+    def clearRemoteRoleData(self, role):
+        '''
+        Clear data from the role data file
+        '''
+        self.saltRaetKey.delete_key(role) #now delete role key file
+
     def clearAllRemoteRoleData(self):
         '''
         Remove all the role data files
         '''
         self.saltRaetKey.delete_all()
+
+    def clearRemoteRoleDir(self):
+        '''
+        Clear the Remote Role directory
+        '''
+        self.saltRaetKey.delete_pki_dir()
 
     def dumpLocal(self, local):
         '''
@@ -230,11 +266,3 @@ class SaltKeep(Keep):
         mid = remote.role
         self.saltRaetKey.accept(match=mid, include_rejected=True)
         remote.acceptance = raeting.acceptances.accepted
-
-def clearAllKeep(dirpath):
-    '''
-    Convenience function to clear all road keep data in dirpath
-    '''
-    road = RoadKeep(dirpath=dirpath)
-    road.clearLocalData()
-    road.clearAllRemoteData()
