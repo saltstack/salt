@@ -1688,8 +1688,13 @@ def _parse_repo_file(filename):
 
             # These are the actual configuration lines that matter
             if '=' in line:
-                comps = line.strip().split('=')
-                repos[repo][comps[0].strip()] = '='.join(comps[1:])
+                try:
+                    comps = line.strip().split('=')
+                    repos[repo][comps[0].strip()] = '='.join(comps[1:])
+                except KeyError:
+                    log.error('Failed to parse line in {0}, '
+                              'offending line was "{1}"'.format(filename, 
+                                                                line.rstrip()))
 
     return (header, repos)
 
