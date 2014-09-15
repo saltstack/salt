@@ -104,6 +104,7 @@ class BasicTestCase(unittest.TestCase):
         '''
         data = odict()
         data['name'] = name
+        data['role'] = role or name
         data['basedirpath'] = os.path.join(cachedirpath, 'raet')
         signer = nacling.Signer()
         data['sighex'] = signer.keyhex
@@ -111,11 +112,11 @@ class BasicTestCase(unittest.TestCase):
         privateer = nacling.Privateer()
         data['prihex'] = privateer.keyhex
         data['pubhex'] = privateer.pubhex
-        data['role'] = role or name
+
 
         return data
 
-    def createRoadStack(self, data, keep,  uid=0, main=None, ha=None, mutable=None):
+    def createRoadStack(self, data, keep,  uid=None, main=None, ha=None, mutable=None):
         '''
         Creates stack and local estate from data with
         local estate.uid = uid
@@ -143,13 +144,19 @@ class BasicTestCase(unittest.TestCase):
 
         return stack
 
-    def join(self, other, main, duration=1.0):
+    def join(self, initiator, correspondent, deid=None, duration=1.0):
         '''
         Utility method to do join. Call from test method.
         '''
         console.terse("\nJoin Transaction **************\n")
-        other.join()
-        self.service(main, other, duration=duration)
+        if not initiator.remotes:
+            remote = initiator.addRemote(estating.RemoteEstate(stack=initiator,
+                                                      fuid=0, # vacuous join
+                                                      sid=0, # always 0 for join
+                                                      ha=correspondent.local.ha))
+            deid = remote.uid
+        initiator.join(uid=deid)
+        self.service(correspondent, initiator, duration=duration)
 
     def allow(self, other, main, duration=1.0):
         '''
@@ -202,7 +209,6 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(mainKeep.loadAllRemoteData(), {})
 
         main = self.createRoadStack(data=mainData,
-                                     uid=1,
                                      main=True,
                                      ha=None, #default ha is ("", raeting.RAET_PORT)
                                      keep=mainKeep)
@@ -212,21 +218,23 @@ class BasicTestCase(unittest.TestCase):
         self.assertTrue(main.keep.dirpath.endswith('main/raet/main'))
         self.assertTrue(main.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertIs(main.keep.auto, raeting.autoModes.never)
-        self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
-                                                         'name': mainData['name'],
-                                                         'ha': ['0.0.0.0', 7530],
+        self.assertDictEqual(main.keep.loadLocalData(), {'name': mainData['name'],
+                                                         'uid': 1,
+                                                         'ha': ['127.0.0.1', 7530],
                                                          'iha': None,
                                                          'natted': None,
+                                                         'fqdn': '1.0.0.127.in-addr.arpa',
+                                                         'dyned': None,
                                                          'sid': 0,
                                                          'puid': 1,
+                                                         'aha': ['0.0.0.0', 7530],
+                                                         'role': mainData['role'],
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
-                                                         'role': mainData['role'],
                                                          })
 
         data1 = self.createRoadData(name='remote1', cachedirpath=opts['cachedir'])
         main.addRemote(estating.RemoteEstate(stack=main,
-                                             uid=3,
                                              name=data1['name'],
                                              ha=('127.0.0.1', 7532),
                                              verkey=data1['verhex'],
@@ -234,7 +242,6 @@ class BasicTestCase(unittest.TestCase):
 
         data2 = self.createRoadData(name='remote2', cachedirpath=opts['cachedir'])
         main.addRemote(estating.RemoteEstate(stack=main,
-                                             uid=4,
                                              name=data2['name'],
                                              ha=('127.0.0.1', 7533),
                                              verkey=data2['verhex'],
@@ -247,31 +254,41 @@ class BasicTestCase(unittest.TestCase):
         self.assertDictEqual(main.keep.loadAllRemoteData(),
             {
                 'remote1':
-                    {'uid': 3,
+                    {'name': data1['name'],
+                     'uid': 2,
                      'fuid': 0,
-                     'name': data1['name'],
                      'ha': ['127.0.0.1', 7532],
                      'iha': None,
                      'natted': None,
+                     'fqdn': '1.0.0.127.in-addr.arpa',
+                     'dyned': None,
+                     'main': False,
+                     'application': 0,
                      'sid': 0,
                      'joined': None,
+                     'role': data1['role'],
                      'acceptance': 0,
                      'verhex': data1['verhex'],
                      'pubhex': data1['pubhex'],
-                     'role': data1['role'],},
+                     },
                 'remote2':
-                    {'uid': 4,
+                    {'name': data2['name'],
+                     'uid': 3,
                      'fuid': 0,
-                     'name': data2['name'],
                      'ha': ['127.0.0.1', 7533],
                      'iha': None,
                      'natted': None,
+                     'fqdn': '1.0.0.127.in-addr.arpa',
+                     'dyned': None,
+                     'main': False,
+                     'application': 0,
                      'sid': 0,
                      'joined': None,
+                     'role': data2['role'],
                      'acceptance': 0,
                      'verhex': data2['verhex'],
                      'pubhex': data2['pubhex'],
-                     'role': data2['role'],}
+                     }
             })
 
         # now recreate with saved data
@@ -303,7 +320,6 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(otherKeep.loadAllRemoteData(), {})
 
         other = self.createRoadStack(data=otherData,
-                                     uid=0,
                                      main=None,
                                      ha=("", raeting.RAET_TEST_PORT),
                                      keep=otherKeep)
@@ -316,21 +332,23 @@ class BasicTestCase(unittest.TestCase):
 
         self.assertDictEqual(other.keep.loadLocalData(),
                             {
-                                'uid': 0,
                                 'name': otherData['name'],
-                                'ha': ['0.0.0.0', 7531],
+                                'uid': 1,
+                                'ha': ['127.0.0.1', 7531],
                                 'iha': None,
                                 'natted': None,
+                                'fqdn': '1.0.0.127.in-addr.arpa',
+                                'dyned': None,
                                 'sid': 0,
                                 'puid': 1,
+                                'aha': ['0.0.0.0', 7531],
+                                'role': otherData['role'],
                                 'sighex': otherData['sighex'],
                                 'prihex': otherData['prihex'],
-                                'role': otherData['role'],
                             })
 
         data3 = self.createRoadData(name='remote3', cachedirpath=opts['cachedir'])
         other.addRemote(estating.RemoteEstate(stack=other,
-                                              uid=3,
                                               name=data3['name'],
                                               ha=('127.0.0.1', 7534),
                                               verkey=data3['verhex'],
@@ -338,7 +356,6 @@ class BasicTestCase(unittest.TestCase):
 
         data4 = self.createRoadData(name='remote4', cachedirpath=opts['cachedir'])
         other.addRemote(estating.RemoteEstate(stack=other,
-                                              uid=4,
                                               name=data4['name'],
                                               ha=('127.0.0.1', 7535),
                                               verkey=data4['verhex'],
@@ -349,33 +366,41 @@ class BasicTestCase(unittest.TestCase):
             {
                 'remote3':
                 {
-                    'uid': 3,
-                    'fuid': 0,
                     'name': data3['name'],
+                    'uid': 2,
+                    'fuid': 0,
                     'ha': ['127.0.0.1', 7534],
                     'iha': None,
                     'natted': None,
+                    'fqdn': '1.0.0.127.in-addr.arpa',
+                    'dyned': None,
+                    'main': False,
+                    'application': 0,
                     'sid': 0,
                     'joined': None,
+                    'role': data3['role'],
                     'acceptance': 0,
                     'verhex': data3['verhex'],
                     'pubhex': data3['pubhex'],
-                    'role': data3['role'],
                 },
                 'remote4':
                 {
-                    'uid': 4,
-                    'fuid': 0,
                     'name': data4['name'],
+                    'uid': 3,
+                    'fuid': 0,
                     'ha': ['127.0.0.1', 7535],
                     'iha': None,
                     'natted': None,
+                    'fqdn': '1.0.0.127.in-addr.arpa',
+                    'dyned': None,
+                    'main': False,
+                    'application': 0,
                     'sid': 0,
                     'joined': None,
+                    'role': data4['role'],
                     'acceptance': 0,
                     'verhex': data4['verhex'],
                     'pubhex': data4['pubhex'],
-                    'role': data4['role'],
                 }
             })
 
@@ -401,7 +426,6 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(mainKeep.loadAllRemoteData(), {})
 
         main = self.createRoadStack(data=mainData,
-                                     uid=1,
                                      main=True,
                                      ha=None, #default ha is ("", raeting.RAET_PORT)
                                      keep=mainKeep)
@@ -411,21 +435,24 @@ class BasicTestCase(unittest.TestCase):
         self.assertTrue(main.keep.dirpath.endswith('main/raet/main'))
         self.assertTrue(main.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertIs(main.keep.auto, raeting.autoModes.always)
-        self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
+        self.assertDictEqual(main.keep.loadLocalData(), {
                                                          'name': mainData['name'],
-                                                         'ha': ['0.0.0.0', 7530],
+                                                         'uid': 1,
+                                                         'ha': ['127.0.0.1', 7530],
                                                          'iha': None,
                                                          'natted': None,
+                                                         'fqdn': '1.0.0.127.in-addr.arpa',
+                                                         'dyned': None,
                                                          'sid': 0,
                                                          'puid': 1,
+                                                         'aha': ['0.0.0.0', 7530],
+                                                         'role': mainData['role'],
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
-                                                         'role': mainData['role'],
                                                          })
 
         data1 = self.createRoadData(name='remote1', cachedirpath=opts['cachedir'])
         main.addRemote(estating.RemoteEstate(stack=main,
-                                             uid=3,
                                              name=data1['name'],
                                              ha=('127.0.0.1', 7532),
                                              verkey=data1['verhex'],
@@ -433,7 +460,6 @@ class BasicTestCase(unittest.TestCase):
 
         data2 = self.createRoadData(name='remote2', cachedirpath=opts['cachedir'])
         main.addRemote(estating.RemoteEstate(stack=main,
-                                             uid=4,
                                              name=data2['name'],
                                              ha=('127.0.0.1', 7533),
                                              verkey=data2['verhex'],
@@ -444,31 +470,41 @@ class BasicTestCase(unittest.TestCase):
         self.assertDictEqual(main.keep.loadAllRemoteData(),
             {
                 'remote1':
-                    {'uid': 3,
+                    {'name': data1['name'],
+                     'uid': 2,
                      'fuid': 0,
-                     'name': data1['name'],
                      'ha': ['127.0.0.1', 7532],
                      'iha': None,
                      'natted': None,
+                     'fqdn': '1.0.0.127.in-addr.arpa',
+                     'dyned': None,
+                     'main': False,
+                     'application': 0,
                      'sid': 0,
                      'joined': None,
+                     'role': data1['role'],
                      'acceptance': 1,
                      'verhex': data1['verhex'],
                      'pubhex': data1['pubhex'],
-                     'role': data1['role'],},
+                     },
                 'remote2':
-                    {'uid': 4,
+                    {'name': data2['name'],
+                     'uid': 3,
                      'fuid': 0,
-                     'name': data2['name'],
                      'ha': ['127.0.0.1', 7533],
                      'iha': None,
                      'natted': None,
+                     'fqdn': '1.0.0.127.in-addr.arpa',
+                     'dyned': None,
+                     'main': False,
+                     'application': 0,
                      'sid': 0,
                      'joined': None,
+                     'role': data2['role'],
                      'acceptance': 1,
                      'verhex': data2['verhex'],
                      'pubhex': data2['pubhex'],
-                     'role': data2['role'],}
+                     }
             })
 
         # now recreate with saved data
@@ -500,7 +536,6 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(otherKeep.loadAllRemoteData(), {})
 
         other = self.createRoadStack(data=otherData,
-                                     uid=0,
                                      main=None,
                                      ha=("", raeting.RAET_TEST_PORT),
                                      keep=otherKeep)
@@ -513,21 +548,23 @@ class BasicTestCase(unittest.TestCase):
 
         self.assertDictEqual(other.keep.loadLocalData(),
                             {
-                                'uid': 0,
                                 'name': otherData['name'],
-                                'ha': ['0.0.0.0', 7531],
+                                'uid': 1,
+                                'ha': ['127.0.0.1', 7531],
                                 'iha': None,
                                 'natted': None,
+                                'fqdn': '1.0.0.127.in-addr.arpa',
+                                'dyned': None,
                                 'sid': 0,
                                 'puid': 1,
+                                'aha': ['0.0.0.0', 7531],
+                                'role': otherData['role'],
                                 'sighex': otherData['sighex'],
                                 'prihex': otherData['prihex'],
-                                'role': otherData['role'],
                             })
 
         data3 = self.createRoadData(name='remote3', cachedirpath=opts['cachedir'])
         other.addRemote(estating.RemoteEstate(stack=other,
-                                              uid=3,
                                               name=data3['name'],
                                               ha=('127.0.0.1', 7534),
                                               verkey=data3['verhex'],
@@ -535,7 +572,6 @@ class BasicTestCase(unittest.TestCase):
 
         data4 = self.createRoadData(name='remote4', cachedirpath=opts['cachedir'])
         other.addRemote(estating.RemoteEstate(stack=other,
-                                              uid=4,
                                               name=data4['name'],
                                               ha=('127.0.0.1', 7535),
                                               verkey=data4['verhex'],
@@ -546,33 +582,41 @@ class BasicTestCase(unittest.TestCase):
             {
                 'remote3':
                 {
-                    'uid': 3,
-                    'fuid': 0,
                     'name': data3['name'],
+                    'uid': 2,
+                    'fuid': 0,
                     'ha': ['127.0.0.1', 7534],
                     'iha': None,
                     'natted': None,
+                    'fqdn': '1.0.0.127.in-addr.arpa',
+                    'dyned': None,
+                    'main': False,
+                    'application': 0,
                     'sid': 0,
                     'joined': None,
+                    'role': data3['role'],
                     'acceptance': 1,
                     'verhex': data3['verhex'],
                     'pubhex': data3['pubhex'],
-                    'role': data3['role'],
                 },
                 'remote4':
                 {
-                    'uid': 4,
-                    'fuid': 0,
                     'name': data4['name'],
+                    'uid': 3,
+                    'fuid': 0,
                     'ha': ['127.0.0.1', 7535],
                     'iha': None,
                     'natted': None,
+                    'fqdn': '1.0.0.127.in-addr.arpa',
+                    'dyned': None,
+                    'main': False,
+                    'application': 0,
                     'sid': 0,
                     'joined': None,
+                    'role': data4['role'],
                     'acceptance': 1,
                     'verhex': data4['verhex'],
                     'pubhex': data4['pubhex'],
-                    'role': data4['role'],
                 }
             })
 
@@ -598,7 +642,6 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(mainKeep.loadAllRemoteData(), {})
 
         main = self.createRoadStack(data=mainData,
-                                     uid=1,
                                      main=True,
                                      ha=None, #default ha is ("", raeting.RAET_PORT)
                                      keep=mainKeep)
@@ -608,13 +651,17 @@ class BasicTestCase(unittest.TestCase):
         self.assertTrue(main.keep.dirpath.endswith('main/raet/main'))
         self.assertTrue(main.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertIs(main.keep.auto,  raeting.autoModes.once)
-        self.assertDictEqual(main.keep.loadLocalData(), {'uid': 1,
+        self.assertDictEqual(main.keep.loadLocalData(), {
                                                          'name': mainData['name'],
-                                                         'ha': ['0.0.0.0', 7530],
+                                                         'uid': 1,
+                                                         'ha': ['127.0.0.1', 7530],
                                                          'iha': None,
                                                          'natted': None,
+                                                         'fqdn': '1.0.0.127.in-addr.arpa',
+                                                         'dyned': None,
                                                          'sid': 0,
                                                          'puid': 1,
+                                                         'aha': ['0.0.0.0', 7530],
                                                          'sighex': mainData['sighex'],
                                                          'prihex': mainData['prihex'],
                                                          'role': mainData['role'],
@@ -622,7 +669,6 @@ class BasicTestCase(unittest.TestCase):
 
         data1 = self.createRoadData(name='remote1', cachedirpath=opts['cachedir'])
         main.addRemote(estating.RemoteEstate(stack=main,
-                                             uid=3,
                                              name=data1['name'],
                                              ha=('127.0.0.1', 7532),
                                              verkey=data1['verhex'],
@@ -630,7 +676,6 @@ class BasicTestCase(unittest.TestCase):
 
         data2 = self.createRoadData(name='remote2', cachedirpath=opts['cachedir'])
         main.addRemote(estating.RemoteEstate(stack=main,
-                                             uid=4,
                                              name=data2['name'],
                                              ha=('127.0.0.1', 7533),
                                              verkey=data2['verhex'],
@@ -641,31 +686,43 @@ class BasicTestCase(unittest.TestCase):
         self.assertDictEqual(main.keep.loadAllRemoteData(),
             {
                 'remote1':
-                    {'uid': 3,
-                     'fuid': 0,
+                    {
                      'name': data1['name'],
+                     'uid': 2,
+                     'fuid': 0,
                      'ha': ['127.0.0.1', 7532],
                      'iha': None,
                      'natted': None,
+                     'fqdn': '1.0.0.127.in-addr.arpa',
+                     'dyned': None,
+                     'main': False,
+                     'application': 0,
                      'sid': 0,
                      'joined': None,
+                     'role': data1['role'],
                      'acceptance': 1,
                      'verhex': data1['verhex'],
                      'pubhex': data1['pubhex'],
-                     'role': data1['role'],},
+                     },
                 'remote2':
-                    {'uid': 4,
-                     'fuid': 0,
+                    {
                      'name': data2['name'],
+                     'uid': 3,
+                     'fuid': 0,
                      'ha': ['127.0.0.1', 7533],
                      'iha': None,
                      'natted': None,
+                     'fqdn': '1.0.0.127.in-addr.arpa',
+                     'dyned': None,
+                     'main': False,
+                     'application': 0,
                      'sid': 0,
                      'joined': None,
+                     'role': data2['role'],
                      'acceptance': 1,
                      'verhex': data2['verhex'],
                      'pubhex': data2['pubhex'],
-                     'role': data2['role'],}
+                     }
             })
 
         # now recreate with saved data
@@ -697,7 +754,6 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(otherKeep.loadAllRemoteData(), {})
 
         other = self.createRoadStack(data=otherData,
-                                     uid=0,
                                      main=None,
                                      ha=("", raeting.RAET_TEST_PORT),
                                      keep=otherKeep)
@@ -710,21 +766,23 @@ class BasicTestCase(unittest.TestCase):
 
         self.assertDictEqual(other.keep.loadLocalData(),
                             {
-                                'uid': 0,
                                 'name': otherData['name'],
-                                'ha': ['0.0.0.0', 7531],
+                                'uid': 1,
+                                'ha': ['127.0.0.1', 7531],
                                 'iha': None,
                                 'natted': None,
+                                'fqdn': '1.0.0.127.in-addr.arpa',
+                                'dyned': None,
                                 'sid': 0,
                                 'puid': 1,
+                                'aha': ['0.0.0.0', 7531],
+                                'role': otherData['role'],
                                 'sighex': otherData['sighex'],
                                 'prihex': otherData['prihex'],
-                                'role': otherData['role'],
                             })
 
         data3 = self.createRoadData(name='remote3', cachedirpath=opts['cachedir'])
         other.addRemote(estating.RemoteEstate(stack=other,
-                                              uid=3,
                                               name=data3['name'],
                                               ha=('127.0.0.1', 7534),
                                               verkey=data3['verhex'],
@@ -732,7 +790,6 @@ class BasicTestCase(unittest.TestCase):
 
         data4 = self.createRoadData(name='remote4', cachedirpath=opts['cachedir'])
         other.addRemote(estating.RemoteEstate(stack=other,
-                                              uid=4,
                                               name=data4['name'],
                                               ha=('127.0.0.1', 7535),
                                               verkey=data4['verhex'],
@@ -743,33 +800,41 @@ class BasicTestCase(unittest.TestCase):
             {
                 'remote3':
                 {
-                    'uid': 3,
-                    'fuid': 0,
                     'name': data3['name'],
+                    'uid': 2,
+                    'fuid': 0,
                     'ha': ['127.0.0.1', 7534],
                     'iha': None,
                     'natted': None,
+                    'fqdn': '1.0.0.127.in-addr.arpa',
+                    'dyned': None,
+                    'main': False,
+                    'application': 0,
                     'sid': 0,
                     'joined': None,
+                    'role': data3['role'],
                     'acceptance': 1,
                     'verhex': data3['verhex'],
                     'pubhex': data3['pubhex'],
-                    'role': data3['role'],
                 },
                 'remote4':
                 {
-                    'uid': 4,
-                    'fuid': 0,
                     'name': data4['name'],
+                    'uid': 3,
+                    'fuid': 0,
                     'ha': ['127.0.0.1', 7535],
                     'iha': None,
                     'natted': None,
+                    'fqdn': '1.0.0.127.in-addr.arpa',
+                    'dyned': None,
+                    'main': False,
+                    'application': 0,
                     'sid': 0,
                     'joined': None,
+                    'role': data4['role'],
                     'acceptance': 1,
                     'verhex': data4['verhex'],
                     'pubhex': data4['pubhex'],
-                    'role': data4['role'],
                 }
             })
 
@@ -849,31 +914,43 @@ class BasicTestCase(unittest.TestCase):
         self.assertDictEqual(main.keep.loadAllRemoteData(),
             {
                 'remote1':
-                    {'uid': 3,
-                     'fuid': 0,
+                    {
                      'name': data1['name'],
+                     'uid': 3,
+                     'fuid': 0,
                      'ha': ['127.0.0.1', 7532],
                      'iha': None,
                      'natted': None,
+                     'fqdn': '1.0.0.127.in-addr.arpa',
+                     'dyned': None,
+                     'main': False,
+                     'application': 0,
                      'sid': 0,
                      'joined': None,
+                     'role': data1['role'],
                      'acceptance': 0,
                      'verhex': data1['verhex'],
                      'pubhex': data1['pubhex'],
-                     'role': data1['role'],},
+                     },
                 'remote2':
-                    {'uid': 4,
-                     'fuid': 0,
+                    {
                      'name': data2['name'],
+                     'uid': 4,
+                     'fuid': 0,
                      'ha': ['127.0.0.1', 7533],
                      'iha': None,
                      'natted': None,
+                     'fqdn': '1.0.0.127.in-addr.arpa',
+                     'dyned': None,
+                     'main': False,
+                     'application': 0,
                      'sid': 0,
                      'joined': None,
+                     'role': data2['role'],
                      'acceptance': 0,
                      'verhex': data1['verhex'],
                      'pubhex': data1['pubhex'],
-                     'role': data2['role'],}
+                     }
             })
 
         # now recreate with saved data
@@ -976,31 +1053,43 @@ class BasicTestCase(unittest.TestCase):
         self.assertDictEqual(main.keep.loadAllRemoteData(),
             {
                 'remote1':
-                    {'uid': 3,
-                     'fuid': 0,
+                    {
                      'name': data1['name'],
+                     'uid': 3,
+                     'fuid': 0,
                      'ha': ['127.0.0.1', 7532],
                      'iha': None,
                      'natted': None,
+                     'fqdn': '1.0.0.127.in-addr.arpa',
+                     'dyned': None,
+                     'main': False,
+                     'application': 0,
                      'sid': 0,
                      'joined': None,
+                     'role': data1['role'],
                      'acceptance': 1,
                      'verhex': data2['verhex'],
                      'pubhex': data2['pubhex'],
-                     'role': data1['role'],},
+                     },
                 'remote2':
-                    {'uid': 4,
-                     'fuid': 0,
+                    {
                      'name': data2['name'],
+                     'uid': 4,
+                     'fuid': 0,
                      'ha': ['127.0.0.1', 7533],
                      'iha': None,
                      'natted': None,
+                     'fqdn': '1.0.0.127.in-addr.arpa',
+                     'dyned': None,
+                     'main': False,
+                     'application': 0,
                      'sid': 0,
                      'joined': None,
+                     'role': data2['role'],
                      'acceptance': 1,
                      'verhex': data2['verhex'],
                      'pubhex': data2['pubhex'],
-                     'role': data2['role'],}
+                     }
             })
 
         # now recreate with saved data
@@ -1076,7 +1165,7 @@ class BasicTestCase(unittest.TestCase):
                                                          'role': mainData['role'],
                                                          })
 
-        # add multiple remotes all with same role
+        # add multiple remotes all with same role but different keys
         data1 = self.createRoadData(name='remote1',
                                     cachedirpath=opts['cachedir'],
                                     role='primary')
@@ -1107,31 +1196,43 @@ class BasicTestCase(unittest.TestCase):
         self.assertDictEqual(main.keep.loadAllRemoteData(),
             {
                 'remote1':
-                    {'uid': 3,
-                     'fuid': 0,
+                    {
                      'name': data1['name'],
+                     'uid': 3,
+                     'fuid': 0,
                      'ha': ['127.0.0.1', 7532],
                      'iha': None,
                      'natted': None,
+                     'fqdn': '1.0.0.127.in-addr.arpa',
+                     'dyned': None,
+                     'main': False,
+                     'application': 0,
                      'sid': 0,
                      'joined': None,
+                     'role': data1['role'],
                      'acceptance': 1,
                      'verhex': data1['verhex'],
                      'pubhex': data1['pubhex'],
-                     'role': data1['role'],},
+                     },
                 'remote2':
-                    {'uid': 4,
-                     'fuid': 0,
+                    {
                      'name': data2['name'],
+                     'uid': 4,
+                     'fuid': 0,
                      'ha': ['127.0.0.1', 7533],
                      'iha': None,
                      'natted': None,
+                     'fqdn': '1.0.0.127.in-addr.arpa',
+                     'dyned': None,
+                     'main': False,
+                     'application': 0,
                      'sid': 0,
                      'joined': None,
+                     'role': data2['role'],
                      'acceptance': 1,
                      'verhex': data1['verhex'],
                      'pubhex': data1['pubhex'],
-                     'role': data2['role'],}
+                     }
             })
 
         # now recreate with saved data
