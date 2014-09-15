@@ -10,6 +10,7 @@ This script is intended to be shell-centric!!
 
 # Import python libs
 from __future__ import print_function
+import glob
 import os
 import re
 import sys
@@ -67,6 +68,12 @@ def build_pillar_data(options):
         pillar['bootstrap_salt_url'] = options.bootstrap_salt_url
     if options.bootstrap_salt_commit is not None:
         pillar['bootstrap_salt_commit'] = options.bootstrap_salt_commit
+    if options.package_source_dir:
+        pillar['package_source_dir'] = options.package_source_dir
+    if options.package_build_dir:
+        pillar['package_build_dir'] = options.package_build_dir
+    if options.package_artifact_dir:
+        pillar['package_artifact_dir'] = options.package_artifact_dir
     if options.pillar:
         pillar.update(dict(options.pillar))
     return yaml.dump(pillar, default_flow_style=True, indent=0, width=sys.maxint).rstrip()
@@ -310,6 +317,52 @@ def download_remote_logs(options):
         time.sleep(0.25)
 
 
+def download_packages(options):
+    print('Downloading packages...')
+    sys.stdout.flush()
+
+    workspace = options.workspace
+    vm_name = options.download_packages
+
+    for fglob in ('salt-*.rpm',
+                  'salt-*.deb',
+                  'salt-*.pkg.xz',
+                  'salt-buildpackage.log'):
+        for fname in glob.glob(os.path.join(workspace, fglob)):
+            if os.path.isfile(fname):
+                os.unlink(fname)
+
+    cmds = [
+        ('salt {{0}} archive.tar czf {0}.tar.gz sources=\'*.*\' cwd={0}'
+         .format(options.package_artifact_dir)),
+        'salt {{0}} cp.push {0}.tar.gz'.format(options.package_artifact_dir),
+        ('tar -C {{2}} -xzf /var/cache/salt/master/minions/{{1}}/files{0}.tar.gz'
+         .format(options.package_artifact_dir)),
+    ]
+
+    for cmd in cmds:
+        cmd = cmd.format(build_minion_target(options, vm_name), vm_name, workspace)
+        print('Running CMD: {0}'.format(cmd))
+        sys.stdout.flush()
+
+        proc = NonBlockingPopen(
+            cmd,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            stream_stds=True
+        )
+        proc.poll_and_read_until_finish()
+        proc.communicate()
+        if proc.returncode != 0:
+            print(
+                '\nFailed to execute command. Exit code: {0}'.format(
+                    proc.returncode
+                )
+            )
+        time.sleep(0.25)
+
+
 def run(opts):
     '''
     RUN!
@@ -322,6 +375,7 @@ def run(opts):
     if opts.download_remote_reports:
         opts.download_coverage_report = vm_name
         opts.download_unittest_reports = vm_name
+        opts.download_packages = vm_name
 
     if opts.bootstrap_salt_commit is not None:
         if opts.bootstrap_salt_url is None:
@@ -687,6 +741,37 @@ def run(opts):
             # Anything else, raise the exception
             raise
 
+    if retcode == 0:
+        # Build packages
+        time.sleep(3)
+        cmd = (
+            'salt -t 1800 {target} state.sls buildpackage pillar="{pillar}" --no-color'.format(
+                pillar=build_pillar_data(opts),
+                target=build_minion_target(opts, vm_name),
+            )
+        )
+        print('Running CMD: {0}'.format(cmd))
+        sys.stdout.flush()
+
+        proc = subprocess.Popen(
+            cmd,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        stdout, stderr = proc.communicate()
+
+        if stdout:
+            print(stdout)
+        sys.stdout.flush()
+        if stderr:
+            print(stderr)
+        sys.stderr.flush()
+
+        # Download packages only if the script ran and was successful
+        if 'Build complete' in stdout:
+            download_packages(opts)
+
     if opts.download_remote_reports:
         # Download unittest reports
         download_unittest_reports(opts)
@@ -825,6 +910,30 @@ def parse():
         default=False,
         action='store_true',
         help='Run the cloud provider tests only.'
+    )
+    parser.add_option(
+        '--build-packages',
+        default=True,
+        action='store_true',
+        help='Run buildpackage.py to create packages off of the git build.'
+    )
+    # These next three options are ignored if --build-packages is False
+    parser.add_option(
+        '--package-source-dir',
+        default='/testing',
+        help='Directory where the salt source code checkout is found '
+             '(default: %default)',
+    )
+    parser.add_option(
+        '--package-build-dir',
+        default='/tmp/salt-buildpackage',
+        help='Build root for automated package builds (default: %default)',
+    )
+    parser.add_option(
+        '--package-artifact-dir',
+        default='/tmp/salt-packages',
+        help='Location on the minion from which packages should be '
+             'retrieved (default: %default)',
     )
 
     options, args = parser.parse_args()

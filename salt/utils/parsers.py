@@ -2134,7 +2134,7 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         self.add_option(
             '--roster',
             dest='roster',
-            default='',
+            default='flat',
             help=('Define which roster system to use, this defines if a '
                   'database backend, scanner, or custom roster system is '
                   'used. Default is the flat file roster.')
@@ -2182,6 +2182,13 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             default=False,
             action='store_true',
             help=('Turn on command verbosity, display jid')
+        )
+        self.add_option(
+            '-s', '--static',
+            default=False,
+            action='store_true',
+            help=('Return the data from minions as a group after they '
+                  'all return.')
         )
 
         auth_group = optparse.OptionGroup(

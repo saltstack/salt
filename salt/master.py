@@ -183,7 +183,8 @@ class Master(SMaster):
                 if now - rotate >= self.opts['publish_session']:
                     salt.crypt.dropfile(
                         self.opts['cachedir'],
-                        self.opts['user'])
+                        self.opts['user'],
+                        self.opts['sock_dir'])
                     rotate = now
                     # Ping all minions to get them to pick up the new key
                     log.debug('Pinging all connected minions due to AES key rotation')
