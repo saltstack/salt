@@ -1114,7 +1114,8 @@ class Loader(object):
 
                 # If the __virtual__ function returns True and __virtualname__ is set then use it
                 elif virtual is True and virtualname != module_name:
-                    module_name = getattr(mod, '__virtualname__', virtual)
+                    if virtualname is not True:
+                        module_name = virtualname
 
         except KeyError:
             # Key errors come out of the virtual function when passing
