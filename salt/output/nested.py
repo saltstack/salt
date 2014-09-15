@@ -26,6 +26,7 @@ Example output::
 # Import python libs
 from numbers import Number
 import re
+import sys
 
 # Import salt libs
 import salt.utils
@@ -39,6 +40,7 @@ class NestDisplay(object):
     '''
     def __init__(self):
         self.colors = salt.utils.get_colors(__opts__.get('color'))
+        self.fse = sys.getfilesystemencoding()
 
     def display(self, ret, indent, prefix, out):
         '''
@@ -65,6 +67,10 @@ class NestDisplay(object):
             for line in lines:
                 if strip_colors:
                     line = salt.output.strip_esc_sequence(line)
+                try:
+                    line = line.decode(self.fse)
+                except AttributeError:
+                    pass
                 out += u'{0}{1}{2}{3}{4}\n'.format(
                         ' ' * indent,
                         self.colors['GREEN'],
@@ -90,6 +96,10 @@ class NestDisplay(object):
                         '-' * 10,
                         self.colors['ENDC'])
             for key in sorted(ret):
+                try:
+                    key = key.decode(self.fse)
+                except AttributeError:
+                    pass
                 val = ret[key]
                 out += u'{0}{1}{2}{3}{4}:\n'.format(
                         ' ' * indent,
