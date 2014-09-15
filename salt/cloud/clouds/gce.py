@@ -1872,11 +1872,22 @@ def create(vm_=None, call=None):
         'ex_metadata': __get_metadata(vm_),
         'external_ip': config.get_cloud_config_value(
                 'external_ip', vm_, __opts__, default='ephemeral'
-            )
+            ),
+        'ex_disk_type': config.get_cloud_config_value(
+            'ex_disk_type', vm_, __opts__, default='pd-standard'),
+        'ex_disk_auto_delete': config.get_cloud_config_value(
+            'ex_disk_auto_delete', vm_, __opts__, default=True)
     }
 
     if 'external_ip' in kwargs and kwargs['external_ip'] == "None":
         kwargs['external_ip'] = None
+
+    if kwargs.get('ex_disk_type') not in ('pd-standard', 'pd-ssd'):
+        raise SaltCloudSystemExit(
+            'The value of \'ex_disk_type\' needs to be one of: '
+            '\'pd-standard\', \'pd-ssd\''
+        )
+
     log.info('Creating GCE instance {0} in {1}'.format(vm_['name'],
         kwargs['location'].name)
     )
