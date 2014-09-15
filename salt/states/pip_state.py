@@ -164,6 +164,103 @@ def installed(name,
     no_use_wheel : False
         Force to not use wheel archives (requires pip>=1.4)
 
+    log
+        Log file where a complete (maximum verbosity) record will be kept
+
+    proxy
+        Specify a proxy in the form
+        user:passwd@proxy.server:port. Note that the
+        user:password@ is optional and required only if you
+        are behind an authenticated proxy.  If you provide
+        user@proxy.server:port then you will be prompted for a
+        password.
+
+    timeout
+        Set the socket timeout (default 15 seconds)
+
+    editable
+        install something editable (i.e.
+        git+https://github.com/worldcompany/djangoembed.git#egg=djangoembed)
+
+    find_links
+        URL to look for packages at
+
+    index_url
+        Base URL of Python Package Index
+
+    extra_index_url
+        Extra URLs of package indexes to use in addition to ``index_url``
+
+    no_index
+        Ignore package index
+
+    mirrors
+        Specific mirror URL(s) to query (automatically adds --use-mirrors)
+
+    build
+        Unpack packages into ``build`` dir
+
+    target
+        Install packages into ``target`` dir
+
+    download
+        Download packages into ``download`` instead of installing them
+
+    download_cache
+        Cache downloaded packages in ``download_cache`` dir
+
+    source
+        Check out ``editable`` packages into ``source`` dir
+
+    upgrade
+        Upgrade all packages to the newest available version
+
+    force_reinstall
+        When upgrading, reinstall all packages even if they are already
+        up-to-date.
+
+    ignore_installed
+        Ignore the installed packages (reinstalling instead)
+
+    exists_action
+        Default action when a path already exists: (s)witch, (i)gnore, (w)ipe,
+        (b)ackup
+
+    no_deps
+        Ignore package dependencies
+
+    no_install
+        Download and unpack all packages, but don't actually install them
+
+    no_chown
+        When user is given, do not attempt to copy and chown
+        a requirements file
+
+    cwd
+        Current working directory to run pip from
+
+    activate
+        Activates the virtual environment, if given via bin_env,
+        before running install.
+
+    pre_releases
+        Include pre-releases in the available versions
+
+    cert
+        Provide a path to an alternate CA bundle
+
+    allow_all_external
+        Allow the installation of all externally hosted files
+
+    allow_external
+        Allow the installation of externally hosted files (comma separated list)
+
+    allow_unverified
+        Allow the installation of insecure and unverifiable files (comma separated list)
+
+    process_dependency_links
+        Enable the processing of dependency links
+
     bin_env : None
         Absolute path to a virtual environment directory or absolute path to
         a pip executable. The example below assumes a virtual environment

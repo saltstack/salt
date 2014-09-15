@@ -1532,7 +1532,7 @@ def sftp_file(dest_path, contents, kwargs):
             # No Keyboard interaction!
             '-oKbdInteractiveAuthentication=no',
             # Also, specify the location of the key file
-            '-i {0}'.format(kwargs['key_filename'])
+            '-oIdentityFile={0}'.format(kwargs['key_filename'])
         ])
 
     if 'port' in kwargs:

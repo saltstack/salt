@@ -1570,7 +1570,7 @@ def directory(name,
         .. versionadded:: 2014.1.4
 
     force
-        If the name of the directory exists and is not a direcotry and
+        If the name of the directory exists and is not a directory and
         force is set to False, the state will fail. If force is set to
         True, the file in the way of the directory will be deleted to
         make room for the directory, unless backupname is set,
