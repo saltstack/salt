@@ -1704,7 +1704,7 @@ def _parse_repo_file(filename):
                     repos[repo][comps[0].strip()] = '='.join(comps[1:])
                 except KeyError:
                     log.error('Failed to parse line in {0}, '
-                              'offending line was "{1}"'.format(filename, 
+                              'offending line was "{1}"'.format(filename,
                                                                 line.rstrip()))
 
     return (header, repos)
