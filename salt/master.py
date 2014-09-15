@@ -186,9 +186,10 @@ class Master(SMaster):
                         self.opts['user'],
                         self.opts['sock_dir'])
                     rotate = now
-                    # Ping all minions to get them to pick up the new key
-                    log.debug('Pinging all connected minions due to AES key rotation')
-                    salt.utils.master.ping_all_connected_minions(self.opts)
+                    if self.opts['ping_on_rotate']:
+                        # Ping all minions to get them to pick up the new key
+                        log.debug('Pinging all connected minions due to AES key rotation')
+                        salt.utils.master.ping_all_connected_minions(self.opts)
             if self.opts.get('search'):
                 if now - last >= self.opts['search_index_interval']:
                     search.index()
