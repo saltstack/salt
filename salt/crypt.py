@@ -37,7 +37,7 @@ from salt.exceptions import (
 log = logging.getLogger(__name__)
 
 
-def dropfile(cachedir, user=None):
+def dropfile(cachedir, user=None, sock_dir=None):
     '''
     Set an AES dropfile to update the publish session key
 
@@ -88,6 +88,9 @@ def dropfile(cachedir, user=None):
 
     shutil.move(dfnt, dfn)
     os.umask(mask)
+    if sock_dir:
+        event = salt.utils.event.SaltEvent('master', sock_dir)
+        event.fire_event({'rotate_aes_key': True}, tag='key')
 
 
 def gen_keys(keydir, keyname, keysize, user=None):
