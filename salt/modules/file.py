@@ -3877,7 +3877,7 @@ def list_backups_dir(path, limit=None):
     ff = os.listdir(bkdir)
     for i, n in f.items():
         ssfile = {}
-        for x in sorted(os.listdir(bkdir)):
+        for x in sorted(ff):
             basename = x.split('_')[0]
             if i == basename:
                 strpfmt = '{0}_%a_%b_%d_%H:%M:%S_%f_%Y'.format(basename)
@@ -3893,8 +3893,8 @@ def list_backups_dir(path, limit=None):
                 ssfile[timestamp]['Size'] = os.stat(location).st_size
                 ssfile[timestamp]['Location'] = location
 
-        sfiles = dict(zip(range(n), [ssfile[x] for x  in sorted(ssfile, reverse = True)[:limit]]))
-        sefiles = {i:sfiles}
+        sfiles = dict(zip(range(n), [ssfile[x] for x in sorted(ssfile, reverse=True)[:limit]]))
+        sefiles = {i: sfiles}
         files.update(sefiles)
     return files
 
