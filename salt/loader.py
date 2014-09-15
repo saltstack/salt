@@ -1035,6 +1035,8 @@ class Loader(object):
                     log.warning(msg)
                 else:
                     virtual = mod.__virtual__()
+                # Get the module's virtual name
+                virtualname = getattr(mod, '__virtualname__', virtual)
                 if not virtual:
                     # if __virtual__() evaluates to False then the module
                     # wasn't meant for this platform or it's not supposed to
@@ -1093,9 +1095,6 @@ class Loader(object):
                             )
                         )
 
-                    # Get the module's virtual name
-                    virtualname = getattr(mod, '__virtualname__', virtual)
-
                     if virtualname != virtual:
                         # The __virtualname__ attribute does not match what's
                         # being returned by the __virtual__() function. This
@@ -1112,6 +1111,11 @@ class Loader(object):
                         )
 
                     module_name = virtualname
+
+                # If the __virtual__ function returns True and __virtualname__ is set then use it
+                elif virtual is True and virtualname != module_name:
+                    if virtualname is not True:
+                        module_name = virtualname
 
         except KeyError:
             # Key errors come out of the virtual function when passing
