@@ -25,6 +25,13 @@ warnings.filterwarnings(
     DeprecationWarning
 )
 
+# Filter the backports package UserWarning about being re-imported
+warnings.filterwarnings(
+    'ignore',
+    '^Module backports was already imported from (.*), but (.*) is being added to sys.path$',
+    UserWarning
+)
+
 # Import salt libs
 # We import log ASAP because we NEED to make sure that any logger instance salt
 # instantiates is using salt.log.setup.SaltLoggingClass
