@@ -854,26 +854,21 @@ def sign(user=None,
     return signed_data.data
 
 
-def verify(user=None,
-           keyid=None,
-           text=None,
+def verify(text=None,
+           user=None,
            filename=None):
     '''
     Verify a message or file
-
-    user
-        Which user's keychain to access, defaults to user Salt is running as.  Passing
-        the user as 'salt' will set the GPG home directory to /etc/salt/gpg.
-
-    keyid
-        The keyid of the key to set the trust level for, defaults to
-        first key in the secret keyring.
 
     text
         The text to verify.
 
     filename
         The filename to verify.
+
+    user
+        Which user's keychain to access, defaults to user Salt is running as.  Passing
+        the user as 'salt' will set the GPG home directory to /etc/salt/gpg.
 
     CLI Example:
 
