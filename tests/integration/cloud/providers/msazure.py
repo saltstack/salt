@@ -20,7 +20,7 @@ from salt.config import cloud_providers_config
 
 # Import Third-Party Libs
 try:
-    import azure
+    import azure  # pylint: disable=W0611
     HAS_AZURE = True
 except ImportError:
     HAS_AZURE = False
