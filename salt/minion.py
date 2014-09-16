@@ -1813,7 +1813,7 @@ class Syndic(Minion):
         if 'tgt' not in data or 'jid' not in data or 'fun' not in data \
            or 'to' not in data or 'arg' not in data:
             return
-        data['to'] = int(data['to']) - 1
+        data['to'] = int(data.get('to', self.opts['timeout'])) - 1
         if 'user' in data:
             log.debug(
                 'User {0[user]} Executing syndic command {0[fun]} with '
