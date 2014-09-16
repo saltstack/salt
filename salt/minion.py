@@ -1863,9 +1863,12 @@ class Syndic(Minion):
             data['tgt_type'] = 'glob'
         kwargs = {}
 
-        # if a master_id is in the data, add it to publish job
-        if 'master_id' in data:
-            kwargs['master_id'] = data['master_id']
+        # optionally add a few fields to the publish data
+        for field in ('master_id',  # which master the job came from
+                      'user',  # which user ran the job
+                      ):
+            if field in data:
+                kwargs[field] = data[field]
 
         # Send out the publication
         self.local.pub(data['tgt'],
@@ -1875,7 +1878,6 @@ class Syndic(Minion):
                        data['ret'],
                        data['jid'],
                        data['to'],
-                       {'user': data.get('user', '')},
                        **kwargs)
 
     def _setsockopts(self):
