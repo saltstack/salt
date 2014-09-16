@@ -1570,7 +1570,7 @@ def directory(name,
         .. versionadded:: 2014.1.4
 
     force
-        If the name of the directory exists and is not a direcotry and
+        If the name of the directory exists and is not a directory and
         force is set to False, the state will fail. If force is set to
         True, the file in the way of the directory will be deleted to
         make room for the directory, unless backupname is set,
@@ -2317,12 +2317,16 @@ def replace(name,
 
     if changes:
         ret['changes'] = {'diff': changes}
-        ret['comment'] = ('Changes were made'
-                if not __opts__['test'] else 'Changes would have been made')
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'Changes would have been made'
+        else:
+            ret['result'] = True
+            ret['comment'] = 'Changes were made'
     else:
-        ret['comment'] = 'No changes were made'
+        ret['result'] = True
+        ret['comment'] = 'No changes needed to be made'
 
-    ret['result'] = True if not __opts__['test'] else None
     return ret
 
 

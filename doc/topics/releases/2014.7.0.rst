@@ -219,7 +219,7 @@ New Salt-Cloud Providers
 
 - :mod:`Aliyun ECS Cloud <salt.cloud.clouds.aliyun>`
 - :mod:`LXC Containers <salt.cloud.clouds.lxc>`
-- :mod:`Proxmox KVM Containers <salt.cloud.clouds.proxmox>`
+- :mod:`Proxmox (OpenVZ containers & KVM) <salt.cloud.clouds.proxmox>`
 
 
 Deprecations

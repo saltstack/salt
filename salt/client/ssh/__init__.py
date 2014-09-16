@@ -451,22 +451,37 @@ class SSH(object):
             print(msg)
             print('-' * len(msg) + '\n')
             print('')
+        sret = {}
+        outputter = self.opts.get('output', 'nested')
         for ret in self.handle_ssh():
             host = ret.keys()[0]
             self.cache_job(jid, host, ret[host])
             ret = self.key_deploy(host, ret)
-            outputter = ret[host].get('out', self.opts.get('output', 'nested'))
-            p_data = {host: ret[host].get('return', {})}
-            salt.output.display_output(
-                    p_data,
-                    outputter,
-                    self.opts)
+            if not isinstance(ret[host], dict):
+                p_data = {host: ret[host]}
+            if 'return' not in ret[host]:
+                p_data = ret
+            else:
+                outputter = ret[host].get('out', self.opts.get('output', 'nested'))
+                p_data = {host: ret[host].get('return', {})}
+            if self.opts.get('static'):
+                sret.update(p_data)
+            else:
+                salt.output.display_output(
+                        p_data,
+                        outputter,
+                        self.opts)
             if self.event:
                 self.event.fire_event(
                         ret,
                         salt.utils.event.tagify(
                             [jid, 'ret', host],
                             'job'))
+        if self.opts.get('static'):
+            salt.output.display_output(
+                    sret,
+                    outputter,
+                    self.opts)
 
 
 class Single(object):

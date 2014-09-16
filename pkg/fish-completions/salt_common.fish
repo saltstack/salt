@@ -103,28 +103,6 @@ for program in $salt_programs_return
 	complete -c $program     -x      -l return               -d "Set an alternative return method. By default salt will send the return data from the command back to the master, but the return data can be redirected into any number of systems, databases or applications."
 end
 
-# salt general options (from --help)
-for auth in auth eauth external-auth
-	complete -c salt         -f -s a -l $auth                -d "Specify an external authentication system to use."
-end
-for batch in batch batch-size
-	complete -c salt         -f -s b -l $batch               -d "Execute the salt job in batch mode, pass either the number of minions to batch at a time, or the percentage of minions to have runnin"
-end
-complete -c salt             -x      -l args-separator       -d "Set the special argument used as a delimiter between command arguments of compound commands. This is useful when one wants to pass commas as arguments to some of the commands in a compound command."
-complete -c salt             -f      -l async                -d "Run the salt command but don't wait for a reply"
-complete -c salt             -f -s C -l compound             -d "The compound target option allows for multiple target types to be evaluated, allowing for greater granularity in target matching. The compound target is space delimited, targets other than globs are preceded with an identifier matching the specific targets argument type: salt \"G@os:RedHat and webser* or E@database.*\""
-complete -c salt             -f -s S -l ipcidr               -d "Match based on Subnet (CIDR notation) or IPv4 address."
-complete -c salt             -f -s T -l make-token           -d "Generate and save an authentication token for re-use. The token is generated and made available for the period defined in the Salt Master."
-complete -c salt             -x      -l password             -d "Password for external authentication"
-complete -c salt             -f -s I -l pillar               -d "Instead of using shell globs to evaluate the target use a pillar value to identify targets, the syntax for the target is the pillar key followed by a globexpression: "role:production*""
-complete -c salt             -f      -l show-timeout         -d "Display minions that timeout without the additional output of --verbose"
-complete -c salt             -f      -l show-jid             -d "Display jid without the additional output of --verbose"
-complete -c salt             -x      -l state-output         -d "Override the configured state_output value for minion output. Default: full"
-complete -c salt             -f -s s -l static               -d "Return the data from minions as a group after they all return."
-complete -c salt             -x      -l subset               -d "Execute the routine on a random subset of the targeted minions. The minions will be verified that they have the named function before executing"
-complete -c salt             -f      -l summary              -d "Display summary information about a salt command"
-complete -c salt             -x      -l username             -d "Username for external authentication"
-complete -c salt             -f -s v -l verbose              -d "Turn on command verbosity, display jid and active job queries"
 
 # convinience functions
 function __fish_salt_log
@@ -142,6 +120,7 @@ function __fish_salt_clean_prefix
 	set prefix '^'$argv[1]
 	grep -E $prefix | sed "s/$prefix//g"
 end
+
 function __fish_salt_clean
 	if [ $argv[1] = yaml ]
 		__fish_salt_clean_prefix ' *- '
@@ -150,10 +129,26 @@ function __fish_salt_clean
 	end
 end
 
+function __fish_salt_lines_between
+	set max 1024
+	grep -A$max $argv[1] | grep -B$max $argv[2]
+end
+
+function __fish_salt_add_help
+	sed "s/\$/\t$argv/"
+end
+
+function __fish_salt_underscore_to_space
+	sed 's/^\w/\u&/g; s/_/ /g'
+end
+
 # information extraction from commandline
 
 set -g __fish_salt_default_program 'salt'
 
+# BUG: Completion doesn't work with correct commandline like
+# salt --out raw server test.ping
+# Consider rewriting using __fish_complete_subcommand
 function __fish_salt_program
 	set result (commandline -pco)
 	if test -n "$result"
@@ -167,7 +162,7 @@ function __fish_salt_program
 	echo $result
 end
 
-function __fish_salt_ignore_args
+function __fish_salt_save_first_commandline_token_not_matching_args_to
 	set -l cli (commandline -pco) 
 	for i in $cli
 		if echo "$i" | grep -Ev (__fish_salt_join '|' $argv)
@@ -178,13 +173,27 @@ function __fish_salt_ignore_args
 	return 1
 end
 
+function __fish_salt_commandline_tokens_not_matching_args
+	set tokens (commandline -pco)
+	set result 1
+	for token in $tokens
+		if echo "$token" | grep -Ev (__fish_salt_join '|' $argv)
+			set result 0
+		end
+	end
+	return $result
+end
+
 set __fish_salt_base_ignores (__fish_salt_join '|' $salt_programs '^-.*')
+
 function __fish_salt_ignores_minion
 	echo $__fish_salt_base_ignores
 end
+
 function __fish_salt_extract_minion
-	__fish_salt_ignore_args __fish_salt_extracted_minion (__fish_salt_ignores_minion)
+	__fish_salt_save_first_commandline_token_not_matching_args_to __fish_salt_extracted_minion (__fish_salt_ignores_minion)
 end
+
 function __fish_salt_minion
 	__fish_salt_extract_minion > /dev/null
 	echo $__fish_salt_extracted_minion
@@ -193,24 +202,41 @@ end
 function __fish_salt_ignores_function
 	__fish_salt_join '|' $__fish_salt_base_ignores (__fish_salt_minion)
 end
+
 function __fish_salt_extract_function
-	__fish_salt_ignore_args __fish_salt_extracted_function (__fish_salt_ignores_function)
+	__fish_salt_save_first_commandline_token_not_matching_args_to __fish_salt_extracted_function (__fish_salt_ignores_function)
 end
+
 function __fish_salt_function
 	__fish_salt_extract_function > /dev/null
 	echo $__fish_salt_extracted_function
 end
 
+function __fish_salt_ignores_args
+	__fish_salt_join '|' (__fish_salt_ignores_function) (__fish_salt_function)
+end
+
+function __fish_salt_args
+	__fish_salt_commandline_tokens_not_matching_args (__fish_salt_ignores_args)
+end
+
 set __fish_salt_arg_name_re '\w*='
+
 function __fish_salt_arg_name
-	set result (echo (commandline -ct) | grep -E --only-matching $__fish_salt_arg_name_re)
+	set result (commandline -ct | grep -E --only-matching $__fish_salt_arg_name_re)
 	if test -z $result
 		set result '_='
 	end
 	echo $result | sed 's/=$//g'
 end
+
 function __fish_salt_arg_value
-	echo (commandline -ct) | sed "s/$__fish_salt_arg_name_re//g"
+	commandline -ct | sed "s/$__fish_salt_arg_name_re//g"
+end
+
+function __fish_salt_arg_value_by_name
+	set arg_name "$argv="
+	__fish_salt_args | __fish_salt_clean_prefix $arg_name
 end
 
 # getting info from salt
@@ -239,7 +265,7 @@ function __fish_salt_list
 	begin
 		for arg_type in $argv
 			set f_list '__fish_salt_list_'$arg_type
-			eval $f_list
+			eval $f_list | __fish_salt_add_help (echo $arg_type | __fish_salt_underscore_to_space)
 		end
 	end
 end
@@ -247,16 +273,23 @@ end
 set -g __fish_salt_args_types '
 _                             cmd.retcode                     : minion_cmd
 cmd                           cmd.retcode                     : minion_cmd
+shell                         cmd.retcode                     : minion_file
 _                             cmd.run                         : minion_cmd
 cmd                           cmd.run                         : minion_cmd
+shell                         cmd.run                         : minion_file
 _                             cmd.run_all                     : minion_cmd
 cmd                           cmd.run_all                     : minion_cmd
+shell                         cmd.run_all                     : minion_file
 _                             cmd.run_stderr                  : minion_cmd
 cmd                           cmd.run_stderr                  : minion_cmd
+shell                         cmd.run_stderr                  : minion_file
 _                             cmd.run_stdout                  : minion_cmd
 cmd                           cmd.run_stdout                  : minion_cmd
-_                             cmd.which                       : minion_file
-cmd                           cmd.which                       : minion_file
+shell                         cmd.run_stdout                  : minion_file
+shell                         cmd.script                      : minion_file
+shell                         cmd.script_retcode              : minion_file
+_                             cmd.which                       : minion_cmd
+cmd                           cmd.which                       : minion_cmd
 _                             cp.get_dir                      : master_file
 _                             cp.get_dir                      : minion_file
 path                          cp.get_dir                      : master_file
@@ -297,8 +330,17 @@ _                             sys.doc                         : module
 '
 #_                             pkg.remove                      : package
 
+function __fish_salt_argspec_function
+	set function_line '^\s*'$argv[1]
+	__fish_salt_lines_between $function_line':' $function_line
+end
+
+function __fish_salt_argspec_args
+	__fish_salt_lines_between '^\s*args:' '^\s*defaults:' | grep -v ':' 
+end
+
 function __fish_salt_list_arg_name
-	__fish_salt_exec_output yaml sys.argspec (__fish_salt_function) | grep -A1024 '^ *args:' | grep -B1024 '^ *defaults:' | grep -v ':' | __fish_salt_clean yaml | sed 's/$/=/g'
+	__fish_salt_exec_output yaml sys.argspec (__fish_salt_function) | __fish_salt_argspec_function (__fish_salt_function) | __fish_salt_argspec_args | __fish_salt_clean yaml | sed 's/$/=/g'
 end
 
 function __fish_salt_list_arg_value
@@ -308,7 +350,7 @@ function __fish_salt_list_arg_value
 end
 
 function __fish_salt_list_function
-	__fish_salt_exec_and_clean yaml sys.list_functions $argv 
+	__fish_salt_exec_and_clean yaml sys.list_functions $argv
 end
 
 function __fish_salt_list_grain
@@ -331,7 +373,21 @@ function __fish_salt_list_minion_cmd
 	set cmd (__fish_salt_arg_value | sed 's/^[\'"]//')
 	set complete_cmd_exe '"complete --do-complete=\''$cmd'\'"'
 	set cmd_without_last_word (echo $cmd | sed -E 's/\S*$//')
-	__fish_salt_exec_and_clean nested cmd.run shell=/usr/bin/fish cmd=$complete_cmd_exe | awk -v prefix="$cmd_without_last_word" '{print prefix $0}'
+	# BUG: Static paths. Do we need to use which?
+	set bash_shell '/bin/bash'
+	set fish_shell '/usr/bin/fish'
+	set sh_shell '/bin/sh'
+	set zsh_shell '/usr/bin/zsh'
+	set shell (__fish_salt_arg_value_by_name shell); and test -z $shell; and set shell $sh_shell
+	switch $shell
+		case $fish_shell
+			__fish_salt_exec_and_clean nested cmd.run shell=$fish_shell cmd=$complete_cmd_exe | awk -v prefix="$cmd_without_last_word" '{print prefix $0}'
+		case $bash_shell $zsh_shell
+			# Not implemented; See
+			# https://github.com/fish-shell/fish-shell/issues/1679#issuecomment-55487388
+		case $sh_shell
+			# sh doesn't have completions
+	end
 end
 
 function __fish_salt_list_minion_file

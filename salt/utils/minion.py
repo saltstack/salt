@@ -45,7 +45,10 @@ def _read_proc_file(path, opts):
             data = serial.loads(buf)
         else:
             # Proc file is empty, remove
-            os.remove(path)
+            try:
+                os.remove(path)
+            except IOError:
+                pass
             return None
     if not isinstance(data, dict):
         # Invalid serial object
@@ -53,19 +56,28 @@ def _read_proc_file(path, opts):
     if not salt.utils.process.os_is_running(data['pid']):
         # The process is no longer running, clear out the file and
         # continue
-        os.remove(path)
+        try:
+            os.remove(path)
+        except IOError:
+            pass
         return None
     if opts['multiprocessing']:
         if data.get('pid') == pid:
             return None
     else:
         if data.get('pid') != pid:
-            os.remove(path)
+            try:
+                os.remove(path)
+            except IOError:
+                pass
             return None
         if data.get('jid') == current_thread:
             return None
         if not data.get('jid') in [x.name for x in threading.enumerate()]:
-            os.remove(path)
+            try:
+                os.remove(path)
+            except IOError:
+                pass
             return None
 
     return data

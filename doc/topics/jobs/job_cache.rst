@@ -45,7 +45,7 @@ returner system. To configure the master job cache, set up an external returner
 database based on the instructions included with each returner and then simply
 add the following configuration to the master configuration file:
 
-.. code_block:: yaml
+.. code-block:: yaml
 
     master_job_cache: mysql
 
@@ -63,6 +63,6 @@ described in the specific returner documentation. Ensure that the returner
 database is accessible from the minions, and set the `ext_job_cache` setting
 in the master configuration file:
 
-.. code_block:: yaml
+.. code-block:: yaml
 
     ext_job_cache: redis

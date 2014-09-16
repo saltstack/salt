@@ -42,6 +42,8 @@ class KeyCLI(object):
     def list_status(self, status):
         '''
         Print out the keys under a named status
+
+        :param str status: A string indicating which set of keys to return
         '''
         keys = self.key.list_keys()
         if status.startswith('acc'):
@@ -77,6 +79,9 @@ class KeyCLI(object):
     def accept(self, match, include_rejected=False):
         '''
         Accept the keys matched
+
+        :param str match: A string to match against. i.e. 'web*'
+        :param bool include_rejected: Whether or not to accept a matched key that was formerly rejected
         '''
         def _print_accepted(matches, after_match):
             if 'minions' in after_match:
@@ -136,12 +141,16 @@ class KeyCLI(object):
     def accept_all(self, include_rejected=False):
         '''
         Accept all keys
+
+        :param bool include_rejected: Whether or not to accept a matched key that was formely rejected
         '''
         self.accept('*', include_rejected=include_rejected)
 
     def delete(self, match):
         '''
         Delete the matched keys
+
+        :param str match: A string to match against. i.e. 'web*'
         '''
         def _print_deleted(matches, after_match):
             deleted = []
@@ -196,6 +205,9 @@ class KeyCLI(object):
     def reject(self, match, include_accepted=False):
         '''
         Reject the matched keys
+
+        :param str match: A string to match against. i.e. 'web*'
+        :param bool include_accepted: Whether or not to accept a matched key that was formerly accepted
         '''
         def _print_rejected(matches, after_match):
             if self.rej in after_match:
@@ -240,12 +252,16 @@ class KeyCLI(object):
     def reject_all(self, include_accepted=False):
         '''
         Reject all keys
+
+        :param bool include_accepted: Whether or not to accept a matched key that was formerly accepted
         '''
         self.reject('*', include_accepted=include_accepted)
 
     def print_key(self, match):
         '''
         Print out a single key
+
+        :param str match: A string to match against. i.e. 'web*'
         '''
         matches = self.key.key_str(match)
         salt.output.display_output(
@@ -262,6 +278,8 @@ class KeyCLI(object):
     def finger(self, match):
         '''
         Print out the fingerprints for the matched keys
+
+        :param str match: A string to match against. i.e. 'web*'
         '''
         matches = self.key.finger(match)
         salt.output.display_output(
@@ -416,7 +434,7 @@ class Key(object):
 
     def gen_keys(self):
         '''
-        Generate minion keys
+        Generate minion RSA public keypair
         '''
         salt.crypt.gen_keys(
                 self.opts['gen_keys_dir'],
@@ -450,6 +468,9 @@ class Key(object):
     def check_master(self):
         '''
         Log if the master is not running
+
+        :rtype: bool
+        :return: Whether or not the master is running
         '''
         if not os.path.exists(
                 os.path.join(
