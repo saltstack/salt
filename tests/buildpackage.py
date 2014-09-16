@@ -230,7 +230,7 @@ def build_centos(opts):
     build_reqs = ['rpm-build']
     if major_release == 5:
         python_bin = 'python26'
-        define_opts.extend(['--define=', 'dist .el5'])
+        define_opts.extend(['--define', 'dist .el5'])
         build_reqs.extend(['python26-devel'])
     elif major_release == 6:
         build_reqs.extend(['python-devel'])
