@@ -9,6 +9,7 @@ def multipath_list():
     CLI Example:
     .. code-block:: bash
     salt '*' devmap.multipath_list
+    salt '*' devmap.multipath flush mpath1
     '''
     cmd = 'multipath -l'
     return __salt__['cmd.run'](cmd).splitlines()
