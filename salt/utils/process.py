@@ -177,12 +177,15 @@ class ProcessManager(object):
         signal.signal(signal.SIGTERM, self.kill_children)
 
         while True:
-            pid, exit_status = os.wait()
-            if pid not in self._process_map:
-                log.debug(('Process of pid {0} died, not a known'
-                           ' process, will not restart').format(pid))
-                continue
-            self.restart_process(pid)
+            try:
+                pid, exit_status = os.wait()
+                if pid not in self._process_map:
+                    log.debug(('Process of pid {0} died, not a known'
+                               ' process, will not restart').format(pid))
+                    continue
+                self.restart_process(pid)
+            except OSError:
+                break
 
             # in case someone died while we were waiting...
             self.check_children()
@@ -202,4 +205,8 @@ class ProcessManager(object):
         for pid, p_map in self._process_map.items():
             p_map['Process'].terminate()
             p_map['Process'].join()
-            del self._process_map[pid]
+            # This is a race condition if a signal was passed to all children
+            try:
+                del self._process_map[pid]
+            except KeyError:
+                pass
