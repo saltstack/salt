@@ -97,7 +97,9 @@ increase verbosity:
 To review the results of a particular run, take a note of the log location
 given in the output for each test:
 
-    **Logging tests on /var/folders/nl/d809xbq577l3qrbj3ymtpbq80000gn/T/salt-runtests.log**
+.. code-block:: text
+
+    Logging tests on /var/folders/nl/d809xbq577l3qrbj3ymtpbq80000gn/T/salt-runtests.log
 
 Evaluating Truth
 ================
