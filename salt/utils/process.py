@@ -205,4 +205,8 @@ class ProcessManager(object):
         for pid, p_map in self._process_map.items():
             p_map['Process'].terminate()
             p_map['Process'].join()
-            del self._process_map[pid]
+            # This is a race condition if a signal was passed to all children
+            try:
+                del self._process_map[pid]
+            except KeyError:
+                pass
