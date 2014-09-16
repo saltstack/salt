@@ -1012,7 +1012,7 @@ def block_device_mappings(vm_):
     '''
     Return the block device mapping:
 
-    ::
+    .. code-block:: python
 
         [{'DeviceName': '/dev/sdb', 'VirtualName': 'ephemeral0'},
           {'DeviceName': '/dev/sdc', 'VirtualName': 'ephemeral1'}]
@@ -2247,7 +2247,9 @@ def set_tags(name=None,
     but a resource_id may be passed instead. If both are passed in, the
     instance_id will be used.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -a set_tags mymachine tag1=somestuff tag2='Other stuff'
         salt-cloud -a set_tags resource_id=vol-3267ab32 tag=somestuff
@@ -2337,7 +2339,9 @@ def get_tags(name=None,
     in, but a resource_id may be passed instead. If both are passed in, the
     instance_id will be used.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -a get_tags mymachine
         salt-cloud -a get_tags resource_id=vol-3267ab32
@@ -2375,7 +2379,9 @@ def del_tags(name=None,
     but a resource_id may be passed instead. If both are passed in, the
     instance_id will be used.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -a del_tags mymachine tags=tag1,tag2,tag3
         salt-cloud -a del_tags resource_id=vol-3267ab32 tags=tag1,tag2,tag3
@@ -2563,9 +2569,13 @@ def show_instance(name=None, instance_id=None, call=None, kwargs=None):
 
     Can be called as an action (which requires a name):
 
+    .. code-block:: bash
+
         salt-cloud -a show_instance myinstance
 
     ...or as a function (which requires either a name or instance_id):
+
+    .. code-block:: bash
 
         salt-cloud -f show_instance my-ec2 name=myinstance
         salt-cloud -f show_instance my-ec2 instance_id=i-d34db33f
@@ -3520,7 +3530,9 @@ def get_password_data(
     transmitted to Amazon; it is only used internally inside of Salt Cloud to
     decrypt data _after_ it has been received from Amazon.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -a get_password_data mymachine
         salt-cloud -a get_password_data mymachine key_file=/root/ec2key.pem
