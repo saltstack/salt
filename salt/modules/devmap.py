@@ -8,11 +8,12 @@ Device-Mapper Multipath module
      salt '*' devmap.multipath flush mpath1
 '''
 
+
 def multipath():
     ret = {}
-    if ret[0]=='list':
+    if ret[0] == 'list':
         cmd = 'multipath -l'
-    elif ret[0]=="flush":
+    elif ret[0] == "flush":
         try:
             cmd = 'multipath -f {0}'.format(ret[1])
         except ValueError:
@@ -20,4 +21,3 @@ def multipath():
     else:
         return 'Error: Unknown option provided!'
     return __salt__['cmd.run'](cmd).splitlines()
-
