@@ -443,7 +443,7 @@ def clouds(opts):
 
     functions = load.gen_functions(pack)
     for funcname in LIBCLOUD_FUNCS_NOT_SUPPORTED:
-        log.debug(
+        log.trace(
             '{0!r} has been marked as not supported. Removing from the list '
             'of supported cloud functions'.format(
                 funcname
