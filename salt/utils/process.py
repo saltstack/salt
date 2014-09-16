@@ -162,7 +162,8 @@ class ProcessManager(object):
                   ' restarting...').format(self._process_map[pid]['tgt'],
                                            pid,
                                            self._process_map[pid]['Process'].exitcode))
-        self._process_map[pid]['Process'].join(1)
+        # don't block, the process is already dead
+        self._process_map[pid]['Process'].join(0)
 
         self.add_process(self._process_map[pid]['tgt'],
                          self._process_map[pid]['args'],
