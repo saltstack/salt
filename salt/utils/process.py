@@ -185,7 +185,7 @@ class ProcessManager(object):
                     continue
                 self.restart_process(pid)
             except OSError:
-                pass
+                break
 
             # in case someone died while we were waiting...
             self.check_children()
