@@ -65,29 +65,37 @@ class AzureTest(integration.ShellCase):
 
         # check if subscription_id and certificate_path are present in provider file
         provider_path = os.path.join(integration.FILES,
-                                     'conf',
-                                     'cloud.providers.d',
-                                     provider + '.conf')
-        config = cloud_providers_config(provider_path)
-
-        sub_id = config['azure-config']['azure']['subscription_id']
-        cert_path = config['azure-config']['azure']['certificate_path']
-        ssh_user = config['azure-config']['azure']['ssh_username']
-        ssh_pass = config['azure-config']['azure']['ssh_password']
-        media_link = config['azure-config']['azure']['media_link']
-
-        conf_items = [sub_id, cert_path, ssh_user, ssh_pass, media_link]
-        missing_conf_item = []
-
-        for item in conf_items:
-            if item == '':
-                missing_conf_item.append(item)
-
-        if missing_conf_item:
+                            'conf',
+                            'cloud.providers.d',
+                            provider + '.conf')
+        provider_config = cloud_providers_config(provider_path)
+        sub_id = provider_config['azure-config']['azure']['subscription_id']
+        cert_path = provider_config['azure-config']['azure']['certificate_path']
+        if sub_id == '' or cert_path == '':
             self.skipTest(
-                'A subscription_id, certificate_path, ssh_user, ssh_password, and a '
-                'media_link must be provided to run these tests. Check '
+                'A subscription_id and certificate_path must be provided to run '
+                'these tests. Check '
                 'tests/integration/files/conf/cloud.providers.d/{0}.conf'.format(
+                    provider
+                )
+            )
+
+        # check if ssh_username, ssh_password, and media_link are present
+        # in the azure configuration file
+        profile_path = os.path.join(integration.FILES,
+                            'conf',
+                            'cloud.profiles.d',
+                            provider + '.conf')
+        profile_config = cloud_providers_config(profile_path)
+        ssh_user = profile_config['azure-test']['azure-config']['ssh_username']
+        ssh_pass = profile_config['azure-test']['azure-config']['ssh_password']
+        media_link = profile_config['azure-test']['azure-config']['media_link']
+
+        if ssh_user == '' or ssh_pass == '' or media_link == '':
+            self.skipTest(
+                'An ssh_username, ssh_password, and media_link must be provided to run '
+                'these tests. One or more of these elements is missing. Check '
+                'tests/integration/files/conf/cloud.profiles.d/{0}.conf'.format(
                     provider
                 )
             )
