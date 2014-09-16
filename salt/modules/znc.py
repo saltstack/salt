@@ -46,7 +46,7 @@ def _makepass(password, hasher='sha256'):
         "0123456789!?.,:;/*-+_()"
     r = {
         'Method': h.name,
-        'Salt': ''.join(random.choice(c) for x in xrange(20)),
+        'Salt': ''.join(random.SystemRandom().choice(c) for x in xrange(20)),
     }
 
     # Salt the password hash
