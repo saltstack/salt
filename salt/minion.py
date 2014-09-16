@@ -990,6 +990,9 @@ class Minion(MinionBase):
         fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
         if opts['multiprocessing']:
             salt.utils.daemonize_if(opts)
+
+        salt.utils.appendproctitle(data['jid'])
+
         sdata = {'pid': os.getpid()}
         sdata.update(data)
         log.info('Starting a new job with PID {0}'.format(sdata['pid']))
@@ -1105,6 +1108,7 @@ class Minion(MinionBase):
         This method should be used as a threading target, start the actual
         minion side execution.
         '''
+        salt.utils.appendproctitle(data['jid'])
         # this seems awkward at first, but it's a workaround for Windows
         # multiprocessing communication.
         if not minion_instance:
@@ -1809,7 +1813,7 @@ class Syndic(Minion):
         if 'tgt' not in data or 'jid' not in data or 'fun' not in data \
            or 'to' not in data or 'arg' not in data:
             return
-        data['to'] = int(data['to']) - 1
+        data['to'] = int(data.get('to', self.opts['timeout'])) - 1
         if 'user' in data:
             log.debug(
                 'User {0[user]} Executing syndic command {0[fun]} with '
