@@ -184,6 +184,7 @@ class ProcessManager(object):
                                ' process, will not restart').format(pid))
                     continue
                 self.restart_process(pid)
+            # OSError is raised if a signal handler is called (SIGTERM) during os.wait
             except OSError:
                 break
 
