@@ -93,7 +93,7 @@ class LoadAuth(object):
         if f_time > self.max_fail:
             self.max_fail = f_time
         deviation = self.max_fail / 4
-        r_time = random.uniform(
+        r_time = random.SystemRandom().uniform(
                 self.max_fail - deviation,
                 self.max_fail + deviation
                 )

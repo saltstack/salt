@@ -116,7 +116,7 @@ def add(name,
     # Set random password, since without a password the account will not be
     # available. TODO: add shadow module
     randpass = ''.join(
-        random.choice(string.letters + string.digits) for x in xrange(20)
+        random.SystemRandom().choice(string.letters + string.digits) for x in xrange(20)
     )
     _dscl('/Users/{0} {1!r}'.format(name, randpass), ctype='passwd')
 
