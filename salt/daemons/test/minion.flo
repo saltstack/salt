@@ -2,7 +2,7 @@
 
 house minion
 
-init .raet.udp.stack.local to eid 0 name "minion" host "" port 7531 main false
+init .raet.udp.stack.local to name "minion" host "" port 7531 main false
 #init port in .raet.udp.stack.local from value in .salt.etc.raet_port
 
 #init .salt.etc.master to  "127.0.0.1"
@@ -12,7 +12,8 @@ init .raet.udp.stack.local to eid 0 name "minion" host "" port 7531 main false
 
 framer minionudpstack be active first start
    frame start
-      do salt raet road stack per inode ".raet.udp.stack"
+      enter
+         do salt raet road stack setup per inode ".raet.udp.stack"
       exit
          do salt raet road stack closer per inode ".raet.udp.stack."
 

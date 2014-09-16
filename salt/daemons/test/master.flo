@@ -2,7 +2,7 @@
 
 house master
 
-init .raet.udp.stack.local to eid 1 name "master" host "" port 7530 main true
+init .raet.udp.stack.local to name "master" host "" port 7530 main true
 #init port in .raet.udp.stack.local from value in .salt.etc.raet_port
 
 

@@ -118,12 +118,12 @@ class WorkerSetup(ioflo.base.deeding.Deed):
         self.stack.value = LaneStack(
                                      name=name,
                                      lanename=lanename,
-                                     yid=self.yid.value,
+                                     uid=self.yid.value,
                                      sockdirpath=self.opts.value['sock_dir'])
         self.stack.value.Pk = raeting.packKinds.pack
         manor_yard = RemoteYard(
                                  stack=self.stack.value,
-                                 yid=0,
+                                 uid=0,
                                  name='manor',
                                  lanename=lanename,
                                  dirpath=self.opts.value['sock_dir'])
