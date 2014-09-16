@@ -136,6 +136,7 @@ except ImportError:
     HAS_LIBCLOUD = False
 
 # Import python libs
+import re
 import copy
 import pprint
 import logging
