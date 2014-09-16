@@ -4163,7 +4163,7 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
 def mod_run_check_cmd(cmd, filename):
     '''
     Execute the check_cmd logic.
-    
+
     Return a result dict if ``check_cmd`` succeeds (check_cmd == 0)
     otherwise return True
     '''
