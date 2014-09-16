@@ -1,15 +1,16 @@
+# -*- coding: utf-8 -*-
+import logging
 log = logging.getLogger(__name__)
-
-'''
-Device-Mapper Multipath module
- CLI Example:
- .. code-block:: bash
-     salt '*' devmap.multipath list
-     salt '*' devmap.multipath flush mpath1
-'''
 
 
 def multipath():
+    '''
+    Device-Mapper Multipath module
+    CLI Example:
+    .. code-block:: bash
+    salt '*' devmap.multipath list
+    salt '*' devmap.multipath flush mpath1
+    '''
     ret = {}
     if ret[0] == 'list':
         cmd = 'multipath -l'
