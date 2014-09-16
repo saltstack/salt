@@ -1014,7 +1014,7 @@ class OutputOptionsMixIn(object):
         if self.options.output_file is not None:
             if os.path.isfile(self.options.output_file):
                 try:
-                    with utils.fopen(self.option.output_file, 'w') as ofh:
+                    with utils.fopen(self.options.output_file, 'w') as ofh:
                         # Make this a zero length filename instead of removing
                         # it. This way we keep the file permissions.
                         ofh.write('')
