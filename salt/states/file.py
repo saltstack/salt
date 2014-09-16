@@ -1490,8 +1490,8 @@ def directory(name,
     recurse
         Enforce user/group ownership and mode of directory recursively. Accepts
         a list of strings representing what you would like to recurse.  If
-        'mode' is defined, will recurse on both 'file_mode' and 'dir_mode' if
-        they are defined.  If ignore_files or ignore_dirs is included, files or
+        ``mode`` is defined, will recurse on both ``file_mode`` and ``dir_mode`` if
+        they are defined.  If ``ignore_files`` or ``ignore_dirs`` is included, files or
         directories will be left unchanged respectively.
         Example:
 
@@ -1508,8 +1508,9 @@ def directory(name,
                     - group
                     - mode
 
-        .. Leave files or directories unchanged respectively.
-        .. versionadded:: Lithium
+        Leave files or directories unchanged:
+
+        .. code-block:: yaml
 
             /var/log/httpd:
                 file.directory:
@@ -1535,6 +1536,7 @@ def directory(name,
                     - mode
                     - ignore_dirs
 
+        .. versionadded:: Lithium
 
     dir_mode / mode
         The permissions mode to set any directories created. Not supported on
@@ -2351,31 +2353,45 @@ def blockreplace(
     (the original version and the edited version) in order to detect changes
     and only edit the targeted file if necessary.
 
-    :param name: Filesystem path to the file to be edited
-    :param marker_start: The line content identifying a line as the start of
-        the content block. Note that the whole line containing this marker will
-        be considered, so whitespace or extra content before or after the
-        marker is included in final output
-    :param marker_end: The line content identifying a line as the end of
-        the content block. Note that the whole line containing this marker will
-        be considered, so whitespace or extra content before or after the
-        marker is included in final output.
-        Note: you can use file.accumulated and target this state. All
-        accumulated data dictionaries content will be added as new lines in the
-        content.
-    :param content: The content to be used between the two lines identified by
-        marker_start and marker_stop.
-    :param append_if_not_found: False by default, if markers are not found and
-        set to True then the markers and content will be appended to the file
-    :param prepend_if_not_found: False by default, if markers are not found and
-        set to True then the markers and content will be prepended to the file
-    :param backup: The file extension to use for a backup of the file if any
-        edit is made. Set to ``False`` to skip making a backup.
-    :param dry_run: Don't make any edits to the file
-    :param show_changes: Output a unified diff of the old file and the new
-        file. If ``False`` return a boolean if any changes were made.
+    name
+        Filesystem path to the file to be edited
 
-    :rtype: bool or str
+    marker_start
+        The line content identifying a line as the start of the content block.
+        Note that the whole line containing this marker will be considered, so
+        whitespace or extra content before or after the marker is included in
+        final output
+
+    marker_end
+        The line content identifying a line as the end of the content block.
+        Note that the whole line containing this marker will be considered, so
+        whitespace or extra content before or after the marker is included in
+        final output. Note: you can use file.accumulated and target this state.
+        All accumulated data dictionaries content will be added as new lines in
+        the content
+
+    content
+        The content to be used between the two lines identified by marker_start
+        and marker_stop
+
+    append_if_not_found
+        If markers are not found and set to True then the markers and content
+        will be appended to the file. Default is ``False``
+
+    prepend_if_not_found
+        If markers are not found and set to True then the markers and content
+        will be prepended to the file. Default is ``False``
+
+    backup
+        The file extension to use for a backup of the file if any edit is made.
+        Set this to ``False`` to skip making a backup.
+
+    dry_run
+        Don't make any edits to the file
+
+    show_changes
+        Output a unified diff of the old file and the new file. If ``False``
+        return a boolean if any changes were made
 
     Example of usage with an accumulator and with a variable:
 
@@ -2709,8 +2725,12 @@ def uncomment(name, regex, char='#', backup='.bak'):
         The character to remove in order to uncomment a line
     backup : ``.bak``
         The file will be backed up before edit with this file extension;
-        **WARNING:** each time ``sed``/``comment``/``uncomment`` is called will
-        overwrite this backup
+
+        .. warning::
+
+            This backup will be overwritten each time ``sed`` / ``comment`` /
+            ``uncomment`` is called. Meaning the backup will only be useful
+            after the first invocation.
 
     Usage:
 
@@ -3236,8 +3256,12 @@ def patch(name,
           env=None,
           **kwargs):
     '''
-    Apply a patch to a file. Note: a suitable ``patch`` executable must be
-    available on the minion when using this state function.
+    Apply a patch to a file.
+
+    .. note::
+
+        A suitable ``patch`` executable must be available on the minion when
+        using this state function.
 
     name
         The file to with the patch will be applied.
@@ -4138,10 +4162,10 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
 
 def mod_run_check_cmd(cmd, filename):
     '''
-    Execute the check_cmd logic
-    Return a result dict if:
-    * check_cmd succeeded (check_cmd == 0)
-    else return True
+    Execute the check_cmd logic.
+    
+    Return a result dict if ``check_cmd`` succeeds (check_cmd == 0)
+    otherwise return True
     '''
 
     log.debug('running our check_cmd')
