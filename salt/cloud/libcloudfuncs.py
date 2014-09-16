@@ -12,6 +12,7 @@ import logging
 # pylint: disable=W0611
 # Import libcloud
 try:
+    import libcloud
     from libcloud.compute.types import Provider
     from libcloud.compute.providers import get_driver
     from libcloud.compute.deployment import (
@@ -20,8 +21,13 @@ try:
         SSHKeyDeployment
     )
     HAS_LIBCLOUD = True
+    LIBCLOUD_VERSION_INFO = tuple([
+        int(part) for part in libcloud.__version__.replace('-', '.').split('.')[:3]
+    ])
+
 except ImportError:
     HAS_LIBCLOUD = False
+    LIBCLOUD_VERSION_INFO = (1000,)
 # pylint: enable=W0611
 
 
@@ -68,7 +74,7 @@ def check_libcloud_version(reqver=LIBCLOUD_MINIMAL_VERSION, why=None):
             '\'reqver\' needs to passed as a tuple or list, ie, (0, 14, 0)'
         )
     try:
-        import libcloud
+        import libcloud  # pylint: disable=redefined-outer-name
     except ImportError:
         raise ImportError(
             'salt-cloud requires >= libcloud {0} which is not installed'.format(
@@ -76,14 +82,7 @@ def check_libcloud_version(reqver=LIBCLOUD_MINIMAL_VERSION, why=None):
             )
         )
 
-    ver = libcloud.__version__
-    ver = ver.replace('-', '.')
-    comps = ver.split('.')
-    version = []
-    for number in comps[:3]:
-        version.append(int(number))
-
-    if tuple(version) >= reqver:
+    if LIBCLOUD_VERSION_INFO >= reqver:
         return libcloud.__version__
 
     errormsg = 'Your version of libcloud is {0}. '.format(libcloud.__version__)
