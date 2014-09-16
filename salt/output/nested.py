@@ -26,6 +26,7 @@ Example output::
 # Import python libs
 from numbers import Number
 import re
+import sys
 
 # Import salt libs
 import salt.utils
