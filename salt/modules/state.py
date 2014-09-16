@@ -216,11 +216,11 @@ def template(tem, queue=False, **kwargs):
     st_ = salt.state.HighState(__opts__)
     if not tem.endswith('.sls'):
         tem = '{sls}.sls'.format(sls=tem)
-    high, errors = st_.render_state(tem, None, '', None, local=True)
+    high_state, errors = st_.render_state(tem, None, '', None, local=True)
     if errors:
         __context__['retcode'] = 1
         return errors
-    ret = st_.state.call_high(high)
+    ret = st_.state.call_high(high_state)
     _set_retcode(ret)
     return ret
 
