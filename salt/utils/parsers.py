@@ -1037,7 +1037,7 @@ class OutputOptionsMixIn(object):
         if self.options.output_file is not None and self.options.output_file_append is False:
             if os.path.isfile(self.options.output_file):
                 try:
-                    with utils.fopen(self.option.output_file, 'w') as ofh:
+                    with utils.fopen(self.options.output_file, 'w') as ofh:
                         # Make this a zero length filename instead of removing
                         # it. This way we keep the file permissions.
                         ofh.write('')
@@ -1509,7 +1509,7 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             default=False,
             dest='mktoken',
             action='store_true',
-            help=('Generate and save an authentication token for re-use. The'
+            help=('Generate and save an authentication token for re-use. The '
                   'token is generated and made available for the period '
                   'defined in the Salt Master.')
         )
@@ -1822,6 +1822,15 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             default=False,
             action='store_true',
             help='Answer Yes to all questions presented, defaults to False'
+        )
+
+        self.add_option(
+            '--no-key-rotate',
+            default=False,
+            action='store_true',
+            help=('This option prevents the master from refreshing the key '
+                  'session when keys are deleted or rejected, this lowers '
+                  'the security of the key deletion/rejection operation.')
         )
 
         key_options_group = optparse.OptionGroup(
@@ -2184,7 +2193,7 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         self.add_option(
             '--roster',
             dest='roster',
-            default='',
+            default='flat',
             help=('Define which roster system to use, this defines if a '
                   'database backend, scanner, or custom roster system is '
                   'used. Default is the flat file roster.')
@@ -2232,6 +2241,13 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             default=False,
             action='store_true',
             help=('Turn on command verbosity, display jid')
+        )
+        self.add_option(
+            '-s', '--static',
+            default=False,
+            action='store_true',
+            help=('Return the data from minions as a group after they '
+                  'all return.')
         )
 
         auth_group = optparse.OptionGroup(

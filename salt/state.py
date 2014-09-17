@@ -623,13 +623,16 @@ class State(object):
         Check that unless doesn't return 0, and that onlyif returns a 0.
         '''
         ret = {'result': False}
+        cmd_opts = {}
+        if 'shell' in self.opts['grains']:
+            cmd_opts['shell'] = self.opts['grains'].get('shell')
         if 'onlyif' in low_data:
             if not isinstance(low_data['onlyif'], list):
                 low_data_onlyif = [low_data['onlyif']]
             else:
                 low_data_onlyif = low_data['onlyif']
             for entry in low_data_onlyif:
-                cmd = self.functions['cmd.retcode'](entry, ignore_retcode=True)
+                cmd = self.functions['cmd.retcode'](entry, ignore_retcode=True, **cmd_opts)
                 log.debug('Last command return code: {0}'.format(cmd))
                 if cmd != 0 and ret['result'] is False:
                     ret.update({'comment': 'onlyif execution failed', 'result': True})
@@ -644,7 +647,7 @@ class State(object):
             else:
                 low_data_unless = low_data['unless']
             for entry in low_data_unless:
-                cmd = self.functions['cmd.retcode'](entry, ignore_retcode=True)
+                cmd = self.functions['cmd.retcode'](entry, ignore_retcode=True, **cmd_opts)
                 log.debug('Last command return code: {0}'.format(cmd))
                 if cmd == 0 and ret['result'] is False:
                     ret.update({'comment': 'unless execution succeeded', 'result': True})
@@ -660,8 +663,11 @@ class State(object):
         Alter the way a successfull state run is determined
         '''
         ret = {'result': False}
+        cmd_opts = {}
+        if 'shell' in self.opts['grains']:
+            cmd_opts['shell'] = self.opts['grains'].get('shell')
         for entry in low_data['check_cmd']:
-            cmd = self.functions['cmd.retcode'](entry, ignore_retcode=True)
+            cmd = self.functions['cmd.retcode'](entry, ignore_retcode=True, **cmd_opts)
             log.debug('Last command return code: {0}'.format(cmd))
             if cmd == 0 and ret['result'] is False:
                 ret.update({'comment': 'check_cmd determined the state succeeded', 'result': True})
@@ -708,7 +714,10 @@ class State(object):
             # In case a package has been installed into the current python
             # process 'site-packages', the 'site' module needs to be reloaded in
             # order for the newly installed package to be importable.
-            reload(site)
+            try:
+                reload(site)
+            except RuntimeError:
+                log.error('Error encountered during module reload. Modules were not reloaded.')
         self.load_modules()
         if not self.opts.get('local', False) and self.opts.get('multiprocessing', True):
             self.functions['saltutil.refresh_modules']()
@@ -2340,14 +2349,22 @@ class BaseHighState(object):
             self.state.opts['pillar'] = self.state._gather_pillar()
         self.state.module_refresh()
 
-    def render_state(self, sls, saltenv, mods, matches):
+    def render_state(self, sls, saltenv, mods, matches, local=False):
         '''
         Render a state file and retrieve all of the include states
         '''
         err = ''
         errors = []
-        state_data = self.client.get_state(sls, saltenv)
-        fn_ = state_data.get('dest', False)
+        if not local:
+            state_data = self.client.get_state(sls, saltenv)
+            fn_ = state_data.get('dest', False)
+        else:
+            fn_ = sls
+            if not os.path.isfile(fn_):
+                errors.append(
+                    'Specified SLS {0} on local filesystem cannot '
+                    'be found.'.format(sls)
+                )
         if not fn_:
             errors.append(
                 'Specified SLS {0} in saltenv {1} is not '
@@ -2375,7 +2392,10 @@ class BaseHighState(object):
                 exc_info_on_loglevel=logging.DEBUG
             )
             errors.append('{0}\n{1}'.format(msg, traceback.format_exc()))
-        mods.add('{0}:{1}'.format(saltenv, sls))
+        try:
+            mods.add('{0}:{1}'.format(saltenv, sls))
+        except AttributeError:
+            pass
         if state:
             if not isinstance(state, dict):
                 errors.append(

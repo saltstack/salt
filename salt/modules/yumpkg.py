@@ -506,6 +506,7 @@ def check_db(*names, **kwargs):
         salt '*' pkg.check_db <package1> <package2> <package3> fromrepo=epel-testing
         salt '*' pkg.check_db <package1> <package2> <package3> disableexcludes=main
     '''
+    normalize = kwargs.pop('normalize') if kwargs.get('normalize') else False
     repo_arg = _get_repo_options(**kwargs)
     exclude_arg = _get_excludes_option(**kwargs)
     repoquery_base = \
@@ -525,7 +526,10 @@ def check_db(*names, **kwargs):
                 name, arch = line.split('_|-')
             except ValueError:
                 continue
-            avail.append(normalize_name('.'.join((name, arch))))
+            if normalize:
+                avail.append(normalize_name('.'.join((name, arch))))
+            else:
+                avail.append('.'.join((name, arch)))
         __context__['pkg._avail'] = avail
 
     ret = {}
@@ -689,6 +693,7 @@ def install(name=None,
             pkgs=None,
             sources=None,
             reinstall=False,
+            normalize=True,
             **kwargs):
     '''
     Install the passed package(s), add refresh=True to clean the yum database
@@ -782,6 +787,20 @@ def install(name=None,
 
             salt '*' pkg.install sources='[{"foo": "salt://foo.rpm"}, {"bar": "salt://bar.rpm"}]'
 
+    normalize
+        Normalize the package name by removing the architecture.  Default is True.
+        This is useful for poorly created packages which might include the
+        architecture as an actual part of the name such as kernel modules
+        which match a specific kernel version.
+
+        .. versionadded:: 2014.7.0
+
+    Example:
+
+    .. code-block:: bash
+
+        salt -G role:nsd pkg.install gpfs.gplbin-2.6.32-279.31.1.el6.x86_64 normalize=False
+
 
     Returns a dict containing the new package names and versions::
 
@@ -794,7 +813,7 @@ def install(name=None,
 
     try:
         pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
-            name, pkgs, sources, **kwargs
+            name, pkgs, sources, normalize=normalize, **kwargs
         )
     except MinionError as exc:
         raise CommandExecutionError(exc)
@@ -1680,8 +1699,13 @@ def _parse_repo_file(filename):
 
             # These are the actual configuration lines that matter
             if '=' in line:
-                comps = line.strip().split('=')
-                repos[repo][comps[0].strip()] = '='.join(comps[1:])
+                try:
+                    comps = line.strip().split('=')
+                    repos[repo][comps[0].strip()] = '='.join(comps[1:])
+                except KeyError:
+                    log.error('Failed to parse line in {0}, '
+                              'offending line was "{1}"'.format(filename,
+                                                                line.rstrip()))
 
     return (header, repos)
 

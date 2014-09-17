@@ -15,6 +15,7 @@ import datetime
 import tempfile
 
 # Import salt libs
+import salt.config
 import salt.utils
 import salt.state
 import salt.payload
@@ -26,6 +27,7 @@ __proxyenabled__ = ['*']
 
 __outputter__ = {
     'sls': 'highstate',
+    'pkg': 'highstate',
     'top': 'highstate',
     'single': 'highstate',
     'highstate': 'highstate',
@@ -138,6 +140,16 @@ def _check_queue(queue, kwargs):
             return conflict
 
 
+def _get_opts(localconfig=None):
+    '''
+    Return a copy of the opts for use, optionally load a local config on top
+    '''
+    opts = copy.deepcopy(__opts__)
+    if localconfig:
+        opts = salt.config.minion_config(localconfig, defaults=opts)
+    return opts
+
+
 def low(data, queue=False, **kwargs):
     '''
     Execute a single low data call
@@ -187,7 +199,10 @@ def high(data, queue=False, **kwargs):
 
 def template(tem, queue=False, **kwargs):
     '''
-    Execute the information stored in a template file on the minion
+    Execute the information stored in a template file on the minion.
+
+    This function does not ask a master for a SLS file to render but
+    instead directly processes the file at the provided path on the minion.
 
     CLI Example:
 
@@ -198,8 +213,14 @@ def template(tem, queue=False, **kwargs):
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
-    st_ = salt.state.State(__opts__)
-    ret = st_.call_template(tem)
+    st_ = salt.state.HighState(__opts__)
+    if not tem.endswith('.sls'):
+        tem = '{sls}.sls'.format(sls=tem)
+    high_state, errors = st_.render_state(tem, None, '', None, local=True)
+    if errors:
+        __context__['retcode'] = 1
+        return errors
+    ret = st_.state.call_high(high_state)
     _set_retcode(ret)
     return ret
 
@@ -223,7 +244,9 @@ def template_str(tem, queue=False, **kwargs):
     return ret
 
 
-def highstate(test=None, queue=False, **kwargs):
+def highstate(test=None,
+              queue=False,
+              **kwargs):
     '''
     Retrieve the state data from the salt master for this minion and execute it
 
@@ -241,6 +264,11 @@ def highstate(test=None, queue=False, **kwargs):
 
         This option starts a new thread for each queued state run so use this
         option sparingly.
+    localconfig:
+        Instead of using running minion opts, load ``localconfig`` and merge that
+        with the running minion opts. This functionality is intended for using
+        "roots" of salt directories (with their own minion config, pillars,
+        file_roots) to run highstate out of.
 
     CLI Example:
 
@@ -258,7 +286,8 @@ def highstate(test=None, queue=False, **kwargs):
     if conflict is not None:
         return conflict
     orig_test = __opts__.get('test', None)
-    opts = copy.deepcopy(__opts__)
+
+    opts = _get_opts(kwargs.get('localconfig'))
 
     if test is None:
         if salt.utils.test_mode(test=test, **kwargs):
@@ -300,22 +329,7 @@ def highstate(test=None, queue=False, **kwargs):
     if __salt__['config.option']('state_data', '') == 'terse' or \
             kwargs.get('terse'):
         ret = _filter_running(ret)
-    serial = salt.payload.Serial(__opts__)
-    cache_file = os.path.join(__opts__['cachedir'], 'highstate.p')
 
-    # Not 100% if this should be fatal or not,
-    # but I'm guessing it likely should not be.
-    cumask = os.umask(077)
-    try:
-        if salt.utils.is_windows():
-            # Make sure cache file isn't read-only
-            __salt__['cmd.run']('attrib -R "{0}"'.format(cache_file))
-        with salt.utils.fopen(cache_file, 'w+b') as fp_:
-            serial.dump(ret, fp_)
-    except (IOError, OSError):
-        msg = 'Unable to write to "state.highstate" cache file {0}'
-        log.error(msg.format(cache_file))
-    os.umask(cumask)
     _set_retcode(ret)
     # Work around Windows multiprocessing bug, set __opts__['test'] back to
     # value from before this function was run.
@@ -356,6 +370,11 @@ def sls(mods,
         WARNING: This flag is potentially dangerous. It is designed
         for use when multiple state runs can safely be run at the same
         Do not use this flag for performance optimization.
+    localconfig:
+        Instead of using running minion opts, load ``localconfig`` and merge that
+        with the running minion opts. This functionality is intended for using
+        "roots" of salt directories (with their own minion config, pillars,
+        file_roots) to run highstate out of.
 
     CLI Example:
 
@@ -389,7 +408,7 @@ def sls(mods,
         err += __pillar__['_errors']
         return err
     orig_test = __opts__.get('test', None)
-    opts = copy.deepcopy(__opts__)
+    opts = _get_opts(kwargs.get('localconfig'))
 
     if salt.utils.test_mode(test=test, **kwargs):
         opts['test'] = True
@@ -471,7 +490,10 @@ def sls(mods,
     return ret
 
 
-def top(topfn, test=None, queue=False, **kwargs):
+def top(topfn,
+        test=None,
+        queue=False,
+        **kwargs):
     '''
     Execute a specific top file instead of the default
 
@@ -492,7 +514,7 @@ def top(topfn, test=None, queue=False, **kwargs):
         err += __pillar__['_errors']
         return err
     orig_test = __opts__.get('test', None)
-    opts = copy.deepcopy(__opts__)
+    opts = _get_opts(kwargs.get('localconfig'))
     if salt.utils.test_mode(test=test, **kwargs):
         opts['test'] = True
     else:
@@ -599,7 +621,7 @@ def sls_id(
     if conflict is not None:
         return conflict
     orig_test = __opts__.get('test', None)
-    opts = copy.deepcopy(__opts__)
+    opts = _get_opts(kwargs.get('localconfig'))
     if salt.utils.test_mode(test=test, **kwargs):
         opts['test'] = True
     else:
@@ -655,7 +677,7 @@ def show_low_sls(mods,
     if conflict is not None:
         return conflict
     orig_test = __opts__.get('test', None)
-    opts = copy.deepcopy(__opts__)
+    opts = _get_opts(kwargs.get('localconfig'))
     if salt.utils.test_mode(test=test, **kwargs):
         opts['test'] = True
     else:
@@ -708,7 +730,7 @@ def show_sls(mods, saltenv='base', test=None, queue=False, env=None, **kwargs):
     if conflict is not None:
         return conflict
     orig_test = __opts__.get('test', None)
-    opts = copy.deepcopy(__opts__)
+    opts = _get_opts(kwargs.get('localconfig'))
 
     if salt.utils.test_mode(test=test, **kwargs):
         opts['test'] = True
@@ -792,7 +814,7 @@ def single(fun, name, test=None, queue=False, **kwargs):
                    '__id__': name,
                    'name': name})
     orig_test = __opts__.get('test', None)
-    opts = copy.deepcopy(__opts__)
+    opts = _get_opts(kwargs.get('localconfig'))
     if salt.utils.test_mode(test=test, **kwargs):
         opts['test'] = True
     else:
@@ -882,7 +904,7 @@ def pkg(pkg_path, pkg_sum, hash_type, test=False, **kwargs):
             pillar = json.load(fp_)
     else:
         pillar = None
-    popts = copy.deepcopy(__opts__)
+    popts = _get_opts(kwargs.get('localconfig'))
     popts['fileclient'] = 'local'
     popts['file_roots'] = {}
     if salt.utils.test_mode(test=test, **kwargs):

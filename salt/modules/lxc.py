@@ -117,10 +117,10 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     gateway
         network gateway for the container
     additional_ips
-        additionnal ips which will be wired on the main bridge (br0)
+        additional ips which will be wired on the main bridge (br0)
         which is connected to internet.
         Be aware that you may use manual virtual mac addresses
-        providen by you provider (online, ovh, etc).
+        provided by you provider (online, ovh, etc).
         This is a list of mappings ``{ip: '', mac: '',netmask:''}``
         Set gateway to ``None`` and an interface with a gateway
         to escape from another interface that's eth0.
@@ -316,7 +316,7 @@ def _lxc_profile(profile):
 
     Profiles can be defined in the config or pillar, e.g.:
 
-    Profile can be a string to be retrieven in config
+    Profile can be a string to be retrieved in config
     or a mapping.
 
     If is is a mapping and it contains a name, the name will
@@ -595,21 +595,14 @@ class _LXCConfig(object):
                 self._filter_data(i)
 
     def as_string(self):
-        chunks = []
-
-        def _process(item):
-            sep = ' = '
-            if not item[0]:
-                sep = ''
-            chunks.append('{0[0]}{1}{0[1]}'.format(item, sep))
-        map(_process, self.data)
+        chunks = ('{0[0]}{1}{0[1]}'.format(item, (' = ' if item[0] else '')) for item in self.data)
         return '\n'.join(chunks) + '\n'
 
     def write(self):
         if self.path:
             content = self.as_string()
             # 2 step rendering to be sure not to open/wipe the config
-            # before as_string suceeds.
+            # before as_string succeeds.
             with open(self.path, 'w') as fic:
                 fic.write(content)
                 fic.flush()
@@ -992,7 +985,7 @@ def init(name,
             changes['350_dns'] = 'DNS updated\n'
             if not cret['result']:
                 ret['result'] = False
-                changes['350_dns'] = 'DNS provisionning error\n'
+                changes['350_dns'] = 'DNS provisioning error\n'
             try:
                 lxcret = int(
                     __salt__['lxc.run_cmd'](
@@ -1992,7 +1985,9 @@ def bootstrap(name, config=None, approve_key=True,
     else:
         needs_install = True
     seeded = not __salt__['lxc.run_cmd'](
-        name, 'test -e \"{0}\"'.format(SEED_MARKER), stdout=False, stderr=False)
+        name,
+        'test -e \"{0}\"'.format(SEED_MARKER),
+        stdout=False, stderr=False)
     tmp = tempfile.mkdtemp()
     if seeded and not unconditional_install:
         res = True
@@ -2008,7 +2003,19 @@ def bootstrap(name, config=None, approve_key=True,
                 run_cmd(name, 'install -m 0700 -d {0}'.format(configdir))
                 bs_ = __salt__['config.gather_bootstrap_script'](
                     bootstrap=bootstrap_url)
-                cp(name, bs_, '/tmp/bootstrap.sh')
+                dest_dir = os.path.join('/tmp', rstr)
+                for cmd in [
+                    'mkdir -p {0}'.format(dest_dir),
+                    'chmod 700 {0}'.format(dest_dir),
+                ]:
+                    if run_cmd(name, cmd, stdout=True):
+                        log.error(
+                            ('tmpdir {0} creation'
+                             ' failed ({1}').format(dest_dir, cmd))
+                        return False
+                cp(name,
+                   bs_,
+                   '{0}/bootstrap.sh'.format(dest_dir))
                 cp(name, cfg_files['config'],
                    os.path.join(configdir, 'minion'))
                 cp(name, cfg_files['privkey'],
@@ -2017,8 +2024,10 @@ def bootstrap(name, config=None, approve_key=True,
                    os.path.join(configdir, 'minion.pub'))
                 bootstrap_args = bootstrap_args.format(configdir)
                 cmd = ('PATH=$PATH:/bin:/sbin:/usr/sbin'
-                       ' {0} /tmp/bootstrap.sh {1}').format(
-                           bootstrap_shell, bootstrap_args)
+                       ' {0} {2}/bootstrap.sh {1}').format(
+                           bootstrap_shell,
+                           bootstrap_args,
+                           dest_dir)
                 # log ASAP the forged bootstrap command which can be wrapped
                 # out of the output in case of unexpected problem
                 log.info('Running {0} in lxc {1}'.format(cmd, name))
@@ -2041,7 +2050,7 @@ def bootstrap(name, config=None, approve_key=True,
             __salt__['lxc.stop'](name)
         elif prior_state == 'frozen':
             __salt__['lxc.freeze'](name)
-        # mark seeded upon sucessful install
+        # mark seeded upon successful install
         if res:
             __salt__['lxc.run_cmd'](
                 name, 'sh -c \'touch "{0}";\''.format(SEED_MARKER))
@@ -2090,7 +2099,7 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
     use_vt
         use saltstack utils.vt to stream output to console
     keep_env
-        A list of env vars to preserve. May be passed as commma-delimited list.
+        A list of env vars to preserve. May be passed as comma-delimited list.
         Defaults to http_proxy,https_proxy.
 
     .. note::

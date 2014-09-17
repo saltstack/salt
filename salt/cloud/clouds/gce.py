@@ -136,6 +136,7 @@ except ImportError:
     HAS_LIBCLOUD = False
 
 # Import python libs
+import re
 import copy
 import pprint
 import logging
@@ -167,6 +168,8 @@ destroy = namespaced_function(destroy, globals())
 list_nodes = namespaced_function(list_nodes, globals())
 list_nodes_full = namespaced_function(list_nodes_full, globals())
 list_nodes_select = namespaced_function(list_nodes_select, globals())
+
+GCE_VM_NAME_REGEX = re.compile(r'(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?)')
 
 
 # Only load in this module if the GCE configurations are in place
@@ -1854,6 +1857,13 @@ def create(vm_=None, call=None):
             'You cannot create an instance with -a or -f.'
         )
 
+    if not GCE_VM_NAME_REGEX.match(vm_['name']):
+        raise SaltCloudSystemExit(
+            'The allowed VM names must match the following regular expression: {0}'.format(
+                GCE_VM_NAME_REGEX.pattern
+            )
+        )
+
     conn = get_conn()
 
     kwargs = {
@@ -1869,8 +1879,24 @@ def create(vm_=None, call=None):
             )
     }
 
+    if LIBCLOUD_VERSION_INFO > (0, 15, 1):
+        # This only exists in current trunk of libcloud and should be in next
+        # release
+        kwargs.update({
+            'ex_disk_type': config.get_cloud_config_value(
+                'ex_disk_type', vm_, __opts__, default='pd-standard'),
+            'ex_disk_auto_delete': config.get_cloud_config_value(
+                'ex_disk_auto_delete', vm_, __opts__, default=True)
+        })
+        if kwargs.get('ex_disk_type') not in ('pd-standard', 'pd-ssd'):
+            raise SaltCloudSystemExit(
+                'The value of \'ex_disk_type\' needs to be one of: '
+                '\'pd-standard\', \'pd-ssd\''
+            )
+
     if 'external_ip' in kwargs and kwargs['external_ip'] == "None":
         kwargs['external_ip'] = None
+
     log.info('Creating GCE instance {0} in {1}'.format(vm_['name'],
         kwargs['location'].name)
     )
@@ -1901,7 +1927,11 @@ def create(vm_=None, call=None):
         )
         return False
 
-    node_dict = show_instance(node_data['name'], 'action')
+    try:
+        node_dict = show_instance(node_data['name'], 'action')
+    except TypeError:
+        # node_data is a libcloud Node which is unsubscriptable
+        node_dict = show_instance(node_data.name, 'action')
 
     if config.get_cloud_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)

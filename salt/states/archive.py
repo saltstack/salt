@@ -54,6 +54,7 @@ def extracted(name,
             - source: https://github.com/downloads/Graylog2/graylog2-server/graylog2-server-0.9.6p1.tar.gz
             - source_hash: md5=499ae16dcae71eeb7c3a30c75ea7a1a6
             - archive_format: tar
+            - tar_options: v
             - if_missing: /opt/graylog2-server-0.9.6p1/
 
     name
@@ -75,14 +76,16 @@ def extracted(name,
         previously extracted.
 
     tar_options
-        Only used for tar format, it need to be the tar argument specific to
-        this archive, such as 'J' for LZMA.
+        Required if used with ``archive_format: tar``, otherwise optional.
+        It needs to be the tar argument specific to the archive being extracted,
+        such as 'J' for LZMA or 'v' to verbosely list files processed.
         Using this option means that the tar executable on the target will
         be used, which is less platform independent.
-        Main operators like -x, --extract, --get, -c, etc. and -f/--file
+        Main operators like -x, --extract, --get, -c and -f/--file
         **should not be used** here.
-        If this option is not set, then the Python tarfile module is used.
-        The tarfile module supports gzip and bz2 in Python 2.
+        If ``archive_format`` is ``zip`` or ``rar`` and this option is not set,
+        then the Python tarfile module is used. The tarfile module supports gzip
+        and bz2 in Python 2.
 
     keep
         Keep the archive in the minion's cache

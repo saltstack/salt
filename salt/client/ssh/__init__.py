@@ -451,22 +451,37 @@ class SSH(object):
             print(msg)
             print('-' * len(msg) + '\n')
             print('')
+        sret = {}
+        outputter = self.opts.get('output', 'nested')
         for ret in self.handle_ssh():
             host = ret.keys()[0]
             self.cache_job(jid, host, ret[host])
             ret = self.key_deploy(host, ret)
-            outputter = ret[host].get('out', self.opts.get('output', 'nested'))
-            p_data = {host: ret[host].get('return', {})}
-            salt.output.display_output(
-                    p_data,
-                    outputter,
-                    self.opts)
+            if not isinstance(ret[host], dict):
+                p_data = {host: ret[host]}
+            if 'return' not in ret[host]:
+                p_data = ret
+            else:
+                outputter = ret[host].get('out', self.opts.get('output', 'nested'))
+                p_data = {host: ret[host].get('return', {})}
+            if self.opts.get('static'):
+                sret.update(p_data)
+            else:
+                salt.output.display_output(
+                        p_data,
+                        outputter,
+                        self.opts)
             if self.event:
                 self.event.fire_event(
                         ret,
                         salt.utils.event.tagify(
                             [jid, 'ret', host],
                             'job'))
+        if self.opts.get('static'):
+            salt.output.display_output(
+                    sret,
+                    outputter,
+                    self.opts)
 
 
 class Single(object):
@@ -525,7 +540,7 @@ class Single(object):
         self.target.update(args)
         self.serial = salt.payload.Serial(opts)
         self.wfuncs = salt.loader.ssh_wrapper(opts)
-        self.mods = mods
+        self.mods = mods if mods else {}
 
     def __arg_comps(self):
         '''
@@ -689,8 +704,7 @@ class Single(object):
         # Mimic the json data-structure that "salt-call --local" will
         # emit (as seen in ssh_py_shim.py)
         if 'local' in result:
-            result['local']['return'] = result['local']
-            ret = json.dumps(result)
+            ret = json.dumps({'local': result['local']})
         else:
             ret = json.dumps({'local': {'return': result}})
         return ret
@@ -1031,6 +1045,8 @@ def mod_data(opts):
                 pl_dir = os.path.join(path, '_{0}'.format(ref))
                 if os.path.isdir(pl_dir):
                     for fn_ in os.listdir(pl_dir):
+                        if not os.path.isfile(fn_):
+                            continue
                         mod_path = os.path.join(pl_dir, fn_)
                         with open(mod_path) as fp_:
                             code_str = fp_.read().encode('base64')

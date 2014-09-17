@@ -15,6 +15,7 @@ import salt.crypt
 import salt.utils
 import salt.config
 import salt.syspaths
+import uuid
 
 
 # Set up logging
@@ -31,6 +32,30 @@ def _file_or_content(file_):
         with open(file_) as fic:
             return fic.read()
     return file_
+
+
+def prep_bootstrap(mpt):
+    '''
+    Update and get the random script to a random place
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' seed.prep_bootstrap /tmp
+
+    '''
+    # Verify that the boostrap script is downloaded
+    bs_ = __salt__['config.gather_bootstrap_script']()
+    fpd_ = os.path.join(mpt, 'tmp', "{0}".format(
+        uuid.uuid4()))
+    if not os.path.exists(fpd_):
+        os.makedirs(fpd_)
+    os.chmod(fpd_, 0700)
+    fp_ = os.path.join(fpd_, os.path.basename(bs_))
+    # Copy script into tmp
+    shutil.copy(bs_, fp_)
+    return fp_
 
 
 def _mount(path, ftype):
@@ -203,9 +228,11 @@ def _install(mpt):
     '''
 
     _check_resolv(mpt)
+    boot_ = (prep_bootstrap(mpt)
+             or salt.syspaths.BOOTSTRAP)
     # Exec the chroot command
     cmd = 'if type salt-minion; then exit 0; '
-    cmd += 'else sh {0} -c /tmp; fi'.format(salt.syspaths.BOOTSTRAP)
+    cmd += 'else sh {0} -c /tmp; fi'.format(boot_)
     return not __salt__['cmd.run_chroot'](mpt, cmd)['retcode']
 
 

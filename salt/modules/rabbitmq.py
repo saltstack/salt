@@ -140,7 +140,7 @@ def add_user(name, password=None, runas=None):
     if password is None:
         # Generate a random, temporary password. RabbitMQ requires one.
         clear_pw = True
-        password = ''.join(random.choice(
+        password = ''.join(random.SystemRandom().choice(
             string.ascii_uppercase + string.digits) for x in range(15))
 
     res = __salt__['cmd.run'](

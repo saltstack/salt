@@ -9,6 +9,7 @@ import imp
 import sys
 import salt
 import logging
+import inspect
 import tempfile
 import time
 
@@ -258,7 +259,7 @@ def states(opts, functions, whitelist=None):
         import salt.config
         import salt.loader
 
-        __opts__ salt.config.minion_config('/etc/salt/minion')
+        __opts__ = salt.config.minion_config('/etc/salt/minion')
         statemods = salt.loader.states(__opts__, None)
     '''
     load = _create_loader(opts, 'states', 'states')
@@ -343,7 +344,7 @@ def grains(opts, force_refresh=False):
         import salt.config
         import salt.loader
 
-        __opts__ salt.config.minion_config('/etc/salt/minion')
+        __opts__ = salt.config.minion_config('/etc/salt/minion')
         __grains__ = salt.loader.grains(__opts__)
         print __grains__['id']
     '''
@@ -442,7 +443,7 @@ def clouds(opts):
 
     functions = load.gen_functions(pack)
     for funcname in LIBCLOUD_FUNCS_NOT_SUPPORTED:
-        log.debug(
+        log.trace(
             '{0!r} has been marked as not supported. Removing from the list '
             'of supported cloud functions'.format(
                 funcname
@@ -656,12 +657,12 @@ class Loader(object):
                 setattr(mod, pack['name'], pack['value'])
 
         # Call a module's initialization method if it exists
-        if hasattr(mod, '__init__'):
-            if callable(mod.__init__):
-                try:
-                    mod.__init__(self.opts)
-                except TypeError:
-                    pass
+        module_init = getattr(mod, '__init__', None)
+        if inspect.isfunction(module_init):
+            try:
+                module_init(self.opts)
+            except TypeError:
+                pass
         funcs = {}
         module_name = mod.__name__[mod.__name__.rindex('.') + 1:]
         if getattr(mod, '__load__', False) is not False:
@@ -675,23 +676,21 @@ class Loader(object):
             if attr.startswith('_'):
                 # private functions are skipped
                 continue
-            if callable(getattr(mod, attr)):
-                func = getattr(mod, attr)
-                if hasattr(func, '__bases__'):
-                    if 'BaseException' in func.__bases__:
-                        # the callable object is an exception, don't load it
-                        continue
+            func = getattr(mod, attr)
+            if not inspect.isfunction(func):
+                # Not a function!? Skip it!!!
+                continue
 
-                # Let's get the function name.
-                # If the module has the __func_alias__ attribute, it must be a
-                # dictionary mapping in the form of(key -> value):
-                #   <real-func-name> -> <desired-func-name>
-                #
-                # It default's of course to the found callable attribute name
-                # if no alias is defined.
-                funcname = getattr(mod, '__func_alias__', {}).get(attr, attr)
-                funcs['{0}.{1}'.format(module_name, funcname)] = func
-                self._apply_outputter(func, mod)
+            # Let's get the function name.
+            # If the module has the __func_alias__ attribute, it must be a
+            # dictionary mapping in the form of(key -> value):
+            #   <real-func-name> -> <desired-func-name>
+            #
+            # It default's of course to the found callable attribute name
+            # if no alias is defined.
+            funcname = getattr(mod, '__func_alias__', {}).get(attr, attr)
+            funcs['{0}.{1}'.format(module_name, funcname)] = func
+            self._apply_outputter(func, mod)
         if not hasattr(mod, '__salt__'):
             mod.__salt__ = functions
         try:
@@ -747,12 +746,12 @@ class Loader(object):
                     setattr(mod, pack['name'], pack['value'])
 
             # Call a module's initialization method if it exists
-            if hasattr(mod, '__init__'):
-                if callable(mod.__init__):
-                    try:
-                        mod.__init__(self.opts)
-                    except TypeError:
-                        pass
+            module_init = getattr(mod, '__init__', None)
+            if inspect.isfunction(module_init):
+                try:
+                    module_init(self.opts)
+                except TypeError:
+                    pass
 
             # Trim the full pathname to just the module
             # this will be the short name that other salt modules and state
@@ -960,42 +959,38 @@ class Loader(object):
                 # log messages omitted for obviousness
                 continue
 
-            if callable(getattr(mod, attr)):
-                # check to make sure this is callable
-                func = getattr(mod, attr)
-                if isinstance(func, type):
-                    # skip callables that might be exceptions
-                    if any(['Error' in func.__name__,
-                            'Exception' in func.__name__]):
-                        continue
+            func = getattr(mod, attr)
+            if not inspect.isfunction(func):
+                # Not a function!? Skip it!!!
+                continue
 
-                # now that callable passes all the checks, add it to the
-                # library of available functions of this type
+            # Once confirmed that "func" is a function, add it to the
+            # library of available functions
 
-                # Let's get the function name.
-                # If the module has the __func_alias__ attribute, it must
-                # be a dictionary mapping in the form of(key -> value):
-                #   <real-func-name> -> <desired-func-name>
-                #
-                # It default's of course to the found callable attribute
-                # name if no alias is defined.
-                funcname = getattr(mod, '__func_alias__', {}).get(
-                    attr, attr
-                )
+            # Let's get the function name.
+            # If the module has the __func_alias__ attribute, it must
+            # be a dictionary mapping in the form of(key -> value):
+            #   <real-func-name> -> <desired-func-name>
+            #
+            # It default's of course to the found callable attribute
+            # name if no alias is defined.
+            funcname = getattr(mod, '__func_alias__', {}).get(
+                attr, attr
+            )
 
-                # functions are namespaced with their module name, unless
-                # the module_name is None (this is a special case added for
-                # pyobjects), in which case just the function name is used
-                if module_name is None:
-                    module_func_name = funcname
-                else:
-                    module_func_name = '{0}.{1}'.format(module_name, funcname)
+            # functions are namespaced with their module name, unless
+            # the module_name is None (this is a special case added for
+            # pyobjects), in which case just the function name is used
+            if module_name is None:
+                module_func_name = funcname
+            else:
+                module_func_name = '{0}.{1}'.format(module_name, funcname)
 
-                funcs[module_func_name] = func
-                log.trace(
-                    'Added {0} to {1}'.format(module_func_name, self.tag)
-                )
-                self._apply_outputter(func, mod)
+            funcs[module_func_name] = func
+            log.trace(
+                'Added {0} to {1}'.format(module_func_name, self.tag)
+            )
+            self._apply_outputter(func, mod)
         return funcs
 
     def process_virtual(self, mod, module_name):
@@ -1025,7 +1020,7 @@ class Loader(object):
         # if they are not intended to run on the given platform or are missing
         # dependencies.
         try:
-            if hasattr(mod, '__virtual__') and callable(mod.__virtual__):
+            if hasattr(mod, '__virtual__') and inspect.isfunction(mod.__virtual__):
                 if self.opts.get('virtual_timer', False):
                     start = time.time()
                     virtual = mod.__virtual__()
@@ -1035,6 +1030,8 @@ class Loader(object):
                     log.warning(msg)
                 else:
                     virtual = mod.__virtual__()
+                # Get the module's virtual name
+                virtualname = getattr(mod, '__virtualname__', virtual)
                 if not virtual:
                     # if __virtual__() evaluates to False then the module
                     # wasn't meant for this platform or it's not supposed to
@@ -1093,9 +1090,6 @@ class Loader(object):
                             )
                         )
 
-                    # Get the module's virtual name
-                    virtualname = getattr(mod, '__virtualname__', virtual)
-
                     if virtualname != virtual:
                         # The __virtualname__ attribute does not match what's
                         # being returned by the __virtual__() function. This
@@ -1112,6 +1106,11 @@ class Loader(object):
                         )
 
                     module_name = virtualname
+
+                # If the __virtual__ function returns True and __virtualname__ is set then use it
+                elif virtual is True and virtualname != module_name:
+                    if virtualname is not True:
+                        module_name = virtualname
 
         except KeyError:
             # Key errors come out of the virtual function when passing
