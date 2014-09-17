@@ -282,6 +282,14 @@ def highstate(test=None,
 
         salt '*' state.highstate pillar="{foo: 'Foo!', bar: 'Bar!'}"
     '''
+    if _disabled(['highstate']):
+        ret = {
+            'name': 'Salt highstate run is disabled. To re-enable, run state.enable highstate',
+            'result': 'False',
+            'comment': 'Disabled'
+        }
+        return ret
+
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
@@ -402,6 +410,16 @@ def sls(mods,
         if conflict:
             __context__['retcode'] = 1
             return conflict
+
+    if isinstance(mods, list):
+        disabled = _disabled(mods)
+    else:
+        disabled = _disabled([mods])
+
+    if disabled:
+        __context__['retcode'] = 1
+        return disabled
+
     if not _check_pillar(kwargs):
         __context__['retcode'] = 5
         err = ['Pillar failed to render with the following messages:']
@@ -443,6 +461,15 @@ def sls(mods,
     st_.push_active()
     try:
         high_, errors = st_.render_highstate({saltenv: mods})
+        lowstate_ = show_lowstate()
+        lows_ = []
+        for item in lowstate_:
+            lows_.append('{0}.{1}'.format(item['state'], item['fun']))
+
+        disabled = _disabled(lows_)
+        if disabled:
+            __context__['retcode'] = 1
+            return disabled
 
         if errors:
             __context__['retcode'] = 1
@@ -925,4 +952,159 @@ def pkg(pkg_path, pkg_sum, hash_type, test=False, **kwargs):
         shutil.rmtree(root)
     except (IOError, OSError):
         pass
+    return ret
+
+
+def disable(states):
+    '''
+    Disable state runs.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.disable highstate
+
+        salt '*' state.disable highstate,test.succeed_without_changes
+
+    .. note::
+        To disable a state file from running provide the same name that would
+        be passed in a state.sls call.
+
+        salt '*' state.disable bind.config
+
+    '''
+    ret = {
+        'res': True,
+        'msg': ''
+    }
+
+    if isinstance(states, string_types):
+        states = states.split(',')
+
+    msg = []
+    _disabled = __salt__['grains.get']('state_runs_disabled')
+    if not isinstance(_disabled, list):
+        _disabled = []
+
+    _changed = False
+    for _state in states:
+        if _state in _disabled:
+            msg.append('Info: {0} state already disabled.'.format(_state))
+        else:
+            msg.append('Info: {0} state disabled.'.format(_state))
+            _disabled.append(_state)
+            _changed = True
+
+    if _changed:
+        __salt__['grains.setval']('state_runs_disabled', _disabled)
+
+    ret['msg'] = '\n'.join(msg)
+
+    # refresh the grains
+    __salt__['saltutil.refresh_modules']()
+
+    return ret
+
+
+def enable(states):
+    '''
+    Enable state function or sls run
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.enable highstate
+
+        salt '*' state.enable test.succeed_without_changes
+
+    .. note::
+        To enable a state file from running provide the same name that would
+        be passed in a state.sls call.
+
+        salt '*' state.disable bind.config
+
+    '''
+    ret = {
+        'res': True,
+        'msg': ''
+    }
+
+    if isinstance(states, string_types):
+        states = states.split(',')
+    log.debug("states {0}".format(states))
+
+    msg = []
+    _disabled = __salt__['grains.get']('state_runs_disabled')
+    if not isinstance(_disabled, list):
+        _disabled = []
+
+    _changed = False
+    for _state in states:
+        log.debug("_state {0}".format(_state))
+        if _state not in _disabled:
+            msg.append('Info: {0} state already enabled.'.format(_state))
+        else:
+            msg.append('Info: {0} state enabled.'.format(_state))
+            _disabled.remove(_state)
+            _changed = True
+
+    if _changed:
+        __salt__['grains.setval']('state_runs_disabled', _disabled)
+
+    ret['msg'] = '\n'.join(msg)
+
+    # refresh the grains
+    __salt__['saltutil.refresh_modules']()
+
+    return ret
+
+
+def list_disabled():
+    '''
+    List the states which are currently disabled
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.list_disabled
+    '''
+    return __salt__['grains.get']('state_runs_disabled')
+
+
+def _disabled(funs):
+    '''
+    Return messages for disabled states
+    that match state functions in funs.
+    '''
+    ret = []
+    _disabled = __salt__['grains.get']('state_runs_disabled')
+    for state in funs:
+        for _state in _disabled:
+            if '.*' in _state:
+                target_state = _state.split('.')[0]
+                target_state = target_state + '.' if not target_state.endswith('.') else target_state
+                if state.startswith(target_state):
+                    err = (
+                        'The state or state function "{0}" is currently disabled by "{1}", '
+                        'to re-enable, run state.enable {1}.'
+                    ).format(
+                        state,
+                        _state,
+                    )
+                    ret.append(err)
+                    continue
+            else:
+                log.debug('state {0} _state {1}'.format(state, _state))
+                if _state == state:
+                    err = (
+                        'The state or state function "{0}" is currently disabled, '
+                        'to re-enable, run state.enable {0}.'
+                    ).format(
+                        _state,
+                    )
+                    ret.append(err)
+                    continue
     return ret
