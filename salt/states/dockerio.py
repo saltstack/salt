@@ -109,14 +109,6 @@ Available Functions
     The docker modules are named ``dockerio`` because
     the name 'docker' would conflict with the underlying docker-py library.
 
-    We should add magic to all methods to also match containers by name
-    now that the 'naming link' stuff has been merged in docker.
-    This applies for example to:
-
-    - running
-    - absent
-    - run
-
 
 '''
 import functools
@@ -640,7 +632,7 @@ def run(name,
         command to run in the container
 
     cid
-        Container id
+        Container id or name
 
     state_id
         state_id
