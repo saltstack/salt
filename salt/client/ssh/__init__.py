@@ -459,7 +459,7 @@ class SSH(object):
             ret = self.key_deploy(host, ret)
             if not isinstance(ret[host], dict):
                 p_data = {host: ret[host]}
-            if 'return' not in ret[host]:
+            elif 'return' not in ret[host]:
                 p_data = ret
             else:
                 outputter = ret[host].get('out', self.opts.get('output', 'nested'))
