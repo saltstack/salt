@@ -489,7 +489,6 @@ class MasterEvent(SaltEvent):
     '''
     def __init__(self, sock_dir):
         super(MasterEvent, self).__init__('master', sock_dir)
-        self.connect_pub()
 
 
 class LocalClientEvent(MasterEvent):
