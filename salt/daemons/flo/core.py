@@ -21,7 +21,7 @@ import salt.utils.args
 import salt.transport
 from raet import raeting, nacling
 from raet.road.stacking import RoadStack
-from raet.road.estating import LocalEstate
+from raet.road.estating import RemoteEstate
 from raet.lane.stacking import LaneStack
 from raet.lane.yarding import RemoteYard
 
@@ -110,8 +110,8 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
             'local': {'ipath': 'local',
                       'ival': {'name': 'master',
                                'main': False,
-                               'auto': None,
-                               'eid': 0,
+                               'mutable': False,
+                               'uid': None,
                                'sigkey': None,
                                'prikey': None}},
             }
@@ -134,39 +134,36 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
         name = self.opts.value.get('id', self.local.data.name)
         sigkey = self.local.data.sigkey
         prikey = self.local.data.prikey
-        auto = self.local.data.auto
-        main = self.local.data.main
-        eid = self.local.data.eid
+        main = self.opts.value.get('raet_main', self.local.data.main)
+        mutable = self.opts.value.get('raet_mutable', self.local.data.mutable)
+        always = self.opts.value.get('open_mode', False)
+        mutable = mutable or always  # open_made when True takes precedence
+        uid = self.local.data.uid
 
         ha = (self.opts.value['interface'], self.opts.value['raet_port'])
 
         basedirpath = os.path.abspath(os.path.join(self.opts.value['cachedir'], 'raet'))
 
-        local = LocalEstate(
-                eid=eid,
-                name=name,
-                main=main,
-                ha=ha,
-                sigkey=sigkey,
-                prikey=prikey)
         txMsgs = self.txmsgs.value
         rxMsgs = self.rxmsgs.value
 
         keep = salting.SaltKeep(opts=self.opts.value,
                                 basedirpath=basedirpath,
-                                stackname=name,
-                                auto=auto)
+                                stackname=name)
 
-        self.stack.value = RoadStack(
-                local=local,
-                store=self.store,
-                name=name,
-                main=main,
-                keep=keep,
-                txMsgs=txMsgs,
-                rxMsgs=rxMsgs,
-                period=3.0,
-                offset=0.5)
+        self.stack.value = RoadStack(store=self.store,
+                                     keep=keep,
+                                     name=name,
+                                     uid=uid,
+                                     ha=ha,
+                                     sigkey=sigkey,
+                                     prikey=prikey,
+                                     main=main,
+                                     mutable=mutable,
+                                     txMsgs=txMsgs,
+                                     rxMsgs=rxMsgs,
+                                     period=3.0,
+                                     offset=0.5)
 
 
 class SaltRaetRoadStackCloser(ioflo.base.deeding.Deed):
@@ -213,7 +210,12 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
         '''
         stack = self.stack.value
         if stack and isinstance(stack, RoadStack):
-            stack.join(ha=self.mha, timeout=0.0)
+            if not stack.remotes:
+                stack.addRemote(RemoteEstate(stack=stack,
+                                             fuid=0,  # vacuous join
+                                             sid=0,  # always 0 for join
+                                             ha=self.mha))
+            stack.join(uid=stack.remotes.values()[0].uid, timeout=0.0)
 
 
 class SaltRaetRoadStackJoined(ioflo.base.deeding.Deed):
@@ -580,11 +582,11 @@ class SaltManorLaneSetup(ioflo.base.deeding.Deed):
         #name = "{0}{1}".format(self.opts.value.get('id', self.local.data.name), 'lane')
         name = 'manor'
         lanename = self.opts.value.get('id', self.local.data.lanename)
-        yid = self.local.data.yid
+        #yid = self.local.data.yid
         self.stack.value = LaneStack(
                                     name=name,
                                     lanename=lanename,
-                                    yid=0,
+                                    uid=0,
                                     sockdirpath=self.opts.value['sock_dir'])
         self.stack.value.Pk = raeting.packKinds.pack
         self.event_yards.value = set()
@@ -745,7 +747,8 @@ class Router(ioflo.base.deeding.Deed):
         elif d_share == 'remote_cmd':
             # Send it to a remote worker
             if 'load' in msg:
-                msg['load']['id'] = sender
+                role = self.udp_stack.value.nameRemotes[sender].role
+                msg['load']['id'] = role  # sender # should this be role XXXX
                 self.uxd_stack.value.transmit(msg,
                         self.uxd_stack.value.fetchUidByName(next(self.workers.value)))
         elif d_share == 'fun':
@@ -770,8 +773,8 @@ class Router(ioflo.base.deeding.Deed):
             pass
         elif d_estate != self.udp_stack.value.local:
             # Forward to the correct estate
-            eid = self.udp_stack.value.fetchUidByName(d_estate)
-            self.udp_stack.value.message(msg, eid)
+            uid = self.udp_stack.value.fetchUidByName(d_estate)
+            self.udp_stack.value.message(msg, uid)
             return
         if d_share == 'pub_ret':
             if msg.get('__worker_verify') == self.worker_verify.value:
@@ -891,13 +894,13 @@ class SaltPublisher(ioflo.base.deeding.Deed):
         # only publish to available minions by intersecting sets
         minions = self.availables.value & set(self.stack.value.nameRemotes.keys())
         for minion in minions:
-            eid = self.stack.value.fetchUidByName(minion)
-            if eid:
+            uid = self.stack.value.fetchUidByName(minion)
+            if uid:
                 route = {
                         'dst': (minion, None, 'fun'),
                         'src': (self.stack.value.local.name, None, None)}
                 msg = {'route': route, 'pub': pub_data['pub']}
-                self.stack.value.message(msg, eid)
+                self.stack.value.message(msg, uid)
 
     def action(self):
         '''
@@ -943,8 +946,8 @@ class NixExecutor(ioflo.base.deeding.Deed):
 
         '''
         mid = self.opts['id']
-        yid = nacling.uuid(size=18)
-        name = 'jobber' + yid
+        uid = nacling.uuid(size=18)
+        name = 'jobber' + uid
         stack = LaneStack(
                 name=name,
                 lanename=mid,

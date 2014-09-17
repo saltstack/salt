@@ -51,17 +51,17 @@ class LocalClient(salt.client.LocalClient):
                 jid=jid,
                 timeout=timeout,
                 **kwargs)
-        yid = nacling.uuid(size=18)
+        uid = nacling.uuid(size=18)
         stack = LaneStack(
-                name=('client' + yid),
-                yid=yid,
+                name=('client' + uid),
+                uid=uid,
                 lanename='master',
                 sockdirpath=self.opts['sock_dir'])
         stack.Pk = raeting.packKinds.pack
         router_yard = RemoteYard(
                 stack=stack,
                 lanename='master',
-                yid=0,
+                uid=0,
                 name='manor',
                 dirpath=self.opts['sock_dir'])
         stack.addRemote(router_yard)
