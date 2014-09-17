@@ -53,7 +53,6 @@ except ImportError:
     pass
 log = logging.getLogger(__name__)
 
-
 class SaltRaetCleanup(ioflo.base.deeding.Deed):
     '''
     Cleanup stray lane keep directories not reaped
@@ -134,8 +133,10 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
         name = self.opts.value.get('id', self.local.data.name)
         sigkey = self.local.data.sigkey
         prikey = self.local.data.prikey
-        main = self.local.data.main
-        mutable = self.opts.value.get('open_mode', self.local.data.mutable)
+        main = self.opts.value.get('raet_main', self.local.data.main)
+        mutable = self.opts.value.get('raet_mutable', self.local.data.mutable)
+        always = self.opts.value.get('open_mode', False)
+        mutable = mutable or always # open_made when True takes precedence
         uid = self.local.data.uid
 
         ha = (self.opts.value['interface'], self.opts.value['raet_port'])
