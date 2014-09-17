@@ -118,7 +118,12 @@ class SMaster(object):
         return salt.daemons.masterapi.access_keys(self.opts)
 
 
+# global: signal handler doesn't have object access
+masterpid = 0
+
+
 class Master(SMaster):
+
     '''
     The salt master server
     '''
@@ -142,6 +147,8 @@ class Master(SMaster):
                 'may result in loss of contact with minions. Please '
                 'upgrade your ZMQ!'
             )
+        global masterpid
+        masterpid = os.getpid()
         SMaster.__init__(self, opts)
 
     def _clear_old_jobs(self):
@@ -326,6 +333,12 @@ class Master(SMaster):
             SIGTERM is encountered.  This is required when running a salt
             master under a process minder like daemontools
             '''
+            # don't do anything unless we are the master; clean_proc() calls
+            # multiprocessing.Process.terminate(), which ends up back here
+            # because the Process()es have this handler installed
+            if os.getpid() != masterpid:
+                return
+
             log.warn(
                 'Caught signal {0}, stopping the Salt Master'.format(
                     signum
