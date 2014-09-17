@@ -1823,7 +1823,7 @@ def get_id(opts, minion_id=False):
                 if name.startswith(codecs.BOM):  # Remove BOM if exists
                     name = name.replace(codecs.BOM, '', 1)
             if name:
-                log.info('Using cached minion ID from {0}: {1}'
+                log.debug('Using cached minion ID from {0}: {1}'
                          .format(id_cache, name))
                 return name, False
         except (IOError, OSError):
