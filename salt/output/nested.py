@@ -3,11 +3,13 @@
 Recursively display nested data, this is the default outputter.
 '''
 # Import python libs
+import re
 from numbers import Number
 
 # Import salt libs
 import salt.utils
 from salt._compat import string_types
+
 
 class NestDisplay(object):
     '''
