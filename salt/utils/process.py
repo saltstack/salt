@@ -2,7 +2,6 @@
 # Import python libs
 import logging
 import os
-import signal
 import time
 import sys
 import multiprocessing
