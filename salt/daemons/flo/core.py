@@ -21,7 +21,7 @@ import salt.utils.args
 import salt.transport
 from raet import raeting, nacling
 from raet.road.stacking import RoadStack
-from raet.road.estating import LocalEstate, RemoteEstate
+from raet.road.estating import RemoteEstate
 from raet.lane.stacking import LaneStack
 from raet.lane.yarding import RemoteYard
 
@@ -52,6 +52,7 @@ try:
 except ImportError:
     pass
 log = logging.getLogger(__name__)
+
 
 class SaltRaetCleanup(ioflo.base.deeding.Deed):
     '''
@@ -136,7 +137,7 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
         main = self.opts.value.get('raet_main', self.local.data.main)
         mutable = self.opts.value.get('raet_mutable', self.local.data.mutable)
         always = self.opts.value.get('open_mode', False)
-        mutable = mutable or always # open_made when True takes precedence
+        mutable = mutable or always  # open_made when True takes precedence
         uid = self.local.data.uid
 
         ha = (self.opts.value['interface'], self.opts.value['raet_port'])
@@ -184,6 +185,7 @@ class SaltRaetRoadStackCloser(ioflo.base.deeding.Deed):
         if self.stack.value and isinstance(self.stack.value, RoadStack):
             self.stack.value.server.close()
 
+
 class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
     '''
     Initiates join transaction with master
@@ -210,10 +212,11 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
         if stack and isinstance(stack, RoadStack):
             if not stack.remotes:
                 stack.addRemote(RemoteEstate(stack=stack,
-                                             fuid=0, # vacuous join
-                                             sid=0, # always 0 for join
+                                             fuid=0,  # vacuous join
+                                             sid=0,  # always 0 for join
                                              ha=self.mha))
             stack.join(uid=stack.remotes.values()[0].uid, timeout=0.0)
+
 
 class SaltRaetRoadStackJoined(ioflo.base.deeding.Deed):
     '''
@@ -745,7 +748,7 @@ class Router(ioflo.base.deeding.Deed):
             # Send it to a remote worker
             if 'load' in msg:
                 role = self.udp_stack.value.nameRemotes[sender].role
-                msg['load']['id'] = role #sender # should this be role XXXX
+                msg['load']['id'] = role  # sender # should this be role XXXX
                 self.uxd_stack.value.transmit(msg,
                         self.uxd_stack.value.fetchUidByName(next(self.workers.value)))
         elif d_share == 'fun':
