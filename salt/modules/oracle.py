@@ -12,10 +12,17 @@ Oracle DataBase connection module
 
 :configuration: module provide connections for multiple Oracle DB instances.
 
-    OS Environment:
+    **OS Environment**
+
+    .. code-block:: text
+
         ORACLE_HOME: path to oracle product
         PATH: path to Oracle Client libs need to be in PATH
-    pillar:
+
+    **pillar**
+
+    .. code-block:: text
+
         oracle.dbs: list of known based
         oracle.dbs.<db>.uri: connection credentials in format:
             user/password@host[:port]/sid[ as {sysdba|sysoper}]
@@ -117,7 +124,7 @@ def run_query(db, query):
 
 def show_dbs(*dbs):
     '''
-    Show databases configuration from pillar. Filter by *args
+    Show databases configuration from pillar. Filter by args
 
     .. code-block:: bash
 
