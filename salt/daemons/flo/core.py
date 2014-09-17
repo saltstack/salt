@@ -111,6 +111,7 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
                                'main': False,
                                'mutable': False,
                                'uid': None,
+                               'role': 'master',
                                'sigkey': None,
                                'prikey': None}},
             }
@@ -130,9 +131,15 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
 
         do salt raet road stack setup at enter
         '''
-        name = self.opts.value.get('id', self.local.data.name)
+        #import  wingdbstub
+
+        role = self.opts.value.get('id', self.local.data.role)
         sigkey = self.local.data.sigkey
         prikey = self.local.data.prikey
+        #name = self.opts.value.get('id', self.local.data.name)
+        #name = LocalEstate.nameGuid(prefix='road') # name is  guid
+        #name = 'stack_' +  role
+        name = role
         main = self.opts.value.get('raet_main', self.local.data.main)
         mutable = self.opts.value.get('raet_mutable', self.local.data.mutable)
         always = self.opts.value.get('open_mode', False)
@@ -155,6 +162,7 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
                                      name=name,
                                      uid=uid,
                                      ha=ha,
+                                     role=role,
                                      sigkey=sigkey,
                                      prikey=prikey,
                                      main=main,
