@@ -42,6 +42,7 @@ def __virtual__():
 def change(name, context=None, changes=None, lens=None, **kwargs):
     '''
     .. versionadded:: 2014.1.6
+
     This state replaces :py:func:`~salt.states.augeas.setvalue`.
 
     Issue changes to Augeas, optionally for a specific context, with a
