@@ -137,8 +137,9 @@ def _format_host(host, data):
             }
             hstrs.extend([sline.format(**svars) for sline in state_lines])
             changes = '     Changes:   ' + ctext
-            hstrs.append(('{0}{1}{2[ENDC]}'
-                          .format(tcolor, changes, colors)))
+            hstrs.append(
+                u'{0}{1}{2[ENDC]}'.format(tcolor, changes, colors)
+            )
 
         # Append result counts to end of output
         colorfmt = '{0}{1}{2[ENDC]}'
