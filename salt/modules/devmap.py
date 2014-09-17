@@ -1,33 +1,36 @@
 # -*- coding: utf-8 -*-
-"""
+'''
 Device-Mapper module
-"""
-import logging
-log = logging.getLogger(__name__)
+'''
+import os.path
 
 
 def multipath_list():
     '''
     Device-Mapper Multipath list
+
     CLI Example:
+
     .. code-block:: bash
-    salt '*' devmap.multipath_list
+
+        salt '*' devmap.multipath_list
     '''
     cmd = 'multipath -l'
     return __salt__['cmd.run'](cmd).splitlines()
 
 
-def multipath_flush(args=None):
+def multipath_flush(device):
     '''
     Device-Mapper Multipath flush
+
     CLI Example:
+
     .. code-block:: bash
-    salt '*' devmap.multipath_flush mpath1
+
+        salt '*' devmap.multipath_flush mpath1
     '''
-    ret = {}
-    try:
-        cmd = 'multipath -f {0}'.format(ret[0])
-    except ValueError:
-        return 'Error: No device to flush has been provided!'
+    if not os.path.exists(device):
+        return '{0} does not exist'.format(device)
+
+    cmd = 'multipath -f {0}'.format(device)
     return __salt__['cmd.run'](cmd).splitlines()
-    
