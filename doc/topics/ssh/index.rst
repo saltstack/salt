@@ -4,10 +4,6 @@ Salt SSH
 
 .. note::
 
-    SALT-SSH IS ALPHA SOFTWARE AND MAY NOT BE READY FOR PRODUCTION USE
-
-.. note::
-
     On many systems, ``salt-ssh`` will be in its own package, usually named
     ``salt-ssh``.
 
