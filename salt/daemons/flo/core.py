@@ -132,8 +132,6 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
 
         do salt raet road stack setup at enter
         '''
-        #import  wingdbstub
-
         role = self.opts.value.get('id', self.local.data.role)
         sigkey = self.local.data.sigkey
         prikey = self.local.data.prikey
