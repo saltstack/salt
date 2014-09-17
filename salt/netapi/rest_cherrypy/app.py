@@ -506,8 +506,10 @@ def lowdata_fmt():
 
     data = cherrypy.request.unserialized_data
 
-    if (cherrypy.request.headers['Content-Type']
-            == 'application/x-www-form-urlencoded'):
+    # if the data was sent as urlencoded, we need to make it a list.
+    # this is a very forgiving implementation as different clients set different
+    # headers for form encoded data (including charset or something similar)
+    if not isinstance(data, list):
         # Make the 'arg' param a list if not already
         if 'arg' in data and not isinstance(data['arg'], list):
             data['arg'] = [data['arg']]

@@ -116,13 +116,15 @@ class ProcessManager(object):
     '''
     A class which will manage processes that should be running
     '''
-    def __init__(self, name=None):
+    def __init__(self, name=None, wait_for_kill=1):
         # pid -> {tgt: foo, Process: object, args: args, kwargs: kwargs}
         self._process_map = {}
 
         self.name = name
         if self.name is None:
             self.name = self.__class__.__name__
+
+        self.wait_for_kill = wait_for_kill
 
     def add_process(self, tgt, args=None, kwargs=None):
         '''
@@ -159,7 +161,8 @@ class ProcessManager(object):
                   ' restarting...').format(self._process_map[pid]['tgt'],
                                            pid,
                                            self._process_map[pid]['Process'].exitcode))
-        self._process_map[pid]['Process'].join(1)
+        # don't block, the process is already dead
+        self._process_map[pid]['Process'].join(0)
 
         self.add_process(self._process_map[pid]['tgt'],
                          self._process_map[pid]['args'],
@@ -183,6 +186,7 @@ class ProcessManager(object):
                                ' process, will not restart').format(pid))
                     continue
                 self.restart_process(pid)
+            # OSError is raised if a signal handler is called (SIGTERM) during os.wait
             except OSError:
                 break
 
@@ -203,9 +207,23 @@ class ProcessManager(object):
         '''
         for pid, p_map in self._process_map.items():
             p_map['Process'].terminate()
-            p_map['Process'].join()
-            # This is a race condition if a signal was passed to all children
+
+        #
+        end_time = time.time() + self.wait_for_kill  # when to die
+
+        while self._process_map and time.time() < end_time:
+            for pid, p_map in self._process_map.items():
+                p_map['Process'].join(0)
+
+                # This is a race condition if a signal was passed to all children
+                try:
+                    del self._process_map[pid]
+                except KeyError:
+                    pass
+        # if anyone is done after
+        for pid in self._process_map:
             try:
-                del self._process_map[pid]
-            except KeyError:
+                os.kill(signal.SIGKILL, pid)
+            # in case the process has since decided to die, os.kill returns OSError
+            except OSError:
                 pass
