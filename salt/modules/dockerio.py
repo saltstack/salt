@@ -25,12 +25,12 @@ Installation Prerequisites
   path that is running salt. Its version should support `Docker Remote API
   v1.12 <http://docs.docker.io/en/latest/reference/api/docker_remote_api_v1.12>`_.
 
-  Currently, ``docker-py 0.3.2`` is known to support `Docker Remote API v1.12
+  Currently, ``docker-py 0.5.0`` is known to support `Docker Remote API v1.12
   <http://docs.docker.io/en/latest/reference/api/docker_remote_api_v1.12>`_
 
   .. code-block:: bash
 
-      pip install docker-py==0.3.2
+      pip install docker-py==0.5.0
 
 Prerequisite Pillar Configuration for Authentication
 ----------------------------------------------------
@@ -833,7 +833,9 @@ def start(container,
           privileged=False,
           dns=None,
           volumes_from=None,
-          network_mode=None):
+          network_mode=None,
+          cap_add=None,
+          cap_drop=None):
     '''
     Start the specified container
 
@@ -877,7 +879,9 @@ def start(container,
                          privileged=privileged,
                          dns=dns,
                          volumes_from=volumes_from,
-                         network_mode=network_mode)
+                         network_mode=network_mode,
+                         cap_add=cap_add,
+                         cap_drop=cap_drop)
 
             if is_running(dcontainer):
                 _valid(status,
