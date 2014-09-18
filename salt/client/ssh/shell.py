@@ -308,6 +308,10 @@ class Shell(object):
         ret_stderr = ''
         while True:
             stdout, stderr = term.recv()
+            if stdout:
+                ret_stdout += stdout
+            if stderr:
+                ret_stderr += stderr
             if stdout and SSH_PASSWORD_PROMPT_RE.search(stdout):
                 if not self.passwd:
                     try:
@@ -336,11 +340,15 @@ class Shell(object):
                                   'auto accept run salt-ssh with the -i '
                                   'flag:\n{0}').format(stdout)
                     return ret_stdout, '', 254
-            if stdout:
-                ret_stdout += stdout
-            if stderr:
-                ret_stderr += stderr
             if not term.isalive():
+                while True:
+                    stdout, stderr = term.recv()
+                    if stdout:
+                        ret_stdout += stdout
+                    if stderr:
+                        ret_stderr += stderr
+                    if stdout is None and stderr is None:
+                        break
                 term.close(terminate=True, kill=True)
                 break
             time.sleep(0.5)
