@@ -166,7 +166,6 @@ class SSH(object):
     Create an SSH execution system
     '''
     def __init__(self, opts):
-        self.verify_env()
         pull_sock = os.path.join(opts['sock_dir'], 'master_event_pull.ipc')
         if os.path.isfile(pull_sock) and HAS_ZMQ:
             self.event = salt.utils.event.get_event(
@@ -225,14 +224,6 @@ class SSH(object):
         self.serial = salt.payload.Serial(opts)
         self.returners = salt.loader.returners(self.opts, {})
         self.mods = mod_data(self.opts)
-
-    def verify_env(self):
-        '''
-        Verify that salt-ssh is ready to run
-        '''
-        if not salt.utils.which('sshpass'):
-            log.warning('Warning:  sshpass is not present, so password-based '
-                        'authentication is not available.')
 
     def get_pubkey(self):
         '''
