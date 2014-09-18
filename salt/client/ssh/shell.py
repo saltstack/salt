@@ -84,9 +84,10 @@ class Shell(object):
         '''
         options = [
                    'KbdInteractiveAuthentication=no',
-                   'GSSAPIAuthentication=no',
                    'PasswordAuthentication=no',
                    ]
+        if self.opts['_ssh_version'] > '4.9':
+            options.append('GSSAPIAuthentication=no')
         options.append('ConnectTimeout={0}'.format(self.timeout))
         if self.opts.get('ignore_host_keys'):
             options.append('StrictHostKeyChecking=no')
@@ -114,8 +115,9 @@ class Shell(object):
         # ssh config.  Also, ControlPersist not widely available.
         options = ['ControlMaster=auto',
                    'StrictHostKeyChecking=no',
-                   'GSSAPIAuthentication=no',
                    ]
+        if self.opts['_ssh_version'] > '4.9':
+            options.append('GSSAPIAuthentication=no')
         options.append('ConnectTimeout={0}'.format(self.timeout))
         if self.opts.get('ignore_host_keys'):
             options.append('StrictHostKeyChecking=no')
