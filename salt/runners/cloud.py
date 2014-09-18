@@ -78,11 +78,29 @@ def select_query(query_type='list_nodes_select'):
     return info
 
 
-def profile(prof, instances, **kwargs):
+def profile(prof=None, instances=None, **kwargs):
     '''
-    Create a cloud vm with the given profile and instances, instances can be a list
-    or comma delimited string
+    Create a cloud vm with the given profile and instances, instances can be a
+    list or comma-delimited string
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run cloud.profile prof=my-ec2 instances=node1,node2,node3
     '''
+    if prof is None and 'profile' in kwargs:
+        prof = kwargs['profile']
+
+    if prof is None:
+        return {'Error': 'A profile (or prof) must be defined'}
+
+    if instances is None and 'names' in kwargs:
+        instances = kwargs['names']
+
+    if instances is None:
+        return {'Error': 'One or more instances (comma-delimited) must be set'}
+
     client = _get_client()
     info = client.profile(prof, instances, **kwargs)
     return info
