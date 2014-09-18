@@ -9,6 +9,7 @@ import getpass
 import json
 import logging
 import multiprocessing
+import subprocess
 import os
 import re
 import shutil
@@ -176,6 +177,7 @@ class SSH(object):
         else:
             self.event = None
         self.opts = opts
+        self.opts['_ssh_version'] = ssh_version()
         self.tgt_type = self.opts['selected_target_option'] \
                 if self.opts['selected_target_option'] else 'glob'
         self.roster = salt.roster.Roster(opts, opts.get('roster'))
@@ -1096,3 +1098,19 @@ def prep_trans_tar(opts, chunks, file_refs):
     os.chdir(cwd)
     shutil.rmtree(gendir)
     return trans_tar
+
+
+def ssh_version():
+    '''
+    Returns the version of the installed ssh command
+    '''
+    # This function needs more granular checks and to be validated against
+    # older versions of ssh
+    ret = subprocess.Popen(
+            ['ssh', '-V'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE).communicate()
+    try:
+        return ret[1].split(',')[0].split('_')[1]
+    except IndexError:
+        return '2.0'
