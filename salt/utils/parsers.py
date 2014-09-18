@@ -1723,6 +1723,7 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'unaccepted/unsigned keys. '
                   '"acc" or "accepted" will list accepted/signed keys. '
                   '"rej" or "rejected" will list rejected keys. '
+                  '"den" or "denied" will list denied keys. '
                   'Finally, "all" will list all keys.')
         )
 
@@ -1929,7 +1930,7 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         # Filter accepted list arguments as soon as possible
         if not self.options.list:
             return
-        if not self.options.list.startswith(('acc', 'pre', 'un', 'rej', 'all')):
+        if not self.options.list.startswith(('acc', 'pre', 'un', 'rej', 'den', 'all')):
             self.error(
                 '{0!r} is not a valid argument to \'--list\''.format(
                     self.options.list
