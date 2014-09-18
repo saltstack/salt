@@ -6,7 +6,6 @@ from __future__ import print_function
 import datetime
 import logging
 import multiprocessing
-import time
 
 import salt.utils
 import salt.utils.event
