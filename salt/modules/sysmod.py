@@ -418,7 +418,7 @@ def argspec(module=''):
 
     Module names can be specified as globs.
 
-        salt '*' sys.argspec pkg.\*
+        salt '*' sys.argspec 'pkg.*'
 
     '''
     return salt.utils.argspec_report(__salt__, module)
