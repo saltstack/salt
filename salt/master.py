@@ -69,7 +69,7 @@ def clean_proc(proc, wait_for_kill=10):
     Generic method for cleaning up multiprocessing procs
 
     :param multiprocessing.Process proc: A salt-master process
-    :param int wait_for_kill: The number of deciseconds to wait before forcibly terminating the process 
+    :param int wait_for_kill: The number of deciseconds to wait before forcibly terminating the process
     '''
     # NoneType and other fun stuff need not apply
     if not proc:
