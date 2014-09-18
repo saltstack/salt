@@ -477,8 +477,8 @@ class LocalClient(object):
             executing a compound command.
         :type arg: list or list-of-lists
 
-        :param timeout: Seconds to wait after the last minion returns but
-            before all minions return.
+        :param timeout: Seconds to wait for the return (a value of 0 will wait
+            until the job is no longer running on the target minions)
 
         :param expr_form: The type of ``tgt``. Allowed values:
 
