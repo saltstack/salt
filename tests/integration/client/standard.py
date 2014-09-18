@@ -24,6 +24,34 @@ class StdTest(integration.ModuleCase):
         for ret in cmd_iter:
             self.assertTrue(ret['minion'])
 
+    def test_cli_timeout(self):
+        '''
+        Test cli timeouts. A timeout > 0 should timeout, and a timeout of 0 means
+        wait until all returns complete
+        '''
+        # verify that timeouts work
+        cmd_iter = self.client.cmd_cli(
+                'minion',
+                'test.sleep',
+                arg=[5],
+                timeout=2
+                )
+        self.assertRaises(StopIteration,
+                          cmd_iter.next)
+
+        # verify that timeout of 0 waits
+        cmd_iter = self.client.cmd_cli(
+                'minion',
+                'test.sleep',
+                arg=[5],
+                timeout=0
+                )
+        num_ret = 0
+        for ret in cmd_iter:
+            num_ret += 1
+            self.assertTrue(ret['minion'])
+        assert num_ret > 0
+
     def test_iter(self):
         '''
         test cmd_iter
