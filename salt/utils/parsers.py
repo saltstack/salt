@@ -1825,12 +1825,12 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         )
 
         self.add_option(
-            '--no-key-rotate',
-            default=False,
-            action='store_true',
-            help=('This option prevents the master from refreshing the key '
-                  'session when keys are deleted or rejected, this lowers '
-                  'the security of the key deletion/rejection operation.')
+            '--rotate-aes-key',
+            default=True,
+            help=('Setting this to False prevents the master from refreshing '
+                  'the key session when keys are deleted or rejected, this '
+                  'lowers the security of the key deletion/rejection operation. '
+                  'Default is True.')
         )
 
         key_options_group = optparse.OptionGroup(
