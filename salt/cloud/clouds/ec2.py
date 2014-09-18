@@ -2196,7 +2196,7 @@ def start(name, call=None):
 
     log.info('Starting node {0}'.format(name))
 
-    instance_id = _get_node(name)['instanceId']
+    instance_id = _get_node(name)[name]['instanceId']
 
     params = {'Action': 'StartInstances',
               'InstanceId.1': instance_id}
