@@ -264,7 +264,8 @@ Set the number of hours to keep old job information
 
 Default: ``5``
 
-Set the default timeout for the salt command and api.
+Set the default timeout for the salt command and api. If the value is set to 0
+the timeout will occur after all minions are no longer running the job.
 
 .. conf_master:: loop_interval
 
