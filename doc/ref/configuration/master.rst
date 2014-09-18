@@ -419,6 +419,21 @@ this can slow down the authentication process a bit in large setups.
 
     max_minions: 100
 
+``con_cache``
+-------------
+
+Default: False
+
+If max_minions is used in large installations, the master might experience
+high-load situations because of having to check the number of connected
+minions for every authentication. This cache provides the minion-ids of
+all connected minions to all MWorker-processes and greatly improves the
+performance of max_minions.
+
+.. code-block:: yaml
+
+    con_cache: True
+
 .. conf_master:: presence_events
 
 ``presence_events``
