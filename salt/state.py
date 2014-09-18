@@ -1855,6 +1855,7 @@ class State(object):
                 low = low.copy()
                 low['sfun'] = low['fun']
                 low['fun'] = 'mod_watch'
+                low['__reqs__'] = reqs
                 ret = self.call(low, chunks, running)
             running[tag] = ret
         elif status == 'pre':
