@@ -311,20 +311,32 @@ class Shell(object):
             stdout, stderr = term.recv()
             if stdout and SSH_PASSWORD_PROMPT_RE.search(stdout):
                 if not self.passwd:
-                    raise NoPasswdError
+                    try:
+                        term.close()
+                    except TerminalException:
+                        pass
+                    return '', 'No authentication information available', 254
                 if sent_passwd < passwd_retries:
                     term.sendline(self.passwd)
                     sent_passwd += 1
                     continue
                 else:
                     # asking for a password, and we can't seem to send it
-                    raise NoPasswdError
+                    try:
+                        term.close()
+                    except TerminalException:
+                        pass
+                    return '', 'Password authentication failed', 254
             elif stdout and KEY_VALID_RE.search(stdout):
                 if key_accept:
                     term.sendline('yes')
                     continue
                 else:
-                    raise KeyAcceptError(stdout)
+                    term.sendline('no')
+                    ret_stdout = ('The host key needs to be accepted, to '
+                                  'auto accept run salt-ssh with the -i '
+                                  'flag:\n{0}').format(stdout)
+                    return ret_stdout, '', 254
             if stdout:
                 ret_stdout += stdout
             if stderr:
