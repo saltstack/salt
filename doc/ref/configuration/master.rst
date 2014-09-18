@@ -683,6 +683,23 @@ signature. The :conf_master:`master_pubkey_signature` must also be set for this.
     master_use_pubkey_signature: True
 
 
+.. conf_master:: rotate_aes_key
+
+``rotate_aes_key``
+------------------
+
+Default: ``True``
+
+Rotate the salt-masters AES-key when a minion-public is deleted with salt-key.
+This is a very important security-setting. Disabling it will enable deleted
+minions to still listen in on the messages published by the salt-master.
+Do not disable this unless it is absolutely clear what this does.
+
+.. code-block:: yaml
+
+    rotate_aes_key: True
+
+
 Master Module Management
 ========================
 
