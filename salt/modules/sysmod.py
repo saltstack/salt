@@ -49,8 +49,8 @@ def doc(*args):
 
     Modules can be specified as globs.
 
-        salt '*' sys.doc sys.\*
-        salt '*' sys.doc sys.list_\*
+        salt '*' sys.doc 'sys.*'
+        salt '*' sys.doc 'sys.list_*'
     '''
     docs = {}
     if not args:
@@ -104,7 +104,7 @@ def state_doc(*args):
 
     State names can be specified as globs.
 
-        salt '*' sys.state_doc service.\* iptables.\*
+        salt '*' sys.state_doc 'service.*' 'iptables.*'
 
     '''
     st_ = salt.state.State(__opts__)
@@ -172,7 +172,7 @@ def runner_doc(*args):
 
     Runner names can be specified as globs.
 
-        salt '*' sys.runner_doc cache.clear_\*
+        salt '*' sys.runner_doc 'cache.clear_*'
 
     '''
     run_ = salt.runner.Runner(__opts__)
@@ -228,7 +228,7 @@ def returner_doc(*args):
 
     Returner names can be specified as globs.
 
-        salt '*' sys.returner_doc sqlite3.get_\*
+        salt '*' sys.returner_doc 'sqlite3.get_*'
 
     '''
 
@@ -284,7 +284,7 @@ def renderer_doc(*args):
 
     Renderer names can be specified as globs.
 
-        salt '*' sys.renderer_doc c\* j\*
+        salt '*' sys.renderer_doc 'c*' 'j*'
 
     '''
     renderers_ = salt.loader.render(__opts__, [])
@@ -321,7 +321,7 @@ def list_functions(*args, **kwargs):
 
     Function names can be specified as globs.
 
-        salt '*' sys.list_functions sys.list_\*
+        salt '*' sys.list_functions 'sys.list_*'
 
     '''
     # ## NOTE: **kwargs is used here to prevent a traceback when garbage
@@ -365,7 +365,7 @@ def list_modules(*args):
 
     Module names can be specified as globs.
 
-        salt '*' sys.list_modules s\*
+        salt '*' sys.list_modules 's*'
 
     '''
     modules = set()
@@ -443,7 +443,7 @@ def state_argspec(module=''):
 
     State names can be specified as globs.
 
-        salt '*' sys.state_argspec pkg.\*
+        salt '*' sys.state_argspec 'pkg.*'
 
     '''
     st_ = salt.state.State(__opts__)
@@ -469,7 +469,7 @@ def returner_argspec(module=''):
 
     Returner names can be specified as globs.
 
-        salt '*' sys.returner_argspec sqlite3.\*
+        salt '*' sys.returner_argspec 'sqlite3.*'
 
     '''
     returners_ = salt.loader.returners(__opts__, [])
@@ -495,7 +495,7 @@ def runner_argspec(module=''):
 
     Runner names can be specified as globs.
 
-        salt '*' sys.runner_argspec winrepo.\*
+        salt '*' sys.runner_argspec 'winrepo.*'
     '''
     run_ = salt.runner.Runner(__opts__)
     return salt.utils.argspec_report(run_.functions, module)
@@ -520,8 +520,8 @@ def list_state_functions(*args, **kwargs):
 
     State function names can be specified as globs.
 
-        salt '*' sys.list_state_functions file.\*
-        salt '*' sys.list_state_functions file.s\*
+        salt '*' sys.list_state_functions 'file.*'
+        salt '*' sys.list_state_functions 'file.s*'
 
     '''
     ### NOTE: **kwargs is used here to prevent a traceback when garbage
@@ -568,7 +568,7 @@ def list_state_modules(*args):
 
     State module names can be specified as globs.
 
-        salt '*' sys.list_state_modules mysql_\*
+        salt '*' sys.list_state_modules 'mysql_*'
 
     '''
     st_ = salt.state.State(__opts__)
@@ -608,7 +608,7 @@ def list_runners(*args):
 
     Runner names can be specified as globs.
 
-        salt '*' sys.list_runners m\*
+        salt '*' sys.list_runners 'm*'
 
     '''
     run_ = salt.runner.Runner(__opts__)
@@ -649,7 +649,7 @@ def list_runner_functions(*args, **kwargs):
 
     Runner function names can be specified as globs.
 
-        salt '*' sys.list_runner_functions state.\* virt.\*
+        salt '*' sys.list_runner_functions 'state.*' 'virt.*'
 
     '''
     # ## NOTE: **kwargs is used here to prevent a traceback when garbage
@@ -696,7 +696,7 @@ def list_returners(*args):
 
     Returner names can be specified as globs.
 
-        salt '*' sys.list_returners s\*
+        salt '*' sys.list_returners 's*'
 
     '''
     returners_ = salt.loader.returners(__opts__, [])
@@ -738,7 +738,7 @@ def list_returner_functions(*args, **kwargs):
 
     Returner names can be specified as globs.
 
-        salt '*' sys.list_returner_functions sqlite3.get_\*
+        salt '*' sys.list_returner_functions 'sqlite3.get_*'
 
     '''
     ### NOTE: **kwargs is used here to prevent a traceback when garbage
@@ -785,7 +785,7 @@ def list_renderers(*args):
 
     Render names can be specified as globs.
 
-        salt '*' sys.list_renderers yaml\*
+        salt '*' sys.list_renderers 'yaml*'
 
     '''
     ren_ = salt.loader.render(__opts__, [])
