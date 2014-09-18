@@ -251,7 +251,7 @@ class SSH(object):
                 if 'passwd' in target:
                     self._key_deploy_run(host, target, False)
             return ret
-        if ret[host].get('stderr', '').startswith('Permission denied'):
+        if ret[host].get('stderr', '').count('Permission denied'):
             target = self.targets[host]
             # permission denied, attempt to auto deploy ssh key
             print(('Permission denied for host {0}, do you want to deploy '
