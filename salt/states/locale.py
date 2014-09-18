@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Management of languages/locales
-==============================
+===============================
 
 The locale can be managed for the system:
 

@@ -1066,12 +1066,16 @@ def cloud_init(name, vm_=None, **kwargs):
     '''
     Thin wrapper to lxc.init to be used from the saltcloud lxc driver
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' lxc.cloud_init foo
+
     name
-        Name of the container
-        may be None and then guessed from saltcloud mapping
+        Name of the container. May be ``None`` and then guessed from saltcloud
+        mapping.
+
     ``vm_``
         saltcloud mapping defaults for the vm
     '''
