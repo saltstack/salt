@@ -415,7 +415,7 @@ even more stateful.  The check_cmds option helps ensure that the result of a
 state is evaluated correctly.
 
 Unless
-~~~~~~
+------
 
 .. versionadded:: 2014.7.0
 
@@ -426,15 +426,15 @@ Use unless to only run if any of the specified commands return False.
     vim:
       pkg.installed:
         - unless:
-            - rpm -q vim-enhanced
-            - ls /usr/bin/vim
+          - rpm -q vim-enhanced
+          - ls /usr/bin/vim
 
 This state will not run if the vim-enhanced package is already installed, or if
 /usr/bin/vim exists.  It gives more granular control over when a state should be
 run.
 
 Onlyif
-~~~~~~
+------
 
 .. versionadded:: 2014.7.0
 
@@ -463,8 +463,8 @@ then the state is run.
 This will ensure that the stop_volume and delete modules are only run if the
 gluster commands return back a 0 ret value.
 
-Check_Cmd
-~~~~~~~~~
+check_cmd
+---------
 
 .. versionadded:: 2014.7.0
 
