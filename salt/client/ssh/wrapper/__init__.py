@@ -59,6 +59,6 @@ class FunctionWrapper(dict):
                     ret = ret['local']
                 ret = ret.get('return', {})
             except ValueError:
-                ret = {'_error': 'Failed to return clean data'}
+                ret = {'_error': 'Failed to return clean data:\n{0}'.format(stdout)}
             return ret
         return caller
