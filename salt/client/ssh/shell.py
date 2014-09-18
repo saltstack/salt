@@ -320,7 +320,7 @@ class Shell(object):
                         term.close(terminate=True, kill=True)
                     except salt.utils.vt.TerminalException:
                         pass
-                    return '', 'No authentication information available', 254
+                    return '', 'Permission denied, no authentication information', 254
                 if sent_passwd < passwd_retries:
                     term.sendline(self.passwd)
                     sent_passwd += 1
