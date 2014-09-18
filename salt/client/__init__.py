@@ -888,22 +888,26 @@ class LocalClient(object):
             if int(time.time()) > timeout_at:
                 # The timeout has been reached, check the jid to see if the
                 # timeout needs to be increased
-                jinfo = self.gather_job_info(jid, tgt, tgt_type, minions - found, **kwargs)
-                still_running = [id_ for id_, jdat in jinfo.iteritems()
-                                 if jdat
-                                 ]
-                if still_running:
-                    timeout_at = int(time.time()) + timeout
-                    log.debug(
-                        'jid {0} still running on {1} will now timeout at {2}'.format(
-                            jid, still_running, datetime.fromtimestamp(timeout_at).time()
-                        )
-                    )
+                if timeout > 0:
+                    last_time = True
                     continue
                 else:
-                    last_time = True
-                    log.debug('jid {0} not running on any minions last time'.format(jid))
-                    continue
+                    jinfo = self.gather_job_info(jid, tgt, tgt_type, minions - found, **kwargs)
+                    more_time = [id_ for id_, jdat in jinfo.iteritems()
+                                     if jdat
+                                     ]
+                    if more_time:
+                        timeout_at = int(time.time()) + timeout
+                        log.debug(
+                            'jid {0} still running on {1} will now timeout at {2}'.format(
+                                jid, more_time, datetime.fromtimestamp(timeout_at).time()
+                            )
+                        )
+                        continue
+                    else:
+                        last_time = True
+                        log.debug('jid {0} not running on any minions last time'.format(jid))
+                        continue
             time.sleep(0.01)
 
     def get_returns(
@@ -1090,17 +1094,37 @@ class LocalClient(object):
                 # All minions have returned, break out of the loop
                 break
             if int(time.time()) > timeout_at:
-                if verbose or show_timeout:
-                    if self.opts.get('minion_data_cache', False) \
-                            or tgt_type in ('glob', 'pcre', 'list'):
-                        if len(found) < len(minions):
-                            fail = sorted(list(minions.difference(found)))
-                            for minion in fail:
-                                ret[minion] = {
-                                    'out': 'no_return',
-                                    'ret': 'Minion did not return'
-                                }
-                break
+                if timeout > 0:
+                    if verbose or show_timeout:
+                        if self.opts.get('minion_data_cache', False) \
+                                or tgt_type in ('glob', 'pcre', 'list'):
+                            if len(found) < len(minions):
+                                fail = sorted(list(minions.difference(found)))
+                                for minion in fail:
+                                    ret[minion] = {
+                                        'out': 'no_return',
+                                        'ret': 'Minion did not return'
+                                    }
+                    break
+                else:
+                    jinfo = self.gather_job_info(jid,
+                                                 tgt,
+                                                 tgt_type,
+                                                 minions - found,
+                                                 )
+                    more_time = False
+                    for id_ in jinfo:
+                        if jinfo[id_]:
+                            if verbose:
+                                print(
+                                    'Execution is still running on {0}'.format(id_)
+                                )
+                            more_time = True
+                    if not more_time:
+                        break
+                    else:
+                        timeout_at = time.time() + timeout
+                        continue
             time.sleep(0.01)
         return ret
 
@@ -1239,11 +1263,10 @@ class LocalClient(object):
                                 if 'retcode' in cache_jinfo[id_]:
                                     ret[id_]['retcode'] = cache_jinfo[id_]['retcode']
                                 yield ret
-                    if more_time:
+                        last_time = True
+                    else:
                         timeout_at = time.time() + timeout
                         continue
-                    else:
-                        last_time = True
             time.sleep(0.01)
 
     def get_event_iter_returns(self, jid, minions, timeout=None):
