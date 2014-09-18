@@ -1214,33 +1214,36 @@ class LocalClient(object):
                                     })
                 break
             if time.time() > timeout_at:
-                # The timeout has been reached, check the jid to see if the
-                # timeout needs to be increased
-                jinfo = self.gather_job_info(jid, tgt, tgt_type, minions - found, **kwargs)
-                more_time = False
-                for id_ in jinfo:
-                    if jinfo[id_]:
-                        if verbose:
-                            print(
-                                'Execution is still running on {0}'.format(id_)
-                            )
-                        more_time = True
-                if not more_time:
-                    cache_jinfo = self.get_cache_returns(jid)
-                    for id_ in cache_jinfo:
-                        if id_ == tgt:
-                            found.add(cache_jinfo.get('id'))
-                            ret = {id_: {'ret': cache_jinfo[id_]['ret']}}
-                            if 'out' in cache_jinfo[id_]:
-                                ret[id_]['out'] = cache_jinfo[id_]['out']
-                            if 'retcode' in cache_jinfo[id_]:
-                                ret[id_]['retcode'] = cache_jinfo[id_]['retcode']
-                            yield ret
-                if more_time:
-                    timeout_at = time.time() + timeout
-                    continue
-                else:
+                # if an non-zero timeout was passed, lets actually time out
+                if timeout > 0:
                     last_time = True
+                # Otherwise, we'll check the jid to see if the timeout needs to be increased
+                else:
+                    jinfo = self.gather_job_info(jid, tgt, tgt_type, minions - found, **kwargs)
+                    more_time = False
+                    for id_ in jinfo:
+                        if jinfo[id_]:
+                            if verbose:
+                                print(
+                                    'Execution is still running on {0}'.format(id_)
+                                )
+                            more_time = True
+                    if not more_time:
+                        cache_jinfo = self.get_cache_returns(jid)
+                        for id_ in cache_jinfo:
+                            if id_ == tgt:
+                                found.add(cache_jinfo.get('id'))
+                                ret = {id_: {'ret': cache_jinfo[id_]['ret']}}
+                                if 'out' in cache_jinfo[id_]:
+                                    ret[id_]['out'] = cache_jinfo[id_]['out']
+                                if 'retcode' in cache_jinfo[id_]:
+                                    ret[id_]['retcode'] = cache_jinfo[id_]['retcode']
+                                yield ret
+                    if more_time:
+                        timeout_at = time.time() + timeout
+                        continue
+                    else:
+                        last_time = True
             time.sleep(0.01)
 
     def get_event_iter_returns(self, jid, minions, timeout=None):
