@@ -24,6 +24,7 @@ KEY_VALID_RE = re.compile(r'.*\(yes\/no\).*')
 class NoPasswdError(Exception):
     pass
 
+
 class KeyAcceptError(Exception):
     pass
 
@@ -198,7 +199,6 @@ class Shell(object):
                 '-t -t' if self.tty else '',
                 opts,
                 cmd)
-        return None
 
     def _old_run_cmd(self, cmd):
         '''
@@ -291,7 +291,6 @@ class Shell(object):
 
         return self._run_cmd(cmd)
 
-
     def _run_cmd(self, cmd, key_accept=False, passwd_retries=3):
         '''
         Execute a shell command via VT. This is blocking and assumes that ssh
@@ -312,8 +311,8 @@ class Shell(object):
             if stdout and SSH_PASSWORD_PROMPT_RE.search(stdout):
                 if not self.passwd:
                     try:
-                        term.close()
-                    except TerminalException:
+                        term.close(terminate=True, kill=True)
+                    except salt.utils.vt.TerminalException:
                         pass
                     return '', 'No authentication information available', 254
                 if sent_passwd < passwd_retries:
@@ -323,8 +322,8 @@ class Shell(object):
                 else:
                     # asking for a password, and we can't seem to send it
                     try:
-                        term.close()
-                    except TerminalException:
+                        term.close(terminate=True, kill=True)
+                    except salt.utils.vt.TerminalException:
                         pass
                     return '', 'Password authentication failed', 254
             elif stdout and KEY_VALID_RE.search(stdout):
@@ -342,6 +341,7 @@ class Shell(object):
             if stderr:
                 ret_stderr += stderr
             if not term.isalive():
+                term.close(terminate=True, kill=True)
                 break
             time.sleep(0.5)
         return ret_stdout, ret_stderr, term.exitstatus
