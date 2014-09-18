@@ -24,6 +24,7 @@ KEY_VALID_RE = re.compile(r'.*\(yes\/no\).*')
 class NoPasswdError(Exception):
     pass
 
+
 class KeyAcceptError(Exception):
     pass
 
@@ -198,7 +199,6 @@ class Shell(object):
                 '-t -t' if self.tty else '',
                 opts,
                 cmd)
-        return None
 
     def _old_run_cmd(self, cmd):
         '''
@@ -290,7 +290,6 @@ class Shell(object):
         log.debug(logmsg)
 
         return self._run_cmd(cmd)
-
 
     def _run_cmd(self, cmd, key_accept=False, passwd_retries=3):
         '''
