@@ -93,10 +93,12 @@ class AsyncClientMixin(object):
                             )
             data['success'] = False
         data['user'] = user
+
         if fire_event:
             event.fire_event(data, tagify('ret', base=tag))
-        # this is a workaround because process reaping is defeating 0MQ linger
-        time.sleep(2.0)  # delay so 0MQ event gets out before runner process reaped
+            # if we fired an event, make sure to delete the event object.
+            # This will ensure that we call destroy, which will do the 0MQ linger
+            del event
 
     def async(self, fun, low, user='UNKNOWN', fire_event=True):
         '''
