@@ -34,6 +34,7 @@ import salt.utils.event
 import salt.utils.atomicfile
 import salt.utils.thin
 import salt.utils.verify
+import salt.utils.validate.ssh
 from salt._compat import string_types
 from salt.utils import is_windows
 
@@ -176,6 +177,7 @@ class SSH(object):
         else:
             self.event = None
         self.opts = opts
+        self.opts['_ssh_version'] = salt.utils.validate.ssh.version()
         self.tgt_type = self.opts['selected_target_option'] \
                 if self.opts['selected_target_option'] else 'glob'
         self.roster = salt.roster.Roster(opts, opts.get('roster'))
