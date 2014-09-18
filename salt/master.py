@@ -67,6 +67,9 @@ log = logging.getLogger(__name__)
 def clean_proc(proc, wait_for_kill=10):
     '''
     Generic method for cleaning up multiprocessing procs
+
+    :param multiprocessing.Process proc: A salt-master process
+    :param int wait_for_kill: The number of deciseconds to wait before forcibly terminating the process 
     '''
     # NoneType and other fun stuff need not apply
     if not proc:
@@ -93,11 +96,13 @@ def clean_proc(proc, wait_for_kill=10):
 
 class SMaster(object):
     '''
-    Create a simple salt-master, this will generate the top level master
+    Create a simple salt-master, this will generate the top-level master
     '''
     def __init__(self, opts):
         '''
         Create a salt master server instance
+
+        :param dict opts: The salt options dictionary
         '''
         self.opts = opts
         self.master_key = salt.crypt.MasterKeys(self.opts)
@@ -125,6 +130,8 @@ class Master(SMaster):
     def __init__(self, opts):
         '''
         Create a salt master server instance
+
+        :param dict: The salt options
         '''
         # Warn if ZMQ < 3.2
         try:
@@ -281,8 +288,8 @@ class Master(SMaster):
 
     def _pre_flight(self):
         '''
-        Run pre flight checks, if anything in this method fails then the master
-        should not start up
+        Run pre flight checks. If anything in this method fails then the master
+        should not start up.
         '''
         errors = []
         fileserver = salt.fileserver.Fileserver(self.opts)
@@ -329,7 +336,9 @@ class Master(SMaster):
             '''
             Cleaner method for stopping multiprocessing processes when a
             SIGTERM is encountered.  This is required when running a salt
-            master under a process minder like daemontools
+            master under a process minder like daemontools.
+
+            :param int signum: The signal number to sent to the salt-master process
             '''
             log.warn(
                 'Caught signal {0}, stopping the Salt Master'.format(
@@ -362,6 +371,11 @@ class Halite(multiprocessing.Process):
     Manage the Halite server
     '''
     def __init__(self, hopts):
+        '''
+        Create a halite instance
+
+        :param dict hopts: The halite options
+        '''
         super(Halite, self).__init__()
         self.hopts = hopts
 
@@ -379,6 +393,11 @@ class Publisher(multiprocessing.Process):
     commands.
     '''
     def __init__(self, opts):
+        '''
+        Create a publisher instance
+
+        :param dict opts: The salt options
+        '''
         super(Publisher, self).__init__()
         self.opts = opts
 
@@ -467,6 +486,14 @@ class ReqServer(object):
     interface.
     '''
     def __init__(self, opts, crypticle, key, mkey):
+        '''
+        Create a request server
+
+        :param dict opts: The salt options dictionary
+        :crypticle salt.crypt.Crypticle crypticle: Encryption crypticle
+        :key dict: The user starting the server and the AES key
+        :mkey dict: The user starting the server and the RSA key
+        '''
         self.opts = opts
         self.master_key = mkey
         self.context = zmq.Context(self.opts['worker_threads'])
@@ -605,6 +632,14 @@ class MWorker(multiprocessing.Process):
                  mkey,
                  key,
                  crypticle):
+        '''
+        Create a salt master worker process
+
+        :param dict opts: The salt options
+        :param dict mkey: The user running the salt master and the AES key
+        :param dict key: The user running the salt master and the RSA key
+        :param salt.crypt.Crypticle crypticle: Encryption crypticle
+        '''
         multiprocessing.Process.__init__(self)
         self.opts = opts
         self.serial = salt.payload.Serial(opts)
@@ -658,6 +693,22 @@ class MWorker(multiprocessing.Process):
         '''
         The _handle_payload method is the key method used to figure out what
         needs to be done with communication to the server
+
+        Example cleartext payload generated for 'salt myminion test.ping':
+
+        {'enc': 'clear',
+         'load': {'arg': [],
+                  'cmd': 'publish',
+                  'fun': 'test.ping',
+                  'jid': '',
+                  'key': 'alsdkjfa.,maljf-==adflkjadflkjalkjadfadflkajdflkj',
+                  'kwargs': {'show_jid': False, 'show_timeout': False},
+                  'ret': '',
+                  'tgt': 'myminion',
+                  'tgt_type': 'glob',
+                  'user': 'root'}}
+
+        :param dict payload: The payload route to the appropriate handler
         '''
         try:
             key = payload['enc']
@@ -670,7 +721,11 @@ class MWorker(multiprocessing.Process):
 
     def _handle_clear(self, load):
         '''
-        Take care of a cleartext command
+        Process a cleartext command
+
+        :param dict load: Cleartext payload
+        :return: The result of passing the load to a function in ClearFuncs corresponding to
+                 the command specified in the load's 'cmd' key.
         '''
         log.info('Clear payload received with command {cmd}'.format(**load))
         if load['cmd'].startswith('__'):
@@ -687,7 +742,11 @@ class MWorker(multiprocessing.Process):
 
     def _handle_aes(self, load):
         '''
-        Handle a command sent via an AES key
+        Process a command sent via an AES key
+
+        :param str load: Encrypted payload
+        :return: The result of passing the load to a function in AESFuncs corresponding to
+                 the command specified in the load's 'cmd' key.
         '''
         try:
             data = self.crypticle.loads(load)
@@ -748,6 +807,12 @@ class AESFuncs(object):
     # The AES Functions:
     #
     def __init__(self, opts, crypticle):
+        '''
+        Create a new AESFuncs
+
+        :param dict opts: The salt options
+        :param salt.crypt.Crypticle crypticle: Encryption crypticle
+        '''
         self.opts = opts
         self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
         self.serial = salt.payload.Serial(opts)
@@ -780,6 +845,12 @@ class AESFuncs(object):
         '''
         Take a minion id and a string signed with the minion private key
         The string needs to verify as 'salt' with the minion public key
+
+        :param str id_: A minion ID
+        :param str token: A string signed with the minion private key
+
+        :rtype: bool
+        :return: Boolean indicating whether or not the token can be verified.
         '''
         if not salt.utils.verify.valid_id(self.opts, id_):
             return False
@@ -811,6 +882,11 @@ class AESFuncs(object):
     def __verify_minion_publish(self, clear_load):
         '''
         Verify that the passed information authorized a minion to execute
+
+        :param dict clear_load: A publication load from a minion
+
+        :rtype: bool
+        :return: A boolean indicating if the minion is allowed to publish the command in the load
         '''
         # Verify that the load is valid
         if 'peer' not in self.opts:
@@ -859,8 +935,12 @@ class AESFuncs(object):
         '''
         A utility function to perform common verification steps.
 
-        verify_keys: A list of strings that should be present in a
-        given load.
+        :param dict load: A payload received from a minion
+        :param list verify_keys: A list of strings that should be present in a given load
+
+        :rtype: bool
+        :rtype: dict
+        :return: The original load (except for the token) if the load can be verified. False if the load is invalid.
         '''
         if any(key not in load for key in verify_keys):
             return False
@@ -890,6 +970,9 @@ class AESFuncs(object):
         '''
         Return the results from an external node classifier if one is
         specified
+
+        :param dict load: A payload received from a minion
+        :return: The results from an external node classifier
         '''
         load = self.__verify_load(load, ('id', 'tok'))
         if load is False:
@@ -899,6 +982,11 @@ class AESFuncs(object):
     def _master_opts(self, load):
         '''
         Return the master options to the minion
+
+        :param dict load: A payload received from a minion
+
+        :rtype: dict
+        :return: The master options
         '''
         mopts = {}
         file_roots = {}
@@ -922,6 +1010,11 @@ class AESFuncs(object):
     def _mine_get(self, load):
         '''
         Gathers the data from the specified minions' mine
+
+        :param dict load: A payload received from a minion
+
+        :rtype: dict
+        :return: Mine data from the specified minions
         '''
         load = self.__verify_load(load, ('id', 'tgt', 'fun', 'tok'))
         if load is False:
@@ -931,7 +1024,12 @@ class AESFuncs(object):
 
     def _mine(self, load):
         '''
-        Return the mine data
+        Store the mine data
+
+        :param dict load: A payload received from a minion
+
+        :rtype: bool
+        :return: True if the data has been stored in the mine
         '''
         load = self.__verify_load(load, ('id', 'data', 'tok'))
         if load is False:
@@ -941,6 +1039,11 @@ class AESFuncs(object):
     def _mine_delete(self, load):
         '''
         Allow the minion to delete a specific function from its own mine
+
+        :param dict load: A payload received from a minion
+
+        :rtype: bool
+        :return: Boolean indicating whether or not the given function was deleted from the mine
         '''
         load = self.__verify_load(load, ('id', 'fun', 'tok'))
         if load is False:
@@ -951,6 +1054,8 @@ class AESFuncs(object):
     def _mine_flush(self, load):
         '''
         Allow the minion to delete all of its own mine contents
+
+        :param dict load: A payload received from a minion
         '''
         load = self.__verify_load(load, ('id', 'tok'))
         if load is False:
