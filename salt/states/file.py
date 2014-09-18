@@ -281,11 +281,12 @@ def _gen_keep_files(name, require):
     like directory or recurse has a clean.
     '''
     keep = set()
-    keep.add(name)
+    # Remove last slash if exists for all path
+    keep.add(name.rstrip('/'))
     if isinstance(require, list):
         for comp in require:
             if 'file' in comp:
-                keep.add(comp['file'])
+                keep.add(comp['file'].rstrip('/'))
                 if os.path.isdir(comp['file']):
                     for root, dirs, files in os.walk(comp['file']):
                         for name in files:
@@ -329,6 +330,7 @@ def _clean_dir(root, keep, exclude_pat):
                     break
 
     for roots, dirs, files in os.walk(root):
+        dirs[:] = [d for d in dirs if os.path.join(root, d) not in keep]
         for name in dirs:
             nfn = os.path.join(roots, name)
             if os.path.islink(nfn):
@@ -448,6 +450,7 @@ def _check_directory(name,
                         continue
                     fchange['removed'] = 'Removed due to clean'
                     changes[path] = fchange
+            dirs[:] = [d for d in dirs if os.path.join(root, d) not in keep]
             for name_ in dirs:
                 fchange = {}
                 path = os.path.join(root, name_)
