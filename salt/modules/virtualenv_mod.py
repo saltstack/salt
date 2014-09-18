@@ -319,7 +319,7 @@ def _install_script(source, cwd, python, user, saltenv='base'):
     if not salt.utils.is_windows():
         fn_ = __salt__['cp.cache_file'](source, saltenv)
         shutil.copyfile(fn_, tmppath)
-        os.chmod(tmppath, 320)
+        os.chmod(tmppath, 0o500)
         os.chown(tmppath, __salt__['file.user_to_uid'](user), -1)
     try:
         return __salt__['cmd.run_all'](
