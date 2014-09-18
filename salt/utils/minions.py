@@ -303,7 +303,7 @@ class CkMinions(object):
                     minions.remove(id_)
         return list(minions)
 
-    def _check_compound_minions(self, expr):
+    def _check_compound_minions(self, expr, delimiter):
         '''
         Return the minions found by looking via compound matcher
         '''
@@ -328,15 +328,20 @@ class CkMinions(object):
                 if '@' in match and match[1] == '@':
                     comps = match.split('@')
                     matcher = ref.get(comps[0])
+
+                    matcher_args = ['@'.join(comps[1:])]
+                    if comps[0] in ('G', 'P', 'I'):
+                        matcher_args.append(delimiter)
+
                     if not matcher:
                         # If an unknown matcher is called at any time, fail out
                         return []
                     if unmatched and unmatched[-1] == '-':
-                        results.append(str(set(matcher('@'.join(comps[1:])))))
+                        results.append(str(set(matcher(*matcher_args))))
                         results.append(')')
                         unmatched.pop()
                     else:
-                        results.append(str(set(matcher('@'.join(comps[1:])))))
+                        results.append(str(set(matcher(*matcher_args))))
                 elif match in opers:
                     # We didn't match a target, so append a boolean operator or
                     # subexpression
@@ -457,7 +462,7 @@ class CkMinions(object):
         try:
             check_func = getattr(self, '_check_{0}_minions'.format(expr_form),
                                  None)
-            if expr_form in ('grain', 'grain_pcre', 'pillar'):
+            if expr_form in ('grain', 'grain_pcre', 'pillar', 'compound'):
                 minions = check_func(expr, delimiter)
             else:
                 minions = check_func(expr)
