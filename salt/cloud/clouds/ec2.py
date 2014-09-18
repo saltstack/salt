@@ -1541,7 +1541,7 @@ def create_attach_volumes(name, kwargs, call=None):
         )
 
     if 'instance_id' not in kwargs:
-        kwargs['instance_id'] = _get_node(name)['instanceId']
+        kwargs['instance_id'] = _get_node(name)[name]['instanceId']
 
     if type(kwargs['volumes']) is str:
         volumes = yaml.safe_load(kwargs['volumes'])
@@ -1616,7 +1616,7 @@ def stop(name, call=None):
 
     log.info('Stopping node {0}'.format(name))
 
-    instance_id = _get_node(name)['instanceId']
+    instance_id = _get_node(name)[name]['instanceId']
 
     params = {'Action': 'StopInstances',
               'InstanceId.1': instance_id}
@@ -1636,7 +1636,7 @@ def start(name, call=None):
 
     log.info('Starting node {0}'.format(name))
 
-    instance_id = _get_node(name)['instanceId']
+    instance_id = _get_node(name)[name]['instanceId']
 
     params = {'Action': 'StartInstances',
               'InstanceId.1': instance_id}
@@ -1659,7 +1659,7 @@ def set_tags(name, tags, call=None, location=None, instance_id=None):
         )
 
     if instance_id is None:
-        instance_id = _get_node(name, location)['instanceId']
+        instance_id = _get_node(name, location)[name]['instanceId']
 
     params = {'Action': 'CreateTags',
               'ResourceId.1': instance_id}
@@ -1748,7 +1748,7 @@ def del_tags(name, kwargs, call=None):
             'A tag or tags must be specified using tags=list,of,tags'
         )
 
-    instance_id = _get_node(name)['instanceId']
+    instance_id = _get_node(name)[name]['instanceId']
     params = {'Action': 'DeleteTags',
               'ResourceId.1': instance_id}
 
@@ -1869,7 +1869,7 @@ def reboot(name, call=None):
 
         salt-cloud -a reboot mymachine
     '''
-    instance_id = _get_node(name)['instanceId']
+    instance_id = _get_node(name)[name]['instanceId']
     params = {'Action': 'RebootInstances',
               'InstanceId.1': instance_id}
     result = query(params)
