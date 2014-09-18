@@ -312,8 +312,8 @@ class Shell(object):
             if stdout and SSH_PASSWORD_PROMPT_RE.search(stdout):
                 if not self.passwd:
                     try:
-                        term.close()
-                    except TerminalException:
+                        term.close(terminate=True, kill=True)
+                    except salt.utils.vt.TerminalException:
                         pass
                     return '', 'No authentication information available', 254
                 if sent_passwd < passwd_retries:
@@ -323,8 +323,8 @@ class Shell(object):
                 else:
                     # asking for a password, and we can't seem to send it
                     try:
-                        term.close()
-                    except TerminalException:
+                        term.close(terminate=True, kill=True)
+                    except salt.utils.vt.TerminalException:
                         pass
                     return '', 'Password authentication failed', 254
             elif stdout and KEY_VALID_RE.search(stdout):
@@ -342,6 +342,7 @@ class Shell(object):
             if stderr:
                 ret_stderr += stderr
             if not term.isalive():
+                term.close(terminate=True, kill=True)
                 break
             time.sleep(0.5)
         return ret_stdout, ret_stderr, term.exitstatus
