@@ -4,6 +4,7 @@ Manage transport commands via ssh
 '''
 
 # Import python libs
+import re
 import os
 import time
 import logging
@@ -12,8 +13,19 @@ import subprocess
 # Import salt libs
 import salt.utils
 import salt.utils.nb_popen
+import salt.utils.vt
 
 log = logging.getLogger(__name__)
+
+SSH_PASSWORD_PROMPT_RE = re.compile(r'(?:.*)[Pp]assword(?: for .*)?:', re.M)
+KEY_VALID_RE = re.compile(r'.*\(yes\/no\).*')
+
+
+class NoPasswdError(Exception):
+    pass
+
+class KeyAcceptError(Exception):
+    pass
 
 
 def gen_key(path):
@@ -289,3 +301,46 @@ class Shell(object):
         log.debug(logmsg)
 
         return self._run_cmd(cmd)
+
+
+def exec_ssh(cmd, passwd=None, key_accept=False, passwd_retries=3):
+    '''
+    Execute a shell command via VT. This is blocking and assumes that ssh
+    is being run
+    '''
+    term = salt.utils.vt.Terminal(
+            cmd,
+            shell=True,
+            log_stdout=True,
+            log_stderr=True,
+            stream_stdout=False,
+            stream_stderr=False)
+    sent_passwd = 0
+    ret_stdout = ''
+    ret_stderr = ''
+    while True:
+        stdout, stderr = term.recv()
+        if stdout and SSH_PASSWORD_PROMPT_RE.search(stdout):
+            if not passwd:
+                raise NoPasswdError
+            if sent_passwd < passwd_retries:
+                term.sendline(passwd)
+                sent_passwd += 1
+                continue
+            else:
+                # asking for a password, and we can't seem to send it
+                raise NoPasswdError
+        elif stdout and KEY_VALID_RE.search(stdout):
+            if key_accept:
+                term.sendline('yes')
+                continue
+            else:
+                raise KeyAcceptError(stdout)
+        if stdout:
+            ret_stdout += stdout
+        if stderr:
+            ret_stderr += stderr
+        if not term.isalive():
+            break
+        time.sleep(0.5)
+    return ret_stdout, ret_stderr
