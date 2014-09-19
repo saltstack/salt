@@ -543,6 +543,8 @@ class FSChan(object):
         self.opts = opts
         self.kwargs = kwargs
         self.fs = Fileserver(self.opts)
+        self.fs.init()
+        self.fs.update()
 
     def send(self, load, tries=None, timeout=None):
         '''
