@@ -229,6 +229,11 @@ class PkgTest(integration.ModuleCase,
         os_name = grains.get('os', '')
         target = _PKG_TARGETS_32.get(os_name, '')
 
+        if os_name == 'CentOS' and grains['osrelease'].startswith('6'):
+            self.skipTest(
+                'This test is running unreliably on CentOS 6. Skipping.'
+            )
+
         # _PKG_TARGETS_32 is only populated for platforms for which Salt has to
         # munge package names for 32-bit-on-x86_64 (Currently only Ubuntu and
         # RHEL-based). Don't actually perform this test on other platforms.
