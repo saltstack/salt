@@ -448,7 +448,7 @@ then the state is run.
         - name: glusterfs.stop_volume
         - m_name: work
         - onlyif:
-            - gluster volume status work
+          - gluster volume status work
         - order: 1
 
     remove-volume:
@@ -456,7 +456,7 @@ then the state is run.
         - name: glusterfs.delete
         - m_name: work
         - onlyif:
-            - gluster volume info work
+          - gluster volume info work
         - watch:
           - cmd: stop-volume
 
@@ -481,7 +481,7 @@ at the end of a state run, after all states have completed.
    service.running:
      - name: apache2
      - listen:
-     - file: /etc/apache2/apache2.conf
+       - file: /etc/apache2/apache2.conf
 
  configure-apache2:
    file.managed:
@@ -502,7 +502,7 @@ changed, but the apache2 restart will happen at the end of the state run.
      - path: /etc/apache2/apache2.conf
      - source: salt://apache2/apache2.conf
      - listen_in:
-     - service: apache2
+       - service: apache2
 
 This example does the same as the above example, but puts the state argument
 on the file resource, rather than the service resource.
@@ -523,7 +523,7 @@ expected.
         - pattern: ^enabled=0
         - repl: enabled=1
         - check_cmd:
-            - grep 'enabled=0' /etc/yum.repos.d/fedora.repo && return 1 || return 0
+          - grep 'enabled=0' /etc/yum.repos.d/fedora.repo && return 1 || return 0
 
 This will attempt to do a replace on all enabled=0 in the .repo file, and
 replace them with enabled=1.  The check_cmd is just a bash command.  It will do
