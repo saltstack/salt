@@ -598,7 +598,6 @@ class MWorker(multiprocessing.Process):
         except KeyError:
             return ''
         return {'aes': self._handle_aes,
-                'pub': self._handle_pub,
                 'clear': self._handle_clear}[key](load)
 
     def _handle_clear(self, load):
@@ -609,14 +608,6 @@ class MWorker(multiprocessing.Process):
         if load['cmd'].startswith('__'):
             return False
         return getattr(self.clear_funcs, load['cmd'])(load)
-
-    def _handle_pub(self, load):
-        '''
-        Handle a command sent via a public key pair
-        '''
-        if load['cmd'].startswith('__'):
-            return False
-        log.info('Pubkey payload received with command {cmd}'.format(**load))
 
     def _handle_aes(self, load):
         '''
