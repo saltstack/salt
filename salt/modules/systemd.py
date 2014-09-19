@@ -234,6 +234,7 @@ def missing(name):
     '''
     return not available(name)
 
+
 def unmask(name):
     '''
     Unmask the specified service with systemd
@@ -247,6 +248,7 @@ def unmask(name):
     if _untracked_custom_unit_found(name) or _unit_file_changed(name):
         systemctl_reload()
     return not __salt__['cmd.retcode'](_systemctl_cmd('unmask', name))
+
 
 def mask(name):
     '''
