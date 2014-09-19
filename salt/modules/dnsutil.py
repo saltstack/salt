@@ -187,28 +187,28 @@ def parse_zone(zonefile=None, zone=None):
     return zonedict
 
 
-def _to_seconds(time):
+def _to_seconds(timestr):
     '''
     Converts a time value to seconds.
 
     As per RFC1035 (page 45), max time is 1 week, so anything longer (or
     unreadable) will be set to one week (604800 seconds).
     '''
-    time = time.upper()
-    if 'H' in time:
-        time = int(time.replace('H', '')) * 3600
-    elif 'D' in time:
-        time = int(time.replace('D', '')) * 86400
-    elif 'W' in time:
-        time = 604800
+    timestr = timestr.upper()
+    if 'H' in timestr:
+        seconds = int(timestr.replace('H', '')) * 3600
+    elif 'D' in timestr:
+        seconds = int(timestr.replace('D', '')) * 86400
+    elif 'W' in timestr:
+        seconds = 604800
     else:
         try:
-            time = int(time)
-        except Exception:
-            time = 604800
-    if time > 604800:
-        time = 604800
-    return time
+            seconds = int(timestr)
+        except ValueError:
+            seconds = 604800
+    if seconds > 604800:
+        seconds = 604800
+    return seconds
 
 
 def _has_dig():
