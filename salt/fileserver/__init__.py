@@ -532,3 +532,26 @@ class Fileserver(object):
                 (x, y) for x, y in ret.items() if x.startswith(prefix)
             ])
         return ret
+
+
+class FSChan(object):
+    '''
+    A class that mimics the transport channels allowing for local access to
+    to the fileserver class class structure
+    '''
+    def __init__(self, opts, **kwargs):
+        self.opts = opts
+        self.kwargs = kwargs
+        self.fs = Fileserver(self.opts)
+
+    def send(self, load, tries=None, timeout=None):
+        '''
+        Emulate the channel send method, the tries and timeout are not used
+        '''
+        if 'cmd' not in load:
+            log.error('Malformed request: {0}'.format(load))
+            return {}
+        if not hasattr(self.fs, load['cmd']):
+            log.error('Malformed request: {0}'.format(load))
+            return {}
+        return getattr(self.fs, load['cmd'])(load)
