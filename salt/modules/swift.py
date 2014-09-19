@@ -182,7 +182,7 @@ def put(cont, path=None, local_file=None, profile=None):
     '''
     swift_conn = _auth(profile)
 
-    if path is not None:
+    if path is None:
         return swift_conn.put_container(cont)
     elif local_file is not None:
         return swift_conn.put_object(cont, path, local_file)
