@@ -329,6 +329,7 @@ __opts__ = {
     'pepa_validate': False
 }
 
+
 def __virtual__():
     '''
     Only return if all the modules are available
@@ -484,6 +485,7 @@ def ext_pillar(minion_id, pillar, resource, sequence, subkey=False, subkey_only=
         pillar_data['pepa_keys'] = output.copy()
     return pillar_data
 
+
 def validate(output, resource):
     '''
     Validate Pepa templates
@@ -559,9 +561,9 @@ if __name__ == '__main__':
 
         username = args.username
         password = args.password
-        if username == None:
+        if username is None:
             username = raw_input('Username: ')
-        if password == None:
+        if password is None:
             password = getpass.getpass()
 
         log.info('Authenticate REST API')
@@ -579,7 +581,7 @@ if __name__ == '__main__':
         request = requests.get(args.url + '/minions/' + args.hostname, headers=headers)
 
         result = request.json().get('return', [{}])[0]
-        if not args.hostname in result:
+        if args.hostname not in result:
             raise RuntimeError('Failed to get Grains from SaltStack REST API')
 
         __grains__ = result[args.hostname]
