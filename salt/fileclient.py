@@ -38,15 +38,9 @@ def get_file_client(opts):
     server
     '''
     client = opts.get('file_client', 'remote')
-    if client == 'local':
-        for backend in opts.get('fileserver_backend', []):
-            if backend != 'roots':
-                client = 'fsclient'
-    print(client)
     return {
         'remote': RemoteClient,
-        'local': LocalClient,
-        'fsclient': FSClient,
+        'local': FSClient,
     }.get(client, RemoteClient)(opts)
 
 
