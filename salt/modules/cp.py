@@ -649,7 +649,7 @@ def push(path, keep_symlinks=False):
         log.debug('Path must be absolute, returning False')
         return False
     if not keep_symlinks:
-      path = os.path.realpath(path)
+        path = os.path.realpath(path)
     if not os.path.isfile(path):
         log.debug('Path failed os.path.isfile check, returning False')
         return False
