@@ -445,7 +445,7 @@ def wait_for_event(
         wait_for_reboots:
           salt.wait_for_event:
             - name: salt/minion/*/start
-            - mid_list:
+            - id_list:
               - jerry
               - stuart
               - dave
