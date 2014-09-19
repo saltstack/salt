@@ -265,7 +265,7 @@ For more examples and information see <https://github.com/mickep76/pepa>.
 __author__ = 'Michael Persson <michael.ake.persson@gmail.com>'
 __copyright__ = 'Copyright (c) 2013 Michael Persson'
 __license__ = 'Apache License, Version 2.0'
-__version__ = '0.6.5'
+__version__ = '0.6.6'
 
 # Import python libs
 import logging
@@ -289,6 +289,10 @@ if __name__ == '__main__':
     parser.add_argument('-p', '--pillar', help='Input Pillar as YAML')
     parser.add_argument('-n', '--no-color', action='store_true', help='No color output')
     parser.add_argument('-v', '--validate', action='store_true', help='Validate output')
+    parser.add_argument('-q', '--query-api', action='store_true', help='Query Saltstack REST API for Grains')
+    parser.add_argument('--url', default='https://salt:8000', help='URL for SaltStack REST API')
+    parser.add_argument('-u', '--username', help='Username for SaltStack REST API')
+    parser.add_argument('-P', '--password', help='Password for SaltStack REST API')
     args = parser.parse_args()
 
     LOG_LEVEL = logging.WARNING
@@ -324,7 +328,6 @@ __opts__ = {
     'pepa_delimiter': '..',
     'pepa_validate': False
 }
-
 
 def __virtual__():
     '''
@@ -399,16 +402,24 @@ def ext_pillar(minion_id, pillar, resource, sequence, subkey=False, subkey_only=
             entries = [inp[categ]]
 
         for entry in entries:
+            results_jinja = None
             results = None
             fn = join(templdir, re.sub(r'\W', '_', entry.lower()) + '.yaml')
             if isfile(fn):
                 log.info("Loading template: {0}".format(fn))
                 template = jinja2.Template(open(fn).read())
                 output['pepa_templates'].append(fn)
-                data = key_value_to_tree(output)
-                data['grains'] = __grains__.copy()
-                data['pillar'] = pillar.copy()
-                results = yaml.load(template.render(data))
+
+                try:
+                    data = key_value_to_tree(output)
+                    data['grains'] = __grains__.copy()
+                    data['pillar'] = pillar.copy()
+                    results_jinja = template.render(data)
+                    results = yaml.load(results_jinja)
+                except jinja2.UndefinedError, err:
+                    log.error('Failed to parse JINJA template: {0}\n{1}'.format(fn, err))
+                except yaml.YAMLError, err:
+                    log.error('Failed to parse YAML in template: {0}\n{1}'.format(fn, err))
             else:
                 log.info("Template doesn't exist: {0}".format(fn))
                 continue
@@ -432,14 +443,16 @@ def ext_pillar(minion_id, pillar, resource, sequence, subkey=False, subkey_only=
                         else:
                             log.debug("Set immutable and merge key {0}: {1}".format(rkey, results[key]))
                             immutable[rkey] = True
-                        if rkey in output and type(results[key]) != type(output[rkey]):
-                            log.warning('You can''t merge different types for key {0}'.format(rkey))
+                        if rkey not in output:
+                            log.error('Cant\'t merge key {0} doesn\'t exist'.format(rkey))
+                        elif type(results[key]) != type(output[rkey]):
+                            log.error('Can\'t merge different types for key {0}'.format(rkey))
                         elif type(results[key]) is dict:
                             output[rkey].update(results[key])
                         elif type(results[key]) is list:
                             output[rkey].extend(results[key])
                         else:
-                            log.warning('Unsupported type need to be list or dict for key {0}'.format(rkey))
+                            log.error('Unsupported type need to be list or dict for key {0}'.format(rkey))
                     elif operator == 'unset()' or operator == 'iunset()':
                         if operator == 'unset()':
                             log.debug("Unset key {0}".format(rkey))
@@ -453,7 +466,7 @@ def ext_pillar(minion_id, pillar, resource, sequence, subkey=False, subkey_only=
                         immutable[rkey] = True
                         output[rkey] = results[key]
                     elif operator is not None:
-                        log.warning('Unsupported operator {0}, skipping key {1}'.format(operator, rkey))
+                        log.error('Unsupported operator {0}, skipping key {1}'.format(operator, rkey))
                     else:
                         log.debug("Substitute key {0}: {1}".format(key, results[key]))
                         output[key] = results[key]
@@ -470,7 +483,6 @@ def ext_pillar(minion_id, pillar, resource, sequence, subkey=False, subkey_only=
     if __opts__['pepa_validate']:
         pillar_data['pepa_keys'] = output.copy()
     return pillar_data
-
 
 def validate(output, resource):
     '''
@@ -541,8 +553,48 @@ if __name__ == '__main__':
     if args.validate:
         __opts__['pepa_validate'] = True
 
+    if args.query_api:
+        import requests
+        import getpass
+
+        username = args.username
+        password = args.password
+        if username == None:
+            username = raw_input('Username: ')
+        if password == None:
+            password = getpass.getpass()
+
+        log.info('Authenticate REST API')
+        auth = {'username': username, 'password': password, 'eauth': 'pam'}
+        request = requests.post(args.url + '/login', auth)
+
+        if not request.ok:
+            raise RuntimeError('Failed to authenticate to SaltStack REST API: {0}'.format(request.text))
+
+        response = request.json()
+        token = response['return'][0]['token']
+
+        log.info('Request Grains from REST API')
+        headers = {'X-Auth-Token': token, 'Accept': 'application/json'}
+        request = requests.get(args.url + '/minions/' + args.hostname, headers=headers)
+
+        result = request.json().get('return', [{}])[0]
+        if not args.hostname in result:
+            raise RuntimeError('Failed to get Grains from SaltStack REST API')
+
+        __grains__ = result[args.hostname]
+#        print yaml.safe_dump(__grains__, indent=4, default_flow_style=False)
+
     # Print results
-    result = ext_pillar(args.hostname, __pillar__, __opts__['ext_pillar'][loc]['pepa']['resource'], __opts__['ext_pillar'][loc]['pepa']['sequence'])
+    ex_subkey = False
+    ex_subkey_only = False
+    if 'subkey' in __opts__['ext_pillar'][loc]['pepa']:
+        ex_subkey = __opts__['ext_pillar'][loc]['pepa']['subkey']
+    if 'subkey_only' in __opts__['ext_pillar'][loc]['pepa']:
+        ex_subkey_only = __opts__['ext_pillar'][loc]['pepa']['subkey_only']
+
+    result = ext_pillar(args.hostname, __pillar__, __opts__['ext_pillar'][loc]['pepa']['resource'],
+                        __opts__['ext_pillar'][loc]['pepa']['sequence'], ex_subkey, ex_subkey_only)
 
     if __opts__['pepa_validate']:
         validate(result, __opts__['ext_pillar'][loc]['pepa']['resource'])
