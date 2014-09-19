@@ -551,9 +551,10 @@ class FSChan(object):
         Emulate the channel send method, the tries and timeout are not used
         '''
         if 'cmd' not in load:
-            log.error('Malformed request: {0}'.format(load))
+            log.error('Malformed request, no cmd: {0}'.format(load))
             return {}
-        if not hasattr(self.fs, load['cmd']):
-            log.error('Malformed request: {0}'.format(load))
+        cmd = load['cmd'].lstrip('_')
+        if not hasattr(self.fs, cmd):
+            log.error('Malformed request, invalid cmd: {0}'.format(load))
             return {}
-        return getattr(self.fs, load['cmd'])(load)
+        return getattr(self.fs, cmd)(load)

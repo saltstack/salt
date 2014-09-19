@@ -37,10 +37,17 @@ def get_file_client(opts):
     Read in the ``file_client`` option and return the correct type of file
     server
     '''
+    client = opts.get('file_client', 'remote')
+    if client == 'local':
+        for backend in opts.get('fileserver_backend', []):
+            if backend != 'roots':
+                client = 'fsclient'
+    print(client)
     return {
         'remote': RemoteClient,
-        'local': LocalClient
-    }.get(opts['file_client'], RemoteClient)(opts)
+        'local': LocalClient,
+        'fsclient': FSClient,
+    }.get(client, RemoteClient)(opts)
 
 
 class Client(object):
@@ -1204,6 +1211,6 @@ class FSClient(RemoteClient):
     the FSChan object
     '''
     def __init__(self, opts):
-        RemoteClient.__init__(self, opts)
+        self.opts = opts
         self.channel = salt.fileserver.FSChan(opts)
         self.auth = True
