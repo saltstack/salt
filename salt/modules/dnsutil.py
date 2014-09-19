@@ -9,6 +9,7 @@ import socket
 
 # Import python libs
 import logging
+import time
 
 log = logging.getLogger(__name__)
 
@@ -320,3 +321,44 @@ def MX(domain, resolve=False, nameserver=None):
         return __salt__['dig.MX'](domain, resolve, nameserver)
 
     return 'This function requires dig, which is not currently available'
+
+
+def serial(zone='', update=False):
+    '''
+    Return, store and update a dns serial for your zone files.
+
+    zone: a keywork for a specific zone
+
+    update: store an updated version of the serial in a grain
+
+    If ``update`` is False, the function will retrieve an existing serial or
+    return the current date if no serial is stored. Nothing will be stored
+
+    If ``update`` is True, the function will set the serial to the current date
+    if none exist or if the existing serial is for a previous date. If a serial
+    for greater than the current date is already stored, the function will
+    increment it.
+
+    This module stores the serial in a grain, you can explicitely set the
+    stored value as a grain named ``dnsserial_<zone_name>``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt ns1 dnsutil.serial example.com
+    '''
+    grains = {}
+    key = 'dnsserial'
+    if zone:
+        key += '_{0}'.format(zone)
+    stored = __salt__['grains.get'](key=key)
+    present = time.strftime('%Y%m%d01')
+    if not update:
+        return stored or present
+    if stored and stored >= present:
+        current = str(int(stored) + 1)
+    else:
+        current = present
+    __salt__['grains.setval'](key=key, val=current)
+    return current
