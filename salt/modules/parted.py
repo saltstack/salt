@@ -53,6 +53,8 @@ def __virtual__():
         return False
     if not salt.utils.which('lsblk'):
         return False
+    if not salt.utils.which('partprobe'):
+        return False
     return __virtualname__
 
 
@@ -377,7 +379,10 @@ def mkfs(device, fs_type):
                           'hfs', 'hfs+', 'hfsx', 'NTFS', 'ufs']):
         raise CommandExecutionError('Invalid fs_type passed to partition.mkfs')
 
-    cmd = 'mkfs.{0} {1}'.format(fs_type, device)
+    mkfs_cmd = 'mkfs.{0}'.format(fs_type)
+    if not salt.utils.which(mkfs_cmd):
+        return 'Error: {0} is unavailable.'
+    cmd = '{0} {1}'.format(mkfs_cmd, device)
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
 
