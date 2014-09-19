@@ -1121,7 +1121,11 @@ class LocalClient(object):
                                 )
                             more_time = True
                     if not more_time:
-                        break
+                        # set the timeout to a non-zero number, so we can do
+                        # one more iteration to attempt to avoid the race here
+                        # between job finishing and master getting ret
+                        timeout = 1
+                        continue
                     else:
                         timeout_at = time.time() + timeout
                         continue
