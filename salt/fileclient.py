@@ -1196,3 +1196,14 @@ class RemoteClient(Client):
             return channel.send(load)
         except SaltReqTimeoutError:
             return ''
+
+
+class FSClient(RemoteClient):
+    '''
+    A local client that uses the RemoteClient but substitutes the channel for
+    the FSChan object
+    '''
+    def __init__(self, opts):
+        RemoteClient.__init__(self, opts)
+        self.channel = salt.fileserver.FSChan(opts)
+        self.auth = True
