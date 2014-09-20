@@ -32,15 +32,16 @@ from salt.utils.openstack.swift import SaltSwift
 log = logging.getLogger(__name__)
 
 
-def get_file_client(opts):
+def get_file_client(opts, pillar=False):
     '''
     Read in the ``file_client`` option and return the correct type of file
     server
     '''
-    client = opts.get('file_client', 'remote')
+    client = 'pillar' if pillar else opts.get('file_client', 'remote')
     return {
         'remote': RemoteClient,
         'local': FSClient,
+        'pillar': LocalClient,
     }.get(client, RemoteClient)(opts)
 
 
