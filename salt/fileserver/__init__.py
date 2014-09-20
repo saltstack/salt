@@ -293,6 +293,12 @@ class Fileserver(object):
                 ret.append(sub)
         return ret
 
+    def master_opts(self, load):
+        '''
+        Simplify master opts
+        '''
+        return self.opts
+
     def update(self, back=None):
         '''
         Update all of the file-servers that support the update function or the
