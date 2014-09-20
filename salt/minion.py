@@ -843,12 +843,6 @@ class Minion(MinionBase):
         channel = salt.transport.Channel.factory(self.opts)
         try:
             result = channel.send(load)
-        except AuthenticationError:
-            log.info("AES key changed, re-authenticating")
-            self.authenticate()
-        except SaltReqTimeoutError:
-            log.info("Master failed to respond. Preforming re-authenticating")
-            self.authenticate()
         except Exception:
             log.info("fire_master failed: {0}".format(traceback.format_exc()))
 
