@@ -331,10 +331,10 @@ def bootstrap(version='develop',
         # pass better options to ssh, etc)
         subprocess.call(['ssh',
                         'root@' if root_user else '' + host,
-                        'python -c 'import urllib; '
+                        'python -c \'import urllib; '
                         'print urllib.urlopen('
                         '\'' + script + '\''
-                        ').read()' | sh -s -- git ' + version])
+                        ').read()\' | sh -s -- git ' + version])
 
 
 def bootstrap_psexec(hosts='', master=None, version=None, arch='win32',
