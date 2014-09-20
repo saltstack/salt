@@ -37,7 +37,9 @@ def get_file_client(opts, pillar=False):
     Read in the ``file_client`` option and return the correct type of file
     server
     '''
-    client = 'pillar' if pillar else opts.get('file_client', 'remote')
+    client = opts.get('file_client', 'remote')
+    if pillar and client == 'local':
+        client = 'pillar'
     return {
         'remote': RemoteClient,
         'local': FSClient,
