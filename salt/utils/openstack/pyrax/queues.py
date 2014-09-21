@@ -35,12 +35,12 @@ class RackspaceQueues(object):
             return True
         except pyrax.exceptions as err_msg:
             log.error('RackSpace API got some problems during creation: %s' % err_msg)
+        return False
 
     def delete(self, qname):
         '''
         Delete an existings RackSpace Queue.
         '''
-
         try:
             q = self.exists(qname)
             if not q:
@@ -60,11 +60,11 @@ class RackspaceQueues(object):
         try:
             # First if not exists() -> exit
             if not self.conn.queue_exists(qname):
-                return False
+                return {}
             # If exist, search the queue to return the Queue Object
             for queue in self.conn.list():
                 if queue.name == qname:
-                    return queue
+                    return queue.__dict__
         except pyrax.exceptions as err_msg:
             log.error('RackSpace API got some problems during existing queue check: %s' % err_msg)
-        return False
+        return {}
