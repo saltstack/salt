@@ -6,6 +6,7 @@ Directly manage the Salt fileserver plugins
 # Import salt libs
 import salt.fileserver
 
+
 def dir_list(saltenv='base', outputter='raw'):
     '''
     List all directories in the given environment
@@ -24,6 +25,7 @@ def dir_list(saltenv='base', outputter='raw'):
     if outputter:
         salt.output.display_output(output, outputter, opts=__opts__)
     return output
+
 
 def envs(back=None, sources=False, outputter='raw'):
     '''
@@ -44,6 +46,7 @@ def envs(back=None, sources=False, outputter='raw'):
         salt.output.display_output(output, outputter, opts=__opts__)
     return output
 
+
 def file_list(saltenv='base', outputter='raw'):
     '''
     Return a list of files from the dominant environment
@@ -63,6 +66,7 @@ def file_list(saltenv='base', outputter='raw'):
         salt.output.display_output(output, outputter, opts=__opts__)
     return output
 
+
 def symlink_list(saltenv='base', outputter='raw'):
     '''
     Return a list of symlinked files and dirs
@@ -81,6 +85,7 @@ def symlink_list(saltenv='base', outputter='raw'):
     if outputter:
         salt.output.display_output(output, outputter, opts=__opts__)
     return output
+
 
 def update(back=None):
     '''
