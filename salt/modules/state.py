@@ -290,6 +290,16 @@ def highstate(test=None,
         }
         return ret
 
+    low_data_ = show_lowstate()
+    lows_ = []
+    for item in low_data_:
+        lows_.append('{0}.{1}'.format(item['state'], item['fun']))
+
+    disabled = _disabled(lows_)
+    if disabled:
+        __context__['retcode'] = 1
+        return disabled
+
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
@@ -461,12 +471,12 @@ def sls(mods,
     st_.push_active()
     try:
         high_, errors = st_.render_highstate({saltenv: mods})
-        lowstate_ = show_lowstate()
-        lows_ = []
-        for item in lowstate_:
-            lows_.append('{0}.{1}'.format(item['state'], item['fun']))
+        high_data_ = st_.state.compile_high_data(high_)
+        highs_ = []
+        for item in high_data_:
+            highs_.append('{0}.{1}'.format(item['state'], item['fun']))
 
-        disabled = _disabled(lows_)
+        disabled = _disabled(highs_)
         if disabled:
             __context__['retcode'] = 1
             return disabled
