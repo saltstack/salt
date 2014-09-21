@@ -41,7 +41,6 @@ def present(name, provider):
 
     provider
         Salt Cloud Provider
-        
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
