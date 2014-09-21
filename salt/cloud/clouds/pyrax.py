@@ -89,7 +89,7 @@ def get_conn(conn_type):
 
 def queues_exists(call, kwargs):
     conn = get_conn('RackspaceQueues')
-    return conn.exists(kwargs['name']).__dict__
+    return conn.exists(kwargs['name'])
 
 def queues_create(call, kwargs):
     conn = get_conn('RackspaceQueues')
@@ -102,6 +102,6 @@ def queues_delete(call, kwargs):
     conn = get_conn('RackspaceQueues')
     ret = conn.exists(kwargs['name']).__dict__
     if conn.delete(kwargs['name']):
-        return ret
-    else:
         return {}
+    else:
+        return ret

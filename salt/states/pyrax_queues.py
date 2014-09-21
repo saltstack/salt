@@ -51,42 +51,29 @@ config:
                 apikey: YYYYYYYYYYYYY
 '''
 
+import salt.utils.openstack.pyrax as suop
 
 def __virtual__():
     '''
     Only load if pyrax is available.
     '''
-    return 'pyrax_queues' if 'pyrax_queues.exists' in __salt__ else False
+    return suop.HAS_PYRAX
 
 
-def present(
-        name,
-        region=None,
-        username=None,
-        apikey=None,
-        profile=None):
+def present(name, provider):
     '''
     Ensure the RackSpace queue exists.
 
     name
         Name of the Rackspace queue.
 
-    region
-        Region to connect to.
-
-    username
-        Rackspace username to be used.
-
-    apikey
-        APIkey to be used.
-
-    profile
-        A dict with region, username and APIkey.
+    provider
+        Salt Cloud Provider
+        
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    is_present = __salt__['pyrax_queues.exists'](name, region, username, apikey, profile)
-
+    is_present = __salt__['cloud.action']('queues_exists', provider, name=name)
 
     if not is_present:
         if __opts__['test']:
@@ -94,11 +81,10 @@ def present(
             ret['comment'] = msg
             ret['result'] = None
             return ret
-        created = __salt__['pyrax_queues.create'](name, region, username, apikey,
-                                              profile)
+        created = __salt__['cloud.action']('queues_create', provider, name)
         if created:
-            ret['changes']['old'] = None
-            ret['changes']['new'] = {'queue': name}
+            ret['changes']['old'] = {}
+            ret['changes']['new'] = {'queue': created}
         else:
             ret['result'] = False
             ret['comment'] = 'Failed to create {0} Rackspace queue.'.format(name)
@@ -109,33 +95,19 @@ def present(
     return ret
 
 
-def absent(
-        name,
-        region=None,
-        username=None,
-        apikey=None,
-        profile=None):
+def absent(name, provider):
     '''
     Ensure the named Rackspace queue is deleted.
 
     name
         Name of the Rackspace queue.
 
-    region
-        Region to connect to.
-
-    key
-        Secret key to be used.
-
-    keyid
-        Access key to be used.
-
-    profile
-        A dict with region, key and keyid.
+    provider
+        Salt Cloud provider
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    is_present = __salt__['pyrax_queues.exists'](name, region, username, apikey, profile)
+    is_present = __salt__['cloud.action']('queues_exists', provider, name=name)
 
     if is_present:
         if __opts__['test']:
@@ -143,11 +115,10 @@ def absent(
                 name)
             ret['result'] = None
             return ret
-        deleted = __salt__['pyrax_queues.delete'](name, region, username, apikey,
-                                              profile)
+        deleted = __salt__['cloud.action']('queues_delete', provider, name)
         if deleted:
-            ret['changes']['old'] = name
-            ret['changes']['new'] = None
+            ret['changes']['old'] = is_present
+            ret['changes']['new'] = {}
         else:
             ret['result'] = False
             ret['comment'] = 'Failed to delete {0} Rackspace queue.'.format(name)
