@@ -10,48 +10,12 @@ module instead.
 '''
 # pylint: disable=E0102
 
-# The import section is mostly libcloud boilerplate
-
-# Import python libs
-import os
-import logging
-import socket
-import pprint
-
-# Import generic libcloud functions
-from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
-import salt.utils.openstack.pyrax as suop
-
-import salt.utils.cloud
-
 # Import salt libs
-import salt.utils
-import salt.client
-
-# Import salt.cloud libs
+import salt.utils.cloud
 import salt.config as config
-from salt.utils import namespaced_function
-from salt.exceptions import (
-    SaltCloudConfigError,
-    SaltCloudNotFound,
-    SaltCloudSystemExit,
-    SaltCloudExecutionFailure,
-    SaltCloudExecutionTimeout
-)
 
-# Get logging started
-log = logging.getLogger(__name__)
-
-# namespace libcloudfuncs
-get_salt_interface = namespaced_function(get_salt_interface, globals())
-
-
-# Some of the libcloud functions need to be in the same namespace as the
-# functions defined in the module, so we create new function objects inside
-# this module namespace
-script = namespaced_function(script, globals())
-reboot = namespaced_function(reboot, globals())
-
+# Import pyrax libraries
+import salt.utils.openstack.pyrax as suop
 
 # Only load in this module is the OPENSTACK configurations are in place
 def __virtual__():
@@ -87,21 +51,28 @@ def get_conn(conn_type):
 
     return conn(**kwargs)
 
+
 def queues_exists(call, kwargs):
     conn = get_conn('RackspaceQueues')
     return conn.exists(kwargs['name'])
 
+
+def queues_show(call, kwargs):
+    conn = get_conn('RackspaceQueues')
+    return salt.utils.cloud.simple_types_filter(conn.show(kwargs['name']).__dict__)
+
+
 def queues_create(call, kwargs):
     conn = get_conn('RackspaceQueues')
     if conn.create(kwargs['name']):
-        return conn.exists(kwargs['name']).__dict__
+        return salt.utils.cloud.simple_types_filter(conn.show(kwargs['name']).__dict__)
     else:
         return {}
 
+
 def queues_delete(call, kwargs):
     conn = get_conn('RackspaceQueues')
-    ret = conn.exists(kwargs['name']).__dict__
     if conn.delete(kwargs['name']):
         return {}
     else:
-        return ret
+        return salt.utils.cloud.simple_types_filter(conn.show(kwargs['name'].__dict__))
