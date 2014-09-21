@@ -14,6 +14,7 @@ __version__ = '0.6.4'
 # Import python libs
 import logging
 import sys
+import glob
 import yaml
 import jinja2
 import re
