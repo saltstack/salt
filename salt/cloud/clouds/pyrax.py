@@ -17,6 +17,7 @@ import salt.config as config
 # Import pyrax libraries
 import salt.utils.openstack.pyrax as suop
 
+
 # Only load in this module is the OPENSTACK configurations are in place
 def __virtual__():
     '''

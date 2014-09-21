@@ -5,7 +5,7 @@ Manage Rackspace Queues
 
 .. versionadded:: XXXXXXXX
 
-Create and destroy Rackspace queues. Be aware that this interacts with 
+Create and destroy Rackspace queues. Be aware that this interacts with
 Rackspace's services, and so may incur charges.
 
 This module uses ``pyrax``, which can be installed via package, or pip.
@@ -13,45 +13,17 @@ This module is greatly inspired by boto_* modules from SaltStack code source.
 
 .. code-block:: yaml
 
-    rsq.username: XXXXXXXXXXXXX
-    rsq.apikey: YYYYYYYYYYYYY
-
-It's also possible to specify ``username``, ``apikey`` and ``region`` via a profile, 
-either passed in as a dict, or as a string to pull from pillars or minion 
-config:
-
-.. code-block:: yaml
-
-    myprofile:
-        username: XXXXXXXXXXXXX
-        apikey: YYYYYYYYYYYYY
-        region: DWS
-
-
-.. code-block:: yaml
-
     myqueue:
         pyrax_queues.present:
-            - region: DFW
-            - username: XXXXXXXXXXXXX
-            - apikey: YYYYYYYYYYYYY
+            - provider: my-pyrax
 
-    # Using a profile from pillars
     myqueue:
-        pyrax_queues.present:
-            - region: DFW
-            - profile: my_rs_profile
-
-    # Passing in a profile
-    myqueue:
-        pyrax_queues.present:
-            - region: DFW
-            - profile:
-                username: XXXXXXXXXXXXX
-                apikey: YYYYYYYYYYYYY
+        pyrax_queues.absent:
+            - provider: my-pyrax
 '''
 
 import salt.utils.openstack.pyrax as suop
+
 
 def __virtual__():
     '''

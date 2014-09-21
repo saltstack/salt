@@ -1,4 +1,6 @@
+# -*- coding: utf-8 -*-
 import pyrax
+
 
 class Authenticate(object):
     def __init__(self, username, password, region, **kwargs):

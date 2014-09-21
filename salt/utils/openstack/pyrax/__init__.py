@@ -1,11 +1,12 @@
+# -*- coding: utf-8 -*-
 try:
     import pyrax
     from salt.utils.openstack.pyrax.authenticate import Authenticate
     from salt.utils.openstack.pyrax.queues import RackspaceQueues
 
     __all__ = [
-        Authenticate,
-        RackspaceQueues
+        'Authenticate',
+        'RackspaceQueues'
     ]
 
     HAS_PYRAX = True

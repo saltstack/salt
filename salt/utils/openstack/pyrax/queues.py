@@ -1,10 +1,6 @@
+# -*- coding: utf-8 -*-
 # Import Python libs
 import logging
-import json
-import uuid
-
-client_uuid = str(uuid.uuid4())
-
 log = logging.getLogger(__name__)
 
 # Import pyrax (SDK for Rackspace cloud) third party libs
@@ -12,8 +8,8 @@ import pyrax
 import pyrax.exceptions
 
 # Import salt classes
-import authenticate
-from salt._compat import string_types
+from salt.utils.openstack.pyrax import authenticate
+
 
 class RackspaceQueues(object):
     def __init__(self, username, password, region, **kwargs):
@@ -26,15 +22,14 @@ class RackspaceQueues(object):
         '''
         try:
             if self.exists(qname):
-                log.error('Queues "%s" already exists. Nothing done.' % qname)
-                print "Allready exists"
+                log.error('Queues "{0}" already exists. Nothing done.'.format(qname))
                 return True
 
             self.conn.create(qname)
 
             return True
         except pyrax.exceptions as err_msg:
-            log.error('RackSpace API got some problems during creation: %s' % err_msg)
+            log.error('RackSpace API got some problems during creation: {0}'.format(err_msg))
         return False
 
     def delete(self, qname):
@@ -43,17 +38,16 @@ class RackspaceQueues(object):
         '''
         try:
             q = self.exists(qname)
-            log.debug('LOGGING: %s' % q)
             if not q:
                 return False
             self.show(qname).delete()
 
         except pyrax.exceptions as err_msg:
-            log.error('RackSpace API got some problems during deletion: %s' % err_msg)
+            log.error('RackSpace API got some problems during deletion: {0}'.format(err_msg))
             return False
 
         return True
-        
+
     def exists(self, qname):
         '''
         Check to see if a Queue exists.
@@ -64,7 +58,7 @@ class RackspaceQueues(object):
                 return True
             return False
         except pyrax.exceptions as err_msg:
-            log.error('RackSpace API got some problems during existing queue check: %s' % err_msg)
+            log.error('RackSpace API got some problems during existing queue check: {0}'.format(err_msg))
         return False
 
     def show(self, qname):
@@ -80,5 +74,5 @@ class RackspaceQueues(object):
                 if queue.name == qname:
                     return queue
         except pyrax.exceptions as err_msg:
-            log.error('RackSpace API got some problems during existing queue check: %s' % err_msg)
+            log.error('RackSpace API got some problems during existing queue check: {0}'.format(err_msg))
         return {}
