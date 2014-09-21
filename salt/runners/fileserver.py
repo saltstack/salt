@@ -7,7 +7,7 @@ Directly manage the Salt fileserver plugins
 import salt.fileserver
 
 
-def dir_list(saltenv='base', outputter='raw'):
+def dir_list(saltenv='base', outputter='nested'):
     '''
     List all directories in the given environment
 
@@ -27,7 +27,7 @@ def dir_list(saltenv='base', outputter='raw'):
     return output
 
 
-def envs(back=None, sources=False, outputter='raw'):
+def envs(back=None, sources=False, outputter='nested'):
     '''
     Return the environments for the named backend or all back-ends
 
@@ -47,7 +47,7 @@ def envs(back=None, sources=False, outputter='raw'):
     return output
 
 
-def file_list(saltenv='base', outputter='raw'):
+def file_list(saltenv='base', outputter='nested'):
     '''
     Return a list of files from the dominant environment
 
@@ -67,7 +67,7 @@ def file_list(saltenv='base', outputter='raw'):
     return output
 
 
-def symlink_list(saltenv='base', outputter='raw'):
+def symlink_list(saltenv='base', outputter='nested'):
     '''
     Return a list of symlinked files and dirs
 
