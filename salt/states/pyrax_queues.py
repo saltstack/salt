@@ -73,7 +73,7 @@ def present(name, provider):
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    is_present = __salt__['cloud.action']('queues_exists', provider, name=name)
+    is_present = __salt__['cloud.action']('queues_exists', provider=provider, name=name)[provider].values()[0]
 
     if not is_present:
         if __opts__['test']:
@@ -81,10 +81,11 @@ def present(name, provider):
             ret['comment'] = msg
             ret['result'] = None
             return ret
-        created = __salt__['cloud.action']('queues_create', provider, name)
+        created = __salt__['cloud.action']('queues_create', provider=provider, name=name)
         if created:
+            queue = __salt__['cloud.action']('queues_show', provider=provider, name=name)
             ret['changes']['old'] = {}
-            ret['changes']['new'] = {'queue': created}
+            ret['changes']['new'] = {'queue': queue}
         else:
             ret['result'] = False
             ret['comment'] = 'Failed to create {0} Rackspace queue.'.format(name)
@@ -107,7 +108,7 @@ def absent(name, provider):
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    is_present = __salt__['cloud.action']('queues_exists', provider, name=name)
+    is_present = __salt__['cloud.action']('queues_exists', provider=provider, name=name)[provider].values()[0]
 
     if is_present:
         if __opts__['test']:
@@ -115,14 +116,15 @@ def absent(name, provider):
                 name)
             ret['result'] = None
             return ret
-        deleted = __salt__['cloud.action']('queues_delete', provider, name)
+        queue = __salt__['cloud.action']('queues_show', provider=provider, name=name)
+        deleted = __salt__['cloud.action']('queues_delete', provider=provider, name=name)
         if deleted:
-            ret['changes']['old'] = is_present
+            ret['changes']['old'] = queue
             ret['changes']['new'] = {}
         else:
             ret['result'] = False
             ret['comment'] = 'Failed to delete {0} Rackspace queue.'.format(name)
     else:
-        ret['comment'] = '{0} does not exist in {1}.'.format(name, region)
+        ret['comment'] = '{0} does not exist.'.format(name)
 
     return ret
