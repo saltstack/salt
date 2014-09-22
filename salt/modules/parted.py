@@ -77,9 +77,9 @@ def probe(*devices, **kwargs):
     salt.utils.kwargs_warn_until(kwargs, 'Beryllium')
     if 'device' in kwargs:
         devices = tuple([kwargs['device']] + list(devices))
-        del(kwargs['device'])
+        del kwargs['device']
     if kwargs:
-        raise(TypeError, "probe() takes no keyword arguments")
+        raise(TypeError("probe() takes no keyword arguments"))
     cmd = 'partprobe -- {0}'.format(" ".join(devices))
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
