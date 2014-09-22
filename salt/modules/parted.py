@@ -53,6 +53,8 @@ def __virtual__():
         return False
     if not salt.utils.which('lsblk'):
         return False
+    if not salt.utils.which('partprobe'):
+        return False
     return __virtualname__
 
 
