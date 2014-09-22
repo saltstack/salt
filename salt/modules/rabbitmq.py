@@ -140,7 +140,7 @@ def add_user(name, password=None, runas=None):
     if password is None:
         # Generate a random, temporary password. RabbitMQ requires one.
         clear_pw = True
-        password = ''.join(random.choice(
+        password = ''.join(random.SystemRandom().choice(
             string.ascii_uppercase + string.digits) for x in range(15))
 
     res = __salt__['cmd.run'](
@@ -492,17 +492,21 @@ def list_policies(runas=None):
     for line in res.splitlines():
         if '...' not in line and line != '\n':
             parts = line.split('\t')
-            if len(parts) != 6:
+            if len(parts) not in (5, 6):
                 continue
             vhost, name = parts[0], parts[1]
             if vhost not in ret:
                 ret[vhost] = {}
-            ret[vhost][name] = {
-                'apply_to': parts[2],
-                'pattern': parts[3],
-                'definition': parts[4],
-                'priority': parts[5]
-            }
+            ret[vhost][name] = {}
+            # How many fields are there? - 'apply_to' was inserted in position 2 at somepoint
+            offset = len(parts) - 5
+            if len(parts) == 6:
+                ret[vhost][name]['apply_to'] = parts[2]
+            ret[vhost][name].update({
+                'pattern': parts[offset+2],
+                'definition': parts[offset+3],
+                'priority': parts[offset+4]
+            })
     log.debug('Listing policies: {0}'.format(ret))
     return ret
 

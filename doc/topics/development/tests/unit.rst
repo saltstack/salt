@@ -38,7 +38,7 @@ A Simple Example
 
 Let's assume that we're testing a very basic function in an imaginary Salt
 execution module. Given a module called ``fib.py`` that has a function called
-'calculate(num_of_results)', which given a 'num_of_results', produces a list of
+``calculate(num_of_results)``, which given a ``num_of_results``, produces a list of
 sequential Fibonacci numbers of that length.
 
 A unit test to test this function might be commonly placed in a file called
@@ -97,7 +97,9 @@ increase verbosity:
 To review the results of a particular run, take a note of the log location
 given in the output for each test:
 
-    **Logging tests on /var/folders/nl/d809xbq577l3qrbj3ymtpbq80000gn/T/salt-runtests.log**
+.. code-block:: text
+
+    Logging tests on /var/folders/nl/d809xbq577l3qrbj3ymtpbq80000gn/T/salt-runtests.log
 
 Evaluating Truth
 ================

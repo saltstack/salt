@@ -319,7 +319,7 @@ def _install_script(source, cwd, python, user, saltenv='base'):
     if not salt.utils.is_windows():
         fn_ = __salt__['cp.cache_file'](source, saltenv)
         shutil.copyfile(fn_, tmppath)
-        os.chmod(tmppath, 320)
+        os.chmod(tmppath, 0o500)
         os.chown(tmppath, __salt__['file.user_to_uid'](user), -1)
     try:
         return __salt__['cmd.run_all'](
@@ -342,12 +342,10 @@ def get_resource_path(venv, package_or_requirement, resource_name):
 
         salt '*' virtualenv.get_resource_path /path/to/my/venv my_package my/resource.xml
     '''
-    if not salt.utils.verify.safe_py_code(venv):
-        return ''
     if not salt.utils.verify.safe_py_code(package_or_requirement):
-        return ''
+        raise salt.exceptions.CommandExecutionError
     if not salt.utils.verify.safe_py_code(resource_name):
-        return ''
+        raise salt.exceptions.CommandExecutionError
     bin_path = os.path.join(venv, 'bin/python')
 
     if not os.path.exists(bin_path):
@@ -366,12 +364,10 @@ def get_resource_content(venv, package_or_requirement, resource_name):
 
         salt '*' virtualenv.get_resource_content /path/to/my/venv my_package my/resource.xml
     '''
-    if not salt.utils.verify.safe_py_code(venv):
-        return ''
     if not salt.utils.verify.safe_py_code(package_or_requirement):
-        return ''
+        raise salt.exceptions.CommandExecutionError
     if not salt.utils.verify.safe_py_code(resource_name):
-        return ''
+        raise salt.exceptions.CommandExecutionError
     bin_path = os.path.join(venv, 'bin/python')
 
     if not os.path.exists(bin_path):

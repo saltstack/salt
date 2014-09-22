@@ -476,6 +476,7 @@ class MultiMinion(MinionBase):
         for master in set(self.opts['master']):
             s_opts = copy.copy(self.opts)
             s_opts['master'] = master
+            s_opts['multimaster'] = True
             ret[master] = {'opts': s_opts,
                            'last': time.time(),
                            'auth_wait': s_opts['acceptance_wait_time']}
@@ -843,12 +844,6 @@ class Minion(MinionBase):
         channel = salt.transport.Channel.factory(self.opts)
         try:
             result = channel.send(load)
-        except AuthenticationError:
-            log.info("AES key changed, re-authenticating")
-            self.authenticate()
-        except SaltReqTimeoutError:
-            log.info("Master failed to respond. Preforming re-authenticating")
-            self.authenticate()
         except Exception:
             log.info("fire_master failed: {0}".format(traceback.format_exc()))
 
@@ -967,6 +962,10 @@ class Minion(MinionBase):
         # python needs to be able to reconstruct the reference on the other
         # side.
         instance = self
+        # If we are running in multi-master mode, re-inject opts into module funcs
+        if instance.opts.get('multimaster', False):
+            for func in instance.functions:
+                sys.modules[instance.functions[func].__module__].__opts__ = self.opts
         if self.opts['multiprocessing']:
             if sys.platform.startswith('win'):
                 # let python reconstruct the minion on the other side if we're
@@ -1836,7 +1835,7 @@ class Syndic(Minion):
         if 'tgt' not in data or 'jid' not in data or 'fun' not in data \
            or 'arg' not in data:
             return
-        data['to'] = int(data['to']) - 1
+        data['to'] = int(data.get('to', self.opts['timeout'])) - 1
         if 'user' in data:
             log.debug(
                 'User {0[user]} Executing syndic command {0[fun]} with '
@@ -1869,9 +1868,12 @@ class Syndic(Minion):
             data['tgt_type'] = 'glob'
         kwargs = {}
 
-        # if a master_id is in the data, add it to publish job
-        if 'master_id' in data:
-            kwargs['master_id'] = data['master_id']
+        # optionally add a few fields to the publish data
+        for field in ('master_id',  # which master the job came from
+                      'user',  # which user ran the job
+                      ):
+            if field in data:
+                kwargs[field] = data[field]
 
         # Send out the publication
         self.local.pub(data['tgt'],
@@ -1881,6 +1883,7 @@ class Syndic(Minion):
                        data['ret'],
                        data['jid'],
                        data['to'],
+                       user=data.get('user', ''),
                        **kwargs)
 
     def _setsockopts(self):
@@ -2331,8 +2334,6 @@ class Matcher(object):
     '''
     def __init__(self, opts, functions=None):
         self.opts = opts
-        if functions is None:
-            functions = salt.loader.minion_mods(self.opts)
         self.functions = functions
 
     def confirm_top(self, match, data, nodegroups=None):
@@ -2412,6 +2413,8 @@ class Matcher(object):
         '''
         Match based on the local data store on the minion
         '''
+        if self.functions is None:
+            self.functions = salt.loader.minion_mods(self.opts)
         comps = tgt.split(':')
         if len(comps) < 2:
             return False

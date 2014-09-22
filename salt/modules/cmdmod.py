@@ -273,6 +273,12 @@ def _run(cmd,
             env_runas = dict(itertools.izip(*[iter(env_encoded.split(b'\0'))]*2))
             env_runas.update(env)
             env = env_runas
+            # Encode unicode kwargs to filesystem encoding to avoid a
+            # UnicodeEncodeError when the subprocess is invoked.
+            fse = sys.getfilesystemencoding()
+            for key, val in env.iteritems():
+                if isinstance(val, unicode):
+                    env[key] = val.encode(fse)
         except ValueError:
             raise CommandExecutionError(
                 'Environment could not be retrieved for User {0!r}'.format(
@@ -1225,9 +1231,8 @@ def exec_code(lang, code, cwd=None):
     codefile = salt.utils.mkstemp()
     with salt.utils.fopen(codefile, 'w+t') as fp_:
         fp_.write(code)
-
-    cmd = '{0} {1}'.format(lang, codefile)
-    ret = run(cmd, cwd=cwd)
+    cmd = [lang, codefile]
+    ret = run(cmd, cwd=cwd, python_shell=False)
     os.remove(codefile)
     return ret
 

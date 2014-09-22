@@ -32,7 +32,7 @@ def __virtual__():
     return True
 
 
-def ping(host):
+def ping(host, timeout=False, return_boolean=False):
     '''
     Performs a ping to a host
 
@@ -41,9 +41,29 @@ def ping(host):
     .. code-block:: bash
 
         salt '*' network.ping archlinux.org
+
+    .. versionadded:: Lithium
+
+    Return a True or False instead of ping output.
+
+        salt '*' network.ping archlinux.org return_boolean=True
+
+    Set the time to wait for a response in seconds.
+
+        salt '*' network.ping archlinux.org timeout=3
     '''
-    cmd = 'ping -c 4 {0}'.format(salt.utils.network.sanitize_host(host))
-    return __salt__['cmd.run'](cmd)
+    if timeout:
+        cmd = 'ping -W {0} -c 4 {1}'.format(timeout, salt.utils.network.sanitize_host(host))
+    else:
+        cmd = 'ping -c 4 {0}'.format(salt.utils.network.sanitize_host(host))
+    if return_boolean:
+        ret = __salt__['cmd.run_all'](cmd)
+        if ret['retcode'] != 0:
+            return False
+        else:
+            return True
+    else:
+        return __salt__['cmd.run'](cmd)
 
 
 # FIXME: Does not work with: netstat 1.42 (2001-04-15) from net-tools

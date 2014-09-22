@@ -513,18 +513,16 @@ class ReqServer(object):
         self.__bind()
 
     def destroy(self):
-        if self.clients.closed is False:
+        if hasattr(self, 'clients') and self.clients.closed is False:
             self.clients.setsockopt(zmq.LINGER, 1)
             self.clients.close()
-        if self.workers.closed is False:
+        if hasattr(self, 'workers') and self.workers.closed is False:
             self.workers.setsockopt(zmq.LINGER, 1)
             self.workers.close()
-        if self.context.closed is False:
+        if hasattr(self, 'context') and self.context.closed is False:
             self.context.term()
         # Also stop the workers
-        for worker in self.work_procs:
-            if worker.is_alive() is True:
-                worker.terminate()
+        self.process_manager.kill_children()
 
     def __del__(self):
         self.destroy()
@@ -600,7 +598,6 @@ class MWorker(multiprocessing.Process):
         except KeyError:
             return ''
         return {'aes': self._handle_aes,
-                'pub': self._handle_pub,
                 'clear': self._handle_clear}[key](load)
 
     def _handle_clear(self, load):
@@ -611,14 +608,6 @@ class MWorker(multiprocessing.Process):
         if load['cmd'].startswith('__'):
             return False
         return getattr(self.clear_funcs, load['cmd'])(load)
-
-    def _handle_pub(self, load):
-        '''
-        Handle a command sent via a public key pair
-        '''
-        if load['cmd'].startswith('__'):
-            return False
-        log.info('Pubkey payload received with command {cmd}'.format(**load))
 
     def _handle_aes(self, load):
         '''

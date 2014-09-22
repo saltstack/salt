@@ -4,6 +4,7 @@ BUILD_DIR=build/output/salt
 
 rm -rf dist/ $BUILD_DIR &&\
 cp $PKG_DIR/_syspaths.py salt/ &&\
+python2.7 setup.py sdist &&\
 python2.7 setup.py bdist &&\
 python2.7 setup.py bdist_esky &&\
 rm salt/_syspaths.py &&\

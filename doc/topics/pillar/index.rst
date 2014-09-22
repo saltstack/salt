@@ -54,9 +54,9 @@ and has the same structure:
 
 In the above top file, it is declared that in the ``base`` environment, the
 glob matching all minions will have the pillar data found in the ``packages``
-pillar available to it. Assuming the ``pillar_roots`` value of ``/srv/salt``
+pillar available to it. Assuming the ``pillar_roots`` value of ``/srv/pillar``
 taken from above, the ``packages`` pillar would be located at
-``/srv/salt/packages.sls``.
+``/srv/pillar/packages.sls``.
 
 Another example shows how to use other standard top matching types
 to deliver specific salt pillar data to minions with different properties.
@@ -124,7 +124,7 @@ pillar. Here is an example top file that illustrates this point:
       '*':
          - common_pillar
 
-And the actual pillar file at '/srv/salt/common_pillar.sls':
+And the actual pillar file at '/srv/pillar/common_pillar.sls':
 
 .. code-block:: yaml
 
