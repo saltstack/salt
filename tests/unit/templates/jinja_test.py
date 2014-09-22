@@ -131,7 +131,8 @@ class TestGetTemplate(TestCase):
             'file_client': 'local',
             'file_roots': {
                 'other': [os.path.join(TEMPLATES_DIR, 'files', 'test')]
-            }
+            },
+            'fileserver_backend': ['roots'],
         }
 
     def test_fallback(self):
