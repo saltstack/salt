@@ -63,6 +63,7 @@ class RAETChannel(Channel):
         self.opts = opts
         self.ttype = 'raet'
         self.dst = ('master', None, 'remote_cmd')
+        #self.dst = (None, None, 'remote_cmd')
         self.stack = None
 
     def _setup_stack(self):
@@ -113,9 +114,8 @@ class RAETChannel(Channel):
         self.__prep_stack()
         tried = 1
         start = time.time()
-        mid = self.opts.get('id', None)
         track = nacling.uuid(18)
-        src = (mid, self.stack.local.name, track)
+        src = (None, self.stack.local.name, track)
         self.route = {'src': src, 'dst': self.dst}
         msg = {'route': self.route, 'load': load}
         self.stack.transmit(msg, self.stack.nameRemotes['manor'].uid)
