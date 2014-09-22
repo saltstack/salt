@@ -6,7 +6,6 @@ options actually work.
 '''
 
 # Import python libs
-import subprocess
 import logging
 
 # Import salt libs
@@ -289,19 +288,6 @@ def valid_control(control):
         return True
     return False
 
-
-def version():
-    '''
-    Returns the version of the installed ssh command
-    '''
-    ret = subprocess.Popen(
-            ['ssh', '-V'],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE).communicate()
-    try:
-        return ret[1].split(',')[0].split('_')[1]
-    except IndexError:
-        return '2.0'
 
 # ssh  [-1246AaCfgKkMNnqsTtVvXxYy]  [-b  bind_address]  [-c  cipher_spec]
 #      [-D[bind_address :]port] [-E log_file] [-e escape_char] [-F configfile]

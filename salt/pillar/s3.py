@@ -44,13 +44,17 @@ base url to use for accessing S3.
 This pillar can operate in two modes, single environment per bucket or multiple
 environments per bucket.
 
-Single environment mode must have this bucket structure::
+Single environment mode must have this bucket structure:
 
-s3://<bucket name>/<files>
+.. code-block:: text
 
-Multiple environment mode must have this bucket structure::
+    s3://<bucket name>/<files>
 
-s3://<bucket name>/<environment>/<files>
+Multiple environment mode must have this bucket structure:
+
+.. code-block:: text
+
+    s3://<bucket name>/<environment>/<files>
 
 '''
 

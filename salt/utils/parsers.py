@@ -1014,7 +1014,7 @@ class OutputOptionsMixIn(object):
         if self.options.output_file is not None:
             if os.path.isfile(self.options.output_file):
                 try:
-                    with utils.fopen(self.option.output_file, 'w') as ofh:
+                    with utils.fopen(self.options.output_file, 'w') as ofh:
                         # Make this a zero length filename instead of removing
                         # it. This way we keep the file permissions.
                         ofh.write('')
@@ -1774,12 +1774,12 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         )
 
         self.add_option(
-            '--no-key-rotate',
-            default=False,
-            action='store_true',
-            help=('This option prevents the master from refreshing the key '
-                  'session when keys are deleted or rejected, this lowers '
-                  'the security of the key deletion/rejection operation.')
+            '--rotate-aes-key',
+            default=True,
+            help=('Setting this to False prevents the master from refreshing '
+                  'the key session when keys are deleted or rejected, this '
+                  'lowers the security of the key deletion/rejection operation. '
+                  'Default is True.')
         )
 
         key_options_group = optparse.OptionGroup(
@@ -2249,6 +2249,9 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             self.config['tgt'] = self.args[0]
 
         self.config['argv'] = self.args[1:]
+        if not self.config['argv'] or not self.config['tgt']:
+            self.print_help()
+            self.exit(os.EX_USAGE)
 
         if self.options.ssh_askpass:
             self.options.ssh_passwd = getpass.getpass('Password: ')

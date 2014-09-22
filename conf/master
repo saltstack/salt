@@ -138,7 +138,16 @@
 # 'aes_key_rotate' event with the 'key' tag and acting appropriately.
 # 
 # ping_on_rotate: False
-
+#
+# If max_minions is used in large installations, the master might experience
+# high-load situations because of having to check the number of connected
+# minions for every authentication. This cache provides the minion-ids of
+# all connected minions to all MWorker-processes and greatly improves the
+# performance of max_minions.
+#
+# con_cache: False
+#
+#
 # The master can include configuration from other files. To enable this,
 # pass a list of paths to this option. The paths can be either relative or
 # absolute; if relative, they are considered to be relative to the directory

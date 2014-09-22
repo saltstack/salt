@@ -843,12 +843,6 @@ class Minion(MinionBase):
         channel = salt.transport.Channel.factory(self.opts)
         try:
             result = channel.send(load)
-        except AuthenticationError:
-            log.info("AES key changed, re-authenticating")
-            self.authenticate()
-        except SaltReqTimeoutError:
-            log.info("Master failed to respond. Preforming re-authenticating")
-            self.authenticate()
         except Exception:
             log.info("fire_master failed: {0}".format(traceback.format_exc()))
 
@@ -1849,6 +1843,15 @@ class Syndic(Minion):
         # Set up default tgt_type
         if 'tgt_type' not in data:
             data['tgt_type'] = 'glob'
+        kwargs = {}
+
+        # optionally add a few fields to the publish data
+        for field in ('master_id',  # which master the job came from
+                      'user',  # which user ran the job
+                      ):
+            if field in data:
+                kwargs[field] = data[field]
+
         # Send out the publication
         self.local.pub(data['tgt'],
                        data['fun'],
@@ -1857,7 +1860,7 @@ class Syndic(Minion):
                        data['ret'],
                        data['jid'],
                        data['to'],
-                       user=data.get('user', ''))
+                       **kwargs)
 
     # Syndic Tune In
     def tune_in(self):

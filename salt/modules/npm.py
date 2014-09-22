@@ -66,7 +66,7 @@ def install(pkg=None,
     pkgs
         A list of package names in the same format as the ``name`` parameter
 
-        .. versionaddedd:: 2014.7.0
+        .. versionadded:: 2014.7.0
 
     dir
         The target directory in which to install the package, or None for

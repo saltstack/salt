@@ -9,6 +9,7 @@ import getpass
 import json
 import logging
 import multiprocessing
+import subprocess
 import os
 import re
 import shutil
@@ -166,7 +167,6 @@ class SSH(object):
     Create an SSH execution system
     '''
     def __init__(self, opts):
-        self.verify_env()
         pull_sock = os.path.join(opts['sock_dir'], 'master_event_pull.ipc')
         if os.path.isfile(pull_sock) and HAS_ZMQ:
             self.event = salt.utils.event.get_event(
@@ -177,6 +177,7 @@ class SSH(object):
         else:
             self.event = None
         self.opts = opts
+        self.opts['_ssh_version'] = ssh_version()
         self.tgt_type = self.opts['selected_target_option'] \
                 if self.opts['selected_target_option'] else 'glob'
         self.roster = salt.roster.Roster(opts, opts.get('roster'))
@@ -226,14 +227,6 @@ class SSH(object):
         self.returners = salt.loader.returners(self.opts, {})
         self.mods = mod_data(self.opts)
 
-    def verify_env(self):
-        '''
-        Verify that salt-ssh is ready to run
-        '''
-        if not salt.utils.which('sshpass'):
-            log.warning('Warning:  sshpass is not present, so password-based '
-                        'authentication is not available.')
-
     def get_pubkey(self):
         '''
         Return the key string for the SSH public key
@@ -260,7 +253,7 @@ class SSH(object):
                 if 'passwd' in target:
                     self._key_deploy_run(host, target, False)
             return ret
-        if ret[host].get('stderr', '').startswith('Permission denied'):
+        if ret[host].get('stderr', '').count('Permission denied'):
             target = self.targets[host]
             # permission denied, attempt to auto deploy ssh key
             print(('Permission denied for host {0}, do you want to deploy '
@@ -781,7 +774,17 @@ class Single(object):
 
         error = self.categorize_shim_errors(stdout, stderr, retcode)
         if error:
-            return 'ERROR: {0}'.format(error), stderr, retcode
+            if error == 'Undefined SHIM state':
+                self.deploy()
+                stdout, stderr, retcode = self.shell.exec_cmd(cmd_str)
+                if not re.search(RSTR_RE, stdout) or not re.search(RSTR_RE, stderr):
+                    # If RSTR is not seen in both stdout and stderr then there
+                    # was a thin deployment problem.
+                    return 'ERROR: Failure deploying thin: {0}'.format(stdout), stderr, retcode
+                stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
+                stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
+            else:
+                return 'ERROR: {0}'.format(error), stderr, retcode
 
         # FIXME: this discards output from ssh_shim if the shim succeeds.  It should
         # always save the shim output regardless of shim success or failure.
@@ -1105,3 +1108,19 @@ def prep_trans_tar(opts, chunks, file_refs):
     os.chdir(cwd)
     shutil.rmtree(gendir)
     return trans_tar
+
+
+def ssh_version():
+    '''
+    Returns the version of the installed ssh command
+    '''
+    # This function needs more granular checks and to be validated against
+    # older versions of ssh
+    ret = subprocess.Popen(
+            ['ssh', '-V'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE).communicate()
+    try:
+        return ret[1].split(',')[0].split('_')[1]
+    except IndexError:
+        return '2.0'

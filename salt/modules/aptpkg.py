@@ -559,8 +559,7 @@ def remove(name=None, pkgs=None, **kwargs):
 
 def purge(name=None, pkgs=None, **kwargs):
     '''
-    Remove packages via ``apt-get purge`` along with all configuration files
-    and unused dependencies.
+    Remove packages via ``apt-get purge`` along with all configuration files.
 
     name
         The name of the package to be deleted.
@@ -1467,7 +1466,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
     if not mod_source:
         mod_source = sourceslist.SourceEntry(repo)
         if 'comments' in kwargs:
-            mod_source.comment = kwargs['comments'][0]
+            mod_source.comment = " ".join(str(c) for c in kwargs['comments'])
         sources.list.append(mod_source)
 
     # if all comps aren't part of the disable
