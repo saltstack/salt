@@ -1202,12 +1202,12 @@ class RemoteClient(Client):
             return ''
 
 
-class FSClient(RemoteClient):  # pylint: disable=W0231
+class FSClient(RemoteClient):
     '''
     A local client that uses the RemoteClient but substitutes the channel for
     the FSChan object
     '''
-    def __init__(self, opts):
+    def __init__(self, opts):  # pylint: disable=W0231
         self.opts = opts
         self.channel = salt.fileserver.FSChan(opts)
         self.auth = DumbAuth()
