@@ -28,7 +28,7 @@ def dns_exists(name, servers=None, interface='Local Area Connection', replace=Fa
     '''
     ret = {'name': name,
            'result': True,
-           'changes': {'Servers Reordered':[],'Servers Added':[],'Servers Removed':[]},
+           'changes': {'Servers Reordered': [], 'Servers Added': [], 'Servers Removed': []},
            'comment': ''}
 
     if __opts__['test']:
@@ -51,13 +51,12 @@ def dns_exists(name, servers=None, interface='Local Area Connection', replace=Fa
         ret['result'] = True
         return ret
 
-
     # add the DNS servers
     for i, server in enumerate(servers):
         if __opts__['test']:
             if server in configured_list:
                 if configured_list[i] != server:
-            	    ret['changes']['Servers Reordered'].append(server)
+                    ret['changes']['Servers Reordered'].append(server)
             else:
                 ret['changes']['Servers Added'].append(server)
         else:
@@ -76,9 +75,9 @@ def dns_exists(name, servers=None, interface='Local Area Connection', replace=Fa
                     ret['changes']['Servers Added'].append(server)
 
     # remove dns servers that weren't in our list
-    if (replace):
+    if replace:
         for i, server in enumerate(configured_list):
-            if not server in servers:
+            if server not in servers:
                 if __opts__['test']:
                     ret['changes']['Servers Removed'].append(server)
                 else:
