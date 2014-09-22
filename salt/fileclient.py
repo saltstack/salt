@@ -1219,4 +1219,4 @@ class DumbAuth(object):
     subsystem
     '''
     def gen_token(self):
-        return ('')
+        return ''
