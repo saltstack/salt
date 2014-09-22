@@ -176,7 +176,7 @@ def install(name, clean=True):
         # Assume that the installation was a recompile with new options, and
         # set return dict so that changes are detected by the ports.installed
         # state.
-        ret = {name: {'old': old.get(name, '')
+        ret = {name: {'old': old.get(name, ''),
                       'new': new.get(name, '')}}
     return ret
 
