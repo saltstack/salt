@@ -1202,7 +1202,7 @@ class RemoteClient(Client):
             return ''
 
 
-class FSClient(RemoteClient):  # pylint: disable=W0232
+class FSClient(RemoteClient):  # pylint: disable=W0231
     '''
     A local client that uses the RemoteClient but substitutes the channel for
     the FSChan object

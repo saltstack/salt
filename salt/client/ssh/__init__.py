@@ -886,7 +886,6 @@ class Single(object):
                 return error[2]
         return None
 
-
     def check_refresh(self, data, ret):
         '''
         Stub out check_refresh
