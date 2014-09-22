@@ -711,7 +711,7 @@ class Key(object):
                 except (OSError, IOError):
                     pass
         self.check_minion_cache()
-        if self.opts.get('key_no_rotate'):
+        if self.opts.get('rotate_aes_key'):
             salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
         return (
             self.name_match(match) if match is not None
@@ -733,7 +733,7 @@ class Key(object):
                 except (OSError, IOError):
                     pass
         self.check_minion_cache()
-        if self.opts.get('key_no_rotate'):
+        if self.opts.get('rotate_aes_key'):
             salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
         return self.list_keys()
 
@@ -771,7 +771,7 @@ class Key(object):
                 except (IOError, OSError):
                     pass
         self.check_minion_cache()
-        if self.opts.get('key_no_rotate'):
+        if self.opts.get('rotate_aes_key'):
             salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
         return (
             self.name_match(match) if match is not None
@@ -802,7 +802,7 @@ class Key(object):
             except (IOError, OSError):
                 pass
         self.check_minion_cache()
-        if self.opts.get('key_no_rotate'):
+        if self.opts.get('rotate_aes_key'):
             salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
         return self.list_keys()
 
