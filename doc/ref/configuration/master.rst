@@ -380,9 +380,9 @@ local job cache on the master
 
 Default: 'local_cache'
 
-Specify the returner to use for ther job cache. The job cache will only be
+Specify the returner to use for the job cache. The job cache will only be
 interacted with from the salt master and therefore does not need to be
-accesible from the minions.
+accessible from the minions.
 
 .. code-block:: yaml
 
