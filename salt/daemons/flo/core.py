@@ -948,7 +948,7 @@ class NixExecutor(ioflo.base.deeding.Deed):
                'returners': '.salt.loader.returners',
                'fun': '.salt.var.fun',
                'executors': '.salt.track.executors',
-               'udp_stack': '.raet.udp.stack.stack',}
+               'udp_stack': '.raet.udp.stack.stack', }
 
     def postinitio(self):
         '''
