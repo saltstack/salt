@@ -1218,5 +1218,5 @@ class DumbAuth(object):
     The dumbauth class is used to stub out auth calls fired from the FSClient
     subsystem
     '''
-    def gen_token(self):
-        return ''
+    def gen_token(self, clear_tok):
+        return clear_tok
