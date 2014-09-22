@@ -497,7 +497,7 @@ class LoadPillar(ioflo.base.deeding.Deed):
         # default master is the first remote
         # this default destination will not work with multiple masters
         route = {'src': (self.udp_stack.value.local.name, 0, None),
-                 'dst': (self.udp_stack.value.remotes.values()[0].name , None, 'remote_cmd')}
+                 'dst': (self.udp_stack.value.remotes.values()[0].name, None, 'remote_cmd')}
         load = {'id': self.opts.value['id'],
                 'grains': self.grains.value,
                 'saltenv': self.opts.value['environment'],
@@ -731,7 +731,7 @@ class Router(ioflo.base.deeding.Deed):
             log.error('Received invalid message: {0}'.format(msg))
             return
 
-        if s_estate is None: #drop
+        if s_estate is None:  # drop
             return
 
         if d_estate is None:
@@ -782,9 +782,9 @@ class Router(ioflo.base.deeding.Deed):
             return
 
         if s_yard is None:
-            return # drop message
+            return  # drop message
 
-        if s_estate is None: # substitute local estate
+        if s_estate is None:  # substitute local estate
             s_estate = self.udp_stack.value.local.name
             msg['route']['src'] = (s_estate, s_yard, s_share)
 
