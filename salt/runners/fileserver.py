@@ -3,7 +3,7 @@
 Directly manage the Salt fileserver plugins
 '''
 
-# Import salt libs
+# Import Salt libs
 import salt.fileserver
 
 
@@ -27,7 +27,7 @@ def dir_list(saltenv='base', outputter='nested'):
     return output
 
 
-def envs(back=None, sources=False, outputter='nested'):
+def envs(backend=None, sources=False, outputter='nested'):
     '''
     Return the environments for the named backend or all back-ends
 
@@ -37,10 +37,10 @@ def envs(back=None, sources=False, outputter='nested'):
 
         salt-run fileserver.envs
         salt-run fileserver.envs outputter=nested
-        salt-run fileserver.envs back='["root", "git"]'
+        salt-run fileserver.envs backend='["root", "git"]'
     '''
     fileserver = salt.fileserver.Fileserver(__opts__)
-    output = fileserver.envs(back=back, sources=sources)
+    output = fileserver.envs(back=backend, sources=sources)
 
     if outputter:
         salt.output.display_output(output, outputter, opts=__opts__)
@@ -87,7 +87,7 @@ def symlink_list(saltenv='base', outputter='nested'):
     return output
 
 
-def update(back=None):
+def update(backend=None):
     '''
     Update all of the file-servers that support the update function or the
     named fileserver only.
@@ -97,9 +97,9 @@ def update(back=None):
     .. code-block:: bash
 
         salt-run fileserver.update
-        salt-run fileserver.update back='["root", "git"]'
+        salt-run fileserver.update backend='["root", "git"]'
     '''
     fileserver = salt.fileserver.Fileserver(__opts__)
-    fileserver.update(back=back)
+    fileserver.update(back=backend)
 
     return True
