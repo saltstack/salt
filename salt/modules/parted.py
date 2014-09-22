@@ -79,7 +79,7 @@ def probe(*devices, **kwargs):
         devices = tuple([kwargs['device']] + list(devices))
         del kwargs['device']
     if kwargs:
-        raise(TypeError("probe() takes no keyword arguments"))
+        raise TypeError("probe() takes no keyword arguments")
     cmd = 'partprobe -- {0}'.format(" ".join(devices))
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
