@@ -125,6 +125,32 @@
 # master event bus. The value is expressed in bytes.
 #max_event_size: 1048576
 
+# By default, the master AES key rotates every 24 hours. The next command
+# following a key rotation will trigger a key refresh from the minion which may
+# result in minions which do not respond to the first command after a key refresh.
+#
+# To tell the master to ping all minions immediately after an AES key refresh, set
+# ping_on_rotate to True. This should mitigate the issue where a minion does not
+# appear to initially respond after a key is rotated.
+#
+# Note that ping_on_rotate may cause high load on the master immediately after
+# the key rotation event as minions reconnect. Consider this carefully if this
+# salt master is managing a large number of minions.
+#
+# If disabled, it is recommended to handle this event by listening for the 
+# 'aes_key_rotate' event with the 'key' tag and acting appropriately.
+# 
+# ping_on_rotate: False
+#
+# If max_minions is used in large installations, the master might experience
+# high-load situations because of having to check the number of connected
+# minions for every authentication. This cache provides the minion-ids of
+# all connected minions to all MWorker-processes and greatly improves the
+# performance of max_minions.
+#
+# con_cache: False
+#
+#
 # The master can include configuration from other files. To enable this,
 # pass a list of paths to this option. The paths can be either relative or
 # absolute; if relative, they are considered to be relative to the directory

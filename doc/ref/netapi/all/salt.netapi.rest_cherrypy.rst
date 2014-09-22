@@ -6,8 +6,6 @@ rest_cherrypy
 
 .. automodule:: salt.netapi.rest_cherrypy.wsgi
 
-.. ............................................................................
-
 REST URI Reference
 ==================
 

@@ -211,7 +211,7 @@ def main(argv):
     salt_call_path = os.path.join(OPTIONS.saltdir, 'salt-call')
     if not os.path.isfile(salt_call_path):
         sys.stderr.write('ERROR: thin is missing "{0}"\n'.format(salt_call_path))
-        sys.exit(os.EX_SOFTWARE)
+        need_deployment()
 
     with open(os.path.join(OPTIONS.saltdir, 'minion'), 'w') as config:
         config.write(OPTIONS.config + '\n')

@@ -68,11 +68,13 @@ log = logging.getLogger(__name__)
 
 class SMaster(object):
     '''
-    Create a simple salt-master, this will generate the top level master
+    Create a simple salt-master, this will generate the top-level master
     '''
     def __init__(self, opts):
         '''
         Create a salt master server instance
+
+        :param dict opts: The salt options dictionary
         '''
         self.opts = opts
         self.master_key = salt.crypt.MasterKeys(self.opts)
@@ -100,6 +102,8 @@ class Master(SMaster):
     def __init__(self, opts):
         '''
         Create a salt master server instance
+
+        :param dict: The salt options
         '''
         # Warn if ZMQ < 3.2
         try:
@@ -161,8 +165,13 @@ class Master(SMaster):
                 if now - rotate >= self.opts['publish_session']:
                     salt.crypt.dropfile(
                         self.opts['cachedir'],
-                        self.opts['user'])
+                        self.opts['user'],
+                        self.opts['sock_dir'])
                     rotate = now
+                    if self.opts['ping_on_rotate']:
+                        # Ping all minions to get them to pick up the new key
+                        log.debug('Pinging all connected minions due to AES key rotation')
+                        salt.utils.master.ping_all_connected_minions(self.opts)
             if self.opts.get('search'):
                 if now - last >= self.opts['search_index_interval']:
                     search.index()
@@ -254,8 +263,8 @@ class Master(SMaster):
 
     def _pre_flight(self):
         '''
-        Run pre flight checks, if anything in this method fails then the master
-        should not start up
+        Run pre flight checks. If anything in this method fails then the master
+        should not start up.
         '''
         errors = []
         fileserver = salt.fileserver.Fileserver(self.opts)
@@ -329,6 +338,11 @@ class Halite(multiprocessing.Process):
     Manage the Halite server
     '''
     def __init__(self, hopts):
+        '''
+        Create a halite instance
+
+        :param dict hopts: The halite options
+        '''
         super(Halite, self).__init__()
         self.hopts = hopts
 
@@ -346,6 +360,11 @@ class Publisher(multiprocessing.Process):
     commands.
     '''
     def __init__(self, opts):
+        '''
+        Create a publisher instance
+
+        :param dict opts: The salt options
+        '''
         super(Publisher, self).__init__()
         self.opts = opts
 
@@ -434,6 +453,17 @@ class ReqServer(object):
     interface.
     '''
     def __init__(self, opts, crypticle, key, mkey):
+        '''
+        Create a request server
+
+        :param dict opts: The salt options dictionary
+        :crypticle salt.crypt.Crypticle crypticle: Encryption crypticle
+        :key dict: The user starting the server and the AES key
+        :mkey dict: The user starting the server and the RSA key
+
+        :rtype: ReqServer
+        :returns: Request server
+        '''
         self.opts = opts
         self.master_key = mkey
         # Prepare the AES key
@@ -538,6 +568,17 @@ class MWorker(multiprocessing.Process):
                  mkey,
                  key,
                  crypticle):
+        '''
+        Create a salt master worker process
+
+        :param dict opts: The salt options
+        :param dict mkey: The user running the salt master and the AES key
+        :param dict key: The user running the salt master and the RSA key
+        :param salt.crypt.Crypticle crypticle: Encryption crypticle
+
+        :rtype: MWorker
+        :return: Master worker
+        '''
         multiprocessing.Process.__init__(self)
         self.opts = opts
         self.serial = salt.payload.Serial(opts)
@@ -591,6 +632,22 @@ class MWorker(multiprocessing.Process):
         '''
         The _handle_payload method is the key method used to figure out what
         needs to be done with communication to the server
+
+        Example cleartext payload generated for 'salt myminion test.ping':
+
+        {'enc': 'clear',
+         'load': {'arg': [],
+                  'cmd': 'publish',
+                  'fun': 'test.ping',
+                  'jid': '',
+                  'key': 'alsdkjfa.,maljf-==adflkjadflkjalkjadfadflkajdflkj',
+                  'kwargs': {'show_jid': False, 'show_timeout': False},
+                  'ret': '',
+                  'tgt': 'myminion',
+                  'tgt_type': 'glob',
+                  'user': 'root'}}
+
+        :param dict payload: The payload route to the appropriate handler
         '''
         try:
             key = payload['enc']
@@ -602,7 +659,11 @@ class MWorker(multiprocessing.Process):
 
     def _handle_clear(self, load):
         '''
-        Take care of a cleartext command
+        Process a cleartext command
+
+        :param dict load: Cleartext payload
+        :return: The result of passing the load to a function in ClearFuncs corresponding to
+                 the command specified in the load's 'cmd' key.
         '''
         log.info('Clear payload received with command {cmd}'.format(**load))
         if load['cmd'].startswith('__'):
@@ -611,7 +672,11 @@ class MWorker(multiprocessing.Process):
 
     def _handle_aes(self, load):
         '''
-        Handle a command sent via an AES key
+        Process a command sent via an AES key
+
+        :param str load: Encrypted payload
+        :return: The result of passing the load to a function in AESFuncs corresponding to
+                 the command specified in the load's 'cmd' key.
         '''
         try:
             data = self.crypticle.loads(load)
@@ -673,6 +738,15 @@ class AESFuncs(object):
     # The AES Functions:
     #
     def __init__(self, opts, crypticle):
+        '''
+        Create a new AESFuncs
+
+        :param dict opts: The salt options
+        :param salt.crypt.Crypticle crypticle: Encryption crypticle
+
+        :rtype: AESFuncs
+        :returns: Instance for handling AES operations
+        '''
         self.opts = opts
         self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
         self.serial = salt.payload.Serial(opts)
@@ -705,6 +779,12 @@ class AESFuncs(object):
         '''
         Take a minion id and a string signed with the minion private key
         The string needs to verify as 'salt' with the minion public key
+
+        :param str id_: A minion ID
+        :param str token: A string signed with the minion private key
+
+        :rtype: bool
+        :return: Boolean indicating whether or not the token can be verified.
         '''
         if not salt.utils.verify.valid_id(self.opts, id_):
             return False
@@ -736,6 +816,11 @@ class AESFuncs(object):
     def __verify_minion_publish(self, clear_load):
         '''
         Verify that the passed information authorized a minion to execute
+
+        :param dict clear_load: A publication load from a minion
+
+        :rtype: bool
+        :return: A boolean indicating if the minion is allowed to publish the command in the load
         '''
         # Verify that the load is valid
         if 'peer' not in self.opts:
@@ -784,8 +869,12 @@ class AESFuncs(object):
         '''
         A utility function to perform common verification steps.
 
-        verify_keys: A list of strings that should be present in a
-        given load.
+        :param dict load: A payload received from a minion
+        :param list verify_keys: A list of strings that should be present in a given load
+
+        :rtype: bool
+        :rtype: dict
+        :return: The original load (except for the token) if the load can be verified. False if the load is invalid.
         '''
         if any(key not in load for key in verify_keys):
             return False
@@ -815,6 +904,9 @@ class AESFuncs(object):
         '''
         Return the results from an external node classifier if one is
         specified
+
+        :param dict load: A payload received from a minion
+        :return: The results from an external node classifier
         '''
         load = self.__verify_load(load, ('id', 'tok'))
         if load is False:
@@ -824,6 +916,11 @@ class AESFuncs(object):
     def _master_opts(self, load):
         '''
         Return the master options to the minion
+
+        :param dict load: A payload received from a minion
+
+        :rtype: dict
+        :return: The master options
         '''
         mopts = {}
         file_roots = {}
@@ -847,6 +944,11 @@ class AESFuncs(object):
     def _mine_get(self, load):
         '''
         Gathers the data from the specified minions' mine
+
+        :param dict load: A payload received from a minion
+
+        :rtype: dict
+        :return: Mine data from the specified minions
         '''
         load = self.__verify_load(load, ('id', 'tgt', 'fun', 'tok'))
         if load is False:
@@ -856,7 +958,12 @@ class AESFuncs(object):
 
     def _mine(self, load):
         '''
-        Return the mine data
+        Store the mine data
+
+        :param dict load: A payload received from a minion
+
+        :rtype: bool
+        :return: True if the data has been stored in the mine
         '''
         load = self.__verify_load(load, ('id', 'data', 'tok'))
         if load is False:
@@ -866,6 +973,11 @@ class AESFuncs(object):
     def _mine_delete(self, load):
         '''
         Allow the minion to delete a specific function from its own mine
+
+        :param dict load: A payload received from a minion
+
+        :rtype: bool
+        :return: Boolean indicating whether or not the given function was deleted from the mine
         '''
         load = self.__verify_load(load, ('id', 'fun', 'tok'))
         if load is False:
@@ -876,6 +988,8 @@ class AESFuncs(object):
     def _mine_flush(self, load):
         '''
         Allow the minion to delete all of its own mine contents
+
+        :param dict load: A payload received from a minion
         '''
         load = self.__verify_load(load, ('id', 'tok'))
         if load is False:
@@ -954,6 +1068,11 @@ class AESFuncs(object):
     def _pillar(self, load):
         '''
         Return the pillar data for the minion
+
+        :param dict load: Minion payload
+
+        :rtype: dict
+        :return: The pillar data for the minion
         '''
         if any(key not in load for key in ('id', 'grains')):
             return False
@@ -994,6 +1113,8 @@ class AESFuncs(object):
         '''
         Receive an event from the minion and fire it on the master event
         interface
+
+        :param dict load: The minion payload
         '''
         load = self.__verify_load(load, ('id', 'tok'))
         if load is False:
@@ -1002,7 +1123,13 @@ class AESFuncs(object):
 
     def _return(self, load):
         '''
-        Handle the return data sent from the minions
+        Handle the return data sent from the minions.
+
+        Takes the return, verifies it and fires it on the master event bus.
+        Typically, this event is consumed by the Salt CLI waiting on the other
+        end of the event bus but could be heard by any listener on the bus.
+
+        :param dict load: The minion payload
         '''
         # If the return data is invalid, just ignore it
         if any(key not in load for key in ('return', 'jid', 'id')):
@@ -1038,6 +1165,8 @@ class AESFuncs(object):
         '''
         Receive a syndic minion return and format it to look like returns from
         individual minions.
+
+        :param dict load: The minion payload
         '''
         # Verify the load
         if any(key not in load for key in ('return', 'jid', 'id')):
@@ -1059,6 +1188,11 @@ class AESFuncs(object):
     def minion_runner(self, clear_load):
         '''
         Execute a runner from a minion, return the runner's function data
+
+        :param dict clear_load: The minion payload
+
+        :rtype: dict
+        :return: The runner function data
         '''
         load = self.__verify_load(clear_load, ('fun', 'arg', 'id', 'tok'))
         if load is False:
@@ -1070,6 +1204,11 @@ class AESFuncs(object):
         '''
         Request the return data from a specific jid, only allowed
         if the requesting minion also initialted the execution.
+
+        :param dict load: The minion payload
+
+        :rtype: dict
+        :return: Return data corresponding to a given JID
         '''
         load = self.__verify_load(load, ('jid', 'id', 'tok'))
         if load is False:
@@ -1092,18 +1231,30 @@ class AESFuncs(object):
         Publish a command initiated from a minion, this method executes minion
         restrictions so that the minion publication will only work if it is
         enabled in the config.
+
         The configuration on the master allows minions to be matched to
         salt functions, so the minions can only publish allowed salt functions
+
         The config will look like this:
-        peer:
-            .*:
-                - .*
-        This configuration will enable all minions to execute all commands.
-        peer:
-            foo.example.com:
-                - test.*
-        This configuration will only allow the minion foo.example.com to
-        execute commands from the test module
+
+        .. code-block:: bash
+
+            peer:
+                .*:
+                    - .*
+
+        This configuration will enable all minions to execute all commands:
+
+        .. code-block:: bash
+
+            peer:
+                foo.example.com:
+                    - test.*
+
+        The above configuration will only allow the minion foo.example.com to
+        execute commands from the test module.
+
+        :param dict clear_load: The minion pay
         '''
         if not self.__verify_minion_publish(clear_load):
             return {}
@@ -1115,18 +1266,30 @@ class AESFuncs(object):
         Publish a command initiated from a minion, this method executes minion
         restrictions so that the minion publication will only work if it is
         enabled in the config.
+
         The configuration on the master allows minions to be matched to
         salt functions, so the minions can only publish allowed salt functions
+
         The config will look like this:
-        peer:
-            .*:
-                - .*
+
+        .. code-block:: bash
+
+            peer:
+                .*:
+                    - .*
+
         This configuration will enable all minions to execute all commands.
         peer:
+
+        .. code-block:: bash
+
             foo.example.com:
                 - test.*
-        This configuration will only allow the minion foo.example.com to
-        execute commands from the test module
+
+        The above configuration will only allow the minion foo.example.com to
+        execute commands from the test module.
+
+        :param dict clear_load: The minion payload
         '''
         if not self.__verify_minion_publish(clear_load):
             return {}
@@ -1136,6 +1299,14 @@ class AESFuncs(object):
     def revoke_auth(self, load):
         '''
         Allow a minion to request revocation of its own key
+
+        :param dict load: The minion payload
+
+        :rtype: dict
+        :return: If the load is invalid, it may be returned. No key operation is performed.
+
+        :rtype: bool
+        :return: True if key was revoked, False if not
         '''
         load = self.__verify_load(load, ('id', 'tok'))
         if load is False:
@@ -1146,6 +1317,9 @@ class AESFuncs(object):
     def run_func(self, func, load):
         '''
         Wrapper for running functions executed with AES encryption
+
+        :param function func: The function to run
+        :return: The result of the master function that was called
         '''
         # Don't honor private functions
         if func.startswith('__'):

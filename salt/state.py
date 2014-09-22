@@ -862,12 +862,15 @@ class State(object):
             errors.append('High data is not a dictionary and is invalid')
         reqs = {}
         for name, body in high.items():
-            if name.startswith('__'):
-                continue
+            try:
+                if name.startswith('__'):
+                    continue
+            except AttributeError:
+                pass
             if not isinstance(name, string_types):
                 errors.append(
                     'ID {0!r} in SLS {1!r} is not formed as a string, but '
-                    'is a {2}'.format(
+                    'is a {2}. It may need to be quoted.'.format(
                         name, body['__sls__'], type(name).__name__)
                 )
             if not isinstance(body, dict):
@@ -1628,7 +1631,7 @@ class State(object):
         if 'onchanges' in low:
             present = True
         if not present:
-            return 'met'
+            return 'met', ()
         reqs = {
                 'require': [],
                 'watch': [],
@@ -1658,7 +1661,7 @@ class State(object):
                                 found = True
                                 reqs[r_state].append(chunk)
                     if not found:
-                        return 'unmet'
+                        return 'unmet', ()
         fun_stats = set()
         for r_state, chunks in reqs.items():
             if r_state == 'prereq':
@@ -1693,16 +1696,19 @@ class State(object):
                     fun_stats.add('met')
 
         if 'unmet' in fun_stats:
-            return 'unmet'
+            status = 'unmet'
         elif 'fail' in fun_stats:
-            return 'fail'
+            status = 'fail'
         elif 'pre' in fun_stats:
             if 'premet' in fun_stats:
-                return 'met'
-            return 'pre'
+                status = 'met'
+            status = 'pre'
         elif 'change' in fun_stats:
-            return 'change'
-        return 'met'
+            status = 'change'
+        else:
+            status = 'met'
+
+        return status, reqs
 
     def event(self, chunk_ret, length):
         '''
@@ -1730,9 +1736,9 @@ class State(object):
         requisites = ['require', 'watch', 'prereq', 'onfail', 'onchanges']
         if not low.get('__prereq__'):
             requisites.append('prerequired')
-            status = self.check_requisite(low, running, chunks, True)
+            status, reqs = self.check_requisite(low, running, chunks, True)
         else:
-            status = self.check_requisite(low, running, chunks)
+            status, reqs = self.check_requisite(low, running, chunks)
         if status == 'unmet':
             lost = {}
             reqs = []
@@ -1816,7 +1822,7 @@ class State(object):
                         running['__FAILHARD__'] = True
                         return running
             if low.get('__prereq__'):
-                status = self.check_requisite(low, running, chunks)
+                status, reqs = self.check_requisite(low, running, chunks)
                 self.pre[tag] = self.call(low, chunks, running)
                 if not self.pre[tag]['changes'] and status == 'change':
                     self.pre[tag]['changes'] = {'watch': 'watch'}
@@ -1852,6 +1858,7 @@ class State(object):
                 low = low.copy()
                 low['sfun'] = low['fun']
                 low['fun'] = 'mod_watch'
+                low['__reqs__'] = reqs
                 ret = self.call(low, chunks, running)
             running[tag] = ret
         elif status == 'pre':

@@ -217,3 +217,36 @@ commands (by default it is 5 seconds) or by modifying the master
 configuration file: ``/etc/salt/master`` and setting the ``timeout`` value to
 change the default timeout for all commands, and then restarting the
 salt-master service.
+
+Salt Master Auth Flooding
+=========================
+
+In large installations, care must be taken not to overwhealm the master with
+authentication requests. Several options can be set on the master which
+mitigate the chances of an authentication flood from causing an interuption in
+service.
+
+.. note::
+    recon_default: 
+    
+    The average number of seconds to wait between reconnection attempts.
+
+    recon_max: 
+       The maximum number of seconds to wait between reconnection attempts.
+
+    recon_randomize:
+        A flag to indicate whether the recon_default value should be randomized.
+
+    acceptance_wait_time:
+        The number of seconds to wait for a reply to each authentication request.
+
+    random_reauth_delay: 
+        The range of seconds across which the minions should attempt to randomize
+        authentication attempts.
+
+    auth_timeout:
+        The total time to wait for the authentication process to complete, regardless
+        of the number of attempts.
+
+
+

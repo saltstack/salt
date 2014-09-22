@@ -2,7 +2,7 @@
 
 house master
 
-init .raet.udp.stack.local to eid 1 main true name "master"
+init .raet.udp.stack.local to main true name "master" role "master"
 
 init .salt.uxd.stack.local to yid 0 name "master" lanename "master"
 
