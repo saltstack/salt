@@ -1210,4 +1210,13 @@ class FSClient(RemoteClient):  # pylint: disable=W0231
     def __init__(self, opts):
         self.opts = opts
         self.channel = salt.fileserver.FSChan(opts)
-        self.auth = True
+        self.auth = DumbAuth()
+
+
+class DumbAuth(object):
+    '''
+    The dumbauth class is used to stub out auth calls fired from the FSClient
+    subsystem
+    '''
+    def gen_token(self):
+        return ('')
