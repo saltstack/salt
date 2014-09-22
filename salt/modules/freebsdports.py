@@ -170,7 +170,15 @@ def install(name, clean=True):
         __context__['ports.install_error'] = result['stderr']
     __context__.pop('pkg.list_pkgs', None)
     new = __salt__['pkg.list_pkgs']()
-    return salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+    if not ret and result['retcode'] == 0:
+        # No change in package list, but the make install was successful.
+        # Assume that the installation was a recompile with new options, and
+        # set return dict so that changes are detected by the ports.installed
+        # state.
+        ret = {name: {'old': old.get(name, ''),
+                      'new': new.get(name, '')}}
+    return ret
 
 
 def deinstall(name):
