@@ -30,7 +30,7 @@ class ManageTest(integration.ShellCase):
         ret = self.run_run_plus(fun='fileserver.envs')
         self.assertIsInstance(ret['fun'], list)
 
-        ret = self.run_run_plus(fun='fileserver.envs', args=['back="{0}"'.format(['root'])])
+        ret = self.run_run_plus(fun='fileserver.envs', args=['backend="{0}"'.format(['root'])])
         self.assertIsInstance(ret['fun'], list)
 
     def test_file_list(self):
