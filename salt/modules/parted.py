@@ -682,6 +682,6 @@ def get_block_device():
 
         salt '*' partition.get_block_device
     '''
-    cmd = '/bin/lsblk -n -io KNAME -d -e 1,7,11 -l'
+    cmd = 'lsblk -n -io KNAME -d -e 1,7,11 -l'
     devs = __salt__['cmd.run'](cmd).splitlines()
     return devs
