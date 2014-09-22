@@ -547,6 +547,7 @@ class TestDaemon(object):
         verify_env([os.path.join(master_opts['pki_dir'], 'minions'),
                     os.path.join(master_opts['pki_dir'], 'minions_pre'),
                     os.path.join(master_opts['pki_dir'], 'minions_rejected'),
+                    os.path.join(master_opts['pki_dir'], 'minions_denied'),
                     os.path.join(master_opts['cachedir'], 'jobs'),
                     os.path.join(master_opts['cachedir'], 'raet'),
                     os.path.join(syndic_master_opts['pki_dir'], 'minions'),
