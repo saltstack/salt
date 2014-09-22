@@ -119,13 +119,6 @@ def list_(device, unit=None):
         salt '*' partition.list /dev/sda unit=s
         salt '*' partition.list /dev/sda unit=kB
     '''
-    if device:
-        dev = device.replace('/dev/', '')
-        if dev not in os.listdir('/dev'):
-            raise CommandExecutionError(
-                'Invalid device passed to partition.part_list'
-            )
-
     if unit:
         if unit not in VALID_UNITS:
             raise CommandExecutionError(
@@ -186,12 +179,6 @@ def align_check(device, part_type, partition):
 
         salt '*' partition.align_check /dev/sda minimal 1
     '''
-    dev = device.replace('/dev/', '')
-    if dev not in os.listdir('/dev'):
-        raise CommandExecutionError(
-            'Invalid device passed to partition.align_check'
-        )
-
     if part_type not in set(['minimal', 'optimal']):
         raise CommandExecutionError(
             'Invalid part_type passed to partition.align_check'
@@ -223,10 +210,6 @@ def check(device, minor):
 
         salt '*' partition.check 1
     '''
-    dev = device.replace('/dev/', '')
-    if dev not in os.listdir('/dev'):
-        raise CommandExecutionError('Invalid device passed to partition.check')
-
     try:
         int(minor)
     except Exception:
@@ -253,10 +236,6 @@ def cp(device, from_minor, to_minor):  # pylint: disable=C0103
 
         salt '*' partition.cp /dev/sda 2 3
     '''
-    dev = device.replace('/dev/', '')
-    if dev not in os.listdir('/dev'):
-        raise CommandExecutionError('Invalid device passed to partition.cp')
-
     try:
         int(from_minor)
         int(to_minor)
@@ -289,10 +268,6 @@ def get_id(device, minor):
 
         salt '*' partition.get_id /dev/sda 1
     '''
-    dev = device.replace('/dev/', '')
-    if dev not in os.listdir('/dev'):
-        raise CommandExecutionError('Invalid device passed to partition.get_id')
-
     try:
         int(minor)
     except Exception:
@@ -324,10 +299,6 @@ def set_id(device, minor, system_id):
 
         salt '*' partition.set_id /dev/sda 1 83
     '''
-    dev = device.replace('/dev/', '')
-    if dev not in os.listdir('/dev'):
-        raise CommandExecutionError('Invalid device passed to partition.set_id')
-
     try:
         int(minor)
     except Exception:
@@ -381,10 +352,6 @@ def mkfs(device, fs_type):
 
         salt '*' partition.mkfs /dev/sda2 fat32
     '''
-    dev = device.replace('/dev/', '')
-    if dev not in os.listdir('/dev'):
-        raise CommandExecutionError('Invalid device passed to partition.mkfs')
-
     if fs_type not in set(['ext2', 'fat32', 'fat16', 'linux-swap', 'reiserfs',
                           'hfs', 'hfs+', 'hfsx', 'NTFS', 'ufs']):
         raise CommandExecutionError('Invalid fs_type passed to partition.mkfs')
@@ -408,12 +375,6 @@ def mklabel(device, label_type):
 
         salt '*' partition.mklabel /dev/sda msdos
     '''
-    dev = device.replace('/dev/', '')
-    if dev not in os.listdir('/dev'):
-        raise CommandExecutionError(
-            'Invalid device passed to partition.mklabel'
-        )
-
     if label_type not in set(['aix', 'amiga', 'bsd', 'dvh', 'gpt', 'loop', 'mac',
                              'msdos', 'pc98', 'sun']):
         raise CommandExecutionError(
@@ -457,11 +418,6 @@ def mkpart(device, part_type, fs_type=None, start=None, end=None):
             'partition.mkpart requires a start and an end'
         )
 
-    dev = device.replace('/dev/', '')
-    if dev not in os.listdir('/dev'):
-        raise CommandExecutionError(
-            'Invalid device passed to partition.mkpart'
-        )
 
     if part_type not in set(['primary', 'logical', 'extended']):
         raise CommandExecutionError(
@@ -506,12 +462,6 @@ def mkpartfs(device, part_type, fs_type, start, end):
 
         salt '*' partition.mkpartfs /dev/sda logical ext2 440 670
     '''
-    dev = device.replace('/dev/', '')
-    if dev not in os.listdir('/dev'):
-        raise CommandExecutionError(
-            'Invalid device passed to partition.mkpartfs'
-        )
-
     if part_type not in set(['primary', 'logical', 'extended']):
         raise CommandExecutionError(
             'Invalid part_type passed to partition.mkpartfs'
@@ -546,10 +496,6 @@ def name(device, partition, name):
 
         salt '*' partition.name /dev/sda 1 'My Documents'
     '''
-    dev = device.replace('/dev/', '')
-    if dev not in os.listdir('/dev'):
-        raise CommandExecutionError('Invalid device passed to partition.name')
-
     try:
         int(partition)
     except Exception:
@@ -583,10 +529,6 @@ def rescue(device, start, end):
 
         salt '*' partition.rescue /dev/sda 0 8056
     '''
-    dev = device.replace('/dev/', '')
-    if dev not in os.listdir('/dev'):
-        raise CommandExecutionError('Invalid device passed to partition.rescue')
-
     _validate_partition_boundary(start)
     _validate_partition_boundary(end)
 
@@ -611,10 +553,6 @@ def resize(device, minor, start, end):
 
         salt '*' partition.resize /dev/sda 3 200 850
     '''
-    dev = device.replace('/dev/', '')
-    if dev not in os.listdir('/dev'):
-        raise CommandExecutionError('Invalid device passed to partition.resize')
-
     try:
         int(minor)
     except Exception:
@@ -645,10 +583,6 @@ def rm(device, minor):  # pylint: disable=C0103
 
         salt '*' partition.rm /dev/sda 5
     '''
-    dev = device.replace('/dev/', '')
-    if dev not in os.listdir('/dev'):
-        raise CommandExecutionError('Invalid device passed to partition.rm')
-
     try:
         int(minor)
     except Exception:
@@ -675,10 +609,6 @@ def set_(device, minor, flag, state):
 
         salt '*' partition.set /dev/sda 1 boot on
     '''
-    dev = device.replace('/dev/', '')
-    if dev not in os.listdir('/dev'):
-        raise CommandExecutionError('Invalid device passed to partition.set')
-
     try:
         int(minor)
     except Exception:
@@ -710,10 +640,6 @@ def toggle(device, partition, flag):
 
         salt '*' partition.name /dev/sda 1 boot
     '''
-    dev = device.replace('/dev/', '')
-    if dev not in os.listdir('/dev'):
-        raise CommandExecutionError('Invalid device passed to partition.toggle')
-
     try:
         int(partition)
     except Exception:
@@ -763,11 +689,6 @@ def get_block_device():
 
         salt '*' partition.get_block_device
     '''
-    ret = []
     cmd = '/bin/lsblk -n -io KNAME -d -e 1,7,11 -l'
     devs = __salt__['cmd.run'](cmd).splitlines()
-    for dev in devs:
-        if dev not in os.listdir('/dev'):
-            continue
-        ret.append(dev)
-    return ret
+    return devs
