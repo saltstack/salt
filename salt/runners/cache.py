@@ -18,7 +18,7 @@ deprecation_warning = ("The 'minion' arg will be removed from "
                     "cache.py runner. Specify minion with 'tgt' arg!")
 
 
-def grains(tgt=None, expr_form='glob', **kwargs):
+def grains(tgt=None, expr_form='glob', outputter=None, **kwargs):
     '''
     Return cached grains of the targeted minions
 
@@ -42,11 +42,11 @@ def grains(tgt=None, expr_form='glob', **kwargs):
                                                 grains_fallback=False,
                                                 opts=__opts__)
     cached_grains = pillar_util.get_minion_grains()
-    salt.output.display_output(cached_grains, None, __opts__)
+    salt.output.display_output(cached_grains, outputter, __opts__)
     return cached_grains
 
 
-def pillar(tgt=None, expr_form='glob', **kwargs):
+def pillar(tgt=None, expr_form='glob', outputter=None, **kwargs):
     '''
     Return cached pillars of the targeted minions
 
@@ -72,11 +72,11 @@ def pillar(tgt=None, expr_form='glob', **kwargs):
                                                 pillar_fallback=False,
                                                 opts=__opts__)
     cached_pillar = pillar_util.get_minion_pillar()
-    salt.output.display_output(cached_pillar, None, __opts__)
+    salt.output.display_output(cached_pillar, outputter, __opts__)
     return cached_pillar
 
 
-def mine(tgt=None, expr_form='glob', **kwargs):
+def mine(tgt=None, expr_form='glob', outputter=None, **kwargs):
     '''
     Return cached mine data of the targeted minions
 
@@ -102,7 +102,7 @@ def mine(tgt=None, expr_form='glob', **kwargs):
                                                 pillar_fallback=False,
                                                 opts=__opts__)
     cached_mine = pillar_util.get_cached_mine_data()
-    salt.output.display_output(cached_mine, None, __opts__)
+    salt.output.display_output(cached_mine, outputter, __opts__)
 
 
 def _clear_cache(tgt=None,

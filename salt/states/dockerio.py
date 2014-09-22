@@ -954,8 +954,9 @@ def running(name,
           name, binds=bindvolumes, port_bindings=bindports,
           lxc_conf=lxc_conf, publish_all_ports=publish_all_ports,
           links=links, privileged=privileged,
-          dns=dns, volumes_from=volumes_from, network_mode=network_mode
-      )# cap_add,cap_drop removed as not valid in 2014.1
+          dns=dns, volumes_from=volumes_from, network_mode=network_mode,
+          cap_add=cap_add,cap_drop=cap_drop
+      )
       if check_is_running:
           is_running = __salt__['docker.is_running'](name)
           log.debug("Docker-io running:" + str(started))

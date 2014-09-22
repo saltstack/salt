@@ -14,7 +14,7 @@ import salt.output
 import salt.minion
 
 
-def active():
+def active(outputter=None):
     '''
     Return a report on all actively running jobs from a job id centric
     perspective
@@ -46,11 +46,11 @@ def active():
             if minion not in ret[jid]['Returned']:
                 ret[jid]['Returned'].append(minion)
 
-    salt.output.display_output(ret, opts=__opts__)
+    salt.output.display_output(ret, outputter, opts=__opts__)
     return ret
 
 
-def lookup_jid(jid, ext_source=None, missing=False):
+def lookup_jid(jid, ext_source=None, missing=False, outputter=None):
     '''
     Return the printout from a previously executed job
 
@@ -59,6 +59,7 @@ def lookup_jid(jid, ext_source=None, missing=False):
     .. code-block:: bash
 
         salt-run jobs.lookup_jid 20130916125524463507
+        salt-run jobs.lookup_jid 20130916125524463507 outputter=highstate
     '''
     ret = {}
     mminion = salt.minion.MasterMinion(__opts__)
@@ -78,11 +79,11 @@ def lookup_jid(jid, ext_source=None, missing=False):
         for minion_id in exp:
             if minion_id not in data:
                 ret[minion_id] = 'Minion did not return'
-    salt.output.display_output(ret, opts=__opts__)
+    salt.output.display_output(ret, outputter, opts=__opts__)
     return ret
 
 
-def list_job(jid, ext_source=None):
+def list_job(jid, ext_source=None, outputter=None):
     '''
     List a specific job given by its jid
 
@@ -99,11 +100,11 @@ def list_job(jid, ext_source=None):
     job = mminion.returners['{0}.get_load'.format(returner)](jid)
     ret.update(_format_jid_instance(jid, job))
     ret['Result'] = mminion.returners['{0}.get_jid'.format(returner)](jid)
-    salt.output.display_output(ret, opts=__opts__)
+    salt.output.display_output(ret, outputter, opts=__opts__)
     return ret
 
 
-def list_jobs(ext_source=None):
+def list_jobs(ext_source=None, outputter=None):
     '''
     List all detectable jobs and associated functions
 
@@ -117,12 +118,12 @@ def list_jobs(ext_source=None):
     mminion = salt.minion.MasterMinion(__opts__)
 
     ret = mminion.returners['{0}.get_jids'.format(returner)]()
-    salt.output.display_output(ret, opts=__opts__)
+    salt.output.display_output(ret, outputter, opts=__opts__)
 
     return ret
 
 
-def print_job(jid, ext_source=None):
+def print_job(jid, ext_source=None, outputter=None):
     '''
     Print a specific job's detail given by it's jid, including the return data.
 
@@ -140,7 +141,7 @@ def print_job(jid, ext_source=None):
     job = mminion.returners['{0}.get_load'.format(returner)](jid)
     ret[jid] = _format_jid_instance(jid, job)
     ret[jid]['Result'] = mminion.returners['{0}.get_jid'.format(returner)](jid)
-    salt.output.display_output(ret, opts=__opts__)
+    salt.output.display_output(ret, outputter, opts=__opts__)
 
     return ret
 

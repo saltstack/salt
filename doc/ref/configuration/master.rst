@@ -419,6 +419,21 @@ this can slow down the authentication process a bit in large setups.
 
     max_minions: 100
 
+``con_cache``
+-------------
+
+Default: False
+
+If max_minions is used in large installations, the master might experience
+high-load situations because of having to check the number of connected
+minions for every authentication. This cache provides the minion-ids of
+all connected minions to all MWorker-processes and greatly improves the
+performance of max_minions.
+
+.. code-block:: yaml
+
+    con_cache: True
+
 .. conf_master:: presence_events
 
 ``presence_events``
@@ -666,6 +681,23 @@ signature. The :conf_master:`master_pubkey_signature` must also be set for this.
 .. code-block:: yaml
 
     master_use_pubkey_signature: True
+
+
+.. conf_master:: rotate_aes_key
+
+``rotate_aes_key``
+------------------
+
+Default: ``True``
+
+Rotate the salt-masters AES-key when a minion-public is deleted with salt-key.
+This is a very important security-setting. Disabling it will enable deleted
+minions to still listen in on the messages published by the salt-master.
+Do not disable this unless it is absolutely clear what this does.
+
+.. code-block:: yaml
+
+    rotate_aes_key: True
 
 
 Master Module Management

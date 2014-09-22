@@ -2058,14 +2058,18 @@ def argspec_report(functions, module=''):
     # TODO: cp.get_file will also match cp.get_file_str. this is the
     # same logic as sys.doc, and it is not working as expected, see
     # issue #3614
-    if module:
+    _use_fnmatch = False
+    if '*' in module:
+        target_mod = module
+        _use_fnmatch = True
+    elif module:
         # allow both "sys" and "sys." to match sys, without also matching
         # sysctl
         target_module = module + '.' if not module.endswith('.') else module
     else:
         target_module = ''
-    for fun in functions:
-        if fun == module or fun.startswith(target_module):
+    if _use_fnmatch:
+        for fun in fnmatch.filter(functions, target_mod):
             try:
                 aspec = get_function_argspec(functions[fun])
             except TypeError:
@@ -2079,6 +2083,23 @@ def argspec_report(functions, module=''):
             ret[fun]['defaults'] = defaults if defaults else None
             ret[fun]['varargs'] = True if varargs else None
             ret[fun]['kwargs'] = True if kwargs else None
+
+    else:
+        for fun in functions:
+            if fun == module or fun.startswith(target_module):
+                try:
+                    aspec = get_function_argspec(functions[fun])
+                except TypeError:
+                    # this happens if not callable
+                    continue
+
+                args, varargs, kwargs, defaults = aspec
+
+                ret[fun] = {}
+                ret[fun]['args'] = args if args else None
+                ret[fun]['defaults'] = defaults if defaults else None
+                ret[fun]['varargs'] = True if varargs else None
+                ret[fun]['kwargs'] = True if kwargs else None
 
     return ret
 

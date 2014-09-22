@@ -252,6 +252,7 @@ VALID_OPTS = {
     'password': str,
     'zmq_filtering': bool,
     'con_cache': bool,
+    'rotate_aes_key': bool,
 }
 
 # default configurations
@@ -539,6 +540,7 @@ DEFAULT_MASTER_OPTS = {
     'master_use_pubkey_signature': False,
     'zmq_filtering': False,
     'con_cache': False,
+    'rotate_aes_key': True,
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
