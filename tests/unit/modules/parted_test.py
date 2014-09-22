@@ -16,11 +16,15 @@ ensure_in_syspath('../../')
 # Import salt libs
 from salt.modules import parted
 
-parted.__salt__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class PartedTestCase(TestCase):
+
+    # Setup for each test function.
+
+    def setUp(self):
+        parted.__salt__ = {'cmd.run': MagicMock()}
+        self.cmdrun = parted.__salt__['cmd.run']
 
     # Test __virtual__ function for module registration
 
@@ -66,51 +70,39 @@ class PartedTestCase(TestCase):
     # Test probe function
 
     def test_probe_wo_args(self):
-        run = MagicMock()
-        with patch.dict(parted.__salt__, {'cmd.run': run}):
-            parted.probe()
-        run.called_once_with(
+        parted.probe()
+        self.cmdrun.called_once_with(
             ['partprobe'], python_shell=False)
 
     def test_probe_w_single_arg(self):
-        run = MagicMock()
-        with patch.dict(parted.__salt__, {'cmd.run': run}):
-            parted.probe("/dev/sda")
-        run.called_once_with(
+        parted.probe("/dev/sda")
+        self.cmdrun.called_once_with(
             ['partprobe', '/dev/sda'], python_shell=False)
 
     def test_probe_w_multiple_args(self):
-        run = MagicMock()
-        with patch.dict(parted.__salt__, {'cmd.run': run}):
-            parted.probe('/dev/sda', '/dev/sdb')
-        run.called_once_with(
+        parted.probe('/dev/sda', '/dev/sdb')
+        self.cmdrun.called_once_with(
             ['partprobe', '/dev/sda', '/dev/sdb'], python_shell=False)
 
     @patch('salt.utils.kwargs_warn_until')
     def test_probe_w_device_kwarg(self, *args, **kwargs):
-        run = MagicMock()
-        with patch.dict(parted.__salt__, {'cmd.run': run}):
-            parted.probe(device="/dev/sda")
+        parted.probe(device="/dev/sda")
         parted.salt.utils.kwargs_warn_until.called_once_with({'device': '/dev/sda'})
-        run.called_once_with(['partprobe', '/dev/sda'], python_shell=False)
+        self.cmdrun.called_once_with(['partprobe', '/dev/sda'], python_shell=False)
 
     @patch('salt.utils.kwargs_warn_until')
     def test_probe_w_device_kwarg_and_arg(self, *args, **kwargs):
         '''device arg is concatanated with possitional args'''
-        run = MagicMock()
-        with patch.dict(parted.__salt__, {'cmd.run': run}):
-            parted.probe("/dev/sdb", device="/dev/sda")
+        parted.probe("/dev/sdb", device="/dev/sda")
         parted.salt.utils.kwargs_warn_until.called_once_with({'device': '/dev/sda'})
-        run.called_once_with(
+        self.cmdrun.called_once_with(
             ['partprobe', '/dev/sda', '/dev/sdb'], python_shell=False)
 
     @patch('salt.utils.kwargs_warn_until')
     def test_probe_w_extra_kwarg(self, *args, **kwargs):
-        run = MagicMock()
-        with patch.dict(parted.__salt__, {'cmd.run': run}):
-            self.assertRaises(TypeError, parted.probe, foo="bar")
+        self.assertRaises(TypeError, parted.probe, foo="bar")
         parted.salt.utils.kwargs_warn_until.called_once_with({'device': '/dev/sda'})
-        self.assertFalse(run.called)
+        self.assertFalse(self.cmdrun.called)
 
     # Test part_list function
 
@@ -125,6 +117,10 @@ class PartedTestCase(TestCase):
             '''The \'part_list\' function has been deprecated in favor of
             \'list\'. Please update your code and configs to reflect
             this.''')
+
+    # Test _list function
+
+
 
 if __name__ == '__main__':
     from integration import run_tests
