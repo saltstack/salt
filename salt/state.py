@@ -862,12 +862,15 @@ class State(object):
             errors.append('High data is not a dictionary and is invalid')
         reqs = {}
         for name, body in high.items():
-            if name.startswith('__'):
-                continue
+            try:
+                if name.startswith('__'):
+                    continue
+            except AttributeError:
+                pass
             if not isinstance(name, string_types):
                 errors.append(
                     'ID {0!r} in SLS {1!r} is not formed as a string, but '
-                    'is a {2}'.format(
+                    'is a {2}. It may need to be quoted.'.format(
                         name, body['__sls__'], type(name).__name__)
                 )
             if not isinstance(body, dict):
