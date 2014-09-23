@@ -1084,6 +1084,8 @@ class Minion(MinionBase):
         ret['jid'] = data['jid']
         ret['fun'] = data['fun']
         ret['fun_args'] = data['arg']
+        if 'master_id' in data:
+            ret['master_id'] = data['master_id']
         minion_instance._return_pub(ret)
         if data['ret']:
             ret['id'] = opts['id']
@@ -1810,7 +1812,7 @@ class Syndic(Minion):
             data = self.crypticle.loads(load)
         # Verify that the publication is valid
         if 'tgt' not in data or 'jid' not in data or 'fun' not in data \
-           or 'to' not in data or 'arg' not in data:
+           or 'arg' not in data:
             return
         data['to'] = int(data.get('to', self.opts['timeout'])) - 1
         if 'user' in data:
@@ -2045,6 +2047,8 @@ class Syndic(Minion):
                     jdict['__load__'].update(
                         self.mminion.returners[fstr](event['data']['jid'])
                         )
+                if 'master_id' in event['data']:
+                    jdict['master_id'] = event['data']['master_id']
                 jdict[event['data']['id']] = event['data']['return']
             else:
                 # Add generic event aggregation here
@@ -2057,6 +2061,7 @@ class Syndic(Minion):
             self._fire_master(events=self.raw_events,
                               pretag=tagify(self.opts['id'], base='syndic'),
                               )
+        print (self.jids)
         for jid in self.jids:
             self._return_pub(self.jids[jid], '_syndic_return')
         self._reset_event_aggregation()
