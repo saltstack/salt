@@ -122,7 +122,7 @@ def list_(device, unit=None):
     ret = {'info': {}, 'partitions': {}}
     mode = 'info'
     for line in out:
-        if line.startswith('BYT'):
+        if line in ('BYT;', 'CHS;', 'CYL;'):
             continue
         cols = line.replace(';', '').split(':')
         if mode == 'info':
@@ -142,15 +142,22 @@ def list_(device, unit=None):
                     # line. In these cases we just leave this field out of the
                     # return dict.
                 mode = 'partitions'
+            else:
+                raise CommandExecutionError(
+                    'Problem encountered while parsing output from parted')
         else:
-            ret['partitions'][cols[0]] = {
-                'number': cols[0],
-                'start': cols[1],
-                'end': cols[2],
-                'size': cols[3],
-                'type': cols[4],
-                'file system': cols[5],
-                'flags': cols[6]}
+            if len(cols) == 7:
+                ret['partitions'][cols[0]] = {
+                    'number': cols[0],
+                    'start': cols[1],
+                    'end': cols[2],
+                    'size': cols[3],
+                    'type': cols[4],
+                    'file system': cols[5],
+                    'flags': cols[6]}
+            else:
+                raise CommandExecutionError(
+                    'Problem encountered while parsing output from parted')
     return ret
 
 
