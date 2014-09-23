@@ -322,7 +322,7 @@ def delval(key, destructive=False):
 
     Delete a grain from the grains config file
 
-    :param Destructive: Delete the key, too. Defaults to False.
+    :param destructive: Delete the key, too. Defaults to False.
 
     CLI Example:
 

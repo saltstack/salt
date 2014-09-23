@@ -37,7 +37,7 @@ from salt.exceptions import (
 log = logging.getLogger(__name__)
 
 
-def dropfile(cachedir, user=None):
+def dropfile(cachedir, user=None, sock_dir=None):
     '''
     Set an AES dropfile to update the publish session key
 
@@ -74,6 +74,7 @@ def dropfile(cachedir, user=None):
         log.warning('Waiting before writing {0}'.format(dfn))
         time.sleep(1)
 
+    log.info('Rotating AES key')
     aes = Crypticle.generate_key_string()
     mask = os.umask(191)
     with salt.utils.fopen(dfnt, 'w+') as fp_:
@@ -88,6 +89,9 @@ def dropfile(cachedir, user=None):
 
     shutil.move(dfnt, dfn)
     os.umask(mask)
+    if sock_dir:
+        event = salt.utils.event.SaltEvent('master', sock_dir)
+        event.fire_event({'rotate_aes_key': True}, tag='key')
 
 
 def gen_keys(keydir, keyname, keysize, user=None):

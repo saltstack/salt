@@ -31,7 +31,7 @@ A REST API for Salt
 
     .. code-block:: bash
 
-        % salt-call tls.create_self_signed_cert
+        salt-call tls.create_self_signed_cert
 
     All available configuration options are detailed below. These settings
     configure the CherryPy HTTP server and do not apply when using an external
@@ -402,6 +402,8 @@ def urlencoded_processor(entity):
 
     For example::
 
+    .. code-block:: bash
+
         curl -si localhost:8000 -d client=local -d tgt='*' \\
                 -d fun='test.kwarg' -d arg='one=1' -d arg='two=2'
 
@@ -615,9 +617,11 @@ class LowDataAdapter(object):
             :status 401: |401|
             :status 406: |406|
 
-        **Example request**::
+        **Example request:**
 
-            % curl -i localhost:8000
+        .. code-block:: bash
+
+            curl -i localhost:8000
 
         .. code-block:: http
 
@@ -625,7 +629,7 @@ class LowDataAdapter(object):
             Host: localhost:8000
             Accept: application/json
 
-        **Example response**:
+        **Example response:**
 
         .. code-block:: http
 
@@ -665,9 +669,11 @@ class LowDataAdapter(object):
             :term:`lowstate` data describing Salt commands must be sent in the
             request body.
 
-        **Example request**::
+        **Example request:**
 
-            % curl -si https://localhost:8000 \\
+        .. code-block:: bash
+
+            curl -si https://localhost:8000 \\
                     -H "Accept: application/x-yaml" \\
                     -H "X-Auth-Token: d40d1e1e" \\
                     -d client=local \\
@@ -686,7 +692,7 @@ class LowDataAdapter(object):
 
             fun=test.ping&arg&client=local&tgt=*
 
-        **Example response**:
+        **Example response:**
 
         .. code-block:: http
 
@@ -731,9 +737,11 @@ class Minions(LowDataAdapter):
             :status 401: |401|
             :status 406: |406|
 
-        **Example request**::
+        **Example request:**
 
-            % curl -i localhost:8000/minions/ms-3
+        .. code-block:: bash
+
+            curl -i localhost:8000/minions/ms-3
 
         .. code-block:: http
 
@@ -741,7 +749,7 @@ class Minions(LowDataAdapter):
             Host: localhost:8000
             Accept: application/x-yaml
 
-        **Example response**:
+        **Example response:**
 
         .. code-block:: http
 
@@ -782,9 +790,11 @@ class Minions(LowDataAdapter):
             request body. The ``client`` option will be set to
             :py:meth:`~salt.client.LocalClient.local_async`.
 
-        **Example request**::
+        **Example request:**
 
-            % curl -sSi localhost:8000/minions \\
+        .. code-block:: bash
+
+            curl -sSi localhost:8000/minions \\
                 -H "Accept: application/x-yaml" \\
                 -d tgt='*' \\
                 -d fun='status.diskusage'
@@ -799,7 +809,7 @@ class Minions(LowDataAdapter):
 
             tgt=*&fun=status.diskusage
 
-        **Example response**:
+        **Example response:**
 
         .. code-block:: http
 
@@ -846,9 +856,11 @@ class Jobs(LowDataAdapter):
             :status 401: |401|
             :status 406: |406|
 
-        **Example request**::
+        **Example request:**
 
-            % curl -i localhost:8000/jobs
+        .. code-block:: bash
+
+            curl -i localhost:8000/jobs
 
         .. code-block:: http
 
@@ -856,7 +868,7 @@ class Jobs(LowDataAdapter):
             Host: localhost:8000
             Accept: application/x-yaml
 
-        **Example response**:
+        **Example response:**
 
         .. code-block:: http
 
@@ -873,9 +885,11 @@ class Jobs(LowDataAdapter):
                 Target: jerry
                 Target-type: glob
 
-        **Example request**::
+        **Example request:**
 
-            % curl -i localhost:8000/jobs/20121130104633606931
+        .. code-block:: bash
+
+            curl -i localhost:8000/jobs/20121130104633606931
 
         .. code-block:: http
 
@@ -883,7 +897,7 @@ class Jobs(LowDataAdapter):
             Host: localhost:8000
             Accept: application/x-yaml
 
-        **Example response**:
+        **Example response:**
 
         .. code-block:: http
 
@@ -962,9 +976,11 @@ class Login(LowDataAdapter):
             :status 401: |401|
             :status 406: |406|
 
-        **Example request**::
+        **Example request:**
 
-            % curl -i localhost:8000/login
+        .. code-block:: bash
+
+            curl -i localhost:8000/login
 
         .. code-block:: http
 
@@ -972,7 +988,7 @@ class Login(LowDataAdapter):
             Host: localhost:8000
             Accept: text/html
 
-        **Example response**:
+        **Example response:**
 
         .. code-block:: http
 
@@ -1004,9 +1020,11 @@ class Login(LowDataAdapter):
             :status 401: |401|
             :status 406: |406|
 
-        **Example request**::
+        **Example request:**
 
-            % curl -si localhost:8000/login \\
+        .. code-block:: bash
+
+            curl -si localhost:8000/login \\
                     -H "Accept: application/json" \\
                     -d username='saltuser' \\
                     -d password='saltpass' \\
@@ -1022,7 +1040,7 @@ class Login(LowDataAdapter):
 
             username=saltuser&password=saltpass&eauth=pam
 
-        **Example response**:
+        **Example response:**
 
         .. code-block:: http
 
@@ -1132,9 +1150,11 @@ class Run(LowDataAdapter):
             :status 401: |401|
             :status 406: |406|
 
-        **Example request**::
+        **Example request:**
 
-            % curl -sS localhost:8000/run \\
+        .. code-block:: bash
+
+            curl -sS localhost:8000/run \\
                 -H 'Accept: application/x-yaml' \\
                 -d client='local' \\
                 -d tgt='*' \\
@@ -1153,7 +1173,7 @@ class Run(LowDataAdapter):
 
             client=local&tgt=*&fun=test.ping&username=saltdev&password=saltdev&eauth=pam
 
-        **Example response**:
+        **Example response:**
 
         .. code-block:: http
 
@@ -1215,16 +1235,18 @@ class Events(object):
             :status 401: |401|
             :status 406: |406|
 
-        **Example request**::
+        **Example request:**
 
-            % curl -NsS localhost:8000/events
+        .. code-block:: bash
+
+            curl -NsS localhost:8000/events
 
         .. code-block:: http
 
             GET /events HTTP/1.1
             Host: localhost:8000
 
-        **Example response**:
+        **Example response:**
 
         .. code-block:: http
 
@@ -1256,9 +1278,11 @@ class Events(object):
 
     Some browser clients lack CORS support for the ``EventSource()`` API. Such
     clients may instead pass the :mailheader:`X-Auth-Token` value as an URL
-    parameter::
+    parameter:
 
-        % curl -NsS localhost:8000/events/6d1b722e
+    .. code-block:: bash
+
+        curl -NsS localhost:8000/events/6d1b722e
 
     It is also possible to consume the stream via the shell.
 
@@ -1273,7 +1297,7 @@ class Events(object):
 
     .. code-block:: bash
 
-        % curl -NsS localhost:8000/events |\
+        curl -NsS localhost:8000/events |\
                 while IFS= read -r line ; do
                     echo $line
                 done
@@ -1282,7 +1306,7 @@ class Events(object):
 
     .. code-block:: bash
 
-        % curl -NsS localhost:8000/events |\
+        curl -NsS localhost:8000/events |\
                 awk '
                     BEGIN { RS=""; FS="\\n" }
                     $1 ~ /^tag: salt\/job\/[0-9]+\/new$/ { print $0 }
@@ -1372,7 +1396,9 @@ class WebsocketEndpoint(object):
             :query format_events: The event stream will undergo server-side
                 formatting if the ``format_events`` URL parameter is included
                 in the request. This can be useful to avoid formatting on the
-                client-side::
+                client-side:
+
+                .. code-block:: bash
 
                     curl -NsS <...snip...> localhost:8000/ws?format_events
 
@@ -1383,7 +1409,7 @@ class WebsocketEndpoint(object):
             :status 401: |401|
             :status 406: |406|
 
-        **Example request**::
+        **Example request:**
 
             curl -NsS \\
                 -H 'X-Auth-Token: ffedf49d' \\
@@ -1418,9 +1444,11 @@ class WebsocketEndpoint(object):
 
         An authentication token **may optionally** be passed as part of the URL
         for browsers that cannot be configured to send the authentication
-        header or cookie::
+        header or cookie:
 
-                curl -NsS <...snip...> localhost:8000/ws/ffedf49d
+        .. code-block:: bash
+
+            curl -NsS <...snip...> localhost:8000/ws/ffedf49d
 
         The event stream can be easily consumed via JavaScript:
 
@@ -1592,9 +1620,11 @@ class Webhook(object):
             :status 406: |406|
             :status 413: request body is too large
 
-        **Example request**::
+        **Example request:**
 
-            % curl -sS localhost:8000/hook -d foo='Foo!' -d bar='Bar!'
+        .. code-block:: bash
+
+            curl -sS localhost:8000/hook -d foo='Foo!' -d bar='Bar!'
 
         .. code-block:: http
 

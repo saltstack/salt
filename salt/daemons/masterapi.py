@@ -552,7 +552,7 @@ class RemoteFuncs(object):
         if self.opts.get('minion_data_cache', False) or self.opts.get('enforce_mine_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
             if not os.path.isdir(cdir):
-                return True
+                return False
             datap = os.path.join(cdir, 'mine.p')
             if os.path.isfile(datap):
                 try:
@@ -575,7 +575,7 @@ class RemoteFuncs(object):
         if self.opts.get('minion_data_cache', False) or self.opts.get('enforce_mine_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
             if not os.path.isdir(cdir):
-                return True
+                return False
             datap = os.path.join(cdir, 'mine.p')
             if os.path.isfile(datap):
                 try:

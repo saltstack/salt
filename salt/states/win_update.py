@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Management of the windows update agent.
-=======================================
+Management of the windows update agent
+======================================
 
 .. versionadded:: 2014.7.0
 
@@ -426,7 +426,8 @@ def installed(name, categories=None, includes=None, retries=10):
             'driver' - driver updates, skipped by default
 
     retries
-        number of retries to make in before giving up. This is total, not per step.
+        Number of retries to make before giving up. This is total, not per
+        step.
     '''
     ret = {'name': name,
            'result': True,
@@ -503,7 +504,8 @@ def downloaded(name, categories=None, includes=None, retries=10):
             'driver' - driver updates, skipped by default
 
     retries
-        number of retries to make in before giving up. This is total, not per step.
+        Number of retries to make before giving up. This is total, not per
+        step.
     '''
     ret = {'name': name,
            'result': True,

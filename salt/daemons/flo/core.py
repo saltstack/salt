@@ -21,7 +21,7 @@ import salt.utils.args
 import salt.transport
 from raet import raeting, nacling
 from raet.road.stacking import RoadStack
-from raet.road.estating import LocalEstate
+from raet.road.estating import RemoteEstate
 from raet.lane.stacking import LaneStack
 from raet.lane.yarding import RemoteYard
 
@@ -110,8 +110,9 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
             'local': {'ipath': 'local',
                       'ival': {'name': 'master',
                                'main': False,
-                               'auto': None,
-                               'eid': 0,
+                               'mutable': False,
+                               'uid': None,
+                               'role': 'master',
                                'sigkey': None,
                                'prikey': None}},
             }
@@ -131,42 +132,44 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
 
         do salt raet road stack setup at enter
         '''
-        name = self.opts.value.get('id', self.local.data.name)
+        role = self.opts.value.get('id', self.local.data.role)
         sigkey = self.local.data.sigkey
         prikey = self.local.data.prikey
-        auto = self.local.data.auto
-        main = self.local.data.main
-        eid = self.local.data.eid
+        #name = self.opts.value.get('id', self.local.data.name)
+        #name = LocalEstate.nameGuid(prefix='road') # name is  guid
+        #name = 'stack_' +  role
+        name = role
+        main = self.opts.value.get('raet_main', self.local.data.main)
+        mutable = self.opts.value.get('raet_mutable', self.local.data.mutable)
+        always = self.opts.value.get('open_mode', False)
+        mutable = mutable or always  # open_made when True takes precedence
+        uid = self.local.data.uid
 
         ha = (self.opts.value['interface'], self.opts.value['raet_port'])
 
         basedirpath = os.path.abspath(os.path.join(self.opts.value['cachedir'], 'raet'))
 
-        local = LocalEstate(
-                eid=eid,
-                name=name,
-                main=main,
-                ha=ha,
-                sigkey=sigkey,
-                prikey=prikey)
         txMsgs = self.txmsgs.value
         rxMsgs = self.rxmsgs.value
 
         keep = salting.SaltKeep(opts=self.opts.value,
                                 basedirpath=basedirpath,
-                                stackname=name,
-                                auto=auto)
+                                stackname=name)
 
-        self.stack.value = RoadStack(
-                local=local,
-                store=self.store,
-                name=name,
-                main=main,
-                keep=keep,
-                txMsgs=txMsgs,
-                rxMsgs=rxMsgs,
-                period=3.0,
-                offset=0.5)
+        self.stack.value = RoadStack(store=self.store,
+                                     keep=keep,
+                                     name=name,
+                                     uid=uid,
+                                     ha=ha,
+                                     role=role,
+                                     sigkey=sigkey,
+                                     prikey=prikey,
+                                     main=main,
+                                     mutable=mutable,
+                                     txMsgs=txMsgs,
+                                     rxMsgs=rxMsgs,
+                                     period=3.0,
+                                     offset=0.5)
 
 
 class SaltRaetRoadStackCloser(ioflo.base.deeding.Deed):
@@ -213,7 +216,12 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
         '''
         stack = self.stack.value
         if stack and isinstance(stack, RoadStack):
-            stack.join(ha=self.mha, timeout=0.0)
+            if not stack.remotes:
+                stack.addRemote(RemoteEstate(stack=stack,
+                                             fuid=0,  # vacuous join
+                                             sid=0,  # always 0 for join
+                                             ha=self.mha))
+            stack.join(uid=stack.remotes.values()[0].uid, timeout=0.0)
 
 
 class SaltRaetRoadStackJoined(ioflo.base.deeding.Deed):
@@ -486,8 +494,10 @@ class LoadPillar(ioflo.base.deeding.Deed):
         '''
         Initial pillar
         '''
-        route = {'src': (self.opts.value['id'], 0, None),
-                 'dst': ('master', None, 'remote_cmd')}
+        # default master is the first remote
+        # this default destination will not work with multiple masters
+        route = {'src': (self.udp_stack.value.local.name, 0, None),
+                 'dst': (self.udp_stack.value.remotes.values()[0].name, None, 'remote_cmd')}
         load = {'id': self.opts.value['id'],
                 'grains': self.grains.value,
                 'saltenv': self.opts.value['environment'],
@@ -580,11 +590,11 @@ class SaltManorLaneSetup(ioflo.base.deeding.Deed):
         #name = "{0}{1}".format(self.opts.value.get('id', self.local.data.name), 'lane')
         name = 'manor'
         lanename = self.opts.value.get('id', self.local.data.lanename)
-        yid = self.local.data.yid
+        #yid = self.local.data.yid
         self.stack.value = LaneStack(
                                     name=name,
                                     lanename=lanename,
-                                    yid=0,
+                                    uid=0,
                                     sockdirpath=self.opts.value['sock_dir'])
         self.stack.value.Pk = raeting.packKinds.pack
         self.event_yards.value = set()
@@ -715,18 +725,22 @@ class Router(ioflo.base.deeding.Deed):
         sender is the unique name of the remote estate that sent the message
         '''
         try:
-            d_estate = msg['route']['dst'][0]
-            d_yard = msg['route']['dst'][1]
-            d_share = msg['route']['dst'][2]
+            s_estate, s_yard, s_share = msg['route']['src']
+            d_estate, d_yard, d_share = msg['route']['dst']
         except (ValueError, IndexError):
             log.error('Received invalid message: {0}'.format(msg))
             return
+
+        if s_estate is None:  # drop
+            return
+
         if d_estate is None:
             pass
         elif d_estate != self.udp_stack.value.local.name:
             log.error(
                     'Received message for wrong estate: {0}'.format(d_estate))
             return
+
         if d_yard is not None:
             # Meant for another yard, send it off!
             if d_yard in self.uxd_stack.value.nameRemotes:
@@ -745,7 +759,8 @@ class Router(ioflo.base.deeding.Deed):
         elif d_share == 'remote_cmd':
             # Send it to a remote worker
             if 'load' in msg:
-                msg['load']['id'] = sender
+                role = self.udp_stack.value.nameRemotes[sender].role
+                msg['load']['id'] = role  # sender # should this be role XXXX
                 self.uxd_stack.value.transmit(msg,
                         self.uxd_stack.value.fetchUidByName(next(self.workers.value)))
         elif d_share == 'fun':
@@ -760,22 +775,32 @@ class Router(ioflo.base.deeding.Deed):
         sender is unique name  of remote that sent the message
         '''
         try:
-            d_estate = msg['route']['dst'][0]
-            d_yard = msg['route']['dst'][1]
-            d_share = msg['route']['dst'][2]
+            s_estate, s_yard, s_share = msg['route']['src']
+            d_estate, d_yard, d_share = msg['route']['dst']
         except (ValueError, IndexError):
             log.error('Received invalid message: {0}'.format(msg))
             return
+
+        if s_yard is None:
+            return  # drop message
+
+        if s_estate is None:  # substitute local estate
+            s_estate = self.udp_stack.value.local.name
+            msg['route']['src'] = (s_estate, s_yard, s_share)
+
         if d_estate is None:
             pass
-        elif d_estate != self.udp_stack.value.local:
+        elif d_estate != self.udp_stack.value.local.name:
             # Forward to the correct estate
-            eid = self.udp_stack.value.fetchUidByName(d_estate)
-            self.udp_stack.value.message(msg, eid)
+            if d_estate in self.udp_stack.value.nameRemotes:
+                self.udp_stack.value.message(msg,
+                        self.udp_stack.value.nameRemotes[d_estate].uid)
             return
+
         if d_share == 'pub_ret':
             if msg.get('__worker_verify') == self.worker_verify.value:
                 self.publish.value.append(msg)
+
         if d_yard is None:
             pass
         elif d_yard != self.uxd_stack.value.local.name:
@@ -891,13 +916,13 @@ class SaltPublisher(ioflo.base.deeding.Deed):
         # only publish to available minions by intersecting sets
         minions = self.availables.value & set(self.stack.value.nameRemotes.keys())
         for minion in minions:
-            eid = self.stack.value.fetchUidByName(minion)
-            if eid:
+            uid = self.stack.value.fetchUidByName(minion)
+            if uid:
                 route = {
                         'dst': (minion, None, 'fun'),
                         'src': (self.stack.value.local.name, None, None)}
                 msg = {'route': route, 'pub': pub_data['pub']}
-                self.stack.value.message(msg, eid)
+                self.stack.value.message(msg, uid)
 
     def action(self):
         '''
@@ -922,7 +947,8 @@ class NixExecutor(ioflo.base.deeding.Deed):
                'modules': '.salt.loader.modules',
                'returners': '.salt.loader.returners',
                'fun': '.salt.var.fun',
-               'executors': '.salt.track.executors'}
+               'executors': '.salt.track.executors',
+               'udp_stack': '.raet.udp.stack.stack', }
 
     def postinitio(self):
         '''
@@ -943,8 +969,8 @@ class NixExecutor(ioflo.base.deeding.Deed):
 
         '''
         mid = self.opts['id']
-        yid = nacling.uuid(size=18)
-        name = 'jobber' + yid
+        uid = nacling.uuid(size=18)
+        name = 'jobber' + uid
         stack = LaneStack(
                 name=name,
                 lanename=mid,
@@ -962,9 +988,9 @@ class NixExecutor(ioflo.base.deeding.Deed):
         '''
         Send the return data back via the uxd socket
         '''
+        route = {'src': (self.udp_stack.value.local.name, stack.local.name, 'jid_ret'),
+                 'dst': (msg['route']['src'][0], None, 'remote_cmd')}
         mid = self.opts['id']
-        route = {'src': (mid, stack.local.name, 'jid_ret'),
-                         'dst': (msg['route']['src'][0], None, 'remote_cmd')}
         ret['cmd'] = '_return'
         ret['id'] = mid
         try:

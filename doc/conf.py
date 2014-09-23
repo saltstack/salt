@@ -111,6 +111,9 @@ MOCK_MODULES = [
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = Mock()
 
+# Define a fake version attribute for libcloud so docs build as supposed
+sys.modules['libcloud'].__version__ = '0.0.0'
+
 
 # -- Add paths to PYTHONPATH ---------------------------------------------------
 try:
