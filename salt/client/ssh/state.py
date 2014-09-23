@@ -58,7 +58,7 @@ class SSHHighState(salt.state.BaseHighState):
     stack = []
 
     def __init__(self, opts, pillar=None, wrapper=None):
-        self.client = salt.fileclient.LocalClient(opts)
+        self.client = salt.fileclient.FSClient(opts)
         salt.state.BaseHighState.__init__(self, opts)
         self.state = SSHState(opts, pillar, wrapper)
         self.matcher = salt.minion.Matcher(self.opts)
@@ -124,7 +124,7 @@ def prep_trans_tar(opts, chunks, file_refs, pillar=None):
     '''
     gendir = tempfile.mkdtemp()
     trans_tar = salt.utils.mkstemp()
-    file_client = salt.fileclient.LocalClient(opts)
+    file_client = salt.fileclient.FSClient(opts)
     lowfn = os.path.join(gendir, 'lowstate.json')
     pillarfn = os.path.join(gendir, 'pillar.json')
     sync_refs = [
