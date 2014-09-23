@@ -34,19 +34,6 @@ class StdTest(integration.ModuleCase):
         self.assertRaises(StopIteration,
                           cmd_iter.next)
 
-        # A timeout of 0 means wait until done
-        cmd_iter = self.client.cmd_cli(
-                'minion',
-                'test.sleep',
-                arg=[5],
-                timeout=0
-                )
-        num_ret = 0
-        for ret in cmd_iter:
-            num_ret += 1
-            self.assertTrue(ret['minion'])
-        assert num_ret > 0
-
     def test_iter(self):
         '''
         test cmd_iter
@@ -67,19 +54,6 @@ class StdTest(integration.ModuleCase):
                 )
         self.assertRaises(StopIteration,
                           cmd_iter.next)
-
-        # A timeout of 0 means wait until done
-        cmd_iter = self.client.cmd_iter(
-                'minion',
-                'test.sleep',
-                arg=[5],
-                timeout=0
-                )
-        num_ret = 0
-        for ret in cmd_iter:
-            num_ret += 1
-            self.assertTrue(ret['minion'])
-        assert num_ret > 0
 
     def test_iter_no_block(self):
         '''
@@ -108,20 +82,6 @@ class StdTest(integration.ModuleCase):
             num_ret += 1
         assert num_ret == 0
 
-        # A timeout of 0 means wait until done
-        cmd_iter = self.client.cmd_iter_no_block(
-                'minion',
-                'test.sleep',
-                arg=[5],
-                timeout=0
-                )
-        num_ret = 0
-        for ret in cmd_iter:
-            if ret is None:
-                continue
-            num_ret += 1
-            self.assertTrue(ret['minion'])
-        assert num_ret > 0
 
     def test_full_returns(self):
         '''
@@ -164,14 +124,6 @@ class StdTest(integration.ModuleCase):
                 )
         assert len(ret) == 0
 
-        # A timeout of 0 means wait until done
-        ret = self.client.cmd_full_return(
-                'minion',
-                'test.sleep',
-                arg=[5],
-                timeout=0
-                )
-        assert len(ret) > 0
 
 if __name__ == '__main__':
     from integration import run_tests

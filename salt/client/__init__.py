@@ -886,28 +886,8 @@ class LocalClient(object):
                         yield {minion: {'failed': True}}
                 break
             if int(time.time()) > timeout_at:
-                # The timeout has been reached, check the jid to see if the
-                # timeout needs to be increased
-                if timeout > 0:
-                    last_time = True
-                    continue
-                else:
-                    jinfo = self.gather_job_info(jid, tgt, tgt_type, minions - found, **kwargs)
-                    more_time = [id_ for id_, jdat in jinfo.iteritems()
-                                     if jdat
-                                     ]
-                    if more_time:
-                        timeout_at = int(time.time()) + timeout
-                        log.debug(
-                            'jid {0} still running on {1} will now timeout at {2}'.format(
-                                jid, more_time, datetime.fromtimestamp(timeout_at).time()
-                            )
-                        )
-                        continue
-                    else:
-                        last_time = True
-                        log.debug('jid {0} not running on any minions last time'.format(jid))
-                        continue
+                # The timeout has been reached, break the loop
+                break
             time.sleep(0.01)
 
     def get_returns(
@@ -1094,41 +1074,17 @@ class LocalClient(object):
                 # All minions have returned, break out of the loop
                 break
             if int(time.time()) > timeout_at:
-                if timeout > 0:
-                    if verbose or show_timeout:
-                        if self.opts.get('minion_data_cache', False) \
-                                or tgt_type in ('glob', 'pcre', 'list'):
-                            if len(found) < len(minions):
-                                fail = sorted(list(minions.difference(found)))
-                                for minion in fail:
-                                    ret[minion] = {
-                                        'out': 'no_return',
-                                        'ret': 'Minion did not return'
-                                    }
-                    break
-                else:
-                    jinfo = self.gather_job_info(jid,
-                                                 tgt,
-                                                 tgt_type,
-                                                 minions - found,
-                                                 )
-                    more_time = False
-                    for id_ in jinfo:
-                        if jinfo[id_]:
-                            if verbose:
-                                print(
-                                    'Execution is still running on {0}'.format(id_)
-                                )
-                            more_time = True
-                    if not more_time:
-                        # set the timeout to a non-zero number, so we can do
-                        # one more iteration to attempt to avoid the race here
-                        # between job finishing and master getting ret
-                        timeout = 1
-                        continue
-                    else:
-                        timeout_at = time.time() + timeout
-                        continue
+                if verbose or show_timeout:
+                    if self.opts.get('minion_data_cache', False) \
+                            or tgt_type in ('glob', 'pcre', 'list'):
+                        if len(found) < len(minions):
+                            fail = sorted(list(minions.difference(found)))
+                            for minion in fail:
+                                ret[minion] = {
+                                    'out': 'no_return',
+                                    'ret': 'Minion did not return'
+                                }
+                break
             time.sleep(0.01)
         return ret
 
@@ -1242,35 +1198,8 @@ class LocalClient(object):
                                     })
                 break
             if time.time() > timeout_at:
-                # if an non-zero timeout was passed, lets actually time out
-                if timeout > 0:
-                    last_time = True
-                # Otherwise, we'll check the jid to see if the timeout needs to be increased
-                else:
-                    jinfo = self.gather_job_info(jid, tgt, tgt_type, minions - found, **kwargs)
-                    more_time = False
-                    for id_ in jinfo:
-                        if jinfo[id_]:
-                            if verbose:
-                                print(
-                                    'Execution is still running on {0}'.format(id_)
-                                )
-                            more_time = True
-                    if not more_time:
-                        cache_jinfo = self.get_cache_returns(jid)
-                        for id_ in cache_jinfo:
-                            if id_ == tgt:
-                                found.add(cache_jinfo.get('id'))
-                                ret = {id_: {'ret': cache_jinfo[id_]['ret']}}
-                                if 'out' in cache_jinfo[id_]:
-                                    ret[id_]['out'] = cache_jinfo[id_]['out']
-                                if 'retcode' in cache_jinfo[id_]:
-                                    ret[id_]['retcode'] = cache_jinfo[id_]['retcode']
-                                yield ret
-                        last_time = True
-                    else:
-                        timeout_at = time.time() + timeout
-                        continue
+                # time out
+                break
             time.sleep(0.01)
 
     def get_event_iter_returns(self, jid, minions, timeout=None):
