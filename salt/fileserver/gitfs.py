@@ -897,7 +897,7 @@ def update():
                 try:
                     # pygit2.Remote.fetch() returns a dict in pygit2 < 0.21.0
                     received_objects = fetch['received_objects']
-                except AttributeError:
+                except (AttributeError, TypeError):
                     # pygit2.Remote.fetch() returns a class instance in
                     # pygit2 >= 0.21.0
                     received_objects = fetch.received_objects
