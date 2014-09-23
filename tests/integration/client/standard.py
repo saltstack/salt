@@ -24,6 +24,16 @@ class StdTest(integration.ModuleCase):
         for ret in cmd_iter:
             self.assertTrue(ret['minion'])
 
+        # Test timeouts, a timeout of > 0 should timeout
+        cmd_iter = self.client.cmd_cli(
+                'minion',
+                'test.sleep',
+                arg=[5],
+                timeout=2
+                )
+        self.assertRaises(StopIteration,
+                          cmd_iter.next)
+
     def test_iter(self):
         '''
         test cmd_iter
@@ -34,6 +44,16 @@ class StdTest(integration.ModuleCase):
                 )
         for ret in cmd_iter:
             self.assertTrue(ret['minion'])
+
+        # Test timeouts, a timeout of > 0 should timeout
+        cmd_iter = self.client.cmd_iter(
+                'minion',
+                'test.sleep',
+                arg=[5],
+                timeout=2
+                )
+        self.assertRaises(StopIteration,
+                          cmd_iter.next)
 
     def test_iter_no_block(self):
         '''
@@ -47,6 +67,20 @@ class StdTest(integration.ModuleCase):
             if ret is None:
                 continue
             self.assertTrue(ret['minion'])
+
+        # Test timeouts, a timeout of > 0 should timeout
+        cmd_iter = self.client.cmd_iter_no_block(
+                'minion',
+                'test.sleep',
+                arg=[5],
+                timeout=2
+                )
+        num_ret = 0
+        for ret in cmd_iter:
+            if ret is None:
+                continue
+            num_ret += 1
+        assert num_ret == 0
 
     def test_full_returns(self):
         '''
@@ -79,6 +113,16 @@ class StdTest(integration.ModuleCase):
                 {'success': False, 'ret': '\'test.pong\' is not available.'},
                 ret['minion']
             )
+
+        # Test timeouts, a timeout of > 0 should timeout
+        ret = self.client.cmd_full_return(
+                'minion',
+                'test.sleep',
+                arg=[5],
+                timeout=2
+                )
+        assert len(ret) == 0
+
 
 if __name__ == '__main__':
     from integration import run_tests
