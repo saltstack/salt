@@ -8,6 +8,7 @@ The core behaviors used by minion and master
 import time
 import os
 import multiprocessing
+import logging
 
 # Import salt libs
 import salt.daemons.masterapi
@@ -18,6 +19,8 @@ from raet.lane.yarding import RemoteYard
 
 # Import ioflo libs
 import ioflo.base.deeding
+
+log = logging.getLogger(__name__)
 
 
 class WorkerFork(ioflo.base.deeding.Deed):
