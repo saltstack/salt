@@ -199,7 +199,7 @@ def remove(name=None, pkgs=None, **kwargs):
     __salt__['cmd.run_all'](cmd, output_loglevel='trace')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return __salt__['pkg_resource.find_changes'](old, new)
+    return __salt__['saltutil.compare_dicts'](old, new)
 
 
 def install(name=None, refresh=False, pkgs=None, **kwargs):
@@ -298,7 +298,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
     __salt__['cmd.run'](cmd, output_loglevel='trace')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return __salt__['pkg_resource.find_changes'](old, new)
+    return salt.utils.compare_dicts(old, new)
 
 
 def list_upgrades(refresh=True):
@@ -352,7 +352,7 @@ def refresh_db():
 
 def upgrade(refresh=True):
     '''
-    Run a full upgrade
+    Run a full upgrade using MacPorts 'port upgrade outdated'
 
     Options:
 
@@ -377,9 +377,7 @@ def upgrade(refresh=True):
 
     old = list_pkgs()
 
-    for pkg in list_upgrades(refresh=refresh):
-        __salt__['pkg.install'](pkg)
-
+    __salt__['cmd.run_all']('port upgrade outdated', output_loglevel='trace')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return __salt__['pkg_resource.find_changes'](old, new)
+    return salt.utils.compare_dicts(old, new)
