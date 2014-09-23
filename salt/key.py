@@ -440,12 +440,7 @@ class Key(object):
 
         minions_denied = os.path.join(self.opts['pki_dir'],
                                         'minions_denied')
-        return (
-            minions_accepted,
-            minions_pre,
-            minions_rejected,
-            minions_denied
-        )
+        return minions_accepted, minions_pre, minions_rejected, minions_denied
 
     def gen_keys(self):
         '''
