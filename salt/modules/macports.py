@@ -5,7 +5,7 @@ Support for MacPorts under Mac OSX.
 This module has some caveats.
 
 1. Updating the database of available ports is quite resource-intensive.
-However, `refresh=True` is the default for all operations that need an 
+However, `refresh=True` is the default for all operations that need an
 up-to-date copy of available ports.  Consider `refresh=False` when you are
 sure no db update is needed.
 
