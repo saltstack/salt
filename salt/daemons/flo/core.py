@@ -494,8 +494,10 @@ class LoadPillar(ioflo.base.deeding.Deed):
         '''
         Initial pillar
         '''
-        route = {'src': (self.opts.value['id'], 0, None),
-                 'dst': ('master', None, 'remote_cmd')}
+        # default master is the first remote
+        # this default destination will not work with multiple masters
+        route = {'src': (self.udp_stack.value.local.name, 0, None),
+                 'dst': (self.udp_stack.value.remotes.values()[0].name, None, 'remote_cmd')}
         load = {'id': self.opts.value['id'],
                 'grains': self.grains.value,
                 'saltenv': self.opts.value['environment'],
@@ -723,18 +725,22 @@ class Router(ioflo.base.deeding.Deed):
         sender is the unique name of the remote estate that sent the message
         '''
         try:
-            d_estate = msg['route']['dst'][0]
-            d_yard = msg['route']['dst'][1]
-            d_share = msg['route']['dst'][2]
+            s_estate, s_yard, s_share = msg['route']['src']
+            d_estate, d_yard, d_share = msg['route']['dst']
         except (ValueError, IndexError):
             log.error('Received invalid message: {0}'.format(msg))
             return
+
+        if s_estate is None:  # drop
+            return
+
         if d_estate is None:
             pass
         elif d_estate != self.udp_stack.value.local.name:
             log.error(
                     'Received message for wrong estate: {0}'.format(d_estate))
             return
+
         if d_yard is not None:
             # Meant for another yard, send it off!
             if d_yard in self.uxd_stack.value.nameRemotes:
@@ -769,22 +775,32 @@ class Router(ioflo.base.deeding.Deed):
         sender is unique name  of remote that sent the message
         '''
         try:
-            d_estate = msg['route']['dst'][0]
-            d_yard = msg['route']['dst'][1]
-            d_share = msg['route']['dst'][2]
+            s_estate, s_yard, s_share = msg['route']['src']
+            d_estate, d_yard, d_share = msg['route']['dst']
         except (ValueError, IndexError):
             log.error('Received invalid message: {0}'.format(msg))
             return
+
+        if s_yard is None:
+            return  # drop message
+
+        if s_estate is None:  # substitute local estate
+            s_estate = self.udp_stack.value.local.name
+            msg['route']['src'] = (s_estate, s_yard, s_share)
+
         if d_estate is None:
             pass
-        elif d_estate != self.udp_stack.value.local:
+        elif d_estate != self.udp_stack.value.local.name:
             # Forward to the correct estate
-            uid = self.udp_stack.value.fetchUidByName(d_estate)
-            self.udp_stack.value.message(msg, uid)
+            if d_estate in self.udp_stack.value.nameRemotes:
+                self.udp_stack.value.message(msg,
+                        self.udp_stack.value.nameRemotes[d_estate].uid)
             return
+
         if d_share == 'pub_ret':
             if msg.get('__worker_verify') == self.worker_verify.value:
                 self.publish.value.append(msg)
+
         if d_yard is None:
             pass
         elif d_yard != self.uxd_stack.value.local.name:
@@ -931,7 +947,8 @@ class NixExecutor(ioflo.base.deeding.Deed):
                'modules': '.salt.loader.modules',
                'returners': '.salt.loader.returners',
                'fun': '.salt.var.fun',
-               'executors': '.salt.track.executors'}
+               'executors': '.salt.track.executors',
+               'udp_stack': '.raet.udp.stack.stack', }
 
     def postinitio(self):
         '''
@@ -971,9 +988,9 @@ class NixExecutor(ioflo.base.deeding.Deed):
         '''
         Send the return data back via the uxd socket
         '''
+        route = {'src': (self.udp_stack.value.local.name, stack.local.name, 'jid_ret'),
+                 'dst': (msg['route']['src'][0], None, 'remote_cmd')}
         mid = self.opts['id']
-        route = {'src': (mid, stack.local.name, 'jid_ret'),
-                         'dst': (msg['route']['src'][0], None, 'remote_cmd')}
         ret['cmd'] = '_return'
         ret['id'] = mid
         try:
