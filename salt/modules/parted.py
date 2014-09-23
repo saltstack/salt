@@ -135,14 +135,12 @@ def list_(device, unit=None):
                     'physical sector': cols[4],
                     'partition table': cols[5],
                     'model': cols[6]}
-                try:
+                if len(cols) == 8:
                     ret['info']['disk flags'] = cols[7]
-                except IndexError:
                     # Older parted (2.x) doesn't show disk flags in the 'print'
                     # output, and will return a 7-column output for the info
                     # line. In these cases we just leave this field out of the
                     # return dict.
-                    pass
                 mode = 'partitions'
         else:
             ret['partitions'][cols[0]] = {
