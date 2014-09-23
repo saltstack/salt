@@ -134,19 +134,19 @@ def list_(device, unit=None):
     for line in out:
         if line.startswith('BYT'):
             continue
-        comps = line.replace(';', '').split(':')
+        cols = line.replace(';', '').split(':')
         if mode == 'info':
-            if 7 <= len(comps) <= 8:
+            if 7 <= len(cols) <= 8:
                 ret['info'] = {
-                    'disk': comps[0],
-                    'size': comps[1],
-                    'interface': comps[2],
-                    'logical sector': comps[3],
-                    'physical sector': comps[4],
-                    'partition table': comps[5],
-                    'model': comps[6]}
+                    'disk': cols[0],
+                    'size': cols[1],
+                    'interface': cols[2],
+                    'logical sector': cols[3],
+                    'physical sector': cols[4],
+                    'partition table': cols[5],
+                    'model': cols[6]}
                 try:
-                    ret['info']['disk flags'] = comps[7]
+                    ret['info']['disk flags'] = cols[7]
                 except IndexError:
                     # Older parted (2.x) doesn't show disk flags in the 'print'
                     # output, and will return a 7-column output for the info
@@ -155,14 +155,14 @@ def list_(device, unit=None):
                     pass
                 mode = 'partitions'
         else:
-            ret['partitions'][comps[0]] = {
-                'number': comps[0],
-                'start': comps[1],
-                'end': comps[2],
-                'size': comps[3],
-                'type': comps[4],
-                'file system': comps[5],
-                'flags': comps[6]}
+            ret['partitions'][cols[0]] = {
+                'number': cols[0],
+                'start': cols[1],
+                'end': cols[2],
+                'size': cols[3],
+                'type': cols[4],
+                'file system': cols[5],
+                'flags': cols[6]}
     return ret
 
 
