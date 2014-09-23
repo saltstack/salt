@@ -631,8 +631,6 @@ def present(name, image=None, is_latest=False):
         return _valid(comment='Container {0} exists and has latest version of image {1}'.format(cid, image))
     return _invalid(comment='Container {0} found with wrong image'.format(cid or name))
 
-
-
 def run(name,
         cid=None,
         hostname=None,
@@ -861,9 +859,9 @@ def running(name,
     if already_exists:
         is_running = __salt__['docker.is_running'](container)
     # if container exists but is not started, try to start it
-    if already_exists and (is_running or start == False):
+    if already_exists and (is_running or not start):
         return _valid(comment='container {0!r} already exists'.format(name))
-    if not iinfos['status']:
+    if (not iinfos['status']):
         return _invalid(comment='image "{0}" does not exist'.format(image))
     # parse input data
     exposeports, bindports, contvolumes, bindvolumes, denvironment, changes = [], {}, [], {}, {}, []
