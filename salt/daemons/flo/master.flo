@@ -28,9 +28,9 @@ framer masterudpstack be active first setup
         go start
 
     frame start
-        # Start the request framer
+        # Start the message receive framer
         bid start inbound
-        # Start the router framer
+        # Start the message receive framer
         bid start uxdrouter
         # Start the event framer
         bid start events
