@@ -68,7 +68,7 @@ Available Functions
           - source: salt://_files/tmp/docker_image.tar
 
 - running
-  can be used only for starting, or for both creating and starting a container. 
+  can be used only for starting, or for both creating and starting a container.
   See method documentation for details
   .. code-block:: yaml
 
@@ -232,9 +232,9 @@ def pulled(name, tag=None, force=False, *args, **kwargs):
         (`docker import
         <http://docs.docker.io/en/latest/reference/commandline/cli/#import>`_).
         NOTE that we added in SaltStack a way to authenticate yourself with the
-        Docker Hub Registry by supplying your credentials (username, email & password)
-        using pillars. For more information, see salt.modules.dockerio execution
-        module.
+        Docker Hub Registry by supplying your credentials (username, email &
+        password) using pillars. For more information, see salt.modules.dockerio
+        execution module.
 
     name
         Name of the image
@@ -282,9 +282,9 @@ def pushed(name, tag=None):
         (`docker import
         <http://docs.docker.io/en/latest/reference/commandline/cli/#import>`_).
         NOTE that we added in SaltStack a way to authenticate yourself with the
-        Docker Hub Registry by supplying your credentials (username, email & password)
-        using pillars. For more information, see salt.modules.dockerio execution
-        module.
+        Docker Hub Registry by supplying your credentials (username, email
+        & password) using pillars. For more information, see
+        salt.modules.dockerio execution module.
 
     name
         Name of the image
@@ -355,7 +355,10 @@ def loaded(name, source=None, source_hash='', force=False):
             comment='Image already loaded: {0}'.format(name))
 
     tmp_filename = salt.utils.mkstemp()
-    __salt__['state.single']('file.managed', name=tmp_filename, source=source, source_hash=source_hash)
+    __salt__['state.single']('file.managed',
+                            name=tmp_filename,
+                            source=source,
+                            source_hash=source_hash)
     changes = {}
 
     if image_infos['status']:
@@ -364,7 +367,7 @@ def loaded(name, source=None, source_hash='', force=False):
         remove_info = remove_image(name)
         if not remove_info['status']:
             return _invalid(name=name,
-                            comment='Image could not be removed: {0}'.format(name))
+                    comment='Image could not be removed: {0}'.format(name))
 
     load = __salt__['docker.load']
     returned = load(tmp_filename)
@@ -596,7 +599,7 @@ def absent(name):
         return _valid(comment="Container {0!r} not found".format(name))
 
 
-def present(name,image=None,is_latest=False):
+def present(name, image=None, is_latest=False):
     '''
     If a container with the given name is not present, this state will fail.
     Supports optionally checking for specific image/version
@@ -617,15 +620,15 @@ def present(name,image=None,is_latest=False):
     else:
         cid = name
     if not cinfos['status']:
-      return _invalid(comment='Container {0} not found'.format(cid or name))
+        return _invalid(comment='Container {0} not found'.format(cid or name))
     if cinfos['status'] and image is None:
-      return _valid(comment='Container {0} exists'.format(cid))
-    if cinfos['status'] and cinfos['out']['Config']["Image"]==image and not is_latest:
-      return _valid(comment='Container {0} exists and has image {1}'.format(cid,image))
+        return _valid(comment='Container {0} exists'.format(cid))
+    if cinfos['status'] and cinfos['out']['Config']["Image"] == image and not is_latest:
+        return _valid(comment='Container {0} exists and has image {1}'.format(cid, image))
     ins_image = __salt__['docker.inspect_image']
     iinfos = ins_image(image)
-    if cinfos['status'] and cinfos['out']['Image']==iinfos['out']['Id']:
-      return _valid(comment='Container {0} exists and has latest version of image {1}'.format(cid,image))
+    if cinfos['status'] and cinfos['out']['Image'] == iinfos['out']['Id']:
+        return _valid(comment='Container {0} exists and has latest version of image {1}'.format(cid, image))
     return _invalid(comment='Container {0} found with wrong image'.format(cid or name))
 
 
@@ -734,11 +737,11 @@ def running(name,
               stdin_open=False,
               tty=False,
               mem_limit=0,
-              ports=[],
+              ports=None,
               environment=None,
               dns=None,
-              volumes=[],
-              volumes_from=[],
+              volumes=None,
+              volumes_from=None,
               start=True,
               cap_add=None,
               cap_drop=None,
@@ -749,7 +752,7 @@ def running(name,
               publish_all_ports=False,
               links=None,
               *args, **kwargs):
-    '''       
+    '''
     Ensure that a container with the given name exists;
     if not, build a new container from the specified image.
     (`docker run`)
@@ -815,7 +818,7 @@ def running(name,
         .. code-block:: yaml
 
             - dns:
-                - 127.0.0.1    
+                - 127.0.0.1
     network_mode
         - 'bridge': creates a new network stack for the container on the docker bridge
         - 'none': no networking for this container
@@ -846,9 +849,8 @@ def running(name,
         This command does not verify that the named container
         is running the specified image.
     '''
-    
     if container is not None:
-      name = container
+        name = container
     ins_image = __salt__['docker.inspect_image']
     ins_container = __salt__['docker.inspect_container']
     create = __salt__['docker.create_container']
@@ -857,14 +859,14 @@ def running(name,
     already_exists = cinfos['status']
     is_running = False
     if already_exists:
-      is_running = __salt__['docker.is_running'](container)
+        is_running = __salt__['docker.is_running'](container)
     # if container exists but is not started, try to start it
-    if already_exists and (is_running or start==False):
+    if already_exists and (is_running or start == False):
         return _valid(comment='container {0!r} already exists'.format(name))
     if not iinfos['status']:
         return _invalid(comment='image "{0}" does not exist'.format(image))
     # parse input data
-    exposeports, bindports, contvolumes, bindvolumes, denvironment, changes = [], {},[], {}, {}, []
+    exposeports, bindports, contvolumes, bindvolumes, denvironment, changes = [], {}, [], {}, {}, []
     if not ports:
         ports = {}
     if not volumes:
@@ -872,107 +874,99 @@ def running(name,
     if not volumes_from:
         volumes_from = []
     if isinstance(environment, dict):
-        for k in environment:
-            denvironment[unicode(k)] = unicode(environment[k])
+        for key in environment:
+            denvironment[unicode(key)] = unicode(environment[key])
     if isinstance(environment, list):
-        for p in environment:
-            if isinstance(p, dict):
-                for k in p:
-                    denvironment[unicode(k)] = unicode(p[k])
-    if isinstance(volumes,dict):
-      bindvolumes = volumes
-      for p in volumes.keys():
-        if not volumes[p].get('isfile',False):
-          contvolumes.append(str(volumes[p]['bind']))
-    if isinstance(volumes,list):
-      for p in volumes:
-        if isinstance(p,dict):
-          # get source as the dict key
-          source = p.keys()[0]
-          # then find target
-          if isinstance(p[source],dict):
-            target = p[source]['bind']
-            ro = p[source].get('ro',False)
-          else:
-            target = str(p[source])
-            ro = False
-          bindvolumes[source] = {
+        for var in environment:
+            if isinstance(var, dict):
+                for key in var:
+                    denvironment[unicode(key)] = unicode(var[key])
+    if isinstance(volumes, dict):
+        bindvolumes = volumes
+    if isinstance(volumes, list):
+        for vol in volumes:
+            if isinstance(vol, dict):
+                # get source as the dict key
+                source = vol.keys()[0]
+                # then find target
+                if isinstance(vol[source], dict):
+                    target = vol[source]['bind']
+                    read_only = vol[source].get('ro', False)
+                else:
+                    target = str(vol[source])
+                    read_only = False
+                bindvolumes[source] = {
                 'bind': target,
-                'ro': ro
-          }
-          contvolumes.append(str(p))
-        else:
-          # assume just an own volumes
-          contvolumes.append(str(p))
-    if isinstance(ports,dict):
-      bindports = ports
-      # in dict form all ports bind, so no need for exposeports
-    if isinstance(ports,list):
-      for p in volumes:
-        if isinstance(p,dict):
-          container_port = p.keys()[0]
-          #find target
-          if isinstance(p[container_port],dict):
-            host_port = p[container_port]['HostPort']
-            host_ip = p[container_port].get('HostIp','0.0.0.0')
-          else:
-            host_port = str(p[container_port])
-          bindports[container_port] = {
-            'HostPort': host_port,
-            'HostIp': host_ip
-          }
-        else:
-          #assume just a port to expose
-          exposeports.append(str(p))
+                'ro': read_only
+                }
+            else:
+                # assume just an own volumes
+                contvolumes.append(str(vol))
+    if isinstance(ports, dict):
+        bindports = ports
+        # in dict form all ports bind, so no need for exposeports
+    if isinstance(ports, list):
+        for port in ports:
+            if isinstance(port, dict):
+                container_port = port.keys()[0]
+                #find target
+                if isinstance(port[container_port], dict):
+                    host_port = port[container_port]['HostPort']
+                    host_ip = port[container_port].get('HostIp', '0.0.0.0')
+                else:
+                    host_port = str(port[container_port])
+                    host_ip = '0.0.0.0'
+                bindports[container_port] = {
+                    'HostPort': host_port,
+                    'HostIp': host_ip
+                }
+            else:
+                #assume just a port to expose
+                exposeports.append(str(port))
     if not already_exists:
-      a, kw = [image], dict(
-          command=command,
-          hostname=hostname,
-          user=user,
-          detach=detach,
-          stdin_open=stdin_open,
-          tty=tty,
-          mem_limit=mem_limit,
-          ports=exposeports,
-          environment=denvironment,
-          dns=dns,
-          volumes=contvolumes,
-          name=name)
-      out = create(*a, **kw)
-      # if container has been created, even if not started, we mark
-      # it as installed
-      try:
-        cid = out['out']['info']['id']
-        log.debug(str(cid))
-      except Exception, e:
-        changes.append('Container created')
-        log.debug(str(e))
-      else:
-        changes.append('Container {0} created'.format(cid))
+        args, kwargs = [image], dict(
+                        command=command,
+                        hostname=hostname,
+                        user=user,
+                        detach=detach,
+                        stdin_open=stdin_open,
+                        tty=tty,
+                        mem_limit=mem_limit,
+                        ports=exposeports,
+                        environment=denvironment,
+                        dns=dns,
+                        volumes=contvolumes,
+                        name=name)
+        out = create(*args, **kwargs)
+        # if container has been created, even if not started, we mark
+        # it as installed
+        try:
+            cid = out['out']['info']['id']
+            log.debug(str(cid))
+        except Exception, e:
+            changes.append('Container created')
+            log.debug(str(e))
+        else:
+            changes.append('Container {0} created'.format(cid))
     if start:
-      started = __salt__['docker.start'](
-          name, binds=bindvolumes, port_bindings=bindports,
-          lxc_conf=lxc_conf, publish_all_ports=publish_all_ports,
-          links=links, privileged=privileged,
-          dns=dns, volumes_from=volumes_from, network_mode=network_mode,
-          cap_add=cap_add,cap_drop=cap_drop
-      )
-      if check_is_running:
-          is_running = __salt__['docker.is_running'](name)
-          log.debug("Docker-io running:" + str(started))
-          log.debug("Docker-io running:" + str(is_running))
-          if is_running:
-              changes.append('Container {0!r} started.\n'.format(name))
-          else:
-              return _invalid(
-                  comment=(
-                      'Container {0!r} cannot be started\n{1!s}'
-                      .format(
-                          name,
-                          started['out'],
-                      )
-                  )
-              )
-      else:
-          changes.append('Container {0!r} started.\n'.format(name))
-    return _valid(comment=','.join(changes),changes={name: True})
+        started = __salt__['docker.start'](
+                name, binds=bindvolumes, port_bindings=bindports,
+                lxc_conf=lxc_conf, publish_all_ports=publish_all_ports,
+                links=links, privileged=privileged,
+                dns=dns, volumes_from=volumes_from, network_mode=network_mode,
+                cap_add=cap_add, cap_drop=cap_drop
+                )
+        if check_is_running:
+            is_running = __salt__['docker.is_running'](name)
+            log.debug("Docker-io running:" + str(started))
+            log.debug("Docker-io running:" + str(is_running))
+            if is_running:
+                changes.append('Container {0!r} started.\n'.format(name))
+            else:
+                return _invalid(
+                        comment=(
+                        'Container {0!r} cannot be started\n{1!s}'
+                        .format(name, started['out'],)))
+        else:
+            changes.append('Container {0!r} started.\n'.format(name))
+    return _valid(comment=','.join(changes), changes={name: True})
