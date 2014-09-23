@@ -14,6 +14,7 @@ from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 ensure_in_syspath('../../')
 
 # Import salt libs
+from salt.exceptions import CommandExecutionError
 from salt.modules import parted
 
 
@@ -25,6 +26,7 @@ class PartedTestCase(TestCase):
     def setUp(self):
         parted.__salt__ = {'cmd.run': MagicMock()}
         self.cmdrun = parted.__salt__['cmd.run']
+        self.maxDiff = None
 
     # Test __virtual__ function for module registration
 
@@ -120,6 +122,285 @@ class PartedTestCase(TestCase):
 
     # Test _list function
 
+    @staticmethod
+    def parted_print_output(k):
+        output = {
+            "valid": (
+                '''BYT;\n'''
+                '''/dev/sda:4000GB:scsi:512:512:gpt:AMCC 9650SE-24M DISK:;\n'''
+                '''1:17.4kB:150MB:150MB:ext3::boot;\n'''
+                '''2:3921GB:4000GB:79.3GB:linux-swap(v1)::;\n'''
+            ),
+            "valid_legacy": (
+                '''BYT;\n'''
+                '''/dev/sda:4000GB:scsi:512:512:gpt:AMCC 9650SE-24M DISK;\n'''
+                '''1:17.4kB:150MB:150MB:ext3::boot;\n'''
+                '''2:3921GB:4000GB:79.3GB:linux-swap(v1)::;\n'''
+            ),
+            "empty": '',
+            "bad_label_info": (
+                '''BYT;\n'''
+                '''badbadbadbad\n'''
+                '''1:17.4kB:150MB:150MB:ext3::boot;\n'''
+                '''2:3921GB:4000GB:79.3GB:linux-swap(v1)::;\n'''
+            ),
+            "bad_header": (
+                '''badbadbadbad\n'''
+                '''/dev/sda:4000GB:scsi:512:512:gpt:AMCC 9650SE-24M DISK:;\n'''
+                '''1:17.4kB:150MB:150MB:ext3::boot;\n'''
+                '''2:3921GB:4000GB:79.3GB:linux-swap(v1)::;\n'''
+            ),
+            "bad_partition": (
+                '''BYT;\n'''
+                '''/dev/sda:4000GB:scsi:512:512:gpt:AMCC 9650SE-24M DISK:;\n'''
+                '''badbadbadbad\n'''
+                '''2:3921GB:4000GB:79.3GB:linux-swap(v1)::;\n'''
+            ),
+        }
+        return output[k]
+
+    def test_list__without_device(self):
+        self.assertRaises(TypeError, parted.list_)
+
+    def test_list__empty_cmd_output(self):
+        self.cmdrun.return_value = self.parted_print_output('empty')
+        output = parted.list_('/dev/sda')
+        self.cmdrun.called_once_with(
+            ['parted',
+             '-m',
+             '-s',
+             '/dev/sda'
+             'print']
+        )
+        expected = {'info': {}, 'partitions': {}}
+        self.assertEqual(output, expected)
+
+    def test_list__valid_unit_empty_cmd_output(self):
+        self.cmdrun.return_value = self.parted_print_output('empty')
+        output = parted.list_('/dev/sda', unit='s')
+        self.cmdrun.called_once_with(
+            ['parted',
+             '-m',
+             '-s',
+             '/dev/sda'
+             'unit',
+             's',
+             'print']
+        )
+        expected = {'info': {}, 'partitions': {}}
+        self.assertEqual(output, expected)
+
+    def test_list__invalid_unit(self):
+        self.assertRaises(CommandExecutionError, parted.list_, '/dev/sda',
+                          unit='badbadbad')
+        self.assertFalse(self.cmdrun.called)
+
+    def test_list__bad_header(self):
+        self.cmdrun.return_value = self.parted_print_output('bad_header')
+        self.assertRaises(CommandExecutionError, parted.list_, '/dev/sda')
+        self.cmdrun.called_once_with(
+            ['parted',
+             '-m',
+             '-s',
+             '/dev/sda'
+             'print']
+        )
+
+    def test_list__bad_label_info(self):
+        self.cmdrun.return_value = self.parted_print_output('bad_label_info')
+        self.assertRaises(CommandExecutionError, parted.list_, '/dev/sda')
+        self.cmdrun.called_once_with(
+            ['parted',
+             '-m',
+             '-s',
+             '/dev/sda'
+             'print']
+        )
+
+    def test_list__bad_partition(self):
+        self.cmdrun.return_value = self.parted_print_output('bad_partition')
+        self.assertRaises(CommandExecutionError, parted.list_, '/dev/sda')
+        self.cmdrun.called_once_with(
+            ['parted',
+             '-m',
+             '-s',
+             '/dev/sda'
+             'print']
+        )
+
+    def test_list__valid_cmd_output(self):
+        self.cmdrun.return_value = self.parted_print_output('valid')
+        output = parted.list_('/dev/sda')
+        self.cmdrun.called_once_with(
+            ['parted',
+             '-m',
+             '-s',
+             '/dev/sda'
+             'print']
+        )
+        expected = {
+            'info': {
+                'logical sector': '512',
+                'physical sector': '512',
+                'interface': 'scsi',
+                'model': 'AMCC 9650SE-24M DISK',
+                'disk': '/dev/sda',
+                'disk flags': '',
+                'partition table': 'gpt',
+                'size': '4000GB'
+            },
+            'partitions': {
+                '1': {
+                    'end': '150MB',
+                    'number': '1',
+                    'start': '17.4kB',
+                    'file system': '',
+                    'flags': 'boot',
+                    'type': 'ext3',
+                    'size': '150MB'},
+                '2': {
+                    'end': '4000GB',
+                    'number': '2',
+                    'start': '3921GB',
+                    'file system': '',
+                    'flags': '',
+                    'type': 'linux-swap(v1)',
+                    'size': '79.3GB'
+                }
+            }
+        }
+        self.assertEqual(output, expected)
+
+    def test_list__valid_unit_valid_cmd_output(self):
+        self.cmdrun.return_value = self.parted_print_output('valid')
+        output = parted.list_('/dev/sda', unit='s')
+        self.cmdrun.called_once_with(
+            ['parted',
+             '-m',
+             '-s',
+             '/dev/sda'
+             'unit',
+             's',
+             'print']
+        )
+        expected = {
+            'info': {
+                'logical sector': '512',
+                'physical sector': '512',
+                'interface': 'scsi',
+                'model': 'AMCC 9650SE-24M DISK',
+                'disk': '/dev/sda',
+                'disk flags': '',
+                'partition table': 'gpt',
+                'size': '4000GB'
+            },
+            'partitions': {
+                '1': {
+                    'end': '150MB',
+                    'number': '1',
+                    'start': '17.4kB',
+                    'file system': '',
+                    'flags': 'boot',
+                    'type': 'ext3',
+                    'size': '150MB'},
+                '2': {
+                    'end': '4000GB',
+                    'number': '2',
+                    'start': '3921GB',
+                    'file system': '',
+                    'flags': '',
+                    'type': 'linux-swap(v1)',
+                    'size': '79.3GB'
+                }
+            }
+        }
+        self.assertEqual(output, expected)
+
+    def test_list__valid_legacy_cmd_output(self):
+        self.cmdrun.return_value = self.parted_print_output('valid_legacy')
+        output = parted.list_('/dev/sda')
+        self.cmdrun.called_once_with(
+            ['parted',
+             '-m',
+             '-s',
+             '/dev/sda'
+             'print']
+        )
+        expected = {
+            'info': {
+                'logical sector': '512',
+                'physical sector': '512',
+                'interface': 'scsi',
+                'model': 'AMCC 9650SE-24M DISK',
+                'disk': '/dev/sda',
+                'partition table': 'gpt',
+                'size': '4000GB'
+            },
+            'partitions': {
+                '1': {
+                    'end': '150MB',
+                    'number': '1',
+                    'start': '17.4kB',
+                    'file system': '',
+                    'flags': 'boot',
+                    'type': 'ext3',
+                    'size': '150MB'},
+                '2': {
+                    'end': '4000GB',
+                    'number': '2',
+                    'start': '3921GB',
+                    'file system': '',
+                    'flags': '',
+                    'type': 'linux-swap(v1)',
+                    'size': '79.3GB'
+                }
+            }
+        }
+        self.assertEqual(output, expected)
+
+    def test_list__valid_unit_valid_legacy_cmd_output(self):
+        self.cmdrun.return_value = self.parted_print_output('valid_legacy')
+        output = parted.list_('/dev/sda', unit='s')
+        self.cmdrun.called_once_with(
+            ['parted',
+             '-m',
+             '-s',
+             '/dev/sda'
+             'unit',
+             's',
+             'print']
+        )
+        expected = {
+            'info': {
+                'logical sector': '512',
+                'physical sector': '512',
+                'interface': 'scsi',
+                'model': 'AMCC 9650SE-24M DISK',
+                'disk': '/dev/sda',
+                'partition table': 'gpt',
+                'size': '4000GB'
+            },
+            'partitions': {
+                '1': {
+                    'end': '150MB',
+                    'number': '1',
+                    'start': '17.4kB',
+                    'file system': '',
+                    'flags': 'boot',
+                    'type': 'ext3',
+                    'size': '150MB'},
+                '2': {
+                    'end': '4000GB',
+                    'number': '2',
+                    'start': '3921GB',
+                    'file system': '',
+                    'flags': '',
+                    'type': 'linux-swap(v1)',
+                    'size': '79.3GB'
+                }
+            }
+        }
+        self.assertEqual(output, expected)
 
 
 if __name__ == '__main__':
