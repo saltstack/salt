@@ -579,7 +579,7 @@ class Key(object):
         '''
         Return a dict of managed keys under a named status
         '''
-        acc, pre, rej = self._check_minions_directories()
+        acc, pre, rej, den = self._check_minions_directories()
         ret = {}
         if match.startswith('acc'):
             ret[os.path.basename(acc)] = []
@@ -927,7 +927,7 @@ class RaetKey(Key):
         If the key has been accepted return "accepted"
         if the key should be rejected, return "rejected"
         '''
-        acc, pre, rej = self._check_minions_directories()
+        acc, pre, rej, den = self._check_minions_directories()
         acc_path = os.path.join(acc, minion_id)
         pre_path = os.path.join(pre, minion_id)
         rej_path = os.path.join(rej, minion_id)
