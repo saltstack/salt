@@ -7,6 +7,7 @@ init .raet.udp.stack.local to main true name "master" role "master"
 init .salt.uxd.stack.local to yid 0 name "master" lanename "master"
 
 framer masterudpstack be active first setup
+    # Begin the pre-flight checks
     frame setup
         enter
             do salt raet cleanup
@@ -14,47 +15,61 @@ framer masterudpstack be active first setup
             do salt manor lane setup per inode ".salt.uxd.stack"
         go spawnmaint
 
+    # Create the maintanence frame
     frame spawnmaint
         enter
             do fork maint
         go spawnworkers
 
+    # Start forking master workers
     frame spawnworkers
         enter
             do worker fork
         go start
 
     frame start
+        # Start the message receive framer
         bid start inbound
+        # Start the message receive framer
         bid start uxdrouter
+        # Start the event framer
         bid start events
+        # Start the publish framer
         bid start publish
+        # Start the manage framer
         bid start manager
+        # Start the outbound framer
         bid start outbound
         exit
             do salt raet road stack closer per inode ".raet.udp.stack."
             do salt raet lane stack closer per inode ".salt.uxd.stack."
 
+# Inbound framer
 framer inbound be inactive first start
     frame start
         do salt raet road stack service rx
 
+# Router framer
 framer uxdrouter be inactive first start
     frame start
         do router
 
+# Event bus framer
 framer events be inactive first start
     frame start
         do eventer
 
+# Publisher framer
 framer publish be inactive first start
     frame start
         do salt publisher
 
+# Manager framer
 framer manager be inactive first start at 10.0
     frame start
          do salt raet road stack manager per inode ".raet.udp.stack"
 
+# Outbound framer
 framer outbound be inactive first start
     frame start
         do salt raet road stack service tx

@@ -8,6 +8,7 @@ init role in .raet.udp.stack.local from value in .salt.etc.id
 init .salt.uxd.stack.local to yid 0 name "minion" lanename "minion"
 
 framer minionudpstack be active first setup
+    # Begin the pre-flight checks
     frame setup
         enter
             do salt raet cleanup
@@ -15,22 +16,32 @@ framer minionudpstack be active first setup
             do salt manor lane setup
         go loadmodules
 
+    # Load the minion mods
     frame loadmodules
         do load modules at enter
         go start
 
+    # OK, let's start the minion up
     frame start
+        # Start the inbound framer
         bid start inbound
+        # Start the bootstrap framer
         bid start bootstrap
+        # Start the eventing framer
         bid start eventing
+        # Start the functionmanage framer
         bid start functionmanager
+        # Start the manage framer
         bid start manager
+        # Start the outbound framer
         bid start outbound
 
+        # Cleanup on exit
         exit
             do salt raet road stack closer per inode ".raet.udp.stack."
             do salt raet lane stack closer per inode ".salt.uxd.stack."
 
+# Framer for handling inbound traffic
 framer inbound be inactive first start
     frame start
         do salt raet road stack service rx
@@ -97,6 +108,7 @@ framer manager be inactive first start at 10.0
     frame start
          do salt raet road stack manager per inode ".raet.udp.stack"
 
+# Framer for handling outbound traffic
 framer outbound be inactive first start
     frame start
         do salt raet road stack service tx
