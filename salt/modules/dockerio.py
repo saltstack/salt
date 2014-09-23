@@ -1498,7 +1498,7 @@ def _parse_image_multilogs_string(ret, repo):
         for l in image_logs:
             if isinstance(l, dict):
                 if l.get('status') == 'Download complete' and l.get('id'):
-                    infos = _get_image_infos(repo)
+                    infos = _get_image_infos(l['id'])
                     break
     return image_logs, infos
 
