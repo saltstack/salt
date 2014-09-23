@@ -426,8 +426,8 @@ Use unless to only run if any of the specified commands return False.
     vim:
       pkg.installed:
         - unless:
-            - rpm -q vim-enhanced
-            - ls /usr/bin/vim
+          - rpm -q vim-enhanced
+          - ls /usr/bin/vim
 
 This state will not run if the vim-enhanced package is already installed, or if
 /usr/bin/vim exists.  It gives more granular control over when a state should be
@@ -507,7 +507,7 @@ changed, but the apache2 restart will happen at the end of the state run.
 This example does the same as the above example, but puts the state argument
 on the file resource, rather than the service resource.
 
-Check_Cmd
+check_cmd
 ---------
 
 .. versionadded:: 2014.7.0

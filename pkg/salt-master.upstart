@@ -6,7 +6,6 @@ start on (net-device-up
 stop on runlevel [!2345]
 limit nofile 100000 100000
 
-expect fork
 script
   # Read configuration variable file if it is present
   [ -f /etc/default/$UPSTART_JOB ] && . /etc/default/$UPSTART_JOB

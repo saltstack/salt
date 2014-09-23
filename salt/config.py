@@ -183,6 +183,7 @@ VALID_OPTS = {
     'pillar_version': int,
     'pillar_opts': bool,
     'pillar_source_merging_strategy': str,
+    'ping_on_key_rotate': bool,
     'peer': dict,
     'syndic_master': str,
     'runner_dirs': list,
@@ -242,7 +243,13 @@ VALID_OPTS = {
     'ssh_sudo': bool,
     'ssh_timeout': float,
     'ssh_user': str,
+    'ioflo_verbose': int,
+    'ioflo_period': float,
+    'ioflo_realtime': bool,
+    'ioflo_console_logdir': str,
     'raet_port': int,
+    'raet_mutable': bool,
+    'raet_main': bool,
     'sqlite_queue_dir': str,
     'queue_dirs': list,
     'ping_interval': int,
@@ -370,7 +377,11 @@ DEFAULT_MINION_OPTS = {
     'ioflo_verbose': 0,
     'ioflo_period': 0.1,
     'ioflo_realtime': True,
+    'ioflo_console_logdir': '',
     'raet_port': 4510,
+    'raet_mutable': False,
+    'raet_main': False,
+    'restart_on_error': False,
     'ping_interval': 0,
     'username': None,
     'password': None,
@@ -439,6 +450,7 @@ DEFAULT_MASTER_OPTS = {
     'pillar_version': 2,
     'pillar_opts': True,
     'pillar_source_merging_strategy': 'smart',
+    'ping_on_key_rotate': False,
     'peer': {},
     'syndic_master': '',
     'runner_dirs': [],
@@ -529,7 +541,10 @@ DEFAULT_MASTER_OPTS = {
     'ioflo_verbose': 0,
     'ioflo_period': 0.01,
     'ioflo_realtime': True,
+    'ioflo_console_logdir': '',
     'raet_port': 4506,
+    'raet_mutable': False,
+    'raet_main': True,
     'sqlite_queue_dir': os.path.join(salt.syspaths.CACHE_DIR, 'master', 'queues'),
     'queue_dirs': [],
     'cli_summary': False,
@@ -1971,6 +1986,20 @@ def apply_master_config(overrides=None, defaults=None):
         os.path.join(opts['cachedir'], 'extmods')
     )
     opts['token_dir'] = os.path.join(opts['cachedir'], 'tokens')
+
+    using_ip_for_id = False
+    append_master = False
+    if opts.get('id') is None:
+        opts['id'], using_ip_for_id = get_id(
+                opts,
+                minion_id=None)
+        append_master = True
+
+    # it does not make sense to append a domain to an IP based id
+    if not using_ip_for_id and 'append_domain' in opts:
+        opts['id'] = _append_domain(opts)
+    if append_master:
+        opts['id'] += '_master'
 
     # Prepend root_dir to other paths
     prepend_root_dirs = [

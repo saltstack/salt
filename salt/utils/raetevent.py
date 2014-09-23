@@ -47,14 +47,14 @@ class SaltEvent(object):
         self.connected = False
         self.stack = LaneStack(
                 name=name,
-                yid=self.yid,
+                uid=self.yid,
                 lanename=self.node,
                 sockdirpath=self.sock_dir)
         self.stack.Pk = raeting.packKinds.pack
         self.router_yard = RemoteYard(
                 stack=self.stack,
                 lanename=self.node,
-                yid=0,
+                uid=0,
                 name='manor',
                 dirpath=self.sock_dir)
         self.stack.addRemote(self.router_yard)

@@ -579,6 +579,7 @@ SETUP_KWARGS = {'name': NAME,
                                 ['doc/man/salt-cp.1',
                                  'doc/man/salt-call.1',
                                  'doc/man/salt-minion.1',
+                                 'doc/man/salt-unity.1',
                                  ]),
                                ('share/man/man7',
                                 ['doc/man/salt.7',
@@ -612,7 +613,8 @@ if IS_WINDOWS_PLATFORM is False:
         'doc/man/salt-syndic.1',
         'doc/man/salt-run.1',
         'doc/man/salt-ssh.1',
-        'doc/man/salt-cloud.1'
+        'doc/man/salt-cloud.1',
+        'doc/man/salt-unity.1',
     ])
 
 
