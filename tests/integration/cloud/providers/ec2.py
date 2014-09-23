@@ -93,12 +93,10 @@ class EC2Test(integration.ShellCase):
         # create the instance
         instance = self.run_cloud('-p ec2-test {0}'.format(INSTANCE_NAME))
         ret_str = '{0}:'.format(INSTANCE_NAME)
-        running = '            running'
 
         # check if instance returned with salt installed
         try:
             self.assertIn(ret_str, instance)
-            self.assertIn(running, instance)
         except AssertionError:
             self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
             raise
