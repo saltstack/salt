@@ -426,7 +426,6 @@ def mkpart(device, part_type, fs_type=None, start=None, end=None):
             'partition.mkpart requires a start and an end'
         )
 
-
     if part_type not in set(['primary', 'logical', 'extended']):
         raise CommandExecutionError(
             'Invalid part_type passed to partition.mkpart'
