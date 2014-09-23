@@ -133,6 +133,9 @@ class TestGetTemplate(TestCase):
                 'other': [os.path.join(TEMPLATES_DIR, 'files', 'test')]
             },
             'fileserver_backend': ['roots'],
+            'extension_modules': os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                'extmods'),
         }
 
     def test_fallback(self):
