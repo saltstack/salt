@@ -82,7 +82,6 @@ class StdTest(integration.ModuleCase):
             num_ret += 1
         assert num_ret == 0
 
-
     def test_full_returns(self):
         '''
         test cmd_iter
