@@ -105,7 +105,7 @@ class Pillar(object):
         self.actual_file_roots = opts['file_roots']
         # use the local file client
         self.opts = self.__gen_opts(opts, grains, id_, saltenv, ext)
-        self.client = salt.fileclient.get_file_client(self.opts)
+        self.client = salt.fileclient.get_file_client(self.opts, True)
 
         if opts.get('file_client', '') == 'local':
             opts['grains'] = grains

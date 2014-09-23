@@ -293,6 +293,12 @@ class Fileserver(object):
                 ret.append(sub)
         return ret
 
+    def master_opts(self, load):
+        '''
+        Simplify master opts
+        '''
+        return self.opts
+
     def update(self, back=None):
         '''
         Update all of the file-servers that support the update function or the
@@ -532,3 +538,29 @@ class Fileserver(object):
                 (x, y) for x, y in ret.items() if x.startswith(prefix)
             ])
         return ret
+
+
+class FSChan(object):
+    '''
+    A class that mimics the transport channels allowing for local access to
+    to the fileserver class class structure
+    '''
+    def __init__(self, opts, **kwargs):
+        self.opts = opts
+        self.kwargs = kwargs
+        self.fs = Fileserver(self.opts)
+        self.fs.init()
+        self.fs.update()
+
+    def send(self, load, tries=None, timeout=None):
+        '''
+        Emulate the channel send method, the tries and timeout are not used
+        '''
+        if 'cmd' not in load:
+            log.error('Malformed request, no cmd: {0}'.format(load))
+            return {}
+        cmd = load['cmd'].lstrip('_')
+        if not hasattr(self.fs, cmd):
+            log.error('Malformed request, invalid cmd: {0}'.format(load))
+            return {}
+        return getattr(self.fs, cmd)(load)
