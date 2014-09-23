@@ -68,7 +68,8 @@ Available Functions
           - source: salt://_files/tmp/docker_image.tar
 
 - running
-
+  can be used only for starting, or for both creating and starting a container.
+  See method documentation for details
   .. code-block:: yaml
 
       my_service:
@@ -231,9 +232,9 @@ def pulled(name, tag=None, force=False, *args, **kwargs):
         (`docker import
         <http://docs.docker.io/en/latest/reference/commandline/cli/#import>`_).
         NOTE that we added in SaltStack a way to authenticate yourself with the
-        Docker Hub Registry by supplying your credentials (username, email & password)
-        using pillars. For more information, see salt.modules.dockerio execution
-        module.
+        Docker Hub Registry by supplying your credentials (username, email &
+        password) using pillars. For more information, see salt.modules.dockerio
+        execution module.
 
     name
         Name of the image
@@ -281,9 +282,9 @@ def pushed(name, tag=None):
         (`docker import
         <http://docs.docker.io/en/latest/reference/commandline/cli/#import>`_).
         NOTE that we added in SaltStack a way to authenticate yourself with the
-        Docker Hub Registry by supplying your credentials (username, email & password)
-        using pillars. For more information, see salt.modules.dockerio execution
-        module.
+        Docker Hub Registry by supplying your credentials (username, email
+        & password) using pillars. For more information, see
+        salt.modules.dockerio execution module.
 
     name
         Name of the image
@@ -354,7 +355,10 @@ def loaded(name, source=None, source_hash='', force=False):
             comment='Image already loaded: {0}'.format(name))
 
     tmp_filename = salt.utils.mkstemp()
-    __salt__['state.single']('file.managed', name=tmp_filename, source=source, source_hash=source_hash)
+    __salt__['state.single']('file.managed',
+                            name=tmp_filename,
+                            source=source,
+                            source_hash=source_hash)
     changes = {}
 
     if image_infos['status']:
@@ -363,7 +367,7 @@ def loaded(name, source=None, source_hash='', force=False):
         remove_info = remove_image(name)
         if not remove_info['status']:
             return _invalid(name=name,
-                            comment='Image could not be removed: {0}'.format(name))
+                    comment='Image could not be removed: {0}'.format(name))
 
     load = __salt__['docker.load']
     returned = load(tmp_filename)
@@ -595,13 +599,19 @@ def absent(name):
         return _valid(comment="Container {0!r} not found".format(name))
 
 
-def present(name):
+def present(name, image=None, is_latest=False):
     '''
     If a container with the given name is not present, this state will fail.
+    Supports optionally checking for specific image/version
     (`docker inspect`)
 
     name:
         container id
+    image:
+        image the container should be running (defaults to any)
+    is_latest:
+        also check if the container runs the latest version of the image (
+        latest defined as the latest pulled onto the local machine)
     '''
     ins_container = __salt__['docker.inspect_container']
     cinfos = ins_container(name)
@@ -609,10 +619,17 @@ def present(name):
         cid = cinfos['id']
     else:
         cid = name
-    if cinfos['status']:
-        return _valid(comment='Container {0} exists'.format(cid))
-    else:
+    if not cinfos['status']:
         return _invalid(comment='Container {0} not found'.format(cid or name))
+    if cinfos['status'] and image is None:
+        return _valid(comment='Container {0} exists'.format(cid))
+    if cinfos['status'] and cinfos['out']['Config']["Image"] == image and not is_latest:
+        return _valid(comment='Container {0} exists and has image {1}'.format(cid, image))
+    ins_image = __salt__['docker.inspect_image']
+    iinfos = ins_image(image)
+    if cinfos['status'] and cinfos['out']['Image'] == iinfos['out']['Id']:
+        return _valid(comment='Container {0} exists and has latest version of image {1}'.format(cid, image))
+    return _invalid(comment='Container {0} found with wrong image'.format(cid or name))
 
 
 def run(name,
@@ -709,64 +726,91 @@ def script(*args, **kw):
     raise NotImplementedError
 
 
-def running(name, container=None, port_bindings=None, binds=None,
-            publish_all_ports=False, links=None, lxc_conf=None,
-            privileged=False, dns=None, volumes_from=None,
-            network_mode=None, cap_add=None, cap_drop=None,
-            check_is_running=True):
+def running(name,
+              image,
+              container=None,
+              command=None,
+              hostname=None,
+              user=None,
+              detach=True,
+              stdin_open=False,
+              tty=False,
+              mem_limit=0,
+              ports=None,
+              environment=None,
+              dns=None,
+              volumes=None,
+              volumes_from=None,
+              start=True,
+              cap_add=None,
+              cap_drop=None,
+              privileged=None,
+              lxc_conf=None,
+              network_mode=None,
+              check_is_running=True,
+              publish_all_ports=False,
+              links=None,
+              *args, **kwargs):
     '''
-    Ensure that a container is running. (`docker inspect`)
+    Ensure that a container with the given name exists;
+    if not, build a new container from the specified image.
+    (`docker run`)
 
-    name
-        name of the service
+    name / container
+        Name for the container
 
-    container
-        name of the container to start
+    image
+        Image from which to build this container
 
-    publish_all_ports
-
-    links
-        Link several container together
-
+    environment
+        Environment variables for the container, either
+            - a mapping of key, values
+            - a list of mappings of key, values
+    ports
+        List of ports definitions, either:
+            - a port to map
+            - a mapping of mapping portInHost : PortInContainer
         .. code-block:: yaml
-
-            - links:
-                name_other_container: alias_for_other_container
-
-    port_bindings
-        List of ports to expose on host system
-            - a mapping port's guest, hostname's host and port's host.
-
-        .. code-block:: yaml
-
-            - port_bindings:
-                "5000/tcp":
+            - ports:
+              - "5000/tcp":
                     HostIp: ""
                     HostPort: "5000"
-
-    binds
-        List of volumes to mount (like ``-v`` of ``docker run`` command),
+    publish_all_ports
+        Publish all ports from the port list (default is false,
+        only meaningfull if port does not contain portinhost:portincontainer mapping )
+    volumes
+        List of volumes to mount or create in the container (like ``-v`` of ``docker run`` command),
         mapping host directory to container directory.
-
-        For read-write mounting, use the short form:
-
+        For create in the host, just put a strin
         .. code-block:: yaml
-
-            - binds:
-                /var/log/service: /var/log/service
-
+          - volumes:
+            - "/var/log/service"
+        For read-write mounting, use the short form (note that the notion of
+        source:target from docker is preserved):
+        .. code-block:: yaml
+          - volumes:
+            - /var/log/service: /var/log/service
         Or, to specify read-only mounting, use the extended form:
-
         .. code-block:: yaml
+          - volumes:
+            - /home/user1:
+              bind: /mnt/vol2
+              ro: true
+            - /var/www:
+              bind: /mnt/vol1
+              ro: false
+        or (mostly for backwards compatibility) a dict style
+        .. code-block:: yaml
+          - volumes:
+            /home/user1:
+              bind: /mnt/vol2
+              ro: true
+            /var/www:
+              bind: /mnt/vol1
+              ro: false
 
-            - binds:
-                /home/user1:
-                    bind: /mnt/vol2
-                    ro: true
-                /var/www:
-                    bind: /mnt/vol1
-                    ro: false
-
+    volumes_from
+        List of containers to share volumes with
     dns
         List of DNS servers.
 
@@ -774,15 +818,6 @@ def running(name, container=None, port_bindings=None, binds=None,
 
             - dns:
                 - 127.0.0.1
-
-    volumes_from
-        List of container names to get volumes definition from
-
-        .. code-block:: yaml
-
-            - volumes_from:
-                - name_other_container
-
     network_mode
         - 'bridge': creates a new network stack for the container on the docker bridge
         - 'none': no networking for this container
@@ -803,40 +838,135 @@ def running(name, container=None, port_bindings=None, binds=None,
         Enable checking if a container should run or not.
         Useful for data-only containers that must be linked to another one.
         e.g. nginx <- static-files
+    For other parameters, see absolutely first the salt.modules.dockerio
+    execution module and the docker-py python bindings for docker
+    documentation
+    <https://github.com/dotcloud/docker-py#api>`_ for
+    `docker.create_container`.
+
+    .. note::
+        This command does not verify that the named container
+        is running the specified image.
     '''
-    if not container and name:
-        container = name
-    is_running = __salt__['docker.is_running'](container)
-    if is_running:
-        return _valid(
-            comment='Container {0!r} is started'.format(container))
-    else:
+    if container is not None:
+        name = container
+    ins_image = __salt__['docker.inspect_image']
+    ins_container = __salt__['docker.inspect_container']
+    create = __salt__['docker.create_container']
+    iinfos = ins_image(image)
+    cinfos = ins_container(name)
+    already_exists = cinfos['status']
+    image_exists = iinfos['status']
+    is_running = False
+    if already_exists:
+        is_running = __salt__['docker.is_running'](container)
+    # if container exists but is not started, try to start it
+    if already_exists and (is_running or not start):
+        return _valid(comment='container {0!r} already exists'.format(name))
+    if not image_exists:
+        return _invalid(comment='image "{0}" does not exist'.format(image))
+    # parse input data
+    exposeports, bindports, contvolumes, bindvolumes, denvironment, changes = [], {}, [], {}, {}, []
+    if not ports:
+        ports = {}
+    if not volumes:
+        volumes = {}
+    if not volumes_from:
+        volumes_from = []
+    if isinstance(environment, dict):
+        for key in environment:
+            denvironment[unicode(key)] = unicode(environment[key])
+    if isinstance(environment, list):
+        for var in environment:
+            if isinstance(var, dict):
+                for key in var:
+                    denvironment[unicode(key)] = unicode(var[key])
+    if isinstance(volumes, dict):
+        bindvolumes = volumes
+    if isinstance(volumes, list):
+        for vol in volumes:
+            if isinstance(vol, dict):
+                # get source as the dict key
+                source = vol.keys()[0]
+                # then find target
+                if isinstance(vol[source], dict):
+                    target = vol[source]['bind']
+                    read_only = vol[source].get('ro', False)
+                else:
+                    target = str(vol[source])
+                    read_only = False
+                bindvolumes[source] = {
+                'bind': target,
+                'ro': read_only
+                }
+            else:
+                # assume just an own volumes
+                contvolumes.append(str(vol))
+    if isinstance(ports, dict):
+        bindports = ports
+        # in dict form all ports bind, so no need for exposeports
+    if isinstance(ports, list):
+        for port in ports:
+            if isinstance(port, dict):
+                container_port = port.keys()[0]
+                #find target
+                if isinstance(port[container_port], dict):
+                    host_port = port[container_port]['HostPort']
+                    host_ip = port[container_port].get('HostIp', '0.0.0.0')
+                else:
+                    host_port = str(port[container_port])
+                    host_ip = '0.0.0.0'
+                bindports[container_port] = {
+                    'HostPort': host_port,
+                    'HostIp': host_ip
+                }
+            else:
+                #assume just a port to expose
+                exposeports.append(str(port))
+    if not already_exists:
+        args, kwargs = [image], dict(
+                        command=command,
+                        hostname=hostname,
+                        user=user,
+                        detach=detach,
+                        stdin_open=stdin_open,
+                        tty=tty,
+                        mem_limit=mem_limit,
+                        ports=exposeports,
+                        environment=denvironment,
+                        dns=dns,
+                        volumes=contvolumes,
+                        name=name)
+        out = create(*args, **kwargs)
+        # if container has been created, even if not started, we mark
+        # it as installed
+        try:
+            cid = out['out']['info']['id']
+            log.debug(str(cid))
+        except Exception, e:
+            changes.append('Container created')
+            log.debug(str(e))
+        else:
+            changes.append('Container {0} created'.format(cid))
+    if start:
         started = __salt__['docker.start'](
-            container, binds=binds, port_bindings=port_bindings,
-            lxc_conf=lxc_conf, publish_all_ports=publish_all_ports,
-            links=links, privileged=privileged,
-            dns=dns, volumes_from=volumes_from, network_mode=network_mode,
-            cap_add=cap_add, cap_drop=cap_drop
-        )
+                name, binds=bindvolumes, port_bindings=bindports,
+                lxc_conf=lxc_conf, publish_all_ports=publish_all_ports,
+                links=links, privileged=privileged,
+                dns=dns, volumes_from=volumes_from, network_mode=network_mode,
+                cap_add=cap_add, cap_drop=cap_drop
+                )
         if check_is_running:
-            is_running = __salt__['docker.is_running'](container)
+            is_running = __salt__['docker.is_running'](name)
             log.debug("Docker-io running:" + str(started))
             log.debug("Docker-io running:" + str(is_running))
             if is_running:
-                return _valid(
-                    comment='Container {0!r} started.\n'.format(container),
-                    changes={name: True})
+                changes.append('Container {0!r} started.\n'.format(name))
             else:
                 return _invalid(
-                    comment=(
+                        comment=(
                         'Container {0!r} cannot be started\n{1!s}'
-                        .format(
-                            container,
-                            started['out'],
-                        )
-                    )
-                )
+                        .format(name, started['out'],)))
         else:
-            return _valid(
-                comment='Container {0!r} started.\n'.format(container),
-                changes={name: True})
+            changes.append('Container {0!r} started.\n'.format(name))
+    return _valid(comment=','.join(changes), changes={name: True})
