@@ -1595,7 +1595,7 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         if self.options.list:
             try:
                 if ',' in self.args[0]:
-                    self.config['tgt'] = self.args[0].split(',')
+                    self.config['tgt'] = self.args[0].replace(' ', '').split(',')
                 else:
                     self.config['tgt'] = self.args[0].split()
             except IndexError:
