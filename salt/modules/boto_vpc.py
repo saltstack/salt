@@ -236,6 +236,35 @@ def create_customer_gateway(vpn_connection_type, ip_address, bgp_asn, region=Non
         return False
 
 
+def delete(vpc_id, region=None, key=None, keyid=None, profile=None):
+    '''
+    Given a VPC ID, delete the VPC.
+
+    Returns True if the VPC was deleted and returns False if the VPC was not deleted.
+
+    CLI example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.delete 'vpc-6b1fe402'
+
+    '''
+
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+
+    try:
+        vpc = conn.delete_vpc(vpc_id)
+
+        log.debug('VPC {0} was deleted.'.format(vpc.id))
+
+        return True
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        return False
+
+
 def _get_conn(region, key, keyid, profile):
     '''
     Get a boto connection to vpc.
