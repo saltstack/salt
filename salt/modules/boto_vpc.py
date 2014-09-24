@@ -45,6 +45,7 @@ log = logging.getLogger(__name__)
 try:
     import boto
     import boto.vpc
+
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
@@ -168,6 +169,24 @@ def create(cidr_block, instance_tenancy=None, region=None, key=None, keyid=None,
         vpc = conn.create_vpc(cidr_block, instance_tenancy=instance_tenancy)
 
         log.debug('The newly created VPC id is {0}'.format(vpc.id))
+
+        return True
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        return False
+
+
+def create_subnet(vpc_id, cidr_block, availability_zone=None, region=None, key=None, keyid=None, profile=None):
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+
+    try:
+        vpc_subnet = conn.create_subnet(vpc_id, cidr_block, availability_zone=availability_zone)
+
+        log.debug('A VPC subnet {0} with {1} available ips on VPC {2}'.format(vpc_subnet.id,
+                                                                              vpc_subnet.available_ip_address_count,
+                                                                              vpc_id))
 
         return True
     except boto.exception.BotoServerError as e:
