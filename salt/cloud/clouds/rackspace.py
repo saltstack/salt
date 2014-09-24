@@ -139,7 +139,7 @@ def get_conn():
             __opts__,
             search_global=False
         ),
-        region = config.get_cloud_config_value(
+        region=config.get_cloud_config_value(
             'compute_region',
             get_configured_provider(),
             __opts__,
