@@ -778,7 +778,7 @@ class LocalClient(object):
             jid,
             event=None):
         '''
-        Raw funciton to just return events of jid excluding timeout logic
+        Raw function to just return events of jid excluding timeout logic
 
         Yield either the raw event data or None
         '''
