@@ -144,6 +144,37 @@ def exists(vpc_id, region=None, key=None, keyid=None, profile=None):
         return False
 
 
+def create(cidr_block, instance_tenancy=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Given a valid CIDR block, create a VPC.
+
+    An optional instance_tenancy argument can be provided. If provided, the valid values are 'default' or 'dedicated'
+
+    Returns True if the VPC was created and returns False if the VPC was not created.
+
+    CLI example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.create '10.0.0.0/24'
+
+    '''
+
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+
+    try:
+        vpc = conn.create_vpc(cidr_block, instance_tenancy=instance_tenancy)
+
+        log.debug('The newly created VPC id is {0}'.format(vpc.id))
+
+        return True
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        return False
+
+
 def _get_conn(region, key, keyid, profile):
     '''
     Get a boto connection to vpc.
