@@ -291,7 +291,7 @@ class Master(SMaster):
         enable_sigusr2_handler()
 
         self.__set_max_open_files()
- 
+
         process_manager = salt.utils.process.ProcessManager()
 
         process_manager.add_process(self._clear_old_jobs)
@@ -504,7 +504,6 @@ class ReqServer(object):
                 if exc.errno == errno.EINTR:
                     continue
                 raise exc
-
 
     def __bind(self):
         '''
