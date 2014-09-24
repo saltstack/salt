@@ -17,7 +17,7 @@
 #       CREATED: 10/15/2012 09:49:37 PM WEST
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
-__ScriptVersion="2014.09.09"
+__ScriptVersion="2014.09.24"
 __ScriptName="bootstrap-salt.sh"
 
 #======================================================================================================================
@@ -1157,7 +1157,7 @@ __git_clone_and_checkout() {
         fi
     else
         __SHALLOW_CLONE="${BS_FALSE}"
-        if [ "$(echo "$GIT_REV" | sed 's/^.*\(v[[:digit:]]\{1,4\}\.[[:digit:]]\{1,2\}\.[[:digit:]]\{1,2\}\).*$/MATCH/')" = "MATCH" ]; then
+        if [ "$(echo "$GIT_REV" | sed 's/^.*\(v[[:digit:]]\{1,4\}\.[[:digit:]]\{1,2\}\.[[:digit:]]\{1,2\}\)\?.*$/MATCH/')" = "MATCH" ]; then
             echoinfo "Git revision matches a Salt version tag"
             # Let's try shallow cloning to speed up.
             # Test for "--single-branch" option introduced in git 1.7.10, the minimal version of git where the shallow
@@ -2517,7 +2517,7 @@ __install_epel_repository() {
     elif [ "$DISTRO_MAJOR_VERSION" -eq 6 ]; then
         rpm -Uvh --force "http://download.fedoraproject.org/pub/epel/6/${EPEL_ARCH}/epel-release-6-8.noarch.rpm" || return 1
     elif [ "$DISTRO_MAJOR_VERSION" -eq 7 ]; then
-        rpm -Uvh --force "http://download.fedoraproject.org/pub/epel/7/${EPEL_ARCH}/e/epel-release-7-1.noarch.rpm" || return 1
+        rpm -Uvh --force "http://download.fedoraproject.org/pub/epel/7/${EPEL_ARCH}/e/epel-release-7-2.noarch.rpm" || return 1
     else
         echoerror "Failed add EPEL repository support."
         return 1
