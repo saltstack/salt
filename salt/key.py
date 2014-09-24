@@ -526,13 +526,7 @@ class Key(object):
         cur_keys = self.list_keys()
         for status, keys in match_dict.items():
             for key in salt.utils.isorted(keys):
-                key_dirs = (
-                    'minions',
-                    'minions_pre',
-                    'minions_rejected',
-                    'minions_denied'
-                )
-                for keydir in key_dirs:
+                for keydir in ('minions', 'minions_pre', 'minions_rejected', 'minions_denied'):
                     if fnmatch.filter(cur_keys.get(keydir, []), key):
                         ret.setdefault(keydir, []).append(key)
         return ret
