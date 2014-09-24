@@ -203,5 +203,5 @@ def clone(cwd, repository, opts=None, user=None):
 
     if not opts:
         opts = ''
-    cmd = 'hg clone {0} {1} {2}'.format(repository, cwd, opts)
+    cmd = 'hg clone "{0}" "{1}" {2}'.format(repository, cwd, opts)
     return __salt__['cmd.run'](cmd, runas=user)
