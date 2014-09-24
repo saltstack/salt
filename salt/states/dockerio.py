@@ -68,8 +68,7 @@ Available Functions
           - source: salt://_files/tmp/docker_image.tar
 
 - running
-  can be used only for starting, or for both creating and starting a container.
-  See method documentation for details
+
   .. code-block:: yaml
 
       my_service:
@@ -82,11 +81,10 @@ Available Functions
 
   .. note::
 
-      The ``port_bindings`` argument above is a dictionary. Note the
-      double-indentation, this is required for PyYAML to load the data
-      structure properly as a dictionary. More information can be found
+      The ``port_bindings`` argument above is a dictionary. The double
+      indentation is required for PyYAML to load the data structure
+      properly as a python dictionary. More information can be found
       :ref:`here <nested-dict-indentation>`
-
 
 - absent
 
@@ -727,34 +725,33 @@ def script(*args, **kw):
 
 
 def running(name,
-              image,
-              container=None,
-              command=None,
-              hostname=None,
-              user=None,
-              detach=True,
-              stdin_open=False,
-              tty=False,
-              mem_limit=0,
-              ports=None,
-              environment=None,
-              dns=None,
-              volumes=None,
-              volumes_from=None,
-              start=True,
-              cap_add=None,
-              cap_drop=None,
-              privileged=None,
-              lxc_conf=None,
-              network_mode=None,
-              check_is_running=True,
-              publish_all_ports=False,
-              links=None,
-              *args, **kwargs):
+            image,
+            container=None,
+            command=None,
+            hostname=None,
+            user=None,
+            detach=True,
+            stdin_open=False,
+            tty=False,
+            mem_limit=0,
+            ports=None,
+            environment=None,
+            dns=None,
+            volumes=None,
+            volumes_from=None,
+            start=True,
+            cap_add=None,
+            cap_drop=None,
+            privileged=None,
+            lxc_conf=None,
+            network_mode=None,
+            check_is_running=True,
+            publish_all_ports=False,
+            links=None,
+            *args, **kwargs):
     '''
-    Ensure that a container with the given name exists;
-    if not, build a new container from the specified image.
-    (`docker run`)
+    Ensure that a container is running. If the container does not exist, it
+    will be created from the specified image. (`docker run`)
 
     name / container
         Name for the container
@@ -770,47 +767,63 @@ def running(name,
         List of ports definitions, either:
             - a port to map
             - a mapping of mapping portInHost : PortInContainer
+
         .. code-block:: yaml
+
             - ports:
               - "5000/tcp":
                     HostIp: ""
                     HostPort: "5000"
+
     publish_all_ports
         Publish all ports from the port list (default is false,
-        only meaningfull if port does not contain portinhost:portincontainer mapping )
+        only meaningful if port does not contain portinhost:portincontainer mapping)
+
     volumes
         List of volumes to mount or create in the container (like ``-v`` of ``docker run`` command),
         mapping host directory to container directory.
-        For create in the host, just put a strin
+        To create a volume in the container:
+
         .. code-block:: yaml
-          - volumes:
-            - "/var/log/service"
+
+            - volumes:
+              - "/var/log/service"
+
         For read-write mounting, use the short form (note that the notion of
         source:target from docker is preserved):
+
         .. code-block:: yaml
-          - volumes:
-            - /var/log/service: /var/log/service
+
+            - volumes:
+              - /var/log/service: /var/log/service
+
         Or, to specify read-only mounting, use the extended form:
+
         .. code-block:: yaml
-          - volumes:
-            - /home/user1:
-              bind: /mnt/vol2
-              ro: true
-            - /var/www:
-              bind: /mnt/vol1
-              ro: false
-        or (mostly for backwards compatibility) a dict style
+
+            - volumes:
+              - /home/user1:
+                bind: /mnt/vol2
+                ro: true
+              - /var/www:
+                bind: /mnt/vol1
+                ro: false
+
+        Or (mostly for backwards compatibility) a dict style
+
         .. code-block:: yaml
-          - volumes:
-            /home/user1:
-              bind: /mnt/vol2
-              ro: true
-            /var/www:
-              bind: /mnt/vol1
-              ro: false
+
+            - volumes:
+              /home/user1:
+                bind: /mnt/vol2
+                ro: true
+              /var/www:
+                bind: /mnt/vol1
+                ro: false
 
     volumes_from
         List of containers to share volumes with
+
     dns
         List of DNS servers.
 
@@ -818,6 +831,7 @@ def running(name,
 
             - dns:
                 - 127.0.0.1
+
     network_mode
         - 'bridge': creates a new network stack for the container on the docker bridge
         - 'none': no networking for this container
@@ -838,9 +852,9 @@ def running(name,
         Enable checking if a container should run or not.
         Useful for data-only containers that must be linked to another one.
         e.g. nginx <- static-files
-    For other parameters, see absolutely first the salt.modules.dockerio
-    execution module and the docker-py python bindings for docker
-    documentation
+
+    For other parameters, see salt.modules.dockerio execution module
+    and the docker-py python bindings for docker documentation
     <https://github.com/dotcloud/docker-py#api>`_ for
     `docker.create_container`.
 
