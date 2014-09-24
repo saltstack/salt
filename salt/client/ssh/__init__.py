@@ -12,9 +12,6 @@ import multiprocessing
 import subprocess
 import os
 import re
-import shutil
-import tarfile
-import tempfile
 import time
 import yaml
 
@@ -532,7 +529,7 @@ class Single(object):
         self.target = kwargs
         self.target.update(args)
         self.serial = salt.payload.Serial(opts)
-        self.wfuncs = salt.loader.ssh_wrapper(opts)
+        self.wfuncs = salt.loader.ssh_wrapper(opts, None, self.opts)
         self.mods = mods if mods else {}
 
     def __arg_comps(self):
@@ -691,7 +688,7 @@ class Single(object):
             opts,
             self.id,
             **self.target)
-        self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper)
+        self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper, self.opts)
         wrapper.wfuncs = self.wfuncs
         result = self.wfuncs[self.fun](*self.args, **self.kwargs)
         # Mimic the json data-structure that "salt-call --local" will

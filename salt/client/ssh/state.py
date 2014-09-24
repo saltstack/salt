@@ -57,8 +57,10 @@ class SSHHighState(salt.state.BaseHighState):
     '''
     stack = []
 
-    def __init__(self, opts, pillar=None, wrapper=None):
-        self.client = salt.fileclient.FSClient(opts)
+    def __init__(self, opts, pillar=None, wrapper=None, mopts=None):
+        if mopts is None:
+            mopts = {}
+        self.client = salt.fileclient.FSClient(mopts)
         salt.state.BaseHighState.__init__(self, opts)
         self.state = SSHState(opts, pillar, wrapper)
         self.matcher = salt.minion.Matcher(self.opts)
