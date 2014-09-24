@@ -651,7 +651,7 @@ class Single(object):
 
             if '_error' in opts_pkg:
                 #Refresh failed
-                ret = json.dumps({'local': opts_pkg['_error']})
+                ret = json.dumps({'local': opts_pkg})
                 return ret
 
             pillar = salt.pillar.Pillar(
