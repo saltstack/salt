@@ -58,11 +58,24 @@ class RAETChannel(Channel):
     Build the communication framework to communicate over the local process
     uxd socket and send messages forwarded to the master. then wait for the
     relative return message.
+
+    Two use cases:
+        mininion to master communication, normal use case
+           Minion is communicating via yard through minion Road to master
+           The destination route needs the estate name of the associated master
+        master call via runner, special use case
+           In the special case the master call external process is communicating
+           via a yard with the master manor yard
+           The destination route estate is None to indicate local estate
+
+        The difference between the two is how the destination route
+        is assigned.
     '''
     def __init__(self, opts, **kwargs):
         self.opts = opts
         self.ttype = 'raet'
-        self.dst = ('master', None, 'remote_cmd')
+        self.dst = ('master', None, 'remote_cmd') # minion to master comms
+        #self.dst = (None, None, 'remote_cmd')
         self.stack = None
 
     def _setup_stack(self):
@@ -113,9 +126,8 @@ class RAETChannel(Channel):
         self.__prep_stack()
         tried = 1
         start = time.time()
-        mid = self.opts.get('id', None)
         track = nacling.uuid(18)
-        src = (mid, self.stack.local.name, track)
+        src = (None, self.stack.local.name, track)
         self.route = {'src': src, 'dst': self.dst}
         msg = {'route': self.route, 'load': load}
         self.stack.transmit(msg, self.stack.nameRemotes['manor'].uid)

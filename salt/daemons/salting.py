@@ -40,10 +40,10 @@ class SaltKeep(Keep):
     LocalDumpFields = ['name', 'uid', 'ha', 'iha', 'natted', 'fqdn', 'dyned', 'sid',
                        'puid', 'aha', 'role']
     RemoteFields = ['name', 'uid', 'fuid', 'ha', 'iha', 'natted', 'fqdn', 'dyned',
-                    'sid', 'main', 'application', 'joined',
+                    'sid', 'main', 'kind', 'joined',
                     'role', 'acceptance', 'verhex', 'pubhex']
     RemoteDumpFields = ['name', 'uid', 'fuid', 'ha', 'iha', 'natted', 'fqdn', 'dyned',
-                         'sid', 'main', 'application', 'joined', 'role']
+                         'sid', 'main', 'kind', 'joined', 'role']
     Auto = raeting.autoModes.never #auto accept
 
     def __init__(self, opts, prefix='estate', basedirpath='',  auto=None, **kwa):
@@ -200,7 +200,7 @@ class SaltKeep(Keep):
                         ('dyned', remote.dyned),
                         ('sid', remote.sid),
                         ('main', remote.main),
-                        ('application', remote.application),
+                        ('kind', remote.kind),
                         ('joined', remote.joined),
                         ('role', remote.role),
                     ])
