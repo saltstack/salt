@@ -2061,7 +2061,6 @@ class Syndic(Minion):
             self._fire_master(events=self.raw_events,
                               pretag=tagify(self.opts['id'], base='syndic'),
                               )
-        print (self.jids)
         for jid in self.jids:
             self._return_pub(self.jids[jid], '_syndic_return')
         self._reset_event_aggregation()
