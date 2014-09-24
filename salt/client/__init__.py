@@ -841,8 +841,8 @@ class LocalClient(object):
         # iterator for this job's return
         ret_iter = self.get_returns_no_block(jid)
         # iterator for the info of this job
-        jinfo_iter = None
-        jinfo_timeout = None
+        jinfo_iter = []
+        jinfo_timeout = time.time() + timeout
         while True:
             # Process events until timeout is reached or all minions have returned
             for raw in ret_iter:
@@ -888,7 +888,7 @@ class LocalClient(object):
                     minion_timeouts[id_] = time.time() + timeout
 
             # if we don't have the job info iterator (or its timed out), lets make it
-            if jinfo_iter is None or time.time() > jinfo_timeout:
+            if time.time() > jinfo_timeout:
                 # need our own event listener, so we don't clobber the class one
                 event = salt.utils.event.get_event(
                         'master',
