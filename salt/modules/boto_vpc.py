@@ -255,11 +255,14 @@ def delete(vpc_id, region=None, key=None, keyid=None, profile=None):
         return False
 
     try:
-        conn.delete_vpc(vpc_id)
+        if conn.delete_vpc(vpc_id):
+            log.debug('VPC {0} was deleted.'.format(vpc_id))
 
-        log.debug('VPC {0} was deleted.'.format(vpc_id))
+            return True
+        else:
+            log.debug('VPC {0} was not deleted.'.format(vpc_id))
 
-        return True
+            return False
     except boto.exception.BotoServerError as e:
         log.debug(e)
         return False
@@ -284,11 +287,14 @@ def delete_subnet(subnet_id, region=None, key=None, keyid=None, profile=None):
         return False
 
     try:
-        conn.delete_subnet(subnet_id)
+        if conn.delete_subnet(subnet_id):
+            log.debug('Subnet {0} was deleted.'.format(subnet_id))
 
-        log.debug('Subnet {0} was deleted.'.format(subnet_id))
+            return True
+        else:
+            log.debug('Subnet {0} was not deleted.'.format(subnet_id))
 
-        return True
+            return False
     except boto.exception.BotoServerError as e:
         log.debug(e)
         return False
@@ -313,11 +319,14 @@ def delete_customer_gateway(customer_gateway_id, region=None, key=None, keyid=No
         return False
 
     try:
-        conn.delete_customer_gateway(customer_gateway_id)
+        if conn.delete_customer_gateway(customer_gateway_id):
+            log.debug('Customer gateway {0} was deleted.'.format(customer_gateway_id))
 
-        log.debug('Customer gateway {0} was deleted.'.format(customer_gateway_id))
+            return True
+        else:
+            log.error('Customer gateway {0} was not deleted.'.format(customer_gateway_id))
 
-        return True
+            return False
     except boto.exception.BotoServerError as e:
         log.debug(e)
         return False
