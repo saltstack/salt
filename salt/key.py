@@ -33,6 +33,7 @@ class KeyCLI(object):
             self.acc = 'minions'
             self.pend = 'minions_pre'
             self.rej = 'minions_rejected'
+            self.den = 'minions_denied'
         else:
             self.key = RaetKey(opts)
             self.acc = 'accepted'
@@ -61,6 +62,12 @@ class KeyCLI(object):
         elif status.startswith('rej'):
             salt.output.display_output(
                 {'minions_rejected': keys[self.rej]},
+                'key',
+                self.opts
+            )
+        elif status.startswith('den'):
+            salt.output.display_output(
+                {'minions_denied': keys[self.den]},
                 'key',
                 self.opts
             )
@@ -430,7 +437,10 @@ class Key(object):
         minions_pre = os.path.join(self.opts['pki_dir'], 'minions_pre')
         minions_rejected = os.path.join(self.opts['pki_dir'],
                                         'minions_rejected')
-        return minions_accepted, minions_pre, minions_rejected
+
+        minions_denied = os.path.join(self.opts['pki_dir'],
+                                        'minions_denied')
+        return minions_accepted, minions_pre, minions_rejected, minions_denied
 
     def gen_keys(self):
         '''
@@ -516,7 +526,7 @@ class Key(object):
         cur_keys = self.list_keys()
         for status, keys in match_dict.items():
             for key in salt.utils.isorted(keys):
-                for keydir in ('minions', 'minions_pre', 'minions_rejected'):
+                for keydir in ('minions', 'minions_pre', 'minions_rejected', 'minions_denied'):
                     if fnmatch.filter(cur_keys.get(keydir, []), key):
                         ret.setdefault(keydir, []).append(key)
         return ret
@@ -537,9 +547,9 @@ class Key(object):
         '''
         Return a dict of managed keys and what the key status are
         '''
-        acc, pre, rej = self._check_minions_directories()
+        acc, pre, rej, den = self._check_minions_directories()
         ret = {}
-        for dir_ in acc, pre, rej:
+        for dir_ in acc, pre, rej, den:
             ret[os.path.basename(dir_)] = []
             for fn_ in salt.utils.isorted(os.listdir(dir_)):
                 if os.path.isfile(os.path.join(dir_, fn_)):
@@ -558,7 +568,7 @@ class Key(object):
         '''
         Return a dict of managed keys under a named status
         '''
-        acc, pre, rej = self._check_minions_directories()
+        acc, pre, rej, den = self._check_minions_directories()
         ret = {}
         if match.startswith('acc'):
             ret[os.path.basename(acc)] = []
@@ -906,7 +916,7 @@ class RaetKey(Key):
         If the key has been accepted return "accepted"
         if the key should be rejected, return "rejected"
         '''
-        acc, pre, rej = self._check_minions_directories()
+        acc, pre, rej = self._check_minions_directories()  # pylint: disable=W0632
         acc_path = os.path.join(acc, minion_id)
         pre_path = os.path.join(pre, minion_id)
         rej_path = os.path.join(rej, minion_id)
