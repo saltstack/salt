@@ -294,6 +294,35 @@ def delete_subnet(subnet_id, region=None, key=None, keyid=None, profile=None):
         return False
 
 
+def delete_customer_gateway(customer_gateway_id, region=None, key=None, keyid=None, profile=None):
+    '''
+    Given a subnet ID, delete the subnet.
+
+    Returns True if the subnet was deleted and returns False if the subnet was not deleted.
+
+    CLI example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.delete_customer_gateway 'cgw-b6a247df'
+
+    '''
+
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+
+    try:
+        conn.delete_customer_gateway(customer_gateway_id)
+
+        log.debug('Customer gateway {0} was deleted.'.format(customer_gateway_id))
+
+        return True
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        return False
+
+
 def _get_conn(region, key, keyid, profile):
     '''
     Get a boto connection to vpc.
