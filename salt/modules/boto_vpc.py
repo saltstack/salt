@@ -177,6 +177,21 @@ def create(cidr_block, instance_tenancy=None, region=None, key=None, keyid=None,
 
 
 def create_subnet(vpc_id, cidr_block, availability_zone=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Given a valid VPC ID and a CIDR block, create a subnet for the VPC.
+
+    An optional availability zone argument can be provided.
+
+    Returns True if the VPC subnet was created and returns False if the VPC subnet was not created.
+
+    CLI example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.create_subnet 'vpc-6b1fe402' '10.0.0.0/25'
+
+    '''
+
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -194,13 +209,26 @@ def create_subnet(vpc_id, cidr_block, availability_zone=None, region=None, key=N
         return False
 
 
-def create_customer_gateway(type, ip_address, bgp_asn, region=None, key=None, keyid=None, profile=None):
+def create_customer_gateway(vpn_connection_type, ip_address, bgp_asn, region=None, key=None, keyid=None, profile=None):
+    '''
+    Given a valid VPN connection type, a static IP address and a customer gateway’s Border Gateway Protocol (BGP) Autonomous System Number, create a customer gateway.
+
+    Returns True if the customer gateway was created and returns False if the customer gateway was not created.
+
+    CLI example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.create_subnet 'vpc-6b1fe402' '10.0.0.0/25'
+
+    '''
+
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
 
     try:
-        customer_gateway = conn.create_customer_gateway(type, ip_address, bgp_asn)
+        customer_gateway = conn.create_customer_gateway(vpn_connection_type, ip_address, bgp_asn)
 
         log.debug('A customer gateway with id {0} was created'.format(customer_gateway.id))
     except boto.exception.BotoServerError as e:
