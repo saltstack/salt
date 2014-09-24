@@ -255,9 +255,38 @@ def delete(vpc_id, region=None, key=None, keyid=None, profile=None):
         return False
 
     try:
-        vpc = conn.delete_vpc(vpc_id)
+        conn.delete_vpc(vpc_id)
 
-        log.debug('VPC {0} was deleted.'.format(vpc.id))
+        log.debug('VPC {0} was deleted.'.format(vpc_id))
+
+        return True
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        return False
+
+
+def delete_subnet(subnet_id, region=None, key=None, keyid=None, profile=None):
+    '''
+    Given a subnet ID, delete the subnet.
+
+    Returns True if the subnet was deleted and returns False if the subnet was not deleted.
+
+    CLI example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.delete_subnet 'subnet-6a1fe403'
+
+    '''
+
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+
+    try:
+        conn.delete_subnet(subnet_id)
+
+        log.debug('Subnet {0} was deleted.'.format(subnet_id))
 
         return True
     except boto.exception.BotoServerError as e:
