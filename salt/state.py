@@ -636,9 +636,9 @@ class State(object):
                 log.debug('Last command return code: {0}'.format(cmd))
                 if cmd != 0 and ret['result'] is False:
                     ret.update({'comment': 'onlyif execution failed', 'result': True})
+                    return ret
                 elif cmd == 0:
                     ret.update({'comment': 'onlyif execution succeeded', 'result': False})
-                    return ret
             return ret
 
         if 'unless' in low_data:

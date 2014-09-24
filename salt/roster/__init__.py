@@ -76,6 +76,10 @@ class Roster(object):
                 pass
 
         if not targets:
-            raise salt.exceptions.SaltSystemExit('Unable to render any roster.')
+            raise salt.exceptions.SaltSystemExit(
+                    'No hosts found with target {0} of type {1}'.format(
+                        tgt,
+                        tgt_type)
+                    )
 
         return targets

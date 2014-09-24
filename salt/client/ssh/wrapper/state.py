@@ -37,7 +37,11 @@ def sls(mods, saltenv='base', test=None, exclude=None, env=None, **kwargs):
         saltenv = env
 
     __pillar__.update(kwargs.get('pillar', {}))
-    st_ = salt.client.ssh.state.SSHHighState(__opts__, __pillar__, __salt__)
+    st_ = salt.client.ssh.state.SSHHighState(
+            __opts__,
+            __pillar__,
+            __salt__,
+            __master_opts__)
     if isinstance(mods, str):
         mods = mods.split(',')
     high_data, errors = st_.render_highstate({saltenv: mods})
@@ -63,7 +67,7 @@ def sls(mods, saltenv='base', test=None, exclude=None, env=None, **kwargs):
     chunks = st_.state.compile_high_data(high_data)
     file_refs = salt.client.ssh.state.lowstate_file_refs(chunks, kwargs.get('extra_filerefs', ''))
     trans_tar = salt.client.ssh.state.prep_trans_tar(
-            __opts__,
+            __master_opts__,
             chunks,
             file_refs,
             __pillar__)
@@ -86,6 +90,10 @@ def sls(mods, saltenv='base', test=None, exclude=None, env=None, **kwargs):
     except Exception, e:
         log.error("JSON Render failed for: {0}".format(stdout))
         log.error(str(e))
+    try:
+        os.remove(trans_tar)
+    except (OSError, IOError):
+        pass
     return stdout
 
 
@@ -102,13 +110,17 @@ def low(data, **kwargs):
     '''
     __opts__['grains'] = __grains__
     chunks = [data]
-    st_ = salt.client.ssh.state.SSHHighState(__opts__, __pillar__, __salt__)
+    st_ = salt.client.ssh.state.SSHHighState(
+            __opts__,
+            __pillar__,
+            __salt__,
+            __master_opts__)
     err = st_.verify_data(data)
     if err:
         return err
     file_refs = salt.client.ssh.state.lowstate_file_refs(chunks, kwargs.get('extra_filerefs', ''))
     trans_tar = salt.client.ssh.state.prep_trans_tar(
-            __opts__,
+            __master_opts__,
             chunks,
             file_refs,
             __pillar__)
@@ -125,6 +137,10 @@ def low(data, **kwargs):
             trans_tar,
             '{0}/salt_state.tgz'.format(__opts__['_thin_dir']))
     stdout, stderr, _ = single.cmd_block()
+    try:
+        os.remove(trans_tar)
+    except (OSError, IOError):
+        pass
     return json.loads(stdout, object_hook=salt.utils.decode_dict)
 
 
@@ -140,11 +156,15 @@ def high(data, **kwargs):
         salt '*' state.high '{"vim": {"pkg": ["installed"]}}'
     '''
     __opts__['grains'] = __grains__
-    st_ = salt.client.ssh.state.SSHHighState(__opts__, __pillar__, __salt__)
+    st_ = salt.client.ssh.state.SSHHighState(
+            __opts__,
+            __pillar__,
+            __salt__,
+            __master_opts__)
     chunks = st_.state.compile_high_data(high)
     file_refs = salt.client.ssh.state.lowstate_file_refs(chunks, kwargs.get('extra_filerefs', ''))
     trans_tar = salt.client.ssh.state.prep_trans_tar(
-            __opts__,
+            __master_opts__,
             chunks,
             file_refs,
             __pillar__)
@@ -161,6 +181,10 @@ def high(data, **kwargs):
             trans_tar,
             '{0}/salt_state.tgz'.format(__opts__['_thin_dir']))
     stdout, stderr, _ = single.cmd_block()
+    try:
+        os.remove(trans_tar)
+    except (OSError, IOError):
+        pass
     return json.loads(stdout, object_hook=salt.utils.decode_dict)
 
 
@@ -178,11 +202,15 @@ def highstate(test=None, **kwargs):
         salt '*' state.highstate exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
     '''
     __opts__['grains'] = __grains__
-    st_ = salt.client.ssh.state.SSHHighState(__opts__, __pillar__, __salt__)
+    st_ = salt.client.ssh.state.SSHHighState(
+            __opts__,
+            __pillar__,
+            __salt__,
+            __master_opts__)
     chunks = st_.compile_low_chunks()
     file_refs = salt.client.ssh.state.lowstate_file_refs(chunks, kwargs.get('extra_filerefs', ''))
     trans_tar = salt.client.ssh.state.prep_trans_tar(
-            __opts__,
+            __master_opts__,
             chunks,
             file_refs,
             __pillar__)
@@ -205,6 +233,10 @@ def highstate(test=None, **kwargs):
     except Exception, e:
         log.error('JSON Render failed for: {0}'.format(stdout))
         log.error(str(e))
+    try:
+        os.remove(trans_tar)
+    except (OSError, IOError):
+        pass
     return stdout
 
 
@@ -225,12 +257,16 @@ def top(topfn, test=None, **kwargs):
         __opts__['test'] = True
     else:
         __opts__['test'] = __opts__.get('test', None)
-    st_ = salt.client.ssh.state.SSHHighState(__opts__, __pillar__, __salt__)
+    st_ = salt.client.ssh.state.SSHHighState(
+            __opts__,
+            __pillar__,
+            __salt__,
+            __master_opts__)
     st_.opts['state_top'] = os.path.join('salt://', topfn)
     chunks = st_.compile_low_chunks()
     file_refs = salt.client.ssh.state.lowstate_file_refs(chunks, kwargs.get('extra_filerefs', ''))
     trans_tar = salt.client.ssh.state.prep_trans_tar(
-            __opts__,
+            __master_opts__,
             chunks,
             file_refs,
             __pillar__)
@@ -248,6 +284,10 @@ def top(topfn, test=None, **kwargs):
             trans_tar,
             '{0}/salt_state.tgz'.format(__opts__['_thin_dir']))
     stdout, stderr, _ = single.cmd_block()
+    try:
+        os.remove(trans_tar)
+    except (OSError, IOError):
+        pass
     return json.loads(stdout, object_hook=salt.utils.decode_dict)
 
 
@@ -262,7 +302,11 @@ def show_highstate():
         salt '*' state.show_highstate
     '''
     __opts__['grains'] = __grains__
-    st_ = salt.client.ssh.state.SSHHighState(__opts__, __pillar__, __salt__)
+    st_ = salt.client.ssh.state.SSHHighState(
+            __opts__,
+            __pillar__,
+            __salt__,
+            __master_opts__)
     return st_.compile_highstate()
 
 
@@ -277,7 +321,11 @@ def show_lowstate():
         salt '*' state.show_lowstate
     '''
     __opts__['grains'] = __grains__
-    st_ = salt.client.ssh.state.SSHHighState(__opts__, __pillar__, __salt__)
+    st_ = salt.client.ssh.state.SSHHighState(
+            __opts__,
+            __pillar__,
+            __salt__,
+            __master_opts__)
     return st_.compile_low_chunks()
 
 
@@ -307,7 +355,11 @@ def show_sls(mods, saltenv='base', test=None, env=None, **kwargs):
         opts['test'] = True
     else:
         opts['test'] = __opts__.get('test', None)
-    st_ = salt.client.ssh.state.SSHHighState(__opts__, __pillar__, __salt__)
+    st_ = salt.client.ssh.state.SSHHighState(
+            __opts__,
+            __pillar__,
+            __salt__,
+            __master_opts__)
     high_data, errors = st_.render_highstate({saltenv: mods})
     high_data, ext_errors = st_.state.reconcile_extend(high_data)
     errors += ext_errors
@@ -334,7 +386,11 @@ def show_top():
         salt '*' state.show_top
     '''
     __opts__['grains'] = __grains__
-    st_ = salt.client.ssh.state.SSHHighState(__opts__, __pillar__, __salt__)
+    st_ = salt.client.ssh.state.SSHHighState(
+            __opts__,
+            __pillar__,
+            __salt__,
+            __master_opts__)
     top_data = st_.get_top()
     errors = []
     errors += st_.verify_tops(top_data)

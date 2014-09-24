@@ -12,9 +12,6 @@ import multiprocessing
 import subprocess
 import os
 import re
-import shutil
-import tarfile
-import tempfile
 import time
 import yaml
 
@@ -532,7 +529,7 @@ class Single(object):
         self.target = kwargs
         self.target.update(args)
         self.serial = salt.payload.Serial(opts)
-        self.wfuncs = salt.loader.ssh_wrapper(opts)
+        self.wfuncs = salt.loader.ssh_wrapper(opts, None, self.opts)
         self.mods = mods if mods else {}
 
     def __arg_comps(self):
@@ -691,7 +688,7 @@ class Single(object):
             opts,
             self.id,
             **self.target)
-        self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper)
+        self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper, self.opts)
         wrapper.wfuncs = self.wfuncs
         result = self.wfuncs[self.fun](*self.args, **self.kwargs)
         # Mimic the json data-structure that "salt-call --local" will
@@ -886,82 +883,6 @@ class Single(object):
                 return error[2]
         return None
 
-    def sls_seed(self,
-                 mods,
-                 saltenv='base',
-                 test=None,
-                 exclude=None,
-                 env=None,
-                 **kwargs):
-        '''
-        Create the seed file for a state.sls run
-        '''
-        if env is not None:
-            salt.utils.warn_until(
-                'Boron',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Boron.'
-            )
-        # Backwards compatibility
-        saltenv = env
-
-        wrapper = salt.client.ssh.wrapper.FunctionWrapper(
-                self.opts,
-                self.id,
-                **self.target)
-        minion_opts = copy.deepcopy(self.opts)
-        minion_opts.update(wrapper['test.opts_pkg']())
-        pillar = kwargs.get('pillar', {})
-        st_ = SSHHighState(minion_opts, pillar, wrapper)
-        if isinstance(mods, str):
-            mods = mods.split(',')
-        high, errors = st_.render_highstate({saltenv: mods})
-        if exclude:
-            if isinstance(exclude, str):
-                exclude = exclude.split(',')
-            if '__exclude__' in high:
-                high['__exclude__'].extend(exclude)
-            else:
-                high['__exclude__'] = exclude
-        high, ext_errors = st_.state.reconcile_extend(high)
-        errors += ext_errors
-        errors += st_.state.verify_high(high)
-        if errors:
-            return errors
-        high, req_in_errors = st_.state.requisite_in(high)
-        errors += req_in_errors
-        high = st_.state.apply_exclude(high)
-        # Verify that the high data is structurally sound
-        if errors:
-            return errors
-        # Compile and verify the raw chunks
-        chunks = st_.state.compile_high_data(high)
-        file_refs = lowstate_file_refs(chunks)
-        trans_tar = prep_trans_tar(self.opts, chunks, file_refs)
-        self.shell.send(
-            trans_tar,
-            os.path.join(self.thin_dir, 'salt_state.tgz'),
-        )
-        self.argv = ['state.pkg', '{0}/salt_state.tgz'.format(self.thin_dir), 'test={0}'.format(test)]
-
-
-class SSHState(salt.state.State):
-    '''
-    Create a State object which wraps the SSH functions for state operations
-    '''
-    def __init__(self, opts, pillar=None, wrapper=None):
-        self.wrapper = wrapper
-        super(SSHState, self).__init__(opts, pillar)
-
-    def load_modules(self, data=None):
-        '''
-        Load up the modules for remote compilation via ssh
-        '''
-        self.functions = self.wrapper
-        self.states = salt.loader.states(self.opts, self.functions)
-        self.rend = salt.loader.render(self.opts, self.functions)
-
     def check_refresh(self, data, ret):
         '''
         Stub out check_refresh
@@ -973,19 +894,6 @@ class SSHState(salt.state.State):
         Module refresh is not needed, stub it out
         '''
         return
-
-
-class SSHHighState(salt.state.BaseHighState):
-    '''
-    Used to compile the highstate on the master
-    '''
-    stack = []
-
-    def __init__(self, opts, pillar=None, wrapper=None):
-        self.client = salt.fileclient.LocalClient(opts)
-        salt.state.BaseHighState.__init__(self, opts)
-        self.state = SSHState(opts, pillar, wrapper)
-        self.matcher = salt.minion.Matcher(self.opts)
 
 
 def lowstate_file_refs(chunks):
@@ -1057,57 +965,6 @@ def mod_data(opts):
                 mod_str = mod_str.rstrip(',')
                 ret[ref] = mod_str
     return ret
-
-
-def prep_trans_tar(opts, chunks, file_refs):
-    '''
-    Generate the execution package from the env file refs and a low state
-    data structure
-    '''
-    gendir = tempfile.mkdtemp()
-    trans_tar = salt.utils.mkstemp()
-    file_client = salt.fileclient.LocalClient(opts)
-    lowfn = os.path.join(gendir, 'lowstate.json')
-    with open(lowfn, 'w+') as fp_:
-        fp_.write(json.dumps(chunks))
-    for saltenv in file_refs:
-        env_root = os.path.join(gendir, saltenv)
-        if not os.path.isdir(env_root):
-            os.makedirs(env_root)
-        for ref in file_refs[saltenv]:
-            for name in ref:
-                short = name[7:]
-                path = file_client.cache_file(name, saltenv)
-                if path:
-                    tgt = os.path.join(env_root, short)
-                    tgt_dir = os.path.dirname(tgt)
-                    if not os.path.isdir(tgt_dir):
-                        os.makedirs(tgt_dir)
-                    shutil.copy(path, tgt)
-                    break
-                files = file_client.cache_dir(name, saltenv, True)
-                if files:
-                    for filename in files:
-                        tgt = os.path.join(
-                                env_root,
-                                short,
-                                filename[filename.find(short) + len(short):],
-                                )
-                        tgt_dir = os.path.dirname(tgt)
-                        if not os.path.isdir(tgt_dir):
-                            os.makedirs(tgt_dir)
-                        shutil.copy(path, tgt)
-                    break
-    cwd = os.getcwd()
-    os.chdir(gendir)
-    with tarfile.open(trans_tar, 'w:gz') as tfp:
-        for root, dirs, files in os.walk(gendir):
-            for name in files:
-                full = os.path.join(root, name)
-                tfp.add(full[len(gendir):].lstrip(os.sep))
-    os.chdir(cwd)
-    shutil.rmtree(gendir)
-    return trans_tar
 
 
 def ssh_version():
