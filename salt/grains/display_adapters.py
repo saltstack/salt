@@ -9,7 +9,7 @@ import salt.utils
 # of the modules are loaded and are generally available for any usage.
 import salt.modules.cmdmod
 
-def _linux_display_adapters(path):
+def _get_display_adapter(path):
     # Get pci bus, device and function
     pci = re.split(':|\.', path.replace('/sys/bus/pci/devices/0000:', ''))
     bus_num = pci[0]
@@ -62,3 +62,20 @@ def _linux_display_adapters(path):
         'boot_device': boot_device,
     };
     return display_adapter
+
+def display_adapters():
+    # Find display adapters
+    grains = {}
+    grains['display_adapters'] = []
+    files = glob.glob('/sys/bus/pci/devices/*/class')
+    for file in files:
+        f = open(file, 'r')
+
+        # Only consider devices with device class 0x030000
+        if f.readline().rstrip() == '0x030000':
+            grains['display_adapters'].append(_get_display_adapter(file.replace('/class', '')))
+        f.close()
+    return grains
+
+if __name__ == "__main__":
+    print display_adapters()
