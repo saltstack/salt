@@ -194,6 +194,20 @@ def create_subnet(vpc_id, cidr_block, availability_zone=None, region=None, key=N
         return False
 
 
+def create_customer_gateway(type, ip_address, bgp_asn, region=None, key=None, keyid=None, profile=None):
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+
+    try:
+        customer_gateway = conn.create_customer_gateway(type, ip_address, bgp_asn)
+
+        log.debug('A customer gateway with id {0} was created'.format(customer_gateway.id))
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        return False
+
+
 def _get_conn(region, key, keyid, profile):
     '''
     Get a boto connection to vpc.
