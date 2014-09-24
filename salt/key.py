@@ -547,9 +547,20 @@ class Key(object):
         '''
         Return a dict of managed keys and what the key status are
         '''
-        acc, pre, rej, den = self._check_minions_directories()
+
+        key_dirs = []
+
+        # We have to differentiate between RaetKey._check_minions_directories
+        # and Zeromq-Keys. Raet-Keys only have three states while ZeroMQ-keys
+        # havd an additional 'denied' state.
+        if self.opts['transport'] == 'zeromq':
+            key_dirs = self._check_minions_directories()
+        else:
+            key_dirs = self._check_minions_directories()
+
         ret = {}
-        for dir_ in acc, pre, rej, den:
+
+        for dir_ in key_dirs:
             ret[os.path.basename(dir_)] = []
             for fn_ in salt.utils.isorted(os.listdir(dir_)):
                 if os.path.isfile(os.path.join(dir_, fn_)):
