@@ -2658,10 +2658,13 @@ class BaseHighState(object):
         highstate = self.building_highstate
         all_errors = []
         mods = set()
+        statefiles = []
         for saltenv, states in matches.items():
             for sls_match in states:
-                statefiles = fnmatch.filter(self.avail[saltenv], sls_match)
-
+                try:
+                    statefiles = fnmatch.filter(self.avail[saltenv], sls_match)
+                except KeyError:
+                    all_errors.extend(['No matching salt environment for environment {0!r} found'.format(saltenv)])
                 # if we did not found any sls in the fileserver listing, this
                 # may be because the sls was generated or added later, we can
                 # try to directly execute it, and if it fails, anyway it will
