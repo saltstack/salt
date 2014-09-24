@@ -204,7 +204,6 @@ class LocalClient(object):
 
         return pub_data
 
-
     def _check_pub_data(self, pub_data):
         '''
         Common checks on the pub_data data structure returned from running pub
@@ -870,7 +869,6 @@ class LocalClient(object):
                     log.debug('jid {0} return from {1}'.format(jid, raw['data']['id']))
                     yield ret
 
-
             if len(found.intersection(minions)) >= len(minions):
                 # All minions have returned, break out of the loop
                 log.debug('jid {0} found all minions {1}'.format(jid, found))
@@ -906,7 +904,6 @@ class LocalClient(object):
                     jinfo_iter = self.get_returns_no_block(jinfo['jid'], event=event)
                 jinfo_timeout = time.time() + self.opts['gather_job_timeout']
 
-
             # check for minions that are running the job still
             for raw in jinfo_iter:
                 # if there are no more events, lets stop waiting for the jinfo
@@ -931,7 +928,7 @@ class LocalClient(object):
                 if raw['data']['id'] not in minions:
                     minions.add(raw['data']['id'])
                 # update this minion's timeout, as long as the job is still running
-                minion_timeouts[raw['data']['id']] = time.time()  + timeout
+                minion_timeouts[raw['data']['id']] = time.time() + timeout
 
             # if we have hit all minion timeouts, lets call it
             done = True
