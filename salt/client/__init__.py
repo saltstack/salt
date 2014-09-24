@@ -1203,6 +1203,8 @@ class LocalClient(object):
         if timeout is None:
             timeout = self.opts['timeout']
 
+        timeout_at = time.time() + timeout
+
         found = set()
         # Check to see if the jid is real, if not return the empty dict
         if not self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) != {}:
@@ -1213,7 +1215,7 @@ class LocalClient(object):
         # Wait for the hosts to check in
         while True:
             raw = self.event.get_event(timeout)
-            if raw is None:
+            if raw is None or time.time() > timeout_at:
                 # Timeout reached
                 break
             if 'minions' in raw.get('data', {}):
