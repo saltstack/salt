@@ -44,7 +44,7 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
                 'Accepted Keys:',
                 'minion',
                 'sub_minion',
-                'Denied Minions:',
+                'Denied Keys:',
                 'Unaccepted Keys:',
                 'Rejected Keys:'
             ]
