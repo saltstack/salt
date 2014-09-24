@@ -92,7 +92,7 @@ class EC2Test(integration.ShellCase):
 
         # create the instance
         instance = self.run_cloud('-p ec2-test {0}'.format(INSTANCE_NAME))
-        ret_str = '        {0}'.format(INSTANCE_NAME)
+        ret_str = '{0}:'.format(INSTANCE_NAME)
 
         # check if instance returned with salt installed
         try:
@@ -103,7 +103,7 @@ class EC2Test(integration.ShellCase):
 
         # delete the instance
         delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
-        ret_str = '            True'
+        ret_str = '                    shutting-down'
 
         # check if deletion was performed appropriately
         try:

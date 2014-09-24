@@ -292,10 +292,12 @@ def log_handlers(opts):
     return load.filter_func('setup_handlers')
 
 
-def ssh_wrapper(opts, functions=None):
+def ssh_wrapper(opts, functions=None, mopts=None):
     '''
     Returns the custom logging handler modules
     '''
+    if mopts is None:
+        mopts = {}
     if functions is None:
         functions = {}
     load = _create_loader(
@@ -308,6 +310,10 @@ def ssh_wrapper(opts, functions=None):
     )
     pack = {'name': '__salt__',
             'value': functions}
+    pack = [{'name': '__salt__',
+             'value': functions},
+            {'name': '__master_opts__',
+             'value': mopts}]
     return load.gen_functions(pack)
 
 
