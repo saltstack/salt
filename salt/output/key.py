@@ -21,6 +21,7 @@ def output(data):
     if __opts__['transport'] == 'zeromq':
         acc = 'minions'
         pend = 'minions_pre'
+        den = 'minions_denied'
         rej = 'minions_rejected'
     else:
         acc = 'accepted'
@@ -29,6 +30,7 @@ def output(data):
 
     cmap = {pend: color['RED'],
             acc: color['GREEN'],
+            den: color['PURPLE'],
             rej: color['BLUE'],
             'local': color['PURPLE']}
 
@@ -37,6 +39,9 @@ def output(data):
                                 color['ENDC']),
              acc: u'{0}Accepted Keys:{1}'.format(
                                 color['LIGHT_GREEN'],
+                                color['ENDC']),
+             den: u'{0}Denied Keys:{1}'.format(
+                                color['LIGHT_PURPLE'],
                                 color['ENDC']),
              rej: u'{0}Rejected Keys:{1}'.format(
                                 color['LIGHT_BLUE'],
