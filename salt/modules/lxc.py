@@ -416,7 +416,7 @@ def _get_network_conf(conf_tuples=None, **kwargs):
                 if k == 'link' and bridge:
                     v = bridge
                 v = opts.get(k, v)
-                if k in ['gateway']:
+                if k in ['gateway', 'mac']:
                     continue
                 ret.append({'lxc.network.{0}'.format(k): v})
             # gateway (in automode) must be appended following network conf !
