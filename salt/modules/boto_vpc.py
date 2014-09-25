@@ -236,6 +236,55 @@ def create_customer_gateway(vpn_connection_type, ip_address, bgp_asn, region=Non
         return False
 
 
+def create_dhcp_options(domain_name=None, domain_name_servers=None, ntp_servers=None,
+                        netbios_name_servers=None, netbios_node_type=None,
+                        region=None, key=None, keyid=None, profile=None):
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+
+    try:
+        dhcp_options = _create_dhcp_options(conn, domain_name=domain_name, domain_name_servers=domain_name_servers,
+                                            ntp_servers=ntp_servers, netbios_name_servers=netbios_name_servers,
+                                            netbios_node_type=netbios_node_type)
+        log.debug('DHCP options with id {0} were created'.format(dhcp_options.id))
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        return False
+
+
+def associate_dhcp_options_to_vpc(dhcp_options_id, vpc_id, region=None, key=None, keyid=None, profile=None):
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+    try:
+        conn.associate_dhcp_options(dhcp_options_id, vpc_id)
+        log.debug('DHCP options with id {0} were associated with VPC {1}'.format(dhcp_options_id, vpc_id))
+
+        return True
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        return False
+
+
+def associate_new_dhcp_options_to_vpc(vpc_id, domain_name=None, domain_name_servers=None, ntp_servers=None,
+                                      netbios_name_servers=None, netbios_node_type=None,
+                                      region=None, key=None, keyid=None, profile=None):
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+    try:
+        dhcp_options = _create_dhcp_options(conn, domain_name=domain_name, domain_name_servers=domain_name_servers,
+                                            ntp_servers=ntp_servers, netbios_name_servers=netbios_name_servers,
+                                            netbios_node_type=netbios_node_type)
+        conn.associate_dhcp_options(dhcp_options.id, vpc_id)
+        log.debug('DHCP options with id {0} were created and associated with VPC {1}'.format(dhcp_options.id, vpc_id))
+        return True
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        return False
+
+
 def delete(vpc_id, region=None, key=None, keyid=None, profile=None):
     '''
     Given a VPC ID, delete the VPC.
@@ -364,3 +413,10 @@ def _get_conn(region, key, keyid, profile):
                   ' make boto autoscale connection.')
         return None
     return conn
+
+
+def _create_dhcp_options(conn, domain_name=None, domain_name_servers=None, ntp_servers=None, netbios_name_servers=None,
+                         netbios_node_type=None):
+    return conn.create_dhcp_options(domain_name=domain_name, domain_name_servers=domain_name_servers,
+                                    ntp_servers=ntp_servers, netbios_name_servers=netbios_name_servers,
+                                    netbios_node_type=netbios_node_type)
