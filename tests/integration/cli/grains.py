@@ -17,9 +17,11 @@
 import integration
 
 # Import Salt Testing Libs
+from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
+
 
 class SSHGrainsTest(integration.SSHCase):
     '''
@@ -27,9 +29,16 @@ class SSHGrainsTest(integration.SSHCase):
     Depend on proper environment set by integration.SSHCase class
     '''
 
+    @skipIf(True, 'Environment not set up properly to run at this time')
     def test_grains_id(self):
         '''
-        Test salt-ssh grains id work for localhost.
+        Test salt-ssh grains id work for localhost. This test can be run
+        in a small test suite with:
+
+        .. code-block:: bash
+
+            python tests/runtests.py -C --ssh -v
+
         '''
         ret = '{\n    "localhost": "localhost"\n}\n'
         cmd = self.run_ssh("grains.get id")
@@ -37,11 +46,5 @@ class SSHGrainsTest(integration.SSHCase):
 
 
 if __name__ == '__main__':
-    '''
-    This test can be run in a small test suite with:
-
-    python tests/runtests.py -C --ssh -v
-    '''
-
     from integration import run_tests
     run_tests(SSHGrainsTest)
