@@ -14,7 +14,7 @@ import requests
 try:
     import msgpack
     HAS_MSGPACK = True
-except:
+except ImportError:
     HAS_MSGPACK = False
 try:
     import urllib3
