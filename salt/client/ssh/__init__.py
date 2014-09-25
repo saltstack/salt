@@ -698,7 +698,7 @@ class Single(object):
             result = 'An Exception occured while executing {0}: {1}'.format(self.fun, exc)
         # Mimic the json data-structure that "salt-call --local" will
         # emit (as seen in ssh_py_shim.py)
-        if 'local' in result:
+        if isinstance(result, dict) and 'local' in result:
             ret = json.dumps({'local': result['local']})
         else:
             ret = json.dumps({'local': {'return': result}})
