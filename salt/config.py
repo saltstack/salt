@@ -469,6 +469,8 @@ DEFAULT_MASTER_OPTS = {
     'ext_pillar': [],
     'pillar_version': 2,
     'pillar_opts': True,
+    ## TODO: migrating pillar_opts to False
+    
     'pillar_source_merging_strategy': 'smart',
     'ping_on_key_rotate': False,
     'peer': {},
