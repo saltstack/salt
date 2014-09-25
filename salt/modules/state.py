@@ -1074,13 +1074,27 @@ def _disabled(funs):
     _disabled = __salt__['grains.get']('state_runs_disabled')
     for state in funs:
         for _state in _disabled:
-            if _state == state:
-                err = (
-                    'The state or state function "{0}" is currently disabled, '
-                    'to re-enable, run state.enable {0}.'
-                ).format(
-                    _state,
-                )
-                ret.append(err)
-                continue
+            if '.*' in _state:
+                target_state = _state.split('.')[0]
+                target_state = target_state + '.' if not target_state.endswith('.') else target_state
+                if state.startswith(target_state):
+                    err = (
+                        'The state file "{0}" is currently disabled by "{1}", '
+                        'to re-enable, run state.enable {1}.'
+                    ).format(
+                        state,
+                        _state,
+                    )
+                    ret.append(err)
+                    continue
+            else:
+                if _state == state:
+                    err = (
+                        'The state file "{0}" is currently disabled, '
+                        'to re-enable, run state.enable {0}.'
+                    ).format(
+                        _state,
+                    )
+                    ret.append(err)
+                    continue
     return ret
