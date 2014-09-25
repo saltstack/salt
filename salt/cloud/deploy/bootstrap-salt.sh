@@ -774,6 +774,10 @@ __gather_linux_system_info() {
                 rv="$(__unquote_string "$(grep '^VERSION_ID=' /etc/os-release | sed -e 's/^VERSION_ID=\(.*\)$/\1/g')")"
                 [ "${rv}" != "" ] && v=$(__parse_version_string "$rv") || v=""
                 case $(echo "${nn}" | tr '[:upper:]' '[:lower:]') in
+                    amzn        )
+                        # Amazon AMI's after 2014.9 match here
+                        n="Amazon Linux AMI"
+                        ;;
                     arch        )
                         n="Arch Linux"
                         v=""  # Arch Linux does not provide a version.
