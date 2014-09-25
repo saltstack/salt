@@ -21,6 +21,7 @@ from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
 
+
 class SSHGrainsTest(integration.SSHCase):
     '''
     Test salt-ssh grains functionality
@@ -37,11 +38,5 @@ class SSHGrainsTest(integration.SSHCase):
 
 
 if __name__ == '__main__':
-    '''
-    This test can be run in a small test suite with:
-
-    python tests/runtests.py -C --ssh -v
-    '''
-
     from integration import run_tests
     run_tests(SSHGrainsTest)
