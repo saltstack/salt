@@ -74,8 +74,8 @@ class RAETChannel(Channel):
     def __init__(self, opts, **kwargs):
         self.opts = opts
         self.ttype = 'raet'
-        self.dst = ('master', None, 'remote_cmd') # minion to master comms
-        #self.dst = (None, None, 'remote_cmd')
+        # assign dst estate in return route for minion to master comms
+        self.dst = (self.opts.get('master_name', None), None, 'remote_cmd')
         self.stack = None
 
     def _setup_stack(self):

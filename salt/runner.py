@@ -132,7 +132,8 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         #        )
         sreq = salt.transport.Channel.factory(self.opts, crypt='clear')
         if self.opts['transport'] == 'raet':
-            sreq.dst = (None, None, 'local_cmd')
+            # in this case sreq is the raet route dict
+            sreq.dst = (None, None, 'local_cmd') # override destination
         ret = sreq.send(load)
         if isinstance(ret, collections.Mapping):
             if 'error' in ret:

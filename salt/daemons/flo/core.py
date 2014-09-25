@@ -964,8 +964,8 @@ class NixExecutor(ioflo.base.deeding.Deed):
 
     def _setup_jobber_stack(self):
         '''
-        Setup and return the LaneStack and Yard used by the jobber to communicate to-from
-        the minion
+        Setup and return the LaneStack and Yard used by the jobber yard
+        to communicate with the minion manor yard
 
         '''
         mid = self.opts['id']
@@ -977,6 +977,7 @@ class NixExecutor(ioflo.base.deeding.Deed):
                 sockdirpath=self.opts['sock_dir'])
 
         stack.Pk = raeting.packKinds.pack
+        # add remote for the manor yard
         stack.addRemote(RemoteYard(stack=stack,
                                    name='manor',
                                    lanename=mid,
@@ -1008,6 +1009,11 @@ class NixExecutor(ioflo.base.deeding.Deed):
         '''
         Pull the queue for functions to execute
         '''
+        if self.udp_stack.value.remotes:
+            # assigne master_name opt so any RAETChannel clients can correctly
+            # assign dst estate in return route
+            self.opts['master_name'] = self.udp_stack.value.remotes.values()[0].name
+
         while self.fun.value:
             exchange = self.fun.value.popleft()
             data = exchange.get('pub')
@@ -1028,6 +1034,7 @@ class NixExecutor(ioflo.base.deeding.Deed):
                         'Executing command {0[fun]} with jid {0[jid]}'.format(data)
                         )
             log.debug('Command details {0}'.format(data))
+
             process = multiprocessing.Process(
                     target=self.proc_run,
                     kwargs={'exchange': exchange}
