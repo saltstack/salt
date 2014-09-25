@@ -374,6 +374,8 @@ master configuration.
 To disable the master config from being added to the pillar set ``pillar_opts``
 to ``False``:
 
+### depericated moving to default to true
+
 .. code-block:: yaml
 
     pillar_opts: False
