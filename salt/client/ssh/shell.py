@@ -84,8 +84,11 @@ class Shell(object):
         '''
         options = [
                    'KbdInteractiveAuthentication=no',
-                   'PasswordAuthentication=no',
                    ]
+        if self.passwd:
+            options.append('PasswordAuthentication=yes')
+        else:
+            options.append('PasswordAuthentication=no')
         if self.opts['_ssh_version'] > '4.9':
             options.append('GSSAPIAuthentication=no')
         options.append('ConnectTimeout={0}'.format(self.timeout))
