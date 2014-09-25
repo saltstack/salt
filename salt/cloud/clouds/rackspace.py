@@ -120,31 +120,11 @@ def get_conn():
         search_global=False,
         default=False
     )
-    compute_region = config.get_cloud_config_value(
-        'compute_region',
-        get_configured_provider(),
-        __opts__,
-        search_global=False,
-        default='DFW'
-    ).upper()
     if force_first_gen:
         log.info('Rackspace driver will only have access to first-gen images')
-        driver = get_driver(Provider.RACKSPACE)
+        driver = get_driver(Provider.RACKSPACE_FIRST_GEN)
     else:
-        computed_provider = 'RACKSPACE_NOVA_{0}'.format(compute_region)
-        try:
-            driver = get_driver(getattr(Provider, computed_provider))
-        except AttributeError:
-            log.info(
-                'Rackspace driver will only have access to first-gen images '
-                'since it was unable to load the driver as {0}'.format(
-                    computed_provider
-                )
-            )
-            driver = get_driver(Provider.RACKSPACE)
-        except Exception:
-            # http://goo.gl/qFgY42
-            driver = get_driver(Provider.RACKSPACE)
+        driver = get_driver(Provider.RACKSPACE)
 
     return driver(
         config.get_cloud_config_value(
@@ -158,7 +138,14 @@ def get_conn():
             get_configured_provider(),
             __opts__,
             search_global=False
-        )
+        ),
+        region=config.get_cloud_config_value(
+            'compute_region',
+            get_configured_provider(),
+            __opts__,
+            search_global=False,
+            default='dfw'
+        ).lower()
     )
 
 
