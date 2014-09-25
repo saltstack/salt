@@ -921,7 +921,7 @@ def get_availability_zone(vm_):
     if avz is None:
         return None
 
-    zones = list_availability_zones()
+    zones = _list_availability_zones()
 
     # Validate user-specified AZ
     if avz not in zones.keys():
@@ -991,7 +991,7 @@ def get_spot_config(vm_):
     )
 
 
-def list_availability_zones():
+def _list_availability_zones():
     '''
     List all availability zones in the current region
     '''
