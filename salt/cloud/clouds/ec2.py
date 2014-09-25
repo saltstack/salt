@@ -1946,6 +1946,11 @@ def create(vm_=None, call=None):
         # and then fire off the request for it
         data, vm_ = request_instance(vm_, location)
 
+        # If data is a str, it's an error
+        if isinstance(data, str):
+            log.error('Error requesting instance: {0}'.format(data))
+            return {}
+
         # Pull the instance ID, valid for both spot and normal instances
 
         # Multiple instances may have been spun up, get all their IDs
