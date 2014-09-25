@@ -617,34 +617,6 @@ def show_lowstate(queue=False, **kwargs):
     return ret
 
 
-def show_state(mods, saltenv='base', queue=False, **kwargs):
-    '''
-    List out the low data that will be applied to this minion
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' state.show_lowstate
-    '''
-    conflict = _check_queue(queue, kwargs)
-    if conflict is not None:
-        assert False
-        return conflict
-    st_ = salt.state.HighState(__opts__)
-    st_.push_active()
-
-    if isinstance(mods, string_types):
-        mods = mods.split(',')
-
-    try:
-        high_, errors = st_.render_highstate({saltenv: mods})
-        ret = st_.state.compile_high_data(high_)
-    finally:
-        st_.pop_active()
-    return ret
-
-
 def sls_id(
         id_,
         mods,
