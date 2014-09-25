@@ -33,7 +33,7 @@ class Channel(object):
     Factory class to create communication-channels for different transport
     '''
     @staticmethod
-    def factory(opts, **kwargs):
+    def factory(opts, usage=None, **kwargs):
         # Default to ZeroMQ for now
         ttype = 'zeromq'
 
@@ -47,7 +47,7 @@ class Channel(object):
         if ttype == 'zeromq':
             return ZeroMQChannel(opts, **kwargs)
         elif ttype == 'raet':
-            return RAETChannel(opts, **kwargs)
+            return RAETChannel(opts, usage=usage, **kwargs)
         else:
             raise Exception('Channels are only defined for ZeroMQ and raet')
             # return NewKindOfChannel(opts, **kwargs)
@@ -71,11 +71,18 @@ class RAETChannel(Channel):
         The difference between the two is how the destination route
         is assigned.
     '''
-    def __init__(self, opts, **kwargs):
+    def __init__(self, opts, usage=None, **kwargs):
         self.opts = opts
         self.ttype = 'raet'
+        if usage == 'master_call':
+            self.dst = (None, None, 'local_cmd') # runner.py master_call
+        elif usage == 'salt_call':
+            self.dst = (None, None, 'call_cmd') # salt_call caller
+        else:
+            self.dst = (None, None, 'remote_cmd') # normal use case mintion to master
+
         # assign dst estate in return route for minion to master comms
-        self.dst = (self.opts.get('master_name', None), None, 'remote_cmd')
+        #self.dst = (self.opts.get('master_name', None), None, 'remote_cmd')
         self.stack = None
 
     def _setup_stack(self):

@@ -821,6 +821,23 @@ class Router(ioflo.base.deeding.Deed):
             self.event_req.value.append(msg)
         elif d_share == 'event_fire':
             self.event.value.append(msg)
+        elif d_share == 'remote_cmd': # assume must be minion to master
+            if not self.udp_stack.value.remotes:
+                log.error("Missing joined master. Unable to route "
+                          "remote_cmd '{0}'.".format(msg))
+            d_estate = self.udp_stack.value.remotes.values()[0].name
+            msg['route']['dst'] = (d_estate, d_yard, d_share)
+            self.udp_stack.value.message(msg,
+                    self.udp_stack.value.nameRemotes[d_estate].uid)
+        elif d_share == 'call_cmd': # salt call minion to master
+            if not self.udp_stack.value.remotes:
+                log.error("Missing joined master. Unable to route "
+                          "call_cmd '{0}'.".format(msg))
+            d_estate = self.udp_stack.value.remotes.values()[0].name
+            d_share = 'remote_cmd'
+            msg['route']['dst'] = (d_estate, d_yard, d_share)
+            self.udp_stack.value.message(msg,
+                    self.udp_stack.value.nameRemotes[d_estate].uid)
 
     def action(self):
         '''
@@ -1009,11 +1026,6 @@ class NixExecutor(ioflo.base.deeding.Deed):
         '''
         Pull the queue for functions to execute
         '''
-        if self.udp_stack.value.remotes:
-            # assigne master_name opt so any RAETChannel clients can correctly
-            # assign dst estate in return route
-            self.opts['master_name'] = self.udp_stack.value.remotes.values()[0].name
-
         while self.fun.value:
             exchange = self.fun.value.popleft()
             data = exchange.get('pub')

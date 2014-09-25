@@ -130,10 +130,10 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         # sreq = salt.payload.SREQ(
         #         'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
         #        )
-        sreq = salt.transport.Channel.factory(self.opts, crypt='clear')
-        if self.opts['transport'] == 'raet':
+        sreq = salt.transport.Channel.factory(self.opts, crypt='clear', usage='local_cmd')
+        #if self.opts['transport'] == 'raet':
             # in this case sreq is the raet route dict
-            sreq.dst = (None, None, 'local_cmd') # override destination
+            # sreq.dst = (None, None, 'local_cmd') # override destination
         ret = sreq.send(load)
         if isinstance(ret, collections.Mapping):
             if 'error' in ret:
