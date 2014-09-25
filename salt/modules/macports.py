@@ -352,7 +352,7 @@ def refresh_db():
     __salt__['cmd.run_all']('port selfupdate', output_loglevel='trace')
 
 
-def upgrade(refresh=True):
+def upgrade():
     '''
     Run a full upgrade using MacPorts 'port upgrade outdated'
 
