@@ -502,6 +502,8 @@
 # master config file that can then be used on minions.
 #pillar_opts: True
 
+## TODO: migrating to False
+
 
 #####          Syndic settings       #####
 ##########################################
