@@ -489,7 +489,6 @@ class MasterEvent(SaltEvent):
     '''
     def __init__(self, sock_dir):
         super(MasterEvent, self).__init__('master', sock_dir)
-        self.connect_pub()
 
 
 class LocalClientEvent(MasterEvent):
@@ -728,7 +727,7 @@ class ReactWrap(object):
         '''
         if 'runner' not in self.client_cache:
             self.client_cache['runner'] = salt.runner.RunnerClient(self.opts)
-        return self.client_cache['runner'].async(fun, kwargs)
+        return self.client_cache['runner'].async(fun, kwargs, fire_event=False)
 
     def wheel(self, fun, **kwargs):
         '''
@@ -736,7 +735,7 @@ class ReactWrap(object):
         '''
         if 'wheel' not in self.client_cache:
             self.client_cache['wheel'] = salt.wheel.Wheel(self.opts)
-        return self.client_cache['wheel'].call_func(fun, **kwargs)
+        return self.client_cache['wheel'].async(fun, kwargs, fire_event=False)
 
 
 class StateFire(object):

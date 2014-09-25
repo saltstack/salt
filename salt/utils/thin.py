@@ -10,8 +10,12 @@ import tarfile
 # Import third party libs
 import jinja2
 import yaml
-import msgpack
 import requests
+try:
+    import msgpack
+    HAS_MSGPACK = True
+except ImportError:
+    HAS_MSGPACK = False
 try:
     import urllib3
     HAS_URLLIB3 = True
@@ -92,9 +96,10 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods=''):
             os.path.dirname(salt.__file__),
             os.path.dirname(jinja2.__file__),
             os.path.dirname(yaml.__file__),
-            os.path.dirname(msgpack.__file__),
             os.path.dirname(requests.__file__)
             ]
+    if HAS_MSGPACK:
+        tops.append(os.path.dirname(msgpack.__file__))
 
     if HAS_URLLIB3:
         tops.append(os.path.dirname(urllib3.__file__))

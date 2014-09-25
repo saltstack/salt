@@ -61,6 +61,20 @@ The network port to set up the publication interface
 
     publish_port: 4505
 
+.. conf_master:: master_id
+
+``master_id``
+----------------
+
+Default: ``None``
+
+The id to be passed in the publish job to minions. This is used for MultiSyndics
+to return the job to the requesting master. Note, this must be the same string
+as the syndic is configured with.
+
+.. code-block:: yaml
+
+    master_id: MasterOfMaster
 
 .. conf_master:: user
 

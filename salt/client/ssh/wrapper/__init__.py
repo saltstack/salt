@@ -52,13 +52,19 @@ class FunctionWrapper(dict):
                     argv,
                     **self.kwargs
             )
-            stdout, _, _ = single.cmd_block()
+            stdout, stderr, _ = single.cmd_block()
+            if stderr.count('Permission Denied'):
+                return {'_error': 'Permission Denied',
+                        'stdout': stdout,
+                        'stderr': stderr}
             try:
                 ret = json.loads(stdout, object_hook=salt.utils.decode_dict)
                 if len(ret) < 2 and 'local' in ret:
                     ret = ret['local']
                 ret = ret.get('return', {})
             except ValueError:
-                ret = {'_error': 'Failed to return clean data:\n{0}'.format(stdout)}
+                ret = {'_error': 'Failed to return clean data',
+                       'stderr': stderr,
+                       'stdout': stdout}
             return ret
         return caller

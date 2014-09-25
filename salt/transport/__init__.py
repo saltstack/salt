@@ -80,9 +80,6 @@ class RAETChannel(Channel):
             self.dst = (None, None, 'call_cmd') # salt_call caller
         else:
             self.dst = (None, None, 'remote_cmd') # normal use case mintion to master
-
-        # assign dst estate in return route for minion to master comms
-        #self.dst = (self.opts.get('master_name', None), None, 'remote_cmd')
         self.stack = None
 
     def _setup_stack(self):

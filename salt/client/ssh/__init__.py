@@ -648,7 +648,7 @@ class Single(object):
 
             if '_error' in opts_pkg:
                 #Refresh failed
-                ret = json.dumps({'local': opts_pkg['_error']})
+                ret = json.dumps({'local': opts_pkg})
                 return ret
 
             pillar = salt.pillar.Pillar(
@@ -690,10 +690,15 @@ class Single(object):
             **self.target)
         self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper, self.opts)
         wrapper.wfuncs = self.wfuncs
-        result = self.wfuncs[self.fun](*self.args, **self.kwargs)
+        try:
+            result = self.wfuncs[self.fun](*self.args, **self.kwargs)
+        except TypeError as exc:
+            result = 'TypeError encountered executing {0}: {1}'.format(self.fun, exc)
+        except Exception as exc:
+            result = 'An Exception occured while executing {0}: {1}'.format(self.fun, exc)
         # Mimic the json data-structure that "salt-call --local" will
         # emit (as seen in ssh_py_shim.py)
-        if 'local' in result:
+        if isinstance(result, dict) and 'local' in result:
             ret = json.dumps({'local': result['local']})
         else:
             ret = json.dumps({'local': {'return': result}})
