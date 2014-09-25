@@ -74,7 +74,7 @@ class RAETChannel(Channel):
     def __init__(self, opts, **kwargs):
         self.opts = opts
         self.ttype = 'raet'
-        self.dst = ('master', None, 'remote_cmd') # minion to master comms
+        self.dst = ('master', None, 'remote_cmd')  # minion to master comms
         #self.dst = (None, None, 'remote_cmd')
         self.stack = None
 
