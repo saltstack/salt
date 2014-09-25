@@ -11,16 +11,23 @@ The FSWorker iterates over the results and filters them by filename. If
 a match is found, the file is opened and filename and data are saved in a dict.
 Once the directory is successfully traversed, all collected data is returned.
 '''
-
-import salt.utils
-import salt.payload
+# Import python libs
 import multiprocessing
 import os
 import stat
-import zmq
 from re import match as rematch
 import time
 import sys
+
+# Import salt libs
+import salt.utils
+import salt.payload
+
+# Import third party libs
+try:
+    import zmq
+except ImportError:
+    pass
 
 # try importing psutil to set ionice-ness
 try:
