@@ -11,6 +11,7 @@ Example configuration:
       - file_tree:
           root_dir: /path/to/root/directory
           follow_dir_links: False
+          raw_data: False
 
 The ``root_dir`` parameter is required and points to the directory where files
 for each host are stored. The ``follow_dir_links`` paramater is optional
@@ -18,6 +19,10 @@ and defaults to False. If ``follow_dir_links`` is set to True, file_tree will
 follow symbolic links to other directories. Be careful when using
 ``follow_dir_links``, the current implementation is dumb and will run into
 infinite recursion if a recursive symlink chain exists in the root_dir!
+
+If ``raw_data`` is set to True, it will revert the behavior of the python
+open() function, which adds a line break character at the end of the file,
+in this case, the pillar data.
 
 To fill pillar data for each host, file_tree recursively iterates over
 ``root_dir``/hosts/``id`` (where ``id`` is a minion ID), and constructs
