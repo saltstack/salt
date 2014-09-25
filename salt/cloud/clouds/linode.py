@@ -162,7 +162,7 @@ def get_ssh_key_filename(vm_):
         default=config.get_cloud_config_value(
             'ssh_pubkey', vm_, __opts__, search_global=False
         ), search_global=False)
-    if exists(expanduser(key_filename)):
+    if key_filename is not None and exists(expanduser(key_filename)):
         return expanduser(key_filename)
     return None
 
