@@ -2262,11 +2262,11 @@ class MultiSyndic(MinionBase):
                 if socks.get(self.local.event.sub) == zmq.POLLIN:
                     self._process_event_socket()
 
-                if self.event_forward_timeout is not None and \
-                        self.event_forward_timeout < time.time():
+                if (self.event_forward_timeout is not None and
+                    self.event_forward_timeout < time.time()):
                     self._forward_events()
             # We don't handle ZMQErrors like the other minions
-            # I've put explicit handling around the receive calls
+            # I've put explicit handling around the recieve calls
             # in the process_*_socket methods. If we see any other
             # errors they may need some kind of handling so log them
             # for now.

@@ -295,7 +295,6 @@ class Master(SMaster):
 
         self.__set_max_open_files()
         process_manager = salt.utils.process.ProcessManager()
-
         process_manager.add_process(self._clear_old_jobs)
 
         process_manager.add_process(Publisher, args=(self.opts,))
@@ -2334,7 +2333,6 @@ class ClearFuncs(object):
             load['master_id'] = self.opts['master_id']
         elif 'master_id' in extra:
             load['master_id'] = extra['master_id']
-
         # Only add the delimiter to the pub data if it is non-default
         if delimiter != DEFAULT_TARGET_DELIM:
             load['delimiter'] = delimiter
