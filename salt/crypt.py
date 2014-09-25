@@ -650,7 +650,7 @@ class Auth(object):
             if safe:
                 log.warning('SaltReqTimeoutError: {0}'.format(e))
                 return 'retry'
-            raise SaltClientError('Failed sign in')
+            raise SaltClientError('Attempt to authenticate with the salt master failed')
 
         if 'load' in payload:
             if 'ret' in payload['load']:
