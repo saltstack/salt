@@ -9,7 +9,6 @@ import os
 import re
 import time
 import errno
-import signal
 import shutil
 import logging
 import hashlib
@@ -42,8 +41,8 @@ import salt.utils.event
 import salt.utils.verify
 import salt.utils.minions
 import salt.utils.gzip_util
+import salt.utils.process
 from salt.utils.debug import enable_sigusr1_handler, enable_sigusr2_handler, inspect_stack
-from salt.exceptions import MasterExit
 from salt.utils.event import tagify
 import binascii
 
@@ -62,36 +61,6 @@ except ImportError:
 
 
 log = logging.getLogger(__name__)
-
-
-def clean_proc(proc, wait_for_kill=10):
-    '''
-    Generic method for cleaning up multiprocessing procs
-
-    :param multiprocessing.Process proc: A salt-master process
-    :param int wait_for_kill: The number of deciseconds to wait before forcibly terminating the process
-    '''
-    # NoneType and other fun stuff need not apply
-    if not proc:
-        return
-    try:
-        waited = 0
-        while proc.is_alive():
-            proc.terminate()
-            waited += 1
-            time.sleep(0.1)
-            if proc.is_alive() and (waited >= wait_for_kill):
-                log.error(
-                    'Process did not die with terminate(): {0}'.format(
-                        proc.pid
-                    )
-                )
-                os.kill(proc.pid, signal.SIGKILL)
-    except (AssertionError, AttributeError):
-        # Catch AssertionError when the proc is evaluated inside the child
-        # Catch AttributeError when the process dies between proc.is_alive()
-        # and proc.terminate() and turns into a NoneType
-        pass
 
 
 class SMaster(object):
@@ -157,6 +126,9 @@ class Master(SMaster):
         controller for the Salt master. This is where any data that needs to
         be cleanly maintained from the master is maintained.
         '''
+        # TODO: move to a seperate class, with a better name
+        salt.utils.appendproctitle('_clear_old_jobs')
+
         # Set up search object
         search = salt.search.Search(self.opts)
         # Make Start Times
@@ -319,50 +291,39 @@ class Master(SMaster):
         enable_sigusr2_handler()
 
         self.__set_max_open_files()
-        clear_old_jobs_proc = multiprocessing.Process(
-            target=self._clear_old_jobs)
-        clear_old_jobs_proc.start()
-        reqserv = ReqServer(
-            self.opts,
-            self.crypticle,
-            self.key,
-            self.master_key)
-        reqserv.start_publisher()
-        reqserv.start_event_publisher()
-        reqserv.start_reactor()
-        reqserv.start_halite()
 
-        def sigterm_clean(signum, frame):
-            '''
-            Cleaner method for stopping multiprocessing processes when a
-            SIGTERM is encountered.  This is required when running a salt
-            master under a process minder like daemontools.
+        process_manager = salt.utils.process.ProcessManager()
 
-            :param int signum: The signal number to sent to the salt-master process
-            '''
-            log.warn(
-                'Caught signal {0}, stopping the Salt Master'.format(
-                    signum
-                )
-            )
-            clean_proc(clear_old_jobs_proc)
-            clean_proc(reqserv.publisher)
-            clean_proc(reqserv.eventpublisher)
-            if hasattr(reqserv, 'halite'):
-                clean_proc(reqserv.halite)
-            if hasattr(reqserv, 'reactor'):
-                clean_proc(reqserv.reactor)
-            for proc in reqserv.work_procs:
-                clean_proc(proc)
-            raise MasterExit
+        process_manager.add_process(self._clear_old_jobs)
 
-        signal.signal(signal.SIGTERM, sigterm_clean)
+        process_manager.add_process(Publisher, args=(self.opts,))
+        process_manager.add_process(salt.utils.event.EventPublisher, args=(self.opts,))
 
-        try:
+        if self.opts.get('reactor'):
+            process_manager.add_process(salt.utils.event.Reactor, args=(self.opts,))
+
+        if HAS_HALITE and 'halite' in self.opts:
+            log.info('Halite: Starting up ...')
+            process_manager.add_process(Halite, args=(self.opts['halite'],))
+        elif 'halite' in self.opts:
+            log.info('Halite: Not configured, skipping.')
+        else:
+            log.debug('Halite: Unavailable.')
+
+        def run_reqserver():
+            reqserv = ReqServer(
+                self.opts,
+                self.crypticle,
+                self.key,
+                self.master_key)
             reqserv.run()
+        process_manager.add_process(run_reqserver)
+        try:
+            process_manager.run()
         except KeyboardInterrupt:
             # Shut the master down gracefully on SIGINT
             log.warn('Stopping the Salt Master')
+            process_manager.kill_children()
             raise SystemExit('\nExiting on Ctrl-c')
 
 
@@ -499,6 +460,12 @@ class ReqServer(object):
         '''
         self.opts = opts
         self.master_key = mkey
+        # Prepare the AES key
+        self.key = key
+        self.crypticle = crypticle
+
+    def zmq_device(self):
+        salt.utils.appendproctitle('MWorkerQueue')
         self.context = zmq.Context(self.opts['worker_threads'])
         # Prepare the zeromq sockets
         self.uri = 'tcp://{interface}:{ret_port}'.format(**self.opts)
@@ -517,35 +484,9 @@ class ReqServer(object):
         self.w_uri = 'ipc://{0}'.format(
             os.path.join(self.opts['sock_dir'], 'workers.ipc')
         )
-        # Prepare the AES key
-        self.key = key
-        self.crypticle = crypticle
 
-    def __bind(self):
-        '''
-        Binds the reply server
-        '''
-        dfn = os.path.join(self.opts['cachedir'], '.dfn')
-        if os.path.isfile(dfn):
-            try:
-                os.remove(dfn)
-            except os.error:
-                pass
         log.info('Setting up the master communication server')
         self.clients.bind(self.uri)
-        self.work_procs = []
-
-        for ind in range(int(self.opts['worker_threads'])):
-            self.work_procs.append(MWorker(self.opts,
-                                           self.master_key,
-                                           self.key,
-                                           self.crypticle,
-                                           )
-                                   )
-
-        for ind, proc in enumerate(self.work_procs):
-            log.info('Starting Salt worker process {0}'.format(ind))
-            proc.start()
 
         self.workers.bind(self.w_uri)
 
@@ -564,42 +505,30 @@ class ReqServer(object):
                     continue
                 raise exc
 
-    def start_publisher(self):
+    def __bind(self):
         '''
-        Start the salt publisher interface
+        Binds the reply server
         '''
-        # Start the publisher
-        self.publisher = Publisher(self.opts)
-        self.publisher.start()
+        dfn = os.path.join(self.opts['cachedir'], '.dfn')
+        if os.path.isfile(dfn):
+            try:
+                os.remove(dfn)
+            except os.error:
+                pass
+        self.process_manager = salt.utils.process.ProcessManager(name='ReqServer_ProcessManager')
 
-    def start_event_publisher(self):
-        '''
-        Start the salt publisher interface
-        '''
-        # Start the publisher
-        self.eventpublisher = salt.utils.event.EventPublisher(self.opts)
-        self.eventpublisher.start()
+        for ind in range(int(self.opts['worker_threads'])):
+            self.process_manager.add_process(MWorker,
+                                             args=(self.opts,
+                                                   self.master_key,
+                                                   self.key,
+                                                   self.crypticle,
+                                                   ),
+                                             )
+        self.process_manager.add_process(self.zmq_device)
 
-    def start_reactor(self):
-        '''
-        Start the reactor, but only if the reactor interface is configured
-        '''
-        if self.opts.get('reactor'):
-            self.reactor = salt.utils.event.Reactor(self.opts)
-            self.reactor.start()
-
-    def start_halite(self):
-        '''
-        If halite is configured and installed, fire it up!
-        '''
-        if HAS_HALITE and 'halite' in self.opts:
-            log.info('Halite: Starting up ...')
-            self.halite = Halite(self.opts['halite'])
-            self.halite.start()
-        elif 'halite' in self.opts:
-            log.info('Halite: Not configured, skipping.')
-        else:
-            log.debug('Halite: Unavailable.')
+        # start zmq device
+        self.process_manager.run()
 
     def run(self):
         '''
@@ -608,18 +537,16 @@ class ReqServer(object):
         self.__bind()
 
     def destroy(self):
-        if self.clients.closed is False:
+        if hasattr(self, 'clients') and self.clients.closed is False:
             self.clients.setsockopt(zmq.LINGER, 1)
             self.clients.close()
-        if self.workers.closed is False:
+        if hasattr(self, 'workers') and self.workers.closed is False:
             self.workers.setsockopt(zmq.LINGER, 1)
             self.workers.close()
-        if self.context.closed is False:
+        if hasattr(self, 'context') and self.context.closed is False:
             self.context.term()
         # Also stop the workers
-        for worker in self.work_procs:
-            if worker.is_alive() is True:
-                worker.terminate()
+        self.process_manager.kill_children()
 
     def __del__(self):
         self.destroy()
@@ -2390,6 +2317,11 @@ class ClearFuncs(object):
             'jid': clear_load['jid'],
             'ret': clear_load['ret'],
         }
+        # if you specified a master id, lets put that in the load
+        if 'master_id' in self.opts:
+            load['master_id'] = self.opts['master_id']
+        elif 'master_id' in extra:
+            load['master_id'] = extra['master_id']
 
         if 'id' in extra:
             load['id'] = extra['id']
