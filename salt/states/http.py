@@ -59,11 +59,11 @@ def query(name, match=None, match_type='string', status=None, **kwargs):
 
     if status is not None:
         if data['status'] == status:
-            ret['comment'] += 'Status {0} was found, as speficied'.format(status)
+            ret['comment'] += 'Status {0} was found, as specified'.format(status)
             if ret['result'] is None:
                 ret['result'] = True
         else:
-            ret['comment'] += 'Status {0} was not found, as speficied'.format(status)
+            ret['comment'] += 'Status {0} was not found, as specified'.format(status)
             ret['result'] = False
 
     if __opts__['test'] and ret['result'] is True:
