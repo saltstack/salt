@@ -2,18 +2,26 @@
 '''
 Classes for salts filesystem cache for larger installations.
 '''
-import salt.utils
-import salt.config
-import multiprocessing
-import zmq
+# Import Python libs
 import time
 import os
-from salt.caches.fsworker import FSWorker
 from threading import Thread, Event
+import multiprocessing
 import signal
 import logging
+
+# Import salt libs
+import salt.utils
+import salt.config
+from salt.caches.fsworker import FSWorker
 import salt.log
 
+# Import third party libs
+try:
+    import zmq
+    HAS_ZMQ = True
+except ImportError:
+    HAS_ZMQ = False
 log = logging.getLogger(__name__)
 
 
