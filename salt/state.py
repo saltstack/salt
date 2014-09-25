@@ -1953,6 +1953,34 @@ class State(object):
             return errors
         # Compile and verify the raw chunks
         chunks = self.compile_high_data(high)
+
+        # Check for any disabled states
+        disabled = {}
+        if 'state_runs_disabled' in self.opts['grains']:
+            _chunks = copy.deepcopy(chunks)
+            __run_num = 0
+            for low in _chunks:
+                state_ = '{0}.{1}'.format(low['state'], low['fun'])
+                for pat in self.opts['grains']['state_runs_disabled']:
+                    if fnmatch.fnmatch(state_, pat):
+                        comment = (
+                                    'The state function "{0}" is currently disabled by "{1}", '
+                                    'to re-enable, run state.enable {1}.'
+                                  ).format(
+                                    state_,
+                                    pat,
+                                  )
+                        _tag = _gen_tag(low)
+                        disabled[_tag] = {'changes': {},
+                                          'result': False,
+                                          'comment': comment,
+                                          '__run_num__': __run_num,
+                                          '__sls__': low['__sls__']}
+                        __run_num += 1
+                        break
+            if disabled:
+                return disabled
+
         # If there are extensions in the highstate, process them and update
         # the low data chunks
         if errors:

@@ -290,16 +290,6 @@ def highstate(test=None,
         }
         return ret
 
-    low_data_ = show_lowstate()
-    lows_ = []
-    for item in low_data_:
-        lows_.append('{0}.{1}'.format(item['state'], item['fun']))
-
-    disabled = _disabled(lows_)
-    if disabled:
-        __context__['retcode'] = 1
-        return disabled
-
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
@@ -471,15 +461,6 @@ def sls(mods,
     st_.push_active()
     try:
         high_, errors = st_.render_highstate({saltenv: mods})
-        high_data_ = st_.state.compile_high_data(high_)
-        highs_ = []
-        for item in high_data_:
-            highs_.append('{0}.{1}'.format(item['state'], item['fun']))
-
-        disabled = _disabled(highs_)
-        if disabled:
-            __context__['retcode'] = 1
-            return disabled
 
         if errors:
             __context__['retcode'] = 1
@@ -1121,28 +1102,13 @@ def _disabled(funs):
     _disabled = __salt__['grains.get']('state_runs_disabled')
     for state in funs:
         for _state in _disabled:
-            if '.*' in _state:
-                target_state = _state.split('.')[0]
-                target_state = target_state + '.' if not target_state.endswith('.') else target_state
-                if state.startswith(target_state):
-                    err = (
-                        'The state or state function "{0}" is currently disabled by "{1}", '
-                        'to re-enable, run state.enable {1}.'
-                    ).format(
-                        state,
-                        _state,
-                    )
-                    ret.append(err)
-                    continue
-            else:
-                log.debug('state {0} _state {1}'.format(state, _state))
-                if _state == state:
-                    err = (
-                        'The state or state function "{0}" is currently disabled, '
-                        'to re-enable, run state.enable {0}.'
-                    ).format(
-                        _state,
-                    )
-                    ret.append(err)
-                    continue
+            if _state == state:
+                err = (
+                    'The state or state function "{0}" is currently disabled, '
+                    'to re-enable, run state.enable {0}.'
+                ).format(
+                    _state,
+                )
+                ret.append(err)
+                continue
     return ret
