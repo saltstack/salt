@@ -2506,7 +2506,10 @@ class BaseHighState(object):
                                             ', '.join(resolved_envs))
                         log.critical(msg)
                         errors.append(msg)
-                self._handle_iorder(state)
+                try:
+                    self._handle_iorder(state)
+                except TypeError:
+                    log.critical('Could not render SLS {0}. Syntax error detected.'.format(sls))
         else:
             state = {}
         return state, errors
