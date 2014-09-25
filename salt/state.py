@@ -1958,7 +1958,6 @@ class State(object):
         disabled = {}
         if 'state_runs_disabled' in self.opts['grains']:
             _chunks = copy.deepcopy(chunks)
-            __run_num = 0
             for low in _chunks:
                 state_ = '{0}.{1}'.format(low['state'], low['fun'])
                 for pat in self.opts['grains']['state_runs_disabled']:
@@ -1974,18 +1973,17 @@ class State(object):
                         disabled[_tag] = {'changes': {},
                                           'result': False,
                                           'comment': comment,
-                                          '__run_num__': __run_num,
+                                          '__run_num__': self.__run_num,
                                           '__sls__': low['__sls__']}
-                        __run_num += 1
+                        self.__run_num += 1
+                        chunks.remove(low)
                         break
-            if disabled:
-                return disabled
 
         # If there are extensions in the highstate, process them and update
         # the low data chunks
         if errors:
             return errors
-        ret = self.call_chunks(chunks)
+        ret = dict(disabled.items() + self.call_chunks(chunks).items())
         ret = self.call_listen(chunks, ret)
         return ret
 
