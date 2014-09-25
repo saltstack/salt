@@ -1,9 +1,18 @@
 # -*- coding: utf-8 -*-
-import time
-import salt.config
-import zmq
-import salt.payload
+# Import Python libs
 import os
+import time
+
+# Import salt libs
+import salt.config
+import salt.payload
+
+# Import third party libs
+try:
+    import zmq
+    HAS_ZMQ = True
+except ImportError:
+    HAS_ZMQ = False
 
 
 class CacheDict(dict):
