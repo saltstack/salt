@@ -88,7 +88,7 @@ class Shell(object):
         if self.passwd:
             options.append('PasswordAuthentication=yes')
         else:
-            option.append('PasswordAuthentication=no')
+            options.append('PasswordAuthentication=no')
         if self.opts['_ssh_version'] > '4.9':
             options.append('GSSAPIAuthentication=no')
         options.append('ConnectTimeout={0}'.format(self.timeout))
