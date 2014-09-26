@@ -821,7 +821,7 @@ class Router(ioflo.base.deeding.Deed):
             self.event_req.value.append(msg)
         elif d_share == 'event_fire':
             self.event.value.append(msg)
-        elif d_share == 'remote_cmd': # assume must be minion to master
+        elif d_share == 'remote_cmd':  # assume must be minion to master
             if not self.udp_stack.value.remotes:
                 log.error("Missing joined master. Unable to route "
                           "remote_cmd '{0}'.".format(msg))
@@ -829,7 +829,7 @@ class Router(ioflo.base.deeding.Deed):
             msg['route']['dst'] = (d_estate, d_yard, d_share)
             self.udp_stack.value.message(msg,
                     self.udp_stack.value.nameRemotes[d_estate].uid)
-        elif d_share == 'call_cmd': # salt call minion to master
+        elif d_share == 'call_cmd':  # salt call minion to master
             if not self.udp_stack.value.remotes:
                 log.error("Missing joined master. Unable to route "
                           "call_cmd '{0}'.".format(msg))
