@@ -55,7 +55,6 @@ def output(data):
                 rej: color['BLUE'],
                 'local': color['PURPLE']}
 
-
         trans = {pend: u'{0}Unaccepted Keys:{1}'.format(
                                     color['LIGHT_RED'],
                                     color['ENDC']),
