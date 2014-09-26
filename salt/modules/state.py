@@ -461,15 +461,6 @@ def sls(mods,
     st_.push_active()
     try:
         high_, errors = st_.render_highstate({saltenv: mods})
-        lowstate_ = show_lowstate()
-        lows_ = []
-        for item in lowstate_:
-            lows_.append('{0}.{1}'.format(item['state'], item['fun']))
-
-        disabled = _disabled(lows_)
-        if disabled:
-            __context__['retcode'] = 1
-            return disabled
 
         if errors:
             __context__['retcode'] = 1
@@ -1088,7 +1079,7 @@ def _disabled(funs):
                 target_state = target_state + '.' if not target_state.endswith('.') else target_state
                 if state.startswith(target_state):
                     err = (
-                        'The state or state function "{0}" is currently disabled by "{1}", '
+                        'The state file "{0}" is currently disabled by "{1}", '
                         'to re-enable, run state.enable {1}.'
                     ).format(
                         state,
@@ -1097,10 +1088,9 @@ def _disabled(funs):
                     ret.append(err)
                     continue
             else:
-                log.debug('state {0} _state {1}'.format(state, _state))
                 if _state == state:
                     err = (
-                        'The state or state function "{0}" is currently disabled, '
+                        'The state file "{0}" is currently disabled, '
                         'to re-enable, run state.enable {0}.'
                     ).format(
                         _state,
