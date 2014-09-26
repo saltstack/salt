@@ -33,7 +33,7 @@ class Channel(object):
     Factory class to create communication-channels for different transport
     '''
     @staticmethod
-    def factory(opts, usage=None, **kwargs):
+    def factory(opts, **kwargs):
         # Default to ZeroMQ for now
         ttype = 'zeromq'
 
@@ -47,7 +47,7 @@ class Channel(object):
         if ttype == 'zeromq':
             return ZeroMQChannel(opts, **kwargs)
         elif ttype == 'raet':
-            return RAETChannel(opts, usage=usage, **kwargs)
+            return RAETChannel(opts, **kwargs)
         else:
             raise Exception('Channels are only defined for ZeroMQ and raet')
             # return NewKindOfChannel(opts, **kwargs)
