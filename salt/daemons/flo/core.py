@@ -821,6 +821,23 @@ class Router(ioflo.base.deeding.Deed):
             self.event_req.value.append(msg)
         elif d_share == 'event_fire':
             self.event.value.append(msg)
+        elif d_share == 'remote_cmd':  # assume must be minion to master
+            if not self.udp_stack.value.remotes:
+                log.error("Missing joined master. Unable to route "
+                          "remote_cmd '{0}'.".format(msg))
+            d_estate = self.udp_stack.value.remotes.values()[0].name
+            msg['route']['dst'] = (d_estate, d_yard, d_share)
+            self.udp_stack.value.message(msg,
+                    self.udp_stack.value.nameRemotes[d_estate].uid)
+        elif d_share == 'call_cmd':  # salt call minion to master
+            if not self.udp_stack.value.remotes:
+                log.error("Missing joined master. Unable to route "
+                          "call_cmd '{0}'.".format(msg))
+            d_estate = self.udp_stack.value.remotes.values()[0].name
+            d_share = 'remote_cmd'
+            msg['route']['dst'] = (d_estate, d_yard, d_share)
+            self.udp_stack.value.message(msg,
+                    self.udp_stack.value.nameRemotes[d_estate].uid)
 
     def action(self):
         '''
@@ -964,8 +981,8 @@ class NixExecutor(ioflo.base.deeding.Deed):
 
     def _setup_jobber_stack(self):
         '''
-        Setup and return the LaneStack and Yard used by the jobber to communicate to-from
-        the minion
+        Setup and return the LaneStack and Yard used by the jobber yard
+        to communicate with the minion manor yard
 
         '''
         mid = self.opts['id']
@@ -977,6 +994,7 @@ class NixExecutor(ioflo.base.deeding.Deed):
                 sockdirpath=self.opts['sock_dir'])
 
         stack.Pk = raeting.packKinds.pack
+        # add remote for the manor yard
         stack.addRemote(RemoteYard(stack=stack,
                                    name='manor',
                                    lanename=mid,
@@ -1028,6 +1046,7 @@ class NixExecutor(ioflo.base.deeding.Deed):
                         'Executing command {0[fun]} with jid {0[jid]}'.format(data)
                         )
             log.debug('Command details {0}'.format(data))
+
             process = multiprocessing.Process(
                     target=self.proc_run,
                     kwargs={'exchange': exchange}
