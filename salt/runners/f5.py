@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-
+# -*- coding: utf-8 -*-
 '''
 Runner to provide F5 Load Balancer functionality
 
@@ -18,16 +17,15 @@ Runner to provide F5 Load Balancer functionality
             username: admin
             password: secret
 '''
+# Import salt libs
+from salt.exceptions import CommandExecutionError
 
-import salt.utils
-
+# Import third party libs
 try:
     import pycontrol.pycontrol as f5
     HAS_PYCONTROL = True
 except ImportError:
     HAS_PYCONTROL = False
-
-from salt.exceptions import CommandExecutionError
 
 
 def __virtual__():
@@ -36,13 +34,11 @@ def __virtual__():
     return True
 
 
-class F5Mgmt:
-
+class F5Mgmt(object):
     def __init__(self, lb, username, password):
         self.lb = lb
         self.username = username
         self.password = password
-
         self._connect()
 
     def _connect(self):
@@ -68,7 +64,6 @@ class F5Mgmt:
         Create a virtual server
         '''
         vs = self.bigIP.LocalLB.VirtualServer
-
         vs_def = vs.typefactory.create('Common.VirtualServerDefinition')
 
         vs_def.name = name
@@ -135,7 +130,6 @@ class F5Mgmt:
             raise Exception(
                 'Unable to create `{0}` virtual server\n\n{1}'.format(name, e)
             )
-
         return True
 
     def create_pool(self, name, method='ROUND_ROBIN'):
@@ -161,7 +155,6 @@ class F5Mgmt:
                 )
         else:
             raise Exception('Unsupported method')
-
         return True
 
     def add_pool_member(self, name, port, pool_name):
@@ -196,7 +189,6 @@ class F5Mgmt:
                                                              pool_name,
                                                              e)
             )
-
         return True
 
     def check_pool(self, name):
@@ -204,11 +196,9 @@ class F5Mgmt:
         Check to see if a pool exists
         '''
         pools = self.bigIP.LocalLB.Pool
-
         for pool in pools.get_list():
             if pool.split('/')[-1] == name:
                 return True
-
         return False
 
     def check_virtualserver(self, name):
@@ -216,11 +206,9 @@ class F5Mgmt:
         Check to see if a virtual server exists
         '''
         vs = self.bigIP.LocalLB.VirtualServer
-
         for v in vs.get_list():
             if v.split('/')[-1] == name:
                 return True
-
         return False
 
     def check_member_pool(self, member, pool_name):
@@ -228,11 +216,9 @@ class F5Mgmt:
         Check a pool member exists in a specific pool
         '''
         members = self.bigIP.LocalLB.Pool.get_member(pool_names=[pool_name])[0]
-
         for mem in members:
             if member == mem.address:
                 return True
-
         return False
 
     def lbmethods(self):
@@ -242,7 +228,6 @@ class F5Mgmt:
         methods = self.bigIP.LocalLB.Pool.typefactory.create(
             'LocalLB.LBMethod'
         )
-
         return [method[0].split('_', 2)[-1] for method in methods]
 
 
@@ -262,9 +247,7 @@ def create_vs(lb, name, ip, port, protocol, profile, pool_name):
         raise Exception('Unable to find `{0}` load balancer'.format(lb))
 
     F5 = F5Mgmt(lb, username, password)
-    F5.create_vs(virtual_server, virtual_ip, port, protocol, profile,
-                 pool_name)
-
+    F5.create_vs(name, ip, port, protocol, profile, pool_name)
     return True
 
 
@@ -283,10 +266,8 @@ def create_pool(lb, name, method='ROUND_ROBIN'):
         (username, password) = __opts__['load_balancers'][lb].values()
     else:
         raise Exception('Unable to find `{0}` load balancer'.format(lb))
-
     F5 = F5Mgmt(lb, username, password)
-    F5.create_pool(pool_name, pool_method)
-
+    F5.create_pool(name, method)
     return True
 
 
@@ -304,10 +285,8 @@ def add_pool_member(lb, name, port, pool_name):
         (username, password) = __opts__['load_balancers'][lb].values()
     else:
         raise Exception('Unable to find `{0}` load balancer'.format(lb))
-
     F5 = F5Mgmt(lb, username, password)
-    F5.add_pool_member(hostname, port, pool_name)
-
+    F5.add_pool_member(name, port, pool_name)
     return True
 
 
@@ -325,10 +304,8 @@ def check_pool(lb, name):
         (username, password) = __opts__['load_balancers'][lb].values()
     else:
         raise Exception('Unable to find `{0}` load balancer'.format(lb))
-
     F5 = F5Mgmt(lb, username, password)
-
-    return F5.check_pool(pool_name)
+    return F5.check_pool(name)
 
 
 def check_virtualserver(lb, name):
@@ -345,10 +322,8 @@ def check_virtualserver(lb, name):
         (username, password) = __opts__['load_balancers'][lb].values()
     else:
         raise Exception('Unable to find `{0}` load balancer'.format(lb))
-
     F5 = F5Mgmt(lb, username, password)
-
-    return F5.check_virtualserver(virtual_server)
+    return F5.check_virtualserver(name)
 
 
 def check_member_pool(lb, member, pool_name):
@@ -365,7 +340,5 @@ def check_member_pool(lb, member, pool_name):
         (username, password) = __opts__['load_balancers'][lb].values()
     else:
         raise Exception('Unable to find `{0}` load balancer'.format(lb))
-
     F5 = F5Mgmt(lb, username, password)
-
     return F5.check_member_pool(member, pool_name)
