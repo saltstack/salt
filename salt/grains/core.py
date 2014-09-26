@@ -1270,6 +1270,54 @@ def ip_interfaces():
     return {'ip_interfaces': ret}
 
 
+def ip4_interfaces():
+    '''
+    Provide a dict of the connected interfaces and their ip4 addresses
+    '''
+    # Provides:
+    #   ip_interfaces
+
+    if 'proxyminion' in __opts__:
+        return {}
+
+    ret = {}
+    ifaces = salt.utils.network.interfaces()
+    for face in ifaces:
+        iface_ips = []
+        for inet in ifaces[face].get('inet', []):
+            if 'address' in inet:
+                iface_ips.append(inet['address'])
+        for secondary in ifaces[face].get('secondary', []):
+            if 'address' in secondary:
+                iface_ips.append(secondary['address'])
+        ret[face] = iface_ips
+    return {'ip4_interfaces': ret}
+
+
+def ip6_interfaces():
+    '''
+    Provide a dict of the connected interfaces and their ip6 addresses
+    '''
+    # Provides:
+    #   ip_interfaces
+
+    if 'proxyminion' in __opts__:
+        return {}
+
+    ret = {}
+    ifaces = salt.utils.network.interfaces()
+    for face in ifaces:
+        iface_ips = []
+        for inet in ifaces[face].get('inet6', []):
+            if 'address' in inet:
+                iface_ips.append(inet['address'])
+        for secondary in ifaces[face].get('secondary', []):
+            if 'address' in secondary:
+                iface_ips.append(secondary['address'])
+        ret[face] = iface_ips
+    return {'ip6_interfaces': ret}
+
+
 def hwaddr_interfaces():
     '''
     Provide a dict of the connected interfaces and their
