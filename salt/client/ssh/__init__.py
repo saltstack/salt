@@ -278,6 +278,7 @@ class SSH(object):
                 self.opts,
                 argv,
                 host,
+                mods=self.mods,
                 **target)
         if salt.utils.which('ssh-copy-id'):
             # we have ssh-copy-id, use it!
@@ -290,6 +291,7 @@ class SSH(object):
                     self.opts,
                     self.opts['argv'],
                     host,
+                    mods=self.mods,
                     **target)
             stdout, stderr, retcode = single.cmd_block()
             try:
@@ -639,6 +641,7 @@ class Single(object):
             pre_wrapper = salt.client.ssh.wrapper.FunctionWrapper(
                 self.opts,
                 self.id,
+                mods=self.mods,
                 **self.target)
             opts_pkg = pre_wrapper['test.opts_pkg']()
             opts_pkg['file_roots'] = self.opts['file_roots']
@@ -687,6 +690,7 @@ class Single(object):
         wrapper = salt.client.ssh.wrapper.FunctionWrapper(
             opts,
             self.id,
+            mods=self.mods,
             **self.target)
         self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper, self.opts)
         wrapper.wfuncs = self.wfuncs
@@ -961,9 +965,9 @@ def mod_data(opts):
                 pl_dir = os.path.join(path, '_{0}'.format(ref))
                 if os.path.isdir(pl_dir):
                     for fn_ in os.listdir(pl_dir):
-                        if not os.path.isfile(fn_):
-                            continue
                         mod_path = os.path.join(pl_dir, fn_)
+                        if not os.path.isfile(mod_path):
+                            continue
                         with open(mod_path) as fp_:
                             code_str = fp_.read().encode('base64')
                         mod_str += '{0}|{1},'.format(fn_, code_str)
