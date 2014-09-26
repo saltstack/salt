@@ -23,32 +23,50 @@ def output(data):
         pend = 'minions_pre'
         den = 'minions_denied'
         rej = 'minions_rejected'
+
+        cmap = {pend: color['RED'],
+                acc: color['GREEN'],
+                den: color['PURPLE'],
+                rej: color['BLUE'],
+                'local': color['PURPLE']}
+
+        trans = {pend: u'{0}Unaccepted Keys:{1}'.format(
+                                    color['LIGHT_RED'],
+                                    color['ENDC']),
+                 acc: u'{0}Accepted Keys:{1}'.format(
+                                    color['LIGHT_GREEN'],
+                                    color['ENDC']),
+                 den: u'{0}Denied Keys:{1}'.format(
+                                    color['LIGHT_PURPLE'],
+                                    color['ENDC']),
+                 rej: u'{0}Rejected Keys:{1}'.format(
+                                    color['LIGHT_BLUE'],
+                                    color['ENDC']),
+                 'local': u'{0}Local Keys:{1}'.format(
+                                    color['LIGHT_PURPLE'],
+                                    color['ENDC'])}
     else:
         acc = 'accepted'
         pend = 'pending'
         rej = 'rejected'
 
-    cmap = {pend: color['RED'],
-            acc: color['GREEN'],
-            den: color['PURPLE'],
-            rej: color['BLUE'],
-            'local': color['PURPLE']}
+        cmap = {pend: color['RED'],
+                acc: color['GREEN'],
+                rej: color['BLUE'],
+                'local': color['PURPLE']}
 
-    trans = {pend: u'{0}Unaccepted Keys:{1}'.format(
-                                color['LIGHT_RED'],
-                                color['ENDC']),
-             acc: u'{0}Accepted Keys:{1}'.format(
-                                color['LIGHT_GREEN'],
-                                color['ENDC']),
-             den: u'{0}Denied Keys:{1}'.format(
-                                color['LIGHT_PURPLE'],
-                                color['ENDC']),
-             rej: u'{0}Rejected Keys:{1}'.format(
-                                color['LIGHT_BLUE'],
-                                color['ENDC']),
-             'local': u'{0}Local Keys:{1}'.format(
-                                color['LIGHT_PURPLE'],
-                                color['ENDC'])}
+        trans = {pend: u'{0}Unaccepted Keys:{1}'.format(
+                                    color['LIGHT_RED'],
+                                    color['ENDC']),
+                 acc: u'{0}Accepted Keys:{1}'.format(
+                                    color['LIGHT_GREEN'],
+                                    color['ENDC']),
+                 rej: u'{0}Rejected Keys:{1}'.format(
+                                    color['LIGHT_BLUE'],
+                                    color['ENDC']),
+                 'local': u'{0}Local Keys:{1}'.format(
+                                    color['LIGHT_PURPLE'],
+                                    color['ENDC'])}
 
     ret = ''
 
