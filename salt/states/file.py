@@ -3524,12 +3524,15 @@ def copy(name, source, force=False, makedirs=False):
     # All tests pass, move the file into place
     try:
         shutil.copy(source, name)
+        source_user = __salt__['file.get_user'](source)
+        source_group = __salt__['file.get_group'](source)
+        source_mode = __salt__['file.get_mode'](source)
+        ret['comment'] = 'Copied "{0}" to "{1}"'.format(source, name)
+        ret['changes'] = {name: source}
+        __salt__['file.check_perms'](name, ret, source_user, source_group, source_mode)
     except (IOError, OSError):
         return _error(
             ret, 'Failed to copy "{0}" to "{1}"'.format(source, name))
-
-    ret['comment'] = 'Copied "{0}" to "{1}"'.format(source, name)
-    ret['changes'] = {name: source}
     return ret
 
 
