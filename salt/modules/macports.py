@@ -352,7 +352,7 @@ def refresh_db():
     __salt__['cmd.run_all']('port selfupdate', output_loglevel='trace')
 
 
-def upgrade(refresh=True):
+def upgrade(refresh=True):  # pylint: disable=W0613
     '''
     Run a full upgrade using MacPorts 'port upgrade outdated'
 
