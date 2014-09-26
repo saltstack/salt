@@ -376,7 +376,7 @@ def refresh_db():
         )
 
 
-def upgrade(refresh=True):
+def upgrade(refresh=True):  # pylint: disable=W0613
     '''
     Run a full upgrade using MacPorts 'port upgrade outdated'
 

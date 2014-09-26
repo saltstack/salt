@@ -162,7 +162,6 @@ def write_modules():
             'var',
             'cache',
             'salt',
-            'minion',
             'extmods')
     for mtype in mtypes:
         dest_dir = os.path.join(modcache, mtype)

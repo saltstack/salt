@@ -480,6 +480,8 @@ def interface(iface):
     '''
     Return the inet address for a given interface
 
+    .. versionadded:: 2014.7
+
     CLI Example:
 
     .. code-block:: bash
@@ -492,6 +494,8 @@ def interface(iface):
 def interface_ip(iface):
     '''
     Return the inet address for a given interface
+
+    .. versionadded:: 2014.7
 
     CLI Example:
 
@@ -647,6 +651,8 @@ def connect(host, port=None, **kwargs):
     '''
     Test connectivity to a host using a particular
     port from the minion.
+
+    .. versionadded:: 2014.7
 
     CLI Example:
 

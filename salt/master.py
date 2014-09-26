@@ -56,12 +56,6 @@ try:
 except ImportError:
     HAS_HALITE = False
 
-try:
-    import systemd.daemon
-    HAS_PYTHON_SYSTEMD = True
-except ImportError:
-    HAS_PYTHON_SYSTEMD = False
-
 
 log = logging.getLogger(__name__)
 
@@ -494,13 +488,6 @@ class ReqServer(object):
         self.clients.bind(self.uri)
 
         self.workers.bind(self.w_uri)
-
-        try:
-            if HAS_PYTHON_SYSTEMD and systemd.daemon.booted():
-                systemd.daemon.notify('READY=1')
-        except SystemError:
-            # Daemon wasn't started by systemd
-            pass
 
         while True:
             try:

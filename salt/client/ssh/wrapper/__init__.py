@@ -25,10 +25,15 @@ class FunctionWrapper(dict):
             id_,
             host,
             wfuncs=None,
+            mods=None,
             **kwargs):
         super(FunctionWrapper, self).__init__()
         self.wfuncs = wfuncs if isinstance(wfuncs, dict) else {}
         self.opts = opts
+        if isinstance(mods, dict):
+            self.mods = mods
+        else:
+            self.mods = {}
         self.kwargs = {'id_': id_,
                        'host': host}
         self.kwargs.update(kwargs)
@@ -50,6 +55,7 @@ class FunctionWrapper(dict):
             single = salt.client.ssh.Single(
                     self.opts,
                     argv,
+                    mods=self.mods,
                     **self.kwargs
             )
             stdout, stderr, _ = single.cmd_block()
