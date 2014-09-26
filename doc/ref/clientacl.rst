@@ -29,7 +29,7 @@ users specified:
 
 .. code-block:: bash
 
-    chmod 755 /var/cache/salt /var/cache/salt/jobs /var/run/salt
+    chmod 755 /var/cache/salt /var/cache/salt/master/jobs /var/run/salt
 
 .. note::
 
