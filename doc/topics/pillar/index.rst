@@ -250,8 +250,8 @@ Viewing Minion Pillar
 =====================
 
 Once the pillar is set up the data can be viewed on the minion via the
-``pillar`` module, the pillar module comes with two functions,
-:mod:`pillar.items <salt.modules.pillar.items>` and and :mod:`pillar.raw
+``pillar`` module, the pillar module comes with functions,
+:mod:`pillar.items <salt.modules.pillar.items>` and :mod:`pillar.raw
 <salt.modules.pillar.raw>`.  :mod:`pillar.items <salt.modules.pillar.items>`
 will return a freshly reloaded pillar and :mod:`pillar.raw
 <salt.modules.pillar.raw>` will return the current pillar without a refresh:
