@@ -191,7 +191,7 @@ class ZeroMQCaller(object):
         '''
         Return the data up to the master
         '''
-        channel = salt.transport.Channel.factory(self.opts)
+        channel = salt.transport.Channel.factory(self.opts, usage='salt_call')
         load = {'cmd': '_return', 'id': self.opts['id']}
         for key, value in ret.items():
             load[key] = value
