@@ -248,6 +248,9 @@ def latest(name,
                                                url=name,
                                                user=user)
                     ret['changes']['remote/{0}'.format(remote_name)] = "{0} => {1}".format(str(remote), name)
+                    # Set to fetch later since we just added the remote and
+                    # need to get the refs
+                    always_fetch = True
 
                 # check if rev is already present in repo, git-fetch otherwise
                 if bare:
@@ -279,9 +282,13 @@ def latest(name,
                                              user=user)
 
                     if branch != 'HEAD':
-                        current_remote = __salt__['git.config_get'](target,
-                                                             'branch.{0}.remote'.format(rev),
-                                                             user=user)
+                        try:
+                            current_remote = __salt__['git.config_get'](
+                                target, 'branch.{0}.remote'.format(rev),
+                                user=user)
+                        except CommandExecutionError:
+                            current_remote = None
+
                         if current_remote != remote_name:
                             if __opts__['test']:
                                 ret['changes'] = {'old': current_remote, 'new': remote_name}
