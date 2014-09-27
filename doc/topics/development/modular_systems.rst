@@ -38,7 +38,7 @@ Sometimes debugging with print() and extra logs sprinkled everywhere
 is not the best strategy.
 
 IPython is a helpfull debug tool that has an interactive python enviroment
-you can embed during runtime of python programs.
+you can embed in python programs.
 
 First the system will require IPython to be installed.
 
