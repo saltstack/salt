@@ -48,7 +48,7 @@ First the system will require IPython to be installed.
     apt-get install ipython
 
 Now in the troubbling python module add the following line
-at any location you want to start the debugger.
+at a location you want to start the debugger.
     
     test = 'test123'
     import IPython; IPython.embed_kernel()
@@ -67,6 +67,8 @@ This provids a console that has access to all the vars and functions and even ta
 
     print(test)
     -- test123
+    
+When your done "Hit Ctrl-D" to exit interpreter and continue program.
 
 
 State Modules
