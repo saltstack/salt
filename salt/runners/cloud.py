@@ -148,7 +148,7 @@ def create(provider, instances, **kwargs):
     .. code-block:: bash
 
         salt-run cloud.create my-ec2-config myinstance \
-            image=ami-1624987f size='Micro Instance' ssh_username=ec2-user \
+            image=ami-1624987f size='t1.micro' ssh_username=ec2-user \
             securitygroup=default delvol_on_destroy=True
     '''
     create_kwargs = {}
