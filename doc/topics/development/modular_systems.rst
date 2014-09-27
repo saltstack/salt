@@ -30,6 +30,45 @@ For a list of all built in execution modules, click :doc:`here
 For information on writing execution modules, see :doc:`this page
 </ref/modules/index>`.
 
+
+Interactive Debugging
+=================
+
+Sometimes debugging with print() and extra logs sprinkled everywhere
+is not the best strategy.
+
+IPython is a helpfull debug tool that has an interactive python enviroment
+you can embed during runtime of python programs.
+
+First the system will require IPython to be installed.
+
+.. code-block:: bash
+
+    # debian
+    apt-get install ipython
+
+Now in the troubbling python module add the following line
+at any location you want to start the debugger.
+    
+    test = 'test123'
+    import IPython; IPython.embed_kernel()
+
+After running a salt command that hits that line. You will see somthing like the following
+in your logs:
+
+    ipython kernel loaded:
+    use: ipython console to connect
+
+Now on the system that invoked embed_kernel you can run:
+
+    ipython console --existing
+
+This provids a console that has access to all the vars and functions and even tab-completion.
+
+    print(test)
+    -- test123
+
+
 State Modules
 =============
 
