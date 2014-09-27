@@ -78,7 +78,7 @@ class RAETChannel(Channel):
             self.dst = (None, None, 'local_cmd')  # runner.py master_call
         elif usage == 'salt_call':
             self.dst = (None, None, 'remote_cmd')  # salt_call caller
-        else: # everything else
+        else:  # everything else
             self.dst = (None, None, 'remote_cmd')  # normal use case minion to master
         self.stack = None
 
