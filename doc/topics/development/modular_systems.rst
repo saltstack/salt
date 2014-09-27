@@ -32,43 +32,60 @@ For information on writing execution modules, see :doc:`this page
 
 
 Interactive Debugging
-=================
+=====================
 
-Sometimes debugging with print() and extra logs sprinkled everywhere
-is not the best strategy.
+Sometimes debugging with ``print()`` and extra logs sprinkled everywhere is not
+the best strategy.
 
-IPython is a helpfull debug tool that has an interactive python enviroment
-you can embed in python programs.
+IPython is a helpful debug tool that has an interactive python environment
+which can be embedded in python programs.
 
 First the system will require IPython to be installed.
 
 .. code-block:: bash
 
-    # debian
+    # Debian
     apt-get install ipython
 
-Now in the troubbling python module add the following line
-at a location you want to start the debugger.
-    
+    # Arch Linux
+    pacman -Syu ipython2
+
+    # RHEL/CentOS (via EPEL)
+    yum install python-ipython
+
+
+Now, in the troubling python module, add the following line at a location where
+the debugger should be started:
+
+.. code-block:: python
+
     test = 'test123'
     import IPython; IPython.embed_kernel()
 
-After running a salt command that hits that line. You will see somthing like the following
-in your logs:
+After running a Salt command that hits that line, the following will show up in
+the log file:
+
+.. code-block:: text
 
     ipython kernel loaded:
     use: ipython console to connect
 
-Now on the system that invoked embed_kernel you can run:
+Now on the system that invoked ``embed_kernel``, run the following command from
+a shell:
 
+.. code-block:: bash
+
+    # NOTE: use ipython2 instead of ipython for Arch Linux
     ipython console --existing
 
-This provids a console that has access to all the vars and functions and even tab-completion.
+This provides a console that has access to all the vars and functions, and even
+supports tab-completion.
 
+.. code-block:: python
     print(test)
-    -- test123
-    
-When your done "Hit Ctrl-D" to exit interpreter and continue program.
+    test123
+
+To exit IPython and continue running Salt, press ``Ctrl-d`` to logout.
 
 
 State Modules
