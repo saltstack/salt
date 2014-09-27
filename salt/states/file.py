@@ -3529,7 +3529,7 @@ def copy(name, source, force=False, makedirs=False, preserve=False):
     try:
         shutil.copy(source, name)
         ret['changes'] = {name: source}
-        if preserve == True:
+        if preserve:
             source_user = __salt__['file.get_user'](source)
             source_group = __salt__['file.get_group'](source)
             source_mode = __salt__['file.get_mode'](source)
