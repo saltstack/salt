@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
 # import Python Third Party Libs
+from boto.exception import BotoServerError
+from mock import patch
+
 try:
     import boto
     HAS_BOTO = True
@@ -20,8 +23,10 @@ except ImportError:
         Allows boto_vpc unit tests to use the @mock_ec2 decorator
         without a "NameError: name 'mock_ec2' is not defined" error.
         '''
+
         def stub_function(self):
             pass
+
         return stub_function
 
 # Import Python libs
@@ -45,6 +50,7 @@ region = 'us-east-1'
 access_key = 'GKTADJGHEIQSXMKKRBJ08H'
 secret_key = 'askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs'
 conn_parameters = {'region': region, 'key': access_key, 'keyid': secret_key, 'profile': {}}
+cidr_block = '10.0.0.0/24'
 
 
 def _has_required_boto():
@@ -65,7 +71,7 @@ def _has_required_boto():
 @skipIf(HAS_MOTO is False, 'The moto module must be installed.')
 @skipIf(_has_required_boto() is False, 'The boto module must be greater than'
                                        ' or equal to version {0}'
-                                       .format(required_boto_version))
+        .format(required_boto_version))
 class BotoVpcTestCase(TestCase):
     '''
     TestCase for salt.modules.boto_vpc module
@@ -79,7 +85,7 @@ class BotoVpcTestCase(TestCase):
         to subnets as opposed to a list.
         '''
         conn = boto.vpc.connect_to_region(region)
-        vpc = conn.create_vpc('10.0.0.0/24')
+        vpc = conn.create_vpc(cidr_block)
         subnet = conn.create_subnet(vpc.id, '10.0.0.0/25')
         subnet_assocation = boto_vpc.get_subnet_association(subnets=subnet.id,
                                                             **conn_parameters)
@@ -92,7 +98,7 @@ class BotoVpcTestCase(TestCase):
         returned.
         '''
         conn = boto.vpc.connect_to_region(region)
-        vpc = conn.create_vpc('10.0.0.0/24')
+        vpc = conn.create_vpc(cidr_block)
         subnet_a = conn.create_subnet(vpc.id, '10.0.0.0/25')
         subnet_b = conn.create_subnet(vpc.id, '10.0.0.128/25')
         subnet_assocation = boto_vpc.get_subnet_association([subnet_a.id, subnet_b.id],
@@ -106,8 +112,8 @@ class BotoVpcTestCase(TestCase):
         returned.
         '''
         conn = boto.vpc.connect_to_region(region)
-        vpc_a = conn.create_vpc('10.0.0.0/24')
-        vpc_b = conn.create_vpc('10.0.0.0/24')
+        vpc_a = conn.create_vpc(cidr_block)
+        vpc_b = conn.create_vpc(cidr_block)
         subnet_a = conn.create_subnet(vpc_a.id, '10.0.0.0/24')
         subnet_b = conn.create_subnet(vpc_b.id, '10.0.0.0/24')
         subnet_assocation = boto_vpc.get_subnet_association([subnet_a.id, subnet_b.id],
@@ -120,11 +126,31 @@ class BotoVpcTestCase(TestCase):
         tests True existence of a VPC.
         '''
         conn = boto.vpc.connect_to_region(region)
-        vpc = conn.create_vpc('10.0.0.0/24')
+        vpc = conn.create_vpc(cidr_block)
         vpc_exists = boto_vpc.exists(vpc.id, **conn_parameters)
         self.assertTrue(vpc_exists)
+
+    @mock_ec2
+    def test_that_when_creating_a_vpc_succeeds_the_create_vpc_method_returns_true(self):
+        '''
+        tests True VPC created.
+        '''
+        vpc_creation_result = boto_vpc.create(cidr_block, **conn_parameters)
+
+        self.assertTrue(vpc_creation_result)
+
+    @mock_ec2
+    def test_that_when_creating_a_vpc_fails_the_create_vpc_method_returns_false(self):
+        '''
+        tests False VPC not created.
+        '''
+        with patch('moto.ec2.models.VPCBackend.create_vpc', side_effect=BotoServerError(400, 'Mocked error')):
+            vpc_creation_result = boto_vpc.create(cidr_block, **conn_parameters)
+
+        self.assertFalse(vpc_creation_result)
 
 
 if __name__ == '__main__':
     from integration import run_tests
+
     run_tests(BotoVpcTestCase, needs_daemon=False)
