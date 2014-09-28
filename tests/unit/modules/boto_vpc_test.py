@@ -152,6 +152,15 @@ class BotoVpcTestCase(TestCase):
         self.assertTrue(vpc_creation_result)
 
     @mock_ec2
+    def test_that_when_creating_a_vpc_and_specifying_a_vpc_name_succeeds_the_create_vpc_method_returns_true(self):
+        '''
+        tests True VPC created.
+        '''
+        vpc_creation_result = boto_vpc.create(cidr_block, vpc_name='test', **conn_parameters)
+
+        self.assertTrue(vpc_creation_result)
+
+    @mock_ec2
     def test_that_when_creating_a_vpc_fails_the_create_vpc_method_returns_false(self):
         '''
         tests False VPC not created.
