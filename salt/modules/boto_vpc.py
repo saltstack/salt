@@ -112,10 +112,10 @@ def get_subnet_association(subnets, region=None, key=None, keyid=None,
             vpc_ids.add(subnet.vpc_id)
     if len(vpc_ids) == 1:
         vpc_id = vpc_ids.pop()
-        log.debug('all subnets are associated with vpc id: {0}'.format(vpc_id))
+        log.info('all subnets are associated with vpc id: {0}'.format(vpc_id))
         return vpc_id
     else:
-        log.debug('given subnets are associated with fewer than 1 or greater'
+        log.info('given subnets are associated with fewer than 1 or greater'
                   ' than 1 subnets')
         return False
 
@@ -141,7 +141,7 @@ def exists(vpc_id, region=None, key=None, keyid=None, profile=None):
         conn.get_all_vpcs(vpc_ids=[vpc_id])
         return True
     except boto.exception.BotoServerError as e:
-        log.debug(e)
+        log.error(e)
         return False
 
 
@@ -172,7 +172,7 @@ def create(cidr_block, instance_tenancy=None, region=None, key=None, keyid=None,
 
         return True
     except boto.exception.BotoServerError as e:
-        log.debug(e)
+        log.error(e)
         return False
 
 
@@ -204,7 +204,7 @@ def delete(vpc_id, region=None, key=None, keyid=None, profile=None):
 
             return False
     except boto.exception.BotoServerError as e:
-        log.debug(e)
+        log.error(e)
         return False
 
 
@@ -237,7 +237,7 @@ def create_subnet(vpc_id, cidr_block, availability_zone=None, region=None, key=N
 
         return True
     except boto.exception.BotoServerError as e:
-        log.debug(e)
+        log.error(e)
         return False
 
 
@@ -269,7 +269,7 @@ def delete_subnet(subnet_id, region=None, key=None, keyid=None, profile=None):
 
             return False
     except boto.exception.BotoServerError as e:
-        log.debug(e)
+        log.error(e)
         return False
 
 
@@ -294,9 +294,9 @@ def create_customer_gateway(vpn_connection_type, ip_address, bgp_asn, region=Non
     try:
         customer_gateway = conn.create_customer_gateway(vpn_connection_type, ip_address, bgp_asn)
 
-        log.debug('A customer gateway with id {0} was created'.format(customer_gateway.id))
+        log.info('A customer gateway with id {0} was created'.format(customer_gateway.id))
     except boto.exception.BotoServerError as e:
-        log.debug(e)
+        log.error(e)
         return False
 
 
@@ -320,15 +320,15 @@ def delete_customer_gateway(customer_gateway_id, region=None, key=None, keyid=No
 
     try:
         if conn.delete_customer_gateway(customer_gateway_id):
-            log.debug('Customer gateway {0} was deleted.'.format(customer_gateway_id))
+            log.info('Customer gateway {0} was deleted.'.format(customer_gateway_id))
 
             return True
         else:
-            log.error('Customer gateway {0} was not deleted.'.format(customer_gateway_id))
+            log.info('Customer gateway {0} was not deleted.'.format(customer_gateway_id))
 
             return False
     except boto.exception.BotoServerError as e:
-        log.debug(e)
+        log.error(e)
         return False
 
 
@@ -343,9 +343,9 @@ def create_dhcp_options(domain_name=None, domain_name_servers=None, ntp_servers=
         dhcp_options = _create_dhcp_options(conn, domain_name=domain_name, domain_name_servers=domain_name_servers,
                                             ntp_servers=ntp_servers, netbios_name_servers=netbios_name_servers,
                                             netbios_node_type=netbios_node_type)
-        log.debug('DHCP options with id {0} were created'.format(dhcp_options.id))
+        log.info('DHCP options with id {0} were created'.format(dhcp_options.id))
     except boto.exception.BotoServerError as e:
-        log.debug(e)
+        log.error(e)
         return False
 
 
@@ -355,11 +355,11 @@ def associate_dhcp_options_to_vpc(dhcp_options_id, vpc_id, region=None, key=None
         return False
     try:
         conn.associate_dhcp_options(dhcp_options_id, vpc_id)
-        log.debug('DHCP options with id {0} were associated with VPC {1}'.format(dhcp_options_id, vpc_id))
+        log.info('DHCP options with id {0} were associated with VPC {1}'.format(dhcp_options_id, vpc_id))
 
         return True
     except boto.exception.BotoServerError as e:
-        log.debug(e)
+        log.error(e)
         return False
 
 
@@ -374,10 +374,10 @@ def associate_new_dhcp_options_to_vpc(vpc_id, domain_name=None, domain_name_serv
                                             ntp_servers=ntp_servers, netbios_name_servers=netbios_name_servers,
                                             netbios_node_type=netbios_node_type)
         conn.associate_dhcp_options(dhcp_options.id, vpc_id)
-        log.debug('DHCP options with id {0} were created and associated with VPC {1}'.format(dhcp_options.id, vpc_id))
+        log.info('DHCP options with id {0} were created and associated with VPC {1}'.format(dhcp_options.id, vpc_id))
         return True
     except boto.exception.BotoServerError as e:
-        log.debug(e)
+        log.error(e)
         return False
 
 
