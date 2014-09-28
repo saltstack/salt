@@ -6,12 +6,14 @@ from mock import patch
 
 try:
     import boto
+
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
 
 try:
     from moto import mock_ec2
+
     HAS_MOTO = True
 except ImportError:
     HAS_MOTO = False
@@ -101,7 +103,7 @@ class BotoVpcTestCase(TestCase):
         vpc = self._create_vpc()
         subnet = self._create_subnet(vpc.id)
         subnet_association = boto_vpc.get_subnet_association(subnets=subnet.id,
-                                                            **conn_parameters)
+                                                             **conn_parameters)
         self.assertEqual(vpc.id, subnet_association)
 
     @mock_ec2
@@ -114,7 +116,7 @@ class BotoVpcTestCase(TestCase):
         subnet_a = self._create_subnet(vpc.id, '10.0.0.0/25')
         subnet_b = self._create_subnet(vpc.id, '10.0.0.128/25')
         subnet_association = boto_vpc.get_subnet_association([subnet_a.id, subnet_b.id],
-                                                            **conn_parameters)
+                                                             **conn_parameters)
         self.assertEqual(vpc.id, subnet_association)
 
     @mock_ec2
@@ -204,6 +206,7 @@ class BotoVpcTestCase(TestCase):
         subnet_deletion_result = boto_vpc.delete_subnet('1234', **conn_parameters)
 
         self.assertFalse(subnet_deletion_result)
+
 
 if __name__ == '__main__':
     from integration import run_tests

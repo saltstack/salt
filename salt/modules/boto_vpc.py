@@ -283,7 +283,7 @@ def create_customer_gateway(vpn_connection_type, ip_address, bgp_asn, region=Non
 
     .. code-block:: bash
 
-        salt myminion boto_vpc.create_subnet 'vpc-6b1fe402' '10.0.0.0/25'
+        salt myminion boto_vpc.create_customer_gateway 'ipsec.1', '12.1.2.3', 65534
 
     '''
 
@@ -302,9 +302,9 @@ def create_customer_gateway(vpn_connection_type, ip_address, bgp_asn, region=Non
 
 def delete_customer_gateway(customer_gateway_id, region=None, key=None, keyid=None, profile=None):
     '''
-    Given a subnet ID, delete the subnet.
+    Given a customer gateway ID, delete the customer gateway.
 
-    Returns True if the subnet was deleted and returns False if the subnet was not deleted.
+    Returns True if the customer gateway was deleted and returns False if the customer gateway was not deleted.
 
     CLI example::
 
