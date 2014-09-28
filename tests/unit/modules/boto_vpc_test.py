@@ -149,6 +149,25 @@ class BotoVpcTestCase(TestCase):
 
         self.assertFalse(vpc_creation_result)
 
+    @mock_ec2
+    def test_that_when_creating_a_subnet_succeeds_the_create_subnet_method_returns_true(self):
+        conn = boto.vpc.connect_to_region(region)
+        vpc = conn.create_vpc(cidr_block)
+
+        subnet_creation_result = boto_vpc.create_subnet(vpc.id, '10.0.0.0/24', **conn_parameters)
+
+        self.assertTrue(subnet_creation_result)
+
+    @mock_ec2
+    def test_that_when_creating_a_subnet_fails_the_create_subnet_method_returns_false(self):
+        conn = boto.vpc.connect_to_region(region)
+        vpc = conn.create_vpc(cidr_block)
+
+        with patch('moto.ec2.models.SubnetBackend.create_subnet', side_effect=BotoServerError(400, 'Mocked error')):
+            subnet_creation_result = boto_vpc.create_subnet(vpc.id, '10.0.0.0/24', **conn_parameters)
+
+        self.assertFalse(subnet_creation_result)
+
 
 if __name__ == '__main__':
     from integration import run_tests
