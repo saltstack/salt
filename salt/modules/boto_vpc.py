@@ -176,6 +176,38 @@ def create(cidr_block, instance_tenancy=None, region=None, key=None, keyid=None,
         return False
 
 
+def delete(vpc_id, region=None, key=None, keyid=None, profile=None):
+    '''
+    Given a VPC ID, delete the VPC.
+
+    Returns True if the VPC was deleted and returns False if the VPC was not deleted.
+
+    CLI example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.delete 'vpc-6b1fe402'
+
+    '''
+
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+
+    try:
+        if conn.delete_vpc(vpc_id):
+            log.debug('VPC {0} was deleted.'.format(vpc_id))
+
+            return True
+        else:
+            log.debug('VPC {0} was not deleted.'.format(vpc_id))
+
+            return False
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        return False
+
+
 def create_subnet(vpc_id, cidr_block, availability_zone=None, region=None, key=None, keyid=None, profile=None):
     '''
     Given a valid VPC ID and a CIDR block, create a subnet for the VPC.
@@ -209,6 +241,38 @@ def create_subnet(vpc_id, cidr_block, availability_zone=None, region=None, key=N
         return False
 
 
+def delete_subnet(subnet_id, region=None, key=None, keyid=None, profile=None):
+    '''
+    Given a subnet ID, delete the subnet.
+
+    Returns True if the subnet was deleted and returns False if the subnet was not deleted.
+
+    CLI example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.delete_subnet 'subnet-6a1fe403'
+
+    '''
+
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+
+    try:
+        if conn.delete_subnet(subnet_id):
+            log.debug('Subnet {0} was deleted.'.format(subnet_id))
+
+            return True
+        else:
+            log.debug('Subnet {0} was not deleted.'.format(subnet_id))
+
+            return False
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        return False
+
+
 def create_customer_gateway(vpn_connection_type, ip_address, bgp_asn, region=None, key=None, keyid=None, profile=None):
     '''
     Given a valid VPN connection type, a static IP address and a customer gateway’s Border Gateway Protocol (BGP) Autonomous System Number, create a customer gateway.
@@ -231,6 +295,38 @@ def create_customer_gateway(vpn_connection_type, ip_address, bgp_asn, region=Non
         customer_gateway = conn.create_customer_gateway(vpn_connection_type, ip_address, bgp_asn)
 
         log.debug('A customer gateway with id {0} was created'.format(customer_gateway.id))
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        return False
+
+
+def delete_customer_gateway(customer_gateway_id, region=None, key=None, keyid=None, profile=None):
+    '''
+    Given a subnet ID, delete the subnet.
+
+    Returns True if the subnet was deleted and returns False if the subnet was not deleted.
+
+    CLI example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.delete_customer_gateway 'cgw-b6a247df'
+
+    '''
+
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+
+    try:
+        if conn.delete_customer_gateway(customer_gateway_id):
+            log.debug('Customer gateway {0} was deleted.'.format(customer_gateway_id))
+
+            return True
+        else:
+            log.error('Customer gateway {0} was not deleted.'.format(customer_gateway_id))
+
+            return False
     except boto.exception.BotoServerError as e:
         log.debug(e)
         return False
@@ -280,102 +376,6 @@ def associate_new_dhcp_options_to_vpc(vpc_id, domain_name=None, domain_name_serv
         conn.associate_dhcp_options(dhcp_options.id, vpc_id)
         log.debug('DHCP options with id {0} were created and associated with VPC {1}'.format(dhcp_options.id, vpc_id))
         return True
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        return False
-
-
-def delete(vpc_id, region=None, key=None, keyid=None, profile=None):
-    '''
-    Given a VPC ID, delete the VPC.
-
-    Returns True if the VPC was deleted and returns False if the VPC was not deleted.
-
-    CLI example::
-
-    .. code-block:: bash
-
-        salt myminion boto_vpc.delete 'vpc-6b1fe402'
-
-    '''
-
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
-
-    try:
-        if conn.delete_vpc(vpc_id):
-            log.debug('VPC {0} was deleted.'.format(vpc_id))
-
-            return True
-        else:
-            log.debug('VPC {0} was not deleted.'.format(vpc_id))
-
-            return False
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        return False
-
-
-def delete_subnet(subnet_id, region=None, key=None, keyid=None, profile=None):
-    '''
-    Given a subnet ID, delete the subnet.
-
-    Returns True if the subnet was deleted and returns False if the subnet was not deleted.
-
-    CLI example::
-
-    .. code-block:: bash
-
-        salt myminion boto_vpc.delete_subnet 'subnet-6a1fe403'
-
-    '''
-
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
-
-    try:
-        if conn.delete_subnet(subnet_id):
-            log.debug('Subnet {0} was deleted.'.format(subnet_id))
-
-            return True
-        else:
-            log.debug('Subnet {0} was not deleted.'.format(subnet_id))
-
-            return False
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        return False
-
-
-def delete_customer_gateway(customer_gateway_id, region=None, key=None, keyid=None, profile=None):
-    '''
-    Given a subnet ID, delete the subnet.
-
-    Returns True if the subnet was deleted and returns False if the subnet was not deleted.
-
-    CLI example::
-
-    .. code-block:: bash
-
-        salt myminion boto_vpc.delete_customer_gateway 'cgw-b6a247df'
-
-    '''
-
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
-
-    try:
-        if conn.delete_customer_gateway(customer_gateway_id):
-            log.debug('Customer gateway {0} was deleted.'.format(customer_gateway_id))
-
-            return True
-        else:
-            log.error('Customer gateway {0} was not deleted.'.format(customer_gateway_id))
-
-            return False
     except boto.exception.BotoServerError as e:
         log.debug(e)
         return False
