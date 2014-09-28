@@ -726,6 +726,7 @@ def _windows_platform_data():
     #    manufacturer
     #    productname
     #    biosversion
+    #    serialnumber
     #    osfullname
     #    timezone
     #    windowsdomain
@@ -757,6 +758,7 @@ def _windows_platform_data():
             # bios name had a bunch of whitespace appended to it in my testing
             # 'PhoenixBIOS 4.0 Release 6.0     '
             'biosversion': biosinfo.Name.strip(),
+            'serialnumber': biosinfo.SerialNumber,
             'osfullname': osfullname,
             'timezone': timeinfo.Description,
             'windowsdomain': systeminfo.Domain,
