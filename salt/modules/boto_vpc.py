@@ -145,11 +145,12 @@ def exists(vpc_id, region=None, key=None, keyid=None, profile=None):
         return False
 
 
-def create(cidr_block, instance_tenancy=None, region=None, key=None, keyid=None, profile=None):
+def create(cidr_block, instance_tenancy=None, vpc_name=None, region=None, key=None, keyid=None, profile=None):
     '''
     Given a valid CIDR block, create a VPC.
 
     An optional instance_tenancy argument can be provided. If provided, the valid values are 'default' or 'dedicated'
+    An optional vpc_name argument can be provided.
 
     Returns True if the VPC was created and returns False if the VPC was not created.
 
@@ -169,6 +170,11 @@ def create(cidr_block, instance_tenancy=None, region=None, key=None, keyid=None,
         vpc = conn.create_vpc(cidr_block, instance_tenancy=instance_tenancy)
 
         log.debug('The newly created VPC id is {0}'.format(vpc.id))
+
+        if vpc_name:
+            vpc.add_tag("Name", vpc_name)
+
+            log.debug('The VPC {0} is now named as {1}'.format(vpc.id, vpc_name))
 
         return True
     except boto.exception.BotoServerError as e:
