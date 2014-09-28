@@ -335,6 +335,18 @@ def delete_customer_gateway(customer_gateway_id, region=None, key=None, keyid=No
 def create_dhcp_options(domain_name=None, domain_name_servers=None, ntp_servers=None,
                         netbios_name_servers=None, netbios_node_type=None,
                         region=None, key=None, keyid=None, profile=None):
+    '''
+    Given valid DHCP options, create a DHCP options record.
+
+    Returns True if the DHCP options record was created and returns False if the DHCP options record was not deleted.
+
+    CLI example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.create_dhcp_options domain_name='example.com' domain_name_servers='[1.2.3.4]' ntp_servers='[5.6.7.8]' netbios_name_servers='[10.0.0.1]' netbios_node_type=1
+
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
