@@ -190,6 +190,21 @@ class BotoVpcTestCase(TestCase):
 
         self.assertFalse(subnet_creation_result)
 
+    @mock_ec2
+    def test_that_when_deleting_an_existing_subnet_the_delete_subnet_method_returns_true(self):
+        vpc = self._create_vpc()
+        subnet = self._create_subnet(vpc.id)
+
+        subnet_deletion_result = boto_vpc.delete_subnet(subnet.id, **conn_parameters)
+
+        self.assertTrue(subnet_deletion_result)
+
+    @mock_ec2
+    def test_that_when_deleting_a_non_existent_subnet_the_delete_vpc_method_returns_false(self):
+        subnet_deletion_result = boto_vpc.delete_subnet('1234', **conn_parameters)
+
+        self.assertFalse(subnet_deletion_result)
+
 if __name__ == '__main__':
     from integration import run_tests
 
