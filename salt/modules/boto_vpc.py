@@ -390,6 +390,18 @@ def associate_dhcp_options_to_vpc(dhcp_options_id, vpc_id, region=None, key=None
 def associate_new_dhcp_options_to_vpc(vpc_id, domain_name=None, domain_name_servers=None, ntp_servers=None,
                                       netbios_name_servers=None, netbios_node_type=None,
                                       region=None, key=None, keyid=None, profile=None):
+    '''
+    Given valid DHCP options and a valid VPC id, create and associate the DHCP options record with the VPC.
+
+    Returns True if the DHCP options record were created and associated and returns False if the DHCP options record was not created and associated.
+
+    CLI example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.associate_new_dhcp_options_to_vpc 'vpc-6b1fe402' domain_name='example.com' domain_name_servers='[1.2.3.4]' ntp_servers='[5.6.7.8]' netbios_name_servers='[10.0.0.1]' netbios_node_type=1
+
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
