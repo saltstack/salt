@@ -168,7 +168,7 @@ class BotoVpcTestCase(TestCase):
         self.assertTrue(vpc_deletion_result)
 
     @mock_ec2
-    def test_that_when_deleting_a_non_existent_vpc_the_delete_vac_method_returns_false(self):
+    def test_that_when_deleting_a_non_existent_vpc_the_delete_vpc_method_returns_false(self):
         vpc_deletion_result = boto_vpc.delete('1234', **conn_parameters)
 
         self.assertFalse(vpc_deletion_result)
@@ -189,7 +189,6 @@ class BotoVpcTestCase(TestCase):
             subnet_creation_result = boto_vpc.create_subnet(vpc.id, '10.0.0.0/24', **conn_parameters)
 
         self.assertFalse(subnet_creation_result)
-
 
 if __name__ == '__main__':
     from integration import run_tests
