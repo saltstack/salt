@@ -362,6 +362,18 @@ def create_dhcp_options(domain_name=None, domain_name_servers=None, ntp_servers=
 
 
 def associate_dhcp_options_to_vpc(dhcp_options_id, vpc_id, region=None, key=None, keyid=None, profile=None):
+    '''
+    Given valid DHCP options id and a valid VPC id, associate the DHCP options record with the VPC.
+
+    Returns True if the DHCP options record were associated and returns False if the DHCP options record was not associated.
+
+    CLI example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.associate_dhcp_options_to_vpc 'dhcp-a0bl34pp' 'vpc-6b1fe402'
+
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
