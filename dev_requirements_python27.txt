@@ -3,4 +3,4 @@
 
 mock
 boto>=2.32.1
-moto
+moto>=0.3.6
