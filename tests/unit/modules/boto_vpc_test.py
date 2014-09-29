@@ -263,13 +263,13 @@ class BotoVpcTestCase(TestCase):
         vpc = self._create_vpc()
         subnet = self._create_subnet(vpc.id)
 
-        subnet_exists_result = boto_vpc.subnet_exists(subnet.id)
+        subnet_exists_result = boto_vpc.subnet_exists(subnet.id, **conn_parameters)
 
         self.assertTrue(subnet_exists_result)
 
     @mock_ec2
     def test_that_when_a_subnet_does_not_exist_the_subnet_exists_method_returns_false(self):
-        subnet_exists_result = boto_vpc.subnet_exists('fake')
+        subnet_exists_result = boto_vpc.subnet_exists('fake', **conn_parameters)
 
         self.assertFalse(subnet_exists_result)
 
