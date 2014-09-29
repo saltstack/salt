@@ -782,11 +782,14 @@ def create_route(route_table_id, destination_cidr_block, gateway_id=None, instan
     try:
         if conn.create_route(route_table_id, destination_cidr_block, gateway_id=gateway_id, instance_id=instance_id,
                              interface_id=interface_id):
-            log.info('Route with cider block {0} on route table {1} was created'.format(route_table_id, destination_cidr_block))
+            log.info('Route with cider block {0} on route table {1} was created'.format(route_table_id,
+                                                                                        destination_cidr_block))
 
             return True
         else:
-            log.warning('Route with cider block {0} on route table {1} was not created'.format(route_table_id, destination_cidr_block))
+            log.warning('Route with cider block {0} on route table {1} was not created'.format(route_table_id,
+                                                                                               destination_cidr_block))
+            return False
     except boto.exception.BotoServerError as e:
         log.error(e)
         return False
