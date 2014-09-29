@@ -815,6 +815,28 @@ def delete_route(route_table_id, destination_cidr_block, region=None, key=None, 
         return False
 
 
+def replace_route(route_table_id, destination_cidr_block, gateway_id=None, instance_id=None, interface_id=None,
+                  region=None, key=None, keyid=None, profile=None):
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+
+    try:
+        if conn.replace_route(route_table_id, destination_cidr_block, gateway_id=gateway_id, instance_id=instance_id,
+                              interface_id=interface_id):
+            log.info('Route with cider block {0} on route table {1} was replaced'.format(route_table_id,
+                                                                                         destination_cidr_block))
+
+            return True
+        else:
+            log.warning('Route with cider block {0} on route table {1} was not replaced'.format(route_table_id,
+                                                                                                destination_cidr_block))
+            return False
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return False
+
+
 def _get_conn(region, key, keyid, profile):
     '''
     Get a boto connection to vpc.
