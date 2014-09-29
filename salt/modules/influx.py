@@ -363,10 +363,13 @@ def user_chpass(name, passwd, database=None, user=None, password=None,
     return client.update_cluster_admin_password(name, passwd)
 
 
-def user_remove(name, database, user=None, password=None, host=None,
+def user_remove(name, database=None, user=None, password=None, host=None,
                 port=None):
     """
-    Remove a InfluxDB database user
+    Remove a cluster admin or a database user.
+
+    If a database is specified: it will remove the database user.
+    If a database is not specified: it will remove the cluster admin.
 
     name
         User name to remove
@@ -393,16 +396,22 @@ def user_remove(name, database, user=None, password=None, host=None,
 
     .. code-block:: bash
 
+        salt '*' influxdb.user_remove <name>
         salt '*' influxdb.user_remove <name> <database>
         salt '*' influxdb.user_remove <name> <database> <user> <password> <host> <port>
     """
     if not user_exists(name, database):
-        log.info('User {0!r} does not exist for DB {0!r}'.format(
-            name, database))
+        if database:
+            log.info('User {0!r} does not exist for DB {0!r}'.format(
+                name, database))
+        else:
+            log.info('Cluster admin {0!r} does not exist'.format(name))
         return False
     client = _client(user=user, password=password, host=host, port=port)
-    client.switch_db(database)
-    return client.delete_database_user(user)
+    if database:
+        client.switch_db(database)
+        return client.delete_database_user(user)
+    return client.delete_cluster_admin(user)
 
 
 def query(database, query, time_precision='s', chunked=False, user=None,
