@@ -654,7 +654,8 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         subnet = self._create_subnet(vpc.id)
 
         network_acl_creation_and_association_result = boto_vpc.associate_new_network_acl_to_subnet(vpc.id, subnet.id,
-                                                                                                   tags={'test': 'testvalue'},
+                                                                                                   tags={
+                                                                                                       'test': 'testvalue'},
                                                                                                    **conn_parameters)
 
         self.assertTrue(network_acl_creation_and_association_result)
@@ -681,6 +682,30 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
                                                                                                    **conn_parameters)
 
         self.assertFalse(network_acl_creation_and_association_result)
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(HAS_BOTO is False, 'The boto module must be installed.')
+@skipIf(HAS_MOTO is False, 'The moto module must be installed.')
+@skipIf(_has_required_boto() is False, 'The boto module must be greater than'
+                                       ' or equal to version {0}'
+        .format(required_boto_version))
+class BotoVpcRoutingTablesTestCase(BotoVpcTestCaseBase):
+    @mock_ec2
+    @expectedNotImplementedFailure
+    def test_when_creating_a_route_table_succeeds_the_create_route_table_method_returns_true(self):
+        vpc = self._create_vpc()
+
+        route_table_creation_result = boto_vpc.create_route_table(vpc.id, **conn_parameters)
+
+        self.assertTrue(route_table_creation_result)
+
+    @mock_ec2
+    @expectedNotImplementedFailure
+    def test_when_creating_a_route_table_on_a_non_existent_vpc_the_create_route_table_method_returns_false(self):
+        route_table_creation_result = boto_vpc.create_route_table('fake', **conn_parameters)
+
+        self.assertTrue(route_table_creation_result)
 
 
 if __name__ == '__main__':

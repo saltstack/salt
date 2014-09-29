@@ -671,6 +671,26 @@ def delete_network_acl_entry(network_acl_id, rule_number, egress=None, region=No
         return False
 
 
+def create_route_table(vpc_id, route_table_name=None, tags=None, region=None, key=None, keyid=None, profile=None):
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+
+    try:
+        route_table = conn.create_route_table(vpc_id)
+        if route_table:
+            log.info('Route table with id {0} was created'.format(route_table.id))
+            _maybe_set_name_tag(route_table_name, route_table)
+            _maybe_set_tags(tags, route_table)
+            return True
+        else:
+            log.warning('Route table ACL was not created')
+            return False
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return False
+
+
 def _get_conn(region, key, keyid, profile):
     '''
     Get a boto connection to vpc.
