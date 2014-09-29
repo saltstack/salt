@@ -795,6 +795,26 @@ def create_route(route_table_id, destination_cidr_block, gateway_id=None, instan
         return False
 
 
+def delete_route(route_table_id, destination_cidr_block, region=None, key=None, keyid=None, profile=None):
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+
+    try:
+        if conn.delete_route(route_table_id, destination_cidr_block):
+            log.info('Route with cider block {0} on route table {1} was deleted'.format(route_table_id,
+                                                                                        destination_cidr_block))
+
+            return True
+        else:
+            log.warning('Route with cider block {0} on route table {1} was not deleted'.format(route_table_id,
+                                                                                               destination_cidr_block))
+            return False
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return False
+
+
 def _get_conn(region, key, keyid, profile):
     '''
     Get a boto connection to vpc.
