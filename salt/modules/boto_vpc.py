@@ -364,6 +364,25 @@ def delete_customer_gateway(customer_gateway_id, region=None, key=None, keyid=No
         return False
 
 
+def customer_gateway_exists(customer_gateway_id, region=None, key=None, keyid=None, profile=None):
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+
+    try:
+        if conn.get_all_customer_gateways(customer_gateway_ids=[customer_gateway_id]):
+            log.info('Customer gateway {0} exists.'.format(customer_gateway_id))
+
+            return True
+        else:
+            log.warning('Customer gateway {0} does not exist.'.format(customer_gateway_id))
+
+            return False
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return False
+
+
 def create_dhcp_options(domain_name=None, domain_name_servers=None, ntp_servers=None,
                         netbios_name_servers=None, netbios_node_type=None, dhcp_options_name=None, tags=None,
                         region=None, key=None, keyid=None, profile=None):
