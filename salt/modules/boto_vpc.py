@@ -282,6 +282,25 @@ def delete_subnet(subnet_id, region=None, key=None, keyid=None, profile=None):
         return False
 
 
+def subnet_exists(subnet_id, region=None, key=None, keyid=None, profile=None):
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+
+    try:
+        if conn.get_all_subnets(subnet_ids=[subnet_id]):
+            log.info('Subnet {0} exists.'.format(subnet_id))
+
+            return True
+        else:
+            log.warning('Subnet {0} does not exist.'.format(subnet_id))
+
+            return False
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return False
+
+
 def create_customer_gateway(vpn_connection_type, ip_address, bgp_asn, customer_gateway_name=None, tags=None,
                             region=None, key=None, keyid=None, profile=None):
     '''

@@ -259,6 +259,21 @@ class BotoVpcTestCase(TestCase):
         self.assertFalse(subnet_deletion_result)
 
     @mock_ec2
+    def test_that_when_a_subnet_exists_the_subnet_exists_method_returns_true(self):
+        vpc = self._create_vpc()
+        subnet = self._create_subnet(vpc.id)
+
+        subnet_exists_result = boto_vpc.subnet_exists(subnet.id)
+
+        self.assertTrue(subnet_exists_result)
+
+    @mock_ec2
+    def test_that_when_a_subnet_does_not_exist_the_subnet_exists_method_returns_false(self):
+        subnet_exists_result = boto_vpc.subnet_exists('fake')
+
+        self.assertFalse(subnet_exists_result)
+
+    @mock_ec2
     def test_when_creating_dhcp_options_succeeds_the_create_dhcp_options_method_returns_true(self):
         dhcp_options_creation_result = boto_vpc.create_dhcp_options(domain_name='example.com',
                                                                     domain_name_servers=['1.2.3.4'],
