@@ -91,7 +91,8 @@ def resolve_dns(opts):
     '''
     ret = {}
     check_dns = True
-    if opts.get('file_client', 'remote') == 'local' and check_dns:
+    if (opts.get('file_client', 'remote') == 'local' and
+            not opts.get('use_master_when_local', False)):
         check_dns = False
 
     if check_dns is True:
@@ -243,7 +244,8 @@ class SMinion(object):
         self.opts = opts
 
         # Clean out the proc directory (default /var/cache/salt/minion/proc)
-        if self.opts.get('file_client', 'remote') == 'remote':
+        if (self.opts.get('file_client', 'remote') == 'remote'
+                or self.opts.get('use_master_when_local', False)):
             if isinstance(self.opts['master'], list):
                 masters = self.opts['master']
                 if self.opts['random_master'] is True:
