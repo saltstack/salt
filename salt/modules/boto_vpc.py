@@ -562,6 +562,50 @@ def network_acl_exists(network_acl_id, region=None, key=None, keyid=None, profil
         return False
 
 
+def associate_network_acl_to_subnet(network_acl_id, subnet_id, region=None, key=None, keyid=None, profile=None):
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+    try:
+        if conn.associate_network_acl(network_acl_id, subnet_id):
+            log.info('Network ACL with id {0} was associated with subnet {1}'.format(network_acl_id, subnet_id))
+
+            return True
+        else:
+            log.warning('Network ACL with id {0} was not associated with subnet {1}'.format(network_acl_id, subnet_id))
+            return False
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return False
+
+
+def associate_new_network_acl_to_subnet(vpc_id, subnet_id, network_acl_name=None, tags=None,
+                                        region=None, key=None, keyid=None, profile=None):
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+    try:
+        network_acl = conn.create_network_acl(vpc_id)
+        if network_acl:
+            log.info('Network ACL with id {0} was created'.format(network_acl.id))
+            _maybe_set_name_tag(network_acl_name, network_acl)
+            _maybe_set_tags(tags, network_acl)
+        else:
+            log.warning('Network ACL was not created')
+            return False
+
+        if conn.associate_network_acl(network_acl.id, subnet_id):
+            log.info('Network ACL with id {0} was associated with subnet {1}'.format(network_acl.id, subnet_id))
+
+            return True
+        else:
+            log.warning('Network ACL with id {0} was not associated with subnet {1}'.format(network_acl.id, subnet_id))
+            return False
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return False
+
+
 def create_network_acl_entry(network_acl_id, rule_number, protocol, rule_action, cidr_block, egress=None,
                              icmp_code=None, icmp_type=None, port_range_from=None, port_range_to=None,
                              region=None, key=None, keyid=None, profile=None):
