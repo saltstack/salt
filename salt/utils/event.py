@@ -350,8 +350,17 @@ class SaltEvent(object):
     def get_event_noblock(self):
         '''Get the raw event without blocking or any other niceties
         '''
-        raw = self.sub.recv(zmq.NOBLOCK)
-        mtag, data = self.unpack(raw, self.serial)
+        socks = dict(self.poller.poll(0.1)) #  Poll for 1ms, pseudo-noblock
+        if socks.get(self.sub) != zmq.POLLIN:
+            return None
+        try:
+            raw = self.sub.recv(zmq.NOBLOCK)
+            mtag, data = self.unpack(raw, self.serial)
+        except zmq.ZMQError as ex:
+            if ex.errno == errno.EAGAIN or ex.errno == errno.EINTR:
+                return None
+            else:
+                raise ex
         return {'data': data, 'tag': mtag}
 
     def get_event_block(self):
