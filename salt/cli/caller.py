@@ -199,8 +199,7 @@ class ZeroMQCaller(object):
             oput = self.minion.functions[fun].__outputter__
             if isinstance(oput, string_types):
                 ret['out'] = oput
-        self.is_local = self.opts['local'] or self.opts.get(
-            'file_client', False) == 'local'
+
         returners = self.opts.get('return', '').split(',')
         if (not self.is_local) or returners:
             ret['id'] = self.opts['id']
