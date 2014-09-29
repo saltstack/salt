@@ -479,6 +479,25 @@ def associate_new_dhcp_options_to_vpc(vpc_id, domain_name=None, domain_name_serv
         return False
 
 
+def dhcp_options_exists(dhcp_options_id, region=None, key=None, keyid=None, profile=None):
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+
+    try:
+        if conn.get_all_dhcp_options(dhcp_options_ids=[dhcp_options_id]):
+            log.info('DHCP options {0} exists.'.format(dhcp_options_id))
+
+            return True
+        else:
+            log.warning('DHCP options {0} does not exist.'.format(dhcp_options_id))
+
+            return False
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return False
+
+
 def _get_conn(region, key, keyid, profile):
     '''
     Get a boto connection to vpc.

@@ -351,6 +351,22 @@ class BotoVpcTestCase(TestCase):
 
         self.assertFalse(dhcp_options_association_result)
 
+    @mock_ec2
+    def test_that_when_dhcp_options_exists_the_dhcp_options_exists_method_returns_true(self):
+        dhcp_options = self._create_dhcp_options()
+
+        dhcp_options_exists_result = boto_vpc.dhcp_options_exists(dhcp_options.id, **conn_parameters)
+
+        self.assertTrue(dhcp_options_exists_result)
+
+    @mock_ec2
+    def test_that_when_dhcp_options_do_not_exist_the_dhcp_options_exists_method_returns_false(self):
+        dhcp_options_exists_result = boto_vpc.dhcp_options_exists('fake', **conn_parameters)
+
+        self.assertFalse(dhcp_options_exists_result)
+
+
+
 
 if __name__ == '__main__':
     from integration import run_tests
