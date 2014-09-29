@@ -23,6 +23,7 @@ import salt.utils.args
 from salt._compat import string_types
 from salt.log import LOG_LEVELS
 from salt.utils import print_cli
+import salt.utils.event
 
 log = logging.getLogger(__name__)
 
@@ -80,6 +81,14 @@ class ZeroMQCaller(object):
         self.opts = opts
         self.opts['caller'] = True
         self.serial = salt.payload.Serial(self.opts)
+
+        # find out as early as possible if we're running locally
+        self.is_local = self.opts['local'] or self.opts.get(
+            'file_client', False) == 'local'
+
+        if not self.is_local:
+            self.fire_get_master()
+
         # Handle this here so other deeper code which might
         # be imported as part of the salt api doesn't do  a
         # nasty sys.exit() and tick off our developer users
@@ -87,6 +96,36 @@ class ZeroMQCaller(object):
             self.minion = salt.minion.SMinion(opts)
         except SaltClientError as exc:
             raise SystemExit(str(exc))
+
+    def fire_get_master(self):
+        '''
+        Fires an event on the minions eventbus to get the
+        current master. Required in Multimaster-PKI environments
+        so the minion does not try to report to a possibly failed
+        master.
+        '''
+        event = salt.utils.event.get_event('minion', opts=self.opts, listen=True)
+
+        # subscribe prior to firing the event
+        event.subscribe('__current_master')
+
+        event.fire_event({'salt-call': ''}, '__salt_call_master')
+
+        # wait for the event to occur on the eventbus
+        for ret_event in event.iter_events(tag='__current_master'):
+            if ret_event is None:
+                pass
+            else:
+                muri = 'tcp://{0}:{1}'
+                try:
+                    self.opts['master'] = ret_event['cur_master']
+                    self.opts['master_uri'] = muri.format(self.opts['master'],
+                                                          self.opts['master_port'])
+                    log.debug('Updated master to {0}'.format(self.opts['master']))
+                except KeyError:
+                    print("Failed to evaluate current master")
+                    sys.exit(-1)
+                break
 
     def call(self):
         '''
@@ -160,10 +199,10 @@ class ZeroMQCaller(object):
             oput = self.minion.functions[fun].__outputter__
             if isinstance(oput, string_types):
                 ret['out'] = oput
-        is_local = self.opts['local'] or self.opts.get(
+        self.is_local = self.opts['local'] or self.opts.get(
             'file_client', False) == 'local'
         returners = self.opts.get('return', '').split(',')
-        if (not is_local) or returners:
+        if (not self.is_local) or returners:
             ret['id'] = self.opts['id']
             ret['fun'] = fun
             ret['fun_args'] = self.opts['arg']
@@ -177,7 +216,7 @@ class ZeroMQCaller(object):
 
         # return the job infos back up to the respective minion's master
 
-        if not is_local:
+        if not self.is_local:
             try:
                 mret = ret.copy()
                 mret['jid'] = 'req'
