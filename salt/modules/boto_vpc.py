@@ -175,7 +175,7 @@ def create(cidr_block, instance_tenancy=None, vpc_name=None, tags=None, region=N
             _maybe_set_name_tag(vpc_name, vpc)
             _maybe_set_tags(tags, vpc)
 
-            return True
+            return vpc.id
         else:
             log.warning('VPC was not created')
     except boto.exception.BotoServerError as e:
@@ -246,7 +246,7 @@ def create_subnet(vpc_id, cidr_block, availability_zone=None, subnet_name=None, 
             _maybe_set_name_tag(subnet_name, vpc_subnet)
             _maybe_set_tags(tags, vpc_subnet)
 
-            return True
+            return vpc_subnet.id
         else:
             log.warning('A VPC subnet was not created.')
     except boto.exception.BotoServerError as e:
@@ -332,7 +332,7 @@ def create_customer_gateway(vpn_connection_type, ip_address, bgp_asn, customer_g
             _maybe_set_name_tag(customer_gateway_name, customer_gateway)
             _maybe_set_tags(tags, customer_gateway)
 
-            return True
+            return customer_gateway.id
         else:
             log.warning('A customer gateway was not created')
             return False
@@ -421,7 +421,7 @@ def create_dhcp_options(domain_name=None, domain_name_servers=None, ntp_servers=
             _maybe_set_name_tag(dhcp_options_name, dhcp_options)
             _maybe_set_tags(tags, dhcp_options)
 
-            return True
+            return dhcp_options.id
         else:
             log.warning('DHCP options with id {0} were not created'.format(dhcp_options.id))
             return False
@@ -483,7 +483,7 @@ def associate_new_dhcp_options_to_vpc(vpc_id, domain_name=None, domain_name_serv
                                             netbios_node_type=netbios_node_type)
         conn.associate_dhcp_options(dhcp_options.id, vpc_id)
         log.info('DHCP options with id {0} were created and associated with VPC {1}'.format(dhcp_options.id, vpc_id))
-        return True
+        return dhcp_options.id
     except boto.exception.BotoServerError as e:
         log.error(e)
         return False
@@ -519,7 +519,7 @@ def create_network_acl(vpc_id, network_acl_name=None, tags=None, region=None, ke
             log.info('Network ACL with id {0} was created'.format(network_acl.id))
             _maybe_set_name_tag(network_acl_name, network_acl)
             _maybe_set_tags(tags, network_acl)
-            return True
+            return network_acl.id
         else:
             log.warning('Network ACL was not created')
             return False
@@ -567,10 +567,11 @@ def associate_network_acl_to_subnet(network_acl_id, subnet_id, region=None, key=
     if not conn:
         return False
     try:
-        if conn.associate_network_acl(network_acl_id, subnet_id):
+        association_id = conn.associate_network_acl(network_acl_id, subnet_id)
+        if association_id:
             log.info('Network ACL with id {0} was associated with subnet {1}'.format(network_acl_id, subnet_id))
 
-            return True
+            return association_id
         else:
             log.warning('Network ACL with id {0} was not associated with subnet {1}'.format(network_acl_id, subnet_id))
             return False
@@ -594,10 +595,11 @@ def associate_new_network_acl_to_subnet(vpc_id, subnet_id, network_acl_name=None
             log.warning('Network ACL was not created')
             return False
 
-        if conn.associate_network_acl(network_acl.id, subnet_id):
+        association_id = conn.associate_network_acl(network_acl.id, subnet_id)
+        if association_id:
             log.info('Network ACL with id {0} was associated with subnet {1}'.format(network_acl.id, subnet_id))
 
-            return True
+            return {'network_acl_id': network_acl.id, 'association_id': association_id}
         else:
             log.warning('Network ACL with id {0} was not associated with subnet {1}'.format(network_acl.id, subnet_id))
             return False
@@ -694,7 +696,7 @@ def create_route_table(vpc_id, route_table_name=None, tags=None, region=None, ke
             log.info('Route table with id {0} was created'.format(route_table.id))
             _maybe_set_name_tag(route_table_name, route_table)
             _maybe_set_tags(tags, route_table)
-            return True
+            return route_table.id
         else:
             log.warning('Route table ACL was not created')
             return False
