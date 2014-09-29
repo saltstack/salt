@@ -784,7 +784,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
         subnet = self._create_subnet(vpc.id)
         route_table = self._create_route_table(vpc.id)
 
-        assocation_id = boto_vpc.associate_route_table(route_table.id, subnet.id)
+        assocation_id = boto_vpc.associate_route_table(route_table.id, subnet.id, **conn_parameters)
 
         self.assertTrue(assocation_id)
 
@@ -794,7 +794,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
         vpc = self._create_vpc()
         subnet = self._create_subnet(vpc.id)
 
-        assocation_id = boto_vpc.associate_route_table('fake', subnet.id)
+        assocation_id = boto_vpc.associate_route_table('fake', subnet.id, **conn_parameters)
 
         self.assertFalse(assocation_id)
 
@@ -804,7 +804,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
         vpc = self._create_vpc()
         route_table = self._create_route_table(vpc.id)
 
-        assocation_id = boto_vpc.associate_route_table(route_table.id, 'fake')
+        assocation_id = boto_vpc.associate_route_table(route_table.id, 'fake', **conn_parameters)
 
         self.assertFalse(assocation_id)
 
@@ -821,6 +821,22 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
 
         self.assertTrue(dhcp_disassociate_result)
 
+    @mock_ec2
+    @expectedNotImplementedFailure
+    def test_when_creating_a_route_succeeds_the_create_route_method_should_return_true(self):
+        vpc = self._create_vpc()
+        route_table = self._create_route_table(vpc.id)
+
+        route_creation_result = boto_vpc.create_route(route_table.id, cidr_block, **conn_parameters)
+
+        self.assertTrue(route_creation_result)
+
+    @mock_ec2
+    @expectedNotImplementedFailure
+    def test_when_creating_a_route_with_a_non_existent_route_table_the_create_route_method_should_return_false(self):
+        route_creation_result = boto_vpc.create_route('fake', cidr_block, **conn_parameters)
+
+        self.assertFalse(route_creation_result)
 
 if __name__ == '__main__':
     from integration import run_tests
