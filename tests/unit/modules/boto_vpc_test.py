@@ -726,7 +726,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
 @skipIf(_has_required_boto() is False, 'The boto module must be greater than'
                                        ' or equal to version {0}'
         .format(required_boto_version))
-class BotoVpcRoutingTablesTestCase(BotoVpcTestCaseBase):
+class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
     @mock_ec2
     @expectedNotImplementedFailure
     def test_when_creating_a_route_table_succeeds_the_create_route_table_method_returns_true(self):
@@ -776,6 +776,19 @@ class BotoVpcRoutingTablesTestCase(BotoVpcTestCaseBase):
         route_table_existence_result = boto_vpc.route_table_exists('fake', **conn_parameters)
 
         self.assertFalse(route_table_existence_result)
+        
+    @mock_ec2
+    @expectedNotImplementedFailure
+    def test_when_disassociating_route_table_succeeds_the_disassociate_route_table_method_should_return_true(self):
+        vpc = self._create_vpc()
+        subnet = self._create_subnet(vpc.id)
+        route_table = self._create_route_table(vpc.id)
+
+        association_id = self._associate_route_table(route_table.id, subnet.id)
+
+        dhcp_disassociate_result = boto_vpc.disassociate_route_table(association_id, **conn_parameters)
+
+        self.assertTrue(dhcp_disassociate_result)
 
 
 if __name__ == '__main__':

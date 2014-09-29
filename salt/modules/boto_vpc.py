@@ -739,6 +739,25 @@ def route_table_exists(route_table_id, region=None, key=None, keyid=None, profil
         return False
 
 
+def disassociate_route_table(association_id, region=None, key=None, keyid=None, profile=None):
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+
+    try:
+        if conn.disassociate_route_table(association_id):
+            log.info('Route table with association id {0} has been disassociated.'.format(association_id))
+
+            return True
+        else:
+            log.warning('Route table with association id {0} has not been disassociated.'.format(association_id))
+
+            return False
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return False
+
+
 def _get_conn(region, key, keyid, profile):
     '''
     Get a boto connection to vpc.
