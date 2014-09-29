@@ -10,10 +10,10 @@ Management of InfluxDB users
 '''
 
 
-def present(name, passwd, database, user=None, password=None, host=None,
+def present(name, passwd, database=None, user=None, password=None, host=None,
             port=None):
     '''
-    Ensure that the user is present
+    Ensure that the cluster admin or database user is present.
 
     name
         The name of the user to manage
@@ -43,7 +43,7 @@ def present(name, passwd, database, user=None, password=None, host=None,
            'comment': ''}
 
     # check if db does not exist
-    if not __salt__['influxdb.db_exists'](
+    if database and not __salt__['influxdb.db_exists'](
             database, user, password, host, port):
         ret['result'] = False
         ret['comment'] = 'Database {0} does not exist'.format(database)
