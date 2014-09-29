@@ -451,7 +451,8 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
 
     @mock_ec2
     @expectedNotImplementedFailure
-    def test_when_creating_network_acl_for_an_existing_vpc_and_specifying_a_name_the_create_network_acl_method_returns_true(self):
+    def test_when_creating_network_acl_for_an_existing_vpc_and_specifying_a_name_the_create_network_acl_method_returns_true(
+            self):
         vpc = self._create_vpc()
 
         network_acl_creation_result = boto_vpc.create_network_acl(vpc.id, network_acl_name='test', **conn_parameters)
@@ -460,7 +461,8 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
 
     @mock_ec2
     @expectedNotImplementedFailure
-    def test_when_creating_network_acl_for_an_existing_vpc_and_specifying_tags_the_create_network_acl_method_returns_true(self):
+    def test_when_creating_network_acl_for_an_existing_vpc_and_specifying_tags_the_create_network_acl_method_returns_true(
+            self):
         vpc = self._create_vpc()
 
         network_acl_creation_result = boto_vpc.create_network_acl(vpc.id, tags={'test': 'testvalue'}, **conn_parameters)
@@ -488,8 +490,8 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
     @mock_ec2
     @expectedNotImplementedFailure
     def test_when_deleting_an_existing_network_acl_the_delete_network_acl_method_returns_true(self):
-        vpc_id = self._create_vpc()
-        network_acl = self._create_network_acl(vpc_id)
+        vpc = self._create_vpc()
+        network_acl = self._create_network_acl(vpc.id)
 
         network_acl_deletion_result = boto_vpc.delete_network_acl(network_acl.id, **conn_parameters)
 
@@ -505,8 +507,8 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
     @mock_ec2
     @expectedNotImplementedFailure
     def test_when_a_network_acl_exists_the_network_acl_exists_method_returns_true(self):
-        vpc_id = self._create_vpc()
-        network_acl = self._create_network_acl(vpc_id)
+        vpc = self._create_vpc()
+        network_acl = self._create_network_acl(vpc.id)
 
         network_acl_deletion_result = boto_vpc.network_acl_exists(network_acl.id, **conn_parameters)
 
@@ -522,8 +524,8 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
     @mock_ec2
     @expectedNotImplementedFailure
     def test_when_creating_a_network_acl_entry_successfully_the_create_network_acl_entry_method_returns_true(self):
-        vpc_id = self._create_vpc()
-        network_acl = self._create_network_acl(vpc_id)
+        vpc = self._create_vpc()
+        network_acl = self._create_network_acl(vpc.id)
 
         network_acl_entry_creation_result = boto_vpc.create_network_acl_entry(network_acl.id,
                                                                               *network_acl_entry_parameters,
@@ -543,8 +545,8 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
     @mock_ec2
     @expectedNotImplementedFailure
     def test_when_replacing_a_network_acl_entry_successfully_the_replace_network_acl_entry_method_returns_true(self):
-        vpc_id = self._create_vpc()
-        network_acl = self._create_network_acl(vpc_id)
+        vpc = self._create_vpc()
+        network_acl = self._create_network_acl(vpc.id)
         self._create_network_acl_entry(network_acl.id, *network_acl_entry_parameters)
 
         network_acl_entry_creation_result = boto_vpc.replace_network_acl_entry(network_acl.id,
@@ -565,8 +567,8 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
     @mock_ec2
     @expectedNotImplementedFailure
     def test_when_deleting_an_existing_network_acl_entry_the_delete_network_acl_entry_method_returns_true(self):
-        vpc_id = self._create_vpc()
-        network_acl = self._create_network_acl(vpc_id)
+        vpc = self._create_vpc()
+        network_acl = self._create_network_acl(vpc.id)
         network_acl_entry = self._create_network_acl_entry(network_acl.id, *network_acl_entry_parameters)
 
         network_acl_entry_deletion_result = boto_vpc.delete_network_acl_entry(network_acl_entry.id, 100,
@@ -581,6 +583,104 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
                                                                               **conn_parameters)
 
         self.assertFalse(network_acl_entry_deletion_result)
+
+    @mock_ec2
+    @expectedNotImplementedFailure
+    def test_when_associating_an_existing_network_acl_to_an_existing_subnet_the_associate_network_acl_method_returns_true(
+            self):
+        vpc = self._create_vpc()
+        network_acl = self._create_network_acl(vpc.id)
+        subnet = self._create_subnet(vpc.id)
+
+        network_acl_association_result = boto_vpc.associate_network_acl_to_subnet(network_acl.id, subnet.id,
+                                                                                  **conn_parameters)
+
+        self.assertTrue(network_acl_association_result)
+
+    @mock_ec2
+    @expectedNotImplementedFailure
+    def test_when_associating_a_non_existent_network_acl_to_an_existing_subnet_the_associate_network_acl_method_returns_false(
+            self):
+        vpc = self._create_vpc()
+        subnet = self._create_subnet(vpc.id)
+
+        network_acl_association_result = boto_vpc.associate_network_acl_to_subnet('fake', subnet.id,
+                                                                                  **conn_parameters)
+
+        self.assertFalse(network_acl_association_result)
+
+    @mock_ec2
+    @expectedNotImplementedFailure
+    def test_when_associating_an_existing_network_acl_to_a_non_existent_subnet_the_associate_network_acl_method_returns_false(
+            self):
+        vpc = self._create_vpc()
+        network_acl = self._create_network_acl(vpc.id)
+
+        network_acl_association_result = boto_vpc.associate_network_acl_to_subnet(network_acl.id, 'fake',
+                                                                                  **conn_parameters)
+
+        self.assertFalse(network_acl_association_result)
+
+    @mock_ec2
+    @expectedNotImplementedFailure
+    def test_when_creating_and_associating_a_network_acl_to_a_subnet_succeeds_the_associate_new_network_acl_to_subnet_method_returns_true(
+            self):
+        vpc = self._create_vpc()
+        subnet = self._create_subnet(vpc.id)
+
+        network_acl_creation_and_association_result = boto_vpc.associate_new_network_acl_to_subnet(vpc.id, subnet.id,
+                                                                                                   **conn_parameters)
+
+        self.assertTrue(network_acl_creation_and_association_result)
+
+    @mock_ec2
+    @expectedNotImplementedFailure
+    def test_when_creating_and_associating_a_network_acl_to_a_subnet_and_specifying_a_name_succeeds_the_associate_new_network_acl_to_subnet_method_returns_true(
+            self):
+        vpc = self._create_vpc()
+        subnet = self._create_subnet(vpc.id)
+
+        network_acl_creation_and_association_result = boto_vpc.associate_new_network_acl_to_subnet(vpc.id, subnet.id,
+                                                                                                   network_acl_name='test',
+                                                                                                   **conn_parameters)
+
+        self.assertTrue(network_acl_creation_and_association_result)
+
+    @mock_ec2
+    @expectedNotImplementedFailure
+    def test_when_creating_and_associating_a_network_acl_to_a_subnet_and_specifying_tags_succeeds_the_associate_new_network_acl_to_subnet_method_returns_true(
+            self):
+        vpc = self._create_vpc()
+        subnet = self._create_subnet(vpc.id)
+
+        network_acl_creation_and_association_result = boto_vpc.associate_new_network_acl_to_subnet(vpc.id, subnet.id,
+                                                                                                   tags={'test': 'testvalue'},
+                                                                                                   **conn_parameters)
+
+        self.assertTrue(network_acl_creation_and_association_result)
+
+    @mock_ec2
+    @expectedNotImplementedFailure
+    def test_when_creating_and_associating_a_network_acl_to_a_non_existent_subnet_the_associate_new_network_acl_to_subnet_method_returns_false(
+            self):
+        vpc = self._create_vpc()
+
+        network_acl_creation_and_association_result = boto_vpc.associate_new_network_acl_to_subnet(vpc.id, 'fake',
+                                                                                                   **conn_parameters)
+
+        self.assertFalse(network_acl_creation_and_association_result)
+
+    @mock_ec2
+    @expectedNotImplementedFailure
+    def test_when_creating_and_associating_a_network_acl_to_a_non_existent_vpc_the_associate_new_network_acl_to_subnet_method_returns_false(
+            self):
+        vpc = self._create_vpc()
+        subnet = self._create_subnet(vpc.id)
+
+        network_acl_creation_and_association_result = boto_vpc.associate_new_network_acl_to_subnet('fake', subnet.id,
+                                                                                                   **conn_parameters)
+
+        self.assertFalse(network_acl_creation_and_association_result)
 
 
 if __name__ == '__main__':
