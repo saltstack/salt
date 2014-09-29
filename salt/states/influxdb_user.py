@@ -73,9 +73,10 @@ def present(name, passwd, database=None, user=None, password=None, host=None,
     return ret
 
 
-def absent(name, database, user=None, password=None, host=None, port=None):
+def absent(name, database=None, user=None, password=None, host=None,
+           port=None):
     '''
-    Ensure that the named user is absent
+    Ensure that the named cluster admin or database user is absent.
 
     name
         The name of the user to remove
