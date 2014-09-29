@@ -184,9 +184,12 @@ def db_remove(name, user=None, password=None, host=None, port=None):
     return client.delete_database(name)
 
 
-def user_list(database, user=None, password=None, host=None, port=None):
+def user_list(database=None, user=None, password=None, host=None, port=None):
     """
-    List users of a InfluxDB database
+    List cluster admins or database users.
+
+    If a database is specified: it will return database users list.
+    If a database is not specified: it will return cluster admins list.
 
     database
         The database to list the users from
@@ -207,12 +210,15 @@ def user_list(database, user=None, password=None, host=None, port=None):
 
     .. code-block:: bash
 
+        salt '*' influxdb.user_list
         salt '*' influxdb.user_list <database>
         salt '*' influxdb.user_list <database> <user> <password> <host> <port>
     """
     client = _client(user=user, password=password, host=host, port=port)
-    client.switch_db(database)
-    return client.get_database_users()
+    if database:
+        client.switch_db(database)
+        return client.get_database_users()
+    return client.get_list_cluster_admins()
 
 
 def user_exists(
