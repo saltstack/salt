@@ -350,6 +350,8 @@ class SaltEvent(object):
     def get_event_noblock(self):
         '''Get the raw event without blocking or any other niceties
         '''
+        if not self.cpub:
+            self.connect_pub()
         raw = self.sub.recv(zmq.NOBLOCK)
         mtag, data = self.unpack(raw, self.serial)
         return {'data': data, 'tag': mtag}
