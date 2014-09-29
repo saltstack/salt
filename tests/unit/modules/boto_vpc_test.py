@@ -71,17 +71,7 @@ def _has_required_boto():
         return True
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(HAS_BOTO is False, 'The boto module must be installed.')
-@skipIf(HAS_MOTO is False, 'The moto module must be installed.')
-@skipIf(_has_required_boto() is False, 'The boto module must be greater than'
-                                       ' or equal to version {0}'
-        .format(required_boto_version))
-class BotoVpcTestCase(TestCase):
-    '''
-    TestCase for salt.modules.boto_vpc module
-    '''
-
+class BotoVpcTestCaseBase(TestCase):
     conn = None
 
     def _create_vpc(self):
@@ -112,45 +102,17 @@ class BotoVpcTestCase(TestCase):
                                              ntp_servers=ntp_servers, netbios_name_servers=netbios_name_servers,
                                              netbios_node_type=netbios_node_type)
 
-    @mock_ec2
-    def test_get_subnet_association_single_subnet(self):
-        '''
-        tests that given multiple subnet ids in the same VPC that the VPC ID is
-        returned. The test is valuable because it uses a string as an argument
-        to subnets as opposed to a list.
-        '''
-        vpc = self._create_vpc()
-        subnet = self._create_subnet(vpc.id)
-        subnet_association = boto_vpc.get_subnet_association(subnets=subnet.id,
-                                                             **conn_parameters)
-        self.assertEqual(vpc.id, subnet_association)
 
-    @mock_ec2
-    def test_get_subnet_association_multiple_subnets_same_vpc(self):
-        '''
-        tests that given multiple subnet ids in the same VPC that the VPC ID is
-        returned.
-        '''
-        vpc = self._create_vpc()
-        subnet_a = self._create_subnet(vpc.id, '10.0.0.0/25')
-        subnet_b = self._create_subnet(vpc.id, '10.0.0.128/25')
-        subnet_association = boto_vpc.get_subnet_association([subnet_a.id, subnet_b.id],
-                                                             **conn_parameters)
-        self.assertEqual(vpc.id, subnet_association)
-
-    @mock_ec2
-    def test_get_subnet_association_multiple_subnets_different_vpc(self):
-        '''
-        tests that given multiple subnet ids in different VPCs that False is
-        returned.
-        '''
-        vpc_a = self._create_vpc()
-        vpc_b = self.conn.create_vpc(cidr_block)
-        subnet_a = self._create_subnet(vpc_a.id, '10.0.0.0/24')
-        subnet_b = self._create_subnet(vpc_b.id, '10.0.0.0/24')
-        subnet_assocation = boto_vpc.get_subnet_association([subnet_a.id, subnet_b.id],
-                                                            **conn_parameters)
-        self.assertFalse(subnet_assocation)
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(HAS_BOTO is False, 'The boto module must be installed.')
+@skipIf(HAS_MOTO is False, 'The moto module must be installed.')
+@skipIf(_has_required_boto() is False, 'The boto module must be greater than'
+                                       ' or equal to version {0}'
+        .format(required_boto_version))
+class BotoVpcTestCase(BotoVpcTestCaseBase):
+    '''
+    TestCase for salt.modules.boto_vpc module
+    '''
 
     @mock_ec2
     def test_exists_true(self):
@@ -211,6 +173,54 @@ class BotoVpcTestCase(TestCase):
         vpc_deletion_result = boto_vpc.delete('1234', **conn_parameters)
 
         self.assertFalse(vpc_deletion_result)
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(HAS_BOTO is False, 'The boto module must be installed.')
+@skipIf(HAS_MOTO is False, 'The moto module must be installed.')
+@skipIf(_has_required_boto() is False, 'The boto module must be greater than'
+                                       ' or equal to version {0}'
+        .format(required_boto_version))
+class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase):
+    @mock_ec2
+    def test_get_subnet_association_single_subnet(self):
+        '''
+        tests that given multiple subnet ids in the same VPC that the VPC ID is
+        returned. The test is valuable because it uses a string as an argument
+        to subnets as opposed to a list.
+        '''
+        vpc = self._create_vpc()
+        subnet = self._create_subnet(vpc.id)
+        subnet_association = boto_vpc.get_subnet_association(subnets=subnet.id,
+                                                             **conn_parameters)
+        self.assertEqual(vpc.id, subnet_association)
+
+    @mock_ec2
+    def test_get_subnet_association_multiple_subnets_same_vpc(self):
+        '''
+        tests that given multiple subnet ids in the same VPC that the VPC ID is
+        returned.
+        '''
+        vpc = self._create_vpc()
+        subnet_a = self._create_subnet(vpc.id, '10.0.0.0/25')
+        subnet_b = self._create_subnet(vpc.id, '10.0.0.128/25')
+        subnet_association = boto_vpc.get_subnet_association([subnet_a.id, subnet_b.id],
+                                                             **conn_parameters)
+        self.assertEqual(vpc.id, subnet_association)
+
+    @mock_ec2
+    def test_get_subnet_association_multiple_subnets_different_vpc(self):
+        '''
+        tests that given multiple subnet ids in different VPCs that False is
+        returned.
+        '''
+        vpc_a = self._create_vpc()
+        vpc_b = self.conn.create_vpc(cidr_block)
+        subnet_a = self._create_subnet(vpc_a.id, '10.0.0.0/24')
+        subnet_b = self._create_subnet(vpc_b.id, '10.0.0.0/24')
+        subnet_assocation = boto_vpc.get_subnet_association([subnet_a.id, subnet_b.id],
+                                                            **conn_parameters)
+        self.assertFalse(subnet_assocation)
 
     @mock_ec2
     def test_that_when_creating_a_subnet_succeeds_the_create_subnet_method_returns_true(self):
@@ -276,6 +286,13 @@ class BotoVpcTestCase(TestCase):
 
         self.assertFalse(subnet_exists_result)
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(HAS_BOTO is False, 'The boto module must be installed.')
+@skipIf(HAS_MOTO is False, 'The moto module must be installed.')
+@skipIf(_has_required_boto() is False, 'The boto module must be greater than'
+                                       ' or equal to version {0}'
+        .format(required_boto_version))
+class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
     @mock_ec2
     def test_when_creating_dhcp_options_succeeds_the_create_dhcp_options_method_returns_true(self):
         dhcp_options_creation_result = boto_vpc.create_dhcp_options(**dhcp_options)
@@ -387,7 +404,6 @@ class BotoVpcTestCase(TestCase):
         dhcp_options_exists_result = boto_vpc.dhcp_options_exists('fake', **conn_parameters)
 
         self.assertFalse(dhcp_options_exists_result)
-
 
 if __name__ == '__main__':
     from integration import run_tests
