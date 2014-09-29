@@ -719,14 +719,14 @@ class BotoVpcRoutingTablesTestCase(BotoVpcTestCaseBase):
         vpc = self._create_vpc()
         route_table = self._create_route_table(vpc.id)
 
-        route_table_deletion_result = boto_vpc.delete_route_table(route_table.id)
+        route_table_deletion_result = boto_vpc.delete_route_table(route_table.id, **conn_parameters)
 
         self.assertTrue(route_table_deletion_result)
 
     @mock_ec2
     @expectedNotImplementedFailure
     def test_when_deleting_a_non_existent_route_table_the_delete_route_table_method_returns_false(self):
-        route_table_deletion_result = boto_vpc.delete_route_table('fake')
+        route_table_deletion_result = boto_vpc.delete_route_table('fake', **conn_parameters)
 
         self.assertFalse(route_table_deletion_result)
 
