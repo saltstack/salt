@@ -53,6 +53,9 @@ access_key = 'GKTADJGHEIQSXMKKRBJ08H'
 secret_key = 'askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs'
 conn_parameters = {'region': region, 'key': access_key, 'keyid': secret_key, 'profile': {}}
 cidr_block = '10.0.0.0/24'
+dhcp_options = {'domain_name': 'example.com', 'domain_name_servers': ['1.2.3.4'], 'ntp_servers': ['5.6.7.8'],
+                'netbios_name_servers': ['10.0.0.1'], 'netbios_node_type': 2}
+dhcp_options.update(conn_parameters)
 
 
 def _has_required_boto():
@@ -275,37 +278,23 @@ class BotoVpcTestCase(TestCase):
 
     @mock_ec2
     def test_when_creating_dhcp_options_succeeds_the_create_dhcp_options_method_returns_true(self):
-        dhcp_options_creation_result = boto_vpc.create_dhcp_options(domain_name='example.com',
-                                                                    domain_name_servers=['1.2.3.4'],
-                                                                    ntp_servers=['5.6.7.8'],
-                                                                    netbios_name_servers=['10.0.0.1'],
-                                                                    netbios_node_type=2, **conn_parameters)
+        dhcp_options_creation_result = boto_vpc.create_dhcp_options(**dhcp_options)
 
         self.assertTrue(dhcp_options_creation_result)
 
     @mock_ec2
     def test_when_creating_dhcp_options_and_specifying_a_name_succeeds_the_create_dhcp_options_method_returns_true(
             self):
-        dhcp_options_creation_result = boto_vpc.create_dhcp_options(domain_name='example.com',
-                                                                    domain_name_servers=['1.2.3.4'],
-                                                                    ntp_servers=['5.6.7.8'],
-                                                                    netbios_name_servers=['10.0.0.1'],
-                                                                    netbios_node_type=2,
-                                                                    dhcp_options_name='test',
-                                                                    **conn_parameters)
+        dhcp_options_creation_result = boto_vpc.create_dhcp_options(dhcp_options_name='test',
+                                                                    **dhcp_options)
 
         self.assertTrue(dhcp_options_creation_result)
 
     @mock_ec2
     def test_when_creating_dhcp_options_and_specifying_tags_succeeds_the_create_dhcp_options_method_returns_true(
             self):
-        dhcp_options_creation_result = boto_vpc.create_dhcp_options(domain_name='example.com',
-                                                                    domain_name_servers=['1.2.3.4'],
-                                                                    ntp_servers=['5.6.7.8'],
-                                                                    netbios_name_servers=['10.0.0.1'],
-                                                                    netbios_node_type=2,
-                                                                    tags={'test': 'testvalue'},
-                                                                    **conn_parameters)
+        dhcp_options_creation_result = boto_vpc.create_dhcp_options(tags={'test': 'testvalue'},
+                                                                    **dhcp_options)
 
         self.assertTrue(dhcp_options_creation_result)
 
@@ -313,11 +302,7 @@ class BotoVpcTestCase(TestCase):
     def test_when_creating_dhcp_options_fails_the_create_dhcp_options_method_returns_false(self):
         with patch('moto.ec2.models.DHCPOptionsSetBackend.create_dhcp_options',
                    side_effect=BotoServerError(400, 'Mocked error')):
-            dhcp_options_creation_result = boto_vpc.create_dhcp_options(domain_name='example.com',
-                                                                        domain_name_servers=['1.2.3.4'],
-                                                                        ntp_servers=['5.6.7.8'],
-                                                                        netbios_name_servers=['10.0.0.1'],
-                                                                        netbios_node_type=2, **conn_parameters)
+            dhcp_options_creation_result = boto_vpc.create_dhcp_options(**dhcp_options)
 
         self.assertFalse(dhcp_options_creation_result)
 
@@ -352,6 +337,44 @@ class BotoVpcTestCase(TestCase):
         self.assertFalse(dhcp_options_association_result)
 
     @mock_ec2
+    def test_when_creating_and_associating_dhcp_options_set_to_an_existing_vpc_succeeds_the_associate_new_dhcp_options_method_returns_true(
+            self):
+        vpc = self._create_vpc()
+
+        dhcp_creation_and_association_result = boto_vpc.associate_new_dhcp_options_to_vpc(vpc.id, **dhcp_options)
+
+        self.assertTrue(dhcp_creation_and_association_result)
+
+    @mock_ec2
+    def test_when_creating_and_associating_dhcp_options_set_to_an_existing_vpc_fails_creating_the_dhcp_options_the_associate_new_dhcp_options_method_returns_false(
+            self):
+        vpc = self._create_vpc()
+
+        with patch('moto.ec2.models.DHCPOptionsSetBackend.create_dhcp_options',
+                   side_effect=BotoServerError(400, 'Mocked error')):
+            dhcp_creation_and_association_result = boto_vpc.associate_new_dhcp_options_to_vpc(vpc.id, **dhcp_options)
+
+        self.assertFalse(dhcp_creation_and_association_result)
+
+    @mock_ec2
+    def test_when_creating_and_associating_dhcp_options_set_to_an_existing_vpc_fails_associating_the_dhcp_options_the_associate_new_dhcp_options_method_returns_false(
+            self):
+        vpc = self._create_vpc()
+
+        with patch('moto.ec2.models.DHCPOptionsSetBackend.associate_dhcp_options',
+                   side_effect=BotoServerError(400, 'Mocked error')):
+            dhcp_creation_and_association_result = boto_vpc.associate_new_dhcp_options_to_vpc(vpc.id, **dhcp_options)
+
+        self.assertFalse(dhcp_creation_and_association_result)
+
+    @mock_ec2
+    def test_when_creating_and_associating_dhcp_options_set_to_a_non_existent_vpc_the_dhcp_options_the_associate_new_dhcp_options_method_returns_false(
+            self):
+        dhcp_creation_and_association_result = boto_vpc.associate_new_dhcp_options_to_vpc('fake', **dhcp_options)
+
+        self.assertFalse(dhcp_creation_and_association_result)
+
+    @mock_ec2
     def test_that_when_dhcp_options_exists_the_dhcp_options_exists_method_returns_true(self):
         dhcp_options = self._create_dhcp_options()
 
@@ -364,8 +387,6 @@ class BotoVpcTestCase(TestCase):
         dhcp_options_exists_result = boto_vpc.dhcp_options_exists('fake', **conn_parameters)
 
         self.assertFalse(dhcp_options_exists_result)
-
-
 
 
 if __name__ == '__main__':
