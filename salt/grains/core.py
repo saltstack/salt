@@ -908,6 +908,11 @@ def os_data():
                     'getenforce'
                 ).strip()
 
+        # Add loaded kernel modules
+        if os.path.isfile('/proc/modules'):
+            with salt.utils.fopen('/proc/modules') as modules_file:
+                grains['kernel_modules'] = [line.split()[0] for line in modules_file]
+
         # Add lsb grains on any distro with lsb-release
         try:
             import lsb_release
