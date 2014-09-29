@@ -841,8 +841,8 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
     @mock_ec2
     @expectedNotImplementedFailure
     def test_when_deleting_a_route_succeeds_the_delete_route_method_should_return_true(self):
-        vpc = self._delete_vpc()
-        route_table = self._delete_route_table(vpc.id)
+        vpc = self._create_vpc()
+        route_table = self._create_route_table(vpc.id)
 
         route_deletion_result = boto_vpc.delete_route(route_table.id, cidr_block, **conn_parameters)
 
@@ -854,6 +854,23 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
         route_deletion_result = boto_vpc.delete_route('fake', cidr_block, **conn_parameters)
 
         self.assertFalse(route_deletion_result)
+        
+    @mock_ec2
+    @expectedNotImplementedFailure
+    def test_when_replacing_a_route_succeeds_the_replace_route_method_should_return_true(self):
+        vpc = self._create_vpc()
+        route_table = self._create_route_table(vpc.id)
+
+        route_replacing_result = boto_vpc.replace_route(route_table.id, cidr_block, **conn_parameters)
+
+        self.assertTrue(route_replacing_result)
+
+    @mock_ec2
+    @expectedNotImplementedFailure
+    def test_when_replacing_a_route_with_a_non_existent_route_table_the_replace_route_method_should_return_false(self):
+        route_replacing_result = boto_vpc.replace_route('fake', cidr_block, **conn_parameters)
+
+        self.assertFalse(route_replacing_result)
 
 if __name__ == '__main__':
     from integration import run_tests
