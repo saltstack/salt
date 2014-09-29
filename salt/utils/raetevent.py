@@ -138,7 +138,8 @@ class SaltEvent(object):
         self.connect_pub()
         self.stack.serviceAll()
         if self.stack.rxMsgs:
-            event, sender = self.stack.rxMsgs.popleft()
+            msg, sender = self.stack.rxMsgs.popleft()
+            event = msg.get('event', {})
             if 'tag' not in event and 'data' not in event:
                 # Invalid event, how did this get here?
                 return None

@@ -787,8 +787,10 @@ class LocalClient(object):
         while True:
             try:
                 raw = event.get_event_noblock()
-                if raw['tag'].startswith(jid):
+                if raw and raw.get('tag', '').startswith(jid):
                     yield raw
+                else:
+                    yield None
             except zmq.ZMQError as ex:
                 if ex.errno == errno.EAGAIN or ex.errno == errno.EINTR:
                     yield None
