@@ -124,6 +124,12 @@ class BotoVpcTestCaseBase(TestCase):
                                                   icmp_code=icmp_code, icmp_type=icmp_type,
                                                   port_range_from=port_range_from, port_range_to=port_range_to)
 
+    def _create_route_table(self, vpc_id):
+        if not self.conn:
+            self.conn = boto.vpc.connect_to_region(region)
+
+        return self.conn.create_route_table(vpc_id)
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
@@ -707,6 +713,22 @@ class BotoVpcRoutingTablesTestCase(BotoVpcTestCaseBase):
 
         self.assertTrue(route_table_creation_result)
 
+    @mock_ec2
+    @expectedNotImplementedFailure
+    def test_when_deleting_a_route_table_succeeds_the_delete_route_table_method_returns_true(self):
+        vpc = self._create_vpc()
+        route_table = self._create_route_table(vpc.id)
+
+        route_table_deletion_result = boto_vpc.delete_route_table(route_table.id)
+
+        self.assertTrue(route_table_deletion_result)
+
+    @mock_ec2
+    @expectedNotImplementedFailure
+    def test_when_deleting_a_non_existent_route_table_the_delete_route_table_method_returns_false(self):
+        route_table_deletion_result = boto_vpc.delete_route_table('fake')
+
+        self.assertFalse(route_table_deletion_result)
 
 if __name__ == '__main__':
     from integration import run_tests
