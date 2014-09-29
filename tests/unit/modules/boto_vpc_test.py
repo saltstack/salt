@@ -57,9 +57,10 @@ access_key = 'GKTADJGHEIQSXMKKRBJ08H'
 secret_key = 'askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs'
 conn_parameters = {'region': region, 'key': access_key, 'keyid': secret_key, 'profile': {}}
 cidr_block = '10.0.0.0/24'
-dhcp_options = {'domain_name': 'example.com', 'domain_name_servers': ['1.2.3.4'], 'ntp_servers': ['5.6.7.8'],
-                'netbios_name_servers': ['10.0.0.1'], 'netbios_node_type': 2}
-dhcp_options.update(conn_parameters)
+dhcp_options_parameters = {'domain_name': 'example.com', 'domain_name_servers': ['1.2.3.4'], 'ntp_servers': ['5.6.7.8'],
+                           'netbios_name_servers': ['10.0.0.1'], 'netbios_node_type': 2}
+network_acl_entry_parameters = ('fake', 100, -1, 'allow', cidr_block)
+dhcp_options_parameters.update(conn_parameters)
 
 
 def _has_required_boto():
@@ -111,6 +112,18 @@ class BotoVpcTestCaseBase(TestCase):
             self.conn = boto.vpc.connect_to_region(region)
 
         return self.conn.create_network_acl(vpc_id)
+
+    def _create_network_acl_entry(self, network_acl_id, rule_number, protocol, rule_action, cidr_block, egress=None,
+                                  icmp_code=None, icmp_type=None, port_range_from=None, port_range_to=None):
+        if not self.conn:
+            self.conn = boto.vpc.connect_to_region(region)
+
+        return self.conn.create_network_acl_entry(network_acl_id, rule_number, protocol, rule_action,
+                                                  cidr_block,
+                                                  egress=egress,
+                                                  icmp_code=icmp_code, icmp_type=icmp_type,
+                                                  port_range_from=port_range_from, port_range_to=port_range_to)
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
@@ -295,6 +308,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase):
 
         self.assertFalse(subnet_exists_result)
 
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(HAS_MOTO is False, 'The moto module must be installed.')
@@ -304,7 +318,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase):
 class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
     @mock_ec2
     def test_when_creating_dhcp_options_succeeds_the_create_dhcp_options_method_returns_true(self):
-        dhcp_options_creation_result = boto_vpc.create_dhcp_options(**dhcp_options)
+        dhcp_options_creation_result = boto_vpc.create_dhcp_options(**dhcp_options_parameters)
 
         self.assertTrue(dhcp_options_creation_result)
 
@@ -312,7 +326,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
     def test_when_creating_dhcp_options_and_specifying_a_name_succeeds_the_create_dhcp_options_method_returns_true(
             self):
         dhcp_options_creation_result = boto_vpc.create_dhcp_options(dhcp_options_name='test',
-                                                                    **dhcp_options)
+                                                                    **dhcp_options_parameters)
 
         self.assertTrue(dhcp_options_creation_result)
 
@@ -320,7 +334,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
     def test_when_creating_dhcp_options_and_specifying_tags_succeeds_the_create_dhcp_options_method_returns_true(
             self):
         dhcp_options_creation_result = boto_vpc.create_dhcp_options(tags={'test': 'testvalue'},
-                                                                    **dhcp_options)
+                                                                    **dhcp_options_parameters)
 
         self.assertTrue(dhcp_options_creation_result)
 
@@ -328,7 +342,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
     def test_when_creating_dhcp_options_fails_the_create_dhcp_options_method_returns_false(self):
         with patch('moto.ec2.models.DHCPOptionsSetBackend.create_dhcp_options',
                    side_effect=BotoServerError(400, 'Mocked error')):
-            dhcp_options_creation_result = boto_vpc.create_dhcp_options(**dhcp_options)
+            dhcp_options_creation_result = boto_vpc.create_dhcp_options(**dhcp_options_parameters)
 
         self.assertFalse(dhcp_options_creation_result)
 
@@ -367,7 +381,8 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
             self):
         vpc = self._create_vpc()
 
-        dhcp_creation_and_association_result = boto_vpc.associate_new_dhcp_options_to_vpc(vpc.id, **dhcp_options)
+        dhcp_creation_and_association_result = boto_vpc.associate_new_dhcp_options_to_vpc(vpc.id,
+                                                                                          **dhcp_options_parameters)
 
         self.assertTrue(dhcp_creation_and_association_result)
 
@@ -378,7 +393,8 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
 
         with patch('moto.ec2.models.DHCPOptionsSetBackend.create_dhcp_options',
                    side_effect=BotoServerError(400, 'Mocked error')):
-            dhcp_creation_and_association_result = boto_vpc.associate_new_dhcp_options_to_vpc(vpc.id, **dhcp_options)
+            dhcp_creation_and_association_result = boto_vpc.associate_new_dhcp_options_to_vpc(vpc.id,
+                                                                                              **dhcp_options_parameters)
 
         self.assertFalse(dhcp_creation_and_association_result)
 
@@ -389,14 +405,16 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
 
         with patch('moto.ec2.models.DHCPOptionsSetBackend.associate_dhcp_options',
                    side_effect=BotoServerError(400, 'Mocked error')):
-            dhcp_creation_and_association_result = boto_vpc.associate_new_dhcp_options_to_vpc(vpc.id, **dhcp_options)
+            dhcp_creation_and_association_result = boto_vpc.associate_new_dhcp_options_to_vpc(vpc.id,
+                                                                                              **dhcp_options_parameters)
 
         self.assertFalse(dhcp_creation_and_association_result)
 
     @mock_ec2
     def test_when_creating_and_associating_dhcp_options_set_to_a_non_existent_vpc_the_dhcp_options_the_associate_new_dhcp_options_method_returns_false(
             self):
-        dhcp_creation_and_association_result = boto_vpc.associate_new_dhcp_options_to_vpc('fake', **dhcp_options)
+        dhcp_creation_and_association_result = boto_vpc.associate_new_dhcp_options_to_vpc('fake',
+                                                                                          **dhcp_options_parameters)
 
         self.assertFalse(dhcp_creation_and_association_result)
 
@@ -413,6 +431,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
         dhcp_options_exists_result = boto_vpc.dhcp_options_exists('fake', **conn_parameters)
 
         self.assertFalse(dhcp_options_exists_result)
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
@@ -481,6 +500,70 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         network_acl_deletion_result = boto_vpc.network_acl_exists('fake', **conn_parameters)
 
         self.assertFalse(network_acl_deletion_result)
+
+    @mock_ec2
+    @expectedNotImplementedFailure
+    def test_when_creating_a_network_acl_entry_successfully_the_create_network_acl_entry_method_returns_true(self):
+        vpc_id = self._create_vpc()
+        network_acl = self._create_network_acl(vpc_id)
+
+        network_acl_entry_creation_result = boto_vpc.create_network_acl_entry(network_acl.id,
+                                                                              *network_acl_entry_parameters,
+                                                                              **conn_parameters)
+
+        self.assertTrue(network_acl_entry_creation_result)
+
+    @mock_ec2
+    @expectedNotImplementedFailure
+    def test_when_creating_a_network_acl_entry_for_a_non_existent_network_acl_the_create_network_acl_entry_method_returns_false(
+            self):
+        network_acl_entry_creation_result = boto_vpc.create_network_acl_entry(*network_acl_entry_parameters,
+                                                                              **conn_parameters)
+
+        self.assertFalse(network_acl_entry_creation_result)
+
+    @mock_ec2
+    @expectedNotImplementedFailure
+    def test_when_replacing_a_network_acl_entry_successfully_the_replace_network_acl_entry_method_returns_true(self):
+        vpc_id = self._create_vpc()
+        network_acl = self._create_network_acl(vpc_id)
+        self._create_network_acl_entry(network_acl.id, *network_acl_entry_parameters)
+
+        network_acl_entry_creation_result = boto_vpc.replace_network_acl_entry(network_acl.id,
+                                                                               *network_acl_entry_parameters,
+                                                                               **conn_parameters)
+
+        self.assertTrue(network_acl_entry_creation_result)
+
+    @mock_ec2
+    @expectedNotImplementedFailure
+    def test_when_replacing_a_network_acl_entry_for_a_non_existent_network_acl_the_replace_network_acl_entry_method_returns_false(
+            self):
+        network_acl_entry_creation_result = boto_vpc.create_network_acl_entry(*network_acl_entry_parameters,
+                                                                              **conn_parameters)
+
+        self.assertFalse(network_acl_entry_creation_result)
+
+    @mock_ec2
+    @expectedNotImplementedFailure
+    def test_when_deleting_an_existing_network_acl_entry_the_delete_network_acl_entry_method_returns_true(self):
+        vpc_id = self._create_vpc()
+        network_acl = self._create_network_acl(vpc_id)
+        network_acl_entry = self._create_network_acl_entry(network_acl.id, *network_acl_entry_parameters)
+
+        network_acl_entry_deletion_result = boto_vpc.delete_network_acl_entry(network_acl_entry.id, 100,
+                                                                              **conn_parameters)
+
+        self.assertTrue(network_acl_entry_deletion_result)
+
+    @mock_ec2
+    @expectedNotImplementedFailure
+    def test_when_deleting_a_non_existent_network_acl_entry_the_delete_network_acl_entry_method_returns_false(self):
+        network_acl_entry_deletion_result = boto_vpc.delete_network_acl_entry('fake', 100,
+                                                                              **conn_parameters)
+
+        self.assertFalse(network_acl_entry_deletion_result)
+
 
 if __name__ == '__main__':
     from integration import run_tests
