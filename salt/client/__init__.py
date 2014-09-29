@@ -787,8 +787,10 @@ class LocalClient(object):
         while True:
             try:
                 raw = event.get_event_noblock()
-                if raw['tag'].startswith(jid):
+                if raw and raw.get('tag', '').startswith(jid):
                     yield raw
+                else:
+                    yield None
             except zmq.ZMQError as ex:
                 if ex.errno == errno.EAGAIN or ex.errno == errno.EINTR:
                     yield None
@@ -1215,7 +1217,7 @@ class LocalClient(object):
         # Wait for the hosts to check in
         while True:
             raw = self.event.get_event(timeout)
-            if raw is None or time.time() > timeout_at:
+            if raw is None: # XXXX or time.time() > timeout_at:
                 # Timeout reached
                 break
             if 'minions' in raw.get('data', {}):
