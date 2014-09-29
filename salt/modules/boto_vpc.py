@@ -739,6 +739,21 @@ def route_table_exists(route_table_id, region=None, key=None, keyid=None, profil
         return False
 
 
+def associate_route_table(route_table_id, subnet_id, region=None, key=None, keyid=None, profile=None):
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+
+    try:
+        association_id = conn.associate_route_table(route_table_id, subnet_id)
+        log.info('Route table {0} was associated with subnet {1}'.format(route_table_id, subnet_id))
+
+        return association_id
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return False
+
+
 def disassociate_route_table(association_id, region=None, key=None, keyid=None, profile=None):
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
