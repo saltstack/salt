@@ -66,8 +66,7 @@ def wrap_tmpl_func(render_str):
                     slspath = os.path.dirname(slspath)
             context['slsdotpath'] = slspath.replace('/', '.')
             context['slscolonpath'] = slspath.replace('/', ':')
-            if slspath:
-                slspath = slspath + '/'
+            context['sls_path'] = slspath.replace('/', '_')
             context['slspath'] = slspath
 
         if isinstance(tmplsrc, string_types):
