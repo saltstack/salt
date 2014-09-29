@@ -781,6 +781,9 @@ class Router(ioflo.base.deeding.Deed):
             log.error('Received invalid message: {0}'.format(msg))
             return
 
+        if s_estate == 'router' or d_estate == 'router':
+            console.terse("Event estate for 'router' {0}.\n".format(msg))
+
         if s_yard is None:
             return  # drop message
 
