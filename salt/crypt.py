@@ -305,6 +305,8 @@ class Auth(object):
             self.mpub = 'monitor_master.pub'
         else:
             self.mpub = 'minion_master.pub'
+        if not os.path.isfile(self.pub_path):
+            self.get_keys()
 
     def get_keys(self):
         '''
