@@ -895,6 +895,8 @@ class LocalClient(object):
                         self.opts['sock_dir'],
                         self.opts['transport'],
                         listen=not self.opts.get('__worker', False))
+                # start listening for new events, before firing off the pings
+                event.connect_pub()
                 jinfo = self.gather_job_info(jid, tgt, tgt_type)
                 # if we weren't assigned any jid that means the master thinks
                 # we have nothing to send
