@@ -560,6 +560,71 @@ def network_acl_exists(network_acl_id, region=None, key=None, keyid=None, profil
         return False
 
 
+def create_network_acl_entry(network_acl_id, rule_number, protocol, rule_action, cidr_block, egress=None,
+                             icmp_code=None, icmp_type=None, port_range_from=None, port_range_to=None,
+                             region=None, key=None, keyid=None, profile=None):
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+
+    try:
+        network_acl_entry = conn.create_network_acl_entry(network_acl_id, rule_number, protocol, rule_action,
+                                                          cidr_block,
+                                                          egress=egress, icmp_code=icmp_code, icmp_type=icmp_type,
+                                                          port_range_from=port_range_from, port_range_to=port_range_to)
+        if network_acl_entry:
+            log.info('Network ACL entry was created')
+            return True
+        else:
+            log.warning('Network ACL entry was not created')
+            return False
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return False
+
+
+def replace_network_acl_entry(network_acl_id, rule_number, protocol, rule_action, cidr_block, egress=None,
+                              icmp_code=None, icmp_type=None, port_range_from=None, port_range_to=None,
+                              region=None, key=None, keyid=None, profile=None):
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+
+    try:
+        network_acl_entry = conn.replace_network_acl_entry(network_acl_id, rule_number, protocol, rule_action,
+                                                           cidr_block,
+                                                           egress=egress,
+                                                           icmp_code=icmp_code, icmp_type=icmp_type,
+                                                           port_range_from=port_range_from, port_range_to=port_range_to)
+        if network_acl_entry:
+            log.info('Network ACL entry was replaced')
+            return True
+        else:
+            log.warning('Network ACL entry was not replaced')
+            return False
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return False
+
+
+def delete_network_acl_entry(network_acl_id, rule_number, egress=None, region=None, key=None, keyid=None, profile=None):
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+
+    try:
+        network_acl_entry = conn.delete_network_acl_entry(network_acl_id, rule_number, egress=egress)
+        if network_acl_entry:
+            log.info('Network ACL entry was deleted')
+            return True
+        else:
+            log.warning('Network ACL was not deleted')
+            return False
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return False
+
+
 def _get_conn(region, key, keyid, profile):
     '''
     Get a boto connection to vpc.
