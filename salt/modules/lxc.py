@@ -2004,35 +2004,47 @@ def bootstrap(name, config=None, approve_key=True,
                 bs_ = __salt__['config.gather_bootstrap_script'](
                     bootstrap=bootstrap_url)
                 dest_dir = os.path.join('/tmp', rstr)
+                bootstrap_args = bootstrap_args.format(configdir)
+                wrapper = '{0}/bootstrap-wrapper.sh'.format(dest_dir)
+                cmd = '{0} {2}/bootstrap.sh {1}'.format(
+                    bootstrap_shell, bootstrap_args, dest_dir)
+                # lxc-attach does not play well everytime with
+                # inline environement variables
+                # so we just create a wrapper to inject the PATH
+                twrapper = os.path.join(tmp, 'bootstrap-wrapper.sh')
+                with open(twrapper, 'w') as fic:
+                    fic.write('#!/usr/bin/env bash\n'
+                              'PATH=$PATH:/bin:/sbin:/usr/sbin\n'
+                              '{0}\n'.format(cmd))
                 for cmd in [
                     'mkdir -p {0}'.format(dest_dir),
                     'chmod 700 {0}'.format(dest_dir),
+                    'chmod 700 {0}'.format(wrapper),
                 ]:
                     if run_cmd(name, cmd, stdout=True):
                         log.error(
                             ('tmpdir {0} creation'
                              ' failed ({1}').format(dest_dir, cmd))
                         return False
-                cp(name,
-                   bs_,
-                   '{0}/bootstrap.sh'.format(dest_dir))
+                cp(name, bs_, '{0}/bootstrap.sh'.format(dest_dir))
                 cp(name, cfg_files['config'],
                    os.path.join(configdir, 'minion'))
                 cp(name, cfg_files['privkey'],
                    os.path.join(configdir, 'minion.pem'))
+                cp(name, twrapper, wrapper)
                 cp(name, cfg_files['pubkey'],
                    os.path.join(configdir, 'minion.pub'))
-                bootstrap_args = bootstrap_args.format(configdir)
-                cmd = ('PATH=$PATH:/bin:/sbin:/usr/sbin'
-                       ' {0} {2}/bootstrap.sh {1}').format(
-                           bootstrap_shell,
-                           bootstrap_args,
-                           dest_dir)
+                wcmd = 'chmod 700 {0}'.format(wrapper)
+                if run_cmd(name, wcmd, stdout=True):
+                    log.error(
+                        ('Permission settings for bootstrap '
+                         ' {0} failed ({1}').format(dest_dir, cmd))
+                    return False
                 # log ASAP the forged bootstrap command which can be wrapped
                 # out of the output in case of unexpected problem
                 log.info('Running {0} in lxc {1}'.format(cmd, name))
                 res = not __salt__['lxc.run_cmd'](
-                    name, cmd,
+                    name, wrapper,
                     stdout=True, stderr=True, use_vt=True)['retcode']
             else:
                 res = False
