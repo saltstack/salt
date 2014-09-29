@@ -116,7 +116,7 @@ def get_subnet_association(subnets, region=None, key=None, keyid=None,
         return vpc_id
     else:
         log.info('given subnets are associated with fewer than 1 or greater'
-                  ' than 1 subnets')
+                 ' than 1 subnets')
         return False
 
 
@@ -171,10 +171,7 @@ def create(cidr_block, instance_tenancy=None, vpc_name=None, region=None, key=No
 
         log.debug('The newly created VPC id is {0}'.format(vpc.id))
 
-        if vpc_name:
-            vpc.add_tag("Name", vpc_name)
-
-            log.debug('The VPC {0} is now named as {1}'.format(vpc.id, vpc_name))
+        _maybe_set_name_tag(vpc_name, vpc)
 
         return True
     except boto.exception.BotoServerError as e:
@@ -214,7 +211,8 @@ def delete(vpc_id, region=None, key=None, keyid=None, profile=None):
         return False
 
 
-def create_subnet(vpc_id, cidr_block, availability_zone=None, region=None, key=None, keyid=None, profile=None):
+def create_subnet(vpc_id, cidr_block, availability_zone=None, subnet_name=None, region=None, key=None, keyid=None,
+                  profile=None):
     '''
     Given a valid VPC ID and a CIDR block, create a subnet for the VPC.
 
@@ -240,6 +238,8 @@ def create_subnet(vpc_id, cidr_block, availability_zone=None, region=None, key=N
         log.debug('A VPC subnet {0} with {1} available ips on VPC {2}'.format(vpc_subnet.id,
                                                                               vpc_subnet.available_ip_address_count,
                                                                               vpc_id))
+
+        _maybe_set_name_tag(subnet_name, vpc_subnet)
 
         return True
     except boto.exception.BotoServerError as e:
@@ -279,7 +279,7 @@ def delete_subnet(subnet_id, region=None, key=None, keyid=None, profile=None):
         return False
 
 
-def create_customer_gateway(vpn_connection_type, ip_address, bgp_asn, region=None, key=None, keyid=None, profile=None):
+def create_customer_gateway(vpn_connection_type, ip_address, bgp_asn, customer_gateway_name=None, region=None, key=None, keyid=None, profile=None):
     '''
     Given a valid VPN connection type, a static IP address and a customer gateway’s Border Gateway Protocol (BGP) Autonomous System Number, create a customer gateway.
 
@@ -301,6 +301,8 @@ def create_customer_gateway(vpn_connection_type, ip_address, bgp_asn, region=Non
         customer_gateway = conn.create_customer_gateway(vpn_connection_type, ip_address, bgp_asn)
 
         log.info('A customer gateway with id {0} was created'.format(customer_gateway.id))
+
+        _maybe_set_name_tag(customer_gateway_name, customer_gateway)
     except boto.exception.BotoServerError as e:
         log.error(e)
         return False
@@ -339,7 +341,7 @@ def delete_customer_gateway(customer_gateway_id, region=None, key=None, keyid=No
 
 
 def create_dhcp_options(domain_name=None, domain_name_servers=None, ntp_servers=None,
-                        netbios_name_servers=None, netbios_node_type=None,
+                        netbios_name_servers=None, netbios_node_type=None, dhcp_options_name=None,
                         region=None, key=None, keyid=None, profile=None):
     '''
     Given valid DHCP options, create a DHCP options record.
@@ -363,6 +365,8 @@ def create_dhcp_options(domain_name=None, domain_name_servers=None, ntp_servers=
                                             netbios_node_type=netbios_node_type)
         if dhcp_options:
             log.info('DHCP options with id {0} were created'.format(dhcp_options.id))
+
+            _maybe_set_name_tag(dhcp_options_name, dhcp_options)
 
             return True
         else:
@@ -470,3 +474,10 @@ def _create_dhcp_options(conn, domain_name=None, domain_name_servers=None, ntp_s
     return conn.create_dhcp_options(domain_name=domain_name, domain_name_servers=domain_name_servers,
                                     ntp_servers=ntp_servers, netbios_name_servers=netbios_name_servers,
                                     netbios_node_type=netbios_node_type)
+
+
+def _maybe_set_name_tag(name, obj):
+    if name:
+        obj.add_tag("Name", name)
+
+        log.debug('{0} is now named as {1}'.format(obj, name))
