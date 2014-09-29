@@ -127,12 +127,9 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         '''
         load = kwargs
         load['cmd'] = 'runner'
-        # sreq = salt.payload.SREQ(
-        #         'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
-        #        )
-        sreq = salt.transport.Channel.factory(self.opts, crypt='clear')
-        if self.opts['transport'] == 'raet':
-            sreq.dst = (None, None, 'local_cmd')
+        sreq = salt.transport.Channel.factory(self.opts,
+                                              crypt='clear',
+                                              usage='master_call')
         ret = sreq.send(load)
         if isinstance(ret, collections.Mapping):
             if 'error' in ret:

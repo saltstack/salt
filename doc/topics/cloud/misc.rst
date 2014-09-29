@@ -16,7 +16,7 @@ to pass arguments to the deploy script:
     ec2-amazon:
         provider: ec2
         image: ami-1624987f
-        size: Micro Instance
+        size: t1.micro
         ssh_username: ec2-user
         script: bootstrap-salt
         script_args: -c /tmp/

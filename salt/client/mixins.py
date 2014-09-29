@@ -6,7 +6,6 @@ from __future__ import print_function
 import datetime
 import logging
 import multiprocessing
-import time
 
 import salt.utils
 import salt.utils.event
@@ -63,22 +62,23 @@ class AsyncClientMixin(object):
     client = None
     tag_prefix = None
 
-    def _proc_function(self, fun, low, user, tag, jid):
+    def _proc_function(self, fun, low, user, tag, jid, fire_event=True):
         '''
         Run this method in a multiprocess target to execute the function in a
         multiprocess and fire the return data on the event bus
         '''
         salt.utils.daemonize()
-        event = salt.utils.event.get_event(
-                'master',
-                self.opts['sock_dir'],
-                self.opts['transport'],
-                listen=False)
         data = {'fun': '{0}.{1}'.format(self.client, fun),
                 'jid': jid,
                 'user': user,
                 }
-        event.fire_event(data, tagify('new', base=tag))
+        if fire_event:
+            event = salt.utils.event.get_event(
+                    'master',
+                    self.opts['sock_dir'],
+                    self.opts['transport'],
+                    listen=False)
+            event.fire_event(data, tagify('new', base=tag))
 
         try:
             data['return'] = self.low(fun, low)
@@ -92,11 +92,14 @@ class AsyncClientMixin(object):
                             )
             data['success'] = False
         data['user'] = user
-        event.fire_event(data, tagify('ret', base=tag))
-        # this is a workaround because process reaping is defeating 0MQ linger
-        time.sleep(2.0)  # delay so 0MQ event gets out before runner process reaped
 
-    def async(self, fun, low, user='UNKNOWN'):
+        if fire_event:
+            event.fire_event(data, tagify('ret', base=tag))
+            # if we fired an event, make sure to delete the event object.
+            # This will ensure that we call destroy, which will do the 0MQ linger
+            del event
+
+    def async(self, fun, low, user='UNKNOWN', fire_event=True):
         '''
         Execute the function in a multiprocess and return the event tag to use
         to watch for the return
@@ -106,6 +109,7 @@ class AsyncClientMixin(object):
 
         proc = multiprocessing.Process(
                 target=self._proc_function,
-                args=(fun, low, user, tag, jid))
+                args=(fun, low, user, tag, jid),
+                kwargs={'fire_event': fire_event})
         proc.start()
         return {'tag': tag, 'jid': jid}

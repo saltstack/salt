@@ -636,9 +636,9 @@ class State(object):
                 log.debug('Last command return code: {0}'.format(cmd))
                 if cmd != 0 and ret['result'] is False:
                     ret.update({'comment': 'onlyif execution failed', 'result': True})
+                    return ret
                 elif cmd == 0:
                     ret.update({'comment': 'onlyif execution succeeded', 'result': False})
-                    return ret
             return ret
 
         if 'unless' in low_data:
@@ -862,12 +862,15 @@ class State(object):
             errors.append('High data is not a dictionary and is invalid')
         reqs = {}
         for name, body in high.items():
-            if name.startswith('__'):
-                continue
+            try:
+                if name.startswith('__'):
+                    continue
+            except AttributeError:
+                pass
             if not isinstance(name, string_types):
                 errors.append(
                     'ID {0!r} in SLS {1!r} is not formed as a string, but '
-                    'is a {2}'.format(
+                    'is a {2}. It may need to be quoted.'.format(
                         name, body['__sls__'], type(name).__name__)
                 )
             if not isinstance(body, dict):
@@ -1628,7 +1631,7 @@ class State(object):
         if 'onchanges' in low:
             present = True
         if not present:
-            return 'met'
+            return 'met', ()
         reqs = {
                 'require': [],
                 'watch': [],
@@ -1658,7 +1661,7 @@ class State(object):
                                 found = True
                                 reqs[r_state].append(chunk)
                     if not found:
-                        return 'unmet'
+                        return 'unmet', ()
         fun_stats = set()
         for r_state, chunks in reqs.items():
             if r_state == 'prereq':
@@ -1693,16 +1696,19 @@ class State(object):
                     fun_stats.add('met')
 
         if 'unmet' in fun_stats:
-            return 'unmet'
+            status = 'unmet'
         elif 'fail' in fun_stats:
-            return 'fail'
+            status = 'fail'
         elif 'pre' in fun_stats:
             if 'premet' in fun_stats:
-                return 'met'
-            return 'pre'
+                status = 'met'
+            status = 'pre'
         elif 'change' in fun_stats:
-            return 'change'
-        return 'met'
+            status = 'change'
+        else:
+            status = 'met'
+
+        return status, reqs
 
     def event(self, chunk_ret, length):
         '''
@@ -1730,9 +1736,9 @@ class State(object):
         requisites = ['require', 'watch', 'prereq', 'onfail', 'onchanges']
         if not low.get('__prereq__'):
             requisites.append('prerequired')
-            status = self.check_requisite(low, running, chunks, True)
+            status, reqs = self.check_requisite(low, running, chunks, True)
         else:
-            status = self.check_requisite(low, running, chunks)
+            status, reqs = self.check_requisite(low, running, chunks)
         if status == 'unmet':
             lost = {}
             reqs = []
@@ -1816,7 +1822,7 @@ class State(object):
                         running['__FAILHARD__'] = True
                         return running
             if low.get('__prereq__'):
-                status = self.check_requisite(low, running, chunks)
+                status, reqs = self.check_requisite(low, running, chunks)
                 self.pre[tag] = self.call(low, chunks, running)
                 if not self.pre[tag]['changes'] and status == 'change':
                     self.pre[tag]['changes'] = {'watch': 'watch'}
@@ -1852,6 +1858,7 @@ class State(object):
                 low = low.copy()
                 low['sfun'] = low['fun']
                 low['fun'] = 'mod_watch'
+                low['__reqs__'] = reqs
                 ret = self.call(low, chunks, running)
             running[tag] = ret
         elif status == 'pre':
@@ -1946,11 +1953,37 @@ class State(object):
             return errors
         # Compile and verify the raw chunks
         chunks = self.compile_high_data(high)
+
+        # Check for any disabled states
+        disabled = {}
+        if 'state_runs_disabled' in self.opts['grains']:
+            _chunks = copy.deepcopy(chunks)
+            for low in _chunks:
+                state_ = '{0}.{1}'.format(low['state'], low['fun'])
+                for pat in self.opts['grains']['state_runs_disabled']:
+                    if fnmatch.fnmatch(state_, pat):
+                        comment = (
+                                    'The state function "{0}" is currently disabled by "{1}", '
+                                    'to re-enable, run state.enable {1}.'
+                                  ).format(
+                                    state_,
+                                    pat,
+                                  )
+                        _tag = _gen_tag(low)
+                        disabled[_tag] = {'changes': {},
+                                          'result': False,
+                                          'comment': comment,
+                                          '__run_num__': self.__run_num,
+                                          '__sls__': low['__sls__']}
+                        self.__run_num += 1
+                        chunks.remove(low)
+                        break
+
         # If there are extensions in the highstate, process them and update
         # the low data chunks
         if errors:
             return errors
-        ret = self.call_chunks(chunks)
+        ret = dict(disabled.items() + self.call_chunks(chunks).items())
         ret = self.call_listen(chunks, ret)
         return ret
 
@@ -2499,7 +2532,10 @@ class BaseHighState(object):
                                             ', '.join(resolved_envs))
                         log.critical(msg)
                         errors.append(msg)
-                self._handle_iorder(state)
+                try:
+                    self._handle_iorder(state)
+                except TypeError:
+                    log.critical('Could not render SLS {0}. Syntax error detected.'.format(sls))
         else:
             state = {}
         return state, errors
@@ -2651,10 +2687,13 @@ class BaseHighState(object):
         highstate = self.building_highstate
         all_errors = []
         mods = set()
+        statefiles = []
         for saltenv, states in matches.items():
             for sls_match in states:
-                statefiles = fnmatch.filter(self.avail[saltenv], sls_match)
-
+                try:
+                    statefiles = fnmatch.filter(self.avail[saltenv], sls_match)
+                except KeyError:
+                    all_errors.extend(['No matching salt environment for environment {0!r} found'.format(saltenv)])
                 # if we did not found any sls in the fileserver listing, this
                 # may be because the sls was generated or added later, we can
                 # try to directly execute it, and if it fails, anyway it will

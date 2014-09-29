@@ -58,11 +58,28 @@ class RAETChannel(Channel):
     Build the communication framework to communicate over the local process
     uxd socket and send messages forwarded to the master. then wait for the
     relative return message.
+
+    Two use cases:
+        mininion to master communication, normal use case
+           Minion is communicating via yard through minion Road to master
+           The destination route needs the estate name of the associated master
+        master call via runner, special use case
+           In the special case the master call external process is communicating
+           via a yard with the master manor yard
+           The destination route estate is None to indicate local estate
+
+        The difference between the two is how the destination route
+        is assigned.
     '''
-    def __init__(self, opts, **kwargs):
+    def __init__(self, opts, usage=None, **kwargs):
         self.opts = opts
         self.ttype = 'raet'
-        self.dst = ('master', None, 'remote_cmd')
+        if usage == 'master_call':
+            self.dst = (None, None, 'local_cmd')  # runner.py master_call
+        elif usage == 'salt_call':
+            self.dst = (None, None, 'remote_cmd')  # salt_call caller
+        else:  # everything else
+            self.dst = (None, None, 'remote_cmd')  # normal use case minion to master
         self.stack = None
 
     def _setup_stack(self):
@@ -72,8 +89,8 @@ class RAETChannel(Channel):
 
         '''
         mid = self.opts.get('id', 'master')
-        yid = nacling.uuid(size=18)
-        name = 'channel' + yid
+        uid = nacling.uuid(size=18)
+        name = 'channel' + uid
         stack = LaneStack(name=name,
                           lanename=mid,
                           sockdirpath=self.opts['sock_dir'])
@@ -96,7 +113,7 @@ class RAETChannel(Channel):
                 self.stack = jobber_stack
             else:
                 self.stack = jobber_stack = self._setup_stack()
-        log.debug("Using Jobber Stack at = {0}\n".format(self.stack.local.ha))
+        log.debug("Using Jobber Stack at = {0}\n".format(self.stack.ha))
 
     def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
         '''
@@ -113,9 +130,8 @@ class RAETChannel(Channel):
         self.__prep_stack()
         tried = 1
         start = time.time()
-        mid = self.opts.get('id', None)
         track = nacling.uuid(18)
-        src = (mid, self.stack.local.name, track)
+        src = (None, self.stack.local.name, track)
         self.route = {'src': src, 'dst': self.dst}
         msg = {'route': self.route, 'load': load}
         self.stack.transmit(msg, self.stack.nameRemotes['manor'].uid)

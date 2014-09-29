@@ -33,6 +33,7 @@ class KeyCLI(object):
             self.acc = 'minions'
             self.pend = 'minions_pre'
             self.rej = 'minions_rejected'
+            self.den = 'minions_denied'
         else:
             self.key = RaetKey(opts)
             self.acc = 'accepted'
@@ -61,6 +62,12 @@ class KeyCLI(object):
         elif status.startswith('rej'):
             salt.output.display_output(
                 {'minions_rejected': keys[self.rej]},
+                'key',
+                self.opts
+            )
+        elif status.startswith('den'):
+            salt.output.display_output(
+                {'minions_denied': keys[self.den]},
                 'key',
                 self.opts
             )
@@ -430,7 +437,10 @@ class Key(object):
         minions_pre = os.path.join(self.opts['pki_dir'], 'minions_pre')
         minions_rejected = os.path.join(self.opts['pki_dir'],
                                         'minions_rejected')
-        return minions_accepted, minions_pre, minions_rejected
+
+        minions_denied = os.path.join(self.opts['pki_dir'],
+                                        'minions_denied')
+        return minions_accepted, minions_pre, minions_rejected, minions_denied
 
     def gen_keys(self):
         '''
@@ -516,7 +526,7 @@ class Key(object):
         cur_keys = self.list_keys()
         for status, keys in match_dict.items():
             for key in salt.utils.isorted(keys):
-                for keydir in ('minions', 'minions_pre', 'minions_rejected'):
+                for keydir in ('minions', 'minions_pre', 'minions_rejected', 'minions_denied'):
                     if fnmatch.filter(cur_keys.get(keydir, []), key):
                         ret.setdefault(keydir, []).append(key)
         return ret
@@ -537,9 +547,20 @@ class Key(object):
         '''
         Return a dict of managed keys and what the key status are
         '''
-        acc, pre, rej = self._check_minions_directories()
+
+        key_dirs = []
+
+        # We have to differentiate between RaetKey._check_minions_directories
+        # and Zeromq-Keys. Raet-Keys only have three states while ZeroMQ-keys
+        # havd an additional 'denied' state.
+        if self.opts['transport'] == 'zeromq':
+            key_dirs = self._check_minions_directories()
+        else:
+            key_dirs = self._check_minions_directories()
+
         ret = {}
-        for dir_ in acc, pre, rej:
+
+        for dir_ in key_dirs:
             ret[os.path.basename(dir_)] = []
             for fn_ in salt.utils.isorted(os.listdir(dir_)):
                 if os.path.isfile(os.path.join(dir_, fn_)):
@@ -558,7 +579,7 @@ class Key(object):
         '''
         Return a dict of managed keys under a named status
         '''
-        acc, pre, rej = self._check_minions_directories()
+        acc, pre, rej, den = self._check_minions_directories()
         ret = {}
         if match.startswith('acc'):
             ret[os.path.basename(acc)] = []
@@ -690,8 +711,8 @@ class Key(object):
                 except (OSError, IOError):
                     pass
         self.check_minion_cache()
-        if self.opts.get('key_no_rotate'):
-            salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
+        if self.opts.get('rotate_aes_key'):
+            salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'], self.opts['sock_dir'])
         return (
             self.name_match(match) if match is not None
             else self.dict_match(matches)
@@ -712,8 +733,8 @@ class Key(object):
                 except (OSError, IOError):
                     pass
         self.check_minion_cache()
-        if self.opts.get('key_no_rotate'):
-            salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
+        if self.opts.get('rotate_aes_key'):
+            salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'], self.opts['sock_dir'])
         return self.list_keys()
 
     def reject(self, match=None, match_dict=None, include_accepted=False):
@@ -750,8 +771,8 @@ class Key(object):
                 except (IOError, OSError):
                     pass
         self.check_minion_cache()
-        if self.opts.get('key_no_rotate'):
-            salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
+        if self.opts.get('rotate_aes_key'):
+            salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'], self.opts['sock_dir'])
         return (
             self.name_match(match) if match is not None
             else self.dict_match(matches)
@@ -781,8 +802,8 @@ class Key(object):
             except (IOError, OSError):
                 pass
         self.check_minion_cache()
-        if self.opts.get('key_no_rotate'):
-            salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
+        if self.opts.get('rotate_aes_key'):
+            salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'], self.opts['sock_dir'])
         return self.list_keys()
 
     def finger(self, match):
@@ -906,7 +927,7 @@ class RaetKey(Key):
         If the key has been accepted return "accepted"
         if the key should be rejected, return "rejected"
         '''
-        acc, pre, rej = self._check_minions_directories()
+        acc, pre, rej = self._check_minions_directories()  # pylint: disable=W0632
         acc_path = os.path.join(acc, minion_id)
         pre_path = os.path.join(pre, minion_id)
         rej_path = os.path.join(rej, minion_id)
@@ -1240,3 +1261,20 @@ class RaetKey(Key):
             fp_.write(self.serial.dumps(keydata))
             os.chmod(path, stat.S_IRUSR)
         os.umask(c_umask)
+
+    def delete_local(self):
+        '''
+        Delete the local private key file
+        '''
+        path = os.path.join(self.opts['pki_dir'], 'local.key')
+        if os.path.isfile(path):
+            os.remove(path)
+
+    def delete_pki_dir(self):
+        '''
+        Delete the private key directory
+        '''
+        path = self.opts['pki_dir']
+        if os.path.exists(path):
+            #os.rmdir(path)
+            shutil.rmtree(path)

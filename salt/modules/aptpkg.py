@@ -580,8 +580,7 @@ def remove(name=None, pkgs=None, **kwargs):
 
 def purge(name=None, pkgs=None, **kwargs):
     '''
-    Remove packages via ``apt-get purge`` along with all configuration files
-    and unused dependencies.
+    Remove packages via ``apt-get purge`` along with all configuration files.
 
     name
         The name of the package to be deleted.

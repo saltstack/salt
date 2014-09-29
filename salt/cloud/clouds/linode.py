@@ -162,7 +162,7 @@ def get_ssh_key_filename(vm_):
         default=config.get_cloud_config_value(
             'ssh_pubkey', vm_, __opts__, search_global=False
         ), search_global=False)
-    if exists(expanduser(key_filename)):
+    if key_filename is not None and exists(expanduser(key_filename)):
         return expanduser(key_filename)
     return None
 
@@ -290,7 +290,8 @@ def create(vm_):
                 'script_args', vm_, __opts__
             ),
             'script_env': config.get_cloud_config_value('script_env', vm_, __opts__),
-            'minion_conf': salt.utils.cloud.minion_config(__opts__, vm_)
+            'minion_conf': salt.utils.cloud.minion_config(__opts__, vm_),
+            'has_ssh_agent': False
         }
 
         if get_ssh_key_filename(vm_) is not None and get_pubkey(vm_) is not None:

@@ -11,7 +11,7 @@ state:
 
     mine.send:
       module.run:
-        - func: network.interfaces
+        - name: network.interfaces
 
 Note that this example is probably unnecessary to use in practice, since the
 ``mine_functions`` and ``mine_interval`` config parameters can be used to
@@ -25,7 +25,7 @@ for this the :mod:`module.wait <salt.states.module.wait>` state can be used:
 
     mine.send:
       module.wait:
-        - func: network.interfaces
+        - name: network.interfaces
         - watch:
           - file: /etc/network/interfaces
 

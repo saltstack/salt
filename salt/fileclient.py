@@ -32,15 +32,19 @@ from salt.utils.openstack.swift import SaltSwift
 log = logging.getLogger(__name__)
 
 
-def get_file_client(opts):
+def get_file_client(opts, pillar=False):
     '''
     Read in the ``file_client`` option and return the correct type of file
     server
     '''
+    client = opts.get('file_client', 'remote')
+    if pillar and client == 'local':
+        client = 'pillar'
     return {
         'remote': RemoteClient,
-        'local': LocalClient
-    }.get(opts['file_client'], RemoteClient)(opts)
+        'local': FSClient,
+        'pillar': LocalClient,
+    }.get(client, RemoteClient)(opts)
 
 
 class Client(object):
@@ -1196,3 +1200,23 @@ class RemoteClient(Client):
             return channel.send(load)
         except SaltReqTimeoutError:
             return ''
+
+
+class FSClient(RemoteClient):
+    '''
+    A local client that uses the RemoteClient but substitutes the channel for
+    the FSChan object
+    '''
+    def __init__(self, opts):  # pylint: disable=W0231
+        self.opts = opts
+        self.channel = salt.fileserver.FSChan(opts)
+        self.auth = DumbAuth()
+
+
+class DumbAuth(object):
+    '''
+    The dumbauth class is used to stub out auth calls fired from the FSClient
+    subsystem
+    '''
+    def gen_token(self, clear_tok):
+        return clear_tok

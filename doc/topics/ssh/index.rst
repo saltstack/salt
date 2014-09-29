@@ -4,7 +4,7 @@ Salt SSH
 
 .. note::
 
-    SALT-SSH IS ALPHA SOFTWARE AND MAY NOT BE READY FOR PRODUCTION USE
+    Salt ssh is considered production ready in version 2014.7.0
 
 .. note::
 

@@ -921,7 +921,7 @@ def get_availability_zone(vm_):
     if avz is None:
         return None
 
-    zones = list_availability_zones()
+    zones = _list_availability_zones()
 
     # Validate user-specified AZ
     if avz not in zones.keys():
@@ -991,7 +991,7 @@ def get_spot_config(vm_):
     )
 
 
-def list_availability_zones():
+def _list_availability_zones():
     '''
     List all availability zones in the current region
     '''
@@ -1012,7 +1012,7 @@ def block_device_mappings(vm_):
     '''
     Return the block device mapping:
 
-    ::
+    .. code-block:: python
 
         [{'DeviceName': '/dev/sdb', 'VirtualName': 'ephemeral0'},
           {'DeviceName': '/dev/sdc', 'VirtualName': 'ephemeral1'}]
@@ -1946,6 +1946,11 @@ def create(vm_=None, call=None):
         # and then fire off the request for it
         data, vm_ = request_instance(vm_, location)
 
+        # If data is a str, it's an error
+        if isinstance(data, str):
+            log.error('Error requesting instance: {0}'.format(data))
+            return {}
+
         # Pull the instance ID, valid for both spot and normal instances
 
         # Multiple instances may have been spun up, get all their IDs
@@ -2130,7 +2135,7 @@ def create_attach_volumes(name, kwargs, call=None):
         )
 
     if 'instance_id' not in kwargs:
-        kwargs['instance_id'] = _get_node(name)['instanceId']
+        kwargs['instance_id'] = _get_node(name)[name]['instanceId']
 
     if isinstance(kwargs['volumes'], str):
         volumes = yaml.safe_load(kwargs['volumes'])
@@ -2206,7 +2211,7 @@ def stop(name, call=None):
 
     log.info('Stopping node {0}'.format(name))
 
-    instance_id = _get_node(name)['instanceId']
+    instance_id = _get_node(name)[name]['instanceId']
 
     params = {'Action': 'StopInstances',
               'InstanceId.1': instance_id}
@@ -2226,7 +2231,7 @@ def start(name, call=None):
 
     log.info('Starting node {0}'.format(name))
 
-    instance_id = _get_node(name)['instanceId']
+    instance_id = _get_node(name)[name]['instanceId']
 
     params = {'Action': 'StartInstances',
               'InstanceId.1': instance_id}
@@ -2247,7 +2252,9 @@ def set_tags(name=None,
     but a resource_id may be passed instead. If both are passed in, the
     instance_id will be used.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -a set_tags mymachine tag1=somestuff tag2='Other stuff'
         salt-cloud -a set_tags resource_id=vol-3267ab32 tag=somestuff
@@ -2337,7 +2344,9 @@ def get_tags(name=None,
     in, but a resource_id may be passed instead. If both are passed in, the
     instance_id will be used.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -a get_tags mymachine
         salt-cloud -a get_tags resource_id=vol-3267ab32
@@ -2375,7 +2384,9 @@ def del_tags(name=None,
     but a resource_id may be passed instead. If both are passed in, the
     instance_id will be used.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -a del_tags mymachine tags=tag1,tag2,tag3
         salt-cloud -a del_tags resource_id=vol-3267ab32 tags=tag1,tag2,tag3
@@ -2393,7 +2404,7 @@ def del_tags(name=None,
         del kwargs['resource_id']
 
     if not instance_id:
-        instance_id = _get_node(name)['instanceId']
+        instance_id = _get_node(name)[name]['instanceId']
 
     params = {'Action': 'DeleteTags',
               'ResourceId.1': instance_id}
@@ -2530,7 +2541,7 @@ def reboot(name, call=None):
 
         salt-cloud -a reboot mymachine
     '''
-    instance_id = _get_node(name)['instanceId']
+    instance_id = _get_node(name)[name]['instanceId']
     params = {'Action': 'RebootInstances',
               'InstanceId.1': instance_id}
     result = query(params)
@@ -2563,9 +2574,13 @@ def show_instance(name=None, instance_id=None, call=None, kwargs=None):
 
     Can be called as an action (which requires a name):
 
+    .. code-block:: bash
+
         salt-cloud -a show_instance myinstance
 
     ...or as a function (which requires either a name or instance_id):
+
+    .. code-block:: bash
 
         salt-cloud -f show_instance my-ec2 name=myinstance
         salt-cloud -f show_instance my-ec2 instance_id=i-d34db33f
@@ -2595,6 +2610,10 @@ def _get_node(name=None, instance_id=None, location=None):
         location = get_location()
 
     params = {'Action': 'DescribeInstances'}
+
+    if str(name).startswith('i-') and len(name) == 10:
+        instance_id = name
+
     if instance_id:
         params['InstanceId.1'] = instance_id
     else:
@@ -3479,7 +3498,7 @@ def get_console_output(
         )
 
     if not instance_id:
-        instance_id = _get_node(name)['instanceId']
+        instance_id = _get_node(name)[name]['instanceId']
 
     if kwargs is None:
         kwargs = {}
@@ -3520,7 +3539,9 @@ def get_password_data(
     transmitted to Amazon; it is only used internally inside of Salt Cloud to
     decrypt data _after_ it has been received from Amazon.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -a get_password_data mymachine
         salt-cloud -a get_password_data mymachine key_file=/root/ec2key.pem

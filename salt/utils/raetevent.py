@@ -47,14 +47,14 @@ class SaltEvent(object):
         self.connected = False
         self.stack = LaneStack(
                 name=name,
-                yid=self.yid,
+                uid=self.yid,
                 lanename=self.node,
                 sockdirpath=self.sock_dir)
         self.stack.Pk = raeting.packKinds.pack
         self.router_yard = RemoteYard(
                 stack=self.stack,
                 lanename=self.node,
-                yid=0,
+                uid=0,
                 name='manor',
                 dirpath=self.sock_dir)
         self.stack.addRemote(self.router_yard)
@@ -138,7 +138,8 @@ class SaltEvent(object):
         self.connect_pub()
         self.stack.serviceAll()
         if self.stack.rxMsgs:
-            event, sender = self.stack.rxMsgs.popleft()
+            msg, sender = self.stack.rxMsgs.popleft()
+            event = msg.get('event', {})
             if 'tag' not in event and 'data' not in event:
                 # Invalid event, how did this get here?
                 return None

@@ -11,6 +11,7 @@ Example configuration:
       - file_tree:
           root_dir: /path/to/root/directory
           follow_dir_links: False
+          raw_data: False
 
 The ``root_dir`` parameter is required and points to the directory where files
 for each host are stored. The ``follow_dir_links`` paramater is optional
@@ -18,6 +19,10 @@ and defaults to False. If ``follow_dir_links`` is set to True, file_tree will
 follow symbolic links to other directories. Be careful when using
 ``follow_dir_links``, the current implementation is dumb and will run into
 infinite recursion if a recursive symlink chain exists in the root_dir!
+
+If ``raw_data`` is set to True, it will revert the behavior of the python
+open() function, which adds a line break character at the end of the file,
+in this case, the pillar data.
 
 To fill pillar data for each host, file_tree recursively iterates over
 ``root_dir``/hosts/``id`` (where ``id`` is a minion ID), and constructs
@@ -116,9 +121,10 @@ def _on_walk_error(err):
 # (Source: https://www.xormedia.com/recursively-merge-dictionaries-in-python/)
 def _dict_merge(dict_a, dict_b):
     '''
-    recursively merges dict's. not just simple dict_a['key'] = dict_b['key'], if
-    both dict_a and dict_b have a key who's value is a dict then _dict_merge
-    is called on both values and the result stored in the returned dictionary.
+    recursively merges dict's. not just simple dict_a['key'] = dict_b['key'],
+    if both dict_a and dict_b have a key who's value is a dict then
+    _dict_merge is called on both values and the result stored in the returned
+     dictionary.
     '''
     if not isinstance(dict_b, dict):
         return dict_b
@@ -131,7 +137,7 @@ def _dict_merge(dict_a, dict_b):
     return result
 
 
-def _construct_pillar(top_dir, follow_dir_links):
+def _construct_pillar(top_dir, follow_dir_links, raw_data=False):
     '''
     Construct pillar from file tree.
     '''
@@ -166,6 +172,8 @@ def _construct_pillar(top_dir, follow_dir_links):
 
             try:
                 pillar_node[file_name] = open(file_path, 'rb').read()
+                if raw_data is False and pillar_node[file_name].endswith('\n'):
+                    pillar_node[file_name] = pillar_node[file_name][:-1]
             except IOError as err:
                 log.error('%s', str(err))
 
@@ -174,7 +182,7 @@ def _construct_pillar(top_dir, follow_dir_links):
 
 def ext_pillar(
         minion_id, pillar, root_dir=None,
-        follow_dir_links=False, debug=False):
+        follow_dir_links=False, debug=False, raw_data=False):
     '''
     Find pillar data for specified ID.
     '''
@@ -212,8 +220,8 @@ def ext_pillar(
                             directory ext_pillar_dirs, skipping...')
     else:
         if debug is True:
-            log.debug('File tree - No nodegroups found in master configuration,\
-                        skipping nodegroups pillar function...')
+            log.debug('File tree - No nodegroups found in master \
+                      configuration, skipping nodegroups pillar function...')
 
     host_dir = os.path.join(root_dir, 'hosts', minion_id)
     if not os.path.exists(host_dir):
@@ -224,5 +232,5 @@ def ext_pillar(
         log.error('"%s" exists, but not a directory', host_dir)
         return ngroup_pillar
 
-    host_pillar = _construct_pillar(host_dir, follow_dir_links)
+    host_pillar = _construct_pillar(host_dir, follow_dir_links, raw_data)
     return _dict_merge(ngroup_pillar, host_pillar)

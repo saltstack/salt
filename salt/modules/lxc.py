@@ -423,7 +423,7 @@ def _get_network_conf(conf_tuples=None, **kwargs):
                 if k == 'link' and bridge:
                     v = bridge
                 v = opts.get(k, v)
-                if k in ['gateway']:
+                if k in ['gateway', 'mac']:
                     continue
                 ret.append({'lxc.network.{0}'.format(k): v})
             # gateway (in automode) must be appended following network conf !
@@ -1686,10 +1686,10 @@ def info(name):
         ret['memory_limit'] = limit
         ret['memory_free'] = free
         ret['size'] = __salt__['cmd.run'](
-            ('lxc-attach -n \'{0}\' -- env -i '
-             'df /|tail -n1|awk \'{{print $2}}\'').format(name))
+            ('lxc-attach --clear-env -n {0} -- '
+             'df /|tail -n1|awk \'{{print $2}}\'').format(pipes.quote(name)))
         ipaddr = __salt__['cmd.run'](
-            'lxc-attach -n \'{0}\' -- env -i ip addr show'.format(name))
+            'lxc-attach --clear-env -n {0} -- ip addr show'.format(pipes.quote(name)))
         for line in ipaddr.splitlines():
             if 'inet' in line:
                 line = line.split()
@@ -1740,9 +1740,9 @@ def set_pass(name, users, password):
     if users:
         try:
             cmd = (
-                "lxc-attach -n \"{0}\" -- "
+                "lxc-attach --clear-env -n {0} -- "
                 " /bin/sh -c \""
-                "").format(name)
+                "").format(pipes.quote(name))
             for i in users:
                 cmd += "echo {0}:{1}|chpasswd && ".format(
                     pipes.quote(i),
@@ -1882,23 +1882,23 @@ def set_dns(name, dnsservers=None, searchdomains=None):
     dns.extend(['search {0}'.format(d) for d in searchdomains])
     dns = "\n".join(dns)
     has_resolvconf = not int(
-        __salt__['cmd.run'](('lxc-attach -n \'{0}\' -- '
+        __salt__['cmd.run'](('lxc-attach --clear-env -n {0} -- '
                              '/usr/bin/test -e /etc/resolvconf/resolv.conf.d/base;'
-                             'echo ${{?}}').format(name)))
+                             'echo ${{?}}').format(pipes.quote(name))))
     if has_resolvconf:
         cret = __salt__['cmd.run_all']((
-            'lxc-attach -n \'{0}\' -- '
+            'lxc-attach --clear-env -n {0} -- '
             'rm /etc/resolvconf/resolv.conf.d/base &&'
-            'echo \'{1}\'|lxc-attach -n \'{0}\' -- '
+            'echo {1}|lxc-attach --clear-env -n {0} -- '
             'tee /etc/resolvconf/resolv.conf.d/base'
-        ).format(name, dns))
+        ).format(pipes.quote(name), pipes.quote(dns)))
         if not cret['retcode']:
             ret['result'] = True
     cret = __salt__['cmd.run_all']((
-        'lxc-attach -n \'{0}\' -- rm /etc/resolv.conf &&'
-        'echo \'{1}\'|lxc-attach -n \'{0}\' -- '
+        'lxc-attach --clear-env -n {0} -- rm /etc/resolv.conf &&'
+        'echo {1}|lxc-attach --clear-env -n {0} -- '
         'tee /etc/resolv.conf'
-    ).format(name, dns))
+    ).format(pipes.quote(name), pipes.quote(dns)))
     if not cret['retcode']:
         ret['result'] = True
     return ret
@@ -2068,7 +2068,7 @@ def attachable(name):
 
         salt 'minion' lxc.attachable ubuntu
     '''
-    cmd = 'lxc-attach -n {0} -- /usr/bin/env'.format(name)
+    cmd = 'lxc-attach -n {0} -- /usr/bin/env'.format(pipes.quote(name))
     data = __salt__['cmd.run_all'](cmd)
     if not data['retcode']:
         return True
@@ -2079,7 +2079,7 @@ def attachable(name):
 
 def run_cmd(name, cmd, no_start=False, preserve_state=True,
             stdout=True, stderr=False, use_vt=False,
-            keep_env='http_proxy,https_proxy'):
+            keep_env='http_proxy,https_proxy,no_proxy'):
     '''
     Run a command inside the container.
 
@@ -2123,12 +2123,11 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
     if attachable(name):
         if isinstance(keep_env, basestring):
             keep_env = keep_env.split(',')
-        if keep_env:
-            env = ' '.join('{0}=${0}'.format(x) for x in keep_env)
-        else:
-            env = ''
+        env = ' '.join('--set-var {0}={1}'.format(
+                       x, pipes.quote(os.environ[x]))
+                       for x in keep_env if x in os.environ)
+        cmd = 'lxc-attach --clear-env {0} -n {1} -- {2}'.format(env, pipes.quote(name), cmd)
 
-        cmd = 'lxc-attach -n \'{0}\' -- env -i {1} {2}'.format(name, env, cmd)
         if not use_vt:
             res = __salt__['cmd.run_all'](cmd)
         else:
@@ -2232,8 +2231,8 @@ def cp(name, src, dest):
     csrcmd5 = __salt__['cmd.run_all'](cmd)
     srcmd5 = csrcmd5['stdout'].split()[0]
 
-    cmd = 'lxc-attach -n {0} -- env -i md5sum {1} 2> /dev/null'.format(
-        name, dest)
+    cmd = 'lxc-attach --clear-env -n {0} -- md5sum {1} 2> /dev/null'.format(
+        pipes.quote(name), dest)
     cdestmd5 = __salt__['cmd.run_all'](cmd)
     if not cdestmd5['retcode']:
         try:
@@ -2249,8 +2248,8 @@ def cp(name, src, dest):
         'stderr': '',
     }
     if srcmd5 != destmd5:
-        cmd = 'cat {0} | lxc-attach -n {1} -- env -i tee {2} > /dev/null'.format(
-            src, name, dest)
+        cmd = 'cat {0} | lxc-attach --clear-env -n {1} -- tee {2} > /dev/null'.format(
+            pipes.quote(src), pipes.quote(name), pipes.quote(dest))
         log.info(cmd)
         ret = __salt__['cmd.run_all'](cmd)
     return ret

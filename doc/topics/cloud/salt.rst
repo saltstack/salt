@@ -163,7 +163,7 @@ directly to Salt Cloud to create the instance:
 .. code-block:: bash
 
     salt myminion cloud.create my-ec2-config my-new-instance \
-        image=ami-1624987f size='Micro Instance' ssh_username=ec2-user \
+        image=ami-1624987f size='t1.micro' ssh_username=ec2-user \
         securitygroup=default delvol_on_destroy=True
 
 Please note that the execution module does *not* run in parallel mode. Using
@@ -240,7 +240,7 @@ presence of the instance will be managed statefully.
       cloud.present:
         - provider: my-ec2-config 
         - image: ami-1624987f
-        - size: 'Micro Instance'
+        - size: 't1.micro'
         - ssh_username: ec2-user
         - securitygroup: default
         - delvol_on_destroy: True

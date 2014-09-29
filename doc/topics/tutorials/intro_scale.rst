@@ -160,6 +160,7 @@ time and that more minions might raise the problem again.
 
 Too many minions returning at once
 ----------------------------------
+
 This can also happen during the testing phase, if all minions are addressed at
 once with
 
@@ -183,12 +184,14 @@ minions.
 
 Too few resources
 =================
+
 The masters resources always have to match the environment. There is no way
 to give good advise without knowing the environment the master is supposed to
 run in.  But here are some general tuning tips for different situations:
 
 The master is CPU bound
 -----------------------
+
 Salt uses RSA-Key-Pairs on the masters and minions end. Both generate 4096
 bit key-pairs on first start. While the key-size for the master is currently
 not configurable, the minions keysize can be configured with different
@@ -208,6 +211,7 @@ do not encrypt as many messages as the master does.
 
 The master is disk IO bound
 ---------------------------
+
 By default, the master saves every minion's return for every job in its
 job-cache. The cache can then be used later, to lookup results for previous
 jobs. The default directory for this is:
@@ -239,7 +243,8 @@ If no job history is needed, the job cache can be disabled:
 
 
 If the job cache is necessary there are (currently) 2 options:
+
 - ext_job_cache: this will have the minions store their return data directly
-into a returner (not sent through the master)
+  into a returner (not sent through the master)
 - master_job_cache (New in `2014.7.0`): this will make the master store the job
-data using a returner (instead of the local job cache on disk).
+  data using a returner (instead of the local job cache on disk).

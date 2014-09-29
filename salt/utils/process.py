@@ -2,7 +2,6 @@
 # Import python libs
 import logging
 import os
-import signal
 import time
 import sys
 import multiprocessing
@@ -19,6 +18,12 @@ try:
     HAS_PSUTIL = True
 except ImportError:
     pass
+
+try:
+    import systemd.daemon
+    HAS_PYTHON_SYSTEMD = True
+except ImportError:
+    HAS_PYTHON_SYSTEMD = False
 
 
 def set_pidfile(pidfile, user):
@@ -117,13 +122,15 @@ class ProcessManager(object):
     '''
     A class which will manage processes that should be running
     '''
-    def __init__(self, name=None):
+    def __init__(self, name=None, wait_for_kill=1):
         # pid -> {tgt: foo, Process: object, args: args, kwargs: kwargs}
         self._process_map = {}
 
         self.name = name
         if self.name is None:
             self.name = self.__class__.__name__
+
+        self.wait_for_kill = wait_for_kill
 
     def add_process(self, tgt, args=None, kwargs=None):
         '''
@@ -160,6 +167,7 @@ class ProcessManager(object):
                   ' restarting...').format(self._process_map[pid]['tgt'],
                                            pid,
                                            self._process_map[pid]['Process'].exitcode))
+        # don't block, the process is already dead
         self._process_map[pid]['Process'].join(1)
 
         self.add_process(self._process_map[pid]['tgt'],
@@ -176,13 +184,24 @@ class ProcessManager(object):
         # make sure to kill the subprocesses if the parent is killed
         signal.signal(signal.SIGTERM, self.kill_children)
 
+        try:
+            if HAS_PYTHON_SYSTEMD and systemd.daemon.booted():
+                systemd.daemon.notify('READY=1')
+        except SystemError:
+            # Daemon wasn't started by systemd
+            pass
+
         while True:
-            pid, exit_status = os.wait()
-            if pid not in self._process_map:
-                log.debug(('Process of pid {0} died, not a known'
-                           ' process, will not restart').format(pid))
-                continue
-            self.restart_process(pid)
+            try:
+                pid, exit_status = os.wait()
+                if pid not in self._process_map:
+                    log.debug(('Process of pid {0} died, not a known'
+                               ' process, will not restart').format(pid))
+                    continue
+                self.restart_process(pid)
+            # OSError is raised if a signal handler is called (SIGTERM) during os.wait
+            except OSError:
+                break
 
             # in case someone died while we were waiting...
             self.check_children()
@@ -201,5 +220,23 @@ class ProcessManager(object):
         '''
         for pid, p_map in self._process_map.items():
             p_map['Process'].terminate()
-            p_map['Process'].join()
-            del self._process_map[pid]
+
+        #
+        end_time = time.time() + self.wait_for_kill  # when to die
+
+        while self._process_map and time.time() < end_time:
+            for pid, p_map in self._process_map.items():
+                p_map['Process'].join(0)
+
+                # This is a race condition if a signal was passed to all children
+                try:
+                    del self._process_map[pid]
+                except KeyError:
+                    pass
+        # if anyone is done after
+        for pid in self._process_map:
+            try:
+                os.kill(signal.SIGKILL, pid)
+            # in case the process has since decided to die, os.kill returns OSError
+            except OSError:
+                pass
