@@ -32,7 +32,7 @@ class SaltEvent(object):
         '''
         Set up the stack and remote yard
         '''
-        self.node = node
+        self.node = node # this is usually 'master', 'minion' or opts['id']
         self.sock_dir = sock_dir
         self.listen = listen
         if opts is None:
