@@ -776,10 +776,41 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
         route_table_existence_result = boto_vpc.route_table_exists('fake', **conn_parameters)
 
         self.assertFalse(route_table_existence_result)
-        
+
     @mock_ec2
     @expectedNotImplementedFailure
-    def test_when_disassociating_route_table_succeeds_the_disassociate_route_table_method_should_return_true(self):
+    def test_when_associating_a_route_table_succeeds_the_associate_route_table_method_should_return_the_association_id(self):
+        vpc = self._create_vpc()
+        subnet = self._create_subnet(vpc.id)
+        route_table = self._create_route_table(vpc.id)
+
+        assocation_id = boto_vpc.associate_route_table(route_table.id, subnet.id)
+
+        self.assertTrue(assocation_id)
+
+    @mock_ec2
+    @expectedNotImplementedFailure
+    def test_when_associating_a_route_table_with_a_non_existent_route_table_the_associate_route_table_method_should_return_false(self):
+        vpc = self._create_vpc()
+        subnet = self._create_subnet(vpc.id)
+
+        assocation_id = boto_vpc.associate_route_table('fake', subnet.id)
+
+        self.assertFalse(assocation_id)
+
+    @mock_ec2
+    @expectedNotImplementedFailure
+    def test_when_associating_a_route_table_with_a_non_existent_route_table_the_associate_route_table_method_should_return_false(self):
+        vpc = self._create_vpc()
+        route_table = self._create_route_table(vpc.id)
+
+        assocation_id = boto_vpc.associate_route_table(route_table.id, 'fake')
+
+        self.assertFalse(assocation_id)
+
+    @mock_ec2
+    @expectedNotImplementedFailure
+    def test_when_disassociating_a_route_table_succeeds_the_disassociate_route_table_method_should_return_true(self):
         vpc = self._create_vpc()
         subnet = self._create_subnet(vpc.id)
         route_table = self._create_route_table(vpc.id)
