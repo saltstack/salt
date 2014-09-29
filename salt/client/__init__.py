@@ -1217,7 +1217,7 @@ class LocalClient(object):
         # Wait for the hosts to check in
         while True:
             raw = self.event.get_event(timeout)
-            if raw is None: # XXXX or time.time() > timeout_at:
+            if raw is None or time.time() > timeout_at:
                 # Timeout reached
                 break
             if 'minions' in raw.get('data', {}):
