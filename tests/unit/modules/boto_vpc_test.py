@@ -93,6 +93,22 @@ class BotoVpcTestCase(TestCase):
 
         return self.conn.create_subnet(vpc_id, cidr_block)
 
+    def _create_dhcp_options(self, domain_name='example.com', domain_name_servers=None, ntp_servers=None,
+                             netbios_name_servers=None, netbios_node_type=2):
+        if not netbios_name_servers:
+            netbios_name_servers = ['10.0.0.1']
+        if not ntp_servers:
+            ntp_servers = ['5.6.7.8']
+        if not domain_name_servers:
+            domain_name_servers = ['1.2.3.4']
+
+        if not self.conn:
+            self.conn = boto.vpc.connect_to_region(region)
+
+        return self.conn.create_dhcp_options(domain_name=domain_name, domain_name_servers=domain_name_servers,
+                                             ntp_servers=ntp_servers, netbios_name_servers=netbios_name_servers,
+                                             netbios_node_type=netbios_node_type)
+
     @mock_ec2
     def test_get_subnet_association_single_subnet(self):
         '''
@@ -237,6 +253,36 @@ class BotoVpcTestCase(TestCase):
                                                                         netbios_node_type=2, **conn_parameters)
 
         self.assertFalse(dhcp_options_creation_result)
+
+    @mock_ec2
+    def test_when_associating_an_existing_dhcp_options_set_to_an_existing_vpc_the_associate_dhco_options_method_returns_true(
+            self):
+        vpc = self._create_vpc()
+        dhcp_options = self._create_dhcp_options()
+
+        dhcp_options_association_result = boto_vpc.associate_dhcp_options_to_vpc(dhcp_options.id, vpc.id,
+                                                                                 **conn_parameters)
+
+        self.assertTrue(dhcp_options_association_result)
+
+    @mock_ec2
+    def test_when_associating_a_non_existent_dhcp_options_set_to_an_existing_vpc_the_associate_dhco_options_method_returns_true(
+            self):
+        vpc = self._create_vpc()
+
+        dhcp_options_association_result = boto_vpc.associate_dhcp_options_to_vpc('fake', vpc.id, **conn_parameters)
+
+        self.assertFalse(dhcp_options_association_result)
+
+    @mock_ec2
+    def test_when_associating_an_existing_dhcp_options_set_to_a_non_existent_vpc_the_associate_dhco_options_method_returns_false(
+            self):
+        dhcp_options = self._create_dhcp_options()
+
+        dhcp_options_association_result = boto_vpc.associate_dhcp_options_to_vpc(dhcp_options.id, 'fake',
+                                                                                 **conn_parameters)
+
+        self.assertFalse(dhcp_options_association_result)
 
 
 if __name__ == '__main__':
