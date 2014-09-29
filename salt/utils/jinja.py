@@ -77,7 +77,9 @@ class SaltCacheLoader(BaseLoader):
         Return a file client. Instantiates on first call.
         '''
         if not self._file_client:
-            self._file_client = salt.fileclient.get_file_client(self.opts)
+            self._file_client = salt.fileclient.get_file_client(
+                    self.opts,
+                    True if self.opts.get('__role') == 'master' else False)
         return self._file_client
 
     def cache_file(self, template):
