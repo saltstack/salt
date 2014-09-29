@@ -691,6 +691,23 @@ def create_route_table(vpc_id, route_table_name=None, tags=None, region=None, ke
         return False
 
 
+def delete_route_table(route_table_id, region=None, key=None, keyid=None, profile=None):
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+
+    try:
+        if conn.delete_route_table(route_table_id):
+            log.info('Route table with id {0} was deleted'.format(route_table_id))
+            return True
+        else:
+            log.warning('Route table with id {0} was not deleted'.format(route_table_id))
+            return False
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return False
+
+
 def _get_conn(region, key, keyid, profile):
     '''
     Get a boto connection to vpc.
