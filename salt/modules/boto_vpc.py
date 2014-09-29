@@ -240,8 +240,8 @@ def create_subnet(vpc_id, cidr_block, availability_zone=None, subnet_name=None, 
         vpc_subnet = conn.create_subnet(vpc_id, cidr_block, availability_zone=availability_zone)
         if vpc_subnet:
             log.info('A VPC subnet {0} with {1} available ips on VPC {2}'.format(vpc_subnet.id,
-                                                                                  vpc_subnet.available_ip_address_count,
-                                                                                  vpc_id))
+                                                                                 vpc_subnet.available_ip_address_count,
+                                                                                 vpc_id))
 
             _maybe_set_name_tag(subnet_name, vpc_subnet)
             _maybe_set_tags(tags, vpc_subnet)
@@ -502,6 +502,58 @@ def dhcp_options_exists(dhcp_options_id, region=None, key=None, keyid=None, prof
         else:
             log.warning('DHCP options {0} does not exist.'.format(dhcp_options_id))
 
+            return False
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return False
+
+
+def create_network_acl(vpc_id, region=None, key=None, keyid=None, profile=None):
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+
+    try:
+        network_acl = conn.create_network_acl(vpc_id)
+        if network_acl:
+            log.info('Network ACL with id {0} was created'.format(network_acl.id))
+            return True
+        else:
+            log.warning('Network ACL was not created')
+            return False
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return False
+
+
+def delete_network_acl(network_acl_id, region=None, key=None, keyid=None, profile=None):
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+
+    try:
+        if conn.delete_network_acl(network_acl_id):
+            log.info('Network ACL with id {0} was deleted'.format(network_acl_id))
+            return True
+        else:
+            log.warning('Network ACL with id {0} was not deleted'.format(network_acl_id))
+            return False
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return False
+
+
+def network_acl_exists(network_acl_id, region=None, key=None, keyid=None, profile=None):
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+
+    try:
+        if conn.get_all_network_acls(network_acl_ids=[network_acl_id]):
+            log.info('Network ACL with id {0} exists.'.format(network_acl_id))
+            return True
+        else:
+            log.warning('Network ACL with id {0} does not exists.'.format(network_acl_id))
             return False
     except boto.exception.BotoServerError as e:
         log.error(e)
