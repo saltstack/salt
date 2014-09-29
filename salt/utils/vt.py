@@ -864,7 +864,7 @@ class Terminal(object):
                 if not self.isalive():
                     return True
                 if force:
-                    self.send(signal.SIGKILL)
+                    self.send_signal(signal.SIGKILL)
                     time.sleep(0.1)
                     if not self.isalive():
                         return True
