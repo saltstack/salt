@@ -773,6 +773,21 @@ def disassociate_route_table(association_id, region=None, key=None, keyid=None, 
         return False
 
 
+def replace_route_table_association(association_id, route_table_id, region=None, key=None, keyid=None, profile=None):
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+
+    try:
+        association_id = conn.replace_route_table_association_with_assoc(association_id, route_table_id)
+        log.info('Route table {0} was reassociated'.format(route_table_id, association_id))
+
+        return association_id
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return False
+
+
 def create_route(route_table_id, destination_cidr_block, gateway_id=None, instance_id=None, interface_id=None,
                  region=None, key=None, keyid=None, profile=None):
     conn = _get_conn(region, key, keyid, profile)
