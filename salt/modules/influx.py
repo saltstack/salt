@@ -312,12 +312,15 @@ def user_create(name, passwd, database=None, user=None, password=None,
     return client.add_cluster_admin(name, passwd)
 
 
-def user_chpass(dbuser, passwd, database, user=None, password=None, host=None,
-                port=None):
+def user_chpass(name, passwd, database=None, user=None, password=None,
+                host=None, port=None):
     """
-    Change password for a InfluxDB database user
+    Change password for a cluster admin or a database user.
 
-    dbuser
+    If a database is specified: it will update database user password.
+    If a database is not specified: it will update cluster admin password.
+
+    name
         User name for whom to change the password
 
     passwd
@@ -342,16 +345,22 @@ def user_chpass(dbuser, passwd, database, user=None, password=None, host=None,
 
     .. code-block:: bash
 
-        salt '*' influxdb.user_chpass <dbuser> <passwd> <database>
-        salt '*' influxdb.user_chpass <dbuser> <passwd> <database> <user> <password> <host> <port>
+        salt '*' influxdb.user_chpass <name> <passwd>
+        salt '*' influxdb.user_chpass <name> <passwd> <database>
+        salt '*' influxdb.user_chpass <name> <passwd> <database> <user> <password> <host> <port>
     """
-    if not user_exists(dbuser, database):
-        log.info('User {0!r} does not exist for DB {0!r}'.format(
-            dbuser, database))
+    if not user_exists(name, database):
+        if database:
+            log.info('User {0!r} does not exist for DB {0!r}'.format(
+                name, database))
+        else:
+            log.info('Cluster admin {0!r} does not exist'.format(name))
         return False
     client = _client(user=user, password=password, host=host, port=port)
-    client.switch_db(database)
-    return client.update_database_user_password(dbuser, passwd)
+    if database:
+        client.switch_db(database)
+        return client.update_database_user_password(name, passwd)
+    return client.update_cluster_admin_password(name, passwd)
 
 
 def user_remove(name, database, user=None, password=None, host=None,
