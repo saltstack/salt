@@ -361,7 +361,13 @@ def create_dhcp_options(domain_name=None, domain_name_servers=None, ntp_servers=
         dhcp_options = _create_dhcp_options(conn, domain_name=domain_name, domain_name_servers=domain_name_servers,
                                             ntp_servers=ntp_servers, netbios_name_servers=netbios_name_servers,
                                             netbios_node_type=netbios_node_type)
-        log.info('DHCP options with id {0} were created'.format(dhcp_options.id))
+        if dhcp_options:
+            log.info('DHCP options with id {0} were created'.format(dhcp_options.id))
+
+            return True
+        else:
+            log.warning('DHCP options with id {0} were not created'.format(dhcp_options.id))
+            return False
     except boto.exception.BotoServerError as e:
         log.error(e)
         return False
@@ -384,10 +390,12 @@ def associate_dhcp_options_to_vpc(dhcp_options_id, vpc_id, region=None, key=None
     if not conn:
         return False
     try:
-        conn.associate_dhcp_options(dhcp_options_id, vpc_id)
-        log.info('DHCP options with id {0} were associated with VPC {1}'.format(dhcp_options_id, vpc_id))
+        if conn.associate_dhcp_options(dhcp_options_id, vpc_id):
+            log.info('DHCP options with id {0} were associated with VPC {1}'.format(dhcp_options_id, vpc_id))
 
-        return True
+            return True
+        else:
+            return False
     except boto.exception.BotoServerError as e:
         log.error(e)
         return False
