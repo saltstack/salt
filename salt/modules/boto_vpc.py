@@ -169,13 +169,15 @@ def create(cidr_block, instance_tenancy=None, vpc_name=None, tags=None, region=N
 
     try:
         vpc = conn.create_vpc(cidr_block, instance_tenancy=instance_tenancy)
+        if vpc:
+            log.info('The newly created VPC id is {0}'.format(vpc.id))
 
-        log.debug('The newly created VPC id is {0}'.format(vpc.id))
+            _maybe_set_name_tag(vpc_name, vpc)
+            _maybe_set_tags(tags, vpc)
 
-        _maybe_set_name_tag(vpc_name, vpc)
-        _maybe_set_tags(tags, vpc)
-
-        return True
+            return True
+        else:
+            log.warning('VPC was not created')
     except boto.exception.BotoServerError as e:
         log.error(e)
         return False
@@ -201,11 +203,11 @@ def delete(vpc_id, region=None, key=None, keyid=None, profile=None):
 
     try:
         if conn.delete_vpc(vpc_id):
-            log.debug('VPC {0} was deleted.'.format(vpc_id))
+            log.info('VPC {0} was deleted.'.format(vpc_id))
 
             return True
         else:
-            log.debug('VPC {0} was not deleted.'.format(vpc_id))
+            log.warning('VPC {0} was not deleted.'.format(vpc_id))
 
             return False
     except boto.exception.BotoServerError as e:
@@ -236,15 +238,17 @@ def create_subnet(vpc_id, cidr_block, availability_zone=None, subnet_name=None, 
 
     try:
         vpc_subnet = conn.create_subnet(vpc_id, cidr_block, availability_zone=availability_zone)
+        if vpc_subnet:
+            log.info('A VPC subnet {0} with {1} available ips on VPC {2}'.format(vpc_subnet.id,
+                                                                                  vpc_subnet.available_ip_address_count,
+                                                                                  vpc_id))
 
-        log.debug('A VPC subnet {0} with {1} available ips on VPC {2}'.format(vpc_subnet.id,
-                                                                              vpc_subnet.available_ip_address_count,
-                                                                              vpc_id))
+            _maybe_set_name_tag(subnet_name, vpc_subnet)
+            _maybe_set_tags(tags, vpc_subnet)
 
-        _maybe_set_name_tag(subnet_name, vpc_subnet)
-        _maybe_set_tags(tags, vpc_subnet)
-
-        return True
+            return True
+        else:
+            log.warning('A VPC subnet was not created.')
     except boto.exception.BotoServerError as e:
         log.error(e)
         return False
@@ -322,11 +326,16 @@ def create_customer_gateway(vpn_connection_type, ip_address, bgp_asn, customer_g
 
     try:
         customer_gateway = conn.create_customer_gateway(vpn_connection_type, ip_address, bgp_asn)
+        if customer_gateway:
+            log.info('A customer gateway with id {0} was created'.format(customer_gateway.id))
 
-        log.info('A customer gateway with id {0} was created'.format(customer_gateway.id))
+            _maybe_set_name_tag(customer_gateway_name, customer_gateway)
+            _maybe_set_tags(tags, customer_gateway)
 
-        _maybe_set_name_tag(customer_gateway_name, customer_gateway)
-        _maybe_set_tags(tags, customer_gateway)
+            return True
+        else:
+            log.warning('A customer gateway was not created')
+            return False
     except boto.exception.BotoServerError as e:
         log.error(e)
         return False
@@ -356,7 +365,7 @@ def delete_customer_gateway(customer_gateway_id, region=None, key=None, keyid=No
 
             return True
         else:
-            log.info('Customer gateway {0} was not deleted.'.format(customer_gateway_id))
+            log.warning('Customer gateway {0} was not deleted.'.format(customer_gateway_id))
 
             return False
     except boto.exception.BotoServerError as e:
@@ -443,6 +452,7 @@ def associate_dhcp_options_to_vpc(dhcp_options_id, vpc_id, region=None, key=None
 
             return True
         else:
+            log.warning('DHCP options with id {0} were not associated with VPC {1}'.format(dhcp_options_id, vpc_id))
             return False
     except boto.exception.BotoServerError as e:
         log.error(e)
