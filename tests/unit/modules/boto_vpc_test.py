@@ -730,6 +730,24 @@ class BotoVpcRoutingTablesTestCase(BotoVpcTestCaseBase):
 
         self.assertFalse(route_table_deletion_result)
 
+    @mock_ec2
+    @expectedNotImplementedFailure
+    def test_when_route_table_exists_the_route_table_exists_method_returns_true(self):
+        vpc = self._create_vpc()
+        route_table = self._create_route_table(vpc.id)
+
+        route_table_existence_result = boto_vpc.route_table_exists(route_table.id, **conn_parameters)
+
+        self.assertTrue(route_table_existence_result)
+
+    @mock_ec2
+    @expectedNotImplementedFailure
+    def test_when_route_table_does_not_exist_the_route_table_exists_method_returns_false(self):
+        route_table_existence_result = boto_vpc.route_table_exists('fake', **conn_parameters)
+
+        self.assertFalse(route_table_existence_result)
+
+
 if __name__ == '__main__':
     from integration import run_tests
 
