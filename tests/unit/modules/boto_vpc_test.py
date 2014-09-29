@@ -1,8 +1,12 @@
 # -*- coding: utf-8 -*-
 
 # import Python Third Party Libs
+
 from boto.exception import BotoServerError
 from mock import patch
+
+from tests.utils import expectedNotImplementedFailure, expectedImportFailure
+
 
 try:
     import boto
@@ -102,6 +106,11 @@ class BotoVpcTestCaseBase(TestCase):
                                              ntp_servers=ntp_servers, netbios_name_servers=netbios_name_servers,
                                              netbios_node_type=netbios_node_type)
 
+    def _create_network_acl(self, vpc_id):
+        if not self.conn:
+            self.conn = boto.vpc.connect_to_region(region)
+
+        return self.conn.create_network_acl(vpc_id)
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
@@ -404,6 +413,74 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
         dhcp_options_exists_result = boto_vpc.dhcp_options_exists('fake', **conn_parameters)
 
         self.assertFalse(dhcp_options_exists_result)
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(HAS_BOTO is False, 'The boto module must be installed.')
+@skipIf(HAS_MOTO is False, 'The moto module must be installed.')
+@skipIf(_has_required_boto() is False, 'The boto module must be greater than'
+                                       ' or equal to version {0}'
+        .format(required_boto_version))
+class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
+    @mock_ec2
+    @expectedNotImplementedFailure
+    def test_when_creating_network_acl_for_an_existing_vpc_the_create_network_acl_method_returns_true(self):
+        vpc = self._create_vpc()
+
+        network_acl_creation_result = boto_vpc.create_network_acl(vpc.id, **conn_parameters)
+
+        self.assertTrue(network_acl_creation_result)
+
+    @mock_ec2
+    @expectedNotImplementedFailure
+    def test_when_creating_network_acl_for_a_non_existent_vpc_the_create_network_acl_method_returns_false(self):
+        network_acl_creation_result = boto_vpc.create_network_acl('fake', **conn_parameters)
+
+        self.assertFalse(network_acl_creation_result)
+
+    @mock_ec2
+    @expectedImportFailure
+    def test_when_creating_network_acl_fails_the_create_network_acl_method_returns_false(self):
+        vpc = self._create_vpc()
+
+        with patch('moto.ec2.models.NetworkACLBackend.create_network_acl',
+                   side_effect=BotoServerError(400, 'Mocked error')):
+            network_acl_creation_result = boto_vpc.create_network_acl(vpc.id, **conn_parameters)
+
+        self.assertFalse(network_acl_creation_result)
+
+    @mock_ec2
+    @expectedNotImplementedFailure
+    def test_when_deleting_an_existing_network_acl_the_delete_network_acl_method_returns_true(self):
+        vpc_id = self._create_vpc()
+        network_acl = self._create_network_acl(vpc_id)
+
+        network_acl_deletion_result = boto_vpc.delete_network_acl(network_acl.id, **conn_parameters)
+
+        self.assertTrue(network_acl_deletion_result)
+
+    @mock_ec2
+    @expectedNotImplementedFailure
+    def test_when_deleting_a_non_existent_network_acl_the_delete_network_acl_method_returns_false(self):
+        network_acl_deletion_result = boto_vpc.delete_network_acl('fake', **conn_parameters)
+
+        self.assertFalse(network_acl_deletion_result)
+
+    @mock_ec2
+    @expectedNotImplementedFailure
+    def test_when_a_network_acl_exists_the_network_acl_exists_method_returns_true(self):
+        vpc_id = self._create_vpc()
+        network_acl = self._create_network_acl(vpc_id)
+
+        network_acl_deletion_result = boto_vpc.network_acl_exists(network_acl.id, **conn_parameters)
+
+        self.assertTrue(network_acl_deletion_result)
+
+    @mock_ec2
+    @expectedNotImplementedFailure
+    def test_when_a_network_acl_does_not_exist_the_network_acl_exists_method_returns_false(self):
+        network_acl_deletion_result = boto_vpc.network_acl_exists('fake', **conn_parameters)
+
+        self.assertFalse(network_acl_deletion_result)
 
 if __name__ == '__main__':
     from integration import run_tests
