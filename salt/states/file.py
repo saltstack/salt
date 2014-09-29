@@ -3436,7 +3436,7 @@ def touch(name, atime=None, mtime=None, makedirs=False):
     return ret
 
 
-def copy(name, source, force=False, makedirs=False):
+def copy(name, source, force=False, makedirs=False, preserve=False):
     '''
     If the source file exists on the system, copy it to the named file. The
     named file will not be overwritten if it already exists unless the force
@@ -3455,6 +3455,10 @@ def copy(name, source, force=False, makedirs=False):
     makedirs
         If the target subdirectories don't exist create them
 
+    preserve
+        Set ``preserve: True`` to preserve user/group ownership and mode
+        after copying. Default is ``False``
+
     '''
     name = os.path.expanduser(name)
     source = os.path.expanduser(source)
@@ -3462,7 +3466,7 @@ def copy(name, source, force=False, makedirs=False):
     ret = {
         'name': name,
         'changes': {},
-        'comment': '',
+        'comment': 'Copied "{0}" to "{1}"'.format(source, name),
         'result': True}
 
     changed = True
@@ -3524,12 +3528,12 @@ def copy(name, source, force=False, makedirs=False):
     # All tests pass, move the file into place
     try:
         shutil.copy(source, name)
-        source_user = __salt__['file.get_user'](source)
-        source_group = __salt__['file.get_group'](source)
-        source_mode = __salt__['file.get_mode'](source)
-        ret['comment'] = 'Copied "{0}" to "{1}"'.format(source, name)
         ret['changes'] = {name: source}
-        __salt__['file.check_perms'](name, ret, source_user, source_group, source_mode)
+        if preserve:
+            source_user = __salt__['file.get_user'](source)
+            source_group = __salt__['file.get_group'](source)
+            source_mode = __salt__['file.get_mode'](source)
+            __salt__['file.check_perms'](name, ret, source_user, source_group, source_mode)
     except (IOError, OSError):
         return _error(
             ret, 'Failed to copy "{0}" to "{1}"'.format(source, name))
