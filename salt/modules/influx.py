@@ -261,10 +261,13 @@ def user_exists(
     return name in [u['name'] for u in users]
 
 
-def user_create(name, passwd, database, user=None, password=None, host=None,
-                port=None):
+def user_create(name, passwd, database=None, user=None, password=None,
+                host=None, port=None):
     """
-    Create a InfluxDB user for a specific database
+    Create a cluster admin or a database user.
+
+    If a database is specified: it will create database user.
+    If a database is not specified: it will create a cluster admin.
 
     name
         User name for the new user to create
@@ -291,16 +294,22 @@ def user_create(name, passwd, database, user=None, password=None, host=None,
 
     .. code-block:: bash
 
+        salt '*' influxdb.user_create <name> <passwd>
         salt '*' influxdb.user_create <name> <passwd> <database>
         salt '*' influxdb.user_create <name> <passwd> <database> <user> <password> <host> <port>
     """
     if user_exists(name, database):
-        log.info('User {0!r} already exists for DB {0!r}'.format(
-            name, database))
+        if database:
+            log.info('User {0!r} already exists for DB {0!r}'.format(
+                name, database))
+        else:
+            log.info('Cluster admin {0!r} already exists'.format(name))
         return False
     client = _client(user=user, password=password, host=host, port=port)
-    client.switch_db(database)
-    return client.add_database_user(name, passwd)
+    if database:
+        client.switch_db(database)
+        return client.add_database_user(name, passwd)
+    return client.add_cluster_admin(name, passwd)
 
 
 def user_chpass(dbuser, passwd, database, user=None, password=None, host=None,
