@@ -606,6 +606,18 @@ def associate_new_network_acl_to_subnet(vpc_id, subnet_id, network_acl_name=None
         return False
 
 
+def disassociate_network_acl(subnet_id, vpc_id=None, region=None, key=None, keyid=None, profile=None):
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+
+    try:
+        return conn.disassociate_network_acl(subnet_id, vpc_id=vpc_id)
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return False
+
+
 def create_network_acl_entry(network_acl_id, rule_number, protocol, rule_action, cidr_block, egress=None,
                              icmp_code=None, icmp_type=None, port_range_from=None, port_range_to=None,
                              region=None, key=None, keyid=None, profile=None):

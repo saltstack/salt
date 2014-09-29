@@ -689,6 +689,36 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
 
         self.assertFalse(network_acl_creation_and_association_result)
 
+    @mock_ec2
+    @expectedNotImplementedFailure
+    def test_when_disassociating_network_acl_succeeds_the_disassociate_network_acl_method_should_return_true(self):
+        vpc = self._create_vpc()
+        subnet = self._create_subnet(vpc.id)
+
+        dhcp_disassociate_result = boto_vpc.disassociate_network_acl(subnet.id, vpc_id=vpc.id, **conn_parameters)
+
+        self.assertTrue(dhcp_disassociate_result)
+
+    @mock_ec2
+    @expectedNotImplementedFailure
+    def test_when_disassociating_network_acl_for_a_non_existent_vpc_the_disassociate_network_acl_method_should_return_false(self):
+        vpc = self._create_vpc()
+        subnet = self._create_subnet(vpc.id)
+
+        dhcp_disassociate_result = boto_vpc.disassociate_network_acl(subnet.id, vpc_id='fake', **conn_parameters)
+
+        self.assertFalse(dhcp_disassociate_result)
+
+    @mock_ec2
+    @expectedNotImplementedFailure
+    def test_when_disassociating_network_acl_for_a_non_existent_subnet_the_disassociate_network_acl_method_should_return_false(self):
+        vpc = self._create_vpc()
+
+        dhcp_disassociate_result = boto_vpc.disassociate_network_acl('fake', vpc_id=vpc.id, **conn_parameters)
+
+        self.assertFalse(dhcp_disassociate_result)
+
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
