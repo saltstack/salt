@@ -192,6 +192,7 @@ rm -rf %{buildroot}
 %doc %{_mandir}/man1/salt-run.1.*
 %doc %{_mandir}/man1/salt-ssh.1.*
 %doc %{_mandir}/man1/salt-syndic.1.*
+%doc %{_mandir}/man1/salt-unity.1.*
 %{_bindir}/salt
 %{_bindir}/salt-api
 %{_bindir}/salt-cloud
