@@ -880,13 +880,13 @@ def user_update(username,
                 groups=None,
                 runas=None):
     '''
-    Creates a Postgres user.
+    Updates a Postgres user.
 
     CLI Examples:
 
     .. code-block:: bash
 
-        salt '*' postgres.user_create 'username' user='user' \\
+        salt '*' postgres.user_update 'username' user='user' \\
                 host='hostname' port='port' password='password' \\
                 rolepassword='rolepassword'
     '''
