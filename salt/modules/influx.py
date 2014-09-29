@@ -222,9 +222,12 @@ def user_list(database=None, user=None, password=None, host=None, port=None):
 
 
 def user_exists(
-        name, database, user=None, password=None, host=None, port=None):
+        name, database=None, user=None, password=None, host=None, port=None):
     '''
-    Checks if a user exists for a InfluxDB database
+    Checks if a cluster admin or database user exists.
+
+    If a database is specified: it will check for database user existence.
+    If a database is not specified: it will check for cluster admin existence.
 
     name
         User name
@@ -248,6 +251,7 @@ def user_exists(
 
     .. code-block:: bash
 
+        salt '*' influxdb.user_exists <name>
         salt '*' influxdb.user_exists <name> <database>
         salt '*' influxdb.user_exists <name> <database> <user> <password> <host> <port>
     '''
