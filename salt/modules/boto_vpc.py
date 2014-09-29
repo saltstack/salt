@@ -145,7 +145,8 @@ def exists(vpc_id, region=None, key=None, keyid=None, profile=None):
         return False
 
 
-def create(cidr_block, instance_tenancy=None, vpc_name=None, region=None, key=None, keyid=None, profile=None):
+def create(cidr_block, instance_tenancy=None, vpc_name=None, tags=None, region=None, key=None, keyid=None,
+           profile=None):
     '''
     Given a valid CIDR block, create a VPC.
 
@@ -172,6 +173,7 @@ def create(cidr_block, instance_tenancy=None, vpc_name=None, region=None, key=No
         log.debug('The newly created VPC id is {0}'.format(vpc.id))
 
         _maybe_set_name_tag(vpc_name, vpc)
+        _maybe_set_tags(tags, vpc)
 
         return True
     except boto.exception.BotoServerError as e:
@@ -211,8 +213,8 @@ def delete(vpc_id, region=None, key=None, keyid=None, profile=None):
         return False
 
 
-def create_subnet(vpc_id, cidr_block, availability_zone=None, subnet_name=None, region=None, key=None, keyid=None,
-                  profile=None):
+def create_subnet(vpc_id, cidr_block, availability_zone=None, subnet_name=None, tags=None, region=None, key=None,
+                  keyid=None, profile=None):
     '''
     Given a valid VPC ID and a CIDR block, create a subnet for the VPC.
 
@@ -240,6 +242,7 @@ def create_subnet(vpc_id, cidr_block, availability_zone=None, subnet_name=None, 
                                                                               vpc_id))
 
         _maybe_set_name_tag(subnet_name, vpc_subnet)
+        _maybe_set_tags(tags, vpc_subnet)
 
         return True
     except boto.exception.BotoServerError as e:
@@ -279,7 +282,8 @@ def delete_subnet(subnet_id, region=None, key=None, keyid=None, profile=None):
         return False
 
 
-def create_customer_gateway(vpn_connection_type, ip_address, bgp_asn, customer_gateway_name=None, region=None, key=None, keyid=None, profile=None):
+def create_customer_gateway(vpn_connection_type, ip_address, bgp_asn, customer_gateway_name=None, tags=None,
+                            region=None, key=None, keyid=None, profile=None):
     '''
     Given a valid VPN connection type, a static IP address and a customer gateway’s Border Gateway Protocol (BGP) Autonomous System Number, create a customer gateway.
 
@@ -303,6 +307,7 @@ def create_customer_gateway(vpn_connection_type, ip_address, bgp_asn, customer_g
         log.info('A customer gateway with id {0} was created'.format(customer_gateway.id))
 
         _maybe_set_name_tag(customer_gateway_name, customer_gateway)
+        _maybe_set_tags(tags, customer_gateway)
     except boto.exception.BotoServerError as e:
         log.error(e)
         return False
@@ -341,7 +346,7 @@ def delete_customer_gateway(customer_gateway_id, region=None, key=None, keyid=No
 
 
 def create_dhcp_options(domain_name=None, domain_name_servers=None, ntp_servers=None,
-                        netbios_name_servers=None, netbios_node_type=None, dhcp_options_name=None,
+                        netbios_name_servers=None, netbios_node_type=None, dhcp_options_name=None, tags=None,
                         region=None, key=None, keyid=None, profile=None):
     '''
     Given valid DHCP options, create a DHCP options record.
@@ -367,6 +372,7 @@ def create_dhcp_options(domain_name=None, domain_name_servers=None, ntp_servers=
             log.info('DHCP options with id {0} were created'.format(dhcp_options.id))
 
             _maybe_set_name_tag(dhcp_options_name, dhcp_options)
+            _maybe_set_tags(tags, dhcp_options)
 
             return True
         else:
@@ -481,3 +487,10 @@ def _maybe_set_name_tag(name, obj):
         obj.add_tag("Name", name)
 
         log.debug('{0} is now named as {1}'.format(obj, name))
+
+
+def _maybe_set_tags(tags, obj):
+    if tags:
+        obj.add_tags(tags)
+
+        log.debug('The following tags: {0} were added to {1}'.format(', '.join(tags), obj))

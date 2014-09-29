@@ -177,6 +177,15 @@ class BotoVpcTestCase(TestCase):
         self.assertTrue(vpc_creation_result)
 
     @mock_ec2
+    def test_that_when_creating_a_vpc_and_specifying_tags_succeeds_the_create_vpc_method_returns_true(self):
+        '''
+        tests True VPC created.
+        '''
+        vpc_creation_result = boto_vpc.create(cidr_block, tags={'test': 'value'}, **conn_parameters)
+
+        self.assertTrue(vpc_creation_result)
+
+    @mock_ec2
     def test_that_when_creating_a_vpc_fails_the_create_vpc_method_returns_false(self):
         '''
         tests False VPC not created.
@@ -209,10 +218,19 @@ class BotoVpcTestCase(TestCase):
         self.assertTrue(subnet_creation_result)
 
     @mock_ec2
-    def test_that_when_creating_a_subnet_and_spefiying_a_name_succeeds_the_create_subnet_method_returns_true(self):
+    def test_that_when_creating_a_subnet_and_specifying_a_name_succeeds_the_create_subnet_method_returns_true(self):
         vpc = self._create_vpc()
 
         subnet_creation_result = boto_vpc.create_subnet(vpc.id, '10.0.0.0/24', subnet_name='test', **conn_parameters)
+
+        self.assertTrue(subnet_creation_result)
+
+    @mock_ec2
+    def test_that_when_creating_a_subnet_and_specifying_tags_succeeds_the_create_subnet_method_returns_true(self):
+        vpc = self._create_vpc()
+
+        subnet_creation_result = boto_vpc.create_subnet(vpc.id, '10.0.0.0/24', tags={'test': 'testvalue'},
+                                                        **conn_parameters)
 
         self.assertTrue(subnet_creation_result)
 
@@ -259,6 +277,19 @@ class BotoVpcTestCase(TestCase):
                                                                     netbios_name_servers=['10.0.0.1'],
                                                                     netbios_node_type=2,
                                                                     dhcp_options_name='test',
+                                                                    **conn_parameters)
+
+        self.assertTrue(dhcp_options_creation_result)
+
+    @mock_ec2
+    def test_when_creating_dhcp_options_and_specifying_tags_succeeds_the_create_dhcp_options_method_returns_true(
+            self):
+        dhcp_options_creation_result = boto_vpc.create_dhcp_options(domain_name='example.com',
+                                                                    domain_name_servers=['1.2.3.4'],
+                                                                    ntp_servers=['5.6.7.8'],
+                                                                    netbios_name_servers=['10.0.0.1'],
+                                                                    netbios_node_type=2,
+                                                                    tags={'test': 'testvalue'},
                                                                     **conn_parameters)
 
         self.assertTrue(dhcp_options_creation_result)
