@@ -906,7 +906,6 @@ class Eventer(ioflo.base.deeding.Deed):
         Register event requests
         Iterate over the registered event yards and fire!
         '''
-        import wingdbstub
 
         while self.event_req.value: # event subscription requests are msg with routes
             self._register_event_yard(
