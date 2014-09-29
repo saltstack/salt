@@ -451,6 +451,24 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
 
     @mock_ec2
     @expectedNotImplementedFailure
+    def test_when_creating_network_acl_for_an_existing_vpc_and_specifying_a_name_the_create_network_acl_method_returns_true(self):
+        vpc = self._create_vpc()
+
+        network_acl_creation_result = boto_vpc.create_network_acl(vpc.id, network_acl_name='test', **conn_parameters)
+
+        self.assertTrue(network_acl_creation_result)
+
+    @mock_ec2
+    @expectedNotImplementedFailure
+    def test_when_creating_network_acl_for_an_existing_vpc_and_specifying_tags_the_create_network_acl_method_returns_true(self):
+        vpc = self._create_vpc()
+
+        network_acl_creation_result = boto_vpc.create_network_acl(vpc.id, tags={'test': 'testvalue'}, **conn_parameters)
+
+        self.assertTrue(network_acl_creation_result)
+
+    @mock_ec2
+    @expectedNotImplementedFailure
     def test_when_creating_network_acl_for_a_non_existent_vpc_the_create_network_acl_method_returns_false(self):
         network_acl_creation_result = boto_vpc.create_network_acl('fake', **conn_parameters)
 

@@ -508,7 +508,7 @@ def dhcp_options_exists(dhcp_options_id, region=None, key=None, keyid=None, prof
         return False
 
 
-def create_network_acl(vpc_id, region=None, key=None, keyid=None, profile=None):
+def create_network_acl(vpc_id, network_acl_name=None, tags=None, region=None, key=None, keyid=None, profile=None):
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -517,6 +517,8 @@ def create_network_acl(vpc_id, region=None, key=None, keyid=None, profile=None):
         network_acl = conn.create_network_acl(vpc_id)
         if network_acl:
             log.info('Network ACL with id {0} was created'.format(network_acl.id))
+            _maybe_set_name_tag(network_acl_name, network_acl)
+            _maybe_set_tags(tags, network_acl)
             return True
         else:
             log.warning('Network ACL was not created')
