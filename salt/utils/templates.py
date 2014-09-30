@@ -55,8 +55,6 @@ def wrap_tmpl_func(render_str):
         # We want explicit context to overwrite the **kws
         kws.update(context)
         context = kws
-        assert 'opts' in context
-        assert 'saltenv' in context
 
         if isinstance(tmplsrc, string_types):
             if from_str:
@@ -221,7 +219,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             loader = jinja2.FileSystemLoader(
                 context, os.path.dirname(tmplpath))
     else:
-        loader = JinjaSaltCacheLoader(opts, saltenv)
+        loader = JinjaSaltCacheLoader(opts, saltenv, pillar_rend=context.get('_pillar_rend', False))
 
     env_args = {'extensions': [], 'loader': loader}
 

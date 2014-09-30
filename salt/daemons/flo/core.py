@@ -895,13 +895,13 @@ class Eventer(ioflo.base.deeding.Deed):
         if msg.get('tag') == 'module_refresh':
             self.module_refresh.value = True
         for y_name in self.event_yards.value:
-            if y_name not in self.uxd_stack.value.nameRemotes: # subscriber not a remote
+            if y_name not in self.uxd_stack.value.nameRemotes:  # subscriber not a remote
                 rm_.append(y_name)
-                continue # drop msg don't publish
+                continue  # drop msg don't publish
             self.uxd_stack.value.transmit(msg,
                     self.uxd_stack.value.fetchUidByName(y_name))
             self.uxd_stack.value.serviceAll()
-        for y_name in rm_: # remove missing subscribers
+        for y_name in rm_:  # remove missing subscribers
             self.event_yards.value.remove(y_name)
 
     def action(self):
@@ -914,7 +914,7 @@ class Eventer(ioflo.base.deeding.Deed):
                     self.event_req.value.popleft()
                     )
 
-        while self.event.value: # events are msgs with routes
+        while self.event.value:  # events are msgs with routes
             self._forward_event(
                     self.event.value.popleft()
                     )
