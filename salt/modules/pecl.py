@@ -40,6 +40,8 @@ def _pecl(command, defaults=False):
 
 def install(pecls, defaults=False, force=False, preferred_state='stable'):
     '''
+    .. versionadded:: 0.17.0
+
     Installs one or several pecl extensions.
 
     pecls
@@ -52,9 +54,6 @@ def install(pecls, defaults=False, force=False, preferred_state='stable'):
 
     force
         Whether to force the installed version or not
-
-    .. note::
-        The ``defaults`` option will be available in version 0.17.0.
 
     CLI Example:
 
