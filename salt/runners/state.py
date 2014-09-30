@@ -241,7 +241,8 @@ def event(tagmatch='*', count=-1, quiet=False, sock_dir=None, pretty=False):
     sevent = salt.utils.event.get_event(
             'master',
             sock_dir or __opts__['sock_dir'],
-            __opts__['transport'])
+            __opts__['transport'],
+            opts=__opts__)
 
     while True:
         ret = sevent.get_event(full=True)
