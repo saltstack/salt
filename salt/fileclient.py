@@ -868,6 +868,15 @@ class LocalClient(Client):
         '''
         return self.opts
 
+    def envs(self):
+        '''
+        Return the available environments
+        '''
+        ret = []
+        for saltenv in self.opts['file_roots']:
+            ret.append(saltenv)
+        return ret
+
     def ext_nodes(self):
         '''
         Originally returned information via the external_nodes subsystem.
@@ -1168,6 +1177,17 @@ class RemoteClient(Client):
 
         load = {'saltenv': saltenv,
                 'cmd': '_file_list'}
+        try:
+            channel = self._get_channel()
+            return channel.send(load)
+        except SaltReqTimeoutError:
+            return ''
+
+    def envs(self):
+        '''
+        Return a list of available environments
+        '''
+        load = {'cmd': '_file_envs'}
         try:
             channel = self._get_channel()
             return channel.send(load)
