@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 
 # import Python Third Party Libs
+from unittest import expectedFailure
 
 from boto.exception import BotoServerError
 from mock import patch
+from salt.modules.boto_vpc import _maybe_set_name_tag, _maybe_set_tags
 
 from tests.utils import expectedNotImplementedFailure, expectedImportFailure
 
@@ -94,11 +96,15 @@ def _has_required_moto():
 class BotoVpcTestCaseBase(TestCase):
     conn = None
 
-    def _create_vpc(self):
+    def _create_vpc(self, name=None, tags=None):
         if not self.conn:
             self.conn = boto.vpc.connect_to_region(region)
 
-        return self.conn.create_vpc(cidr_block)
+        vpc = self.conn.create_vpc(cidr_block)
+
+        _maybe_set_name_tag(name, vpc)
+        _maybe_set_tags(tags, vpc)
+        return vpc
 
     def _create_subnet(self, vpc_id, cidr_block='10.0.0.0/25'):
         if not self.conn:
@@ -158,13 +164,54 @@ class BotoVpcTestCase(BotoVpcTestCaseBase):
     '''
 
     @mock_ec2
-    def test_exists_true(self):
-        '''
-        tests True existence of a VPC.
-        '''
+    def test_that_when_checking_if_a_vpc_exists_by_id_and_a_vpc_exists_the_vpc_exists_method_returns_true(self):
         vpc = self._create_vpc()
-        vpc_exists = boto_vpc.exists(vpc.id, **conn_parameters)
+
+        vpc_exists = boto_vpc.exists(vpc_id=vpc.id, **conn_parameters)
+
         self.assertTrue(vpc_exists)
+
+    @mock_ec2
+    @expectedFailure
+    def test_that_when_checking_if_a_vpc_exists_by_id_and_a_vpc_does_not_exist_the_vpc_exists_method_returns_false(self):
+        self._create_vpc()  # Created to ensure that the filters are applied correctly
+        vpc_exists = boto_vpc.exists(vpc_id='fake', **conn_parameters)
+
+        self.assertFalse(vpc_exists)
+
+    @mock_ec2
+    def test_that_when_checking_if_a_vpc_exists_by_name_and_a_vpc_exists_the_vpc_exists_method_returns_true(self):
+        self._create_vpc(name='test')
+
+        vpc_exists = boto_vpc.exists(name='test', **conn_parameters)
+
+        self.assertTrue(vpc_exists)
+
+    @mock_ec2
+    @expectedFailure
+    def test_that_when_checking_if_a_vpc_exists_by_name_and_a_vpc_does_not_exist_the_vpc_exists_method_returns_false(self):
+        self._create_vpc()  # Created to ensure that the filters are applied correctly
+
+        vpc_exists = boto_vpc.exists(name='test', **conn_parameters)
+
+        self.assertFalse(vpc_exists)
+
+    @mock_ec2
+    def test_that_when_checking_if_a_vpc_exists_by_tags_and_a_vpc_exists_the_vpc_exists_method_returns_true(self):
+        self._create_vpc(tags={'test': 'testvalue'})
+
+        vpc_exists = boto_vpc.exists(tags={'test': 'testvalue'}, **conn_parameters)
+
+        self.assertTrue(vpc_exists)
+
+    @mock_ec2
+    @expectedFailure
+    def test_that_when_checking_if_a_vpc_exists_by_tags_and_a_vpc_does_not_exist_the_vpc_exists_method_returns_false(self):
+        self._create_vpc()  # Created to ensure that the filters are applied correctly
+
+        vpc_exists = boto_vpc.exists(tags={'test': 'testvalue'}, **conn_parameters)
+
+        self.assertFalse(vpc_exists)
 
     @mock_ec2
     def test_that_when_creating_a_vpc_succeeds_the_create_vpc_method_returns_true(self):
