@@ -124,7 +124,7 @@ def get_subnet_association(subnets, region=None, key=None, keyid=None,
         return False
 
 
-def exists(vpc_id, region=None, key=None, keyid=None, profile=None):
+def exists(vpc_id=None, name=None, tags=None, region=None, key=None, keyid=None, profile=None):
     '''
     Given a VPC ID, check to see if the given VPC ID exists.
 
@@ -141,9 +141,31 @@ def exists(vpc_id, region=None, key=None, keyid=None, profile=None):
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
+
+    if not vpc_id and not name and not tags:
+        log.error('At least on of the following must be specified: vpc id, name or tags.')
+        return False
+
     try:
-        conn.get_all_vpcs(vpc_ids=[vpc_id])
-        return True
+        filter_parameters = {'filters': {}}
+
+        if vpc_id:
+            filter_parameters['vpc_ids'] = [vpc_id]
+
+        if name:
+            filter_parameters['filters']['tag:Name'] = name
+
+        if tags:
+            for tag_name, tag_value in tags.items():
+                filter_parameters['filters']['tag:%s' % tag_name] = tag_value
+        vpcs = conn.get_all_vpcs(**filter_parameters)
+        log.debug('The filters criteria {0} matched the following VPCs:{1}'.format(filter_parameters, vpcs))
+        if vpcs:
+            log.info('VPC exists.')
+            return True
+        else:
+            log.warning('VPC does not exist.')
+            return False
     except boto.exception.BotoServerError as e:
         log.error(e)
         return False
