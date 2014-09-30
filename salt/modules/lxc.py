@@ -2023,8 +2023,8 @@ def bootstrap(name, config=None, approve_key=True,
                 cp(name, cfg_files['pubkey'],
                    os.path.join(configdir, 'minion.pub'))
                 bootstrap_args = bootstrap_args.format(configdir)
-                cmd = ('PATH=$PATH:/bin:/sbin:/usr/sbin'
-                       ' {0} {2}/bootstrap.sh {1}').format(
+                cmd = ("/bin/sh -c 'PATH=$PATH:/bin:/sbin:/usr/sbin"
+                       " {0} {2}/bootstrap.sh {1}'").format(
                            bootstrap_shell,
                            bootstrap_args,
                            dest_dir)
