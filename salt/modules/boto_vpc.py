@@ -538,7 +538,7 @@ def dhcp_options_exists(dhcp_options_id=None, name=None, tags=None, region=None,
         filter_parameters = {'filters': {}}
 
         if dhcp_options_id:
-            filter_parameters['subnet_ids'] = [dhcp_options_id]
+            filter_parameters['dhcp_options_ids'] = [dhcp_options_id]
 
         if name:
             filter_parameters['filters']['tag:Name'] = name
