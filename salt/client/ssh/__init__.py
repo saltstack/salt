@@ -975,12 +975,13 @@ def mod_data(fsclient):
             for fn_ in files:
                 if fn_.startswith(pref):
                     if fn_.endswith(('.py', '.so', '.pyx')):
-                        mod_path = fsclient.cache_file(fn_, env)
+                        full = 'salt://{0}'.format(fn_)
+                        mod_path = fsclient.cache_file(full, env)
                         if not os.path.isfile(mod_path):
                             continue
                         with open(mod_path) as fp_:
                             code_str = fp_.read().encode('base64')
-                        mod_str += '{0}|{1},'.format(fn_, code_str)
+                        mod_str += '{0}|{1},'.format(os.path.basename(fn_), code_str)
             if mod_str:
                 if ref in ret:
                     ret[ref] += mod_str
