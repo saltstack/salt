@@ -819,7 +819,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
 
     @mock_ec2
     @expectedNotImplementedFailure
-    def test_when_associating_a_route_table_with_a_non_existent_route_table_the_associate_route_table_method_should_return_false(
+    def test_when_associating_a_route_table_with_a_non_existent_subnet_the_associate_route_table_method_should_return_false(
             self):
         vpc = self._create_vpc()
         route_table = self._create_route_table(vpc.id)
