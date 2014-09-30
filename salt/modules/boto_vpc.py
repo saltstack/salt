@@ -548,6 +548,7 @@ def dhcp_options_exists(dhcp_options_id=None, name=None, tags=None, region=None,
                 filter_parameters['filters']['tag:%s' % tag_name] = tag_value
 
         dhcp_options = conn.get_all_dhcp_options(**filter_parameters)
+        log.debug('The filters criteria {0} matched the following DHCP options:{1}'.format(filter_parameters, dhcp_options))
         if dhcp_options:
             log.info('DHCP options {0} exists.'.format(dhcp_options_id))
 
