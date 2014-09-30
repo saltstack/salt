@@ -84,9 +84,10 @@ def _has_required_moto():
     '''
     if not HAS_MOTO:
         return False
-    elif LooseVersion(moto.__version__) < LooseVersion('0.3.7'):
-        return False
     else:
+        import pkg_resources
+        if LooseVersion(pkg_resources.get_distribution('moto').version) < LooseVersion('0.3.7'):
+            return False
         return True
 
 
@@ -335,7 +336,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase):
 @skipIf(_has_required_boto() is False, 'The boto module must be greater than'
                                        ' or equal to version {0}'
         .format(required_boto_version))
-@skipIf(_has_required_moto is False, 'The moto module has a bug in creating DHCP options which is fixed '
+@skipIf(_has_required_moto() is False, 'The moto module has a bug in creating DHCP options which is fixed '
                                      'in spulec/moto#214. Next release should solve this issue.')
 class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
     @mock_ec2
