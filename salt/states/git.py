@@ -216,7 +216,8 @@ def latest(name,
             if branch != 'HEAD' and branch == rev:
                 remote_rev = __salt__['git.ls_remote'](target,
                                                        repository=name,
-                                                       branch=branch, user=user,
+                                                       branch=branch,
+                                                       user=user,
                                                        identity=identity)
 
             # only do something, if the specified rev differs from the
@@ -247,7 +248,12 @@ def latest(name,
                                                name=remote_name,
                                                url=name,
                                                user=user)
-                    ret['changes']['remote/{0}'.format(remote_name)] = "{0} => {1}".format(str(remote), name)
+                    ret['changes']['remote/{0}'.format(remote_name)] = (
+                        "{0} => {1}".format(str(remote), name)
+                    )
+                    # Set to fetch later since we just added the remote and
+                    # need to get the refs
+                    always_fetch = True
 
                 # check if rev is already present in repo, git-fetch otherwise
                 if bare:
@@ -279,30 +285,42 @@ def latest(name,
                                              user=user)
 
                     if branch != 'HEAD':
-                        current_remote = __salt__['git.config_get'](target,
-                                                             'branch.{0}.remote'.format(rev),
-                                                             user=user)
+                        try:
+                            current_remote = __salt__['git.config_get'](
+                                target, 'branch.{0}.remote'.format(rev),
+                                user=user)
+                        except CommandExecutionError:
+                            current_remote = None
+
                         if current_remote != remote_name:
                             if __opts__['test']:
-                                ret['changes'] = {'old': current_remote, 'new': remote_name}
-                                return _neutral_test(ret,
-                                                     ('Repository {0} update is probably required.'
-                                                      'Current remote is {1} should be {2}'.format(target, current_remote, remote_name)))
-                            log.debug('Setting branch {0} to upstream {1}'.format(rev, remote_name))
-                            __salt__['git.branch'](target,
-                                                   rev,
-                                                   opts='--set-upstream {0}/{1}'.format(remote_name, rev),
-                                                   user=user)
-                            ret['changes']['remote/{0}/{1}'.format(remote_name, rev)] = '{0} => {1}'.format(current_remote, remote_name)
+                                ret['changes'] = {'old': current_remote,
+                                                  'new': remote_name}
+                                return _neutral_test(
+                                    ret,
+                                    ('Repository {0} update is probably '
+                                     'required. Current remote is {1} should '
+                                     'be {2}'.format(target, current_remote,
+                                                     remote_name)))
+                            log.debug(
+                                'Setting branch {0} to '
+                                'upstream {1}'.format(rev, remote_name))
+                            __salt__['git.branch'](
+                                target, rev,
+                                opts='--set-upstream '
+                                '{0}/{1}'.format(remote_name, rev),
+                                user=user)
+                            ret['changes']['remote/''{0}/{1}'.format(
+                                remote_name, rev)] = (
+                                    '{0} => {1}'.format(current_remote,
+                                                        remote_name))
 
                 # check if we are on a branch to merge changes
                 cmd = "git symbolic-ref -q HEAD"
                 retcode = __salt__['cmd.retcode'](cmd, cwd=target, runas=user)
                 if 0 == retcode:
-                    __salt__['git.fetch' if bare else 'git.pull'](target,
-                                                                  opts=fetch_opts,
-                                                                  user=user,
-                                                                  identity=identity)
+                    __salt__['git.fetch' if bare else 'git.pull'](
+                        target, opts=fetch_opts, user=user, identity=identity)
 
                 if submodules:
                     __salt__['git.submodule'](target,
@@ -313,8 +331,8 @@ def latest(name,
                 new_rev = __salt__['git.revision'](cwd=target, user=user)
         except Exception as exc:
             return _fail(
-                    ret,
-                    str(exc))
+                ret,
+                str(exc))
 
         if current_rev != new_rev:
             log.info('Repository {0} updated: {1} => {2}'.format(target,
@@ -322,7 +340,7 @@ def latest(name,
                                                                  new_rev))
             ret['comment'] = 'Repository {0} updated'.format(target)
             ret['changes']['revision'] = '{0} => {1}'.format(
-                    current_rev, new_rev)
+                current_rev, new_rev)
     else:
         if os.path.isdir(target):
             # git clone is required, target exists but force is turned on
@@ -335,19 +353,19 @@ def latest(name,
                     shutil.rmtree(target)
             # git clone is required, but target exists and is non-empty
             elif os.listdir(target):
-                return _fail(ret, 'Directory \'{0}\' exists, is non-empty, and '
-                             'force option not in use'.format(target))
+                return _fail(ret, 'Directory \'{0}\' exists, is non-empty, '
+                             'and force option not in use'.format(target))
 
         # git clone is required
         log.debug(
-                'target {0} is not found, "git clone" is required'.format(
-                    target))
+            'target {0} is not found, "git clone" is required'.format(
+                target))
         if 'test' in __opts__:
             if __opts__['test']:
                 return _neutral_test(
-                        ret,
-                        'Repository {0} is about to be cloned to {1}'.format(
-                            name, target))
+                    ret,
+                    'Repository {0} is about to be cloned to {1}'.format(
+                        name, target))
         try:
             # make the clone
             opts = '--mirror' if mirror else '--bare' if bare else ''
@@ -375,8 +393,8 @@ def latest(name,
 
         except Exception as exc:
             return _fail(
-                    ret,
-                    str(exc))
+                ret,
+                str(exc))
 
         message = 'Repository {0} cloned to {1}'.format(name, target)
         log.info(message)
