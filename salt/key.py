@@ -12,7 +12,6 @@ import shutil
 import fnmatch
 import hashlib
 import json
-import msgpack
 import logging
 
 # Import salt libs
@@ -21,6 +20,12 @@ import salt.utils
 import salt.utils.event
 import salt.daemons.masterapi
 from salt.utils.event import tagify
+
+# Import third party libs
+try:
+    import msgpack
+except ImportError:
+    pass
 
 log = logging.getLogger(__name__)
 
