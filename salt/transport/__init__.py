@@ -104,7 +104,7 @@ class RAETChannel(Channel):
             lanename = role # add kind later
         else:
             emsg = ("Unsupported application kind '{0}' for RAETChannel "
-                                "Raet.".format(self.node))
+                                "Raet.".format(kind))
             log.error(emsg + '\n')
             raise ValueError(emsg)
 
