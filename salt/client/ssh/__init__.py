@@ -224,7 +224,7 @@ class SSH(object):
         self.serial = salt.payload.Serial(opts)
         self.returners = salt.loader.returners(self.opts, {})
         self.fsclient = salt.fileclient.FSClient(self.opts)
-        self.mods = mod_data(self.opts)
+        self.mods = mod_data(self.fsclient)
 
     def get_pubkey(self):
         '''
@@ -954,7 +954,7 @@ def salt_refs(data):
     return ret
 
 
-def mod_data(opts):
+def mod_data(fsclient):
     '''
     Generate the module arguments for the shim data
     '''
@@ -967,21 +967,29 @@ def mod_data(opts):
             'returners',
             ]
     ret = {}
-    for env in opts['file_roots']:
-        for path in opts['file_roots'][env]:
-            for ref in sync_refs:
-                mod_str = ''
-                pl_dir = os.path.join(path, '_{0}'.format(ref))
-                if os.path.isdir(pl_dir):
-                    for fn_ in os.listdir(pl_dir):
-                        mod_path = os.path.join(pl_dir, fn_)
+    envs = fsclient.envs()
+    for env in envs:
+        files = fsclient.file_list(env)
+        for ref in sync_refs:
+            mod_str = ''
+            pref = '_{0}'.format(ref)
+            for fn_ in files:
+                if fn_.startswith(pref):
+                    if fn_.endswith(('.py', '.so', '.pyx')):
+                        full = 'salt://{0}'.format(fn_)
+                        mod_path = fsclient.cache_file(full, env)
                         if not os.path.isfile(mod_path):
                             continue
                         with open(mod_path) as fp_:
                             code_str = fp_.read().encode('base64')
-                        mod_str += '{0}|{1},'.format(fn_, code_str)
-                mod_str = mod_str.rstrip(',')
-                ret[ref] = mod_str
+                        mod_str += '{0}|{1},'.format(os.path.basename(fn_), code_str)
+            if mod_str:
+                if ref in ret:
+                    ret[ref] += mod_str
+                else:
+                    ret[ref] = mod_str
+    for ref in ret:
+        ret[ref] = ret[ref].rstrip(',')
     return ret
 
 
