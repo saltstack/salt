@@ -480,18 +480,18 @@ class Pillar(object):
 
     def ext_pillar(self, pillar, pillar_dirs):
         '''
-        Render the external pillar data
+        Render the external pillar data, and merge with pillar data
         '''
         if 'ext_pillar' not in self.opts:
-            return {}
+            return pillar
         if not isinstance(self.opts['ext_pillar'], list):
             log.critical('The "ext_pillar" option is malformed')
-            return {}
+            return pillar
         ext = None
         for run in self.opts['ext_pillar']:
             if not isinstance(run, dict):
                 log.critical('The "ext_pillar" option is malformed')
-                return {}
+                return pillar
             for key, val in run.items():
                 if key not in self.ext_pillars:
                     err = ('Specified ext_pillar interface {0} is '
