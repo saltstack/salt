@@ -82,7 +82,7 @@ class SaltEvent(object):
         self.router_yard = RemoteYard(
                 stack=self.stack,
                 lanename=lanename,
-                uid=0,
+                #uid=0,
                 name='manor',
                 dirpath=self.sock_dir)
         self.stack.addRemote(self.router_yard)
@@ -196,7 +196,7 @@ class SaltEvent(object):
         route = {'dst': (None, self.router_yard.name, 'event_fire'),
                  'src': (None, self.stack.local.name, None)}
         msg = {'route': route, 'tag': tag, 'data': data}
-        self.stack.transmit(msg)
+        self.stack.transmit(msg, self.router_yard.uid)
         self.stack.serviceAll()
 
     def fire_ret_load(self, load):

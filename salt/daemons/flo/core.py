@@ -573,7 +573,6 @@ class SaltManorLaneSetup(ioflo.base.deeding.Deed):
                'stack': 'stack',
                'local': {'ipath': 'local',
                           'ival': {'name': 'master',
-                                   'yid': 0,
                                    'lanename': 'master'}},
             }
 
