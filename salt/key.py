@@ -29,6 +29,7 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+
 class KeyCLI(object):
     '''
     Manage key CLI operations
