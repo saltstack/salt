@@ -587,10 +587,13 @@ class SaltManorLaneSetup(ioflo.base.deeding.Deed):
         '''
         Run once at enter
         '''
-        #name = "{0}{1}".format(self.opts.value.get('id', self.local.data.name), 'lane')
         name = 'manor'
-        lanename = self.opts.value.get('id', self.local.data.lanename)
-        #yid = self.local.data.yid
+        kind = self.opts.value['__role']
+        if kind == 'master':
+            lanename = 'master'
+        else:
+            lanename = self.opts.value.get('id', self.local.data.lanename)
+
         self.stack.value = LaneStack(
                                     name=name,
                                     lanename=lanename,
@@ -906,8 +909,7 @@ class Eventer(ioflo.base.deeding.Deed):
         Register event requests
         Iterate over the registered event yards and fire!
         '''
-
-        while self.event_req.value:  # event subscription requests are msg with routes
+        while self.event_req.value: # event subscription requests are msg with routes
             self._register_event_yard(
                     self.event_req.value.popleft()
                     )

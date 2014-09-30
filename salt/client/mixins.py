@@ -77,6 +77,7 @@ class AsyncClientMixin(object):
                     'master',
                     self.opts['sock_dir'],
                     self.opts['transport'],
+                    opts=self.opts,
                     listen=False)
             event.fire_event(data, tagify('new', base=tag))
 

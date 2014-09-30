@@ -170,8 +170,10 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
                 'eauth': 'pam',
             })
         '''
-        sevent = salt.utils.event.get_event('master', self.opts['sock_dir'],
-                self.opts['transport'])
+        sevent = salt.utils.event.get_event('master',
+                                            self.opts['sock_dir'],
+                                            self.opts['transport'],
+                                            opts=self.opts)
         job = self.master_call(**low)
         ret_tag = tagify('ret', base=job['tag'])
 
