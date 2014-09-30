@@ -547,7 +547,7 @@ def dhcp_options_exists(dhcp_options_id=None, name=None, tags=None, region=None,
             for tag_name, tag_value in tags.items():
                 filter_parameters['filters']['tag:%s' % tag_name] = tag_value
 
-        dhcp_options = conn.get_all_dhcp_options(dhcp_options_ids=[dhcp_options_id])
+        dhcp_options = conn.get_all_dhcp_options(**filter_parameters)
         if dhcp_options:
             log.info('DHCP options {0} exists.'.format(dhcp_options_id))
 
@@ -598,7 +598,7 @@ def delete_network_acl(network_acl_id, region=None, key=None, keyid=None, profil
         return False
 
 
-def network_acl_exists(network_acl_id, region=None, key=None, keyid=None, profile=None):
+def network_acl_exists(network_acl_id, name=None, tags=None, region=None, key=None, keyid=None, profile=None):
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
