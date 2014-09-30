@@ -16,6 +16,7 @@ except ImportError:
     HAS_BOTO = False
 
 try:
+    import moto
     from moto import mock_ec2
 
     HAS_MOTO = True
@@ -71,6 +72,19 @@ def _has_required_boto():
     if not HAS_BOTO:
         return False
     elif LooseVersion(boto.__version__) < LooseVersion(required_boto_version):
+        return False
+    else:
+        return True
+
+
+def _has_required_moto():
+    '''
+    Returns True/False boolean depending on if Moto is installed and correct
+    version.
+    '''
+    if not HAS_MOTO:
+        return False
+    elif LooseVersion(moto.__version__) < LooseVersion('0.3.7'):
         return False
     else:
         return True
@@ -321,6 +335,8 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase):
 @skipIf(_has_required_boto() is False, 'The boto module must be greater than'
                                        ' or equal to version {0}'
         .format(required_boto_version))
+@skipIf(_has_required_moto is False, 'The moto module has a bug in creating DHCP options which is fixed '
+                                     'in spulec/moto#214. Next release should solve this issue.')
 class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
     @mock_ec2
     def test_when_creating_dhcp_options_succeeds_the_create_dhcp_options_method_returns_true(self):
@@ -701,7 +717,8 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
 
     @mock_ec2
     @expectedNotImplementedFailure
-    def test_when_disassociating_network_acl_for_a_non_existent_vpc_the_disassociate_network_acl_method_should_return_false(self):
+    def test_when_disassociating_network_acl_for_a_non_existent_vpc_the_disassociate_network_acl_method_should_return_false(
+            self):
         vpc = self._create_vpc()
         subnet = self._create_subnet(vpc.id)
 
@@ -711,13 +728,13 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
 
     @mock_ec2
     @expectedNotImplementedFailure
-    def test_when_disassociating_network_acl_for_a_non_existent_subnet_the_disassociate_network_acl_method_should_return_false(self):
+    def test_when_disassociating_network_acl_for_a_non_existent_subnet_the_disassociate_network_acl_method_should_return_false(
+            self):
         vpc = self._create_vpc()
 
         dhcp_disassociate_result = boto_vpc.disassociate_network_acl('fake', vpc_id=vpc.id, **conn_parameters)
 
         self.assertFalse(dhcp_disassociate_result)
-
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -779,7 +796,8 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
 
     @mock_ec2
     @expectedNotImplementedFailure
-    def test_when_associating_a_route_table_succeeds_the_associate_route_table_method_should_return_the_association_id(self):
+    def test_when_associating_a_route_table_succeeds_the_associate_route_table_method_should_return_the_association_id(
+            self):
         vpc = self._create_vpc()
         subnet = self._create_subnet(vpc.id)
         route_table = self._create_route_table(vpc.id)
@@ -790,7 +808,8 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
 
     @mock_ec2
     @expectedNotImplementedFailure
-    def test_when_associating_a_route_table_with_a_non_existent_route_table_the_associate_route_table_method_should_return_false(self):
+    def test_when_associating_a_route_table_with_a_non_existent_route_table_the_associate_route_table_method_should_return_false(
+            self):
         vpc = self._create_vpc()
         subnet = self._create_subnet(vpc.id)
 
@@ -800,7 +819,8 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
 
     @mock_ec2
     @expectedNotImplementedFailure
-    def test_when_associating_a_route_table_with_a_non_existent_route_table_the_associate_route_table_method_should_return_false(self):
+    def test_when_associating_a_route_table_with_a_non_existent_route_table_the_associate_route_table_method_should_return_false(
+            self):
         vpc = self._create_vpc()
         route_table = self._create_route_table(vpc.id)
 
@@ -837,7 +857,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
         route_creation_result = boto_vpc.create_route('fake', cidr_block, **conn_parameters)
 
         self.assertFalse(route_creation_result)
-        
+
     @mock_ec2
     @expectedNotImplementedFailure
     def test_when_deleting_a_route_succeeds_the_delete_route_method_should_return_true(self):
@@ -854,7 +874,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
         route_deletion_result = boto_vpc.delete_route('fake', cidr_block, **conn_parameters)
 
         self.assertFalse(route_deletion_result)
-        
+
     @mock_ec2
     @expectedNotImplementedFailure
     def test_when_replacing_a_route_succeeds_the_replace_route_method_should_return_true(self):
@@ -871,6 +891,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
         route_replacing_result = boto_vpc.replace_route('fake', cidr_block, **conn_parameters)
 
         self.assertFalse(route_replacing_result)
+
 
 if __name__ == '__main__':
     from integration import run_tests
