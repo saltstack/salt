@@ -320,6 +320,10 @@ class Terminal(object):
                     raise TerminalException('Failed to terminate child process.')
             self.closed = True
 
+    @property
+    def has_unread_data(self):
+        return self.flag_eof_stderr is False or self.flag_eof_stdout is False
+
     # <---- Common Public API ------------------------------------------------
 
     # ----- Common Internal API --------------------------------------------->
@@ -760,10 +764,10 @@ class Terminal(object):
             if self.terminated:
                 return False
 
-            if self.flag_eof:
+            if not self.has_unread_data:
                 # This is for Linux, which requires the blocking form
                 # of waitpid to get status of a defunct process.
-                # This is super-lame. The flag_eof would have been set
+                # This is super-lame. The flag_eof_* would have been set
                 # in recv(), so this should be safe.
                 waitpid_options = 0
             else:

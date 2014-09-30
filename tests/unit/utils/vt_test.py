@@ -117,6 +117,57 @@ class VTTestCase(TestCase):
                 # We're pushing the system resources, let's keep going
                 continue
 
+    def test_isalive_while_theres_data_to_read(self):
+        term = vt.Terminal('echo "Alive!"', shell=True, stream_stdout=False, stream_stderr=False)
+        iterations = 0
+        try:
+            while term.has_unread_data:
+                stdout, stderr = term.recv()
+                if iterations < 1:
+                    self.assertFalse(term.isalive())
+                    self.assertIsNone(stderr)
+                    self.assertIsNotNone(stdout)
+                    iterations += 1
+                elif iterations == 1:
+                    self.assertFalse(term.isalive())
+                    self.assertIsNone(stderr)
+                    self.assertIsNone(stdout)
+                    iterations += 1
+
+            # term should be dead now
+            stdout, stderr = term.recv()
+            self.assertFalse(term.isalive())
+            self.assertIsNone(stderr)
+            self.assertIsNone(stdout)
+        finally:
+            term.close(terminate=True, kill=True)
+
+        term = vt.Terminal('echo "Alive!" 1>&2', shell=True, stream_stdout=False, stream_stderr=False)
+        iterations = 0
+        try:
+            while term.has_unread_data:
+                stdout, stderr = term.recv()
+                if iterations < 1:
+                    self.assertFalse(term.isalive())
+                    self.assertIsNotNone(stderr)
+                    self.assertIsNone(stdout)
+                    iterations += 1
+                elif iterations == 1:
+                    self.assertFalse(term.isalive())
+                    self.assertIsNone(stderr)
+                    self.assertIsNone(stdout)
+                    iterations += 1
+
+            # term should be dead now
+            stdout, stderr = term.recv()
+            self.assertFalse(term.isalive())
+            self.assertIsNone(stderr)
+            self.assertIsNone(stdout)
+        finally:
+            term.close(terminate=True, kill=True)
+
+
+
 
 if __name__ == '__main__':
     from integration import run_tests
