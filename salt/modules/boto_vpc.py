@@ -529,13 +529,26 @@ def associate_new_dhcp_options_to_vpc(vpc_id, domain_name=None, domain_name_serv
         return False
 
 
-def dhcp_options_exists(dhcp_options_id, region=None, key=None, keyid=None, profile=None):
+def dhcp_options_exists(dhcp_options_id=None, name=None, tags=None, region=None, key=None, keyid=None, profile=None):
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
 
     try:
-        if conn.get_all_dhcp_options(dhcp_options_ids=[dhcp_options_id]):
+        filter_parameters = {'filters': {}}
+
+        if dhcp_options_id:
+            filter_parameters['subnet_ids'] = [dhcp_options_id]
+
+        if name:
+            filter_parameters['filters']['tag:Name'] = name
+
+        if tags:
+            for tag_name, tag_value in tags.items():
+                filter_parameters['filters']['tag:%s' % tag_name] = tag_value
+
+        dhcp_options = conn.get_all_dhcp_options(dhcp_options_ids=[dhcp_options_id])
+        if dhcp_options:
             log.info('DHCP options {0} exists.'.format(dhcp_options_id))
 
             return True
