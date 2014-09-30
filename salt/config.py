@@ -78,6 +78,7 @@ VALID_OPTS = {
     'sls_list': list,
     'top_file': str,
     'file_client': str,
+    'use_master_when_local': bool,
     'file_roots': dict,
     'pillar_roots': dict,
     'hash_type': str,
@@ -296,6 +297,7 @@ DEFAULT_MINION_OPTS = {
     'sls_list': [],
     'top_file': '',
     'file_client': 'remote',
+    'use_master_when_local': False,
     'file_roots': {
         'base': [salt.syspaths.BASE_FILE_ROOTS_DIR],
     },
