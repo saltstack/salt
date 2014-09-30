@@ -144,7 +144,7 @@ def db_create(name, user=None, password=None, host=None, port=None):
         salt '*' influxdb.db_create <name>
         salt '*' influxdb.db_create <name> <user> <password> <host> <port>
     """
-    if db_exists(name):
+    if db_exists(name, user, password, host, port):
         log.info('DB {0!r} already exists'.format(name))
         return False
     client = _client(user=user, password=password, host=host, port=port)
@@ -177,7 +177,7 @@ def db_remove(name, user=None, password=None, host=None, port=None):
         salt '*' influxdb.db_remove <name>
         salt '*' influxdb.db_remove <name> <user> <password> <host> <port>
     """
-    if not db_exists(name):
+    if not db_exists(name, user, password, host, port):
         log.info('DB {0!r} does not exist'.format(name))
         return False
     client = _client(user=user, password=password, host=host, port=port)
