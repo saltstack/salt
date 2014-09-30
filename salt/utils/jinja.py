@@ -51,7 +51,7 @@ class SaltCacheLoader(BaseLoader):
     Templates are cached like regular salt states
     and only loaded once per loader instance.
     '''
-    def __init__(self, opts, saltenv='base', encoding='utf-8', env=None):
+    def __init__(self, opts, saltenv='base', encoding='utf-8', env=None, pillar_rend=False):
         if env is not None:
             salt.utils.warn_until(
                 'Boron',
@@ -71,6 +71,7 @@ class SaltCacheLoader(BaseLoader):
         log.debug('Jinja search path: {0!r}'.format(self.searchpath))
         self._file_client = None
         self.cached = []
+        self.pillar_rend = pillar_rend
 
     def file_client(self):
         '''
@@ -79,7 +80,7 @@ class SaltCacheLoader(BaseLoader):
         if not self._file_client:
             self._file_client = salt.fileclient.get_file_client(
                     self.opts,
-                    True if self.opts.get('__role') == 'master' else False)
+                    self.pillar_rend)
         return self._file_client
 
     def cache_file(self, template):
