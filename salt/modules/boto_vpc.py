@@ -599,13 +599,27 @@ def delete_network_acl(network_acl_id, region=None, key=None, keyid=None, profil
         return False
 
 
-def network_acl_exists(network_acl_id, name=None, tags=None, region=None, key=None, keyid=None, profile=None):
+def network_acl_exists(network_acl_id=None, name=None, tags=None, region=None, key=None, keyid=None, profile=None):
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
 
     try:
-        if conn.get_all_network_acls(network_acl_ids=[network_acl_id]):
+        filter_parameters = {'filters': {}}
+
+        if network_acl_id:
+            filter_parameters['network_acl_ids'] = [network_acl_id]
+
+        if name:
+            filter_parameters['filters']['tag:Name'] = name
+
+        if tags:
+            for tag_name, tag_value in tags.items():
+                filter_parameters['filters']['tag:%s' % tag_name] = tag_value
+
+        network_acls = conn.get_all_network_acls(**filter_parameters)
+        log.debug('The filters criteria {0} matched the following network ACLs:{1}'.format(filter_parameters, network_acls))
+        if network_acls:
             log.info('Network ACL with id {0} exists.'.format(network_acl_id))
             return True
         else:
