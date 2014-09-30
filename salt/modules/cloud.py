@@ -278,7 +278,7 @@ def volume_detach(provider, names, **kwargs):
 
     .. code-block:: bash
 
-        salt minionname cloud.volume_detach my-nova myblock \
+        salt minionname cloud.volume_detach my-nova myblock \\
                 server_name=myserver
 
     '''
