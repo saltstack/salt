@@ -222,6 +222,7 @@ class SSH(object):
         }
         self.serial = salt.payload.Serial(opts)
         self.returners = salt.loader.returners(self.opts, {})
+        self.fsclient = salt.fileclient.FSClient(self.opts)
         self.mods = mod_data(self.opts)
 
     def get_pubkey(self):
@@ -279,6 +280,7 @@ class SSH(object):
                 argv,
                 host,
                 mods=self.mods,
+                fsclient=self.fsclient,
                 **target)
         if salt.utils.which('ssh-copy-id'):
             # we have ssh-copy-id, use it!
@@ -292,6 +294,7 @@ class SSH(object):
                     self.opts['argv'],
                     host,
                     mods=self.mods,
+                    fsclient=self.fsclient,
                     **target)
             stdout, stderr, retcode = single.cmd_block()
             try:
@@ -315,6 +318,7 @@ class SSH(object):
                 opts['argv'],
                 host,
                 mods=self.mods,
+                fsclient=self.fsclient,
                 **target)
         ret = {'id': single.id}
         stdout, stderr, retcode = single.run()
@@ -498,6 +502,7 @@ class Single(object):
             sudo=False,
             tty=False,
             mods=None,
+            fsclient=None,
             **kwargs):
         self.opts = opts
         if user:
@@ -505,6 +510,9 @@ class Single(object):
         else:
             self.thin_dir = DEFAULT_THIN_DIR.replace('%%USER%%', 'root')
         self.opts['_thin_dir'] = self.thin_dir
+        self.fsclient = fsclient
+        self.context = {'master_opts': self.opts,
+                        'fileclient': self.fsclient}
 
         if isinstance(argv, string_types):
             self.argv = [argv]
@@ -531,7 +539,7 @@ class Single(object):
         self.target = kwargs
         self.target.update(args)
         self.serial = salt.payload.Serial(opts)
-        self.wfuncs = salt.loader.ssh_wrapper(opts, None, self.opts)
+        self.wfuncs = salt.loader.ssh_wrapper(opts, None, self.context)
         self.mods = mods if mods else {}
 
     def __arg_comps(self):
@@ -692,7 +700,7 @@ class Single(object):
             self.id,
             mods=self.mods,
             **self.target)
-        self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper, self.opts)
+        self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper, self.context)
         wrapper.wfuncs = self.wfuncs
         try:
             result = self.wfuncs[self.fun](*self.args, **self.kwargs)
