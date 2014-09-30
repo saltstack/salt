@@ -119,6 +119,7 @@ class LocalClient(object):
                 'master',
                 self.opts['sock_dir'],
                 self.opts['transport'],
+                opts=self.opts,
                 listen=not self.opts.get('__worker', False))
 
         self.returners = salt.loader.returners(self.opts, {})
@@ -896,6 +897,7 @@ class LocalClient(object):
                         'master',
                         self.opts['sock_dir'],
                         self.opts['transport'],
+                        opts=self.opts,
                         listen=not self.opts.get('__worker', False))
                 jinfo = self.gather_job_info(jid, tgt, tgt_type)
                 # if we weren't assigned any jid that means the master thinks

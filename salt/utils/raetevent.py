@@ -32,7 +32,7 @@ class SaltEvent(object):
         '''
         Set up the stack and remote yard
         '''
-        self.node = node # this is usually 'master', 'minion' or opts['id']
+        self.node = node # application kind 'master', 'minion', 'syndic', 'call' etc
         self.sock_dir = sock_dir
         self.listen = listen
         if opts is None:
@@ -41,6 +41,34 @@ class SaltEvent(object):
         self.__prep_stack()
 
     def __prep_stack(self):
+        if self.node == 'master':
+            lanename = 'master'
+            if self.opts:
+                kind = self.opts.get('__role', '') # opts optional for master
+                if kind and kind != self.node:
+                    emsg = ("Mismatch between node '{}' and kind '{}' in setup "
+                           "of SaltEvent on Raet.".format(self.node, kind))
+                    log.error(emsg + '\n')
+                    raise ValueError(emsg)
+        elif self.node == 'minion':
+            role = self.opts.get('id', '') #opts required for minion
+            if not role:
+                emsg = ("Missing opts['id'] required by SaltEvent on Raet with "
+                       "node kind {0}.".format(self.node))
+                log.error(emsg + '\n')
+                raise ValueError(emsg)
+            kind = self.opts.get('__role', '')
+            if kind != self.node:
+                emsg = ("Mismatch between node '{}' and kind '{}' in setup "
+                       "of SaltEvent on Raet.".format(self.node, kind))
+                log.error(emsg + '\n')
+                raise ValueError(emsg)
+            lanename = role # add '_minion'
+        else:
+            emsg = ("Unsupported application node kind '{0}' for SaltEvent "
+                    "Raet.".format(self.node))
+            log.error(emsg + '\n')
+            raise ValueError(emsg)
         self.yid = nacling.uuid(size=18)
         name = 'event' + self.yid
         cachedir = self.opts.get('cachedir', os.path.join(syspaths.CACHE_DIR, self.node))
@@ -48,12 +76,12 @@ class SaltEvent(object):
         self.stack = LaneStack(
                 name=name,
                 uid=self.yid,
-                lanename=self.node,
+                lanename=lanename,
                 sockdirpath=self.sock_dir)
         self.stack.Pk = raeting.packKinds.pack
         self.router_yard = RemoteYard(
                 stack=self.stack,
-                lanename=self.node,
+                lanename=lanename,
                 uid=0,
                 name='manor',
                 dirpath=self.sock_dir)

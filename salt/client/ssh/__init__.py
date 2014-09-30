@@ -170,6 +170,7 @@ class SSH(object):
                     'master',
                     opts['sock_dir'],
                     opts['transport'],
+                    opts=opts,
                     listen=False)
         else:
             self.event = None

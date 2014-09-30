@@ -356,6 +356,7 @@ class RemoteFuncs(object):
                 'master',
                 self.opts['sock_dir'],
                 self.opts['transport'],
+                opts=self.opts,
                 listen=False)
         self.serial = salt.payload.Serial(opts)
         self.ckminions = salt.utils.minions.CkMinions(opts)
@@ -942,6 +943,7 @@ class LocalFuncs(object):
                 'master',
                 self.opts['sock_dir'],
                 self.opts['transport'],
+                opts=self.opts,
                 listen=False)
         # Make a client
         self.local = salt.client.get_local_client(mopts=self.opts)

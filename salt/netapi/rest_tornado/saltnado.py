@@ -148,7 +148,8 @@ class EventListener(object):
         self.event = salt.utils.event.get_event(
             'master',
             opts['sock_dir'],
-            opts['transport'])
+            opts['transport'],
+            opts=opts)
 
         # tag -> list of futures
         self.tag_map = defaultdict(list)
@@ -756,7 +757,8 @@ class WebhookSaltAPIHandler(SaltAPIHandler):
         self.event = salt.utils.event.get_event(
             'master',
             self.application.opts['sock_dir'],
-            self.application.opts['transport'])
+            self.application.opts['transport'],
+            opts=self.application.opts)
 
         ret = self.event.fire_event({
             'post': self.raw_data,
