@@ -312,13 +312,27 @@ def delete_subnet(subnet_id, region=None, key=None, keyid=None, profile=None):
         return False
 
 
-def subnet_exists(subnet_id, region=None, key=None, keyid=None, profile=None):
+def subnet_exists(subnet_id=None, name=None, tags=None, region=None, key=None, keyid=None, profile=None):
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
 
     try:
-        if conn.get_all_subnets(subnet_ids=[subnet_id]):
+        filter_parameters = {'filters': {}}
+
+        if subnet_id:
+            filter_parameters['subnet_ids'] = [subnet_id]
+
+        if name:
+            filter_parameters['filters']['tag:Name'] = name
+
+        if tags:
+            for tag_name, tag_value in tags.items():
+                filter_parameters['filters']['tag:%s' % tag_name] = tag_value
+
+        subnets = conn.get_all_subnets(**filter_parameters)
+        log.debug('The filters criteria {0} matched the following subnets:{1}'.format(filter_parameters, subnets))
+        if subnets:
             log.info('Subnet {0} exists.'.format(subnet_id))
 
             return True
