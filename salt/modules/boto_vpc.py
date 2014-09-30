@@ -790,13 +790,26 @@ def delete_route_table(route_table_id, region=None, key=None, keyid=None, profil
         return False
 
 
-def route_table_exists(route_table_id, region=None, key=None, keyid=None, profile=None):
+def route_table_exists(route_table_id=None, name=None, tags=None, region=None, key=None, keyid=None, profile=None):
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
 
     try:
-        if conn.get_all_route_tables(route_table_ids=[route_table_id]):
+        filter_parameters = {'filters': {}}
+
+        if route_table_id:
+            filter_parameters['route_table_ids'] = [route_table_id]
+
+        if name:
+            filter_parameters['filters']['tag:Name'] = name
+
+        if tags:
+            for tag_name, tag_value in tags.items():
+                filter_parameters['filters']['tag:%s' % tag_name] = tag_value
+
+        route_tables = conn.get_all_route_tables(**filter_parameters)
+        if route_tables:
             log.info('Route table {0} exists.'.format(route_table_id))
 
             return True
