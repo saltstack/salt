@@ -24,6 +24,18 @@ class StdTest(integration.ModuleCase):
         for ret in cmd_iter:
             self.assertTrue(ret['minion'])
 
+        # make sure that the iter waits for long running jobs too
+        cmd_iter = self.client.cmd_cli(
+                'minion',
+                'test.sleep',
+                [6]
+                )
+        num_ret = 0
+        for ret in cmd_iter:
+            num_ret += 1
+            self.assertTrue(ret['minion'])
+        assert num_ret > 0
+
     def test_iter(self):
         '''
         test cmd_iter

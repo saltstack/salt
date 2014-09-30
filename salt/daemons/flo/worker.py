@@ -117,7 +117,15 @@ class WorkerSetup(ioflo.base.deeding.Deed):
                                   #'worker',
                                   #self.yid.value)
         name = "worker{0}".format(self.yid.value)
-        lanename = self.opts.value.get('id', self.main.data.lanename)
+        # master application kind
+        kind = self.opts.value['__role']
+        if kind == 'master':
+            lanename = 'master' #self.opts.value.get('id', self.main.data.lanename)
+        else: # workers currently are only supported for masters
+            emsg =("Invalid application kind '{0}' for worker.".format())
+            log.error(emsg + '\n')
+            raise ValueError(emsg)
+
         self.stack.value = LaneStack(
                                      name=name,
                                      lanename=lanename,
@@ -126,7 +134,7 @@ class WorkerSetup(ioflo.base.deeding.Deed):
         self.stack.value.Pk = raeting.packKinds.pack
         manor_yard = RemoteYard(
                                  stack=self.stack.value,
-                                 uid=0,
+                                 #uid=0,
                                  name='manor',
                                  lanename=lanename,
                                  dirpath=self.opts.value['sock_dir'])

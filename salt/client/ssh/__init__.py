@@ -170,6 +170,7 @@ class SSH(object):
                     'master',
                     opts['sock_dir'],
                     opts['transport'],
+                    opts=opts,
                     listen=False)
         else:
             self.event = None
@@ -222,7 +223,8 @@ class SSH(object):
         }
         self.serial = salt.payload.Serial(opts)
         self.returners = salt.loader.returners(self.opts, {})
-        self.mods = mod_data(self.opts)
+        self.fsclient = salt.fileclient.FSClient(self.opts)
+        self.mods = mod_data(self.fsclient)
 
     def get_pubkey(self):
         '''
@@ -279,6 +281,7 @@ class SSH(object):
                 argv,
                 host,
                 mods=self.mods,
+                fsclient=self.fsclient,
                 **target)
         if salt.utils.which('ssh-copy-id'):
             # we have ssh-copy-id, use it!
@@ -292,6 +295,7 @@ class SSH(object):
                     self.opts['argv'],
                     host,
                     mods=self.mods,
+                    fsclient=self.fsclient,
                     **target)
             stdout, stderr, retcode = single.cmd_block()
             try:
@@ -315,6 +319,7 @@ class SSH(object):
                 opts['argv'],
                 host,
                 mods=self.mods,
+                fsclient=self.fsclient,
                 **target)
         ret = {'id': single.id}
         stdout, stderr, retcode = single.run()
@@ -498,6 +503,7 @@ class Single(object):
             sudo=False,
             tty=False,
             mods=None,
+            fsclient=None,
             **kwargs):
         self.opts = opts
         if user:
@@ -505,6 +511,9 @@ class Single(object):
         else:
             self.thin_dir = DEFAULT_THIN_DIR.replace('%%USER%%', 'root')
         self.opts['_thin_dir'] = self.thin_dir
+        self.fsclient = fsclient
+        self.context = {'master_opts': self.opts,
+                        'fileclient': self.fsclient}
 
         if isinstance(argv, string_types):
             self.argv = [argv]
@@ -531,7 +540,7 @@ class Single(object):
         self.target = kwargs
         self.target.update(args)
         self.serial = salt.payload.Serial(opts)
-        self.wfuncs = salt.loader.ssh_wrapper(opts, None, self.opts)
+        self.wfuncs = salt.loader.ssh_wrapper(opts, None, self.context)
         self.mods = mods if mods else {}
 
     def __arg_comps(self):
@@ -692,7 +701,7 @@ class Single(object):
             self.id,
             mods=self.mods,
             **self.target)
-        self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper, self.opts)
+        self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper, self.context)
         wrapper.wfuncs = self.wfuncs
         try:
             result = self.wfuncs[self.fun](*self.args, **self.kwargs)
@@ -945,7 +954,7 @@ def salt_refs(data):
     return ret
 
 
-def mod_data(opts):
+def mod_data(fsclient):
     '''
     Generate the module arguments for the shim data
     '''
@@ -958,21 +967,29 @@ def mod_data(opts):
             'returners',
             ]
     ret = {}
-    for env in opts['file_roots']:
-        for path in opts['file_roots'][env]:
-            for ref in sync_refs:
-                mod_str = ''
-                pl_dir = os.path.join(path, '_{0}'.format(ref))
-                if os.path.isdir(pl_dir):
-                    for fn_ in os.listdir(pl_dir):
-                        mod_path = os.path.join(pl_dir, fn_)
+    envs = fsclient.envs()
+    for env in envs:
+        files = fsclient.file_list(env)
+        for ref in sync_refs:
+            mod_str = ''
+            pref = '_{0}'.format(ref)
+            for fn_ in files:
+                if fn_.startswith(pref):
+                    if fn_.endswith(('.py', '.so', '.pyx')):
+                        full = 'salt://{0}'.format(fn_)
+                        mod_path = fsclient.cache_file(full, env)
                         if not os.path.isfile(mod_path):
                             continue
                         with open(mod_path) as fp_:
                             code_str = fp_.read().encode('base64')
-                        mod_str += '{0}|{1},'.format(fn_, code_str)
-                mod_str = mod_str.rstrip(',')
-                ret[ref] = mod_str
+                        mod_str += '{0}|{1},'.format(os.path.basename(fn_), code_str)
+            if mod_str:
+                if ref in ret:
+                    ret[ref] += mod_str
+                else:
+                    ret[ref] = mod_str
+    for ref in ret:
+        ret[ref] = ret[ref].rstrip(',')
     return ret
 
 
