@@ -278,7 +278,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     )
     lxc_init_interface['bootstrap_url'] = script
     lxc_init_interface['bootstrap_args'] = script_args
-    lxc_init_interface['bootstrap_shell'] = '/bin/bash'
+    lxc_init_interface['bootstrap_shell'] = 'sh'
     lxc_init_interface['autostart'] = autostart
     lxc_init_interface['users'] = users
     lxc_init_interface['password'] = password
@@ -1741,14 +1741,14 @@ def set_pass(name, users, password):
         try:
             cmd = (
                 "lxc-attach --clear-env -n {0} -- "
-                " /bin/sh -c \""
+                " sh -c \""
                 "").format(pipes.quote(name))
             for i in users:
                 cmd += "echo {0}:{1}|chpasswd && ".format(
                     pipes.quote(i),
                     pipes.quote(password),
                 )
-            cmd += " /bin/true\""
+            cmd += " true\""
             cret = __salt__['cmd.run_all'](cmd)
             if cret['retcode'] != 0:
                 raise ValueError('Can\'t change passwords')
@@ -1883,7 +1883,7 @@ def set_dns(name, dnsservers=None, searchdomains=None):
     dns = "\n".join(dns)
     has_resolvconf = not int(
         __salt__['cmd.run'](('lxc-attach --clear-env -n {0} -- '
-                             '/usr/bin/test -e /etc/resolvconf/resolv.conf.d/base;'
+                             'test -e /etc/resolvconf/resolv.conf.d/base;'
                              'echo ${{?}}').format(pipes.quote(name))))
     if has_resolvconf:
         cret = __salt__['cmd.run_all']((
@@ -2068,7 +2068,7 @@ def attachable(name):
 
         salt 'minion' lxc.attachable ubuntu
     '''
-    cmd = 'lxc-attach -n {0} -- /usr/bin/env'.format(pipes.quote(name))
+    cmd = 'lxc-attach -n {0} -- true'.format(pipes.quote(name))
     data = __salt__['cmd.run_all'](cmd)
     if not data['retcode']:
         return True
