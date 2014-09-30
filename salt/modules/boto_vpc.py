@@ -64,10 +64,14 @@ def __virtual__():
     # which was added in boto 2.8.0
     # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
     if not HAS_BOTO:
+        log.error('The boto_vpc module requires boto {0} to be installed.'.format(required_boto_version))
         return False
     elif _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
+        log.error('The boto_vpc module requires boto {0} to be installed. Current boto version: {1}'.format(
+            required_boto_version, boto.__version__))
         return False
     else:
+        log.debug('Installed boto version: {0}'.format(boto.__version__))
         return True
 
 
