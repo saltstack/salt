@@ -32,7 +32,7 @@ class SaltEvent(object):
         '''
         Set up the stack and remote yard
         '''
-        self.node = node
+        self.node = node  # this is usually 'master', 'minion' or opts['id']
         self.sock_dir = sock_dir
         self.listen = listen
         if opts is None:
@@ -116,34 +116,32 @@ class SaltEvent(object):
             self.stack.serviceAll()
             if self.stack.rxMsgs:
                 msg, sender = self.stack.rxMsgs.popleft()
-                event = msg.get('event', {})
-                if 'tag' not in event and 'data' not in event:
+                if 'tag' not in msg and 'data' not in msg:
                     # Invalid event, how did this get here?
                     continue
-                if not event['tag'].startswith(tag):
+                if not msg['tag'].startswith(tag):
                     # Not what we are looking for, throw it away
                     continue
                 if full:
-                    return event
+                    return msg
                 else:
-                    return event['data']
+                    return msg['data']
             if start + wait < time.time():
                 return None
             time.sleep(0.01)
 
     def get_event_noblock(self):
         '''
-        Get the raw event without blocking or any other niceties
+        Get the raw event msg without blocking or any other niceties
         '''
         self.connect_pub()
         self.stack.serviceAll()
         if self.stack.rxMsgs:
             msg, sender = self.stack.rxMsgs.popleft()
-            event = msg.get('event', {})
-            if 'tag' not in event and 'data' not in event:
+            if 'tag' not in msg and 'data' not in msg:
                 # Invalid event, how did this get here?
                 return None
-            return event
+            return msg
 
     def iter_events(self, tag='', full=False):
         '''
