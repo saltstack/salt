@@ -563,6 +563,8 @@ class FSChan(object):
         cmd = load['cmd'].lstrip('_')
         if cmd in self.cmd_stub:
             return self.cmd_stub[cmd]
+        if cmd == 'file_envs':
+            cmd = 'envs'
         if not hasattr(self.fs, cmd):
             log.error('Malformed request, invalid cmd: {0}'.format(load))
             return {}
