@@ -214,6 +214,12 @@ class BotoVpcTestCase(BotoVpcTestCaseBase):
         self.assertFalse(vpc_exists)
 
     @mock_ec2
+    def test_that_when_checking_if_a_vpc_exists_but_providing_no_filters_the_vpc_exists_method_returns_false(self):
+        vpc_exists = boto_vpc.exists(**conn_parameters)
+
+        self.assertFalse(vpc_exists)
+
+    @mock_ec2
     def test_that_when_creating_a_vpc_succeeds_the_create_vpc_method_returns_true(self):
         '''
         tests True VPC created.
