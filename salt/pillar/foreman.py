@@ -56,7 +56,10 @@ __opts__ = {'foreman.url': 'http://foreman/api',
 log = logging.getLogger(__name__)
 
 
-def ext_pillar(minion_id, pillar, key=None, only=()):
+def ext_pillar(minion_id,
+               pillar,  # pylint: disable=W0613
+               key=None,
+               only=()):
     '''
     Read pillar data from Foreman via its API.
     '''
