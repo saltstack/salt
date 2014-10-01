@@ -114,16 +114,16 @@ def __virtual__():
     return True
 
 
-def ext_pillar(minion_id,
-               pillar,
+def ext_pillar(minion_id,  # pylint: disable=W0613
+               pillar,  # pylint: disable=W0613
                pillar_name,
                project_path,
                settings_module,
                django_app,
                env=None,
                env_file=None,
-               *args,
-               **kwargs):
+               *args,  # pylint: disable=W0613
+               **kwargs):  # pylint: disable=W0613
     '''
     Connect to a Django database through the ORM and retrieve model fields
 
