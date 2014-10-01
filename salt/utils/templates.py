@@ -55,6 +55,19 @@ def wrap_tmpl_func(render_str):
         # We want explicit context to overwrite the **kws
         kws.update(context)
         context = kws
+        assert 'opts' in context
+        assert 'saltenv' in context
+
+        if 'sls' in context:
+            slspath = context['sls'].replace('.', '/')
+            if tmplpath is not None:
+                context['tplpath'] = tmplpath
+                if not tmplpath.lower().replace('\\', '/').endswith('/init.sls'):
+                    slspath = os.path.dirname(slspath)
+            context['slsdotpath'] = slspath.replace('/', '.')
+            context['slscolonpath'] = slspath.replace('/', ':')
+            context['sls_path'] = slspath.replace('/', '_')
+            context['slspath'] = slspath
 
         if 'sls' in context:
             slspath = context['sls'].replace('.', '/')

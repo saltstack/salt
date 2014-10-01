@@ -120,9 +120,9 @@ class WorkerSetup(ioflo.base.deeding.Deed):
         # master application kind
         kind = self.opts.value['__role']
         if kind == 'master':
-            lanename = 'master' #self.opts.value.get('id', self.main.data.lanename)
-        else: # workers currently are only supported for masters
-            emsg =("Invalid application kind '{0}' for worker.".format())
+            lanename = 'master'  # self.opts.value.get('id', self.main.data.lanename)
+        else:  # workers currently are only supported for masters
+            emsg = ("Invalid application kind '{0}' for worker.".format(kind))
             log.error(emsg + '\n')
             raise ValueError(emsg)
 
