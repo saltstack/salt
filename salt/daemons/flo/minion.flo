@@ -13,7 +13,7 @@ framer minionudpstack be active first setup
         enter
             do salt raet cleanup
             do salt raet road stack setup per inode ".raet.udp.stack"
-            do salt manor lane setup
+            do salt raet manor lane setup
         go loadmodules
 
     # Load the minion mods
@@ -98,7 +98,7 @@ framer bootstrap be inactive first join
 
 framer eventing be inactive first event
     frame event
-        do eventer
+        do salt raet eventer
 
 framer functionmanager be inactive first checkexec
     frame checkexec

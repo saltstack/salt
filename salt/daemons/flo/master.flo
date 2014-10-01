@@ -12,7 +12,7 @@ framer masterudpstack be active first setup
         enter
             do salt raet cleanup
             do salt raet road stack setup per inode ".raet.udp.stack"
-            do salt manor lane setup per inode ".salt.uxd.stack"
+            do salt raet manor lane setup per inode ".salt.uxd.stack"
         go spawnmaint
 
     # Create the maintanence frame
@@ -57,12 +57,12 @@ framer uxdrouter be inactive first start
 # Event bus framer
 framer events be inactive first start
     frame start
-        do eventer
+        do salt raet eventer
 
 # Publisher framer
 framer publish be inactive first start
     frame start
-        do salt publisher
+        do salt raet publisher
 
 # Manager framer
 framer manager be inactive first start at 10.0

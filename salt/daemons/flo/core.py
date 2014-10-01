@@ -550,13 +550,13 @@ class Schedule(ioflo.base.deeding.Deed):
         self.schedule.eval()
 
 
-class SaltManorLaneSetup(ioflo.base.deeding.Deed):
+class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
     '''
     Only intended to be called once at the top of the manor house
     Sets up the LaneStack for the main yard
     FloScript:
 
-    do salt manor lane setup at enter
+    do salt raet manor lane setup at enter
 
     '''
     Ioinits = {'opts': '.salt.opts',
@@ -861,12 +861,12 @@ class Router(ioflo.base.deeding.Deed):
             self._process_uxd_rxmsg(msg=msg, sender=sender)
 
 
-class Eventer(ioflo.base.deeding.Deed):
+class SaltRaetEventer(ioflo.base.deeding.Deed):
     '''
     Fire events!
     FloScript:
 
-    do eventer
+    do salt raet eventer
 
     '''
     Ioinits = {'opts': '.salt.opts',
@@ -919,12 +919,12 @@ class Eventer(ioflo.base.deeding.Deed):
                     )
 
 
-class SaltPublisher(ioflo.base.deeding.Deed):
+class SaltRaetPublisher(ioflo.base.deeding.Deed):
     '''
     Publish to the minions
     FloScript:
 
-    do salt publisher
+    do salt raet publisher
 
     '''
     Ioinits = {'opts': '.salt.opts',
