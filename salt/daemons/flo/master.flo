@@ -52,7 +52,7 @@ framer inbound be inactive first start
 # Router framer
 framer uxdrouter be inactive first start
     frame start
-        do router
+        do salt raet router
 
 # Event bus framer
 framer events be inactive first start
