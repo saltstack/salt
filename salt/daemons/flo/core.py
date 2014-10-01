@@ -108,8 +108,7 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
             'rxmsgs': {'ipath': 'rxmsgs',
                        'ival': deque()},
             'local': {'ipath': 'local',
-                      'ival': {'name': 'master',
-                               'main': False,
+                      'ival': {'main': False,
                                'mutable': False,
                                'uid': None,
                                'role': 'master',
@@ -201,13 +200,12 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = odict(
-        inode=".raet.udp.stack.",
-        stack='stack',
-        masterhost='.salt.etc.master',
-        masterport='.salt.etc.master_port', )
+                    inode=".raet.udp.stack.",
+                    stack='stack',
+                    opts='.salt.opts')
 
     def postinitio(self):
-        self.mha = (self.masterhost.value, int(self.masterport.value))
+        self.mha = (self.opts.value['master'], int(self.opts.value['master_port']))
 
     def action(self, **kwa):
         '''
@@ -574,8 +572,7 @@ class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
                'inode': '.salt.uxd.stack.',
                'stack': 'stack',
                'local': {'ipath': 'local',
-                          'ival': {'name': 'master',
-                                   'lanename': 'master'}},
+                          'ival': {'lanename': 'master'}},
             }
 
     def postinitio(self):
@@ -738,6 +735,12 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
         if s_estate is None:  # drop
             return
 
+        log.debug("**** Road Router rxMsg ****\n   id {0} estate {1} yard {2}\n{3}\n".format(
+                self.opts.value['id'],
+                self.udp_stack.value.local.name,
+                self.uxd_stack.value.local.name,
+                msg['route']))
+
         if d_estate is None:
             pass
         elif d_estate != self.udp_stack.value.local.name:
@@ -792,11 +795,11 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
             s_estate = self.udp_stack.value.local.name
             msg['route']['src'] = (s_estate, s_yard, s_share)
 
-        #console.terse("***UXD Router rxMsg***  id {0} estate {1} yard {2}\n{3}\n".format(
-                 #self.opts.value['id'],
-                 #self.udp_stack.value.local.name,
-                 #self.uxd_stack.value.local.name,
-                 #msg['route']))
+        log.debug("**** UXD Router rxMsg ****\n  id {0} estate {1} yard {2}\n{3}\n".format(
+                self.opts.value['id'],
+                self.udp_stack.value.local.name,
+                self.uxd_stack.value.local.name,
+                msg['route']))
 
         if d_estate is None:
             pass
@@ -829,10 +832,10 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
                     self.uxd_stack.value.fetchUidByName(next(self.workers.value)))
         elif d_share == 'event_req':
             self.event_req.value.append(msg)
-            log.debug("\n****Event Subscribe \n {0}\n".format(msg))
+            #log.debug("\n**** Event Subscribe \n {0}\n".format(msg))
         elif d_share == 'event_fire':
             self.event.value.append(msg)
-            log.debug("\n****Event Fire \n {0}\n".format(msg))
+            #log.debug("\n**** Event Fire \n {0}\n".format(msg))
         elif d_share == 'remote_cmd':  # assume must be minion to master
             if not self.udp_stack.value.remotes:
                 log.error("Missing joined master. Unable to route "
