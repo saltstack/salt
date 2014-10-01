@@ -86,7 +86,9 @@ class ZeroMQCaller(object):
         self.is_local = self.opts['local'] or self.opts.get(
             'file_client', False) == 'local'
 
-        if not self.is_local:
+        # we only query the minion if not running local only
+        # and more than 1 master is defined in config
+        if not self.is_local and len(opts['master']) > 1:
             self.fire_get_master()
 
         # Handle this here so other deeper code which might
