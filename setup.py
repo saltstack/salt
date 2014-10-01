@@ -336,6 +336,7 @@ class CloudSdist(Sdist):
                 if not filename.startswith('scripts/'):
                     continue
                 if filename not in ('scripts/salt-ssh',
+                                    'scripts/salt-run',
                                     'scripts/salt-cloud'):
                     self.filelist.files.pop(
                         self.filelist.files.index(filename)
@@ -689,6 +690,7 @@ if IS_WINDOWS_PLATFORM is False:
     if PACKAGED_FOR_SALT_SSH:
         SETUP_KWARGS['data_files'][0][1].extend([
             'doc/man/salt-ssh.1',
+            'doc/man/salt-run.1',
             'doc/man/salt-cloud.1',
         ])
     else:
@@ -812,8 +814,9 @@ if WITH_SETUPTOOLS:
     if IS_WINDOWS_PLATFORM is False:
         if PACKAGED_FOR_SALT_SSH:
             SETUP_KWARGS['entry_points'] = {'console_scripts': [
-                'salt-cloud = salt.scripts:salt_cloud',
                 'salt-ssh = salt.scripts:salt_ssh'
+                'salt-run = salt.scripts:salt_run',
+                'salt-cloud = salt.scripts:salt_cloud',
             ]}
         else:
             SETUP_KWARGS['entry_points']['console_scripts'].extend([
@@ -838,15 +841,16 @@ if WITH_SETUPTOOLS:
 # does not, apparently, break the build, so, let's have both
 if PACKAGED_FOR_SALT_SSH is False:
     SETUP_KWARGS['scripts'] = ['scripts/salt-call',
-                                'scripts/salt-cp',
-                                'scripts/salt-minion',
-                                'scripts/salt-unity',
-                                ]
+                               'scripts/salt-cp',
+                               'scripts/salt-minion',
+                               'scripts/salt-unity',
+                               ]
 
 if IS_WINDOWS_PLATFORM is False:
     if PACKAGED_FOR_SALT_SSH:
         SETUP_KWARGS['scripts'] = [
             'scripts/salt-ssh',
+            'scripts/salt-run',
             'scripts/salt-cloud'
         ]
     else:
