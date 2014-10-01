@@ -573,7 +573,6 @@ class SaltManorLaneSetup(ioflo.base.deeding.Deed):
                'stack': 'stack',
                'local': {'ipath': 'local',
                           'ival': {'name': 'master',
-                                   'yid': 0,
                                    'lanename': 'master'}},
             }
 
@@ -587,10 +586,13 @@ class SaltManorLaneSetup(ioflo.base.deeding.Deed):
         '''
         Run once at enter
         '''
-        #name = "{0}{1}".format(self.opts.value.get('id', self.local.data.name), 'lane')
         name = 'manor'
-        lanename = self.opts.value.get('id', self.local.data.lanename)
-        #yid = self.local.data.yid
+        kind = self.opts.value['__role']
+        if kind == 'master':
+            lanename = 'master'
+        else:
+            lanename = self.opts.value.get('id', self.local.data.lanename)
+
         self.stack.value = LaneStack(
                                     name=name,
                                     lanename=lanename,
@@ -788,6 +790,12 @@ class Router(ioflo.base.deeding.Deed):
             s_estate = self.udp_stack.value.local.name
             msg['route']['src'] = (s_estate, s_yard, s_share)
 
+        #console.terse("***UXD Router rxMsg***  id {0} estate {1} yard {2}\n{3}\n".format(
+                 #self.opts.value['id'],
+                 #self.udp_stack.value.local.name,
+                 #self.uxd_stack.value.local.name,
+                 #msg['route']))
+
         if d_estate is None:
             pass
         elif d_estate != self.udp_stack.value.local.name:
@@ -819,8 +827,10 @@ class Router(ioflo.base.deeding.Deed):
                     self.uxd_stack.value.fetchUidByName(next(self.workers.value)))
         elif d_share == 'event_req':
             self.event_req.value.append(msg)
+            log.debug("\n****Event Subscribe \n {0}\n".format(msg))
         elif d_share == 'event_fire':
             self.event.value.append(msg)
+            log.debug("\n****Event Fire \n {0}\n".format(msg))
         elif d_share == 'remote_cmd':  # assume must be minion to master
             if not self.udp_stack.value.remotes:
                 log.error("Missing joined master. Unable to route "
@@ -873,26 +883,24 @@ class Eventer(ioflo.base.deeding.Deed):
         '''
         self.event_yards.value.add(msg['route']['src'][1])
 
-    def _fire_event(self, event):
+    def _forward_event(self, msg):
         '''
-        Fire an event to all subscribed yards
+        Forward an event message to all subscribed yards
+        Event message has a route
         '''
         rm_ = []
-        if event.get('tag') == 'pillar_refresh':
+        if msg.get('tag') == 'pillar_refresh':
             self.pillar_refresh.value = True
-        if event.get('tag') == 'module_refresh':
+        if msg.get('tag') == 'module_refresh':
             self.module_refresh.value = True
         for y_name in self.event_yards.value:
-            if y_name not in self.uxd_stack.value.nameRemotes:
+            if y_name not in self.uxd_stack.value.nameRemotes:  # subscriber not a remote
                 rm_.append(y_name)
-                continue
-            route = {'src': ('router', self.uxd_stack.value.local.name, None),
-                     'dst': ('router', y_name, None)}
-            msg = {'route': route, 'event': event}
+                continue  # drop msg don't publish
             self.uxd_stack.value.transmit(msg,
                     self.uxd_stack.value.fetchUidByName(y_name))
             self.uxd_stack.value.serviceAll()
-        for y_name in rm_:
+        for y_name in rm_:  # remove missing subscribers
             self.event_yards.value.remove(y_name)
 
     def action(self):
@@ -900,13 +908,13 @@ class Eventer(ioflo.base.deeding.Deed):
         Register event requests
         Iterate over the registered event yards and fire!
         '''
-        while self.event_req.value:
+        while self.event_req.value: # event subscription requests are msg with routes
             self._register_event_yard(
                     self.event_req.value.popleft()
                     )
 
-        while self.event.value:
-            self._fire_event(
+        while self.event.value:  # events are msgs with routes
+            self._forward_event(
                     self.event.value.popleft()
                     )
 

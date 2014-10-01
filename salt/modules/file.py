@@ -576,6 +576,13 @@ def find(path, **kwargs):
         exec    = command [arg ...]         # where {} is replaced by pathname
         print  [= print-opts]
 
+    and/or depth criteria:
+
+    .. code-block:: text
+
+        maxdepth = maximum depth to transverse in path
+        mindepth = minimum depth to transverse before checking files or directories
+
     The default action is ``print=path``
 
     ``path-glob``:

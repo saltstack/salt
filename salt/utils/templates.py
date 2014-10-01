@@ -55,8 +55,6 @@ def wrap_tmpl_func(render_str):
         # We want explicit context to overwrite the **kws
         kws.update(context)
         context = kws
-        assert 'opts' in context
-        assert 'saltenv' in context
 
         if 'sls' in context:
             slspath = context['sls'].replace('.', '/')
@@ -66,8 +64,7 @@ def wrap_tmpl_func(render_str):
                     slspath = os.path.dirname(slspath)
             context['slsdotpath'] = slspath.replace('/', '.')
             context['slscolonpath'] = slspath.replace('/', ':')
-            if slspath:
-                slspath = slspath + '/'
+            context['sls_path'] = slspath.replace('/', '_')
             context['slspath'] = slspath
 
         if isinstance(tmplsrc, string_types):
@@ -233,7 +230,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             loader = jinja2.FileSystemLoader(
                 context, os.path.dirname(tmplpath))
     else:
-        loader = JinjaSaltCacheLoader(opts, saltenv)
+        loader = JinjaSaltCacheLoader(opts, saltenv, pillar_rend=context.get('_pillar_rend', False))
 
     env_args = {'extensions': [], 'loader': loader}
 

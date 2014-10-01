@@ -205,7 +205,7 @@ Pillar Configuration
 ====================
 
 It is possible to configure cloud providers using pillars.  This is only used
-when inside the cloud module.  You can setup a variable called ``clouds`` that
+when inside the cloud module.  You can setup a variable called ``cloud`` that
 contains your profile and provider to pass that information to the cloud
 servers instead of having to copy the full configuration to every minion.
 

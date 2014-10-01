@@ -551,6 +551,7 @@ class FSChan(object):
         self.fs = Fileserver(self.opts)
         self.fs.init()
         self.fs.update()
+        self.cmd_stub = {'ext_nodes': {}}
 
     def send(self, load, tries=None, timeout=None):
         '''
@@ -560,6 +561,10 @@ class FSChan(object):
             log.error('Malformed request, no cmd: {0}'.format(load))
             return {}
         cmd = load['cmd'].lstrip('_')
+        if cmd in self.cmd_stub:
+            return self.cmd_stub[cmd]
+        if cmd == 'file_envs':
+            return self.fs.envs()
         if not hasattr(self.fs, cmd):
             log.error('Malformed request, invalid cmd: {0}'.format(load))
             return {}

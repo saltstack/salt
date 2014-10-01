@@ -4,7 +4,7 @@ house master
 
 init .raet.udp.stack.local to main true name "master" role "master"
 
-init .salt.uxd.stack.local to yid 0 name "master" lanename "master"
+init .salt.uxd.stack.local to name "master" lanename "master"
 
 framer masterudpstack be active first setup
     # Begin the pre-flight checks

@@ -119,7 +119,7 @@ class SaltNova(OpenStackComputeShell):
 
         self.kwargs = kwargs.copy()
 
-        if not novaclient.utils.HookableMixin._hooks_map:
+        if not novaclient.base.Manager._hooks_map:
             self.extensions = self._discover_extensions('1.1')
             for extension in self.extensions:
                 extension.run_hooks('__pre_parse_args__')

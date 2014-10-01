@@ -18,6 +18,9 @@ and/or actions:
     delete [= file-types]               # default type = 'f'
     exec    = command [arg ...]         # where {} is replaced by pathname
     print  [= print-opts]
+and/or depth criteria:
+   maxdepth = maximum depth to transverse in path
+   mindepth = minimum depth to transverse before checking files or directories
 
 The default action is 'print=path'.
 
@@ -517,9 +520,17 @@ class PrintOption(Option):
 class Finder(object):
     def __init__(self, options):
         self.actions = []
+        self.maxdepth = None
+        self.mindepth = 0
         criteria = {_REQUIRES_PATH: list(),
                     _REQUIRES_STAT: list(),
                     _REQUIRES_CONTENTS: list()}
+        if 'mindepth' in options:
+            self.mindepth = options['mindepth']
+            del options['mindepth']
+        if 'maxdepth' in options:
+            self.maxdepth = options['maxdepth']
+            del options['maxdepth']
         for key, value in options.items():
             if key.startswith('_'):
                 # this is a passthrough object, continue
@@ -555,27 +566,32 @@ class Finder(object):
         until there are no more results.
         '''
         for dirpath, dirs, files in os.walk(path):
-            for name in dirs + files:
-                fstat = None
-                matches = True
-                fullpath = None
-                for criterion in self.criteria:
-                    if fstat is None and criterion.requires() & _REQUIRES_STAT:
-                        fullpath = os.path.join(dirpath, name)
-                        fstat = os.stat(fullpath)
-                    if not criterion.match(dirpath, name, fstat):
-                        matches = False
-                        break
-                if matches:
-                    if fullpath is None:
-                        fullpath = os.path.join(dirpath, name)
-                    for action in self.actions:
-                        if (fstat is None and
-                            action.requires() & _REQUIRES_STAT):
-                            fstat = os.stat(fullpath)
-                        result = action.execute(fullpath, fstat)
-                        if result is not None:
-                            yield result
+            depth = dirpath[len(path) + len(os.path.sep):].count(os.path.sep)
+            if depth == self.maxdepth:
+                dirs[:] = []
+            else:
+                if depth >= self.mindepth:
+                    for name in dirs + files:
+                        fstat = None
+                        matches = True
+                        fullpath = None
+                        for criterion in self.criteria:
+                            if fstat is None and criterion.requires() & _REQUIRES_STAT:
+                                fullpath = os.path.join(dirpath, name)
+                                fstat = os.stat(fullpath)
+                            if not criterion.match(dirpath, name, fstat):
+                                matches = False
+                                break
+                        if matches:
+                            if fullpath is None:
+                                fullpath = os.path.join(dirpath, name)
+                            for action in self.actions:
+                                if (fstat is None and
+                                    action.requires() & _REQUIRES_STAT):
+                                    fstat = os.stat(fullpath)
+                                result = action.execute(fullpath, fstat)
+                                if result is not None:
+                                    yield result
 
 
 def find(path, options):
