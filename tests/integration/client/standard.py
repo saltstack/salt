@@ -6,6 +6,7 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+import os
 
 
 class StdTest(integration.ModuleCase):
@@ -35,6 +36,25 @@ class StdTest(integration.ModuleCase):
             num_ret += 1
             self.assertTrue(ret['minion'])
         assert num_ret > 0
+
+        # ping a minion that doesnt exist, to make sure that it doesnt hang forever
+        # create fake mininion
+        key_file = os.path.join(self.master_opts['pki_dir'], 'minions', 'footest')
+        # touch the file
+        open(key_file, 'a').close()
+        # ping that minion and ensure it times out
+        try:
+            cmd_iter = self.client.cmd_cli(
+                    'footest',
+                    'test.ping',
+                    )
+            num_ret = 0
+            for ret in cmd_iter:
+                num_ret += 1
+                self.assertTrue(ret['minion'])
+            assert num_ret == 0
+        finally:
+            os.unlink(key_file)
 
     def test_iter(self):
         '''

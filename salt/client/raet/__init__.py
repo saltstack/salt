@@ -53,9 +53,9 @@ class LocalClient(salt.client.LocalClient):
                 **kwargs)
         kind = self.opts['__role']
         if kind == 'master':
-            lanename = 'master' #self.opts.value.get('id', self.main.data.lanename)
-        else: # workers currently are only supported for masters
-            emsg =("Invalid application kind '{0}' for client.".format())
+            lanename = 'master'  # self.opts.value.get('id', self.main.data.lanename)
+        else:  # workers currently are only supported for masters
+            emsg = ("Invalid application kind '{0}' for client.".format(kind))
             log.error(emsg + '\n')
             raise ValueError(emsg)
         uid = nacling.uuid(size=18)
