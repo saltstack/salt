@@ -66,6 +66,7 @@ if 'USE_SETUPTOOLS' in os.environ or 'setuptools' in sys.modules:
         from setuptools import setup
         from setuptools.command.install import install
         from setuptools.command.sdist import sdist
+        from setuptools.command.egg_info import egg_info
         WITH_SETUPTOOLS = True
     except ImportError:
         WITH_SETUPTOOLS = False
@@ -176,6 +177,15 @@ class WriteSaltSshPackaingFile(Command):
             # pylint: enable=E0602
 
 
+if WITH_SETUPTOOLS is True:
+    class EggInfo(egg_info):
+
+        def finalize_options(self):
+            if getattr(self.distribution, 'packaged_for_salt_ssh', PACKAGED_FOR_SALT_SSH):
+                self.distribution.metadata.name = 'salt-ssh'
+            egg_info.finalize_options(self)
+
+
 class Sdist(sdist):
     user_options = sdist.user_options + [
         ('ssh-packaging', None, 'Prepare the salt-ssh packaging')
@@ -197,6 +207,15 @@ class Sdist(sdist):
             self.distribution.salt_ssh_packaging_file = PACKAGED_FOR_SALT_SSH_FILE
             self.run_command('write-salt-ssh-packaging-file')
             self.distribution.package_data.pop('salt.daemons.flo', None)
+            self.filelist.files.append(os.path.basename(PACKAGED_FOR_SALT_SSH_FILE))
+            self.distribution.metadata.name = 'salt-ssh'
+            self.distribution.data_files = [('share/man/man1',
+                                             ['doc/man/salt-ssh.1',
+                                              'doc/man/salt-run.1',
+                                              'doc/man/salt-call.1',
+                                              'doc/man/salt-cloud.1']),
+                                            ('share/man/man7', ['doc/man/salt.7'])]
+
         sdist.make_release_tree(self, base_dir, files)
 
         # Let's generate salt/_version.py to include in the sdist tarball
@@ -205,18 +224,6 @@ class Sdist(sdist):
             base_dir, 'salt', '_version.py'
         )
         self.run_command('write-salt-version')
-
-    def write_manifest(self):
-        if self.ssh_packaging:
-            self.filelist.files.append(os.path.basename(PACKAGED_FOR_SALT_SSH_FILE))
-            self.distribution.metadata.name = 'salt-ssh'
-            # Only Salt or Salt-SSH must be installed at a time
-            self.distribution.package_data.pop('salt.daemons.flo')
-            self.distribution.data_files = [('share/man/man1',
-                                             ['doc/man/salt-ssh.1',
-                                              'doc/man/salt-cloud.1']),
-                                            ('share/man/man7', ['doc/man/salt.7'])]
-        sdist.write_manifest(self)
 
     def make_distribution(self):
         sdist.make_distribution(self)
@@ -337,6 +344,7 @@ class CloudSdist(Sdist):
                     continue
                 if filename not in ('scripts/salt-ssh',
                                     'scripts/salt-run',
+                                    'scripts/salt-call',
                                     'scripts/salt-cloud'):
                     self.filelist.files.pop(
                         self.filelist.files.index(filename)
@@ -537,7 +545,6 @@ class Install(install):
     def run(self):
         # Let's set the running_salt_install attribute so we can add
         # _version.py in the build command
-        print 444, self.salt_transport
         self.distribution.running_salt_install = True
         self.distribution.salt_version_hardcoded_path = os.path.join(
             self.build_lib, 'salt', '_version.py'
@@ -589,7 +596,7 @@ SETUP_KWARGS = {'name': NAME,
                     'sdist': Sdist,
                     'install': Install,
                     'write-salt-version': WriteSaltVersion,
-                    'write-salt-ssh-packaging-file': WriteSaltSshPackaingFile
+                    'write-salt-ssh-packaging-file': WriteSaltSshPackaingFile,
                 },
                 'classifiers': ['Programming Language :: Python',
                                 'Programming Language :: Cython',
@@ -804,6 +811,7 @@ if HAS_ESKY:
     SETUP_KWARGS['options'] = OPTIONS
 
 if WITH_SETUPTOOLS:
+    SETUP_KWARGS['cmdclass']['egg_info'] = EggInfo
     if PACKAGED_FOR_SALT_SSH is False:
         SETUP_KWARGS['entry_points'] = {
             'console_scripts': ['salt-call = salt.scripts:salt_call',
@@ -814,8 +822,9 @@ if WITH_SETUPTOOLS:
     if IS_WINDOWS_PLATFORM is False:
         if PACKAGED_FOR_SALT_SSH:
             SETUP_KWARGS['entry_points'] = {'console_scripts': [
-                'salt-ssh = salt.scripts:salt_ssh'
+                'salt-ssh = salt.scripts:salt_ssh',
                 'salt-run = salt.scripts:salt_run',
+                'salt-call = salt.scripts:salt_call',
                 'salt-cloud = salt.scripts:salt_cloud',
             ]}
         else:
@@ -851,6 +860,7 @@ if IS_WINDOWS_PLATFORM is False:
         SETUP_KWARGS['scripts'] = [
             'scripts/salt-ssh',
             'scripts/salt-run',
+            'scripts/salt-call',
             'scripts/salt-cloud'
         ]
     else:
