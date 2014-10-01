@@ -280,7 +280,7 @@ def _connect(**kwargs):
     # Ensure MySQldb knows the format we use for queries with arguments
     MySQLdb.paramstyle = 'pyformat'
 
-    if connargs.get('passwd', True) is None: # If present but set to None. (Extreme edge case.)
+    if connargs.get('passwd', True) is None:  # If present but set to None. (Extreme edge case.)
         log.warning('MySQL password of None found. Attempting passwordless login.')
         connargs.pop('passwd')
     try:
