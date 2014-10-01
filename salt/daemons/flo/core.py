@@ -418,12 +418,12 @@ class SaltRaetRoadStackPrinter(ioflo.base.deeding.Deed):
             console.terse("\nReceived....\n{0}\n".format(msg))
 
 
-class LoadModules(ioflo.base.deeding.Deed):
+class SaltLoadModules(ioflo.base.deeding.Deed):
     '''
     Reload the minion modules
     FloScript:
 
-    do load modules at enter
+    do salt load modules at enter
 
     '''
     Ioinits = {'opts': '.salt.opts',
@@ -479,9 +479,11 @@ class LoadModules(ioflo.base.deeding.Deed):
         self.module_refresh.value = False
 
 
-class LoadPillar(ioflo.base.deeding.Deed):
+class SaltLoadPillar(ioflo.base.deeding.Deed):
     '''
     Load up the initial pillar for the minion
+
+    do salt load pillar
     '''
     Ioinits = {'opts': '.salt.opts',
                'pillar': '.salt.pillar',
@@ -519,12 +521,12 @@ class LoadPillar(ioflo.base.deeding.Deed):
         self.pillar_refresh.value = False
 
 
-class Schedule(ioflo.base.deeding.Deed):
+class SaltSchedule(ioflo.base.deeding.Deed):
     '''
     Evaluates the schedule
     FloScript:
 
-    do schedule
+    do salt schedule
 
     '''
     Ioinits = {'opts': '.salt.opts',
@@ -697,7 +699,7 @@ class SaltRaetRoadStackServiceTx(ioflo.base.deeding.Deed):
         self.udp_stack.value.serviceAllTx()
 
 
-class Router(ioflo.base.deeding.Deed):
+class SaltRaetRouter(ioflo.base.deeding.Deed):
     '''
     Routes the communication in and out of uxd connections
 
@@ -705,7 +707,7 @@ class Router(ioflo.base.deeding.Deed):
     router that takes a map that defines where packets are send
     FloScript:
 
-    do router
+    do salt raet router
 
     '''
     Ioinits = {'opts': '.salt.opts',
@@ -959,12 +961,12 @@ class SaltRaetPublisher(ioflo.base.deeding.Deed):
                     )
 
 
-class NixExecutor(ioflo.base.deeding.Deed):
+class SaltRaetNixJobber(ioflo.base.deeding.Deed):
     '''
-    Execute a function call on a *nix based system
+    Execute a function call job on a minion on a *nix based system
     FloScript:
 
-    do nix executor
+    do salt raet nix jobber
 
     '''
     Ioinits = {'opts_store': '.salt.opts',
