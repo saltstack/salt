@@ -3,12 +3,6 @@
 house minion
 
 init .raet.udp.stack.local to name "minion" host "" port 7531 main false
-#init port in .raet.udp.stack.local from value in .salt.etc.raet_port
-
-#init .salt.etc.master to  "127.0.0.1"
-#init .salt.etc.master_port to 7530
-
-
 
 framer minionudpstack be active first start
    frame start

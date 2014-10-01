@@ -2,11 +2,6 @@
 
 house minion
 
-# init name in .raet.udp.stack.local from value in .salt.etc.id
-init role in .raet.udp.stack.local from value in .salt.etc.id
-
-init .salt.uxd.stack.local to name "minion" lanename "minion"
-
 framer minionudpstack be active first setup
     frame setup
         enter
