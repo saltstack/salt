@@ -801,7 +801,7 @@ def _read_temp(data):
     tout = StringIO.StringIO()
     tout.write(data)
     tout.seek(0)
-    output = tout.readlines()
+    output = tout.read().splitlines()  # Discard newlines
     tout.close()
     return output
 
