@@ -112,22 +112,21 @@ class ZeroMQCaller(object):
         event.subscribe('__current_master')
 
         event.fire_event({'salt-call': ''}, '__salt_call_master')
+        cur_master = event.get_event(wait=5, tag='__current_master')
 
-        # wait for the event to occur on the eventbus
-        for ret_event in event.iter_events(tag='__current_master'):
-            if ret_event is None:
-                pass
-            else:
-                muri = 'tcp://{0}:{1}'
-                try:
-                    self.opts['master'] = ret_event['cur_master']
-                    self.opts['master_uri'] = muri.format(self.opts['master'],
-                                                          self.opts['master_port'])
-                    log.debug('Updated master to {0}'.format(self.opts['master']))
-                except KeyError:
-                    print("Failed to evaluate current master")
-                    sys.exit(-1)
-                break
+        if cur_master is None:
+            log.error('Failed to get current master from minion. Is the minion running?')
+            sys.exit(-1)
+        else:
+            muri = 'tcp://{0}:{1}'
+            try:
+                self.opts['master'] = cur_master['cur_master']
+                self.opts['master_uri'] = muri.format(self.opts['master'],
+                                                      self.opts['master_port'])
+                log.debug('Updated master to {0}'.format(self.opts['master']))
+            except KeyError:
+                print("Failed to evaluate current master")
+                sys.exit(-1)
 
     def call(self):
         '''
