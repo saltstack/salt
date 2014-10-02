@@ -183,8 +183,8 @@ example:
             profile: my-pagerduty-account
 
 When the Event Reactor receives an event notifying it that a new instance has
-been created, this ``sls`` will create a new incident in Pager Duty, using the
-configured Pager Duty account.
+been created, this ``sls`` will create a new incident in PagerDuty, using the
+configured PagerDuty account.
 
 The declaration ID in this example is ``new_instance_alert``. The function
 called is ``cmd.pagerduty.create_event``. The ``cmd`` portion of this function
