@@ -869,7 +869,7 @@ class LocalClient(object):
                 else:
                     found.add(raw['data']['id'])
                     ret = {raw['data']['id']: {'ret': raw['data']['return']}}
-                    if 'out' in raw:
+                    if 'out' in raw['data']:
                         ret[raw['data']['id']]['out'] = raw['data']['out']
                     log.debug('jid {0} return from {1}'.format(jid, raw['data']['id']))
                     yield ret
