@@ -2,7 +2,6 @@
 
 # import Python Third Party Libs
 
-from boto.exception import BotoServerError
 from mock import patch
 
 from salt.exceptions import SaltInvocationError
@@ -12,6 +11,7 @@ from tests.utils import expectedNotImplementedFailure, expectedImportFailure
 
 try:
     import boto
+    from boto.exception import BotoServerError
 
     HAS_BOTO = True
 except ImportError:
