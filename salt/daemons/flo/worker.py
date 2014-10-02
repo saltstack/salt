@@ -39,33 +39,34 @@ class SaltRaetWorkerFork(ioflo.base.deeding.Deed):
         '''
         Spin up a process for each worker thread
         '''
-        for ind in range(int(self.opts.value['worker_threads'])):
+        for index in range(int(self.opts.value['worker_threads'])):
             time.sleep(0.01)
             proc = multiprocessing.Process(
-                    target=self._worker, kwargs={'yid': ind + 1}
+                    target=self._worker, kwargs={'windex': index + 1}
                     )
             proc.start()
 
-    def _worker(self, yid):
+    def _worker(self, windex):
         '''
         Spin up a worker, do this in  multiprocess
+        windex is worker index
         '''
         self.opts.value['__worker'] = True
         behaviors = ['salt.daemons.flo']
         preloads = [('.salt.opts', dict(value=self.opts.value)),
                     ('.salt.var.worker_verify', dict(value=self.worker_verify.value))]
-        preloads.append(('.salt.yid', dict(value=yid)))
+        preloads.append(('.salt.var.fork.worker.windex', dict(value=windex)))
         preloads.append(
                 ('.salt.access_keys', dict(value=self.access_keys.value)))
 
         console_logdir = self.opts.value.get('ioflo_console_logdir', '')
         if console_logdir:
-            consolepath = os.path.join(console_logdir, "worker_{0}.log".format(yid))
+            consolepath = os.path.join(console_logdir, "worker_{0}.log".format(windex))
         else:  # empty means log to std out
             consolepath = ''
 
         ioflo.app.run.start(
-                name='worker{0}'.format(yid),
+                name='worker{0}'.format(windex),
                 period=float(self.opts.value['ioflo_period']),
                 stamp=0.0,
                 real=self.opts.value['ioflo_realtime'],
@@ -97,26 +98,21 @@ class SaltRaetWorkerSetup(ioflo.base.deeding.Deed):
     '''
     Ioinits = {
             'opts': '.salt.opts',
-            'yid': '.salt.yid',
+            'windex': '.salt.var.fork.worker.windex',
             'access_keys': '.salt.access_keys',
             'remote': '.salt.loader.remote',
             'local': '.salt.loader.local',
             'inode': '.salt.lane.manor.',
             'stack': 'stack',
-            'main': {'ipath': 'main',
-                       'ival': {'name': 'master',
-                                'yid': 0,
-                                'lanename': 'master'}}
+            'local': {'ipath': 'local',
+                       'ival': {'lanename': 'master'}}
             }
 
     def action(self):
         '''
         Set up the uxd stack and behaviors
         '''
-        #name = "{0}{1}{2}".format(self.opts.value.get('id', self.main.data.name),
-                                  #'worker',
-                                  #self.yid.value)
-        name = "worker{0}".format(self.yid.value)
+        name = "worker{0}".format(self.windex.value)
         # master application kind
         kind = self.opts.value['__role']
         if kind == 'master':
@@ -129,12 +125,10 @@ class SaltRaetWorkerSetup(ioflo.base.deeding.Deed):
         self.stack.value = LaneStack(
                                      name=name,
                                      lanename=lanename,
-                                     uid=self.yid.value,
                                      sockdirpath=self.opts.value['sock_dir'])
         self.stack.value.Pk = raeting.packKinds.pack
         manor_yard = RemoteYard(
                                  stack=self.stack.value,
-                                 #uid=0,
                                  name='manor',
                                  lanename=lanename,
                                  dirpath=self.opts.value['sock_dir'])
@@ -166,7 +160,7 @@ class SaltRaetWorkerRouter(ioflo.base.deeding.Deed):
             'uxd_stack': '.salt.lane.manor.stack',
             'udp_stack': '.salt.road.manor.stack',
             'opts': '.salt.opts',
-            'yid': '.salt.yid',
+            #'windex': '.salt.var.fork.worker.windex',
             'worker_verify': '.salt.var.worker_verify',
             'remote': '.salt.loader.remote',
             'local': '.salt.loader.local',
@@ -187,6 +181,8 @@ class SaltRaetWorkerRouter(ioflo.base.deeding.Deed):
                 log.error('Received invalid message: {0}'.format(msg))
                 return
 
+            log.debug("**** Worker Router rxMsg\n   msg= {0}\n".format(msg))
+
             if 'load' in msg:
                 cmd = msg['load'].get('cmd')
                 if not cmd:
@@ -202,7 +198,7 @@ class SaltRaetWorkerRouter(ioflo.base.deeding.Deed):
                         ret['return'] = getattr(self.local.value, cmd)(msg['load'])
                 else:
                     ret = {'error': 'Invalid request'}
-                if cmd == 'publish' and 'pub' in ret['return']:
+                if cmd == 'publish' and 'pub' in ret.get('return', {}):
                     r_share = 'pub_ret'
                     ret['__worker_verify'] = self.worker_verify.value
                 else:
