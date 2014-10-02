@@ -608,8 +608,8 @@ class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
         self.worker_verify.value = salt.utils.rand_string()
         if self.opts.value.get('worker_threads'):
             worker_seed = []
-            for ind in range(self.opts.value['worker_threads']):
-                worker_seed.append('worker{0}'.format(ind + 1))
+            for index in range(self.opts.value['worker_threads']):
+                worker_seed.append('worker{0}'.format(index + 1))
             self.workers.value = itertools.cycle(worker_seed)
 
 
