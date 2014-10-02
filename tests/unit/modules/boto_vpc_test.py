@@ -5,6 +5,7 @@ from unittest import expectedFailure
 
 from boto.exception import BotoServerError
 from mock import patch
+from salt.exceptions import SaltInvocationError
 from salt.modules.boto_vpc import _maybe_set_name_tag, _maybe_set_tags
 
 from tests.utils import expectedNotImplementedFailure, expectedImportFailure
@@ -224,10 +225,9 @@ class BotoVpcTestCase(BotoVpcTestCaseBase):
         self.assertFalse(vpc_exists)
 
     @mock_ec2
-    def test_that_when_checking_if_a_vpc_exists_but_providing_no_filters_the_vpc_exists_method_returns_false(self):
-        vpc_exists = boto_vpc.exists(**conn_parameters)
-
-        self.assertFalse(vpc_exists)
+    def test_that_when_checking_if_a_vpc_exists_but_providing_no_filters_the_vpc_exists_method_raises_a_salt_invocation_error(self):
+        with self.assertRaisesRegexp(SaltInvocationError, 'At least on of the following must be specified: vpc id, name or tags.'):
+            boto_vpc.exists(**conn_parameters)
 
     @mock_ec2
     def test_that_when_creating_a_vpc_succeeds_the_create_vpc_method_returns_true(self):
