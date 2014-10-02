@@ -569,7 +569,7 @@ class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
                'event': '.salt.event.events',
                'event_req': '.salt.event.event_req',
                'workers': '.salt.track.workers',
-               'inode': '.salt.uxd.stack.',
+               'inode': '.salt.lane.manor.',
                'stack': 'stack',
                'local': {'ipath': 'local',
                           'ival': {'lanename': 'master'}},
@@ -622,7 +622,7 @@ class SaltRaetLaneStackCloser(ioflo.base.deeding.Deed):  # pylint: disable=W0232
 
     '''
     Ioinits = odict(
-        inode=".salt.uxd.stack",
+        inode=".salt.lane.manor",
         stack='stack',)
 
     def action(self, **kwa):
@@ -661,7 +661,7 @@ class SaltRaetRoadStackServiceRx(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = {
-               'uxd_stack': '.salt.uxd.stack.stack',
+               'uxd_stack': '.salt.lane.manor.stack',
                'udp_stack': '.salt.road.manor.stack',
                }
 
@@ -684,7 +684,7 @@ class SaltRaetRoadStackServiceTx(ioflo.base.deeding.Deed):
     # Yes, this class is identical to RX, this is because we still need to
     # separate out rx and tx in raet itself
     Ioinits = {
-               'uxd_stack': '.salt.uxd.stack.stack',
+               'uxd_stack': '.salt.lane.manor.stack',
                'udp_stack': '.salt.road.manor.stack',
                }
 
@@ -716,7 +716,7 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
                'event_req': '.salt.event.event_req',
                'workers': '.salt.track.workers',
                'worker_verify': '.salt.var.worker_verify',
-               'uxd_stack': '.salt.uxd.stack.stack',
+               'uxd_stack': '.salt.lane.manor.stack',
                'udp_stack': '.salt.road.manor.stack'}
 
     def _process_udp_rxmsg(self, msg, sender):
@@ -880,7 +880,7 @@ class SaltRaetEventer(ioflo.base.deeding.Deed):
                'event_req': '.salt.event.event_req',
                'module_refresh': '.salt.var.module_refresh',
                'pillar_refresh': '.salt.var.pillar_refresh',
-               'uxd_stack': '.salt.uxd.stack.stack'}
+               'uxd_stack': '.salt.lane.manor.stack'}
 
     def _register_event_yard(self, msg):
         '''

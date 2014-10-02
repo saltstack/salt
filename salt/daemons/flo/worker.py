@@ -101,7 +101,7 @@ class WorkerSetup(ioflo.base.deeding.Deed):
             'access_keys': '.salt.access_keys',
             'remote': '.salt.loader.remote',
             'local': '.salt.loader.local',
-            'inode': '.salt.uxd.stack.',
+            'inode': '.salt.lane.manor.',
             'stack': 'stack',
             'main': {'ipath': 'main',
                        'ival': {'name': 'master',
@@ -163,7 +163,7 @@ class WorkerRouter(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = {
-            'uxd_stack': '.salt.uxd.stack.stack',
+            'uxd_stack': '.salt.lane.manor.stack',
             'udp_stack': '.salt.road.manor.stack',
             'opts': '.salt.opts',
             'yid': '.salt.yid',
