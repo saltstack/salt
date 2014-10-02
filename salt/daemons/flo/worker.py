@@ -23,12 +23,12 @@ import ioflo.base.deeding
 log = logging.getLogger(__name__)
 
 
-class WorkerFork(ioflo.base.deeding.Deed):
+class SaltRaetWorkerFork(ioflo.base.deeding.Deed):
     '''
     Fork off the worker procs
     FloScript:
 
-    do worker fork at enter
+    do salt raet worker fork at enter
 
     '''
     Ioinits = {'opts': '.salt.opts',
@@ -88,11 +88,11 @@ class WorkerFork(ioflo.base.deeding.Deed):
         self._make_workers()
 
 
-class WorkerSetup(ioflo.base.deeding.Deed):
+class SaltRaetWorkerSetup(ioflo.base.deeding.Deed):
     '''
     FloScript:
 
-    do worker setup at enter
+    do salt raet worker setup at enter
 
     '''
     Ioinits = {
@@ -155,11 +155,11 @@ class WorkerSetup(ioflo.base.deeding.Deed):
         self.stack.server.close()
 
 
-class WorkerRouter(ioflo.base.deeding.Deed):
+class SaltRaetWorkerRouter(ioflo.base.deeding.Deed):
     '''
     FloScript:
 
-    do worker router
+    do salt raet worker router
 
     '''
     Ioinits = {
