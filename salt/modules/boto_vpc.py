@@ -804,6 +804,9 @@ def route_table_exists(route_table_id=None, name=None, tags=None, region=None, k
     if not conn:
         return False
 
+    if not route_table_id and not name and not tags:
+        raise SaltInvocationError('At least on of the following must be specified: route table id, name or tags.')
+
     try:
         filter_parameters = {'filters': {}}
 
