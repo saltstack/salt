@@ -1367,7 +1367,9 @@ class LocalClient(object):
 
         master_uri = 'tcp://' + salt.utils.ip_bracket(self.opts['interface']) + \
                      ':' + str(self.opts['ret_port'])
-        sreq = salt.transport.Channel.factory(self.opts, crypt='clear', master_uri=master_uri)
+        sreq = salt.transport.Channel.factory(self.opts,
+                                              crypt='clear',
+                                              master_uri=master_uri)
 
         try:
             payload = sreq.send(payload_kwargs)

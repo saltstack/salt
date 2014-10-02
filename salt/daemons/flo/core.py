@@ -735,11 +735,12 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
         if s_estate is None:  # drop
             return
 
-        log.debug("**** Road Router rxMsg **** id={0} estate={1} yard={2}\n   msg= {3}\n".format(
-                self.opts.value['id'],
-                self.udp_stack.value.local.name,
-                self.uxd_stack.value.local.name,
-                msg['route']))
+        log.debug("**** Road Router rxMsg **** id={0} estate={1} yard={2}\n"
+                  "   msg= {3}\n".format(
+                                            self.opts.value['id'],
+                                            self.udp_stack.value.local.name,
+                                            self.uxd_stack.value.local.name,
+                                            msg))
 
         if d_estate is None:
             pass
@@ -795,11 +796,12 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
             s_estate = self.udp_stack.value.local.name
             msg['route']['src'] = (s_estate, s_yard, s_share)
 
-        log.debug("**** Lane Router rxMsg ****\n  id {0} estate {1} yard {2}\n{3}\n".format(
-                self.opts.value['id'],
-                self.udp_stack.value.local.name,
-                self.uxd_stack.value.local.name,
-                msg['route']))
+        log.debug("**** Lane Router rxMsg **** id={0} estate={1} yard={2}\n"
+                  "   msg={3}\n".format(
+                                        self.opts.value['id'],
+                                        self.udp_stack.value.local.name,
+                                        self.uxd_stack.value.local.name,
+                                        msg))
 
         if d_estate is None:
             pass
