@@ -661,7 +661,7 @@ class SaltRaetRoadStackServiceRx(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = {
-               'uxd_stack': '.salt.lane.manor.stack',
+               'lane_stack': '.salt.lane.manor.stack',
                'road_stack': '.salt.road.manor.stack',
                }
 
@@ -670,7 +670,7 @@ class SaltRaetRoadStackServiceRx(ioflo.base.deeding.Deed):
         Process inboud queues
         '''
         self.road_stack.value.serviceAllRx()
-        self.uxd_stack.value.serviceAllRx()
+        self.lane_stack.value.serviceAllRx()
 
 
 class SaltRaetRoadStackServiceTx(ioflo.base.deeding.Deed):
@@ -684,7 +684,7 @@ class SaltRaetRoadStackServiceTx(ioflo.base.deeding.Deed):
     # Yes, this class is identical to RX, this is because we still need to
     # separate out rx and tx in raet itself
     Ioinits = {
-               'uxd_stack': '.salt.lane.manor.stack',
+               'lane_stack': '.salt.lane.manor.stack',
                'road_stack': '.salt.road.manor.stack',
                }
 
@@ -692,7 +692,7 @@ class SaltRaetRoadStackServiceTx(ioflo.base.deeding.Deed):
         '''
         Process inbound queues
         '''
-        self.uxd_stack.value.serviceAllTx()
+        self.lane_stack.value.serviceAllTx()
         self.road_stack.value.serviceAllTx()
 
 
@@ -716,7 +716,7 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
                'event_req': '.salt.event.event_req',
                'workers': '.salt.track.workers',
                'worker_verify': '.salt.var.worker_verify',
-               'uxd_stack': '.salt.lane.manor.stack',
+               'lane_stack': '.salt.lane.manor.stack',
                'road_stack': '.salt.road.manor.stack'}
 
     def _process_udp_rxmsg(self, msg, sender):
@@ -739,7 +739,7 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
                   "   msg= {3}\n".format(
                                             self.opts.value['id'],
                                             self.road_stack.value.local.name,
-                                            self.uxd_stack.value.local.name,
+                                            self.lane_stack.value.local.name,
                                             msg))
 
         if d_estate is None:
@@ -751,9 +751,9 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
 
         if d_yard is not None:
             # Meant for another yard, send it off!
-            if d_yard in self.uxd_stack.value.nameRemotes:
-                self.uxd_stack.value.transmit(msg,
-                        self.uxd_stack.value.nameRemotes[d_yard].uid)
+            if d_yard in self.lane_stack.value.nameRemotes:
+                self.lane_stack.value.transmit(msg,
+                        self.lane_stack.value.nameRemotes[d_yard].uid)
                 return
             return
         if d_share is None:
@@ -769,8 +769,8 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
             if 'load' in msg:
                 role = self.road_stack.value.nameRemotes[sender].role
                 msg['load']['id'] = role  # sender # should this be role XXXX
-                self.uxd_stack.value.transmit(msg,
-                        self.uxd_stack.value.fetchUidByName(next(self.workers.value)))
+                self.lane_stack.value.transmit(msg,
+                        self.lane_stack.value.fetchUidByName(next(self.workers.value)))
         elif d_share == 'fun':
             self.fun.value.append(msg)
 
@@ -800,7 +800,7 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
                   "   msg={3}\n".format(
                                         self.opts.value['id'],
                                         self.road_stack.value.local.name,
-                                        self.uxd_stack.value.local.name,
+                                        self.lane_stack.value.local.name,
                                         msg))
 
         if d_estate is None:
@@ -818,11 +818,11 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
 
         if d_yard is None:
             pass
-        elif d_yard != self.uxd_stack.value.local.name:
+        elif d_yard != self.lane_stack.value.local.name:
             # Meant for another yard, send it off!
-            if d_yard in self.uxd_stack.value.nameRemotes:
-                self.uxd_stack.value.transmit(msg,
-                        self.uxd_stack.value.nameRemotes[d_yard].uid)
+            if d_yard in self.lane_stack.value.nameRemotes:
+                self.lane_stack.value.transmit(msg,
+                        self.lane_stack.value.nameRemotes[d_yard].uid)
                 return
             return
         if d_share is None:
@@ -830,8 +830,8 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
             log.error('Received message without share: {0}'.format(msg))
             return
         elif d_share == 'local_cmd':
-            self.uxd_stack.value.transmit(msg,
-                    self.uxd_stack.value.fetchUidByName(next(self.workers.value)))
+            self.lane_stack.value.transmit(msg,
+                    self.lane_stack.value.fetchUidByName(next(self.workers.value)))
         elif d_share == 'event_req':
             self.event_req.value.append(msg)
             #log.debug("\n**** Event Subscribe \n {0}\n".format(msg))
@@ -863,8 +863,8 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
         while self.road_stack.value.rxMsgs:
             msg, sender = self.road_stack.value.rxMsgs.popleft()
             self._process_udp_rxmsg(msg=msg, sender=sender)
-        while self.uxd_stack.value.rxMsgs:
-            msg, sender = self.uxd_stack.value.rxMsgs.popleft()
+        while self.lane_stack.value.rxMsgs:
+            msg, sender = self.lane_stack.value.rxMsgs.popleft()
             self._process_uxd_rxmsg(msg=msg, sender=sender)
 
 
@@ -882,7 +882,7 @@ class SaltRaetEventer(ioflo.base.deeding.Deed):
                'event_req': '.salt.event.event_req',
                'module_refresh': '.salt.var.module_refresh',
                'pillar_refresh': '.salt.var.pillar_refresh',
-               'uxd_stack': '.salt.lane.manor.stack'}
+               'lane_stack': '.salt.lane.manor.stack'}
 
     def _register_event_yard(self, msg):
         '''
@@ -901,12 +901,12 @@ class SaltRaetEventer(ioflo.base.deeding.Deed):
         if msg.get('tag') == 'module_refresh':
             self.module_refresh.value = True
         for y_name in self.event_yards.value:
-            if y_name not in self.uxd_stack.value.nameRemotes:  # subscriber not a remote
+            if y_name not in self.lane_stack.value.nameRemotes:  # subscriber not a remote
                 rm_.append(y_name)
                 continue  # drop msg don't publish
-            self.uxd_stack.value.transmit(msg,
-                    self.uxd_stack.value.fetchUidByName(y_name))
-            self.uxd_stack.value.serviceAll()
+            self.lane_stack.value.transmit(msg,
+                    self.lane_stack.value.fetchUidByName(y_name))
+            self.lane_stack.value.serviceAll()
         for y_name in rm_:  # remove missing subscribers
             self.event_yards.value.remove(y_name)
 

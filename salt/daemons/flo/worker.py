@@ -158,7 +158,7 @@ class SaltRaetWorkerRouter(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = {
-            'uxd_stack': '.salt.lane.manor.stack',
+            'lane_stack': '.salt.lane.manor.stack',
             'road_stack': '.salt.road.manor.stack',
             'opts': '.salt.opts',
             #'windex': '.salt.var.fork.worker.windex',
@@ -172,9 +172,9 @@ class SaltRaetWorkerRouter(ioflo.base.deeding.Deed):
         Read in a command and execute it, send the return back up to the
         main master process
         '''
-        self.uxd_stack.value.serviceAll()
-        while self.uxd_stack.value.rxMsgs:
-            msg, sender = self.uxd_stack.value.rxMsgs.popleft()
+        self.lane_stack.value.serviceAll()
+        while self.lane_stack.value.rxMsgs:
+            msg, sender = self.lane_stack.value.rxMsgs.popleft()
             try:
                 s_estate, s_yard, s_share = msg['route']['src']
                 d_estate, d_yard, d_share = msg['route']['dst']
@@ -205,9 +205,9 @@ class SaltRaetWorkerRouter(ioflo.base.deeding.Deed):
                 else:
                     r_share = s_share
                 ret['route'] = {
-                        'src': (None, self.uxd_stack.value.local.name, None),
+                        'src': (None, self.lane_stack.value.local.name, None),
                         'dst': (s_estate, s_yard, r_share)
                         }
-                self.uxd_stack.value.transmit(ret,
-                        self.uxd_stack.value.fetchUidByName('manor'))
-                self.uxd_stack.value.serviceAll()
+                self.lane_stack.value.transmit(ret,
+                        self.lane_stack.value.fetchUidByName('manor'))
+                self.lane_stack.value.serviceAll()
