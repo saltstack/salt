@@ -262,7 +262,7 @@ def _run(cmd,
                            sys.executable)
             elif __grains__['os'] in ['FreeBSD']:
                 env_cmd = ('su', '-', runas, '-c',
-                           "{} -c {}".format(shell, sys.executable))
+                           "{0} -c {1}".format(shell, sys.executable))
             else:
                 env_cmd = ('su', '-s', shell, '-', runas, '-c', sys.executable)
             env_encoded = subprocess.Popen(
