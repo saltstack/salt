@@ -688,29 +688,33 @@ SETUP_KWARGS = {'name': NAME,
                 'zip_safe': False
                 }
 
+if PACKAGED_FOR_SALT_SSH:
+    SETUP_KWARGS['data_files'][0][1].extend([
+        'doc/man/salt-ssh.1',
+        'doc/man/salt-run.1',
+        'doc/man/salt-cloud.1',
+    ])
+
 if IS_WINDOWS_PLATFORM is False:
     SETUP_KWARGS['cmdclass']['sdist'] = CloudSdist
     SETUP_KWARGS['cmdclass']['install_lib'] = InstallLib
     # SETUP_KWARGS['packages'].extend(['salt.cloud',
     #                                  'salt.cloud.clouds'])
     SETUP_KWARGS['package_data']['salt.cloud'] = ['deploy/*.sh']
-    if PACKAGED_FOR_SALT_SSH:
+
+    SETUP_KWARGS['data_files'][0][1].extend([
+        'doc/man/salt-master.1',
+        'doc/man/salt-key.1',
+        'doc/man/salt.1',
+        'doc/man/salt-api.1',
+        'doc/man/salt-syndic.1',
+        'doc/man/salt-unity.1',
+    ])
+    if PACKAGED_FOR_SALT_SSH is False:
         SETUP_KWARGS['data_files'][0][1].extend([
             'doc/man/salt-ssh.1',
             'doc/man/salt-run.1',
             'doc/man/salt-cloud.1',
-        ])
-    else:
-        SETUP_KWARGS['data_files'][0][1].extend([
-            'doc/man/salt-master.1',
-            'doc/man/salt-key.1',
-            'doc/man/salt.1',
-            'doc/man/salt-api.1',
-            'doc/man/salt-syndic.1',
-            'doc/man/salt-run.1',
-            'doc/man/salt-ssh.1',
-            'doc/man/salt-cloud.1',
-            'doc/man/salt-unity.1',
         ])
 
 
@@ -819,14 +823,22 @@ if WITH_SETUPTOOLS:
                                 'salt-minion = salt.scripts:salt_minion',
                                 ]
         }
+    else:
+        SETUP_KWARGS['entry_points'] = {'console_scripts': [
+            'salt-ssh = salt.scripts:salt_ssh',
+            'salt-run = salt.scripts:salt_run',
+            'salt-call = salt.scripts:salt_call',
+            'salt-cloud = salt.scripts:salt_cloud',
+        ]}
     if IS_WINDOWS_PLATFORM is False:
         if PACKAGED_FOR_SALT_SSH:
-            SETUP_KWARGS['entry_points'] = {'console_scripts': [
-                'salt-ssh = salt.scripts:salt_ssh',
-                'salt-run = salt.scripts:salt_run',
-                'salt-call = salt.scripts:salt_call',
-                'salt-cloud = salt.scripts:salt_cloud',
-            ]}
+            SETUP_KWARGS['entry_points']['console_scripts'].extend([
+                'salt = salt.scripts:salt_main',
+                'salt-api = salt.scripts:salt_api',
+                'salt-key = salt.scripts:salt_key',
+                'salt-master = salt.scripts:salt_master',
+                'salt-syndic = salt.scripts:salt_syndic',
+            ])
         else:
             SETUP_KWARGS['entry_points']['console_scripts'].extend([
                 'salt = salt.scripts:salt_main',
