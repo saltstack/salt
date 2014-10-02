@@ -23,7 +23,7 @@ framer masterudpstack be active first setup
     # Start forking master workers
     frame spawnworkers
         enter
-            do worker fork
+            do salt raet worker fork
         go start
 
     frame start
