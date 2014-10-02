@@ -791,17 +791,11 @@ class LocalClient(object):
         if event is None:
             event = self.event
         while True:
-            try:
-                raw = event.get_event_noblock()
-                if raw and raw.get('tag', '').startswith(jid):
-                    yield raw
-                else:
-                    yield None
-            except zmq.ZMQError as ex:
-                if ex.errno == errno.EAGAIN or ex.errno == errno.EINTR:
-                    yield None
-                else:
-                    raise
+            raw = event.get_event_noblock()
+            if raw and raw.get('tag', '').startswith(jid):
+                yield raw
+            else:
+                yield None
 
     def get_iter_returns(
             self,
