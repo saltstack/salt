@@ -1002,8 +1002,7 @@ class LocalFuncs(object):
                 runner_client = salt.runner.RunnerClient(self.opts)
                 return runner_client.async(
                         fun,
-                        # load.get('kwarg', {}),
-                        load,
+                        load.get('kwarg', {}),
                         token['name'])
             except Exception as exc:
                 log.error('Exception occurred while '
