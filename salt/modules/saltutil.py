@@ -112,14 +112,10 @@ def _sync(form, saltenv=None):
             log.info('Copying {0!r} to {1!r}'.format(fn_, dest))
             if os.path.isfile(dest):
                 # The file is present, if the sum differs replace it
-                hash_type = getattr(hashlib, __opts__.get('hash_type', 'md5'))
-                srch = hash_type(
-                    salt.utils.fopen(fn_, 'r').read()
-                ).hexdigest()
-                dsth = hash_type(
-                    salt.utils.fopen(dest, 'r').read()
-                ).hexdigest()
-                if srch != dsth:
+                hash_type = __opts__.get('hash_type', 'md5')
+                src_digest = salt.utils.get_hash(fn_, hash_type)
+                dst_digest = salt.utils.get_hash(dest, hash_type)
+                if src_digest != dst_digest:
                     # The downloaded file differs, replace!
                     shutil.copyfile(fn_, dest)
                     ret.append('{0}.{1}'.format(form, relname))

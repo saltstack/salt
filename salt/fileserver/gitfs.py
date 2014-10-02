@@ -1284,9 +1284,7 @@ def file_hash(load, fnd):
     if not os.path.isfile(hashdest):
         if not os.path.exists(os.path.dirname(hashdest)):
             os.makedirs(os.path.dirname(hashdest))
-        with salt.utils.fopen(path, 'rb') as fp_:
-            ret['hsum'] = getattr(hashlib, __opts__['hash_type'])(
-                fp_.read()).hexdigest()
+        ret['hsum'] = salt.utils.get_hash(path, __opts__['hash_type'])
         with salt.utils.fopen(hashdest, 'w+') as fp_:
             fp_.write(ret['hsum'])
         return ret
