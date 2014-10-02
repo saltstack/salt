@@ -567,6 +567,11 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
 
         self.assertFalse(dhcp_options_exists_result)
 
+    @mock_ec2
+    def test_that_when_checking_if_dhcp_options_exists_but_providing_no_filters_the_dhcp_options_exists_method_raises_a_salt_invocation_error(self):
+        with self.assertRaisesRegexp(SaltInvocationError, 'At least on of the following must be specified: subnet id, name or tags.'):
+            boto_vpc.dhcp_options_exists(**conn_parameters)
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
