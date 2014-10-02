@@ -100,7 +100,7 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = {
-            'inode': 'raet.udp.stack.',
+            'inode': 'salt.road.manor.',
             'stack': 'stack',
             'opts': '.salt.opts',
             'txmsgs': {'ipath': 'txmsgs',
@@ -180,7 +180,7 @@ class SaltRaetRoadStackCloser(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = odict(
-        inode=".raet.udp.stack.",
+        inode=".salt.road.manor.",
         stack='stack', )
 
     def action(self, **kwa):
@@ -200,7 +200,7 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = odict(
-                    inode=".raet.udp.stack.",
+                    inode=".salt.road.manor.",
                     stack='stack',
                     opts='.salt.opts')
 
@@ -228,11 +228,11 @@ class SaltRaetRoadStackJoined(ioflo.base.deeding.Deed):
     FloScript:
 
     do salt raet road stack joined
-    go next if joined in .raet.udp.stack.status
+    go next if joined in .salt.road.manor.status
 
     '''
     Ioinits = odict(
-        inode=".raet.udp.stack.",
+        inode=".salt.road.manor.",
         stack='stack',
         status=odict(ipath='status', ival=odict(joined=False,
                                                 allowed=False,
@@ -258,11 +258,11 @@ class SaltRaetRoadStackRejected(ioflo.base.deeding.Deed):
     FloScript:
 
     do salt raet road stack rejected
-    go next if rejected in .raet.udp.stack.status
+    go next if rejected in .salt.road.manor.status
 
     '''
     Ioinits = odict(
-        inode=".raet.udp.stack.",
+        inode=".salt.road.manor.",
         stack='stack',
         status=odict(ipath='status', ival=odict(joined=False,
                                                 allowed=False,
@@ -294,7 +294,7 @@ class SaltRaetRoadStackAllower(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = odict(
-        inode=".raet.udp.stack.",
+        inode=".salt.road.manor.",
         stack='stack', )
 
     def action(self, **kwa):
@@ -314,11 +314,11 @@ class SaltRaetRoadStackAllowed(ioflo.base.deeding.Deed):
     FloScript:
 
     do salt raet road stack allowed
-    go next if allowed in .raet.udp.stack.status
+    go next if allowed in .salt.road.manor.status
 
     '''
     Ioinits = odict(
-        inode=".raet.udp.stack.",
+        inode=".salt.road.manor.",
         stack='stack',
         status=odict(ipath='status', ival=odict(joined=False,
                                                 allowed=False,
@@ -346,7 +346,7 @@ class SaltRaetRoadStackManager(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = odict(
-        inode=".raet.udp.stack.",
+        inode=".salt.road.manor.",
         stack='stack',
         alloweds={'ipath': '.salt.var.presence.alloweds',
                   'ival': odict()},
@@ -403,7 +403,7 @@ class SaltRaetRoadStackPrinter(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = odict(
-        inode=".raet.udp.stack.",
+        inode=".salt.road.manor.",
         rxmsgs=odict(ipath='rxmsgs', ival=deque()),)
 
     def action(self, **kwa):
@@ -488,7 +488,7 @@ class SaltLoadPillar(ioflo.base.deeding.Deed):
                'grains': '.salt.grains',
                'modules': '.salt.loader.modules',
                'pillar_refresh': '.salt.var.pillar_refresh',
-               'udp_stack': '.raet.udp.stack.stack'}
+               'udp_stack': '.salt.road.manor.stack'}
 
     def action(self):
         '''
@@ -642,7 +642,7 @@ class SaltRaetRoadStackService(ioflo.base.deeding.Deed):
 
     '''
     Ioinits = {
-               'udp_stack': '.raet.udp.stack.stack',
+               'udp_stack': '.salt.road.manor.stack',
                }
 
     def action(self):
@@ -662,7 +662,7 @@ class SaltRaetRoadStackServiceRx(ioflo.base.deeding.Deed):
     '''
     Ioinits = {
                'uxd_stack': '.salt.uxd.stack.stack',
-               'udp_stack': '.raet.udp.stack.stack',
+               'udp_stack': '.salt.road.manor.stack',
                }
 
     def action(self):
@@ -685,7 +685,7 @@ class SaltRaetRoadStackServiceTx(ioflo.base.deeding.Deed):
     # separate out rx and tx in raet itself
     Ioinits = {
                'uxd_stack': '.salt.uxd.stack.stack',
-               'udp_stack': '.raet.udp.stack.stack',
+               'udp_stack': '.salt.road.manor.stack',
                }
 
     def action(self):
@@ -717,7 +717,7 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
                'workers': '.salt.track.workers',
                'worker_verify': '.salt.var.worker_verify',
                'uxd_stack': '.salt.uxd.stack.stack',
-               'udp_stack': '.raet.udp.stack.stack'}
+               'udp_stack': '.salt.road.manor.stack'}
 
     def _process_udp_rxmsg(self, msg, sender):
         '''
@@ -934,7 +934,7 @@ class SaltRaetPublisher(ioflo.base.deeding.Deed):
     '''
     Ioinits = {'opts': '.salt.opts',
                'publish': '.salt.var.publish',
-               'stack': '.raet.udp.stack.stack',
+               'stack': '.salt.road.manor.stack',
                'availables': {'ipath': '.salt.var.presence.availables',
                               'ival': set()}, }
 
@@ -978,7 +978,7 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
                'returners': '.salt.loader.returners',
                'fun': '.salt.var.fun',
                'executors': '.salt.track.executors',
-               'udp_stack': '.raet.udp.stack.stack', }
+               'udp_stack': '.salt.road.manor.stack', }
 
     def postinitio(self):
         '''

@@ -7,7 +7,7 @@ framer minionudpstack be active first setup
     frame setup
         enter
             do salt raet cleanup
-            do salt raet road stack setup per inode ".raet.udp.stack"
+            do salt raet road stack setup per inode ".salt.road.manor"
             do salt raet manor lane setup
         go loadmodules
 
@@ -33,7 +33,7 @@ framer minionudpstack be active first setup
 
         # Cleanup on exit
         exit
-            do salt raet road stack closer per inode ".raet.udp.stack."
+            do salt raet road stack closer per inode ".salt.road.manor."
             do salt raet lane stack closer per inode ".salt.uxd.stack."
 
 # Framer for handling inbound traffic
@@ -45,13 +45,13 @@ framer bootstrap be inactive first join
     frame join
         print Joining...
         enter
-            do salt raet road stack joiner per inode ".raet.udp.stack."
+            do salt raet road stack joiner per inode ".salt.road.manor."
         recur
-            do salt raet road stack joined per inode ".raet.udp.stack."
-            do salt raet road stack rejected per inode ".raet.udp.stack."
+            do salt raet road stack joined per inode ".salt.road.manor."
+            do salt raet road stack rejected per inode ".salt.road.manor."
 
-        go next if joined in .raet.udp.stack.status
-        go abort if rejected in .raet.udp.stack.status
+        go next if joined in .salt.road.manor.status
+        go abort if rejected in .salt.road.manor.status
         #go abort if elapsed >= 10
 
     frame joined
@@ -61,11 +61,11 @@ framer bootstrap be inactive first join
     frame allow
         print Allowing...
         enter
-            do salt raet road stack allower per inode ".raet.udp.stack."
+            do salt raet road stack allower per inode ".salt.road.manor."
         recur
-            do salt raet road stack allowed per inode ".raet.udp.stack."
+            do salt raet road stack allowed per inode ".salt.road.manor."
 
-        go next if allowed in .raet.udp.stack.status
+        go next if allowed in .salt.road.manor.status
         #go abort if elapsed >= 5
 
     frame allowed
@@ -101,7 +101,7 @@ framer functionmanager be inactive first checkexec
 
 framer manager be inactive first start at 10.0
     frame start
-         do salt raet road stack manager per inode ".raet.udp.stack"
+         do salt raet road stack manager per inode ".salt.road.manor"
 
 # Framer for handling outbound traffic
 framer outbound be inactive first start

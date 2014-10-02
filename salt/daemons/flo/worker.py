@@ -164,7 +164,7 @@ class WorkerRouter(ioflo.base.deeding.Deed):
     '''
     Ioinits = {
             'uxd_stack': '.salt.uxd.stack.stack',
-            'udp_stack': '.raet.udp.stack.stack',
+            'udp_stack': '.salt.road.manor.stack',
             'opts': '.salt.opts',
             'yid': '.salt.yid',
             'worker_verify': '.salt.var.worker_verify',
