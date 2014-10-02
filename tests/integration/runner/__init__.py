@@ -77,6 +77,18 @@ class RunnerModuleTest(integration.ClientCase):
 
         self.runner.cmd_async(low)
 
+    def test_cmd_sync_w_arg(self):
+        low = {
+            'fun': 'test.arg',
+            'foo': 'Foo!',
+            'bar': 'Bar!',
+        }
+        low.update(self.eauth_creds)
+
+        ret = self.runner.cmd_sync(low)
+        self.assertEqual(ret['kwargs']['foo'], 'Foo!')
+        self.assertEqual(ret['kwargs']['bar'], 'Bar!')
+
 
 if __name__ == '__main__':
     from integration import run_tests

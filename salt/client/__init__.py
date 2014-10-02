@@ -24,7 +24,6 @@ import os
 import time
 import copy
 import logging
-import zmq
 import errno
 from datetime import datetime
 from salt._compat import string_types
@@ -43,6 +42,12 @@ import salt.syspaths as syspaths
 from salt.exceptions import (
     EauthAuthenticationError, SaltInvocationError, SaltReqTimeoutError
 )
+
+# Import third party libs
+try:
+    import zmq
+except ImportError:
+    pass
 
 # Try to import range from https://github.com/ytoolshed/range
 HAS_RANGE = False
@@ -786,17 +791,11 @@ class LocalClient(object):
         if event is None:
             event = self.event
         while True:
-            try:
-                raw = event.get_event_noblock()
-                if raw and raw.get('tag', '').startswith(jid):
-                    yield raw
-                else:
-                    yield None
-            except zmq.ZMQError as ex:
-                if ex.errno == errno.EAGAIN or ex.errno == errno.EINTR:
-                    yield None
-                else:
-                    raise
+            raw = event.get_event_noblock()
+            if raw and raw.get('tag', '').startswith(jid):
+                yield raw
+            else:
+                yield None
 
     def get_iter_returns(
             self,
@@ -870,7 +869,7 @@ class LocalClient(object):
                 else:
                     found.add(raw['data']['id'])
                     ret = {raw['data']['id']: {'ret': raw['data']['return']}}
-                    if 'out' in raw:
+                    if 'out' in raw['data']:
                         ret[raw['data']['id']]['out'] = raw['data']['out']
                     log.debug('jid {0} return from {1}'.format(jid, raw['data']['id']))
                     yield ret
