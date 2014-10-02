@@ -982,11 +982,6 @@ class LocalFuncs(object):
                 log.warning(msg)
                 return dict(error=dict(name='TokenAuthenticationError',
                                        message=msg))
-            if token['name'] not in self.opts['external_auth'][token['eauth']]:
-                msg = 'Authentication failure of type "token" occurred.'
-                log.warning(msg)
-                return dict(error=dict(name='TokenAuthenticationError',
-                                       message=msg))
             good = self.ckminions.runner_check(
                     self.opts['external_auth'][token['eauth']][token['name']]
                     if token['name'] in self.opts['external_auth'][token['eauth']]
@@ -1092,11 +1087,6 @@ class LocalFuncs(object):
                 return dict(error=dict(name='TokenAuthenticationError',
                                        message=msg))
             if token['eauth'] not in self.opts['external_auth']:
-                msg = 'Authentication failure of type "token" occurred.'
-                log.warning(msg)
-                return dict(error=dict(name='TokenAuthenticationError',
-                                       message=msg))
-            if token['name'] not in self.opts['external_auth'][token['eauth']]:
                 msg = 'Authentication failure of type "token" occurred.'
                 log.warning(msg)
                 return dict(error=dict(name='TokenAuthenticationError',
