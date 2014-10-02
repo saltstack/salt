@@ -610,6 +610,9 @@ def network_acl_exists(network_acl_id=None, name=None, tags=None, region=None, k
     if not conn:
         return False
 
+    if not network_acl_id and not name and not tags:
+        raise SaltInvocationError('At least on of the following must be specified: network ACL id, name or tags.')
+
     try:
         filter_parameters = {'filters': {}}
 
