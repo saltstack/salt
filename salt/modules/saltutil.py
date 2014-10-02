@@ -9,7 +9,6 @@ minion.
 
 # Import python libs
 import os
-import hashlib
 import shutil
 import signal
 import logging

@@ -62,7 +62,6 @@ Multiple environment mode must have this bucket structure:
 import logging
 import os
 import time
-import hashlib
 import pickle
 import urllib
 from copy import deepcopy
