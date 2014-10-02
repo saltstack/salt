@@ -1734,7 +1734,9 @@ class ClearFuncs(object):
                 return dict(error=dict(name='TokenAuthenticationError',
                                        message=msg))
             good = self.ckminions.runner_check(
-                self.opts['external_auth'][token['eauth']][token['name']] if token['name'] in self.opts['external_auth'][token['eauth']] else self.opts['external_auth'][token['eauth']]['*'],
+                self.opts['external_auth'][token['eauth']][token['name']]
+                if token['name'] in self.opts['external_auth'][token['eauth']]
+                else self.opts['external_auth'][token['eauth']]['*'],
                 clear_load['fun'])
             if not good:
                 msg = ('Authentication failure of type "token" occurred for '
@@ -1786,7 +1788,9 @@ class ClearFuncs(object):
                 return dict(error=dict(name='EauthAuthenticationError',
                                        message=msg))
             good = self.ckminions.runner_check(
-                self.opts['external_auth'][clear_load['eauth']][name] if name in self.opts['external_auth'][clear_load['eauth']] else self.opts['external_auth'][clear_load['eauth']]['*'],
+                self.opts['external_auth'][clear_load['eauth']][name]
+                if name in self.opts['external_auth'][clear_load['eauth']]
+                else self.opts['external_auth'][clear_load['eauth']]['*'],
                 clear_load['fun'])
             if not good:
                 msg = ('Authentication failure of type "eauth" occurred for '
