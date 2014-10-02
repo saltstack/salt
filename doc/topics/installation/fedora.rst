@@ -27,6 +27,19 @@ will be one master and multiple minions.
 
 .. _`EPEL`: http://fedoraproject.org/wiki/EPEL
 
+Installing from ``updates-testing``
+-----------------------------------
+
+When a new Salt release is packaged, it is first admitted into the
+``updates-testing`` repository, before being moved to the stable repo.
+
+To install from ``updates-testing``, use the ``enablerepo`` argument for yum:
+
+.. code-block:: bash
+
+    yum --enablerepo=updates-testing install salt-master
+    yum --enablerepo=ubdates-testing install salt-minion
+
 Post-installation tasks
 =======================
 
