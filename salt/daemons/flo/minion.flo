@@ -21,6 +21,7 @@ framer minionudpstack be active first setup
         bid start functionmanager
         bid start manager
         bid start outbound
+        bid start scheduler
 
         exit
             do salt raet road stack closer per inode ".salt.road.manor."
@@ -96,6 +97,6 @@ framer outbound be inactive first start
     frame start
         do salt raet road stack service tx
 
-#framer scheduler be inactive first start
-#    frame start
-#        do salt schedule
+framer scheduler be inactive first start
+    frame start
+        do salt schedule
