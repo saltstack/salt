@@ -569,7 +569,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
 
     @mock_ec2
     def test_that_when_checking_if_dhcp_options_exists_but_providing_no_filters_the_dhcp_options_exists_method_raises_a_salt_invocation_error(self):
-        with self.assertRaisesRegexp(SaltInvocationError, 'At least on of the following must be specified: subnet id, name or tags.'):
+        with self.assertRaisesRegexp(SaltInvocationError, 'At least on of the following must be specified: dhcp options id, name or tags.'):
             boto_vpc.dhcp_options_exists(**conn_parameters)
 
 
@@ -660,6 +660,11 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         network_acl_deletion_result = boto_vpc.network_acl_exists('fake', **conn_parameters)
 
         self.assertFalse(network_acl_deletion_result)
+
+    @mock_ec2
+    def test_that_when_checking_if_network_acl_exists_but_providing_no_filters_the_network_acl_exists_method_raises_a_salt_invocation_error(self):
+        with self.assertRaisesRegexp(SaltInvocationError, 'At least on of the following must be specified: network ACL id, name or tags.'):
+            boto_vpc.dhcp_options_exists(**conn_parameters)
 
     @mock_ec2
     @expectedNotImplementedFailure
