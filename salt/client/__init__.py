@@ -24,7 +24,6 @@ import os
 import time
 import copy
 import logging
-import zmq
 import errno
 from datetime import datetime
 from salt._compat import string_types
@@ -43,6 +42,12 @@ import salt.syspaths as syspaths
 from salt.exceptions import (
     EauthAuthenticationError, SaltInvocationError, SaltReqTimeoutError
 )
+
+# Import third party libs
+try:
+    import zmq
+except ImportError:
+    pass
 
 # Try to import range from https://github.com/ytoolshed/range
 HAS_RANGE = False
