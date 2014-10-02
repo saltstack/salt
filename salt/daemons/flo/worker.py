@@ -159,7 +159,7 @@ class SaltRaetWorkerRouter(ioflo.base.deeding.Deed):
     '''
     Ioinits = {
             'uxd_stack': '.salt.lane.manor.stack',
-            'udp_stack': '.salt.road.manor.stack',
+            'road_stack': '.salt.road.manor.stack',
             'opts': '.salt.opts',
             #'windex': '.salt.var.fork.worker.windex',
             'worker_verify': '.salt.var.worker_verify',
