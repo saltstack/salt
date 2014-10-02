@@ -501,13 +501,8 @@ class PrintOption(Option):
                     result.append(gid)
             elif arg == 'md5':
                 if stat.S_ISREG(fstat[stat.ST_MODE]):
-                    with salt.utils.fopen(fullpath, 'rb') as ifile:
-                        buf = ifile.read(8192)
-                        md5hash = hashlib.md5()
-                        while buf:
-                            md5hash.update(buf)
-                            buf = ifile.read(8192)
-                    result.append(md5hash.hexdigest())
+                    md5digest = salt.utils.get_hash(fullpath, 'md5')
+                    result.append(md5digest)
                 else:
                     result.append('')
 
