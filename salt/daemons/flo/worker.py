@@ -100,8 +100,8 @@ class SaltRaetWorkerSetup(ioflo.base.deeding.Deed):
             'opts': '.salt.opts',
             'windex': '.salt.var.fork.worker.windex',
             'access_keys': '.salt.access_keys',
-            'remote': '.salt.loader.remote',
-            'local': '.salt.loader.local',
+            'remote_loader': '.salt.loader.remote',
+            'local_loader': '.salt.loader.local',
             'inode': '.salt.lane.manor.',
             'stack': 'stack',
             'local': {'ipath': 'local',
@@ -133,10 +133,11 @@ class SaltRaetWorkerSetup(ioflo.base.deeding.Deed):
                                  lanename=lanename,
                                  dirpath=self.opts.value['sock_dir'])
         self.stack.value.addRemote(manor_yard)
-        self.remote.value = salt.daemons.masterapi.RemoteFuncs(self.opts.value)
-        self.local.value = salt.daemons.masterapi.LocalFuncs(
-                self.opts.value,
-                self.access_keys.value)
+        self.remote_loader.value = salt.daemons.masterapi.RemoteFuncs(
+                                                        self.opts.value)
+        self.local_loader.value = salt.daemons.masterapi.LocalFuncs(
+                                                        self.opts.value,
+                                                        self.access_keys.value)
         init = {}
         init['route'] = {
                 'src': (None, self.stack.value.local.name, None),
@@ -162,8 +163,8 @@ class SaltRaetWorkerRouter(ioflo.base.deeding.Deed):
             'opts': '.salt.opts',
             #'windex': '.salt.var.fork.worker.windex',
             'worker_verify': '.salt.var.worker_verify',
-            'remote': '.salt.loader.remote',
-            'local': '.salt.loader.local',
+            'remote_loader': '.salt.loader.remote',
+            'local_loader': '.salt.loader.local',
             }
 
     def action(self):
@@ -191,11 +192,11 @@ class SaltRaetWorkerRouter(ioflo.base.deeding.Deed):
                     continue
                 ret = {}
                 if d_share == 'remote_cmd':
-                    if hasattr(self.remote.value, cmd):
-                        ret['return'] = getattr(self.remote.value, cmd)(msg['load'])
+                    if hasattr(self.remote_loader.value, cmd):
+                        ret['return'] = getattr(self.remote_loader.value, cmd)(msg['load'])
                 elif d_share == 'local_cmd':
-                    if hasattr(self.local.value, cmd):
-                        ret['return'] = getattr(self.local.value, cmd)(msg['load'])
+                    if hasattr(self.local_loader.value, cmd):
+                        ret['return'] = getattr(self.local_loader.value, cmd)(msg['load'])
                 else:
                     ret = {'error': 'Invalid request'}
                 if cmd == 'publish' and 'pub' in ret.get('return', {}):
