@@ -38,6 +38,7 @@ Connection module for Amazon VPC
 # Import Python libs
 import logging
 from distutils.version import LooseVersion as _LooseVersion
+from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
 
@@ -143,8 +144,7 @@ def exists(vpc_id=None, name=None, tags=None, region=None, key=None, keyid=None,
         return False
 
     if not vpc_id and not name and not tags:
-        log.error('At least on of the following must be specified: vpc id, name or tags.')
-        return False
+        raise SaltInvocationError('At least on of the following must be specified: vpc id, name or tags.')
 
     try:
         filter_parameters = {'filters': {}}
