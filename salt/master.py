@@ -308,6 +308,7 @@ class Master(SMaster):
         if self.opts['con_cache']:
             log.debug('Starting ConCache')
             process_manager.add_process(ConnectedCache, args=(self.opts,))
+            time.sleep(2)
 
         def run_reqserver():
             reqserv = ReqServer(
