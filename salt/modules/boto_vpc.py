@@ -537,6 +537,9 @@ def dhcp_options_exists(dhcp_options_id=None, name=None, tags=None, region=None,
     if not conn:
         return False
 
+    if not dhcp_options_id and not name and not tags:
+        raise SaltInvocationError('At least on of the following must be specified: dhcp options id, name or tags.')
+
     try:
         filter_parameters = {'filters': {}}
 
