@@ -66,7 +66,6 @@ structure::
 # Import python libs
 import datetime
 import os
-import hashlib
 import time
 import pickle
 import urllib

@@ -5,7 +5,6 @@ Module for managing timezone on POSIX-like systems.
 
 # Import python libs
 import os
-import hashlib
 import logging
 import re
 
