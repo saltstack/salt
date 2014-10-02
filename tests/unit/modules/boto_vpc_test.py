@@ -920,6 +920,11 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
         self.assertFalse(route_table_existence_result)
 
     @mock_ec2
+    def test_that_when_checking_if_a_route_table_exists_but_providing_no_filters_the_route_table_exists_method_raises_a_salt_invocation_error(self):
+        with self.assertRaisesRegexp(SaltInvocationError, 'At least on of the following must be specified: route table id, name or tags.'):
+            boto_vpc.dhcp_options_exists(**conn_parameters)
+
+    @mock_ec2
     @expectedNotImplementedFailure
     def test_that_when_associating_a_route_table_succeeds_the_associate_route_table_method_should_return_the_association_id(
             self):
