@@ -174,7 +174,18 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
                                             self.opts['sock_dir'],
                                             self.opts['transport'],
                                             opts=self.opts)
-        job = self.master_call(**low)
+
+        # The master_call function here has a different function signature than
+        # on WheelClient. So extract all the eauth keys and the fun key and
+        # assume everything else is a kwarg to pass along to the runner
+        # function to be called.
+        auth_creds = dict([(i, low.pop(i))
+            for i in ['username', 'password', 'eauth', 'token'] if i in low])
+        reformatted_low = {'fun': low.pop('fun')}
+        reformatted_low.update(auth_creds)
+        reformatted_low['kwarg'] = low
+
+        job = self.master_call(**reformatted_low)
         ret_tag = tagify('ret', base=job['tag'])
 
         timelimit = time.time() + (timeout or 300)
