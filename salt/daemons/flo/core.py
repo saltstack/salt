@@ -496,7 +496,7 @@ class SaltLoadPillar(ioflo.base.deeding.Deed):
         '''
         # default master is the first remote
         # this default destination will not work with multiple masters
-        route = {'src': (self.udp_stack.value.local.name, 0, None),
+        route = {'src': (self.udp_stack.value.local.name, None, None),
                  'dst': (self.udp_stack.value.remotes.values()[0].name, None, 'remote_cmd')}
         load = {'id': self.opts.value['id'],
                 'grains': self.grains.value,
