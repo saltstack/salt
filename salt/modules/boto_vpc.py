@@ -317,6 +317,9 @@ def subnet_exists(subnet_id=None, name=None, tags=None, region=None, key=None, k
     if not conn:
         return False
 
+    if not subnet_id and not name and not tags:
+        raise SaltInvocationError('At least on of the following must be specified: subnet id, name or tags.')
+
     try:
         filter_parameters = {'filters': {}}
 
