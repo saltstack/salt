@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 
 # import Python Third Party Libs
-from unittest import expectedFailure
 
 from boto.exception import BotoServerError
 from mock import patch
+
 from salt.exceptions import SaltInvocationError
 from salt.modules.boto_vpc import _maybe_set_name_tag, _maybe_set_tags
-
 from tests.utils import expectedNotImplementedFailure, expectedImportFailure
 
 
