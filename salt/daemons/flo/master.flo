@@ -2,14 +2,14 @@
 
 house master
 
-#init .raet.udp.stack.local to main true role "master"
+#init .salt.road.manor.local to main true role "master"
 #init .salt.uxd.stack.local to lanename "master"
 
 framer masterudpstack be active first setup
     frame setup
         enter
             do salt raet cleanup
-            do salt raet road stack setup per inode ".raet.udp.stack"
+            do salt raet road stack setup per inode ".salt.road.manor"
             do salt raet manor lane setup per inode ".salt.uxd.stack"
         go spawnmaint
 
@@ -31,7 +31,7 @@ framer masterudpstack be active first setup
         bid start manager
         bid start outbound
         exit
-            do salt raet road stack closer per inode ".raet.udp.stack."
+            do salt raet road stack closer per inode ".salt.road.manor."
             do salt raet lane stack closer per inode ".salt.uxd.stack."
 
 framer inbound be inactive first start
@@ -52,7 +52,7 @@ framer publish be inactive first start
 
 framer manager be inactive first start at 10.0
     frame start
-         do salt raet road stack manager per inode ".raet.udp.stack"
+         do salt raet road stack manager per inode ".salt.road.manor"
 
 framer outbound be inactive first start
     frame start
