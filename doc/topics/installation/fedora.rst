@@ -7,6 +7,12 @@ repositories and `EPEL`_. It is installable using yum. Fedora will have more
 up to date versions of Salt than other members of the Red Hat family, which
 makes it a great place to help improve Salt!
 
+**WARNING**: Fedora 19 comes with systemd 204.  Systemd has known bugs fixed in
+later revisions that prevent the salt-master from starting reliably or opening
+the network connections that it needs to.  It's not likely that a salt-master
+will start or run reliably on any distribution that uses systemd version 204 or 
+earlier.  Running salt-minions should be OK.
+
 Installation
 ============
 
