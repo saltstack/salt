@@ -22,7 +22,6 @@ def _determine_hyper(data, omit=''):
     # to be much more complicated.
     hyper = ''
     bestmem = 0
-    bestcpu = 0
     for hv_, comps in data.items():
         if hv_ == omit:
             continue
