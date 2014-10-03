@@ -585,9 +585,6 @@ else:
 
 VER = __version__  # pylint: disable=E0602
 DESC = 'Portable, distributed, remote execution and configuration management system'
-print('XXXXXXXXXXXXXXXXX')
-print(NAME)
-print('XXXXXXXXXXXXXXXXX')
 SETUP_KWARGS = {'name': NAME,
                 'version': VER,
                 'description': DESC,
