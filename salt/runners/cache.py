@@ -14,8 +14,8 @@ from salt._compat import string_types
 
 log = logging.getLogger(__name__)
 
-deprecation_warning = ("The 'minion' arg will be removed from "
-                    "cache.py runner. Specify minion with 'tgt' arg!")
+DEPRECATION_WARNING = ("The 'minion' arg will be removed from "
+                       "cache.py runner. Specify minion with 'tgt' arg!")
 
 
 def grains(tgt=None, expr_form='glob', outputter=None, **kwargs):
@@ -30,17 +30,17 @@ def grains(tgt=None, expr_form='glob', outputter=None, **kwargs):
     '''
     deprecated_minion = kwargs.get('minion', None)
     if tgt is None and deprecated_minion is None:
-        log.warn("DEPRECATION WARNING: {0}".format(deprecation_warning))
+        log.warn("DEPRECATION WARNING: {0}".format(DEPRECATION_WARNING))
         tgt = '*'  # targat all minions for backward compatibility
     elif tgt is None and isinstance(deprecated_minion, string_types):
-        log.warn("DEPRECATION WARNING: {0}".format(deprecation_warning))
+        log.warn("DEPRECATION WARNING: {0}".format(DEPRECATION_WARNING))
         tgt = deprecated_minion
     elif tgt is None:
         return {}
     pillar_util = salt.utils.master.MasterPillarUtil(tgt, expr_form,
-                                                use_cached_grains=True,
-                                                grains_fallback=False,
-                                                opts=__opts__)
+                                                     use_cached_grains=True,
+                                                     grains_fallback=False,
+                                                     opts=__opts__)
     cached_grains = pillar_util.get_minion_grains()
     salt.output.display_output(cached_grains, outputter, __opts__)
     return cached_grains
@@ -58,19 +58,19 @@ def pillar(tgt=None, expr_form='glob', outputter=None, **kwargs):
     '''
     deprecated_minion = kwargs.get('minion', None)
     if tgt is None and deprecated_minion is None:
-        log.warn("DEPRECATION WARNING: {0}".format(deprecation_warning))
+        log.warn("DEPRECATION WARNING: {0}".format(DEPRECATION_WARNING))
         tgt = '*'  # targat all minions for backward compatibility
     elif tgt is None and isinstance(deprecated_minion, string_types):
-        log.warn("DEPRECATION WARNING: {0}".format(deprecation_warning))
+        log.warn("DEPRECATION WARNING: {0}".format(DEPRECATION_WARNING))
         tgt = deprecated_minion
     elif tgt is None:
         return {}
     pillar_util = salt.utils.master.MasterPillarUtil(tgt, expr_form,
-                                                use_cached_grains=True,
-                                                grains_fallback=False,
-                                                use_cached_pillar=True,
-                                                pillar_fallback=False,
-                                                opts=__opts__)
+                                                     use_cached_grains=True,
+                                                     grains_fallback=False,
+                                                     use_cached_pillar=True,
+                                                     pillar_fallback=False,
+                                                     opts=__opts__)
     cached_pillar = pillar_util.get_minion_pillar()
     salt.output.display_output(cached_pillar, outputter, __opts__)
     return cached_pillar
@@ -88,19 +88,19 @@ def mine(tgt=None, expr_form='glob', outputter=None, **kwargs):
     '''
     deprecated_minion = kwargs.get('minion', None)
     if tgt is None and deprecated_minion is None:
-        log.warn("DEPRECATION WARNING: {0}".format(deprecation_warning))
+        log.warn("DEPRECATION WARNING: {0}".format(DEPRECATION_WARNING))
         tgt = '*'  # targat all minions for backward compatibility
     elif tgt is None and isinstance(deprecated_minion, string_types):
-        log.warn("DEPRECATION WARNING: {0}".format(deprecation_warning))
+        log.warn("DEPRECATION WARNING: {0}".format(DEPRECATION_WARNING))
         tgt = deprecated_minion
     elif tgt is None:
         return {}
     pillar_util = salt.utils.master.MasterPillarUtil(tgt, expr_form,
-                                                use_cached_grains=False,
-                                                grains_fallback=False,
-                                                use_cached_pillar=False,
-                                                pillar_fallback=False,
-                                                opts=__opts__)
+                                                     use_cached_grains=False,
+                                                     grains_fallback=False,
+                                                     use_cached_pillar=False,
+                                                     pillar_fallback=False,
+                                                     opts=__opts__)
     cached_mine = pillar_util.get_cached_mine_data()
     salt.output.display_output(cached_mine, outputter, __opts__)
 
@@ -117,11 +117,11 @@ def _clear_cache(tgt=None,
     if tgt is None:
         return False
     pillar_util = salt.utils.master.MasterPillarUtil(tgt, expr_form,
-                                            use_cached_grains=True,
-                                            grains_fallback=False,
-                                            use_cached_pillar=True,
-                                            pillar_fallback=False,
-                                            opts=__opts__)
+                                                     use_cached_grains=True,
+                                                     grains_fallback=False,
+                                                     use_cached_pillar=True,
+                                                     pillar_fallback=False,
+                                                     opts=__opts__)
     return pillar_util.clear_cached_minion_data(clear_pillar=clear_pillar_flag,
                                                 clear_grains=clear_grains_flag,
                                                 clear_mine=clear_mine_flag,
