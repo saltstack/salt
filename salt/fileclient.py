@@ -587,9 +587,10 @@ class Client(object):
         else:
             fixed_url = url
         try:
-            req = requests.get(fixed_url)
+            response = requests.get(fixed_url, stream=True)
             with salt.utils.fopen(dest, 'wb') as destfp:
-                destfp.write(req.content)
+                for chunk in response.iter_content(chunk_size=32*1024):
+                    destfp.write(chunk)
             return dest
         except HTTPError as exc:
             raise MinionError('HTTP error {0} reading {1}: {3}'.format(
