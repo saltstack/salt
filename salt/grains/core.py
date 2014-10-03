@@ -116,7 +116,7 @@ def _linux_cpudata():
                 #
                 # Hardware        : BCM2708
                 # Revision        : 0002
-                # Serial          : 00000000XXXXXXXX
+                # Serial          : 00000000
                 elif key == 'Processor':
                     grains['cpu_model'] = val.split('-')[0]
                     grains['num_cpus'] = 1
