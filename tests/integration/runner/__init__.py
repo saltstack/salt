@@ -89,6 +89,16 @@ class RunnerModuleTest(integration.ClientCase):
         self.assertEqual(ret['kwargs']['foo'], 'Foo!')
         self.assertEqual(ret['kwargs']['bar'], 'Bar!')
 
+    def test_wildcard_auth(self):
+        low = {
+            'username': 'the_s0und_of_t3ch',
+            'password': 'willrockyou',
+            'eauth': 'auto',
+            'fun': 'test.arg',
+            'foo': 'Foo!',
+            'bar': 'Bar!',
+        }
+        self.runner.cmd_sync(low)
 
 if __name__ == '__main__':
     from integration import run_tests
