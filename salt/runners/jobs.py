@@ -71,8 +71,6 @@ def lookup_jid(jid, ext_source=None, missing=False, outputter=None):
             ret[minion] = data[minion].get(u'return')
         else:
             ret[minion] = data[minion].get('return')
-        if 'out' in data[minion]:
-            out = data[minion]['out']
     if missing:
         ckminions = salt.utils.minions.CkMinions(__opts__)
         exp = ckminions.check_minions(data['tgt'], data['tgt_type'])
