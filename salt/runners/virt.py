@@ -86,7 +86,7 @@ def query(hyper=None, quiet=False):
     return ret
 
 
-def list(hyper=None, quiet=False):
+def list(hyper=None, quiet=False):  # pylint: disable=redefined-builtin
     '''
     List the virtual machines on each hyper, this is a simplified query,
     showing only the virtual machine names belonging to each hypervisor.
