@@ -132,7 +132,7 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
         do salt raet road stack setup at enter
         '''
         role = self.opts.value.get('id', self.local.data.role)
-        kind = self.opts.value['__role'] # application kind
+        kind = self.opts.value['__role']  # application kind
         sigkey = self.local.data.sigkey
         prikey = self.local.data.prikey
         #name = self.opts.value.get('id', self.local.data.name)
