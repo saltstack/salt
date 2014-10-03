@@ -106,7 +106,7 @@ class SaltEvent(object):
             try:
                 route = {'dst': (None, self.router_yard.name, 'event_req'),
                          'src': (None, self.stack.local.name, None)}
-                msg = {'route': route,}
+                msg = {'route': route}
                 self.stack.transmit(msg, self.router_yard.uid)
                 self.stack.serviceAll()
                 self.connected = True

@@ -58,7 +58,7 @@ class LocalClient(salt.client.LocalClient):
             emsg = ("Invalid application kind '{0}' for client.".format(kind))
             log.error(emsg + '\n')
             raise ValueError(emsg)
-        name =  'client' + nacling.uuid(size=18)
+        name = 'client' + nacling.uuid(size=18)
         stack = LaneStack(
                 name=name,
                 lanename=lanename,
