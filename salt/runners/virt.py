@@ -112,11 +112,11 @@ def list(hyper=None, quiet=False):  # pylint: disable=redefined-builtin
         if not isinstance(info[id_]['ret'], dict):
             continue
         data = {}
-        for k, v in info[id_]['ret'].items():
-            if v['state'] in data:
-                data[v['state']].append(k)
+        for key, val in info[id_]['ret'].items():
+            if val['state'] in data:
+                data[val['state']].append(key)
             else:
-                data[v['state']] = [k]
+                data[val['state']] = [key]
         chunk[id_] = data
         ret.update(chunk)
         if not quiet:
@@ -211,8 +211,8 @@ def init(
 
     if seed:
         print('Minion will be preseeded')
-        kv = salt.utils.virt.VirtKey(hyper, name, __opts__)
-        kv.authorize()
+        kv_ = salt.utils.virt.VirtKey(hyper, name, __opts__)
+        kv_.authorize()
 
     client = salt.client.get_local_client(__opts__['conf_file'])
 
