@@ -178,8 +178,7 @@ def action(
 
         salt '*' cloud.action start instance=myinstance
         salt '*' cloud.action stop instance=myinstance
-        salt '*' cloud.action show_image provider=my-ec2-config \
-            image=ami-1624987f
+        salt '*' cloud.action show_image provider=my-ec2-config image=ami-1624987f
     '''
     client = _get_client()
     info = client.action(fun, cloudmap, names, provider, instance, kwargs)
@@ -194,9 +193,7 @@ def create(provider, names, **kwargs):
 
     .. code-block:: bash
 
-        salt minionname cloud.create my-ec2-config myinstance \
-            image=ami-1624987f size='t1.micro' ssh_username=ec2-user \
-            securitygroup=default delvol_on_destroy=True
+        salt minionname cloud.create my-ec2-config myinstance image=ami-1624987f size='t1.micro' ssh_username=ec2-user securitygroup=default delvol_on_destroy=True
     '''
     client = _get_client()
     info = client.create(provider, names, **kwargs)
@@ -243,8 +240,7 @@ def volume_create(provider, names, **kwargs):
 
     .. code-block:: bash
 
-        salt minionname cloud.volume_create my-nova myblock size=100 \
-                voltype=SSD
+        salt minionname cloud.volume_create my-nova myblock size=100 voltype=SSD
 
     '''
     client = _get_client()
@@ -260,9 +256,7 @@ def volume_attach(provider, names, **kwargs):
 
     .. code-block:: bash
 
-        salt minionname cloud.volume_attach my-nova myblock \
-                server_name=myserver \
-                device='/dev/xvdf'
+        salt minionname cloud.volume_attach my-nova myblock server_name=myserver device='/dev/xvdf'
 
     '''
     client = _get_client()
@@ -278,8 +272,7 @@ def volume_detach(provider, names, **kwargs):
 
     .. code-block:: bash
 
-        salt minionname cloud.volume_detach my-nova myblock \
-                server_name=myserver
+        salt minionname cloud.volume_detach my-nova myblock server_name=myserver
 
     '''
     client = _get_client()
