@@ -752,12 +752,15 @@ class State(object):
             errors.append('High data is not a dictionary and is invalid')
         reqs = {}
         for name, body in high.items():
-            if name.startswith('__'):
-                continue
+            try:
+                if name.startswith('__'):
+                    continue
+            except AttributeError:
+                pass
             if not isinstance(name, string_types):
                 err = ('The name {0} in sls {1} is not formed as a '
-                       'string but is a {2}').format(
-                               name, body['__sls__'], type(name))
+                       'string but is a {2}. It may need to be quoted.'
+                       .format(name, body['__sls__'], type(name)))
                 errors.append(err)
             if not isinstance(body, dict):
                 err = ('The type {0} in {1} is not formated as a dictionary'
@@ -2407,9 +2410,13 @@ class BaseHighState(object):
                         self.merge_included_states(highstate, state, errors)
                     for i, error in enumerate(errors[:]):
                         if 'is not available on the salt master' in error:
-                            errors[i] = (
-                                'No matching sls found for {0!r} '
-                                'in env {1!r}'.format(sls_match, saltenv))
+                            # match SLS foobar in environment
+                            this_sls = 'SLS {0} in environment'.format(
+                                sls_match)
+                            if this_sls in error:
+                                errors[i] = (
+                                    'No matching sls found for {0!r} '
+                                    'in env {1!r}'.format(sls_match, saltenv))
                     all_errors.extend(errors)
 
         self.clean_duplicate_extends(highstate)

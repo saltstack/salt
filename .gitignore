@@ -38,7 +38,7 @@ htmlcov/
 /.project
 /.pydevproject
 /.idea
-/.ropeproject
+.ropeproject
 
 # ignore ctags file
 tags

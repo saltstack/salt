@@ -3,10 +3,12 @@
 Recursively display nested data, this is the default outputter.
 '''
 # Import python libs
+import re
 from numbers import Number
 
 # Import salt libs
 import salt.utils
+from salt._compat import string_types
 
 
 class NestDisplay(object):
@@ -16,59 +18,73 @@ class NestDisplay(object):
     def __init__(self):
         self.colors = salt.utils.get_colors(__opts__.get('color'))
 
+    def ustring(self,
+                indent,
+                color,
+                msg,
+                prefix='',
+                suffix='',
+                endc=None,
+                encoding='utf-8'):
+        if endc is None:
+            endc = self.colors['ENDC']
+        try:
+            return u'{0}{1}{2}{3}{4}{5}\n'.format(
+                indent, color, prefix, msg, endc, suffix)
+        except UnicodeDecodeError:
+            return u'{0}{1}{2}{3}{4}{5}\n'.format(
+                indent, color, prefix, msg.decode(encoding), endc, suffix)
+
     def display(self, ret, indent, prefix, out):
         '''
         Recursively iterate down through data structures to determine output
         '''
         if ret is None or ret is True or ret is False:
-            out += '{0}{1}{2}{3}{4}\n'.format(
-                    ' ' * indent,
-                    self.colors['YELLOW'],
-                    prefix,
-                    ret,
-                    self.colors['ENDC'])
-        # Number includes all python numbers types (float, int, long, complex, ...)
+            out += self.ustring(
+                ' ' * indent,
+                self.colors['YELLOW'],
+                ret,
+                prefix=prefix)
+        # Number includes all python numbers types
+        #  (float, int, long, complex, ...)
         elif isinstance(ret, Number):
-            out += '{0}{1}{2}{3}{4}\n'.format(
-                    ' ' * indent,
-                    self.colors['YELLOW'],
-                    prefix,
-                    ret,
-                    self.colors['ENDC'])
-        elif isinstance(ret, basestring):
-            lines = ret.split('\n')
+            out += self.ustring(
+                ' ' * indent,
+                self.colors['YELLOW'],
+                ret,
+                prefix=prefix)
+        elif isinstance(ret, string_types):
+            lines = re.split(r'\r?\n', ret)
             for line in lines:
-                out += '{0}{1}{2}{3}{4}\n'.format(
-                        ' ' * indent,
-                        self.colors['GREEN'],
-                        prefix,
-                        line,
-                        self.colors['ENDC'])
+                out += self.ustring(
+                    ' ' * indent,
+                    self.colors['GREEN'],
+                    line,
+                    prefix=prefix)
         elif isinstance(ret, list) or isinstance(ret, tuple):
             for ind in ret:
-                if isinstance(ind, (list, tuple)):
-                    out += '{0}{1}|_{2}\n'.format(
-                            ' ' * indent,
-                            self.colors['GREEN'],
-                            self.colors['ENDC'])
-                    out = self.display(ind, indent + 2, '- ', out)
+                if isinstance(ind, (list, tuple, dict)):
+                    out += self.ustring(' ' * indent,
+                                        self.colors['GREEN'],
+                                        '|_')
+                    prefix = '' if isinstance(ind, dict) else '- '
+                    out = self.display(ind, indent + 2, prefix, out)
                 else:
                     out = self.display(ind, indent, '- ', out)
         elif isinstance(ret, dict):
             if indent:
-                out += '{0}{1}{2}{3}\n'.format(
-                        ' ' * indent,
-                        self.colors['CYAN'],
-                        '-' * 10,
-                        self.colors['ENDC'])
+                out += self.ustring(
+                    ' ' * indent,
+                    self.colors['CYAN'],
+                    '-' * 10)
             for key in sorted(ret):
                 val = ret[key]
-                out += '{0}{1}{2}{3}{4}:\n'.format(
-                        ' ' * indent,
-                        self.colors['CYAN'],
-                        prefix,
-                        key,
-                        self.colors['ENDC'])
+                out += self.ustring(
+                    ' ' * indent,
+                    self.colors['CYAN'],
+                    key,
+                    suffix=":",
+                    prefix=prefix)
                 out = self.display(val, indent + 4, '', out)
         return out
 

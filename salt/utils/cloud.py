@@ -391,7 +391,7 @@ def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
                 log.debug('Using {0} as the key_filename'.format(key_filename))
             elif password:
                 kwargs['password'] = password
-                log.debug('Using password authentication'.format(password))
+                log.debug('Using password authentication')
 
             trycount += 1
             log.debug(
@@ -629,12 +629,12 @@ def deploy_script(host, port=22, timeout=900, username='root',
 
             # Minion configuration
             if minion_pem:
-                scp_file('{0}/minion.pem'.format(tmp_dir), minion_pem, kwargs)
+                sftp_file('{0}/minion.pem'.format(tmp_dir), minion_pem, kwargs)
                 root_cmd('chmod 600 {0}/minion.pem'.format(tmp_dir),
                          tty, sudo, **kwargs)
 
             if minion_pub:
-                scp_file('{0}/minion.pub'.format(tmp_dir), minion_pub, kwargs)
+                sftp_file('{0}/minion.pub'.format(tmp_dir), minion_pub, kwargs)
 
             if minion_conf:
                 if not isinstance(minion_conf, dict):
@@ -647,12 +647,12 @@ def deploy_script(host, port=22, timeout=900, username='root',
                     )
                 minion_grains = minion_conf.pop('grains', {})
                 if minion_grains:
-                    scp_file(
+                    sftp_file(
                         '{0}/grains'.format(tmp_dir),
                         salt_config_to_yaml(minion_grains),
                         kwargs
                     )
-                scp_file(
+                sftp_file(
                     '{0}/minion'.format(tmp_dir),
                     salt_config_to_yaml(minion_conf),
                     kwargs
@@ -660,12 +660,12 @@ def deploy_script(host, port=22, timeout=900, username='root',
 
             # Master configuration
             if master_pem:
-                scp_file('{0}/master.pem'.format(tmp_dir), master_pem, kwargs)
+                sftp_file('{0}/master.pem'.format(tmp_dir), master_pem, kwargs)
                 root_cmd('chmod 600 {0}/master.pem'.format(tmp_dir),
                          tty, sudo, **kwargs)
 
             if master_pub:
-                scp_file('{0}/master.pub'.format(tmp_dir), master_pub, kwargs)
+                sftp_file('{0}/master.pub'.format(tmp_dir), master_pub, kwargs)
 
             if master_conf:
                 if not isinstance(master_conf, dict):
@@ -677,7 +677,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
                         'Loading from YAML ...'
                     )
 
-                scp_file(
+                sftp_file(
                     '{0}/master'.format(tmp_dir),
                     salt_config_to_yaml(master_conf),
                     kwargs
@@ -709,7 +709,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
                     rpath = os.path.join(
                         preseed_minion_keys_tempdir, minion_id
                     )
-                    scp_file(rpath, minion_key, kwargs)
+                    sftp_file(rpath, minion_key, kwargs)
 
                 if kwargs['username'] != 'root':
                     root_cmd(
@@ -721,7 +721,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
 
             # The actual deploy script
             if script:
-                scp_file('{0}/deploy.sh'.format(tmp_dir), script, kwargs)
+                sftp_file('{0}/deploy.sh'.format(tmp_dir), script, kwargs)
                 root_cmd('chmod +x {0}/deploy.sh'.format(tmp_dir),
                          tty, sudo, **kwargs)
 
@@ -778,7 +778,7 @@ def deploy_script(host, port=22, timeout=900, username='root',
                     environ_script_contents.append(deploy_command)
 
                     # Upload our environ setter wrapper
-                    scp_file(
+                    sftp_file(
                         '{0}/environ-deploy-wrapper.sh'.format(tmp_dir),
                         '\n'.join(environ_script_contents),
                         kwargs
@@ -975,7 +975,7 @@ def scp_file(dest_path, contents, kwargs, allow_failure=False):
         log.debug('Uploading file(PID {0}): {1!r}'.format(proc.pid, dest_path))
 
         sent_password = 0
-        while proc.isalive():
+        while True:
             stdout, stderr = proc.recv()
             if stdout and SSH_PASSWORD_PROMP_RE.match(stdout):
                 if sent_password > 2:
@@ -983,14 +983,13 @@ def scp_file(dest_path, contents, kwargs, allow_failure=False):
                     log.warning(
                         'Asking for password again. Wrong one provided???'
                     )
-                    proc.terminate()
                     return 1
 
                 proc.sendline(kwargs['password'])
                 sent_password += 1
-
+            if not proc.isalive():
+                break
             time.sleep(0.025)
-        proc.close(force=True)
         if allow_failure is False:
             raise SaltCloudSystemExit(
                 'Failed to upload {0} to {1}. Exit code: {2}'.format(
@@ -1005,6 +1004,94 @@ def scp_file(dest_path, contents, kwargs, allow_failure=False):
             ),
             exc_info=True
         )
+    finally:
+        proc.close(force=True)
+
+    # Signal an error
+    return 1
+
+
+def sftp_file(dest_path, contents, kwargs, allow_failure=False):
+    '''
+    Use sftp to upload a file to a server
+    '''
+    tmpfh, tmppath = tempfile.mkstemp()
+    with salt.utils.fopen(tmppath, 'w') as tmpfile:
+        tmpfile.write(contents)
+
+    log.debug('Uploading {0} to {1} (scp)'.format(dest_path, kwargs['hostname']))
+
+    ssh_args = [
+        # Don't add new hosts to the host key database
+        '-oStrictHostKeyChecking=no',
+        # Set hosts key database path to /dev/null, ie, non-existing
+        '-oUserKnownHostsFile=/dev/null',
+        # Don't re-use the SSH connection. Less failures.
+        '-oControlPath=none'
+    ]
+    if 'key_filename' in kwargs:
+        # There should never be both a password and an ssh key passed in, so
+        ssh_args.extend([
+            # tell SSH to skip password authentication
+            '-oPasswordAuthentication=no',
+            '-oChallengeResponseAuthentication=no',
+            # Make sure public key authentication is enabled
+            '-oPubkeyAuthentication=yes',
+            # No Keyboard interaction!
+            '-oKbdInteractiveAuthentication=no',
+            # Also, specify the location of the key file
+            '-i {0}'.format(kwargs['key_filename'])
+        ])
+
+    cmd = 'echo "put {0} {1}" | sftp {2} {3[username]}@{3[hostname]}'.format(
+        tmppath, dest_path, ' '.join(ssh_args), kwargs
+    )
+
+    log.debug('Upload file command command: {0!r}'.format(cmd))
+
+    try:
+        proc = vt.Terminal(
+            cmd,
+            shell=True,
+            log_stdout=True,
+            log_stderr=True,
+            stream_stdout=kwargs.get('display_ssh_output', True),
+            stream_stderr=kwargs.get('display_ssh_output', True)
+        )
+        log.debug('Uploading file(PID {0}): {1!r}'.format(proc.pid, dest_path))
+
+        sent_password = 0
+        while True:
+            stdout, stderr = proc.recv()
+            if stdout and SSH_PASSWORD_PROMP_RE.match(stdout):
+                if sent_password > 2:
+                    # 3rd time??? Wrong password?
+                    log.warning(
+                        'Asking for password again. Wrong one provided???'
+                    )
+                    return 1
+
+                proc.sendline(kwargs['password'])
+                sent_password += 1
+            if not proc.isalive():
+                break
+            time.sleep(0.025)
+        if allow_failure is False:
+            raise SaltCloudSystemExit(
+                'Failed to upload {0} to {1}. Exit code: {2}'.format(
+                    tmppath, dest_path, proc.exitstatus
+                )
+            )
+        return proc.exitstatus
+    except vt.TerminalException as err:
+        log.error(
+            'Failed to upload file {0!r}: {1}\n'.format(
+                dest_path, err
+            ),
+            exc_info=True
+        )
+    finally:
+        proc.close(force=True)
 
     # Signal an error
     return 1
@@ -1127,7 +1214,7 @@ def root_cmd(command, tty, sudo, **kwargs):
         )
 
         sent_password = False
-        while proc.isalive():
+        while True:
             stdout, stderr = proc.recv()
             if stdout and SSH_PASSWORD_PROMP_RE.match(stdout):
                 if sent_password:
@@ -1135,15 +1222,14 @@ def root_cmd(command, tty, sudo, **kwargs):
                     log.warning(
                         'Asking for password again. Wrong one provided???'
                     )
-                    proc.terminate()
                     return 1
 
                 proc.sendline(kwargs['password'])
                 sent_password = True
 
+            if not proc.isalive():
+                break
             time.sleep(0.025)
-
-        proc.close(force=True)
         return proc.exitstatus
     except vt.TerminalException as err:
         log.error(
@@ -1152,6 +1238,8 @@ def root_cmd(command, tty, sudo, **kwargs):
             ),
             exc_info=True
         )
+    finally:
+        proc.close(force=True)
 
     # Signal an error
     return 1

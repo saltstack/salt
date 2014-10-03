@@ -151,6 +151,7 @@ def _linux_gpu_data():
 
     # dominant gpu vendors to search for (MUST be lowercase for matching below)
     known_vendors = ['nvidia', 'amd', 'ati', 'intel']
+    gpu_classes = ('vga compatible controller', '3d controller')
 
     devs = []
     try:
@@ -165,9 +166,8 @@ def _linux_gpu_data():
         for line in lspci_list:
             # check for record-separating empty lines
             if line == '':
-                if cur_dev.get('Class', '') == 'VGA compatible controller':
+                if cur_dev.get('Class', '').lower() in gpu_classes:
                     devs.append(cur_dev)
-                # XXX; may also need to search for "3D controller"
                 cur_dev = {}
                 continue
             if re.match(r'^\w+:\s+.*', line):
@@ -983,7 +983,7 @@ def os_data():
 
     # Load additional OS family grains
     if grains['os_family'] == "RedHat":
-        grains['osmajorrelease'] = grains['osrelease'].split('.', 1)
+        grains['osmajorrelease'] = grains['osrelease'].split('.', 1)[0]
 
         grains['osfinger'] = '{os}-{ver}'.format(
             os=grains['osfullname'],
