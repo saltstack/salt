@@ -19,7 +19,7 @@ framer minionudpstack be active first setup
         bid start bootstrap
         bid start eventing
         bid start functionmanager
-        bid start manager
+        #bid start manager #started below in bootstrap<<router>
         bid start outbound
         bid start scheduler
 
@@ -73,7 +73,7 @@ framer bootstrap be inactive first join
         go router
 
     frame router
-        bid start manager #start alive presence from minion side
+        #bid start manager #start alive presence from minion side
         do salt raet router
         go pillar if .salt.var.pillar_refresh
         go loading if .salt.var.module_refresh

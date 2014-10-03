@@ -25,6 +25,7 @@ from raet.road.estating import RemoteEstate
 from raet.lane.stacking import LaneStack
 from raet.lane.yarding import RemoteYard
 
+from salt import daemons
 from salt.daemons import salting
 
 from salt.exceptions import (
@@ -131,14 +132,22 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
 
         do salt raet road stack setup at enter
         '''
-        role = self.opts.value.get('id', self.local.data.role)
+
         kind = self.opts.value['__role'] # application kind
+        if kind not in daemons.APPL_KINDS:
+            emsg = ("Invalid application kind = '{0}'.".format(kind))
+            log.error(emsg + '\n')
+            raise ValueError(emsg)
+        role = self.opts.value.get('id', '')
+        if not role:
+            emsg = ("Missing role required to setup RoadStack.")
+            log.error(emsg + "\n")
+            raise ValueError(emsg)
+
+        name = "{0}_{1}".format(role, kind)
+
         sigkey = self.local.data.sigkey
         prikey = self.local.data.prikey
-        #name = self.opts.value.get('id', self.local.data.name)
-        #name = LocalEstate.nameGuid(prefix='road') # name is  guid
-        #name = 'stack_' +  role
-        name = role
         main = self.opts.value.get('raet_main', self.local.data.main)
         mutable = self.opts.value.get('raet_mutable', self.local.data.mutable)
         always = self.opts.value.get('open_mode', False)
@@ -586,13 +595,27 @@ class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
         '''
         Run once at enter
         '''
-        name = 'manor'
         kind = self.opts.value['__role']
+        if kind not in daemons.APPL_KINDS:
+            emsg = ("Invalid application kind = '{0}' for manor lane.".format(kind))
+            log.error(emsg + "\n")
+            raise ValueError(emsg)
+
         if kind == 'master':
             lanename = 'master'
+        elif kind == 'minion':
+            role = self.opts.value.get('id', '')
+            if not role:
+                emsg = ("Missing role required to setup manor Lane.")
+                log.error(emsg + "\n")
+                raise ValueError(emsg)
+            lanename = "{0}_{1}".format(role, kind)
         else:
-            lanename = self.opts.value.get('id', self.local.data.lanename)
+            emsg = ("Unsupported application kind = '{0}' for manor Lane.".format(kind))
+            log.error(emsg + '\n')
+            raise ValueError(emsg)
 
+        name = 'manor'
         self.stack.value = LaneStack(
                                     name=name,
                                     lanename=lanename,
@@ -1001,20 +1024,38 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
         to communicate with the minion manor yard
 
         '''
-        mid = self.opts['id']
-        uid = nacling.uuid(size=18)
-        name = 'jobber' + uid
+        role = self.opts.get('id', '')
+        if not role:
+            emsg = ("Missing role required to setup Jobber Lane.")
+            log.error(emsg + "\n")
+            raise ValueError(emsg)
+
+        kind = self.opts['__role']
+        if kind not in daemons.APPL_KINDS:
+            emsg = ("Invalid application kind = '{0}' for Jobber lane.".format(kind))
+            log.error(emsg + "\n")
+            raise ValueError(emsg)
+
+        if kind == 'minion':
+            lanename = "{0}_{1}".format(role, kind)
+        else:
+            emsg = ("Unsupported application kind = '{0}' for Jobber Lane.".format(kind))
+            log.error(emsg + '\n')
+            raise ValueError(emsg)
+
+        sockdirpath = self.opts['sock_dir']
+        name = 'jobber' + nacling.uuid(size=18)
         stack = LaneStack(
                 name=name,
-                lanename=mid,
-                sockdirpath=self.opts['sock_dir'])
+                lanename=lanename,
+                sockdirpath=sockdirpath)
 
         stack.Pk = raeting.packKinds.pack
         # add remote for the manor yard
         stack.addRemote(RemoteYard(stack=stack,
                                    name='manor',
-                                   lanename=mid,
-                                   dirpath=self.opts['sock_dir']))
+                                   lanename=lanename,
+                                   dirpath=sockdirpath))
         console.concise("Created Jobber Stack {0}\n".format(stack.name))
         return stack
 
