@@ -769,7 +769,7 @@ def _windows_platform_data():
             'motherboard': {
                 'productname': motherboardinfo.Product,
                 'serialnumber': motherboardinfo.SerialNumber
-             }
+            }
         }
 
         # test for virtualized environments
