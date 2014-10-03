@@ -811,7 +811,6 @@ class LocalClient(object):
                 else:
                     yield None
 
-
     def get_iter_returns(
             self,
             jid,
