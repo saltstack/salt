@@ -145,6 +145,7 @@ class EventListener(object):
     def __init__(self, mod_opts, opts):
         self.mod_opts = mod_opts
         self.opts = opts
+
         self.event = salt.utils.event.get_event(
             'master',
             opts['sock_dir'],
