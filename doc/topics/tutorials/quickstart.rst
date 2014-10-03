@@ -17,6 +17,12 @@ commands with ``salt``, we use the ``salt-call`` command, like this:
 
     salt-call --local state.highstate
 
+.. note::
+
+    When running Salt in masterless mode, do not run the salt-minion daemon.
+    Otherwise, it will attempt to connect to a master and fail. The salt-call
+    command stands on its own and does not need the salt-minion daemon.
+
 Bootstrap Salt Minion
 =====================
 
