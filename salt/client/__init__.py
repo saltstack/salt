@@ -46,8 +46,9 @@ from salt.exceptions import (
 # Import third party libs
 try:
     import zmq
+    HAS_ZMQ = True
 except ImportError:
-    pass
+    HAS_ZMQ = False
 
 # Try to import range from https://github.com/ytoolshed/range
 HAS_RANGE = False
@@ -791,17 +792,25 @@ class LocalClient(object):
         if event is None:
             event = self.event
         while True:
-            try:
+            if HAS_ZMQ:
+                try:
+                    raw = event.get_event_noblock()
+                    if raw and raw.get('tag', '').startswith(jid):
+                        yield raw
+                    else:
+                        yield None
+                except zmq.ZMQError as ex:
+                    if ex.errno == errno.EAGAIN or ex.errno == errno.EINTR:
+                        yield None
+                    else:
+                        raise
+            else:
                 raw = event.get_event_noblock()
                 if raw and raw.get('tag', '').startswith(jid):
                     yield raw
                 else:
                     yield None
-            except zmq.ZMQError as ex:
-                if ex.errno == errno.EAGAIN or ex.errno == errno.EINTR:
-                    yield None
-                else:
-                    raise
+
 
     def get_iter_returns(
             self,
