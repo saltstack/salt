@@ -29,6 +29,7 @@ _supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
 import salt.log
 import salt.utils
 import salt.utils.network
+import salt.utils.cmd
 from salt._compat import string_types
 
 # Solve the Chicken and egg problem where grains need to run before any
@@ -36,9 +37,9 @@ from salt._compat import string_types
 import salt.modules.cmdmod
 
 __salt__ = {
-    'cmd.run': salt.modules.cmdmod._run_quiet,
-    'cmd.retcode': salt.modules.cmdmod._retcode_quiet,
-    'cmd.run_all': salt.modules.cmdmod._run_all_quiet
+    'cmd.run': salt.utils.cmd.run_quiet,
+    'cmd.retcode': salt.utils.cmd.retcode_quiet,
+    'cmd.run_all': salt.utils.cmd.run_all_quiet
 }
 log = logging.getLogger(__name__)
 

@@ -45,6 +45,7 @@ import os
 
 # Import salt libs
 import salt.utils
+import salt.utils.cmd
 
 __func_alias__ = {
     'reload_': 'reload'
@@ -64,7 +65,7 @@ def __virtual__():
     elif __grains__['os'] in ('Debian', 'Raspbian'):
         debian_initctl = '/sbin/initctl'
         if os.path.isfile(debian_initctl):
-            initctl_version = salt.modules.cmdmod._run_quiet(debian_initctl + ' version')
+            initctl_version = salt.utils.cmd.run_quiet(debian_initctl + ' version')
             if 'upstart' in initctl_version:
                 return __virtualname__
     return False
