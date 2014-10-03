@@ -253,19 +253,20 @@ def _run(cmd,
         try:
             # Getting the environment for the runas user
             # There must be a better way to do this.
-            py_code = '''import os, itertools; print \"\\0\".join(itertools.chain(*os.environ.items()))'''
+            py_code = (
+                'import os, itertools; '
+                'print \"\\0\".join(itertools.chain(*os.environ.items()))'
+            )
             if __grains__['os'] in ['MacOS', 'Darwin']:
-                env_cmd = ('sudo -i -u {0} -- "{1}"'
-                           ).format(runas, sys.executable)
+                env_cmd = ('sudo', '-i', '-u', runas, '--',
+                           sys.executable)
             elif __grains__['os'] in ['FreeBSD']:
-                env_cmd = ('su - {1} -c "{0} -c \'{2}\'"'
-                           ).format(shell, runas, sys.executable)
+                env_cmd = ('su', '-', runas, '-c',
+                           "{0} -c {1}".format(shell, sys.executable))
             else:
-                env_cmd = ('su -s {0} - {1} -c "{2}"'
-                           ).format(shell, runas, sys.executable)
+                env_cmd = ('su', '-s', shell, '-', runas, '-c', sys.executable)
             env_encoded = subprocess.Popen(
                 env_cmd,
-                shell=python_shell,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE
             ).communicate(py_code)[0]

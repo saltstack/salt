@@ -88,7 +88,7 @@ class RAETChannel(Channel):
         not already setup such as in salt-call to communicate to-from the minion
 
         '''
-        kind = self.opts.get('__role', '') # application kind 'master', 'minion', etc
+        kind = self.opts.get('__role', '')  # application kind 'master', 'minion', etc
         if not kind:
             emsg = ("Missing opts['__role']. required to setup RAETChannel.")
             log.error(emsg + "\n")
@@ -101,13 +101,12 @@ class RAETChannel(Channel):
                 emsg = ("Missing opts['id']. required to setup RAETChannel.")
                 log.error(emsg + "\n")
                 raise ValueError(emsg)
-            lanename = role # add kind later
+            lanename = role  # add kind later
         else:
             emsg = ("Unsupported application kind '{0}' for RAETChannel "
-                                "Raet.".format(self.node))
+                                "Raet.".format(kind))
             log.error(emsg + '\n')
             raise ValueError(emsg)
-
 
         mid = self.opts.get('id', 'master')
         uid = nacling.uuid(size=18)

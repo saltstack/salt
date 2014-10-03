@@ -846,6 +846,9 @@ class LocalClient(object):
         # iterator for the info of this job
         jinfo_iter = []
         jinfo_timeout = time.time() + timeout
+        # are there still minions running the job out there
+        # start as True so that we ping at least once
+        minions_running = True
         while True:
             # Process events until timeout is reached or all minions have returned
             for raw in ret_iter:
@@ -886,15 +889,14 @@ class LocalClient(object):
                 break
 
             # let start the timeouts for all remaining minions
-            missing_minions = minions - found
-            for id_ in missing_minions:
+            for id_ in minions - found:
                 # if we have a new minion in the list, make sure it has a timeout
                 if id_ not in minion_timeouts:
                     minion_timeouts[id_] = time.time() + timeout
 
-            # if we don't have the job info iterator (or its timed out),
-            # lets make it assuming we have more minions to ping for
-            if time.time() > jinfo_timeout and missing_minions:
+            # if the jinfo has timed out and some minions are still running the job
+            # re-do the ping
+            if time.time() > jinfo_timeout and minions_running:
                 # need our own event listener, so we don't clobber the class one
                 event = salt.utils.event.get_event(
                         'master',
@@ -904,7 +906,9 @@ class LocalClient(object):
                         listen=not self.opts.get('__worker', False))
                 # start listening for new events, before firing off the pings
                 event.connect_pub()
+                # since this is a new ping, no one has responded yet
                 jinfo = self.gather_job_info(jid, tgt, tgt_type)
+                minions_running = False
                 # if we weren't assigned any jid that means the master thinks
                 # we have nothing to send
                 if 'jid' not in jinfo:
@@ -938,13 +942,15 @@ class LocalClient(object):
                     minions.add(raw['data']['id'])
                 # update this minion's timeout, as long as the job is still running
                 minion_timeouts[raw['data']['id']] = time.time() + timeout
+                # a minion returned, so we know its running somewhere
+                minions_running = True
 
             # if we have hit gather_job_timeout (after firing the job) AND
             # if we have hit all minion timeouts, lets call it
             now = time.time()
-            # if we have finished pinging all the minions
-            done = now > jinfo_timeout
-            # only check minion timeouts if the ping job is all done
+            # if we have finished waiting, and no minions are running the job
+            # then we need to see if each minion has timedout
+            done = (now > jinfo_timeout) and not minions_running
             if done:
                 # if all minions have timeod out
                 for id_ in minions - found:

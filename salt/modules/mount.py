@@ -194,7 +194,7 @@ def fstab(config='/etc/fstab'):
     return ret
 
 
-def rm_fstab(name, config='/etc/fstab'):
+def rm_fstab(name, device, config='/etc/fstab'):
     '''
     Remove the mount point from the fstab
 
@@ -226,8 +226,12 @@ def rm_fstab(name, config='/etc/fstab'):
                     lines.append(line)
                     continue
                 comps = line.split()
-                if comps[1] == name:
-                    continue
+                if device:
+                    if comps[1] == name and comps[0] == device:
+                        continue
+                else:
+                    if comps[1] == name:
+                        continue
                 lines.append(line)
     except (IOError, OSError) as exc:
         msg = "Couldn't read from {0}: {1}"
@@ -425,7 +429,7 @@ def remount(name, device, mkmnt=False, fstype='', opts='defaults'):
     return mount(name, device, mkmnt, fstype, opts)
 
 
-def umount(name):
+def umount(name, device):
     '''
     Attempt to unmount a device by specifying the directory it is mounted on
 
@@ -434,12 +438,19 @@ def umount(name):
     .. code-block:: bash
 
         salt '*' mount.umount /mnt/foo
+
+        .. versionadded:: Lithium
+
+        salt '*' mount.umount /mnt/foo /dev/xvdc1
     '''
     mnts = active()
     if name not in mnts:
         return "{0} does not have anything mounted".format(name)
 
-    cmd = 'umount {0}'.format(name)
+    if not device:
+        cmd = 'umount {0}'.format(name)
+    else:
+        cmd = 'umount {0}'.format(device)
     out = __salt__['cmd.run_all'](cmd)
     if out['retcode']:
         return out['stderr']

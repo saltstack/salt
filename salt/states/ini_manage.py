@@ -28,8 +28,7 @@ def options_present(name, sections=None):
     .. code-block:: yaml
 
         /home/saltminion/api-paste.ini:
-          ini_manage:
-            - options_present
+          ini.options_present:
             - sections:
                 test:
                   testkey: 'testval'
@@ -77,8 +76,7 @@ def options_absent(name, sections=None):
     .. code-block:: yaml
 
         /home/saltminion/api-paste.ini:
-          ini_manage:
-            - options_absent
+          ini.options_present:
             - sections:
                 test:
                   - testkey
@@ -122,8 +120,7 @@ def sections_present(name, sections=None):
     .. code-block:: yaml
 
         /home/saltminion/api-paste.ini:
-          ini_manage:
-            - sections_present
+          ini.sections_present:
             - sections:
                 test:
                   testkey: testval
@@ -168,8 +165,7 @@ def sections_absent(name, sections=None):
     .. code-block:: yaml
 
         /home/saltminion/api-paste.ini:
-          ini_manage:
-            - sections_absent
+          ini.sections_absent:
             - sections:
                 - test
                 - test1

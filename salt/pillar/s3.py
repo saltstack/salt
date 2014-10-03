@@ -329,12 +329,10 @@ def _get_file_from_s3(creds, metadata, saltenv, bucket, path,
         file_md5 = filter(str.isalnum, file_meta['ETag']) \
             if file_meta else None
 
-        cached_file_hash = hashlib.md5()
-        with salt.utils.fopen(cached_file_path, 'rb') as fp_:
-            cached_file_hash.update(fp_.read())
+        cached_md5 = salt.utils.get_hash(cached_file_path, 'md5')
 
         # hashes match we have a cache hit
-        if cached_file_hash.hexdigest() == file_md5:
+        if cached_md5 == file_md5:
             return
 
     # ... or get the file from S3
