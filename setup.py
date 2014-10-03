@@ -104,6 +104,9 @@ SALT_SYSPATHS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'salt', 'syspaths.p
 
 # Salt SSH Packaging Detection
 PACKAGED_FOR_SALT_SSH_FILE = os.path.join(os.path.abspath(SETUP_DIRNAME), '.salt-ssh-package')
+if '--ssh-packaging' in sys.argv:
+    with open(PACKAGED_FOR_SALT_SSH_FILE, 'w+') as fp_:
+        fp_.write(' ')
 PACKAGED_FOR_SALT_SSH = os.path.isfile(PACKAGED_FOR_SALT_SSH_FILE)
 
 # pylint: disable=W0122
@@ -582,7 +585,9 @@ else:
 
 VER = __version__  # pylint: disable=E0602
 DESC = 'Portable, distributed, remote execution and configuration management system'
-
+print('XXXXXXXXXXXXXXXXX')
+print(NAME)
+print('XXXXXXXXXXXXXXXXX')
 SETUP_KWARGS = {'name': NAME,
                 'version': VER,
                 'description': DESC,
