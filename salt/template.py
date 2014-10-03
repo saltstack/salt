@@ -19,6 +19,9 @@ log = logging.getLogger(__name__)
 
 
 def string_io(data=None):  # cStringIO can't handle unicode
+    '''
+    Pass data through to stringIO module and return result
+    '''
     try:
         return cStringIO(bytes(data))
     except UnicodeEncodeError:
