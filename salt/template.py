@@ -90,7 +90,7 @@ def compile_template(template,
             time.sleep(0.01)
             ret = render(input_data, saltenv, sls, **render_kwargs)
         input_data = ret
-        if log.isEnabledFor(logging.GARBAGE):
+        if log.isEnabledFor(logging.GARBAGE):  # pylint: disable=no-member
             try:
                 log.debug('Rendered data from file: {0}:\n{1}'.format(
                     template,
