@@ -97,8 +97,10 @@ class WheelClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
             })
             {'minions': {'jerry': '5d:f6:79:43:5e:d4:42:3f:57:b8:45:a8:7e:a4:6e:ca'}}
         '''
-        sevent = salt.utils.event.get_event('master', self.opts['sock_dir'],
-                self.opts['transport'])
+        sevent = salt.utils.event.get_event('master',
+                                            self.opts['sock_dir'],
+                                            self.opts['transport'],
+                                            opts=self.opts)
         job = self.master_call(**low)
         ret_tag = tagify('ret', base=job['tag'])
 

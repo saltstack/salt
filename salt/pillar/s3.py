@@ -61,7 +61,6 @@ Multiple environment mode must have this bucket structure:
 import logging
 import os
 import time
-import hashlib
 import pickle
 import urllib
 from copy import deepcopy
@@ -87,8 +86,15 @@ class S3Credentials(object):
         self.verify_ssl = verify_ssl
 
 
-def ext_pillar(minion_id, pillar, bucket, key, keyid, verify_ssl,
-               multiple_env=False, environment='base', service_url=None):
+def ext_pillar(minion_id,
+               pillar,  # pylint: disable=W0613
+               bucket,
+               key,
+               keyid,
+               verify_ssl,
+               multiple_env=False,
+               environment='base',
+               service_url=None):
     '''
     Execute a command and read the output as YAML
     '''
@@ -329,12 +335,10 @@ def _get_file_from_s3(creds, metadata, saltenv, bucket, path,
         file_md5 = filter(str.isalnum, file_meta['ETag']) \
             if file_meta else None
 
-        cached_file_hash = hashlib.md5()
-        with salt.utils.fopen(cached_file_path, 'rb') as fp_:
-            cached_file_hash.update(fp_.read())
+        cached_md5 = salt.utils.get_hash(cached_file_path, 'md5')
 
         # hashes match we have a cache hit
-        if cached_file_hash.hexdigest() == file_md5:
+        if cached_md5 == file_md5:
             return
 
     # ... or get the file from S3

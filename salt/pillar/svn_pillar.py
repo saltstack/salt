@@ -152,7 +152,9 @@ def _extract_key_val(kv, delimiter='='):
     return key, val
 
 
-def ext_pillar(minion_id, pillar, repo_string):
+def ext_pillar(minion_id,
+               pillar,  # pylint: disable=W0613
+               repo_string):
     '''
     Execute a command and read the output as YAML
     '''

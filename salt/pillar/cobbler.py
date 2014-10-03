@@ -40,7 +40,10 @@ __opts__ = {'cobbler.url': 'http://localhost/cobbler_api',
 log = logging.getLogger(__name__)
 
 
-def ext_pillar(minion_id, pillar, key=None, only=()):
+def ext_pillar(minion_id,
+               pillar,  # pylint: disable=W0613
+               key=None,
+               only=()):
     '''
     Read pillar data from Cobbler via its API.
     '''
