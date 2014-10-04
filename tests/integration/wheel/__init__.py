@@ -57,6 +57,16 @@ class WheelModuleTest(integration.ClientCase):
             'token': token['token'],
         })
 
+    def test_wildcard_auth(self):
+        low = {
+            'username': 'the_s0und_of_t3ch',
+            'password': 'willrockyou',
+            'eauth': 'auto',
+            'fun': 'key.list_all',
+        }
+
+        self.wheel.cmd_sync(low)
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(WheelModuleTest, needs_daemon=True)

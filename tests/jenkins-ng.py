@@ -18,7 +18,6 @@ import sys
 import json
 import time
 import shutil
-import hashlib
 import argparse
 import requests
 import subprocess

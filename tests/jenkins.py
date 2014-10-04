@@ -17,7 +17,6 @@ import sys
 import json
 import time
 import shutil
-import hashlib
 import optparse
 import subprocess
 

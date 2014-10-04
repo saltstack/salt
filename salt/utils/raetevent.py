@@ -69,20 +69,18 @@ class SaltEvent(object):
                     "Raet.".format(self.node))
             log.error(emsg + '\n')
             raise ValueError(emsg)
-        self.yid = nacling.uuid(size=18)
-        name = 'event' + self.yid
+
+        name = 'event' + nacling.uuid(size=18)
         cachedir = self.opts.get('cachedir', os.path.join(syspaths.CACHE_DIR, self.node))
         self.connected = False
         self.stack = LaneStack(
                 name=name,
-                uid=self.yid,
                 lanename=lanename,
                 sockdirpath=self.sock_dir)
         self.stack.Pk = raeting.packKinds.pack
         self.router_yard = RemoteYard(
                 stack=self.stack,
                 lanename=lanename,
-                #uid=0,
                 name='manor',
                 dirpath=self.sock_dir)
         self.stack.addRemote(self.router_yard)
@@ -108,9 +106,7 @@ class SaltEvent(object):
             try:
                 route = {'dst': (None, self.router_yard.name, 'event_req'),
                          'src': (None, self.stack.local.name, None)}
-                msg = {
-                        'route': route,
-                        'load': {'yid': self.yid, 'dirpath': self.sock_dir}}
+                msg = {'route': route}
                 self.stack.transmit(msg, self.router_yard.uid)
                 self.stack.serviceAll()
                 self.connected = True
