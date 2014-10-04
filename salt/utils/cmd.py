@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
 import salt.modules.cmdmod as cmd
+import salt.grains.extra
+DEFAULT_SHELL = salt.grains.extra.shell()['shell']
+
 
 def run_quiet(cmd,
                cwd=None,
@@ -63,6 +66,7 @@ def run_all_quiet(cmd,
                 reset_system_locale=reset_system_locale,
                 saltenv=saltenv)
 
+
 def retcode_quiet(cmd,
                    cwd=None,
                    stdin=None,
@@ -85,7 +89,7 @@ def retcode_quiet(cmd,
     Helper for running commands quietly for minion startup.
     Returns same as retcode
     '''
-    return retcode(cmd,
+    return cmd.retcode(cmd,
                    cwd=cwd,
                    stdin=stdin,
                    runas=runas,
