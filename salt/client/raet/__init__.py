@@ -58,9 +58,9 @@ class LocalClient(salt.client.LocalClient):
             emsg = ("Invalid application kind '{0}' for client.".format(kind))
             log.error(emsg + '\n')
             raise ValueError(emsg)
-        uid = nacling.uuid(size=18)
+        name = 'client' + nacling.uuid(size=18)
         stack = LaneStack(
-                name=('client' + uid),
+                name=name,
                 lanename=lanename,
                 sockdirpath=self.opts['sock_dir'])
         stack.Pk = raeting.packKinds.pack

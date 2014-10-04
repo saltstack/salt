@@ -61,7 +61,6 @@ Multiple environment mode must have this bucket structure:
 import logging
 import os
 import time
-import hashlib
 import pickle
 import urllib
 from copy import deepcopy
@@ -87,8 +86,15 @@ class S3Credentials(object):
         self.verify_ssl = verify_ssl
 
 
-def ext_pillar(minion_id, pillar, bucket, key, keyid, verify_ssl,
-               multiple_env=False, environment='base', service_url=None):
+def ext_pillar(minion_id,
+               pillar,  # pylint: disable=W0613
+               bucket,
+               key,
+               keyid,
+               verify_ssl,
+               multiple_env=False,
+               environment='base',
+               service_url=None):
     '''
     Execute a command and read the output as YAML
     '''
