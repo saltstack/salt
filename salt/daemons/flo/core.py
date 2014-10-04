@@ -174,6 +174,7 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
                                      sigkey=sigkey,
                                      prikey=prikey,
                                      main=main,
+                                     #kind=kind,
                                      mutable=mutable,
                                      txMsgs=txMsgs,
                                      rxMsgs=rxMsgs,
