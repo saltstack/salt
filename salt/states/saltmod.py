@@ -445,7 +445,7 @@ def wait_for_event(
         wait_for_reboots:
           salt.wait_for_event:
             - name: salt/minion/*/start
-            - mid_list:
+            - id_list:
               - jerry
               - stuart
               - dave
@@ -460,7 +460,8 @@ def wait_for_event(
     sevent = salt.utils.event.get_event(
             'master',
             __opts__['sock_dir'],
-            __opts__['transport'])
+            __opts__['transport'],
+            opts=__opts__)
 
     del_counter = 0
     starttime = time.time()

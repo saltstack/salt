@@ -638,6 +638,20 @@ directed to look on the minion by setting this parameter to ``local``.
 
     file_client: remote
 
+.. conf_minion:: use_master_when_local
+
+``use_master_when_local``
+---------------
+
+Default: ``False``
+
+When using a local :conf_minion:`file_client`, this parameter is used to allow
+the client to connect to a master for remote execution.
+
+.. code-block:: yaml
+
+    use_master_when_local: False
+
 .. conf_minion:: file_roots
 
 ``file_roots``
@@ -755,9 +769,9 @@ to ``True`` in the master configuration file.
 
 Default: ``master_sign``
 
-The filename without the \*.pub-suffix of the public that should be used for
-verifying the signature from the master. The file must be located in the minions
-pki-directory.
+The filename without the *.pub* suffix of the public key that should be used
+for verifying the signature from the master. The file must be located in the
+minion's pki directory.
 
 .. versionadded:: 2014.7.0
 

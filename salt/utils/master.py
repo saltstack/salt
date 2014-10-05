@@ -618,6 +618,12 @@ class ConnectedCache(multiprocessing.Process):
         context.term()
         log.debug('ConCache Shutting down')
 
+
+def ping_all_connected_minions(opts):
+    client = salt.client.LocalClient()
+    ckminions = salt.utils.minions.CkMinions(opts)
+    client.cmd(list(ckminions.connected_ids()), 'test.ping', expr_form='list')
+
 # test code for the ConCache class
 if __name__ == '__main__':
 

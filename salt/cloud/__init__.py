@@ -360,7 +360,7 @@ class CloudClient(object):
         .. code-block:: python
 
             client.create(names=['myinstance'], provider='my-ec2-config',
-                kwargs={'image': 'ami-1624987f', 'size': 'Micro Instance',
+                kwargs={'image': 'ami-1624987f', 'size': 't1.micro',
                         'ssh_username': 'ec2-user', 'securitygroup': 'default',
                         'delvol_on_destroy': True})
         '''

@@ -78,6 +78,7 @@ VALID_OPTS = {
     'sls_list': list,
     'top_file': str,
     'file_client': str,
+    'use_master_when_local': bool,
     'file_roots': dict,
     'pillar_roots': dict,
     'hash_type': str,
@@ -183,7 +184,9 @@ VALID_OPTS = {
     'pillar_version': int,
     'pillar_opts': bool,
     'pillar_source_merging_strategy': str,
+    'ping_on_key_rotate': bool,
     'peer': dict,
+    'preserve_minion_cache': bool,
     'syndic_master': str,
     'runner_dirs': list,
     'client_acl': dict,
@@ -242,7 +245,13 @@ VALID_OPTS = {
     'ssh_sudo': bool,
     'ssh_timeout': float,
     'ssh_user': str,
+    'ioflo_verbose': int,
+    'ioflo_period': float,
+    'ioflo_realtime': bool,
+    'ioflo_console_logdir': str,
     'raet_port': int,
+    'raet_mutable': bool,
+    'raet_main': bool,
     'sqlite_queue_dir': str,
     'queue_dirs': list,
     'ping_interval': int,
@@ -252,6 +261,7 @@ VALID_OPTS = {
     'password': str,
     'zmq_filtering': bool,
     'con_cache': bool,
+    'rotate_aes_key': bool,
 }
 
 # default configurations
@@ -282,18 +292,39 @@ DEFAULT_MINION_OPTS = {
     'failhard': False,
     'autoload_dynamic_modules': True,
     'environment': None,
+    'extension_modules': os.path.join(salt.syspaths.CACHE_DIR, 'extmods'),
     'state_top': 'top.sls',
     'startup_states': '',
     'sls_list': [],
     'top_file': '',
     'file_client': 'remote',
+    'use_master_when_local': False,
     'file_roots': {
         'base': [salt.syspaths.BASE_FILE_ROOTS_DIR],
     },
     'fileserver_limit_traversal': False,
+    'file_recv': False,
+    'file_recv_max_size': 100,
+    'file_ignore_regex': None,
+    'file_ignore_glob': None,
+    'fileserver_backend': ['roots'],
+    'fileserver_followsymlinks': True,
+    'fileserver_ignoresymlinks': False,
     'pillar_roots': {
         'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR],
     },
+    'gitfs_remotes': [],
+    'gitfs_mountpoint': '',
+    'gitfs_root': '',
+    'gitfs_base': 'master',
+    'gitfs_user': '',
+    'gitfs_password': '',
+    'gitfs_insecure_auth': False,
+    'gitfs_privkey': '',
+    'gitfs_pubkey': '',
+    'gitfs_passphrase': '',
+    'gitfs_env_whitelist': [],
+    'gitfs_env_blacklist': [],
     'hash_type': 'md5',
     'disable_modules': [],
     'disable_returners': [],
@@ -369,7 +400,11 @@ DEFAULT_MINION_OPTS = {
     'ioflo_verbose': 0,
     'ioflo_period': 0.1,
     'ioflo_realtime': True,
+    'ioflo_console_logdir': '',
     'raet_port': 4510,
+    'raet_mutable': False,
+    'raet_main': False,
+    'restart_on_error': False,
     'ping_interval': 0,
     'username': None,
     'password': None,
@@ -438,7 +473,9 @@ DEFAULT_MASTER_OPTS = {
     'pillar_version': 2,
     'pillar_opts': True,
     'pillar_source_merging_strategy': 'smart',
+    'ping_on_key_rotate': False,
     'peer': {},
+    'preserve_minion_cache': False,
     'syndic_master': '',
     'runner_dirs': [],
     'outputter_dirs': [],
@@ -446,6 +483,7 @@ DEFAULT_MASTER_OPTS = {
     'client_acl_blacklist': {},
     'external_auth': {},
     'token_expire': 43200,
+    'extension_modules': os.path.join(salt.syspaths.CACHE_DIR, 'extmods'),
     'file_recv': False,
     'file_recv_max_size': 100,
     'file_buffer_size': 1048576,
@@ -528,7 +566,10 @@ DEFAULT_MASTER_OPTS = {
     'ioflo_verbose': 0,
     'ioflo_period': 0.01,
     'ioflo_realtime': True,
+    'ioflo_console_logdir': '',
     'raet_port': 4506,
+    'raet_mutable': False,
+    'raet_main': True,
     'sqlite_queue_dir': os.path.join(salt.syspaths.CACHE_DIR, 'master', 'queues'),
     'queue_dirs': [],
     'cli_summary': False,
@@ -539,6 +580,7 @@ DEFAULT_MASTER_OPTS = {
     'master_use_pubkey_signature': False,
     'zmq_filtering': False,
     'con_cache': False,
+    'rotate_aes_key': True,
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
@@ -1823,7 +1865,7 @@ def get_id(opts, minion_id=False):
                 if name.startswith(codecs.BOM):  # Remove BOM if exists
                     name = name.replace(codecs.BOM, '', 1)
             if name:
-                log.info('Using cached minion ID from {0}: {1}'
+                log.debug('Using cached minion ID from {0}: {1}'
                          .format(id_cache, name))
                 return name, False
         except (IOError, OSError):
@@ -1969,6 +2011,20 @@ def apply_master_config(overrides=None, defaults=None):
         os.path.join(opts['cachedir'], 'extmods')
     )
     opts['token_dir'] = os.path.join(opts['cachedir'], 'tokens')
+
+    using_ip_for_id = False
+    append_master = False
+    if opts.get('id') is None:
+        opts['id'], using_ip_for_id = get_id(
+                opts,
+                minion_id=None)
+        append_master = True
+
+    # it does not make sense to append a domain to an IP based id
+    if not using_ip_for_id and 'append_domain' in opts:
+        opts['id'] = _append_domain(opts)
+    if append_master:
+        opts['id'] += '_master'
 
     # Prepend root_dir to other paths
     prepend_root_dirs = [

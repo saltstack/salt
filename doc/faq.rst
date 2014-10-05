@@ -7,9 +7,9 @@ Is Salt open-core?
 ------------------
 
 No. Salt is 100% committed to being open-source, including all of our APIs and
-the new `'Halite' web interface`_ which was introduced in version 0.17.0. It
-is developed under the `Apache 2.0 license`_, allowing it to be used in both
-open and proprietary projects.
+the `'Halite' web interface`_ which was introduced in version 0.17.0. It is
+developed under the `Apache 2.0 license`_, allowing it to be used in both open
+and proprietary projects.
 
 .. _`'Halite' web interface`: https://github.com/saltstack/halite
 .. _`Apache 2.0 license`: http://www.apache.org/licenses/LICENSE-2.0.html

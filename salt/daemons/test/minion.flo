@@ -2,29 +2,24 @@
 
 house minion
 
-init .raet.udp.stack.local to eid 0 name "minion" host "" port 7531 main false
-#init port in .raet.udp.stack.local from value in .salt.etc.raet_port
-
-#init .salt.etc.master to  "127.0.0.1"
-#init .salt.etc.master_port to 7530
-
-
+init .salt.road.manor.local to name "minion" host "" port 7531 main false
 
 framer minionudpstack be active first start
    frame start
-      do salt raet road stack per inode ".raet.udp.stack"
+      enter
+         do salt raet road stack setup per inode ".salt.road.manor"
       exit
-         do salt raet road stack closer per inode ".raet.udp.stack."
+         do salt raet road stack closer per inode ".salt.road.manor."
 
 framer bootstrap be active first join
    frame join
       print Joining...
       enter
-         do salt raet road stack joiner per inode ".raet.udp.stack."
+         do salt raet road stack joiner per inode ".salt.road.manor."
       recur
-         do raet road stack joined per inode ".raet.udp.stack."
+         do raet road stack joined per inode ".salt.road.manor."
 
-      go next if joined in .raet.udp.stack.status
+      go next if joined in .salt.road.manor.status
       go abort if elapsed >= 10
 
    frame joined
@@ -34,11 +29,11 @@ framer bootstrap be active first join
    frame allow
       print Allowing...
       enter
-         do salt raet road stack allower per inode ".raet.udp.stack."
+         do salt raet road stack allower per inode ".salt.road.manor."
       recur
-         do salt raet road stack allowed per inode ".raet.udp.stack."
+         do salt raet road stack allowed per inode ".salt.road.manor."
 
-      go next if allowed in .raet.udp.stack.status
+      go next if allowed in .salt.road.manor.status
       go abort if elapsed >= 5
 
 
@@ -50,13 +45,13 @@ framer bootstrap be active first join
       print Messaging...
       enter
          do raet road stack messenger to contents "Minion 1 Hello" code 15 \
-            per inode ".raet.udp.stack."
+            per inode ".salt.road.manor."
       go next
 
    frame idle
       print Idling...
-      do raet road stack idled per inode ".raet.udp.stack."
-      go abort if idled in .raet.udp.stack.status
+      do raet road stack idled per inode ".salt.road.manor."
+      go abort if idled in .salt.road.manor.status
 
    frame abort
       bid stop all

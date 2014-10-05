@@ -897,7 +897,7 @@ def update():
                 try:
                     # pygit2.Remote.fetch() returns a dict in pygit2 < 0.21.0
                     received_objects = fetch['received_objects']
-                except AttributeError:
+                except (AttributeError, TypeError):
                     # pygit2.Remote.fetch() returns a class instance in
                     # pygit2 >= 0.21.0
                     received_objects = fetch.received_objects
@@ -984,6 +984,7 @@ def update():
                 'master',
                 __opts__['sock_dir'],
                 __opts__['transport'],
+                opts=__opts__,
                 listen=False)
         event.fire_event(data, tagify(['gitfs', 'update'], prefix='fileserver'))
     try:
@@ -1283,9 +1284,7 @@ def file_hash(load, fnd):
     if not os.path.isfile(hashdest):
         if not os.path.exists(os.path.dirname(hashdest)):
             os.makedirs(os.path.dirname(hashdest))
-        with salt.utils.fopen(path, 'rb') as fp_:
-            ret['hsum'] = getattr(hashlib, __opts__['hash_type'])(
-                fp_.read()).hexdigest()
+        ret['hsum'] = salt.utils.get_hash(path, __opts__['hash_type'])
         with salt.utils.fopen(hashdest, 'w+') as fp_:
             fp_.write(ret['hsum'])
         return ret

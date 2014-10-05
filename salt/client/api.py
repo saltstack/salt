@@ -61,7 +61,8 @@ class APIClient(object):
         self.event = salt.utils.event.get_event(
                 'master',
                 self.opts['sock_dir'],
-                self.opts['transport'])
+                self.opts['transport'],
+                opts=self.opts)
 
     def run(self, cmd):
         '''

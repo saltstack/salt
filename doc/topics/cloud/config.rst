@@ -130,7 +130,7 @@ configuration key in the defined profiles.
     rhel_aws:
       provider: aws
       image: ami-e565ba8c
-      size: Micro Instance
+      size: t1.micro
 
 
 * To:
@@ -140,7 +140,7 @@ configuration key in the defined profiles.
     rhel_aws:
       provider: my-aws-migrated-config
       image: ami-e565ba8c
-      size: Micro Instance
+      size: t1.micro
 
 
 This new configuration syntax even allows you to have multiple cloud
@@ -174,7 +174,7 @@ key on any defined profile to change, see the example:
     rhel_aws_dev:
       provider: production-config:aws
       image: ami-e565ba8c
-      size: Micro Instance
+      size: t1.micro
 
     rhel_aws_prod:
       provider: production-config:aws
@@ -205,7 +205,7 @@ Pillar Configuration
 ====================
 
 It is possible to configure cloud providers using pillars.  This is only used
-when inside the cloud module.  You can setup a variable called ``clouds`` that
+when inside the cloud module.  You can setup a variable called ``cloud`` that
 contains your profile and provider to pass that information to the cloud
 servers instead of having to copy the full configuration to every minion.
 
@@ -574,8 +574,7 @@ the API Access tab.
 
     my-digitalocean-config:
       provider: digital_ocean
-      client_key: wFGEwgregeqw3435gDger
-      api_key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
+      personal_access_token: xxx
       location: New York 1
 
 
@@ -726,7 +725,7 @@ Some example usage on how to use ``extends`` with profiles. Consider
 
     development-instances:
       provider: my-ec2-config
-      size: Micro Instance
+      size: t1.micro
       ssh_username: ec2_user
       securitygroup:
         - default
@@ -756,27 +755,27 @@ data:
       'profile': 'Fedora-17',
       'provider': 'my-ec2-config',
       'securitygroup': ['default'],
-      'size': 'Micro Instance',
+      'size': 't1.micro',
       'ssh_username': 'ec2_user'},
      {'deploy': False,
       'image': 'ami-09b61d60',
       'profile': 'CentOS-5',
       'provider': 'my-aws-config',
       'securitygroup': ['default'],
-      'size': 'Micro Instance',
+      'size': 't1.micro',
       'ssh_username': 'ec2_user'},
      {'deploy': False,
       'image': 'ami-54cf5c3d',
       'profile': 'Amazon-Linux-AMI-2012.09-64bit',
       'provider': 'my-ec2-config',
       'securitygroup': ['default'],
-      'size': 'Micro Instance',
+      'size': 't1.micro',
       'ssh_username': 'ec2_user'},
      {'deploy': False,
       'profile': 'development-instances',
       'provider': 'my-ec2-config',
       'securitygroup': ['default'],
-      'size': 'Micro Instance',
+      'size': 't1.micro',
       'ssh_username': 'ec2_user'}]
 
 Pretty cool right?

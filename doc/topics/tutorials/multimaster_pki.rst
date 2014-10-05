@@ -109,7 +109,7 @@ When that is done, enable the signature checking in the minions configuration
 
 .. code-block:: yaml
 
-    verify_master_pub_sig: True
+    verify_master_pubkey_sign: True
 
 and restart the minion. For the first try, the minion should be run in manual
 debug mode.

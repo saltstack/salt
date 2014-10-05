@@ -331,7 +331,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
             self.run_script(
                 'salt-call',
-                '-c {0} --output-file={1} -g'.format(
+                '-c {0} --output-file={1} --output-file-append -g'.format(
                     self.get_config_dir(),
                     output_file
                 ),
@@ -340,7 +340,27 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             )
             stat2 = os.stat(output_file)
             self.assertEqual(stat1.st_mode, stat2.st_mode)
-            # self.assertEqual(stat1.st_ctime, stat2.st_ctime)
+            # Data was appeneded to file
+            self.assertTrue(stat1.st_size < stat2.st_size)
+
+            # Let's remove the output file
+            os.unlink(output_file)
+
+            # Not appending data
+            self.run_script(
+                'salt-call',
+                '-c {0} --output-file={1} -g'.format(
+                    self.get_config_dir(),
+                    output_file
+                ),
+                catch_stderr=True,
+                with_retcode=True
+            )
+            stat3 = os.stat(output_file)
+            # Mode must have changed since we're creating a new log file
+            self.assertNotEqual(stat1.st_mode, stat3.st_mode)
+            # Data was appended to file
+            self.assertEqual(stat1.st_size, stat3.st_size)
         finally:
             if os.path.exists(output_file):
                 os.unlink(output_file)

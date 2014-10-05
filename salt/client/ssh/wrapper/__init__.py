@@ -25,10 +25,15 @@ class FunctionWrapper(dict):
             id_,
             host,
             wfuncs=None,
+            mods=None,
             **kwargs):
         super(FunctionWrapper, self).__init__()
         self.wfuncs = wfuncs if isinstance(wfuncs, dict) else {}
         self.opts = opts
+        if isinstance(mods, dict):
+            self.mods = mods
+        else:
+            self.mods = {}
         self.kwargs = {'id_': id_,
                        'host': host}
         self.kwargs.update(kwargs)
@@ -50,15 +55,22 @@ class FunctionWrapper(dict):
             single = salt.client.ssh.Single(
                     self.opts,
                     argv,
+                    mods=self.mods,
                     **self.kwargs
             )
-            stdout, _, _ = single.cmd_block()
+            stdout, stderr, _ = single.cmd_block()
+            if stderr.count('Permission Denied'):
+                return {'_error': 'Permission Denied',
+                        'stdout': stdout,
+                        'stderr': stderr}
             try:
                 ret = json.loads(stdout, object_hook=salt.utils.decode_dict)
                 if len(ret) < 2 and 'local' in ret:
                     ret = ret['local']
                 ret = ret.get('return', {})
             except ValueError:
-                ret = {'_error': 'Failed to return clean data'}
+                ret = {'_error': 'Failed to return clean data',
+                       'stderr': stderr,
+                       'stdout': stdout}
             return ret
         return caller

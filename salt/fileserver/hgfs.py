@@ -353,6 +353,7 @@ def update():
                 'master',
                 __opts__['sock_dir'],
                 __opts__['transport'],
+                opts=__opts__,
                 listen=False)
         event.fire_event(data, tagify(['hgfs', 'update'], prefix='fileserver'))
     try:
@@ -549,9 +550,7 @@ def file_hash(load, fnd):
                             '{0}.hash.{1}'.format(relpath,
                                                   __opts__['hash_type']))
     if not os.path.isfile(hashdest):
-        with salt.utils.fopen(path, 'rb') as fp_:
-            ret['hsum'] = getattr(hashlib, __opts__['hash_type'])(
-                fp_.read()).hexdigest()
+        ret['hsum'] = salt.utils.get_hash(path, __opts__['hash_type'])
         with salt.utils.fopen(hashdest, 'w+') as fp_:
             fp_.write(ret['hsum'])
         return ret

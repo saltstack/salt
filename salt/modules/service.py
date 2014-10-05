@@ -129,7 +129,8 @@ def status(name, sig=None):
 
 def reload_(name):
     '''
-    Restart the specified service
+    Refreshes config files by calling service reload. Does not perform a full
+    restart.
 
     CLI Example:
 

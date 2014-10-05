@@ -73,15 +73,18 @@ try:
 
             # if its not ephemeral, make sure we didn't already grab it
             if not self.ephemeral_lease:
-                for child in self.client.get_children(self.path):
-                    try:
-                        data, stat = self.client.get(self.path + "/" + child)
-                        if identifier == data.decode('utf-8'):
-                            self.create_path = self.path + "/" + child
-                            self.is_acquired = True
-                            break
-                    except NoNodeError:  # pragma: nocover
-                        pass
+                try:
+                    for child in self.client.get_children(self.path):
+                        try:
+                            data, stat = self.client.get(self.path + "/" + child)
+                            if identifier == data.decode('utf-8'):
+                                self.create_path = self.path + "/" + child
+                                self.is_acquired = True
+                                break
+                        except NoNodeError:  # pragma: nocover
+                            pass
+                except NoNodeError:  # pragma: nocover
+                    pass
 
         def _get_lease(self, data=None):
             # Make sure the session is still valid

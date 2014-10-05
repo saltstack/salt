@@ -136,6 +136,9 @@ def _linux_gpu_data():
       - vendor: nvidia|amd|ati|...
         model: string
     '''
+    if __opts__.get('enable_lspci', True) is False:
+        return {}
+
     if __opts__.get('enable_gpu_grains', True) is False:
         return {}
 
@@ -458,7 +461,19 @@ def _virtual(osdata):
     #   virtual
     #   virtual_subtype
     grains = {'virtual': 'physical'}
-    for command in ('dmidecode', 'lspci', 'dmesg'):
+
+    # Check if enable_lspci is True or False
+    if __opts__.get('enable_lspci', True) is False:
+        _cmds = ('dmidecode', 'dmesg')
+    else:
+        # /proc/bus/pci does not exists, lspci will fail
+        if not os.path.exists('/proc/bus/pci'):
+            _cmds = ('dmidecode', 'dmesg')
+        else:
+            _cmds = ('dmidecode', 'lspci', 'dmesg')
+
+    failed_commands = set()
+    for command in _cmds:
         args = []
         if osdata['kernel'] == 'Darwin':
             command = 'system_profiler'
@@ -477,11 +492,7 @@ def _virtual(osdata):
             if salt.log.is_logging_configured():
                 if salt.utils.is_windows():
                     continue
-                log.warn(
-                    'Although {0!r} was found in path, the current user '
-                    'cannot execute it. Grains output might not be '
-                    'accurate.'.format(command)
-                )
+                failed_commands.add(command)
             continue
 
         output = ret['stdout']
@@ -577,6 +588,9 @@ def _virtual(osdata):
                 grains['virtual'] = 'openvzhn'
             elif os.path.isfile('/proc/vz/veinfo'):
                 grains['virtual'] = 'openvzve'
+                # a posteriori, it's expected for these to have failed:
+                failed_commands.discard('lspci')
+                failed_commands.discard('dmidecode')
         # Provide additional detection for OpenVZ
         if os.path.isfile('/proc/self/status'):
             with salt.utils.fopen('/proc/self/status') as status_file:
@@ -675,6 +689,12 @@ def _virtual(osdata):
                 if os.path.isfile('/var/run/xenconsoled.pid'):
                     grains['virtual_subtype'] = 'Xen Dom0'
 
+    for command in failed_commands:
+        log.warn(
+            'Although {0!r} was found in path, the current user '
+            'cannot execute it. Grains output might not be '
+            'accurate.'.format(command)
+        )
     return grains
 
 
@@ -712,9 +732,12 @@ def _windows_platform_data():
     #    manufacturer
     #    productname
     #    biosversion
+    #    serialnumber
     #    osfullname
     #    timezone
     #    windowsdomain
+    #    motherboard.productname
+    #    motherboard.serialnumber
 
     if not HAS_WMI:
         return {}
@@ -729,6 +752,8 @@ def _windows_platform_data():
         biosinfo = wmi_c.Win32_BIOS()[0]
         # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394498(v=vs.85).aspx
         timeinfo = wmi_c.Win32_TimeZone()[0]
+        # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394072(v=vs.85).aspx
+        motherboardinfo = wmi_c.Win32_BaseBoard()[0]
 
         # the name of the OS comes with a bunch of other data about the install
         # location. For example:
@@ -743,9 +768,14 @@ def _windows_platform_data():
             # bios name had a bunch of whitespace appended to it in my testing
             # 'PhoenixBIOS 4.0 Release 6.0     '
             'biosversion': biosinfo.Name.strip(),
+            'serialnumber': biosinfo.SerialNumber,
             'osfullname': osfullname,
             'timezone': timeinfo.Description,
             'windowsdomain': systeminfo.Domain,
+            'motherboard': {
+                'productname': motherboardinfo.Product,
+                'serialnumber': motherboardinfo.SerialNumber
+             }
         }
 
         # test for virtualized environments
@@ -1254,6 +1284,54 @@ def ip_interfaces():
                 iface_ips.append(secondary['address'])
         ret[face] = iface_ips
     return {'ip_interfaces': ret}
+
+
+def ip4_interfaces():
+    '''
+    Provide a dict of the connected interfaces and their ip4 addresses
+    '''
+    # Provides:
+    #   ip_interfaces
+
+    if 'proxyminion' in __opts__:
+        return {}
+
+    ret = {}
+    ifaces = salt.utils.network.interfaces()
+    for face in ifaces:
+        iface_ips = []
+        for inet in ifaces[face].get('inet', []):
+            if 'address' in inet:
+                iface_ips.append(inet['address'])
+        for secondary in ifaces[face].get('secondary', []):
+            if 'address' in secondary:
+                iface_ips.append(secondary['address'])
+        ret[face] = iface_ips
+    return {'ip4_interfaces': ret}
+
+
+def ip6_interfaces():
+    '''
+    Provide a dict of the connected interfaces and their ip6 addresses
+    '''
+    # Provides:
+    #   ip_interfaces
+
+    if 'proxyminion' in __opts__:
+        return {}
+
+    ret = {}
+    ifaces = salt.utils.network.interfaces()
+    for face in ifaces:
+        iface_ips = []
+        for inet in ifaces[face].get('inet6', []):
+            if 'address' in inet:
+                iface_ips.append(inet['address'])
+        for secondary in ifaces[face].get('secondary', []):
+            if 'address' in secondary:
+                iface_ips.append(secondary['address'])
+        ret[face] = iface_ips
+    return {'ip6_interfaces': ret}
 
 
 def hwaddr_interfaces():

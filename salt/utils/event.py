@@ -154,6 +154,7 @@ class SaltEvent(object):
         if sock_dir is None:
             sock_dir = opts.get('sock_dir', None)
         self.puburi, self.pulluri = self.__load_uri(sock_dir, node)
+        self.subscribe()
         self.pending_events = []
 
     def __load_uri(self, sock_dir, node):
@@ -331,7 +332,6 @@ class SaltEvent(object):
 
             New in Boron
         '''
-        self.subscribe()
 
         if pending_tags is None:
             pending_tags = []
@@ -350,6 +350,8 @@ class SaltEvent(object):
     def get_event_noblock(self):
         '''Get the raw event without blocking or any other niceties
         '''
+        if not self.cpub:
+            self.connect_pub()
         raw = self.sub.recv(zmq.NOBLOCK)
         mtag, data = self.unpack(raw, self.serial)
         return {'data': data, 'tag': mtag}
@@ -489,7 +491,6 @@ class MasterEvent(SaltEvent):
     '''
     def __init__(self, sock_dir):
         super(MasterEvent, self).__init__('master', sock_dir)
-        self.connect_pub()
 
 
 class LocalClientEvent(MasterEvent):
@@ -728,7 +729,7 @@ class ReactWrap(object):
         '''
         if 'runner' not in self.client_cache:
             self.client_cache['runner'] = salt.runner.RunnerClient(self.opts)
-        return self.client_cache['runner'].async(fun, kwargs)
+        return self.client_cache['runner'].async(fun, kwargs, fire_event=False)
 
     def wheel(self, fun, **kwargs):
         '''
@@ -736,7 +737,7 @@ class ReactWrap(object):
         '''
         if 'wheel' not in self.client_cache:
             self.client_cache['wheel'] = salt.wheel.Wheel(self.opts)
-        return self.client_cache['wheel'].call_func(fun, **kwargs)
+        return self.client_cache['wheel'].async(fun, kwargs, fire_event=False)
 
 
 class StateFire(object):

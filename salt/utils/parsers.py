@@ -1595,7 +1595,7 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         if self.options.list:
             try:
                 if ',' in self.args[0]:
-                    self.config['tgt'] = self.args[0].split(',')
+                    self.config['tgt'] = self.args[0].replace(' ', '').split(',')
                 else:
                     self.config['tgt'] = self.args[0].split()
             except IndexError:
@@ -1723,6 +1723,7 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'unaccepted/unsigned keys. '
                   '"acc" or "accepted" will list accepted/signed keys. '
                   '"rej" or "rejected" will list rejected keys. '
+                  '"den" or "denied" will list denied keys. '
                   'Finally, "all" will list all keys.')
         )
 
@@ -1825,12 +1826,12 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         )
 
         self.add_option(
-            '--no-key-rotate',
-            default=False,
-            action='store_true',
-            help=('This option prevents the master from refreshing the key '
-                  'session when keys are deleted or rejected, this lowers '
-                  'the security of the key deletion/rejection operation.')
+            '--rotate-aes-key',
+            default=True,
+            help=('Setting this to False prevents the master from refreshing '
+                  'the key session when keys are deleted or rejected, this '
+                  'lowers the security of the key deletion/rejection operation. '
+                  'Default is True.')
         )
 
         key_options_group = optparse.OptionGroup(
@@ -1929,7 +1930,7 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         # Filter accepted list arguments as soon as possible
         if not self.options.list:
             return
-        if not self.options.list.startswith(('acc', 'pre', 'un', 'rej', 'all')):
+        if not self.options.list.startswith(('acc', 'pre', 'un', 'rej', 'den', 'all')):
             self.error(
                 '{0!r} is not a valid argument to \'--list\''.format(
                     self.options.list
@@ -2308,6 +2309,9 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             self.config['tgt'] = self.args[0]
 
         self.config['argv'] = self.args[1:]
+        if not self.config['argv'] or not self.config['tgt']:
+            self.print_help()
+            self.exit(os.EX_USAGE)
 
         if self.options.ssh_askpass:
             self.options.ssh_passwd = getpass.getpass('Password: ')

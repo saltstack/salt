@@ -444,34 +444,38 @@ def list_updates(verbose=False, includes=None, retries=5, categories=None):
     Returns a summary of available updates, grouped into their non-mutually
     exclusive categories.
 
-    To list the actual updates by name, add ``verbose`` to the call.
+    verbose
+        Print results in greater detail
 
-    you can set the maximum number of retries to ``n`` in the search process by
-    adding: ``retries=n``
+    retries
+        Number of retries to make before giving up. This is total, not per
+        step.
 
-    various aspects of the updates can be included or excluded. This function is
-    still under development.
+    categories
+        Specify the categories to list. Must be passed as a list.
 
-    You can also specify by category of update similarly to how you do includes:
+        .. code-block:: bash
 
-    ``categories=['Windows 7', 'Security Updates']``
+            salt '*' win_update.list_updates categories="['Updates']"
 
-    Some known categories:
+        Categories include the following:
 
-    .. code-block:: text
-
-        Updates
-        Windows 7
-        Critical Updates
-        Security Updates
-        Update Rollups
+        * Updates
+        * Windows 7
+        * Critical Updates
+        * Security Updates
+        * Update Rollups
 
     CLI Examples:
 
     .. code-block:: bash
 
+        # Normal Usage
         salt '*' win_update.list_updates
-        salt '*' win_update.list_updates categories=['Critical Updates'] verbose
+
+        # List all critical updates list in verbose detail
+        salt '*' win_update.list_updates categories=['Critical Updates'] verbose=True
+
     '''
 
     log.debug('categories to search for are: {0}'.format(str(categories)))
@@ -492,34 +496,41 @@ def list_updates(verbose=False, includes=None, retries=5, categories=None):
 
 def download_updates(includes=None, retries=5, categories=None):
     '''
-    Downloads all available updates, skipping those that require user interaction.
+    Downloads all available updates, skipping those that require user
+    interaction.
 
-    you can set the maximum number of retries to ``n`` in the search process by
-    adding: ``retries=n``
-
-    various aspects of the updates can be included or excluded. This function is
+    Various aspects of the updates can be included or excluded. this feature is
     still in development.
 
-    You can also specify by category of update similarly to how you do includes:
+    retries
+        Number of retries to make before giving up. This is total, not per
+        step.
 
-    ``categories=['Windows 7', 'Security Updates']``
+    categories
+        Specify the categories to update. Must be passed as a list.
 
-    Some known categories:
+        .. code-block:: bash
 
-    .. code-block:: text
+            salt '*' win_update.download_updates categories="['Updates']"
 
-        Updates
-        Windows 7
-        Critical Updates
-        Security Updates
-        Update Rollups
+        Categories include the following:
+
+        * Updates
+        * Windows 7
+        * Critical Updates
+        * Security Updates
+        * Update Rollups
 
     CLI Examples:
 
     .. code-block:: bash
 
+        # Normal Usage
         salt '*' win_update.download_updates
-        salt '*' win_update.download_updates categories=['Critical Updates'] verbose
+
+        # Download critical updates only
+        salt '*' win_update.download_updates categories="['Critical Updates']"
+
     '''
 
     log.debug('categories to search for are: {0}'.format(str(categories)))
@@ -544,9 +555,10 @@ def download_updates(includes=None, retries=5, categories=None):
     return 'Windows is up to date. \n{0}'.format(comment)
 
 
-def install_updates(cached=None, includes=None, retries=5, categories=None):
+def install_updates(includes=None, retries=5, categories=None):
     '''
-    Downloads and installs all available updates, skipping those that require user interaction.
+    Downloads and installs all available updates, skipping those that require
+    user interaction.
 
     Add ``cached`` to only install those updates which have already been downloaded.
 
@@ -556,26 +568,35 @@ def install_updates(cached=None, includes=None, retries=5, categories=None):
     various aspects of the updates can be included or excluded. This function is
     still under development.
 
-    You can also specify by category of update similarly to how you do includes:
+    retries
+        Number of retries to make before giving up. This is total, not per
+        step.
 
-    ``categories=['Windows 7', 'Security Updates']``
+    categories
+        Specify the categories to install. Must be passed as a list.
 
-    Some known categories:
+        .. code-block:: bash
 
-    .. code-block:: text
+            salt '*' win_update.install_updates categories="['Updates']"
 
-        Updates
-        Windows 7
-        Critical Updates
-        Security Updates
-        Update Rollups
+        Categories include the following:
+
+        * Updates
+        * Windows 7
+        * Critical Updates
+        * Security Updates
+        * Update Rollups
 
     CLI Examples:
 
     .. code-block:: bash
 
+        # Normal Usage
         salt '*' win_update.install_updates
-        salt '*' win_update.install_updates categories=['Critical Updates'] verbose
+
+        # Install all critical updates
+        salt '*' win_update.install_updates categories="['Critical Updates']"
+
     '''
 
     log.debug('categories to search for are: {0}'.format(str(categories)))

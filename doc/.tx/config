@@ -4838,3 +4838,9 @@ source_file = _build/locale/ref/states/all/salt.states.boto_cloudwatch_alarm.pot
 source_lang = en
 source_name = ref/states/all/salt.states.boto_cloudwatch_alarm.rst
 
+[salt.topics--releases--2014_1_11]
+file_filter = locale/<lang>/LC_MESSAGES/topics/releases/2014.1.11.po
+source_file = _build/locale/topics/releases/2014.1.11.pot
+source_lang = en
+source_name = topics/releases/2014.1.11.rst
+

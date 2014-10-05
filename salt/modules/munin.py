@@ -24,8 +24,8 @@ def __virtual__():
 
 
 def _get_conf(fname='/etc/munin/munin-node.cfg'):
-    fp = salt.utils.fopen(fname, 'r')
-    return fp.read()
+    with salt.utils.fopen(fname, 'r') as fp_:
+        return fp_.read()
 
 
 def run(plugins):

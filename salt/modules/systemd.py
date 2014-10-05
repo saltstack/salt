@@ -235,6 +235,36 @@ def missing(name):
     return not available(name)
 
 
+def unmask(name):
+    '''
+    Unmask the specified service with systemd
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.unmask <service name>
+    '''
+    if _untracked_custom_unit_found(name) or _unit_file_changed(name):
+        systemctl_reload()
+    return not __salt__['cmd.retcode'](_systemctl_cmd('unmask', name))
+
+
+def mask(name):
+    '''
+    Mask the specified service with systemd
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.mask <service name>
+    '''
+    if _untracked_custom_unit_found(name) or _unit_file_changed(name):
+        systemctl_reload()
+    return not __salt__['cmd.retcode'](_systemctl_cmd('mask', name))
+
+
 def start(name):
     '''
     Start the specified service with systemd

@@ -356,6 +356,7 @@ class RemoteFuncs(object):
                 'master',
                 self.opts['sock_dir'],
                 self.opts['transport'],
+                opts=self.opts,
                 listen=False)
         self.serial = salt.payload.Serial(opts)
         self.ckminions = salt.utils.minions.CkMinions(opts)
@@ -552,7 +553,7 @@ class RemoteFuncs(object):
         if self.opts.get('minion_data_cache', False) or self.opts.get('enforce_mine_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
             if not os.path.isdir(cdir):
-                return True
+                return False
             datap = os.path.join(cdir, 'mine.p')
             if os.path.isfile(datap):
                 try:
@@ -575,7 +576,7 @@ class RemoteFuncs(object):
         if self.opts.get('minion_data_cache', False) or self.opts.get('enforce_mine_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
             if not os.path.isdir(cdir):
-                return True
+                return False
             datap = os.path.join(cdir, 'mine.p')
             if os.path.isfile(datap):
                 try:
@@ -942,6 +943,7 @@ class LocalFuncs(object):
                 'master',
                 self.opts['sock_dir'],
                 self.opts['transport'],
+                opts=self.opts,
                 listen=False)
         # Make a client
         self.local = salt.client.get_local_client(mopts=self.opts)
@@ -980,13 +982,10 @@ class LocalFuncs(object):
                 log.warning(msg)
                 return dict(error=dict(name='TokenAuthenticationError',
                                        message=msg))
-            if token['name'] not in self.opts['external_auth'][token['eauth']]:
-                msg = 'Authentication failure of type "token" occurred.'
-                log.warning(msg)
-                return dict(error=dict(name='TokenAuthenticationError',
-                                       message=msg))
             good = self.ckminions.runner_check(
-                    self.opts['external_auth'][token['eauth']][token['name']] if token['name'] in self.opts['external_auth'][token['eauth']] else self.opts['external_auth'][token['eauth']]['*'],
+                    self.opts['external_auth'][token['eauth']][token['name']]
+                    if token['name'] in self.opts['external_auth'][token['eauth']]
+                    else self.opts['external_auth'][token['eauth']]['*'],
                     load['fun'])
             if not good:
                 msg = ('Authentication failure of type "token" occurred for '
@@ -1092,15 +1091,10 @@ class LocalFuncs(object):
                 log.warning(msg)
                 return dict(error=dict(name='TokenAuthenticationError',
                                        message=msg))
-            if token['name'] not in self.opts['external_auth'][token['eauth']]:
-                msg = 'Authentication failure of type "token" occurred.'
-                log.warning(msg)
-                return dict(error=dict(name='TokenAuthenticationError',
-                                       message=msg))
             good = self.ckminions.wheel_check(
                     self.opts['external_auth'][token['eauth']][token['name']]
-                        if token['name'] in self.opts['external_auth'][token['eauth']]
-                        else self.opts['external_auth'][token['eauth']]['*'],
+                    if token['name'] in self.opts['external_auth'][token['eauth']]
+                    else self.opts['external_auth'][token['eauth']]['*'],
                     load['fun'])
             if not good:
                 msg = ('Authentication failure of type "token" occurred for '

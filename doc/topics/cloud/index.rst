@@ -96,3 +96,10 @@ Feature Comparison
     :maxdepth: 3
 
     Features <features>
+
+Tutorials
+=========
+.. toctree::
+    :maxdepth: 3
+
+    Using Salt Cloud with the Event Reactor <reactor>

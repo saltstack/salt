@@ -17,9 +17,7 @@ import re
 import sys
 import json
 import time
-import random
 import shutil
-import hashlib
 import argparse
 import requests
 import subprocess
@@ -89,8 +87,7 @@ def generate_vm_name(options):
     if 'BUILD_NUMBER' in os.environ:
         random_part = 'BUILD{0:0>6}'.format(os.environ.get('BUILD_NUMBER'))
     else:
-        random_part = hashlib.md5(
-            str(random.randint(1, 100000000))).hexdigest()[:6]
+        random_part = os.urandom(3).encode('hex')
 
     return '{0}-{1}-{2}'.format(options.vm_prefix, options.vm_source, random_part)
 
