@@ -472,6 +472,7 @@ def _virtual(osdata):
         else:
             _cmds = ('dmidecode', 'lspci', 'dmesg')
 
+    failed_commands = set()
     for command in _cmds:
         args = []
         if osdata['kernel'] == 'Darwin':
@@ -491,11 +492,7 @@ def _virtual(osdata):
             if salt.log.is_logging_configured():
                 if salt.utils.is_windows():
                     continue
-                log.warn(
-                    'Although {0!r} was found in path, the current user '
-                    'cannot execute it. Grains output might not be '
-                    'accurate.'.format(command)
-                )
+                failed_commands.add(command)
             continue
 
         output = ret['stdout']
@@ -591,6 +588,9 @@ def _virtual(osdata):
                 grains['virtual'] = 'openvzhn'
             elif os.path.isfile('/proc/vz/veinfo'):
                 grains['virtual'] = 'openvzve'
+                # a posteriori, it's expected for these to have failed:
+                failed_commands.discard('lspci')
+                failed_commands.discard('dmidecode')
         # Provide additional detection for OpenVZ
         if os.path.isfile('/proc/self/status'):
             with salt.utils.fopen('/proc/self/status') as status_file:
@@ -689,6 +689,12 @@ def _virtual(osdata):
                 if os.path.isfile('/var/run/xenconsoled.pid'):
                     grains['virtual_subtype'] = 'Xen Dom0'
 
+    for command in failed_commands:
+        log.warn(
+            'Although {0!r} was found in path, the current user '
+            'cannot execute it. Grains output might not be '
+            'accurate.'.format(command)
+        )
     return grains
 
 

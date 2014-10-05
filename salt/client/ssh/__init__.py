@@ -627,7 +627,7 @@ class Single(object):
         cdir = os.path.join(self.opts['cachedir'], 'minions', self.id)
         if not os.path.isdir(cdir):
             os.makedirs(cdir)
-        datap = os.path.join(cdir, 'data.p')
+        datap = os.path.join(cdir, 'ssh_data.p')
         refresh = False
         if not os.path.isfile(datap):
             refresh = True

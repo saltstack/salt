@@ -85,7 +85,6 @@ the following:
 
 # Import python libs
 from __future__ import print_function
-import hashlib
 import logging
 import os
 import re
