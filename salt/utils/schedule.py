@@ -130,6 +130,33 @@ code-block:: yaml
           jid_include: True
           maxrunning: 1
 
+By default, data about jobs runs from the Salt scheduler is not returned to the
+master.  Because of this information for these jobs will not be listed in the
+jobs.list_jobs runner.  The return_job parameter will return the data back to
+the Salt master, making the job available in this list.
+
+    ... versionadded:: Lithium
+
+    schedule:
+      job1:
+          function: scheduled_job_function
+          job_return: True
+
+It can be useful to include specific data to differentiate a job from other
+jobs.  Using the metadata parameter special values can be associated with
+a scheduled job.  These values are not used in the execution of the job,
+but can be used to search for specific jobs later if combined with the
+return_job parameter.  The metadata parameter must be specified as a
+dictionary, othewise it will be ignored.
+
+    ... versionadded:: Lithium
+
+    schedule:
+      job1:
+          function: scheduled_job_function
+          metadata:
+            foo: bar
+
 '''
 
 # Import python libs
@@ -348,6 +375,13 @@ class Schedule(object):
                'schedule': data['name'],
                'jid': '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())}
 
+        if 'metadata' in data:
+            if isinstance(data['metadata'], dict):
+                ret['metadata'] = data['metadata']
+            else:
+                log.warning('schedule: The metadata parameter must be '
+                            'specified as a dictionary.  Ignoring.')
+
         proc_fn = os.path.join(
             salt.minion.get_proc_dir(self.opts['cachedir']),
             ret['jid']
@@ -443,6 +477,17 @@ class Schedule(object):
                                 func, returner
                             )
                         )
+
+            if 'return_job' in data and data['return_job']:
+                # Send back to master so the job is included in the job list
+                mret = ret.copy()
+                mret['jid'] = 'req'
+                channel = salt.transport.Channel.factory(self.opts, usage='salt_schedule')
+                load = {'cmd': '_return', 'id': self.opts['id']}
+                for key, value in mret.items():
+                    load[key] = value
+                channel.send(load)
+
         except Exception:
             log.exception("Unhandled exception running {0}".format(ret['fun']))
             # Although catch-all exception handlers are bad, the exception here

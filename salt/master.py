@@ -2332,6 +2332,9 @@ class ClearFuncs(object):
             if 'ret_config' in clear_load['kwargs']:
                 load['ret_config'] = clear_load['kwargs'].get('ret_config')
 
+            if 'metadata' in clear_load['kwargs']:
+                load['metadata'] = clear_load['kwargs'].get('metadata')
+
         if 'user' in clear_load:
             log.info(
                 'User {user} Published command {fun} with jid {jid}'.format(
