@@ -638,7 +638,7 @@ def _virtual(osdata):
 
     for command in failed_commands:
         log.warn(
-            'Although \'{0}\' was found in path, the current user '
+            'Although {0!r} was found in path, the current user '
             'cannot execute it. Grains output might not be '
             'accurate.'.format(command)
         )
