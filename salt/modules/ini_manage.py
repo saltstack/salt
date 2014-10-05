@@ -384,7 +384,7 @@ class _Ini(object):
     def get_ini_file(file_name):
         try:
             inifile = _Ini(file_name)
-	    inifile.refresh()
+            inifile.refresh()
             return inifile
         except IOError:
             return inifile
