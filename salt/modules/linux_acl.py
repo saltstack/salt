@@ -173,10 +173,10 @@ def modfacl(acl_type, acl_name, perms, *args):
 
     .. code-block:: bash
 
-        salt '*' acl.addfacl user myuser rwx /tmp/house/kitchen
-        salt '*' acl.addfacl default:group mygroup rx /tmp/house/kitchen
-        salt '*' acl.addfacl d:u myuser 7 /tmp/house/kitchen
-        salt '*' acl.addfacl g mygroup 0 /tmp/house/kitchen /tmp/house/livingroom
+        salt '*' acl.modfacl user myuser rwx /tmp/house/kitchen
+        salt '*' acl.modfacl default:group mygroup rx /tmp/house/kitchen
+        salt '*' acl.modfacl d:u myuser 7 /tmp/house/kitchen
+        salt '*' acl.modfacl g mygroup 0 /tmp/house/kitchen /tmp/house/livingroom
     '''
     cmd = 'setfacl -m'
 
