@@ -313,6 +313,11 @@ def delete_subnet(subnet_id, region=None, key=None, keyid=None, profile=None):
 
 
 def subnet_exists(subnet_id=None, name=None, tags=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Check if a subnet exists.
+
+    Returns True if the subnet exists, otherwise returns False.
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -417,6 +422,11 @@ def delete_customer_gateway(customer_gateway_id, region=None, key=None, keyid=No
 
 
 def customer_gateway_exists(customer_gateway_id, region=None, key=None, keyid=None, profile=None):
+    '''
+    Given a customer gateway ID, check if the customer gateway ID exists.
+
+    Returns True if the customer gateway ID exists; Returns False otherwise.
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -533,6 +543,11 @@ def associate_new_dhcp_options_to_vpc(vpc_id, domain_name=None, domain_name_serv
 
 
 def dhcp_options_exists(dhcp_options_id=None, name=None, tags=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Check if a dhcp option exists.
+
+    Returns True if the dhcp otpion exists; Returns False otherwise.
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -569,6 +584,11 @@ def dhcp_options_exists(dhcp_options_id=None, name=None, tags=None, region=None,
 
 
 def create_network_acl(vpc_id, network_acl_name=None, tags=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Given a vpc_id, creates a network acl.
+
+    Returns the network acl id if successful, otherwise returns False.
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -589,6 +609,11 @@ def create_network_acl(vpc_id, network_acl_name=None, tags=None, region=None, ke
 
 
 def delete_network_acl(network_acl_id, region=None, key=None, keyid=None, profile=None):
+    '''
+    Deletes a network acl based on the network_acl_id provided.
+
+    Returns True if the network acl was deleted successfully, otherwise returns False
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -606,6 +631,11 @@ def delete_network_acl(network_acl_id, region=None, key=None, keyid=None, profil
 
 
 def network_acl_exists(network_acl_id=None, name=None, tags=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Checks if a network acl exists.
+
+    Returns True if the network acl exists or returns False if it doesn't exist.
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -640,6 +670,11 @@ def network_acl_exists(network_acl_id=None, name=None, tags=None, region=None, k
 
 
 def associate_network_acl_to_subnet(network_acl_id, subnet_id, region=None, key=None, keyid=None, profile=None):
+    '''
+    Given a network acl ID and a subnet ID, associates a network acl to a subnet.
+
+    Returns the association ID if successful, otherwise returns False,
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -659,6 +694,12 @@ def associate_network_acl_to_subnet(network_acl_id, subnet_id, region=None, key=
 
 def associate_new_network_acl_to_subnet(vpc_id, subnet_id, network_acl_name=None, tags=None,
                                         region=None, key=None, keyid=None, profile=None):
+    '''
+    Given a vpc ID and a subnet ID, associates a new network act to a subnet.
+
+    Returns a dictionary containing the network acl id and the new association id if successful. If unsuccessful,
+    returns False.
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -686,6 +727,9 @@ def associate_new_network_acl_to_subnet(vpc_id, subnet_id, network_acl_name=None
 
 
 def disassociate_network_acl(subnet_id, vpc_id=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Given a subnet ID, disassociates a network acl.
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -700,6 +744,9 @@ def disassociate_network_acl(subnet_id, vpc_id=None, region=None, key=None, keyi
 def create_network_acl_entry(network_acl_id, rule_number, protocol, rule_action, cidr_block, egress=None,
                              icmp_code=None, icmp_type=None, port_range_from=None, port_range_to=None,
                              region=None, key=None, keyid=None, profile=None):
+    '''
+    Creates a network acl entry.
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -723,6 +770,9 @@ def create_network_acl_entry(network_acl_id, rule_number, protocol, rule_action,
 def replace_network_acl_entry(network_acl_id, rule_number, protocol, rule_action, cidr_block, egress=None,
                               icmp_code=None, icmp_type=None, port_range_from=None, port_range_to=None,
                               region=None, key=None, keyid=None, profile=None):
+    '''
+    Replaces a network acl entry.
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -745,6 +795,9 @@ def replace_network_acl_entry(network_acl_id, rule_number, protocol, rule_action
 
 
 def delete_network_acl_entry(network_acl_id, rule_number, egress=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Deletes a network acl entry.
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -763,6 +816,9 @@ def delete_network_acl_entry(network_acl_id, rule_number, egress=None, region=No
 
 
 def create_route_table(vpc_id, route_table_name=None, tags=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Creates a route table
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -783,6 +839,9 @@ def create_route_table(vpc_id, route_table_name=None, tags=None, region=None, ke
 
 
 def delete_route_table(route_table_id, region=None, key=None, keyid=None, profile=None):
+    '''
+    Deletes a route table.
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -800,6 +859,9 @@ def delete_route_table(route_table_id, region=None, key=None, keyid=None, profil
 
 
 def route_table_exists(route_table_id=None, name=None, tags=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Checks if a route table exists.
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -835,6 +897,9 @@ def route_table_exists(route_table_id=None, name=None, tags=None, region=None, k
 
 
 def associate_route_table(route_table_id, subnet_id, region=None, key=None, keyid=None, profile=None):
+    '''
+    Given a route table ID and a subnet ID, associates the route table with the subnet.
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -850,6 +915,9 @@ def associate_route_table(route_table_id, subnet_id, region=None, key=None, keyi
 
 
 def disassociate_route_table(association_id, region=None, key=None, keyid=None, profile=None):
+    '''
+    Dissassociates a route table.
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -869,6 +937,9 @@ def disassociate_route_table(association_id, region=None, key=None, keyid=None, 
 
 
 def replace_route_table_association(association_id, route_table_id, region=None, key=None, keyid=None, profile=None):
+    '''
+    Replaces a route table association.
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -885,6 +956,9 @@ def replace_route_table_association(association_id, route_table_id, region=None,
 
 def create_route(route_table_id, destination_cidr_block, gateway_id=None, instance_id=None, interface_id=None,
                  region=None, key=None, keyid=None, profile=None):
+    '''
+    Creates a route.
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -906,6 +980,9 @@ def create_route(route_table_id, destination_cidr_block, gateway_id=None, instan
 
 
 def delete_route(route_table_id, destination_cidr_block, region=None, key=None, keyid=None, profile=None):
+    '''
+    Deletes a route
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -927,6 +1004,9 @@ def delete_route(route_table_id, destination_cidr_block, region=None, key=None, 
 
 def replace_route(route_table_id, destination_cidr_block, gateway_id=None, instance_id=None, interface_id=None,
                   region=None, key=None, keyid=None, profile=None):
+    '''
+    Replaces a route.
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
