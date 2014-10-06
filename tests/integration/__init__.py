@@ -926,13 +926,17 @@ class AdaptedConfigurationTestCaseMixIn(object):
 
     def get_config(self, config_for):
         if config_for not in RUNTIME_CONFIGS:
-            if config_for == 'master':
+            if config_for in ('master', 'syndic_master'):
                 RUNTIME_CONFIGS[config_for] = freeze(
                     salt.config.master_config(self.get_config_file_path(config_for))
                 )
             elif config_for in ('minion', 'sub_minion'):
                 RUNTIME_CONFIGS[config_for] = freeze(
                     salt.config.minion_config(self.get_config_file_path(config_for))
+                )
+            elif config_for in ('syndic',):
+                RUNTIME_CONFIGS[config_for] = freeze(
+                    salt.config.syndic_config(self.get_config_file_path(config_for))
                 )
         return RUNTIME_CONFIGS[config_for]
 
