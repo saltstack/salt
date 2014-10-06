@@ -1085,8 +1085,8 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
         Pull the queue for functions to execute
         '''
         while self.fun.value:
-            exchange = self.fun.value.popleft()
-            data = exchange.get('pub')
+            msg = self.fun.value.popleft()
+            data = msg.get('pub')
             match = getattr(
                     self.matcher,
                     '{0}_match'.format(
@@ -1107,16 +1107,16 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
 
             process = multiprocessing.Process(
                     target=self.proc_run,
-                    kwargs={'exchange': exchange}
+                    kwargs={'msg': msg}
                     )
             process.start()
             process.join()
 
-    def proc_run(self, exchange):
+    def proc_run(self, msg):
         '''
         Execute the run in a dedicated process
         '''
-        data = exchange['pub']
+        data = msg['pub']
         fn_ = os.path.join(self.proc_dir, data['jid'])
         self.opts['__ex_id'] = data['jid']
         salt.utils.daemonize_if(self.opts)
@@ -1209,7 +1209,7 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
         ret['jid'] = data['jid']
         ret['fun'] = data['fun']
         ret['fun_args'] = data['arg']
-        self._return_pub(exchange, ret, stack)
+        self._return_pub(msg, ret, stack)
         if data['ret']:
             ret['id'] = self.opts['id']
             for returner in set(data['ret'].split(',')):
