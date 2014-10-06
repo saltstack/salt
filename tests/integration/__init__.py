@@ -960,13 +960,19 @@ class AdaptedConfigurationTestCaseMixIn(object):
 class SaltClientTestCaseMixIn(AdaptedConfigurationTestCaseMixIn):
 
     _salt_client_config_file_name_ = 'master'
-    __slots__ = ('client', '_salt_client_config_file_name_')
+    __slots__ = ('client', '_salt_client_config_file_name_', '_client')
 
     @property
     def client(self):
-        return salt.client.get_local_client(
-            mopts=self.get_config(self._salt_client_config_file_name_)
-        )
+        if getattr(self, '_client', None) is None:
+            self._client = salt.client.get_local_client(
+                mopts=self.get_config(self._salt_client_config_file_name_)
+            )
+        return self._client
+
+    def __del__(self):
+        del self._client
+        self._client = None
 
 
 class ModuleCase(TestCase, SaltClientTestCaseMixIn):
