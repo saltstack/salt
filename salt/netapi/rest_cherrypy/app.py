@@ -64,6 +64,9 @@ A REST API for Salt
         The number of worker threads to start up in the pool.
     socket_queue_size : ``30``
         Specify the maximum number of HTTP connections to queue.
+    expire_responses : True
+        Whether to check for and kill HTTP responses that have exceeded the
+        default timeout.
     max_request_body_size : ``1048576``
         Maximum size for the HTTP request body.
     collect_stats : False
@@ -1822,6 +1825,8 @@ class API(object):
                 'server.socket_port': self.apiopts.get('port', 8000),
                 'server.thread_pool': self.apiopts.get('thread_pool', 100),
                 'server.socket_queue_size': self.apiopts.get('queue_size', 30),
+                'engine.timeout_monitor.on': self.apiopts.get(
+                    'expire_responses', True),
                 'max_request_body_size': self.apiopts.get(
                     'max_request_body_size', 1048576),
                 'debug': self.apiopts.get('debug', False),
