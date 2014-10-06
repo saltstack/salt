@@ -620,7 +620,6 @@ class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
         self.stack.value = LaneStack(
                                     name=name,
                                     lanename=lanename,
-                                    uid=0,
                                     sockdirpath=self.opts.value['sock_dir'])
         self.stack.value.Pk = raeting.packKinds.pack
         self.event_yards.value = set()
