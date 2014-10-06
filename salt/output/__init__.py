@@ -18,6 +18,10 @@ import salt.utils
 from salt.utils import print_cli
 
 
+reload(sys)
+sys.setdefaultencoding('utf-8')
+
+
 log = logging.getLogger(__name__)
 
 STATIC = (
