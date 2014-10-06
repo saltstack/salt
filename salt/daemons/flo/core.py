@@ -174,7 +174,7 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
                                      sigkey=sigkey,
                                      prikey=prikey,
                                      main=main,
-                                     #kind=kind,
+                                     kind=daemons.APPL_KINDS[kind],
                                      mutable=mutable,
                                      txMsgs=txMsgs,
                                      rxMsgs=rxMsgs,
