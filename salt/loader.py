@@ -20,10 +20,12 @@ from salt.exceptions import LoaderError
 from salt.template import check_render_pipe_str
 from salt.utils.decorators import Depends
 
-import salt.utils.cmd
+# Solve the Chicken and egg problem where grains need to run before any
+# of the modules are loaded and are generally available for any usage.
+import salt.modules.cmdmod
 
 __salt__ = {
-    'cmd.run': salt.utils.cmd.run_quiet
+    'cmd.run': salt.modules.cmdmod._run_quiet
 }
 log = logging.getLogger(__name__)
 
