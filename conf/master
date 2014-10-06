@@ -140,6 +140,14 @@
 # 'aes_key_rotate' event with the 'key' tag and acting appropriately.
 # ping_on_rotate: False
 
+# By default, the master deletes its cache of minion data when the key for that
+# minion is removed. To preserve the cache after key deletion, set 
+# 'preserve_minion_cache' to True.
+#
+# WARNING: This may have security implications if compromised minions auth with
+# a previous deleted minion ID.
+#preserve_minion_cache: False
+
 # If max_minions is used in large installations, the master might experience
 # high-load situations because of having to check the number of connected
 # minions for every authentication. This cache provides the minion-ids of

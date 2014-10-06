@@ -305,6 +305,7 @@ def user_create(name, passwd, database=None, user=None, password=None,
         else:
             log.info('Cluster admin {0!r} already exists'.format(name))
         return False
+
     client = _client(user=user, password=password, host=host, port=port)
     if database:
         client.switch_db(database)

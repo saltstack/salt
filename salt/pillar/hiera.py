@@ -25,7 +25,9 @@ def __virtual__():
     return 'hiera' if salt.utils.which('hiera') else False
 
 
-def ext_pillar(minion_id, pillar, conf):
+def ext_pillar(minion_id,  # pylint: disable=W0613
+               pillar,  # pylint: disable=W0613
+               conf):
     '''
     Execute hiera and return the data
     '''
