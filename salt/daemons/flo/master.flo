@@ -2,9 +2,6 @@
 
 house master
 
-#init .salt.road.manor.local to main true role "master"
-#init .salt.lane.manor.local to lanename "master"
-
 framer masterudpstack be active first setup
     frame setup
         enter
