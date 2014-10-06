@@ -1875,27 +1875,42 @@ def wait_for_ip(update_callback,
                      'now {0}s'.format(interval))
 
 
-def simple_types_filter(datadict):
+def simple_types_filter(data):
     '''
-    Convert the data dictionary into simple types, ie, int, float, string,
+    Convert the data list, dictionary into simple types, ie, int, float, string,
     bool, etc.
     '''
-    if not isinstance(datadict, dict):
-        # This function is only supposed to work on dictionaries
-        return datadict
+    if data is None:
+        return data
 
     simpletypes_keys = (str, unicode, int, long, float, bool)
     simpletypes_values = tuple(list(simpletypes_keys) + [list, tuple])
-    simpledict = {}
-    for key, value in datadict.iteritems():
-        if key is not None and not isinstance(key, simpletypes_keys):
-            key = repr(key)
-        if value is not None and isinstance(value, dict):
-            value = simple_types_filter(value)
-        elif value is not None and not isinstance(value, simpletypes_values):
-            value = repr(value)
-        simpledict[key] = value
-    return simpledict
+
+    if isinstance(data, list):
+        simplearray = []
+        for value in data:
+            if value is not None:
+                if isinstance(value, (dict, list)):
+                    value = simple_types_filter(value)
+                elif not isinstance(value, simpletypes_values):
+                    value = repr(value)
+            simplearray.append(value)
+        return simplearray
+
+    if isinstance(data, dict):
+        simpledict = {}
+        for key, value in data.iteritems():
+            if key is not None and not isinstance(key, simpletypes_keys):
+                key = repr(key)
+            if value is not None and isinstance(value, (dict, list)):
+                value = simple_types_filter(value)
+            elif value is not None and not isinstance(value, simpletypes_values):
+                value = repr(value)
+            simpledict[key] = value
+        return simpledict
+    
+    # This function is only supposed to work on dictionaries or lists
+    return data
 
 
 def list_nodes_select(nodes, selection, call=None):
