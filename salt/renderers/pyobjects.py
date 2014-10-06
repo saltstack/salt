@@ -296,7 +296,7 @@ def load_states():
     for mod in load.modules:
         module_name = mod.__name__.rsplit('.', 1)[-1]
 
-        (virtual_ret, virtual_name) = load.process_virtual(mod, module_name)
+        (virtual_ret, virtual_name, _) = load.process_virtual(mod, module_name)
 
         # if the module returned a True value and a new name use that
         # otherwise use the default module name
