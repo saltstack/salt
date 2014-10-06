@@ -329,7 +329,7 @@ Packages management under Windows 2003
 
 On windows Server 2003, you need to install optional component "wmi windows
 installer provider" to have full list of installed packages. If you don't have
-this, salt-minion can't report some installed softwares.
+this, salt-minion can't report some installed packages.
 
 
 .. _http://csa-net.dk/salt: http://csa-net.dk/salt

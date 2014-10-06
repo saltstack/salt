@@ -13,6 +13,9 @@ import salt._compat
 import salt.syspaths as syspaths
 import salt.utils.sdb as sdb
 
+import logging
+log = logging.getLogger(__name__)
+
 __proxyenabled__ = ['*']
 
 # Set up the default values for all systems
@@ -279,3 +282,19 @@ def dot_vals(value):
         if key.startswith('{0}.'.format(value)):
             ret[key] = val
     return ret
+
+
+def gather_bootstrap_script(bootstrap=None):
+    '''
+    Download the salt-bootstrap script, and return the first location
+    downloaded to.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' config.gather_bootstrap_script
+    '''
+    ret = salt.utils.cloud.update_bootstrap(__opts__, url=bootstrap)
+    if 'Success' in ret and len(ret['Success']['Files updated']) > 0:
+        return ret['Success']['Files updated'][0]

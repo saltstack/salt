@@ -14,7 +14,6 @@ Basics
 .. toctree::
     :maxdepth: 2
 
-    salt_bootstrap
     standalone_minion
     firewall
     cron
@@ -72,5 +71,3 @@ Using Salt at scale
     intro_scale
     the_master
     the_minion
-
-

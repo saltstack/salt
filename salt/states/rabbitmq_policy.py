@@ -67,7 +67,7 @@ def present(name,
             updates.append('Pattern')
         if policy.get('definition') != definition:
             updates.append('Definition')
-        if policy.get('priority') != priority:
+        if int(policy.get('priority')) != priority:
             updates.append('Priority')
 
     if policy and not updates:
@@ -80,7 +80,6 @@ def present(name,
             ret['comment'] = 'Policy {0} {1} is set to be created'.format(vhost, name)
         elif updates:
             ret['comment'] = 'Policy {0} {1} is set to be updated'.format(vhost, name)
-        ret['comment'] = ret['comment'].format(name)
     else:
         changes = {'new': '', 'old': ''}
         if not policy:

@@ -97,6 +97,7 @@ except ImportError:
     HAS_SETPROCTITLE = False
 
 # Import salt libs
+from salt.defaults import DEFAULT_TARGET_DELIM
 import salt._compat
 import salt.log
 import salt.payload
@@ -1197,7 +1198,10 @@ def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
     return ret
 
 
-def subdict_match(data, expr, delim=':', regex_match=False):
+def subdict_match(data,
+                  expr,
+                  delimiter=DEFAULT_TARGET_DELIM,
+                  regex_match=False):
     '''
     Check for a match in a dictionary using a delimiter character to denote
     levels of subdicts, and also allowing the delimiter character to be
@@ -1215,13 +1219,13 @@ def subdict_match(data, expr, delim=':', regex_match=False):
         else:
             return fnmatch.fnmatch(str(target).lower(), pattern.lower())
 
-    for idx in range(1, expr.count(delim) + 1):
-        splits = expr.split(delim)
-        key = delim.join(splits[:idx])
-        matchstr = delim.join(splits[idx:])
+    for idx in range(1, expr.count(delimiter) + 1):
+        splits = expr.split(delimiter)
+        key = delimiter.join(splits[:idx])
+        matchstr = delimiter.join(splits[idx:])
         log.debug('Attempting to match {0!r} in {1!r} using delimiter '
-                  '{2!r}'.format(matchstr, key, delim))
-        match = traverse_dict_and_list(data, key, {}, delim=delim)
+                  '{2!r}'.format(matchstr, key, delimiter))
+        match = traverse_dict_and_list(data, key, {}, delimiter=delimiter)
         if match == {}:
             continue
         if isinstance(match, dict):
@@ -1245,15 +1249,15 @@ def subdict_match(data, expr, delim=':', regex_match=False):
     return False
 
 
-def traverse_dict(data, key, default, delim=':'):
+def traverse_dict(data, key, default, delimiter=DEFAULT_TARGET_DELIM):
     '''
-    Traverse a dict using a colon-delimited (or otherwise delimited, using
-    the "delim" param) target string. The target 'foo:bar:baz' will return
-    data['foo']['bar']['baz'] if this value exists, and will otherwise
-    return the dict in the default argument.
+    Traverse a dict using a colon-delimited (or otherwise delimited, using the
+    'delimiter' param) target string. The target 'foo:bar:baz' will return
+    data['foo']['bar']['baz'] if this value exists, and will otherwise return
+    the dict in the default argument.
     '''
     try:
-        for each in key.split(delim):
+        for each in key.split(delimiter):
             data = data[each]
     except (KeyError, IndexError, TypeError):
         # Encountered a non-indexable value in the middle of traversing
@@ -1261,10 +1265,10 @@ def traverse_dict(data, key, default, delim=':'):
     return data
 
 
-def traverse_dict_and_list(data, key, default, delim=':'):
+def traverse_dict_and_list(data, key, default, delimiter=DEFAULT_TARGET_DELIM):
     '''
     Traverse a dict or list using a colon-delimited (or otherwise delimited,
-    using the "delim" param) target string. The target 'foo:bar:0' will
+    using the 'delimiter' param) target string. The target 'foo:bar:0' will
     return data['foo']['bar'][0] if this value exists, and will otherwise
     return the dict in the default argument.
     Function will automatically determine the target type.
@@ -1272,7 +1276,7 @@ def traverse_dict_and_list(data, key, default, delim=':'):
     {'foo':{'bar':['baz']}} , if data like {'foo':{'bar':{'0':'baz'}}}
     then return data['foo']['bar']['0']
     '''
-    for each in key.split(delim):
+    for each in key.split(delimiter):
         if isinstance(data, list):
             try:
                 idx = int(each)
@@ -1720,7 +1724,7 @@ def safe_walk(top, topdown=True, onerror=None, followlinks=True, _seen=None):
         yield top, dirs, nondirs
 
 
-def get_hash(path, form='md5', chunk_size=4096):
+def get_hash(path, form='md5', chunk_size=65536):
     '''
     Get the hash sum of a file
 
@@ -2054,14 +2058,18 @@ def argspec_report(functions, module=''):
     # TODO: cp.get_file will also match cp.get_file_str. this is the
     # same logic as sys.doc, and it is not working as expected, see
     # issue #3614
-    if module:
+    _use_fnmatch = False
+    if '*' in module:
+        target_mod = module
+        _use_fnmatch = True
+    elif module:
         # allow both "sys" and "sys." to match sys, without also matching
         # sysctl
         target_module = module + '.' if not module.endswith('.') else module
     else:
         target_module = ''
-    for fun in functions:
-        if fun == module or fun.startswith(target_module):
+    if _use_fnmatch:
+        for fun in fnmatch.filter(functions, target_mod):
             try:
                 aspec = get_function_argspec(functions[fun])
             except TypeError:
@@ -2075,6 +2083,23 @@ def argspec_report(functions, module=''):
             ret[fun]['defaults'] = defaults if defaults else None
             ret[fun]['varargs'] = True if varargs else None
             ret[fun]['kwargs'] = True if kwargs else None
+
+    else:
+        for fun in functions:
+            if fun == module or fun.startswith(target_module):
+                try:
+                    aspec = get_function_argspec(functions[fun])
+                except TypeError:
+                    # this happens if not callable
+                    continue
+
+                args, varargs, kwargs, defaults = aspec
+
+                ret[fun] = {}
+                ret[fun]['args'] = args if args else None
+                ret[fun]['defaults'] = defaults if defaults else None
+                ret[fun]['varargs'] = True if varargs else None
+                ret[fun]['kwargs'] = True if kwargs else None
 
     return ret
 
@@ -2408,8 +2433,8 @@ def chugid(runas):
     # this does not appear to be strictly true.
     group_list = get_group_dict(runas, include_default=True)
     if sys.platform == 'darwin':
-        group_list = [a for a in group_list
-                      if not a.startswith('_')]
+        group_list = dict((k, v) for k, v in group_list.iteritems()
+                          if not k.startswith('_'))
     for group_name in group_list:
         gid = group_list[group_name]
         if (gid not in supgroups_seen

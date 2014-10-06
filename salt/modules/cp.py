@@ -623,7 +623,7 @@ def hash_file(path, saltenv='base', env=None):
     return __context__['cp.fileclient'].hash_file(path, saltenv)
 
 
-def push(path):
+def push(path, keep_symlinks=False):
     '''
     Push a file from the minion up to the master, the file will be saved to
     the salt master in the master's minion files cachedir
@@ -634,17 +634,22 @@ def push(path):
     ``file_recv`` to ``True`` in the master configuration file, and restart the
     master.
 
+    keep_symlinks
+        Keep the path value without resolving its canonical form
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' cp.push /etc/fstab
+        salt '*' cp.push /etc/system-release keep_symlinks=True
     '''
     log.debug('Trying to copy {0!r} to master'.format(path))
     if '../' in path or not os.path.isabs(path):
         log.debug('Path must be absolute, returning False')
         return False
-    path = os.path.realpath(path)
+    if not keep_symlinks:
+        path = os.path.realpath(path)
     if not os.path.isfile(path):
         log.debug('Path failed os.path.isfile check, returning False')
         return False

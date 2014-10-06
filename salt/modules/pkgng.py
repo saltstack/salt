@@ -970,6 +970,11 @@ def upgrade(jail=None, chroot=None, force=False, local=False, dryrun=False):
 
             salt '*' pkg.upgrade dryrun=True
     '''
+    ret = {'changes': {},
+           'result': True,
+           'comment': '',
+           }
+
     opts = ''
     if force:
         opts += 'f'
@@ -982,10 +987,22 @@ def upgrade(jail=None, chroot=None, force=False, local=False, dryrun=False):
     if opts:
         opts = '-' + opts
 
-    return __salt__['cmd.run'](
+    old = list_pkgs()
+    call = __salt__['cmd.run_all'](
         '{0} upgrade {1}'.format(_pkg(jail, chroot), opts),
         output_loglevel='trace'
     )
+    if call['retcode'] != 0:
+        ret['result'] = False
+        if 'stderr' in call:
+            ret['comment'] += call['stderr']
+        if 'stdout' in call:
+            ret['comment'] += call['stdout']
+    else:
+        __context__.pop('pkg.list_pkgs', None)
+        new = list_pkgs()
+        ret['changes'] = salt.utils.compare_dicts(old, new)
+    return ret
 
 
 def clean(jail=None, chroot=None):

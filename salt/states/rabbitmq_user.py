@@ -11,7 +11,9 @@ Example:
         rabbitmq_user.present:
             - password: password
             - force: True
-            - tags: administrator
+            - tags:
+                - monitoring
+                - user
             - perms:
               - '/':
                 - '.*'
@@ -52,7 +54,7 @@ def present(name,
     force
         If user exists, forcibly change the password
     tags
-        Optionally set user tags for user
+        Optional list of tags for the user
     perms
         A list of dicts with vhost keys and 3-tuple values
     runas

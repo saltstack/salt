@@ -1741,16 +1741,33 @@ def apply_network_settings(**settings):
     if 'require_reboot' not in settings:
         settings['require_reboot'] = False
 
+    if 'apply_hostname' not in settings:
+        settings['apply_hostname'] = False
+
+    hostname_res = True
+    if settings['apply_hostname'] in _CONFIG_TRUE:
+        if 'hostname' in settings:
+            hostname_res = __salt__['network.mod_hostname'](settings['hostname'])
+        else:
+            log.warning(
+                'The network state sls is trying to apply hostname '
+                'changes but no hostname is defined.'
+            )
+            hostname_res = False
+
+    res = True
     if settings['require_reboot'] in _CONFIG_TRUE:
         log.warning(
             'The network state sls is requiring a reboot of the system to '
             'properly apply network configuration.'
         )
-        return True
+        res = True
     else:
         stop = __salt__['service.stop']('networking')
         time.sleep(2)
-        return stop and __salt__['service.start']('networking')
+        res = stop and __salt__['service.start']('networking')
+
+    return hostname_res and res
 
 
 def build_network_settings(**settings):
@@ -1808,6 +1825,7 @@ def build_network_settings(**settings):
 
     # Only write the hostname if it has changed
     if not opts['hostname'] == current_network_settings['hostname']:
+        # TODO  replace wiht a call to network.mod_hostname instead
         _write_file_network(hostname, _DEB_HOSTNAME_FILE)
 
     new_domain = False

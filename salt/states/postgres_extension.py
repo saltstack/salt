@@ -9,6 +9,9 @@ The postgres_extensions module is used to create and manage Postgres extensions.
 
     adminpack:
       postgres_extension.present
+
+
+.. versionadded:: 2014.7.0
 '''
 
 # Import Python libs
@@ -123,7 +126,11 @@ def present(name,
             from_version=from_version,
             **db_args)
     if cret:
-        ret['comment'] = 'The extension {0} has been {1}ed'.format(name, mode)
+        if mode.endswith('e'):
+            suffix = 'd'
+        else:
+            suffix = 'ed'
+        ret['comment'] = 'The extension {0} has been {1}{2}'.format(name, mode, suffix)
     elif cret is not None:
         ret['comment'] = 'Failed to {1} extension {0}'.format(name, mode)
         ret['result'] = False

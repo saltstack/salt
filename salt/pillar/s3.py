@@ -17,27 +17,27 @@ options
           verify_ssl: True
           service_url: s3.amazonaws.com
 
-The `bucket=` parameter specifies the target S3 bucket. It is required.
+The ``bucket`` parameter specifies the target S3 bucket. It is required.
 
-The `keyid=` parameter specifies the key id to use when access the S3 bucket.
+The ``keyid`` parameter specifies the key id to use when access the S3 bucket.
 It is required.
 
-The `key=` parameter specifies the key to use when access the S3 bucket. It
+The ``key`` parameter specifies the key to use when access the S3 bucket. It
 is required.
 
-The `multiple_env=` defaults to False. It specifies whether the pillar should
+The ``multiple_env`` defaults to False. It specifies whether the pillar should
 interpret top level folders as pillar environments (see mode section below).
 
-The `environment=` defaults to 'base'. It specifies which environment the
+The ``environment`` defaults to 'base'. It specifies which environment the
 bucket represents when in single environments mode (see mode section below). It
 is ignored if multiple_env is True.
 
-The `verify_ssl=` parameter defaults to True. It specifies whether to check for
+The ``verify_ssl`` parameter defaults to True. It specifies whether to check for
 valid S3 SSL certificates. *NOTE* If you use bucket names with periods, this
 must be set to False else an invalid certificate error will be thrown (issue
 #12200).
 
-The `service_url=` parameter defaults to 's3.amazonaws.com'. It specifies the
+The ``service_url`` parameter defaults to 's3.amazonaws.com'. It specifies the
 base url to use for accessing S3.
 
 
@@ -55,7 +55,6 @@ Multiple environment mode must have this bucket structure:
 .. code-block:: text
 
     s3://<bucket name>/<environment>/<files>
-
 '''
 
 # Import python libs

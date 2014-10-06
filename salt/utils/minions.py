@@ -13,6 +13,7 @@ import logging
 # Import salt libs
 import salt.payload
 import salt.utils
+from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import CommandExecutionError
 
 HAS_RANGE = False
@@ -42,18 +43,22 @@ def get_minion_data(minion, opts):
             # If no minion specified, take first one with valid grains
             for id_ in minions:
                 datap = os.path.join(cdir, id_, 'data.p')
-                if not os.path.isfile(datap):
+                try:
+                    with salt.utils.fopen(datap, 'rb') as fp_:
+                        miniondata = serial.load(fp_)
+                except (IOError, OSError):
                     continue
-                miniondata = serial.load(salt.utils.fopen(datap, 'rb'))
                 grains = miniondata.get('grains')
                 pillar = miniondata.get('pillar')
                 return id_, grains, pillar
         else:
             # Search for specific minion
             datap = os.path.join(cdir, minion, 'data.p')
-            if not os.path.isfile(datap):
+            try:
+                with salt.utils.fopen(datap, 'rb') as fp_:
+                    miniondata = serial.load(fp_)
+            except (IOError, OSError):
                 return minion, None, None
-            miniondata = serial.load(salt.utils.fopen(datap, 'rb'))
             grains = miniondata.get('grains')
             pillar = miniondata.get('pillar')
             return minion, grains, pillar
@@ -146,7 +151,7 @@ class CkMinions(object):
         os.chdir(cwd)
         return ret
 
-    def _check_grain_minions(self, expr):
+    def _check_grain_minions(self, expr, delimiter):
         '''
         Return the minions found by looking via grains
         '''
@@ -161,16 +166,16 @@ class CkMinions(object):
                 if id_ not in minions:
                     continue
                 datap = os.path.join(cdir, id_, 'data.p')
-                if not os.path.isfile(datap):
+                try:
+                    with salt.utils.fopen(datap, 'rb') as fp_:
+                        grains = self.serial.load(fp_).get('grains')
+                except (IOError, OSError):
                     continue
-                grains = self.serial.load(
-                    salt.utils.fopen(datap, 'rb')
-                ).get('grains')
-                if not salt.utils.subdict_match(grains, expr):
+                if not salt.utils.subdict_match(grains, expr, delimiter):
                     minions.remove(id_)
         return list(minions)
 
-    def _check_grain_pcre_minions(self, expr):
+    def _check_grain_pcre_minions(self, expr, delimiter):
         '''
         Return the minions found by looking via grains with PCRE
         '''
@@ -185,17 +190,17 @@ class CkMinions(object):
                 if id_ not in minions:
                     continue
                 datap = os.path.join(cdir, id_, 'data.p')
-                if not os.path.isfile(datap):
+                try:
+                    with salt.utils.fopen(datap, 'rb') as fp_:
+                        grains = self.serial.load(fp_).get('grains')
+                except (IOError, OSError):
                     continue
-                grains = self.serial.load(
-                    salt.utils.fopen(datap, 'rb')
-                ).get('grains')
-                if not salt.utils.subdict_match(grains, expr,
-                                                delim=':', regex_match=True):
+                if not salt.utils.subdict_match(grains, expr, delimiter,
+                                                regex_match=True):
                     minions.remove(id_)
         return list(minions)
 
-    def _check_pillar_minions(self, expr):
+    def _check_pillar_minions(self, expr, delimiter):
         '''
         Return the minions found by looking via pillar
         '''
@@ -210,12 +215,12 @@ class CkMinions(object):
                 if id_ not in minions:
                     continue
                 datap = os.path.join(cdir, id_, 'data.p')
-                if not os.path.isfile(datap):
+                try:
+                    with salt.utils.fopen(datap, 'rb') as fp_:
+                        pillar = self.serial.load(fp_).get('pillar')
+                except (IOError, OSError):
                     continue
-                pillar = self.serial.load(
-                    salt.utils.fopen(datap, 'rb')
-                ).get('pillar')
-                if not salt.utils.subdict_match(pillar, expr):
+                if not salt.utils.subdict_match(pillar, expr, delimiter):
                     minions.remove(id_)
         return list(minions)
 
@@ -234,12 +239,11 @@ class CkMinions(object):
                 if id_ not in minions:
                     continue
                 datap = os.path.join(cdir, id_, 'data.p')
-                if not os.path.isfile(datap):
+                try:
+                    with salt.utils.fopen(datap, 'rb') as fp_:
+                        grains = self.serial.load(fp_).get('grains')
+                except (IOError, OSError):
                     continue
-                grains = self.serial.load(
-                    salt.utils.fopen(datap, 'rb')
-                ).get('grains')
-
                 num_parts = len(expr.split('/'))
                 if num_parts > 2:
                     # Target is not valid CIDR, no minions match
@@ -283,12 +287,11 @@ class CkMinions(object):
                 if id_ not in minions:
                     continue
                 datap = os.path.join(cdir, id_, 'data.p')
-                if not os.path.isfile(datap):
+                try:
+                    with salt.utils.fopen(datap, 'rb') as fp_:
+                        grains = self.serial.load(fp_).get('grains')
+                except (IOError, OSError):
                     continue
-                grains = self.serial.load(
-                    salt.utils.fopen(datap, 'rb')
-                ).get('grains')
-
                 range_ = seco.range.Range(self.opts['range_server'])
                 try:
                     if grains.get('fqdn', '') not in range_.expand(expr):
@@ -300,7 +303,7 @@ class CkMinions(object):
                     minions.remove(id_)
         return list(minions)
 
-    def _check_compound_minions(self, expr):
+    def _check_compound_minions(self, expr, delimiter):
         '''
         Return the minions found by looking via compound matcher
         '''
@@ -325,15 +328,20 @@ class CkMinions(object):
                 if '@' in match and match[1] == '@':
                     comps = match.split('@')
                     matcher = ref.get(comps[0])
+
+                    matcher_args = ['@'.join(comps[1:])]
+                    if comps[0] in ('G', 'P', 'I'):
+                        matcher_args.append(delimiter)
+
                     if not matcher:
                         # If an unknown matcher is called at any time, fail out
                         return []
                     if unmatched and unmatched[-1] == '-':
-                        results.append(str(set(matcher('@'.join(comps[1:])))))
+                        results.append(str(set(matcher(*matcher_args))))
                         results.append(')')
                         unmatched.pop()
                     else:
-                        results.append(str(set(matcher('@'.join(comps[1:])))))
+                        results.append(str(set(matcher(*matcher_args))))
                 elif match in opers:
                     # We didn't match a target, so append a boolean operator or
                     # subexpression
@@ -416,14 +424,14 @@ class CkMinions(object):
                 search = os.listdir(cdir)
             for id_ in search:
                 datap = os.path.join(cdir, id_, 'data.p')
-                if not os.path.isfile(datap):
-                    continue
                 try:
                     grains = self.serial.load(
                         salt.utils.fopen(datap, 'rb')
                     ).get('grains', {})
                 except AttributeError:
                     pass
+                except (IOError, OSError):
+                    continue
                 for ipv4 in grains.get('ipv4', []):
                     if ipv4 == '127.0.0.1' or ipv4 == '0.0.0.0':
                         continue
@@ -441,7 +449,10 @@ class CkMinions(object):
         '''
         return os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
 
-    def check_minions(self, expr, expr_form='glob'):
+    def check_minions(self,
+                      expr,
+                      expr_form='glob',
+                      delimiter=DEFAULT_TARGET_DELIM):
         '''
         Check the passed regex against the available minions' public keys
         stored for authentication. This should return a set of ids which
@@ -449,16 +460,12 @@ class CkMinions(object):
         make sure everyone has checked back in.
         '''
         try:
-            minions = {'glob': self._check_glob_minions,
-                       'pcre': self._check_pcre_minions,
-                       'list': self._check_list_minions,
-                       'grain': self._check_grain_minions,
-                       'grain_pcre': self._check_grain_pcre_minions,
-                       'pillar': self._check_pillar_minions,
-                       'compound': self._check_compound_minions,
-                       'ipcidr': self._check_ipcidr_minions,
-                       'range': self._check_range_minions,
-                       }[expr_form](expr)
+            check_func = getattr(self, '_check_{0}_minions'.format(expr_form),
+                                 None)
+            if expr_form in ('grain', 'grain_pcre', 'pillar', 'compound'):
+                minions = check_func(expr, delimiter)
+            else:
+                minions = check_func(expr)
         except Exception:
             log.exception(
                     'Failed matching available minions with {0} pattern: {1}'

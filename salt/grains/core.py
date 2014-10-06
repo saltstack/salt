@@ -136,6 +136,9 @@ def _linux_gpu_data():
       - vendor: nvidia|amd|ati|...
         model: string
     '''
+    if __opts__.get('enable_lspci', True) is False:
+        return {}
+
     if __opts__.get('enable_gpu_grains', True) is False:
         return {}
 
@@ -403,6 +406,51 @@ def _memdata(osdata):
     return grains
 
 
+def _windows_virtual(osdata):
+    '''
+    Returns what type of virtual hardware is under the hood, kvm or physical
+    '''
+    # Provides:
+    #   virtual
+    #   virtual_subtype
+    grains = dict()
+    if osdata['kernel'] != 'Windows':
+        return grains
+
+    if 'QEMU' in osdata.get('manufacturer', ''):
+        # FIXME: Make this detect between kvm or qemu
+        grains['virtual'] = 'kvm'
+    if 'Bochs' in osdata.get('manufacturer', ''):
+        grains['virtual'] = 'kvm'
+    # Product Name: (oVirt) www.ovirt.org
+    # Red Hat Community virtualization Project based on kvm
+    elif 'oVirt' in osdata.get('productname', ''):
+        grains['virtual'] = 'kvm'
+        grains['virtual_subtype'] = 'oVirt'
+    # Red Hat Enterprise Virtualization
+    elif 'RHEV Hypervisor' in osdata.get('productname', ''):
+        grains['virtual'] = 'kvm'
+        grains['virtual_subtype'] = 'rhev'
+    # Product Name: VirtualBox
+    elif 'VirtualBox' in osdata.get('productname', ''):
+        grains['virtual'] = 'VirtualBox'
+    # Product Name: VMware Virtual Platform
+    elif 'VMware Virtual Platform' in osdata.get('productname', ''):
+        grains['virtual'] = 'VMware'
+    # Manufacturer: Microsoft Corporation
+    # Product Name: Virtual Machine
+    elif 'Microsoft' in osdata.get('manufacturer', '') and \
+         'Virtual Machine' in osdata.get('productname', ''):
+        grains['virtual'] = 'VirtualPC'
+    # Manufacturer: Parallels Software International Inc.
+    elif 'Parallels Software' in osdata.get('manufacturer'):
+        grains['virtual'] = 'Parallels'
+
+    if HAS_WMI:
+        pass
+    return grains
+
+
 def _virtual(osdata):
     '''
     Returns what type of virtual hardware is under the hood, kvm or physical
@@ -476,6 +524,11 @@ def _virtual(osdata):
             # Red Hat Community virtualization Project based on kvm
             elif 'Manufacturer: oVirt' in output:
                 grains['virtual'] = 'kvm'
+                grains['virtual_subtype'] = 'ovirt'
+            # Red Hat Enterprise Virtualization
+            elif 'Product Name: RHEV Hypervisor' in output:
+                grains['virtual'] = 'kvm'
+                grains['virtual_subtype'] = 'rhev'
             elif 'VirtualBox' in output:
                 grains['virtual'] = 'VirtualBox'
             # Product Name: VMware Virtual Platform
@@ -679,9 +732,12 @@ def _windows_platform_data():
     #    manufacturer
     #    productname
     #    biosversion
+    #    serialnumber
     #    osfullname
     #    timezone
     #    windowsdomain
+    #    motherboard.productname
+    #    motherboard.serialnumber
 
     if not HAS_WMI:
         return {}
@@ -696,6 +752,8 @@ def _windows_platform_data():
         biosinfo = wmi_c.Win32_BIOS()[0]
         # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394498(v=vs.85).aspx
         timeinfo = wmi_c.Win32_TimeZone()[0]
+        # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394072(v=vs.85).aspx
+        motherboardinfo = wmi_c.Win32_BaseBoard()[0]
 
         # the name of the OS comes with a bunch of other data about the install
         # location. For example:
@@ -710,9 +768,14 @@ def _windows_platform_data():
             # bios name had a bunch of whitespace appended to it in my testing
             # 'PhoenixBIOS 4.0 Release 6.0     '
             'biosversion': biosinfo.Name.strip(),
+            'serialnumber': biosinfo.SerialNumber,
             'osfullname': osfullname,
             'timezone': timeinfo.Description,
             'windowsdomain': systeminfo.Domain,
+            'motherboard': {
+                'productname': motherboardinfo.Product,
+                'serialnumber': motherboardinfo.SerialNumber
+             }
         }
 
         # test for virtualized environments
@@ -846,6 +909,7 @@ def os_data():
         grains.update(_memdata(grains))
         grains.update(_windows_platform_data())
         grains.update(_windows_cpudata())
+        grains.update(_windows_virtual(grains))
         grains.update(_ps(grains))
         return grains
     elif salt.utils.is_linux():
@@ -1063,6 +1127,12 @@ def os_data():
         grains['osfinger'] = '{os}-{ver}'.format(
             os=grains['osfullname'],
             ver=grains['osrelease'])
+    elif grains.get('osfullname') == "Debian":
+        grains['osmajorrelease'] = grains['osrelease'].split('.', 1)[0]
+
+        grains['osfinger'] = '{os}-{ver}'.format(
+            os=grains['osfullname'],
+            ver=grains['osrelease'].partition('.')[0])
 
     if grains.get('osrelease', ''):
         osrelease_info = grains['osrelease'].split('.')
@@ -1206,11 +1276,62 @@ def ip_interfaces():
         for inet in ifaces[face].get('inet', []):
             if 'address' in inet:
                 iface_ips.append(inet['address'])
+        for inet in ifaces[face].get('inet6', []):
+            if 'address' in inet:
+                iface_ips.append(inet['address'])
         for secondary in ifaces[face].get('secondary', []):
             if 'address' in secondary:
                 iface_ips.append(secondary['address'])
         ret[face] = iface_ips
     return {'ip_interfaces': ret}
+
+
+def ip4_interfaces():
+    '''
+    Provide a dict of the connected interfaces and their ip4 addresses
+    '''
+    # Provides:
+    #   ip_interfaces
+
+    if 'proxyminion' in __opts__:
+        return {}
+
+    ret = {}
+    ifaces = salt.utils.network.interfaces()
+    for face in ifaces:
+        iface_ips = []
+        for inet in ifaces[face].get('inet', []):
+            if 'address' in inet:
+                iface_ips.append(inet['address'])
+        for secondary in ifaces[face].get('secondary', []):
+            if 'address' in secondary:
+                iface_ips.append(secondary['address'])
+        ret[face] = iface_ips
+    return {'ip4_interfaces': ret}
+
+
+def ip6_interfaces():
+    '''
+    Provide a dict of the connected interfaces and their ip6 addresses
+    '''
+    # Provides:
+    #   ip_interfaces
+
+    if 'proxyminion' in __opts__:
+        return {}
+
+    ret = {}
+    ifaces = salt.utils.network.interfaces()
+    for face in ifaces:
+        iface_ips = []
+        for inet in ifaces[face].get('inet6', []):
+            if 'address' in inet:
+                iface_ips.append(inet['address'])
+        for secondary in ifaces[face].get('secondary', []):
+            if 'address' in secondary:
+                iface_ips.append(secondary['address'])
+        ret[face] = iface_ips
+    return {'ip6_interfaces': ret}
 
 
 def hwaddr_interfaces():

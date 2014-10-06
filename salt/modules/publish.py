@@ -55,7 +55,10 @@ def _publish(
         log.info('Function name is \'publish.publish\'. Returning {}')
         return {}
 
-    arg = [salt.utils.args.yamlify_arg(arg)]
+    if not isinstance(arg, list):
+        arg = [salt.utils.args.yamlify_arg(arg)]
+    else:
+        arg = [salt.utils.args.yamlify_arg(x) for x in arg]
     if len(arg) == 1 and arg[0] is None:
         arg = []
 
@@ -169,6 +172,13 @@ def publish(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
 
             salt '*' publish.publish test.kwarg arg='cheese=spam'
 
+        Multiple keyword arguments should be passed as a list.
+
+        .. code-block:: bash
+
+            salt '*' publish.publish test.kwarg arg="['cheese=spam','spam=cheese']"
+
+
 
     '''
     return _publish(tgt,
@@ -223,7 +233,10 @@ def runner(fun, arg=None, timeout=5):
 
         salt publish.runner manage.down
     '''
-    arg = [salt.utils.args.yamlify_arg(arg)]
+    if not isinstance(arg, list):
+        arg = [salt.utils.args.yamlify_arg(arg)]
+    else:
+        arg = [salt.utils.args.yamlify_arg(x) for x in arg]
     if len(arg) == 1 and arg[0] is None:
         arg = []
 

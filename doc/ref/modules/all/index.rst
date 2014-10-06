@@ -218,6 +218,7 @@ Full list of builtin execution modules
     svn
     swift
     sysbench
+    syslog_ng
     sysmod
     system
     systemd

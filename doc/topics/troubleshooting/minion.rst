@@ -127,3 +127,23 @@ The reason for this difficulty is that python attempts to pickle all objects in
 memory when communicating, and it cannot pickle function objects. Since the
 Salt loader system creates and manages function objects this causes the pickle
 operation to fail.
+
+Salt Minion Doesn't Return Anything While Running Jobs Locally
+==============================================================
+
+When a command being run via Salt takes a very long time to return
+(package installations, certain scripts, etc.) the minion may drop you back
+to the shell. In most situations the job is still running but Salt has
+exceeded the set timeout before returning. Querying the job queue will 
+provide the data of the job but is inconvenient. This can be resolved by
+either manually using the ``-t`` option to set a longer timeout when running
+commands (by default it is 5 seconds) or by modifying the minion
+configuration file: ``/etc/salt/minion`` and setting the ``timeout`` value to
+change the default timeout for all commands, and then restarting the
+salt-minion service.
+
+.. note::
+
+    Modifying the minion timeout value is not required when running commands
+    from a Salt Master. It is only required when running commands locally on
+    the minion.

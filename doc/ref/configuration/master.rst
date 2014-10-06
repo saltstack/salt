@@ -135,6 +135,14 @@ worker_threads value.
 Worker threads should not be put below 3 when using the peer system, but can
 drop down to 1 worker otherwise.
 
+.. note::
+    When the master daemon starts, it is expected behaviour to see
+    multiple salt-master processes, even if 'worker_threads' is set to '1'. At
+    a minimum, a controlling process will start along with a Publisher, an
+    EventPublisher, and a number of MWorker processes will be started. The
+    number of MWorker processes is tuneable by the 'worker_threads'
+    configuration value while the others are not.
+
 .. code-block:: yaml
 
     worker_threads: 5
@@ -340,8 +348,8 @@ Default: ``True``
 
 The minion data cache is a cache of information about the minions stored on the
 master, this information is primarily the pillar and grains data. The data is
-cached in the Master cachedir under the name of the minion and used to pre
-determine what minions are expected to reply from executions.
+cached in the Master cachedir under the name of the minion and used to
+predetermine what minions are expected to reply from executions.
 
 .. code-block:: yaml
 
@@ -372,9 +380,9 @@ local job cache on the master
 
 Default: 'local_cache'
 
-Specify the returner to use for ther job cache. The job cache will only be
+Specify the returner to use for the job cache. The job cache will only be
 interacted with from the salt master and therefore does not need to be
-accesible from the minions.
+accessible from the minions.
 
 .. code-block:: yaml
 
@@ -410,6 +418,21 @@ this can slow down the authentication process a bit in large setups.
 .. code-block:: yaml
 
     max_minions: 100
+
+``con_cache``
+-------------
+
+Default: False
+
+If max_minions is used in large installations, the master might experience
+high-load situations because of having to check the number of connected
+minions for every authentication. This cache provides the minion-ids of
+all connected minions to all MWorker-processes and greatly improves the
+performance of max_minions.
+
+.. code-block:: yaml
+
+    con_cache: True
 
 .. conf_master:: presence_events
 
@@ -610,7 +633,7 @@ security purposes.
 
 Default: ``False``
 
-Sign the master auth-replies with a cryptographical signature of the masters
+Sign the master auth-replies with a cryptographic signature of the masters
 public key. Please see the tutorial how to use these settings in the
 `Multimaster-PKI with Failover Tutorial <http://docs.saltstack.com/en/latest/topics/tutorials/multimaster_pki.html>`_
 
@@ -1794,15 +1817,32 @@ Default: ``None``
 
 There are additional details at :ref:`salt-pillars`
 
+.. conf_master:: ext_pillar_first
+
+``ext_pillar_first``
+--------------------
+
+The ext_pillar_first option allows for external pillar sources to populate
+before file system pillar. This allows for targeting file system pillar from
+ext_pillar.
+
+Default: ``False``
+
+.. code-block:: yaml
+
+    ext_pillar_first: False
+
 .. conf_master:: pillar_source_merging_strategy
 
 ``pillar_source_merging_strategy``
 ----------------------------------
 
+.. versionadded:: 2014.7.0
+
 Default: ``smart``
 
-The pillar_source_merging_strategy option allows to configure merging strategy
-between different sources. It accepts 3 values:
+The pillar_source_merging_strategy option allows you to configure merging
+strategy between different sources. It accepts 3 values:
 
 * recurse:
 

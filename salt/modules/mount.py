@@ -115,6 +115,24 @@ def _active_mounts_solaris(ret):
     return ret
 
 
+def _active_mounts_openbsd(ret):
+    '''
+    List active mounts on OpenBSD systems
+    '''
+    for line in __salt__['cmd.run_stdout']('mount -v').split('\n'):
+        comps = re.sub(r"\s+", " ", line).split()
+        nod = __salt__['cmd.run_stdout']('ls -l {0}'.format(comps[0]))
+        nod = ' '.join(nod.split()).split(" ")
+        parens = re.findall(r'\((.*?)\)', line, re.DOTALL)
+        ret[comps[3]] = {'device': comps[0],
+                         'fstype': comps[5],
+                         'opts': parens[1].split(", "),
+                         'major': str(nod[4].strip(",")),
+                         'minor': str(nod[5]),
+                         'device_uuid': parens[0]}
+    return ret
+
+
 def active(extended=False):
     '''
     List the active mounts.
@@ -130,6 +148,8 @@ def active(extended=False):
         _active_mounts_freebsd(ret)
     elif __grains__['os'] == 'Solaris':
         _active_mounts_solaris(ret)
+    if __grains__['os'] == 'OpenBSD':
+        _active_mounts_openbsd(ret)
     else:
         if extended:
             try:
@@ -174,7 +194,7 @@ def fstab(config='/etc/fstab'):
     return ret
 
 
-def rm_fstab(name, config='/etc/fstab'):
+def rm_fstab(name, device, config='/etc/fstab'):
     '''
     Remove the mount point from the fstab
 
@@ -206,8 +226,12 @@ def rm_fstab(name, config='/etc/fstab'):
                     lines.append(line)
                     continue
                 comps = line.split()
-                if comps[1] == name:
-                    continue
+                if device:
+                    if comps[1] == name and comps[0] == device:
+                        continue
+                else:
+                    if comps[1] == name:
+                        continue
                 lines.append(line)
     except (IOError, OSError) as exc:
         msg = "Couldn't read from {0}: {1}"
@@ -387,13 +411,16 @@ def remount(name, device, mkmnt=False, fstype='', opts='defaults'):
     mnts = active()
     if name in mnts:
         # The mount point is mounted, attempt to remount it with the given data
-        if 'remount' not in opts:
+        if 'remount' not in opts and __grains__['os'] != 'OpenBSD':
             opts.append('remount')
         lopts = ','.join(opts)
         args = '-o {0}'.format(lopts)
         if fstype:
             args += ' -t {0}'.format(fstype)
-        cmd = 'mount {0} {1} {2} '.format(args, device, name)
+        if __grains__['os'] != 'OpenBSD':
+            cmd = 'mount {0} {1} {2} '.format(args, device, name)
+        else:
+            cmd = 'mount -u {0} {1} {2} '.format(args, device, name)
         out = __salt__['cmd.run_all'](cmd)
         if out['retcode']:
             return out['stderr']
@@ -402,7 +429,7 @@ def remount(name, device, mkmnt=False, fstype='', opts='defaults'):
     return mount(name, device, mkmnt, fstype, opts)
 
 
-def umount(name):
+def umount(name, device):
     '''
     Attempt to unmount a device by specifying the directory it is mounted on
 
@@ -411,12 +438,19 @@ def umount(name):
     .. code-block:: bash
 
         salt '*' mount.umount /mnt/foo
+
+        .. versionadded:: Lithium
+
+        salt '*' mount.umount /mnt/foo /dev/xvdc1
     '''
     mnts = active()
     if name not in mnts:
         return "{0} does not have anything mounted".format(name)
 
-    cmd = 'umount {0}'.format(name)
+    if not device:
+        cmd = 'umount {0}'.format(name)
+    else:
+        cmd = 'umount {0}'.format(device)
     out = __salt__['cmd.run_all'](cmd)
     if out['retcode']:
         return out['stderr']
@@ -456,15 +490,28 @@ def swaps():
         salt '*' mount.swaps
     '''
     ret = {}
-    with salt.utils.fopen('/proc/swaps') as fp_:
-        for line in fp_:
-            if line.startswith('Filename'):
+    if __grains__['os'] != 'OpenBSD':
+        with salt.utils.fopen('/proc/swaps') as fp_:
+            for line in fp_:
+                if line.startswith('Filename'):
+                    continue
+                comps = line.split()
+                ret[comps[0]] = {'type': comps[1],
+                                 'size': comps[2],
+                                 'used': comps[3],
+                                 'priority': comps[4]}
+    else:
+        for line in __salt__['cmd.run_stdout']('swapctl -kl').splitlines():
+            if line.startswith(('Device', 'Total')):
                 continue
+            swap_type = "file"
             comps = line.split()
-            ret[comps[0]] = {'type': comps[1],
-                             'size': comps[2],
-                             'used': comps[3],
-                             'priority': comps[4]}
+            if comps[0].startswith('/dev/'):
+                swap_type = "partition"
+            ret[comps[0]] = {'type': swap_type,
+                             'size': comps[1],
+                             'used': comps[2],
+                             'priority': comps[5]}
     return ret
 
 
@@ -508,7 +555,10 @@ def swapoff(name):
     '''
     on_ = swaps()
     if name in on_:
-        __salt__['cmd.run']('swapoff {0}'.format(name))
+        if __grains__['os'] != 'OpenBSD':
+            __salt__['cmd.run']('swapoff {0}'.format(name))
+        else:
+            __salt__['cmd.run']('swapctl -d {0}'.format(name))
         on_ = swaps()
         if name in on_:
             return False

@@ -216,11 +216,11 @@ def template(tem, queue=False, **kwargs):
     st_ = salt.state.HighState(__opts__)
     if not tem.endswith('.sls'):
         tem = '{sls}.sls'.format(sls=tem)
-    high, errors = st_.render_state(tem, None, '', None, local=True)
+    high_state, errors = st_.render_state(tem, None, '', None, local=True)
     if errors:
         __context__['retcode'] = 1
         return errors
-    ret = st_.state.call_high(high)
+    ret = st_.state.call_high(high_state)
     _set_retcode(ret)
     return ret
 
@@ -282,6 +282,14 @@ def highstate(test=None,
 
         salt '*' state.highstate pillar="{foo: 'Foo!', bar: 'Bar!'}"
     '''
+    if _disabled(['highstate']):
+        ret = {
+            'name': 'Salt highstate run is disabled. To re-enable, run state.enable highstate',
+            'result': 'False',
+            'comment': 'Disabled'
+        }
+        return ret
+
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
@@ -329,22 +337,7 @@ def highstate(test=None,
     if __salt__['config.option']('state_data', '') == 'terse' or \
             kwargs.get('terse'):
         ret = _filter_running(ret)
-    serial = salt.payload.Serial(__opts__)
-    cache_file = os.path.join(__opts__['cachedir'], 'highstate.p')
 
-    # Not 100% if this should be fatal or not,
-    # but I'm guessing it likely should not be.
-    cumask = os.umask(077)
-    try:
-        if salt.utils.is_windows():
-            # Make sure cache file isn't read-only
-            __salt__['cmd.run']('attrib -R "{0}"'.format(cache_file))
-        with salt.utils.fopen(cache_file, 'w+b') as fp_:
-            serial.dump(ret, fp_)
-    except (IOError, OSError):
-        msg = 'Unable to write to "state.highstate" cache file {0}'
-        log.error(msg.format(cache_file))
-    os.umask(cumask)
     _set_retcode(ret)
     # Work around Windows multiprocessing bug, set __opts__['test'] back to
     # value from before this function was run.
@@ -417,6 +410,16 @@ def sls(mods,
         if conflict:
             __context__['retcode'] = 1
             return conflict
+
+    if isinstance(mods, list):
+        disabled = _disabled(mods)
+    else:
+        disabled = _disabled([mods])
+
+    if disabled:
+        __context__['retcode'] = 1
+        return disabled
+
     if not _check_pillar(kwargs):
         __context__['retcode'] = 5
         err = ['Pillar failed to render with the following messages:']
@@ -940,4 +943,158 @@ def pkg(pkg_path, pkg_sum, hash_type, test=False, **kwargs):
         shutil.rmtree(root)
     except (IOError, OSError):
         pass
+    return ret
+
+
+def disable(states):
+    '''
+    Disable state runs.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.disable highstate
+
+        salt '*' state.disable highstate,test.succeed_without_changes
+
+    .. note::
+        To disable a state file from running provide the same name that would
+        be passed in a state.sls call.
+
+        salt '*' state.disable bind.config
+
+    '''
+    ret = {
+        'res': True,
+        'msg': ''
+    }
+
+    if isinstance(states, string_types):
+        states = states.split(',')
+
+    msg = []
+    _disabled = __salt__['grains.get']('state_runs_disabled')
+    if not isinstance(_disabled, list):
+        _disabled = []
+
+    _changed = False
+    for _state in states:
+        if _state in _disabled:
+            msg.append('Info: {0} state already disabled.'.format(_state))
+        else:
+            msg.append('Info: {0} state disabled.'.format(_state))
+            _disabled.append(_state)
+            _changed = True
+
+    if _changed:
+        __salt__['grains.setval']('state_runs_disabled', _disabled)
+
+    ret['msg'] = '\n'.join(msg)
+
+    # refresh the grains
+    __salt__['saltutil.refresh_modules']()
+
+    return ret
+
+
+def enable(states):
+    '''
+    Enable state function or sls run
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.enable highstate
+
+        salt '*' state.enable test.succeed_without_changes
+
+    .. note::
+        To enable a state file from running provide the same name that would
+        be passed in a state.sls call.
+
+        salt '*' state.disable bind.config
+
+    '''
+    ret = {
+        'res': True,
+        'msg': ''
+    }
+
+    if isinstance(states, string_types):
+        states = states.split(',')
+    log.debug("states {0}".format(states))
+
+    msg = []
+    _disabled = __salt__['grains.get']('state_runs_disabled')
+    if not isinstance(_disabled, list):
+        _disabled = []
+
+    _changed = False
+    for _state in states:
+        log.debug("_state {0}".format(_state))
+        if _state not in _disabled:
+            msg.append('Info: {0} state already enabled.'.format(_state))
+        else:
+            msg.append('Info: {0} state enabled.'.format(_state))
+            _disabled.remove(_state)
+            _changed = True
+
+    if _changed:
+        __salt__['grains.setval']('state_runs_disabled', _disabled)
+
+    ret['msg'] = '\n'.join(msg)
+
+    # refresh the grains
+    __salt__['saltutil.refresh_modules']()
+
+    return ret
+
+
+def list_disabled():
+    '''
+    List the states which are currently disabled
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.list_disabled
+    '''
+    return __salt__['grains.get']('state_runs_disabled')
+
+
+def _disabled(funs):
+    '''
+    Return messages for disabled states
+    that match state functions in funs.
+    '''
+    ret = []
+    _disabled = __salt__['grains.get']('state_runs_disabled')
+    for state in funs:
+        for _state in _disabled:
+            if '.*' in _state:
+                target_state = _state.split('.')[0]
+                target_state = target_state + '.' if not target_state.endswith('.') else target_state
+                if state.startswith(target_state):
+                    err = (
+                        'The state file "{0}" is currently disabled by "{1}", '
+                        'to re-enable, run state.enable {1}.'
+                    ).format(
+                        state,
+                        _state,
+                    )
+                    ret.append(err)
+                    continue
+            else:
+                if _state == state:
+                    err = (
+                        'The state file "{0}" is currently disabled, '
+                        'to re-enable, run state.enable {0}.'
+                    ).format(
+                        _state,
+                    )
+                    ret.append(err)
+                    continue
     return ret

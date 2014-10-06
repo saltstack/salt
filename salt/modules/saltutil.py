@@ -401,7 +401,12 @@ def refresh_pillar():
 
         salt '*' saltutil.refresh_pillar
     '''
-    return __salt__['event.fire']({}, 'pillar_refresh')
+    try:
+        ret = __salt__['event.fire']({}, 'pillar_refresh')
+    except KeyError:
+        log.error('Event module not available. Module refresh failed.')
+        ret = False  # Effectively a no-op, since we can't really return without an event system
+    return ret
 
 
 def refresh_modules():
@@ -414,7 +419,12 @@ def refresh_modules():
 
         salt '*' saltutil.refresh_modules
     '''
-    return __salt__['event.fire']({}, 'module_refresh')
+    try:
+        ret = __salt__['event.fire']({}, 'module_refresh')
+    except KeyError:
+        log.error('Event module not available. Module refresh failed.')
+        ret = False  # Effectively a no-op, since we can't really return without an event system
+    return ret
 
 
 def is_running(fun):
@@ -702,7 +712,7 @@ def cmd_iter(tgt,
 
     .. code-block:: bash
 
-        salt '*' saltutil.cmd
+        salt '*' saltutil.cmd_iter
     '''
     if ssh:
         client = salt.client.SSHClient(__opts__['conf_file'])

@@ -2,7 +2,7 @@
 '''
 Oracle DataBase connection module
 
-:mainteiner: Vladimir Bormotov <bormotov@gmail.com>
+:maintainer: Vladimir Bormotov <bormotov@gmail.com>
 
 :maturity: new
 
@@ -14,14 +14,14 @@ Oracle DataBase connection module
 
     **OS Environment**
 
-    .. code-block:: text
+    .. code-block:: yaml
 
         ORACLE_HOME: path to oracle product
         PATH: path to Oracle Client libs need to be in PATH
 
     **pillar**
 
-    .. code-block:: text
+    .. code-block:: yaml
 
         oracle.dbs: list of known based
         oracle.dbs.<db>.uri: connection credentials in format:
@@ -111,7 +111,7 @@ def run_query(db, query):
     '''
     Run SQL query and return result
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -124,7 +124,9 @@ def run_query(db, query):
 
 def show_dbs(*dbs):
     '''
-    Show databases configuration from pillar. Filter by args
+    Show databases configuration from pillar. Filter by `*args`
+
+    CLI Example:
 
     .. code-block:: bash
 

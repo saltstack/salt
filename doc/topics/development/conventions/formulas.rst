@@ -85,8 +85,9 @@ or zip file of the repository. The directory structure is designed to work with
     .. code-block:: yaml
 
         file_roots:
-          - /srv/salt
-          - /srv/formulas/apache-formula
+          base:
+            - /srv/salt
+            - /srv/formulas/apache-formula
 
 3.  Restart the Salt Master.
 
@@ -385,7 +386,7 @@ of where the data comes from. Production data will vary from development data
 will vary from data from one company to another, however the state itself stays
 the same.
 
-.. code-block:: yaml
+.. code-block:: jinja
 
     {% set user_list = [
         {'name': 'larry', 'shell': 'bash'},
@@ -472,7 +473,9 @@ Jinja macros to encapsulate logic or conditionals are discouraged in favor of
 Repository structure
 ====================
 
-A basic Formula repository should have the following layout::
+A basic Formula repository should have the following layout:
+
+.. code-block:: text
 
     foo-formula
     |-- foo/
@@ -511,7 +514,7 @@ A sample skeleton for the ``README.rst`` file:
     .. note::
 
         See the full `Salt Formulas installation and usage instructions
-        <http://docs.saltstack.com/topics/conventions/formulas.html>`_.
+        <http://docs.saltstack.com/en/latest/topics/development/conventions/formulas.html>`_.
 
     Available states
     ================
@@ -555,6 +558,8 @@ Versioning
 ----------
 
 Formula are versioned according to Semantic Versioning, http://semver.org/.
+
+.. note::
 
     Given a version number MAJOR.MINOR.PATCH, increment the:
 

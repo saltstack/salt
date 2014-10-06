@@ -281,11 +281,12 @@ def _gen_keep_files(name, require):
     like directory or recurse has a clean.
     '''
     keep = set()
-    keep.add(name)
+    # Remove last slash if exists for all path
+    keep.add(name.rstrip('/'))
     if isinstance(require, list):
         for comp in require:
             if 'file' in comp:
-                keep.add(comp['file'])
+                keep.add(comp['file'].rstrip('/'))
                 if os.path.isdir(comp['file']):
                     for root, dirs, files in os.walk(comp['file']):
                         for name in files:
@@ -329,6 +330,7 @@ def _clean_dir(root, keep, exclude_pat):
                     break
 
     for roots, dirs, files in os.walk(root):
+        dirs[:] = [d for d in dirs if os.path.join(root, d) not in keep]
         for name in dirs:
             nfn = os.path.join(roots, name)
             if os.path.islink(nfn):
@@ -448,6 +450,7 @@ def _check_directory(name,
                         continue
                     fchange['removed'] = 'Removed due to clean'
                     changes[path] = fchange
+            dirs[:] = [d for d in dirs if os.path.join(root, d) not in keep]
             for name_ in dirs:
                 fchange = {}
                 path = os.path.join(root, name_)
@@ -725,6 +728,8 @@ def symlink(
         The permissions to set on this file, aka 644, 0775, 4664. Not supported
         on Windows
     '''
+    name = os.path.expanduser(name)
+
     # Make sure that leading zeros stripped by YAML loader are added back
     mode = __salt__['config.manage_mode'](mode)
 
@@ -881,6 +886,8 @@ def absent(name):
     name
         The path which should be deleted
     '''
+    name = os.path.expanduser(name)
+
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -931,6 +938,8 @@ def exists(name):
     name
         Absolute path which must exist
     '''
+    name = os.path.expanduser(name)
+
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -950,6 +959,8 @@ def missing(name):
     name
         Absolute path which must NOT exist
     '''
+    name = os.path.expanduser(name)
+
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -1040,20 +1051,46 @@ def managed(name,
             sha1        40
             md5         32
 
-        The file can contain several checksums for several files. Each line
-        must contain both the file name and the hash.  If no file name is
-        matched, the first hash encountered will be used, otherwise the most
-        secure hash with the correct source file name will be used.
+        **Using a Source Hash File**
+            The file can contain several checksums for several files. Each line
+            must contain both the file name and the hash.  If no file name is
+            matched, the first hash encountered will be used, otherwise the most
+            secure hash with the correct source file name will be used.
 
-        Debian file type ``*.dsc`` is supported.
+            When using a source hash file the source_hash argument needs to be a
+            url, the standard download urls are supported, ftp, http, salt etc:
 
-        Examples:
+            Example:
 
-        .. code-block:: text
+            .. code-block:: yaml
 
-            /etc/rc.conf ef6e82e4006dee563d98ada2a2a80a27
-            sha254c8525aee419eb649f0233be91c151178b30f0dff8ebbdcc8de71b1d5c8bcc06a  /etc/resolv.conf
-            ead48423703509d37c4a90e6a0d53e143b6fc268
+                tomdroid-src-0.7.3.tar.gz:
+                  file.managed:
+                    - name: /tmp/tomdroid-src-0.7.3.tar.gz
+                    - source: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz
+                    - source_hash: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.hash
+
+            The following is an example of the supported source_hash format:
+
+            .. code-block:: text
+
+                /etc/rc.conf ef6e82e4006dee563d98ada2a2a80a27
+                sha254c8525aee419eb649f0233be91c151178b30f0dff8ebbdcc8de71b1d5c8bcc06a  /etc/resolv.conf
+                ead48423703509d37c4a90e6a0d53e143b6fc268
+
+            Debian file type ``*.dsc`` files are also supported.
+
+        **Inserting the Source Hash in the sls Data**
+            Examples:
+
+            .. code-block:: yaml
+
+                tomdroid-src-0.7.3.tar.gz:
+                  file.managed:
+                    - name: /tmp/tomdroid-src-0.7.3.tar.gz
+                    - source: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz
+                    - source_hash: md5=79eef25f9b0b2c642c62b7f737d4f53f
+
 
         Known issues:
             If the remote server URL has the hash file as an apparent
@@ -1193,6 +1230,8 @@ def managed(name,
         Do run the state only if the check_cmd succeeds
 
     '''
+    name = os.path.expanduser(name)
+
     # Make sure that leading zeros stripped by YAML loader are added back
     mode = __salt__['config.manage_mode'](mode)
 
@@ -1454,8 +1493,9 @@ def directory(name,
     recurse
         Enforce user/group ownership and mode of directory recursively. Accepts
         a list of strings representing what you would like to recurse.  If
-        'mode' is defined, will recurse on both 'file_mode' and 'dir_mode' if
-        they are defined.
+        ``mode`` is defined, will recurse on both ``file_mode`` and ``dir_mode`` if
+        they are defined.  If ``ignore_files`` or ``ignore_dirs`` is included, files or
+        directories will be left unchanged respectively.
         Example:
 
         .. code-block:: yaml
@@ -1470,6 +1510,36 @@ def directory(name,
                     - user
                     - group
                     - mode
+
+        Leave files or directories unchanged:
+
+        .. code-block:: yaml
+
+            /var/log/httpd:
+                file.directory:
+                - user: root
+                - group: root
+                - dir_mode: 755
+                - file_mode: 644
+                - recurse:
+                    - user
+                    - group
+                    - mode
+                    - ignore_files
+
+            /var/log/httpd:
+                file.directory:
+                - user: root
+                - group: root
+                - dir_mode: 755
+                - file_mode: 644
+                - recurse:
+                    - user
+                    - group
+                    - mode
+                    - ignore_dirs
+
+        .. versionadded:: Lithium
 
     dir_mode / mode
         The permissions mode to set any directories created. Not supported on
@@ -1522,6 +1592,7 @@ def directory(name,
         .. versionadded:: 2014.7.0
 
     '''
+    name = os.path.expanduser(name)
     # Remove trailing slash, if present
     if name[-1] == '/':
         name = name[:-1]
@@ -1628,11 +1699,17 @@ def directory(name,
         if not isinstance(recurse, list):
             ret['result'] = False
             ret['comment'] = '"recurse" must be formed as a list of strings'
-        elif not set(['user', 'group', 'mode']) >= set(recurse):
+        elif not set(['user', 'group', 'mode', 'ignore_files', 'ignore_dirs']) >= set(recurse):
             ret['result'] = False
             ret['comment'] = 'Types for "recurse" limited to "user", ' \
-                             '"group" and "mode"'
+                             '"group", "mode", "ignore_files, and "ignore_dirs"'
         else:
+            if 'ignore_files' in recurse and 'ignore_dirs' in recurse:
+                ret['result'] = False
+                ret['comment'] = 'Can not specify "recurse" options "ignore_files" ' \
+                                 'and "ignore_dirs" at the same time.'
+                return ret
+
             if 'user' in recurse:
                 if user:
                     uid = __salt__['file.user_to_uid'](user)
@@ -1671,25 +1748,37 @@ def directory(name,
                 file_mode = None
                 dir_mode = None
 
+            if 'ignore_files' in recurse:
+                ignore_files = True
+            else:
+                ignore_files = False
+
+            if 'ignore_dirs' in recurse:
+                ignore_dirs = True
+            else:
+                ignore_dirs = False
+
             for root, dirs, files in os.walk(name):
-                for fn_ in files:
-                    full = os.path.join(root, fn_)
-                    ret, perms = __salt__['file.check_perms'](
-                        full,
-                        ret,
-                        user,
-                        group,
-                        file_mode,
-                        follow_symlinks)
-                for dir_ in dirs:
-                    full = os.path.join(root, dir_)
-                    ret, perms = __salt__['file.check_perms'](
-                        full,
-                        ret,
-                        user,
-                        group,
-                        dir_mode,
-                        follow_symlinks)
+                if not ignore_files:
+                    for fn_ in files:
+                        full = os.path.join(root, fn_)
+                        ret, perms = __salt__['file.check_perms'](
+                            full,
+                            ret,
+                            user,
+                            group,
+                            file_mode,
+                            follow_symlinks)
+                if not ignore_dirs:
+                    for dir_ in dirs:
+                        full = os.path.join(root, dir_)
+                        ret, perms = __salt__['file.check_perms'](
+                            full,
+                            ret,
+                            user,
+                            group,
+                            dir_mode,
+                            follow_symlinks)
 
     if clean:
         keep = _gen_keep_files(name, require)
@@ -1841,6 +1930,8 @@ def recurse(name,
         recursively removed so that symlink creation can proceed. This
         option is usually not needed except in special circumstances.
     '''
+    name = os.path.expanduser(name)
+
     user = _test_owner(kwargs, user=user)
     if salt.utils.is_windows():
         if group is not None:
@@ -2208,6 +2299,8 @@ def replace(name,
     Params are identical to :py:func:`~salt.modules.file.replace`.
 
     '''
+    name = os.path.expanduser(name)
+
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
     check_res, check_msg = _check_file(name)
@@ -2229,12 +2322,16 @@ def replace(name,
 
     if changes:
         ret['changes'] = {'diff': changes}
-        ret['comment'] = ('Changes were made'
-                if not __opts__['test'] else 'Changes would have been made')
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'Changes would have been made'
+        else:
+            ret['result'] = True
+            ret['comment'] = 'Changes were made'
     else:
-        ret['comment'] = 'No changes were made'
+        ret['result'] = True
+        ret['comment'] = 'No changes needed to be made'
 
-    ret['result'] = True if not __opts__['test'] else None
     return ret
 
 
@@ -2259,31 +2356,45 @@ def blockreplace(
     (the original version and the edited version) in order to detect changes
     and only edit the targeted file if necessary.
 
-    :param name: Filesystem path to the file to be edited
-    :param marker_start: The line content identifying a line as the start of
-        the content block. Note that the whole line containing this marker will
-        be considered, so whitespace or extra content before or after the
-        marker is included in final output
-    :param marker_end: The line content identifying a line as the end of
-        the content block. Note that the whole line containing this marker will
-        be considered, so whitespace or extra content before or after the
-        marker is included in final output.
-        Note: you can use file.accumulated and target this state. All
-        accumulated data dictionaries content will be added as new lines in the
-        content.
-    :param content: The content to be used between the two lines identified by
-        marker_start and marker_stop.
-    :param append_if_not_found: False by default, if markers are not found and
-        set to True then the markers and content will be appended to the file
-    :param prepend_if_not_found: False by default, if markers are not found and
-        set to True then the markers and content will be prepended to the file
-    :param backup: The file extension to use for a backup of the file if any
-        edit is made. Set to ``False`` to skip making a backup.
-    :param dry_run: Don't make any edits to the file
-    :param show_changes: Output a unified diff of the old file and the new
-        file. If ``False`` return a boolean if any changes were made.
+    name
+        Filesystem path to the file to be edited
 
-    :rtype: bool or str
+    marker_start
+        The line content identifying a line as the start of the content block.
+        Note that the whole line containing this marker will be considered, so
+        whitespace or extra content before or after the marker is included in
+        final output
+
+    marker_end
+        The line content identifying a line as the end of the content block.
+        Note that the whole line containing this marker will be considered, so
+        whitespace or extra content before or after the marker is included in
+        final output. Note: you can use file.accumulated and target this state.
+        All accumulated data dictionaries content will be added as new lines in
+        the content
+
+    content
+        The content to be used between the two lines identified by marker_start
+        and marker_stop
+
+    append_if_not_found
+        If markers are not found and set to True then the markers and content
+        will be appended to the file. Default is ``False``
+
+    prepend_if_not_found
+        If markers are not found and set to True then the markers and content
+        will be prepended to the file. Default is ``False``
+
+    backup
+        The file extension to use for a backup of the file if any edit is made.
+        Set this to ``False`` to skip making a backup.
+
+    dry_run
+        Don't make any edits to the file
+
+    show_changes
+        Output a unified diff of the old file and the new file. If ``False``
+        return a boolean if any changes were made
 
     Example of usage with an accumulator and with a variable:
 
@@ -2329,6 +2440,8 @@ def blockreplace(
         text 4
         # END managed zone 42 --
     '''
+    name = os.path.expanduser(name)
+
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
     check_res, check_msg = _check_file(name)
@@ -2439,6 +2552,8 @@ def sed(name,
 
     .. versionadded:: 0.9.5
     '''
+    name = os.path.expanduser(name)
+
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
     check_res, check_msg = _check_file(name)
@@ -2544,6 +2659,8 @@ def comment(name, regex, char='#', backup='.bak'):
 
     .. versionadded:: 0.9.5
     '''
+    name = os.path.expanduser(name)
+
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
     check_res, check_msg = _check_file(name)
@@ -2611,8 +2728,12 @@ def uncomment(name, regex, char='#', backup='.bak'):
         The character to remove in order to uncomment a line
     backup : ``.bak``
         The file will be backed up before edit with this file extension;
-        **WARNING:** each time ``sed``/``comment``/``uncomment`` is called will
-        overwrite this backup
+
+        .. warning::
+
+            This backup will be overwritten each time ``sed`` / ``comment`` /
+            ``uncomment`` is called. Meaning the backup will only be useful
+            after the first invocation.
 
     Usage:
 
@@ -2624,6 +2745,8 @@ def uncomment(name, regex, char='#', backup='.bak'):
 
     .. versionadded:: 0.9.5
     '''
+    name = os.path.expanduser(name)
+
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
     check_res, check_msg = _check_file(name)
@@ -2827,6 +2950,8 @@ def append(name,
 
     .. versionadded:: 0.9.5
     '''
+    name = os.path.expanduser(name)
+
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
     if sources is None:
@@ -3006,6 +3131,8 @@ def prepend(name,
 
     .. versionadded:: 2014.7.0
     '''
+    name = os.path.expanduser(name)
+
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
     if sources is None:
@@ -3132,8 +3259,12 @@ def patch(name,
           env=None,
           **kwargs):
     '''
-    Apply a patch to a file. Note: a suitable ``patch`` executable must be
-    available on the minion when using this state function.
+    Apply a patch to a file.
+
+    .. note::
+
+        A suitable ``patch`` executable must be available on the minion when
+        using this state function.
 
     name
         The file to with the patch will be applied.
@@ -3171,6 +3302,8 @@ def patch(name,
             - source: salt://file.patch
             - hash: md5=e138491e9d5b97023cea823fe17bac22
     '''
+    name = os.path.expanduser(name)
+
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
     check_res, check_msg = _check_file(name)
     if not check_res:
@@ -3266,6 +3399,8 @@ def touch(name, atime=None, mtime=None, makedirs=False):
 
     .. versionadded:: 0.9.5
     '''
+    name = os.path.expanduser(name)
+
     ret = {
         'name': name,
         'changes': {},
@@ -3301,7 +3436,7 @@ def touch(name, atime=None, mtime=None, makedirs=False):
     return ret
 
 
-def copy(name, source, force=False, makedirs=False):
+def copy(name, source, force=False, makedirs=False, preserve=False):
     '''
     If the source file exists on the system, copy it to the named file. The
     named file will not be overwritten if it already exists unless the force
@@ -3320,13 +3455,21 @@ def copy(name, source, force=False, makedirs=False):
     makedirs
         If the target subdirectories don't exist create them
 
+    preserve
+        Set ``preserve: True`` to preserve user/group ownership and mode
+        after copying. Default is ``False``
+
     '''
+    name = os.path.expanduser(name)
+    source = os.path.expanduser(source)
+
     ret = {
         'name': name,
         'changes': {},
-        'comment': '',
+        'comment': 'Copied "{0}" to "{1}"'.format(source, name),
         'result': True}
 
+    changed = True
     if not os.path.isabs(name):
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
@@ -3335,11 +3478,14 @@ def copy(name, source, force=False, makedirs=False):
         return _error(ret, 'Source file "{0}" is not present'.format(source))
 
     if os.path.lexists(source) and os.path.lexists(name):
+        # if this is a file which did not changed, do not update
+        if force and os.path.isfile(name):
+            hash1 = salt.utils.get_hash(name)
+            hash2 = salt.utils.get_hash(source)
+            if hash1 != hash2:
+                changed = False
         if not force:
-            ret['comment'] = ('The target file "{0}" exists and will not be '
-                              'overwritten'.format(name))
-            ret['result'] = True
-            return ret
+            changed = False
         elif not __opts__['test']:
             # Remove the destination to prevent problems later
             try:
@@ -3364,6 +3510,12 @@ def copy(name, source, force=False, makedirs=False):
         ret['result'] = None
         return ret
 
+    if not changed:
+        ret['comment'] = ('The target file "{0}" exists and will not be '
+                          'overwritten'.format(name))
+        ret['result'] = True
+        return ret
+
     # Run makedirs
     dname = os.path.dirname(name)
     if not os.path.isdir(dname):
@@ -3376,12 +3528,15 @@ def copy(name, source, force=False, makedirs=False):
     # All tests pass, move the file into place
     try:
         shutil.copy(source, name)
+        ret['changes'] = {name: source}
+        if preserve:
+            source_user = __salt__['file.get_user'](source)
+            source_group = __salt__['file.get_group'](source)
+            source_mode = __salt__['file.get_mode'](source)
+            __salt__['file.check_perms'](name, ret, source_user, source_group, source_mode)
     except (IOError, OSError):
         return _error(
             ret, 'Failed to copy "{0}" to "{1}"'.format(source, name))
-
-    ret['comment'] = 'Copied "{0}" to "{1}"'.format(source, name)
-    ret['changes'] = {name: source}
     return ret
 
 
@@ -3405,6 +3560,9 @@ def rename(name, source, force=False, makedirs=False):
         If the target subdirectories don't exist create them
 
     '''
+    name = os.path.expanduser(name)
+    source = os.path.expanduser(source)
+
     ret = {
         'name': name,
         'changes': {},
@@ -3577,8 +3735,8 @@ def accumulated(name, filename, text, **kwargs):
 def _merge_dict(obj, k, v):
     changes = {}
     if k in obj:
-        if type(obj[k]) is list:
-            if type(v) is list:
+        if isinstance(obj[k], list):
+            if isinstance(v, list):
                 for a in v:
                     if a not in obj[k]:
                         changes[k] = a
@@ -3587,10 +3745,10 @@ def _merge_dict(obj, k, v):
                 if obj[k] != v:
                     changes[k] = v
                     obj[k] = v
-        elif type(obj[k]) is dict:
-            if type(v) is dict:
+        elif isinstance(obj[k], dict):
+            if isinstance(v, dict):
                 for a, b in v.iteritems():
-                    if (type(b) is dict) or (type(b) is list):
+                    if isinstance(b, dict) or isinstance(b, list):
                         updates = _merge_dict(obj[k], a, b)
                         for x, y in updates.iteritems():
                             changes[k + "." + x] = y
@@ -3705,6 +3863,7 @@ def serialize(name,
           "name": "naive"
         }
     '''
+    name = os.path.expanduser(name)
 
     ret = {'changes': {},
            'comment': '',
@@ -3866,6 +4025,8 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
 
     .. versionadded:: 0.17.0
     '''
+    name = os.path.expanduser(name)
+
     ret = {'name': name,
            'changes': {},
            'comment': '',
@@ -4011,10 +4172,10 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
 
 def mod_run_check_cmd(cmd, filename):
     '''
-    Execute the check_cmd logic
-    Return a result dict if:
-    * check_cmd succeeded (check_cmd == 0)
-    else return True
+    Execute the check_cmd logic.
+
+    Return a result dict if ``check_cmd`` succeeds (check_cmd == 0)
+    otherwise return True
     '''
 
     log.debug('running our check_cmd')

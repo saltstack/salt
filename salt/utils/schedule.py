@@ -221,9 +221,9 @@ class Schedule(object):
         python data-structures to make sure, you pass correct dictionaries.
         '''
 
-        # we dont do any checking here besides making sure its a dict.
+        # we don't do any checking here besides making sure its a dict.
         # eval() already does for us and raises errors accordingly
-        if not type(data) is dict:
+        if not isinstance(data, dict):
             raise ValueError('Scheduled jobs have to be of type dict.')
         if not len(data.keys()) == 1:
             raise ValueError('You can only schedule one new job at a time.')
@@ -422,6 +422,8 @@ class Schedule(object):
 
             data_returner = data.get('returner', None)
             if data_returner or self.schedule_returner:
+                if 'returner_config' in data:
+                    ret['ret_config'] = data['returner_config']
                 rets = []
                 for returner in [data_returner, self.schedule_returner]:
                     if isinstance(returner, str):

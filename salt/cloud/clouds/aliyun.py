@@ -118,7 +118,7 @@ def avail_images(kwargs=None, call=None):
             '-f or --function, or with the --list-images option'
         )
 
-    if type(kwargs) is not dict:
+    if not isinstance(kwargs, dict):
         kwargs = {}
 
     provider = get_configured_provider()
@@ -516,7 +516,7 @@ def create_node(kwargs):
     '''
     Convenience function to make the rest api call for node creation.
     '''
-    if type(kwargs) is not dict:
+    if not isinstance(kwargs, dict):
         kwargs = {}
 
     # Required parameters
@@ -623,7 +623,7 @@ def create(vm_):
     log.debug('VM {0} is now running'.format(public_ip))
     vm_['ssh_host'] = public_ip
 
-    # The instance is booted and accessable, let's Salt it!
+    # The instance is booted and accessible, let's Salt it!
     ret = salt.utils.cloud.bootstrap(vm_, __opts__)
     ret.update(data.__dict__)
 
@@ -800,7 +800,7 @@ def list_monitor_data(kwargs=None, call=None):
             'The list_monitor_data must be called with -f or --function.'
         )
 
-    if type(kwargs) is not dict:
+    if not isinstance(kwargs, dict):
         kwargs = {}
 
     ret = {}
@@ -865,7 +865,7 @@ def show_image(kwargs, call=None):
             '-f or --function'
         )
 
-    if type(kwargs) is not dict:
+    if not isinstance(kwargs, dict):
         kwargs = {}
 
     location = get_location()

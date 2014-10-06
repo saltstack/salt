@@ -2,7 +2,6 @@
 # Import python libs
 import logging
 import os
-import signal
 import time
 import sys
 import multiprocessing
@@ -168,6 +167,7 @@ class ProcessManager(object):
                   ' restarting...').format(self._process_map[pid]['tgt'],
                                            pid,
                                            self._process_map[pid]['Process'].exitcode))
+        # don't block, the process is already dead
         self._process_map[pid]['Process'].join(1)
 
         self.add_process(self._process_map[pid]['tgt'],
@@ -199,6 +199,7 @@ class ProcessManager(object):
                                ' process, will not restart').format(pid))
                     continue
                 self.restart_process(pid)
+            # OSError is raised if a signal handler is called (SIGTERM) during os.wait
             except OSError:
                 break
 

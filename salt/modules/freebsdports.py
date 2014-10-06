@@ -5,7 +5,7 @@ Install software from the FreeBSD ``ports(7)`` system
 .. versionadded:: 2014.1.0
 
 This module allows you to install ports using ``BATCH=yes`` to bypass
-configuration prompts. It is recommended to use the the :mod:`ports state
+configuration prompts. It is recommended to use the :mod:`ports state
 <salt.states.freebsdports>` to install ports, but it it also possible to use
 this module exclusively from the command line.
 

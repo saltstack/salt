@@ -12,12 +12,13 @@ import yaml
 # Import salt libs
 import salt.pillar
 import salt.utils
+from salt.defaults import DEFAULT_TARGET_DELIM
 from salt._compat import string_types
 
 __proxyenabled__ = ['*']
 
 
-def get(key, default='', merge=False, delimiter=':'):
+def get(key, default='', merge=False, delimiter=DEFAULT_TARGET_DELIM):
     '''
     .. versionadded:: 0.14
 

@@ -345,21 +345,6 @@ seconds each iteration.
 
     acceptance_wait_time_max: None
 
-.. conf_minion:: dns_check
-
-``dns_check``
--------------
-
-Default: ``True``
-
-When healing, a dns_check is run. This is to make sure that the originally
-resolved dns has not changed. If this is something that does not happen in your
-environment, set this value to ``False``.
-
-.. code-block:: yaml
-
-    dns_check: True
-
 .. conf_minion:: ipc_mode
 
 ``ipc_mode``
@@ -652,6 +637,20 @@ directed to look on the minion by setting this parameter to ``local``.
 .. code-block:: yaml
 
     file_client: remote
+
+.. conf_minion:: use_master_when_local
+
+``use_master_when_local``
+---------------
+
+Default: ``False``
+
+When using a local :conf_minion:`file_client`, this parameter is used to allow
+the client to connect to a master for remote execution.
+
+.. code-block:: yaml
+
+    use_master_when_local: False
 
 .. conf_minion:: file_roots
 

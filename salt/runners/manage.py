@@ -138,7 +138,7 @@ def up():  # pylint: disable=C0103
 def present(subset=None, show_ipv4=False):
     '''
     Print a list of all minions that are up according to Salt's presence
-    detection, no commands will be sent
+    detection (no commands will be sent)
 
     subset : None
         Pass in a CIDR range to filter minions by IP address.
@@ -158,6 +158,40 @@ def present(subset=None, show_ipv4=False):
     connected = dict(minions) if show_ipv4 else sorted(minions)
 
     salt.output.display_output(connected, '', __opts__)
+    return connected
+
+
+def not_present(subset=None, show_ipv4=False):
+    '''
+    Print a list of all minions that are NOT up according to Salt's presence
+    detection (no commands will be sent)
+
+    subset : None
+        Pass in a CIDR range to filter minions by IP address.
+
+    show_ipv4 : False
+        Also show the IP address each minion is connecting from.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run manage.not_present
+    '''
+    ckminions = salt.utils.minions.CkMinions(__opts__)
+
+    minions = ckminions.connected_ids(show_ipv4=show_ipv4, subset=subset)
+    connected = dict(minions) if show_ipv4 else sorted(minions)
+
+    key = salt.key.Key(__opts__)
+    keys = key.list_keys()
+
+    not_connected = []
+    for minion in keys['minions']:
+        if minion not in connected:
+            not_connected.append(minion)
+
+    salt.output.display_output(not_connected, '', __opts__)
     return connected
 
 
@@ -255,24 +289,26 @@ def versions():
         else:
             for minion in sorted(version_status[key]):
                 ret.setdefault(labels[key], {})[minion] = version_status[key][minion]
-
     salt.output.display_output(ret, '', __opts__)
     return ret
 
 
-def bootstrap(version="develop",
+def bootstrap(version='develop',
               script=None,
-              hosts="",
+              hosts='',
               root_user=True):
     '''
     Bootstrap minions with salt-bootstrap
 
     version : develop
         Git tag of version to install
+
     script : https://bootstrap.saltstack.com
         Script to execute
+
     hosts
-        Comma separated hosts [example: hosts="host1.local,host2.local"]
+        Comma-separated hosts [example: hosts='host1.local,host2.local']
+
     root_user : True
         Prepend ``root@`` to each host.
 
@@ -280,24 +316,25 @@ def bootstrap(version="develop",
 
     .. code-block:: bash
 
-        salt-run manage.bootstrap hosts="host1,host2"
-        salt-run manage.bootstrap hosts="host1,host2" version="v0.17"
-        salt-run manage.bootstrap hosts="host1,host2" version="v0.17" script="https://bootstrap.saltstack.com/develop"
-        salt-run manage.bootstrap hosts="ec2-user@host1,ec2-user@host2" root_user=False
+        salt-run manage.bootstrap hosts='host1,host2'
+        salt-run manage.bootstrap hosts='host1,host2' version='v0.17'
+        salt-run manage.bootstrap hosts='host1,host2' version='v0.17' script='https://bootstrap.saltstack.com/develop'
+        salt-run manage.bootstrap hosts='ec2-user@host1,ec2-user@host2' root_user=False
 
     '''
     if script is None:
         script = 'https://bootstrap.saltstack.com'
-    for host in hosts.split(","):
+
+    for host in hosts.split(','):
         # Could potentially lean on salt-ssh utils to make
-        # deployment easier on existing hosts (i.e. use sshpass,
-        # or expect, pass better options to ssh etc)
-        subprocess.call(["ssh",
-                        "root@" if root_user else "" + host,
-                        "python -c 'import urllib; "
-                        "print urllib.urlopen("
-                        "\"" + script + "\""
-                        ").read()' | sh -s -- git " + version])
+        # deployment easier on existing hosts (i.e. use salt.utils.vt,
+        # pass better options to ssh, etc)
+        subprocess.call(['ssh',
+                        'root@' if root_user else '' + host,
+                        'python -c \'import urllib; '
+                        'print urllib.urlopen('
+                        '\'' + script + '\''
+                        ').read()\' | sh -s -- git ' + version])
 
 
 def bootstrap_psexec(hosts='', master=None, version=None, arch='win32',

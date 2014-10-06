@@ -711,14 +711,14 @@ def hw_addr(iface):
 
 def interface(iface):
     '''
-    Return the the interface details
+    Return the interface details
     '''
     return interfaces().get(iface, {}).get('inet', '')
 
 
 def interface_ip(iface):
     '''
-    Return the the interface details
+    Return the interface details
     '''
     return interfaces().get(iface, {}).get('inet', {})[0].get('address', {})
 

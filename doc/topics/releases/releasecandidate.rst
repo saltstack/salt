@@ -5,7 +5,7 @@ Installing/Testing a Salt Release Candidate
 It's time for a new feature release of Salt!  Follow the instructions below to
 install the latest release candidate of Salt, and try :doc:`all the shiny new
 features </topics/releases/2014.7.0>`!  Be sure to report any bugs you find on
-`Github <saltstack/salt>`_.
+`Github <http://www.github.com/saltstack/salt>`_
 
 Installing Using Bootstrap
 ==========================

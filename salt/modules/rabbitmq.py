@@ -49,7 +49,8 @@ def _get_rabbitmq_plugin():
     if rabbitmq is None:
         version = __salt__['pkg.version']('rabbitmq-server').split('-')[0]
 
-        path = '/usr/lib/rabbitmq/lib/rabbitmq_server-{0}/sbin/rabbitmq-plugins'
+        path = '/usr/lib/rabbitmq/lib/rabbitmq_server-{0}/\
+                sbin/rabbitmq-plugins'
         rabbitmq = path.format(version)
 
     return rabbitmq
@@ -249,7 +250,7 @@ def delete_vhost(vhost, runas=None):
 
 
 def set_permissions(vhost, user, conf='.*', write='.*', read='.*',
-        runas=None):
+                    runas=None):
     '''
     Sets permissions for vhost via rabbitmqctl set_permissions
 
@@ -349,7 +350,7 @@ def cluster_status(user=None):
     return res
 
 
-def join_cluster(host, user='rabbit', runas=None):
+def join_cluster(host, user='rabbit', ram_node=None, runas=None):
     '''
     Join a rabbit cluster
 
@@ -357,13 +358,15 @@ def join_cluster(host, user='rabbit', runas=None):
 
     .. code-block:: bash
 
-        salt '*' rabbitmq.join_cluster 'rabbit' 'rabbit.example.com'
+        salt '*' rabbitmq.join_cluster 'rabbit.example.com' 'rabbit'
     '''
+    if ram_node:
+        cmd = 'rabbitmqctl join_cluster --ram {0}@{1}'.format(user, host)
+    else:
+        cmd = 'rabbitmqctl join_cluster {0}@{1}'.format(user, host)
 
     stop_app(runas)
-    res = __salt__['cmd.run'](
-        'rabbitmqctl join_cluster {0}@{1}'.format(user, host),
-        runas=runas)
+    res = __salt__['cmd.run'](cmd, runas=runas)
     start_app(runas)
 
     return _format_response(res, 'Join')
@@ -465,8 +468,8 @@ def list_queues_vhost(vhost, *kwargs):
 
         salt '*' rabbitmq.list_queues messages consumers
     '''
-    res = __salt__['cmd.run'](
-        'rabbitmqctl list_queues -p {0} {1}'.format(vhost, ' '.join(list(kwargs))))
+    res = __salt__['cmd.run']('rabbitmqctl list_queues -p\
+                              {0} {1}'.format(vhost, ' '.join(list(kwargs))))
     return res
 
 
@@ -489,17 +492,21 @@ def list_policies(runas=None):
     for line in res.splitlines():
         if '...' not in line and line != '\n':
             parts = line.split('\t')
-            if len(parts) != 6:
+            if len(parts) not in (5, 6):
                 continue
             vhost, name = parts[0], parts[1]
             if vhost not in ret:
                 ret[vhost] = {}
-            ret[vhost][name] = {
-                'apply_to': parts[2],
-                'pattern': parts[3],
-                'definition': parts[4],
-                'priority': parts[5]
-            }
+            ret[vhost][name] = {}
+            # How many fields are there? - 'apply_to' was inserted in position 2 at somepoint
+            offset = len(parts) - 5
+            if len(parts) == 6:
+                ret[vhost][name]['apply_to'] = parts[2]
+            ret[vhost][name].update({
+                'pattern': parts[offset+2],
+                'definition': parts[offset+3],
+                'priority': parts[offset+4]
+            })
     log.debug('Listing policies: {0}'.format(ret))
     return ret
 

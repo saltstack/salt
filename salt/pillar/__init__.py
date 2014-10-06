@@ -564,10 +564,19 @@ class Pillar(object):
         Render the pillar data and return
         '''
         top, terrors = self.get_top()
-        matches = self.top_matches(top)
-        pillar, errors = self.render_pillar(matches)
         if ext:
-            pillar = self.ext_pillar(pillar, pillar_dirs)
+            if self.opts.get('ext_pillar_first', False):
+                self.opts['pillar'] = self.ext_pillar({}, pillar_dirs)
+                matches = self.top_matches(top)
+                pillar, errors = self.render_pillar(matches)
+                pillar = self.merge_sources(pillar, self.opts['pillar'])
+            else:
+                matches = self.top_matches(top)
+                pillar, errors = self.render_pillar(matches)
+                pillar = self.ext_pillar(pillar, pillar_dirs)
+        else:
+            matches = self.top_matches(top)
+            pillar, errors = self.render_pillar(matches)
         errors.extend(terrors)
         if self.opts.get('pillar_opts', True):
             mopts = dict(self.opts)

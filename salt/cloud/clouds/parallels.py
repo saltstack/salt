@@ -487,11 +487,11 @@ def query(action=None, command=None, args=None, method='GET', data=None):
     if command:
         path += '/{0}'.format(command)
 
-    if type(args) is not dict:
+    if not type(args, dict):
         args = {}
 
     kwargs = {'data': data}
-    if type(data) is str and '<?xml' in data:
+    if isinstance(data, str) and '<?xml' in data:
         kwargs['headers'] = {
             'Content-type': 'application/xml',
         }

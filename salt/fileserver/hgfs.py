@@ -71,7 +71,7 @@ def __virtual__():
     if __opts__['hgfs_branch_method'] not in VALID_BRANCH_METHODS:
         log.error(
             'Invalid hgfs_branch_method {0!r}. Valid methods are: {1}'
-            .format(VALID_BRANCH_METHODS)
+            .format(__opts__['hgfs_branch_method'], VALID_BRANCH_METHODS)
         )
         return False
     return __virtualname__

@@ -9,7 +9,6 @@ access to the master root execution access to all salt minions.
 # Import python libs
 import time
 import functools
-import json
 import glob
 import logging
 import os
@@ -254,8 +253,10 @@ def _run(cmd,
         try:
             # Getting the environment for the runas user
             # There must be a better way to do this.
-            py_code = 'import os, json;' \
-                      'print(json.dumps(os.environ.__dict__))'
+            py_code = (
+                'import os, itertools; '
+                'print \"\\0\".join(itertools.chain(*os.environ.items()))'
+            )
             if __grains__['os'] in ['MacOS', 'Darwin']:
                 env_cmd = ('sudo', '-i', '-u', runas, '--',
                            sys.executable)
@@ -264,14 +265,13 @@ def _run(cmd,
                            "{0} -c {1}".format(shell, sys.executable))
             else:
                 env_cmd = ('su', '-s', shell, '-', runas, '-c', sys.executable)
-            env_json = subprocess.Popen(
+            env_encoded = subprocess.Popen(
                 env_cmd,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE
             ).communicate(py_code)[0]
-            env_json = (filter(lambda x: x.startswith('{') and x.endswith('}'),
-                               env_json.splitlines()) or ['{}']).pop()
-            env_runas = json.loads(env_json).get('data', {})
+            import itertools
+            env_runas = dict(itertools.izip(*[iter(env_encoded.split(b'\0'))]*2))
             env_runas.update(env)
             env = env_runas
             # Encode unicode kwargs to filesystem encoding to avoid a
@@ -1011,7 +1011,7 @@ def script(source,
            shell=DEFAULT_SHELL,
            python_shell=True,
            env=None,
-           template='jinja',
+           template=None,
            umask=None,
            output_loglevel='debug',
            quiet=False,
@@ -1232,9 +1232,8 @@ def exec_code(lang, code, cwd=None):
     codefile = salt.utils.mkstemp()
     with salt.utils.fopen(codefile, 'w+t') as fp_:
         fp_.write(code)
-
-    cmd = '{0} {1}'.format(lang, codefile)
-    ret = run(cmd, cwd=cwd)
+    cmd = [lang, codefile]
+    ret = run(cmd, cwd=cwd, python_shell=False)
     os.remove(codefile)
     return ret
 

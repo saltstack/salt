@@ -78,6 +78,7 @@ VALID_OPTS = {
     'sls_list': list,
     'top_file': str,
     'file_client': str,
+    'use_master_when_local': bool,
     'file_roots': dict,
     'pillar_roots': dict,
     'hash_type': str,
@@ -122,7 +123,6 @@ VALID_OPTS = {
     'acceptance_wait_time_max': float,
     'rejected_retry': bool,
     'loop_interval': float,
-    'dns_check': bool,
     'verify_env': bool,
     'grains': dict,
     'permissive_pki_access': bool,
@@ -254,13 +254,13 @@ VALID_OPTS = {
     'raet_main': bool,
     'sqlite_queue_dir': str,
     'queue_dirs': list,
-    'restart_on_error': bool,
     'ping_interval': int,
     'cli_summary': bool,
     'max_minions': int,
     'username': str,
     'password': str,
     'zmq_filtering': bool,
+    'con_cache': bool,
     'rotate_aes_key': bool,
 }
 
@@ -298,6 +298,7 @@ DEFAULT_MINION_OPTS = {
     'sls_list': [],
     'top_file': '',
     'file_client': 'remote',
+    'use_master_when_local': False,
     'file_roots': {
         'base': [salt.syspaths.BASE_FILE_ROOTS_DIR],
     },
@@ -368,7 +369,6 @@ DEFAULT_MINION_OPTS = {
     'acceptance_wait_time_max': 0,
     'rejected_retry': False,
     'loop_interval': 1,
-    'dns_check': True,
     'verify_env': True,
     'grains': {},
     'permissive_pki_access': False,
@@ -393,7 +393,7 @@ DEFAULT_MINION_OPTS = {
     'keysize': 4096,
     'transport': 'zeromq',
     'auth_timeout': 60,
-    'auth_tries': 1,
+    'auth_tries': 7,
     'auth_safemode': False,
     'random_master': False,
     'minion_floscript': os.path.join(FLO_DIR, 'minion.flo'),
@@ -454,7 +454,7 @@ DEFAULT_MASTER_OPTS = {
     'hgfs_branch_method': 'branches',
     'hgfs_env_whitelist': [],
     'hgfs_env_blacklist': [],
-    'show_timeout': False,
+    'show_timeout': True,
     'show_jid': False,
     'svnfs_remotes': [],
     'svnfs_mountpoint': '',
@@ -579,6 +579,7 @@ DEFAULT_MASTER_OPTS = {
     'master_pubkey_signature': 'master_pubkey_signature',
     'master_use_pubkey_signature': False,
     'zmq_filtering': False,
+    'con_cache': False,
     'rotate_aes_key': True,
 }
 
@@ -1369,7 +1370,7 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
             if ':' in details['provider']:
                 alias, driver = details['provider'].split(':')
                 if alias not in providers or driver not in providers[alias]:
-                    log.warning(
+                    log.trace(
                         'The profile {0!r} is defining {1[provider]!r} as the '
                         'provider. Since there\'s no valid configuration for '
                         'that provider, the profile will be removed from the '
@@ -1383,7 +1384,7 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
                 providers[alias][driver]['profiles'][profile] = details
 
             if details['provider'] not in providers:
-                log.warning(
+                log.trace(
                     'The profile {0!r} is defining {1[provider]!r} as the '
                     'provider. Since there\'s no valid configuration for '
                     'that provider, the profile will be removed from the '
@@ -1418,7 +1419,7 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
 
         if ':' not in extended['provider']:
             if extended['provider'] not in providers:
-                log.warning(
+                log.trace(
                     'The profile {0!r} is defining {1[provider]!r} as the '
                     'provider. Since there\'s no valid configuration for '
                     'that provider, the profile will be removed from the '
@@ -1435,7 +1436,7 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
         else:
             alias, driver = extended['provider'].split(':')
             if alias not in providers or driver not in providers[alias]:
-                log.warning(
+                log.trace(
                     'The profile {0!r} is defining {1[provider]!r} as the '
                     'provider. Since there\'s no valid configuration for '
                     'that provider, the profile will be removed from the '
@@ -1778,7 +1779,7 @@ def is_provider_configured(opts, provider, required_keys=()):
             if opts['providers'][alias][driver].get(key, None) is None:
                 # There's at least one require configuration key which is not
                 # set.
-                log.warn(
+                log.trace(
                     'The required {0!r} configuration setting is missing on '
                     'the {1!r} driver(under the {2!r} alias)'.format(
                         key, provider, alias
@@ -1801,7 +1802,7 @@ def is_provider_configured(opts, provider, required_keys=()):
                 if provider_details.get(key, None) is None:
                     # This provider does not include all necessary keys,
                     # continue to next one
-                    log.warn(
+                    log.trace(
                         'The required {0!r} configuration setting is missing '
                         'on the {1!r} driver(under the {2!r} alias)'.format(
                             key, provider, alias

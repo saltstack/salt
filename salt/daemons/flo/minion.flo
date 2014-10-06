@@ -3,6 +3,7 @@
 house minion
 
 framer minionudpstack be active first setup
+    # Begin the pre-flight checks
     frame setup
         enter
             do salt raet cleanup
@@ -10,23 +11,31 @@ framer minionudpstack be active first setup
             do salt raet manor lane setup
         go loadmodules
 
+    # Load the minion mods
     frame loadmodules
         do salt load modules at enter
         go start
 
+    # OK, let's start the minion up
     frame start
+        # Start the inbound framer
         bid start inbound
+        # Start the bootstrap framer
         bid start bootstrap
+        # Start the eventing framer
         bid start eventing
+        # Start the functionmanage framer
         bid start functionmanager
-        #bid start manager #started below in bootstrap<<router>
+        # Start the outbound framer
         bid start outbound
         bid start scheduler
 
+        # Cleanup on exit
         exit
             do salt raet road stack closer per inode ".salt.road.manor."
             do salt raet lane stack closer per inode ".salt.lane.manor."
 
+# Framer for handling inbound traffic
 framer inbound be inactive first start
     frame start
         do salt raet road stack service rx
@@ -73,7 +82,8 @@ framer bootstrap be inactive first join
         go router
 
     frame router
-        #bid start manager #start alive presence from minion side
+        # start the manager framer
+        bid start manager #start alive presence from minion side
         do salt raet router
         go pillar if .salt.var.pillar_refresh
         go loading if .salt.var.module_refresh
@@ -93,6 +103,7 @@ framer manager be inactive first start at 10.0
     frame start
          do salt raet road stack manager per inode ".salt.road.manor"
 
+# Framer for handling outbound traffic
 framer outbound be inactive first start
     frame start
         do salt raet road stack service tx

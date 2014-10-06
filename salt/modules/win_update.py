@@ -478,7 +478,7 @@ def list_updates(verbose=False, includes=None, retries=5, categories=None):
 
     '''
 
-    log.debug('categories to search for are: '.format(str(categories)))
+    log.debug('categories to search for are: {0}'.format(str(categories)))
     quidditch = PyWinUpdater()
     if categories:
         quidditch.SetCategories(categories)
@@ -533,7 +533,7 @@ def download_updates(includes=None, retries=5, categories=None):
 
     '''
 
-    log.debug('categories to search for are: '.format(str(categories)))
+    log.debug('categories to search for are: {0}'.format(str(categories)))
     quidditch = PyWinUpdater(skipDownloaded=True)
     quidditch.SetCategories(categories)
     quidditch.SetIncludes(includes)
@@ -560,8 +560,13 @@ def install_updates(includes=None, retries=5, categories=None):
     Downloads and installs all available updates, skipping those that require
     user interaction.
 
-    various aspects of the updates can be included or excluded. this feature is
-    still in development.
+    Add ``cached`` to only install those updates which have already been downloaded.
+
+    you can set the maximum number of retries to ``n`` in the search process by
+    adding: ``retries=n``
+
+    various aspects of the updates can be included or excluded. This function is
+    still under development.
 
     retries
         Number of retries to make before giving up. This is total, not per
@@ -594,7 +599,7 @@ def install_updates(includes=None, retries=5, categories=None):
 
     '''
 
-    log.debug('categories to search for are: '.format(str(categories)))
+    log.debug('categories to search for are: {0}'.format(str(categories)))
     quidditch = PyWinUpdater()
     quidditch.SetCategories(categories)
     quidditch.SetIncludes(includes)

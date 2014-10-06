@@ -786,7 +786,7 @@ def destroy(name, call=None):
     response = conn.createCancelServerTicket(
         {
             'id': node['id'],
-            'reason': 'Salt Cloud Hardware Server Cancelation',
+            'reason': 'Salt Cloud Hardware Server Cancellation',
             'content': 'Please cancel this server',
             'cancelAssociatedItems': True,
             'attachmentType': 'HARDWARE',

@@ -131,7 +131,7 @@ def service_highstate(requires=True):
         if requires:
             exists = False
             for item in ret[service]['service']:
-                if type(item) is dict and item.keys()[0] == 'require':
+                if isinstance(item, dict) and item.keys()[0] == 'require':
                     exists = True
             if not exists:
                 ret[service]['service'].append(

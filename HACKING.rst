@@ -172,9 +172,6 @@ ZeroMQ Transport:
     pip install psutil
     pip install -e .
 
-
-.. note:: Installing M2Crypto
-
 .. note:: Installing M2Crypto
 
     You may need ``swig`` and ``libssl-dev`` to build M2Crypto. If you
@@ -260,7 +257,7 @@ Once the minion starts, you may see an error like the following::
 
     zmq.core.error.ZMQError: ipc path "/path/to/your/virtualenv/var/run/salt/minion/minion_event_7824dcbcfd7a8f6755939af70b96249f_pub.ipc" is longer than 107 characters (sizeof(sockaddr_un.sun_path)).
 
-This means the the path to the socket the minion is using is too long. This is
+This means that the path to the socket the minion is using is too long. This is
 a system limitation, so the only workaround is to reduce the length of this
 path. This can be done in a couple different ways:
 

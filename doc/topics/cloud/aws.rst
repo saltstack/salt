@@ -210,13 +210,13 @@ Set up an initial profile at ``/etc/salt/cloud.profiles``:
     base_ec2_private:
       provider: my-ec2-southeast-private-ips
       image: ami-e565ba8c
-      size: Micro Instance
+      size: t1.micro
       ssh_username: ec2-user
 
     base_ec2_public:
       provider: my-ec2-southeast-public-ips
       image: ami-e565ba8c
-      size: Micro Instance
+      size: t1.micro
       ssh_username: ec2-user
 
     base_ec2_db:
@@ -887,6 +887,8 @@ image should be created. Then, edit your cloud.profiles file like so:-
 
 Specifying interface properties
 -------------------------------
+
+.. versionadded:: 2014.7.0
 
 Launching into a VPC allows you to specify more complex configurations for
 the network interfaces of your virtual machines, for example:-

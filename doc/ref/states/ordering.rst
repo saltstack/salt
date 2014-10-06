@@ -100,7 +100,7 @@ the discrete states are split or groups into separate sls files:
           - sls: network
 
 In this example, the httpd service running state will not be applied
-(i.e., the httpd service will not be started) unless both the https package is
+(i.e., the httpd service will not be started) unless both the httpd package is
 installed AND the network state is satisfied.
 
 .. note:: Requisite matching

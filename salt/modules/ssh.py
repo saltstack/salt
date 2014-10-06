@@ -261,25 +261,45 @@ def host_keys(keydir=None):
     return keys
 
 
-def auth_keys(user, config='.ssh/authorized_keys'):
+def auth_keys(user=None, config='.ssh/authorized_keys'):
     '''
-    Return the authorized keys for the specified user
+    Return the authorized keys for users
 
     CLI Example:
 
     .. code-block:: bash
 
+        salt '*' ssh.auth_keys
         salt '*' ssh.auth_keys root
+        salt '*' ssh.auth_keys user=root
+        salt '*' ssh.auth_keys user="[user1, user2]"
     '''
-    full = None
-    try:
-        full = _get_config_file(user, config)
-    except CommandExecutionError:
-        pass
+    if not user:
+        user = __salt__['user.list_users']()
 
-    if not full or not os.path.isfile(full):
-        return {}
-    return _validate_keys(full)
+    old_output_when_one_user = False
+    if not isinstance(user, list):
+        user = [user]
+        old_output_when_one_user = True
+
+    keys = {}
+    for u in user:
+        full = None
+        try:
+            full = _get_config_file(u, config)
+        except CommandExecutionError:
+            pass
+
+        if full and os.path.isfile(full):
+            keys[u] = _validate_keys(full)
+
+    if old_output_when_one_user:
+        if user[0] in keys:
+            return keys[user[0]]
+        else:
+            return {}
+
+    return keys
 
 
 def check_key_file(user,
@@ -620,7 +640,7 @@ def get_known_host(user, hostname, config=None):
     '''
     full = _get_known_hosts_file(config=config, user=user)
 
-    if type(full) == dict:
+    if isinstance(full, dict):
         return full
 
     cmd = 'ssh-keygen -F "{0}" -f "{1}"'.format(hostname, full)
@@ -717,7 +737,7 @@ def rm_known_host(user=None, hostname=None, config=None):
 
     full = _get_known_hosts_file(config=config, user=user)
 
-    if type(full) == dict:
+    if isinstance(full, dict):
         return full
 
     if not os.path.isfile(full):
@@ -791,7 +811,7 @@ def set_known_host(user=None,
 
     full = _get_known_hosts_file(config=config, user=user)
 
-    if type(full) == dict:
+    if isinstance(full, dict):
         return full
 
     if key:
@@ -926,7 +946,7 @@ def hash_known_hosts(user=None, config=None):
     '''
     full = _get_known_hosts_file(config=config, user=user)
 
-    if type(full) == dict:
+    if isinstance(full, dict):
         return full
 
     if not os.path.isfile(full):

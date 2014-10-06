@@ -1454,7 +1454,8 @@ class SSHClient(object):
         '''
         opts = copy.deepcopy(self.opts)
         opts.update(kwargs)
-        opts['timeout'] = timeout
+        if timeout:
+            opts['timeout'] = timeout
         arg = salt.utils.args.condition_input(arg, kwarg)
         opts['argv'] = [fun] + arg
         opts['selected_target_option'] = expr_form

@@ -33,6 +33,7 @@ def installed(name,          # pylint: disable=C0103
               version=None,
               rdoc=False,
               ri=False,
+              pre_releases=False,
               proxy=None):     # pylint: disable=C0103
     '''
     Make sure that a gem is installed.
@@ -62,6 +63,9 @@ def installed(name,          # pylint: disable=C0103
 
     ri : False
         Generate RI documentation for the gem(s).
+
+    pre_releases : False
+        Install pre-release version of gem(s) if available.
 
     proxy : None
         Use the specified HTTP proxy server for all outgoing traffic.
@@ -112,6 +116,7 @@ def installed(name,          # pylint: disable=C0103
                                version=version,
                                rdoc=rdoc,
                                ri=ri,
+                               pre_releases=pre_releases,
                                proxy=proxy):
         ret['result'] = True
         ret['changes'][name] = 'Installed'

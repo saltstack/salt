@@ -42,9 +42,12 @@ import salt.utils.verify
 import salt.utils.minions
 import salt.utils.gzip_util
 import salt.utils.process
+from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.debug import enable_sigusr1_handler, enable_sigusr2_handler, inspect_stack
 from salt.utils.event import tagify
 import binascii
+from salt.utils.master import ConnectedCache
+from salt.utils.cache import CacheCli
 
 # Import halite libs
 try:
@@ -285,9 +288,7 @@ class Master(SMaster):
         enable_sigusr2_handler()
 
         self.__set_max_open_files()
-
         process_manager = salt.utils.process.ProcessManager()
-
         process_manager.add_process(self._clear_old_jobs)
 
         process_manager.add_process(Publisher, args=(self.opts,))
@@ -303,6 +304,12 @@ class Master(SMaster):
             log.info('Halite: Not configured, skipping.')
         else:
             log.debug('Halite: Unavailable.')
+
+        if self.opts['con_cache']:
+            log.debug('Starting ConCache')
+            process_manager.add_process(ConnectedCache, args=(self.opts,))
+            # workaround for issue #16315, race condition
+            time.sleep(2)
 
         def run_reqserver():
             reqserv = ReqServer(
@@ -636,7 +643,6 @@ class MWorker(multiprocessing.Process):
         except KeyError:
             return ''
         return {'aes': self._handle_aes,
-                'pub': self._handle_pub,
                 'clear': self._handle_clear}[key](load)
 
     def _handle_clear(self, load):
@@ -651,16 +657,6 @@ class MWorker(multiprocessing.Process):
         if load['cmd'].startswith('__'):
             return False
         return getattr(self.clear_funcs, load['cmd'])(load)
-
-    def _handle_pub(self, load):
-        '''
-        Handle a command sent via a public key pair
-
-        :param dict load: Minion payload
-        '''
-        if load['cmd'].startswith('__'):
-            return False
-        log.info('Pubkey payload received with command {cmd}'.format(**load))
 
     def _handle_aes(self, load):
         '''
@@ -701,6 +697,7 @@ class MWorker(multiprocessing.Process):
                 aes = fp_.read()
             if len(aes) != 76:
                 return
+            log.debug('New master AES key found by pid {0}'.format(os.getpid()))
             self.crypticle = salt.crypt.Crypticle(self.opts, aes)
             self.clear_funcs.crypticle = self.crypticle
             self.clear_funcs.opts['aes'] = aes
@@ -1402,6 +1399,7 @@ class ClearFuncs(object):
         self.wheel_ = salt.wheel.Wheel(opts)
         self.masterapi = salt.daemons.masterapi.LocalFuncs(opts, key)
         self.auto_key = salt.daemons.masterapi.AutoKey(opts)
+        self.cache_cli = CacheCli(self.opts)
 
     def _auth(self, load):
         '''
@@ -1429,7 +1427,16 @@ class ClearFuncs(object):
 
         # 0 is default which should be 'unlimited'
         if self.opts['max_minions'] > 0:
-            minions = salt.utils.minions.CkMinions(self.opts).connected_ids()
+            # use the ConCache if enabled, else use the minion utils
+            if self.cache_cli:
+                minions = self.cache_cli.get_cached()
+            else:
+                minions = self.ckminions.connected_ids()
+                if len(minions) > 1000:
+                    log.info('With large numbers of minions it is advised '
+                             'to enable the ConCache with \'con_cache: True\' '
+                             'in the masters configuration file.')
+
             if not len(minions) < self.opts['max_minions']:
                 # we reject new minions, minions that are already
                 # connected must be allowed for the mine, highstate, etc.
@@ -1637,6 +1644,10 @@ class ClearFuncs(object):
             with salt.utils.fopen(pubfn, 'w+') as fp_:
                 fp_.write(load['pub'])
         pub = None
+
+        # the con_cache is enabled, send the minion id to the cache
+        if self.cache_cli:
+            self.cache_cli.put_cache([load['id']])
 
         # The key payload may sometimes be corrupt when using auto-accept
         # and an empty request comes in
@@ -2011,7 +2022,7 @@ class ClearFuncs(object):
         # check if the cmd is blacklisted
         for module_re in self.opts['client_acl_blacklist'].get('modules', []):
             # if this is a regular command, its a single function
-            if type(clear_load['fun']) == str:
+            if isinstance(clear_load['fun'], str):
                 funs_to_check = [clear_load['fun']]
             # if this a compound function
             else:
@@ -2212,10 +2223,12 @@ class ClearFuncs(object):
                 )
                 return ''
         # Retrieve the minions list
+        delimiter = clear_load.get('kwargs', {}).get('delimiter', DEFAULT_TARGET_DELIM)
         minions = self.ckminions.check_minions(
             clear_load['tgt'],
-            clear_load.get('tgt_type', 'glob')
-            )
+            clear_load.get('tgt_type', 'glob'),
+            delimiter
+        )
         # If we order masters (via a syndic), don't short circuit if no minions
         # are found
         if not self.opts.get('order_masters'):
@@ -2304,6 +2317,9 @@ class ClearFuncs(object):
             load['master_id'] = self.opts['master_id']
         elif 'master_id' in extra:
             load['master_id'] = extra['master_id']
+        # Only add the delimiter to the pub data if it is non-default
+        if delimiter != DEFAULT_TARGET_DELIM:
+            load['delimiter'] = delimiter
 
         if 'id' in extra:
             load['id'] = extra['id']
@@ -2311,6 +2327,10 @@ class ClearFuncs(object):
             load['tgt_type'] = clear_load['tgt_type']
         if 'to' in clear_load:
             load['to'] = clear_load['to']
+
+        if 'kwargs' in clear_load:
+            if 'ret_config' in clear_load['kwargs']:
+                load['ret_config'] = clear_load['kwargs'].get('ret_config')
 
         if 'user' in clear_load:
             log.info(

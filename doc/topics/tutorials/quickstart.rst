@@ -91,6 +91,12 @@ ensures that the server has the Apache webserver installed.
       pkg:                # state declaration
         - installed       # function declaration
 
+.. note::
+
+    The apache package has different names on different platforms, for
+    instance on Debian/Ubuntu it is apache2, on Fedora/RHEL it is httpd
+    and on Arch it is apache
+
 The only thing left is to provision our minion using salt-call and the
 highstate command.
 

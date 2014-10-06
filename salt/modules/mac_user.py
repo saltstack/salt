@@ -422,3 +422,29 @@ def list_users():
         salt '*' user.list_users
     '''
     return sorted([user.pw_name for user in pwd.getpwall()])
+
+
+def rename(name, new_name):
+    '''
+    Change the username for a named user
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' user.rename name new_name
+    '''
+    current_info = info(name)
+    if not current_info:
+        raise CommandExecutionError('User {0!r} does not exist'.format(name))
+    new_info = info(new_name)
+    if new_info:
+        raise CommandExecutionError('User {0!r} already exists'.format(new_name))
+    _dscl(
+        '/Users/{0} RecordName {0!r} {2!r}'.format(name, new_name),
+        ctype='change'
+    )
+    # dscl buffers changes, sleep 1 second before checking if new value
+    # matches desired value
+    time.sleep(1)
+    return info(new_name).get('RecordName') == new_name

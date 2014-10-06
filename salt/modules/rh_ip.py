@@ -68,6 +68,7 @@ _CONFIG_FALSE = ['no', 'off', 'false', '0', False]
 _IFACE_TYPES = [
     'eth', 'bond', 'alias', 'clone',
     'ipsec', 'dialup', 'bridge', 'slave', 'vlan',
+    'ipip',
 ]
 
 
@@ -575,7 +576,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         if bonding:
             result['bonding'] = bonding
 
-    if iface_type not in ['bond', 'vlan', 'bridge']:
+    if iface_type not in ['bond', 'vlan', 'bridge', 'ipip']:
         if 'addr' in opts:
             if salt.utils.validate.net.mac(opts['addr']):
                 result['addr'] = opts['addr']
@@ -611,6 +612,14 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     else:
         if 'bridge' in opts:
             result['bridge'] = opts['bridge']
+
+    if iface_type == 'ipip':
+        result['devtype'] = 'IPIP'
+        for opt in ['my_inner_ipaddr', 'my_outer_ipaddr']:
+            if opt not in opts:
+                _raise_error_iface(iface, opts[opt], ['1.2.3.4'])
+            else:
+                result[opt] = opts[opt]
 
     for opt in ['ipaddr', 'master', 'netmask', 'srcaddr', 'delay', 'domain', 'gateway']:
         if opt in opts:
@@ -802,7 +811,7 @@ def _read_temp(data):
     tout = StringIO.StringIO()
     tout.write(data)
     tout.seek(0)
-    output = tout.readlines()
+    output = tout.read().splitlines()  # Discard newlines
     tout.close()
     return output
 
@@ -879,7 +888,7 @@ def build_interface(iface, iface_type, enabled, **settings):
     if iface_type == 'bridge':
         __salt__['pkg.install']('bridge-utils')
 
-    if iface_type in ['eth', 'bond', 'bridge', 'slave', 'vlan']:
+    if iface_type in ['eth', 'bond', 'bridge', 'slave', 'vlan', 'ipip']:
         opts = _parse_settings_eth(settings, iface_type, enabled, iface)
         try:
             template = JINJA.get_template('rh{0}_eth.jinja'.format(rh_major))
@@ -1032,14 +1041,31 @@ def apply_network_settings(**settings):
     if 'require_reboot' not in settings:
         settings['require_reboot'] = False
 
+    if 'apply_hostname' not in settings:
+        settings['apply_hostname'] = False
+
+    hostname_res = True
+    if settings['apply_hostname'] in _CONFIG_TRUE:
+        if 'hostname' in settings:
+            hostname_res = __salt__['network.mod_hostname'](settings['hostname'])
+        else:
+            log.warning(
+                'The network state sls is trying to apply hostname '
+                'changes but no hostname is defined.'
+            )
+            hostname_res = False
+
+    res = True
     if settings['require_reboot'] in _CONFIG_TRUE:
         log.warning(
             'The network state sls is requiring a reboot of the system to '
             'properly apply network configuration.'
         )
-        return True
+        res = True
     else:
-        return __salt__['service.restart']('network')
+        res = __salt__['service.restart']('network')
+
+    return hostname_res and res
 
 
 def build_network_settings(**settings):

@@ -46,7 +46,7 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
         ret = self.run_script(
             self._call_binary_,
-            '--config-dir {0} --pid-file {1} -l debug'.format(
+            '--disable-keepalive --config-dir {0} --pid-file {1} -l debug'.format(
                 config_dir,
                 pid_path
             ),

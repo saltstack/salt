@@ -319,7 +319,7 @@ def _install_script(source, cwd, python, user, saltenv='base'):
     if not salt.utils.is_windows():
         fn_ = __salt__['cp.cache_file'](source, saltenv)
         shutil.copyfile(fn_, tmppath)
-        os.chmod(tmppath, 320)
+        os.chmod(tmppath, 0o500)
         os.chown(tmppath, __salt__['file.user_to_uid'](user), -1)
     try:
         return __salt__['cmd.run_all'](
@@ -330,3 +330,47 @@ def _install_script(source, cwd, python, user, saltenv='base'):
         )
     finally:
         os.remove(tmppath)
+
+
+def get_resource_path(venv, package_or_requirement, resource_name):
+    '''
+    Returns the path to a resource of a package or a distribution inside a virtualenv
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virtualenv.get_resource_path /path/to/my/venv my_package my/resource.xml
+    '''
+    if not salt.utils.verify.safe_py_code(package_or_requirement):
+        raise salt.exceptions.CommandExecutionError
+    if not salt.utils.verify.safe_py_code(resource_name):
+        raise salt.exceptions.CommandExecutionError
+    bin_path = os.path.join(venv, 'bin/python')
+
+    if not os.path.exists(bin_path):
+        raise salt.exceptions.CommandExecutionError("Path does not appear to be a virtualenv: '{0}'".format(bin_path))
+
+    return __salt__['cmd.exec_code'](bin_path, "import pkg_resources; print pkg_resources.resource_filename('{0}', '{1}')".format(package_or_requirement, resource_name))
+
+
+def get_resource_content(venv, package_or_requirement, resource_name):
+    '''
+    Returns the content of a resource of a package or a distribution inside a virtualenv
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virtualenv.get_resource_content /path/to/my/venv my_package my/resource.xml
+    '''
+    if not salt.utils.verify.safe_py_code(package_or_requirement):
+        raise salt.exceptions.CommandExecutionError
+    if not salt.utils.verify.safe_py_code(resource_name):
+        raise salt.exceptions.CommandExecutionError
+    bin_path = os.path.join(venv, 'bin/python')
+
+    if not os.path.exists(bin_path):
+        raise salt.exceptions.CommandExecutionError("Path does not appear to be a virtualenv: '{0}'".format(bin_path))
+
+    return __salt__['cmd.exec_code'](bin_path, "import pkg_resources; print pkg_resources.resource_string('{0}', '{1}')".format(package_or_requirement, resource_name))

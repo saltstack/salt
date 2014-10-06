@@ -44,6 +44,17 @@ class TestGemModule(TestCase):
                 'gem install rails', runas=None
             )
 
+    def test_install_pre(self):
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(gem.__salt__,
+                        {'rvm.is_installed': MagicMock(return_value=False),
+                         'rbenv.is_installed': MagicMock(return_value=False),
+                         'cmd.run_all': mock}):
+            gem.install('rails', pre_releases=True)
+            mock.assert_called_once_with(
+                'gem install rails --no-rdoc --no-ri --pre', runas=None
+            )
+
     def test_list(self):
         output = '''
 actionmailer (2.3.14)

@@ -81,9 +81,12 @@ import datetime
 import urllib
 import urlparse
 import requests
+import base64
 
 # Import salt libs
 import salt.utils
+from salt.utils import namespaced_function
+from salt.cloud.libcloudfuncs import get_salt_interface
 from salt._compat import ElementTree as ET
 
 # Import salt.cloud libs
@@ -97,9 +100,21 @@ from salt.exceptions import (
     SaltCloudExecutionFailure
 )
 
+# Try to import PyCrypto, which may not be installed on a RAET-based system
+try:
+    import Crypto
+    # PKCS1_v1_5 was added in PyCrypto 2.5
+    from Crypto.Cipher import PKCS1_v1_5  # pylint: disable=E0611
+    HAS_PYCRYPTO = True
+except ImportError:
+    HAS_PYCRYPTO = False
+
 
 # Get logging started
 log = logging.getLogger(__name__)
+
+# namespace libcloudfuncs
+get_salt_interface = namespaced_function(get_salt_interface, globals())
 
 SIZE_MAP = {
     'Micro Instance': 't1.micro',
@@ -222,7 +237,7 @@ def _xml_to_dict(xmltree):
             else:
                 xmldict[name] = item.text
         else:
-            if type(xmldict[name]) is not list:
+            if not isinstance(xmldict[name], list):
                 tempvar = xmldict[name]
                 xmldict[name] = []
                 xmldict[name].append(tempvar)
@@ -702,7 +717,7 @@ def avail_images(kwargs=None, call=None):
             '-f or --function, or with the --list-images option'
         )
 
-    if type(kwargs) is not dict:
+    if not isinstance(kwargs, dict):
         kwargs = {}
 
     if 'owner' in kwargs:
@@ -906,7 +921,7 @@ def get_availability_zone(vm_):
     if avz is None:
         return None
 
-    zones = list_availability_zones()
+    zones = _list_availability_zones()
 
     # Validate user-specified AZ
     if avz not in zones.keys():
@@ -976,7 +991,7 @@ def get_spot_config(vm_):
     )
 
 
-def list_availability_zones():
+def _list_availability_zones():
     '''
     List all availability zones in the current region
     '''
@@ -997,7 +1012,7 @@ def block_device_mappings(vm_):
     '''
     Return the block device mapping:
 
-    ::
+    .. code-block:: python
 
         [{'DeviceName': '/dev/sdb', 'VirtualName': 'ephemeral0'},
           {'DeviceName': '/dev/sdc', 'VirtualName': 'ephemeral1'}]
@@ -1020,7 +1035,7 @@ def _request_eip(interface):
     return None
 
 
-def _create_eni(interface, eip=None):
+def _create_eni(interface):
     '''
     Create and return an Elastic Interface
     '''
@@ -1458,7 +1473,7 @@ def request_instance(vm_=None, call=None):
         if rd_data[0]['blockDeviceMapping'] is None:
             # Some ami instances do not have a root volume. Ignore such cases
             rd_name = None
-        elif type(rd_data[0]['blockDeviceMapping']['item']) is list:
+        elif isinstance(rd_data[0]['blockDeviceMapping']['item'], list):
             rd_name = rd_data[0]['blockDeviceMapping']['item'][0]['deviceName']
         else:
             rd_name = rd_data[0]['blockDeviceMapping']['item']['deviceName']
@@ -1789,7 +1804,7 @@ def wait_for_instance(
                                         gateway=ssh_gateway_config
                                         ):
         # If a known_hosts_file is configured, this instance will not be
-        # accessable until it has a host key. Since this is provided on
+        # accessible until it has a host key. Since this is provided on
         # supported instances by cloud-init, and viewable to us only from the
         # console output (which may take several minutes to become available,
         # we have some more waiting to do here.
@@ -1931,6 +1946,11 @@ def create(vm_=None, call=None):
         # and then fire off the request for it
         data, vm_ = request_instance(vm_, location)
 
+        # If data is a str, it's an error
+        if isinstance(data, str):
+            log.error('Error requesting instance: {0}'.format(data))
+            return {}
+
         # Pull the instance ID, valid for both spot and normal instances
 
         # Multiple instances may have been spun up, get all their IDs
@@ -1998,14 +2018,24 @@ def create(vm_=None, call=None):
     # bootstrapped, once the necessary port is available.
     log.info('Created node {0}'.format(vm_['name']))
 
+    instance = data[0]['instancesSet']['item']
+
     # Wait for the necessary port to become available to bootstrap
     if ssh_interface(vm_) == 'private_ips':
-        ip_address = data[0]['instancesSet']['item']['privateIpAddress']
+        ip_address = instance['privateIpAddress']
         log.info('Salt node data. Private_ip: {0}'.format(ip_address))
     else:
-        ip_address = data[0]['instancesSet']['item']['ipAddress']
+        ip_address = instance['ipAddress']
         log.info('Salt node data. Public_ip: {0}'.format(ip_address))
     vm_['ssh_host'] = ip_address
+
+    if get_salt_interface(vm_) == 'private_ips':
+        salt_ip_address = instance['privateIpAddress']
+        log.info('Salt interface set to: {0}'.format(salt_ip_address))
+    else:
+        salt_ip_address = instance['ipAddress']
+        log.debug('Salt interface set to: {0}'.format(salt_ip_address))
+    vm_['salt_host'] = salt_ip_address
 
     display_ssh_output = config.get_cloud_config_value(
         'display_ssh_output', vm_, __opts__, default=True
@@ -2015,17 +2045,8 @@ def create(vm_=None, call=None):
         vm_, data, ip_address, display_ssh_output
     )
 
-    # The instance is booted and accessable, let's Salt it!
-    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
-
-    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
-    log.debug(
-        '{0[name]!r} VM creation details:\n{1}'.format(
-            vm_, pprint.pformat(data[0]['instancesSet']['item'])
-        )
-    )
-
-    ret.update(data[0]['instancesSet']['item'])
+    # The instance is booted and accessible, let's Salt it!
+    ret = instance.copy()
 
     # Get ANY defined volumes settings, merging data, in the following order
     # 1. VM config
@@ -2056,16 +2077,30 @@ def create(vm_=None, call=None):
         )
         ret['Attached Volumes'] = created
 
+    for key, value in salt.utils.cloud.bootstrap(vm_, __opts__).items():
+        ret.setdefault(key, value)
+
+    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.debug(
+        '{0[name]!r} VM creation details:\n{1}'.format(
+            vm_, pprint.pformat(instance)
+        )
+    )
+
+    event_data = {
+        'name': vm_['name'],
+        'profile': vm_['profile'],
+        'provider': vm_['provider'],
+        'instance_id': vm_['instance_id'],
+    }
+    if volumes:
+        event_data['volumes'] = volumes
+
     salt.utils.cloud.fire_event(
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        {
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['provider'],
-            'instance_id': vm_['instance_id'],
-        },
+        event_data,
         transport=__opts__['transport']
     )
 
@@ -2102,7 +2137,7 @@ def create_attach_volumes(name, kwargs, call=None):
     if 'instance_id' not in kwargs:
         kwargs['instance_id'] = _get_node(name)[name]['instanceId']
 
-    if type(kwargs['volumes']) is str:
+    if isinstance(kwargs['volumes'], str):
         volumes = yaml.safe_load(kwargs['volumes'])
     else:
         volumes = kwargs['volumes']
@@ -2217,7 +2252,9 @@ def set_tags(name=None,
     but a resource_id may be passed instead. If both are passed in, the
     instance_id will be used.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -a set_tags mymachine tag1=somestuff tag2='Other stuff'
         salt-cloud -a set_tags resource_id=vol-3267ab32 tag=somestuff
@@ -2307,7 +2344,9 @@ def get_tags(name=None,
     in, but a resource_id may be passed instead. If both are passed in, the
     instance_id will be used.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -a get_tags mymachine
         salt-cloud -a get_tags resource_id=vol-3267ab32
@@ -2345,7 +2384,9 @@ def del_tags(name=None,
     but a resource_id may be passed instead. If both are passed in, the
     instance_id will be used.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -a del_tags mymachine tags=tag1,tag2,tag3
         salt-cloud -a del_tags resource_id=vol-3267ab32 tags=tag1,tag2,tag3
@@ -2533,9 +2574,13 @@ def show_instance(name=None, instance_id=None, call=None, kwargs=None):
 
     Can be called as an action (which requires a name):
 
+    .. code-block:: bash
+
         salt-cloud -a show_instance myinstance
 
     ...or as a function (which requires either a name or instance_id):
+
+    .. code-block:: bash
 
         salt-cloud -f show_instance my-ec2 name=myinstance
         salt-cloud -f show_instance my-ec2 instance_id=i-d34db33f
@@ -2565,6 +2610,10 @@ def _get_node(name=None, instance_id=None, location=None):
         location = get_location()
 
     params = {'Action': 'DescribeInstances'}
+
+    if str(name).startswith('i-') and len(name) == 10:
+        instance_id = name
+
     if instance_id:
         params['InstanceId.1'] = instance_id
     else:
@@ -2628,7 +2677,7 @@ def _vm_provider_driver(vm_):
 def _extract_name_tag(item):
     if 'tagSet' in item:
         tagset = item['tagSet']
-        if type(tagset['item']) is list:
+        if isinstance(tagset['item'], list):
             for tag in tagset['item']:
                 if tag['key'] == 'Name':
                     return tag['value']
@@ -2900,7 +2949,7 @@ def show_delvol_on_destroy(name, kwargs=None, call=None):
 
     blockmap = data[0]['instancesSet']['item']['blockDeviceMapping']
 
-    if type(blockmap['item']) != list:
+    if not isinstance(blockmap['item'], list):
         blockmap['item'] = [blockmap['item']]
 
     items = []
@@ -2995,7 +3044,7 @@ def _toggle_delvol(name=None, instance_id=None, device=None, volume_id=None,
     params = {'Action': 'ModifyInstanceAttribute',
               'InstanceId': instance_id}
 
-    if type(blockmap['item']) != list:
+    if not isinstance(blockmap['item'], list):
         blockmap['item'] = [blockmap['item']]
 
     for idx, item in enumerate(blockmap['item']):
@@ -3469,5 +3518,78 @@ def get_console_output(
             ret['output_decoded'] = binascii.a2b_base64(item.values()[0])
         else:
             ret[item.keys()[0]] = item.values()[0]
+
+    return ret
+
+
+def get_password_data(
+        name=None,
+        kwargs=None,
+        instance_id=None,
+        call=None,
+    ):
+    '''
+    Return password data for a Windows instance.
+
+    By default only the encrypted password data will be returned. However, if a
+    key_file is passed in, then a decrypted password will also be returned.
+
+    Note that the key_file references the private key that was used to generate
+    the keypair associated with this instance. This private key will _not_ be
+    transmitted to Amazon; it is only used internally inside of Salt Cloud to
+    decrypt data _after_ it has been received from Amazon.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt-cloud -a get_password_data mymachine
+        salt-cloud -a get_password_data mymachine key_file=/root/ec2key.pem
+
+    Note: PKCS1_v1_5 was added in PyCrypto 2.5
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The get_password_data action must be called with '
+            '-a or --action.'
+        )
+
+    if not instance_id:
+        instance_id = _get_node(name)[name]['instanceId']
+
+    if kwargs is None:
+        kwargs = {}
+
+    if instance_id is None:
+        if 'instance_id' in kwargs:
+            instance_id = kwargs['instance_id']
+            del kwargs['instance_id']
+
+    params = {'Action': 'GetPasswordData',
+              'InstanceId': instance_id}
+
+    ret = {}
+    data = query(params, return_root=True)
+    for item in data:
+        ret[item.keys()[0]] = item.values()[0]
+
+    if not HAS_PYCRYPTO:
+        return ret
+
+    if 'key' not in kwargs:
+        if 'key_file' in kwargs:
+            with salt.utils.fopen(kwargs['key_file'], 'r') as kf_:
+                kwargs['key'] = kf_.read()
+
+    if 'key' in kwargs:
+        pwdata = ret.get('passwordData', None)
+        if pwdata is not None:
+            rsa_key = kwargs['key']
+            pwdata = base64.b64decode(pwdata)
+            dsize = Crypto.Hash.SHA.digest_size
+            sentinel = Crypto.Random.new().read(15 + dsize)
+            key_obj = Crypto.PublicKey.RSA.importKey(rsa_key)
+            key_obj = PKCS1_v1_5.new(key_obj)
+            ret['password'] = key_obj.decrypt(pwdata, sentinel)
 
     return ret

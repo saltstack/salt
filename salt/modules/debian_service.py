@@ -274,7 +274,7 @@ def disable(name, **kwargs):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def enabled(name):
+def enabled(name, **kwargs):
     '''
     Return True if the named service is enabled, false otherwise
 

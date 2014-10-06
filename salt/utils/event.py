@@ -154,6 +154,7 @@ class SaltEvent(object):
         if sock_dir is None:
             sock_dir = opts.get('sock_dir', None)
         self.puburi, self.pulluri = self.__load_uri(sock_dir, node)
+        self.subscribe()
         self.pending_events = []
 
     def __load_uri(self, sock_dir, node):
@@ -331,7 +332,6 @@ class SaltEvent(object):
 
             New in Boron
         '''
-        self.subscribe()
 
         if pending_tags is None:
             pending_tags = []

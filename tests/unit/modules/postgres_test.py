@@ -27,6 +27,13 @@ test_list_db_csv = (
     'test_db,postgres,LATIN1,en_US,en_US,,pg_default'
 )
 
+test_list_schema_csv = (
+    'name,owner,acl\n'
+    'public,postgres,"{postgres=UC/postgres,=UC/postgres}"\n'
+    'pg_toast,postgres,""'
+)
+
+
 if NO_MOCK is False:
     SALT_STUB = {
         'config.option': Mock(),
@@ -666,6 +673,136 @@ class PostgresTestCase(TestCase):
                 'foo', 'bar', True),
             'md596948aad3fcae80c08a35c9b5958cd89')
 
+    @patch('salt.modules.postgres._run_psql',
+           Mock(return_value={'retcode': None,
+                              'stdout': test_list_schema_csv}))
+    def test_schema_list(self):
+        ret = postgres.schema_list(
+            'maint_db',
+            db_user='testuser',
+            db_host='testhost',
+            db_port='testport',
+            db_password='foo'
+        )
+        self.assertDictEqual(ret, {
+            'public': {'acl': '{postgres=UC/postgres,=UC/postgres}',
+                       'owner': 'postgres'},
+            'pg_toast': {'acl': '', 'owner': 'postgres'}
+            })
+
+    @patch('salt.modules.postgres._run_psql',
+           Mock(return_value={'retcode': None}))
+    @patch('salt.modules.postgres.psql_query',
+           Mock(return_value=[
+               {
+                   'name': 'public',
+                   'acl': '{postgres=UC/postgres,=UC/postgres}',
+                   'owner': 'postgres'
+               }]))
+    def test_schema_exists(self):
+        ret = postgres.schema_exists(
+            'template1',
+            'public'
+        )
+        self.assertTrue(ret)
+
+    @patch('salt.modules.postgres._run_psql',
+           Mock(return_value={'retcode': None}))
+    @patch('salt.modules.postgres.psql_query',
+           Mock(return_value=[
+               {
+                   'name': 'public',
+                   'acl': '{postgres=UC/postgres,=UC/postgres}',
+                   'owner': 'postgres'
+               }]))
+    def test_schema_get(self):
+        ret = postgres.schema_get(
+            'template1',
+            'public'
+        )
+        self.assertTrue(ret)
+
+    @patch('salt.modules.postgres._run_psql',
+           Mock(return_value={'retcode': None}))
+    @patch('salt.modules.postgres.psql_query',
+           Mock(return_value=[
+               {
+                   'name': 'public',
+                   'acl': '{postgres=UC/postgres,=UC/postgres}',
+                   'owner': 'postgres'
+               }]))
+    def test_schema_get_again(self):
+        ret = postgres.schema_get(
+            'template1',
+            'pg_toast'
+        )
+        self.assertFalse(ret)
+
+    @patch('salt.modules.postgres._run_psql',
+           Mock(return_value={'retcode': None}))
+    @patch('salt.modules.postgres.schema_exists', Mock(return_value=False))
+    def test_schema_create(self):
+        postgres.schema_create(
+            'test_db',
+            'test_schema',
+            user='user',
+            db_host='test_host',
+            db_port='test_port',
+            db_user='test_user',
+            db_password='test_password'
+        )
+        postgres._run_psql.assert_called_once_with(
+            "/usr/bin/pgsql --no-align --no-readline --no-password "
+            "--username test_user "
+            "--host test_host --port test_port "
+            "--dbname test_db -c 'CREATE SCHEMA test_schema'",
+            host='test_host', port='test_port',
+            password='test_password', user='test_user', runas='user')
+
+    @patch('salt.modules.postgres.schema_exists', Mock(return_value=True))
+    def test_schema_create2(self):
+        ret = postgres.schema_create('test_db',
+                                     'test_schema',
+                                     user='user',
+                                     db_host='test_host',
+                                     db_port='test_port',
+                                     db_user='test_user',
+                                     db_password='test_password'
+                                     )
+        self.assertFalse(ret)
+
+    @patch('salt.modules.postgres._run_psql',
+           Mock(return_value={'retcode': None}))
+    @patch('salt.modules.postgres.schema_exists', Mock(return_value=True))
+    def test_schema_remove(self):
+        postgres.schema_remove(
+            'test_db',
+            'test_schema',
+            user='user',
+            db_host='test_host',
+            db_port='test_port',
+            db_user='test_user',
+            db_password='test_password'
+        )
+        postgres._run_psql.assert_called_once_with(
+            "/usr/bin/pgsql --no-align --no-readline --no-password "
+            "--username test_user "
+            "--host test_host --port test_port "
+            "--dbname test_db -c 'DROP SCHEMA test_schema'",
+            host='test_host', port='test_port',
+            password='test_password', user='test_user', runas='user')
+
+    @patch('salt.modules.postgres.schema_exists', Mock(return_value=False))
+    def test_schema_remove2(self):
+        ret = postgres.schema_remove('test_db',
+                                     'test_schema',
+                                     user='user',
+                                     db_host='test_host',
+                                     db_port='test_port',
+                                     db_user='test_user',
+                                     db_password='test_password'
+                                     )
+        self.assertFalse(ret)
 
 if __name__ == '__main__':
     from integration import run_tests

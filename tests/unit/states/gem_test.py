@@ -29,7 +29,7 @@ class TestGemState(TestCase):
                 ret = gem.installed('quux')
                 self.assertEqual(True, ret['result'])
                 gem_install_succeeds.assert_called_once_with(
-                    'quux', ruby=None, runas=None,
+                    'quux', pre_releases=False, ruby=None, runas=None,
                     version=None, proxy=None, rdoc=False, ri=False
                 )
 
@@ -38,7 +38,7 @@ class TestGemState(TestCase):
                 ret = gem.installed('quux')
                 self.assertEqual(False, ret['result'])
                 gem_install_fails.assert_called_once_with(
-                    'quux', ruby=None, runas=None,
+                    'quux', pre_releases=False, ruby=None, runas=None,
                     version=None, proxy=None, rdoc=False, ri=False
                 )
 

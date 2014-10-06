@@ -22,6 +22,15 @@ configuration at:
       password: verybadpass
       url: 'https://10.1.1.1:443'
 
+Note: Your URL may or may not look like any of the following, depending on how
+your VMWare installation is configured:
+
+    10.1.1.1
+    10.1.1.1:443
+    https://10.1.1.1:443
+    https://10.1.1.1:443/sdk
+    10.1.1.1:443/sdk
+
 folder: Name of the folder that will contain the new VM. If not set, the VM will
         be added to the folder the original VM belongs to.
 
@@ -156,7 +165,7 @@ def avail_images():
                 name = item.Val
             elif item.Name == 'config.template':
                 is_template = item.Val
-        if type(is_template) is bool and is_template is True:
+        if is_template is True:
             ret[name] = {'Name': name}
     return ret
 
@@ -367,7 +376,7 @@ def create(vm_):
     return ret
 
 
-def list_nodes_full():
+def list_nodes_full(kwargs=None, call=None):  # pylint: disable=W0613
     '''
     Return a list of the VMs that are on the provider
     '''
@@ -396,7 +405,7 @@ def list_nodes_full():
     return ret
 
 
-def list_nodes_min():
+def list_nodes_min(kwargs=None, call=None):  # pylint: disable=W0613
     '''
     Return a list of the nodes in the provider, with no details
     '''
@@ -412,7 +421,7 @@ def list_nodes_min():
     return ret
 
 
-def list_nodes():
+def list_nodes(kwargs=None, call=None):  # pylint: disable=W0613
     '''
     Return a list of the VMs that are on the provider
     '''

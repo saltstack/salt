@@ -11,6 +11,12 @@ aliases:
     username:
       alias.present:
         - target: user@example.com
+
+.. code-block:: yaml
+
+    thomas:
+      alias.present:
+        - target: thomas@example.com
 '''
 
 

@@ -291,7 +291,18 @@ def refresh_db():
     '''
     ret = {}
     cmd = 'apt-get -q update'
-    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
+    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+    if call['retcode'] != 0:
+        comment = ''
+        if 'stderr' in call:
+            comment += call['stderr']
+
+        raise CommandExecutionError(
+            '{0}'.format(comment)
+        )
+    else:
+        out = call['stdout']
+
     for line in out.splitlines():
         cols = line.split()
         if not cols:
@@ -393,6 +404,11 @@ def install(name=None,
 
         .. versionadded:: 0.17.4
 
+    install_recommends
+        Whether to install the packages marked as recommended.  Default is True.
+
+        .. versionadded:: Lithium
+
     Returns a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
@@ -475,6 +491,8 @@ def install(name=None,
             cmd.append('--force-yes')
         cmd = cmd + ['-o', 'DPkg::Options::=--force-confold']
         cmd = cmd + ['-o', 'DPkg::Options::=--force-confdef']
+        if 'install_recommends' in kwargs and not kwargs['install_recommends']:
+            cmd.append('--no-install-recommends')
         if skip_verify:
             cmd.append('--allow-unauthenticated')
         if fromrepo:
@@ -932,7 +950,19 @@ def _get_upgradable():
     '''
 
     cmd = 'apt-get --just-print dist-upgrade'
-    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
+    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+
+    if call['retcode'] != 0:
+        comment = ''
+        if 'stderr' in call:
+            comment += call['stderr']
+        if 'stdout' in call:
+            comment += call['stdout']
+        raise CommandExecutionError(
+            '{0}'.format(comment)
+        )
+    else:
+        out = call['stdout']
 
     # rexp parses lines that look like the following:
     # Conf libxfont1 (1:1.4.5-1 Debian:testing [i386])
@@ -1841,7 +1871,7 @@ def owner(*paths):
     .. versionadded:: 2014.7.0
 
     Return the name of the package that owns the file. Multiple file paths can
-    be passed. Like :mod:`pkg.version <salt.modules.aptpkg.version`, if a
+    be passed. Like :mod:`pkg.version <salt.modules.aptpkg.version>`, if a
     single path is passed, a string will be returned, and if multiple paths are
     passed, a dictionary of file/package name pairs will be returned.
 

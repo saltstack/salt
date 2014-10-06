@@ -70,7 +70,7 @@ def run(name,
         grain to store the output (need output=grain)
 
     key:
-        the specified grain will be treated as a dictionnary, the result
+        the specified grain will be treated as a dictionary, the result
         of this state will be stored under the specified key.
 
     overwrite:
