@@ -59,7 +59,7 @@
 {%endfor-%}
 {%endif%}{% if interface.post_down_cmds %}{% for cmd in interface.post_down_cmds %}    post-down {{ cmd }}
 {%endfor-%}{%endif%}
-{%endif%}
+{%- endif%}
 {%- if data.data['inet6'] -%}
 {%- set interface = data.data['inet6'] -%}
 iface {{name}} {{interface.addrfam}} {{interface.proto}}
