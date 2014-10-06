@@ -15,7 +15,7 @@ framer masterudpstack be active first setup
 
     frame spawnmaint
         enter
-            do fork maint
+            do salt raet maint fork
         go spawnworkers
 
     frame spawnworkers
