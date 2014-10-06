@@ -67,8 +67,8 @@ the log file:
 
 .. code-block:: text
 
-    ipython kernel loaded:
-    use: ipython console to connect
+    [CRITICAL] To connect another client to this kernel, use:
+    [IPKernelApp] --existing kernel-31271.json
 
 Now on the system that invoked ``embed_kernel``, run the following command from
 a shell:
