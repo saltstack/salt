@@ -1,7 +1,11 @@
 # coding: utf-8
+import functools
+from unittest.case import _ExpectedFailure, _UnexpectedSuccess
+import sys
 
 try:
     import cherrypy
+
     HAS_CHERRYPY = True
 except ImportError:
     HAS_CHERRYPY = False
@@ -12,7 +16,7 @@ import salt.config
 from ..integration import TMP_CONF_DIR
 
 if HAS_CHERRYPY:
-    from . cptestcase import BaseCherryPyTestCase
+    from .cptestcase import BaseCherryPyTestCase
     from salt.netapi.rest_cherrypy import app
 else:
     from salttesting.unit import TestCase, skipIf
@@ -107,3 +111,27 @@ if HAS_CHERRYPY:
 
         def tearDown(self):
             cherrypy.engine.exit()
+
+
+def expectedNotImplementedFailure(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            func(*args, **kwargs)
+        except NotImplementedError:
+            raise _ExpectedFailure(sys.exc_info())
+        raise _UnexpectedSuccess
+
+    return wrapper
+
+
+def expectedImportFailure(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            func(*args, **kwargs)
+        except ImportError:
+            raise _ExpectedFailure(sys.exc_info())
+        raise _UnexpectedSuccess
+
+    return wrapper
