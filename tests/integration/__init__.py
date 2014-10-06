@@ -936,7 +936,10 @@ class AdaptedConfigurationTestCaseMixIn(object):
                 )
             elif config_for in ('syndic',):
                 RUNTIME_CONFIGS[config_for] = freeze(
-                    salt.config.syndic_config(self.get_config_file_path(config_for))
+                    salt.config.syndic_config(
+                        self.get_config_file_path(config_for),
+                        self.get_config_file_path('minion')
+                    )
                 )
         return RUNTIME_CONFIGS[config_for]
 
