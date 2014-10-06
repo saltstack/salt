@@ -59,6 +59,7 @@ import salt.utils
 import salt.utils.process
 from salt.utils import fopen, get_colors
 from salt.utils.verify import verify_env
+from salt.utils.immutabletypes import freeze
 
 try:
     import salt.master
@@ -84,6 +85,8 @@ TMP_STATE_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-state-tree')
 TMP_PRODENV_STATE_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-prodenv-state-tree')
 TMP_CONF_DIR = os.path.join(TMP, 'config')
 CONF_DIR = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf')
+
+RUNTIME_CONFIGS = {}
 
 log = logging.getLogger(__name__)
 
@@ -422,9 +425,7 @@ class TestDaemon(object):
         to be deferred to a latter stage. If created it on `__enter__` like it
         previously was, it would not receive the master events.
         '''
-        return salt.client.get_local_client(
-            mopts=self.master_opts
-        )
+        return salt.client.get_local_client(mopts=self.master_opts)
 
     @classmethod
     def transplant_configs(cls, transport='zeromq'):
@@ -543,6 +544,12 @@ class TestDaemon(object):
         )
         sub_minion_opts = salt.config.minion_config(os.path.join(TMP_CONF_DIR, 'sub_minion'))
         syndic_master_opts = salt.config.master_config(os.path.join(TMP_CONF_DIR, 'syndic_master'))
+
+        RUNTIME_CONFIGS['master'] = freeze(master_opts)
+        RUNTIME_CONFIGS['minion'] = freeze(minion_opts)
+        RUNTIME_CONFIGS['syndic'] = freeze(syndic_opts)
+        RUNTIME_CONFIGS['sub_minion'] = freeze(sub_minion_opts)
+        RUNTIME_CONFIGS['syndic_master'] = freeze(syndic_master_opts)
 
         verify_env([os.path.join(master_opts['pki_dir'], 'minions'),
                     os.path.join(master_opts['pki_dir'], 'minions_pre'),
@@ -917,6 +924,18 @@ class AdaptedConfigurationTestCaseMixIn(object):
 
     __slots__ = ()
 
+    def get_config(self, config_for):
+        if config_for not in RUNTIME_CONFIGS:
+            if config_for == 'master':
+                RUNTIME_CONFIGS[config_for] = freeze(
+                    salt.config.master_config(self.get_config_file_path(config_for))
+                )
+            elif config_for in ('minion', 'sub_minion'):
+                RUNTIME_CONFIGS[config_for] = freeze(
+                    salt.config.minion_config(self.get_config_file_path(config_for))
+                )
+        return RUNTIME_CONFIGS[config_for]
+
     def get_config_dir(self):
         return TMP_CONF_DIR
 
@@ -928,9 +947,7 @@ class AdaptedConfigurationTestCaseMixIn(object):
         '''
         Return the options used for the minion
         '''
-        return salt.config.master_config(
-            self.get_config_file_path('master')
-        )
+        return self.get_config('master')
 
 
 class SaltClientTestCaseMixIn(AdaptedConfigurationTestCaseMixIn):
@@ -941,7 +958,7 @@ class SaltClientTestCaseMixIn(AdaptedConfigurationTestCaseMixIn):
     @property
     def client(self):
         return salt.client.get_local_client(
-            self.get_config_file_path(self._salt_client_config_file_name_)
+            mopts=self.get_config(self._salt_client_config_file_name_)
         )
 
 
@@ -1004,18 +1021,14 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
         '''
         Return the options used for the minion
         '''
-        return salt.config.minion_config(
-            self.get_config_file_path('minion')
-        )
+        return self.get_config('minion')
 
     @property
     def sub_minion_opts(self):
         '''
         Return the options used for the minion
         '''
-        return salt.config.minion_config(
-            self.get_config_file_path('sub_minion')
-        )
+        return self.get_config('sub_minion')
 
     def _check_state_return(self, ret):
         if isinstance(ret, dict):
@@ -1113,9 +1126,8 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
         ret['out'] = self.run_run(
             '{0} {1} {2}'.format(options, fun, ' '.join(arg)), catch_stderr=kwargs.get('catch_stderr', None)
         )
-        opts = salt.config.master_config(
-            self.get_config_file_path('master')
-        )
+        opts = {}
+        opts.update(self.get_config('master'))
         opts.update({'doc': False, 'fun': fun, 'arg': arg})
         with RedirectStdStreams():
             runner = salt.runner.Runner(opts)
@@ -1384,7 +1396,11 @@ class ClientCase(AdaptedConfigurationTestCaseMixIn, TestCase):
     Python API entrypoints
     '''
     def get_opts(self):
-        return salt.config.client_config(self.get_config_file_path('master'))
+        if 'client_config' not in RUNTIME_CONFIGS:
+            RUNTIME_CONFIGS = freeze(
+                salt.config.client_config(self.get_config_file_path('master'))
+            )
+        return RUNTIME_CONFIGS['client_config']
 
     def mkdir_p(self, path):
         try:
