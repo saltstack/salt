@@ -410,7 +410,6 @@ class SaltCall(parsers.SaltCallOptionParser):
         # Setup file logging!
         self.setup_logfile_logger()
 
-        #caller = salt.cli.caller.Caller(self.config)
         caller = salt.cli.caller.Caller.factory(self.config)
 
         if self.options.doc:

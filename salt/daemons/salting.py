@@ -8,7 +8,6 @@ salting.py module of salt specific interfaces to raet
 
 # Import Python libs
 import os
-from collections import namedtuple, OrderedDict
 
 # Import ioflo libs
 from ioflo.base.odicting import odict
@@ -20,13 +19,6 @@ from raet import raeting, nacling
 from raet.keeping import Keep
 
 from salt.key import RaetKey
-
-# Python equivalent of an enum
-APPL_KINDS = OrderedDict([('master', 0), ('minion', 1), ('syndic', 2), ('call', 3)])
-APPL_KIND_NAMES = odict((v, k) for k, v in APPL_KINDS.iteritems())  # inverse map
-ApplKind = namedtuple('ApplKind', APPL_KINDS.keys())
-applKinds = ApplKind(**APPL_KINDS)
-
 
 class SaltKeep(Keep):
     '''

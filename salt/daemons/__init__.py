@@ -6,3 +6,11 @@ Minion enabling different transports
 
 
 '''
+
+from collections import namedtuple, OrderedDict
+
+# Python equivalent of an enum
+APPL_KINDS = OrderedDict([('master', 0), ('minion', 1), ('syndic', 2), ('call', 3)])
+APPL_KIND_NAMES = OrderedDict((v, k) for k, v in APPL_KINDS.iteritems())  # inverse map
+ApplKind = namedtuple('ApplKind', APPL_KINDS.keys())
+applKinds = ApplKind(**APPL_KINDS)

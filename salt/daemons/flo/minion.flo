@@ -26,8 +26,6 @@ framer minionudpstack be active first setup
         bid start eventing
         # Start the functionmanage framer
         bid start functionmanager
-        # Start the manage framer
-        bid start manager
         # Start the outbound framer
         bid start outbound
         bid start scheduler
@@ -84,6 +82,7 @@ framer bootstrap be inactive first join
         go router
 
     frame router
+        # start the manager framer
         bid start manager #start alive presence from minion side
         do salt raet router
         go pillar if .salt.var.pillar_refresh
