@@ -32,7 +32,7 @@ except ImportError:
 # Import salt libs
 from salt.exceptions import CommandExecutionError
 import salt.utils
-import salt.utils.cmd
+import salt.modules.cmdmod
 
 # Define the module's virtual name
 __virtualname__ = 'virt'
@@ -48,7 +48,7 @@ def _check_xenapi():
         debian_xen_version = '/usr/lib/xen-common/bin/xen-version'
         if os.path.isfile(debian_xen_version):
             # __salt__ is not available in __virtual__
-            xenversion = salt.utils.cmd.run_quiet(debian_xen_version)
+            xenversion = salt.modules.cmdmod._run_quiet(debian_xen_version)
             xapipath = '/usr/lib/xen-{0}/lib/python'.format(xenversion)
             if os.path.isdir(xapipath):
                 sys.path.append(xapipath)
