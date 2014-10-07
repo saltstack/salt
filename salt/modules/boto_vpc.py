@@ -157,7 +157,7 @@ def exists(vpc_id=None, name=None, tags=None, region=None, key=None, keyid=None,
 
         if tags:
             for tag_name, tag_value in tags.items():
-                filter_parameters['filters']['tag:%s' % tag_name] = tag_value
+                filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
         vpcs = conn.get_all_vpcs(**filter_parameters)
         log.debug('The filters criteria {0} matched the following VPCs:{1}'.format(filter_parameters, vpcs))
         if vpcs:
@@ -343,7 +343,7 @@ def subnet_exists(subnet_id=None, name=None, tags=None, region=None, key=None, k
 
         if tags:
             for tag_name, tag_value in tags.items():
-                filter_parameters['filters']['tag:%s' % tag_name] = tag_value
+                filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
 
         subnets = conn.get_all_subnets(**filter_parameters)
         log.debug('The filters criteria {0} matched the following subnets:{1}'.format(filter_parameters, subnets))
@@ -587,7 +587,7 @@ def dhcp_options_exists(dhcp_options_id=None, name=None, tags=None, region=None,
 
         if tags:
             for tag_name, tag_value in tags.items():
-                filter_parameters['filters']['tag:%s' % tag_name] = tag_value
+                filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
 
         dhcp_options = conn.get_all_dhcp_options(**filter_parameters)
         log.debug('The filters criteria {0} matched the following DHCP options:{1}'.format(filter_parameters, dhcp_options))
@@ -695,7 +695,7 @@ def network_acl_exists(network_acl_id=None, name=None, tags=None, region=None, k
 
         if tags:
             for tag_name, tag_value in tags.items():
-                filter_parameters['filters']['tag:%s' % tag_name] = tag_value
+                filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
 
         network_acls = conn.get_all_network_acls(**filter_parameters)
         log.debug('The filters criteria {0} matched the following network ACLs:{1}'.format(filter_parameters, network_acls))
@@ -983,7 +983,7 @@ def route_table_exists(route_table_id=None, name=None, tags=None, region=None, k
 
         if tags:
             for tag_name, tag_value in tags.items():
-                filter_parameters['filters']['tag:%s' % tag_name] = tag_value
+                filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
 
         route_tables = conn.get_all_route_tables(**filter_parameters)
         if route_tables:
