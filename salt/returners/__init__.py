@@ -20,32 +20,14 @@ def get_returner_options(virtualname=None,
     else:
         ret_config = None
 
-    if 'profile_attr' in kwargs:
-        profile_attr = kwargs['profile_attr']
-    else:
-        profile_attr = None
-
-    if 'profile_attrs' in kwargs:
-        profile_attrs = kwargs['profile_attrs']
-    else:
-        profile_attrs = None
-
-    if 'defaults' in kwargs:
-        defaults = kwargs['defaults']
-    else:
-        defaults = None
-
-    if '__salt__' in kwargs:
-        __salt__ = kwargs['__salt__']
-    else:
-        __salt__ = {}
-
-    if '__opts__' in kwargs:
-        __opts__ = kwargs['__opts__']
-    else:
-        __opts__ = {}
+    profile_attr = kwargs.get('profile_attr', None)
+    profile_attrs = kwargs.get('profile_attrs', None)
+    defaults = kwargs.get('defaults', None)
+    __salt__ = kwargs.get('__salt__', {})
+    __opts__ = kwargs.get('__opts__', {})
 
     _options = {}
+
     for attr in attrs:
         if 'config.option' in __salt__:
             # Look for the configuration options in __salt__
