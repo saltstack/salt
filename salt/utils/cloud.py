@@ -1908,8 +1908,7 @@ def simple_types_filter(data):
                 value = repr(value)
             simpledict[key] = value
         return simpledict
-    
-    # This function is only supposed to work on dictionaries or lists
+
     return data
 
 
