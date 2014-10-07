@@ -201,7 +201,7 @@ def run(name, **kwargs):
     ret['comment'] = 'Module function {0} executed'.format(name)
 
     ret['result'] = True
-    if ret['changes'].get('retcode', 0) != 0:
+    if ret['changes'].get('ret', {}).get('retcode', 0) != 0:
         ret['result'] = False
     else:
         changes_ret = ret['changes'].get('ret', {})
