@@ -1,8 +1,5 @@
 # coding: utf-8
 
-# Import Python libs
-import os
-
 # Import Salt Testing libs
 import integration
 
