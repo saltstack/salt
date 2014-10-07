@@ -504,7 +504,8 @@ class RemoteFuncs(object):
         checker = salt.utils.minions.CkMinions(self.opts)
         minions = checker.check_minions(
                 load['tgt'],
-                load.get('expr_form', 'glob')
+                load.get('expr_form', 'glob'),
+                greedy=False
                 )
         for minion in minions:
             mine = os.path.join(
