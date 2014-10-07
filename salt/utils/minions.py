@@ -295,7 +295,7 @@ class CkMinions(object):
                 if id_ not in minions:
                     continue
                 datap = os.path.join(cdir, id_, 'data.p')
-                if not os.path.isfile(datap): 
+                if not os.path.isfile(datap):
                     if greedy:
                         continue
                     else:
@@ -397,12 +397,12 @@ class CkMinions(object):
                     # The match is not explicitly defined, evaluate as a glob
                     if unmatched and unmatched[-1] == '-':
                         results.append(
-                                str(set(self._check_glob_minions(match))))
+                                str(set(self._check_glob_minions(match, True))))
                         results.append(')')
                         unmatched.pop()
                     else:
                         results.append(
-                                str(set(self._check_glob_minions(match))))
+                                str(set(self._check_glob_minions(match, True))))
             for token in unmatched:
                 results.append(')')
             results = ' '.join(results)
