@@ -34,12 +34,14 @@ def ls_():
             majmin = comps.pop()
             major, minor = majmin.replace('[', '').replace(']', '').split(':')
             device = comps.pop()
+            model = ' '.join(comps[3:])
             ret[key] = {
                 'lun': key.replace('[', '').replace(']', ''),
                 'size': size,
                 'major': major,
                 'minor': minor,
                 'device': device,
+                'model': model,
             }
         elif line.startswith(' '):
             if line.strip().startswith('dir'):
