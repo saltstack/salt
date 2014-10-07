@@ -33,7 +33,7 @@ def rescan_all(host):
 
         salt '*' scsi.rescan_all(0)
     '''
-    if os.path.isdir('/sys/class/scsi_host/host{0}').format(host):
+    if os.path.isdir('/sys/class/scsi_host/host{0}'.format(host)):
         cmd = 'echo "- - -" > /sys/class/scsi_host/host{0}/scan'.format(host)
     else:
         return 'Host {0} does not exist'.format(host)
