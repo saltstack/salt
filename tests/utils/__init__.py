@@ -1,6 +1,5 @@
 # coding: utf-8
 import functools
-from unittest.case import _ExpectedFailure, _UnexpectedSuccess
 import sys
 
 try:
@@ -19,7 +18,12 @@ if HAS_CHERRYPY:
     from .cptestcase import BaseCherryPyTestCase
     from salt.netapi.rest_cherrypy import app
 else:
-    from salttesting.unit import TestCase, skipIf
+    from salttesting.unit import (
+        TestCase,
+        skipIf,
+        expectedFailure,
+        unexpectedSuccess
+    )
 
     @skipIf(HAS_CHERRYPY is False, 'The CherryPy python package needs to be installed')
     class BaseCherryPyTestCase(TestCase):
@@ -119,8 +123,8 @@ def expectedNotImplementedFailure(func):
         try:
             func(*args, **kwargs)
         except NotImplementedError:
-            raise _ExpectedFailure(sys.exc_info())
-        raise _UnexpectedSuccess
+            raise expectedFailure(sys.exc_info())
+        raise unexpectedSuccess
 
     return wrapper
 
@@ -131,7 +135,7 @@ def expectedImportFailure(func):
         try:
             func(*args, **kwargs)
         except ImportError:
-            raise _ExpectedFailure(sys.exc_info())
-        raise _UnexpectedSuccess
+            raise expectedFailure(sys.exc_info())
+        raise unexpectedSuccess
 
     return wrapper
