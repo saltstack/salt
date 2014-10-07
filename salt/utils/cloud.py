@@ -490,15 +490,14 @@ def wait_for_fun(fun, timeout=900, **kwargs):
         except Exception as exc:
             log.debug('Caught exception in wait_for_fun: {0}'.format(exc))
             time.sleep(1)
-            if time.time() - start > timeout:
-                log.error('Function timed out: {0}'.format(timeout))
-                return False
-
             log.debug(
                 'Retrying function {0} on  (try {1})'.format(
                     fun, trycount
                 )
             )
+        if time.time() - start > timeout:
+            log.error('Function timed out: {0}'.format(timeout))
+            return False
 
 
 def wait_for_port(host, port=22, timeout=900, gateway=None):
