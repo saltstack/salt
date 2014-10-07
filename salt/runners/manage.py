@@ -75,9 +75,9 @@ def key_regen():
         salt-run manage.key_regen
     '''
     client = salt.client.get_local_client(__opts__['conf_file'])
-    minions = client.cmd('*', 'saltutil.regen_keys')
+    client.cmd('*', 'saltutil.regen_keys')
 
-    for root, dirs, files in os.walk(__opts__['pki_dir']):
+    for root, _, files in os.walk(__opts__['pki_dir']):
         for fn_ in files:
             path = os.path.join(root, fn_)
             try:
@@ -401,7 +401,7 @@ def bootstrap_psexec(hosts='', master=None, version=None, arch='win32',
     # The following script was borrowed from an informative article about
     # downloading exploit payloads for malware. Nope, no irony here.
     # http://www.greyhathacker.net/?p=500
-    vb = '''strFileURL = "{0}"
+    vb_script = '''strFileURL = "{0}"
 strHDLocation = "{1}"
 Set objXMLHTTP = CreateObject("MSXML2.XMLHTTP")
 objXMLHTTP.open "GET", strFileURL, false
@@ -430,11 +430,17 @@ objShell.Exec("{1}{2}")'''
     # It's tiny, so the bootstrap will attempt a silent install.
     vb_vcrunexec = 'vcredist.exe'
     if arch == 'AMD64':
-        vb_vcrun = vb.format('http://download.microsoft.com/download/d/2/4/d242c3fb-da5a-4542-ad66-f9661d0a8d19/vcredist_x64.exe', vb_vcrunexec, ' /q')
+        vb_vcrun = vb_script.format(
+                'http://download.microsoft.com/download/d/2/4/d242c3fb-da5a-4542-ad66-f9661d0a8d19/vcredist_x64.exe',
+                vb_vcrunexec,
+                ' /q')
     else:
-        vb_vcrun = vb.format('http://download.microsoft.com/download/d/d/9/dd9a82d0-52ef-40db-8dab-795376989c03/vcredist_x86.exe', vb_vcrunexec, ' /q')
+        vb_vcrun = vb_script.format(
+                'http://download.microsoft.com/download/d/d/9/dd9a82d0-52ef-40db-8dab-795376989c03/vcredist_x86.exe',
+                vb_vcrunexec,
+                ' /q')
 
-    vb_salt = vb.format(installer_url, vb_saltexec, vb_saltexec_args)
+    vb_salt = vb_script.format(installer_url, vb_saltexec, vb_saltexec_args)
 
     # PsExec doesn't like extra long arguments; save the instructions as a batch
     # file so we can fire it over for execution.

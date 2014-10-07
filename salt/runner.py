@@ -207,7 +207,7 @@ class Runner(RunnerClient):
     '''
     Execute the salt runner interface
     '''
-    def _print_docs(self):
+    def print_docs(self):
         '''
         Print out the documentation!
         '''
@@ -222,7 +222,7 @@ class Runner(RunnerClient):
         Execute the runner sequence
         '''
         if self.opts.get('doc', False):
-            self._print_docs()
+            self.print_docs()
         else:
             try:
                 return super(Runner, self).cmd(

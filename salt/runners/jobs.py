@@ -71,8 +71,6 @@ def lookup_jid(jid, ext_source=None, missing=False, outputter=None):
             ret[minion] = data[minion].get(u'return')
         else:
             ret[minion] = data[minion].get('return')
-        if 'out' in data[minion]:
-            out = data[minion]['out']
     if missing:
         ckminions = salt.utils.minions.CkMinions(__opts__)
         exp = ckminions.check_minions(data['tgt'], data['tgt_type'])
@@ -156,6 +154,9 @@ def _get_returner(returner_types):
 
 
 def _format_job_instance(job):
+    '''
+    Helper to format a job instance
+    '''
     ret = {'Function': job.get('fun', 'unknown-function'),
            'Arguments': list(job.get('arg', [])),
            # unlikely but safeguard from invalid returns
@@ -169,12 +170,18 @@ def _format_job_instance(job):
 
 
 def _format_jid_instance(jid, job):
+    '''
+    Helper to format jid instance
+    '''
     ret = _format_job_instance(job)
     ret.update({'StartTime': salt.utils.jid_to_time(jid)})
     return ret
 
 
 def _walk_through(job_dir):
+    '''
+    Walk through the job dir and return jobs
+    '''
     serial = salt.payload.Serial(__opts__)
 
     for top in os.listdir(job_dir):

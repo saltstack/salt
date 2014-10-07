@@ -32,6 +32,7 @@ except ImportError:
 # Import salt libs
 from salt.exceptions import CommandExecutionError
 import salt.utils
+import salt.modules.cmdmod
 
 # Define the module's virtual name
 __virtualname__ = 'virt'
