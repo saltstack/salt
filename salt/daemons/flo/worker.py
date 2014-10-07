@@ -122,11 +122,11 @@ class SaltRaetWorkerSetup(ioflo.base.deeding.Deed):
             raise ValueError(emsg)
         if kind == 'master':
             lanename = 'master'
-        else: # workers currently are only supported for masters
+        else:  # workers currently are only supported for masters
             emsg = ("Invalid application kind '{0}' for Master Worker.".format(kind))
             log.error(emsg + '\n')
             raise ValueError(emsg)
-        sockdirpath=self.opts.value['sock_dir']
+        sockdirpath = self.opts.value['sock_dir']
         self.stack.value = LaneStack(
                                      name=name,
                                      lanename=lanename,

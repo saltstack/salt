@@ -132,7 +132,7 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
 
         do salt raet road stack setup at enter
         '''
-        kind = self.opts.value['__role'] # application kind
+        kind = self.opts.value['__role']  # application kind
         if kind not in daemons.APPL_KINDS:
             emsg = ("Invalid application kind = '{0}'.".format(kind))
             log.error(emsg + '\n')

@@ -44,7 +44,7 @@ class SaltEvent(object):
 
     def __prep_stack(self):
         kind = self.opts.get('__role', '')  # opts optional for master
-        if kind: # not all uses of Raet SaltEvent has opts defined
+        if kind:  # not all uses of Raet SaltEvent has opts defined
             if kind not in daemons.APPL_KINDS:
                 emsg = ("Invalid application kind = '{0}' for RAET SaltEvent.".format(kind))
                 log.error(emsg + "\n")

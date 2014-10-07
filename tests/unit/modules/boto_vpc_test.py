@@ -18,7 +18,6 @@ except ImportError:
     HAS_BOTO = False
 
 try:
-    import moto
     from moto import mock_ec2
 
     HAS_MOTO = True
