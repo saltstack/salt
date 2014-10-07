@@ -425,7 +425,9 @@ class TestDaemon(object):
         to be deferred to a latter stage. If created it on `__enter__` like it
         previously was, it would not receive the master events.
         '''
-        return salt.client.get_local_client(mopts=self.master_opts)
+        if 'runtime_client' not in RUNTIME_CONFIGS:
+            RUNTIME_CONFIGS['runtime_client'] = salt.client.get_local_client(mopts=self.master_opts)
+        return RUNTIME_CONFIGS['runtime_client']
 
     @classmethod
     def transplant_configs(cls, transport='zeromq'):
@@ -979,20 +981,15 @@ class AdaptedConfigurationTestCaseMixIn(object):
 class SaltClientTestCaseMixIn(AdaptedConfigurationTestCaseMixIn):
 
     _salt_client_config_file_name_ = 'master'
-    __slots__ = ('client', '_salt_client_config_file_name_', '_client')
+    __slots__ = ('client', '_salt_client_config_file_name_')
 
     @property
     def client(self):
-        if getattr(self, '_client', None) is None:
-            self._client = salt.client.get_local_client(
+        if 'runtime_client' not in RUNTIME_CONFIGS:
+            RUNTIME_CONFIGS['runtime_client'] = salt.client.get_local_client(
                 mopts=self.get_config(self._salt_client_config_file_name_)
             )
-        return self._client
-
-    def __del__(self):
-        if hasattr(self, '_client'):
-            del self._client
-            self._client = None
+        return RUNTIME_CONFIGS['runtime_client']
 
 
 class ModuleCase(TestCase, SaltClientTestCaseMixIn):
