@@ -376,7 +376,7 @@ class CloudClient(object):
                         'delvol_on_destroy': True})
         '''
         mapper = salt.cloud.Map(self._opts_defaults())
-        providers = mapper.map_providers_parallel()
+        providers = self.opts['providers']
         if provider in providers:
             provider += ':{0}'.format(providers[provider].iterkeys().next())
         else:
