@@ -752,7 +752,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertFalse(network_acl_creation_result)
 
     @mock_ec2
-    @expectedImportFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_creating_network_acl_fails_the_create_network_acl_method_returns_false(self):
         '''
         Tests creation of network acl failure
