@@ -426,7 +426,9 @@ class TestDaemon(object):
         previously was, it would not receive the master events.
         '''
         if 'runtime_client' not in RUNTIME_CONFIGS:
-            RUNTIME_CONFIGS['runtime_client'] = salt.client.get_local_client(mopts=self.master_opts)
+            RUNTIME_CONFIGS['runtime_client'] = salt.client.get_local_client(
+                mopts=self.master_opts
+            )
         return RUNTIME_CONFIGS['runtime_client']
 
     @classmethod
@@ -987,7 +989,7 @@ class SaltClientTestCaseMixIn(AdaptedConfigurationTestCaseMixIn):
     def client(self):
         if 'runtime_client' not in RUNTIME_CONFIGS:
             RUNTIME_CONFIGS['runtime_client'] = salt.client.get_local_client(
-                mopts=self.get_config(self._salt_client_config_file_name_)
+                mopts=self.get_config(self._salt_client_config_file_name_, from_scratch=True)
             )
         return RUNTIME_CONFIGS['runtime_client']
 
