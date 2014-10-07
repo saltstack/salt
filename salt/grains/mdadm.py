@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
 '''
-    Detect MDADM RAIDs
+Detect MDADM RAIDs
 '''
 
 # Import python libs
 import logging
+
+# Import salt libs
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -13,19 +16,23 @@ def mdadm():
     '''
     Return list of mdadm devices
     '''
-    mdadms = []
+    devices = set()
     try:
-        mdstat = open('/proc/mdstat', 'r')
+        with salt.utils.fopen('/proc/mdstat', 'r') as mdstat:
+            for line in mdstat:
+                if line.startswith('Personalities : '):
+                    continue
+                if line.startswith('unused devices:'):
+                    continue
+                if ' : ' in line:
+                    devices.add(line.split(' : ')[0])
     except IOError:
-        log.debug('MDADM: cannot open /proc/mdstat')
+        return {}
 
-    for line in mdstat:
-        if line.startswith('Personalities : '):
-            continue
-        if line.startswith('unused devices:'):
-            continue
-        if ' : ' in line:
-            mdadms.append(line.split(' : ')[0])
-    log.debug('MDADM: {0}'.format(mdadms))
+    devices = sorted(devices)
+    if devices:
+        log.trace(
+            'mdadm devices detected: {0}'.format(', '.join(devices))
+        )
 
-    return {'mdadm': mdadms}
+    return {'mdadm': devices}
