@@ -1210,7 +1210,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
         self.assertTrue(dhcp_disassociate_result)
 
     @mock_ec2
-   @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_creating_a_route_succeeds_the_create_route_method_should_return_true(self):
         '''
         Tests successful creation of a route
