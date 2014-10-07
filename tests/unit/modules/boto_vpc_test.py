@@ -816,7 +816,10 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         '''
         Tests checking existence of network acl with no filters
         '''
-        with self.assertRaisesRegexp(SaltInvocationError, 'At least on of the following must be specified: network ACL id, name or tags.'):
+        with self.assertRaisesRegexp(
+                SaltInvocationError,
+                'At least on of the following must be specified: dhcp options id, name or tags.'
+        ):
             boto_vpc.dhcp_options_exists(**conn_parameters)
 
     @mock_ec2
@@ -1146,7 +1149,10 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
         '''
         Tests checking route table without filters
         '''
-        with self.assertRaisesRegexp(SaltInvocationError, 'At least on of the following must be specified: route table id, name or tags.'):
+        with self.assertRaisesRegexp(
+                SaltInvocationError,
+                'At least on of the following must be specified: dhcp options id, name or tags.'
+        ):
             boto_vpc.dhcp_options_exists(**conn_parameters)
 
     @mock_ec2
