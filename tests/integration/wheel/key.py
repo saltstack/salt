@@ -7,7 +7,7 @@ import integration
 import salt.wheel
 
 
-class KeyWheelModuleTest(integration.ClientCase):
+class KeyWheelModuleTest(integration.TestCase, integration.AdaptedConfigurationTestCaseMixIn):
     def setUp(self):
         self.wheel = salt.wheel.Wheel(self.get_config('client_config'))
 

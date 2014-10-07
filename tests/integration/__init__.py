@@ -1421,18 +1421,3 @@ class SaltReturnAssertsMixIn(object):
         return self.assertNotEqual(
             self.__getWithinSaltReturn(ret, keys), comparison
         )
-
-
-class ClientCase(AdaptedConfigurationTestCaseMixIn, TestCase):
-    '''
-    A base class containing relevant options for starting the various Salt
-    Python API entrypoints
-    '''
-    def mkdir_p(self, path):
-        try:
-            os.makedirs(path)
-        except OSError as exc:  # Python >2.5
-            if exc.errno == errno.EEXIST and os.path.isdir(path):
-                pass
-            else:
-                raise
