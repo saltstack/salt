@@ -175,9 +175,12 @@ class SREQ(object):
                     zmq.RECONNECT_IVL_MAX, 5000
                 )
 
-            if self.master.startswith('tcp://') and hasattr(zmq, 'IPV4ONLY'):
-                # IPv6 sockets work for both IPv6 and IPv4 addresses
-                self._socket.setsockopt(zmq.IPV4ONLY, 0)
+            if self.master.startswith('tcp://['):
+                # Hint PF type if bracket enclosed IPv6 address
+                if hasattr(zmq, 'IPV6'):
+                    self._socket.setsockopt(zmq.IPV6, 1)
+                elif hasattr(zmq, 'IPV4ONLY'):
+                    self._socket.setsockopt(zmq.IPV4ONLY, 0)
             self._socket.linger = self.linger
             if self.id_:
                 self._socket.setsockopt(zmq.IDENTITY, self.id_)
