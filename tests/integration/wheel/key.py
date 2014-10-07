@@ -9,7 +9,7 @@ import salt.wheel
 
 class KeyWheelModuleTest(integration.ClientCase):
     def setUp(self):
-        self.wheel = salt.wheel.Wheel(self.get_opts())
+        self.wheel = salt.wheel.Wheel(self.get_config('client_config'))
 
     def test_list_all(self):
         ret = self.wheel.call_func('key.list_all')

@@ -7,10 +7,12 @@ import os
 import integration
 
 # Import Salt libs
+import salt.auth
 import salt.wheel
 
 
-class WheelModuleTest(integration.ClientCase):
+class WheelModuleTest(integration.TestCase, integration.AdaptedConfigurationTestCaseMixIn):
+
     eauth_creds = {
         'username': 'saltdev_auto',
         'password': 'saltdev',
@@ -21,7 +23,7 @@ class WheelModuleTest(integration.ClientCase):
         '''
         Configure an eauth user to test with
         '''
-        self.wheel = salt.wheel.Wheel(self.get_opts())
+        self.wheel = salt.wheel.Wheel(self.get_config('client_config'))
 
     def test_master_call(self):
         '''
@@ -45,13 +47,14 @@ class WheelModuleTest(integration.ClientCase):
         The choice of using key.list_all for this is arbitrary and should be
         changed to some mocked function that is more testing friendly.
         '''
-        import salt.auth
-
-        opts = self.get_opts()
-        self.mkdir_p(os.path.join(opts['root_dir'], 'cache', 'tokens'))
-
-        auth = salt.auth.LoadAuth(opts)
+        auth = salt.auth.LoadAuth(self.get_config('client_config'))
         token = auth.mk_token(self.eauth_creds)
+
+        token = auth.mk_token({
+            'username': 'saltdev_auto',
+            'password': 'saltdev',
+            'eauth': 'auto',
+        })
 
         self.wheel.master_call(**{
             'client': 'wheel',
@@ -96,6 +99,7 @@ class WheelModuleTest(integration.ClientCase):
         }
 
         self.wheel.cmd_sync(low)
+
 
 if __name__ == '__main__':
     from integration import run_tests

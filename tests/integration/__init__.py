@@ -556,11 +556,13 @@ class TestDaemon(object):
                     os.path.join(master_opts['pki_dir'], 'minions_rejected'),
                     os.path.join(master_opts['cachedir'], 'jobs'),
                     os.path.join(master_opts['cachedir'], 'raet'),
+                    os.path.join(master_opts['root_dir'], 'cache', 'tokens'),
                     os.path.join(syndic_master_opts['pki_dir'], 'minions'),
                     os.path.join(syndic_master_opts['pki_dir'], 'minions_pre'),
                     os.path.join(syndic_master_opts['pki_dir'], 'minions_rejected'),
                     os.path.join(syndic_master_opts['cachedir'], 'jobs'),
                     os.path.join(syndic_master_opts['cachedir'], 'raet'),
+                    os.path.join(syndic_master_opts['root_dir'], 'cache', 'tokens'),
                     os.path.join(master_opts['pki_dir'], 'accepted'),
                     os.path.join(master_opts['pki_dir'], 'rejected'),
                     os.path.join(master_opts['pki_dir'], 'pending'),
@@ -924,7 +926,20 @@ class AdaptedConfigurationTestCaseMixIn(object):
 
     __slots__ = ()
 
-    def get_config(self, config_for):
+    def get_config(self, config_for, from_scratch=False):
+        if from_scratch:
+            if config_for in ('master', 'syndic_master'):
+                return salt.config.master_config(self.get_config_file_path(config_for))
+            elif config_for in ('minion', 'sub_minion'):
+                return salt.config.minion_config(self.get_config_file_path(config_for))
+            elif config_for in ('syndic',):
+                return salt.config.syndic_config(
+                    self.get_config_file_path(config_for),
+                    self.get_config_file_path('minion')
+                )
+            elif config_for == 'client_config':
+                return salt.config.client_config(self.get_config_file_path('master'))
+
         if config_for not in RUNTIME_CONFIGS:
             if config_for in ('master', 'syndic_master'):
                 RUNTIME_CONFIGS[config_for] = freeze(
@@ -940,6 +955,10 @@ class AdaptedConfigurationTestCaseMixIn(object):
                         self.get_config_file_path(config_for),
                         self.get_config_file_path('minion')
                     )
+                )
+            elif config_for == 'client_config':
+                RUNTIME_CONFIGS[config_for] = freeze(
+                    salt.config.client_config(self.get_config_file_path('master'))
                 )
         return RUNTIME_CONFIGS[config_for]
 
@@ -971,8 +990,9 @@ class SaltClientTestCaseMixIn(AdaptedConfigurationTestCaseMixIn):
         return self._client
 
     def __del__(self):
-        del self._client
-        self._client = None
+        if hasattr(self, '_client'):
+            del self._client
+            self._client = None
 
 
 class ModuleCase(TestCase, SaltClientTestCaseMixIn):
@@ -1408,13 +1428,6 @@ class ClientCase(AdaptedConfigurationTestCaseMixIn, TestCase):
     A base class containing relevant options for starting the various Salt
     Python API entrypoints
     '''
-    def get_opts(self):
-        if 'client_config' not in RUNTIME_CONFIGS:
-            RUNTIME_CONFIGS = freeze(
-                salt.config.client_config(self.get_config_file_path('master'))
-            )
-        return RUNTIME_CONFIGS['client_config']
-
     def mkdir_p(self, path):
         try:
             os.makedirs(path)
