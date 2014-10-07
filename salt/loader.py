@@ -110,7 +110,7 @@ def _create_loader(
     )
 
 
-def minion_mods(opts, context=None, whitelist=None):
+def minion_mods(opts, context=None, whitelist=None, include_errors=False):
     '''
     Load execution modules
 
@@ -136,7 +136,8 @@ def minion_mods(opts, context=None, whitelist=None):
     functions = load.gen_functions(
         pack,
         whitelist=whitelist,
-        provider_overrides=True
+        provider_overrides=True,
+        include_errors=include_errors
     )
     # Enforce dependencies of module functions from "functions"
     Depends.enforce_dependencies(functions)
@@ -707,11 +708,12 @@ class Loader(object):
         return funcs
 
     def gen_functions(self, pack=None, virtual_enable=True, whitelist=None,
-                      provider_overrides=False):
+                      provider_overrides=False, include_errors=False):
         '''
         Return a dict of functions found in the defined module_dirs
         '''
         funcs = {}
+        error_funcs = {}
         self.load_modules()
         for mod in self.modules:
             # If this is a proxy minion then MOST modules cannot work.  Therefore, require that
@@ -765,12 +767,16 @@ class Loader(object):
             if virtual_enable:
                 # if virtual modules are enabled, we need to look for the
                 # __virtual__() function inside that module and run it.
-                (virtual_ret, virtual_name) = self.process_virtual(mod,
-                                                                   module_name)
+                (virtual_ret, virtual_name, virtual_errors) = self.process_virtual(
+                                                                    mod,
+                                                                    module_name)
 
                 # if process_virtual returned a non-True value then we are
                 # supposed to not process this module
                 if virtual_ret is not True:
+                    # If a module has information about why it could not be loaded, record it
+                    if virtual_errors:
+                        error_funcs[module_name] = virtual_errors
                     continue
 
                 # update our module name to reflect the virtual name
@@ -807,10 +813,15 @@ class Loader(object):
                  not str(mod.__name__).startswith('salt.loaded.ext.grain'))
             ):
                 mod.__salt__ = funcs
+#                if include_errors:
+#                    mod.__errors__ = error_funcs
             elif not in_pack(pack, '__salt__') and \
                     (str(mod.__name__).startswith('salt.loaded.int.grain') or
                      str(mod.__name__).startswith('salt.loaded.ext.grain')):
                 mod.__salt__.update(funcs)
+ #               mod.__errors__ = error_funcs
+        if include_errors:
+            funcs['_errors'] = error_funcs
         return funcs
 
     def load_modules(self):
@@ -1024,16 +1035,23 @@ class Loader(object):
         # if they are not intended to run on the given platform or are missing
         # dependencies.
         try:
+            error_reasons = []
             if hasattr(mod, '__virtual__') and inspect.isfunction(mod.__virtual__):
                 if self.opts.get('virtual_timer', False):
                     start = time.time()
                     virtual = mod.__virtual__()
+                    if isinstance(virtual, tuple):
+                        error_reasons = virtual[1]
+                        virtual = virtual[0]
                     end = time.time() - start
                     msg = 'Virtual function took {0} seconds for {1}'.format(
                             end, module_name)
                     log.warning(msg)
                 else:
                     virtual = mod.__virtual__()
+                    if isinstance(virtual, tuple):
+                        error_reasons = virtual[1]
+                        virtual = virtual[0]
                 # Get the module's virtual name
                 virtualname = getattr(mod, '__virtualname__', virtual)
                 if not virtual:
@@ -1054,7 +1072,7 @@ class Loader(object):
                             )
                         )
 
-                    return (False, module_name)
+                    return (False, module_name, error_reasons)
 
                 # At this point, __virtual__ did not return a
                 # boolean value, let's check for deprecated usage
@@ -1136,9 +1154,9 @@ class Loader(object):
                 ),
                 exc_info=True
             )
-            return (False, module_name)
+            return (False, module_name, error_reasons)
 
-        return (True, module_name)
+        return (True, module_name, [])
 
     def _apply_outputter(self, func, mod):
         '''
@@ -1158,6 +1176,8 @@ class Loader(object):
         gen = self.gen_functions(pack=pack, whitelist=whitelist)
         for key, fun in gen.items():
             # if the name (after '.') is "name", then rename to mod_name: fun
+            if key == '_errors':
+                continue
             if key[key.index('.') + 1:] == name:
                 funcs[key[:key.index('.')]] = fun
         return funcs
@@ -1216,7 +1236,7 @@ class Loader(object):
                 continue
             grains_data.update(ret)
         for key, fun in funcs.items():
-            if key.startswith('core.'):
+            if key.startswith('core.') or key == '_errors':
                 continue
             try:
                 ret = fun()
