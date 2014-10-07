@@ -1,7 +1,4 @@
-# coding: utf-8
-import functools
-from unittest.case import _ExpectedFailure, _UnexpectedSuccess
-import sys
+# -*- coding: utf-8 -*-
 
 try:
     import cherrypy
@@ -19,7 +16,10 @@ if HAS_CHERRYPY:
     from .cptestcase import BaseCherryPyTestCase
     from salt.netapi.rest_cherrypy import app
 else:
-    from salttesting.unit import TestCase, skipIf
+    from salttesting.unit import (
+        TestCase,
+        skipIf,
+    )
 
     @skipIf(HAS_CHERRYPY is False, 'The CherryPy python package needs to be installed')
     class BaseCherryPyTestCase(TestCase):
@@ -111,27 +111,3 @@ if HAS_CHERRYPY:
 
         def tearDown(self):
             cherrypy.engine.exit()
-
-
-def expectedNotImplementedFailure(func):
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        try:
-            func(*args, **kwargs)
-        except NotImplementedError:
-            raise _ExpectedFailure(sys.exc_info())
-        raise _UnexpectedSuccess
-
-    return wrapper
-
-
-def expectedImportFailure(func):
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        try:
-            func(*args, **kwargs)
-        except ImportError:
-            raise _ExpectedFailure(sys.exc_info())
-        raise _UnexpectedSuccess
-
-    return wrapper

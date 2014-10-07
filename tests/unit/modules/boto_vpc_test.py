@@ -6,7 +6,6 @@ from mock import patch
 
 from salt.exceptions import SaltInvocationError
 from salt.modules.boto_vpc import _maybe_set_name_tag, _maybe_set_tags
-from tests.utils import expectedNotImplementedFailure, expectedImportFailure
 
 
 try:
@@ -18,7 +17,6 @@ except ImportError:
     HAS_BOTO = False
 
 try:
-    import moto
     from moto import mock_ec2
 
     HAS_MOTO = True
@@ -98,6 +96,9 @@ class BotoVpcTestCaseBase(TestCase):
     conn = None
 
     def _create_vpc(self, name=None, tags=None):
+        '''
+        Helper function to create a test vpc
+        '''
         if not self.conn:
             self.conn = boto.vpc.connect_to_region(region)
 
@@ -108,6 +109,9 @@ class BotoVpcTestCaseBase(TestCase):
         return vpc
 
     def _create_subnet(self, vpc_id, cidr_block='10.0.0.0/25', name=None, tags=None):
+        '''
+        Helper function to create a test subnet
+        '''
         if not self.conn:
             self.conn = boto.vpc.connect_to_region(region)
 
@@ -118,6 +122,9 @@ class BotoVpcTestCaseBase(TestCase):
 
     def _create_dhcp_options(self, domain_name='example.com', domain_name_servers=None, ntp_servers=None,
                              netbios_name_servers=None, netbios_node_type=2):
+        '''
+        Helper function to create test dchp options
+        '''
         if not netbios_name_servers:
             netbios_name_servers = ['10.0.0.1']
         if not ntp_servers:
@@ -133,6 +140,9 @@ class BotoVpcTestCaseBase(TestCase):
                                              netbios_node_type=netbios_node_type)
 
     def _create_network_acl(self, vpc_id):
+        '''
+        Helper function to create test network acl
+        '''
         if not self.conn:
             self.conn = boto.vpc.connect_to_region(region)
 
@@ -140,6 +150,9 @@ class BotoVpcTestCaseBase(TestCase):
 
     def _create_network_acl_entry(self, network_acl_id, rule_number, protocol, rule_action, cidr_block, egress=None,
                                   icmp_code=None, icmp_type=None, port_range_from=None, port_range_to=None):
+        '''
+        Helper function to create test network acl entry
+        '''
         if not self.conn:
             self.conn = boto.vpc.connect_to_region(region)
 
@@ -150,6 +163,9 @@ class BotoVpcTestCaseBase(TestCase):
                                                   port_range_from=port_range_from, port_range_to=port_range_to)
 
     def _create_route_table(self, vpc_id):
+        '''
+        Helper function to create a test route table
+        '''
         if not self.conn:
             self.conn = boto.vpc.connect_to_region(region)
 
@@ -169,6 +185,9 @@ class BotoVpcTestCase(BotoVpcTestCaseBase):
 
     @mock_ec2
     def test_that_when_checking_if_a_vpc_exists_by_id_and_a_vpc_exists_the_vpc_exists_method_returns_true(self):
+        '''
+        Tests checking vpc existence via id when the vpc already exists
+        '''
         vpc = self._create_vpc()
 
         vpc_exists = boto_vpc.exists(vpc_id=vpc.id, **conn_parameters)
@@ -180,6 +199,9 @@ class BotoVpcTestCase(BotoVpcTestCaseBase):
                                            'Added support in spulec/moto#218. Next release should solve this issue.')
     def test_that_when_checking_if_a_vpc_exists_by_id_and_a_vpc_does_not_exist_the_vpc_exists_method_returns_false(
             self):
+        '''
+        Tests checking vpc existence via id when the vpc does not exist
+        '''
         self._create_vpc()  # Created to ensure that the filters are applied correctly
         vpc_exists = boto_vpc.exists(vpc_id='fake', **conn_parameters)
 
@@ -187,6 +209,9 @@ class BotoVpcTestCase(BotoVpcTestCaseBase):
 
     @mock_ec2
     def test_that_when_checking_if_a_vpc_exists_by_name_and_a_vpc_exists_the_vpc_exists_method_returns_true(self):
+        '''
+        Tests checking vpc existence via name when vpc exists
+        '''
         self._create_vpc(name='test')
 
         vpc_exists = boto_vpc.exists(name='test', **conn_parameters)
@@ -198,6 +223,9 @@ class BotoVpcTestCase(BotoVpcTestCaseBase):
                                            'Added support in spulec/moto#218. Next release should solve this issue.')
     def test_that_when_checking_if_a_vpc_exists_by_name_and_a_vpc_does_not_exist_the_vpc_exists_method_returns_false(
             self):
+        '''
+        Tests checking vpc existence via name when vpc does not exist
+        '''
         self._create_vpc()  # Created to ensure that the filters are applied correctly
 
         vpc_exists = boto_vpc.exists(name='test', **conn_parameters)
@@ -206,6 +234,9 @@ class BotoVpcTestCase(BotoVpcTestCaseBase):
 
     @mock_ec2
     def test_that_when_checking_if_a_vpc_exists_by_tags_and_a_vpc_exists_the_vpc_exists_method_returns_true(self):
+        '''
+        Tests checking vpc existence via tag when vpc exists
+        '''
         self._create_vpc(tags={'test': 'testvalue'})
 
         vpc_exists = boto_vpc.exists(tags={'test': 'testvalue'}, **conn_parameters)
@@ -217,6 +248,9 @@ class BotoVpcTestCase(BotoVpcTestCaseBase):
                                            'Added support in spulec/moto#218. Next release should solve this issue.')
     def test_that_when_checking_if_a_vpc_exists_by_tags_and_a_vpc_does_not_exist_the_vpc_exists_method_returns_false(
             self):
+        '''
+        Tests checking vpc existence via tag when vpc does not exist
+        '''
         self._create_vpc()  # Created to ensure that the filters are applied correctly
 
         vpc_exists = boto_vpc.exists(tags={'test': 'testvalue'}, **conn_parameters)
@@ -225,6 +259,9 @@ class BotoVpcTestCase(BotoVpcTestCaseBase):
 
     @mock_ec2
     def test_that_when_checking_if_a_vpc_exists_but_providing_no_filters_the_vpc_exists_method_raises_a_salt_invocation_error(self):
+        '''
+        Tests checking vpc existence when no filters are provided
+        '''
         with self.assertRaisesRegexp(SaltInvocationError, 'At least on of the following must be specified: vpc id, name or tags.'):
             boto_vpc.exists(**conn_parameters)
 
@@ -267,6 +304,9 @@ class BotoVpcTestCase(BotoVpcTestCaseBase):
 
     @mock_ec2
     def test_that_when_deleting_an_existing_vpc_the_delete_vpc_method_returns_true(self):
+        '''
+        Tests deleting an existing vpc
+        '''
         vpc = self._create_vpc()
 
         vpc_deletion_result = boto_vpc.delete(vpc.id, **conn_parameters)
@@ -275,6 +315,9 @@ class BotoVpcTestCase(BotoVpcTestCaseBase):
 
     @mock_ec2
     def test_that_when_deleting_a_non_existent_vpc_the_delete_vpc_method_returns_false(self):
+        '''
+        Tests deleting a non-existent vpc
+        '''
         vpc_deletion_result = boto_vpc.delete('1234', **conn_parameters)
 
         self.assertFalse(vpc_deletion_result)
@@ -329,6 +372,9 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase):
 
     @mock_ec2
     def test_that_when_creating_a_subnet_succeeds_the_create_subnet_method_returns_true(self):
+        '''
+        Tests creating a subnet successfully
+        '''
         vpc = self._create_vpc()
 
         subnet_creation_result = boto_vpc.create_subnet(vpc.id, '10.0.0.0/24', **conn_parameters)
@@ -337,6 +383,9 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase):
 
     @mock_ec2
     def test_that_when_creating_a_subnet_and_specifying_a_name_succeeds_the_create_subnet_method_returns_true(self):
+        '''
+        Tests creating a subnet successfully when specifying a name
+        '''
         vpc = self._create_vpc()
 
         subnet_creation_result = boto_vpc.create_subnet(vpc.id, '10.0.0.0/24', subnet_name='test', **conn_parameters)
@@ -345,6 +394,9 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase):
 
     @mock_ec2
     def test_that_when_creating_a_subnet_and_specifying_tags_succeeds_the_create_subnet_method_returns_true(self):
+        '''
+        Tests creating a subnet successfully when specifying a tag
+        '''
         vpc = self._create_vpc()
 
         subnet_creation_result = boto_vpc.create_subnet(vpc.id, '10.0.0.0/24', tags={'test': 'testvalue'},
@@ -354,6 +406,9 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase):
 
     @mock_ec2
     def test_that_when_creating_a_subnet_fails_the_create_subnet_method_returns_false(self):
+        '''
+        Tests creating a subnet failure
+        '''
         vpc = self._create_vpc()
 
         with patch('moto.ec2.models.SubnetBackend.create_subnet', side_effect=BotoServerError(400, 'Mocked error')):
@@ -363,6 +418,9 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase):
 
     @mock_ec2
     def test_that_when_deleting_an_existing_subnet_the_delete_subnet_method_returns_true(self):
+        '''
+        Tests deleting an existing subnet
+        '''
         vpc = self._create_vpc()
         subnet = self._create_subnet(vpc.id)
 
@@ -372,12 +430,18 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase):
 
     @mock_ec2
     def test_that_when_deleting_a_non_existent_subnet_the_delete_vpc_method_returns_false(self):
+        '''
+        Tests deleting a subnet that doesn't exist
+        '''
         subnet_deletion_result = boto_vpc.delete_subnet('1234', **conn_parameters)
 
         self.assertFalse(subnet_deletion_result)
 
     @mock_ec2
     def test_that_when_checking_if_a_subnet_exists_by_id_the_subnet_exists_method_returns_true(self):
+        '''
+        Tests checking if a subnet exists when it does exist
+        '''
         vpc = self._create_vpc()
         subnet = self._create_subnet(vpc.id)
 
@@ -387,6 +451,9 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase):
 
     @mock_ec2
     def test_that_when_a_subnet_does_not_exist_the_subnet_exists_method_returns_false(self):
+        '''
+        Tests checking if a subnet exists which doesn't exist
+        '''
         subnet_exists_result = boto_vpc.subnet_exists('fake', **conn_parameters)
 
         self.assertFalse(subnet_exists_result)
@@ -395,6 +462,9 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase):
     @skipIf(_has_required_moto() is False, 'The moto module does not support filtering by tags. '
                                            'Added support in spulec/moto#218. Next release should solve this issue.')
     def test_that_when_checking_if_a_subnet_exists_by_name_the_subnet_exists_method_returns_true(self):
+        '''
+        Tests checking subnet existence by name
+        '''
         vpc = self._create_vpc()
         self._create_subnet(vpc.id, name='test')
 
@@ -406,6 +476,9 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase):
     @skipIf(_has_required_moto() is False, 'The moto module does not support filtering by tags. '
                                            'Added support in spulec/moto#218. Next release should solve this issue.')
     def test_that_when_checking_if_a_subnet_exists_by_name_the_subnet_does_not_exist_the_subnet_method_returns_false(self):
+        '''
+        Tests checking subnet existence by name when it doesn't exist
+        '''
         vpc = self._create_vpc()
         self._create_subnet(vpc.id)
 
@@ -417,6 +490,9 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase):
     @skipIf(_has_required_moto() is False, 'The moto module does not support filtering by tags. '
                                            'Added support in spulec/moto#218. Next release should solve this issue.')
     def test_that_when_checking_if_a_subnet_exists_by_tags_the_subnet_exists_method_returns_true(self):
+        '''
+        Tests checking subnet existence by tag
+        '''
         vpc = self._create_vpc()
         self._create_subnet(vpc.id, tags={'test': 'testvalue'})
 
@@ -428,6 +504,9 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase):
     @skipIf(_has_required_moto() is False, 'The moto module does not support filtering by tags. '
                                            'Added support in spulec/moto#218. Next release should solve this issue.')
     def test_that_when_checking_if_a_subnet_exists_by_tags_the_subnet_does_not_exist_the_subnet_method_returns_false(self):
+        '''
+        Tests checking subnet existence by tag when subnet doesn't exist
+        '''
         vpc = self._create_vpc()
         self._create_subnet(vpc.id)
 
@@ -437,6 +516,9 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase):
 
     @mock_ec2
     def test_that_when_checking_if_a_subnet_exists_but_providing_no_filters_the_subnet_exists_method_raises_a_salt_invocation_error(self):
+        '''
+        Tests checking subnet existence without any filters
+        '''
         with self.assertRaisesRegexp(SaltInvocationError, 'At least on of the following must be specified: subnet id, name or tags.'):
             boto_vpc.subnet_exists(**conn_parameters)
 
@@ -452,6 +534,9 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase):
 class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
     @mock_ec2
     def test_that_when_creating_dhcp_options_succeeds_the_create_dhcp_options_method_returns_true(self):
+        '''
+        Tests creating dhcp options successfully
+        '''
         dhcp_options_creation_result = boto_vpc.create_dhcp_options(**dhcp_options_parameters)
 
         self.assertTrue(dhcp_options_creation_result)
@@ -459,6 +544,9 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
     @mock_ec2
     def test_that_when_creating_dhcp_options_and_specifying_a_name_succeeds_the_create_dhcp_options_method_returns_true(
             self):
+        '''
+        Tests creating dchp options with name successfully
+        '''
         dhcp_options_creation_result = boto_vpc.create_dhcp_options(dhcp_options_name='test',
                                                                     **dhcp_options_parameters)
 
@@ -467,6 +555,9 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
     @mock_ec2
     def test_that_when_creating_dhcp_options_and_specifying_tags_succeeds_the_create_dhcp_options_method_returns_true(
             self):
+        '''
+        Tests creating dchp options with tag successfully
+        '''
         dhcp_options_creation_result = boto_vpc.create_dhcp_options(tags={'test': 'testvalue'},
                                                                     **dhcp_options_parameters)
 
@@ -474,6 +565,9 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
 
     @mock_ec2
     def test_that_when_creating_dhcp_options_fails_the_create_dhcp_options_method_returns_false(self):
+        '''
+        Tests creating dhcp options failure
+        '''
         with patch('moto.ec2.models.DHCPOptionsSetBackend.create_dhcp_options',
                    side_effect=BotoServerError(400, 'Mocked error')):
             dhcp_options_creation_result = boto_vpc.create_dhcp_options(**dhcp_options_parameters)
@@ -483,6 +577,9 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
     @mock_ec2
     def test_that_when_associating_an_existing_dhcp_options_set_to_an_existing_vpc_the_associate_dhcp_options_method_returns_true(
             self):
+        '''
+        Tests associating existing dchp options successfully
+        '''
         vpc = self._create_vpc()
         dhcp_options = self._create_dhcp_options()
 
@@ -494,6 +591,9 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
     @mock_ec2
     def test_that_when_associating_a_non_existent_dhcp_options_set_to_an_existing_vpc_the_associate_dhcp_options_method_returns_true(
             self):
+        '''
+        Tests associating non-existanct dhcp options successfully
+        '''
         vpc = self._create_vpc()
 
         dhcp_options_association_result = boto_vpc.associate_dhcp_options_to_vpc('fake', vpc.id, **conn_parameters)
@@ -503,6 +603,9 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
     @mock_ec2
     def test_that_when_associating_an_existing_dhcp_options_set_to_a_non_existent_vpc_the_associate_dhcp_options_method_returns_false(
             self):
+        '''
+        Tests associating existing dhcp options to non-existance vpc
+        '''
         dhcp_options = self._create_dhcp_options()
 
         dhcp_options_association_result = boto_vpc.associate_dhcp_options_to_vpc(dhcp_options.id, 'fake',
@@ -513,6 +616,9 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
     @mock_ec2
     def test_that_when_creating_and_associating_dhcp_options_set_to_an_existing_vpc_succeeds_the_associate_new_dhcp_options_method_returns_true(
             self):
+        '''
+        Tests creation/association of dchp options to an existing vpc successfully
+        '''
         vpc = self._create_vpc()
 
         dhcp_creation_and_association_result = boto_vpc.associate_new_dhcp_options_to_vpc(vpc.id,
@@ -523,6 +629,9 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
     @mock_ec2
     def test_that_when_creating_and_associating_dhcp_options_set_to_an_existing_vpc_fails_creating_the_dhcp_options_the_associate_new_dhcp_options_method_returns_false(
             self):
+        '''
+        Tests creation failure during creation/association of dchp options to an existing vpc
+        '''
         vpc = self._create_vpc()
 
         with patch('moto.ec2.models.DHCPOptionsSetBackend.create_dhcp_options',
@@ -535,6 +644,9 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
     @mock_ec2
     def test_that_when_creating_and_associating_dhcp_options_set_to_an_existing_vpc_fails_associating_the_dhcp_options_the_associate_new_dhcp_options_method_returns_false(
             self):
+        '''
+        Tests association failure during creation/association of dchp options to existing vpc
+        '''
         vpc = self._create_vpc()
 
         with patch('moto.ec2.models.DHCPOptionsSetBackend.associate_dhcp_options',
@@ -547,6 +659,9 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
     @mock_ec2
     def test_that_when_creating_and_associating_dhcp_options_set_to_a_non_existent_vpc_the_dhcp_options_the_associate_new_dhcp_options_method_returns_false(
             self):
+        '''
+        Tests creation/association of dhcp options to non-existant vpc
+        '''
         dhcp_creation_and_association_result = boto_vpc.associate_new_dhcp_options_to_vpc('fake',
                                                                                           **dhcp_options_parameters)
 
@@ -554,6 +669,9 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
 
     @mock_ec2
     def test_that_when_dhcp_options_exists_the_dhcp_options_exists_method_returns_true(self):
+        '''
+        Tests existence of dhcp options successfully
+        '''
         dhcp_options = self._create_dhcp_options()
 
         dhcp_options_exists_result = boto_vpc.dhcp_options_exists(dhcp_options.id, **conn_parameters)
@@ -562,12 +680,18 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
 
     @mock_ec2
     def test_that_when_dhcp_options_do_not_exist_the_dhcp_options_exists_method_returns_false(self):
+        '''
+        Tests existence of dhcp options failure
+        '''
         dhcp_options_exists_result = boto_vpc.dhcp_options_exists('fake', **conn_parameters)
 
         self.assertFalse(dhcp_options_exists_result)
 
     @mock_ec2
     def test_that_when_checking_if_dhcp_options_exists_but_providing_no_filters_the_dhcp_options_exists_method_raises_a_salt_invocation_error(self):
+        '''
+        Tests checking dhcp option existence with no filters
+        '''
         with self.assertRaisesRegexp(SaltInvocationError, 'At least on of the following must be specified: dhcp options id, name or tags.'):
             boto_vpc.dhcp_options_exists(**conn_parameters)
 
@@ -580,8 +704,11 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
         .format(required_boto_version))
 class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_creating_network_acl_for_an_existing_vpc_the_create_network_acl_method_returns_true(self):
+        '''
+        Tests creation of network acl with existing vpc
+        '''
         vpc = self._create_vpc()
 
         network_acl_creation_result = boto_vpc.create_network_acl(vpc.id, **conn_parameters)
@@ -589,9 +716,12 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertTrue(network_acl_creation_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_creating_network_acl_for_an_existing_vpc_and_specifying_a_name_the_create_network_acl_method_returns_true(
             self):
+        '''
+        Tests creation of network acl via name with an existing vpc
+        '''
         vpc = self._create_vpc()
 
         network_acl_creation_result = boto_vpc.create_network_acl(vpc.id, network_acl_name='test', **conn_parameters)
@@ -599,9 +729,12 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertTrue(network_acl_creation_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_creating_network_acl_for_an_existing_vpc_and_specifying_tags_the_create_network_acl_method_returns_true(
             self):
+        '''
+        Tests creation of network acl via tags with an existing vpc
+        '''
         vpc = self._create_vpc()
 
         network_acl_creation_result = boto_vpc.create_network_acl(vpc.id, tags={'test': 'testvalue'}, **conn_parameters)
@@ -609,15 +742,21 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertTrue(network_acl_creation_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_creating_network_acl_for_a_non_existent_vpc_the_create_network_acl_method_returns_false(self):
+        '''
+        Tests creation of network acl with a non-existant vpc
+        '''
         network_acl_creation_result = boto_vpc.create_network_acl('fake', **conn_parameters)
 
         self.assertFalse(network_acl_creation_result)
 
     @mock_ec2
-    @expectedImportFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_creating_network_acl_fails_the_create_network_acl_method_returns_false(self):
+        '''
+        Tests creation of network acl failure
+        '''
         vpc = self._create_vpc()
 
         with patch('moto.ec2.models.NetworkACLBackend.create_network_acl',
@@ -627,8 +766,11 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertFalse(network_acl_creation_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_deleting_an_existing_network_acl_the_delete_network_acl_method_returns_true(self):
+        '''
+        Tests deletion of existing network acl successfully
+        '''
         vpc = self._create_vpc()
         network_acl = self._create_network_acl(vpc.id)
 
@@ -637,15 +779,21 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertTrue(network_acl_deletion_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_deleting_a_non_existent_network_acl_the_delete_network_acl_method_returns_false(self):
+        '''
+        Tests deleting a non-existent network acl
+        '''
         network_acl_deletion_result = boto_vpc.delete_network_acl('fake', **conn_parameters)
 
         self.assertFalse(network_acl_deletion_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_a_network_acl_exists_the_network_acl_exists_method_returns_true(self):
+        '''
+        Tests existence of network acl
+        '''
         vpc = self._create_vpc()
         network_acl = self._create_network_acl(vpc.id)
 
@@ -654,20 +802,32 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertTrue(network_acl_deletion_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_a_network_acl_does_not_exist_the_network_acl_exists_method_returns_false(self):
+        '''
+        Tests checking network acl does not exist
+        '''
         network_acl_deletion_result = boto_vpc.network_acl_exists('fake', **conn_parameters)
 
         self.assertFalse(network_acl_deletion_result)
 
     @mock_ec2
     def test_that_when_checking_if_network_acl_exists_but_providing_no_filters_the_network_acl_exists_method_raises_a_salt_invocation_error(self):
-        with self.assertRaisesRegexp(SaltInvocationError, 'At least on of the following must be specified: network ACL id, name or tags.'):
+        '''
+        Tests checking existence of network acl with no filters
+        '''
+        with self.assertRaisesRegexp(
+                SaltInvocationError,
+                'At least on of the following must be specified: dhcp options id, name or tags.'
+        ):
             boto_vpc.dhcp_options_exists(**conn_parameters)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_creating_a_network_acl_entry_successfully_the_create_network_acl_entry_method_returns_true(self):
+        '''
+        Tests creating network acl successfully
+        '''
         vpc = self._create_vpc()
         network_acl = self._create_network_acl(vpc.id)
 
@@ -678,18 +838,24 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertTrue(network_acl_entry_creation_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_creating_a_network_acl_entry_for_a_non_existent_network_acl_the_create_network_acl_entry_method_returns_false(
             self):
+        '''
+        Tests creating network acl entry for non-existent network acl
+        '''
         network_acl_entry_creation_result = boto_vpc.create_network_acl_entry(*network_acl_entry_parameters,
                                                                               **conn_parameters)
 
         self.assertFalse(network_acl_entry_creation_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_replacing_a_network_acl_entry_successfully_the_replace_network_acl_entry_method_returns_true(
             self):
+        '''
+        Tests replacing network acl entry successfully
+        '''
         vpc = self._create_vpc()
         network_acl = self._create_network_acl(vpc.id)
         self._create_network_acl_entry(network_acl.id, *network_acl_entry_parameters)
@@ -701,17 +867,23 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertTrue(network_acl_entry_creation_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_replacing_a_network_acl_entry_for_a_non_existent_network_acl_the_replace_network_acl_entry_method_returns_false(
             self):
+        '''
+        Tests replacing a network acl entry for a non-existent network acl
+        '''
         network_acl_entry_creation_result = boto_vpc.create_network_acl_entry(*network_acl_entry_parameters,
                                                                               **conn_parameters)
 
         self.assertFalse(network_acl_entry_creation_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_deleting_an_existing_network_acl_entry_the_delete_network_acl_entry_method_returns_true(self):
+        '''
+        Tests deleting existing network acl entry successfully
+        '''
         vpc = self._create_vpc()
         network_acl = self._create_network_acl(vpc.id)
         network_acl_entry = self._create_network_acl_entry(network_acl.id, *network_acl_entry_parameters)
@@ -722,18 +894,24 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertTrue(network_acl_entry_deletion_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_deleting_a_non_existent_network_acl_entry_the_delete_network_acl_entry_method_returns_false(
             self):
+        '''
+        Tests deleting a non-existent network acl entry
+        '''
         network_acl_entry_deletion_result = boto_vpc.delete_network_acl_entry('fake', 100,
                                                                               **conn_parameters)
 
         self.assertFalse(network_acl_entry_deletion_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_associating_an_existing_network_acl_to_an_existing_subnet_the_associate_network_acl_method_returns_true(
             self):
+        '''
+        Tests association of existing network acl to existing subnet successfully
+        '''
         vpc = self._create_vpc()
         network_acl = self._create_network_acl(vpc.id)
         subnet = self._create_subnet(vpc.id)
@@ -744,9 +922,12 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertTrue(network_acl_association_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_associating_a_non_existent_network_acl_to_an_existing_subnet_the_associate_network_acl_method_returns_false(
             self):
+        '''
+        Tests associating a non-existent network acl to existing subnet failure
+        '''
         vpc = self._create_vpc()
         subnet = self._create_subnet(vpc.id)
 
@@ -756,9 +937,12 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertFalse(network_acl_association_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_associating_an_existing_network_acl_to_a_non_existent_subnet_the_associate_network_acl_method_returns_false(
             self):
+        '''
+        Tests associating an existing network acl to a non-existent subnet
+        '''
         vpc = self._create_vpc()
         network_acl = self._create_network_acl(vpc.id)
 
@@ -768,9 +952,12 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertFalse(network_acl_association_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_creating_and_associating_a_network_acl_to_a_subnet_succeeds_the_associate_new_network_acl_to_subnet_method_returns_true(
             self):
+        '''
+        Tests creating/associating a network acl to a subnet to a new network
+        '''
         vpc = self._create_vpc()
         subnet = self._create_subnet(vpc.id)
 
@@ -780,9 +967,12 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertTrue(network_acl_creation_and_association_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_creating_and_associating_a_network_acl_to_a_subnet_and_specifying_a_name_succeeds_the_associate_new_network_acl_to_subnet_method_returns_true(
             self):
+        '''
+        Tests creation/association of a network acl to subnet via name successfully
+        '''
         vpc = self._create_vpc()
         subnet = self._create_subnet(vpc.id)
 
@@ -793,9 +983,12 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertTrue(network_acl_creation_and_association_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_creating_and_associating_a_network_acl_to_a_subnet_and_specifying_tags_succeeds_the_associate_new_network_acl_to_subnet_method_returns_true(
             self):
+        '''
+        Tests creating/association of a network acl to a subnet via tag successfully
+        '''
         vpc = self._create_vpc()
         subnet = self._create_subnet(vpc.id)
 
@@ -807,9 +1000,12 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertTrue(network_acl_creation_and_association_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_creating_and_associating_a_network_acl_to_a_non_existent_subnet_the_associate_new_network_acl_to_subnet_method_returns_false(
             self):
+        '''
+        Tests creation/association of a network acl to a non-existent vpc
+        '''
         vpc = self._create_vpc()
 
         network_acl_creation_and_association_result = boto_vpc.associate_new_network_acl_to_subnet(vpc.id, 'fake',
@@ -818,9 +1014,12 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertFalse(network_acl_creation_and_association_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_creating_and_associating_a_network_acl_to_a_non_existent_vpc_the_associate_new_network_acl_to_subnet_method_returns_false(
             self):
+        '''
+        Tests creation/association of network acl to a non-existent subnet
+        '''
         vpc = self._create_vpc()
         subnet = self._create_subnet(vpc.id)
 
@@ -830,8 +1029,11 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertFalse(network_acl_creation_and_association_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_disassociating_network_acl_succeeds_the_disassociate_network_acl_method_should_return_true(self):
+        '''
+        Tests disassociation of network acl success
+        '''
         vpc = self._create_vpc()
         subnet = self._create_subnet(vpc.id)
 
@@ -840,9 +1042,12 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertTrue(dhcp_disassociate_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_disassociating_network_acl_for_a_non_existent_vpc_the_disassociate_network_acl_method_should_return_false(
             self):
+        '''
+        Tests disassociation of network acl from non-existent vpc
+        '''
         vpc = self._create_vpc()
         subnet = self._create_subnet(vpc.id)
 
@@ -851,9 +1056,12 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertFalse(dhcp_disassociate_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_disassociating_network_acl_for_a_non_existent_subnet_the_disassociate_network_acl_method_should_return_false(
             self):
+        '''
+        Tests disassociation of network acl from non-existent subnet
+        '''
         vpc = self._create_vpc()
 
         dhcp_disassociate_result = boto_vpc.disassociate_network_acl('fake', vpc_id=vpc.id, **conn_parameters)
@@ -869,8 +1077,11 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         .format(required_boto_version))
 class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_creating_a_route_table_succeeds_the_create_route_table_method_returns_true(self):
+        '''
+        Tests creating route table successfully
+        '''
         vpc = self._create_vpc()
 
         route_table_creation_result = boto_vpc.create_route_table(vpc.id, **conn_parameters)
@@ -878,15 +1089,21 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
         self.assertTrue(route_table_creation_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_creating_a_route_table_on_a_non_existent_vpc_the_create_route_table_method_returns_false(self):
+        '''
+        Tests creating route table on a non-existent vpc
+        '''
         route_table_creation_result = boto_vpc.create_route_table('fake', **conn_parameters)
 
         self.assertTrue(route_table_creation_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_deleting_a_route_table_succeeds_the_delete_route_table_method_returns_true(self):
+        '''
+        Tests deleting route table successfully
+        '''
         vpc = self._create_vpc()
         route_table = self._create_route_table(vpc.id)
 
@@ -895,15 +1112,21 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
         self.assertTrue(route_table_deletion_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_deleting_a_non_existent_route_table_the_delete_route_table_method_returns_false(self):
+        '''
+        Tests deleting non-existent route table
+        '''
         route_table_deletion_result = boto_vpc.delete_route_table('fake', **conn_parameters)
 
         self.assertFalse(route_table_deletion_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_route_table_exists_the_route_table_exists_method_returns_true(self):
+        '''
+        Tests existence of route table success
+        '''
         vpc = self._create_vpc()
         route_table = self._create_route_table(vpc.id)
 
@@ -912,21 +1135,33 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
         self.assertTrue(route_table_existence_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_route_table_does_not_exist_the_route_table_exists_method_returns_false(self):
+        '''
+        Tests existence of route table failure
+        '''
         route_table_existence_result = boto_vpc.route_table_exists('fake', **conn_parameters)
 
         self.assertFalse(route_table_existence_result)
 
     @mock_ec2
     def test_that_when_checking_if_a_route_table_exists_but_providing_no_filters_the_route_table_exists_method_raises_a_salt_invocation_error(self):
-        with self.assertRaisesRegexp(SaltInvocationError, 'At least on of the following must be specified: route table id, name or tags.'):
+        '''
+        Tests checking route table without filters
+        '''
+        with self.assertRaisesRegexp(
+                SaltInvocationError,
+                'At least on of the following must be specified: dhcp options id, name or tags.'
+        ):
             boto_vpc.dhcp_options_exists(**conn_parameters)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_associating_a_route_table_succeeds_the_associate_route_table_method_should_return_the_association_id(
             self):
+        '''
+        Tests associating route table successsfully
+        '''
         vpc = self._create_vpc()
         subnet = self._create_subnet(vpc.id)
         route_table = self._create_route_table(vpc.id)
@@ -936,9 +1171,12 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
         self.assertTrue(assocation_id)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_associating_a_route_table_with_a_non_existent_route_table_the_associate_route_table_method_should_return_false(
             self):
+        '''
+        Tests associating of route table to non-existent route table
+        '''
         vpc = self._create_vpc()
         subnet = self._create_subnet(vpc.id)
 
@@ -947,9 +1185,12 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
         self.assertFalse(assocation_id)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_associating_a_route_table_with_a_non_existent_subnet_the_associate_route_table_method_should_return_false(
             self):
+        '''
+        Tests associating of route table with non-existent subnet
+        '''
         vpc = self._create_vpc()
         route_table = self._create_route_table(vpc.id)
 
@@ -958,9 +1199,12 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
         self.assertFalse(assocation_id)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_disassociating_a_route_table_succeeds_the_disassociate_route_table_method_should_return_true(
             self):
+        '''
+        Tests disassociation of a route
+        '''
         vpc = self._create_vpc()
         subnet = self._create_subnet(vpc.id)
         route_table = self._create_route_table(vpc.id)
@@ -972,8 +1216,11 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
         self.assertTrue(dhcp_disassociate_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_creating_a_route_succeeds_the_create_route_method_should_return_true(self):
+        '''
+        Tests successful creation of a route
+        '''
         vpc = self._create_vpc()
         route_table = self._create_route_table(vpc.id)
 
@@ -982,16 +1229,22 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
         self.assertTrue(route_creation_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_creating_a_route_with_a_non_existent_route_table_the_create_route_method_should_return_false(
             self):
+        '''
+        Tests creation of route on non-existent route table
+        '''
         route_creation_result = boto_vpc.create_route('fake', cidr_block, **conn_parameters)
 
         self.assertFalse(route_creation_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_deleting_a_route_succeeds_the_delete_route_method_should_return_true(self):
+        '''
+        Tests deleting route from route table
+        '''
         vpc = self._create_vpc()
         route_table = self._create_route_table(vpc.id)
 
@@ -1000,16 +1253,22 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
         self.assertTrue(route_deletion_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_deleting_a_route_with_a_non_existent_route_table_the_delete_route_method_should_return_false(
             self):
+        '''
+        Tests deleting route from a non-existent route table
+        '''
         route_deletion_result = boto_vpc.delete_route('fake', cidr_block, **conn_parameters)
 
         self.assertFalse(route_deletion_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_replacing_a_route_succeeds_the_replace_route_method_should_return_true(self):
+        '''
+        Tests replacing route successfully
+        '''
         vpc = self._create_vpc()
         route_table = self._create_route_table(vpc.id)
 
@@ -1018,9 +1277,12 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
         self.assertTrue(route_replacing_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_replacing_a_route_with_a_non_existent_route_table_the_replace_route_method_should_return_false(
             self):
+        '''
+        Tests replacing a route when the route table doesn't exist
+        '''
         route_replacing_result = boto_vpc.replace_route('fake', cidr_block, **conn_parameters)
 
         self.assertFalse(route_replacing_result)
