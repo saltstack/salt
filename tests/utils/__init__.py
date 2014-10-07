@@ -1,6 +1,4 @@
-# coding: utf-8
-import functools
-import sys
+# -*- coding: utf-8 -*-
 
 try:
     import cherrypy
@@ -21,8 +19,6 @@ else:
     from salttesting.unit import (
         TestCase,
         skipIf,
-        expectedFailure,
-        unexpectedSuccess
     )
 
     @skipIf(HAS_CHERRYPY is False, 'The CherryPy python package needs to be installed')
@@ -115,27 +111,3 @@ if HAS_CHERRYPY:
 
         def tearDown(self):
             cherrypy.engine.exit()
-
-
-def expectedNotImplementedFailure(func):
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        try:
-            func(*args, **kwargs)
-        except NotImplementedError:
-            raise expectedFailure(sys.exc_info())
-        raise unexpectedSuccess
-
-    return wrapper
-
-
-def expectedImportFailure(func):
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        try:
-            func(*args, **kwargs)
-        except ImportError:
-            raise expectedFailure(sys.exc_info())
-        raise unexpectedSuccess
-
-    return wrapper

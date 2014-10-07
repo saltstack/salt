@@ -6,7 +6,6 @@ from mock import patch
 
 from salt.exceptions import SaltInvocationError
 from salt.modules.boto_vpc import _maybe_set_name_tag, _maybe_set_tags
-from tests.utils import expectedNotImplementedFailure, expectedImportFailure
 
 
 try:
@@ -705,7 +704,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
         .format(required_boto_version))
 class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_creating_network_acl_for_an_existing_vpc_the_create_network_acl_method_returns_true(self):
         '''
         Tests creation of network acl with existing vpc
@@ -717,7 +716,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertTrue(network_acl_creation_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_creating_network_acl_for_an_existing_vpc_and_specifying_a_name_the_create_network_acl_method_returns_true(
             self):
         '''
@@ -730,7 +729,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertTrue(network_acl_creation_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_creating_network_acl_for_an_existing_vpc_and_specifying_tags_the_create_network_acl_method_returns_true(
             self):
         '''
@@ -743,7 +742,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertTrue(network_acl_creation_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_creating_network_acl_for_a_non_existent_vpc_the_create_network_acl_method_returns_false(self):
         '''
         Tests creation of network acl with a non-existant vpc
@@ -767,7 +766,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertFalse(network_acl_creation_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_deleting_an_existing_network_acl_the_delete_network_acl_method_returns_true(self):
         '''
         Tests deletion of existing network acl successfully
@@ -780,7 +779,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertTrue(network_acl_deletion_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_deleting_a_non_existent_network_acl_the_delete_network_acl_method_returns_false(self):
         '''
         Tests deleting a non-existent network acl
@@ -790,7 +789,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertFalse(network_acl_deletion_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_a_network_acl_exists_the_network_acl_exists_method_returns_true(self):
         '''
         Tests existence of network acl
@@ -803,7 +802,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertTrue(network_acl_deletion_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_a_network_acl_does_not_exist_the_network_acl_exists_method_returns_false(self):
         '''
         Tests checking network acl does not exist
@@ -821,7 +820,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
             boto_vpc.dhcp_options_exists(**conn_parameters)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_creating_a_network_acl_entry_successfully_the_create_network_acl_entry_method_returns_true(self):
         '''
         Tests creating network acl successfully
@@ -836,7 +835,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertTrue(network_acl_entry_creation_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_creating_a_network_acl_entry_for_a_non_existent_network_acl_the_create_network_acl_entry_method_returns_false(
             self):
         '''
@@ -848,7 +847,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertFalse(network_acl_entry_creation_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_replacing_a_network_acl_entry_successfully_the_replace_network_acl_entry_method_returns_true(
             self):
         '''
@@ -865,7 +864,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertTrue(network_acl_entry_creation_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_replacing_a_network_acl_entry_for_a_non_existent_network_acl_the_replace_network_acl_entry_method_returns_false(
             self):
         '''
@@ -877,7 +876,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertFalse(network_acl_entry_creation_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_deleting_an_existing_network_acl_entry_the_delete_network_acl_entry_method_returns_true(self):
         '''
         Tests deleting existing network acl entry successfully
@@ -892,7 +891,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertTrue(network_acl_entry_deletion_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_deleting_a_non_existent_network_acl_entry_the_delete_network_acl_entry_method_returns_false(
             self):
         '''
@@ -904,7 +903,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertFalse(network_acl_entry_deletion_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_associating_an_existing_network_acl_to_an_existing_subnet_the_associate_network_acl_method_returns_true(
             self):
         '''
@@ -920,7 +919,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertTrue(network_acl_association_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_associating_a_non_existent_network_acl_to_an_existing_subnet_the_associate_network_acl_method_returns_false(
             self):
         '''
@@ -935,7 +934,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertFalse(network_acl_association_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_associating_an_existing_network_acl_to_a_non_existent_subnet_the_associate_network_acl_method_returns_false(
             self):
         '''
@@ -950,7 +949,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertFalse(network_acl_association_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_creating_and_associating_a_network_acl_to_a_subnet_succeeds_the_associate_new_network_acl_to_subnet_method_returns_true(
             self):
         '''
@@ -965,7 +964,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertTrue(network_acl_creation_and_association_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_creating_and_associating_a_network_acl_to_a_subnet_and_specifying_a_name_succeeds_the_associate_new_network_acl_to_subnet_method_returns_true(
             self):
         '''
@@ -981,7 +980,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertTrue(network_acl_creation_and_association_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_creating_and_associating_a_network_acl_to_a_subnet_and_specifying_tags_succeeds_the_associate_new_network_acl_to_subnet_method_returns_true(
             self):
         '''
@@ -998,7 +997,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertTrue(network_acl_creation_and_association_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_creating_and_associating_a_network_acl_to_a_non_existent_subnet_the_associate_new_network_acl_to_subnet_method_returns_false(
             self):
         '''
@@ -1012,7 +1011,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertFalse(network_acl_creation_and_association_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_creating_and_associating_a_network_acl_to_a_non_existent_vpc_the_associate_new_network_acl_to_subnet_method_returns_false(
             self):
         '''
@@ -1027,7 +1026,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertFalse(network_acl_creation_and_association_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_disassociating_network_acl_succeeds_the_disassociate_network_acl_method_should_return_true(self):
         '''
         Tests disassociation of network acl success
@@ -1040,7 +1039,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertTrue(dhcp_disassociate_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_disassociating_network_acl_for_a_non_existent_vpc_the_disassociate_network_acl_method_should_return_false(
             self):
         '''
@@ -1054,7 +1053,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         self.assertFalse(dhcp_disassociate_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_disassociating_network_acl_for_a_non_existent_subnet_the_disassociate_network_acl_method_should_return_false(
             self):
         '''
@@ -1075,7 +1074,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         .format(required_boto_version))
 class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_creating_a_route_table_succeeds_the_create_route_table_method_returns_true(self):
         '''
         Tests creating route table successfully
@@ -1087,7 +1086,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
         self.assertTrue(route_table_creation_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_creating_a_route_table_on_a_non_existent_vpc_the_create_route_table_method_returns_false(self):
         '''
         Tests creating route table on a non-existent vpc
@@ -1097,7 +1096,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
         self.assertTrue(route_table_creation_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_deleting_a_route_table_succeeds_the_delete_route_table_method_returns_true(self):
         '''
         Tests deleting route table successfully
@@ -1110,7 +1109,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
         self.assertTrue(route_table_deletion_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_deleting_a_non_existent_route_table_the_delete_route_table_method_returns_false(self):
         '''
         Tests deleting non-existent route table
@@ -1120,7 +1119,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
         self.assertFalse(route_table_deletion_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_route_table_exists_the_route_table_exists_method_returns_true(self):
         '''
         Tests existence of route table success
@@ -1133,7 +1132,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
         self.assertTrue(route_table_existence_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_route_table_does_not_exist_the_route_table_exists_method_returns_false(self):
         '''
         Tests existence of route table failure
@@ -1151,7 +1150,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
             boto_vpc.dhcp_options_exists(**conn_parameters)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_associating_a_route_table_succeeds_the_associate_route_table_method_should_return_the_association_id(
             self):
         '''
@@ -1166,7 +1165,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
         self.assertTrue(assocation_id)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_associating_a_route_table_with_a_non_existent_route_table_the_associate_route_table_method_should_return_false(
             self):
         '''
@@ -1180,7 +1179,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
         self.assertFalse(assocation_id)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_associating_a_route_table_with_a_non_existent_subnet_the_associate_route_table_method_should_return_false(
             self):
         '''
@@ -1194,7 +1193,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
         self.assertFalse(assocation_id)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_disassociating_a_route_table_succeeds_the_disassociate_route_table_method_should_return_true(
             self):
         '''
@@ -1211,7 +1210,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
         self.assertTrue(dhcp_disassociate_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+   @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_creating_a_route_succeeds_the_create_route_method_should_return_true(self):
         '''
         Tests successful creation of a route
@@ -1224,7 +1223,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
         self.assertTrue(route_creation_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_creating_a_route_with_a_non_existent_route_table_the_create_route_method_should_return_false(
             self):
         '''
@@ -1235,7 +1234,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
         self.assertFalse(route_creation_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_deleting_a_route_succeeds_the_delete_route_method_should_return_true(self):
         '''
         Tests deleting route from route table
@@ -1248,7 +1247,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
         self.assertTrue(route_deletion_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_deleting_a_route_with_a_non_existent_route_table_the_delete_route_method_should_return_false(
             self):
         '''
@@ -1259,7 +1258,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
         self.assertFalse(route_deletion_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_replacing_a_route_succeeds_the_replace_route_method_should_return_true(self):
         '''
         Tests replacing route successfully
@@ -1272,7 +1271,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
         self.assertTrue(route_replacing_result)
 
     @mock_ec2
-    @expectedNotImplementedFailure
+    @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_replacing_a_route_with_a_non_existent_route_table_the_replace_route_method_should_return_false(
             self):
         '''
