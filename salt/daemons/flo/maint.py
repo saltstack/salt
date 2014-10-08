@@ -95,7 +95,7 @@ class SaltRaetMaintSetup(ioflo.base.deeding.Deed):
                 self.opts.value)
 
 
-class SaltRaetMainFileserverClean(ioflo.base.deeding.Deed):
+class SaltRaetMaintFileserverClean(ioflo.base.deeding.Deed):
     '''
     Clear the fileserver backend caches
     FloScript:
@@ -112,7 +112,7 @@ class SaltRaetMainFileserverClean(ioflo.base.deeding.Deed):
         salt.daemons.masterapi.clean_fsbackend(self.opts.value)
 
 
-class SaltRaetMainOldJobsClear(ioflo.base.deeding.Deed):
+class SaltRaetMaintOldJobsClear(ioflo.base.deeding.Deed):
     '''
     Iterate over the jobs directory and clean out the old jobs
     FloScript:
@@ -129,7 +129,7 @@ class SaltRaetMainOldJobsClear(ioflo.base.deeding.Deed):
         salt.daemons.masterapi.clean_old_jobs(self.opts.value)
 
 
-class SaltRaetMainBackendsUpdate(ioflo.base.deeding.Deed):
+class SaltRaetMaintBackendsUpdate(ioflo.base.deeding.Deed):
     '''
     Update the fileserver and external pillar caches
     FloScript:
