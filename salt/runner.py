@@ -136,6 +136,23 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
                 raise_error(**ret['error'])
         return ret
 
+    def _reformat_low(self, low):
+        '''
+        Format the low data for RunnerClient()'s master_call() function
+
+        The master_call function here has a different function signature than
+        on WheelClient. So extract all the eauth keys and the fun key and
+        assume everything else is a kwarg to pass along to the runner function
+        to be called.
+        '''
+        auth_creds = dict([(i, low.pop(i)) for i in [
+                'username', 'password', 'eauth', 'token', 'client',
+            ] if i in low])
+        reformatted_low = {'fun': low.pop('fun')}
+        reformatted_low.update(auth_creds)
+        reformatted_low['kwarg'] = low
+        return reformatted_low
+
     def cmd_async(self, low):
         '''
         Execute a runner function asynchronously; eauth is respected
@@ -152,7 +169,8 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
                 'eauth': 'pam',
             })
         '''
-        return self.master_call(**low)
+        reformatted_low = self._reformat_low(low)
+        return self.master_call(**reformatted_low)
 
     def cmd_sync(self, low, timeout=None):
         '''
@@ -175,16 +193,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
                                             self.opts['transport'],
                                             opts=self.opts)
 
-        # The master_call function here has a different function signature than
-        # on WheelClient. So extract all the eauth keys and the fun key and
-        # assume everything else is a kwarg to pass along to the runner
-        # function to be called.
-        auth_creds = dict([(i, low.pop(i))
-            for i in ['username', 'password', 'eauth', 'token'] if i in low])
-        reformatted_low = {'fun': low.pop('fun')}
-        reformatted_low.update(auth_creds)
-        reformatted_low['kwarg'] = low
-
+        reformatted_low = self._reformat_low(low)
         job = self.master_call(**reformatted_low)
         ret_tag = tagify('ret', base=job['tag'])
 
