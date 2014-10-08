@@ -344,11 +344,11 @@ class CkMinions(object):
                         # If an unknown matcher is called at any time, fail out
                         return []
                     if unmatched and unmatched[-1] == '-':
-                        results.append(str(set(matcher('@'.join(comps[1:])))))
+                        results.append(str(set(matcher('@'.join(comps[1:]), True))))
                         results.append(')')
                         unmatched.pop()
                     else:
-                        results.append(str(set(matcher('@'.join(comps[1:])))))
+                        results.append(str(set(matcher('@'.join(comps[1:]), True))))
                 elif match in opers:
                     # We didn't match a target, so append a boolean operator or
                     # subexpression
