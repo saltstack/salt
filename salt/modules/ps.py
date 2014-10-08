@@ -165,6 +165,34 @@ def get_pid_list():
     return psutil.get_pid_list()
 
 
+def proc_info(pid, attrs=None):
+    '''
+    Return a dictionary of information for a process id (PID).
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ps.proc_info 2322
+        salt '*' ps.proc_info 2322 attrs='["pid", "name"]'
+
+    pid
+        PID of process to query.
+
+    attrs
+        Optional list of desired process attributes.
+    '''
+    try:
+        proc = psutil.Process(pid)
+        return proc.as_dict(attrs)
+    except psutil.NoSuchProcess as exc:
+        raise CommandExecutionError(exc)
+    except psutil.AccessDenied as exc:
+        raise CommandExecutionError(exc)
+    except AttributeError as exc:
+        raise CommandExecutionError(exc)
+
+
 def kill_pid(pid, signal=15):
     '''
     Kill a process by PID.
