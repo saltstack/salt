@@ -77,10 +77,8 @@ def present(name, cloud_provider, onlyif=None, unless=None, **kwargs):
            'changes': {},
            'result': None,
            'comment': ''}
-    instance = __salt__['cloud.action'](
-        fun='show_instance', names=[name])
+
     retcode = __salt__['cmd.retcode']
-    prov = str([a for a in instance][0])
     if onlyif is not None:
         if not isinstance(onlyif, string_types):
             if not onlyif:
@@ -95,14 +93,18 @@ def present(name, cloud_provider, onlyif=None, unless=None, **kwargs):
         elif isinstance(unless, string_types):
             if retcode(unless) == 0:
                 return _valid(name, comment='unless execution succeeded')
-    if instance and 'Not Actioned' not in prov:
+
+    # provider=None not cloud_provider because
+    # need to ensure ALL providers dont have the instance
+    if __salt__['cloud.has_instance'](name=name, provider=None):
         ret['result'] = True
-        ret['comment'] = 'Instance {0} already exists in {1}'.format(name,
-                                                                     prov)
+        ret['comment'] = 'Already present instance {0}'.format(name)
         return ret
+
     if __opts__['test']:
         ret['comment'] = 'Instance {0} needs to be created'.format(name)
         return ret
+
     info = __salt__['cloud.create'](cloud_provider, name, **kwargs)
     if info and 'Error' not in info:
         ret['changes'] = info
@@ -153,16 +155,7 @@ def absent(name, onlyif=None, unless=None):
            'result': None,
            'comment': ''}
     retcode = __salt__['cmd.retcode']
-    instance = __salt__['cloud.action'](fun='show_instance', names=[name])
-    if not instance or \
-            ('Not Actioned/Not Running' in ret
-            and name in ret['Not Actioned/Not Running']):
-        ret['result'] = True
-        ret['comment'] = 'Instance {0} already absent'.format(name)
-        return ret
-    if __opts__['test']:
-        ret['comment'] = 'Instance {0} needs to be destroyed'.format(name)
-        return ret
+
     if onlyif is not None:
         if not isinstance(onlyif, string_types):
             if not onlyif:
@@ -177,6 +170,16 @@ def absent(name, onlyif=None, unless=None):
         elif isinstance(unless, string_types):
             if retcode(unless) == 0:
                 return _valid(name, comment='unless execution succeeded')
+
+    if __salt__['cloud.has_instance'](name=name, provider=None):
+        ret['result'] = True
+        ret['comment'] = 'Already absent instance {0}'.format(name)
+        return ret
+
+    if __opts__['test']:
+        ret['comment'] = 'Instance {0} needs to be destroyed'.format(name)
+        return ret
+
     info = __salt__['cloud.destroy'](name)
     if info and 'Error' not in info:
         ret['changes'] = info
@@ -242,15 +245,17 @@ def profile(name, profile, onlyif=None, unless=None, **kwargs):
             if retcode(unless) == 0:
                 return _valid(name, comment='unless execution succeeded')
     instance = __salt__['cloud.action'](fun='show_instance', names=[name])
-    prov = str(instance.keys()[0])
-    if instance and 'Not Actioned' not in prov:
+
+    # need to ensure ALL providers dont have the instance
+    if __salt__['cloud.has_instance'](name=name, provider=None):
         ret['result'] = True
-        ret['comment'] = 'Instance {0} already exists in {1}'.format(
-            name, prov)
+        ret['comment'] = 'Already present instance {0}'.format(name)
         return ret
+
     if __opts__['test']:
         ret['comment'] = 'Instance {0} needs to be created'.format(name)
         return ret
+
     info = __salt__['cloud.profile'](profile, name, vm_overrides=kwargs)
 
     # get either {Error: ''} or {namestring: {Error: ''}}
