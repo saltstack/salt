@@ -498,12 +498,7 @@ class CkMinions(object):
         match the regex, this will then be used to parse the returns to
         make sure everyone has checked back in.
         '''
-        greedy=False
         try:
-            print('GREEDY: {0}'.format(greedy))
-            if greedy:
-                import traceback
-                traceback.print_stack()
             minions = {'glob': self._check_glob_minions,
                        'pcre': self._check_pcre_minions,
                        'list': self._check_list_minions,
