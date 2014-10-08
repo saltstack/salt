@@ -150,22 +150,29 @@ class CkMinions(object):
         '''
         Return the minions found by looking via grains
         '''
-        minions = set(
-            os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
-        )
-        if self.opts.get('minion_data_cache', False):
+        cache_enabled = self.opts.get('minion_data_cache', False)
+
+        if greedy:
+            minions = set(
+                os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
+            )
+        elif cache_enabled:
+            minions = os.listdir(os.path.join(self.opts['cachedir'], 'minions'))
+        else:
+            return list()
+
+        if cache_enabled:
             cdir = os.path.join(self.opts['cachedir'], 'minions')
             if not os.path.isdir(cdir):
                 return list(minions)
             for id_ in os.listdir(cdir):
-                if id_ not in minions:
-                    continue
+                if not greedy and id_ not in minions:
+                        continue
                 datap = os.path.join(cdir, id_, 'data.p')
                 if not os.path.isfile(datap):
-                    if greedy:
-                        continue
-                    else:
+                    if not greedy:
                         minions.remove(id_)
+                    continue
                 grains = self.serial.load(
                     salt.utils.fopen(datap, 'rb')
                 ).get('grains')
@@ -463,7 +470,12 @@ class CkMinions(object):
         match the regex, this will then be used to parse the returns to
         make sure everyone has checked back in.
         '''
+        greedy=False
         try:
+            print('GREEDY: {0}'.format(greedy))
+            if greedy:
+                import traceback
+                traceback.print_stack()
             minions = {'glob': self._check_glob_minions,
                        'pcre': self._check_pcre_minions,
                        'list': self._check_list_minions,
