@@ -180,7 +180,9 @@ def proc_info(pid, attrs=None):
         PID of process to query.
 
     attrs
-        Optional list of desired process attributes.
+        Optional list of desired process attributes.  The list of possible
+        attributes can be found here:
+        http://pythonhosted.org/psutil/#psutil.Process
     '''
     try:
         proc = psutil.Process(pid)
