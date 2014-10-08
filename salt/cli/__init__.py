@@ -456,7 +456,7 @@ class SaltRun(parsers.SaltRunOptionParser):
 
         runner = salt.runner.Runner(self.config)
         if self.options.doc:
-            runner._print_docs()
+            runner.print_docs()
             self.exit(os.EX_OK)
 
         # Run this here so SystemExit isn't raised anywhere else when

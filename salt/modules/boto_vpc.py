@@ -157,7 +157,7 @@ def exists(vpc_id=None, name=None, tags=None, region=None, key=None, keyid=None,
 
         if tags:
             for tag_name, tag_value in tags.items():
-                filter_parameters['filters']['tag:%s' % tag_name] = tag_value
+                filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
         vpcs = conn.get_all_vpcs(**filter_parameters)
         log.debug('The filters criteria {0} matched the following VPCs:{1}'.format(filter_parameters, vpcs))
         if vpcs:
@@ -313,6 +313,18 @@ def delete_subnet(subnet_id, region=None, key=None, keyid=None, profile=None):
 
 
 def subnet_exists(subnet_id=None, name=None, tags=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Check if a subnet exists.
+
+    Returns True if the subnet exists, otherwise returns False.
+
+    CLI Example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.subnet_exists subnet_id='subnet-6a1fe403'
+
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -331,7 +343,7 @@ def subnet_exists(subnet_id=None, name=None, tags=None, region=None, key=None, k
 
         if tags:
             for tag_name, tag_value in tags.items():
-                filter_parameters['filters']['tag:%s' % tag_name] = tag_value
+                filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
 
         subnets = conn.get_all_subnets(**filter_parameters)
         log.debug('The filters criteria {0} matched the following subnets:{1}'.format(filter_parameters, subnets))
@@ -417,6 +429,18 @@ def delete_customer_gateway(customer_gateway_id, region=None, key=None, keyid=No
 
 
 def customer_gateway_exists(customer_gateway_id, region=None, key=None, keyid=None, profile=None):
+    '''
+    Given a customer gateway ID, check if the customer gateway ID exists.
+
+    Returns True if the customer gateway ID exists; Returns False otherwise.
+
+    CLI Example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.customer_gateway_exists 'cgw-b6a247df'
+
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -533,6 +557,18 @@ def associate_new_dhcp_options_to_vpc(vpc_id, domain_name=None, domain_name_serv
 
 
 def dhcp_options_exists(dhcp_options_id=None, name=None, tags=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Check if a dhcp option exists.
+
+    Returns True if the dhcp option exists; Returns False otherwise.
+
+    CLI Example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.dhcp_options_exists dhcp_options_id='dhcp-a0bl34pp'
+
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -551,7 +587,7 @@ def dhcp_options_exists(dhcp_options_id=None, name=None, tags=None, region=None,
 
         if tags:
             for tag_name, tag_value in tags.items():
-                filter_parameters['filters']['tag:%s' % tag_name] = tag_value
+                filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
 
         dhcp_options = conn.get_all_dhcp_options(**filter_parameters)
         log.debug('The filters criteria {0} matched the following DHCP options:{1}'.format(filter_parameters, dhcp_options))
@@ -569,6 +605,18 @@ def dhcp_options_exists(dhcp_options_id=None, name=None, tags=None, region=None,
 
 
 def create_network_acl(vpc_id, network_acl_name=None, tags=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Given a vpc_id, creates a network acl.
+
+    Returns the network acl id if successful, otherwise returns False.
+
+    CLI Example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.create_network_acl 'vpc-6b1fe402'
+
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -589,6 +637,18 @@ def create_network_acl(vpc_id, network_acl_name=None, tags=None, region=None, ke
 
 
 def delete_network_acl(network_acl_id, region=None, key=None, keyid=None, profile=None):
+    '''
+    Deletes a network acl based on the network_acl_id provided.
+
+    Returns True if the network acl was deleted successfully, otherwise returns False.
+
+    CLI Example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.delete_network_acl 'acl-5fb85d36'
+
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -606,6 +666,17 @@ def delete_network_acl(network_acl_id, region=None, key=None, keyid=None, profil
 
 
 def network_acl_exists(network_acl_id=None, name=None, tags=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Checks if a network acl exists.
+
+    Returns True if the network acl exists or returns False if it doesn't exist.
+
+    CLI Example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.network_acl_exists network_acl_id='acl-5fb85d36'
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -624,7 +695,7 @@ def network_acl_exists(network_acl_id=None, name=None, tags=None, region=None, k
 
         if tags:
             for tag_name, tag_value in tags.items():
-                filter_parameters['filters']['tag:%s' % tag_name] = tag_value
+                filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
 
         network_acls = conn.get_all_network_acls(**filter_parameters)
         log.debug('The filters criteria {0} matched the following network ACLs:{1}'.format(filter_parameters, network_acls))
@@ -640,6 +711,18 @@ def network_acl_exists(network_acl_id=None, name=None, tags=None, region=None, k
 
 
 def associate_network_acl_to_subnet(network_acl_id, subnet_id, region=None, key=None, keyid=None, profile=None):
+    '''
+    Given a network acl ID and a subnet ID, associates a network acl to a subnet.
+
+    Returns the association ID if successful, otherwise returns False.
+
+    CLI Example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.associate_network_acl_to_subnet 'acl-5fb85d36' 'subnet-6a1fe403'
+
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -659,6 +742,18 @@ def associate_network_acl_to_subnet(network_acl_id, subnet_id, region=None, key=
 
 def associate_new_network_acl_to_subnet(vpc_id, subnet_id, network_acl_name=None, tags=None,
                                         region=None, key=None, keyid=None, profile=None):
+    '''
+    Given a vpc ID and a subnet ID, associates a new network act to a subnet.
+
+    Returns a dictionary containing the network acl id and the new association id if successful. If unsuccessful,
+    returns False.
+
+    CLI Example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.associate_new_network_acl_to_subnet 'vpc-6b1fe402' 'subnet-6a1fe403'
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -686,6 +781,16 @@ def associate_new_network_acl_to_subnet(vpc_id, subnet_id, network_acl_name=None
 
 
 def disassociate_network_acl(subnet_id, vpc_id=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Given a subnet ID, disassociates a network acl.
+
+    CLI Example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.disassociate_network_acl 'subnet-6a1fe403'
+
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -700,6 +805,16 @@ def disassociate_network_acl(subnet_id, vpc_id=None, region=None, key=None, keyi
 def create_network_acl_entry(network_acl_id, rule_number, protocol, rule_action, cidr_block, egress=None,
                              icmp_code=None, icmp_type=None, port_range_from=None, port_range_to=None,
                              region=None, key=None, keyid=None, profile=None):
+    '''
+    Creates a network acl entry.
+
+    CLI Example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.create_network_acl_entry 'acl-5fb85d36' '32767' '-1' 'deny' '0.0.0.0/0'
+
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -723,6 +838,16 @@ def create_network_acl_entry(network_acl_id, rule_number, protocol, rule_action,
 def replace_network_acl_entry(network_acl_id, rule_number, protocol, rule_action, cidr_block, egress=None,
                               icmp_code=None, icmp_type=None, port_range_from=None, port_range_to=None,
                               region=None, key=None, keyid=None, profile=None):
+    '''
+    Replaces a network acl entry.
+
+    CLI Example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.replace_network_acl_entry 'acl-5fb85d36' '32767' '-1' 'deny' '0.0.0.0/0'
+
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -745,6 +870,16 @@ def replace_network_acl_entry(network_acl_id, rule_number, protocol, rule_action
 
 
 def delete_network_acl_entry(network_acl_id, rule_number, egress=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Deletes a network acl entry.
+
+    CLI Example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.delete_network_acl_entry 'acl-5fb85d36' '32767'
+
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -763,6 +898,16 @@ def delete_network_acl_entry(network_acl_id, rule_number, egress=None, region=No
 
 
 def create_route_table(vpc_id, route_table_name=None, tags=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Creates a route table.
+
+    CLI Example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.create_route_table 'vpc-6b1fe402'
+
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -783,6 +928,16 @@ def create_route_table(vpc_id, route_table_name=None, tags=None, region=None, ke
 
 
 def delete_route_table(route_table_id, region=None, key=None, keyid=None, profile=None):
+    '''
+    Deletes a route table.
+
+    CLI Example::
+
+    .. code-example:: bash
+
+        salt myminion boto_vpc.delete_route_table 'rtb-1f382e7d'
+
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -800,6 +955,16 @@ def delete_route_table(route_table_id, region=None, key=None, keyid=None, profil
 
 
 def route_table_exists(route_table_id=None, name=None, tags=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Checks if a route table exists.
+
+    CLI Example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.route_table_exists route_table_id='rtb-1f382e7d'
+
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -818,7 +983,7 @@ def route_table_exists(route_table_id=None, name=None, tags=None, region=None, k
 
         if tags:
             for tag_name, tag_value in tags.items():
-                filter_parameters['filters']['tag:%s' % tag_name] = tag_value
+                filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
 
         route_tables = conn.get_all_route_tables(**filter_parameters)
         if route_tables:
@@ -835,6 +1000,16 @@ def route_table_exists(route_table_id=None, name=None, tags=None, region=None, k
 
 
 def associate_route_table(route_table_id, subnet_id, region=None, key=None, keyid=None, profile=None):
+    '''
+    Given a route table ID and a subnet ID, associates the route table with the subnet.
+
+    CLI Example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.associate_route_table 'rtb-1f382e7d' 'subnet-6a1fe403'
+
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -850,6 +1025,19 @@ def associate_route_table(route_table_id, subnet_id, region=None, key=None, keyi
 
 
 def disassociate_route_table(association_id, region=None, key=None, keyid=None, profile=None):
+    '''
+    Dissassociates a route table.
+
+    association_id
+        The Route Table Association ID to disassociate
+
+    CLI Example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.disassociate_route_table 'rtbassoc-d8ccddba'
+
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -869,13 +1057,23 @@ def disassociate_route_table(association_id, region=None, key=None, keyid=None, 
 
 
 def replace_route_table_association(association_id, route_table_id, region=None, key=None, keyid=None, profile=None):
+    '''
+    Replaces a route table association.
+
+    CLI Example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.replace_route_table_association 'rtbassoc-d8ccddba' 'rtb-1f382e7d'
+
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
 
     try:
         association_id = conn.replace_route_table_association_with_assoc(association_id, route_table_id)
-        log.info('Route table {0} was reassociated'.format(route_table_id, association_id))
+        log.info('Route table {0} was reassociated with association id {1}'.format(route_table_id, association_id))
 
         return association_id
     except boto.exception.BotoServerError as e:
@@ -885,6 +1083,16 @@ def replace_route_table_association(association_id, route_table_id, region=None,
 
 def create_route(route_table_id, destination_cidr_block, gateway_id=None, instance_id=None, interface_id=None,
                  region=None, key=None, keyid=None, profile=None):
+    '''
+    Creates a route.
+
+    CLI Example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.create_route 'rtb-1f382e7d' '10.0.0.0/16'
+
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -906,6 +1114,16 @@ def create_route(route_table_id, destination_cidr_block, gateway_id=None, instan
 
 
 def delete_route(route_table_id, destination_cidr_block, region=None, key=None, keyid=None, profile=None):
+    '''
+    Deletes a route.
+
+    CLI Example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.delete_route 'rtb-1f382e7d' '10.0.0.0/16'
+
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -927,6 +1145,16 @@ def delete_route(route_table_id, destination_cidr_block, region=None, key=None, 
 
 def replace_route(route_table_id, destination_cidr_block, gateway_id=None, instance_id=None, interface_id=None,
                   region=None, key=None, keyid=None, profile=None):
+    '''
+    Replaces a route.
+
+    CLI Example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.replace_route 'rtb-1f382e7d' '10.0.0.0/16'
+
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False

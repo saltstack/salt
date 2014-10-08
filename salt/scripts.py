@@ -49,13 +49,19 @@ def salt_master():
     master.start()
 
 
-def minion_process(q):
+def minion_process(queue):
+    '''
+    Start a minion process
+    '''
     # salt_minion spawns this function in a new process
 
     def suicide_when_without_parent(parent_pid):
-        # have the minion suicide if the parent process is gone
-        # there is a small race issue where the parent PID could be replace
-        # with another process with the same PID
+        '''
+        Have the minion suicide if the parent process is gone
+
+        NOTE: there is a small race issue where the parent PID could be replace
+        with another process with the same PID!
+        '''
         while True:
             time.sleep(5)
             try:
@@ -64,8 +70,8 @@ def minion_process(q):
             except OSError:
                 sys.exit(999)
     if not salt.utils.is_windows():
-        t = threading.Thread(target=suicide_when_without_parent, args=(os.getppid(),))
-        t.start()
+        thread = threading.Thread(target=suicide_when_without_parent, args=(os.getppid(),))
+        thread.start()
 
     restart = False
     minion = None
@@ -87,9 +93,9 @@ def minion_process(q):
         random_delay = randint(1, delay)
         log.info('Sleeping random_reauth_delay of {0} seconds'.format(random_delay))
         # preform delay after minion resources have been cleaned
-        q.put(random_delay)
+        queue.put(random_delay)
     else:
-        q.put(0)
+        queue.put(0)
 
 
 def salt_minion():
@@ -117,20 +123,20 @@ def salt_minion():
     # keep one minion subprocess running
     while True:
         try:
-            q = multiprocessing.Queue()
+            queue = multiprocessing.Queue()
         except Exception:
             # This breaks in containers
             minion = salt.Minion()
             minion.start()
             return
-        p = multiprocessing.Process(target=minion_process, args=(q,))
-        p.start()
+        process = multiprocessing.Process(target=minion_process, args=(queue,))
+        process.start()
         try:
-            p.join()
+            process.join()
             try:
-                restart_delay = q.get(block=False)
+                restart_delay = queue.get(block=False)
             except Exception:
-                if p.exitcode == 0:
+                if process.exitcode == 0:
                     # Minion process ended naturally, Ctrl+C or --version
                     break
                 restart_delay = 60
@@ -144,8 +150,8 @@ def salt_minion():
         # need to reset logging because new minion objects
         # cause extra log handlers to accumulate
         rlogger = logging.getLogger()
-        for h in rlogger.handlers:
-            rlogger.removeHandler(h)
+        for handler in rlogger.handlers:
+            rlogger.removeHandler(handler)
         logging.basicConfig()
 
 
@@ -285,14 +291,14 @@ def salt_cloud():
     '''
     try:
         import salt.cloud.cli
-        HAS_SALTCLOUD = True
+        has_saltcloud = True
     except ImportError:
         # No salt cloud on Windows
-        HAS_SALTCLOUD = False
+        has_saltcloud = False
     if '' in sys.path:
         sys.path.remove('')
 
-    if not HAS_SALTCLOUD:
+    if not has_saltcloud:
         print('salt-cloud is not available in this system')
         sys.exit(os.EX_UNAVAILABLE)
 
