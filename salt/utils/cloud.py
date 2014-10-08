@@ -990,7 +990,7 @@ def scp_file(dest_path, contents, kwargs, allow_failure=False):
             if not proc.isalive():
                 break
             time.sleep(0.025)
-        if allow_failure is False:
+        if (proc.exitstatus != 0) and (allow_failure is False):
             raise SaltCloudSystemExit(
                 'Failed to upload {0} to {1}. Exit code: {2}'.format(
                     tmppath, dest_path, proc.exitstatus
