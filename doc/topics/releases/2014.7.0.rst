@@ -30,6 +30,61 @@ hammer out the update. This is a BETA release of Salt RAET.
 
 For information about how to use Salt with RAET please see the :doc:`tutorial </topics/transports/raet/programming_intro>`.
 
+Salt SSH Enhancements
+=====================
+
+Salt SSH has just entered a new league, which substantial updates and
+improvements to make salt-ssh more reliable and easier then ever! From new
+features like the ansible roster and fileserver backends to the new pypi
+salt-ssh installer to lowered deps and a swath of bugfixes, salt-ssh is
+basically reborn!
+
+Pip install salt-ssh
+--------------------
+
+Salt ssh is now pip installable!
+
+https://pypi.python.org/pypi/salt-ssh/
+
+Pip will bring in all of the required deps, and while some deps are compiled,
+they all include pure python implementations, meaning that any compile errors
+which may be seen can be safely ignored.
+
+.. code-block:: bash
+
+    pip install salt-ssh
+
+Fileserver Backends
+-------------------
+
+Salt-ssh can now use the salt fileserver backend system, this allows for
+the gitfs, hgfs, s3, and many more ways to centrally store states to be easily
+used with salt-ssh. This also allows for a distributed team to easily use
+a centralized source.
+
+No More sshpass
+---------------
+
+Thanks to the enhancements in the salt vt system salt-ssh no longer requires
+sshpass to send passwords to ssh, this also makes the manipulation of ssh
+calls substantially more flexible, allowing for intercepting ssh calls in
+a much more fluid way.
+
+Pure Python Shim
+----------------
+
+The salt-ssh call originally used a shell script to discover what version of
+python to execute with and determine the state of the ssh code deployment.
+This shell script has been replaced with a pure python version making it easy
+to increase the capability of the code deployment without causing platform
+inconsistency issues with different shell interpreters.
+
+Custom Module Delivery
+----------------------
+
+Custom modules are now seamlessly delivered. This makes the deployment of
+custom grains, states, execution modules and returners a seamless process.
+
 State System Enhancements
 =========================
 
@@ -103,6 +158,13 @@ Red Hat 7 Family Support
 
 All the needed additions have been made to run Salt on RHEL 7 and derived OSes
 like CentOS and Scientific.
+
+Fileserver Backends in salt-call
+--------------------------------
+
+Standalone modes just got easier, now fileserver backends like gitfs can be
+used without a salt master! Just add the fileserver backend configuration to
+the minion config and execute salt-call.
 
 Amazon Execution Modules
 ------------------------
