@@ -29,7 +29,6 @@ _supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
 import salt.log
 import salt.utils
 import salt.utils.network
-import salt.modules.cmdmod
 from salt._compat import string_types
 
 # Solve the Chicken and egg problem where grains need to run before any
