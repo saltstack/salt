@@ -197,7 +197,8 @@ meantime a good way is to use the system scheduler with a short interval. The
 following example is a state that will always execute at the very end of a
 state run.
 
-For Unix machines:
+Linux/Unix
+**********
 
 .. code-block:: yaml
 
@@ -207,7 +208,22 @@ For Unix machines:
         - name: echo service salt-minion restart | at now + 1 minute
         - order: last
 
-For Windows machines:
+To ensure that **at** is installed and **atd** is running, the following states
+can be used (be sure to double-check the package name and service name for the
+distro the minion is running, in case they differ from the example below.
+
+.. code-block:: yaml
+
+    at:
+      pkg:
+        - installed
+      service:
+        - running
+        - name: atd
+        - enable: True
+
+Windows
+*******
 
 .. code-block:: yaml
 
