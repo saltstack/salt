@@ -1148,7 +1148,7 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
                 )
             except TypeError as exc:
                 msg = ('TypeError encountered executing {0}: {1}. See '
-                       'debug log for more info.'.format(function_name, exc)
+                       'debug log for more info.').format(function_name, exc)
                 log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
                 ret['return'] = msg
             except Exception:
