@@ -359,7 +359,7 @@ components.
     # standard declaration
 
     <ID Declaration>:
-      <State Declaration>:
+      <State Module>:
         - <Function>
         - <Function Arg>
         - <Function Arg>
@@ -373,7 +373,7 @@ components.
     # inline function and names
 
     <ID Declaration>:
-      <State Declaration>.<Function>:
+      <State Module>.<Function>:
         - <Function Arg>
         - <Function Arg>
         - <Function Arg>
@@ -385,17 +385,17 @@ components.
           - <Requisite Reference>
           - <Requisite Reference>
 
- 
+
     # multiple states for single id
 
     <ID Declaration>:
-      <State Declaration>:
-        - <Function> 
+      <State Module>:
+        - <Function>
         - <Function Arg>
         - <Name>: <name>
         - <Requisite Declaration>:
           - <Requisite Reference>
-      <State Declaration>:
+      <State Module>:
         - <Function>
         - <Function Arg>
         - <Names>:
