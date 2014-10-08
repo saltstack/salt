@@ -1073,7 +1073,7 @@ def replace_route_table_association(association_id, route_table_id, region=None,
 
     try:
         association_id = conn.replace_route_table_association_with_assoc(association_id, route_table_id)
-        log.info('Route table {0} was reassociated'.format(route_table_id, association_id))
+        log.info('Route table {0} was reassociated with association id {1}'.format(route_table_id, association_id))
 
         return association_id
     except boto.exception.BotoServerError as e:
