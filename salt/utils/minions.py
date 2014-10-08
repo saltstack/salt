@@ -146,9 +146,9 @@ class CkMinions(object):
         os.chdir(cwd)
         return ret
 
-    def _check_grain_minions(self, expr, greedy):
+    def _check_cache_minions(self, expr, greedy, search_type):
         '''
-        Return the minions found by looking via grains
+        Helper function to search for minions in master caches
         '''
         cache_enabled = self.opts.get('minion_data_cache', False)
 
@@ -173,12 +173,18 @@ class CkMinions(object):
                     if not greedy:
                         minions.remove(id_)
                     continue
-                grains = self.serial.load(
+                search_results = self.serial.load(
                     salt.utils.fopen(datap, 'rb')
-                ).get('grains')
-                if not salt.utils.subdict_match(grains, expr):
+                ).get(search_type)
+                if not salt.utils.subdict_match(search_results, expr):
                     minions.remove(id_)
         return list(minions)
+
+    def _check_grain_minions(self, expr, greedy):
+        '''
+        Return the minions found by looking via grains
+        '''
+        return self._check_cache_minions(expr, greedy, 'grains')
 
     def _check_grain_pcre_minions(self, expr, greedy):
         '''
@@ -219,35 +225,7 @@ class CkMinions(object):
         '''
         Return the minions found by looking via pillar
         '''
-        cache_enabled = self.opts.get('minion_data_cach', False)
-
-        if greedy:
-            minions = set(
-                os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
-            )
-        elif cache_enabled:
-            minions = os.listdir(os.path.join(self.opts['cachedir'], 'minions'))
-        else:
-            return list()
-
-        if cache_enabled:
-            cdir = os.path.join(self.opts['cachedir'], 'minions')
-            if not os.path.isdir(cdir):
-                return list(minions)
-            for id_ in os.listdir(cdir):
-                if not greedy and id_ not in minions:
-                    continue
-                datap = os.path.join(cdir, id_, 'data.p')
-                if not os.path.isfile(datap):
-                    if not greedy:
-                        minions.remove(id_)
-                    continue
-                pillar = self.serial.load(
-                    salt.utils.fopen(datap, 'rb')
-                ).get('pillar')
-                if not salt.utils.subdict_match(pillar, expr):
-                    minions.remove(id_)
-        return list(minions)
+        return self._check_cache_minions(expr, greedy, 'pillar')
 
     def _check_ipcidr_minions(self, expr, greedy):
         '''
