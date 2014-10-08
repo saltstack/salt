@@ -184,22 +184,29 @@ class CkMinions(object):
         '''
         Return the minions found by looking via grains with PCRE
         '''
-        minions = set(
-            os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
-        )
-        if self.opts.get('minion_data_cache', False):
+        cache enabled = self.optsget('minion_data_cache', False)
+
+        if greedy:
+            minions = set(
+                os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
+            )
+        elif cache_enabled:
+            minions = os.listdir(os.path.join(self.opts['cachedir'], 'minions'))
+        else:
+            return list()
+
+        if cache_enabled:
             cdir = os.path.join(self.opts['cachedir'], 'minions')
             if not os.path.isdir(cdir):
                 return list(minions)
             for id_ in os.listdir(cdir):
-                if id_ not in minions:
+                if not greedy and id_ not in minions:
                     continue
                 datap = os.path.join(cdir, id_, 'data.p')
                 if not os.path.isfile(datap):
-                    if greedy:
-                        continue
-                    else:
+                    if not greedy:
                         minions.remove(id_)
+                    continue
                 grains = self.serial.load(
                     salt.utils.fopen(datap, 'rb')
                 ).get('grains')
@@ -212,22 +219,29 @@ class CkMinions(object):
         '''
         Return the minions found by looking via pillar
         '''
-        minions = set(
-            os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
-        )
-        if self.opts.get('minion_data_cache', False):
+        cache_enabled = self.opts.get('minion_data_cach', False)
+
+        if greedy:
+            minions = set(
+                os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
+            )
+        elif cache_enabled:
+            minions = os.listdir(os.path.join(self.opts['cachedir'], 'minions'))
+        else:
+            return list()
+
+        if cache_enabled:
             cdir = os.path.join(self.opts['cachedir'], 'minions')
             if not os.path.isdir(cdir):
                 return list(minions)
             for id_ in os.listdir(cdir):
-                if id_ not in minions:
+                if not greedy and id_ not in minions:
                     continue
                 datap = os.path.join(cdir, id_, 'data.p')
                 if not os.path.isfile(datap):
-                    if greedy:
-                        continue
-                    else:
+                    if not greedy:
                         minions.remove(id_)
+                    continue
                 pillar = self.serial.load(
                     salt.utils.fopen(datap, 'rb')
                 ).get('pillar')
@@ -239,22 +253,29 @@ class CkMinions(object):
         '''
         Return the minions found by looking via ipcidr
         '''
-        minions = set(
-            os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
-        )
-        if self.opts.get('minion_data_cache', False):
+        cache_enabled = self.opts.get('minion_data_cache', False)
+
+        if greedy:
+            minions = set(
+                os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
+            )
+        elif cache_enabled:
+            minions = os.listdir(os.path.join(self.opts['cachedir'], 'minions'))
+        else:
+            return list()
+
+        if cache_enabled:
             cdir = os.path.join(self.opts['cachedir'], 'minions')
             if not os.path.isdir(cdir):
                 return list(minions)
             for id_ in os.listdir(cdir):
-                if id_ not in minions:
+                if not greedy and id_ not in minions:
                     continue
                 datap = os.path.join(cdir, id_, 'data.p')
                 if not os.path.isfile(datap):
-                    if greedy:
-                        continue
-                    else:
+                    if not greedy:
                         minions.remove(id_)
+                    continue
                 grains = self.serial.load(
                     salt.utils.fopen(datap, 'rb')
                 ).get('grains')
@@ -291,22 +312,29 @@ class CkMinions(object):
                 'Range matcher unavailble (unable to import seco.range, '
                 'module most likely not installed)'
             )
-        minions = set(
-            os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
-        )
-        if self.opts.get('minion_data_cache', False):
+        cache_enabled = self.opts.get('minion_data_cache', False)
+        
+        if greedy:
+            minions = set(
+                os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
+            )
+        elif cache_enabled:
+            minions = os.listdir(os.path.join(self.opts['cachedir'], 'minions'))
+        else:
+            return list()
+
+        if cache_enabled:
             cdir = os.path.join(self.opts['cachedir'], 'minions')
             if not os.path.isdir(cdir):
                 return list(minions)
             for id_ in os.listdir(cdir):
-                if id_ not in minions:
+                if not greedy and id_ not in minions:
                     continue
                 datap = os.path.join(cdir, id_, 'data.p')
                 if not os.path.isfile(datap):
-                    if greedy:
-                        continue
-                    else:
-                        minions.remove(id_)
+                    if not greedy:
+                        minions.remove(id)
+                    continue
                 grains = self.serial.load(
                     salt.utils.fopen(datap, 'rb')
                 ).get('grains')
