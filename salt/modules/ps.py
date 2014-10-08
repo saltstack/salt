@@ -91,7 +91,7 @@ def _get_proc_pid(proc):
 
     It's backward compatible with < 2.0 versions of psutil.
     '''
-    return proc.pid() if PSUTIL2 else proc.pid
+    return proc.pid
 
 
 def top(num_processes=5, interval=3):
