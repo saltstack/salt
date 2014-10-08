@@ -485,6 +485,7 @@ class MultiMinion(MinionBase):
         for minion in minions:
             if isinstance(minion, dict):
                 ret[minion['master']] = minion
+                ret[minion['multimaster']] = True
             else:
                 ret[minion.opts['master']] = {
                     'minion': minion,
@@ -812,7 +813,11 @@ class Minion(MinionBase):
                 log.error('Unable to enforce modules_max_memory because resource is missing')
 
         self.opts['grains'] = salt.loader.grains(self.opts, force_refresh)
-        functions = salt.loader.minion_mods(self.opts)
+        if self.opts.get('multimaster', False):
+            s_opts = copy.copy(self.opts)
+            functions = salt.loader.minion_mods(s_opts)
+        else:
+            functions = salt.loader.minion_mods(self.opts)
         returners = salt.loader.returners(self.opts, functions)
 
         # we're done, reset the limits!
