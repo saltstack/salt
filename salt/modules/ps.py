@@ -185,11 +185,7 @@ def proc_info(pid, attrs=None):
     try:
         proc = psutil.Process(pid)
         return proc.as_dict(attrs)
-    except psutil.NoSuchProcess as exc:
-        raise CommandExecutionError(exc)
-    except psutil.AccessDenied as exc:
-        raise CommandExecutionError(exc)
-    except AttributeError as exc:
+    except (psutil.NoSuchProcess, psutil.AccessDenied, AttributeError) as exc:
         raise CommandExecutionError(exc)
 
 
