@@ -353,7 +353,7 @@ def sls(mods,
         env=None,
         **kwargs):
     '''
-    Execute a set list of state modules from an environment.
+    Execute a set list of state files from an environment.
 
     test
         Notify states to execute in test-only (dry-run) mode.

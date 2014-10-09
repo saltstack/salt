@@ -1924,7 +1924,7 @@ class ClearFuncs(object):
             good = self.ckminions.wheel_check(
                 self.opts['external_auth'][clear_load['eauth']][name]
                 if name in self.opts['external_auth'][clear_load['eauth']]
-                else self.opts['external_auth'][token['eauth']]['*'],
+                else self.opts['external_auth'][clear_load['eauth']]['*'],
                 clear_load['fun'])
             if not good:
                 msg = ('Authentication failure of type "eauth" occurred for '

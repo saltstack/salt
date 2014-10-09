@@ -1858,7 +1858,7 @@ def seek_read(path, size, offset):
     '''
     .. versionadded:: 2014.1.0
 
-    Seek to a position on a file and write to it
+    Seek to a position on a file and read it
 
     path
         path to file

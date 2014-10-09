@@ -66,7 +66,7 @@ def _get_proc_name(proc):
 
 
 def _get_proc_pid(proc):
-    return proc.pid() if PSUTIL2 else proc.pid
+    return proc.pid
 
 
 @skipIf(not HAS_PSUTIL, "psutils are required for this test case")

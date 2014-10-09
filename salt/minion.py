@@ -488,9 +488,7 @@ class MultiMinion(MinionBase):
                 ret[master]['generator'] = minion.tune_in_no_block()
             except SaltClientError as exc:
                 log.error('Error while bringing up minion for multi-master. Is master at {0} responding?'.format(master))
-
         return ret
-
     # Multi Master Tune In
     def tune_in(self):
         '''
@@ -815,7 +813,11 @@ class Minion(MinionBase):
                 log.error('Unable to enforce modules_max_memory because resource is missing')
 
         self.opts['grains'] = salt.loader.grains(self.opts, force_refresh)
-        functions = salt.loader.minion_mods(self.opts)
+        if self.opts.get('multimaster', False):
+            s_opts = copy.copy(self.opts)
+            functions = salt.loader.minion_mods(s_opts)
+        else:
+            functions = salt.loader.minion_mods(self.opts)
         returners = salt.loader.returners(self.opts, functions)
 
         # we're done, reset the limits!
@@ -1069,15 +1071,8 @@ class Minion(MinionBase):
                 )
                 ret['out'] = 'nested'
             except TypeError as exc:
-                trb = traceback.format_exc()
-                aspec = salt.utils.get_function_argspec(
-                    minion_instance.functions[data['fun']]
-                )
                 msg = ('TypeError encountered executing {0}: {1}. See '
-                       'debug log for more info.  Possibly a missing '
-                       'arguments issue:  {2}').format(function_name,
-                                                       exc,
-                                                       aspec)
+                       'debug log for more info.').format(function_name, exc)
                 log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
                 ret['return'] = msg
                 ret['out'] = 'nested'
