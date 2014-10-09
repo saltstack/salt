@@ -8,17 +8,14 @@ import sys
 from collections import namedtuple, Iterable, Sequence, Mapping
 import logging
 
-# Python2to3 support
-if sys.version > '3':
-    long = int
-    basestring = (str, bytes)
-    unicode = str
-    xrange = range
-
 # Import Salt Libs
 from salt.utils.odict import OrderedDict
+from salt._compat import text_type, binary_type
 
 log = logging.getLogger(__name__)
+
+if sys.version_info[0] == 3:
+    basestring = (text_type, binary_type)
 
 # Python equivalent of an enum
 APPL_KINDS = OrderedDict([('master', 0), ('minion', 1), ('syndic', 2), ('call', 3)])
