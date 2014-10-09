@@ -318,6 +318,10 @@ def query(params=None, setname=None, requesturl=None, location=None,
         values = map(params_with_headers.get, keys)
         querystring = urllib.urlencode(list(zip(keys, values)))
 
+        # AWS signature version 2 requires that spaces be encoded as
+        # %20, however urlencode uses '+'. So replace pluses with %20.
+        querystring = querystring.replace('+', '%20')
+
         uri = '{0}\n{1}\n/\n{2}'.format(method.encode('utf-8'),
                                         endpoint.encode('utf-8'),
                                         querystring.encode('utf-8'))
