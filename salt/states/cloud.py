@@ -171,7 +171,7 @@ def absent(name, onlyif=None, unless=None):
             if retcode(unless) == 0:
                 return _valid(name, comment='unless execution succeeded')
 
-    if __salt__['cloud.has_instance'](name=name, provider=None) == False:
+    if not __salt__['cloud.has_instance'](name=name, provider=None):
         ret['result'] = True
         ret['comment'] = 'Already absent instance {0}'.format(name)
         return ret
@@ -247,7 +247,7 @@ def profile(name, profile, onlyif=None, unless=None, **kwargs):
     instance = __salt__['cloud.action'](fun='show_instance', names=[name])
 
     # need to ensure ALL providers dont have the instance
-    if not __salt__['cloud.has_instance'](name=name, provider=None):
+    if __salt__['cloud.has_instance'](name=name, provider=None):
         ret['result'] = True
         ret['comment'] = 'Already present instance {0}'.format(name)
         return ret
