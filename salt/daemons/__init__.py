@@ -5,7 +5,7 @@ Minion enabling different transports.
 '''
 # Import Python Libs
 import sys
-from collections import namedtuple, Iterable, Sequence
+from collections import namedtuple, Iterable, Sequence, Mapping
 import logging
 
 # Python2to3 support
@@ -153,26 +153,26 @@ def extractMasters(opts):
 
     hostages = []
     # extract candidate hostage (hostname dict) from entries
-    if nonstringSequence(entries): # multiple master addresses provided
+    if nonStringSequence(entries): # multiple master addresses provided
         for entry in entries:
-            if hasattr(entry, 'get'): # mapping
-                external = entry.get('external', None)
-                internal = entry.get('internal', None)
+            if isinstance(entry, Mapping): # mapping
+                external = entry.get('external', '')
+                internal = entry.get('internal', '')
                 hostages.append(dict(external=external, internal=internal))
 
             elif isinstance(entry, basestring): # string
                 external = entry
-                internal = None
+                internal = ''
                 hostages.append(dict(external=external, internal=internal))
 
-    elif hasattr(entries, 'get'): # mapping
-        external = entries.get('external', None)
-        internal = entries.get('internal', None)
+    elif isinstance(entries, Mapping): # mapping
+        external = entries.get('external', '')
+        internal = entries.get('internal', '')
         hostages.append(dict(external=external, internal=internal))
 
     elif isinstance(entries, basestring): # string
         external = entries
-        internal = None
+        internal = ''
         hostages.append(dict(external=external, internal=internal))
 
     # now parse each hostname string for host and optional port
@@ -181,12 +181,13 @@ def extractMasters(opts):
         external = hostage['external']
         internal = hostage['internal']
         if external:
-            external = parseHostname( external, default_port)
+            external = parseHostname( external, master_port)
             if not external:
                 continue # must have a valid external host address
-            if internal:
-                internal = parseHostname( internal, default_port)
+            internal = parseHostname( internal, master_port)
             masters.append(dict(external=external, internal=internal))
+
+    return masters
 
 
 def parseHostname(hostname, default_port):
@@ -220,6 +221,7 @@ def parseHostname(hostname, default_port):
                 if not port: # colon but no port so use default
                     port = default_port
 
+        host = host.strip()
         try:
             port = int(port)
         except ValueError:
