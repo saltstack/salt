@@ -51,10 +51,10 @@ def get_zone():
         cmd = 'grep ZONE /etc/sysconfig/clock | grep -vE "^#"'
     elif 'Debian' in __grains__['os_family']:
         with salt.utils.fopen('/etc/timezone', 'r') as ofh:
-            return ofh.read()
+            return ofh.read().strip()
     elif 'Gentoo' in __grains__['os_family']:
         with salt.utils.fopen('/etc/timezone', 'r') as ofh:
-            return ofh.read()
+            return ofh.read().strip()
     elif __grains__['os_family'] in ('FreeBSD', 'OpenBSD', 'NetBSD'):
         return os.readlink('/etc/localtime').lstrip('/usr/share/zoneinfo/')
     elif 'Solaris' in __grains__['os_family']:
