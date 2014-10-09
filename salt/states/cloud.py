@@ -171,7 +171,7 @@ def absent(name, onlyif=None, unless=None):
             if retcode(unless) == 0:
                 return _valid(name, comment='unless execution succeeded')
 
-    if __salt__['cloud.has_instance'](name=name, provider=None):
+    if not __salt__['cloud.has_instance'](name=name, provider=None):
         ret['result'] = True
         ret['comment'] = 'Already absent instance {0}'.format(name)
         return ret
