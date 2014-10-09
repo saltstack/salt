@@ -56,6 +56,8 @@ if salt.utils.is_windows():
             'will be missing'
         )
 
+_INTERFACES = {}
+
 
 def _windows_cpudata():
     '''
@@ -880,6 +882,18 @@ def _linux_bin_exists(binary):
     ) == 0
 
 
+def _get_interfaces():
+    '''
+    Provide a dict of the connected interfaces and their ip addresses
+    '''
+
+    global _INTERFACES
+    if not _INTERFACES:
+        log.debug('Populating _INTERFACES')
+        _INTERFACES = salt.utils.network.interfaces()
+    return _INTERFACES
+
+
 def os_data():
     '''
     Return grains pertaining to the operating system
@@ -1270,7 +1284,7 @@ def ip_interfaces():
         return {}
 
     ret = {}
-    ifaces = salt.utils.network.interfaces()
+    ifaces = _get_interfaces()
     for face in ifaces:
         iface_ips = []
         for inet in ifaces[face].get('inet', []):
@@ -1297,7 +1311,7 @@ def ip4_interfaces():
         return {}
 
     ret = {}
-    ifaces = salt.utils.network.interfaces()
+    ifaces = _get_interfaces()
     for face in ifaces:
         iface_ips = []
         for inet in ifaces[face].get('inet', []):
@@ -1321,7 +1335,7 @@ def ip6_interfaces():
         return {}
 
     ret = {}
-    ifaces = salt.utils.network.interfaces()
+    ifaces = _get_interfaces()
     for face in ifaces:
         iface_ips = []
         for inet in ifaces[face].get('inet6', []):
@@ -1342,7 +1356,7 @@ def hwaddr_interfaces():
     # Provides:
     #   hwaddr_interfaces
     ret = {}
-    ifaces = salt.utils.network.interfaces()
+    ifaces = _get_interfaces()
     for face in ifaces:
         if 'hwaddr' in ifaces[face]:
             ret[face] = ifaces[face]['hwaddr']
