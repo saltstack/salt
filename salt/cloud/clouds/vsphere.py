@@ -248,7 +248,6 @@ def create(vm_):
         deploy_kwargs = _deploy(vm_)
 
     ret = show_instance(name=vm_['name'], call='action')
-    
     show_deploy_args = config.get_cloud_config_value(
         'show_deploy_args', vm_, __opts__, default=False
     )
@@ -292,7 +291,7 @@ def wait_for_ip(vm_):
         return False
 
     log.debug('Pulling VM {0} {1} seconds for an IP address'.format(vm_['name']))
-    ip_address = salt.utils.cloud.wait_for_fun(poll_ip, timeout)
+    ip_address = salt.utils.cloud.wait_for_fun(poll_ip)
 
     if ip_address is not False:
         log.debug('VM {0} has IP address {1}'.format(vm_['name'], ip_address))
@@ -415,7 +414,7 @@ def _get_instance_properties(instance, from_cache=True):
     properties = instance.get_properties(from_cache)
     for prop in ('guest_full_name', 'guest_id', 'memory_mb', 'name',
                     'num_cpu', 'path', 'devices', 'disks', 'files',
-                    'net', 'ip_address', 'mac_address','hostname'):
+                    'net', 'ip_address', 'mac_address', 'hostname'):
         if prop in properties:
             ret[prop] = properties[prop]
         else:
