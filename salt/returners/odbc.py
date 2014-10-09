@@ -101,6 +101,9 @@ correctly.  Replace with equivalent SQL for other ODBC-compliant servers::
 # Import python libs
 import json
 
+# Import Salt libs
+import salt.utils
+
 # FIXME We'll need to handle this differently for Windows.
 # Import third party libs
 try:
@@ -263,3 +266,7 @@ def get_minions():
         ret.append(minion[0])
     _close_conn(conn)
     return ret
+
+
+def prep_jid(nocache):  #pylint: disable=unused-argument
+    return salt.utils.gen_jid()

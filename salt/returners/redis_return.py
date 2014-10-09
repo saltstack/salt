@@ -18,6 +18,9 @@ config, these are the defaults:
 # Import python libs
 import json
 
+# Import Salt libs
+import salt.utils
+
 # Import third party libs
 try:
     import redis
@@ -128,3 +131,7 @@ def get_minions():
     '''
     serv = _get_serv()
     return list(serv.smembers('minions'))
+
+
+def prep_jid(nocache):  # pylint: disable=unused-argument
+    return salt.utils.gen_jid()

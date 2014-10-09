@@ -23,6 +23,9 @@ to the minion config files::
 # Import python libs
 import logging
 
+# import Salt libs
+import salt.utils
+
 # Import third party libs
 try:
     import pymongo
@@ -118,3 +121,6 @@ def get_fun(fun):
         if rdata:
             ret[collection] = rdata
     return ret
+
+def prep_jid(nocache):  # pylint: disable=unused-argument
+    return salt.utils.gen_jid()

@@ -30,7 +30,11 @@ In order to have the returner apply to all minions:
     ext_job_cache: elasticsearch
 '''
 
+# Import Python libs
 import datetime
+
+# Import Salt libs
+import salt.utils
 
 __virtualname__ = 'elasticsearch'
 
@@ -109,3 +113,7 @@ def returner(ret):
              doc_type='returner',
              body=_get_pickler().flatten(r),
              )
+
+
+def prep_jid(nocache):  # pylint: disable=unusued-argument
+    return salt.utils.gen_jid()

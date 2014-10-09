@@ -66,6 +66,9 @@ Required python modules: psycopg2
 # Import python libs
 import json
 
+# Import Salt libs
+import salt.utils
+
 # Import third party libs
 try:
     import psycopg2
@@ -230,3 +233,7 @@ def get_minions():
         ret.append(minion[0])
     _close_conn(conn)
     return ret
+
+
+def prep_jid(nocache):  # pylint: disable=unused-argument
+    return salt.utils.gen_jid()
