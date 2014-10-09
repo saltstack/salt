@@ -464,6 +464,7 @@ def list_nodes_min(kwargs=None, call=None):  # pylint: disable=W0613
         comps2 = comps1.split('/')
         if len(comps2) == 2:
             name = comps2[0]
+            name_file = comps2[1][:-4]
             if comps2[1].endswith('.vmtx'):
                 name_file = comps2[1][:-5]
             if comps2[1].endswith('.vmx'):
@@ -474,7 +475,7 @@ def list_nodes_min(kwargs=None, call=None):  # pylint: disable=W0613
                 )
                 # the vm name needs slow lookup
                 instance = conn.get_vm_by_path(node)
-                name = instance.get_property('name', from_cache=True)
+                name = instance.get_property('name')
             ret[name] = True
         else:
             log.debug('vm node bad format: {0}'.format(node))
