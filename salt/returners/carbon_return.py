@@ -40,6 +40,9 @@ import socket
 import struct
 import time
 
+# Import salt libs
+import salt.utils
+
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
@@ -203,3 +206,7 @@ def returner(ret):
 
             log.debug('Sent {0} bytes to carbon'.format(sent_bytes))
             total_sent_bytes += sent_bytes
+
+
+def prep_jid(nocache):  # pylint: disable=unused-argument
+    return salt.utils.gen_jid()

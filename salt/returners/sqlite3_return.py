@@ -54,6 +54,9 @@ import logging
 import json
 import datetime
 
+# Import Salt libs
+import salt.utils
+
 # Better safe than sorry here. Even though sqlite3 is included in python
 try:
     import sqlite3
@@ -242,3 +245,7 @@ def get_minions():
         ret.append(minion[0])
     _close_conn(conn)
     return ret
+
+
+def prep_jid(nocache):  # pylint: disable=unused-arguments
+    return salt.utils.gen_jid()

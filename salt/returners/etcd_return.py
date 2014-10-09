@@ -52,6 +52,8 @@ try:
 except ImportError:
     HAS_LIBS = False
 
+import salt.utils
+
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
@@ -164,3 +166,7 @@ def get_minions():
         comps = str(item.key).split('/')
         ret.append(comps[-1])
     return ret
+
+
+def prep_jid(nocache):  # pylint: disable=unused-argument
+    return salt.utils.gen_jid()

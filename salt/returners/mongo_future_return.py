@@ -26,6 +26,9 @@ in the future and should not be considered API stable yet.
 # Import python libs
 import logging
 
+# Import Salt libs
+import salt.utils
+
 # Import third party libs
 try:
     import pymongo
@@ -173,3 +176,7 @@ def get_jids():
             except ValueError:
                 pass
     return ret
+
+
+def prep_jid(nocache):  # pylint: disable=unusued-argument
+    return salt.utils.gen_jid()

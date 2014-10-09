@@ -10,10 +10,14 @@ couchdb.url:        'http://salt:5984/'
 
     salt '*' test.ping --return couchdb
 '''
+# Import Python libs
 import logging
 import time
 import urllib2
 import json
+
+# Import Salt libs
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -306,3 +310,6 @@ def set_salt_view():
                     .format(_response['error']))
         return False
     return True
+
+def prep_jid(nocache):  # pylint: disable=unusued-argument
+    return salt.utils.gen_jid()

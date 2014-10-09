@@ -51,6 +51,9 @@ import logging
 import smtplib
 from email.utils import formatdate
 
+# Import Salt libs
+import salt.utils
+
 try:
     import gnupg
     HAS_GNUPG = True
@@ -147,3 +150,7 @@ def returner(ret):
     server.sendmail(from_addr, to_addrs, message)
     log.debug('smtp_return: Message sent.')
     server.quit()
+
+
+def prep_jid(nocache):  # pylint: disable=unused-argument
+    return salt.utils.gen_jid()
