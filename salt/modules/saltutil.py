@@ -408,6 +408,7 @@ def refresh_pillar():
         ret = False  # Effectively a no-op, since we can't really return without an event system
     return ret
 
+pillar_refresh=refresh_pillar
 
 def refresh_modules():
     '''
