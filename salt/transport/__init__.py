@@ -165,8 +165,9 @@ class RAETChannel(Channel):
                 break
             if time.time() - start > timeout:
                 if tried >= tries:
-                    raise ValueError
-                self.stack.transmit(msg, self.stack.nameRemotes['manor'].uid)
+                    raise ValueError("Message send timed out after '{0} * {1}'"
+                             " secs on route = {1}".format(tries, timeout, self.route))
+                #self.stack.transmit(msg, self.stack.nameRemotes['manor'].uid)
                 tried += 1
             time.sleep(0.01)
         return jobber_rxMsgs.pop(track).get('return', {})
