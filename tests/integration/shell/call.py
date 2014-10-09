@@ -290,7 +290,6 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
                 catch_stderr=True,
                 with_retcode=True
             )
-            print ret
 
             with salt.utils.fopen(output_file_append) as ofa:
                 output = ofa.read()
