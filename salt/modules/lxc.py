@@ -37,7 +37,8 @@ log = logging.getLogger(__name__)
 
 # Don't shadow built-in's.
 __func_alias__ = {
-    'list_': 'list'
+    'list_': 'list',
+    'ls_': 'ls'
 }
 
 
@@ -1268,7 +1269,7 @@ def clone(name,
         ).format(cmd, ret['stderr'])}
 
 
-def ls():
+def ls_():
     '''
     Return just a list of the containers available
 
