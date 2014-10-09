@@ -1459,14 +1459,14 @@ def stop(name, kill=True):
            'result': True,
            'comment': 'Stopped'}
     try:
-        does_exist = __salt__['lxc.exists'](name)
+        does_exist = exists(name)
         if not does_exist:
             return {'name': name,
                     'result': False,
                     'changes': {},
                     'comment': 'Container does not exist'}
         ret.update(_change_state('lxc-stop', name, 'stopped'))
-        infos = __salt__['lxc.info'](name)
+        infos = info(name)
         ret['result'] = infos['state'] == 'stopped'
         if ret['change']:
             ret['changes']['stopped'] = 'stopped'
