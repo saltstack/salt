@@ -135,7 +135,7 @@ def select_query(query_type='list_nodes_select'):
 def has_instance(name, provider=None):
     '''
     Return true if the instance is found on a provider
-    
+
     CLI Example:
 
     .. code-block:: bash
@@ -151,7 +151,7 @@ def has_instance(name, provider=None):
 def get_instance(name, provider=None):
     '''
     Return details on an instance.
-    
+
     Similar to the cloud action show_instance
     but returns only the instance details.
 
@@ -160,13 +160,13 @@ def get_instance(name, provider=None):
     .. code-block:: bash
 
         salt '*' cloud.get_instance myinstance
-    
+
     SLS Example:
-    
+
     .. code-block:: bash
-    
+
         {{ salt['cloud.get_instance']('myinstance')['mac_address'] }}
-    
+
     '''
     client = _get_client()
     data = action(fun='show_instance', names=[name], provider=provider)
