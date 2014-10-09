@@ -132,6 +132,53 @@ def select_query(query_type='list_nodes_select'):
     return query(query_type='list_nodes_select')
 
 
+def has_instance(name, provider=None):
+    '''
+    Return true if the instance is found on a provider
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cloud.has_instance myinstance
+    '''
+    data = get_instance(name, provider)
+    if data is None:
+        return False
+    return True
+
+
+def get_instance(name, provider=None):
+    '''
+    Return details on an instance.
+
+    Similar to the cloud action show_instance
+    but returns only the instance details.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cloud.get_instance myinstance
+
+    SLS Example:
+
+    .. code-block:: bash
+
+        {{ salt['cloud.get_instance']('myinstance')['mac_address'] }}
+
+    '''
+    client = _get_client()
+    data = action(fun='show_instance', names=[name], provider=provider)
+    info = salt.utils.cloud.simple_types_filter(data)
+    try:
+        # get the first: [alias][driver][vm_name]
+        info = info.itervalues().next().itervalues().next().itervalues().next()
+    except AttributeError:
+        return None
+    return info
+
+
 def profile_(profile, names, vm_overrides=None, **kwargs):
     '''
     Spin up an instance using Salt Cloud
