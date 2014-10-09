@@ -903,7 +903,7 @@ def init(name,
                      cpuset=cpuset, cpushare=cpushare, memory=memory)
     old_chunks = []
     if os.path.exists(cfg.path):
-        old_chunks = lxc.read_conf(cfg.path)
+        old_chunks = read_conf(cfg.path)
     cfg.write()
     chunks = read_conf(cfg.path)
     if old_chunks != chunks:
@@ -982,7 +982,7 @@ def init(name,
                     name, 'test -e {0}'.format(ogid),
                     stdout=False, stderr=False)))
         if True not in lxcrets:
-            cret = lxc.set_dns(name, dnsservers=dnsservers)
+            cret = set_dns(name, dnsservers=dnsservers)
             changes['350_dns'] = 'DNS updated\n'
             if not cret['result']:
                 ret['result'] = False
