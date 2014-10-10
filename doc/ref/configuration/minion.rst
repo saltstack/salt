@@ -345,7 +345,7 @@ seconds each iteration.
 
     acceptance_wait_time_max: None
 
-.. conf_minion:: dns_check
+.. conf_minion:: recon_default
 
 ``recon_default``
 -----------------
@@ -359,7 +359,7 @@ reconnect to the master (1000ms = 1 second).
 
     recon_default: 1000
 
-.. conf_minion:: recon_default
+.. conf_minion:: recon_max
 
 ``recon_max``
 -------------
@@ -382,7 +382,7 @@ Short example:
 
     recon_max: 10000
 
-.. conf_minion:: recon_max
+.. conf_minion:: recon_randomize
 
 ``recon_randomize``
 -------------------
@@ -400,7 +400,7 @@ behavior is to have time-frame within all minions try to reconnect.
 
     recon_randomize: True
 
-.. conf_minion:: recon_randomize
+.. conf_minion:: dns_check
 
 ``dns_check``
 -------------
