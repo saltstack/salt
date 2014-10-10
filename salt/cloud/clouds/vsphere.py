@@ -455,30 +455,16 @@ def list_nodes_min(kwargs=None, call=None):  # pylint: disable=W0613
     '''
     Return a list of the nodes in the provider, with no details
     '''
-    log.debug('function list_nodes_min()')
     ret = {}
     conn = get_conn()
-    nodes = conn.get_registered_vms()
-    for node in nodes:
-        comps1 = node[node.find(']')+2:]
-        comps2 = comps1.split('/')
-        if len(comps2) == 2:
-            name = comps2[0]
-            name_file = comps2[1][:-4]
-            if comps2[1].endswith('.vmtx'):
-                name_file = comps2[1][:-5]
-            if comps2[1].endswith('.vmx'):
-                name_file = comps2[1][:-4]
-            if name != name_file:
-                log.debug('mismatch found {0} != {1} : node {2}'.format(
-                    name, name_file, node)
-                )
-                # the vm name needs slow lookup
-                instance = conn.get_vm_by_path(node)
-                name = instance.get_property('name')
-            ret[name] = True
-        else:
-            log.debug('vm node bad format: {0}'.format(node))
+    property_names=['name']
+    result = conn._retrieve_properties_traversal(
+        property_names=property_names, obj_type='VirtualMachine'
+    )
+    for r in result:
+        for p in r.PropSet:
+            if p.Name == 'name':
+                ret[p.Val] = True
     return ret
 
 
