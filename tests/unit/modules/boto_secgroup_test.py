@@ -97,21 +97,21 @@ class BotoSecgroupTestCase(TestCase):
     @mock_ec2
     def test_create_ec2_classic(self):
         '''
-        test of creation of an EC2-Classic security group. The test ensures
+        Test of creation of an EC2-Classic security group. The test ensures
         that a group was created with the desired name and description
         '''
         group_name = _random_group_name()
         group_description = 'test_create_ec2_classic'
         boto_secgroup.create(group_name, group_description, **conn_parameters)
         conn = boto.ec2.connect_to_region(region, **boto_conn_parameters)
-        group_filter = {'group-name': group_name, 'vpc_id': None}
+        group_filter = {'group-name': group_name}
         secgroup_created_group = conn.get_all_security_groups(filters=group_filter)
-        # when https://github.com/spulec/moto/commit/cc0166964371f7b5247a49d45637a8f936ccbe6f
-        # released, test should be updated as follows:
-        # expected_create_result = [group_name, group_description, None]
-        # secgroup_create_result = [secgroup_created_group[0].name, secgroup_created_group[0].description, secgroup_created_group[0].vpc_id]
-        expected_create_result = [group_name, group_description]
-        secgroup_create_result = [secgroup_created_group[0].name, secgroup_created_group[0].description]
+        expected_create_result = [group_name,
+                                  group_description,
+                                  None]
+        secgroup_create_result = [secgroup_created_group[0].name,
+                                  secgroup_created_group[0].description,
+                                  secgroup_created_group[0].vpc_id]
         self.assertEqual(expected_create_result, secgroup_create_result)
 
     @mock_ec2
