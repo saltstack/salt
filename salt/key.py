@@ -12,7 +12,7 @@ import shutil
 import fnmatch
 import hashlib
 import json
-import msgpack
+import logging
 
 # Import salt libs
 import salt.crypt
@@ -20,6 +20,14 @@ import salt.utils
 import salt.utils.event
 import salt.daemons.masterapi
 from salt.utils.event import tagify
+
+# Import third party libs
+try:
+    import msgpack
+except ImportError:
+    pass
+
+log = logging.getLogger(__name__)
 
 
 class KeyCLI(object):
@@ -423,10 +431,16 @@ class Key(object):
     '''
     def __init__(self, opts):
         self.opts = opts
+        kind = self.opts.get('__role', '')
+        if not kind:
+            emsg = "Missing application kind via opts['__role']"
+            log.error(emsg + '\n')
+            raise ValueError(emsg)
         self.event = salt.utils.event.get_event(
-                'master',
+                kind,
                 opts['sock_dir'],
                 opts['transport'],
+                opts=opts,
                 listen=False)
 
     def _check_minions_directories(self):
@@ -471,9 +485,10 @@ class Key(object):
         minions = []
         for key, val in keys.items():
             minions.extend(val)
-        for minion in os.listdir(m_cache):
-            if minion not in minions:
-                shutil.rmtree(os.path.join(m_cache, minion))
+        if self.opts.get('preserve_minion_cache', False):
+            for minion in os.listdir(m_cache):
+                if minion not in minions:
+                    shutil.rmtree(os.path.join(m_cache, minion))
 
     def check_master(self):
         '''

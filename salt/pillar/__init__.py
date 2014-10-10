@@ -378,13 +378,13 @@ class Pillar(object):
         state = None
         try:
             state = compile_template(
-                fn_, self.rend, self.opts['renderer'], saltenv, sls, **defaults)
+                fn_, self.rend, self.opts['renderer'], saltenv, sls, _pillar_rend=True, **defaults)
         except Exception as exc:
             msg = 'Rendering SLS {0!r} failed, render error:\n{1}'.format(
                 sls, exc
             )
             log.critical(msg)
-            errors.append(msg)
+            errors.append('Rendering SLS \'{0}\' failed. Please see master log for details.'.format(sls))
         mods.add(sls)
         nstate = None
         if state:

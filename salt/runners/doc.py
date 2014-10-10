@@ -66,8 +66,8 @@ def execution():
 
     docs = {}
     for ret in client.cmd_iter('*', 'sys.doc', timeout=__opts__['timeout']):
-        for v in ret.values():
-            docs.update(v)
+        for return_value in ret.values():
+            docs.update(return_value)
 
     i = itertools.chain.from_iterable([i.items() for i in docs.values()])
     ret = dict(list(i))
@@ -93,6 +93,6 @@ def __list_functions(user=None):
     if not user:
         salt.output.display_output(funcs, '', __opts__)
         return funcs
-    for key, val in __opts__['external_auth'].items():
+    for _, val in __opts__['external_auth'].items():
         if user in val:
             pass

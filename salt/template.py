@@ -19,6 +19,9 @@ log = logging.getLogger(__name__)
 
 
 def string_io(data=None):  # cStringIO can't handle unicode
+    '''
+    Pass data through to stringIO module and return result
+    '''
     try:
         return cStringIO(bytes(data))
     except UnicodeEncodeError:
@@ -87,7 +90,7 @@ def compile_template(template,
             time.sleep(0.01)
             ret = render(input_data, saltenv, sls, **render_kwargs)
         input_data = ret
-        if log.isEnabledFor(logging.GARBAGE):
+        if log.isEnabledFor(logging.GARBAGE):  # pylint: disable=no-member
             try:
                 log.debug('Rendered data from file: {0}:\n{1}'.format(
                     template,
@@ -151,16 +154,16 @@ def template_shebang(template, renderers, default):
 OLD_STYLE_RENDERERS = {}
 
 for comb in '''
-    yaml_jinja
-    yaml_mako
-    yaml_wempy
-    json_jinja
-    json_mako
-    json_wempy
-    yamlex_jinja
-    yamlexyamlex_mako
-    yamlexyamlex_wempy
-    '''.strip().split():
+        yaml_jinja
+        yaml_mako
+        yaml_wempy
+        json_jinja
+        json_mako
+        json_wempy
+        yamlex_jinja
+        yamlexyamlex_mako
+        yamlexyamlex_wempy
+        '''.strip().split():
 
     fmt, tmpl = comb.split('_')
     OLD_STYLE_RENDERERS[comb] = '{0}|{1}'.format(tmpl, fmt)

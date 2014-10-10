@@ -587,9 +587,10 @@ class Client(object):
         else:
             fixed_url = url
         try:
-            req = requests.get(fixed_url)
+            response = requests.get(fixed_url, stream=True)
             with salt.utils.fopen(dest, 'wb') as destfp:
-                destfp.write(req.content)
+                for chunk in response.iter_content(chunk_size=32*1024):
+                    destfp.write(chunk)
             return dest
         except HTTPError as exc:
             raise MinionError('HTTP error {0} reading {1}: {3}'.format(
@@ -840,9 +841,7 @@ class LocalClient(Client):
         if not path:
             return {}
         ret = {}
-        with salt.utils.fopen(path, 'rb') as ifile:
-            ret['hsum'] = getattr(hashlib, self.opts['hash_type'])(
-                ifile.read()).hexdigest()
+        ret['hsum'] = salt.utils.get_hash(path, self.opts['hash_type'])
         ret['hash_type'] = self.opts['hash_type']
         return ret
 
@@ -867,6 +866,15 @@ class LocalClient(Client):
         Return the master opts data
         '''
         return self.opts
+
+    def envs(self):
+        '''
+        Return the available environments
+        '''
+        ret = []
+        for saltenv in self.opts['file_roots']:
+            ret.append(saltenv)
+        return ret
 
     def ext_nodes(self):
         '''
@@ -999,15 +1007,11 @@ class RemoteClient(Client):
                     # Master has prompted a file verification, if the
                     # verification fails, re-download the file. Try 3 times
                     d_tries += 1
-                    with salt.utils.fopen(dest, 'rb') as fp_:
-                        hsum = getattr(
-                            hashlib,
-                            data.get('hash_type', 'md5')
-                        )(fp_.read()).hexdigest()
-                        if hsum != data['hsum']:
-                            log.warn('Bad download of file {0}, attempt {1} '
-                                     'of 3'.format(path, d_tries))
-                            continue
+                    hsum = salt.utils.get_hash(dest, data.get('hash_type', 'md5'))
+                    if hsum != data['hsum']:
+                        log.warn('Bad download of file {0}, attempt {1} '
+                                 'of 3'.format(path, d_tries))
+                        continue
                 break
             if not fn_:
                 with self._cache_loc(data['dest'], saltenv) as cache_dest:
@@ -1168,6 +1172,17 @@ class RemoteClient(Client):
 
         load = {'saltenv': saltenv,
                 'cmd': '_file_list'}
+        try:
+            channel = self._get_channel()
+            return channel.send(load)
+        except SaltReqTimeoutError:
+            return ''
+
+    def envs(self):
+        '''
+        Return a list of available environments
+        '''
+        load = {'cmd': '_file_envs'}
         try:
             channel = self._get_channel()
             return channel.send(load)

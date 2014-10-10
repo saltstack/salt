@@ -15,8 +15,8 @@
 %define _salttesting_ver 2014.8.5
 
 Name: salt
-Version: 2014.1.10
-Release: 4%{?dist}
+Version: 2014.1.11
+Release: 1%{?dist}
 Summary: A parallel remote execution system
 
 Group:   System Environment/Daemons
@@ -332,6 +332,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Mon Sep 29 2014 Erik Johnson <erik@saltstack.com> - 2014.1.11-1
+- Update to bugfix release 2014.1.11
+
 * Sun Aug 10 2014 Erik Johnson <erik@saltstack.com> - 2014.1.10-4
 - Fix incorrect conditional
 

@@ -3,7 +3,7 @@
 Manage Rackspace Queues
 =======================
 
-.. versionadded:: XXXXXXXX
+.. versionadded:: Lithium
 
 Create and destroy Rackspace queues. Be aware that this interacts with
 Rackspace's services, and so may incur charges.

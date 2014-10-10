@@ -20,7 +20,6 @@ from raet.keeping import Keep
 
 from salt.key import RaetKey
 
-
 class SaltKeep(Keep):
     '''
     RAET protocol estate on road data persistence for a given estate

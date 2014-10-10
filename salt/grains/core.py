@@ -116,7 +116,7 @@ def _linux_cpudata():
                 #
                 # Hardware        : BCM2708
                 # Revision        : 0002
-                # Serial          : 00000000XXXXXXXX
+                # Serial          : 00000000
                 elif key == 'Processor':
                     grains['cpu_model'] = val.split('-')[0]
                     grains['num_cpus'] = 1
@@ -220,13 +220,13 @@ def _netbsd_gpu_data():
 
         for line in pcictl_out.splitlines():
             for vendor in known_vendors:
-                m = re.match(
+                vendor_match = re.match(
                     r'[0-9:]+ ({0}) (.+) \(VGA .+\)'.format(vendor),
                     line,
                     re.IGNORECASE
                 )
-                if m:
-                    gpus.append({'vendor': m.group(1), 'model': m.group(2)})
+                if vendor_match:
+                    gpus.append({'vendor': vendor_match.group(1), 'model': vendor_match.group(2)})
     except OSError:
         pass
 
@@ -299,9 +299,9 @@ def _bsd_cpudata(osdata):
     if osdata['kernel'] == 'NetBSD':
         grains['cpu_flags'] = []
         for line in __salt__['cmd.run']('cpuctl identify 0').splitlines():
-            m = re.match(r'cpu[0-9]:\ features[0-9]?\ .+<(.+)>', line)
-            if m:
-                flag = m.group(1).split(',')
+            cpu_match = re.match(r'cpu[0-9]:\ features[0-9]?\ .+<(.+)>', line)
+            if cpu_match:
+                flag = cpu_match.group(1).split(',')
                 grains['cpu_flags'].extend(flag)
 
     if osdata['kernel'] == 'FreeBSD' and os.path.isfile('/var/run/dmesg.boot'):
@@ -472,6 +472,7 @@ def _virtual(osdata):
         else:
             _cmds = ('dmidecode', 'lspci', 'dmesg')
 
+    failed_commands = set()
     for command in _cmds:
         args = []
         if osdata['kernel'] == 'Darwin':
@@ -491,11 +492,7 @@ def _virtual(osdata):
             if salt.log.is_logging_configured():
                 if salt.utils.is_windows():
                     continue
-                log.warn(
-                    'Although {0!r} was found in path, the current user '
-                    'cannot execute it. Grains output might not be '
-                    'accurate.'.format(command)
-                )
+                failed_commands.add(command)
             continue
 
         output = ret['stdout']
@@ -591,6 +588,9 @@ def _virtual(osdata):
                 grains['virtual'] = 'openvzhn'
             elif os.path.isfile('/proc/vz/veinfo'):
                 grains['virtual'] = 'openvzve'
+                # a posteriori, it's expected for these to have failed:
+                failed_commands.discard('lspci')
+                failed_commands.discard('dmidecode')
         # Provide additional detection for OpenVZ
         if os.path.isfile('/proc/self/status'):
             with salt.utils.fopen('/proc/self/status') as status_file:
@@ -689,6 +689,12 @@ def _virtual(osdata):
                 if os.path.isfile('/var/run/xenconsoled.pid'):
                     grains['virtual_subtype'] = 'Xen Dom0'
 
+    for command in failed_commands:
+        log.warn(
+            'Although {0!r} was found in path, the current user '
+            'cannot execute it. Grains output might not be '
+            'accurate.'.format(command)
+        )
     return grains
 
 
@@ -726,9 +732,12 @@ def _windows_platform_data():
     #    manufacturer
     #    productname
     #    biosversion
+    #    serialnumber
     #    osfullname
     #    timezone
     #    windowsdomain
+    #    motherboard.productname
+    #    motherboard.serialnumber
 
     if not HAS_WMI:
         return {}
@@ -743,6 +752,8 @@ def _windows_platform_data():
         biosinfo = wmi_c.Win32_BIOS()[0]
         # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394498(v=vs.85).aspx
         timeinfo = wmi_c.Win32_TimeZone()[0]
+        # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394072(v=vs.85).aspx
+        motherboardinfo = wmi_c.Win32_BaseBoard()[0]
 
         # the name of the OS comes with a bunch of other data about the install
         # location. For example:
@@ -757,9 +768,14 @@ def _windows_platform_data():
             # bios name had a bunch of whitespace appended to it in my testing
             # 'PhoenixBIOS 4.0 Release 6.0     '
             'biosversion': biosinfo.Name.strip(),
+            'serialnumber': biosinfo.SerialNumber,
             'osfullname': osfullname,
             'timezone': timeinfo.Description,
             'windowsdomain': systeminfo.Domain,
+            'motherboard': {
+                'productname': motherboardinfo.Product,
+                'serialnumber': motherboardinfo.SerialNumber
+            }
         }
 
         # test for virtualized environments

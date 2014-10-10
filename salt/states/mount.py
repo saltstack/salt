@@ -33,6 +33,9 @@ import re
 # Import salt libs
 from salt._compat import string_types
 
+import logging
+log = logging.getLogger(__name__)
+
 
 def mounted(name,
             device,
@@ -337,6 +340,7 @@ def swap(name, persist=True, config='/etc/fstab'):
 
 
 def unmounted(name,
+              device,
               config='/etc/fstab',
               persist=False):
     '''
@@ -346,6 +350,11 @@ def unmounted(name,
 
     name
         The path to the location where the device is to be unmounted from
+
+    .. versionadded:: Lithium
+
+    device
+        The device to be unmounted.
 
     config
         Set an alternative location for the fstab, Default is ``/etc/fstab``
@@ -370,7 +379,10 @@ def unmounted(name,
             ret['comment'] = ('Mount point {0} is mounted but should not '
                               'be').format(name)
             return ret
-        out = __salt__['mount.umount'](name)
+        if device:
+            out = __salt__['mount.umount'](name, device)
+        else:
+            out = __salt__['mount.umount'](name)
         if isinstance(out, string_types):
             # Failed to umount, the state has failed!
             ret['comment'] = out
@@ -388,6 +400,10 @@ def unmounted(name,
         if name not in fstab_data:
             ret['comment'] += '. fstab entry not found'
         else:
+            if device:
+                if fstab_data[name]['device'] != device:
+                    ret['comment'] += '. fstab entry for device {0} not found'.format(device)
+                    return ret
             if __opts__['test']:
                 ret['result'] = None
                 ret['comment'] = ('Mount point {0} is unmounted but needs to '
@@ -395,7 +411,7 @@ def unmounted(name,
                                   'persistent').format(name, config)
                 return ret
             else:
-                out = __salt__['mount.rm_fstab'](name, config)
+                out = __salt__['mount.rm_fstab'](name, device, config)
                 if out is not True:
                     ret['result'] = False
                     ret['comment'] += '. Failed to persist purge'

@@ -576,6 +576,13 @@ def find(path, **kwargs):
         exec    = command [arg ...]         # where {} is replaced by pathname
         print  [= print-opts]
 
+    and/or depth criteria:
+
+    .. code-block:: text
+
+        maxdepth = maximum depth to transverse in path
+        mindepth = minimum depth to transverse before checking files or directories
+
     The default action is ``print=path``
 
     ``path-glob``:
@@ -1851,7 +1858,7 @@ def seek_read(path, size, offset):
     '''
     .. versionadded:: 2014.1.0
 
-    Seek to a position on a file and write to it
+    Seek to a position on a file and read it
 
     path
         path to file

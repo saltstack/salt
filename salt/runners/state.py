@@ -17,7 +17,7 @@ import salt.syspaths
 import salt.utils.event
 from salt.exceptions import SaltInvocationError
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 def over(saltenv='base', os_fn=None):
@@ -105,8 +105,8 @@ def orchestrate(mods, saltenv='base', test=None, exclude=None, pillar=None):
     return ret
 
 # Aliases for orchestrate runner
-orch = orchestrate
-sls = orchestrate
+orch = orchestrate  # pylint: disable=invalid-name
+sls = orchestrate  # pylint: disable=invalid-name
 
 
 def show_stages(saltenv='base', os_fn=None):
@@ -241,7 +241,8 @@ def event(tagmatch='*', count=-1, quiet=False, sock_dir=None, pretty=False):
     sevent = salt.utils.event.get_event(
             'master',
             sock_dir or __opts__['sock_dir'],
-            __opts__['transport'])
+            __opts__['transport'],
+            opts=__opts__)
 
     while True:
         ret = sevent.get_event(full=True)
@@ -259,10 +260,10 @@ def event(tagmatch='*', count=-1, quiet=False, sock_dir=None, pretty=False):
                 sys.stdout.flush()
 
             count -= 1
-            logger.debug('Remaining event matches: {0}'.format(count))
+            LOGGER.debug('Remaining event matches: {0}'.format(count))
 
             if count == 0:
                 break
         else:
-            logger.debug('Skipping event tag: {0}'.format(ret['tag']))
+            LOGGER.debug('Skipping event tag: {0}'.format(ret['tag']))
             continue

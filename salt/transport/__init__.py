@@ -13,6 +13,8 @@ import salt.utils
 import logging
 from collections import defaultdict
 
+from salt import daemons
+
 log = logging.getLogger(__name__)
 
 try:
@@ -78,7 +80,7 @@ class RAETChannel(Channel):
             self.dst = (None, None, 'local_cmd')  # runner.py master_call
         elif usage == 'salt_call':
             self.dst = (None, None, 'remote_cmd')  # salt_call caller
-        else:  # everything else
+        else:  # everything else minion
             self.dst = (None, None, 'remote_cmd')  # normal use case minion to master
         self.stack = None
 
@@ -88,17 +90,35 @@ class RAETChannel(Channel):
         not already setup such as in salt-call to communicate to-from the minion
 
         '''
-        mid = self.opts.get('id', 'master')
-        uid = nacling.uuid(size=18)
-        name = 'channel' + uid
+        role = self.opts.get('id')
+        if not role:
+            emsg = ("Missing role required to setup RAETChannel.")
+            log.error(emsg + "\n")
+            raise ValueError(emsg)
+
+        kind = self.opts.get('__role')  # application kind 'master', 'minion', etc
+        if kind not in daemons.APPL_KINDS:
+            emsg = ("Invalid application kind = '{0}' for RAETChannel.".format(kind))
+            log.error(emsg + "\n")
+            raise ValueError(emsg)
+        if kind == 'master':
+            lanename = 'master'
+        elif kind == 'minion':
+            lanename = "{0}_{1}".format(role, kind)
+        else:
+            emsg = ("Unsupported application kind '{0}' for RAETChannel.".format(kind))
+            log.error(emsg + '\n')
+            raise ValueError(emsg)
+
+        name = 'channel' + nacling.uuid(size=18)
         stack = LaneStack(name=name,
-                          lanename=mid,
+                          lanename=lanename,
                           sockdirpath=self.opts['sock_dir'])
 
         stack.Pk = raeting.packKinds.pack
         stack.addRemote(RemoteYard(stack=stack,
                                    name='manor',
-                                   lanename=mid,
+                                   lanename=lanename,
                                    dirpath=self.opts['sock_dir']))
         log.debug("Created Channel Jobber Stack {0}\n".format(stack.name))
         return stack
@@ -145,8 +165,9 @@ class RAETChannel(Channel):
                 break
             if time.time() - start > timeout:
                 if tried >= tries:
-                    raise ValueError
-                self.stack.transmit(msg, self.stack.nameRemotes['manor'].uid)
+                    raise ValueError("Message send timed out after '{0} * {1}'"
+                             " secs on route = {1}".format(tries, timeout, self.route))
+                #self.stack.transmit(msg, self.stack.nameRemotes['manor'].uid)
                 tried += 1
             time.sleep(0.01)
         return jobber_rxMsgs.pop(track).get('return', {})

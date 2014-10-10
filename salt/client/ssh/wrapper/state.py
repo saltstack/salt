@@ -41,7 +41,7 @@ def sls(mods, saltenv='base', test=None, exclude=None, env=None, **kwargs):
             __opts__,
             __pillar__,
             __salt__,
-            __master_opts__)
+            __context__['fileclient'])
     if isinstance(mods, str):
         mods = mods.split(',')
     high_data, errors = st_.render_highstate({saltenv: mods})
@@ -67,7 +67,7 @@ def sls(mods, saltenv='base', test=None, exclude=None, env=None, **kwargs):
     chunks = st_.state.compile_high_data(high_data)
     file_refs = salt.client.ssh.state.lowstate_file_refs(chunks, kwargs.get('extra_filerefs', ''))
     trans_tar = salt.client.ssh.state.prep_trans_tar(
-            __master_opts__,
+            __context__['fileclient'],
             chunks,
             file_refs,
             __pillar__)
@@ -114,13 +114,13 @@ def low(data, **kwargs):
             __opts__,
             __pillar__,
             __salt__,
-            __master_opts__)
+            __context__['fileclient'])
     err = st_.verify_data(data)
     if err:
         return err
     file_refs = salt.client.ssh.state.lowstate_file_refs(chunks, kwargs.get('extra_filerefs', ''))
     trans_tar = salt.client.ssh.state.prep_trans_tar(
-            __master_opts__,
+            __context__['fileclient'],
             chunks,
             file_refs,
             __pillar__)
@@ -160,11 +160,11 @@ def high(data, **kwargs):
             __opts__,
             __pillar__,
             __salt__,
-            __master_opts__)
+            __context__['fileclient'])
     chunks = st_.state.compile_high_data(high)
     file_refs = salt.client.ssh.state.lowstate_file_refs(chunks, kwargs.get('extra_filerefs', ''))
     trans_tar = salt.client.ssh.state.prep_trans_tar(
-            __master_opts__,
+            __context__['fileclient'],
             chunks,
             file_refs,
             __pillar__)
@@ -206,11 +206,11 @@ def highstate(test=None, **kwargs):
             __opts__,
             __pillar__,
             __salt__,
-            __master_opts__)
+            __context__['fileclient'])
     chunks = st_.compile_low_chunks()
     file_refs = salt.client.ssh.state.lowstate_file_refs(chunks, kwargs.get('extra_filerefs', ''))
     trans_tar = salt.client.ssh.state.prep_trans_tar(
-            __master_opts__,
+            __context__['fileclient'],
             chunks,
             file_refs,
             __pillar__)
@@ -261,12 +261,12 @@ def top(topfn, test=None, **kwargs):
             __opts__,
             __pillar__,
             __salt__,
-            __master_opts__)
+            __context__['fileclient'])
     st_.opts['state_top'] = os.path.join('salt://', topfn)
     chunks = st_.compile_low_chunks()
     file_refs = salt.client.ssh.state.lowstate_file_refs(chunks, kwargs.get('extra_filerefs', ''))
     trans_tar = salt.client.ssh.state.prep_trans_tar(
-            __master_opts__,
+            __context__['fileclient'],
             chunks,
             file_refs,
             __pillar__)
@@ -306,7 +306,7 @@ def show_highstate():
             __opts__,
             __pillar__,
             __salt__,
-            __master_opts__)
+            __context__['fileclient'])
     return st_.compile_highstate()
 
 
@@ -325,7 +325,7 @@ def show_lowstate():
             __opts__,
             __pillar__,
             __salt__,
-            __master_opts__)
+            __context__['fileclient'])
     return st_.compile_low_chunks()
 
 
@@ -359,7 +359,7 @@ def show_sls(mods, saltenv='base', test=None, env=None, **kwargs):
             __opts__,
             __pillar__,
             __salt__,
-            __master_opts__)
+            __context__['fileclient'])
     high_data, errors = st_.render_highstate({saltenv: mods})
     high_data, ext_errors = st_.state.reconcile_extend(high_data)
     errors += ext_errors
@@ -390,7 +390,7 @@ def show_top():
             __opts__,
             __pillar__,
             __salt__,
-            __master_opts__)
+            __context__['fileclient'])
     top_data = st_.get_top()
     errors = []
     errors += st_.verify_tops(top_data)

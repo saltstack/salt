@@ -5,7 +5,6 @@ Module for managing timezone on POSIX-like systems.
 
 # Import python libs
 import os
-import hashlib
 import logging
 import re
 
@@ -52,10 +51,10 @@ def get_zone():
         cmd = 'grep ZONE /etc/sysconfig/clock | grep -vE "^#"'
     elif 'Debian' in __grains__['os_family']:
         with salt.utils.fopen('/etc/timezone', 'r') as ofh:
-            return ofh.read()
+            return ofh.read().strip()
     elif 'Gentoo' in __grains__['os_family']:
         with salt.utils.fopen('/etc/timezone', 'r') as ofh:
-            return ofh.read()
+            return ofh.read().strip()
     elif __grains__['os_family'] in ('FreeBSD', 'OpenBSD', 'NetBSD'):
         return os.readlink('/etc/localtime').lstrip('/usr/share/zoneinfo/')
     elif 'Solaris' in __grains__['os_family']:
@@ -163,17 +162,15 @@ def zone_compare(timezone):
     if not os.path.exists(tzfile):
         return 'Error: {0} does not exist.'.format(tzfile)
 
-    hash_type = getattr(hashlib, __opts__.get('hash_type', 'md5'))
+    hash_type = __opts__.get('hash_type', 'md5')
 
     try:
-        with salt.utils.fopen(zonepath, 'r') as fp_:
-            usrzone = hash_type(fp_.read()).hexdigest()
+        usrzone = salt.utils.get_hash(zonepath, hash_type)
     except IOError as exc:
         raise SaltInvocationError('Invalid timezone {0!r}'.format(timezone))
 
     try:
-        with salt.utils.fopen(tzfile, 'r') as fp_:
-            etczone = hash_type(fp_.read()).hexdigest()
+        etczone = salt.utils.get_hash(tzfile, hash_type)
     except IOError as exc:
         raise CommandExecutionError(
             'Problem reading timezone file {0}: {1}'

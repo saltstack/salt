@@ -42,6 +42,9 @@ def iter_ret(opts, ret):
 
 
 def _iter_dir(dir_, saltenv):
+    '''
+    Walk a dir path looking for files and marking their content type
+    '''
     ret = []
     for fn_ in os.listdir(dir_):
         path = os.path.join(dir_, fn_)
