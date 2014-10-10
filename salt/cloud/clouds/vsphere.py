@@ -484,20 +484,31 @@ def list_nodes_min(kwargs=None, call=None):  # pylint: disable=W0613
 
 def list_nodes(kwargs=None, call=None):  # pylint: disable=W0613
     '''
-    Return a list of the VMs that are on the provider
+    Return a list of the VMs that are on the provider, with basic fields
     '''
     ret = {}
     conn = get_conn()
-    nodes = conn.get_registered_vms()
-    for node in nodes:
-        instance = conn.get_vm_by_path(node)
-        properties = _get_instance_properties(instance)
-        ret[properties['name']] = {
-            'id': properties['name'],
-            'ram': properties['memory_mb'],
-            'cpus': properties['num_cpu'],
-            'ip_address': properties['ip_address'],
-        }
+    property_names=['summary']
+    result = conn._retrieve_properties_traversal(
+        property_names=property_names, obj_type='VirtualMachine'
+    )
+    for r in result:
+        for p in r.PropSet:
+            if p.Name == 'summary':
+                n = p.Val
+                ip_address = None
+                try:
+                    ip_address = n.Guest.IpAddress
+                except:
+                    # vmtools likly not installed
+                    pass
+
+                ret[n.Vm] = {
+                    'id': n.Vm,
+                    'cpus': n.Config.NumCpu,
+                    'ram': n.Config.MemorySizeMB,
+                    'ip_address': ip_address,
+                }
     return ret
 
 
