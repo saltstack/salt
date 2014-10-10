@@ -149,11 +149,11 @@ class BasicTestCase(unittest.TestCase):
                                                        ('localhost::4510', 4506))
 
 
-    def testExtractMasters(self):
+    def testExtractMastersSingle(self):
         '''
         Test extracting from master provided according to syntax for opts['master']
         '''
-        console.terse("{0}\n".format(self.testExtractMasters.__doc__))
+        console.terse("{0}\n".format(self.testExtractMastersSingle.__doc__))
 
         master = 'localhost'
         self.opts.update(master=master)
@@ -241,8 +241,85 @@ class BasicTestCase(unittest.TestCase):
         self.assertEquals(extractMasters(self.opts),[])
 
 
+    def testExtractMastersMultiple(self):
+        '''
+        Test extracting from master provided according to syntax for opts['master']
+        '''
+        console.terse("{0}\n".format(self.testExtractMastersMultiple.__doc__))
 
+        master = [
+                    'localhost',
+                    '10.0.2.23',
+                    'me.example.com'
+                 ]
+        self.opts.update(master=master)
+        self.assertEquals(extractMasters(self.opts),
+                          [
+                            {
+                                'external': ('localhost', 4506),
+                                'internal': None
+                            },
+                            {
+                                'external': ('10.0.2.23', 4506),
+                                'internal': None
+                            },
+                            {
+                                'external': ('me.example.com', 4506),
+                                'internal': None
+                            },
+                          ])
 
+        master = [
+                    'localhost 4510',
+                    '10.0.2.23 4510',
+                    'me.example.com 4510'
+                 ]
+        self.opts.update(master=master)
+        self.assertEquals(extractMasters(self.opts),
+                          [
+                            {
+                                'external': ('localhost', 4510),
+                                'internal': None
+                            },
+                            {
+                                'external': ('10.0.2.23', 4510),
+                                'internal': None
+                            },
+                            {
+                                'external': ('me.example.com', 4510),
+                                'internal': None
+                            },
+                          ])
+
+        master = [
+                    {
+                        'external': 'localhost 4510',
+                        'internal': '',
+                    },
+                    {
+                        'external': 'me.example.com 4510',
+                        'internal': '10.0.2.23 4510',
+                    },
+                    {
+                        'external': 'you.example.com 4509',
+                    }
+                 ]
+        self.opts.update(master=master)
+        self.assertEquals(extractMasters(self.opts),
+                          [
+                            {
+                                'external': ('localhost', 4510),
+                                'internal': None
+                            },
+                            {
+                                'external': ('me.example.com', 4510),
+                                'internal': ('10.0.2.23', 4510)
+                            },
+                            {
+                                'external': ('you.example.com', 4509),
+                                'internal': None
+                            },
+                          ])
 
 
 def runOne(test):
@@ -260,7 +337,8 @@ def runSome():
     tests =  []
     names = [
                 'testParseHostname',
-                'testExtractMasters',
+                'testExtractMastersSingle',
+                'testExtractMastersMultiple',
             ]
 
     tests.extend(map(BasicTestCase, names))
