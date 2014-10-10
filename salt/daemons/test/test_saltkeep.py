@@ -87,6 +87,7 @@ class BasicTestCase(unittest.TestCase):
                      open_mode=openMode,
                      auto_accept=autoAccept,
                      transport='raet',
+                     __role='master',
                      )
         return opts
 
