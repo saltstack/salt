@@ -889,7 +889,6 @@ def _get_interfaces():
 
     global _INTERFACES
     if not _INTERFACES:
-        log.debug('Populating _INTERFACES')
         _INTERFACES = salt.utils.network.interfaces()
     return _INTERFACES
 
