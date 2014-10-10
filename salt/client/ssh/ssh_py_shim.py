@@ -14,6 +14,7 @@ import tarfile
 import shutil
 import sys
 import os
+import json
 import stat
 
 THIN_ARCHIVE = 'salt-thin.tgz'
@@ -149,13 +150,17 @@ def unpack_thin(thin_path):
     tfile.close()
     os.unlink(thin_path)
 
+def get_modules():
+    sys.stdout.write("{0}\next_mods\n".format(OPTIONS.delimiter))
+    glob = ''
+    while True:
+        glob += raw_input()
+        if glob.endswith('EOF_||'):
+            break
+    ext_mods = json.loads(glob[:-6])
+    write_modules(ext_mods)
 
-def write_modules():
-    mtypes = ('modules',
-              'states',
-              'grains',
-              'returners',
-              'renderers')
+def write_modules(ext_mods):
     modcache = os.path.join(
             OPTIONS.saltdir,
             'running_data',
@@ -163,11 +168,11 @@ def write_modules():
             'cache',
             'salt',
             'extmods')
-    for mtype in mtypes:
+    for mtype in ext_mods:
         dest_dir = os.path.join(modcache, mtype)
         if not os.path.isdir(dest_dir):
             os.makedirs(dest_dir)
-        chunks = getattr(OPTIONS, mtype)
+        chunks = ext_mods.get(mtype)
         if not chunks:
             continue
         for chunk in chunks.split(','):
@@ -214,7 +219,7 @@ def main(argv):
 
     with open(os.path.join(OPTIONS.saltdir, 'minion'), 'w') as config:
         config.write(OPTIONS.config + '\n')
-    write_modules()
+    get_modules()
     #Fix parameter passing issue
     if len(ARGS) == 1:
         argv_prepared = ARGS[0].split()

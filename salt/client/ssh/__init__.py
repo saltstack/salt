@@ -827,6 +827,8 @@ class Single(object):
                     return 'ERROR: Failure deploying thin: {0}'.format(stdout), stderr, retcode
                 stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
                 stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
+            if 'ext_mods' == shim_command:
+                pass
 
         return stdout, stderr, retcode
 

@@ -345,6 +345,8 @@ class Shell(object):
                                   'auto accept run salt-ssh with the -i '
                                   'flag:\n{0}').format(stdout)
                     return ret_stdout, '', 254
+            elif stdout and stdout == 'ext_mod':
+                pass
             if not term.isalive():
                 while True:
                     stdout, stderr = term.recv()
