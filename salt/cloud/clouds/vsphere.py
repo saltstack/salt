@@ -488,7 +488,7 @@ def list_nodes(kwargs=None, call=None):
     '''
     ret = {}
     conn = get_conn()
-    property_names = ['name','guest.ipAddress', 'summary.config']
+    property_names = ['name', 'guest.ipAddress', 'summary.config']
     result = conn._retrieve_properties_traversal(
         property_names=property_names, obj_type='VirtualMachine'
     )
