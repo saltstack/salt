@@ -1679,7 +1679,7 @@ class State(object):
                     continue
                 if r_state == 'onfail':
                     if run_dict[tag]['result'] is True:
-                        fun_stats.add('fail')
+                        fun_stats.add('onfail')
                         continue
                 else:
                     if run_dict[tag]['result'] is False:
@@ -1687,7 +1687,7 @@ class State(object):
                         continue
                 if r_state == 'onchanges':
                     if not run_dict[tag]['changes']:
-                        fun_stats.add('fail')
+                        fun_stats.add('onchanges')
                         continue
                 if r_state == 'watch' and run_dict[tag]['changes']:
                     fun_stats.add('change')
@@ -1707,6 +1707,10 @@ class State(object):
             if 'premet' in fun_stats:
                 status = 'met'
             status = 'pre'
+        elif 'onfail' in fun_stats:
+            status = 'onfail'
+        elif 'onchanges' in fun_stats:
+            status = 'onchanges'
         elif 'change' in fun_stats:
             status = 'change'
         else:
@@ -1874,6 +1878,20 @@ class State(object):
             running[tag] = pre_ret
             self.pre[tag] = pre_ret
             self.__run_num += 1
+        elif status == 'onfail':
+            running[tag] = {'changes': {},
+                            'result': True,
+                            'comment': 'State was not run because onfail req did not change',
+                            '__run_num__': self.__run_num,
+                            '__sls__': low['__sls__']}
+            self.__run_num +=1
+        elif status == 'onchanges':
+            running[tag] = {'changes': {},
+                            'result': True,
+                            'comment': 'State was not run because onchanges req did not change',
+                            '__run_num__': self.__run_num,
+                            '__sls__': low['__sls__']}
+            self.__run_num +=1
         else:
             if low.get('__prereq__'):
                 self.pre[tag] = self.call(low, chunks, running)
