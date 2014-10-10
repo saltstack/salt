@@ -220,6 +220,23 @@ update completes.
         - watch:
           - pkg: salt-minion
 
+To ensure that **at** is installed and **atd** is running, the following states
+can be used (be sure to double-check the package name and service name for the
+distro the minion is running, in case they differ from the example below.
+
+.. code-block:: yaml
+
+    at:
+      pkg:
+        - installed
+      service:
+        - running
+        - name: atd
+        - enable: True
+
+Windows
+*******
+
 For Windows machines, restarting the minion at can be accomplished by adding
 the following state:
 
