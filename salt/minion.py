@@ -492,6 +492,7 @@ class MultiMinion(MinionBase):
                 log.error('Error while bringing up minion for multi-master. Is master at {0} responding?'.format(master))
         return ret
 
+
     def minions(self):
         '''
         Return a list of minion generators bound to the tune_in method
