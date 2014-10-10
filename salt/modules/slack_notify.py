@@ -5,19 +5,9 @@ See https://slack.com for more info.
 
 .. versionadded:: Lithium
 
-:depends:   - slack python module
+:depends:   - pyslack python module
 :configuration: Configure this module by specifying the name of a configuration
     profile in the minion config, minion pillar, or master config.
-
-As of the creation of this module, the latest version of the slack module is
-required and should be installed from the main git repo like this:
-
-    Examples of how to install slack:
-
-    .. code-block:: yaml
-
-        sudo pip install git+git://github.com/kn/slack.git
-        salt \* pip.install git+git://github.com/kn/slack.git
 
     For example:
 
