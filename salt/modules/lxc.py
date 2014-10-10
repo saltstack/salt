@@ -37,7 +37,8 @@ log = logging.getLogger(__name__)
 
 # Don't shadow built-in's.
 __func_alias__ = {
-    'list_': 'list'
+    'list_': 'list',
+    'ls_': 'ls'
 }
 
 
@@ -278,7 +279,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     )
     lxc_init_interface['bootstrap_url'] = script
     lxc_init_interface['bootstrap_args'] = script_args
-    lxc_init_interface['bootstrap_shell'] = '/bin/bash'
+    lxc_init_interface['bootstrap_shell'] = 'sh'
     lxc_init_interface['autostart'] = autostart
     lxc_init_interface['users'] = users
     lxc_init_interface['password'] = password
@@ -643,7 +644,7 @@ def get_base(**kwargs):
                 [seed=(True|False)] [install=(True|False)] \\
                 [config=minion_config]
     '''
-    cntrs = __salt__['lxc.ls']()
+    cntrs = ls_()
     if kwargs.get('image'):
         image = kwargs.get('image')
         proto = salt._compat.urlparse(image).scheme
@@ -654,19 +655,19 @@ def get_base(**kwargs):
                 __salt__['config.get']('hash_type'))
         name = '__base_{0}_{1}_{2}'.format(proto, img_name, hash_)
         if name not in cntrs:
-            __salt__['lxc.create'](name, **kwargs)
+            create(name, **kwargs)
             if kwargs.get('vgname'):
                 rootfs = os.path.join('/dev', kwargs['vgname'], name)
-                lxc_info = __salt__['lxc.info'](name)
+                lxc_info = info(name)
                 edit_conf(lxc_info['config'], **{'lxc.rootfs': rootfs})
         return name
     elif kwargs.get('template'):
         name = '__base_{0}'.format(kwargs['template'])
         if name not in cntrs:
-            __salt__['lxc.create'](name, **kwargs)
+            create(name, **kwargs)
             if kwargs.get('vgname'):
                 rootfs = os.path.join('/dev', kwargs['vgname'], name)
-                lxc_info = __salt__['lxc.info'](name)
+                lxc_info = info(name)
                 edit_conf(lxc_info['config'], **{'lxc.rootfs': rootfs})
         return name
     return ''
@@ -844,7 +845,7 @@ def init(name,
         clone_from = get_base(vgname=vgname, **kwargs)
         if not kwargs.get('snapshot') is False:
             kwargs['snapshot'] = True
-    does_exist = __salt__['lxc.exists'](name)
+    does_exist = exists(name)
     to_reboot = False
     remove_seed_marker = False
     if does_exist:
@@ -852,7 +853,7 @@ def init(name,
     elif clone_from:
         remove_seed_marker = True
         ret.update(
-            __salt__['lxc.clone'](name, clone_from,
+            clone(name, clone_from,
                                   profile=profile, **kwargs))
         if not ret.get('cloned', False):
             return ret
@@ -860,9 +861,9 @@ def init(name,
                          bridge=bridge, gateway=gateway,
                          autostart=autostart,
                          cpuset=cpuset, cpushare=cpushare, memory=memory)
-        old_chunks = __salt__['lxc.read_conf'](cfg.path)
+        old_chunks = read_conf(cfg.path)
         cfg.write()
-        chunks = __salt__['lxc.read_conf'](cfg.path)
+        chunks = read_conf(cfg.path)
         if old_chunks != chunks:
             to_reboot = True
     else:
@@ -873,25 +874,25 @@ def init(name,
                          cpushare=cpushare, memory=memory)
         with cfg.tempfile() as cfile:
             ret.update(
-                __salt__['lxc.create'](name, config=cfile.name,
+                create(name, config=cfile.name,
                                        profile=profile, **kwargs))
         if not ret.get('created', False):
             return ret
         path = '/var/lib/lxc/{0}/config'.format(name)
         old_chunks = []
         if os.path.exists(path):
-            old_chunks = __salt__['lxc.read_conf'](path)
+            old_chunks = read_conf(path)
         for comp in _config_list(conf_tuples=old_chunks,
                                  cpu=cpu,
                                  nic=nic, nic_opts=nic_opts, bridge=bridge,
                                  cpuset=cpuset, cpushare=cpushare,
                                  memory=memory):
             edit_conf(path, **comp)
-        chunks = __salt__['lxc.read_conf'](path)
+        chunks = read_conf(path)
         if old_chunks != chunks:
             to_reboot = True
     if remove_seed_marker:
-        lxcret = __salt__['lxc.run_cmd'](
+        lxcret = run_cmd(
             name, 'rm -f \"{0}\"'.format(SEED_MARKER),
             stdout=False, stderr=False)
 
@@ -902,9 +903,9 @@ def init(name,
                      cpuset=cpuset, cpushare=cpushare, memory=memory)
     old_chunks = []
     if os.path.exists(cfg.path):
-        old_chunks = __salt__['lxc.read_conf'](cfg.path)
+        old_chunks = read_conf(cfg.path)
     cfg.write()
-    chunks = __salt__['lxc.read_conf'](cfg.path)
+    chunks = read_conf(cfg.path)
     if old_chunks != chunks:
         comment += 'Container configuration updated\n'
         to_reboot = True
@@ -912,7 +913,7 @@ def init(name,
         if not to_reboot:
             comment += 'Container already correct\n'
     if to_reboot:
-        __salt__['lxc.stop'](name)
+        stop(name)
     if clone_from:
         inner = 'cloned'
         comment += 'Container cloned\n'
@@ -924,11 +925,11 @@ def init(name,
         not does_exist
         or (
             does_exist
-            and __salt__['lxc.state'](name) != 'running'
+            and state(name) != 'running'
         )
     ):
-        ret['state'] = __salt__['lxc.start'](name)
-    ret['state'] = __salt__['lxc.state'](name)
+        ret['state'] = start(name)
+    ret['state'] = state(name)
 
     # set the default user/password, only the first time
     if password:
@@ -940,11 +941,11 @@ def init(name,
         lxcrets = []
         for ogid in gids:
             lxcrets.append(
-                bool(__salt__['lxc.run_cmd'](
+                bool(run_cmd(
                     name, 'test -e {0}'.format(gid),
                     stdout=False, stderr=False)))
         if True not in lxcrets:
-            cret = __salt__['lxc.set_pass'](name,
+            cret = set_pass(name,
                                             password=password, users=users)
             changes['250_password'] = 'Password updated\n'
             if not cret['result']:
@@ -952,7 +953,7 @@ def init(name,
                 changes['250_password'] = 'Failed to update passwords\n'
             try:
                 lxcret = int(
-                    __salt__['lxc.run_cmd'](
+                    run_cmd(
                         name,
                         'sh -c \'touch "{0}"; '
                         'test -e "{0}";echo ${{?}}\''.format(gid)))
@@ -977,18 +978,18 @@ def init(name,
         lxcrets = []
         for ogid in gids:
             lxcrets.append(bool(
-                __salt__['lxc.run_cmd'](
+                run_cmd(
                     name, 'test -e {0}'.format(ogid),
                     stdout=False, stderr=False)))
         if True not in lxcrets:
-            cret = __salt__['lxc.set_dns'](name, dnsservers=dnsservers)
+            cret = set_dns(name, dnsservers=dnsservers)
             changes['350_dns'] = 'DNS updated\n'
             if not cret['result']:
                 ret['result'] = False
                 changes['350_dns'] = 'DNS provisioning error\n'
             try:
                 lxcret = int(
-                    __salt__['lxc.run_cmd'](
+                    run_cmd(
                         name,
                         'sh -c \'touch "{0}"; '
                         'test -e "{0}";echo ${{?}}\''.format(gid)))
@@ -1005,7 +1006,7 @@ def init(name,
     if seed or seed_cmd:
         changes['450_seed'] = 'Container seeded\n'
         if seed:
-            ret['seeded'] = __salt__['lxc.bootstrap'](
+            ret['seeded'] = bootstrap(
                 name, config=salt_config,
                 approve_key=approve_key,
                 pub_key=pub_key, priv_key=priv_key,
@@ -1057,9 +1058,9 @@ def cloud_init(name, vm_=None, **kwargs):
 
         salt '*' lxc.cloud_init foo
     '''
-    init_interface = __salt__['lxc.cloud_init_interface'](name, vm_, **kwargs)
+    init_interface = cloud_init_interface(name, vm_, **kwargs)
     name = init_interface.pop('name', name)
-    return __salt__['lxc.init'](name, **init_interface)
+    return init(name, **init_interface)
 
 
 def create(name, config=None, profile=None, options=None, **kwargs):
@@ -1268,7 +1269,7 @@ def clone(name,
         ).format(cmd, ret['stderr'])}
 
 
-def ls():
+def ls_():
     '''
     Return just a list of the containers available
 
@@ -1335,7 +1336,7 @@ def list_(extra=False):
                 break
         if extra:
             try:
-                infos = __salt__['lxc.info'](container)
+                infos = info(container)
             except Exception:
                 trace = traceback.format_exc()
                 infos = {'error': 'Error while getting extra infos',
@@ -1387,18 +1388,18 @@ def _ensure_running(name, no_start=False):
     If the container is not currently running, start it. This function returns
     the state that the container was in before changing
     '''
-    prior_state = __salt__['lxc.state'](name)
+    prior_state = state(name)
     if not prior_state:
         return None
     res = {}
     if prior_state == 'stopped':
         if no_start:
             return False
-        res = __salt__['lxc.start'](name)
+        res = start(name)
     elif prior_state == 'frozen':
         if no_start:
             return False
-        res = __salt__['lxc.unfreeze'](name)
+        res = unfreeze(name)
     if res.get('error'):
         log.warn('Failed to run command: {0}'.format(res['error']))
         return False
@@ -1420,15 +1421,15 @@ def start(name, restart=False):
            'result': True,
            'comment': 'Started'}
     try:
-        does_exist = __salt__['lxc.exists'](name)
+        does_exist = exists(name)
         if not does_exist:
             return {'name': name,
                     'result': False,
                     'comment': 'Container does not exist'}
         if restart:
-            __salt__['lxc.stop'](name)
+            stop(name)
         ret.update(_change_state('lxc-start -d', name, 'running'))
-        infos = __salt__['lxc.info'](name)
+        infos = info(name)
         ret['result'] = infos['state'] == 'running'
         if ret['change']:
             ret['changes']['started'] = 'started'
@@ -1458,14 +1459,14 @@ def stop(name, kill=True):
            'result': True,
            'comment': 'Stopped'}
     try:
-        does_exist = __salt__['lxc.exists'](name)
+        does_exist = exists(name)
         if not does_exist:
             return {'name': name,
                     'result': False,
                     'changes': {},
                     'comment': 'Container does not exist'}
         ret.update(_change_state('lxc-stop', name, 'stopped'))
-        infos = __salt__['lxc.info'](name)
+        infos = info(name)
         ret['result'] = infos['state'] == 'stopped'
         if ret['change']:
             ret['changes']['stopped'] = 'stopped'
@@ -1741,14 +1742,14 @@ def set_pass(name, users, password):
         try:
             cmd = (
                 "lxc-attach --clear-env -n {0} -- "
-                " /bin/sh -c \""
+                " sh -c \""
                 "").format(pipes.quote(name))
             for i in users:
                 cmd += "echo {0}:{1}|chpasswd && ".format(
                     pipes.quote(i),
                     pipes.quote(password),
                 )
-            cmd += " /bin/true\""
+            cmd += " true\""
             cret = __salt__['cmd.run_all'](cmd)
             if cret['retcode'] != 0:
                 raise ValueError('Can\'t change passwords')
@@ -1779,7 +1780,7 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset):
     changes = {'edited': [], 'added': [], 'removed': []}
     ret = {'changes': changes, 'result': True, 'comment': ''}
     lxc_conf_p = '/var/lib/lxc/{0}/config'.format(name)
-    if not __salt__['lxc.exists'](name):
+    if not exists(name):
         ret['result'] = False
         ret['comment'] = 'Container does not exist: {0}'.format(name)
     elif not os.path.exists(lxc_conf_p):
@@ -1883,7 +1884,7 @@ def set_dns(name, dnsservers=None, searchdomains=None):
     dns = "\n".join(dns)
     has_resolvconf = not int(
         __salt__['cmd.run'](('lxc-attach --clear-env -n {0} -- '
-                             '/usr/bin/test -e /etc/resolvconf/resolv.conf.d/base;'
+                             'test -e /etc/resolvconf/resolv.conf.d/base;'
                              'echo ${{?}}').format(pipes.quote(name))))
     if has_resolvconf:
         cret = __salt__['cmd.run_all']((
@@ -1962,7 +1963,7 @@ def bootstrap(name, config=None, approve_key=True,
                 [approve_key=(True|False)] [install=(True|False)]
     '''
 
-    infos = __salt__['lxc.info'](name)
+    infos = info(name)
     if not infos:
         return None
     # default set here as we cannot set them
@@ -1981,10 +1982,10 @@ def bootstrap(name, config=None, approve_key=True,
           'else exit 1; fi"'
     if not force_install:
         # no need to run this cmd in force mode
-        needs_install = bool(__salt__['lxc.run_cmd'](name, cmd, stdout=False))
+        needs_install = bool(run_cmd(name, cmd, stdout=False))
     else:
         needs_install = True
-    seeded = not __salt__['lxc.run_cmd'](
+    seeded = not run_cmd(
         name,
         'test -e \"{0}\"'.format(SEED_MARKER),
         stdout=False, stderr=False)
@@ -2023,15 +2024,15 @@ def bootstrap(name, config=None, approve_key=True,
                 cp(name, cfg_files['pubkey'],
                    os.path.join(configdir, 'minion.pub'))
                 bootstrap_args = bootstrap_args.format(configdir)
-                cmd = ('PATH=$PATH:/bin:/sbin:/usr/sbin'
-                       ' {0} {2}/bootstrap.sh {1}').format(
+                cmd = ("{0} -c 'PATH=$PATH:/bin:/sbin:/usr/sbin"
+                       " {0} {2}/bootstrap.sh {1}'").format(
                            bootstrap_shell,
-                           bootstrap_args,
+                           bootstrap_args.replace("'", "''"),
                            dest_dir)
                 # log ASAP the forged bootstrap command which can be wrapped
                 # out of the output in case of unexpected problem
                 log.info('Running {0} in lxc {1}'.format(cmd, name))
-                res = not __salt__['lxc.run_cmd'](
+                res = not run_cmd(
                     name, cmd,
                     stdout=True, stderr=True, use_vt=True)['retcode']
             else:
@@ -2047,12 +2048,12 @@ def bootstrap(name, config=None, approve_key=True,
             res = True
         shutil.rmtree(tmp)
         if prior_state == 'stopped':
-            __salt__['lxc.stop'](name)
+            stop(name)
         elif prior_state == 'frozen':
-            __salt__['lxc.freeze'](name)
+            freeze(name)
         # mark seeded upon successful install
         if res:
-            __salt__['lxc.run_cmd'](
+            run_cmd(
                 name, 'sh -c \'touch "{0}";\''.format(SEED_MARKER))
     return res
 
@@ -2068,7 +2069,7 @@ def attachable(name):
 
         salt 'minion' lxc.attachable ubuntu
     '''
-    cmd = 'lxc-attach -n {0} -- /usr/bin/env'.format(pipes.quote(name))
+    cmd = 'lxc-attach -n {0} -- true'.format(pipes.quote(name))
     data = __salt__['cmd.run_all'](cmd)
     if not data['retcode']:
         return True
@@ -2186,9 +2187,9 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
 
     if preserve_state:
         if prior_state == 'stopped':
-            __salt__['lxc.stop'](name)
+            stop(name)
         elif prior_state == 'frozen':
-            __salt__['lxc.freeze'](name)
+            freeze(name)
 
     if stdout and stderr:
         return res
@@ -2375,7 +2376,7 @@ def edit_conf(conf_file, out_format='simple', **kwargs):
     data = []
 
     try:
-        conf = __salt__['lxc.read_conf'](conf_file, out_format='commented')
+        conf = read_conf(conf_file, out_format='commented')
     except Exception:
         conf = []
 
@@ -2396,5 +2397,5 @@ def edit_conf(conf_file, out_format='simple', **kwargs):
             continue
         data.append({kwarg: kwargs[kwarg]})
 
-    __salt__['lxc.write_conf'](conf_file, data)
+    write_conf(conf_file, data)
     return read_conf(conf_file, out_format)
