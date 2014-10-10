@@ -746,7 +746,7 @@ def is_private(ip_addr):
     '''
     Check if the given IP address is a private address
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     CLI Example::
 
@@ -759,7 +759,7 @@ def is_loopback(ip_addr):
     '''
     Check if the given IP address is a loopback address
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     CLI Example::
 
