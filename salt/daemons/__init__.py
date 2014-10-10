@@ -26,6 +26,7 @@ APPL_KIND_NAMES = OrderedDict((v, k) for k, v in APPL_KINDS.iteritems())  # inve
 ApplKind = namedtuple('ApplKind', APPL_KINDS.keys())
 applKinds = ApplKind(**APPL_KINDS)
 
+
 def nonStringIterable(obj):
     """
     Returns True if obj is non-string iterable, False otherwise
@@ -34,7 +35,8 @@ def nonStringIterable(obj):
     for non string iterables.
     Assumes in Python3 that, basestring = (str, bytes)
     """
-    return (not isinstance(obj, basestring) and isinstance(obj, Iterable))
+    return not isinstance(obj, basestring) and isinstance(obj, Iterable)
+
 
 def nonStringSequence(obj):
     """
@@ -44,9 +46,8 @@ def nonStringSequence(obj):
     for non string sequences.
     Assumes in Python3 that, basestring = (str, bytes)
     """
-    return (not isinstance(obj, basestring) and isinstance(obj, Sequence) )
+    return not isinstance(obj, basestring) and isinstance(obj, Sequence)
 
-# Parse multiple master data for Salt Raet
 
 def extractMasters(opts):
     '''
@@ -153,24 +154,24 @@ def extractMasters(opts):
 
     hostages = []
     # extract candidate hostage (hostname dict) from entries
-    if nonStringSequence(entries): # multiple master addresses provided
+    if nonStringSequence(entries):  # multiple master addresses provided
         for entry in entries:
-            if isinstance(entry, Mapping): # mapping
+            if isinstance(entry, Mapping):  # mapping
                 external = entry.get('external', '')
                 internal = entry.get('internal', '')
                 hostages.append(dict(external=external, internal=internal))
 
-            elif isinstance(entry, basestring): # string
+            elif isinstance(entry, basestring):  # string
                 external = entry
                 internal = ''
                 hostages.append(dict(external=external, internal=internal))
 
-    elif isinstance(entries, Mapping): # mapping
+    elif isinstance(entries, Mapping):  # mapping
         external = entries.get('external', '')
         internal = entries.get('internal', '')
         hostages.append(dict(external=external, internal=internal))
 
-    elif isinstance(entries, basestring): # string
+    elif isinstance(entries, basestring):  # string
         external = entries
         internal = ''
         hostages.append(dict(external=external, internal=internal))
@@ -181,10 +182,10 @@ def extractMasters(opts):
         external = hostage['external']
         internal = hostage['internal']
         if external:
-            external = parseHostname( external, master_port)
+            external = parseHostname(external, master_port)
             if not external:
-                continue # must have a valid external host address
-            internal = parseHostname( internal, master_port)
+                continue  # must have a valid external host address
+            internal = parseHostname(internal, master_port)
             masters.append(dict(external=external, internal=internal))
 
     return masters
@@ -207,18 +208,18 @@ def parseHostname(hostname, default_port):
     '''
     try:
         host, sep, port = hostname.strip().rpartition(' ')
-        if not port: # invalid nothing there
+        if not port:  # invalid nothing there
             return None
 
-        if not host: # no space separated port, only host as port use default port
+        if not host:  # no space separated port, only host as port use default port
             host = port
             port = default_port
             # ipv6 must have two or more colons
-            if host.count(':') == 1: # only one so may be using colon delimited port
+            if host.count(':') == 1:  # only one so may be using colon delimited port
                 host, sep, port = host.rpartition(':')
-                if not host: # colon but not host so invalid
+                if not host:  # colon but not host so invalid
                     return None
-                if not port: # colon but no port so use default
+                if not port:  # colon but no port so use default
                     port = default_port
 
         host = host.strip()
@@ -230,5 +231,4 @@ def parseHostname(hostname, default_port):
     except AttributeError:
         return None
 
-    return ((host, port))
-
+    return (host, port)
