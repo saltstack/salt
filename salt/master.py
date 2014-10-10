@@ -162,7 +162,7 @@ class Master(SMaster):
                         self.opts['user'],
                         self.opts['sock_dir'])
                     rotate = now
-                    if self.opts['ping_on_rotate']:
+                    if self.opts.get('ping_on_rotate'):
                         # Ping all minions to get them to pick up the new key
                         log.debug('Pinging all connected minions due to AES key rotation')
                         salt.utils.master.ping_all_connected_minions(self.opts)

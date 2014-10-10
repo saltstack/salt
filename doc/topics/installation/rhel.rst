@@ -1,6 +1,6 @@
-==========================================================================
+==============================================================
 RHEL / CentOS / Scientific Linux / Amazon Linux / Oracle Linux
-==========================================================================
+==============================================================
 
 Installation Using pip
 ======================
@@ -90,6 +90,22 @@ To install from ``epel-testing``, use the ``enablerepo`` argument for yum:
 .. code-block:: bash
 
     yum --enablerepo=epel-testing install salt-minion
+
+
+ZeroMQ 4
+========
+
+We recommend using ZeroMQ 4 where available. SaltStack provides ZeroMQ 4.0.4
+and pyzmq 14.3.1 in a COPR_ repository. Instructions for adding this repository
+(as well as for upgrading ZeroMQ and pyzmq on existing minions) can be found
+here_.
+
+.. _COPR: http://copr.fedoraproject.org/
+.. _here: http://copr.fedoraproject.org/coprs/saltstack/zeromq4/
+
+If this repo is added *before* Salt is installed, then installing either
+``salt-master`` or ``salt-minion`` will automatically pull in ZeroMQ 4.0.4, and
+additional states to upgrade ZeroMQ and pyzmq are unnecessary.
 
 
 Post-installation tasks

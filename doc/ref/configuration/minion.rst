@@ -4,7 +4,7 @@
 Configuring the Salt Minion
 ===========================
 
-The Salt system is amazingly simple and easy to configure, the two components
+The Salt system is amazingly simple and easy to configure. The two components
 of the Salt system each have a respective configuration file. The
 :command:`salt-master` is configured via the master configuration file, and the
 :command:`salt-minion` is configured via the minion configuration file.
@@ -12,8 +12,8 @@ of the Salt system each have a respective configuration file. The
 .. seealso::
     :ref:`example minion configuration file <configuration-examples-minion>`
 
-The Salt Minion configuration is very simple, typically the only value that
-needs to be set is the master value so the minion can find its master.
+The Salt Minion configuration is very simple. Typically, the only value that
+needs to be set is the master value so the minion knows where to locate its master.
 
 By default, the salt-minion configuration will be in :file:`/etc/salt/minion`.
 A notable exception is FreeBSD, where the configuration will be in
@@ -277,7 +277,7 @@ executed. By default this feature is disabled, to enable set cache_jobs to
 .. conf_minion:: sock_dir
 
 ``sock_dir``
---------------
+------------
 
 Default: ``/var/run/salt/minion``
 
@@ -317,7 +317,7 @@ master.
 .. conf_minion:: random_reauth_delay
 
 ``random_reauth_delay``
-------------------------
+-----------------------
 
 When the master key changes, the minion will try to re-auth itself to
 receive the new master key. In larger environments this can cause a syn-flood
@@ -345,10 +345,80 @@ seconds each iteration.
 
     acceptance_wait_time_max: None
 
+.. conf_minion:: recon_default
+
+``recon_default``
+-----------------
+
+Default: ``1000``
+
+The interval in milliseconds that the socket should wait before trying to
+reconnect to the master (1000ms = 1 second).
+
+.. code-block:: yaml
+
+    recon_default: 1000
+
+.. conf_minion:: recon_max
+
+``recon_max``
+-------------
+
+Default: ``10000``
+
+The maximum time a socket should wait. Each interval the time to wait is calculated
+by doubling the previous time. If recon_max is reached, it starts again at
+the recon_default.
+
+Short example:
+    - reconnect 1: the socket will wait 'recon_default' milliseconds
+    - reconnect 2: 'recon_default' * 2
+    - reconnect 3: ('recon_default' * 2) * 2
+    - reconnect 4: value from previous interval * 2
+    - reconnect 5: value from previous interval * 2
+    - reconnect x: if value >= recon_max, it starts again with recon_default
+
+.. code-block:: yaml
+
+    recon_max: 10000
+
+.. conf_minion:: recon_randomize
+
+``recon_randomize``
+-------------------
+
+Default: ``True``
+
+Generate a random wait time on minion start. The wait time will be a random value
+between recon_default and recon_default and recon_max. Having all minions reconnect
+with the same recon_default and recon_max value kind of defeats the purpose of being
+able to change these settings. If all minions have the same values and the setup is
+quite large (several thousand minions), they will still flood the master. The desired
+behavior is to have time-frame within all minions try to reconnect.
+
+.. code-block:: ymal
+
+    recon_randomize: True
+
+.. conf_minion:: dns_check
+
+``dns_check``
+-------------
+
+Default: ``True``
+
+When healing, a dns_check is run. This is to make sure that the originally
+resolved dns has not changed. If this is something that does not happen in your
+environment, set this value to ``False``.
+
+.. code-block:: yaml
+
+    dns_check: True
+
 .. conf_minion:: ipc_mode
 
 ``ipc_mode``
--------------
+------------
 
 Default: ``ipc``
 
