@@ -24,6 +24,8 @@ from salt._compat import string_types
 from salt.log import LOG_LEVELS
 from salt.utils import print_cli
 
+from salt import daemons
+
 log = logging.getLogger(__name__)
 
 try:
@@ -101,7 +103,12 @@ class ZeroMQCaller(object):
             ret['jid']
         )
         if fun not in self.minion.functions:
-            sys.stderr.write('Function {0} is not available\n'.format(fun))
+            sys.stderr.write('Function {0} is not available.'.format(fun))
+            mod_name = fun.split('.')[0]
+            if mod_name in self.minion.function_errors:
+                sys.stderr.write(' Possible reasons: {0}\n'.format(self.minion.function_errors[mod_name]))
+            else:
+                sys.stderr.write('\n')
             sys.exit(-1)
         try:
             sdata = {
@@ -281,18 +288,34 @@ class RAETCaller(ZeroMQCaller):
         not already setup such as in salt-call to communicate to-from the minion
 
         '''
-        mid = opts['id']
+        role = opts.get('id')
+        if not role:
+            emsg = ("Missing role required to setup RAETChannel.")
+            log.error(emsg + "\n")
+            raise ValueError(emsg)
+
+        kind = opts.get('__role')  # application kind 'master', 'minion', etc
+        if kind not in daemons.APPL_KINDS:
+            emsg = ("Invalid application kind = '{0}' for RAETChannel.".format(kind))
+            log.error(emsg + "\n")
+            raise ValueError(emsg)
+        if kind == 'minion':
+            lanename = "{0}_{1}".format(role, kind)
+        else:
+            emsg = ("Unsupported application kind '{0}' for RAETChannel.".format(kind))
+            log.error(emsg + '\n')
+            raise ValueError(emsg)
+
         sockdirpath = opts['sock_dir']
-        uid = nacling.uuid(size=18)
-        name = 'caller' + uid
+        name = 'caller' + nacling.uuid(size=18)
         stack = LaneStack(name=name,
-                          lanename=mid,
+                          lanename=lanename,
                           sockdirpath=sockdirpath)
 
         stack.Pk = raeting.packKinds.pack
         stack.addRemote(RemoteYard(stack=stack,
                                    name='manor',
-                                   lanename=mid,
+                                   lanename=lanename,
                                    dirpath=sockdirpath))
         log.debug("Created Caller Jobber Stack {0}\n".format(stack.name))
         return stack

@@ -21,6 +21,8 @@ from raet import raeting, nacling
 from raet.lane.stacking import LaneStack
 from raet.lane.yarding import RemoteYard
 
+from salt import daemons
+
 log = logging.getLogger(__name__)
 
 
@@ -41,32 +43,33 @@ class SaltEvent(object):
         self.__prep_stack()
 
     def __prep_stack(self):
+        kind = self.opts.get('__role', '')  # opts optional for master
+        if kind:  # not all uses of Raet SaltEvent has opts defined
+            if kind not in daemons.APPL_KINDS:
+                emsg = ("Invalid application kind = '{0}' for RAET SaltEvent.".format(kind))
+                log.error(emsg + "\n")
+                raise ValueError(emsg)
+            if kind != self.node:
+                emsg = ("Mismatch between node = '{0}' and kind = '{1}' in "
+                        "RAET SaltEvent.".format(self.node, kind))
+                log.error(emsg + '\n')
+                raise ValueError(emsg)
+
         if self.node == 'master':
             lanename = 'master'
-            if self.opts:
-                kind = self.opts.get('__role', '')  # opts optional for master
-                if kind and kind != self.node:
-                    emsg = ("Mismatch between node '{0}' and kind '{1}' in setup "
-                            "of SaltEvent on Raet.".format(self.node, kind))
-                    log.error(emsg + '\n')
-                    raise ValueError(emsg)
         elif self.node == 'minion':
             role = self.opts.get('id', '')  # opts required for minion
             if not role:
-                emsg = ("Missing opts['id'] required by SaltEvent on Raet with "
-                       "node kind {0}.".format(self.node))
+                emsg = ("Missing role required to setup RAET SaltEvent.")
+                log.error(emsg + "\n")
+                raise ValueError(emsg)
+            if not kind:
+                emsg = "Missing kind required to setup RAET SaltEvent."
                 log.error(emsg + '\n')
                 raise ValueError(emsg)
-            kind = self.opts.get('__role', '')
-            if kind != self.node:
-                emsg = ("Mismatch between node '{0}' and kind '{1}' in setup "
-                       "of SaltEvent on Raet.".format(self.node, kind))
-                log.error(emsg + '\n')
-                raise ValueError(emsg)
-            lanename = role  # add '_minion'
+            lanename = "{0}_{1}".format(role, kind)
         else:
-            emsg = ("Unsupported application node kind '{0}' for SaltEvent "
-                    "Raet.".format(self.node))
+            emsg = ("Unsupported application node kind '{0}' for RAET SaltEvent.".format(self.node))
             log.error(emsg + '\n')
             raise ValueError(emsg)
 

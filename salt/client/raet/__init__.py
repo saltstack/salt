@@ -17,6 +17,9 @@ import salt.client
 import salt.utils
 import salt.syspaths as syspaths
 
+from salt import daemons
+
+
 log = logging.getLogger(__name__)
 
 
@@ -51,26 +54,33 @@ class LocalClient(salt.client.LocalClient):
                 jid=jid,
                 timeout=timeout,
                 **kwargs)
+
         kind = self.opts['__role']
+        if kind not in daemons.APPL_KINDS:
+            emsg = ("Invalid application kind = '{0}' for Raet LocalClient.".format(kind))
+            log.error(emsg + "\n")
+            raise ValueError(emsg)
         if kind == 'master':
-            lanename = 'master'  # self.opts.value.get('id', self.main.data.lanename)
-        else:  # workers currently are only supported for masters
-            emsg = ("Invalid application kind '{0}' for client.".format(kind))
+            lanename = 'master'
+        else:
+            emsg = ("Unsupported application kind '{0}' for Raet LocalClient.".format(kind))
             log.error(emsg + '\n')
             raise ValueError(emsg)
+
+        sockdirpath = self.opts['sock_dir']
         name = 'client' + nacling.uuid(size=18)
         stack = LaneStack(
                 name=name,
                 lanename=lanename,
-                sockdirpath=self.opts['sock_dir'])
+                sockdirpath=sockdirpath)
         stack.Pk = raeting.packKinds.pack
-        router_yard = RemoteYard(
+        manor_yard = RemoteYard(
                 stack=stack,
                 lanename=lanename,
                 name='manor',
-                dirpath=self.opts['sock_dir'])
-        stack.addRemote(router_yard)
-        route = {'dst': (None, router_yard.name, 'local_cmd'),
+                dirpath=sockdirpath)
+        stack.addRemote(manor_yard)
+        route = {'dst': (None, manor_yard.name, 'local_cmd'),
                  'src': (None, stack.local.name, None)}
         msg = {'route': route, 'load': payload_kwargs}
         stack.transmit(msg)

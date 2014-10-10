@@ -2,9 +2,6 @@
 
 house master
 
-#init .salt.road.manor.local to main true role "master"
-#init .salt.lane.manor.local to lanename "master"
-
 framer masterudpstack be active first setup
     # Begin the pre-flight checks
     frame setup
@@ -17,7 +14,7 @@ framer masterudpstack be active first setup
     # Create the maintanence frame
     frame spawnmaint
         enter
-            do fork maint
+            do salt raet maint fork
         go spawnworkers
 
     # Start forking master workers

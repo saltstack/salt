@@ -3,7 +3,7 @@
 Manage ini files
 ================
 
-:maintainer: <ageeleshwar.kandavelu@csscorp.com>
+:maintainer: <akilesh1597@gmail.com>
 :maturity: new
 :depends: re
 :platform: all

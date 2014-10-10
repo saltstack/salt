@@ -87,6 +87,8 @@ def list_queues(backend='sqlite'):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt-run queue.list_queues
         salt-run queue.list_queues backend=sqlite
     '''

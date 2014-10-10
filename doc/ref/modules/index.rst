@@ -154,6 +154,15 @@ The ``__virtual__`` function is used to return either a
 False is returned then the module is not loaded, if a string is returned then
 the module is loaded with the name of the string.
 
+.. note::
+
+   Optionally, modules may additionally return a list of reasons that a module could
+   not be loaded. For example, if a dependency for 'my_mod' was not met, a
+   __virtual__ function could do as follows:
+
+    return False, ['My Module must be installed before this module can be
+    used.']
+
 This means that the package manager modules can be presented as the ``pkg`` module
 regardless of what the actual module is named.
 
