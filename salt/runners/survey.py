@@ -161,13 +161,13 @@ def _get_pool_results(*args, **kwargs):
     ret = {}
     # hash minion return values as a string
     for minion in sorted(minions):
-        h = hashlib.sha256(str(minions[minion])).hexdigest()
-        if h not in ret:
-            ret[h] = {}
-            ret[h]['pool'] = []
-            ret[h]['result'] = str(minions[minion])
+        digest = hashlib.sha256(str(minions[minion])).hexdigest()
+        if digest not in ret:
+            ret[digest] = {}
+            ret[digest]['pool'] = []
+            ret[digest]['result'] = str(minions[minion])
 
-        ret[h]['pool'].append(minion)
+        ret[digest]['pool'].append(minion)
 
     sorted_ret = []
     for k in sorted(ret, key=lambda k: len(ret[k]['pool']), reverse=direction):
