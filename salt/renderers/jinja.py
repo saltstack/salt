@@ -232,14 +232,12 @@ def _split_module_dicts():
         {{ salt.cmd.run('uptime') }}
     '''
 
-    class Container():
-        ''' This object allows us to set arbitrary attributes'''
-        pass
     mod_dict = dict(__salt__)
     for module_func_name, mod_fun in mod_dict.items():
         mod, fun = module_func_name.split('.', 1)
         if mod not in mod_dict:
-            mod_dict[mod] = Container()
+            # create an empty object that we can add attributes to
+            mod_dict[mod] = lambda: None
         setattr(mod_dict[mod], fun, mod_fun)
     return mod_dict
 
