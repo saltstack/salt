@@ -17,6 +17,12 @@ import salt.loader
 import salt.utils
 from salt.utils import print_cli
 
+# Are you really sure !!!
+# dealing with unicode is not as simple as setting defaultencoding
+# which can break other python modules imported by salt in bad ways...
+# reloading sys is not either a good idea...
+# reload(sys)
+# sys.setdefaultencoding('utf-8')
 
 log = logging.getLogger(__name__)
 
