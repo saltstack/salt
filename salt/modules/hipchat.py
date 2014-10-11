@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
-"""
+'''
 Module for sending messages to hipchat
 
-:configuration: This module can be used by either passing an api key directly
-    to send_message or by specifying the name of a configuration profile in
-    the salt master config.
-
-    The module only supports HipChat API v1 at the moment.
+:configuration: This module can be used by either passing an api key and version
+    directly or by specifying both in a configuration profile in the salt
+    master/minion config.
 
     For example:
 
@@ -14,15 +12,15 @@ Module for sending messages to hipchat
 
         hipchat:
           api_key: peWcBiMOS9HrZG15peWcBiMOS9HrZG15
-"""
-import urllib
-import urllib2
-import urlparse
+          api_version: v1
+'''
 import json
+import requests
+import requests.packages.urllib3.exceptions
 import logging
+from urlparse import urljoin
 
 log = logging.getLogger(__name__)
-
 
 __virtualname__ = 'hipchat'
 
@@ -44,269 +42,204 @@ except (NameError, KeyError):
     __salt__ = None
 
 
-# This code comes from https://github.com/kurttheviking/python-simple-hipchat
-# It couldn't simply be imported because of the hipchat name clash.
-# It has been improved with various error handling and documentation though.
-class HipChat(object):
-    API_URL_DEFAULT = 'https://api.hipchat.com/v1/'
-    FORMAT_DEFAULT = 'json'
+def _query(function, api_key=None, api_version=None, method='GET', data={}):
+    '''
+    HipChat object method function to construct and execute on the API URL.
+    :param api_key:     The HipChat api key.
+    :param function:    The HipChat api function to perform.
+    :param api_version: The HipChat api version (v1 or v2).
+    :param method:      The HTTP method, e.g. GET or POST.
+    :param data:        The data to be sent for POST method.
+    :return:            The json response from the API call or False.
+    '''
+    headers = {}
+    query_params = {}
 
-    def __init__(self, token=None, url=API_URL_DEFAULT, message_format=FORMAT_DEFAULT):
-        """
-        HipChat object initialize function.
-        :param token:          The HipChat API key.
-        :param url:            The HipChat API URL.
-        :param message_format: Default message format, set statically to json.
-        """
-        self.url = url
-        self.token = token
-        self.format = message_format
-        self.opener = urllib2.build_opener(urllib2.HTTPSHandler())
+    if data.get('room_id'):
+        room_id = str(data.get('room_id'))
+    else:
+        room_id = '0'
 
-    class RequestWithMethod(urllib2.Request):
-        def __init__(self, url, data=None, headers=None, origin_req_host=None, unverifiable=False, http_method=None):
-            """
-            RequestWithMethod object initialize function to construct the HTTP request.
-            :param url:             The HipChat API URL plus query string.
-            :param data:            The request data.
-            :param headers:         The request headers.
-            :param origin_req_host: The host requesting.
-            :param unverifiable:    Should indicate whether the request is unverifiable.
-            :param http_method:     HTTP method to use, e.g. GET or POST.
-            """
-            if not headers:
-                headers = {}
-            urllib2.Request.__init__(self, url, data, headers, origin_req_host, unverifiable)
-            if http_method:
-                self.method = http_method
+    hipchat_functions = {
+        'v1': {
+            'rooms': {
+                'request': 'rooms/list',
+                'response': 'rooms',
+            },
+            'users': {
+                'request': 'users/list',
+                'response': 'users',
+            },
+            'message': {
+                'request': 'rooms/message',
+                'response': 'status',
+            },
+        },
+        'v2': {
+            'rooms': {
+                'request': 'room',
+                'response': 'items',
+            },
+            'users': {
+                'request': 'user',
+                'response': 'items',
+            },
+            'message': {
+                'request': 'room/' + room_id + '/notification',
+                'response': None,
+            },
+        },
+    }
 
-    def method(self, url, method="GET", parameters=None, timeout=None):
-        """
-        HipChat object method function to construct and execute on the API URL.
-        :param url:        The hipchat api function url, e.g. "rooms/list".
-        :param method:     The HTTP method, e.g. GET or POST.
-        :param parameters: URL parameters, used for POST method.
-        :param timeout:    Optional for the URL request.
-        :return:           The json response from the API call or False.
-        """
-        method_url = urlparse.urljoin(self.url, url)
-
-        if method == "GET":
-            if not parameters:
-                parameters = dict()
-
-            parameters['format'] = self.format
-            parameters['auth_token'] = self.token
-
-            query_string = urllib.urlencode(parameters)
-            request_data = None
-        else:
-            query_parameters = dict()
-            query_parameters['auth_token'] = self.token
-
-            query_string = urllib.urlencode(query_parameters)
-
-            if parameters:
-                request_data = urllib.urlencode(parameters).encode('utf-8')
-            else:
-                request_data = None
-
-        method_url = method_url + '?' + query_string
-
-        req = self.RequestWithMethod(method_url, http_method=method, data=request_data)
-        try:
-            response = self.opener.open(req, None, timeout).read()
-            return json.loads(response.decode('utf-8'))
-        except (urllib2.HTTPError, urllib2.URLError) as e:
-            log.error(e)
-            if hasattr(e, 'code') and (e.code == 401):
-                log.error('The api key is either invalid or not an admin key and '
-                          'hence unauthorized to perform this operation.')
-            return False
-
-    def list_rooms(self):
-        """
-        List all hipchat rooms.
-        :return: The room list.
-        """
-        return self.method('rooms/list')
-
-    def list_users(self):
-        """
-        List all hipchat users.
-        :return: The user list.
-        """
-        return self.method('users/list')
-
-    def message_room(self, room_id='', message_from='', message='', message_format='text', color='', notify=False):
-        """
-        Send a message to a specific room.
-        :param room_id:        The room id.
-        :param message_from:   Specify who the message is from.
-        :param message:        The message to send to the HipChat room.
-        :param message_format: The message format.
-        :param color:          The color for the message.
-        :param notify:         Whether to notify the room, default: False
-        :return:               Boolean if message was sent successfully.
-        """
-        parameters = dict()
-        parameters['room_id'] = room_id
-        parameters['from'] = message_from[:15]
-        parameters['message'] = message
-        parameters['message_format'] = message_format
-        parameters['color'] = color
-
-        if notify:
-            parameters['notify'] = 1
-        else:
-            parameters['notify'] = 0
-
-        return self.method('rooms/message', 'POST', parameters)
-
-    def find_room(self, room_name=''):
-        """
-        Find a room by name and return it.
-        :param room_name: The room name.
-        :return:          The room object.
-        """
-        rooms = self.list_rooms()
-        if rooms:
-            rooms = rooms['rooms']
-            for x in range(0, len(rooms)):
-                if rooms[x]['name'] == room_name:
-                    return rooms[x]
-        return False
-
-    def find_user(self, user_name=''):
-        """
-        Find a user by name and return it.
-        :param user_name: The user name.
-        :return:          The user object.
-        """
-        users = self.list_users()
-        if users:
-            users = users['users']
-            for x in range(0, len(users)):
-                if users[x]['name'] == user_name:
-                    return users[x]
-        return False
-
-
-def _get_hipchat(api_key=None):
-    """
-    Return the hipchat object.
-    :param api_key: The hipchat api key.
-    :return: The hipchat object.
-    """
-
-    if not api_key:
+    if not api_key or not api_version:
         try:
             options = __salt__['config.option']('hipchat')
-            api_key = options.get('api_key')
+            if not api_key:
+                api_key = options.get('api_key')
+            if not api_version:
+                api_version = options.get('api_version')
         except (NameError, KeyError, AttributeError):
-            log.error("No hipchat api key could be found in the configuration and none has been passed either.")
+            log.error("No HipChat api key or version found.")
             return False
 
-    hipster = HipChat(token=api_key)
-    return hipster
+    api_url = 'https://api.hipchat.com'
+    base_url = urljoin(api_url, api_version + '/')
+    path = hipchat_functions.get(api_version).get(function).get('request')
+    url = urljoin(base_url, path, False)
+
+    if api_version == 'v1':
+        query_params['format'] = 'json'
+        query_params['auth_token'] = api_key
+
+        if method == 'POST':
+            headers['Content-Type'] = 'application/x-www-form-urlencoded'
+
+        if data.get('notify'):
+            data['notify'] = 1
+        else:
+            data['notify'] = 0
+    elif api_version == 'v2':
+        headers['Authorization'] = "Bearer %s" % api_key
+        data = json.dumps(data)
+    else:
+        log.error("Unsupported HipChat API version")
+        return False
+
+    try:
+        result = requests.request(
+            method=method,
+            url=url,
+            headers=headers,
+            params=query_params,
+            data=data,
+            verify=True,
+        )
+    except requests.ConnectionError as e:
+        log.error(e)
+        return False
+
+    if result.status_code == 200:
+        result = result.json()
+        response = hipchat_functions.get(api_version).get(function).get('response')
+        return result.get(response)
+    elif result.status_code == 204:
+        return True
+    else:
+        log.debug(url)
+        log.debug(query_params)
+        log.debug(data)
+        log.debug(result)
+        if result.json().get('error'):
+            log.error(result.json())
+        return False
 
 
-def list_rooms(api_key=None):
-    """
-    List all hipchat rooms.
-    :param api_key: The hipchat admin api key.
+def list_rooms(api_key=None, api_version=None):
+    '''
+    List all HipChat rooms.
+    :param api_key: The HipChat admin api key.
+    :param api_version: The HipChat api version, if not specified in the configuration.
     :return: The room list.
-    """
-    hipster = _get_hipchat(api_key)
-    if hipster:
-        return hipster.list_rooms()
-
-    return False
+    '''
+    return _query(function='rooms', api_key=api_key, api_version=api_version)
 
 
-def list_users(api_key=None):
-    """
-    List all hipchat users.
-    :param api_key: The hipchat admin api key.
+def list_users(api_key=None, api_version=None):
+    '''
+    List all HipChat users.
+    :param api_key: The HipChat admin api key.
+    :param api_version: The HipChat api version, if not specified in the configuration.
     :return: The user list.
-    """
-    hipster = _get_hipchat(api_key)
-    if hipster:
-        return hipster.list_users()
-
-    return False
+    '''
+    return _query(function='users', api_key=api_key, api_version=api_version)
 
 
-def find_room(name, api_key=None):
-    """
+def find_room(name, api_key=None, api_version=None):
+    '''
     Find a room by name and return it.
     :param name:    The room name.
-    :param api_key: The hipchat admin api key.
+    :param api_key: The HipChat admin api key.
+    :param api_version: The HipChat api version, if not specified in the configuration.
     :return:        The room object.
-    """
-    hipster = _get_hipchat(api_key)
-    if hipster:
-        return hipster.find_room(name)
-
+    '''
+    rooms = list_rooms(api_key=api_key, api_version=api_version)
+    if rooms:
+        for x in range(0, len(rooms)):
+            if rooms[x]['name'] == name:
+                return rooms[x]
     return False
 
 
-def find_user(name, api_key=None):
-    """
+def find_user(name, api_key=None, api_version=None):
+    '''
     Find a user by name and return it.
-    :param name:    The user name.
-    :param api_key: The hipchat admin api key.
-    :return:        The user object.
-    """
-    hipster = _get_hipchat(api_key)
-    if hipster:
-        return hipster.find_user(name)
-
+    :param name:        The user name.
+    :param api_key:     The HipChat admin api key.
+    :param api_version: The HipChat api version, if not specified in the configuration.
+    :return:            The user object.
+    '''
+    users = list_users(api_key=api_key, api_version=api_version)
+    if users:
+        for x in range(0, len(users)):
+            if users[x]['name'] == name:
+                return users[x]
     return False
 
 
-def send_message(message,
+def send_message(room_id,
+                 message,
                  from_name,
                  api_key=None,
-                 room_id=None,
-                 room_name=None,
-                 message_color='yellow',
+                 api_version=None,
+                 color='yellow',
                  notify=False):
-    """
-    Send a message to a specific room.
-    :param message:       The message to send to the HipChat room.
-    :param from_name:     Specify who the message is from.
-    :param api_key:       The hipchat api key.
-    :param room_id:       The room id.
-    :param room_name:     The room name, needs an admin api key to look up the room id.
-    :param message_color: The color for the message, default: yellow.
-    :param notify:        Whether to notify the room, default: False.
-    :return:              Boolean if message was sent successfully.
-    """
-    hipster = _get_hipchat(api_key)
-    if hipster:
-        if not room_id:
-            if not room_name:
-                log.error("No room id or name was specified.")
-                return False
-            else:
-                log.debug("No room id specified, trying to lookup room by name.")
-                room = find_room(room_name)
-                if room:
-                    room_id = room['room_id']
-                else:
-                    log.error("Could not find room by name.")
-                    return False
+    '''
+    Send a message to a HipChat room.
+    :param room_id:     The room id or room name, either will work.
+    :param message:     The message to send to the HipChat room.
+    :param from_name:   Specify who the message is from.
+    :param api_key:     The HipChat api key, if not specified in the configuration.
+    :param api_version: The HipChat api version, if not specified in the configuration.
+    :param color:       The color for the message, default: yellow.
+    :param notify:      Whether to notify the room, default: False.
+    :return:            Boolean if message was sent successfully.
+    '''
 
-        response = hipster.message_room(room_id=room_id,
-                                        message_from=from_name,
-                                        message=message,
-                                        color=message_color,
-                                        notify=notify)
+    parameters = dict()
+    parameters['room_id'] = room_id
+    parameters['from'] = from_name[:15]
+    parameters['message'] = message[:10000]
+    parameters['message_format'] = 'text'
+    parameters['color'] = color
+    parameters['notify'] = notify
 
-        if response and response['status'] == 'sent':
-            return True
-        else:
-            return False
+    result = _query(function='message',
+                    api_key=api_key,
+                    api_version=api_version,
+                    method='POST',
+                    data=parameters)
 
-    return False
+    if result:
+        return True
+    else:
+        return False
