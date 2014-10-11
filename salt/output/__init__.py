@@ -39,6 +39,8 @@ def display_output(data, out=None, opts=None):
     '''
     Print the passed data using the desired output
     '''
+    if opts is None:
+        opts = {}
     try:
         display_data = get_printout(out, opts)(data).rstrip()
     except (KeyError, AttributeError):
@@ -52,7 +54,15 @@ def display_output(data, out=None, opts=None):
         # output filename can be either '' or None
         if output_filename:
             with salt.utils.fopen(output_filename, 'a') as ofh:
-                ofh.write(display_data)
+                fdata = display_data
+                if isinstance(fdata, unicode):
+                    try:
+                        fdata = fdata.encode('utf-8')
+                    except:
+                        # try to let the stream write
+                        # even if we didnt encode it
+                        pass
+                ofh.write(fdata)
                 ofh.write('\n')
             return
         if display_data:
