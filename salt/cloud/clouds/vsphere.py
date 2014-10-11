@@ -455,49 +455,45 @@ def list_nodes_min(kwargs=None, call=None):  # pylint: disable=W0613
     '''
     Return a list of the nodes in the provider, with no details
     '''
-    log.debug('function list_nodes_min()')
     ret = {}
     conn = get_conn()
-    nodes = conn.get_registered_vms()
-    for node in nodes:
-        comps1 = node[node.find(']')+2:]
-        comps2 = comps1.split('/')
-        if len(comps2) == 2:
-            name = comps2[0]
-            name_file = comps2[1][:-4]
-            if comps2[1].endswith('.vmtx'):
-                name_file = comps2[1][:-5]
-            if comps2[1].endswith('.vmx'):
-                name_file = comps2[1][:-4]
-            if name != name_file:
-                log.debug('mismatch found {0} != {1} : node {2}'.format(
-                    name, name_file, node)
-                )
-                # the vm name needs slow lookup
-                instance = conn.get_vm_by_path(node)
-                name = instance.get_property('name')
-            ret[name] = True
-        else:
-            log.debug('vm node bad format: {0}'.format(node))
+    property_names = ['name']
+    result = conn._retrieve_properties_traversal(
+        property_names=property_names, obj_type='VirtualMachine'
+    )
+    for r in result:
+        for p in r.PropSet:
+            if p.Name == 'name':
+                ret[p.Val] = True
     return ret
 
 
-def list_nodes(kwargs=None, call=None):  # pylint: disable=W0613
+def list_nodes(kwargs=None, call=None):
     '''
-    Return a list of the VMs that are on the provider
+    Return a list of the VMs that are on the provider, with basic fields
     '''
     ret = {}
     conn = get_conn()
-    nodes = conn.get_registered_vms()
-    for node in nodes:
-        instance = conn.get_vm_by_path(node)
-        properties = _get_instance_properties(instance)
-        ret[properties['name']] = {
-            'id': properties['name'],
-            'ram': properties['memory_mb'],
-            'cpus': properties['num_cpu'],
-            'ip_address': properties['ip_address'],
+    property_names = ['name', 'guest.ipAddress', 'summary.config']
+    result = conn._retrieve_properties_traversal(
+        property_names=property_names, obj_type='VirtualMachine'
+    )
+    for r in result:
+        vset = {
+            'id': None,
+            'ip_address': None,
+            'cpus': None,
+            'ram': None,
         }
+        for p in r.PropSet:
+            if p.Name == 'name':
+                vset['id'] = p.Val
+            if p.Name == 'guest.ipAddress':
+                vset['ip_address'] = p.Val
+            if p.Name == 'summary.config':
+                vset['cpus'] = p.Val.NumCpu
+                vset['ram'] = p.Val.MemorySizeMB
+        ret[vset['id']] = vset
     return ret
 
 

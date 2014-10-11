@@ -429,7 +429,7 @@ def remount(name, device, mkmnt=False, fstype='', opts='defaults'):
     return mount(name, device, mkmnt, fstype, opts)
 
 
-def umount(name, device):
+def umount(name, device=None):
     '''
     Attempt to unmount a device by specifying the directory it is mounted on
 

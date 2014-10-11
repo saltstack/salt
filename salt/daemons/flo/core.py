@@ -214,21 +214,25 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
                     opts='.salt.opts')
 
     def postinitio(self):
-        self.mha = (self.opts.value['master'], int(self.opts.value['master_port']))
+        self.masters = daemons.extractMasters(self.opts.value)
+        # self.mha = (self.opts.value['master'], int(self.opts.value['master_port']))
 
     def action(self, **kwa):
         '''
-        Receive any udp packets on server socket and put in rxes
-        Send any packets in txes
+        Join with all masters
         '''
         stack = self.stack.value
         if stack and isinstance(stack, RoadStack):
             if not stack.remotes:
-                stack.addRemote(RemoteEstate(stack=stack,
-                                             fuid=0,  # vacuous join
-                                             sid=0,  # always 0 for join
-                                             ha=self.mha))
-            stack.join(uid=stack.remotes.values()[0].uid, timeout=0.0)
+                for master in self.masters:
+                    mha = master['external']
+                    stack.addRemote(RemoteEstate(stack=stack,
+                                                 fuid=0,  # vacuous join
+                                                 sid=0,  # always 0 for join
+                                                 ha=mha))
+            # stack.join(uid=stack.remotes.values()[0].uid, timeout=0.0)
+            for remote in stack.remotes.values():
+                stack.join(uid=remote.uid, timeout=0.0)
 
 
 class SaltRaetRoadStackJoined(ioflo.base.deeding.Deed):
