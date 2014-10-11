@@ -139,7 +139,13 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods=''):
     start_dir = os.getcwd()
     for top in tops:
         base = os.path.basename(top)
-        os.chdir(os.path.dirname(top))
+        top_dirname = os.path.dirname(top)
+        if os.path.isdir(top_dirname):
+            os.chdir(top_dirname)
+        else:
+            # This is likely a compressed python .egg
+            tfp.add(top_dirname)
+            continue
         if not os.path.isdir(top):
             # top is a single file module
             tfp.add(base)
