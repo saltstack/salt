@@ -28,6 +28,7 @@ OPTS['state_events'] = False
 OPTS['id'] = 'whatever'
 OPTS['file_client'] = 'local'
 OPTS['file_roots'] = dict(base=['/tmp'])
+OPTS['cachedir'] = 'cachedir'
 OPTS['test'] = False
 OPTS['grains'] = salt.loader.grains(OPTS)
 
