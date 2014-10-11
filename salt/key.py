@@ -611,6 +611,11 @@ class Key(object):
             for fn_ in salt.utils.isorted(os.listdir(rej)):
                 if os.path.isfile(os.path.join(rej, fn_)):
                     ret[os.path.basename(rej)].append(fn_)
+        elif match.startswith('den'):
+            ret[os.path.basename(den)] = []
+            for fn_ in salt.utils.isorted(os.listdir(den)):
+                if os.path.isfile(os.path.join(den, fn_)):
+                    ret[os.path.basename(den)].append(fn_)
         elif match.startswith('all'):
             return self.all_keys()
         return ret
