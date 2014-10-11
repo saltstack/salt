@@ -17,7 +17,7 @@
 
 
 Name:           salt
-Version:        2014.1.7
+Version:        2014.1.11
 Release:        0
 Summary:        A parallel remote execution system
 License:        Apache-2.0
@@ -32,6 +32,10 @@ Patch2:         allow-systemd-parameterized-services.patch
 Patch3:         pass-all-systemd-list-units.patch
 # PATCH-FIX-OPENSUSE use-forking-daemon.patch tserong@suse.com -- We don't have python-systemd, so notify can't work
 Patch4:         use-forking-daemon.patch
+# PATCH-FIX-UPSTREAM disable-service-py-for-suse-family.patch tserong@suse.com -- ensure salt uses systemd for services on SLES
+Patch5:         disable-service-py-for-suse-family.patch
+# PATCH-FIX-UPSTREAM fix-service-py-version-parsing-sles.patch tserong@suse.com -- fix SLES 11 version parsing
+Patch6:         fix-service-py-version-parsing-sles.patch
 
 #for building
 BuildRequires:  fdupes
@@ -144,8 +148,13 @@ Documentation of salt, offline version of http://docs.saltstack.com.
 Summary:        Management component for salt, a parallel remote execution system
 Group:          System/Monitoring
 Requires:       %{name} = %{version}
+%if 0%{?suse_version} == 1315
+Recommends:     git
+Recommends:     python-GitPython
+%else
 Requires:       git
 Requires:       python-GitPython
+%endif
 Requires:       python-M2Crypto
 Requires:       python-msgpack-python
 Requires:       python-pycrypto
@@ -234,6 +243,8 @@ Bash command line completion support for %{name}.
 %patch2 -p1
 %patch3 -p1
 %patch4 -p1
+%patch5 -p1
+%patch6 -p1
 
 %build
 python setup.py build
@@ -314,6 +325,11 @@ install -Dpm 0644 pkg/salt.bash "%{buildroot}/etc/bash_completion.d/%{name}"
 %stop_on_removal salt-syndic
 %endif
 
+%pre syndic
+%if 0%{?_unitdir:1}
+%service_add_pre salt-syndic.service
+%endif
+
 %post syndic
 %if 0%{?_unitdir:1}
 %service_add_post salt-syndic.service
@@ -337,6 +353,11 @@ install -Dpm 0644 pkg/salt.bash "%{buildroot}/etc/bash_completion.d/%{name}"
 %stop_on_removal salt-master
 %endif
 
+%pre master
+%if 0%{?_unitdir:1}
+%service_add_pre salt-master.service
+%endif
+
 %post master
 %if 0%{?_unitdir:1}
 %service_add_post salt-master.service
@@ -358,6 +379,11 @@ install -Dpm 0644 pkg/salt.bash "%{buildroot}/etc/bash_completion.d/%{name}"
 %service_del_preun salt-minion.service
 %else
 %stop_on_removal salt-minion
+%endif
+
+%pre minion
+%if 0%{?_unitdir:1}
+%service_add_pre salt-minion.service
 %endif
 
 %post minion
