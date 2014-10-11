@@ -48,7 +48,8 @@ def display_output(data, out=None, opts=None):
     output_filename = opts.get('output_file', None)
     log.trace('data = {0}'.format(data))
     try:
-        if output_filename is not None:
+        # output filename can be either '' or None
+        if output_filename:
             with salt.utils.fopen(output_filename, 'a') as ofh:
                 ofh.write(display_data)
                 ofh.write('\n')
