@@ -647,7 +647,7 @@ class Terminal(object):
                     self.child_fde = None
                     stderr = None
                 finally:
-                    if self.isalive() and self.child_fde is not None:
+                    if self.child_fde is not None:
                         fcntl.fcntl(self.child_fde, fcntl.F_SETFL, fde_flags)
             # <---- Process STDERR -------------------------------------------
 
@@ -677,7 +677,7 @@ class Terminal(object):
                     self.child_fd = None
                     stdout = None
                 finally:
-                    if self.isalive() and self.child_fd is not None:
+                    if self.child_fd is not None:
                         fcntl.fcntl(self.child_fd, fcntl.F_SETFL, fd_flags)
             # <---- Process STDOUT -------------------------------------------
             return stdout, stderr
