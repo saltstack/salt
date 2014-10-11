@@ -67,9 +67,8 @@ ID declarations with the same name will be ignored.
 
 .. note:: Naming gotchas
 
-        Until 0.9.6, IDs could **not** contain a dot, otherwise highstate
-        summary output was unpredictable. (It was fixed in versions 0.9.7 and
-        above)
+    In Salt versions earlier than 0.9.7, ID declarations containing dots would
+    result in unpredictable highstate output.
 
 .. _extend-declaration:
 
