@@ -21,25 +21,15 @@ import logging
 from urlparse import urljoin
 
 log = logging.getLogger(__name__)
-
 __virtualname__ = 'hipchat'
 
 
 def __virtual__():
+    '''
+    Return virtual name of the module.
+    :return: The virtual name of the module.
+    '''
     return __virtualname__
-
-
-# Explicitly alias the SALT special global values to assist an IDE
-try:
-    __pillar__ = globals()["__pillar__"]
-    __grains__ = globals()["__grains__"]
-    __salt__ = globals()["__salt__"]
-except (NameError, KeyError):
-    # Set these to none as Salt will come back and set values to these after the module is loaded
-    # and prior to calling any functions on this module
-    __pillar__ = None
-    __grains__ = None
-    __salt__ = None
 
 
 def _query(function, api_key=None, api_version=None, method='GET', data={}):
@@ -160,6 +150,14 @@ def list_rooms(api_key=None, api_version=None):
     :param api_key: The HipChat admin api key.
     :param api_version: The HipChat api version, if not specified in the configuration.
     :return: The room list.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' hipchat.list_rooms
+
+        salt '*' hipchat.list_rooms api_key=peWcBiMOS9HrZG15peWcBiMOS9HrZG15 api_version=v1
     '''
     return _query(function='rooms', api_key=api_key, api_version=api_version)
 
@@ -170,6 +168,14 @@ def list_users(api_key=None, api_version=None):
     :param api_key: The HipChat admin api key.
     :param api_version: The HipChat api version, if not specified in the configuration.
     :return: The user list.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' hipchat.list_users
+
+        salt '*' hipchat.list_users api_key=peWcBiMOS9HrZG15peWcBiMOS9HrZG15 api_version=v1
     '''
     return _query(function='users', api_key=api_key, api_version=api_version)
 
@@ -181,6 +187,14 @@ def find_room(name, api_key=None, api_version=None):
     :param api_key: The HipChat admin api key.
     :param api_version: The HipChat api version, if not specified in the configuration.
     :return:        The room object.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' hipchat.find_room name="Development Room"
+
+        salt '*' hipchat.find_room name="Development Room" api_key=peWcBiMOS9HrZG15peWcBiMOS9HrZG15 api_version=v1
     '''
     rooms = list_rooms(api_key=api_key, api_version=api_version)
     if rooms:
@@ -197,6 +211,14 @@ def find_user(name, api_key=None, api_version=None):
     :param api_key:     The HipChat admin api key.
     :param api_version: The HipChat api version, if not specified in the configuration.
     :return:            The user object.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' hipchat.find_user name="Thomas Hatch"
+
+        salt '*' hipchat.find_user name="Thomas Hatch" api_key=peWcBiMOS9HrZG15peWcBiMOS9HrZG15 api_version=v1
     '''
     users = list_users(api_key=api_key, api_version=api_version)
     if users:
@@ -223,6 +245,14 @@ def send_message(room_id,
     :param color:       The color for the message, default: yellow.
     :param notify:      Whether to notify the room, default: False.
     :return:            Boolean if message was sent successfully.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' hipchat.send_message room_id="Development Room" message="Build is done" from_name="Build Server"
+
+        salt '*' hipchat.send_message room_id="Development Room" message="Build failed" from_name="Build Server" color="red" notify=True
     '''
 
     parameters = dict()

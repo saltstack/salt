@@ -12,7 +12,7 @@ This state is useful for sending messages to Hipchat during state runs.
         - room_id: 123456
         - from_name: SuperAdmin
         - message: 'This state was executed successfully.'
-        - api_key: nwg13WyLKiFq0ghpnwg13WyLKiFq0ghp
+        - api_key: peWcBiMOS9HrZG15peWcBiMOS9HrZG15
         - api_version: v1
 
 The api key can be specified in the master or minion configuration like below:
@@ -50,7 +50,7 @@ def send_message(name,
             - room_id: 123456
             - from_name: SuperAdmin
             - message: 'This state was executed successfully.'
-            - api_key: nwg13WyLKiFq0ghpnwg13WyLKiFq0ghp
+            - api_key: peWcBiMOS9HrZG15peWcBiMOS9HrZG15
             - api_version: v1
             - color: green
             - notify: True
