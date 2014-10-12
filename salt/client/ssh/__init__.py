@@ -132,7 +132,7 @@ main()
         if "$py_cmd" -c 'import sys; sys.exit(not sys.hexversion >= 0x02060000);' >/dev/null 2>&1; then
             local py_cmd_path
             py_cmd_path=`"$py_cmd" -c 'import sys; print sys.executable;'`
-            exec $SUDO "$py_cmd_path" -c 'exec """{{SSH_PY_CODE}}""".decode("base64")' -- {{SSH_PY_ARGS}}
+            exec $SUDO "$py_cmd_path" -c 'exec """{{SSH_PY_CODE}}""".decode("base64")'
             exit 0
         else
             continue
@@ -154,7 +154,7 @@ if not is_windows():
         # On esky builds we only have the .pyc file
         shim_file += "c"
     with open(shim_file) as ssh_py_shim:
-        SSH_PY_SHIM = ''.join(ssh_py_shim.readlines()).encode('base64')
+        SSH_PY_SHIM = ssh_py_shim.read()
 
 log = logging.getLogger(__name__)
 
@@ -725,26 +725,30 @@ class Single(object):
         debug = ''
         if salt.log.LOG_LEVELS['debug'] >= salt.log.LOG_LEVELS[self.opts['log_level']]:
             debug = '1'
-        ssh_py_shim_args = []
-        if self.mods:
-            ssh_py_shim_args += ['--get-modules']
-
-        ssh_py_shim_args += [
-            '--config', self.minion_config,
-            '--delimiter', RSTR,
-            '--saltdir', self.thin_dir,
-            '--checksum', thin_sum,
-            '--hashfunc', 'sha1',
-            '--version', salt.__version__,
-            '--',
-        ]
-        ssh_py_shim_args += self.argv
+        arg_str = '''
+OPTIONS = OBJ()
+OPTIONS.config = '{0}'
+OPTIONS.delimiter = '{1}'
+OPTIONS.saltdir = '{2}'
+OPTIONS.checksum = '{3}'
+OPTIONS.hashfunc = '{4}'
+OPTIONS.version = '{5}'
+OPTIONS.get_modules = {6}
+ARGS = "{7}"\n'''.format(self.minion_config,
+                         RSTR,
+                         self.thin_dir,
+                         thin_sum,
+                         'sha1',
+                         salt.__version__,
+                         'True' if self.mods else 'False',
+                         self.argv)
+        py_code = SSH_PY_SHIM.replace('#%%OPTS', arg_str)
+        py_code_enc = py_code.encode('base64')
 
         cmd = SSH_SH_SHIM.format(
             DEBUG=debug,
             SUDO=sudo,
-            SSH_PY_CODE=SSH_PY_SHIM,
-            SSH_PY_ARGS=' '.join([self._escape_arg(arg) for arg in ssh_py_shim_args]),
+            SSH_PY_CODE=py_code_enc,
         )
 
         return cmd
