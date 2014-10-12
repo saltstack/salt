@@ -191,7 +191,6 @@ class VTTestCase(TestCase):
                 if buffer_o != expected_data:
                     self.assertTrue(term.isalive())
 
-
             # term should be dead now
             self.assertEqual(buffer_o, expected_data)
             self.assertFalse(term.isalive())
