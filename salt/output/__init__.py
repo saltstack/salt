@@ -58,7 +58,7 @@ def display_output(data, out=None, opts=None):
                 if isinstance(fdata, unicode):
                     try:
                         fdata = fdata.encode('utf-8')
-                    except:
+                    except (UnicodeDecodeError, UnicodeEncodeError):
                         # try to let the stream write
                         # even if we didnt encode it
                         pass
