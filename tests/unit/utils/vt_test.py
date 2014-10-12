@@ -118,23 +118,26 @@ class VTTestCase(TestCase):
                 continue
 
     def test_isalive_while_theres_data_to_read(self):
+        expected_data = 'Alive!\n'
         term = vt.Terminal('echo "Alive!"', shell=True, stream_stdout=False, stream_stderr=False)
-        iterations = 0
+        buffer_o = buffer_e = ''
         try:
             while term.has_unread_data:
                 stdout, stderr = term.recv()
-                if iterations < 1:
+                if stdout:
+                    buffer_o += stdout
+                if stderr:
+                    buffer_e += stderr
+                if stdout is not None and stderr is not None:
+                    # While there's data to be read, the process is alive
+                    self.assertTrue(term.isalive())
+                else:
                     self.assertFalse(term.isalive())
-                    self.assertIsNone(stderr)
-                    self.assertIsNotNone(stdout)
-                    iterations += 1
-                elif iterations == 1:
-                    self.assertFalse(term.isalive())
-                    self.assertIsNone(stderr)
-                    self.assertIsNone(stdout)
-                    iterations += 1
 
             # term should be dead now
+            self.assertEqual(buffer_o, expected_data)
+            self.assertFalse(term.isalive())
+
             stdout, stderr = term.recv()
             self.assertFalse(term.isalive())
             self.assertIsNone(stderr)
@@ -142,23 +145,26 @@ class VTTestCase(TestCase):
         finally:
             term.close(terminate=True, kill=True)
 
+        expected_data = 'Alive!\n'
         term = vt.Terminal('echo "Alive!" 1>&2', shell=True, stream_stdout=False, stream_stderr=False)
-        iterations = 0
+        buffer_o = buffer_e = ''
         try:
             while term.has_unread_data:
                 stdout, stderr = term.recv()
-                if iterations < 1:
+                if stdout:
+                    buffer_o += stdout
+                if stderr:
+                    buffer_e += stderr
+                if stdout is not None and stderr is not None:
+                    # While there's data to be read, the process is alive
+                    self.assertTrue(term.isalive())
+                else:
                     self.assertFalse(term.isalive())
-                    self.assertIsNotNone(stderr)
-                    self.assertIsNone(stdout)
-                    iterations += 1
-                elif iterations == 1:
-                    self.assertFalse(term.isalive())
-                    self.assertIsNone(stderr)
-                    self.assertIsNone(stdout)
-                    iterations += 1
 
             # term should be dead now
+            self.assertEqual(buffer_e, expected_data)
+            self.assertFalse(term.isalive())
+
             stdout, stderr = term.recv()
             self.assertFalse(term.isalive())
             self.assertIsNone(stderr)
@@ -166,7 +172,36 @@ class VTTestCase(TestCase):
         finally:
             term.close(terminate=True, kill=True)
 
+        expected_data = 'Alive!\nAlive!\n'
+        term = vt.Terminal('echo "Alive!"; sleep 1; echo "Alive!"', shell=True, stream_stdout=False, stream_stderr=False)
+        buffer_o = buffer_e = ''
+        try:
+            while term.has_unread_data:
+                stdout, stderr = term.recv()
+                if stdout:
+                    buffer_o += stdout
+                if stderr:
+                    buffer_e += stderr
+                if stdout is not None and stderr is not None:
+                    # While there's data to be read, the process is alive
+                    self.assertTrue(term.isalive())
+                else:
+                    self.assertFalse(term.isalive())
 
+                if buffer_o != expected_data:
+                    self.assertTrue(term.isalive())
+
+
+            # term should be dead now
+            self.assertEqual(buffer_o, expected_data)
+            self.assertFalse(term.isalive())
+
+            stdout, stderr = term.recv()
+            self.assertFalse(term.isalive())
+            self.assertIsNone(stderr)
+            self.assertIsNone(stdout)
+        finally:
+            term.close(terminate=True, kill=True)
 
 
 if __name__ == '__main__':
