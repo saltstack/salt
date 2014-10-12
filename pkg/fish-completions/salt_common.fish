@@ -103,7 +103,6 @@ for program in $salt_programs_return
 	complete -c $program     -x      -l return               -d "Set an alternative return method. By default salt will send the return data from the command back to the master, but the return data can be redirected into any number of systems, databases or applications."
 end
 
-
 # convinience functions
 function __fish_salt_log
 	echo $argv >&2
@@ -129,9 +128,16 @@ function __fish_salt_clean
 	end
 end
 
+set -g __fish_salt_max_line_count_in_yaml_block 1024
+
 function __fish_salt_lines_between
-	set max 1024
+	set max $__fish_salt_max_line_count_in_yaml_block
 	grep -A$max $argv[1] | grep -B$max $argv[2]
+end
+
+function __fish_salt_extract_first_yaml_block
+	set max $__fish_salt_max_line_count_in_yaml_block
+	sed '1d' | sed '$a\  stop' | grep -m 1 -B$max '^  \w' | sed '$d'
 end
 
 function __fish_salt_add_help
@@ -331,8 +337,9 @@ _                             sys.doc                         : module
 #_                             pkg.remove                      : package
 
 function __fish_salt_argspec_function
-	set function_line '^\s*'$argv[1]
-	__fish_salt_lines_between $function_line':' $function_line
+	set function_line '^\s*'$argv[1]:
+	set max $__fish_salt_max_line_count_in_yaml_block
+	grep -A$max $function_line | __fish_salt_extract_first_yaml_block
 end
 
 function __fish_salt_argspec_args
