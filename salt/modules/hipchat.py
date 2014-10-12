@@ -18,7 +18,7 @@ import json
 import requests
 import requests.packages.urllib3.exceptions
 import logging
-from urlparse import urljoin
+from urlparse import urljoin as url_join
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'hipchat'
@@ -27,14 +27,16 @@ __virtualname__ = 'hipchat'
 def __virtual__():
     '''
     Return virtual name of the module.
+
     :return: The virtual name of the module.
     '''
     return __virtualname__
 
 
-def _query(function, api_key=None, api_version=None, method='GET', data={}):
+def _query(function, api_key=None, api_version=None, method='GET', data=None):
     '''
     HipChat object method function to construct and execute on the API URL.
+
     :param api_key:     The HipChat api key.
     :param function:    The HipChat api function to perform.
     :param api_version: The HipChat api version (v1 or v2).
@@ -44,6 +46,9 @@ def _query(function, api_key=None, api_version=None, method='GET', data={}):
     '''
     headers = {}
     query_params = {}
+
+    if data is None:
+        data = {}
 
     if data.get('room_id'):
         room_id = str(data.get('room_id'))
@@ -93,9 +98,9 @@ def _query(function, api_key=None, api_version=None, method='GET', data={}):
             return False
 
     api_url = 'https://api.hipchat.com'
-    base_url = urljoin(api_url, api_version + '/')
+    base_url = url_join(api_url, api_version + '/')
     path = hipchat_functions.get(api_version).get(function).get('request')
-    url = urljoin(base_url, path, False)
+    url = url_join(base_url, path, False)
 
     if api_version == 'v1':
         query_params['format'] = 'json'
@@ -109,10 +114,10 @@ def _query(function, api_key=None, api_version=None, method='GET', data={}):
         else:
             data['notify'] = 0
     elif api_version == 'v2':
-        headers['Authorization'] = "Bearer %s" % api_key
+        headers['Authorization'] = 'Bearer {0}'.format(api_key)
         data = json.dumps(data)
     else:
-        log.error("Unsupported HipChat API version")
+        log.error('Unsupported HipChat API version')
         return False
 
     try:
@@ -147,6 +152,7 @@ def _query(function, api_key=None, api_version=None, method='GET', data={}):
 def list_rooms(api_key=None, api_version=None):
     '''
     List all HipChat rooms.
+
     :param api_key: The HipChat admin api key.
     :param api_version: The HipChat api version, if not specified in the configuration.
     :return: The room list.
