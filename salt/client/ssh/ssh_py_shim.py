@@ -58,29 +58,10 @@ def parse_argv(argv):
         help='Hash function for computing checksum',
     )
     oparser.add_option(
-        '--modules',
-        dest='modules',
-        help='base64 modules, comma delim'
-        )
-    oparser.add_option(
-        '--states',
-        dest='states',
-        help='base64 states, comma delim'
-        )
-    oparser.add_option(
-        '--grains',
-        dest='grains',
-        help='base64 grains, comma delim'
-        )
-    oparser.add_option(
-        '--returners',
-        dest='returners',
-        help='base64 returners, comma delim'
-        )
-    oparser.add_option(
-        '--renderers',
-        dest='renderers',
-        help='base64 renderers, comma delim'
+        '--get-modules',
+        dest='get_modules',
+        default=False,
+        help='Call the routine to bring down ext_mods',
         )
     oparser.add_option(
         '-v', '--version',
@@ -219,7 +200,8 @@ def main(argv):
 
     with open(os.path.join(OPTIONS.saltdir, 'minion'), 'w') as config:
         config.write(OPTIONS.config + '\n')
-    get_modules()
+    if OPTIONS.get_modules:
+        get_modules()
     #Fix parameter passing issue
     if len(ARGS) == 1:
         argv_prepared = ARGS[0].split()

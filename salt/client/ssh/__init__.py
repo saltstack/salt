@@ -523,6 +523,7 @@ class Single(object):
         self.fun, self.args, self.kwargs = self.__arg_comps()
         self.id = id_
 
+        self.mods = mods
         args = {'host': host,
                 'user': user,
                 'port': port,
@@ -530,8 +531,8 @@ class Single(object):
                 'priv': priv,
                 'timeout': timeout,
                 'sudo': sudo,
-                'tty': tty}
-        self.shell = salt.client.ssh.shell.Shell(opts, **args)
+                'tty': tty,
+                'mods': self.mods}
         self.minion_config = yaml.dump(
                 {
                     'root_dir': os.path.join(self.thin_dir, 'running_data'),
@@ -541,7 +542,7 @@ class Single(object):
         self.target.update(args)
         self.serial = salt.payload.Serial(opts)
         self.wfuncs = salt.loader.ssh_wrapper(opts, None, self.context)
-        self.mods = mods if mods else {}
+        self.shell = salt.client.ssh.shell.Shell(opts, **args)
 
     def __arg_comps(self):
         '''
@@ -727,9 +728,8 @@ class Single(object):
         if salt.log.LOG_LEVELS['debug'] >= salt.log.LOG_LEVELS[self.opts['log_level']]:
             debug = '1'
         ssh_py_shim_args = []
-        for mod in self.mods:
-            if self.mods[mod]:
-                ssh_py_shim_args += ['--{0}'.format(mod), '{0}'.format(self.mods[mod])]
+        if self.mods:
+            ssh_py_shim_args += ['--get-modules']
 
         ssh_py_shim_args += [
             '--config', self.minion_config,
@@ -827,8 +827,6 @@ class Single(object):
                     return 'ERROR: Failure deploying thin: {0}'.format(stdout), stderr, retcode
                 stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
                 stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
-            if 'ext_mods' == shim_command:
-                pass
 
         return stdout, stderr, retcode
 
@@ -973,7 +971,7 @@ def mod_data(fsclient):
     for env in envs:
         files = fsclient.file_list(env)
         for ref in sync_refs:
-            mod_str = ''
+            mod_data = {}
             pref = '_{0}'.format(ref)
             for fn_ in files:
                 if fn_.startswith(pref):
@@ -984,14 +982,12 @@ def mod_data(fsclient):
                             continue
                         with open(mod_path) as fp_:
                             code_str = fp_.read().encode('base64')
-                        mod_str += '{0}|{1},'.format(os.path.basename(fn_), code_str)
-            if mod_str:
+                        mod_data[os.path.basename(fn_)] = code_str
+            if mod_data:
                 if ref in ret:
-                    ret[ref] += mod_str
+                    ret[ref].update(mod_data)
                 else:
-                    ret[ref] = mod_str
-    for ref in ret:
-        ret[ref] = ret[ref].rstrip(',')
+                    ret[ref] = mod_data
     return ret
 
 

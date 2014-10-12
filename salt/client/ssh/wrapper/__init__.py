@@ -30,10 +30,7 @@ class FunctionWrapper(dict):
         super(FunctionWrapper, self).__init__()
         self.wfuncs = wfuncs if isinstance(wfuncs, dict) else {}
         self.opts = opts
-        if isinstance(mods, dict):
-            self.mods = mods
-        else:
-            self.mods = {}
+        self.mods = mods
         self.kwargs = {'id_': id_,
                        'host': host}
         self.kwargs.update(kwargs)
