@@ -153,7 +153,8 @@ class Terminal(object):
         self.child_fde = None
 
         self.closed = True
-        self.flag_eof = False
+        self.flag_eof_stdout = False
+        self.flag_eof_stderr = False
         self.terminated = True
         self.exitstatus = None
         self.signalstatus = None
@@ -579,7 +580,7 @@ class Terminal(object):
                     return None, None
                 rlist, _, _ = select.select(rfds, [], [], 0)
                 if not rlist:
-                    self.flag_eof = True
+                    self.flag_eof_stdout = self.flag_eof_stderr = True
                     log.debug('End of file(EOL). Brain-dead platform.')
                     return None, None
             elif self.__irix_hack:
@@ -590,7 +591,7 @@ class Terminal(object):
                 # That sucks.
                 rlist, _, _ = select.select(rfds, [], [], 2)
                 if not rlist:
-                    self.flag_eof = True
+                    self.flag_eof_stdout = self.flag_eof_stderr = True
                     log.debug('End of file(EOL). Slow platform.')
                     return None, None
 
@@ -620,7 +621,7 @@ class Terminal(object):
             # ----- Nothing to Process!? ------------------------------------>
             if not rlist:
                 if not self.isalive():
-                    self.flag_eof = True
+                    self.flag_eof_stdout = self.flag_eof_stderr = True
                     log.debug('End of file(EOL). Very slow platform.')
                     return None, None
             # <---- Nothing to Process!? -------------------------------------
@@ -633,7 +634,7 @@ class Terminal(object):
                     )
 
                     if not stderr:
-                        self.flag_eof = True
+                        self.flag_eof_stderr = True
                         stderr = None
                     else:
                         if self.stream_stderr:
@@ -649,6 +650,7 @@ class Terminal(object):
                 except OSError:
                     os.close(self.child_fde)
                     self.child_fde = None
+                    self.flag_eof_stderr = True
                     stderr = None
                 finally:
                     if self.child_fde is not None:
@@ -663,7 +665,7 @@ class Terminal(object):
                     )
 
                     if not stdout:
-                        self.flag_eof = True
+                        self.flag_eof_stdout = True
                         stdout = None
                     else:
                         if self.stream_stdout:
@@ -679,6 +681,7 @@ class Terminal(object):
                 except OSError:
                     os.close(self.child_fd)
                     self.child_fd = None
+                    self.flag_eof_stdout = True
                     stdout = None
                 finally:
                     if self.child_fd is not None:
@@ -764,7 +767,7 @@ class Terminal(object):
             if self.terminated:
                 return False
 
-            if not self.has_unread_data:
+            if self.has_unread_data is False:
                 # This is for Linux, which requires the blocking form
                 # of waitpid to get status of a defunct process.
                 # This is super-lame. The flag_eof_* would have been set
