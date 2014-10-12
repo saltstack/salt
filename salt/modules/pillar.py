@@ -101,7 +101,7 @@ def item(*args):
     '''
     .. versionadded:: 0.16.2
 
-    Return one ore more pillar entries
+    Return one or more pillar entries
 
     CLI Examples:
 
