@@ -17,7 +17,7 @@ Module for sending messages to hipchat
 import json
 import requests
 import logging
-from urlparse import urljoin as url_join
+from urlparse import urljoin as _urljoin
 from requests.exceptions import ConnectionError
 
 log = logging.getLogger(__name__)
@@ -98,9 +98,9 @@ def _query(function, api_key=None, api_version=None, method='GET', data=None):
             return False
 
     api_url = 'https://api.hipchat.com'
-    base_url = url_join(api_url, api_version + '/')
+    base_url = _urljoin(api_url, api_version + '/')
     path = hipchat_functions.get(api_version).get(function).get('request')
-    url = url_join(base_url, path, False)
+    url = _urljoin(base_url, path, False)
 
     if api_version == 'v1':
         query_params['format'] = 'json'
