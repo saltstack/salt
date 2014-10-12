@@ -134,9 +134,9 @@ def unpack_thin(thin_path):
 def get_modules():
     glob = ''
     while True:
-        sys.stdout.write("{0}\next_mods\n".format(OPTIONS.delimiter))
-        glob += raw_input()
-        if glob.endswith('EOF_||'):
+        sys.stdout.write('ext_mods')
+        glob += sys.stdin.readline()
+        if glob.endswith('|_E|0|'):
             break
     ext_mods = json.loads(glob[:-6])
     write_modules(ext_mods)

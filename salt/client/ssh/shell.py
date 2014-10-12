@@ -348,8 +348,8 @@ class Shell(object):
                                   'auto accept run salt-ssh with the -i '
                                   'flag:\n{0}').format(stdout)
                     return ret_stdout, '', 254
-            elif stdout and stdout == 'ext_mod':
-                mods_raw = json.dumps(self.mods, separators=(',',':')) + 'EOF_||'
+            elif stdout and stdout == 'ext_mods':
+                mods_raw = json.dumps(self.mods, separators=(',',':')) + '|_E|0|'
                 term.sendline(mods_raw)
             if not term.isalive():
                 while True:
