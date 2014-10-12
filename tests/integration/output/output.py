@@ -93,9 +93,9 @@ class OutputReturnTest(integration.ShellCase):
             # this should not raises UnicodeEncodeError
             display_output(data, opts=self.minion_opts)
             self.assertTrue(True)
-        except:
+        except Exception:
             # display trace in error message for debugging on jenkins
-            trace = traeback.format_exc()
+            trace = traceback.format_exc()
             self.assertEqual(trace, '')
 
 
