@@ -62,7 +62,7 @@ def post_message(message, channel='#general', username=None):
 
     .. code-block:: yaml
 
-        salt \* slack.post_message 'Test message'
+        salt '*' slack.post_message 'Test message'
     '''
     ret = {}
     creds = _setup()
