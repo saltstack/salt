@@ -151,9 +151,9 @@ def unpack_thin(thin_path):
     os.unlink(thin_path)
 
 def get_modules():
-    sys.stdout.write("{0}\next_mods\n".format(OPTIONS.delimiter))
     glob = ''
     while True:
+        sys.stdout.write("{0}\next_mods\n".format(OPTIONS.delimiter))
         glob += raw_input()
         if glob.endswith('EOF_||'):
             break
