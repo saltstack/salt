@@ -4,6 +4,7 @@
 '''
 
 # Import Salt Libs
+import traceback
 import integration
 import os
 import copy
@@ -93,7 +94,9 @@ class OutputReturnTest(integration.ShellCase):
             display_output(data, opts=self.minion_opts)
             self.assertTrue(True)
         except:
-            self.assertTrue(False)
+            # display trace in error message for debugging on jenkins
+            trace = traeback.format_exc()
+            self.assertEqual(trace, '')
 
 
 if __name__ == '__main__':
