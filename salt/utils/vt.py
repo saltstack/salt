@@ -47,7 +47,6 @@ else:
 # Import salt libs
 from salt._compat import string_types
 from salt.log.setup import LOG_LEVELS
-import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -93,10 +92,7 @@ class Terminal(object):
                  shell=False,
                  cwd=None,
                  env=None,
-
-                 # user setup
-                 user=None,
-                 umask=None,
+                 preexec_fn=None,
 
                  # Terminal Size
                  rows=None,
@@ -129,6 +125,7 @@ class Terminal(object):
         self.shell = shell
         self.cwd = cwd
         self.env = env
+        self.preexec_fn = preexec_fn
 
         # ----- Set the desired terminal size ------------------------------->
         if rows is None and cols is None:
@@ -145,8 +142,6 @@ class Terminal(object):
         self.pid = None
         self.stdin = None
         self.stdout = None
-        self.user = user
-        self.umask = umask
         self.stderr = None
 
         self.child_fd = None
@@ -445,9 +440,8 @@ class Terminal(object):
                 if self.cwd is not None:
                     os.chdir(self.cwd)
 
-                if self.user or self.umask:
-                    salt.utils.chugid_and_umask(
-                        self.user, self.umask)
+                if self.preexec_fn:
+                    self.preexec_fn()
 
                 if self.env is None:
                     os.execvp(self.executable, self.args)
