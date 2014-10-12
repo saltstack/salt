@@ -16,9 +16,9 @@ Module for sending messages to hipchat
 '''
 import json
 import requests
-import requests.packages.urllib3.exceptions
 import logging
 from urlparse import urljoin as url_join
+from requests.exceptions import ConnectionError
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'hipchat'
@@ -129,7 +129,7 @@ def _query(function, api_key=None, api_version=None, method='GET', data=None):
             data=data,
             verify=True,
         )
-    except requests.ConnectionError as e:
+    except ConnectionError as e:
         log.error(e)
         return False
 
