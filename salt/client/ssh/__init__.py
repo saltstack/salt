@@ -651,7 +651,6 @@ class Single(object):
             pre_wrapper = salt.client.ssh.wrapper.FunctionWrapper(
                 self.opts,
                 self.id,
-                mods=self.mods,
                 **self.target)
             opts_pkg = pre_wrapper['test.opts_pkg']()
             opts_pkg['file_roots'] = self.opts['file_roots']
@@ -700,7 +699,6 @@ class Single(object):
         wrapper = salt.client.ssh.wrapper.FunctionWrapper(
             opts,
             self.id,
-            mods=self.mods,
             **self.target)
         self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper, self.context)
         wrapper.wfuncs = self.wfuncs
