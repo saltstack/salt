@@ -8,12 +8,12 @@ helper script used by salt.client.ssh.Single.  It is here, in a
 separate file, for convenience of development.
 '''
 
-import optparse
 import hashlib
 import tarfile
 import shutil
 import sys
 import os
+import json
 import stat
 
 THIN_ARCHIVE = 'salt-thin.tgz'
@@ -24,82 +24,12 @@ EX_THIN_DEPLOY = 11
 EX_THIN_CHECKSUM = 12
 
 
+class OBJ(object):
+    pass
+
 OPTIONS = None
 ARGS = None
-
-
-def parse_argv(argv):
-    global OPTIONS
-    global ARGS
-
-    oparser = optparse.OptionParser(usage='%prog -- [SHIM_OPTIONS] -- [SALT_OPTIONS]')
-    oparser.add_option(
-        '-c', '--config',
-        default='',
-        help='YAML configuration for salt thin',
-    )
-    oparser.add_option(
-        '-d', '--delimiter',
-        help='Delimeter string (viz. magic string) to indicate beginning of salt output',
-    )
-    oparser.add_option(
-        '-s', '--saltdir',
-        help='Directory where salt thin is or will be installed.',
-    )
-    oparser.add_option(
-        '--sum', '--checksum',
-        dest='checksum',
-        help='Salt thin checksum',
-    )
-    oparser.add_option(
-        '--hashfunc',
-        default='sha1',
-        help='Hash function for computing checksum',
-    )
-    oparser.add_option(
-        '--modules',
-        dest='modules',
-        help='base64 modules, comma delim'
-        )
-    oparser.add_option(
-        '--states',
-        dest='states',
-        help='base64 states, comma delim'
-        )
-    oparser.add_option(
-        '--grains',
-        dest='grains',
-        help='base64 grains, comma delim'
-        )
-    oparser.add_option(
-        '--returners',
-        dest='returners',
-        help='base64 returners, comma delim'
-        )
-    oparser.add_option(
-        '--renderers',
-        dest='renderers',
-        help='base64 renderers, comma delim'
-        )
-    oparser.add_option(
-        '-v', '--version',
-        help='Salt thin version to be deployed/verified',
-    )
-
-    if argv and '--' not in argv:
-        oparser.error('A "--" argument must be the initial argument indicating the start of options to this script')
-
-    (OPTIONS, ARGS) = oparser.parse_args(argv[argv.index('--')+1:])
-
-    for option in (
-            'delimiter',
-            'saltdir',
-            'checksum',
-            'version',
-    ):
-        if getattr(OPTIONS, option, None):
-            continue
-        oparser.error('Option "--{0}" is required.'.format(option))
+#%%OPTS
 
 
 def need_deployment():
@@ -150,12 +80,19 @@ def unpack_thin(thin_path):
     os.unlink(thin_path)
 
 
-def write_modules():
-    mtypes = ('modules',
-              'states',
-              'grains',
-              'returners',
-              'renderers')
+def get_modules():
+    glob = ''
+    while True:
+        sys.stdout.write('_||ext_mods||_')
+        sys.stdout.flush()
+        glob += raw_input()
+        if glob.endswith('|_E|0|'):
+            break
+    ext_mods = json.loads(glob[:-6])
+    write_modules(ext_mods)
+
+
+def write_modules(ext_mods):
     modcache = os.path.join(
             OPTIONS.saltdir,
             'running_data',
@@ -163,23 +100,20 @@ def write_modules():
             'cache',
             'salt',
             'extmods')
-    for mtype in mtypes:
+    for mtype in ext_mods:
         dest_dir = os.path.join(modcache, mtype)
         if not os.path.isdir(dest_dir):
             os.makedirs(dest_dir)
-        chunks = getattr(OPTIONS, mtype)
+        chunks = ext_mods.get(mtype)
         if not chunks:
             continue
-        for chunk in chunks.split(','):
-            name, raw = chunk.split('|')
+        for name in chunks:
             dest = os.path.join(dest_dir, name)
             with open(dest, 'w+') as fp_:
-                fp_.write(raw.decode('base64'))
+                fp_.write(chunks[name].decode('base64'))
 
 
 def main(argv):
-    parse_argv(argv)
-
     thin_path = os.path.join(OPTIONS.saltdir, THIN_ARCHIVE)
     if os.path.exists(thin_path):
         if OPTIONS.checksum != get_hash(thin_path, OPTIONS.hashfunc):
@@ -214,7 +148,8 @@ def main(argv):
 
     with open(os.path.join(OPTIONS.saltdir, 'minion'), 'w') as config:
         config.write(OPTIONS.config + '\n')
-    write_modules()
+    if OPTIONS.get_modules:
+        get_modules()
     #Fix parameter passing issue
     if len(ARGS) == 1:
         argv_prepared = ARGS[0].split()
