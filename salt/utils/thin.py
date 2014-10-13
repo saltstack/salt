@@ -5,7 +5,10 @@ Generate the salt thin tarball from the installed python files
 
 # Import python libs
 import os
+import shutil
 import tarfile
+import zipfile
+import tempfile
 
 # Import third party libs
 import jinja2
@@ -137,9 +140,19 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods=''):
         tops.append(os.path.dirname(markupsafe.__file__))
     tfp = tarfile.open(thintar, 'w:gz', dereference=True)
     start_dir = os.getcwd()
+    tempdir = None
     for top in tops:
         base = os.path.basename(top)
-        os.chdir(os.path.dirname(top))
+        top_dirname = os.path.dirname(top)
+        if os.path.isdir(top_dirname):
+            os.chdir(top_dirname)
+        else:
+            # This is likely a compressed python .egg
+            tempdir = tempfile.mkdtemp()
+            egg = zipfile.ZipFile(top_dirname)
+            egg.extractall(tempdir)
+            top = os.path.join(tempdir, base)
+            os.chdir(tempdir)
         if not os.path.isdir(top):
             # top is a single file module
             tfp.add(base)
@@ -148,6 +161,9 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods=''):
             for name in files:
                 if not name.endswith(('.pyc', '.pyo')):
                     tfp.add(os.path.join(root, name))
+        if tempdir is not None:
+            shutil.rmtree(tempdir)
+            tempdir = None
     os.chdir(thindir)
     tfp.add('salt-call')
     with open(thinver, 'w+') as fp_:
