@@ -34,13 +34,14 @@ def merge_recurse(obj_a, obj_b):
 def merge_aggregate(obj_a, obj_b):
     return merge_recursive(obj_a, obj_b, level=1)
 
+
 def merge_overwrite(obj_a, obj_b):
     for obj in obj_b:
         if obj in obj_a.keys():
             obj_a[obj] = obj_b[obj]
             return obj_a
-    else:
-        return merge_recurse(obj_a, obj_b)
+    return merge_recurse(obj_a, obj_b)
+
 
 def get_pillar(opts, grains, id_, saltenv=None, ext=None, env=None):
     '''
