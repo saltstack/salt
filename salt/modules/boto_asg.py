@@ -367,7 +367,7 @@ def get_cloud_init_mime(cloud_init):
             _cloud_init.attach(_script)
     if 'cloud-config' in cloud_init:
         cloud_config = cloud_init['cloud-config']
-        _cloud_config = email.mime.text.MIMEText(yaml.dump(cloud_config),
+        _cloud_config = email.mime.text.MIMEText(yaml.dump(dict(cloud_config)),
                                                  'cloud-config')
         _cloud_init.attach(_cloud_config)
     return _cloud_init.as_string()
