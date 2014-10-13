@@ -4,6 +4,7 @@ A convenience system to manage jobs, both active and already run
 '''
 
 # Import python libs
+import fnmatch
 import os
 
 # Import salt libs
@@ -12,6 +13,11 @@ import salt.payload
 import salt.utils
 import salt.output
 import salt.minion
+
+from salt._compat import string_types
+
+import logging
+log = logging.getLogger(__name__)
 
 
 def active(outputter=None):
@@ -102,7 +108,11 @@ def list_job(jid, ext_source=None, outputter=None):
     return ret
 
 
-def list_jobs(ext_source=None, outputter=None):
+def list_jobs(ext_source=None,
+              outputter=None,
+              search_metadata=None,
+              search_function=None,
+              search_target=None):
     '''
     List all detectable jobs and associated functions
 
@@ -116,9 +126,51 @@ def list_jobs(ext_source=None, outputter=None):
     mminion = salt.minion.MasterMinion(__opts__)
 
     ret = mminion.returners['{0}.get_jids'.format(returner)]()
-    salt.output.display_output(ret, outputter, opts=__opts__)
 
-    return ret
+    if search_metadata:
+        mret = {}
+        for item in ret:
+            if 'Metadata' in ret[item]:
+                if isinstance(search_metadata, dict):
+                    for key in search_metadata:
+                        if key in ret[item]['Metadata']:
+                            if ret[item]['Metadata'][key] == search_metadata[key]:
+                                mret[item] = ret[item]
+                else:
+                    log.info('The search_metadata parameter must be specified'
+                             ' as a dictionary.  Ignoring.')
+    else:
+        mret = ret.copy()
+
+    if search_target:
+        _mret = {}
+        for item in mret:
+            if 'Target' in ret[item]:
+                if isinstance(search_target, list):
+                    for key in search_target:
+                        if fnmatch.fnmatch(ret[item]['Target'], key):
+                            _mret[item] = ret[item]
+                elif isinstance(search_target, string_types):
+                    if fnmatch.fnmatch(ret[item]['Target'], search_target):
+                        _mret[item] = ret[item]
+        mret = _mret.copy()
+
+    if search_function:
+        _mret = {}
+        for item in mret:
+            if 'Function' in ret[item]:
+                if isinstance(search_function, list):
+                    for key in search_function:
+                        if fnmatch.fnmatch(ret[item]['Function'], key):
+                            _mret[item] = ret[item]
+                elif isinstance(search_function, string_types):
+                    if fnmatch.fnmatch(ret[item]['Function'], search_function):
+                        _mret[item] = ret[item]
+        mret = _mret.copy()
+
+    salt.output.display_output(mret, outputter, opts=__opts__)
+
+    return mret
 
 
 def print_job(jid, ext_source=None, outputter=None):
@@ -163,6 +215,13 @@ def _format_job_instance(job):
            'Target': job.get('tgt', 'unknown-target'),
            'Target-type': job.get('tgt_type', []),
            'User': job.get('user', 'root')}
+
+    if 'metadata' in job:
+        ret['Metadata'] = job.get('metadata', {})
+    else:
+        if 'kwargs' in job:
+            if 'metadata' in job['kwargs']:
+                ret['Metadata'] = job['kwargs'].get('metadata', {})
 
     if 'Minions' in job:
         ret['Minions'] = job['Minions']
