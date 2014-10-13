@@ -8,19 +8,52 @@ import logging
 
 log = logging.getLogger(__name__)
 
+__func_alias__ = {
+    'ls_': 'ls'
+}
 
-def lsscsi():
+
+def ls_():
     '''
-    List SCSI devices
+    List SCSI devices, with details
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' scsi.lsscsi
+        salt '*' scsi.ls
     '''
-    cmd = 'lsscsi'
-    return __salt__['cmd.run'](cmd).splitlines()
+    cmd = 'lsscsi -dLsv'
+    ret = {}
+    for line in __salt__['cmd.run'](cmd).splitlines():
+        if line.startswith('['):
+            mode = 'start'
+            comps = line.strip().split()
+            key = comps[0]
+            size = comps.pop()
+            majmin = comps.pop()
+            major, minor = majmin.replace('[', '').replace(']', '').split(':')
+            device = comps.pop()
+            model = ' '.join(comps[3:])
+            ret[key] = {
+                'lun': key.replace('[', '').replace(']', ''),
+                'size': size,
+                'major': major,
+                'minor': minor,
+                'device': device,
+                'model': model,
+            }
+        elif line.startswith(' '):
+            if line.strip().startswith('dir'):
+                comps = line.strip().split()
+                ret[key]['dir'] = [
+                    comps[1],
+                    comps[2].replace('[', '').replace(']', '')
+                ]
+            else:
+                comps = line.strip().split('=')
+                ret[key][comps[0]] = comps[1]
+    return ret
 
 
 def rescan_all(host):
