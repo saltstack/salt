@@ -23,12 +23,14 @@ THIN_ARCHIVE = 'salt-thin.tgz'
 EX_THIN_DEPLOY = 11
 EX_THIN_CHECKSUM = 12
 
+
 class OBJ(object):
     pass
 
 OPTIONS = None
 ARGS = None
 #%%OPTS
+
 
 def need_deployment():
     if os.path.exists(OPTIONS.saltdir):
@@ -77,6 +79,7 @@ def unpack_thin(thin_path):
     tfile.close()
     os.unlink(thin_path)
 
+
 def get_modules():
     glob = ''
     while True:
@@ -87,6 +90,7 @@ def get_modules():
             break
     ext_mods = json.loads(glob[:-6])
     write_modules(ext_mods)
+
 
 def write_modules(ext_mods):
     modcache = os.path.join(

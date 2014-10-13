@@ -349,7 +349,7 @@ class Shell(object):
                                   'flag:\n{0}').format(stdout)
                     return ret_stdout, '', 254
             elif stdout and stdout.endswith('_||ext_mods||_'):
-                mods_raw = json.dumps(self.mods, separators=(',',':')) + '|_E|0|'
+                mods_raw = json.dumps(self.mods, separators=(',', ':')) + '|_E|0|'
                 term.sendline(mods_raw)
             if not term.isalive():
                 while True:
