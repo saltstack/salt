@@ -128,10 +128,8 @@ class VTTestCase(TestCase):
                     buffer_o += stdout
                 if stderr:
                     buffer_e += stderr
-                if stdout is not None and stderr is not None:
-                    # While there's data to be read, the process is alive
-                    self.assertTrue(term.isalive())
-                else:
+                # While there's data to be read, the process is alive
+                if stdout is None and stderr is None:
                     self.assertFalse(term.isalive())
 
             # term should be dead now
@@ -155,10 +153,8 @@ class VTTestCase(TestCase):
                     buffer_o += stdout
                 if stderr:
                     buffer_e += stderr
-                if stdout is not None and stderr is not None:
-                    # While there's data to be read, the process is alive
-                    self.assertTrue(term.isalive())
-                else:
+                # While there's data to be read, the process is alive
+                if stdout is None and stderr is None:
                     self.assertFalse(term.isalive())
 
             # term should be dead now
@@ -182,10 +178,8 @@ class VTTestCase(TestCase):
                     buffer_o += stdout
                 if stderr:
                     buffer_e += stderr
-                if stdout is not None and stderr is not None:
-                    # While there's data to be read, the process is alive
-                    self.assertTrue(term.isalive())
-                else:
+                # While there's data to be read, the process is alive
+                if stdout is None and stderr is None:
                     self.assertFalse(term.isalive())
 
                 if buffer_o != expected_data:
