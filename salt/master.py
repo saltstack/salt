@@ -1437,7 +1437,7 @@ class ClearFuncs(object):
                              'to enable the ConCache with \'con_cache: True\' '
                              'in the masters configuration file.')
 
-            if not len(minions) < self.opts['max_minions']:
+            if not len(minions) <= self.opts['max_minions']:
                 # we reject new minions, minions that are already
                 # connected must be allowed for the mine, highstate, etc.
                 if load['id'] not in minions:
