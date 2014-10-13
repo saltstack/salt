@@ -68,6 +68,8 @@ RSTR_RE = r'(?:^|\r?\n)' + RSTR + '(?:\r?\n|$)'
 #   1) Make the _thinnest_ /bin/sh shim (SSH_SH_SHIM) to find the python
 #      interpreter and get it invoked
 #   2) Once a qualified python is found start it with the SSH_PY_SHIM
+#   3) The shim is converted to a single semicolon seperated line, so
+#      some constructs are needed to keep it clean.
 
 # NOTE:
 #   * SSH_SH_SHIM is generic and can be used to load+exec *any* python
@@ -92,7 +94,7 @@ RSTR_RE = r'(?:^|\r?\n)' + RSTR + '(?:\r?\n|$)'
 #   - SUDO        - load python and execute as root (any non-zero string enables)
 #   - SSH_PY_CODE - base64-encoded python code to execute
 #   - SSH_PY_ARGS - arguments to pass to python code
-SSH_SH_SHIM = r'''/bin/sh << 'EOF'
+
 # This shim generically loads python code . . . and *no* more.
 # - Uses /bin/sh for maximum compatibility - then jumps to
 #   python for ultra-maximum compatibility.
@@ -100,51 +102,28 @@ SSH_SH_SHIM = r'''/bin/sh << 'EOF'
 # 1. Identify a suitable python
 # 2. Jump to python
 
-set -e
+SSH_SH_SHIM = r''' /bin/sh -c 'set -e
 set -u
-
 DEBUG="{{DEBUG}}"
-if [ -n "$DEBUG" ]; then
-    set -x
+if [ -n "$DEBUG" ]
+then set -x
 fi
-
 SUDO=""
-if [ -n "{{SUDO}}" ]; then
-    SUDO="sudo "
+if [ -n "{{SUDO}}" ]
+then SUDO="sudo "
 fi
-
-EX_PYTHON_OLD={EX_THIN_PYTHON_OLD}    # Python interpreter is too old and incompatible
-
-PYTHON_CMDS="
-    python27
-    python2.7
-    python26
-    python2.6
-    python2
-    python
-"
-
-main()
-{{{{
-    local py_cmd
-    local py_cmd_path
-    for py_cmd in $PYTHON_CMDS; do
-        if "$py_cmd" -c 'import sys; sys.exit(not sys.hexversion >= 0x02060000);' >/dev/null 2>&1; then
-            local py_cmd_path
-            py_cmd_path=`"$py_cmd" -c 'import sys; print sys.executable;'`
-            exec $SUDO "$py_cmd_path" -c 'exec """{{SSH_PY_CODE}}""".decode("base64")'
-            exit 0
-        else
-            continue
-        fi
-    done
-
-    echo "ERROR: Unable to locate appropriate python command" >&2
-    exit $EX_PYTHON_OLD
-}}}}
-
-main
-EOF'''.format(
+EX_PYTHON_OLD={EX_THIN_PYTHON_OLD}
+PYTHON_CMDS="python27 python2.7 python26 python2.6 python2 python"
+for py_cmd in $PYTHON_CMDS
+do if "$py_cmd" -c "import sys; sys.exit(not sys.hexversion >= 0x02060000);" >/dev/null 2>&1
+then py_cmd_path=`"$py_cmd" -c "import sys; print sys.executable;"`
+exec $SUDO "$py_cmd_path" -c "exec \"{{SSH_PY_CODE}}\".replace(\"_\", \"\n\").decode(\"base64\")"
+exit 0
+else continue
+fi
+done
+echo "ERROR: Unable to locate appropriate python command" >&2
+exit $EX_PYTHON_OLD' '''.format(
     EX_THIN_PYTHON_OLD=salt.exitcodes.EX_THIN_PYTHON_OLD,
 )
 
@@ -734,7 +713,7 @@ OPTIONS.checksum = '{3}'
 OPTIONS.hashfunc = '{4}'
 OPTIONS.version = '{5}'
 OPTIONS.get_modules = {6}
-ARGS = "{7}"\n'''.format(self.minion_config,
+ARGS = {7}\n'''.format(self.minion_config,
                          RSTR,
                          self.thin_dir,
                          thin_sum,
@@ -743,13 +722,13 @@ ARGS = "{7}"\n'''.format(self.minion_config,
                          'True' if self.mods else 'False',
                          self.argv)
         py_code = SSH_PY_SHIM.replace('#%%OPTS', arg_str)
-        py_code_enc = py_code.encode('base64')
+        py_code_enc = py_code.encode('base64').replace('\n', '_')
 
         cmd = SSH_SH_SHIM.format(
             DEBUG=debug,
             SUDO=sudo,
             SSH_PY_CODE=py_code_enc,
-        )
+        ).replace('\n', '; ')
 
         return cmd
 

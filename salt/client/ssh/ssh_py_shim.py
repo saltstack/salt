@@ -80,8 +80,9 @@ def unpack_thin(thin_path):
 def get_modules():
     glob = ''
     while True:
-        sys.stdout.write('ext_mods')
-        glob += sys.stdin.readline()
+        sys.stdout.write('_||ext_mods||_')
+        sys.stdout.flush()
+        glob += raw_input()
         if glob.endswith('|_E|0|'):
             break
     ext_mods = json.loads(glob[:-6])
@@ -102,11 +103,10 @@ def write_modules(ext_mods):
         chunks = ext_mods.get(mtype)
         if not chunks:
             continue
-        for chunk in chunks.split(','):
-            name, raw = chunk.split('|')
+        for name in chunks:
             dest = os.path.join(dest_dir, name)
             with open(dest, 'w+') as fp_:
-                fp_.write(raw.decode('base64'))
+                fp_.write(chunks[name].decode('base64'))
 
 
 def main(argv):
