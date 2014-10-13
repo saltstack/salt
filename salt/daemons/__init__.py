@@ -27,7 +27,7 @@ ApplKind = namedtuple('ApplKind', APPL_KINDS.keys())
 applKinds = ApplKind(**APPL_KINDS)
 
 
-def nonStringIterable(obj):
+def is_non_string_iterable(obj):
     """
     Returns True if obj is non-string iterable, False otherwise
 
@@ -38,7 +38,7 @@ def nonStringIterable(obj):
     return not isinstance(obj, basestring) and isinstance(obj, Iterable)
 
 
-def nonStringSequence(obj):
+def is_non_string_sequence(obj):
     """
     Returns True if obj is non-string sequence, False otherwise
 
@@ -49,7 +49,7 @@ def nonStringSequence(obj):
     return not isinstance(obj, basestring) and isinstance(obj, Sequence)
 
 
-def extractMasters(opts):
+def extract_masters(opts):
     '''
     Parses master from opts['master'] and extracts a dict of master IP host
     addresses and ports.
@@ -154,7 +154,7 @@ def extractMasters(opts):
 
     hostages = []
     # extract candidate hostage (hostname dict) from entries
-    if nonStringSequence(entries):  # multiple master addresses provided
+    if is_non_string_sequence(entries):  # multiple master addresses provided
         for entry in entries:
             if isinstance(entry, Mapping):  # mapping
                 external = entry.get('external', '')
@@ -182,16 +182,16 @@ def extractMasters(opts):
         external = hostage['external']
         internal = hostage['internal']
         if external:
-            external = parseHostname(external, master_port)
+            external = parse_hostname(external, master_port)
             if not external:
                 continue  # must have a valid external host address
-            internal = parseHostname(internal, master_port)
+            internal = parse_hostname(internal, master_port)
             masters.append(dict(external=external, internal=internal))
 
     return masters
 
 
-def parseHostname(hostname, default_port):
+def parse_hostname(hostname, default_port):
     '''
     Parse hostname string and return a tuple of (host, port)
     If port missing in hostname string then use default_port

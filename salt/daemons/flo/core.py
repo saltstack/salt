@@ -214,7 +214,7 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
                     opts='.salt.opts')
 
     def postinitio(self):
-        self.masters = daemons.extractMasters(self.opts.value)
+        self.masters = daemons.extract_masters(self.opts.value)
         # self.mha = (self.opts.value['master'], int(self.opts.value['master_port']))
 
     def action(self, **kwa):
