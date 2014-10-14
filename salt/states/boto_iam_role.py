@@ -41,6 +41,8 @@ with the role. This is the default behavior of the AWS console.
             - region: us-east-1
             - key: GKTADJGHEIQSXMKKRBJ08H
             - keyid: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+            - policies_from_pillars:
+                - shared_iam_bootstrap_policy
             - policies:
                 MySQSPolicy:
                     Statement:
