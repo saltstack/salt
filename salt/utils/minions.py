@@ -167,7 +167,7 @@ class CkMinions(object):
                 return list(minions)
             for id_ in os.listdir(cdir):
                 if not greedy and id_ not in minions:
-                        continue
+                    continue
                 datap = os.path.join(cdir, id_, 'data.p')
                 if not os.path.isfile(datap):
                     if not greedy:
@@ -291,7 +291,6 @@ class CkMinions(object):
                 'module most likely not installed)'
             )
         cache_enabled = self.opts.get('minion_data_cache', False)
-        
         if greedy:
             minions = set(
                 os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
