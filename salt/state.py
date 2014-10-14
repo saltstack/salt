@@ -1880,7 +1880,7 @@ class State(object):
                             'comment': 'State was not run because onfail req did not change',
                             '__run_num__': self.__run_num,
                             '__sls__': low['__sls__']}
-            self.__run_num +=1
+            self.__run_num += 1
         elif status == 'onchanges':
             running[tag] = {'changes': {},
                             'result': True,
