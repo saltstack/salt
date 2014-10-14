@@ -13,7 +13,6 @@ import salt.config
 import salt.loader
 import salt.payload
 import salt.utils
-import salt.exceptions
 from salt.client import mixins
 from salt.utils.error import raise_error
 from salt.utils.event import tagify
