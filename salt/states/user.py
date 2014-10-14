@@ -330,7 +330,7 @@ def present(name,
     if gid_from_name:
         gid = __salt__['file.group_to_gid'](name)
 
-    if empty_password:
+    if empty_password and 'shadow.del_password' in __salt__:
         __salt__['shadow.del_password'](name)
 
     changes = _changes(name,
