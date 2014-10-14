@@ -1868,7 +1868,7 @@ between different sources. It accepts 3 values:
 
 * overwrite:
 
-    Will use the behaviour of the 2014.10 branch and earlier.
+    Will use the behaviour of the 2014.1 branch and earlier.
 
     Overwrites elements according the order in which they are processed.
 
