@@ -41,5 +41,8 @@ def returner(ret):
     syslog.syslog(syslog.LOG_INFO, 'salt-minion: {0}'.format(json.dumps(ret)))
 
 
-def  prep_jid(nocache):  # pylint: disable=unused-argument
+def prep_jid(nocache):  # pylint: disable=unused-argument
+    '''
+    Do any necessary pre-preocessing and then return the jid to use
+    '''
     return salt.utils.gen_jid()

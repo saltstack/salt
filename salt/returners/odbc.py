@@ -138,6 +138,9 @@ def _get_conn():
 
 
 def _close_conn(conn):
+    '''
+    Close the MySQL connection
+    '''
     conn.commit()
     conn.close()
 
@@ -228,7 +231,7 @@ def get_fun(fun):
 
     ret = {}
     if data:
-        for minion, jid, retval in data:
+        for minion, _, retval in data:
             ret[minion] = json.loads(retval)
     _close_conn(conn)
     return ret
@@ -268,5 +271,8 @@ def get_minions():
     return ret
 
 
-def prep_jid(nocache):  #pylint: disable=unused-argument
+def prep_jid(nocache):  # pylint: disable=unused-argument
+    '''
+    Do any jid pre-processing and return the jid to use
+    '''
     return salt.utils.gen_jid()
