@@ -75,7 +75,7 @@ Description: This package provides a remote manager to administer servers via sa
 
 Package: salt-minion
 Architecture: all
-Depends: ${misc:Depends}, python, python-support, python-pkg-resources,
+Depends: ${misc:Depends}, python, python-support, python-pkg-resources, python-apt
 Pre-Depends: salt-common (= ${source:Version})
 Recommends: debconf-utils
 Description: This package represents the client package for salt
