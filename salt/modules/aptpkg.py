@@ -4,8 +4,10 @@ Support for APT (Advanced Packaging Tool)
 
 .. note::
 
-    The ``python-apt`` package is required to be installed.
+    For virtual package support, either the ``python-apt`` or ``dctrl-tools``
+    package must be installed.
 
+    For repository management, the ``python-apt`` package must be installed.
 '''
 
 # Import python libs
@@ -122,21 +124,39 @@ def _get_repo(**kwargs):
     return ''
 
 
+def _has_dpkg_tools():
+    try:
+        return __context__['pkg._has_dpkg_tools']
+    except KeyError:
+        __context__['pkg._has_dpkg_tools'] = \
+            __salt__['cmd.has_exec']('grep-available')
+        return __context__['pkg._has_dpkg_tools']
+
+
 def _get_virtual():
     '''
     Return a dict of virtual package information
     '''
-    if 'pkg._get_virtual' not in __context__:
+    try:
+        return __context__['pkg._get_virtual']
+    except KeyError:
         __context__['pkg._get_virtual'] = {}
-        apt_cache = apt.cache.Cache()
-        pkgs = getattr(apt_cache._cache, 'packages', [])
-        for pkg in pkgs:
-            for item in getattr(pkg, 'provides_list', []):
-                realpkg = item[2].parent_pkg.name
-                if realpkg not in __context__['pkg._get_virtual']:
-                    __context__['pkg._get_virtual'][realpkg] = []
-                __context__['pkg._get_virtual'][realpkg].append(pkg.name)
-    return __context__['pkg._get_virtual']
+        if HAS_APT:
+            apt_cache = apt.cache.Cache()
+            pkgs = getattr(apt_cache._cache, 'packages', [])
+            for pkg in pkgs:
+                for item in getattr(pkg, 'provides_list', []):
+                    realpkg = item[2].parent_pkg.name
+                    if realpkg not in __context__['pkg._get_virtual']:
+                        __context__['pkg._get_virtual'][realpkg] = []
+                    __context__['pkg._get_virtual'][realpkg].append(pkg.name)
+        elif _has_dpkg_tools():
+            cmd = 'grep-available -F Provides -s Package,Provides -e "^.+$"'
+            out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
+            virtpkg_re = re.compile(r'Package: (\S+)\nProvides: ([\S, ]+)')
+            for realpkg, provides in virtpkg_re.findall(out):
+                __context__['pkg._get_virtual'][realpkg] = provides.split(', ')
+        return __context__['pkg._get_virtual']
 
 
 def _warn_software_properties(repo):
@@ -196,11 +216,6 @@ def latest_version(*names, **kwargs):
     # Refresh before looking for the latest version available
     if refresh:
         refresh_db()
-
-    if not HAS_APT:
-        raise CommandExecutionError(
-            'Error: \'python-apt\' package not installed'
-        )
 
     virtpkgs = _get_virtual()
     all_virt = set()
@@ -827,10 +842,10 @@ def list_pkgs(versions_as_list=False,
             Packages in this state now correctly show up in the output of this
             function.
 
-    External dependencies::
+    .. note:: External dependencies
 
-        Virtual package resolution requires dctrl-tools. Without dctrl-tools
-        virtual packages will be reported as not installed.
+        Virtual package resolution requires the ``dctrl-tools`` package to be
+        installed. Virtual packages will show a version of ``1``.
 
     CLI Example:
 
@@ -888,11 +903,6 @@ def list_pkgs(versions_as_list=False,
                                                  name,
                                                  version_num)
 
-    if not HAS_APT:
-        raise CommandExecutionError(
-            'Error: \'python-apt\' package not installed'
-        )
-
     # Check for virtual packages. We need dctrl-tools for this.
     if not removed:
         virtpkgs_all = _get_virtual()
@@ -938,7 +948,7 @@ def _get_upgradable():
     # Conf libxfont1 (1:1.4.5-1 Debian:testing [i386])
     rexp = re.compile('(?m)^Conf '
                       '([^ ]+) '          # Package name
-                      r'\(([^ ]+)')        # Version
+                      r'\(([^ ]+)')       # Version
     keys = ['name', 'version']
     _get = lambda l, k: l[keys.index(k)]
 
