@@ -311,7 +311,8 @@ def set_salt_view():
         return False
     return True
 
-def prep_jid(nocache):  # pylint: disable=unusued-argument
+
+def prep_jid(nocache):  # pylint: disable=unused-argument
     '''
     Do any necessary pre-processing and return the jid to use
     '''
