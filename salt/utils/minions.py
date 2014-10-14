@@ -190,7 +190,7 @@ class CkMinions(object):
         '''
         Return the minions found by looking via grains with PCRE
         '''
-        cache_enabled = self.optsget('minion_data_cache', False)
+        cache_enabled = self.opts.get('minion_data_cache', False)
 
         if greedy:
             minions = set(
