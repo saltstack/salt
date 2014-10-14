@@ -54,6 +54,9 @@ def returner(ret):
     messages will be reported at info level.
     '''
     def connect_sentry(message, result):
+        '''
+        Connect to the Sentry server
+        '''
         pillar_data = __salt__['pillar.raw']()
         grains = __salt__['grains.items']()
         sentry_data = {
@@ -109,4 +112,7 @@ def returner(ret):
 
 
 def prep_jid(nocache):  # pylint: disable=unused-argument
+    '''
+    Do any necessary pre-processing and then return the jid to use
+    '''
     return salt.utils.gen_jid()

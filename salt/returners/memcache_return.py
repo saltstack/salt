@@ -61,8 +61,13 @@ def _get_serv():
     # 2. Tuples of the form C{("host:port", weight)}, where C{weight} is
     #    an integer weight value.
 
+
 def prep_jid(nocache):  # pylint: disable=unused-argument
+    '''
+    Pre-process the jid and return the jid to use
+    '''
     return salt.utils.gen_jid()
+
 
 def returner(ret):
     '''

@@ -134,4 +134,7 @@ def get_minions():
 
 
 def prep_jid(nocache):  # pylint: disable=unused-argument
+    '''
+    Do any pre-processing necessary and return the jid to use
+    '''
     return salt.utils.gen_jid()
