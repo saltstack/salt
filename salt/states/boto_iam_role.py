@@ -87,6 +87,7 @@ def present(
         policy_document=None,
         path=None,
         policies=None,
+        policies_from_pillars=None,
         region=None,
         key=None,
         keyid=None,
@@ -106,6 +107,15 @@ def present(
     policies
         A dict of IAM role policies.
 
+    policies_from_pillars
+        A list of pillars that contain role policy dicts. Policies in the
+        pillars will be merged in the order defined in the list and key
+        conflicts will be handled by later defined keys overriding earlier
+        defined keys. The policies defined here will be merged with the
+        policies defined in the policies argument. If keys conflict, the keys
+        in the policies argument will override the keys defined in
+        policies_from_pillars.
+
     region
         Region to connect to.
 
@@ -122,6 +132,15 @@ def present(
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     _ret = _role_present(name, policy_document, path, region, key, keyid,
                          profile)
+    if not policies:
+        policies = {}
+    if not policies_from_pillars:
+        policies_from_pillars = []
+    _policies = {}
+    for policy in policies_from_pillars:
+        _policy = __salt__['pillar.get'](policy)
+        _policies.update(_policy)
+    _policies.update(policies)
     ret['changes'] = _ret['changes']
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     if not _ret['result']:
@@ -142,7 +161,7 @@ def present(
         ret['result'] = _ret['result']
         if ret['result'] is False:
             return ret
-    _ret = _policies_present(name, policies, region, key, keyid, profile)
+    _ret = _policies_present(name, _policies, region, key, keyid, profile)
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     if not _ret['result']:
@@ -249,8 +268,6 @@ def _policies_present(
         keyid=None,
         profile=None):
     ret = {'result': True, 'comment': '', 'changes': {}}
-    if not policies:
-        policies = {}
     policies_to_create = {}
     policies_to_delete = []
     for policy_name, policy in policies.iteritems():
