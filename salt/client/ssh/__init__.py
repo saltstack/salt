@@ -734,7 +734,7 @@ ARGS = {8}\n'''.format(self.minion_config,
                          thin_sum,
                          'sha1',
                          salt.__version__,
-                         self.mods.get('version'),
+                         self.mods.get('version', ''),
                          'True' if self.opts.get('wipe_ssh') else 'False',
                          self.argv)
         py_code = SSH_PY_SHIM.replace('#%%OPTS', arg_str)
