@@ -176,6 +176,8 @@ def main(argv):
     sys.stderr.write(OPTIONS.delimiter + '\n')
     sys.stderr.flush()
     os.execv(sys.executable, salt_argv)
+    if OPTIONS.wipe:
+        shutil.rmtree(OPTIONS.saltdir)
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
