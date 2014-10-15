@@ -625,8 +625,8 @@ def script(*args, **kw):
 def running(name, container=None, port_bindings=None, binds=None,
             publish_all_ports=False, links=None, lxc_conf=None,
             privileged=False, dns=None, volumes_from=None,
-            network_mode=None, cap_add=None, cap_drop=None,
-            check_is_running=True):
+            network_mode=None, restart_policy=None, cap_add=None,
+            cap_drop=None, check_is_running=True):
     '''
     Ensure that a container is running. (`docker inspect`)
 
@@ -706,6 +706,15 @@ def running(name, container=None, port_bindings=None, binds=None,
 
             - network_mode: host
 
+    restart_policy
+        Restart policy to apply when a container exits (no, on-failure[:max-retry], always)
+
+        .. code-block:: yaml
+
+            - restart_policy:
+                MaximumRetryCount: 5
+                Name: on-failure
+
     cap_add
         List of capabilities to add in a container.
 
@@ -729,7 +738,7 @@ def running(name, container=None, port_bindings=None, binds=None,
             lxc_conf=lxc_conf, publish_all_ports=publish_all_ports,
             links=links, privileged=privileged,
             dns=dns, volumes_from=volumes_from, network_mode=network_mode,
-            cap_add=cap_add, cap_drop=cap_drop
+            restart_policy=restart_policy, cap_add=cap_add, cap_drop=cap_drop
         )
         if check_is_running:
             is_running = __salt__['docker.is_running'](container)
