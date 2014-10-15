@@ -986,12 +986,7 @@ def mod_data(fsclient):
                         if not os.path.isfile(mod_path):
                             continue
                         mod_data[os.path.basename(fn_)] = mod_path
-                        fns = os.stat(mod_path)
-                        chunk = '{0}{1}{2}{3}'.format(
-                                fns.st_size,
-                                fns.st_atime,
-                                fns.st_ctime,
-                                fns.st_mtime,)
+                        chunk = salt.utils.get_hash(mod_path)
                         ver_base += chunk
             if mod_data:
                 if ref in ret:
