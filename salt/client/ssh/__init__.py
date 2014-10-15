@@ -568,6 +568,18 @@ class Single(object):
             thin,
             os.path.join(self.thin_dir, 'salt-thin.tgz'),
         )
+        self.deploy_ext()
+        return True
+
+    def deploy_ext(self):
+        '''
+        Deploy the ext_mods tarball
+        '''
+        if self.mods.get('file'):
+            self.shell.send(
+                self.mods['file'],
+                os.path.join(self.thin_dir, 'salt-ext_mods.tgz'),
+            )
         return True
 
     def run(self, deploy_attempted=False):
