@@ -4224,6 +4224,7 @@ def mod_run_check_cmd(cmd, filename):
     _cmd = '{0} {1}'.format(cmd, filename)
     if __salt__['cmd.retcode'](_cmd) != 0:
         return {'comment': 'check_cmd execution failed',
+                'skip_watch': True,
                 'result': True}
 
     # No reason to stop, return True
