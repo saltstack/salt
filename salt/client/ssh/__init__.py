@@ -16,7 +16,6 @@ import os
 import re
 import time
 import yaml
-import uuid
 
 # Import salt libs
 import salt.client.ssh.shell
@@ -105,7 +104,8 @@ RSTR_RE = r'(?:^|\r?\n)' + RSTR + '(?:\r?\n|$)'
 # 1. Identify a suitable python
 # 2. Jump to python
 
-SSH_SH_SHIM = r''' /bin/sh -c 'set -e
+SSH_SH_SHIM = r'''/bin/sh << 'EOF'
+set -e
 set -u
 DEBUG="{{DEBUG}}"
 if [ -n "$DEBUG" ]
@@ -119,14 +119,14 @@ EX_PYTHON_OLD={EX_THIN_PYTHON_OLD}
 PYTHON_CMDS="python27 python2.7 python26 python2.6 python2 python"
 for py_cmd in $PYTHON_CMDS
 do if "$py_cmd" -c "import sys; sys.exit(not sys.hexversion >= 0x02060000);" >/dev/null 2>&1
-then py_cmd_path=`"$py_cmd" -c "import sys; print sys.executable;"`
-exec $SUDO "$py_cmd_path" -c "exec \"{{SSH_PY_CODE}}\".replace(\"_\", \"\n\").decode(\"base64\")"
+then py_cmd_path=`"$py_cmd" -c 'import sys; print sys.executable;'`
+exec $SUDO "$py_cmd_path" -c 'exec """{{SSH_PY_CODE}}""".decode("base64")'
 exit 0
 else continue
 fi
 done
 echo "ERROR: Unable to locate appropriate python command" >&2
-exit $EX_PYTHON_OLD' '''.format(
+exit $EX_PYTHON_OLD'''.format(
     EX_THIN_PYTHON_OLD=salt.exitcodes.EX_THIN_PYTHON_OLD,
 )
 
@@ -492,8 +492,6 @@ class Single(object):
             self.thin_dir = DEFAULT_THIN_DIR.replace('%%USER%%', user)
         else:
             self.thin_dir = DEFAULT_THIN_DIR.replace('%%USER%%', 'root')
-        if self.opts.get('rand_thin_dir'):
-            self.thin_dir = os.path.join('/tmp', '.{0}'.format(uuid.uuid4().hex))
         self.opts['_thin_dir'] = self.thin_dir
         self.fsclient = fsclient
         self.context = {'master_opts': self.opts,
@@ -507,7 +505,7 @@ class Single(object):
         self.fun, self.args, self.kwargs = self.__arg_comps()
         self.id = id_
 
-        self.mods = mods if mods else {}
+        self.mods = mods
         args = {'host': host,
                 'user': user,
                 'port': port,
@@ -744,13 +742,13 @@ ARGS = {8}\n'''.format(self.minion_config,
                          wipe,
                          self.argv)
         py_code = SSH_PY_SHIM.replace('#%%OPTS', arg_str)
-        py_code_enc = py_code.encode('base64').replace('\n', '_')
+        py_code_enc = py_code.encode('base64')
 
         cmd = SSH_SH_SHIM.format(
             DEBUG=debug,
             SUDO=sudo,
             SSH_PY_CODE=py_code_enc,
-        ).replace('\n', '; ')
+        )
 
         return cmd
 
