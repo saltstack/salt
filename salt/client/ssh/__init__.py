@@ -714,14 +714,14 @@ OPTIONS.saltdir = '{2}'
 OPTIONS.checksum = '{3}'
 OPTIONS.hashfunc = '{4}'
 OPTIONS.version = '{5}'
-OPTIONS.get_modules = {6}
+OPTIONS.ext_mods = {6}
 ARGS = {7}\n'''.format(self.minion_config,
                          RSTR,
                          self.thin_dir,
                          thin_sum,
                          'sha1',
                          salt.__version__,
-                         'True' if self.mods else 'False',
+                         self.mods.get('version'),
                          self.argv)
         py_code = SSH_PY_SHIM.replace('#%%OPTS', arg_str)
         py_code_enc = py_code.encode('base64').replace('\n', '_')
@@ -810,6 +810,9 @@ ARGS = {7}\n'''.format(self.minion_config,
                     return 'ERROR: Failure deploying thin: {0}'.format(stdout), stderr, retcode
                 stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
                 stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
+            elif 'ext_mods' == shim_command:
+                self.deploy_ext()
+                stdout, stderr, retcode = self.shell.exec_cmd(cmd_str)
 
         return stdout, stderr, retcode
 
@@ -977,22 +980,26 @@ def mod_data(fsclient):
                     ret[ref].update(mod_data)
                 else:
                     ret[ref] = mod_data
+    if not ret:
+        return {}
     ver = hashlib.sha1(ver_base).hexdigest()
     ext_tar_path = os.path.join(
             fsclient.opts['cachedir'],
             'ext_mods.{0}.tgz'.format(ver))
+    mods = {'version': ver,
+            'file': ext_tar_path}
     if os.path.isfile(ext_tar_path):
-        return ext_tar_path
-    tarfile = tarfile.open(ext_tar_path, 'w:gz')
+        return mods
+    tfp = tarfile.open(ext_tar_path, 'w:gz')
     verfile = os.path.join(fsclient.opts['cachedir'], 'ext_mods.ver')
     with salt.utils.fopen(verfile, 'w+') as fp_:
         fp_.write(ver)
-    tarfile.add(verfile, 'ext_version')
-    for ref in sync_refs:
+    tfp.add(verfile, 'ext_version')
+    for ref in ret:
         for fn_ in ret[ref]:
-            tarfile.add(ret[ref][fn_], os.path.join('_{0}'.format(ref), fn_))
-    tarfile.close()
-    return ext_tar_path
+            tfp.add(ret[ref][fn_], os.path.join('_{0}'.format(ref), fn_))
+    tfp.close()
+    return mods
 
 
 def ssh_version():
