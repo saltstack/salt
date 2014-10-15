@@ -175,9 +175,12 @@ def main(argv):
     sys.stdout.flush()
     sys.stderr.write(OPTIONS.delimiter + '\n')
     sys.stderr.flush()
-    os.execv(sys.executable, salt_argv)
     if OPTIONS.wipe:
+        import subprocess
+        subprocess.call(salt_argv)
         shutil.rmtree(OPTIONS.saltdir)
+    else:
+        os.execv(sys.executable, salt_argv)
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
