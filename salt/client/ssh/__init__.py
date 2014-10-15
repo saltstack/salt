@@ -16,6 +16,7 @@ import os
 import re
 import time
 import yaml
+import uuid
 
 # Import salt libs
 import salt.client.ssh.shell
@@ -491,6 +492,8 @@ class Single(object):
             self.thin_dir = DEFAULT_THIN_DIR.replace('%%USER%%', user)
         else:
             self.thin_dir = DEFAULT_THIN_DIR.replace('%%USER%%', 'root')
+        if self.opts.get('rand_thin_dir'):
+            self.thin_dir = os.path.join('/tmp', '.{0}'.format(uuid.uuid4().hex))
         self.opts['_thin_dir'] = self.thin_dir
         self.fsclient = fsclient
         self.context = {'master_opts': self.opts,
@@ -718,6 +721,9 @@ class Single(object):
         debug = ''
         if salt.log.LOG_LEVELS['debug'] >= salt.log.LOG_LEVELS[self.opts['log_level']]:
             debug = '1'
+        wipe = 'True' if self.opts.get('wipe_ssh') else 'False'
+        if self.opts.get('rand_thin_dir'):
+            wipe = 'True'
         arg_str = '''
 OPTIONS = OBJ()
 OPTIONS.config = '{0}'
@@ -735,7 +741,7 @@ ARGS = {8}\n'''.format(self.minion_config,
                          'sha1',
                          salt.__version__,
                          self.mods.get('version', ''),
-                         'True' if self.opts.get('wipe_ssh') else 'False',
+                         wipe,
                          self.argv)
         py_code = SSH_PY_SHIM.replace('#%%OPTS', arg_str)
         py_code_enc = py_code.encode('base64').replace('\n', '_')
