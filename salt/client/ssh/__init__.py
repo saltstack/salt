@@ -16,6 +16,7 @@ import os
 import re
 import time
 import yaml
+import uuid
 
 # Import salt libs
 import salt.client.ssh.shell
@@ -492,6 +493,8 @@ class Single(object):
             self.thin_dir = DEFAULT_THIN_DIR.replace('%%USER%%', user)
         else:
             self.thin_dir = DEFAULT_THIN_DIR.replace('%%USER%%', 'root')
+        if self.opts.get('rand_thin_dir'):
+            self.thin_dir = os.path.join('/tmp', '.{0}'.format(uuid.uuid4().hex))
         self.opts['_thin_dir'] = self.thin_dir
         self.fsclient = fsclient
         self.context = {'master_opts': self.opts,
