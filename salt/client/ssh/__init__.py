@@ -10,6 +10,8 @@ import json
 import logging
 import multiprocessing
 import subprocess
+import hashlib
+import tarfile
 import os
 import re
 import time
@@ -949,27 +951,48 @@ def mod_data(fsclient):
             ]
     ret = {}
     envs = fsclient.envs()
+    ver_base = ''
     for env in envs:
         files = fsclient.file_list(env)
         for ref in sync_refs:
             mod_data = {}
             pref = '_{0}'.format(ref)
-            for fn_ in files:
+            for fn_ in sorted(files):
                 if fn_.startswith(pref):
                     if fn_.endswith(('.py', '.so', '.pyx')):
                         full = 'salt://{0}'.format(fn_)
                         mod_path = fsclient.cache_file(full, env)
                         if not os.path.isfile(mod_path):
                             continue
-                        with open(mod_path) as fp_:
-                            code_str = fp_.read().encode('base64')
-                        mod_data[os.path.basename(fn_)] = code_str
+                        mod_data[os.path.basename(fn_)] = mod_path
+                        fns = os.stat(mod_path)
+                        chunk = '{0}{1}{2}{3}'.format(
+                                fns.st_size,
+                                fns.st_atime,
+                                fns.st_ctime,
+                                fns.st_mtime,)
+                        ver_base += chunk
             if mod_data:
                 if ref in ret:
                     ret[ref].update(mod_data)
                 else:
                     ret[ref] = mod_data
-    return ret
+    ver = hashlib.sha1(ver_base).hexdigest()
+    ext_tar_path = os.path.join(
+            fsclient.opts['cachedir'],
+            'ext_mods.{0}.tgz'.format(ver))
+    if os.path.isfile(ext_tar_path):
+        return ext_tar_path
+    tarfile = tarfile.open(ext_tar_path, 'w:gz')
+    verfile = os.path.join(fsclient.opts['cachedir'], 'ext_mods.ver')
+    with salt.utils.fopen(verfile, 'w+') as fp_:
+        fp_.write(ver)
+    tarfile.add(verfile, 'ext_version')
+    for ref in sync_refs:
+        for fn_ in ret[ref]:
+            tarfile.add(ret[ref][fn_], os.path.join('_{0}'.format(ref), fn_))
+    tarfile.close()
+    return ext_tar_path
 
 
 def ssh_version():
