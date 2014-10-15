@@ -1010,7 +1010,7 @@ def mod_data(fsclient):
     tfp.add(verfile, 'ext_version')
     for ref in ret:
         for fn_ in ret[ref]:
-            tfp.add(ret[ref][fn_], os.path.join('_{0}'.format(ref), fn_))
+            tfp.add(ret[ref][fn_], os.path.join(ref, fn_))
     tfp.close()
     return mods
 
