@@ -124,13 +124,26 @@ def _get_repo(**kwargs):
     return ''
 
 
-def _has_dpkg_tools():
+def _check_apt():
+    '''
+    Abort if python-apt is not installed
+    '''
+    if not HAS_APT:
+        raise CommandExecutionError(
+            'Error: \'python-apt\' package not installed'
+        )
+
+
+def _has_dctrl_tools():
+    '''
+    Return a boolean depending on whether or not dctrl-tools was installed.
+    '''
     try:
-        return __context__['pkg._has_dpkg_tools']
+        return __context__['pkg._has_dctrl_tools']
     except KeyError:
-        __context__['pkg._has_dpkg_tools'] = \
+        __context__['pkg._has_dctrl_tools'] = \
             __salt__['cmd.has_exec']('grep-available')
-        return __context__['pkg._has_dpkg_tools']
+        return __context__['pkg._has_dctrl_tools']
 
 
 def _get_virtual():
@@ -150,7 +163,7 @@ def _get_virtual():
                     if realpkg not in __context__['pkg._get_virtual']:
                         __context__['pkg._get_virtual'][realpkg] = []
                     __context__['pkg._get_virtual'][realpkg].append(pkg.name)
-        elif _has_dpkg_tools():
+        elif _has_dctrl_tools():
             cmd = 'grep-available -F Provides -s Package,Provides -e "^.+$"'
             out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
             virtpkg_re = re.compile(r'Package: (\S+)\nProvides: ([\S, ]+)')
@@ -1073,11 +1086,7 @@ def list_repos():
        salt '*' pkg.list_repos
        salt '*' pkg.list_repos disabled=True
     '''
-    if not HAS_APT:
-        raise CommandExecutionError(
-            'Error: \'python-apt\' package not installed'
-        )
-
+    _check_apt()
     repos = {}
     sources = sourceslist.SourcesList()
     for source in sources.list:
@@ -1108,11 +1117,7 @@ def get_repo(repo, **kwargs):
 
         salt '*' pkg.get_repo "myrepo definition"
     '''
-    if not HAS_APT:
-        raise CommandExecutionError(
-            'Error: \'python-apt\' package not installed'
-        )
-
+    _check_apt()
     ppa_auth = kwargs.get('ppa_auth', None)
     # we have to be clever about this since the repo definition formats
     # are a bit more "loose" than in some other distributions
@@ -1184,11 +1189,7 @@ def del_repo(repo, **kwargs):
 
         salt '*' pkg.del_repo "myrepo definition"
     '''
-    if not HAS_APT:
-        raise CommandExecutionError(
-            'Error: \'python-apt\' package not installed'
-        )
-
+    _check_apt()
     is_ppa = False
     if repo.startswith('ppa:') and __grains__['os'] == 'Ubuntu':
         # This is a PPA definition meaning special handling is needed
@@ -1298,11 +1299,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
         salt '*' pkg.mod_repo 'myrepo definition' uri=http://new/uri
         salt '*' pkg.mod_repo 'myrepo definition' comps=main,universe
     '''
-    if not HAS_APT:
-        raise CommandExecutionError(
-            'Error: \'python-apt\' package not installed'
-        )
-
+    _check_apt()
     # to ensure no one sets some key values that _shouldn't_ be changed on the
     # object itself, this is just a white-list of "ok" to set properties
     if repo.startswith('ppa:'):
@@ -1587,15 +1584,10 @@ def expand_repo_def(repokwargs):
 
     There is no use to calling this function via the CLI.
     '''
+    _check_apt()
+
     sanitized = {}
-
-    if not HAS_APT:
-        raise CommandExecutionError(
-            'Error: \'python-apt\' package not installed'
-        )
-
     repo = _strip_uri(repokwargs['repo'])
-
     if repo.startswith('ppa:') and __grains__['os'] == 'Ubuntu':
         dist = __grains__['lsb_distrib_codename']
         owner_name, ppa_name = repo[4:].split('/', 1)
