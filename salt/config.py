@@ -471,7 +471,7 @@ DEFAULT_MASTER_OPTS = {
     'minionfs_blacklist': [],
     'ext_pillar': [],
     'pillar_version': 2,
-    'pillar_opts': True,
+    'pillar_opts': False,
     'pillar_source_merging_strategy': 'smart',
     'ping_on_key_rotate': False,
     'peer': {},

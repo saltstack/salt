@@ -1190,14 +1190,8 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
                     function_name, exc
                 )
             except TypeError as exc:
-                aspec = salt.utils.get_function_argspec(
-                    self.modules.value[data['fun']]
-                )
                 msg = ('TypeError encountered executing {0}: {1}. See '
-                       'debug log for more info.  Possibly a missing '
-                       'arguments issue:  {2}').format(function_name,
-                                                       exc,
-                                                       aspec)
+                       'debug log for more info.').format(function_name, exc)
                 log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
                 ret['return'] = msg
             except Exception:

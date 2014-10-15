@@ -237,7 +237,7 @@ def clone(cwd, repository, opts=None, user=None):
         salt '*' hg.clone /path/to/repo https://bitbucket.org/birkenfeld/sphinx
     '''
     _check_hg()
-    cmd = ['hg', 'clone', '"{0}"'.format(repository), '"{0}"'.format(cwd)]
+    cmd = ['hg', 'clone', '{0}'.format(repository), '{0}'.format(cwd)]
     if opts:
         for opt in opts.split():
             cmd.append('{0}'.format(opt))

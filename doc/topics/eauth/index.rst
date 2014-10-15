@@ -40,10 +40,15 @@ modules <all-salt.runners>` the following ``@`` syntax must be used:
     external_auth:
       pam:
         thatch:
-          - '@wheel'
-          - '@runner'
+          - '@wheel'   # to allow access to all wheel modules
+          - '@runner'  # to allow access to all runner modules
+          - '@jobs'    # to allow access to the jobs runner and/or wheel module
 
-.. note:: 
+.. note::
+    The runner/wheel markup is different, since there are no minions to scope the
+    acl to.
+
+.. note::
     Globs will not match wheel or runners! They must be explicitly
     allowed with @wheel or @runner.
 
@@ -82,7 +87,7 @@ adding a ``-T`` option when authenticating:
     $ salt -T -a pam web\* test.ping
 
 Now a token will be created that has a expiration of 12 hours (by default).
-This token is stored in a file named ``.salt_token`` in the active user's home 
+This token is stored in a file named ``.salt_token`` in the active user's home
 directory.
 
 Once the token is created, it is sent with all subsequent communications.
@@ -91,7 +96,7 @@ User authentication does not need to be entered again until the token expires.
 Token expiration time can be set in the Salt master config file.
 
 
-LDAP 
+LDAP
 ----
 
 Salt supports both user and group authentication for LDAP.

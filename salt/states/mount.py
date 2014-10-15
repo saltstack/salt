@@ -151,17 +151,23 @@ def mounted(name,
                             return ret
             if real_device not in device_list:
                 # name matches but device doesn't - need to umount
-                ret['changes']['umount'] = "Forced unmount because devices " \
-                                           + "don't match. Wanted: " + device
-                if real_device != device:
-                    ret['changes']['umount'] += " (" + real_device + ")"
-                ret['changes']['umount'] += ", current: " + ', '.join(device_list)
-                out = __salt__['mount.umount'](real_name)
-                active = __salt__['mount.active']()
-                if real_name in active:
-                    ret['comment'] = "Unable to unmount"
+                if __opts__['test']:
                     ret['result'] = None
-                    return ret
+                    ret['comment'] = "An umount would have been forced " \
+                                     + "because devices do not match.  Watched: " \
+                                     + device
+                else:
+                    ret['changes']['umount'] = "Forced unmount because devices " \
+                                               + "don't match. Wanted: " + device
+                    if real_device != device:
+                        ret['changes']['umount'] += " (" + real_device + ")"
+                    ret['changes']['umount'] += ", current: " + ', '.join(device_list)
+                    out = __salt__['mount.umount'](real_name)
+                    active = __salt__['mount.active']()
+                    if real_name in active:
+                        ret['comment'] = "Unable to unmount"
+                        ret['result'] = None
+                        return ret
             else:
                 ret['comment'] = 'Target was already mounted'
     # using a duplicate check so I can catch the results of a umount

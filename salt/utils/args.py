@@ -89,6 +89,9 @@ def yamlify_arg(arg):
         # True
         return arg
 
+    elif '_' in arg and all([x in '0123456789_' for x in arg.strip()]):
+        return arg
+
     try:
         # Explicit late import to avoid circular import. DO NOT MOVE THIS.
         import salt.utils.yamlloader as yamlloader

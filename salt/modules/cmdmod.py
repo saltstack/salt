@@ -401,8 +401,7 @@ def _run(cmd,
                                log_stdout=True,
                                log_stderr=True,
                                cwd=cwd,
-                               user=runas,
-                               umask=umask,
+                               preexec_fn=kwargs.get('preexec_fn', None),
                                env=env,
                                log_stdin_level=output_loglevel,
                                log_stdout_level=output_loglevel,
@@ -446,7 +445,7 @@ def _run(cmd,
                         exc_info_on_loglevel=logging.DEBUG)
                     ret = {'retcode': 1, 'pid': '2'}
                     break
-                # only set stdout on sucess as we already mangled in other
+                # only set stdout on success as we already mangled in other
                 # cases
                 ret['stdout'] = stdout
                 if finished:

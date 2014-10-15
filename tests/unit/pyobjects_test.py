@@ -198,7 +198,8 @@ class RendererMixin(object):
             'file_client': 'local',
             'file_roots': {
                 'base': [self.root_dir]
-            }
+            },
+            'cachedir': 'cachedir'
         })
 
     def tearDown(self, *args, **kwargs):

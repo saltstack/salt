@@ -42,7 +42,7 @@ import re
 import salt.utils
 from salt.output import nested
 from salt.utils import namespaced_function as _namespaced_function
-from salt.utils.odict import OrderedDict
+from salt.utils.odict import OrderedDict as _OrderedDict
 from salt._compat import string_types
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
@@ -218,7 +218,7 @@ def _find_install_targets(name=None,
     # Get the ignore_types list if any from the pkg_verify argument
     if isinstance(pkg_verify, list) and any(x.get('ignore_types') is not None
                                         for x in pkg_verify
-                                        if isinstance(x, OrderedDict)
+                                        if type(x) is _OrderedDict
                                         and 'ignore_types' in x):
         ignore_types = next(x.get('ignore_types')
                             for x in pkg_verify
@@ -1070,7 +1070,7 @@ def installed(
     # Get the ignore_types list if any from the pkg_verify argument
     if isinstance(pkg_verify, list) and any(x.get('ignore_types') is not None
                                         for x in pkg_verify
-                                        if isinstance(x, OrderedDict)
+                                        if isinstance(x, _OrderedDict)
                                         and 'ignore_types' in x):
         ignore_types = next(x.get('ignore_types')
                             for x in pkg_verify

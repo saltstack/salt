@@ -256,12 +256,20 @@ def get_jids():
 
 
 def _format_job_instance(job):
-    return {'Function': job.get('fun', 'unknown-function'),
-            'Arguments': list(job.get('arg', [])),
-            # unlikely but safeguard from invalid returns
-            'Target': job.get('tgt', 'unknown-target'),
-            'Target-type': job.get('tgt_type', []),
-            'User': job.get('user', 'root')}
+    ret = {'Function': job.get('fun', 'unknown-function'),
+           'Arguments': list(job.get('arg', [])),
+           # unlikely but safeguard from invalid returns
+           'Target': job.get('tgt', 'unknown-target'),
+           'Target-type': job.get('tgt_type', []),
+           'User': job.get('user', 'root')}
+
+    if 'metadata' in job:
+        ret['Metadata'] = job.get('metadata', {})
+    else:
+        if 'kwargs' in job:
+            if 'metadata' in job['kwargs']:
+                ret['Metadata'] = job['kwargs'].get('metadata', {})
+    return ret
 
 
 def _format_jid_instance(jid, job):

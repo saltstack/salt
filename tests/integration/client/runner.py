@@ -1,8 +1,5 @@
 # coding: utf-8
 
-# Import Python libs
-import os
-
 # Import Salt Testing libs
 import integration
 
@@ -10,7 +7,7 @@ import integration
 import salt.runner
 
 
-class RunnerModuleTest(integration.ClientCase):
+class RunnerModuleTest(integration.TestCase, integration.AdaptedConfigurationTestCaseMixIn):
     eauth_creds = {
         'username': 'saltdev_auto',
         'password': 'saltdev',
@@ -21,7 +18,7 @@ class RunnerModuleTest(integration.ClientCase):
         '''
         Configure an eauth user to test with
         '''
-        self.runner = salt.runner.RunnerClient(self.get_opts())
+        self.runner = salt.runner.RunnerClient(self.get_config('client_config'))
 
     def test_eauth(self):
         '''
@@ -47,10 +44,7 @@ class RunnerModuleTest(integration.ClientCase):
         '''
         import salt.auth
 
-        opts = self.get_opts()
-        self.mkdir_p(os.path.join(opts['root_dir'], 'cache', 'tokens'))
-
-        auth = salt.auth.LoadAuth(opts)
+        auth = salt.auth.LoadAuth(self.get_config('client_config'))
         token = auth.mk_token(self.eauth_creds)
 
         self.runner.master_call(**{
@@ -99,6 +93,7 @@ class RunnerModuleTest(integration.ClientCase):
             'bar': 'Bar!',
         }
         self.runner.cmd_sync(low)
+
 
 if __name__ == '__main__':
     from integration import run_tests

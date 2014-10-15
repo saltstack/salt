@@ -2018,14 +2018,6 @@ def recurse(name,
         ret['comment'] = 'Recurse failed: {0}'.format(exc)
         return ret
 
-    try:
-        for idx, val in enumerate(sources):
-            sources[idx] = val.rstrip('/')
-    except AttributeError:
-        ret['result'] = False
-        ret['comment'] = '\'source\' parameter must be a string'
-        return ret
-
     # Check source path relative to fileserver root, make sure it is a
     # directory
     source_rel = source.partition('://')[2]
@@ -3436,7 +3428,16 @@ def touch(name, atime=None, mtime=None, makedirs=False):
     return ret
 
 
-def copy(name, source, force=False, makedirs=False, preserve=False):
+def copy(
+        name,
+        source,
+        force=False,
+        makedirs=False,
+        preserve=False,
+        user=None,
+        group=None,
+        mode=None,
+        **kwargs):
     '''
     If the source file exists on the system, copy it to the named file. The
     named file will not be overwritten if it already exists unless the force
@@ -3457,8 +3458,23 @@ def copy(name, source, force=False, makedirs=False, preserve=False):
 
     preserve
         Set ``preserve: True`` to preserve user/group ownership and mode
-        after copying. Default is ``False``
+        after copying. Default is ``False``. If ``preseve`` is set to ``True``,
+        then user/group/mode attributes will be ignored.
 
+    user
+        The user to own the copied file, this defaults to the user salt is
+        running as on the minion. If ``preserve`` is set to ``True``, then
+        this will be ignored
+
+    group
+        The group to own the copied file, this defaults to the group salt is
+        running as on the minion. If ``preserve`` is set to ``True`` or on
+        Windows this will be ignored
+
+    mode
+        The permissions to set on the copied file, aka 644, '0775', '4664'.
+        If ``preserve`` is set to ``True``, then this will be ignored.
+        Not supported on Windows
     '''
     name = os.path.expanduser(name)
     source = os.path.expanduser(source)
@@ -3476,6 +3492,36 @@ def copy(name, source, force=False, makedirs=False, preserve=False):
 
     if not os.path.exists(source):
         return _error(ret, 'Source file "{0}" is not present'.format(source))
+
+    if preserve:
+        user = __salt__['file.get_user'](source)
+        group = __salt__['file.get_group'](source)
+        mode = __salt__['file.get_mode'](source)
+    else:
+        user = _test_owner(kwargs, user=user)
+        if user is None:
+            user = __opts__['user']
+
+        if salt.utils.is_windows():
+            if group is not None:
+                log.warning(
+                    'The group argument for {0} has been ignored as this is '
+                    'a Windows system.'.format(name)
+                )
+            group = user
+
+        if group is None:
+            group = __salt__['file.gid_to_group'](
+                __salt__['user.info'](user).get('gid', 0)
+            )
+
+        u_check = _check_user(user, group)
+        if u_check:
+            # The specified user or group do not exist
+            return _error(ret, u_check)
+
+        if mode is None:
+            mode = __salt__['file.get_mode'](source)
 
     if os.path.lexists(source) and os.path.lexists(name):
         # if this is a file which did not changed, do not update
@@ -3529,11 +3575,7 @@ def copy(name, source, force=False, makedirs=False, preserve=False):
     try:
         shutil.copy(source, name)
         ret['changes'] = {name: source}
-        if preserve:
-            source_user = __salt__['file.get_user'](source)
-            source_group = __salt__['file.get_group'](source)
-            source_mode = __salt__['file.get_mode'](source)
-            __salt__['file.check_perms'](name, ret, source_user, source_group, source_mode)
+        __salt__['file.check_perms'](name, ret, user, group, mode)
     except (IOError, OSError):
         return _error(
             ret, 'Failed to copy "{0}" to "{1}"'.format(source, name))

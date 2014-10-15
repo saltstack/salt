@@ -68,6 +68,8 @@ RSTR_RE = r'(?:^|\r?\n)' + RSTR + '(?:\r?\n|$)'
 #   1) Make the _thinnest_ /bin/sh shim (SSH_SH_SHIM) to find the python
 #      interpreter and get it invoked
 #   2) Once a qualified python is found start it with the SSH_PY_SHIM
+#   3) The shim is converted to a single semicolon seperated line, so
+#      some constructs are needed to keep it clean.
 
 # NOTE:
 #   * SSH_SH_SHIM is generic and can be used to load+exec *any* python
@@ -92,7 +94,7 @@ RSTR_RE = r'(?:^|\r?\n)' + RSTR + '(?:\r?\n|$)'
 #   - SUDO        - load python and execute as root (any non-zero string enables)
 #   - SSH_PY_CODE - base64-encoded python code to execute
 #   - SSH_PY_ARGS - arguments to pass to python code
-SSH_SH_SHIM = r'''/bin/sh << 'EOF'
+
 # This shim generically loads python code . . . and *no* more.
 # - Uses /bin/sh for maximum compatibility - then jumps to
 #   python for ultra-maximum compatibility.
@@ -100,51 +102,28 @@ SSH_SH_SHIM = r'''/bin/sh << 'EOF'
 # 1. Identify a suitable python
 # 2. Jump to python
 
-set -e
+SSH_SH_SHIM = r''' /bin/sh -c 'set -e
 set -u
-
 DEBUG="{{DEBUG}}"
-if [ -n "$DEBUG" ]; then
-    set -x
+if [ -n "$DEBUG" ]
+then set -x
 fi
-
 SUDO=""
-if [ -n "{{SUDO}}" ]; then
-    SUDO="sudo "
+if [ -n "{{SUDO}}" ]
+then SUDO="sudo "
 fi
-
-EX_PYTHON_OLD={EX_THIN_PYTHON_OLD}    # Python interpreter is too old and incompatible
-
-PYTHON_CMDS="
-    python27
-    python2.7
-    python26
-    python2.6
-    python2
-    python
-"
-
-main()
-{{{{
-    local py_cmd
-    local py_cmd_path
-    for py_cmd in $PYTHON_CMDS; do
-        if "$py_cmd" -c 'import sys; sys.exit(not sys.hexversion >= 0x02060000);' >/dev/null 2>&1; then
-            local py_cmd_path
-            py_cmd_path=`"$py_cmd" -c 'import sys; print sys.executable;'`
-            exec $SUDO "$py_cmd_path" -c 'exec """{{SSH_PY_CODE}}""".decode("base64")' -- {{SSH_PY_ARGS}}
-            exit 0
-        else
-            continue
-        fi
-    done
-
-    echo "ERROR: Unable to locate appropriate python command" >&2
-    exit $EX_PYTHON_OLD
-}}}}
-
-main
-EOF'''.format(
+EX_PYTHON_OLD={EX_THIN_PYTHON_OLD}
+PYTHON_CMDS="python27 python2.7 python26 python2.6 python2 python"
+for py_cmd in $PYTHON_CMDS
+do if "$py_cmd" -c "import sys; sys.exit(not sys.hexversion >= 0x02060000);" >/dev/null 2>&1
+then py_cmd_path=`"$py_cmd" -c "import sys; print sys.executable;"`
+exec $SUDO "$py_cmd_path" -c "exec \"{{SSH_PY_CODE}}\".replace(\"_\", \"\n\").decode(\"base64\")"
+exit 0
+else continue
+fi
+done
+echo "ERROR: Unable to locate appropriate python command" >&2
+exit $EX_PYTHON_OLD' '''.format(
     EX_THIN_PYTHON_OLD=salt.exitcodes.EX_THIN_PYTHON_OLD,
 )
 
@@ -154,7 +133,7 @@ if not is_windows():
         # On esky builds we only have the .pyc file
         shim_file += "c"
     with open(shim_file) as ssh_py_shim:
-        SSH_PY_SHIM = ''.join(ssh_py_shim.readlines()).encode('base64')
+        SSH_PY_SHIM = ssh_py_shim.read()
 
 log = logging.getLogger(__name__)
 
@@ -523,6 +502,7 @@ class Single(object):
         self.fun, self.args, self.kwargs = self.__arg_comps()
         self.id = id_
 
+        self.mods = mods
         args = {'host': host,
                 'user': user,
                 'port': port,
@@ -530,8 +510,8 @@ class Single(object):
                 'priv': priv,
                 'timeout': timeout,
                 'sudo': sudo,
-                'tty': tty}
-        self.shell = salt.client.ssh.shell.Shell(opts, **args)
+                'tty': tty,
+                'mods': self.mods}
         self.minion_config = yaml.dump(
                 {
                     'root_dir': os.path.join(self.thin_dir, 'running_data'),
@@ -541,7 +521,7 @@ class Single(object):
         self.target.update(args)
         self.serial = salt.payload.Serial(opts)
         self.wfuncs = salt.loader.ssh_wrapper(opts, None, self.context)
-        self.mods = mods if mods else {}
+        self.shell = salt.client.ssh.shell.Shell(opts, **args)
 
     def __arg_comps(self):
         '''
@@ -650,7 +630,6 @@ class Single(object):
             pre_wrapper = salt.client.ssh.wrapper.FunctionWrapper(
                 self.opts,
                 self.id,
-                mods=self.mods,
                 **self.target)
             opts_pkg = pre_wrapper['test.opts_pkg']()
             opts_pkg['file_roots'] = self.opts['file_roots']
@@ -699,7 +678,6 @@ class Single(object):
         wrapper = salt.client.ssh.wrapper.FunctionWrapper(
             opts,
             self.id,
-            mods=self.mods,
             **self.target)
         self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper, self.context)
         wrapper.wfuncs = self.wfuncs
@@ -726,28 +704,31 @@ class Single(object):
         debug = ''
         if salt.log.LOG_LEVELS['debug'] >= salt.log.LOG_LEVELS[self.opts['log_level']]:
             debug = '1'
-        ssh_py_shim_args = []
-        for mod in self.mods:
-            if self.mods[mod]:
-                ssh_py_shim_args += ['--{0}'.format(mod), '{0}'.format(self.mods[mod])]
-
-        ssh_py_shim_args += [
-            '--config', self.minion_config,
-            '--delimiter', RSTR,
-            '--saltdir', self.thin_dir,
-            '--checksum', thin_sum,
-            '--hashfunc', 'sha1',
-            '--version', salt.__version__,
-            '--',
-        ]
-        ssh_py_shim_args += self.argv
+        arg_str = '''
+OPTIONS = OBJ()
+OPTIONS.config = '{0}'
+OPTIONS.delimiter = '{1}'
+OPTIONS.saltdir = '{2}'
+OPTIONS.checksum = '{3}'
+OPTIONS.hashfunc = '{4}'
+OPTIONS.version = '{5}'
+OPTIONS.get_modules = {6}
+ARGS = {7}\n'''.format(self.minion_config,
+                         RSTR,
+                         self.thin_dir,
+                         thin_sum,
+                         'sha1',
+                         salt.__version__,
+                         'True' if self.mods else 'False',
+                         self.argv)
+        py_code = SSH_PY_SHIM.replace('#%%OPTS', arg_str)
+        py_code_enc = py_code.encode('base64').replace('\n', '_')
 
         cmd = SSH_SH_SHIM.format(
             DEBUG=debug,
             SUDO=sudo,
-            SSH_PY_CODE=SSH_PY_SHIM,
-            SSH_PY_ARGS=' '.join([self._escape_arg(arg) for arg in ssh_py_shim_args]),
-        )
+            SSH_PY_CODE=py_code_enc,
+        ).replace('\n', '; ')
 
         return cmd
 
@@ -971,7 +952,7 @@ def mod_data(fsclient):
     for env in envs:
         files = fsclient.file_list(env)
         for ref in sync_refs:
-            mod_str = ''
+            mod_data = {}
             pref = '_{0}'.format(ref)
             for fn_ in files:
                 if fn_.startswith(pref):
@@ -982,14 +963,12 @@ def mod_data(fsclient):
                             continue
                         with open(mod_path) as fp_:
                             code_str = fp_.read().encode('base64')
-                        mod_str += '{0}|{1},'.format(os.path.basename(fn_), code_str)
-            if mod_str:
+                        mod_data[os.path.basename(fn_)] = code_str
+            if mod_data:
                 if ref in ret:
-                    ret[ref] += mod_str
+                    ret[ref].update(mod_data)
                 else:
-                    ret[ref] = mod_str
-    for ref in ret:
-        ret[ref] = ret[ref].rstrip(',')
+                    ret[ref] = mod_data
     return ret
 
 

@@ -1567,6 +1567,12 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             nargs=1,
             help=('Password for external authentication')
         )
+        self.add_option(
+            '--metadata',
+            default='',
+            metavar='METADATA',
+            help=('Pass metadata into Salt, used to search jobs.')
+        )
 
     def _mixin_after_parsed(self):
         if len(self.args) <= 1 and not self.options.doc:

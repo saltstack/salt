@@ -8,6 +8,7 @@ import copy
 import logging
 import os
 import re
+from distutils.version import LooseVersion as _LooseVersion
 
 # Import salt libs
 import salt.utils
@@ -398,22 +399,41 @@ def list_pkgs(versions_as_list=False, **kwargs):
 def list_repo_pkgs(*args, **kwargs):
     '''
     .. versionadded:: 2014.1.0
+    .. versionchanged:: 2014.7.0
+        All available versions of each package are now returned. This required
+        a slight modification to the structure of the return dict. The return
+        data shown below reflects the updated return dict structure.
 
-    Returns all available packages. Optionally, package names can be passed and
-    the results will be filtered to packages matching those names. This can be
-    helpful in discovering the version or repo to specify in a pkg.installed
-    state. The return data is a dictionary of repo names, with each repo having
-    a list of dictionaries denoting the package name and version. An example of
-    the return data would look like this:
+    Returns all available packages. Optionally, package names (and name globs)
+    can be passed and the results will be filtered to packages matching those
+    names. This is recommended as it speeds up the function considerably.
+
+    This function can be helpful in discovering the version or repo to specify
+    in a :mod:`pkg.installed <salt.states.pkg.installed>` state.
+
+    The return data is a dictionary of repo names, with each repo containing a
+    dictionary in which the keys are package names, and the values are a list
+    of version numbers. Here is an example of the return data:
 
     .. code-block:: python
 
         {
-            '<repo_name>': [
-                {'<package1>': '<version1>'},
-                {'<package2>': '<version2>'},
-                {'<package3>': '<version3>'}
-            ]
+            'base': {
+                'bash': ['4.1.2-15.el6_4'],
+                'kernel': ['2.6.32-431.el6']
+            },
+            'updates': {
+                'bash': ['4.1.2-15.el6_5.2', '4.1.2-15.el6_5.1'],
+                'kernel': ['2.6.32-431.29.2.el6',
+                           '2.6.32-431.23.3.el6',
+                           '2.6.32-431.20.5.el6',
+                           '2.6.32-431.20.3.el6',
+                           '2.6.32-431.17.1.el6',
+                           '2.6.32-431.11.2.el6',
+                           '2.6.32-431.5.1.el6',
+                           '2.6.32-431.3.1.el6',
+                           '2.6.32-431.1.2.0.1.el6']
+            }
         }
 
     fromrepo : None
@@ -439,15 +459,22 @@ def list_repo_pkgs(*args, **kwargs):
 
     ret = {}
     for repo in repos:
-        repoquery_cmd = '--all --repoid="{0}"'.format(repo)
+        repoquery_cmd = '--all --repoid="{0}" --show-duplicates'.format(repo)
         for arg in args:
             repoquery_cmd += ' "{0}"'.format(arg)
         all_pkgs = _repoquery_pkginfo(repoquery_cmd)
         for pkg in all_pkgs:
-            ret.setdefault(pkg.repoid, []).append({pkg.name: pkg.version})
+            repo_dict = ret.setdefault(pkg.repoid, {})
+            version_list = repo_dict.setdefault(pkg.name, [])
+            version_list.append(pkg.version)
 
     for reponame in ret:
-        ret[reponame].sort()
+        for pkgname in ret[reponame]:
+            sorted_versions = sorted(
+                [_LooseVersion(x) for x in ret[reponame][pkgname]],
+                reverse=True
+            )
+            ret[reponame][pkgname] = [x.vstring for x in sorted_versions]
     return ret
 
 

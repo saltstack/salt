@@ -162,7 +162,7 @@ class Master(SMaster):
                         self.opts['user'],
                         self.opts['sock_dir'])
                     rotate = now
-                    if self.opts['ping_on_rotate']:
+                    if self.opts.get('ping_on_rotate'):
                         # Ping all minions to get them to pick up the new key
                         log.debug('Pinging all connected minions due to AES key rotation')
                         salt.utils.master.ping_all_connected_minions(self.opts)
@@ -1031,12 +1031,18 @@ class AESFuncs(object):
             )
             return {}
         load.pop('tok')
+        # Normalize Windows paths
+        normpath = load['path']
+        if ':' in normpath:
+            # make sure double backslashes are normalized
+            normpath = normpath.replace('\\', '/')
+            normpath = os.path.normpath(normpath)
         cpath = os.path.join(
             self.opts['cachedir'],
             'minions',
             load['id'],
             'files',
-            load['path'])
+            normpath)
         cdir = os.path.dirname(cpath)
         if not os.path.isdir(cdir):
             try:
@@ -1437,7 +1443,7 @@ class ClearFuncs(object):
                              'to enable the ConCache with \'con_cache: True\' '
                              'in the masters configuration file.')
 
-            if not len(minions) < self.opts['max_minions']:
+            if not len(minions) <= self.opts['max_minions']:
                 # we reject new minions, minions that are already
                 # connected must be allowed for the mine, highstate, etc.
                 if load['id'] not in minions:
@@ -2331,6 +2337,9 @@ class ClearFuncs(object):
         if 'kwargs' in clear_load:
             if 'ret_config' in clear_load['kwargs']:
                 load['ret_config'] = clear_load['kwargs'].get('ret_config')
+
+            if 'metadata' in clear_load['kwargs']:
+                load['metadata'] = clear_load['kwargs'].get('metadata')
 
         if 'user' in clear_load:
             log.info(
