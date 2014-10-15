@@ -49,7 +49,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         self.assertEqual(''.join(expect), ''.join(out).rsplit(",", 1)[0])
 
     def test_local_sls_call(self):
-        fileroot = os.path.join(integration.FILES,'file','base')
+        fileroot = os.path.join(integration.FILES, 'file', 'base')
         out = self.run_call('--file-root {0} --local state.sls saltcalllocal'.format(fileroot))
         self.assertIn('Name: test.echo', ''.join(out))
         self.assertIn('Result: True', ''.join(out))
