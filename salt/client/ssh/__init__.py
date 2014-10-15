@@ -713,13 +713,15 @@ OPTIONS.checksum = '{3}'
 OPTIONS.hashfunc = '{4}'
 OPTIONS.version = '{5}'
 OPTIONS.get_modules = {6}
-ARGS = {7}\n'''.format(self.minion_config,
+OPTIONS.wipe = {7}
+ARGS = {8}\n'''.format(self.minion_config,
                          RSTR,
                          self.thin_dir,
                          thin_sum,
                          'sha1',
                          salt.__version__,
                          'True' if self.mods else 'False',
+                         'True' if self.opts.get('wipe_ssh') else 'False',
                          self.argv)
         py_code = SSH_PY_SHIM.replace('#%%OPTS', arg_str)
         py_code_enc = py_code.encode('base64').replace('\n', '_')
