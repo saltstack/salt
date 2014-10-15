@@ -2190,6 +2190,13 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help=('Return the data from minions as a group after they '
                   'all return.')
         )
+        self.add_option(
+            '-w', '--wipe',
+            default=False,
+            action='store_true',
+            dest='wipe_ssh',
+            help='Remove the deployment of the salt files when done executing.',
+        )
 
         auth_group = optparse.OptionGroup(
             self, 'Authentication Options',
