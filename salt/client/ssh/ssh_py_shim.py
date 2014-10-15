@@ -82,7 +82,7 @@ def unpack_thin(thin_path):
 
 
 def need_ext():
-    sys.stdout.write('ext_mods')
+    sys.stdout.write("{0}\next_mods\n".format(OPTIONS.delimiter))
     sys.exit(EX_MOD_DEPLOY)
 
 

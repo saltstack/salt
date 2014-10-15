@@ -726,7 +726,7 @@ OPTIONS.saltdir = '{2}'
 OPTIONS.checksum = '{3}'
 OPTIONS.hashfunc = '{4}'
 OPTIONS.version = '{5}'
-OPTIONS.ext_mods = {6}
+OPTIONS.ext_mods = '{6}'
 ARGS = {7}\n'''.format(self.minion_config,
                          RSTR,
                          self.thin_dir,
@@ -825,6 +825,12 @@ ARGS = {7}\n'''.format(self.minion_config,
             elif 'ext_mods' == shim_command:
                 self.deploy_ext()
                 stdout, stderr, retcode = self.shell.exec_cmd(cmd_str)
+                if not re.search(RSTR_RE, stdout) or not re.search(RSTR_RE, stderr):
+                    # If RSTR is not seen in both stdout and stderr then there
+                    # was a thin deployment problem.
+                    return 'ERROR: Failure deploying thin: {0}'.format(stdout), stderr, retcode
+                stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
+                stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
 
         return stdout, stderr, retcode
 
