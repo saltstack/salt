@@ -504,7 +504,7 @@ class Single(object):
         self.fun, self.args, self.kwargs = self.__arg_comps()
         self.id = id_
 
-        self.mods = mods
+        self.mods = mods if mods else {}
         args = {'host': host,
                 'user': user,
                 'port': port,
