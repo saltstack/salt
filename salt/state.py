@@ -635,7 +635,9 @@ class State(object):
                 cmd = self.functions['cmd.retcode'](entry, ignore_retcode=True, **cmd_opts)
                 log.debug('Last command return code: {0}'.format(cmd))
                 if cmd != 0 and ret['result'] is False:
-                    ret.update({'comment': 'onlyif execution failed', 'result': True})
+                    ret.update({'comment': 'onlyif execution failed',
+                                'skip_watch': True,
+                                'result': True})
                     return ret
                 elif cmd == 0:
                     ret.update({'comment': 'onlyif execution succeeded', 'result': False})
@@ -650,7 +652,9 @@ class State(object):
                 cmd = self.functions['cmd.retcode'](entry, ignore_retcode=True, **cmd_opts)
                 log.debug('Last command return code: {0}'.format(cmd))
                 if cmd == 0 and ret['result'] is False:
-                    ret.update({'comment': 'unless execution succeeded', 'result': True})
+                    ret.update({'comment': 'unless execution succeeded',
+                                'skip_watch': True,
+                                'result': True})
                 elif cmd != 0:
                     ret.update({'comment': 'unless execution failed', 'result': False})
                     return ret
@@ -1858,7 +1862,7 @@ class State(object):
             self.__run_num += 1
         elif status == 'change' and not low.get('__prereq__'):
             ret = self.call(low, chunks, running)
-            if not ret['changes']:
+            if not ret['changes'] and not ret.get('skip_watch', False):
                 low = low.copy()
                 low['sfun'] = low['fun']
                 low['fun'] = 'mod_watch'
