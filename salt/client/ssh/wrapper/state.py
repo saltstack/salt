@@ -73,7 +73,7 @@ def sls(mods, saltenv='base', test=None, exclude=None, env=None, **kwargs):
             __pillar__)
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
     cmd = 'state.pkg {0}/salt_state.tgz test={1} pkg_sum={2} hash_type={3}'.format(
-            __opts__['_thin_dir'],
+            __opts__['thin_dir'],
             test,
             trans_tar_sum,
             __opts__['hash_type'])
@@ -83,12 +83,12 @@ def sls(mods, saltenv='base', test=None, exclude=None, env=None, **kwargs):
             **__salt__.kwargs)
     single.shell.send(
             trans_tar,
-            '{0}/salt_state.tgz'.format(__opts__['_thin_dir']))
+            '{0}/salt_state.tgz'.format(__opts__['thin_dir']))
     stdout, stderr, _ = single.cmd_block()
     try:
         return json.loads(stdout, object_hook=salt.utils.decode_dict)
     except Exception, e:
-        log.error("JSON Render failed for: {0}".format(stdout))
+        log.error("JSON Render failed for: {0}\n{1}".format(stdout, stderr))
         log.error(str(e))
     try:
         os.remove(trans_tar)
@@ -126,7 +126,7 @@ def low(data, **kwargs):
             __pillar__)
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
     cmd = 'state.pkg {0}/salt_state.tgz pkg_sum={1} hash_type={2}'.format(
-            __opts__['_thin_dir'],
+            __opts__['thin_dir'],
             trans_tar_sum,
             __opts__['hash_type'])
     single = salt.client.ssh.Single(
@@ -135,7 +135,7 @@ def low(data, **kwargs):
             **__salt__.kwargs)
     single.shell.send(
             trans_tar,
-            '{0}/salt_state.tgz'.format(__opts__['_thin_dir']))
+            '{0}/salt_state.tgz'.format(__opts__['thin_dir']))
     stdout, stderr, _ = single.cmd_block()
     try:
         os.remove(trans_tar)
@@ -170,7 +170,7 @@ def high(data, **kwargs):
             __pillar__)
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
     cmd = 'state.pkg {0}/salt_state.tgz pkg_sum={1} hash_type={2}'.format(
-            __opts__['_thin_dir'],
+            __opts__['thin_dir'],
             trans_tar_sum,
             __opts__['hash_type'])
     single = salt.client.ssh.Single(
@@ -179,7 +179,7 @@ def high(data, **kwargs):
             **__salt__.kwargs)
     single.shell.send(
             trans_tar,
-            '{0}/salt_state.tgz'.format(__opts__['_thin_dir']))
+            '{0}/salt_state.tgz'.format(__opts__['thin_dir']))
     stdout, stderr, _ = single.cmd_block()
     try:
         os.remove(trans_tar)
@@ -216,7 +216,7 @@ def highstate(test=None, **kwargs):
             __pillar__)
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
     cmd = 'state.pkg {0}/salt_state.tgz test={1} pkg_sum={2} hash_type={3}'.format(
-            __opts__['_thin_dir'],
+            __opts__['thin_dir'],
             test,
             trans_tar_sum,
             __opts__['hash_type'])
@@ -226,12 +226,12 @@ def highstate(test=None, **kwargs):
             **__salt__.kwargs)
     single.shell.send(
             trans_tar,
-            '{0}/salt_state.tgz'.format(__opts__['_thin_dir']))
+            '{0}/salt_state.tgz'.format(__opts__['thin_dir']))
     stdout, stderr, _ = single.cmd_block()
     try:
         stdout = json.loads(stdout, object_hook=salt.utils.decode_dict)
     except Exception, e:
-        log.error('JSON Render failed for: {0}'.format(stdout))
+        log.error('JSON Render failed for: {0}\n{1}'.format(stdout, stderr))
         log.error(str(e))
     try:
         os.remove(trans_tar)
@@ -272,7 +272,7 @@ def top(topfn, test=None, **kwargs):
             __pillar__)
     trans_tar_sum = salt.utils.get_hash(trans_tar, __opts__['hash_type'])
     cmd = 'state.pkg {0}/salt_state.tgz test={1} pkg_sum={2} hash_type={3}'.format(
-            __opts__['_thin_dir'],
+            __opts__['thin_dir'],
             test,
             trans_tar_sum,
             __opts__['hash_type'])
@@ -282,7 +282,7 @@ def top(topfn, test=None, **kwargs):
             **__salt__.kwargs)
     single.shell.send(
             trans_tar,
-            '{0}/salt_state.tgz'.format(__opts__['_thin_dir']))
+            '{0}/salt_state.tgz'.format(__opts__['thin_dir']))
     stdout, stderr, _ = single.cmd_block()
     try:
         os.remove(trans_tar)

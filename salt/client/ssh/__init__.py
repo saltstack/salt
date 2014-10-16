@@ -204,6 +204,10 @@ class SSH(object):
                 salt.config.DEFAULT_MASTER_OPTS['ssh_sudo']
             ),
         }
+        if self.opts.get('rand_thin_dir'):
+            self.defaults['thin_dir'] = os.path.join(
+                    '/tmp',
+                    '.{0}'.format(uuid.uuid4().hex[:6]))
         self.serial = salt.payload.Serial(opts)
         self.returners = salt.loader.returners(self.opts, {})
         self.fsclient = salt.fileclient.FSClient(self.opts)
@@ -493,15 +497,13 @@ class Single(object):
             self.wipe = 'False'
         else:
             self.wipe = 'True' if self.opts.get('wipe_ssh') else 'False'
-            if self.opts.get('rand_thin_dir'):
-                self.wipe = 'True'
-        if user:
+        if kwargs.get('thin_dir'):
+            self.thin_dir = kwargs['thin_dir']
+        elif user:
             self.thin_dir = DEFAULT_THIN_DIR.replace('%%USER%%', user)
         else:
             self.thin_dir = DEFAULT_THIN_DIR.replace('%%USER%%', 'root')
-        if self.opts.get('rand_thin_dir'):
-            self.thin_dir = os.path.join('/tmp', '.{0}'.format(uuid.uuid4().hex))
-        self.opts['_thin_dir'] = self.thin_dir
+        self.opts['thin_dir'] = self.thin_dir
         self.fsclient = fsclient
         self.context = {'master_opts': self.opts,
                         'fileclient': self.fsclient}
@@ -528,6 +530,7 @@ class Single(object):
                 {
                     'root_dir': os.path.join(self.thin_dir, 'running_data'),
                     'id': self.id,
+                    'sock_dir': '/',
                 }).strip()
         self.target = kwargs
         self.target.update(args)
