@@ -573,7 +573,11 @@ class Single(object):
         '''
         Deploy salt-thin
         '''
-        thin = salt.utils.thin.gen_thin(self.opts['cachedir'])
+        if self.opts.get('_caller_cachedir'):
+            cachedir = self.opts.get('_caller_cachedir')
+        else:
+            cachedir = self.opts['cachedir']
+        thin = salt.utils.thin.gen_thin(cachedir)
         self.shell.send(
             thin,
             os.path.join(self.thin_dir, 'salt-thin.tgz'),
@@ -658,6 +662,10 @@ class Single(object):
             opts_pkg = pre_wrapper['test.opts_pkg']()
             opts_pkg['file_roots'] = self.opts['file_roots']
             opts_pkg['pillar_roots'] = self.opts['pillar_roots']
+            if '_caller_cachedir' in self.opts:
+                opts_pkg['_caller_cachedir'] = self.opts['_caller_cachedir']
+            else:
+                opts_pkg['_caller_cachedir'] = self.opts['cachedir']
             # Use the ID defined in the roster file
             opts_pkg['id'] = self.id
 
@@ -724,7 +732,11 @@ class Single(object):
         Prepare the command string
         '''
         sudo = 'sudo' if self.target['sudo'] else ''
-        thin_sum = salt.utils.thin.thin_sum(self.opts['cachedir'], 'sha1')
+        if '_caller_cachedir' in self.opts:
+            cachedir = self.opts['_caller_cachedir']
+        else:
+            cachedir = self.opts['cachedir']
+        thin_sum = salt.utils.thin.thin_sum(cachedir, 'sha1')
         debug = ''
         if salt.log.LOG_LEVELS['debug'] >= salt.log.LOG_LEVELS[self.opts['log_level']]:
             debug = '1'
