@@ -141,7 +141,10 @@ def extracted(name,
                                                saltenv=__env__)
         log.debug('file.managed: {0}'.format(file_result))
         # get value of first key
-        file_result = file_result[file_result.keys()[0]]
+        try:
+            file_result = file_result[file_result.keys()[0]]
+        except AttributeError:
+            pass
         if not file_result['result']:
             log.debug('failed to download {0}'.format(source))
             return file_result
