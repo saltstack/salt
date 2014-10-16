@@ -170,6 +170,11 @@ class SSH(object):
                     )
                 )
         if not os.path.isfile(priv):
+            priv = self.opts.get(
+                'ssh_priv',
+                os.path.expanduser('~/.ssh/id_rsa')
+            )
+        if not os.path.isfile(priv):
             try:
                 salt.client.ssh.shell.gen_key(priv)
             except OSError:
@@ -217,6 +222,12 @@ class SSH(object):
                     'salt-ssh.rsa'
                     )
                 )
+        pub = '{0}.pub'.format(priv)
+        if not os.path.isfile(pub):
+            priv = self.opts.get(
+                'ssh_priv',
+                os.path.expanduser('~/.ssh/id_rsa')
+            )
         pub = '{0}.pub'.format(priv)
         with open(pub, 'r') as fp_:
             return '{0} rsa root@master'.format(fp_.read().split()[1])
