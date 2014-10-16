@@ -150,7 +150,7 @@ def extracted(name,
             if not file_result['result']:
                 log.debug('failed to download {0}'.format(source))
                 return file_result
-        except AttributeError:
+        except TypeError:
             if not file_result:
                 log.debug('failed to download {0}'.format(source))
                 return file_result
