@@ -489,6 +489,12 @@ class Single(object):
             fsclient=None,
             **kwargs):
         self.opts = opts
+        if kwargs.get('wipe'):
+            self.wipe = 'False'
+        else:
+            self.wipe = 'True' if self.opts.get('wipe_ssh') else 'False'
+            if self.opts.get('rand_thin_dir'):
+                self.wipe = 'True'
         if user:
             self.thin_dir = DEFAULT_THIN_DIR.replace('%%USER%%', user)
         else:
@@ -722,9 +728,6 @@ class Single(object):
         debug = ''
         if salt.log.LOG_LEVELS['debug'] >= salt.log.LOG_LEVELS[self.opts['log_level']]:
             debug = '1'
-        wipe = 'True' if self.opts.get('wipe_ssh') else 'False'
-        if self.opts.get('rand_thin_dir'):
-            wipe = 'True'
         arg_str = '''
 OPTIONS = OBJ()
 OPTIONS.config = '{0}'
@@ -742,7 +745,7 @@ ARGS = {8}\n'''.format(self.minion_config,
                          'sha1',
                          salt.__version__,
                          self.mods.get('version', ''),
-                         wipe,
+                         self.wipe,
                          self.argv)
         py_code = SSH_PY_SHIM.replace('#%%OPTS', arg_str)
         py_code_enc = py_code.encode('base64')

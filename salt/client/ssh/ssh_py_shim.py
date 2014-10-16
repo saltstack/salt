@@ -105,8 +105,10 @@ def unpack_ext(ext_path):
 
 def main(argv):
     thin_path = os.path.join(OPTIONS.saltdir, THIN_ARCHIVE)
-    if os.path.exists(thin_path):
+    if os.path.isfile(thin_path):
         if OPTIONS.checksum != get_hash(thin_path, OPTIONS.hashfunc):
+            sys.stderr.write('{0}\n'.format(OPTIONS.checksum))
+            sys.stderr.write('{0}\n'.format(get_hash(thin_path, OPTIONS.hashfunc)))
             os.unlink(thin_path)
             sys.stderr.write('WARNING: checksum mismatch for "{0}"\n'.format(thin_path))
             sys.exit(EX_THIN_CHECKSUM)
