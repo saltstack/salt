@@ -1168,8 +1168,7 @@ def get_repo(repo, **kwargs):
                     for comp in repo_comps:
                         if comp in sub.get('comps', []):
                             return sub
-
-    raise CommandExecutionError('repo {0!r} was not found'.format(repo))
+    return {}
 
 
 def del_repo(repo, **kwargs):

@@ -242,8 +242,6 @@ def managed(name, **kwargs):
         ret['comment'] = \
             'Failed to configure repo {0!r}: {1}'.format(name, exc)
         return ret
-    except Exception:
-        pass
 
     # this is because of how apt-sources works.  This pushes distro logic
     # out of the state itself and into a module that it makes more sense
@@ -380,8 +378,7 @@ def absent(name, **kwargs):
         ret['comment'] = \
             'Failed to configure repo {0!r}: {1}'.format(name, exc)
         return ret
-    except Exception:
-        pass
+
     if not repo:
         ret['comment'] = 'Package repo {0} is absent'.format(name)
         ret['result'] = True
