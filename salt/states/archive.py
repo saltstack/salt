@@ -109,6 +109,8 @@ def extracted(name,
 
     log.debug('Input seem valid so far')
     filename = os.path.join(__opts__['cachedir'],
+                            'files',
+                            __env__,
                             '{0}.{1}'.format(if_missing.replace('/', '_'),
                                              archive_format))
     if not os.path.exists(filename):
@@ -131,7 +133,12 @@ def extracted(name,
                 ]
             }
         }
-        file_result = __salt__['state.high'](data)
+        file_result = __salt__['state.single']('file.managed',
+                                               filename,
+                                               source=source,
+                                               source_hash=source_hash,
+                                               makedirs=True,
+                                               saltenv=__env__)
         log.debug('file.managed: {0}'.format(file_result))
         # get value of first key
         file_result = file_result[file_result.keys()[0]]
