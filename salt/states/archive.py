@@ -145,9 +145,15 @@ def extracted(name,
             file_result = file_result[file_result.keys()[0]]
         except AttributeError:
             pass
-        if not file_result['result']:
-            log.debug('failed to download {0}'.format(source))
-            return file_result
+
+        try:
+            if not file_result['result']:
+                log.debug('failed to download {0}'.format(source))
+                return file_result
+        except AttributeError:
+            if not file_result:
+                log.debug('failed to download {0}'.format(source))
+                return file_result
     else:
         log.debug('Archive file {0} is already in cache'.format(name))
 
