@@ -43,4 +43,5 @@ The information which can be stored in a roster `target` is the following:
         port:    # The target system's ssh port number
         sudo:    # Boolean to run command via sudo
         priv:    # File path to ssh private key, defaults to salt-ssh.rsa
-        timeout: # Number of seconds to wait for response
+        timeout: # Number of seconds to wait for response when establishing a
+                   SSH connection
