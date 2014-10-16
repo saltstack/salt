@@ -1584,9 +1584,9 @@ also be configured on a per-remote basis, see :conf_master:`here
 
 Default: ``tags``
 
-Path relative to the root of the repository where the tags is located. Can also
-be configured on a per-remote basis, see :conf_master:`here <svnfs_remotes>`
-for more info.
+Path relative to the root of the repository where the tags are located. Can
+also be configured on a per-remote basis, see :conf_master:`here
+<svnfs_remotes>` for more info.
 
 .. code-block:: yaml
 
