@@ -620,7 +620,7 @@ class Single(object):
         '''
         # Ensure that opts/grains are up to date
         # Execute routine
-        data_cache = self.opts.get('ssh_minion_cache', True)
+        data_cache = False
         data = None
         cdir = os.path.join(self.opts['cachedir'], 'minions', self.id)
         if not os.path.isdir(cdir):
