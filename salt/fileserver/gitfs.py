@@ -17,6 +17,9 @@ mind, this order is subject to change).
 An optional master config parameter (:conf_master:`gitfs_provider`) can be used
 to specify which provider should be used.
 
+More detailed information on how to use gitfs can be found in the :ref:`Gitfs
+Walkthrough <tutorial-gitfs>`.
+
 .. note:: Minimum requirements
 
     To use GitPython_ for gitfs requires a minimum GitPython version of 0.3.0,
@@ -32,21 +35,10 @@ to specify which provider should be used.
     To find stale refs, pygit2 additionally requires the git CLI utility to be
     installed.
 
-.. warning::
-
-    pygit2_ does not yet support supplying passing SSH credentials, so at
-    this time only ``http://``, ``https://``, and ``file://`` URLs are
-    supported as valid :conf_master:`gitfs_remotes` entries if pygit2 is being
-    used.
-
-    Additionally, pygit2_ does not yet support passing http/https credentials
-    via a `.netrc`_ file.
-
 .. _GitPython: https://github.com/gitpython-developers/GitPython
 .. _pygit2: https://github.com/libgit2/pygit2
 .. _libgit2: https://libgit2.github.com/
 .. _dulwich: https://www.samba.org/~jelmer/dulwich/
-.. _.netrc: https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-File.html
 '''
 
 # Import python libs
