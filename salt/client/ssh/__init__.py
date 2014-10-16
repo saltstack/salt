@@ -799,7 +799,7 @@ ARGS = {8}\n'''.format(self.minion_config,
                 if not re.search(RSTR_RE, stdout) or not re.search(RSTR_RE, stderr):
                     # If RSTR is not seen in both stdout and stderr then there
                     # was a thin deployment problem.
-                    return 'ERROR: Failure deploying thin: {0}'.format(stdout), stderr, retcode
+                    return 'ERROR: Failure deploying thin, undefined state: {0}'.format(stdout), stderr, retcode
                 stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
                 stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
             else:
@@ -837,7 +837,7 @@ ARGS = {8}\n'''.format(self.minion_config,
                 if not re.search(RSTR_RE, stdout) or not re.search(RSTR_RE, stderr):
                     # If RSTR is not seen in both stdout and stderr then there
                     # was a thin deployment problem.
-                    return 'ERROR: Failure deploying thin: {0}'.format(stdout), stderr, retcode
+                    return 'ERROR: Failure deploying ext_mods: {0}'.format(stdout), stderr, retcode
                 stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
                 stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
 
