@@ -320,7 +320,9 @@ class Shell(object):
             if stderr:
                 ret_stderr += stderr
             if stdout and SSH_PASSWORD_PROMPT_RE.search(stdout):
-                if not self.passwd:
+                if len(stdout) > 256:
+                    pass
+                elif not self.passwd:
                     try:
                         term.close(terminate=True, kill=True)
                     except salt.utils.vt.TerminalException:
