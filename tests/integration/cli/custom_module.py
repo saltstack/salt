@@ -29,6 +29,10 @@
     localhost:
         olleh
 
+
+    This test can be run in a small test suite with:
+
+    $ python tests/runtests.py -C --ssh
 '''
 
 # Import Salt Libs
@@ -48,7 +52,6 @@ class SSHCustomModuleTest(integration.SSHCase):
         cmd = self.run_function('test.echo', arg=['hello'])
         self.assertEqual(expected, cmd)
 
-
     def test_ssh_custom_module(self):
         '''
         Test custom module work using SSHCase environment
@@ -56,7 +59,6 @@ class SSHCustomModuleTest(integration.SSHCase):
         expected = 'hello'[::-1]
         cmd = self.run_function('test.recho', arg=['hello'])
         self.assertEqual(expected, cmd)
-
 
     def test_ssh_sls_with_custom_module(self):
         '''
@@ -74,10 +76,5 @@ class SSHCustomModuleTest(integration.SSHCase):
 
 
 if __name__ == '__main__':
-    '''
-    This test can be run in a small test suite with:
-
-    python tests/runtests.py -C --ssh
-    '''
     from integration import run_tests
     run_tests(SSHCustomModuleTest)
