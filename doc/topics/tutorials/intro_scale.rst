@@ -146,7 +146,7 @@ reconnect x: etc.
 
 With a thousand minions this will mean
 
-.. code-block:: math
+.. code-block:: text
 
     1000/60 = ~16
 
@@ -228,7 +228,7 @@ the retention time defined by
 
     keep_jobs: 24
 
-.. code-block:: math
+.. code-block:: text
 
     250 jobs/day * 2000 minions returns = 500.000 files a day
 
