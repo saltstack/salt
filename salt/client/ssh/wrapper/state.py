@@ -18,6 +18,7 @@ import salt.state
 import salt.loader
 import salt.minion
 import salt.log
+from salt._compat import string_types
 
 log = logging.getLogger(__name__)
 
@@ -360,6 +361,8 @@ def show_sls(mods, saltenv='base', test=None, env=None, **kwargs):
             __pillar__,
             __salt__,
             __context__['fileclient'])
+    if isinstance(mods, string_types):
+        mods = mods.split(',')
     high_data, errors = st_.render_highstate({saltenv: mods})
     high_data, ext_errors = st_.state.reconcile_extend(high_data)
     errors += ext_errors
