@@ -508,7 +508,7 @@ class Single(object):
         self.fun, self.args, self.kwargs = self.__arg_comps()
         self.id = id_
 
-        self.mods = mods
+        self.mods = mods if isinstance(mods, dict) else {}
         args = {'host': host,
                 'user': user,
                 'port': port,
@@ -985,7 +985,7 @@ def mod_data(fsclient):
     for env in envs:
         files = fsclient.file_list(env)
         for ref in sync_refs:
-            mod_data = {}
+            mods_data = {}
             pref = '_{0}'.format(ref)
             for fn_ in sorted(files):
                 if fn_.startswith(pref):
@@ -994,14 +994,14 @@ def mod_data(fsclient):
                         mod_path = fsclient.cache_file(full, env)
                         if not os.path.isfile(mod_path):
                             continue
-                        mod_data[os.path.basename(fn_)] = mod_path
+                        mods_data[os.path.basename(fn_)] = mod_path
                         chunk = salt.utils.get_hash(mod_path)
                         ver_base += chunk
-            if mod_data:
+            if mods_data:
                 if ref in ret:
-                    ret[ref].update(mod_data)
+                    ret[ref].update(mods_data)
                 else:
-                    ret[ref] = mod_data
+                    ret[ref] = mods_data
     if not ret:
         return {}
     ver = hashlib.sha1(ver_base).hexdigest()
