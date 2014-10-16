@@ -53,6 +53,7 @@ class FunctionWrapper(dict):
                     self.opts,
                     argv,
                     mods=self.mods,
+                    wipe=True,
                     **self.kwargs
             )
             stdout, stderr, _ = single.cmd_block()

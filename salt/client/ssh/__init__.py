@@ -204,6 +204,10 @@ class SSH(object):
                 salt.config.DEFAULT_MASTER_OPTS['ssh_sudo']
             ),
         }
+        if self.opts.get('rand_thin_dir'):
+            self.defaults['thin_dir'] = os.path.join(
+                    '/tmp',
+                    '.{0}'.format(uuid.uuid4().hex[:6]))
         self.serial = salt.payload.Serial(opts)
         self.returners = salt.loader.returners(self.opts, {})
         self.fsclient = salt.fileclient.FSClient(self.opts)
@@ -489,13 +493,17 @@ class Single(object):
             fsclient=None,
             **kwargs):
         self.opts = opts
-        if user:
+        if kwargs.get('wipe'):
+            self.wipe = 'False'
+        else:
+            self.wipe = 'True' if self.opts.get('wipe_ssh') else 'False'
+        if kwargs.get('thin_dir'):
+            self.thin_dir = kwargs['thin_dir']
+        elif user:
             self.thin_dir = DEFAULT_THIN_DIR.replace('%%USER%%', user)
         else:
             self.thin_dir = DEFAULT_THIN_DIR.replace('%%USER%%', 'root')
-        if self.opts.get('rand_thin_dir'):
-            self.thin_dir = os.path.join('/tmp', '.{0}'.format(uuid.uuid4().hex))
-        self.opts['_thin_dir'] = self.thin_dir
+        self.opts['thin_dir'] = self.thin_dir
         self.fsclient = fsclient
         self.context = {'master_opts': self.opts,
                         'fileclient': self.fsclient}
@@ -522,6 +530,7 @@ class Single(object):
                 {
                     'root_dir': os.path.join(self.thin_dir, 'running_data'),
                     'id': self.id,
+                    'sock_dir': '/',
                 }).strip()
         self.target = kwargs
         self.target.update(args)
@@ -567,7 +576,11 @@ class Single(object):
         '''
         Deploy salt-thin
         '''
-        thin = salt.utils.thin.gen_thin(self.opts['cachedir'])
+        if self.opts.get('_caller_cachedir'):
+            cachedir = self.opts.get('_caller_cachedir')
+        else:
+            cachedir = self.opts['cachedir']
+        thin = salt.utils.thin.gen_thin(cachedir)
         self.shell.send(
             thin,
             os.path.join(self.thin_dir, 'salt-thin.tgz'),
@@ -620,7 +633,7 @@ class Single(object):
         '''
         # Ensure that opts/grains are up to date
         # Execute routine
-        data_cache = self.opts.get('ssh_minion_cache', True)
+        data_cache = False
         data = None
         cdir = os.path.join(self.opts['cachedir'], 'minions', self.id)
         if not os.path.isdir(cdir):
@@ -652,6 +665,10 @@ class Single(object):
             opts_pkg = pre_wrapper['test.opts_pkg']()
             opts_pkg['file_roots'] = self.opts['file_roots']
             opts_pkg['pillar_roots'] = self.opts['pillar_roots']
+            if '_caller_cachedir' in self.opts:
+                opts_pkg['_caller_cachedir'] = self.opts['_caller_cachedir']
+            else:
+                opts_pkg['_caller_cachedir'] = self.opts['cachedir']
             # Use the ID defined in the roster file
             opts_pkg['id'] = self.id
 
@@ -718,13 +735,14 @@ class Single(object):
         Prepare the command string
         '''
         sudo = 'sudo' if self.target['sudo'] else ''
-        thin_sum = salt.utils.thin.thin_sum(self.opts['cachedir'], 'sha1')
+        if '_caller_cachedir' in self.opts:
+            cachedir = self.opts['_caller_cachedir']
+        else:
+            cachedir = self.opts['cachedir']
+        thin_sum = salt.utils.thin.thin_sum(cachedir, 'sha1')
         debug = ''
         if salt.log.LOG_LEVELS['debug'] >= salt.log.LOG_LEVELS[self.opts['log_level']]:
             debug = '1'
-        wipe = 'True' if self.opts.get('wipe_ssh') else 'False'
-        if self.opts.get('rand_thin_dir'):
-            wipe = 'True'
         arg_str = '''
 OPTIONS = OBJ()
 OPTIONS.config = '{0}'
@@ -742,7 +760,7 @@ ARGS = {8}\n'''.format(self.minion_config,
                          'sha1',
                          salt.__version__,
                          self.mods.get('version', ''),
-                         wipe,
+                         self.wipe,
                          self.argv)
         py_code = SSH_PY_SHIM.replace('#%%OPTS', arg_str)
         py_code_enc = py_code.encode('base64')
@@ -799,7 +817,7 @@ ARGS = {8}\n'''.format(self.minion_config,
                 if not re.search(RSTR_RE, stdout) or not re.search(RSTR_RE, stderr):
                     # If RSTR is not seen in both stdout and stderr then there
                     # was a thin deployment problem.
-                    return 'ERROR: Failure deploying thin: {0}'.format(stdout), stderr, retcode
+                    return 'ERROR: Failure deploying thin, undefined state: {0}'.format(stdout), stderr, retcode
                 stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
                 stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
             else:
@@ -828,7 +846,7 @@ ARGS = {8}\n'''.format(self.minion_config,
                 if not re.search(RSTR_RE, stdout) or not re.search(RSTR_RE, stderr):
                     # If RSTR is not seen in both stdout and stderr then there
                     # was a thin deployment problem.
-                    return 'ERROR: Failure deploying thin: {0}'.format(stdout), stderr, retcode
+                    return 'ERROR: Failure deploying thin: {0}\n{1}'.format(stdout, stderr), stderr, retcode
                 stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
                 stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
             elif 'ext_mods' == shim_command:
@@ -837,7 +855,7 @@ ARGS = {8}\n'''.format(self.minion_config,
                 if not re.search(RSTR_RE, stdout) or not re.search(RSTR_RE, stderr):
                     # If RSTR is not seen in both stdout and stderr then there
                     # was a thin deployment problem.
-                    return 'ERROR: Failure deploying thin: {0}'.format(stdout), stderr, retcode
+                    return 'ERROR: Failure deploying ext_mods: {0}'.format(stdout), stderr, retcode
                 stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
                 stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
 
