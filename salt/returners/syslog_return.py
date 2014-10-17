@@ -21,6 +21,9 @@ try:
 except ImportError:
     HAS_SYSLOG = False
 
+# Import Salt libs
+import salt.utils
+
 # Define the module's virtual name
 __virtualname__ = 'syslog'
 
@@ -36,3 +39,10 @@ def returner(ret):
     Return data to the local syslog
     '''
     syslog.syslog(syslog.LOG_INFO, 'salt-minion: {0}'.format(json.dumps(ret)))
+
+
+def prep_jid(nocache):  # pylint: disable=unused-argument
+    '''
+    Do any necessary pre-preocessing and then return the jid to use
+    '''
+    return salt.utils.gen_jid()
