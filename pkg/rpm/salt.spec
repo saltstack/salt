@@ -15,7 +15,7 @@
 %define _salttesting_ver 2014.8.5
 
 Name: salt
-Version: 2014.1.11
+Version: 2014.1.13
 Release: 1%{?dist}
 Summary: A parallel remote execution system
 
@@ -332,6 +332,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Fri Oct 17 2014 Erik Johnson <erik@saltstack.com> - 2014.1.13-1
+- Update to bugfix release 2014.1.13
+
 * Mon Sep 29 2014 Erik Johnson <erik@saltstack.com> - 2014.1.11-1
 - Update to bugfix release 2014.1.11
 
