@@ -3,9 +3,12 @@
 Display return data in JSON format
 ==================================
 
-:configuration: The output format can be configured with the ``output_indent``
-    setting in the Master or Minion configuration file with the following
-    values:
+:configuration: The output format can be configured in two ways:
+    Using the ``--out-indent`` CLI flag and specifying a positive integer or a
+    negative integer to group JSON from each minion to a single line.
+
+    Or setting the ``output_indent`` setting in the Master or Minion
+    configuration file with one of the following values:
 
     * ``Null``: put each minion return on a single line.
     * ``pretty``: use four-space indents and sort the keys.
@@ -62,8 +65,11 @@ def output(data):
             indent = 4
             sort_keys = True
 
-        elif isinstance(indent, int) and indent >= 0:
-            indent = indent
+        elif isinstance(indent, int):
+            if indent >= 0:
+                indent = indent
+            else:
+                indent = None
 
         return json.dumps(data, default=repr, indent=indent, sort_keys=sort_keys)
 
