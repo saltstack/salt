@@ -353,7 +353,7 @@ def present(
                 ret['comment'] = msg
                 ret['result'] = None
                 return ret
-            updated = __salt__['boto_asg.update'](name, launch_config_name,
+            updated,msg = __salt__['boto_asg.update'](name, launch_config_name,
                                                   availability_zones, min_size,
                                                   max_size, desired_capacity,
                                                   load_balancers,
@@ -381,7 +381,7 @@ def present(
                 ret['comment'] = 'Updated autoscale group.'
             else:
                 ret['result'] = False
-                ret['comment'] = 'Failed to update autoscale group.'
+                ret['comment'] = msg
         else:
             ret['comment'] = 'Autoscale group present.'
     return ret
