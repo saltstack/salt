@@ -249,6 +249,10 @@ def highstate(test=None, **kwargs):
                 __opts__.get('extra_filerefs', '')
                 )
             )
+    # Check for errors
+    for chunk in chunks:
+        if not isinstance(chunk, dict):
+            return chunks
     trans_tar = salt.client.ssh.state.prep_trans_tar(
             __context__['fileclient'],
             chunks,
