@@ -22,7 +22,8 @@ from salt._compat import string_types
 
 log = logging.getLogger(__name__)
 
-def _merge_extra_filerefs(**args):
+
+def _merge_extra_filerefs(*args):
     '''
     Takes a list of filerefs and returns a merged list
     '''
