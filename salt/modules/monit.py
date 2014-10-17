@@ -118,3 +118,33 @@ def summary(svc_name=''):
                     ret[resource] = {}
                 ret[resource][name] = status
     return ret
+
+
+def status(svc_name=''):
+    '''
+    Display a process status from monit
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' monit.status
+        salt '*' monit.status <service name>
+    '''
+    cmd = 'monit status'
+    res = __salt__['cmd.run'](cmd)
+    prostr = 'Process'+' '*28
+    s = res.replace('Process', prostr).replace("'", '').split('\n\n')
+    entries = {}
+    for process in s[1:-1]:
+        pro = process.splitlines()
+        tmp = {}
+        for items in pro:
+            key = items[:36].strip()
+            tmp[key] = items[35:].strip()
+        entries[pro[0].split()[1]] = tmp
+    if svc_name == '':
+        ret = entries
+    else:
+        ret = entries.get(svc_name, 'No such service')
+    return ret
