@@ -715,13 +715,15 @@ class ReactWrap(object):
             return False
         return ret
 
-    def cmd(self, *args, **kwargs):
+    def local(self, *args, **kwargs):
         '''
         Wrap LocalClient for running :ref:`execution modules <all-salt.modules>`
         '''
         if 'local' not in self.client_cache:
             self.client_cache['local'] = salt.client.LocalClient(self.opts['conf_file'])
         return self.client_cache['local'].cmd_async(*args, **kwargs)
+
+    cmd = local
 
     def runner(self, fun, **kwargs):
         '''
