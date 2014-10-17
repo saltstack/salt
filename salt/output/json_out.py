@@ -62,8 +62,11 @@ def output(data):
             indent = 4
             sort_keys = True
 
-        elif isinstance(indent, int) and indent >= 0:
-            indent = indent
+        elif isinstance(indent, int):
+            if indent >= 0:
+                indent = indent
+            else:
+                indent = None
 
         return json.dumps(data, default=repr, indent=indent, sort_keys=sort_keys)
 
