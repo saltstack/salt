@@ -119,7 +119,11 @@ def _get_serv(commit=False):
     Return a mysql cursor
     '''
     _options = _get_options()
-    conn = MySQLdb.connect(host=_options['host'], user=_options['user'], passwd=_options['pass'], db=_options['db'], port=_options['port'])
+    conn = MySQLdb.connect(host=_options['host'],
+                           user=_options['user'],
+                           passwd=_options['pass'],
+                           db=_options['db'],
+                           port=_options['port'])
     cursor = conn.cursor()
     try:
         yield cursor
@@ -147,8 +151,10 @@ def returner(ret):
                 VALUES (%s, %s, %s, %s, %s, %s)'''
 
         cur.execute(sql, (ret['fun'], ret['jid'],
-                            json.dumps(ret['return']), ret['id'],
-                            ret['success'], json.dumps(ret)))
+                          json.dumps(ret['return']),
+                          ret['id'],
+                          ret['success'],
+                          json.dumps(ret)))
 
 
 def save_load(jid, load):
@@ -217,7 +223,7 @@ def get_fun(fun):
 
         ret = {}
         if data:
-            for minion, jid, full_ret in data:
+            for minion, _, full_ret in data:
                 ret[minion] = json.loads(full_ret)
         return ret
 

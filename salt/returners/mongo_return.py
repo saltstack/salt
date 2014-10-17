@@ -23,6 +23,9 @@ to the minion config files::
 # Import python libs
 import logging
 
+# import Salt libs
+import salt.utils
+
 # Import third party libs
 try:
     import pymongo
@@ -41,6 +44,9 @@ def __virtual__():
 
 
 def _remove_dots(src):
+    '''
+    Remove dots from the given data structure
+    '''
     output = {}
     for key, val in src.iteritems():
         if isinstance(val, dict):
@@ -56,19 +62,19 @@ def _get_conn():
     if 'config.option' in __salt__:
         host = __salt__['config.option']('mongo.host')
         port = __salt__['config.option']('mongo.port')
-        db = __salt__['config.option']('mongo.db')
+        db_ = __salt__['config.option']('mongo.db')
         user = __salt__['config.option']('mongo.user')
         password = __salt__['config.option']('mongo.password')
     else:
         cfg = __opts__
         host = cfg.get('mongo.host', None)
         port = cfg.get('mongo.port', None)
-        db = cfg.get('mongo.db', None)
+        db_ = cfg.get('mongo.db', None)
         user = cfg.get('mongo.user', None)
         password = cfg.get('mongo.password', None)
 
     conn = pymongo.Connection(host, port)
-    mdb = conn[db]
+    mdb = conn[db_]
 
     if user and password:
         mdb.authenticate(user, password)
@@ -79,7 +85,7 @@ def returner(ret):
     '''
     Return data to a mongodb server
     '''
-    conn, mdb = _get_conn()
+    _, mdb = _get_conn()
     col = mdb[ret['id']]
 
     if isinstance(ret['return'], dict):
@@ -98,7 +104,7 @@ def get_jid(jid):
     '''
     Return the return information associated with a jid
     '''
-    conn, mdb = _get_conn()
+    _, mdb = _get_conn()
     ret = {}
     for collection in mdb.collection_names():
         rdata = mdb[collection].find_one({jid: {'$exists': 'true'}})
@@ -111,10 +117,17 @@ def get_fun(fun):
     '''
     Return the most recent jobs that have executed the named function
     '''
-    conn, mdb = _get_conn()
+    _, mdb = _get_conn()
     ret = {}
     for collection in mdb.collection_names():
         rdata = mdb[collection].find_one({'fun': fun})
         if rdata:
             ret[collection] = rdata
     return ret
+
+
+def prep_jid(nocache):  # pylint: disable=unused-argument
+    '''
+    Pre-process the jid and return the jid to use
+    '''
+    return salt.utils.gen_jid()
