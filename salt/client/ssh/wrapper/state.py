@@ -209,6 +209,10 @@ def highstate(test=None, **kwargs):
             __salt__,
             __context__['fileclient'])
     chunks = st_.compile_low_chunks()
+    # Check for errors
+    for chunk in chunks:
+        if not isinstance(chunk, dict):
+            return chunks
     file_refs = salt.client.ssh.state.lowstate_file_refs(chunks, kwargs.get('extra_filerefs', ''))
     trans_tar = salt.client.ssh.state.prep_trans_tar(
             __context__['fileclient'],
