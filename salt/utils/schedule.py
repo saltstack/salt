@@ -552,12 +552,14 @@ class Schedule(object):
                     time_conflict = True
 
             if time_conflict:
-                log.error('Unable to use "seconds", "minutes", "hours", or "days" with '
+                log.error('Unable to use "seconds", "minutes",'
+                          '"hours", or "days" with '
                           '"when" or "cron" options. Ignoring.')
                 continue
 
             if 'when' in data and 'cron' in data:
-                log.error('Unable to use "when" and "cron" options together. Ignoring.')
+                log.error('Unable to use "when" and "cron" options together.'
+                          'Ignoring.')
                 continue
 
             time_elements = ['seconds', 'minutes', 'hours', 'days']
@@ -569,20 +571,50 @@ class Schedule(object):
                 seconds += int(data.get('days', 0)) * 86400
             elif 'when' in data:
                 if not _WHEN_SUPPORTED:
-                    log.error('Missing python-dateutil. Ignoring job {0}'.format(job))
+                    log.error('Missing python-dateutil.'
+                              'Ignoring job {0}'.format(job))
                     continue
 
                 if isinstance(data['when'], list):
                     _when = []
                     now = int(time.time())
                     for i in data['when']:
-                        try:
-                            tmp = int(dateutil_parser.parse(i).strftime('%s'))
-                        except ValueError:
-                            log.error('Invalid date string {0}. Ignoring job {1}.'.format(i, job))
-                            continue
-                        if tmp >= now:
-                            _when.append(tmp)
+                        if ('whens' in self.opts['pillar'] and
+                                i in self.opts['pillar']['whens']):
+                            if not isinstance(self.opts['pillar']['whens'],
+                                              dict):
+                                log.error('Pillar item "whens" must be dict.'
+                                          'Ignoring')
+                                continue
+                            __when = self.opts['pillar']['whens'][i]
+                            try:
+                                when__ = dateutil_parser.parse(__when)
+                            except ValueError:
+                                log.error('Invalid date string. Ignoring')
+                                continue
+                        elif ('whens' in self.opts['grains'] and
+                              i in self.opts['grains']['whens']):
+                            if not isinstance(self.opts['grains']['whens'],
+                                              dict):
+                                log.error('Grain "whens" must be dict.'
+                                          'Ignoring')
+                                continue
+                            __when = self.opts['grains']['whens'][i]
+                            try:
+                                when__ = dateutil_parser.parse(__when)
+                            except ValueError:
+                                log.error('Invalid date string. Ignoring')
+                                continue
+                        else:
+                            try:
+                                when__ = dateutil_parser.parse(i)
+                            except ValueError:
+                                log.error('Invalid date string {0}.'
+                                          'Ignoring job {1}.'.format(i, job))
+                                continue
+                        when = int(when__.strftime('%s'))
+                        if when >= now:
+                            _when.append(when)
                     _when.sort()
                     if _when:
                         # Grab the first element
@@ -616,12 +648,36 @@ class Schedule(object):
                         continue
 
                 else:
-                    try:
-                        when = int(dateutil_parser.parse(data['when']).strftime('%s'))
-                    except ValueError:
-                        log.error('Invalid date string. Ignoring')
-                        continue
-
+                    if ('whens' in self.opts['pillar'] and
+                            data['when'] in self.opts['pillar']['whens']):
+                        if not isinstance(self.opts['pillar']['whens'], dict):
+                            log.error('Pillar item "whens" must be dict.'
+                                      'Ignoring')
+                            continue
+                        _when = self.opts['pillar']['whens'][data['when']]
+                        try:
+                            when__ = dateutil_parser.parse(_when)
+                        except ValueError:
+                            log.error('Invalid date string. Ignoring')
+                            continue
+                    elif ('whens' in self.opts['grains'] and
+                          data['when'] in self.opts['grains']['whens']):
+                        if not isinstance(self.opts['grains']['whens'], dict):
+                            log.error('Grain "whens" must be dict. Ignoring')
+                            continue
+                        _when = self.opts['grains']['whens'][data['when']]
+                        try:
+                            when__ = dateutil_parser.parse(_when)
+                        except ValueError:
+                            log.error('Invalid date string. Ignoring')
+                            continue
+                    else:
+                        try:
+                            when__ = dateutil_parser.parse(data['when'])
+                        except ValueError:
+                            log.error('Invalid date string. Ignoring')
+                            continue
+                    when = int(when__.strftime('%s'))
                     now = int(time.time())
                     seconds = when - now
 
