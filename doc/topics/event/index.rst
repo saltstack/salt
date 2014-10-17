@@ -112,9 +112,18 @@ To fire an event to be sent to the master, from the minion:
 If a process is listening on the minion, it may be useful for a user on the
 master to fire an event to it:
 
+.. code-block:: python
+    # Job on minion
+    import salt.utils.event
+
+    event = salt.utils.event.MinionEvent(**__opts__)
+
+    for evdata in event.iter_events(tag='customtag/'):
+        return evdata # do your processing here...
+
 .. code-block:: bash
 
-    salt minionname event.fire '{"data": "message for the minion"}' 'tag'
+    salt minionname event.fire '{"data": "message for the minion"}' 'customtag/african/unladen'
 
 
 Firing Events From Code
