@@ -665,6 +665,7 @@ class Single(object):
             opts_pkg = pre_wrapper['test.opts_pkg']()
             opts_pkg['file_roots'] = self.opts['file_roots']
             opts_pkg['pillar_roots'] = self.opts['pillar_roots']
+            opts_pkg['ext_pillar'] = self.opts['ext_pillar']
             if '_caller_cachedir' in self.opts:
                 opts_pkg['_caller_cachedir'] = self.opts['_caller_cachedir']
             else:
@@ -683,8 +684,8 @@ class Single(object):
                     opts_pkg['id'],
                     opts_pkg.get('environment', 'base')
                     )
-
-            pillar_data = pillar.compile_pillar()
+            pillar_dirs = {}
+            pillar_data = pillar.compile_pillar(pillar_dirs=pillar_dirs)
 
             # TODO: cache minion opts in datap in master.py
             data = {'opts': opts_pkg,
