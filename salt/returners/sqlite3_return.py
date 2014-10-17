@@ -51,9 +51,9 @@ Use the commands to create the sqlite3 database and tables::
       );
     EOF
 
-  To use the sqlite returner, append '--return sqlite' to the salt command. ex:
+  To use the sqlite returner, append '--return sqlite3' to the salt command. ex:
 
-    salt '*' test.ping --return sqlite
+    salt '*' test.ping --return sqlite3
 
   To use the alternative configuration, append '--return_config alternative' to the salt command. ex:
 
