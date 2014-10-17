@@ -366,6 +366,7 @@ class MultiMinion(object):
         for master in set(self.opts['master']):
             s_opts = copy.copy(self.opts)
             s_opts['master'] = master
+            s_opts['multimaster'] = True
             try:
                 minions.append(Minion(s_opts, 5, False))
             except SaltClientError as exc:
@@ -765,6 +766,10 @@ class Minion(object):
         # python needs to be able to reconstruct the reference on the other
         # side.
         instance = self
+        # If we are running in multi-master mode, re-inject opts into module funcs
+        if instance.opts.get('multimaster', False):
+            for func in instance.functions:
+                sys.modules[instance.functions[func].__module__].__opts__ = self.opts
         if self.opts['multiprocessing']:
             if sys.platform.startswith('win'):
                 # let python reconstruct the minion on the other side if we're
