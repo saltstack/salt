@@ -23,12 +23,14 @@ def list_(match):
     skey = salt.key.Key(__opts__)
     return skey.list_status(match)
 
+
 def list_all():
     '''
     List all the keys
     '''
     skey = salt.key.Key(__opts__)
     return skey.all_keys()
+
 
 def accept(match):
     '''
@@ -37,12 +39,14 @@ def accept(match):
     skey = salt.key.Key(__opts__)
     return skey.accept(match)
 
+
 def accept_dict(match):
     '''
     Accept keys based on a dict of keys
     '''
     skey = salt.key.Key(__opts__)
     return skey.accept(match_dict=match)
+
 
 def delete(match):
     '''
@@ -51,12 +55,14 @@ def delete(match):
     skey = salt.key.Key(__opts__)
     return skey.delete_key(match)
 
+
 def delete_dict(match):
     '''
     Delete keys based on a dict of keys
     '''
     skey = salt.key.Key(__opts__)
     return skey.delete_key(match_dict=match)
+
 
 def reject(match):
     '''
@@ -65,12 +71,14 @@ def reject(match):
     skey = salt.key.Key(__opts__)
     return skey.reject(match)
 
+
 def reject_dict(match):
     '''
     Reject keys based on a dict of keys
     '''
     skey = salt.key.Key(__opts__)
     return skey.reject(match_dict=match)
+
 
 def key_str(match):
     '''
@@ -79,12 +87,14 @@ def key_str(match):
     skey = salt.key.Key(__opts__)
     return skey.key_str(match)
 
+
 def finger(match):
     '''
     Return the matching key fingerprints
     '''
     skey = salt.key.Key(__opts__)
     return skey.finger(match)
+
 
 def gen(id_=None, keysize=2048):
     '''
@@ -104,6 +114,7 @@ def gen(id_=None, keysize=2048):
     os.remove(priv)
     os.remove(pub)
     return ret
+
 
 def gen_accept(id_, keysize=2048, force=False):
     '''
