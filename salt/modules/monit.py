@@ -111,12 +111,12 @@ def summary(svc_name=''):
         else:
             parts = line.split('\'')
             if len(parts) == 3:
-                resource, name, status = (
+                resource, name, status_ = (
                     parts[0].strip(), parts[1], parts[2].strip()
                 )
                 if resource not in ret:
                     ret[resource] = {}
-                ret[resource][name] = status
+                ret[resource][name] = status_
     return ret
 
 
