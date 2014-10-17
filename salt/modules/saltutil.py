@@ -732,6 +732,12 @@ def runner(fun, **kwargs):
         The name of the function to run
     kwargs
         Any keyword arguments to pass to the runner function
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.runner jobs.list_jobs
     '''
     rclient = salt.runner.RunnerClient(__opts__)
     return rclient.cmd(fun, [], kwarg=kwargs)
@@ -747,6 +753,12 @@ def wheel(fun, **kwargs):
         The name of the function to run
     kwargs
         Any keyword arguments to pass to the wheel function
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.wheel key.accept match=jerry
     '''
     wclient = salt.wheel.WheelClient(__opts__)
     return wclient.cmd(fun, **kwargs)
