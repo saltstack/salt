@@ -11,16 +11,16 @@ except ImportError:
 
 import salt.utils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.modules.mac_user import _osmajor, _dscl, _flush_dscl_cache
+from salt.modules.mac_user import _dscl, _flush_dscl_cache
 
 # Define the module's virtual name
 __virtualname__ = 'group'
 
 
 def __virtual__():
-    global _osmajor, _dscl, _flush_dscl_cache
-    _osmajor = salt.utils.namespaced_function(_osmajor, globals())
-    if __grains__.get('kernel') != 'Darwin' or _osmajor() < 10.7:
+    global _dscl, _flush_dscl_cache
+    if (__grains__.get('kernel') != 'Darwin' or
+            __grains__['osrelease_info'] < (10, 7)):
         return False
     _dscl = salt.utils.namespaced_function(_dscl, globals())
     _flush_dscl_cache = salt.utils.namespaced_function(
