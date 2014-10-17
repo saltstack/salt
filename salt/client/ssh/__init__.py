@@ -208,6 +208,7 @@ class SSH(object):
             self.defaults['thin_dir'] = os.path.join(
                     '/tmp',
                     '.{0}'.format(uuid.uuid4().hex[:6]))
+            self.opts['wipe_ssh'] = 'True'
         self.serial = salt.payload.Serial(opts)
         self.returners = salt.loader.returners(self.opts, {})
         self.fsclient = salt.fileclient.FSClient(self.opts)

@@ -2198,7 +2198,7 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help='Remove the deployment of the salt files when done executing.',
         )
         self.add_option(
-            '--rand-thin-dir',
+            '-W', '--rand-thin-dir',
             default=False,
             action='store_true',
             help=('Select a random temp dir to deploy on the remote system. '
