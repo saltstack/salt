@@ -22,6 +22,20 @@ from salt._compat import string_types
 
 log = logging.getLogger(__name__)
 
+def _merge_extra_filerefs(**args):
+    '''
+    Takes a list of filerefs and returns a merged list
+    '''
+    ret = []
+    for arg in args:
+        if isinstance(arg, string_types):
+            if arg:
+                ret.extend(arg.split(','))
+        elif isinstance(arg, list):
+            if arg:
+                ret.extend(arg)
+    return ','.join(ret)
+
 
 def sls(mods, saltenv='base', test=None, exclude=None, env=None, **kwargs):
     '''
@@ -66,7 +80,13 @@ def sls(mods, saltenv='base', test=None, exclude=None, env=None, **kwargs):
         return errors
     # Compile and verify the raw chunks
     chunks = st_.state.compile_high_data(high_data)
-    file_refs = salt.client.ssh.state.lowstate_file_refs(chunks, kwargs.get('extra_filerefs', ''))
+    file_refs = salt.client.ssh.state.lowstate_file_refs(
+            chunks,
+            _merge_extra_filerefs(
+                kwargs.get('extra_filerefs', ''),
+                __opts__.get('extra_filerefs', '')
+                )
+            )
     trans_tar = salt.client.ssh.state.prep_trans_tar(
             __context__['fileclient'],
             chunks,
@@ -119,7 +139,13 @@ def low(data, **kwargs):
     err = st_.verify_data(data)
     if err:
         return err
-    file_refs = salt.client.ssh.state.lowstate_file_refs(chunks, kwargs.get('extra_filerefs', ''))
+    file_refs = salt.client.ssh.state.lowstate_file_refs(
+            chunks,
+            _merge_extra_filerefs(
+                kwargs.get('extra_filerefs', ''),
+                __opts__.get('extra_filerefs', '')
+                )
+            )
     trans_tar = salt.client.ssh.state.prep_trans_tar(
             __context__['fileclient'],
             chunks,
@@ -163,7 +189,13 @@ def high(data, **kwargs):
             __salt__,
             __context__['fileclient'])
     chunks = st_.state.compile_high_data(high)
-    file_refs = salt.client.ssh.state.lowstate_file_refs(chunks, kwargs.get('extra_filerefs', ''))
+    file_refs = salt.client.ssh.state.lowstate_file_refs(
+            chunks,
+            _merge_extra_filerefs(
+                kwargs.get('extra_filerefs', ''),
+                __opts__.get('extra_filerefs', '')
+                )
+            )
     trans_tar = salt.client.ssh.state.prep_trans_tar(
             __context__['fileclient'],
             chunks,
@@ -209,7 +241,13 @@ def highstate(test=None, **kwargs):
             __salt__,
             __context__['fileclient'])
     chunks = st_.compile_low_chunks()
-    file_refs = salt.client.ssh.state.lowstate_file_refs(chunks, kwargs.get('extra_filerefs', ''))
+    file_refs = salt.client.ssh.state.lowstate_file_refs(
+            chunks,
+            _merge_extra_filerefs(
+                kwargs.get('extra_filerefs', ''),
+                __opts__.get('extra_filerefs', '')
+                )
+            )
     trans_tar = salt.client.ssh.state.prep_trans_tar(
             __context__['fileclient'],
             chunks,
@@ -265,7 +303,13 @@ def top(topfn, test=None, **kwargs):
             __context__['fileclient'])
     st_.opts['state_top'] = os.path.join('salt://', topfn)
     chunks = st_.compile_low_chunks()
-    file_refs = salt.client.ssh.state.lowstate_file_refs(chunks, kwargs.get('extra_filerefs', ''))
+    file_refs = salt.client.ssh.state.lowstate_file_refs(
+            chunks,
+            _merge_extra_filerefs(
+                kwargs.get('extra_filerefs', ''),
+                __opts__.get('extra_filerefs', '')
+                )
+            )
     trans_tar = salt.client.ssh.state.prep_trans_tar(
             __context__['fileclient'],
             chunks,
