@@ -933,8 +933,6 @@ def pkg(pkg_path, pkg_sum, hash_type, test=False, **kwargs):
             continue
         popts['file_roots'][fn_] = [full]
     st_ = salt.state.State(popts, pillar=pillar)
-    st_.functions['saltutil.sync_all'](envs)
-    st_.module_refresh()
     ret = st_.call_chunks(lowstate)
     try:
         shutil.rmtree(root)
