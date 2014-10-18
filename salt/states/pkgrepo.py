@@ -67,6 +67,7 @@ these states. Here is some example SLS:
 import sys
 
 # Import salt libs
+from salt.exceptions import CommandExecutionError
 from salt.modules.aptpkg import _strip_uri
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
@@ -236,8 +237,11 @@ def managed(name, **kwargs):
                 kwargs['repo'],
                 ppa_auth=kwargs.get('ppa_auth', None)
         )
-    except Exception:
-        pass
+    except CommandExecutionError as exc:
+        ret['result'] = False
+        ret['comment'] = \
+            'Failed to configure repo {0!r}: {1}'.format(name, exc)
+        return ret
 
     # this is because of how apt-sources works.  This pushes distro logic
     # out of the state itself and into a module that it makes more sense
@@ -369,8 +373,12 @@ def absent(name, **kwargs):
         repo = __salt__['pkg.get_repo'](
             name, ppa_auth=kwargs.get('ppa_auth', None)
         )
-    except Exception:
-        pass
+    except CommandExecutionError as exc:
+        ret['result'] = False
+        ret['comment'] = \
+            'Failed to configure repo {0!r}: {1}'.format(name, exc)
+        return ret
+
     if not repo:
         ret['comment'] = 'Package repo {0} is absent'.format(name)
         ret['result'] = True
