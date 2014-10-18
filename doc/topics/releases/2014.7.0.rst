@@ -28,7 +28,8 @@ release.
 Simply stated, users running Salt with RAET should expect some hiccups as we
 hammer out the update. This is a BETA release of Salt RAET.
 
-For information about how to use Salt with RAET please see the :doc:`tutorial </topics/transports/raet/programming_intro>`.
+For information about how to use Salt with RAET please see the
+:doc:`tutorial </topics/transports/raet/programming_intro>`.
 
 Salt SSH Enhancements
 =====================
@@ -42,7 +43,7 @@ basically reborn!
 Install salt-ssh Using pip
 --------------------------
 
-salt-ssh is now pip-installable!
+Salt-ssh is now pip-installable!
 
 https://pypi.python.org/pypi/salt-ssh/
 
@@ -61,6 +62,18 @@ Salt-ssh can now use the salt fileserver backend system, this allows for
 the gitfs, hgfs, s3, and many more ways to centrally store states to be easily
 used with salt-ssh. This also allows for a distributed team to easily use
 a centralized source.
+
+Saltfile Support
+----------------
+
+The new saltfile system makes it easy to have a user specific custom extended
+configuration.
+
+Ext Pillar
+----------
+
+Salt-ssh can now use the external pillar system. Making it easier then ever
+to use salt-ssh with teams.
 
 No More sshpass
 ---------------
@@ -84,6 +97,27 @@ Custom Module Delivery
 
 Custom modules are now seamlessly delivered. This makes the deployment of
 custom grains, states, execution modules and returners a seamless process.
+
+CP Module Support
+-----------------
+
+Salt-ssh now makes simple file transfers easier then ever! The `cp`
+module allows for files to be conveniently sent from the salt fileserver
+system down to systems.
+
+More Thin Directory Options
+---------------------------
+
+Salt ssh functions by copying a subset of the salt code, or `salt thin` down
+to the target system. In the past this was always transfered to /tmp/.salt
+and cached there for subsequent commands.
+
+Now, salt thin can be sent to a random directory and removed when the call
+is complete with the `-W` option. The new `-w` option still uses a static
+location but will clean up that location when finished.
+
+The default `salt thin` location is now user defined, allowing multiple users
+to cleanly access the same systems.
 
 State System Enhancements
 =========================
