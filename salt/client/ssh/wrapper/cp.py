@@ -45,3 +45,31 @@ def get_url(path, dest, saltenv='base'):
             **__salt_.kwargs)
     single.send(src, dest)
     return dest
+
+
+def list_states(saltenv='base'):
+    '''
+    List all the avilable state modules in an environment
+    '''
+    return __context__['fileclient'].list_states(saltenv)
+
+
+def list_master(saltenv='base', prefix=''):
+    '''
+    List all of the files stored on the master
+    '''
+    return __context__['fileclient'].file_list(saltenv, prefix)
+
+
+def list_master_dirs(saltenv='base', prefix=''):
+    '''
+    List all of the directories stored on the master
+    '''
+    return __context__['fileclient'].dir_list(saltenv, prefix)
+
+
+def list_master_symlinks(saltenv='base', prefix=''):
+    '''
+    List all of the symlinks stored on the master
+    '''
+    return __context__['fileclient'].symlink_list(saltenv, prefix)
