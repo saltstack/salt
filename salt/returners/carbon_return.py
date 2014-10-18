@@ -40,6 +40,9 @@ import socket
 import struct
 import time
 
+# Import salt libs
+import salt.utils
+
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
@@ -67,8 +70,8 @@ def _carbon(host, port):
                                     socket.IPPROTO_TCP)
 
         carbon_sock.connect((host, port))
-    except socket.error as e:
-        log.error('Error connecting to {0}:{1}, {2}'.format(host, port, e))
+    except socket.error as err:
+        log.error('Error connecting to {0}:{1}, {2}'.format(host, port, err))
         raise
     else:
         log.debug('Connected to carbon')
@@ -203,3 +206,10 @@ def returner(ret):
 
             log.debug('Sent {0} bytes to carbon'.format(sent_bytes))
             total_sent_bytes += sent_bytes
+
+
+def prep_jid(nocache):  # pylint: disable=unused-argument
+    '''
+    Do any work necessary to prepare a JID, including sending a custom id
+    '''
+    return salt.utils.gen_jid()
