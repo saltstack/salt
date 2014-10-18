@@ -9,7 +9,7 @@ import salt.client.ssh
 
 def get_file(path, dest, saltenv='base'):
     '''
-    Send a file from the master to the location in specified 
+    Send a file from the master to the location in specified
     '''
     src = __context__['fileclient'].cache_file(path, saltenv)
     single = salt.client.ssh.Single(
