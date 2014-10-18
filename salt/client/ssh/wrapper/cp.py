@@ -15,9 +15,9 @@ def get_file(path, dest, saltenv='base'):
     single = salt.client.ssh.Single(
             __opts__,
             '',
-            **__salt_.kwargs)
-    single.send(src, dest)
-    return dest
+            **__salt__.kwargs)
+    ret = single.shell.send(src, dest)
+    return not ret[2]
 
 
 def get_dir(path, dest, saltenv='base'):
@@ -29,9 +29,9 @@ def get_dir(path, dest, saltenv='base'):
     single = salt.client.ssh.Single(
             __opts__,
             '',
-            **__salt_.kwargs)
-    single.send(src, dest)
-    return dest
+            **__salt__.kwargs)
+    ret = single.shell.send(src, dest)
+    return not ret[2]
 
 
 def get_url(path, dest, saltenv='base'):
@@ -42,9 +42,9 @@ def get_url(path, dest, saltenv='base'):
     single = salt.client.ssh.Single(
             __opts__,
             '',
-            **__salt_.kwargs)
-    single.send(src, dest)
-    return dest
+            **__salt__.kwargs)
+    ret = single.shell.send(src, dest)
+    return not ret[2]
 
 
 def list_states(saltenv='base'):
