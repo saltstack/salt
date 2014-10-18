@@ -54,12 +54,12 @@ import subprocess
 from datetime import datetime
 
 VALID_PROVIDERS = ('gitpython', 'pygit2', 'dulwich')
+PER_REMOTE_PARAMS = ('base', 'mountpoint', 'root')
 
 # Auth support (auth params can be global or per-remote, too)
 AUTH_PROVIDERS = ('pygit2',)
 AUTH_PARAMS = ('user', 'password', 'pubkey', 'privkey', 'passphrase',
                'insecure_auth')
-PER_REMOTE_PARAMS = AUTH_PARAMS + ('base', 'mountpoint', 'root')
 
 _RECOMMEND_GITPYTHON = (
     'GitPython is installed, you may wish to set gitfs_provider to '
