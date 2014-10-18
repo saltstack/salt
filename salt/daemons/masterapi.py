@@ -440,6 +440,7 @@ class RemoteFuncs(object):
         mopts['nodegroups'] = self.opts['nodegroups']
         mopts['state_auto_order'] = self.opts['state_auto_order']
         mopts['state_events'] = self.opts['state_events']
+        mopts['state_aggregate'] = self.opts['state_aggregate']
         mopts['jinja_lstrip_blocks'] = self.opts['jinja_lstrip_blocks']
         mopts['jinja_trim_blocks'] = self.opts['jinja_trim_blocks']
         return mopts
@@ -504,7 +505,8 @@ class RemoteFuncs(object):
         checker = salt.utils.minions.CkMinions(self.opts)
         minions = checker.check_minions(
                 load['tgt'],
-                load.get('expr_form', 'glob')
+                load.get('expr_form', 'glob'),
+                greedy=False
                 )
         for minion in minions:
             mine = os.path.join(
@@ -612,12 +614,18 @@ class RemoteFuncs(object):
                 )
             )
             return False
+        # Normalize Windows paths
+        normpath = load['path']
+        if ':' in normpath:
+            # make sure double backslashes are normalized
+            normpath = normpath.replace('\\', '/')
+            normpath = os.path.normpath(normpath)
         cpath = os.path.join(
-                self.opts['cachedir'],
-                'minions',
-                load['id'],
-                'files',
-                load['path'])
+            self.opts['cachedir'],
+            'minions',
+            load['id'],
+            'files',
+            normpath)
         cdir = os.path.dirname(cpath)
         if not os.path.isdir(cdir):
             try:

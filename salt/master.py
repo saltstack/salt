@@ -159,7 +159,7 @@ class Master(SMaster):
                         self.opts['user'],
                         self.opts['sock_dir'])
                     rotate = now
-                    if self.opts['ping_on_rotate']:
+                    if self.opts.get('ping_on_rotate'):
                         # Ping all minions to get them to pick up the new key
                         log.debug('Pinging all connected minions due to AES key rotation')
                         salt.utils.master.ping_all_connected_minions(self.opts)
@@ -928,6 +928,7 @@ class AESFuncs(object):
         mopts['nodegroups'] = self.opts['nodegroups']
         mopts['state_auto_order'] = self.opts['state_auto_order']
         mopts['state_events'] = self.opts['state_events']
+        mopts['state_aggregate'] = self.opts['state_aggregate']
         mopts['jinja_lstrip_blocks'] = self.opts['jinja_lstrip_blocks']
         mopts['jinja_trim_blocks'] = self.opts['jinja_trim_blocks']
         return mopts
@@ -1034,12 +1035,18 @@ class AESFuncs(object):
             )
             return {}
         load.pop('tok')
+        # Normalize Windows paths
+        normpath = load['path']
+        if ':' in normpath:
+            # make sure double backslashes are normalized
+            normpath = normpath.replace('\\', '/')
+            normpath = os.path.normpath(normpath)
         cpath = os.path.join(
             self.opts['cachedir'],
             'minions',
             load['id'],
             'files',
-            load['path'])
+            normpath)
         cdir = os.path.dirname(cpath)
         if not os.path.isdir(cdir):
             try:
@@ -1913,7 +1920,7 @@ class ClearFuncs(object):
             good = self.ckminions.wheel_check(
                 self.opts['external_auth'][clear_load['eauth']][name]
                 if name in self.opts['external_auth'][clear_load['eauth']]
-                else self.opts['external_auth'][token['eauth']]['*'],
+                else self.opts['external_auth'][clear_load['eauth']]['*'],
                 clear_load['fun'])
             if not good:
                 msg = ('Authentication failure of type "eauth" occurred for '

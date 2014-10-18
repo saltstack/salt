@@ -56,6 +56,8 @@ if salt.utils.is_windows():
             'will be missing'
         )
 
+_INTERFACES = {}
+
 
 def _windows_cpudata():
     '''
@@ -414,9 +416,16 @@ def _virtual(osdata):
     #   virtual_subtype
     grains = {'virtual': 'physical'}
 
+    # Skip the below loop on platforms which have none of the desired cmds
+    # This is a temporary measure until we can write proper virtual hardware
+    # detection.
+    skip_cmds = ('AIX',)
+
     # Check if enable_lspci is True or False
     if __opts__.get('enable_lspci', True) is False:
         _cmds = ('dmidecode', 'dmesg')
+    elif osdata['kernel'] in skip_cmds:
+        _cmds = ()
     else:
         # /proc/bus/pci does not exists, lspci will fail
         if not os.path.exists('/proc/bus/pci'):
@@ -507,12 +516,14 @@ def _virtual(osdata):
             # Break out of the loop so the next log message is not issued
             break
     else:
-        log.warn(
-            'The tools \'dmidecode\', \'lspci\' and \'dmesg\' failed to '
-            'execute because they do not exist on the system of the user '
-            'running this instance or the user does not have the necessary '
-            'permissions to execute them. Grains output might not be accurate.'
-        )
+        if osdata['kernel'] in skip_cmds:
+            log.warn(
+                'The tools \'dmidecode\', \'lspci\' and \'dmesg\' failed to '
+                'execute because they do not exist on the system of the user '
+                'running this instance or the user does not have the '
+                'necessary permissions to execute them. Grains output might '
+                'not be accurate.'
+            )
 
     choices = ('Linux', 'OpenBSD', 'HP-UX')
     isdir = os.path.isdir
@@ -815,6 +826,17 @@ def _linux_bin_exists(binary):
     return __salt__['cmd.retcode'](
         'which {0}'.format(binary)
     ) == 0
+
+
+def _get_interfaces():
+    '''
+    Provide a dict of the connected interfaces and their ip addresses
+    '''
+
+    global _INTERFACES
+    if not _INTERFACES:
+        _INTERFACES = salt.utils.network.interfaces()
+    return _INTERFACES
 
 
 def os_data():
@@ -1200,7 +1222,7 @@ def ip_interfaces():
         return {}
 
     ret = {}
-    ifaces = salt.utils.network.interfaces()
+    ifaces = _get_interfaces()
     for face in ifaces:
         iface_ips = []
         for inet in ifaces[face].get('inet', []):
@@ -1213,6 +1235,54 @@ def ip_interfaces():
     return {'ip_interfaces': ret}
 
 
+def ip4_interfaces():
+    '''
+    Provide a dict of the connected interfaces and their ip4 addresses
+    '''
+    # Provides:
+    #   ip_interfaces
+
+    if 'proxyminion' in __opts__:
+        return {}
+
+    ret = {}
+    ifaces = _get_interfaces()
+    for face in ifaces:
+        iface_ips = []
+        for inet in ifaces[face].get('inet', []):
+            if 'address' in inet:
+                iface_ips.append(inet['address'])
+        for secondary in ifaces[face].get('secondary', []):
+            if 'address' in secondary:
+                iface_ips.append(secondary['address'])
+        ret[face] = iface_ips
+    return {'ip4_interfaces': ret}
+
+
+def ip6_interfaces():
+    '''
+    Provide a dict of the connected interfaces and their ip6 addresses
+    '''
+    # Provides:
+    #   ip_interfaces
+
+    if 'proxyminion' in __opts__:
+        return {}
+
+    ret = {}
+    ifaces = _get_interfaces()
+    for face in ifaces:
+        iface_ips = []
+        for inet in ifaces[face].get('inet6', []):
+            if 'address' in inet:
+                iface_ips.append(inet['address'])
+        for secondary in ifaces[face].get('secondary', []):
+            if 'address' in secondary:
+                iface_ips.append(secondary['address'])
+        ret[face] = iface_ips
+    return {'ip6_interfaces': ret}
+
+
 def hwaddr_interfaces():
     '''
     Provide a dict of the connected interfaces and their
@@ -1221,7 +1291,7 @@ def hwaddr_interfaces():
     # Provides:
     #   hwaddr_interfaces
     ret = {}
-    ifaces = salt.utils.network.interfaces()
+    ifaces = _get_interfaces()
     for face in ifaces:
         if 'hwaddr' in ifaces[face]:
             ret[face] = ifaces[face]['hwaddr']

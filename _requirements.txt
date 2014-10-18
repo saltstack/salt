@@ -2,4 +2,4 @@ Jinja2
 msgpack-python > 0.3
 PyYAML
 MarkupSafe
-requests
+requests >= 1.0.0

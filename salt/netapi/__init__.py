@@ -117,7 +117,7 @@ class NetapiClient(object):
         '''
         kwargs['fun'] = fun
         wheel = salt.wheel.WheelClient(self.opts)
-        return wheel.master_call(**kwargs)
+        return wheel.cmd_sync(kwargs)
 
     def wheel_async(self, fun, **kwargs):
         '''

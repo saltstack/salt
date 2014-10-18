@@ -635,7 +635,9 @@ class State(object):
                 cmd = self.functions['cmd.retcode'](entry, ignore_retcode=True, **cmd_opts)
                 log.debug('Last command return code: {0}'.format(cmd))
                 if cmd != 0 and ret['result'] is False:
-                    ret.update({'comment': 'onlyif execution failed', 'result': True})
+                    ret.update({'comment': 'onlyif execution failed',
+                                'skip_watch': True,
+                                'result': True})
                     return ret
                 elif cmd == 0:
                     ret.update({'comment': 'onlyif execution succeeded', 'result': False})
@@ -650,7 +652,9 @@ class State(object):
                 cmd = self.functions['cmd.retcode'](entry, ignore_retcode=True, **cmd_opts)
                 log.debug('Last command return code: {0}'.format(cmd))
                 if cmd == 0 and ret['result'] is False:
-                    ret.update({'comment': 'unless execution succeeded', 'result': True})
+                    ret.update({'comment': 'unless execution succeeded',
+                                'skip_watch': True,
+                                'result': True})
                 elif cmd != 0:
                     ret.update({'comment': 'unless execution failed', 'result': False})
                     return ret
@@ -1675,7 +1679,7 @@ class State(object):
                     continue
                 if r_state == 'onfail':
                     if run_dict[tag]['result'] is True:
-                        fun_stats.add('fail')
+                        fun_stats.add('onfail')
                         continue
                 else:
                     if run_dict[tag]['result'] is False:
@@ -1683,7 +1687,7 @@ class State(object):
                         continue
                 if r_state == 'onchanges':
                     if not run_dict[tag]['changes']:
-                        fun_stats.add('fail')
+                        fun_stats.add('onchanges')
                         continue
                 if r_state == 'watch' and run_dict[tag]['changes']:
                     fun_stats.add('change')
@@ -1703,6 +1707,10 @@ class State(object):
             if 'premet' in fun_stats:
                 status = 'met'
             status = 'pre'
+        elif 'onfail' in fun_stats:
+            status = 'onfail'
+        elif 'onchanges' in fun_stats:
+            status = 'onchanges'
         elif 'change' in fun_stats:
             status = 'change'
         else:
@@ -1854,7 +1862,7 @@ class State(object):
             self.__run_num += 1
         elif status == 'change' and not low.get('__prereq__'):
             ret = self.call(low, chunks, running)
-            if not ret['changes']:
+            if not ret['changes'] and not ret.get('skip_watch', False):
                 low = low.copy()
                 low['sfun'] = low['fun']
                 low['fun'] = 'mod_watch'
@@ -1869,6 +1877,20 @@ class State(object):
                        '__sls__': low['__sls__']}
             running[tag] = pre_ret
             self.pre[tag] = pre_ret
+            self.__run_num += 1
+        elif status == 'onfail':
+            running[tag] = {'changes': {},
+                            'result': True,
+                            'comment': 'State was not run because onfail req did not change',
+                            '__run_num__': self.__run_num,
+                            '__sls__': low['__sls__']}
+            self.__run_num += 1
+        elif status == 'onchanges':
+            running[tag] = {'changes': {},
+                            'result': True,
+                            'comment': 'State was not run because onchanges req did not change',
+                            '__run_num__': self.__run_num,
+                            '__sls__': low['__sls__']}
             self.__run_num += 1
         else:
             if low.get('__prereq__'):
@@ -2126,6 +2148,7 @@ class BaseHighState(object):
                     opts['state_auto_order'])
             opts['file_roots'] = mopts['file_roots']
             opts['state_events'] = mopts.get('state_events')
+            opts['state_aggregate'] = mopts.get('state_aggregate', opts.get('state_aggregate', False))
             opts['jinja_lstrip_blocks'] = mopts.get('jinja_lstrip_blocks', False)
             opts['jinja_trim_blocks'] = mopts.get('jinja_trim_blocks', False)
         return opts

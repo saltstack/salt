@@ -35,6 +35,14 @@ def merge_aggregate(obj_a, obj_b):
     return merge_recursive(obj_a, obj_b, level=1)
 
 
+def merge_overwrite(obj_a, obj_b):
+    for obj in obj_b:
+        if obj in obj_a.keys():
+            obj_a[obj] = obj_b[obj]
+            return obj_a
+    return merge_recurse(obj_a, obj_b)
+
+
 def get_pillar(opts, grains, id_, saltenv=None, ext=None, env=None):
     '''
     Return the correct pillar driver based on the file_client option
@@ -552,6 +560,8 @@ class Pillar(object):
         elif strategy == 'aggregate':
             #: level = 1 merge at least root data
             merged = merge_aggregate(obj_a, obj_b)
+        elif strategy == 'overwrite':
+            merged = merge_overwrite(obj_a, obj_b)
         else:
             log.warning('unknown merging strategy {0}, '
                         'fallback to recurse'.format(strategy))

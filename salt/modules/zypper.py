@@ -420,7 +420,10 @@ def get_repo(repo, **kwargs):
 
         salt '*' pkg.get_repo alias
     '''
-    r = _RepoInfo(_get_zypp_repo(repo))
+    try:
+        r = _RepoInfo(_get_zypp_repo(repo))
+    except CommandExecutionError:
+        return {}
     return r.options
 
 

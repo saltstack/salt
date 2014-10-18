@@ -53,7 +53,8 @@ class Shell(object):
             priv=None,
             timeout=None,
             sudo=False,
-            tty=False):
+            tty=False,
+            mods=None):
         self.opts = opts
         self.host = host
         self.user = user
@@ -63,6 +64,7 @@ class Shell(object):
         self.timeout = timeout
         self.sudo = sudo
         self.tty = tty
+        self.mods = mods
 
     def get_error(self, errstr):
         '''
@@ -318,7 +320,9 @@ class Shell(object):
             if stderr:
                 ret_stderr += stderr
             if stdout and SSH_PASSWORD_PROMPT_RE.search(stdout):
-                if not self.passwd:
+                if len(stdout) > 256:
+                    pass
+                elif not self.passwd:
                     try:
                         term.close(terminate=True, kill=True)
                     except salt.utils.vt.TerminalException:
