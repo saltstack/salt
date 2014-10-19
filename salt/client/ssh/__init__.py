@@ -127,7 +127,8 @@ else continue
 fi
 done
 echo "ERROR: Unable to locate appropriate python command" >&2
-exit $EX_PYTHON_OLD'''.format(
+exit $EX_PYTHON_OLD
+EOF'''.format(
     EX_THIN_PYTHON_OLD=salt.exitcodes.EX_THIN_PYTHON_OLD,
 )
 
