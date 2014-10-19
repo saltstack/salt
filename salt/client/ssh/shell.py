@@ -339,8 +339,8 @@ class Shell(object):
                     else:
                         term.sendline('no')
                         ret_stdout = ('The host key needs to be accepted, to '
-                                    'auto accept run salt-ssh with the -i '
-                                    'flag:\n{0}').format(stdout)
+                                      'auto accept run salt-ssh with the -i '
+                                      'flag:\n{0}').format(stdout)
                         return ret_stdout, '', 254
                 elif stdout and stdout.endswith('_||ext_mods||_'):
                     mods_raw = json.dumps(self.mods, separators=(',', ':')) + '|_E|0|'
