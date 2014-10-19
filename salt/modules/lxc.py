@@ -2173,7 +2173,7 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
                        'stdout': stdout,
                        'stderr': stderr}
             finally:
-                term.close(terminate=True, kill=True)
+                proc.close(terminate=True, kill=True)
     else:
         rootfs = info(name).get('rootfs')
         res = __salt__['cmd.run_chroot'](rootfs, cmd)
