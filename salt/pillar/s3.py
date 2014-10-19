@@ -288,7 +288,7 @@ def _read_buckets_cache_file(cache_file):
     return data
 
 
-def _find_files(metadata, dirs_only=False):
+def _find_files(metadata):
     '''
     Looks for all the files in the S3 bucket cache metadata
     '''
@@ -301,8 +301,8 @@ def _find_files(metadata, dirs_only=False):
 
         # grab the paths from the metadata
         filePaths = map(lambda k: k['Key'], data)
-        # filter out the files or the dirs depending on flag
-        ret[bucket] += filter(lambda k: k.endswith('/') == dirs_only,
+        # filter out the dirs
+        ret[bucket] += filter(lambda k: not k.endswith('/'),
                               filePaths)
 
     return ret
