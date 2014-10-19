@@ -183,9 +183,11 @@ class CkMinions(object):
                     if not greedy:
                         minions.remove(id_)
                     continue
-                search_results = self.serial.load(
-                    salt.utils.fopen(datap, 'rb')
-                ).get(search_type)
+                try:
+                    with salt.utils.fopen(datap, 'rb') as fp_:
+                        search_results = self.serial.load(fp_).get(search_type)
+                except (IOError, OSError):
+                    continue
                 if not salt.utils.subdict_match(search_results,
                                                 expr,
                                                 delimiter,
