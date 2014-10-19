@@ -540,7 +540,8 @@ GitPython
 ---------
 
 With GitPython_, only passphrase-less SSH public key authentication is
-supported.
+supported. **The auth parameters (pubkey, privkey, etc.) shown in the pygit2
+authentication examples above do not work with GitPython.**
 
 .. code-block:: yaml
 
