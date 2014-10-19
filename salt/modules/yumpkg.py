@@ -1503,12 +1503,12 @@ def get_repo(repo, basedir='/etc/yum.repos.d', **kwargs):  # pylint: disable=W06
     for arepo in repos.keys():
         if arepo == repo:
             repofile = repos[arepo]['file']
-    if not repofile:
-        raise Exception('repo {0} was not found in {1}'.format(repo, basedir))
 
-    # Return just one repo
-    filerepos = _parse_repo_file(repofile)[1]
-    return filerepos[repo]
+    if repofile:
+        # Return just one repo
+        filerepos = _parse_repo_file(repofile)[1]
+        return filerepos[repo]
+    return {}
 
 
 def del_repo(repo, basedir='/etc/yum.repos.d', **kwargs):  # pylint: disable=W0613

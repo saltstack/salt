@@ -7,7 +7,6 @@ Manage transport commands via ssh
 import re
 import os
 import time
-import json
 import logging
 import subprocess
 
@@ -321,7 +320,9 @@ class Shell(object):
             if stderr:
                 ret_stderr += stderr
             if stdout and SSH_PASSWORD_PROMPT_RE.search(stdout):
-                if not self.passwd:
+                if len(stdout) > 256:
+                    pass
+                elif not self.passwd:
                     try:
                         term.close(terminate=True, kill=True)
                     except salt.utils.vt.TerminalException:
@@ -348,9 +349,6 @@ class Shell(object):
                                   'auto accept run salt-ssh with the -i '
                                   'flag:\n{0}').format(stdout)
                     return ret_stdout, '', 254
-            elif stdout and stdout.endswith('_||ext_mods||_'):
-                mods_raw = json.dumps(self.mods, separators=(',', ':')) + '|_E|0|'
-                term.sendline(mods_raw)
             if not term.isalive():
                 while True:
                     stdout, stderr = term.recv()

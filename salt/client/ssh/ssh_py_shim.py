@@ -13,15 +13,16 @@ import tarfile
 import shutil
 import sys
 import os
-import json
 import stat
 
 THIN_ARCHIVE = 'salt-thin.tgz'
+EXT_ARCHIVE = 'salt-ext_mods.tgz'
 
 # FIXME - it would be ideal if these could be obtained directly from
 #         salt.exitcodes rather than duplicated.
 EX_THIN_DEPLOY = 11
 EX_THIN_CHECKSUM = 12
+EX_MOD_DEPLOY = 13
 
 
 class OBJ(object):
@@ -80,19 +81,12 @@ def unpack_thin(thin_path):
     os.unlink(thin_path)
 
 
-def get_modules():
-    glob = ''
-    while True:
-        sys.stdout.write('_||ext_mods||_')
-        sys.stdout.flush()
-        glob += raw_input()
-        if glob.endswith('|_E|0|'):
-            break
-    ext_mods = json.loads(glob[:-6])
-    write_modules(ext_mods)
+def need_ext():
+    sys.stdout.write("{0}\next_mods\n".format(OPTIONS.delimiter))
+    sys.exit(EX_MOD_DEPLOY)
 
 
-def write_modules(ext_mods):
+def unpack_ext(ext_path):
     modcache = os.path.join(
             OPTIONS.saltdir,
             'running_data',
@@ -100,23 +94,21 @@ def write_modules(ext_mods):
             'cache',
             'salt',
             'extmods')
-    for mtype in ext_mods:
-        dest_dir = os.path.join(modcache, mtype)
-        if not os.path.isdir(dest_dir):
-            os.makedirs(dest_dir)
-        chunks = ext_mods.get(mtype)
-        if not chunks:
-            continue
-        for name in chunks:
-            dest = os.path.join(dest_dir, name)
-            with open(dest, 'w+') as fp_:
-                fp_.write(chunks[name].decode('base64'))
+    tfile = tarfile.TarFile.gzopen(ext_path)
+    tfile.extractall(path=modcache)
+    tfile.close()
+    os.unlink(ext_path)
+    ver_path = os.path.join(modcache, 'ext_version')
+    ver_dst = os.path.join(OPTIONS.saltdir, 'ext_version')
+    shutil.move(ver_path, ver_dst)
 
 
 def main(argv):
     thin_path = os.path.join(OPTIONS.saltdir, THIN_ARCHIVE)
-    if os.path.exists(thin_path):
+    if os.path.isfile(thin_path):
         if OPTIONS.checksum != get_hash(thin_path, OPTIONS.hashfunc):
+            sys.stderr.write('{0}\n'.format(OPTIONS.checksum))
+            sys.stderr.write('{0}\n'.format(get_hash(thin_path, OPTIONS.hashfunc)))
             os.unlink(thin_path)
             sys.stderr.write('WARNING: checksum mismatch for "{0}"\n'.format(thin_path))
             sys.exit(EX_THIN_CHECKSUM)
@@ -148,8 +140,18 @@ def main(argv):
 
     with open(os.path.join(OPTIONS.saltdir, 'minion'), 'w') as config:
         config.write(OPTIONS.config + '\n')
-    if OPTIONS.get_modules:
-        get_modules()
+    if OPTIONS.ext_mods:
+        ext_path = os.path.join(OPTIONS.saltdir, EXT_ARCHIVE)
+        if os.path.exists(ext_path):
+            unpack_ext(ext_path)
+        else:
+            version_path = os.path.join(OPTIONS.saltdir, 'ext_version')
+            if not os.path.exists(version_path) or not os.path.isfile(version_path):
+                need_ext()
+            with open(version_path, 'r') as vpo:
+                cur_version = vpo.readline().strip()
+            if cur_version != OPTIONS.ext_mods:
+                need_ext()
     #Fix parameter passing issue
     if len(ARGS) == 1:
         argv_prepared = ARGS[0].split()
@@ -175,7 +177,12 @@ def main(argv):
     sys.stdout.flush()
     sys.stderr.write(OPTIONS.delimiter + '\n')
     sys.stderr.flush()
-    os.execv(sys.executable, salt_argv)
+    if OPTIONS.wipe:
+        import subprocess
+        subprocess.call(salt_argv)
+        shutil.rmtree(OPTIONS.saltdir)
+    else:
+        os.execv(sys.executable, salt_argv)
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))

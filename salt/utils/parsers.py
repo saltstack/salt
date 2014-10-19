@@ -2225,15 +2225,6 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'reached.')
         )
         self.add_option(
-            '--no-minion-cache',
-            dest='ssh_minion_cache',
-            default=True,
-            action='store_false',
-            help=('Set this flag to disable the ssh minion cache, this will '
-                  'prevent information about the target systems from being '
-                  'stored on the originating system.')
-        )
-        self.add_option(
             '--max-procs',
             dest='ssh_max_procs',
             default=25,
@@ -2256,6 +2247,19 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help=('Return the data from minions as a group after they '
                   'all return.')
         )
+        self.add_option(
+            '-w', '--wipe',
+            default=False,
+            action='store_true',
+            dest='wipe_ssh',
+            help='Remove the deployment of the salt files when done executing.',
+        )
+        self.add_option(
+            '-W', '--rand-thin-dir',
+            default=False,
+            action='store_true',
+            help=('Select a random temp dir to deploy on the remote system. '
+                  'The dir will be cleaned after the execution.'))
 
         auth_group = optparse.OptionGroup(
             self, 'Authentication Options',

@@ -834,6 +834,7 @@ def start(container,
           dns=None,
           volumes_from=None,
           network_mode=None,
+          restart_policy=None,
           cap_add=None,
           cap_drop=None):
     '''
@@ -880,6 +881,7 @@ def start(container,
                          dns=dns,
                          volumes_from=volumes_from,
                          network_mode=network_mode,
+                         restart_policy=restart_policy,
                          cap_add=cap_add,
                          cap_drop=cap_drop)
 

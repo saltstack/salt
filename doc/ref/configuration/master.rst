@@ -1613,9 +1613,9 @@ also be configured on a per-remote basis, see :conf_master:`here
 
 Default: ``tags``
 
-Path relative to the root of the repository where the tags is located. Can also
-be configured on a per-remote basis, see :conf_master:`here <svnfs_remotes>`
-for more info.
+Path relative to the root of the repository where the tags are located. Can
+also be configured on a per-remote basis, see :conf_master:`here
+<svnfs_remotes>` for more info.
 
 .. code-block:: yaml
 
@@ -1912,9 +1912,39 @@ strategy between different sources. It accepts 3 values:
         - quux
         - quux2
 
+* overwrite:
+
+    Will use the behaviour of the 2014.1 branch and earlier.
+
+    Overwrites elements according the order in which they are processed.
+
+    First pillar processed:
+
+    .. code-block:: yaml
+
+        A:
+          first_key: blah
+          second_key: blah
+
+    Second pillar processed:
+
+    .. code-block:: yaml
+
+        A:
+          third_key: blah
+          fourth_key: blah
+
+    will be merged as:
+
+    .. code-block:: yaml
+
+        A:
+          third_key: blah
+          fourth_key: blah
+
 * smart (default):
 
-    it guesses the best strategy, based on the "renderer" setting.
+    Guesses the best strategy based on the "renderer" setting.
 
 
 Syndic Server Settings

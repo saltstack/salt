@@ -511,3 +511,56 @@ def wait_for_event(
         if is_timedout:
             ret['comment'] = 'Timeout value reached.'
             return ret
+
+
+def runner(name, **kwargs):
+    '''
+    Execute a runner module on the master
+
+    .. versionadded:: 2014.7
+
+    name
+        The name of the function to run
+    kwargs
+        Any keyword arguments to pass to the runner function
+    '''
+    ret = {'name': name, 'result': False, 'changes': {}, 'comment': ''}
+    out = __salt__['saltutil.runner'](name, **kwargs)
+
+    ret['result'] = True
+    ret['comment'] = "Runner function '{0}' executed.".format(name)
+
+    if out:
+        ret['changes'] = out
+
+    return ret
+
+
+def wheel(name, **kwargs):
+    '''
+    Execute a wheel module on the master
+
+    .. versionadded:: 2014.7
+
+    name
+        The name of the function to run
+    kwargs
+        Any keyword arguments to pass to the wheel function
+
+    .. code-block:: yaml
+
+        accept_minion_key:
+          salt.wheel:
+            - name: key.accept
+            - match: frank
+    '''
+    ret = {'name': name, 'result': False, 'changes': {}, 'comment': ''}
+    out = __salt__['saltutil.wheel'](name, **kwargs)
+
+    ret['result'] = True
+    ret['comment'] = "Wheel function '{0}' executed.".format(name)
+
+    if out:
+        ret['changes'] = out
+
+    return ret
