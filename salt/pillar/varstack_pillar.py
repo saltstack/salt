@@ -6,13 +6,6 @@ Use varstack data as a Pillar source
 # Import python libs
 import logging
 
-# Import salt libs
-import salt.utils
-from salt._compat import string_types
-
-# Import third party libs
-import yaml
-
 HAS_VARSTACK = False
 try:
     import varstack
@@ -26,12 +19,14 @@ log = logging.getLogger(__name__)
 # Define the module's virtual name
 __virtualname__ = 'varstack'
 
+
 def __virtual__():
     if not HAS_VARSTACK:
         log.error('Varstack ext_pillar is enabled in configuration but '
                   'could not be loaded because Varstack is not installed.')
         return False
     return __virtualname__
+
 
 def ext_pillar(minion_id,  # pylint: disable=W0613
                pillar,  # pylint: disable=W0613
