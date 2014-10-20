@@ -4,7 +4,7 @@ Connection module for Amazon VPC
 
 .. versionadded:: 2014.7.0
 
-:configuration: This module accepts explicit autoscale credentials but can also
+:configuration: This module accepts explicit VPC credentials but can also
     utilize IAM roles assigned to the instance trough Instance Profiles.
     Dynamic credentials are then automatically obtained from AWS API and no
     further configuration is necessary. More Information available at::
@@ -14,12 +14,12 @@ Connection module for Amazon VPC
     If IAM roles are not used you need to specify them either in a pillar or
     in the minion's config file::
 
-        asg.keyid: GKTADJGHEIQSXMKKRBJ08H
-        asg.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+        vpc.keyid: GKTADJGHEIQSXMKKRBJ08H
+        vpc.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
     A region may also be specified in the configuration::
 
-        asg.region: us-east-1
+        vpc.region: us-east-1
 
     If a region is not specified, the default is us-east-1.
 
@@ -1204,7 +1204,7 @@ def _get_conn(region, key, keyid, profile):
                                           aws_secret_access_key=key)
     except boto.exception.NoAuthHandlerFound:
         log.error('No authentication credentials found when attempting to'
-                  ' make boto autoscale connection.')
+                  ' make boto VPC connection.')
         return None
     return conn
 
