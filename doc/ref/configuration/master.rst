@@ -1032,7 +1032,7 @@ translated into salt environments.
     fileserver environments.
 
 As of 2014.7.0, it is possible to have per-repo versions of several of the
-gitfs configuration parameters. For more information, see the :ref:`Gitfs
+gitfs configuration parameters. For more information, see the :ref:`GitFS
 Walkthrough <gitfs-per-remote-config>`.
 
 .. conf_master:: gitfs_provider
@@ -1043,7 +1043,7 @@ Walkthrough <gitfs-per-remote-config>`.
 .. versionadded:: 2014.7.0
 
 Specify the provider to be used for gitfs. More information can be found in the
-:ref:`Gitfs Walkthrough <gitfs-dependencies>`.
+:ref:`GitFS Walkthrough <gitfs-dependencies>`.
 
 .. _pygit2: https://github.com/libgit2/pygit2
 .. _GitPython: https://github.com/gitpython-developers/GitPython
@@ -1142,7 +1142,7 @@ Default: ``[]``
 
 Used to restrict which environments are made available. Can speed up state runs
 if the repos in :conf_master:`gitfs_remotes` contain many branches/tags.  More
-information can be found in the :ref:`Gitfs Walkthrough
+information can be found in the :ref:`GitFS Walkthrough
 <gitfs-whitelist-blacklist>`.
 
 .. code-block:: yaml
@@ -1163,7 +1163,7 @@ Default: ``[]``
 
 Used to restrict which environments are made available. Can speed up state runs
 if the repos in :conf_master:`gitfs_remotes` contain many branches/tags. More
-information can be found in the :ref:`Gitfs Walkthrough
+information can be found in the :ref:`GitFS Walkthrough
 <gitfs-whitelist-blacklist>`.
 
 .. code-block:: yaml
@@ -1174,11 +1174,11 @@ information can be found in the :ref:`Gitfs Walkthrough
       - 'mybranch\d+'
 
 
-Gitfs Authentication Options
+GitFS Authentication Options
 ****************************
 
 These parameters only currently apply to the pygit2 gitfs provider. Examples of
-how to use these can be found in the :ref:`Gitfs Walkthrough
+how to use these can be found in the :ref:`GitFS Walkthrough
 <gitfs-authentication>`.
 
 .. conf_master:: gitfs_user
