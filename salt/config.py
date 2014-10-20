@@ -583,6 +583,7 @@ DEFAULT_MASTER_OPTS = {
     'zmq_filtering': False,
     'con_cache': False,
     'rotate_aes_key': True,
+    'cache_sreqs': True,
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
