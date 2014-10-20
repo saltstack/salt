@@ -812,9 +812,6 @@ class Loader(object):
                     (str(mod.__name__).startswith('salt.loaded.int.grain') or
                      str(mod.__name__).startswith('salt.loaded.ext.grain')):
                 mod.__salt__.update(funcs)
-            # TODO: Refactor this to be smarter and cleaner
-            elif str(mod.__name__).startswith('salt.loaded.int.wrapper'):
-                mod.__salt__.update(funcs)
         return funcs
 
     def load_modules(self):

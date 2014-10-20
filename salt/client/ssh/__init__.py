@@ -670,11 +670,13 @@ class Single(object):
             pre_wrapper = salt.client.ssh.wrapper.FunctionWrapper(
                 self.opts,
                 self.id,
+                fsclient=self.fsclient,
                 **self.target)
             opts_pkg = pre_wrapper['test.opts_pkg']()
             opts_pkg['file_roots'] = self.opts['file_roots']
             opts_pkg['pillar_roots'] = self.opts['pillar_roots']
             opts_pkg['ext_pillar'] = self.opts['ext_pillar']
+            opts_pkg['_ssh_version'] = self.opts['_ssh_version']
             if '_caller_cachedir' in self.opts:
                 opts_pkg['_caller_cachedir'] = self.opts['_caller_cachedir']
             else:
@@ -723,6 +725,7 @@ class Single(object):
         wrapper = salt.client.ssh.wrapper.FunctionWrapper(
             opts,
             self.id,
+            fsclient=self.fsclient,
             **self.target)
         self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper, self.context)
         wrapper.wfuncs = self.wfuncs

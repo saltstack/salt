@@ -14,7 +14,7 @@ import salt.utils
 import salt.client.ssh
 
 
-class FunctionWrapper(dict):
+class FunctionWrapper(object):
     '''
     Create an object that acts like the salt function dict and makes function
     calls remotely via the SSH shell system
@@ -26,6 +26,7 @@ class FunctionWrapper(dict):
             host,
             wfuncs=None,
             mods=None,
+            fsclient=None,
             **kwargs):
         super(FunctionWrapper, self).__init__()
         self.wfuncs = wfuncs if isinstance(wfuncs, dict) else {}
@@ -33,6 +34,7 @@ class FunctionWrapper(dict):
         self.mods = mods if isinstance(mods, dict) else {}
         self.kwargs = {'id_': id_,
                        'host': host}
+        self.fsclient = fsclient
         self.kwargs.update(kwargs)
 
     def __getitem__(self, cmd):
@@ -54,6 +56,7 @@ class FunctionWrapper(dict):
                     argv,
                     mods=self.mods,
                     wipe=True,
+                    fsclient=self.fsclient,
                     **self.kwargs
             )
             stdout, stderr, _ = single.cmd_block()
