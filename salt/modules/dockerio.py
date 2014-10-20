@@ -1501,7 +1501,6 @@ def _parse_image_multilogs_string(ret, repo):
         valid_states = [
             'Download complete',
             'Already exists',
-            'Image is up to date',
         ]
 
         # search last layer grabbed
