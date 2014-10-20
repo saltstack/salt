@@ -32,6 +32,8 @@ the default location::
 # Import python libs
 import json
 
+# Import Salt libs
+import salt.utils
 import salt.returners
 
 # Import third party libs
@@ -158,3 +160,10 @@ def get_minions():
     '''
     serv = _get_serv(ret=None)
     return list(serv.smembers('minions'))
+
+
+def prep_jid(nocache):  # pylint: disable=unused-argument
+    '''
+    Do any pre-processing necessary and return the jid to use
+    '''
+    return salt.utils.gen_jid()

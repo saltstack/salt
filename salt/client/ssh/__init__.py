@@ -10,10 +10,13 @@ import json
 import logging
 import multiprocessing
 import subprocess
+import hashlib
+import tarfile
 import os
 import re
 import time
 import yaml
+import uuid
 
 # Import salt libs
 import salt.client.ssh.shell
@@ -102,7 +105,8 @@ RSTR_RE = r'(?:^|\r?\n)' + RSTR + '(?:\r?\n|$)'
 # 1. Identify a suitable python
 # 2. Jump to python
 
-SSH_SH_SHIM = r''' /bin/sh -c 'set -e
+SSH_SH_SHIM = r'''/bin/sh << 'EOF'
+set -e
 set -u
 DEBUG="{{DEBUG}}"
 if [ -n "$DEBUG" ]
@@ -116,14 +120,14 @@ EX_PYTHON_OLD={EX_THIN_PYTHON_OLD}
 PYTHON_CMDS="python27 python2.7 python26 python2.6 python2 python"
 for py_cmd in $PYTHON_CMDS
 do if "$py_cmd" -c "import sys; sys.exit(not sys.hexversion >= 0x02060000);" >/dev/null 2>&1
-then py_cmd_path=`"$py_cmd" -c "import sys; print sys.executable;"`
-exec $SUDO "$py_cmd_path" -c "exec \"{{SSH_PY_CODE}}\".replace(\"_\", \"\n\").decode(\"base64\")"
+then py_cmd_path=`"$py_cmd" -c 'import sys; print sys.executable;'`
+exec $SUDO "$py_cmd_path" -c 'exec """{{SSH_PY_CODE}}""".decode("base64")'
 exit 0
 else continue
 fi
 done
 echo "ERROR: Unable to locate appropriate python command" >&2
-exit $EX_PYTHON_OLD' '''.format(
+exit $EX_PYTHON_OLD'''.format(
     EX_THIN_PYTHON_OLD=salt.exitcodes.EX_THIN_PYTHON_OLD,
 )
 
@@ -200,6 +204,11 @@ class SSH(object):
                 salt.config.DEFAULT_MASTER_OPTS['ssh_sudo']
             ),
         }
+        if self.opts.get('rand_thin_dir'):
+            self.defaults['thin_dir'] = os.path.join(
+                    '/tmp',
+                    '.{0}'.format(uuid.uuid4().hex[:6]))
+            self.opts['wipe_ssh'] = 'True'
         self.serial = salt.payload.Serial(opts)
         self.returners = salt.loader.returners(self.opts, {})
         self.fsclient = salt.fileclient.FSClient(self.opts)
@@ -485,11 +494,17 @@ class Single(object):
             fsclient=None,
             **kwargs):
         self.opts = opts
-        if user:
+        if kwargs.get('wipe'):
+            self.wipe = 'False'
+        else:
+            self.wipe = 'True' if self.opts.get('wipe_ssh') else 'False'
+        if kwargs.get('thin_dir'):
+            self.thin_dir = kwargs['thin_dir']
+        elif user:
             self.thin_dir = DEFAULT_THIN_DIR.replace('%%USER%%', user)
         else:
             self.thin_dir = DEFAULT_THIN_DIR.replace('%%USER%%', 'root')
-        self.opts['_thin_dir'] = self.thin_dir
+        self.opts['thin_dir'] = self.thin_dir
         self.fsclient = fsclient
         self.context = {'master_opts': self.opts,
                         'fileclient': self.fsclient}
@@ -502,7 +517,7 @@ class Single(object):
         self.fun, self.args, self.kwargs = self.__arg_comps()
         self.id = id_
 
-        self.mods = mods
+        self.mods = mods if isinstance(mods, dict) else {}
         args = {'host': host,
                 'user': user,
                 'port': port,
@@ -516,6 +531,7 @@ class Single(object):
                 {
                     'root_dir': os.path.join(self.thin_dir, 'running_data'),
                     'id': self.id,
+                    'sock_dir': '/',
                 }).strip()
         self.target = kwargs
         self.target.update(args)
@@ -561,11 +577,27 @@ class Single(object):
         '''
         Deploy salt-thin
         '''
-        thin = salt.utils.thin.gen_thin(self.opts['cachedir'])
+        if self.opts.get('_caller_cachedir'):
+            cachedir = self.opts.get('_caller_cachedir')
+        else:
+            cachedir = self.opts['cachedir']
+        thin = salt.utils.thin.gen_thin(cachedir)
         self.shell.send(
             thin,
             os.path.join(self.thin_dir, 'salt-thin.tgz'),
         )
+        self.deploy_ext()
+        return True
+
+    def deploy_ext(self):
+        '''
+        Deploy the ext_mods tarball
+        '''
+        if self.mods.get('file'):
+            self.shell.send(
+                self.mods['file'],
+                os.path.join(self.thin_dir, 'salt-ext_mods.tgz'),
+            )
         return True
 
     def run(self, deploy_attempted=False):
@@ -602,7 +634,7 @@ class Single(object):
         '''
         # Ensure that opts/grains are up to date
         # Execute routine
-        data_cache = self.opts.get('ssh_minion_cache', True)
+        data_cache = False
         data = None
         cdir = os.path.join(self.opts['cachedir'], 'minions', self.id)
         if not os.path.isdir(cdir):
@@ -634,6 +666,11 @@ class Single(object):
             opts_pkg = pre_wrapper['test.opts_pkg']()
             opts_pkg['file_roots'] = self.opts['file_roots']
             opts_pkg['pillar_roots'] = self.opts['pillar_roots']
+            opts_pkg['ext_pillar'] = self.opts['ext_pillar']
+            if '_caller_cachedir' in self.opts:
+                opts_pkg['_caller_cachedir'] = self.opts['_caller_cachedir']
+            else:
+                opts_pkg['_caller_cachedir'] = self.opts['cachedir']
             # Use the ID defined in the roster file
             opts_pkg['id'] = self.id
 
@@ -648,8 +685,8 @@ class Single(object):
                     opts_pkg['id'],
                     opts_pkg.get('environment', 'base')
                     )
-
-            pillar_data = pillar.compile_pillar()
+            pillar_dirs = {}
+            pillar_data = pillar.compile_pillar(pillar_dirs=pillar_dirs)
 
             # TODO: cache minion opts in datap in master.py
             data = {'opts': opts_pkg,
@@ -700,7 +737,11 @@ class Single(object):
         Prepare the command string
         '''
         sudo = 'sudo' if self.target['sudo'] else ''
-        thin_sum = salt.utils.thin.thin_sum(self.opts['cachedir'], 'sha1')
+        if '_caller_cachedir' in self.opts:
+            cachedir = self.opts['_caller_cachedir']
+        else:
+            cachedir = self.opts['cachedir']
+        thin_sum = salt.utils.thin.thin_sum(cachedir, 'sha1')
         debug = ''
         if salt.log.LOG_LEVELS['debug'] >= salt.log.LOG_LEVELS[self.opts['log_level']]:
             debug = '1'
@@ -712,23 +753,25 @@ OPTIONS.saltdir = '{2}'
 OPTIONS.checksum = '{3}'
 OPTIONS.hashfunc = '{4}'
 OPTIONS.version = '{5}'
-OPTIONS.get_modules = {6}
-ARGS = {7}\n'''.format(self.minion_config,
+OPTIONS.ext_mods = '{6}'
+OPTIONS.wipe = {7}
+ARGS = {8}\n'''.format(self.minion_config,
                          RSTR,
                          self.thin_dir,
                          thin_sum,
                          'sha1',
                          salt.__version__,
-                         'True' if self.mods else 'False',
+                         self.mods.get('version', ''),
+                         self.wipe,
                          self.argv)
         py_code = SSH_PY_SHIM.replace('#%%OPTS', arg_str)
-        py_code_enc = py_code.encode('base64').replace('\n', '_')
+        py_code_enc = py_code.encode('base64')
 
         cmd = SSH_SH_SHIM.format(
             DEBUG=debug,
             SUDO=sudo,
             SSH_PY_CODE=py_code_enc,
-        ).replace('\n', '; ')
+        )
 
         return cmd
 
@@ -776,7 +819,7 @@ ARGS = {7}\n'''.format(self.minion_config,
                 if not re.search(RSTR_RE, stdout) or not re.search(RSTR_RE, stderr):
                     # If RSTR is not seen in both stdout and stderr then there
                     # was a thin deployment problem.
-                    return 'ERROR: Failure deploying thin: {0}'.format(stdout), stderr, retcode
+                    return 'ERROR: Failure deploying thin, undefined state: {0}'.format(stdout), stderr, retcode
                 stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
                 stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
             else:
@@ -805,7 +848,16 @@ ARGS = {7}\n'''.format(self.minion_config,
                 if not re.search(RSTR_RE, stdout) or not re.search(RSTR_RE, stderr):
                     # If RSTR is not seen in both stdout and stderr then there
                     # was a thin deployment problem.
-                    return 'ERROR: Failure deploying thin: {0}'.format(stdout), stderr, retcode
+                    return 'ERROR: Failure deploying thin: {0}\n{1}'.format(stdout, stderr), stderr, retcode
+                stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
+                stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
+            elif 'ext_mods' == shim_command:
+                self.deploy_ext()
+                stdout, stderr, retcode = self.shell.exec_cmd(cmd_str)
+                if not re.search(RSTR_RE, stdout) or not re.search(RSTR_RE, stderr):
+                    # If RSTR is not seen in both stdout and stderr then there
+                    # was a thin deployment problem.
+                    return 'ERROR: Failure deploying ext_mods: {0}'.format(stdout), stderr, retcode
                 stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
                 stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
 
@@ -949,27 +1001,47 @@ def mod_data(fsclient):
             ]
     ret = {}
     envs = fsclient.envs()
+    ver_base = ''
     for env in envs:
         files = fsclient.file_list(env)
         for ref in sync_refs:
-            mod_data = {}
+            mods_data = {}
             pref = '_{0}'.format(ref)
-            for fn_ in files:
+            for fn_ in sorted(files):
                 if fn_.startswith(pref):
                     if fn_.endswith(('.py', '.so', '.pyx')):
                         full = 'salt://{0}'.format(fn_)
                         mod_path = fsclient.cache_file(full, env)
                         if not os.path.isfile(mod_path):
                             continue
-                        with open(mod_path) as fp_:
-                            code_str = fp_.read().encode('base64')
-                        mod_data[os.path.basename(fn_)] = code_str
-            if mod_data:
+                        mods_data[os.path.basename(fn_)] = mod_path
+                        chunk = salt.utils.get_hash(mod_path)
+                        ver_base += chunk
+            if mods_data:
                 if ref in ret:
-                    ret[ref].update(mod_data)
+                    ret[ref].update(mods_data)
                 else:
-                    ret[ref] = mod_data
-    return ret
+                    ret[ref] = mods_data
+    if not ret:
+        return {}
+    ver = hashlib.sha1(ver_base).hexdigest()
+    ext_tar_path = os.path.join(
+            fsclient.opts['cachedir'],
+            'ext_mods.{0}.tgz'.format(ver))
+    mods = {'version': ver,
+            'file': ext_tar_path}
+    if os.path.isfile(ext_tar_path):
+        return mods
+    tfp = tarfile.open(ext_tar_path, 'w:gz')
+    verfile = os.path.join(fsclient.opts['cachedir'], 'ext_mods.ver')
+    with salt.utils.fopen(verfile, 'w+') as fp_:
+        fp_.write(ver)
+    tfp.add(verfile, 'ext_version')
+    for ref in ret:
+        for fn_ in ret[ref]:
+            tfp.add(ret[ref][fn_], os.path.join(ref, fn_))
+    tfp.close()
+    return mods
 
 
 def ssh_version():

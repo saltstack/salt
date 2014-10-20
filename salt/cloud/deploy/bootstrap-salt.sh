@@ -17,7 +17,7 @@
 #       CREATED: 10/15/2012 09:49:37 PM WEST
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
-__ScriptVersion="2014.09.24"
+__ScriptVersion="2014.10.14"
 __ScriptName="bootstrap-salt.sh"
 
 #======================================================================================================================
@@ -937,6 +937,7 @@ __ubuntu_derivatives_translation() {
     # https://bugs.launchpad.net/linuxmint/+bug/1198751
 
     linuxmint_16_ubuntu_base="13.10"
+    linuxmint_17_ubuntu_base="14.04"
     linaro_12_ubuntu_base="12.04"
     elementary_os_02_ubuntu_base="12.04"
 
@@ -1161,7 +1162,7 @@ __git_clone_and_checkout() {
         fi
     else
         __SHALLOW_CLONE="${BS_FALSE}"
-        if [ "$(echo "$GIT_REV" | sed 's/^.*\(v[[:digit:]]\{1,4\}\.[[:digit:]]\{1,2\}\.[[:digit:]]\{1,2\}\)\?.*$/MATCH/')" = "MATCH" ]; then
+        if [ "$(echo "$GIT_REV" | sed 's/^.*\(v[[:digit:]]\{1,4\}\.[[:digit:]]\{1,2\}\)\(\.[[:digit:]]\{1,2\}\)\?.*$/MATCH/')" = "MATCH" ]; then
             echoinfo "Git revision matches a Salt version tag"
             # Let's try shallow cloning to speed up.
             # Test for "--single-branch" option introduced in git 1.7.10, the minimal version of git where the shallow
@@ -3314,6 +3315,10 @@ install_amazon_linux_ami_testing_post() {
 #   Arch Install Functions
 #
 install_arch_linux_stable_deps() {
+
+    if [ ! -f /etc/pacman.d/gnupg ]; then
+        pacman-key --init && pacman-key --populate archlinux || return 1
+    fi
 
     if [ "$_UPGRADE_SYS" -eq $BS_TRUE ]; then
         pacman -Syyu --noconfirm --needed || return 1

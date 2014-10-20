@@ -396,7 +396,7 @@ able to change these settings. If all minions have the same values and the setup
 quite large (several thousand minions), they will still flood the master. The desired
 behavior is to have time-frame within all minions try to reconnect.
 
-.. code-block:: ymal
+.. code-block:: yaml
 
     recon_randomize: True
 

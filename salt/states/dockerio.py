@@ -748,6 +748,7 @@ def running(name,
             check_is_running=True,
             publish_all_ports=False,
             links=None,
+            restart_policy=None,
             *args, **kwargs):
     '''
     Ensure that a container is running. If the container does not exist, it
@@ -841,6 +842,15 @@ def running(name,
         .. code-block:: yaml
 
             - network_mode: host
+
+    restart_policy
+        Restart policy to apply when a container exits (no, on-failure[:max-retry], always)
+
+        .. code-block:: yaml
+
+            - restart_policy:
+                MaximumRetryCount: 5
+                Name: on-failure
 
     cap_add
         List of capabilities to add in a container.
@@ -963,13 +973,19 @@ def running(name,
         else:
             changes.append('Container {0} created'.format(cid))
     if start:
-        started = __salt__['docker.start'](
-                name, binds=bindvolumes, port_bindings=bindports,
-                lxc_conf=lxc_conf, publish_all_ports=publish_all_ports,
-                links=links, privileged=privileged,
-                dns=dns, volumes_from=volumes_from, network_mode=network_mode,
-                cap_add=cap_add, cap_drop=cap_drop
-                )
+        started = __salt__['docker.start'](name,
+                                           binds=bindvolumes,
+                                           port_bindings=bindports,
+                                           lxc_conf=lxc_conf,
+                                           publish_all_ports=publish_all_ports,
+                                           links=links,
+                                           privileged=privileged,
+                                           dns=dns,
+                                           volumes_from=volumes_from,
+                                           network_mode=network_mode,
+                                           restart_policy=restart_policy,
+                                           cap_add=cap_add,
+                                           cap_drop=cap_drop)
         if check_is_running:
             is_running = __salt__['docker.is_running'](name)
             log.debug("Docker-io running:" + str(started))

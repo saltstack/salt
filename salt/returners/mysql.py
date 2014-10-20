@@ -83,6 +83,7 @@ import sys
 import json
 import logging
 
+# Import salt libs
 import salt.returners
 
 # Import third party libs
@@ -138,7 +139,11 @@ def _get_serv(ret=None, commit=False):
     Return a mysql cursor
     '''
     _options = _get_options(ret)
-    conn = MySQLdb.connect(host=_options.get('host'), user=_options.get('user'), passwd=_options.get('pass'), db=_options.get('db'), port=_options.get('port'))
+    conn = MySQLdb.connect(host=_options.get('host'),
+                           user=_options.get('user'),
+                           passwd=_options.get('pass'),
+                           db=_options.get('db'),
+                           port=_options.get('port'))
     cursor = conn.cursor()
     try:
         yield cursor
@@ -166,8 +171,10 @@ def returner(ret):
                 VALUES (%s, %s, %s, %s, %s, %s)'''
 
         cur.execute(sql, (ret['fun'], ret['jid'],
-                            json.dumps(ret['return']), ret['id'],
-                            ret['success'], json.dumps(ret)))
+                          json.dumps(ret['return']),
+                          ret['id'],
+                          ret['success'],
+                          json.dumps(ret)))
 
 
 def save_load(jid, load):
@@ -236,7 +243,7 @@ def get_fun(fun):
 
         ret = {}
         if data:
-            for minion, jid, full_ret in data:
+            for minion, _, full_ret in data:
                 ret[minion] = json.loads(full_ret)
         return ret
 
