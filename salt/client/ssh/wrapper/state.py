@@ -42,6 +42,7 @@ def sls(mods, saltenv='base', test=None, exclude=None, env=None, **kwargs):
     '''
     Create the seed file for a state.sls run
     '''
+    st_kwargs = __salt__.kwargs
     __opts__['grains'] = __grains__
     if env is not None:
         salt.utils.warn_until(
@@ -102,7 +103,8 @@ def sls(mods, saltenv='base', test=None, exclude=None, env=None, **kwargs):
     single = salt.client.ssh.Single(
             __opts__,
             cmd,
-            **__salt__.kwargs)
+            fsclient=__context__['fileclient'],
+            **st_kwargs)
     single.shell.send(
             trans_tar,
             '{0}/salt_state.tgz'.format(__opts__['thin_dir']))
@@ -130,6 +132,7 @@ def low(data, **kwargs):
 
         salt '*' state.low '{"state": "pkg", "fun": "installed", "name": "vi"}'
     '''
+    st_kwargs = __salt__.kwargs
     __opts__['grains'] = __grains__
     chunks = [data]
     st_ = salt.client.ssh.state.SSHHighState(
@@ -160,7 +163,8 @@ def low(data, **kwargs):
     single = salt.client.ssh.Single(
             __opts__,
             cmd,
-            **__salt__.kwargs)
+            fsclient=__context__['fileclient'],
+            **st_kwargs)
     single.shell.send(
             trans_tar,
             '{0}/salt_state.tgz'.format(__opts__['thin_dir']))
@@ -183,6 +187,7 @@ def high(data, **kwargs):
 
         salt '*' state.high '{"vim": {"pkg": ["installed"]}}'
     '''
+    st_kwargs = __salt__.kwargs
     __opts__['grains'] = __grains__
     st_ = salt.client.ssh.state.SSHHighState(
             __opts__,
@@ -210,7 +215,8 @@ def high(data, **kwargs):
     single = salt.client.ssh.Single(
             __opts__,
             cmd,
-            **__salt__.kwargs)
+            fsclient=__context__['fileclient'],
+            **st_kwargs)
     single.shell.send(
             trans_tar,
             '{0}/salt_state.tgz'.format(__opts__['thin_dir']))
@@ -235,6 +241,7 @@ def highstate(test=None, **kwargs):
         salt '*' state.highstate exclude=sls_to_exclude
         salt '*' state.highstate exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
     '''
+    st_kwargs = __salt__.kwargs
     __opts__['grains'] = __grains__
     st_ = salt.client.ssh.state.SSHHighState(
             __opts__,
@@ -267,7 +274,8 @@ def highstate(test=None, **kwargs):
     single = salt.client.ssh.Single(
             __opts__,
             cmd,
-            **__salt__.kwargs)
+            fsclient=__context__['fileclient'],
+            **st_kwargs)
     single.shell.send(
             trans_tar,
             '{0}/salt_state.tgz'.format(__opts__['thin_dir']))
@@ -296,6 +304,7 @@ def top(topfn, test=None, **kwargs):
         salt '*' state.top reverse_top.sls exclude=sls_to_exclude
         salt '*' state.top reverse_top.sls exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
     '''
+    st_kwargs = __salt__.kwargs
     __opts__['grains'] = __grains__
     if salt.utils.test_mode(test=test, **kwargs):
         __opts__['test'] = True
@@ -329,7 +338,8 @@ def top(topfn, test=None, **kwargs):
     single = salt.client.ssh.Single(
             __opts__,
             cmd,
-            **__salt__.kwargs)
+            fsclient=__context__['fileclient'],
+            **st_kwargs)
     single.shell.send(
             trans_tar,
             '{0}/salt_state.tgz'.format(__opts__['thin_dir']))

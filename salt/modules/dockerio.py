@@ -1496,12 +1496,20 @@ def _parse_image_multilogs_string(ret, repo):
                     image_logs.append(buf)
                 buf = ''
         image_logs.reverse()
+
+        # Valid statest when pulling an image from the docker registry
+        valid_states = [
+            'Download complete',
+            'Already exists',
+        ]
+
         # search last layer grabbed
         for l in image_logs:
             if isinstance(l, dict):
-                if l.get('status') == 'Download complete' and l.get('id'):
+                if l.get('status') in valid_states and l.get('id'):
                     infos = _get_image_infos(l['id'])
                     break
+
     return image_logs, infos
 
 
