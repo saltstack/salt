@@ -500,9 +500,9 @@ def _find_dirs(metadata):
         for path in [k['Key'] for k in data]:
             prefix = ''
             for part in path.split('/')[:-1]:
-                dir = prefix + part + '/'
-                ret[bucket_name].add(dir)
-                prefix = dir
+                directory = prefix + part + '/'
+                ret[bucket_name].add(directory)
+                prefix = directory
 
     return ret
 
