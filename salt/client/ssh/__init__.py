@@ -35,6 +35,7 @@ import salt.utils.event
 import salt.utils.atomicfile
 import salt.utils.thin
 import salt.utils.verify
+import salt.utils.network
 from salt._compat import string_types
 from salt.utils import is_windows
 
@@ -45,7 +46,7 @@ except ImportError:
     HAS_ZMQ = False
 
 # The directory where salt thin is deployed
-DEFAULT_THIN_DIR = '/tmp/.%%USER%%_salt'
+DEFAULT_THIN_DIR = '/tmp/.%%USER%%_%%FQDNUUID%%__salt'
 
 # RSTR is just a delimiter to distinguish the beginning of salt STDOUT
 # and STDERR.  There is no special meaning.  Messages prior to RSTR in
@@ -501,10 +502,16 @@ class Single(object):
             self.wipe = 'True' if self.opts.get('wipe_ssh') else 'False'
         if kwargs.get('thin_dir'):
             self.thin_dir = kwargs['thin_dir']
-        elif user:
-            self.thin_dir = DEFAULT_THIN_DIR.replace('%%USER%%', user)
         else:
-            self.thin_dir = DEFAULT_THIN_DIR.replace('%%USER%%', 'root')
+            if user:
+                thin_dir = DEFAULT_THIN_DIR.replace('%%USER%%', user)
+            else:
+                thin_dir = DEFAULT_THIN_DIR.replace('%%USER%%', 'root')
+            self.thin_dir = thin_dir.replace(
+                '%%FQDNUUID%%',
+                uuid.uuid3(uuid.NAMESPACE_DNS,
+                           salt.utils.network.get_fqhostname()).hex[:6]
+            )
         self.opts['thin_dir'] = self.thin_dir
         self.fsclient = fsclient
         self.context = {'master_opts': self.opts,
@@ -704,10 +711,10 @@ class Single(object):
         opts = data.get('opts', {})
         opts['grains'] = data.get('grains')
 
-        #Restore master grains
+        # Restore master grains
         for grain in conf_grains:
             opts['grains'][grain] = conf_grains[grain]
-        #Enable roster grains support
+        # Enable roster grains support
         if 'grains' in self.target:
             for grain in self.target['grains']:
                 opts['grains'][grain] = self.target['grains'][grain]
