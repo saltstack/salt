@@ -349,6 +349,7 @@ its size to 100G by using the following configuration.
         - DeviceName: /dev/sda
           Ebs.VolumeSize: 100
           Ebs.VolumeType: io1
+          Ebs.SnapshotId: dummy0
 
 
 Tags can be set once an instance has been launched.
