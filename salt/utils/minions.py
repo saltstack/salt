@@ -425,11 +425,10 @@ class CkMinions(object):
                 if not os.path.isfile(datap):
                     continue
                 try:
-                    grains = self.serial.load(
-                        salt.utils.fopen(datap, 'rb')
-                    ).get('grains', {})
-                except AttributeError:
-                    pass
+                    with salt.utils.fopen(datap, 'rb') as fp_:
+                        grains = self.serial.load(fp_).get('grains', {})
+                except (AttributeError, IOError, OSError):
+                    continue
                 for ipv4 in grains.get('ipv4', []):
                     if ipv4 == '127.0.0.1' or ipv4 == '0.0.0.0':
                         continue
