@@ -1207,7 +1207,7 @@ class LocalClient(object):
                                          minions,
                                          timeout=timeout,
                                          tgt=tgt,
-                                         tgt_type='glob',
+                                         tgt_type=tgt_type,
                                          expect_minions=(verbose or show_timeout)
                                          ):
             # replace the return structure for missing minions
