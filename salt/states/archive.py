@@ -94,7 +94,7 @@ def extracted(name,
     if archive_format not in valid_archives:
         ret['result'] = False
         ret['comment'] = '{0} is not supported, valids: {1}'.format(
-            name, ','.join(valid_archives))
+            archive_format, ','.join(valid_archives))
         return ret
 
     if if_missing is None:
