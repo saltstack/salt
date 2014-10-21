@@ -347,7 +347,8 @@ its size to 100G by using the following configuration.
     my-ec2-config:
       block_device_mappings:
         - DeviceName: /dev/sda
-          Ebs.VolumeSize: 100 
+          Ebs.VolumeSize: 100
+          Ebs.VolumeType: io1
 
 
 Tags can be set once an instance has been launched.
