@@ -340,7 +340,7 @@ created in the order provided and additional mappings will be ignored. Consult t
 
 You can also use block device mappings to change the size of the root device at the 
 provisioing time. For example, assuming the root device is '/dev/sda', you can set 
-its size to 100G by using the following configuration.
+its size to 100G by using the following configuration. note.
 
 .. code-block:: yaml
 
@@ -348,7 +348,7 @@ its size to 100G by using the following configuration.
       block_device_mappings:
         - DeviceName: /dev/sda
           Ebs.VolumeSize: 100
-          Ebs.VolumeType: io1
+          Ebs.VolumeType: gp2
           Ebs.SnapshotId: dummy0
 
 
