@@ -232,7 +232,7 @@ class CkMinions(object):
                     salt.utils.fopen(datap, 'rb')
                 ).get('grains')
                 if not salt.utils.subdict_match(grains, expr,
-                                                delim=':', regex_match=True) and id_ in minions:
+                                                delimiter=':', regex_match=True) and id_ in minions:
                     minions.remove(id_)
         return list(minions)
 
