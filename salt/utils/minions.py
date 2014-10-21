@@ -443,9 +443,7 @@ class CkMinions(object):
                 try:
                     with salt.utils.fopen(datap, 'rb') as fp_:
                         grains = self.serial.load(fp_).get('grains', {})
-                except AttributeError:
-                    pass
-                except (IOError, OSError):
+                except (AttributeError, IOError, OSError):
                     continue
                 for ipv4 in grains.get('ipv4', []):
                     if ipv4 == '127.0.0.1' or ipv4 == '0.0.0.0':
