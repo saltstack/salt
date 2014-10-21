@@ -25,17 +25,11 @@ __virtualname__ = 'user'
 
 
 def __virtual__():
-    if __grains__.get('kernel') != 'Darwin':
+    if (__grains__.get('kernel') != 'Darwin' or
+            __grains__['osrelease_info'] < (10, 7)):
         return False
-    return __virtualname__ if _osmajor() >= 10.7 else False
-
-
-def _osmajor():
-    if '_osmajor' not in __context__:
-        __context__['_osmajor'] = float(
-            '.'.join(str(__grains__['osrelease']).split('.')[0:2])
-        )
-    return __context__['_osmajor']
+    else:
+        return __virtualname__
 
 
 def _flush_dscl_cache():
@@ -49,7 +43,7 @@ def _dscl(cmd, ctype='create'):
     '''
     Run a dscl -create command
     '''
-    if _osmajor() < 10.8:
+    if __grains__['osrelease_info'] < (10, 8):
         source, noderoot = '.', ''
     else:
         source, noderoot = 'localhost', '/Local/Default'

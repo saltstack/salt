@@ -819,7 +819,6 @@ class Loader(object):
                     (str(mod.__name__).startswith('salt.loaded.int.grain') or
                      str(mod.__name__).startswith('salt.loaded.ext.grain')):
                 mod.__salt__.update(funcs)
- #               mod.__errors__ = error_funcs
         if include_errors:
             funcs['_errors'] = error_funcs
         return funcs

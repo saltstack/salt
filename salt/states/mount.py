@@ -121,6 +121,18 @@ def mounted(name,
         if os.path.exists(mapper_device):
             real_device = mapper_device
 
+    # When included in a Salt state file, FUSE
+    # devices are prefaced by the filesystem type
+    # and a hash, eg. sshfs#.  In the mount list
+    # only the hostname is included.  So if we detect
+    # that the device is a FUSE device then we
+    # remove the prefaced string so that the device in
+    # state matches the device in the mount list.
+    fuse_match = re.match(r'^\w+\#(?P<device_name>.+)', device)
+    if fuse_match:
+        if 'device_name' in fuse_match.groupdict():
+            real_device = fuse_match.group('device_name')
+
     device_list = []
     if real_name in active:
         if mount:
@@ -133,7 +145,7 @@ def mounted(name,
             if uuid_device and uuid_device not in device_list:
                 device_list.append(uuid_device)
             if opts:
-                mount_invisible_options = ['defaults', 'comment', 'nobootwait']
+                mount_invisible_options = ['defaults', 'comment', 'nobootwait', 'reconnect', 'delay_connect']
                 for opt in opts:
                     comment_option = opt.split('=')[0]
                     if comment_option == 'comment':

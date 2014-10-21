@@ -231,7 +231,8 @@ def _split_module_dicts():
 
         {{ salt.cmd.run('uptime') }}
     '''
-
+    if not isinstance(__salt__, dict):
+        return __salt__
     mod_dict = dict(__salt__)
     for module_func_name, mod_fun in mod_dict.items():
         mod, fun = module_func_name.split('.', 1)

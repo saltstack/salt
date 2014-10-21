@@ -4,7 +4,7 @@ The EC2 Cloud Module
 ====================
 
 The EC2 cloud module is used to interact with the Amazon Elastic Cloud
-Computing. This driver is highly experimental! Use at your own risk!
+Computing.
 
 To use the EC2 cloud module, set up the cloud configuration at
  ``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/ec2.conf``:
@@ -1673,6 +1673,8 @@ def query_instance(vm_=None, call=None):
                 )
             )
             attempts -= 1
+            # Just a little delay between attempts...
+            time.sleep(1)
             continue
 
         if isinstance(data, list) and not data:
@@ -1681,6 +1683,8 @@ def query_instance(vm_=None, call=None):
                 'remaining.'.format(attempts)
             )
             attempts -= 1
+            # Just a little delay between attempts...
+            time.sleep(1)
             continue
 
         break
@@ -2328,6 +2332,8 @@ def set_tags(name=None,
                 )
             )
             attempts -= 1
+            # Just a little delay between attempts...
+            time.sleep(1)
             continue
 
         return settags

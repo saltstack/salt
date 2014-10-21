@@ -30,6 +30,7 @@ python2-memcache uses 'localhost' and '11211' as syntax on connection.
 # Import python libs
 import json
 import logging
+import salt.utils
 
 import salt.returners
 
@@ -80,15 +81,23 @@ def _get_serv(ret):
     if not host or not port:
         log.error('Host or port not defined in salt config')
         return
+
     # Combine host and port to conform syntax of python memcache client
     memcacheoptions = (host, port)
 
-    return memcache.Client([':'.join(memcacheoptions)], debug=0)
+    return memcache.Client(['{0}:{1}'.format(*memcacheoptions)], debug=0)
     # # TODO: make memcacheoptions cluster aware
     # Servers can be passed in two forms:
     # 1. Strings of the form C{"host:port"}, which implies a default weight of 1
     # 2. Tuples of the form C{("host:port", weight)}, where C{weight} is
     #    an integer weight value.
+
+
+def prep_jid(nocache):  # pylint: disable=unused-argument
+    '''
+    Pre-process the jid and return the jid to use
+    '''
+    return salt.utils.gen_jid()
 
 
 def returner(ret):

@@ -17,6 +17,9 @@ mind, this order is subject to change).
 An optional master config parameter (:conf_master:`gitfs_provider`) can be used
 to specify which provider should be used.
 
+More detailed information on how to use gitfs can be found in the :ref:`Gitfs
+Walkthrough <tutorial-gitfs>`.
+
 .. note:: Minimum requirements
 
     To use GitPython_ for gitfs requires a minimum GitPython version of 0.3.0,
@@ -32,21 +35,10 @@ to specify which provider should be used.
     To find stale refs, pygit2 additionally requires the git CLI utility to be
     installed.
 
-.. warning::
-
-    pygit2_ does not yet support supplying passing SSH credentials, so at
-    this time only ``http://``, ``https://``, and ``file://`` URLs are
-    supported as valid :conf_master:`gitfs_remotes` entries if pygit2 is being
-    used.
-
-    Additionally, pygit2_ does not yet support passing http/https credentials
-    via a `.netrc`_ file.
-
 .. _GitPython: https://github.com/gitpython-developers/GitPython
 .. _pygit2: https://github.com/libgit2/pygit2
 .. _libgit2: https://libgit2.github.com/
 .. _dulwich: https://www.samba.org/~jelmer/dulwich/
-.. _.netrc: https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-File.html
 '''
 
 # Import python libs
@@ -607,11 +599,13 @@ def init():
         override_params += AUTH_PARAMS
     elif global_auth_params:
         log.critical(
-            'GitFS authentication was configured, but the {0} gitfs_provider '
-            'does not support authentication. The providers for which '
-            'authentication is supported in gitfs are: {1}'
-            .format(provider, ', '.join(AUTH_PROVIDERS))
+            'GitFS authentication was configured, but the {0!r} '
+            'gitfs_provider does not support authentication. The providers '
+            'for which authentication is supported in gitfs are: {1}. See the '
+            'GitFS Walkthrough in the Salt documentation for further '
+            'information.'.format(provider, ', '.join(AUTH_PROVIDERS))
         )
+        return []
 
     # ignore git ssl verification if requested
     ssl_verify = 'true' if __opts__.get('gitfs_ssl_verify', True) else 'false'
@@ -624,6 +618,7 @@ def init():
 
     for remote in __opts__['gitfs_remotes']:
         repo_conf = copy.deepcopy(per_remote_defaults)
+        bad_per_remote_conf = False
         if isinstance(remote, dict):
             repo_url = next(iter(remote))
             per_remote_conf = salt.utils.repack_dictlist(remote[repo_url])
@@ -636,14 +631,34 @@ def init():
                 )
             for param in (x for x in per_remote_conf
                           if x not in override_params):
-                log.error(
-                    'Invalid configuration parameter {0!r} in remote {1}. '
-                    'Valid parameters are: {2}. See the documentation for '
-                    'further information.'.format(
-                        param, repo_url, ', '.join(PER_REMOTE_PARAMS)
+                bad_per_remote_conf = True
+                if param in AUTH_PARAMS and provider not in AUTH_PROVIDERS:
+                    log.critical(
+                        'GitFS authentication parameter {0!r} (from remote '
+                        '{1}) is only supported by the following provider(s): '
+                        '{2}. Current gitfs_provider is {3!r}. See the '
+                        'GitFS Walkthrough in the Salt documentation for '
+                        'further information.'.format(
+                            param,
+                            repo_url,
+                            ', '.join(AUTH_PROVIDERS),
+                            provider
+                        )
                     )
-                )
-                per_remote_conf.pop(param)
+                else:
+                    log.critical(
+                        'Invalid configuration parameter {0!r} in remote {1}. '
+                        'Valid parameters are: {2}. See the GitFS Walkthrough '
+                        'in the Salt documentation for further '
+                        'information.'.format(
+                            param,
+                            repo_url,
+                            ', '.join(PER_REMOTE_PARAMS)
+                        )
+                    )
+            if bad_per_remote_conf:
+                # Don't let Salt try to use a badly-configured remote
+                continue
             repo_conf.update(per_remote_conf)
         else:
             repo_url = remote

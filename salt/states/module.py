@@ -221,9 +221,14 @@ def run(name, **kwargs):
         if kwargs['returner'] in returners:
             returners[kwargs['returner']](ret_ret)
     ret['comment'] = 'Module function {0} executed'.format(name)
+
     ret['result'] = True
-    if ret['changes'].get('ret', {}).get('retcode', 0) != 0:
+    if ret['changes'].get('retcode', 0) != 0:
         ret['result'] = False
+    else:
+        changes_ret = ret['changes'].get('ret', {})
+        if isinstance(changes_ret, dict) and changes_ret.get('retcode', 0) != 0:
+            ret['result'] = False
     return ret
 
 mod_watch = run  # pylint: disable=C0103

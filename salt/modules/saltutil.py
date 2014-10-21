@@ -23,10 +23,12 @@ import salt
 import salt.payload
 import salt.state
 import salt.client
+import salt.runner
 import salt.utils
 import salt.utils.process
 import salt.utils.minion
 import salt.transport
+import salt.wheel
 from salt.exceptions import (
     SaltReqTimeoutError, SaltRenderError, CommandExecutionError
 )
@@ -730,6 +732,48 @@ def cmd_iter(tgt,
             kwarg,
             **kwargs):
         yield ret
+
+
+def runner(fun, **kwargs):
+    '''
+    Execute a runner module (this function must be run on the master)
+
+    .. versionadded:: 2014.7
+
+    name
+        The name of the function to run
+    kwargs
+        Any keyword arguments to pass to the runner function
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.runner jobs.list_jobs
+    '''
+    rclient = salt.runner.RunnerClient(__opts__)
+    return rclient.cmd(fun, [], kwarg=kwargs)
+
+
+def wheel(fun, **kwargs):
+    '''
+    Execute a wheel module (this function must be run on the master)
+
+    .. versionadded:: 2014.7
+
+    name
+        The name of the function to run
+    kwargs
+        Any keyword arguments to pass to the wheel function
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.wheel key.accept match=jerry
+    '''
+    wclient = salt.wheel.WheelClient(__opts__)
+    return wclient.cmd(fun, **kwargs)
 
 
 # this is the only way I could figure out how to get the REAL file_roots
