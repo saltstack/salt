@@ -10,6 +10,7 @@ from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
 
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class ArgsTestCase(TestCase):
     '''
