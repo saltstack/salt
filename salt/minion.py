@@ -613,15 +613,17 @@ class Minion(MinionBase):
             self.returners)
 
         # add default scheduling jobs to the minions scheduler
-        self.schedule.add_job({
-            '__mine_interval':
-            {
-                'function': 'mine.update',
-                'minutes': opts['mine_interval'],
-                'jid_include': True,
-                'maxrunning': 2
-            }
-        })
+        if 'mine.update' in self.functions:
+            log.info('Added mine.update to schedular')
+            self.schedule.add_job({
+                '__mine_interval':
+                {
+                    'function': 'mine.update',
+                    'minutes': opts['mine_interval'],
+                    'jid_include': True,
+                    'maxrunning': 2
+                }
+            })
 
         # add master_alive job if enabled
         if self.opts['master_alive_interval'] > 0:
