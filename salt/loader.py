@@ -886,72 +886,84 @@ class Loader(object):
                             fn_
                         )
                     )
-        for name in names:
-            try:
-                if names[name].endswith('.pyx'):
-                    # If there's a name which ends in .pyx it means the above
-                    # cython_enabled is True. Continue...
-                    mod = pyximport.load_module(
-                        '{0}.{1}.{2}.{3}'.format(
-                            self.loaded_base_name,
-                            self.mod_type_check(names[name]),
-                            self.tag,
-                            name
-                        ), names[name], tempfile.gettempdir()
-                    )
-                else:
-                    fn_, path, desc = imp.find_module(name, self.module_dirs)
-                    mod = imp.load_module(
-                        '{0}.{1}.{2}.{3}'.format(
-                            self.loaded_base_name,
-                            self.mod_type_check(path),
-                            self.tag,
-                            name
-                        ), fn_, path, desc
-                    )
-                    # reload all submodules if necessary
-                    submodules = [
-                        getattr(mod, sname) for sname in dir(mod) if
-                        isinstance(getattr(mod, sname), mod.__class__)
-                    ]
+        failed_loads = {}
 
-                    # reload only custom "sub"modules i.e is a submodule in
-                    # parent module that are still available on disk (i.e. not
-                    # removed during sync_modules)
-                    for submodule in submodules:
-                        try:
-                            smname = '{0}.{1}.{2}'.format(
+        def load_names(names, failhard=False):
+            log.info('Loading names')
+            for name in names:
+                try:
+                    if names[name].endswith('.pyx'):
+                        # If there's a name which ends in .pyx it means the above
+                        # cython_enabled is True. Continue...
+                        mod = pyximport.load_module(
+                            '{0}.{1}.{2}.{3}'.format(
                                 self.loaded_base_name,
+                                self.mod_type_check(names[name]),
                                 self.tag,
                                 name
-                            )
-                            smfile = '{0}.py'.format(
-                                os.path.splitext(submodule.__file__)[0]
-                            )
-                            if submodule.__name__.startswith(smname) and \
-                                    os.path.isfile(smfile):
-                                reload(submodule)
-                        except AttributeError:
-                            continue
-            except ImportError:
-                log.debug(
-                    'Failed to import {0} {1}, this is most likely NOT a '
-                    'problem:\n'.format(
-                        self.tag, name
-                    ),
-                    exc_info=True
-                )
-                continue
-            except Exception:
-                log.error(
-                    'Failed to import {0} {1}, this is due most likely to a '
-                    'syntax error. Traceback raised:\n'.format(
-                        self.tag, name
-                    ),
-                    exc_info=True
-                )
-                continue
-            self.modules.append(mod)
+                            ), names[name], tempfile.gettempdir()
+                        )
+                    else:
+                        fn_, path, desc = imp.find_module(name, self.module_dirs)
+                        mod = imp.load_module(
+                            '{0}.{1}.{2}.{3}'.format(
+                                self.loaded_base_name,
+                                self.mod_type_check(path),
+                                self.tag,
+                                name
+                            ), fn_, path, desc
+                        )
+                        # reload all submodules if necessary
+                        submodules = [
+                            getattr(mod, sname) for sname in dir(mod) if
+                            isinstance(getattr(mod, sname), mod.__class__)
+                        ]
+
+                        # reload only custom "sub"modules i.e is a submodule in
+                        # parent module that are still available on disk (i.e. not
+                        # removed during sync_modules)
+                        for submodule in submodules:
+                            try:
+                                smname = '{0}.{1}.{2}'.format(
+                                    self.loaded_base_name,
+                                    self.tag,
+                                    name
+                                )
+                                smfile = '{0}.py'.format(
+                                    os.path.splitext(submodule.__file__)[0]
+                                )
+                                if submodule.__name__.startswith(smname) and \
+                                        os.path.isfile(smfile):
+                                    reload(submodule)
+                            except AttributeError:
+                                continue
+                except ImportError:
+                    if failhard:
+                        log.debug(
+                            'Failed to import {0} {1}, this is most likely NOT a '
+                            'problem:\n'.format(
+                                self.tag, name
+                            ),
+                            exc_info=True
+                        )
+                    if not failhard:
+                        log.debug('Failed to import {0} {1}. Another attempt will be made to try to resolve dependencies.'.format(
+                            self.tag, name))
+                        failed_loads[name] = path
+                    continue
+                except Exception:
+                    log.warning(
+                        'Failed to import {0} {1}, this is due most likely to a '
+                        'syntax error. Traceback raised:\n'.format(
+                            self.tag, name
+                        ),
+                        exc_info=True
+                    )
+                    continue
+                self.modules.append(mod)
+        load_names(names, failhard=False)
+        if failed_loads:
+            load_names(failed_loads, failhard=True)
 
     def load_functions(self, mod, module_name):
         '''
