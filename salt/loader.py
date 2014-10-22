@@ -577,7 +577,7 @@ class Loader(object):
                              'modules.')
         return getattr(mod, fun[fun.rindex('.') + 1:])(*arg)
 
-    def gen_module(self, name, functions, pack=None):
+    def gen_module(self, name, functions, pack=None, virtual_enable=False):
         '''
         Load a single module and pack it with the functions passed
         '''
@@ -670,6 +670,22 @@ class Loader(object):
                 pass
         funcs = {}
         module_name = mod.__name__[mod.__name__.rindex('.') + 1:]
+        if virtual_enable:
+            # if virtual modules are enabled, we need to look for the
+            # __virtual__() function inside that module and run it.
+            (virtual_ret, virtual_name, virtual_errors) = self.process_virtual(
+                                                                mod,
+                                                                module_name)
+
+            # if process_virtual returned a non-True value then we are
+            # supposed to not process this module
+            if virtual_ret is not True:
+                # If a module has information about why it could not be loaded, record it
+                if virtual_errors:
+                    error_funcs[module_name] = virtual_errors
+                return False #  TODO Support virtual_errors here
+
+                # update our module name to reflect the virtual name
         if getattr(mod, '__load__', False) is not False:
             log.info(
                 'The functions from module {0!r} are being loaded from the '
@@ -1313,6 +1329,7 @@ class LazyLoader(MutableMapping):
         mod_funcs = self.loader.gen_module(mod_key,
                                            self.functions,
                                            pack=self.pack,
+                                           virtual_enable=True
                                            )
         # if you loaded nothing, then we don't have it
         if mod_funcs is None:
@@ -1321,7 +1338,10 @@ class LazyLoader(MutableMapping):
             # TODO: maybe do a load until, with some glob match first?
             self.load_all()
             return self._dict[key]
+        elif mod_funcs is False:  # i.e., the virtual check failed
+            return False
         self._dict.update(mod_funcs)
+        return True
 
     def load_all(self):
         '''
@@ -1343,9 +1363,15 @@ class LazyLoader(MutableMapping):
         '''
         if key not in self._dict and not self.loaded:
             # load the item
-            self._load(key)
-            log.debug('LazyLoaded {0}'.format(key))
-        return self._dict[key]
+            mod_load = self._load(key)
+            if mod_load: 
+                log.debug('LazyLoaded {0}'.format(key))
+                return self._dict[key]
+            elif mod_load is False:
+                log.debug('Could not LazyLoad {0}'.format(key))
+                return None
+        else:
+            return self._dict[key]
 
     def __len__(self):
         # if not loaded,
