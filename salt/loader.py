@@ -673,7 +673,7 @@ class Loader(object):
         if virtual_enable:
             # if virtual modules are enabled, we need to look for the
             # __virtual__() function inside that module and run it.
-            (virtual_ret, virtual_name, virtual_errors) = self.process_virtual(
+            (virtual_ret, virtual_name, _) = self.process_virtual(
                                                                 mod,
                                                                 module_name)
 
@@ -681,9 +681,7 @@ class Loader(object):
             # supposed to not process this module
             if virtual_ret is not True:
                 # If a module has information about why it could not be loaded, record it
-                if virtual_errors:
-                    error_funcs[module_name] = virtual_errors
-                return False #  TODO Support virtual_errors here
+                return False  # TODO Support virtual_errors here
 
                 # update our module name to reflect the virtual name
         if getattr(mod, '__load__', False) is not False:
@@ -1364,7 +1362,7 @@ class LazyLoader(MutableMapping):
         if key not in self._dict and not self.loaded:
             # load the item
             mod_load = self._load(key)
-            if mod_load: 
+            if mod_load:
                 log.debug('LazyLoaded {0}'.format(key))
                 return self._dict[key]
             elif mod_load is False:
