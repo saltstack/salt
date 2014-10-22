@@ -74,7 +74,7 @@ def lookup_jid(jid, ext_source=None, missing=False, outputter=None):
     try:
         data = mminion.returners['{0}.get_jid'.format(returner)](jid)
     except TypeError:
-        print('Requested returner could not be loaded. No JIDs could be retreived.')
+        print 'Requested returner could not be loaded. No JIDs could be retreived.'
         return
     for minion in data:
         if u'return' in data[minion]:
@@ -132,7 +132,7 @@ def list_jobs(ext_source=None,
     try:
         ret = mminion.returners['{0}.get_jids'.format(returner)]()
     except TypeError:
-        print('Error: Requested returner could not be loaded. No jobs could be retreived.')
+        print 'Error: Requested returner could not be loaded. No jobs could be retreived.'
         return
 
     if search_metadata:
@@ -196,9 +196,9 @@ def print_job(jid, ext_source=None, outputter=None):
     returner = _get_returner((__opts__['ext_job_cache'], ext_source, __opts__['master_job_cache']))
     mminion = salt.minion.MasterMinion(__opts__)
 
-    ret[jid] = _format_jid_instance(jid, job)
     try:
         job = mminion.returners['{0}.get_load'.format(returner)](jid)
+        ret[jid] = _format_jid_instance(jid, job)
     except TypeError:
         ret[jid]['Result'] = 'Requested returner {0} is not available. Jobs cannot be retreived. '
         'Check master log for details.'.format(returner)
