@@ -38,6 +38,9 @@ Mapping Events to Reactor SLS Files
 Reactor SLS files and event tags are associated in the master config file.
 By default this is /etc/salt/master, or /etc/salt/master.d/reactor.conf.
 
+.. versionadded:: 2014.7.0
+    Added Reactor support for ``salt://`` file paths.
+
 In the master config section 'reactor:' is a list of event tags to be matched
 and each event tag has a list of reactor SLS files to be run.
 
@@ -172,14 +175,28 @@ Understanding the Structure of Reactor Formulas
 ===============================================
 
 While the reactor system uses the same data structure as the state system, this
-data does not translate the same way to operations. In state files formula
-information is mapped to the state functions, but in the reactor system
-information is mapped to a number of available subsystems on the master. These
-systems are the :strong:`LocalClient` and the :strong:`Runners`. The
-:strong:`state declaration` field takes a reference to the function to call in
-each interface. So to trigger a salt-run call the :strong:`state declaration`
-field will start with :strong:`runner`, followed by the runner function to
-call. This means that a call to what would be on the command line
+data does not translate the same way to function calls.
+
+.. versionchanged:: 2014.7.0
+    The ``cmd`` prefix was renamed to ``local`` for consistency with other
+    parts of Salt. A backward-compatible alias was added for ``cmd``.
+
+In state files the minion generates the data structure locally and uses that to
+call local state functions. In the reactor system the master generates a data
+structure that is used to call methods on one of Salt's client interfaces
+described in :ref:`the Python API documentation <client-apis>`.
+
+* :py:class:`~salt.client.LocalClient` is used to call Execution modules
+  remotely on minions. (The :command:`salt` CLI program uses this also.)
+* :py:class:`~salt.runner.RunnerClient` calls Runner modules locally on the
+  master.
+* :py:class:`~salt.wheel.WheelClient` calls Wheel modules locally on the
+  master.
+
+The :strong:`state declaration` field takes a reference to the function to call
+in each interface. So to trigger a salt-run call the :strong:`state
+declaration` field will start with :strong:`runner`, followed by the runner
+function to call. This means that a call to what would be on the command line
 :strong:`salt-run manage.up` will be :strong:`runner.manage.up`. An example of
 this in a reactor formula would look like this:
 
