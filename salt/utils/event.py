@@ -57,6 +57,7 @@ import logging
 import time
 import datetime
 import multiprocessing
+import pickle
 from multiprocessing import Process
 from collections import MutableMapping
 
@@ -257,6 +258,8 @@ class SaltEvent(object):
             mtag, sep, mdata = raw.partition(TAGEND)  # split tag from data
 
         data = serial.loads(mdata)
+        if mtag == '_error':
+            data['error'] = pickle.loads(data['error'])
         return mtag, data
 
     def _check_pending(self, tag, pending_tags):
@@ -387,11 +390,14 @@ class SaltEvent(object):
         if not str(tag):  # no empty tags allowed
             raise ValueError('Empty tag.')
 
-        if not isinstance(data, MutableMapping):  # data must be dict
+        if not isinstance(data, MutableMapping) and not isinstance(data, Exception):
             raise ValueError('Dict object expected, not "{0!r}".'.format(data))
 
         if not self.cpush:
             self.connect_pull(timeout=timeout)
+
+        if isinstance(data, Exception) or tag == '_error':
+            data = {'error': pickle.dumps(data)}
 
         data['_stamp'] = datetime.datetime.now().isoformat()
 
