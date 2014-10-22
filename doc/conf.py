@@ -152,7 +152,7 @@ copyright = '2014 SaltStack, Inc.'
 
 version = salt.version.__version__
 #release = '.'.join(map(str, salt.version.__version_info__))
-release = '2014.1.11'
+release = '2014.1.13'
 
 spelling_lang = 'en_US'
 language = 'en'
