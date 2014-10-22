@@ -41,11 +41,14 @@ otherwise multi-minion targetting can lead to losing output:
 * the first returning minion is able to create a document in the database
 * other minions fail with ``{'error': 'HTTP Error 409: Conflict'}``
 '''
+# Import Python libs
 import logging
 import time
 import urllib2
 import json
 
+# Import Salt libs
+import salt.utils
 import salt.returners
 
 log = logging.getLogger(__name__)
@@ -341,3 +344,10 @@ def set_salt_view():
                     .format(_response['error']))
         return False
     return True
+
+
+def prep_jid(nocache):  # pylint: disable=unused-argument
+    '''
+    Do any necessary pre-processing and return the jid to use
+    '''
+    return salt.utils.gen_jid()

@@ -44,7 +44,7 @@ To install from ``updates-testing``, use the ``enablerepo`` argument for yum:
 .. code-block:: bash
 
     yum --enablerepo=updates-testing install salt-master
-    yum --enablerepo=ubdates-testing install salt-minion
+    yum --enablerepo=updates-testing install salt-minion
 
 Post-installation tasks
 =======================

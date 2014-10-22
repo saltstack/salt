@@ -70,6 +70,8 @@ import logging
 import smtplib
 from email.utils import formatdate
 
+# Import Salt libs
+import salt.utils
 import salt.returners
 
 try:
@@ -154,7 +156,8 @@ def returner(ret):
             content = str(encrypted_data)
         else:
             log.error('smtp_return: Encryption failed, only an error message will be sent')
-            content = 'Encryption failed, the return data was not sent.\r\n\r\n{0}\r\n{1}'.format(encrypted_data.status, encrypted_data.stderr)
+            content = 'Encryption failed, the return data was not sent.\r\n\r\n{0}\r\n{1}'.format(
+                    encrypted_data.status, encrypted_data.stderr)
 
     message = ('From: {0}\r\n'
                'To: {1}\r\n'
@@ -178,3 +181,10 @@ def returner(ret):
     server.sendmail(from_addr, to_addrs, message)
     log.debug('smtp_return: Message sent.')
     server.quit()
+
+
+def prep_jid(nocache):  # pylint: disable=unused-argument
+    '''
+    Do any necessary pre-processing and return the jid to use
+    '''
+    return salt.utils.gen_jid()
