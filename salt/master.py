@@ -2251,7 +2251,12 @@ class ClearFuncs(object):
         # Retrieve the jid
         if not clear_load['jid']:
             fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
-            clear_load['jid'] = self.mminion.returners[fstr](nocache=extra.get('nocache', False))
+            try:
+                clear_load['jid'] = self.mminion.returners[fstr](nocache=extra.get('nocache', False))
+            except TypeError:  # The returner is not present
+                log.error('The requested returner {0} could not be loaded. Publication not sent.'.format(fstr.split('.')[0]))
+                return {}
+                # TODO Error reporting over the master event bus
         self.event.fire_event({'minions': minions}, clear_load['jid'])
 
         new_job_load = {
