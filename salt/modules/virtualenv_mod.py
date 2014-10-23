@@ -53,6 +53,7 @@ def create(path,
            upgrade=None,
            user=None,
            runas=None,
+           use_vt=False,
            saltenv='base'):
     '''
     Create a virtualenv
@@ -87,6 +88,8 @@ def create(path,
         Set ownership for the virtualenv
     runas : None
         Set ownership for the virtualenv
+    use_vt
+        Use VT terminal emulation (see ouptut while installing)
 
     .. note::
         The ``runas`` argument is deprecated as of 2014.1.0. ``user`` should be
@@ -262,7 +265,7 @@ def create(path,
     if (pip or distribute) and not os.path.exists(venv_setuptools):
         _install_script(
             'https://bitbucket.org/pypa/setuptools/raw/default/ez_setup.py',
-            path, venv_python, user, saltenv=saltenv
+            path, venv_python, user, saltenv=saltenv, use_vt=use_vt
         )
 
         # clear up the distribute archive which gets downloaded
@@ -277,7 +280,7 @@ def create(path,
     if pip and not os.path.exists(venv_pip):
         _ret = _install_script(
             'https://raw.githubusercontent.com/pypa/pip/master/contrib/get-pip.py',
-            path, venv_python, user, saltenv=saltenv
+            path, venv_python, user, saltenv=saltenv, use_vt=use_vt
         )
         # Let's update the return dictionary with the details from the pip
         # installation
@@ -310,7 +313,7 @@ def get_site_packages(venv):
             'from distutils import sysconfig; print sysconfig.get_python_lib()')
 
 
-def _install_script(source, cwd, python, user, saltenv='base'):
+def _install_script(source, cwd, python, user, saltenv='base', use_vt=False):
     if not salt.utils.is_windows():
         tmppath = salt.utils.mkstemp(dir=cwd)
     else:
@@ -326,7 +329,8 @@ def _install_script(source, cwd, python, user, saltenv='base'):
             '{0} {1}'.format(python, tmppath),
             runas=user,
             cwd=cwd,
-            env={'VIRTUAL_ENV': cwd}
+            env={'VIRTUAL_ENV': cwd},
+            use_vt=use_vt
         )
     finally:
         os.remove(tmppath)
