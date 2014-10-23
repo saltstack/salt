@@ -2144,7 +2144,7 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
                                    stream_stdout=True,
                                    stream_stderr=True)
                 # consume output
-                while 1:
+                while proc.has_unread_data:
                     try:
                         time.sleep(0.5)
                         try:
@@ -2159,13 +2159,6 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
                             stderr += cstderr
                         else:
                             cstderr = ''
-                        # done by vt itself
-                        # if stdout:
-                        #     log.debug(stdout)
-                        # if stderr:
-                        #     log.debug(stderr)
-                        if not cstdout and not cstderr and not proc.isalive():
-                            break
                     except KeyboardInterrupt:
                         break
                 res = {'retcode': proc.exitstatus,
@@ -2180,7 +2173,7 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
                        'stdout': stdout,
                        'stderr': stderr}
             finally:
-                proc.terminate()
+                proc.close(terminate=True, kill=True)
     else:
         rootfs = info(name).get('rootfs')
         res = __salt__['cmd.run_chroot'](rootfs, cmd)
