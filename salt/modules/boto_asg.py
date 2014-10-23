@@ -240,7 +240,7 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
 
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
-        return False,"failed to connect to AWS"
+        return False, 'Failed to connect to AWS'
     if isinstance(availability_zones, string_types):
         availability_zones = json.loads(availability_zones)
     if isinstance(load_balancers, string_types):
@@ -257,12 +257,12 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
                 key = tag.get('key')
             except KeyError:
                 log.error('Tag missing key.')
-                return False,"Tag %s missing key" % tag
+                return False, 'Tag {0} missing key'.format(tag)
             try:
                 value = tag.get('value')
             except KeyError:
                 log.error('Tag missing value.')
-                return False,"Tag %s missing value" % tag
+                return False, 'Tag {0} missing value'.format(tag)
             propagate_at_launch = tag.get('propagate_at_launch', False)
             _tag = autoscale.Tag(key=key, value=value, resource_id=name,
                                  propagate_at_launch=propagate_at_launch)
