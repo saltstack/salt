@@ -66,6 +66,7 @@ import salt.utils.args
 import salt.utils.event
 import salt.utils.minion
 import salt.utils.schedule
+import salt.utils.error
 import salt.exitcodes
 
 from salt.defaults import DEFAULT_TARGET_DELIM
@@ -1088,6 +1089,7 @@ class Minion(MinionBase):
             except Exception:
                 msg = 'The minion function caused an exception'
                 log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
+                salt.utils.error.fire_raw_exception(salt.exceptions.MinionError(msg), opts)
                 ret['return'] = '{0}: {1}'.format(msg, traceback.format_exc())
                 ret['out'] = 'nested'
         else:
@@ -1621,6 +1623,10 @@ class Minion(MinionBase):
 
                 self.schedule.modify_job(name='__master_alive',
                                          schedule=schedule)
+        elif package.startswith('_salt_error'):
+            tag, data = salt.utils.event.MinionEvent.unpack(package)
+            log.debug('Forwarding salt error event tag={tag}'.format(tag=tag))
+            self._fire_master(data, tag)
 
     # Main Minion Tune In
     def tune_in(self):
