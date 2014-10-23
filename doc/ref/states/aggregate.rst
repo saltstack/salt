@@ -29,7 +29,7 @@ How to Use it
 .. note::
 
     Since this option changes the basic behavior of the state runtime states
-    should be executed in 
+    should be executed in test mode the first time that aggregation is enabled.
 
 Since this behavior can dramatically change the flow of configuration
 management inside of Salt it is disabled by default. But enabling it is easy.
