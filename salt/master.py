@@ -1406,7 +1406,12 @@ class ClearFuncs(object):
         self.wheel_ = salt.wheel.Wheel(opts)
         self.masterapi = salt.daemons.masterapi.LocalFuncs(opts, key)
         self.auto_key = salt.daemons.masterapi.AutoKey(opts)
-        self.cache_cli = CacheCli(self.opts)
+
+        # only create a con_cache-client if the con_cache is active
+        if self.opts['con_cache']:
+            self.cache_cli = CacheCli(self.opts)
+        else:
+            self.cache_cli = False
 
     def _auth(self, load):
         '''
