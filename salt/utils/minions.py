@@ -180,7 +180,7 @@ class CkMinions(object):
                     continue
                 datap = os.path.join(cdir, id_, 'data.p')
                 if not os.path.isfile(datap):
-                    if not greedy:
+                    if not greedy and id_ in minions:
                         minions.remove(id_)
                     continue
                 try:
@@ -205,11 +205,36 @@ class CkMinions(object):
         '''
         Return the minions found by looking via grains with PCRE
         '''
-        return self._check_cache_minions(expr,
-                                         delimiter,
-                                         greedy,
-                                         'grains',
-                                         regex_match=True)
+        cache_enabled = self.opts.get('minion_data_cache', False)
+
+        if greedy:
+            minions = set(
+                os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
+            )
+        elif cache_enabled:
+            minions = os.listdir(os.path.join(self.opts['cachedir'], 'minions'))
+        else:
+            return list()
+
+        if cache_enabled:
+            cdir = os.path.join(self.opts['cachedir'], 'minions')
+            if not os.path.isdir(cdir):
+                return list(minions)
+            for id_ in os.listdir(cdir):
+                if not greedy and id_ not in minions:
+                    continue
+                datap = os.path.join(cdir, id_, 'data.p')
+                if not os.path.isfile(datap):
+                    if not greedy and id_ in minions:
+                        minions.remove(id_)
+                    continue
+                grains = self.serial.load(
+                    salt.utils.fopen(datap, 'rb')
+                ).get('grains')
+                if not salt.utils.subdict_match(grains, expr,
+                                                delimiter=':', regex_match=True) and id_ in minions:
+                    minions.remove(id_)
+        return list(minions)
 
     def _check_pillar_minions(self, expr, delimiter, greedy):
         '''
@@ -241,7 +266,7 @@ class CkMinions(object):
                     continue
                 datap = os.path.join(cdir, id_, 'data.p')
                 if not os.path.isfile(datap):
-                    if not greedy:
+                    if not greedy and id_ in minions:
                         minions.remove(id_)
                     continue
                 try:
@@ -257,7 +282,7 @@ class CkMinions(object):
                     # Target is CIDR
                     if not salt.utils.network.in_subnet(
                             expr,
-                            addrs=grains.get('ipv4', [])):
+                            addrs=grains.get('ipv4', [])) and id_ in minions:
                         minions.remove(id_)
                 else:
                     # Target is an IPv4 address
@@ -268,7 +293,7 @@ class CkMinions(object):
                         # Not a valid IPv4 address, no minions match
                         return []
                     else:
-                        if expr not in grains.get('ipv4', []):
+                        if expr not in grains.get('ipv4', []) and id_ in minions:
                             minions.remove(id_)
         return list(minions)
 
@@ -300,8 +325,8 @@ class CkMinions(object):
                     continue
                 datap = os.path.join(cdir, id_, 'data.p')
                 if not os.path.isfile(datap):
-                    if not greedy:
-                        minions.remove(id)
+                    if not greedy and id_ in minions:
+                        minions.remove(id_)
                     continue
                 try:
                     with salt.utils.fopen(datap, 'rb') as fp_:
@@ -310,13 +335,16 @@ class CkMinions(object):
                     continue
                 range_ = seco.range.Range(self.opts['range_server'])
                 try:
-                    if grains.get('fqdn', '') not in range_.expand(expr):
+                    if grains.get('fqdn', '') not in range_.expand(expr) and id_ in minions:
                         minions.remove(id_)
                 except seco.range.RangeException as exc:
                     log.debug(
                         'Range exception in compound match: {0}'.format(exc)
                     )
-                    minions.remove(id_)
+                    try:
+                        minions.remove(id_)
+                    except KeyError:
+                        pass
         return list(minions)
 
     def _check_compound_minions(self, expr, delimiter, greedy):  # pylint: disable=unused-argument
@@ -443,9 +471,7 @@ class CkMinions(object):
                 try:
                     with salt.utils.fopen(datap, 'rb') as fp_:
                         grains = self.serial.load(fp_).get('grains', {})
-                except AttributeError:
-                    pass
-                except (IOError, OSError):
+                except (AttributeError, IOError, OSError):
                     continue
                 for ipv4 in grains.get('ipv4', []):
                     if ipv4 == '127.0.0.1' or ipv4 == '0.0.0.0':

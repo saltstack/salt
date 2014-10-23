@@ -202,12 +202,6 @@ service to be running (usually called **atd**) in order to schedule jobs.
 Here's an example of how to upgrade the salt-minion package at the end of a
 Salt run, and schedule a service restart for one minute after the package
 update completes.
-=======
-Restarting Salt using Salt without having the restart interrupt the whole
-process is a tricky problem to solve. We're still working on it but in the
-meantime a good way is to use the system scheduler with a short interval. The
-following example is a state that will always execute at the very end of a
-state run.
 
 Linux/Unix
 **********
