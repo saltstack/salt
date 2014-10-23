@@ -557,7 +557,6 @@ def installed(name,
         use_vt=use_vt
     )
 
-    import pdb;pdb.set_trace()  ## Breakpoint ##
     if pip_install_call and (pip_install_call.get('retcode', 1) == 0):
         ret['result'] = True
 
@@ -636,7 +635,7 @@ def removed(name,
             user=None,
             runas=None,
             cwd=None,
-            use_vt=use_vt):
+            use_vt=False):
     '''
     Make sure that a package is not installed.
 
