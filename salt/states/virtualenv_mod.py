@@ -197,7 +197,7 @@ def managed(name,
 
     # Populate the venv via a requirements file
     if requirements:
-        before = set(__salt__['pip.freeze'](bin_env=name, use_vt=use_vt))
+        before = set(__salt__['pip.freeze'](bin_env=name, user=user, use_vt=use_vt))
         _ret = __salt__['pip.install'](
             requirements=requirements,
             bin_env=name,
