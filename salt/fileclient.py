@@ -21,6 +21,7 @@ import salt.crypt
 import salt.loader
 import salt.payload
 import salt.transport
+import salt.fileserver
 import salt.utils
 import salt.utils.templates
 import salt.utils.gzip_util
