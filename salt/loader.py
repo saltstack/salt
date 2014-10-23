@@ -889,7 +889,6 @@ class Loader(object):
         failed_loads = {}
 
         def load_names(names, failhard=False):
-            log.info('Loading names')
             for name in names:
                 try:
                     if names[name].endswith('.pyx'):
