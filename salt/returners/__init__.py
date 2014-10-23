@@ -29,6 +29,10 @@ def get_returner_options(virtualname=None,
     _options = {}
 
     for attr in attrs:
+
+        # default place for the option in the config
+        default_cfg_key = '{0}.{1}'.format(virtualname, attrs[attr])
+
         if 'config.option' in __salt__:
             # Look for the configuration options in __salt__
             # most likely returner is being called from a state or module run
@@ -45,23 +49,23 @@ def get_returner_options(virtualname=None,
 
                 # Look for the configuration item in the override location
                 # if not found, fall back to the default location.
-                if ret_cfg.get(attrs[attr],
-                               cfg('{0}.{1}.{2}'.format(ret_config,
-                                                        virtualname,
-                                                        attrs[attr]))):
-                    _attr = ret_cfg.get(attrs[attr],
-                                        cfg('{0}.{1}.{2}'.format(ret_config,
-                                                                 virtualname,
-                                                                 attrs[attr])))
+                override_default_cfg_key = '{0}.{1}.{2}'.format(
+                    ret_config,
+                    virtualname,
+                    attrs[attr]
+                )
+                override_cfg_default = cfg(override_default_cfg_key)
+                ret_override_cfg = ret_cfg.get(
+                    attrs[attr],
+                    override_cfg_default
+                )
+                if ret_override_cfg:
+                    _attr = ret_override_cfg
                 else:
-                    _attr = c_cfg.get(attrs[attr],
-                                      cfg('{0}.{1}'.format(virtualname,
-                                                           attrs[attr])))
+                    _attr = c_cfg.get(attrs[attr], cfg(default_cfg_key))
             else:
                 # Using the default configuration key
-                _attr = c_cfg.get(attrs[attr],
-                                  cfg('{0}.{1}'.format(virtualname,
-                                                       attrs[attr])))
+                _attr = c_cfg.get(attrs[attr], cfg(default_cfg_key))
         else:
             # __salt__ is unavailable, most likely the returner
             # is being called from the Salt scheduler so
