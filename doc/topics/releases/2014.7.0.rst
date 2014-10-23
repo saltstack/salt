@@ -6,6 +6,20 @@ This release is the largest Salt release ever, with more features and commits
 then any previous release of Salt. Everything from the new RAET transport to
 major updates in Salt Cloud and the merging of Salt API into the main project.
 
+.. important::
+
+    The Fedora/RHEL/CentOS **salt-master** package has been modified for this
+    release. The following components of Salt have been broken out and placed
+    into their own packages:
+
+    * salt-syndic
+    * salt-cloud
+    * salt-ssh
+
+    When the **salt-master** package is upgraded, these components will be
+    removed, and they will need to be manually installed.
+
+
 New Transport!
 ==============
 
