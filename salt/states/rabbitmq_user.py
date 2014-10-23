@@ -82,6 +82,8 @@ def present(name,
         # Get it into the correct format
         if tags and isinstance(tags, (list, tuple)):
             tags = ' '.join(tags)
+        if not tags:
+            tags = ''
 
         if not user_exists:
             log.debug(
