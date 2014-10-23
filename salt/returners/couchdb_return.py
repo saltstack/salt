@@ -137,8 +137,10 @@ def returner(ret):
 
         # Confirm that the response back was simple 'ok': true.
         if 'ok' not in _response or _response['ok'] is not True:
-            return log.error('Unable to create database "{0}"'
+            log.error('Unable to create database "{0}"'
                              .format(options['db']))
+            log.error('Nothing logged! Lost data.')
+            return
         log.info('Created database "{0}"'.format(options['db']))
 
     # Call _generate_doc to get a dict object of the document we're going to
@@ -151,9 +153,10 @@ def returner(ret):
                          'application/json',
                          json.dumps(doc))
 
-    # Santiy check regarding the response..
+    # Sanity check regarding the response..
     if 'ok' not in _response or _response['ok'] is not True:
         log.error('Unable to create document: "{0}"'.format(_response))
+        log.error('Nothing logged! Lost data.')
 
 
 def get_jid(jid):

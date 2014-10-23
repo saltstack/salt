@@ -433,6 +433,8 @@ its size to 100G by using the following configuration.
       block_device_mappings:
         - DeviceName: /dev/sda
           Ebs.VolumeSize: 100
+          Ebs.VolumeType: gp2
+          Ebs.SnapshotId: dummy0
 
 Existing EBS volumes may also be attached (not created) to your instances or
 you can create new EBS volumes based on EBS snapshots. To simply attach an

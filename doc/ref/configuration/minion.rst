@@ -415,6 +415,21 @@ environment, set this value to ``False``.
 
     dns_check: True
 
+.. conf_minion:: cache_sreqs
+
+``cache_sreqs``
+---------------
+
+Default: ``True``
+
+The connection to the master ret_port is kept open. When set to False, the minion
+creates a new connection for every return to the master.
+environment, set this value to ``False``.
+
+.. code-block:: yaml
+
+    cache_sreqs: True
+
 .. conf_minion:: ipc_mode
 
 ``ipc_mode``
