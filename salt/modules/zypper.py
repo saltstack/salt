@@ -7,6 +7,7 @@ Package support for openSUSE via the zypper package manager
 import copy
 import logging
 import re
+import os
 from contextlib import contextmanager as _contextmanager
 
 # Import salt libs
@@ -18,6 +19,7 @@ from salt.exceptions import (
 log = logging.getLogger(__name__)
 
 HAS_ZYPP = False
+LOCKS = "/etc/zypp/locks"
 
 try:
     import zypp
@@ -847,3 +849,121 @@ def purge(name=None, pkgs=None, **kwargs):
         salt '*' pkg.purge pkgs='["foo", "bar"]'
     '''
     return _uninstall(action='purge', name=name, pkgs=pkgs)
+
+
+def list_locks():
+    '''
+    List current package locks.
+
+    Return a dict containing the locked package with attributes::
+
+        {'<package>': {'case_sensitive': '<case_sensitive>',
+                       'match_type': '<match_type>'
+                       'type': '<type>'}}
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_locks
+    '''
+    if not os.path.exists(LOCKS):
+        return False
+
+    locks = {}
+    for meta in map(lambda item:item.split("\n"),
+                    open(LOCKS).read().split("\n\n")):
+        lock = {}
+        for element in filter(None, meta):
+            if ":" in element:
+                lock.update(dict([tuple(map(lambda i:i.strip(),
+                                            element.split(":", 1))),]))
+        if lock.get('solvable_name'):
+            locks[lock.pop('solvable_name')] = lock
+
+    return locks
+
+
+def clean_locks():
+    '''
+    Remove unused locks that do not currently (with regard to repositories used) lock any package.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.clean_locks
+    '''
+    if not os.path.exists(LOCKS):
+        return False
+    
+    cmd = ('zypper --non-interactive cl')
+    __salt__['cmd.run'](cmd, output_loglevel='trace')
+
+    return True
+
+
+def remove_lock(name=None, pkgs=None, **kwargs):
+    '''
+    Remove specified package lock.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.remove_lock <package name>
+        salt '*' pkg.remove_lock <package1>,<package2>,<package3>
+        salt '*' pkg.remove_lock pkgs='["foo", "bar"]'
+    '''
+
+    locks = list_locks()
+    packages = []
+    try:
+        packages = __salt__['pkg_resource.parse_targets'](name, pkgs)[0].keys()
+    except MinionError as exc:
+        raise CommandExecutionError(exc)
+
+    removed = []
+    missing = []
+    for pkg in packages:
+        if locks.get(pkg):
+            removed.append(pkg)
+        else:
+            missing.append(pkg)
+
+    if removed:
+        __salt__['cmd.run'](('zypper --non-interactive rl %s' % ' '.join(removed)),
+                            output_loglevel='trace')
+
+    return {'removed' : len(removed), 'not_found' : missing}
+
+
+def add_lock(name=None, pkgs=None, **kwargs):
+    '''
+    Add a package lock. Specify packages to lock by exact name.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.add_lock <package name>
+        salt '*' pkg.add_lock <package1>,<package2>,<package3>
+        salt '*' pkg.add_lock pkgs='["foo", "bar"]'
+    '''
+    locks = list_locks()
+    packages = []
+    added = []
+    try:
+        packages = __salt__['pkg_resource.parse_targets'](name, pkgs)[0].keys()
+    except MinionError as exc:
+        raise CommandExecutionError(exc)
+
+    for pkg in packages:
+        if not locks.get(pkg):
+            added.append(pkg)
+
+    if added:
+        __salt__['cmd.run'](('zypper --non-interactive al %s' % ' '.join(added)),
+                            output_loglevel='trace')
+
+    return {'added' : len(added), 'packages' : added}
