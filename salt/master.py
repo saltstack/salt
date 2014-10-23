@@ -1413,7 +1413,6 @@ class ClearFuncs(object):
         else:
             self.cache_cli = False
 
-
     def _auth(self, load):
         '''
         Authenticate the client, use the sent public key to encrypt the AES key
