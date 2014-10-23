@@ -262,6 +262,7 @@ VALID_OPTS = {
     'zmq_filtering': bool,
     'con_cache': bool,
     'rotate_aes_key': bool,
+    'cache_sreqs': bool,
 }
 
 # default configurations
@@ -409,6 +410,7 @@ DEFAULT_MINION_OPTS = {
     'username': None,
     'password': None,
     'zmq_filtering': False,
+    'cache_sreqs': True,
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -581,6 +583,7 @@ DEFAULT_MASTER_OPTS = {
     'zmq_filtering': False,
     'con_cache': False,
     'rotate_aes_key': True,
+    'cache_sreqs': True,
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
