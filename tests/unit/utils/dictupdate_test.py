@@ -9,8 +9,8 @@ from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import Salt libs
-from salt.exceptions import SaltException
 from salt.utils import dictupdate
+
 
 class UtilDictupdateTestCase(TestCase):
 
