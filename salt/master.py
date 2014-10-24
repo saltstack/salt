@@ -2236,9 +2236,11 @@ class ClearFuncs(object):
                     }
                 }
         # Retrieve the jid
-        if not clear_load['jid']:
-            fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
-            clear_load['jid'] = self.mminion.returners[fstr](nocache=extra.get('nocache', False))
+        fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
+        clear_load['jid'] = self.mminion.returners[fstr](nocache=extra.get('nocache', False),
+                                                         # the jid in clear_load can be None, '', or something else.
+                                                         # this is an attempt to clean up the value before passing to plugins
+                                                         passed_jid=clear_load['jid'] if clear_load.get('jid') else None)
         self.event.fire_event({'minions': minions}, clear_load['jid'])
 
         new_job_load = {
