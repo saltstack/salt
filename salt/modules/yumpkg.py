@@ -102,10 +102,27 @@ def _repoquery_pkginfo(repoquery_args):
     return ret
 
 
+def _check_repoquery():
+    '''
+    Check for existence of repoquery and install yum-utils if it is not
+    present.
+    '''
+    if not salt.utils.which('repoquery'):
+        __salt__['cmd.run'](
+            ['yum', '-y', 'install', 'yum-utils'],
+            python_shell=False,
+            output_loglevel='trace'
+        )
+        # Check again now that we've installed yum-utils
+        if not salt.utils.which('repoquery'):
+            raise CommandExecutionError('Unable to install yum-utils')
+
+
 def _repoquery(repoquery_args, query_format=__QUERYFORMAT):
     '''
     Runs a repoquery command and returns a list of namedtuples
     '''
+    _check_repoquery()
     cmd = 'repoquery --plugins --queryformat="{0}" {1}'.format(
         query_format, repoquery_args
     )
