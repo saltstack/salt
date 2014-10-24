@@ -783,7 +783,8 @@ class LocalClient(object):
     def get_returns_no_block(
             self,
             jid,
-            event=None):
+            event=None,
+            gather_errors=False):
         '''
         Raw function to just return events of jid excluding timeout logic
 
@@ -793,17 +794,32 @@ class LocalClient(object):
             event = self.event
         while True:
             if HAS_ZMQ:
-                try:
-                    raw = event.get_event_noblock()
-                    if raw and raw.get('tag', '').startswith(jid):
-                        yield raw
-                    else:
-                        yield None
-                except zmq.ZMQError as ex:
-                    if ex.errno == errno.EAGAIN or ex.errno == errno.EINTR:
-                        yield None
-                    else:
-                        raise
+                if not gather_errors:
+                    try:
+                        raw = event.get_event_noblock()
+                        if raw and raw.get('tag', '').startswith(jid):
+                            yield raw
+                        else:
+                            yield None
+                    except zmq.ZMQError as ex:
+                        if ex.errno == errno.EAGAIN or ex.errno == errno.EINTR:
+                            yield None
+                        else:
+                            raise
+                else:
+                    try:
+                        raw = event.get_event_noblock()
+                        if raw and (raw.get('tag', '').startswith(jid) or raw.get('tag', '').startswith('_salt_error')):
+                            yield raw
+                        else:
+                            yield None
+                    except zmq.ZMQError as ex:
+                        if ex.errno == errno.EAGAIN or ex.errno == errno.EINTR:
+                            yield None
+                        else:
+                            raise
+
+
             else:
                 raw = event.get_event_noblock()
                 if raw and raw.get('tag', '').startswith(jid):
@@ -819,6 +835,7 @@ class LocalClient(object):
             tgt='*',
             tgt_type='glob',
             expect_minions=False,
+            gather_errors=True,
             **kwargs):
         '''
         Watch the event system and return job data as it comes in
@@ -855,7 +872,7 @@ class LocalClient(object):
             )
         )
         # iterator for this job's return
-        ret_iter = self.get_returns_no_block(jid)
+        ret_iter = self.get_returns_no_block(jid, gather_errors=gather_errors)
         # iterator for the info of this job
         jinfo_iter = []
         jinfo_timeout = time.time() + timeout
@@ -868,7 +885,10 @@ class LocalClient(object):
                 # if we got None, then there were no events
                 if raw is None:
                     break
-
+                if gather_errors:
+                    if raw['tag'] == '_salt_error':
+                        ret = {raw['data']['id']: raw['data']['data']}
+                        yield ret
                 if 'minions' in raw.get('data', {}):
                     minions.update(raw['data']['minions'])
                     continue
