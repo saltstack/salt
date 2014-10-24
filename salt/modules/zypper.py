@@ -1025,9 +1025,9 @@ def file_dict(*packages):
 def owner(*paths):
     '''
     Return the name of the package that owns the file. Multiple file paths can
-    be passed. Like :mod:`pkg.version <salt.modules.yumpkg.version`, if a
-    single path is passed, a string will be returned, and if multiple paths are
-    passed, a dictionary of file/package name pairs will be returned.
+    be passed. If a single path is passed, a string will be returned,
+    and if multiple paths are passed, a dictionary of file/package name
+    pairs will be returned.
 
     If the file is not owned by a package, or is not present on the minion,
     then an empty string will be returned for that path.
@@ -1039,15 +1039,4 @@ def owner(*paths):
         salt '*' pkg.owner /usr/bin/apachectl
         salt '*' pkg.owner /usr/bin/apachectl /etc/httpd/conf/httpd.conf
     '''
-    if not paths:
-        return ''
-    ret = {}
-    cmd = 'rpm -qf --queryformat "%{{NAME}}" {0!r}'
-    for path in paths:
-        ret[path] = __salt__['cmd.run_stdout'](cmd.format(path),
-                                               output_loglevel='trace')
-        if 'not owned' in ret[path].lower():
-            ret[path] = ''
-    if len(ret) == 1:
-        return ret.values()[0]
-    return ret
+    return __salt__['lowpkg.owner'](*paths)
