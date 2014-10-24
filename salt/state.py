@@ -1653,12 +1653,12 @@ class State(object):
                         req_val = req[req_key]
                         if req_val is None:
                             continue
-                        if (chunk['__id__'] == req_val
-                                and chunk['state'] == req_key):
+                        if (req_key == chunk['state']
+                                and req_val == chunk['__id__']):
                             found = True
                             reqs[r_state].append(chunk)
                         elif (req_key == 'sls'
-                                and chunk['__sls__'] == req_val):
+                                and req_val == chunk['__sls__']):
                             # Allow requisite tracking of entire sls files
                             found = True
                             reqs[r_state].append(chunk)
@@ -1760,8 +1760,8 @@ class State(object):
                         req_val = req[req_key]
                         if req_val is None:
                             continue
-                        if (chunk['__id__'] == req_val
-                                and chunk['state'] == req_key):
+                        if (req_key == chunk['state']
+                                and req_val == chunk['__id__']):
                             if requisite == 'prereq':
                                 chunk['__prereq__'] = True
                             elif requisite == 'prerequired':
@@ -1770,7 +1770,7 @@ class State(object):
                             found = True
                         # Allow requisite tracking of entire sls files
                         elif (req_key == 'sls'
-                                and chunk['__sls__'] == req_val):
+                                and req_val == chunk['__sls__']):
                             if requisite == 'prereq':
                                 chunk['__prereq__'] = True
                             reqs.append(chunk)
