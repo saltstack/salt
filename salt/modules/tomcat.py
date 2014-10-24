@@ -80,6 +80,7 @@ def __catalina_home():
                     return catalina_home
     return False
 
+
 def _get_credentials():
     '''
     Get the username and password from opts, grains & pillar
