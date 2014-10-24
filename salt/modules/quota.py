@@ -236,8 +236,8 @@ def get_mode(device):
                     ret[comps[4]] = 'disabled'
                     continue
                 elif comps[1].startswith('Cannot'):
-                        ret[device] = 'Not found'
-                        return ret
+                    ret[device] = 'Not found'
+                    return ret
                 continue
             ret[comps[3]] = {
                 'device': comps[4].replace('(', '').replace(')', ''),
