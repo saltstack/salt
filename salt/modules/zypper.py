@@ -8,6 +8,7 @@ import copy
 import logging
 import re
 import os
+from xml.dom import minidom as dom
 from contextlib import contextmanager as _contextmanager
 
 # Import salt libs
@@ -1040,3 +1041,47 @@ def owner(*paths):
         salt '*' pkg.owner /usr/bin/apachectl /etc/httpd/conf/httpd.conf
     '''
     return __salt__['lowpkg.owner'](*paths)
+
+
+def _get_patterns(installed_only=None):
+    '''
+    List all known patterns in repos.
+    '''
+    patterns = {}
+    doc = dom.parseString(__salt__['cmd.run'](('zypper --xmlout se -t pattern'),
+                                              output_loglevel='trace'))
+    for element in doc.getElementsByTagName("solvable"):
+        installed = element.getAttribute("status") == "installed"
+        if (installed_only and installed) or not installed_only:
+            patterns[element.getAttribute("name")] = {
+                'installed' : installed,
+                'summary' : element.getAttribute("summary"),
+            }
+
+    return patterns
+
+
+def list_patterns():
+    '''
+    List all known patterns from available repos.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_patterns
+    '''
+    return _get_patterns()
+
+
+def list_installed_patterns():
+    '''
+    List installed patterns on the system.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_installed_patterns
+    '''
+    return _get_patterns(installed_only=True)
