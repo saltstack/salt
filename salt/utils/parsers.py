@@ -1367,7 +1367,7 @@ class CloudCredentialsMixIn(object):
 
 class MasterOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                          LogLevelMixIn, RunUserMixin, DaemonMixIn,
-                         PidfileMixin):
+                         PidfileMixin, SaltfileMixIn):
 
     __metaclass__ = OptionParserMeta
 
@@ -1402,7 +1402,7 @@ class MinionOptionParser(MasterOptionParser):
 
 class SyndicOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                          LogLevelMixIn, RunUserMixin, DaemonMixIn,
-                         PidfileMixin):
+                         PidfileMixin, SaltfileMixIn):
 
     __metaclass__ = OptionParserMeta
 
@@ -1424,7 +1424,8 @@ class SyndicOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
 class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                           TimeoutMixIn, ExtendedTargetOptionsMixIn,
-                          OutputOptionsMixIn, LogLevelMixIn, HardCrashMixin):
+                          OutputOptionsMixIn, LogLevelMixIn, HardCrashMixin,
+                          SaltfileMixIn):
 
     __metaclass__ = OptionParserMeta
 
@@ -1567,6 +1568,12 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             nargs=1,
             help=('Password for external authentication')
         )
+        self.add_option(
+            '--metadata',
+            default='',
+            metavar='METADATA',
+            help=('Pass metadata into Salt, used to search jobs.')
+        )
 
     def _mixin_after_parsed(self):
         if len(self.args) <= 1 and not self.options.doc:
@@ -1653,7 +1660,7 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
 class SaltCPOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                          TimeoutMixIn, TargetOptionsMixIn, LogLevelMixIn,
-                         HardCrashMixin):
+                         HardCrashMixin, SaltfileMixIn):
     __metaclass__ = OptionParserMeta
 
     description = (
@@ -1696,7 +1703,7 @@ class SaltCPOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
 class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                           LogLevelMixIn, OutputOptionsMixIn, RunUserMixin,
-                          HardCrashMixin):
+                          HardCrashMixin, SaltfileMixIn):
 
     __metaclass__ = OptionParserMeta
 
@@ -1959,7 +1966,8 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
 
 class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
-                           LogLevelMixIn, OutputOptionsMixIn, HardCrashMixin):
+                           LogLevelMixIn, OutputOptionsMixIn, HardCrashMixin,
+                           SaltfileMixIn):
     __metaclass__ = OptionParserMeta
 
     description = ('Salt call is used to execute module functions locally '
@@ -2107,7 +2115,8 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
 
 class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
-                          TimeoutMixIn, LogLevelMixIn, HardCrashMixin):
+                          TimeoutMixIn, LogLevelMixIn, HardCrashMixin,
+                          SaltfileMixIn):
     __metaclass__ = OptionParserMeta
 
     default_timeout = 1
@@ -2219,15 +2228,6 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'reached.')
         )
         self.add_option(
-            '--no-minion-cache',
-            dest='ssh_minion_cache',
-            default=True,
-            action='store_false',
-            help=('Set this flag to disable the ssh minion cache, this will '
-                  'prevent information about the target systems from being '
-                  'stored on the originating system.')
-        )
-        self.add_option(
             '--max-procs',
             dest='ssh_max_procs',
             default=25,
@@ -2250,6 +2250,19 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help=('Return the data from minions as a group after they '
                   'all return.')
         )
+        self.add_option(
+            '-w', '--wipe',
+            default=False,
+            action='store_true',
+            dest='wipe_ssh',
+            help='Remove the deployment of the salt files when done executing.',
+        )
+        self.add_option(
+            '-W', '--rand-thin-dir',
+            default=False,
+            action='store_true',
+            help=('Select a random temp dir to deploy on the remote system. '
+                  'The dir will be cleaned after the execution.'))
 
         auth_group = optparse.OptionGroup(
             self, 'Authentication Options',
@@ -2329,7 +2342,8 @@ class SaltCloudParser(OptionParser,
                       ExecutionOptionsMixIn,
                       CloudProvidersListsMixIn,
                       CloudCredentialsMixIn,
-                      HardCrashMixin):
+                      HardCrashMixin,
+                      SaltfileMixIn):
 
     __metaclass__ = OptionParserMeta
 

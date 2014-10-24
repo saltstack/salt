@@ -490,7 +490,6 @@ class MultiMinion(MinionBase):
                 ret[master]['generator'] = minion.tune_in_no_block()
             except SaltClientError as exc:
                 log.error('Error while bringing up minion for multi-master. Is master at {0} responding?'.format(master))
-
         return ret
 
     # Multi Master Tune In
@@ -617,15 +616,17 @@ class Minion(MinionBase):
             self.returners)
 
         # add default scheduling jobs to the minions scheduler
-        self.schedule.add_job({
-            '__mine_interval':
-            {
-                'function': 'mine.update',
-                'minutes': opts['mine_interval'],
-                'jid_include': True,
-                'maxrunning': 2
-            }
-        })
+        if 'mine.update' in self.functions:
+            log.info('Added mine.update to schedular')
+            self.schedule.add_job({
+                '__mine_interval':
+                {
+                    'function': 'mine.update',
+                    'minutes': opts['mine_interval'],
+                    'jid_include': True,
+                    'maxrunning': 2
+                }
+            })
 
         # add master_alive job if enabled
         if self.opts['master_alive_interval'] > 0:
@@ -817,10 +818,16 @@ class Minion(MinionBase):
                 log.error('Unable to enforce modules_max_memory because resource is missing')
 
         self.opts['grains'] = salt.loader.grains(self.opts, force_refresh)
-        functions = salt.loader.minion_mods(self.opts, include_errors=True)
+        if self.opts.get('multimaster', False):
+            s_opts = copy.copy(self.opts)
+            functions = salt.loader.minion_mods(s_opts)
+        else:
+            functions = salt.loader.minion_mods(self.opts)
         returners = salt.loader.returners(self.opts, functions)
-        errors = functions['_errors']
-        functions.pop('_errors')
+        errors = {}
+        if '_errors' in functions:
+            errors = functions['_errors']
+            functions.pop('_errors')
 
         # we're done, reset the limits!
         if modules_max_memory is True:
@@ -1073,15 +1080,8 @@ class Minion(MinionBase):
                 )
                 ret['out'] = 'nested'
             except TypeError as exc:
-                trb = traceback.format_exc()
-                aspec = salt.utils.get_function_argspec(
-                    minion_instance.functions[data['fun']]
-                )
                 msg = ('TypeError encountered executing {0}: {1}. See '
-                       'debug log for more info.  Possibly a missing '
-                       'arguments issue:  {2}').format(function_name,
-                                                       exc,
-                                                       aspec)
+                       'debug log for more info.').format(function_name, exc)
                 log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
                 ret['return'] = msg
                 ret['out'] = 'nested'
@@ -1102,6 +1102,11 @@ class Minion(MinionBase):
         ret['fun_args'] = data['arg']
         if 'master_id' in data:
             ret['master_id'] = data['master_id']
+        if 'metadata' in data:
+            if isinstance(data['metadata'], dict):
+                ret['metadata'] = data['metadata']
+            else:
+                log.warning('The metadata parameter must be a dictionary.  Ignoring.')
         minion_instance._return_pub(ret)
         if data['ret']:
             if 'ret_config' in data:
@@ -1157,6 +1162,8 @@ class Minion(MinionBase):
             ret['jid'] = data['jid']
             ret['fun'] = data['fun']
             ret['fun_args'] = data['arg']
+        if 'metadata' in data:
+            ret['metadata'] = data['metadata']
         minion_instance._return_pub(ret)
         if data['ret']:
             if 'ret_config' in data:

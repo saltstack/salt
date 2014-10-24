@@ -70,7 +70,7 @@ Here is a simple reactor sls:
 
     {% if data['id'] == 'mysql1' %}
     highstate_run:
-      cmd.state.highstate:
+      local.state.highstate:
         - tgt: mysql1
     {% endif %}
 
@@ -200,14 +200,14 @@ Executing remote commands maps to the :strong:`LocalClient` interface which is
 used by the :strong:`salt` command. This interface more specifically maps to
 the :strong:`cmd_async` method inside of the :strong:`LocalClient` class. This
 means that the arguments passed are being passed to the :strong:`cmd_async`
-method, not the remote method. A field starts with :strong:`cmd` to use the
+method, not the remote method. A field starts with :strong:`local` to use the
 :strong:`LocalClient` subsystem. The result is, to execute a remote command, 
 a reactor formula would look like this:
 
 .. code-block:: yaml
 
     clean_tmp:
-      cmd.cmd.run:
+      local.cmd.run:
         - tgt: '*'
         - arg:
           - rm -rf /tmp/*
@@ -225,7 +225,7 @@ Use the ``expr_form`` argument to specify a matcher:
 .. code-block:: yaml
 
     clean_tmp:
-      cmd.cmd.run:
+      local.cmd.run:
         - tgt: 'os:Ubuntu'
         - expr_form: grain
         - arg:
@@ -233,7 +233,7 @@ Use the ``expr_form`` argument to specify a matcher:
 
 
     clean_tmp:
-      cmd.cmd.run:
+      local.cmd.run:
         - tgt: 'G@roles:hbase_master'
         - expr_form: compound
         - arg:
@@ -264,7 +264,7 @@ Pillar.
 
     {% if data['act'] == 'accept' and data['id'].startswith('web') %}
     add_new_minion_to_pool:
-      cmd.state.sls:
+      local.state.sls:
         - tgt: 'haproxy*'
         - arg:
           - haproxy.refresh_pool
@@ -346,7 +346,7 @@ authentication every ten seconds by default.
       wheel.key.delete:
         - match: {{ data['id'] }}
     minion_rejoin:
-      cmd.cmd.run:
+      local.cmd.run:
         - tgt: salt-master.domain.tld
         - arg:
           - ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no "{{ data['id'] }}" 'sleep 10 && /etc/init.d/salt-minion restart'
@@ -368,7 +368,7 @@ Ink servers in the master configuration.
 
     {# When an Ink server connects, run state.highstate. #}
     highstate_run:
-      cmd.state.highstate:
+      local.state.highstate:
         - tgt: {{ data['id'] }}
         - ret: smtp_return
 
@@ -395,7 +395,7 @@ contents:
 .. code-block:: yaml
 
     sync_grains:
-      cmd.saltutil.sync_grains:
+      local.saltutil.sync_grains:
         - tgt: {{ data['id'] }}
 
 And in the master config file, add the following reactor configuration:
@@ -410,6 +410,6 @@ This will cause the master to instruct each minion to sync its custom grains
 when it starts, making these grains available when the initial highstate is
 executed.
 
-Other types can be synced by replacing ``cmd.saltutil.sync_grains`` with
-``cmd.saltutil.sync_modules``, ``cmd.saltutil.sync_all``, or whatever else
+Other types can be synced by replacing ``local.saltutil.sync_grains`` with
+``local.saltutil.sync_modules``, ``local.saltutil.sync_all``, or whatever else
 suits the intended use case.

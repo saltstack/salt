@@ -41,11 +41,14 @@ otherwise multi-minion targetting can lead to losing output:
 * the first returning minion is able to create a document in the database
 * other minions fail with ``{'error': 'HTTP Error 409: Conflict'}``
 '''
+# Import Python libs
 import logging
 import time
 import urllib2
 import json
 
+# Import Salt libs
+import salt.utils
 import salt.returners
 
 log = logging.getLogger(__name__)
@@ -134,8 +137,10 @@ def returner(ret):
 
         # Confirm that the response back was simple 'ok': true.
         if 'ok' not in _response or _response['ok'] is not True:
-            return log.error('Unable to create database "{0}"'
+            log.error('Unable to create database "{0}"'
                              .format(options['db']))
+            log.error('Nothing logged! Lost data.')
+            return
         log.info('Created database "{0}"'.format(options['db']))
 
     # Call _generate_doc to get a dict object of the document we're going to
@@ -148,9 +153,10 @@ def returner(ret):
                          'application/json',
                          json.dumps(doc))
 
-    # Santiy check regarding the response..
+    # Sanity check regarding the response..
     if 'ok' not in _response or _response['ok'] is not True:
         log.error('Unable to create document: "{0}"'.format(_response))
+        log.error('Nothing logged! Lost data.')
 
 
 def get_jid(jid):
@@ -341,3 +347,10 @@ def set_salt_view():
                     .format(_response['error']))
         return False
     return True
+
+
+def prep_jid(nocache):  # pylint: disable=unused-argument
+    '''
+    Do any necessary pre-processing and return the jid to use
+    '''
+    return salt.utils.gen_jid()

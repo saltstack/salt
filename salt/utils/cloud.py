@@ -1119,7 +1119,7 @@ def deploy_script(host,
 
                 if ssh_kwargs['username'] != 'root':
                     root_cmd(
-                        'chown -R root \\"{0}\\"'.format(
+                        'chown -R root "{0}"'.format(
                             preseed_minion_keys_tempdir
                         ),
                         tty, sudo, **ssh_kwargs
@@ -1359,7 +1359,7 @@ def _exec_ssh_cmd(cmd, error_msg=None, allow_failure=False, **kwargs):
             stream_stderr=kwargs.get('display_ssh_output', True)
         )
         sent_password = 0
-        while True:
+        while proc.has_unread_data:
             stdout, stderr = proc.recv()
             if stdout and SSH_PASSWORD_PROMP_RE.search(stdout):
                 if (
@@ -1370,8 +1370,6 @@ def _exec_ssh_cmd(cmd, error_msg=None, allow_failure=False, **kwargs):
                     proc.sendline(kwargs['password'])
                 else:
                     raise SaltCloudPasswordError(error_msg)
-            if not proc.isalive():
-                break
             # 0.0125 is really too fast on some systems
             time.sleep(0.5)
         if proc.exitstatus != 0:

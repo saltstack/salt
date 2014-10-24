@@ -80,6 +80,8 @@ Required python modules: psycopg2
 # Import python libs
 import json
 
+# Import Salt libs
+import salt.utils
 import salt.returners
 
 # Import third party libs
@@ -138,6 +140,9 @@ def _get_conn(ret=None):
 
 
 def _close_conn(conn):
+    '''
+    Close the Postgres connection
+    '''
     conn.commit()
     conn.close()
 
@@ -227,7 +232,7 @@ def get_fun(fun):
 
     ret = {}
     if data:
-        for minion, jid, full_ret in data:
+        for minion, _, full_ret in data:
             ret[minion] = json.loads(full_ret)
     _close_conn(conn)
     return ret
@@ -265,3 +270,10 @@ def get_minions():
         ret.append(minion[0])
     _close_conn(conn)
     return ret
+
+
+def prep_jid(nocache):  # pylint: disable=unused-argument
+    '''
+    Do any pre-processing necessary and return the jid to use
+    '''
+    return salt.utils.gen_jid()

@@ -282,5 +282,9 @@ def enabled(name, **kwargs):
         cur_flags = __salt__['cmd.run_stdout']('{0} status {1}'.format(_cmd(), name))
         if format(flags) == format(cur_flags):
             return True
+        if not flags:
+            def_flags = __salt__['cmd.run_stdout']('{0} default {1}'.format(_cmd(), name))
+            if format(cur_flags) == format(def_flags):
+                return True
 
     return False

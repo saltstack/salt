@@ -131,22 +131,16 @@ def list_(channel=None):
 
         salt '*' pecl.list
     '''
+    pecl_channel_pat = re.compile('^([^ ]+)[ ]+([^ ]+)[ ]+([^ ]+)')
     pecls = {}
     command = 'list'
     if channel:
         command = '{0} -c {1}'.format(command, channel)
     lines = _pecl(command).splitlines()
-    lines.pop(0)
-    # Only one line if no package installed:
-    # (no packages installed from channel pecl.php.net)
-    if not lines:
-        return pecls
-
-    lines.pop(0)
-    lines.pop(0)
+    lines = (l for l in lines if pecl_channel_pat.match(l))
 
     for line in lines:
-        match = re.match('^([^ ]+)[ ]+([^ ]+)[ ]+([^ ]+)', line)
+        match = pecl_channel_pat.match(line)
         if match:
             pecls[match.group(1)] = [match.group(2), match.group(3)]
 

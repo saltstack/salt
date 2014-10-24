@@ -41,6 +41,8 @@ in the future and should not be considered API stable yet.
 # Import python libs
 import logging
 
+# Import Salt libs
+import salt.utils
 import salt.returners
 
 # Import third party libs
@@ -63,6 +65,9 @@ def __virtual__():
 
 
 def _remove_dots(src):
+    '''
+    Remove the dots from the given data structure
+    '''
     output = {}
     for key, val in src.iteritems():
         if isinstance(val, dict):
@@ -97,12 +102,12 @@ def _get_conn(ret):
 
     host = _options.get('host')
     port = _options.get('port')
-    db = _options.get('db')
+    db_ = _options.get('db')
     user = _options.get('user')
     password = _options.get('password')
 
     conn = pymongo.Connection(host, port)
-    mdb = conn[db]
+    mdb = conn[db_]
 
     if user and password:
         mdb.authenticate(user, password)
@@ -202,3 +207,10 @@ def get_jids():
             except ValueError:
                 pass
     return ret
+
+
+def prep_jid(nocache):  # pylint: disable=unused-argument
+    '''
+    Pre-process the jid and return the jid to use
+    '''
+    return salt.utils.gen_jid()

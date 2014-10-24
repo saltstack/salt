@@ -1,8 +1,8 @@
 .. _tutorial-gitfs:
 
-=========================
-Gitfs Backend Walkthrough
-=========================
+==================================
+Git Fileserver Backend Walkthrough
+==================================
 
 .. note::
 
@@ -243,12 +243,12 @@ configured gitfs remotes):
 * :conf_master:`gitfs_base`
 * :conf_master:`gitfs_root`
 * :conf_master:`gitfs_mountpoint` (new in 2014.7.0)
-* :conf_master:`gitfs_user` (new in 2014.7.0)
-* :conf_master:`gitfs_password` (new in 2014.7.0)
-* :conf_master:`gitfs_insecure_auth` (new in 2014.7.0)
-* :conf_master:`gitfs_pubkey` (new in 2014.7.0)
-* :conf_master:`gitfs_privkey` (new in 2014.7.0)
-* :conf_master:`gitfs_passphrase` (new in 2014.7.0)
+* :conf_master:`gitfs_user` (**pygit2 only**, new in 2014.7.0)
+* :conf_master:`gitfs_password` (**pygit2 only**, new in 2014.7.0)
+* :conf_master:`gitfs_insecure_auth` (**pygit2 only**, new in 2014.7.0)
+* :conf_master:`gitfs_pubkey` (**pygit2 only**, new in 2014.7.0)
+* :conf_master:`gitfs_privkey` (**pygit2 only**, new in 2014.7.0)
+* :conf_master:`gitfs_passphrase` (**pygit2 only**, new in 2014.7.0)
 
 These parameters can now be overridden on a per-remote basis. This allows for a
 tremendous amount of customization. Here's some example usage:
@@ -540,7 +540,8 @@ GitPython
 ---------
 
 With GitPython_, only passphrase-less SSH public key authentication is
-supported.
+supported. **The auth parameters (pubkey, privkey, etc.) shown in the pygit2
+authentication examples above do not work with GitPython.**
 
 .. code-block:: yaml
 

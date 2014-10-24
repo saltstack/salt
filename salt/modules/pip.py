@@ -196,7 +196,8 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             allow_unverified=None,
             process_dependency_links=False,
             __env__=None,
-            saltenv='base'):
+            saltenv='base',
+            use_vt=False):
     '''
     Install packages with pip
 
@@ -308,6 +309,8 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         Allow the installation of insecure and unverifiable files (comma separated list)
     process_dependency_links
         Enable the processing of dependency links
+    use_vt
+        Use VT terminal emulation (see ouptut while installing)
 
     CLI Example:
 
@@ -500,7 +503,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     if pre_releases:
         # Check the locally installed pip version
         pip_version_cmd = '{0} --version'.format(_get_pip_bin(bin_env))
-        output = __salt__['cmd.run_all'](pip_version_cmd).get('stdout', '')
+        output = __salt__['cmd.run_all'](pip_version_cmd, use_vt=use_vt).get('stdout', '')
         pip_version = output.split()[1]
 
         # From pip v1.4 the --pre flag is available
@@ -574,7 +577,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         cmd.append('--process-dependency-links')
 
     try:
-        cmd_kwargs = dict(runas=user, cwd=cwd, saltenv=saltenv)
+        cmd_kwargs = dict(runas=user, cwd=cwd, saltenv=saltenv, use_vt=use_vt)
         if bin_env and os.path.isdir(bin_env):
             cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
         return __salt__['cmd.run_all'](' '.join(cmd), **cmd_kwargs)
@@ -597,7 +600,8 @@ def uninstall(pkgs=None,
               no_chown=False,
               cwd=None,
               __env__=None,
-              saltenv='base'):
+              saltenv='base',
+              use_vt=False):
     '''
     Uninstall packages with pip
 
@@ -637,6 +641,8 @@ def uninstall(pkgs=None,
         a requirements file
     cwd
         Current working directory to run pip from
+    use_vt
+        Use VT terminal emulation (see ouptut while installing)
 
     CLI Example:
 
@@ -704,7 +710,7 @@ def uninstall(pkgs=None,
                             pass
         cmd.extend(pkgs)
 
-    cmd_kwargs = dict(runas=user, cwd=cwd, saltenv=saltenv)
+    cmd_kwargs = dict(runas=user, cwd=cwd, saltenv=saltenv, use_vt=use_vt)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
 
@@ -721,7 +727,8 @@ def uninstall(pkgs=None,
 def freeze(bin_env=None,
            user=None,
            runas=None,
-           cwd=None):
+           cwd=None,
+           use_vt=False):
     '''
     Return a list of installed packages either globally or in the specified
     virtualenv
@@ -751,7 +758,7 @@ def freeze(bin_env=None,
     user = _get_user(user, runas)
 
     cmd = [_get_pip_bin(bin_env), 'freeze']
-    cmd_kwargs = dict(runas=user, cwd=cwd)
+    cmd_kwargs = dict(runas=user, cwd=cwd, use_vt=use_vt)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
     result = __salt__['cmd.run_all'](' '.join(cmd), **cmd_kwargs)
@@ -905,7 +912,8 @@ def upgrade_available(pkg,
 def upgrade(bin_env=None,
             user=None,
             runas=None,
-            cwd=None):
+            cwd=None,
+            use_vt=False):
     '''
     Upgrades outdated pip packages
 
@@ -931,7 +939,7 @@ def upgrade(bin_env=None,
     old = list_(bin_env=bin_env, user=user, cwd=cwd)
 
     cmd = [pip_bin, "install", "-U"]
-    cmd_kwargs = dict(runas=user, cwd=cwd)
+    cmd_kwargs = dict(runas=user, cwd=cwd, use_vt=use_vt)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
     errors = False

@@ -203,6 +203,9 @@ Here's an example of how to upgrade the salt-minion package at the end of a
 Salt run, and schedule a service restart for one minute after the package
 update completes.
 
+Linux/Unix
+**********
+
 .. code-block:: yaml
 
     salt-minion:
@@ -220,8 +223,22 @@ update completes.
         - watch:
           - pkg: salt-minion
 
-For Windows machines, restarting the minion at can be accomplished by adding
-the following state:
+To ensure that **at** is installed and **atd** is running, the following states
+can be used (be sure to double-check the package name and service name for the
+distro the minion is running, in case they differ from the example below.
+
+.. code-block:: yaml
+
+    at:
+      pkg:
+        - installed
+      service:
+        - running
+        - name: atd
+        - enable: True
+
+Windows
+*******
 
 .. code-block:: yaml
 

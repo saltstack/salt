@@ -468,22 +468,32 @@ def list_nodes_min(kwargs=None, call=None):  # pylint: disable=W0613
     return ret
 
 
-def list_nodes(kwargs=None, call=None):  # pylint: disable=W0613
+def list_nodes(kwargs=None, call=None):
     '''
-    Return a list of the VMs that are on the provider
+    Return a list of the VMs that are on the provider, with basic fields
     '''
     ret = {}
     conn = get_conn()
-    nodes = conn.get_registered_vms()
-    for node in nodes:
-        instance = conn.get_vm_by_path(node)
-        properties = _get_instance_properties(instance)
-        ret[properties['name']] = {
-            'id': properties['name'],
-            'ram': properties['memory_mb'],
-            'cpus': properties['num_cpu'],
-            'ip_address': properties['ip_address'],
+    property_names = ['name', 'guest.ipAddress', 'summary.config']
+    result = conn._retrieve_properties_traversal(
+        property_names=property_names, obj_type='VirtualMachine'
+    )
+    for r in result:
+        vset = {
+            'id': None,
+            'ip_address': None,
+            'cpus': None,
+            'ram': None,
         }
+        for p in r.PropSet:
+            if p.Name == 'name':
+                vset['id'] = p.Val
+            if p.Name == 'guest.ipAddress':
+                vset['ip_address'] = p.Val
+            if p.Name == 'summary.config':
+                vset['cpus'] = p.Val.NumCpu
+                vset['ram'] = p.Val.MemorySizeMB
+        ret[vset['id']] = vset
     return ret
 
 

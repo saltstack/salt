@@ -39,7 +39,7 @@ _DFLT_LOG_DATEFMT = '%H:%M:%S'
 _DFLT_LOG_DATEFMT_LOGFILE = '%Y-%m-%d %H:%M:%S'
 _DFLT_LOG_FMT_CONSOLE = '[%(levelname)-8s] %(message)s'
 _DFLT_LOG_FMT_LOGFILE = (
-    '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
+    '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s][%(process)d] %(message)s'
 )
 
 FLO_DIR = os.path.join(
@@ -184,7 +184,7 @@ VALID_OPTS = {
     'pillar_version': int,
     'pillar_opts': bool,
     'pillar_source_merging_strategy': str,
-    'ping_on_key_rotate': bool,
+    'ping_on_rotate': bool,
     'peer': dict,
     'preserve_minion_cache': bool,
     'syndic_master': str,
@@ -263,6 +263,7 @@ VALID_OPTS = {
     'zmq_filtering': bool,
     'con_cache': bool,
     'rotate_aes_key': bool,
+    'cache_sreqs': bool,
 }
 
 # default configurations
@@ -411,6 +412,7 @@ DEFAULT_MINION_OPTS = {
     'username': None,
     'password': None,
     'zmq_filtering': False,
+    'cache_sreqs': True,
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -473,9 +475,9 @@ DEFAULT_MASTER_OPTS = {
     'minionfs_blacklist': [],
     'ext_pillar': [],
     'pillar_version': 2,
-    'pillar_opts': True,
+    'pillar_opts': False,
     'pillar_source_merging_strategy': 'smart',
-    'ping_on_key_rotate': False,
+    'ping_on_rotate': False,
     'peer': {},
     'preserve_minion_cache': False,
     'syndic_master': '',
@@ -584,6 +586,7 @@ DEFAULT_MASTER_OPTS = {
     'zmq_filtering': False,
     'con_cache': False,
     'rotate_aes_key': True,
+    'cache_sreqs': True,
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->

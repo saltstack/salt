@@ -25,7 +25,7 @@ console = getConsole()
 
 from raet import raeting
 
-from salt.daemons import parseHostname,  extractMasters
+from salt.daemons import parse_hostname,  extract_masters
 
 
 def setUpModule():
@@ -54,98 +54,98 @@ class BasicTestCase(unittest.TestCase):
         '''
         console.terse("{0}\n".format(self.testParseHostname.__doc__))
 
-        self.assertEquals(parseHostname('localhost', self.port),
+        self.assertEquals(parse_hostname('localhost', self.port),
                                        ('localhost', 4506))
-        self.assertEquals(parseHostname('127.0.0.1', self.port),
+        self.assertEquals(parse_hostname('127.0.0.1', self.port),
                                        ('127.0.0.1', 4506))
-        self.assertEquals(parseHostname('10.0.2.100', self.port),
+        self.assertEquals(parse_hostname('10.0.2.100', self.port),
                                         ('10.0.2.100', 4506))
-        self.assertEquals(parseHostname('me.example.com', self.port),
+        self.assertEquals(parse_hostname('me.example.com', self.port),
                                         ('me.example.com', 4506))
-        self.assertEquals(parseHostname(
+        self.assertEquals(parse_hostname(
                '1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa',
                 self.port),
                 ('1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa',
                  4506))
-        self.assertEquals(parseHostname('fe80::1%lo0', self.port),
+        self.assertEquals(parse_hostname('fe80::1%lo0', self.port),
                                                 ('fe80::1%lo0', 4506))
 
-        self.assertEquals(parseHostname('  localhost   ', self.port),
+        self.assertEquals(parse_hostname('  localhost   ', self.port),
                                                ('localhost', 4506))
-        self.assertEquals(parseHostname('  127.0.0.1   ', self.port),
+        self.assertEquals(parse_hostname('  127.0.0.1   ', self.port),
                                        ('127.0.0.1', 4506))
-        self.assertEquals(parseHostname('   10.0.2.100   ', self.port),
+        self.assertEquals(parse_hostname('   10.0.2.100   ', self.port),
                                         ('10.0.2.100', 4506))
-        self.assertEquals(parseHostname('  me.example.com  ', self.port),
+        self.assertEquals(parse_hostname('  me.example.com  ', self.port),
                                         ('me.example.com', 4506))
-        self.assertEquals(parseHostname(
+        self.assertEquals(parse_hostname(
                '  1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa   ',
                 self.port),
                 ('1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa',
                  4506))
-        self.assertEquals(parseHostname('  fe80::1%lo0  ', self.port),
+        self.assertEquals(parse_hostname('  fe80::1%lo0  ', self.port),
                                                 ('fe80::1%lo0', 4506))
 
 
-        self.assertEquals(parseHostname('localhost 4510', self.port),
+        self.assertEquals(parse_hostname('localhost 4510', self.port),
                                                ('localhost', 4510))
-        self.assertEquals(parseHostname('127.0.0.1 4510', self.port),
+        self.assertEquals(parse_hostname('127.0.0.1 4510', self.port),
                                        ('127.0.0.1', 4510))
-        self.assertEquals(parseHostname('10.0.2.100 4510', self.port),
+        self.assertEquals(parse_hostname('10.0.2.100 4510', self.port),
                                         ('10.0.2.100', 4510))
-        self.assertEquals(parseHostname('me.example.com 4510', self.port),
+        self.assertEquals(parse_hostname('me.example.com 4510', self.port),
                                         ('me.example.com', 4510))
-        self.assertEquals(parseHostname(
+        self.assertEquals(parse_hostname(
                '1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa 4510',
                 self.port),
                 ('1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa',
                  4510))
-        self.assertEquals(parseHostname('fe80::1%lo0 4510', self.port),
+        self.assertEquals(parse_hostname('fe80::1%lo0 4510', self.port),
                                                 ('fe80::1%lo0', 4510))
 
 
-        self.assertEquals(parseHostname('  localhost     4510 ', self.port),
+        self.assertEquals(parse_hostname('  localhost     4510 ', self.port),
                                                ('localhost', 4510))
-        self.assertEquals(parseHostname('   127.0.0.1    4510   ', self.port),
+        self.assertEquals(parse_hostname('   127.0.0.1    4510   ', self.port),
                                        ('127.0.0.1', 4510))
-        self.assertEquals(parseHostname('   10.0.2.100   4510   ', self.port),
+        self.assertEquals(parse_hostname('   10.0.2.100   4510   ', self.port),
                                         ('10.0.2.100', 4510))
-        self.assertEquals(parseHostname('   me.example.com    4510   ', self.port),
+        self.assertEquals(parse_hostname('   me.example.com    4510   ', self.port),
                                         ('me.example.com', 4510))
-        self.assertEquals(parseHostname(
+        self.assertEquals(parse_hostname(
                '   1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa   4510   ',
                 self.port),
                 ('1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa',
                  4510))
-        self.assertEquals(parseHostname('   fe80::1%lo0   4510   ', self.port),
+        self.assertEquals(parse_hostname('   fe80::1%lo0   4510   ', self.port),
                                                 ('fe80::1%lo0', 4510))
 
 
-        self.assertEquals(parseHostname('localhost abcde', self.port), None)
-        self.assertEquals(parseHostname('127.0.0.1 a4510', self.port), None)
-        self.assertEquals(parseHostname(list([1, 2, 3]), self.port), None)
-        self.assertEquals(parseHostname(list(), self.port), None)
-        self.assertEquals(parseHostname(dict(a=1), self.port), None)
-        self.assertEquals(parseHostname(dict(), self.port), None)
-        self.assertEquals(parseHostname(4510, self.port), None)
-        self.assertEquals(parseHostname(('localhost', 4510), self.port), None)
+        self.assertEquals(parse_hostname('localhost abcde', self.port), None)
+        self.assertEquals(parse_hostname('127.0.0.1 a4510', self.port), None)
+        self.assertEquals(parse_hostname(list([1, 2, 3]), self.port), None)
+        self.assertEquals(parse_hostname(list(), self.port), None)
+        self.assertEquals(parse_hostname(dict(a=1), self.port), None)
+        self.assertEquals(parse_hostname(dict(), self.port), None)
+        self.assertEquals(parse_hostname(4510, self.port), None)
+        self.assertEquals(parse_hostname(('localhost', 4510), self.port), None)
 
-        self.assertEquals(parseHostname('localhost:4510', self.port),
+        self.assertEquals(parse_hostname('localhost:4510', self.port),
                                                ('localhost', 4510))
-        self.assertEquals(parseHostname('127.0.0.1:4510', self.port),
+        self.assertEquals(parse_hostname('127.0.0.1:4510', self.port),
                                        ('127.0.0.1', 4510))
-        self.assertEquals(parseHostname('10.0.2.100:4510', self.port),
+        self.assertEquals(parse_hostname('10.0.2.100:4510', self.port),
                                         ('10.0.2.100', 4510))
-        self.assertEquals(parseHostname('me.example.com:4510', self.port),
+        self.assertEquals(parse_hostname('me.example.com:4510', self.port),
                                         ('me.example.com', 4510))
-        self.assertEquals(parseHostname(
+        self.assertEquals(parse_hostname(
                '1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa:4510',
                 self.port),
                 ('1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa',
                  4510))
-        self.assertEquals(parseHostname('fe80::1%lo0:4510', self.port),
+        self.assertEquals(parse_hostname('fe80::1%lo0:4510', self.port),
                                                       ('fe80::1%lo0:4510', 4506))
-        self.assertEquals(parseHostname('localhost::4510', self.port),
+        self.assertEquals(parse_hostname('localhost::4510', self.port),
                                                        ('localhost::4510', 4506))
 
 
@@ -157,7 +157,7 @@ class BasicTestCase(unittest.TestCase):
 
         master = 'localhost'
         self.opts.update(master=master)
-        self.assertEquals(extractMasters(self.opts),
+        self.assertEquals(extract_masters(self.opts),
                           [
                               dict(external=('localhost', 4506),
                                    internal=None),
@@ -165,7 +165,7 @@ class BasicTestCase(unittest.TestCase):
 
         master = '127.0.0.1'
         self.opts.update(master=master)
-        self.assertEquals(extractMasters(self.opts),
+        self.assertEquals(extract_masters(self.opts),
                           [
                               dict(external=('127.0.0.1', 4506),
                                    internal=None),
@@ -173,7 +173,7 @@ class BasicTestCase(unittest.TestCase):
 
         master = 'localhost 4510'
         self.opts.update(master=master)
-        self.assertEquals(extractMasters(self.opts),
+        self.assertEquals(extract_masters(self.opts),
                           [
                               dict(external=('localhost', 4510),
                                    internal=None),
@@ -181,7 +181,7 @@ class BasicTestCase(unittest.TestCase):
 
         master = '127.0.0.1 4510'
         self.opts.update(master=master)
-        self.assertEquals(extractMasters(self.opts),
+        self.assertEquals(extract_masters(self.opts),
                           [
                               dict(external=('127.0.0.1', 4510),
                                    internal=None),
@@ -190,7 +190,7 @@ class BasicTestCase(unittest.TestCase):
 
         master = '10.0.2.23'
         self.opts.update(master=master)
-        self.assertEquals(extractMasters(self.opts),
+        self.assertEquals(extract_masters(self.opts),
                           [
                               dict(external=('10.0.2.23', 4506),
                                    internal=None),
@@ -198,7 +198,7 @@ class BasicTestCase(unittest.TestCase):
 
         master = 'me.example.com'
         self.opts.update(master=master)
-        self.assertEquals(extractMasters(self.opts),
+        self.assertEquals(extract_masters(self.opts),
                                   [
                                       dict(external=('me.example.com', 4506),
                                            internal=None),
@@ -206,7 +206,7 @@ class BasicTestCase(unittest.TestCase):
 
         master = '10.0.2.23 4510'
         self.opts.update(master=master)
-        self.assertEquals(extractMasters(self.opts),
+        self.assertEquals(extract_masters(self.opts),
                                   [
                                       dict(external=('10.0.2.23', 4510),
                                            internal=None),
@@ -214,7 +214,7 @@ class BasicTestCase(unittest.TestCase):
 
         master = 'me.example.com 4510'
         self.opts.update(master=master)
-        self.assertEquals(extractMasters(self.opts),
+        self.assertEquals(extract_masters(self.opts),
                                   [
                                       dict(external=('me.example.com', 4510),
                                            internal=None),
@@ -222,7 +222,7 @@ class BasicTestCase(unittest.TestCase):
 
         master = dict(external='10.0.2.23 4510')
         self.opts.update(master=master)
-        self.assertEquals(extractMasters(self.opts),
+        self.assertEquals(extract_masters(self.opts),
                                   [
                                       dict(external=('10.0.2.23', 4510),
                                            internal=None),
@@ -230,7 +230,7 @@ class BasicTestCase(unittest.TestCase):
 
         master = dict(external='10.0.2.23 4510', internal='')
         self.opts.update(master=master)
-        self.assertEquals(extractMasters(self.opts),
+        self.assertEquals(extract_masters(self.opts),
                                   [
                                       dict(external=('10.0.2.23', 4510),
                                            internal=None),
@@ -238,7 +238,7 @@ class BasicTestCase(unittest.TestCase):
 
         master = dict(internal='10.0.2.23 4510')
         self.opts.update(master=master)
-        self.assertEquals(extractMasters(self.opts),[])
+        self.assertEquals(extract_masters(self.opts),[])
 
 
     def testExtractMastersMultiple(self):
@@ -253,7 +253,7 @@ class BasicTestCase(unittest.TestCase):
                     'me.example.com'
                  ]
         self.opts.update(master=master)
-        self.assertEquals(extractMasters(self.opts),
+        self.assertEquals(extract_masters(self.opts),
                           [
                             {
                                 'external': ('localhost', 4506),
@@ -275,7 +275,7 @@ class BasicTestCase(unittest.TestCase):
                     'me.example.com 4510'
                  ]
         self.opts.update(master=master)
-        self.assertEquals(extractMasters(self.opts),
+        self.assertEquals(extract_masters(self.opts),
                           [
                             {
                                 'external': ('localhost', 4510),
@@ -305,7 +305,7 @@ class BasicTestCase(unittest.TestCase):
                     }
                  ]
         self.opts.update(master=master)
-        self.assertEquals(extractMasters(self.opts),
+        self.assertEquals(extract_masters(self.opts),
                           [
                             {
                                 'external': ('localhost', 4510),
