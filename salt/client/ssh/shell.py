@@ -6,6 +6,7 @@ Manage transport commands via ssh
 # Import python libs
 import re
 import os
+import json
 import time
 import logging
 import subprocess
@@ -313,52 +314,38 @@ class Shell(object):
         sent_passwd = 0
         ret_stdout = ''
         ret_stderr = ''
-        while True:
-            stdout, stderr = term.recv()
-            if stdout:
-                ret_stdout += stdout
-            if stderr:
-                ret_stderr += stderr
-            if stdout and SSH_PASSWORD_PROMPT_RE.search(stdout):
-                if len(stdout) > 256:
-                    pass
-                elif not self.passwd:
-                    try:
-                        term.close(terminate=True, kill=True)
-                    except salt.utils.vt.TerminalException:
-                        pass
-                    return '', 'Permission denied, no authentication information', 254
-                if sent_passwd < passwd_retries:
-                    term.sendline(self.passwd)
-                    sent_passwd += 1
-                    continue
-                else:
-                    # asking for a password, and we can't seem to send it
-                    try:
-                        term.close(terminate=True, kill=True)
-                    except salt.utils.vt.TerminalException:
-                        pass
-                    return '', 'Password authentication failed', 254
-            elif stdout and KEY_VALID_RE.search(stdout):
-                if key_accept:
-                    term.sendline('yes')
-                    continue
-                else:
-                    term.sendline('no')
-                    ret_stdout = ('The host key needs to be accepted, to '
-                                  'auto accept run salt-ssh with the -i '
-                                  'flag:\n{0}').format(stdout)
-                    return ret_stdout, '', 254
-            if not term.isalive():
-                while True:
-                    stdout, stderr = term.recv()
-                    if stdout:
-                        ret_stdout += stdout
-                    if stderr:
-                        ret_stderr += stderr
-                    if stdout is None and stderr is None:
-                        break
-                term.close(terminate=True, kill=True)
-                break
-            time.sleep(0.5)
-        return ret_stdout, ret_stderr, term.exitstatus
+
+        try:
+            while term.has_unread_data:
+                stdout, stderr = term.recv()
+                if stdout:
+                    ret_stdout += stdout
+                if stderr:
+                    ret_stderr += stderr
+                if stdout and SSH_PASSWORD_PROMPT_RE.search(stdout):
+                    if not self.passwd:
+                        return '', 'Permission denied, no authentication information', 254
+                    if sent_passwd < passwd_retries:
+                        term.sendline(self.passwd)
+                        sent_passwd += 1
+                        continue
+                    else:
+                        # asking for a password, and we can't seem to send it
+                        return '', 'Password authentication failed', 254
+                elif stdout and KEY_VALID_RE.search(stdout):
+                    if key_accept:
+                        term.sendline('yes')
+                        continue
+                    else:
+                        term.sendline('no')
+                        ret_stdout = ('The host key needs to be accepted, to '
+                                      'auto accept run salt-ssh with the -i '
+                                      'flag:\n{0}').format(stdout)
+                        return ret_stdout, '', 254
+                elif stdout and stdout.endswith('_||ext_mods||_'):
+                    mods_raw = json.dumps(self.mods, separators=(',', ':')) + '|_E|0|'
+                    term.sendline(mods_raw)
+                time.sleep(0.5)
+            return ret_stdout, ret_stderr, term.exitstatus
+        finally:
+            term.close(terminate=True, kill=True)

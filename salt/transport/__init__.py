@@ -197,20 +197,23 @@ class ZeroMQChannel(Channel):
     def sreq(self):
         key = self.sreq_key
 
-        if key not in ZeroMQChannel.sreq_cache:
-            master_type = self.opts.get('master_type', None)
-            if master_type == 'failover':
-                # remove all cached sreqs to the old master to prevent
-                # zeromq from reconnecting to old masters automagically
-                for check_key in self.sreq_cache.keys():
-                    if self.opts['master_uri'] != check_key[0]:
-                        del self.sreq_cache[check_key]
-                        log.debug('Removed obsolete sreq-object from '
-                                  'sreq_cache for master {0}'.format(check_key[0]))
+        if not self.opts['cache_sreqs']:
+            return salt.payload.SREQ(self.master_uri)
+        else:
+            if key not in ZeroMQChannel.sreq_cache:
+                master_type = self.opts.get('master_type', None)
+                if master_type == 'failover':
+                    # remove all cached sreqs to the old master to prevent
+                    # zeromq from reconnecting to old masters automagically
+                    for check_key in self.sreq_cache.keys():
+                        if self.opts['master_uri'] != check_key[0]:
+                            del self.sreq_cache[check_key]
+                            log.debug('Removed obsolete sreq-object from '
+                                      'sreq_cache for master {0}'.format(check_key[0]))
 
-            ZeroMQChannel.sreq_cache[key] = salt.payload.SREQ(self.master_uri)
+                ZeroMQChannel.sreq_cache[key] = salt.payload.SREQ(self.master_uri)
 
-        return ZeroMQChannel.sreq_cache[key]
+            return ZeroMQChannel.sreq_cache[key]
 
     def __init__(self, opts, **kwargs):
         self.opts = opts

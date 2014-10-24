@@ -408,10 +408,8 @@ def _run(cmd,
                                log_stderr_level=output_loglevel,
                                stream_stdout=True,
                                stream_stderr=True)
-            # consume output
-            finished = False
             ret['pid'] = proc.pid
-            while not finished:
+            while proc.has_unread_data:
                 try:
                     try:
                         time.sleep(0.5)
@@ -427,8 +425,6 @@ def _run(cmd,
                             stderr += cstderr
                         else:
                             cstderr = ''
-                        if not cstdout and not cstderr and not proc.isalive():
-                            finished = True
                         if timeout and (time.time() > will_timeout):
                             ret['stderr'] = (
                                 'SALT: Timeout after {0}s\n{1}').format(
@@ -448,7 +444,9 @@ def _run(cmd,
                 # only set stdout on success as we already mangled in other
                 # cases
                 ret['stdout'] = stdout
-                if finished:
+                if not proc.isalive():
+                    # Process terminated, ie, not canceled by the user or by
+                    # the timeout
                     ret['stderr'] = stderr
                     ret['retcode'] = proc.exitstatus
                 ret['pid'] = proc.pid
