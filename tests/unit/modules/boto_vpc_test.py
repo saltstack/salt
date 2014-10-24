@@ -4,7 +4,7 @@
 
 from mock import patch
 
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.modules.boto_vpc import _maybe_set_name_tag, _maybe_set_tags
 
 
@@ -258,12 +258,123 @@ class BotoVpcTestCase(BotoVpcTestCaseBase):
         self.assertFalse(vpc_exists)
 
     @mock_ec2
+    def test_that_when_checking_if_a_vpc_exists_by_cidr_and_a_vpc_exists_the_vpc_exists_method_returns_true(self):
+        '''
+        Tests checking vpc existence via cidr when vpc exists
+        '''
+        self._create_vpc()
+
+        vpc_exists = boto_vpc.exists(cidr=u'10.0.0.0/24', **conn_parameters)
+
+        self.assertTrue(vpc_exists)
+
+    @mock_ec2
+    @skipIf(_has_required_moto() is False, 'The moto module does not support filtering vpcs.'
+                                           'Added support in spulec/moto#218. Next release should solve this issue.')
+    def test_that_when_checking_if_a_vpc_exists_by_cidr_and_a_vpc_does_not_exist_the_vpc_exists_method_returns_false(
+            self):
+        '''
+        Tests checking vpc existence via cidr when vpc does not exist
+        '''
+        self._create_vpc()  # Created to ensure that the filters are applied correctly
+
+        vpc_exists = boto_vpc.exists(cidr=u'10.10.10.10/24', **conn_parameters)
+
+        self.assertFalse(vpc_exists)
+
+    @mock_ec2
     def test_that_when_checking_if_a_vpc_exists_but_providing_no_filters_the_vpc_exists_method_raises_a_salt_invocation_error(self):
         '''
         Tests checking vpc existence when no filters are provided
         '''
-        with self.assertRaisesRegexp(SaltInvocationError, 'At least on of the following must be specified: vpc id, name or tags.'):
+        with self.assertRaisesRegexp(SaltInvocationError, 'At least on of the following must be specified: vpc id, name, cidr or tags.'):
             boto_vpc.exists(**conn_parameters)
+
+    @mock_ec2
+    def test_get_vpc_id_method_when_filtering_by_name(self):
+        '''
+        Tests getting vpc id when filtering by name
+        '''
+        vpc = self._create_vpc(name='test')
+
+        vpc_id = boto_vpc.get_id(name='test', **conn_parameters)
+
+        self.assertEqual(vpc.id, vpc_id)
+
+    @mock_ec2
+    def test_get_vpc_id_method_when_filtering_by_invalid_name(self):
+        '''
+        Tests getting vpc id when filtering by invalid name
+        '''
+        self._create_vpc(name='test')
+
+        vpc_id = boto_vpc.get_id(name='test_fake', **conn_parameters)
+
+        self.assertFalse(vpc_id)
+
+    @mock_ec2
+    def test_get_vpc_id_method_when_filtering_by_cidr(self):
+        '''
+        Tests getting vpc id when filtering by cidr
+        '''
+        vpc = self._create_vpc()
+
+        vpc_id = boto_vpc.get_id(cidr=u'10.0.0.0/24', **conn_parameters)
+
+        self.assertEqual(vpc.id, vpc_id)
+
+    @mock_ec2
+    def test_get_vpc_id_method_when_filtering_by_invalid_cidr(self):
+        '''
+        Tests getting vpc id when filtering by invalid cidr
+        '''
+        self._create_vpc()
+
+        vpc_id = boto_vpc.get_id(cidr=u'10.10.10.10/24', **conn_parameters)
+
+        self.assertFalse(vpc_id)
+
+    @mock_ec2
+    def test_get_vpc_id_method_when_filtering_by_tags(self):
+        '''
+        Tests getting vpc id when filtering by tags
+        '''
+        vpc = self._create_vpc(tags={'test': 'testvalue'})
+
+        vpc_id = boto_vpc.get_id(tags={'test': 'testvalue'}, **conn_parameters)
+
+        self.assertEqual(vpc.id, vpc_id)
+
+    @mock_ec2
+    def test_get_vpc_id_method_when_filtering_by_invalid_tags(self):
+        '''
+        Tests getting vpc id when filtering by invalid tags
+        '''
+        self._create_vpc(tags={'test': 'testvalue'})
+
+        vpc_id = boto_vpc.get_id(tags={'test': 'fake-testvalue'}, **conn_parameters)
+
+        self.assertFalse(vpc_id)
+
+    @mock_ec2
+    def test_get_vpc_id_method_when_not_providing_filters_raises_a_salt_invocation_error(self):
+        '''
+        Tests getting vpc id but providing no filters
+        '''
+        with self.assertRaisesRegexp(SaltInvocationError, 'At least on of the following must be specified: vpc id, name, cidr or tags.'):
+            boto_vpc.get_id(**conn_parameters)
+
+    @mock_ec2
+    def test_get_vpc_id_method_when_more_than_one_vpc_is_matched_raises_a_salt_command_execution_error(self):
+        '''
+        Tests getting vpc id but providing no filters
+        '''
+        
+        vpc1 = self._create_vpc(name='vpc-test1')
+        vpc2 = self._create_vpc(name='vpc-test2')
+
+        with self.assertRaisesRegexp(CommandExecutionError, 'Found more than one VPC matching the criteria.'):
+            boto_vpc.get_id(cidr=u'10.0.0.0/24', **conn_parameters)
 
     @mock_ec2
     def test_that_when_creating_a_vpc_succeeds_the_create_vpc_method_returns_true(self):
