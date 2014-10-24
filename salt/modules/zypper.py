@@ -871,13 +871,13 @@ def list_locks():
         return False
 
     locks = {}
-    for meta in map(lambda item:item.split("\n"),
+    for meta in map(lambda item: item.split("\n"),
                     open(LOCKS).read().split("\n\n")):
         lock = {}
-        for element in filter(None, meta):
+        for element in [el for el in meta if el]:
             if ":" in element:
-                lock.update(dict([tuple(map(lambda i:i.strip(),
-                                            element.split(":", 1))),]))
+                lock.update(dict([tuple(map(lambda i: i.strip(),
+                                            element.split(":", 1))), ]))
         if lock.get('solvable_name'):
             locks[lock.pop('solvable_name')] = lock
 
@@ -896,7 +896,7 @@ def clean_locks():
     '''
     if not os.path.exists(LOCKS):
         return False
-    
+
     cmd = ('zypper --non-interactive cl')
     __salt__['cmd.run'](cmd, output_loglevel='trace')
 
@@ -932,7 +932,7 @@ def remove_lock(name=None, pkgs=None, **kwargs):
             missing.append(pkg)
 
     if removed:
-        __salt__['cmd.run'](('zypper --non-interactive rl %s' % ' '.join(removed)),
+        __salt__['cmd.run'](('zypper --non-interactive rl {0}'.format(' '.join(removed))),
                             output_loglevel='trace')
 
     return {'removed' : len(removed), 'not_found' : missing}
@@ -963,7 +963,7 @@ def add_lock(name=None, pkgs=None, **kwargs):
             added.append(pkg)
 
     if added:
-        __salt__['cmd.run'](('zypper --non-interactive al %s' % ' '.join(added)),
+        __salt__['cmd.run'](('zypper --non-interactive al {0}'.format(' '.join(added))),
                             output_loglevel='trace')
 
     return {'added' : len(added), 'packages' : added}
