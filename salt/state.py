@@ -847,8 +847,7 @@ class State(object):
             for req in data[reqdec]:
                 reqfirst = next(iter(req))
                 if data['state'] == reqfirst:
-                    if (fnmatch.fnmatch(data['name'], req[reqfirst])
-                            or fnmatch.fnmatch(data['__id__'], req[reqfirst])):
+                    if fnmatch.fnmatch(data['__id__'], req[reqfirst]):
                         err = ('Recursive require detected in SLS {0} for'
                                ' require {1} in ID {2}').format(
                                    data['__sls__'],
@@ -1654,8 +1653,7 @@ class State(object):
                         req_val = req[req_key]
                         if req_val is None:
                             continue
-                        if (fnmatch.fnmatch(chunk['name'], req_val) or
-                            fnmatch.fnmatch(chunk['__id__'], req_val)):
+                        if fnmatch.fnmatch(chunk['__id__'], req_val):
                             if chunk['state'] == req_key:
                                 found = True
                                 reqs[r_state].append(chunk)
@@ -1762,8 +1760,7 @@ class State(object):
                         req_val = req[req_key]
                         if req_val is None:
                             continue
-                        if (fnmatch.fnmatch(chunk['name'], req_val) or
-                            fnmatch.fnmatch(chunk['__id__'], req_val)):
+                        if fnmatch.fnmatch(chunk['__id__'], req_val):
                             if chunk['state'] == req_key:
                                 if requisite == 'prereq':
                                     chunk['__prereq__'] = True
