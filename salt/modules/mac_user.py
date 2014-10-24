@@ -12,6 +12,7 @@ import logging
 import random
 import string
 import time
+import itertools
 
 # Import salt libs
 import salt.utils
@@ -55,7 +56,7 @@ def _dscl(cmd, ctype='create'):
 
 def _first_avail_uid():
     uids = set(x.pw_uid for x in pwd.getpwall())
-    for idx in xrange(501, 2 ** 32):
+    for idx in itertools.count(501, 2 ** 32):
         if idx not in uids:
             return idx
 
