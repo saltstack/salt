@@ -619,7 +619,7 @@ def fullversion():
             continue
         if ': ' in line:
             comps = line.split(': ')
-            ret[comps[0]] = comps[1]
+            ret[comps[0]] = comps[1].lstrip()
     return ret
 
 
