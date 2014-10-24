@@ -986,3 +986,68 @@ def verify(*names, **kwargs):
         salt '*' pkg.verify 'httpd postfix' ignore_types=['config','doc']
     '''
     return __salt__['lowpkg.verify'](*names, **kwargs)
+
+
+def file_list(*packages):
+    '''
+    List the files that belong to a package. Not specifying any packages will
+    return a list of *every* file on the system's rpm database (not generally
+    recommended).
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.file_list httpd
+        salt '*' pkg.file_list httpd postfix
+        salt '*' pkg.file_list
+    '''
+    return __salt__['lowpkg.file_list'](*packages)
+
+
+def file_dict(*packages):
+    '''
+    List the files that belong to a package, grouped by package. Not
+    specifying any packages will return a list of *every* file on the system's
+    rpm database (not generally recommended).
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.file_list httpd
+        salt '*' pkg.file_list httpd postfix
+        salt '*' pkg.file_list
+    '''
+    return __salt__['lowpkg.file_dict'](*packages)
+
+
+def owner(*paths):
+    '''
+    Return the name of the package that owns the file. Multiple file paths can
+    be passed. Like :mod:`pkg.version <salt.modules.yumpkg.version`, if a
+    single path is passed, a string will be returned, and if multiple paths are
+    passed, a dictionary of file/package name pairs will be returned.
+
+    If the file is not owned by a package, or is not present on the minion,
+    then an empty string will be returned for that path.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.owner /usr/bin/apachectl
+        salt '*' pkg.owner /usr/bin/apachectl /etc/httpd/conf/httpd.conf
+    '''
+    if not paths:
+        return ''
+    ret = {}
+    cmd = 'rpm -qf --queryformat "%{{NAME}}" {0!r}'
+    for path in paths:
+        ret[path] = __salt__['cmd.run_stdout'](cmd.format(path),
+                                               output_loglevel='trace')
+        if 'not owned' in ret[path].lower():
+            ret[path] = ''
+    if len(ret) == 1:
+        return ret.values()[0]
+    return ret
