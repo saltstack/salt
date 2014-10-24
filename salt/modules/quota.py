@@ -231,6 +231,14 @@ def get_mode(device):
     for line in out.splitlines():
         comps = line.strip().split()
         if comps[3] not in ret:
+            if comps[0].startswith('quotaon'):
+                if comps[1].startswith('Mountpoint'):
+                    ret[comps[4]] = 'disabled'
+                    continue
+                elif comps[1].startswith('Cannot'):
+                    ret[device] = 'Not found'
+                    return ret
+                continue
             ret[comps[3]] = {
                 'device': comps[4].replace('(', '').replace(')', ''),
             }
