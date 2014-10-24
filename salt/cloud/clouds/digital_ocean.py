@@ -101,9 +101,9 @@ def avail_images(call=None):
     items = query(method='images')
     ret = {}
     for image in items['images']:
-        ret[image['name']] = {}
+        ret[image['id']] = {}
         for item in image.keys():
-            ret[image['name']][item] = str(image[item])
+            ret[image['id']][item] = str(image[item])
 
     return ret
 
