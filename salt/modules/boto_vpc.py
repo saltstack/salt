@@ -38,7 +38,7 @@ Connection module for Amazon VPC
 # Import Python libs
 import logging
 from distutils.version import LooseVersion as _LooseVersion
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -124,6 +124,60 @@ def get_subnet_association(subnets, region=None, key=None, keyid=None,
                  ' than 1 subnets')
         return False
 
+
+def find(cidr=None, tags=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Given a CIDR, tags, find VPC ID if exists.
+
+    Returns VPC ID if  exists and returns False if cannot be found.
+    Aborts if more than one VPC is found matching criteria.
+
+    CLI example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.find cidr=172.16.0.0/16
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.find tags="{'Name':'dev-us1','environment':'dev'}"
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+
+    if not cidr and not tags:
+        raise SaltInvocationError(
+               'At least on of the following must be specified: cidr or tags.')
+
+    try:
+        filter_parameters = {'filters': {}}
+
+        if cidr:
+            filter_parameters['filters']['cidrBlock'] = cidr
+
+        if tags:
+            for tag_name, tag_value in tags.items():
+                if tag_name == 'name':
+                    log.debug('Detected tag "name". Did you mean "Name"?')
+                filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
+
+        log.debug('Using filters: {0}'.format(filter_parameters))
+        vpcs = conn.get_all_vpcs(**filter_parameters)
+
+        if len(vpcs) == 1:
+            vpc = vpcs[0]
+            log.debug('Matched: {0}'.format(vpc.id))
+            return vpc.id
+
+        if len(vpcs) > 1:
+            log.debug('Matched: {0}'.format(",".join(vpc.id)))
+            raise CommandExecutionError(
+                    'Found more than one VPC matching the criteria. Bailing.')
+
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return False
 
 def exists(vpc_id=None, name=None, tags=None, region=None, key=None, keyid=None, profile=None):
     '''
