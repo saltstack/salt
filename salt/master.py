@@ -257,7 +257,7 @@ class Master(SMaster):
 
 
     def __handle_error_react(self, event):
-        log.error('Received minion error from [{minion}]: {data}'.format(minion=event['id'], data=event['data']))
+        log.error('Received minion error from [{minion}]: {data}'.format(minion=event['id'], data=event['data']['exception']))
 
     def __register_reactions(self):
         '''

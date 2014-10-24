@@ -32,14 +32,17 @@ def raise_error(name=None, args=None, message=''):
     else:
         raise ex(message)
 
-
-def fire_raw_exception(exc, opts, node='minion'):
-    '''
-    Fire raw exception across the event bus
-    '''
+def pack_exception(exc):
     if hasattr(exc, 'pack'):
         packed_exception = exc.pack()
     else:
         packed_exception = {'message': exc.__unicode__(), 'args': exc.args}
+    return packed_exception
+
+def fire_exception(exc, opts, job={}, node='minion'):
+    '''
+    Fire raw exception across the event bus
+    '''
     event = salt.utils.event.SaltEvent(node, opts=opts)
-    event.fire_event(packed_exception, '_salt_error')
+    event.fire_event({'exception': pack_exception(exc),
+                      'job': job}, '_salt_error')
