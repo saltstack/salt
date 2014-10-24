@@ -7,6 +7,8 @@ Package support for openSUSE via the zypper package manager
 import copy
 import logging
 import re
+import os
+from xml.dom import minidom as dom
 from contextlib import contextmanager as _contextmanager
 
 # Import salt libs
@@ -18,6 +20,7 @@ from salt.exceptions import (
 log = logging.getLogger(__name__)
 
 HAS_ZYPP = False
+LOCKS = "/etc/zypp/locks"
 
 try:
     import zypp
@@ -847,3 +850,238 @@ def purge(name=None, pkgs=None, **kwargs):
         salt '*' pkg.purge pkgs='["foo", "bar"]'
     '''
     return _uninstall(action='purge', name=name, pkgs=pkgs)
+
+
+def list_locks():
+    '''
+    List current package locks.
+
+    Return a dict containing the locked package with attributes::
+
+        {'<package>': {'case_sensitive': '<case_sensitive>',
+                       'match_type': '<match_type>'
+                       'type': '<type>'}}
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_locks
+    '''
+    if not os.path.exists(LOCKS):
+        return False
+
+    locks = {}
+    for meta in map(lambda item: item.split("\n"),
+                    open(LOCKS).read().split("\n\n")):
+        lock = {}
+        for element in [el for el in meta if el]:
+            if ":" in element:
+                lock.update(dict([tuple(map(lambda i: i.strip(),
+                                            element.split(":", 1))), ]))
+        if lock.get('solvable_name'):
+            locks[lock.pop('solvable_name')] = lock
+
+    return locks
+
+
+def clean_locks():
+    '''
+    Remove unused locks that do not currently (with regard to repositories used) lock any package.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.clean_locks
+    '''
+    if not os.path.exists(LOCKS):
+        return False
+
+    cmd = ('zypper --non-interactive cl')
+    __salt__['cmd.run'](cmd, output_loglevel='trace')
+
+    return True
+
+
+def remove_lock(name=None, pkgs=None, **kwargs):
+    '''
+    Remove specified package lock.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.remove_lock <package name>
+        salt '*' pkg.remove_lock <package1>,<package2>,<package3>
+        salt '*' pkg.remove_lock pkgs='["foo", "bar"]'
+    '''
+
+    locks = list_locks()
+    packages = []
+    try:
+        packages = __salt__['pkg_resource.parse_targets'](name, pkgs)[0].keys()
+    except MinionError as exc:
+        raise CommandExecutionError(exc)
+
+    removed = []
+    missing = []
+    for pkg in packages:
+        if locks.get(pkg):
+            removed.append(pkg)
+        else:
+            missing.append(pkg)
+
+    if removed:
+        __salt__['cmd.run'](('zypper --non-interactive rl {0}'.format(' '.join(removed))),
+                            output_loglevel='trace')
+
+    return {'removed' : len(removed), 'not_found' : missing}
+
+
+def add_lock(name=None, pkgs=None, **kwargs):
+    '''
+    Add a package lock. Specify packages to lock by exact name.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.add_lock <package name>
+        salt '*' pkg.add_lock <package1>,<package2>,<package3>
+        salt '*' pkg.add_lock pkgs='["foo", "bar"]'
+    '''
+    locks = list_locks()
+    packages = []
+    added = []
+    try:
+        packages = __salt__['pkg_resource.parse_targets'](name, pkgs)[0].keys()
+    except MinionError as exc:
+        raise CommandExecutionError(exc)
+
+    for pkg in packages:
+        if not locks.get(pkg):
+            added.append(pkg)
+
+    if added:
+        __salt__['cmd.run'](('zypper --non-interactive al {0}'.format(' '.join(added))),
+                            output_loglevel='trace')
+
+    return {'added' : len(added), 'packages' : added}
+
+
+def verify(*names, **kwargs):
+    '''
+    Runs an rpm -Va on a system, and returns the results in a dict
+
+    Files with an attribute of config, doc, ghost, license or readme in the
+    package header can be ignored using the ``ignore_types`` keyword argument
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.verify
+        salt '*' pkg.verify httpd
+        salt '*' pkg.verify 'httpd postfix'
+        salt '*' pkg.verify 'httpd postfix' ignore_types=['config','doc']
+    '''
+    return __salt__['lowpkg.verify'](*names, **kwargs)
+
+
+def file_list(*packages):
+    '''
+    List the files that belong to a package. Not specifying any packages will
+    return a list of *every* file on the system's rpm database (not generally
+    recommended).
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.file_list httpd
+        salt '*' pkg.file_list httpd postfix
+        salt '*' pkg.file_list
+    '''
+    return __salt__['lowpkg.file_list'](*packages)
+
+
+def file_dict(*packages):
+    '''
+    List the files that belong to a package, grouped by package. Not
+    specifying any packages will return a list of *every* file on the system's
+    rpm database (not generally recommended).
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.file_list httpd
+        salt '*' pkg.file_list httpd postfix
+        salt '*' pkg.file_list
+    '''
+    return __salt__['lowpkg.file_dict'](*packages)
+
+
+def owner(*paths):
+    '''
+    Return the name of the package that owns the file. Multiple file paths can
+    be passed. If a single path is passed, a string will be returned,
+    and if multiple paths are passed, a dictionary of file/package name
+    pairs will be returned.
+
+    If the file is not owned by a package, or is not present on the minion,
+    then an empty string will be returned for that path.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.owner /usr/bin/apachectl
+        salt '*' pkg.owner /usr/bin/apachectl /etc/httpd/conf/httpd.conf
+    '''
+    return __salt__['lowpkg.owner'](*paths)
+
+
+def _get_patterns(installed_only=None):
+    '''
+    List all known patterns in repos.
+    '''
+    patterns = {}
+    doc = dom.parseString(__salt__['cmd.run'](('zypper --xmlout se -t pattern'),
+                                              output_loglevel='trace'))
+    for element in doc.getElementsByTagName("solvable"):
+        installed = element.getAttribute("status") == "installed"
+        if (installed_only and installed) or not installed_only:
+            patterns[element.getAttribute("name")] = {
+                'installed' : installed,
+                'summary' : element.getAttribute("summary"),
+            }
+
+    return patterns
+
+
+def list_patterns():
+    '''
+    List all known patterns from available repos.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_patterns
+    '''
+    return _get_patterns()
+
+
+def list_installed_patterns():
+    '''
+    List installed patterns on the system.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_installed_patterns
+    '''
+    return _get_patterns(installed_only=True)
