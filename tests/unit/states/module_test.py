@@ -4,6 +4,7 @@
 '''
 
 # Import Pyhton Libs
+from inspect import ArgSpec
 
 # Import Salt Libs
 from salt.states import module
@@ -32,6 +33,11 @@ class ModuleStateTest(TestCase):
     Tests module state (salt/states/module.py)
     '''
 
+    aspec = ArgSpec(args=['hello', 'world'],
+                    varargs=None,
+                    keywords=None,
+                    defaults=False)
+
     def test_module_run_module_not_available(self):
         '''
         Tests the return of module.run state when the module function
@@ -52,6 +58,15 @@ class ModuleStateTest(TestCase):
             ret = module.run(CMD)
             comment = 'Module function {0} is set to execute'.format(CMD)
             self.assertEqual(ret['comment'], comment)
+
+    @patch('salt.utils.get_function_argspec', MagicMock(return_value=aspec))
+    def test_module_run_missing_arg(self):
+        '''
+        Tests the return of module.run state when arguments are missing
+        '''
+        ret = module.run(CMD)
+        comment = 'The following arguments are missing: world hello'
+        self.assertEqual(ret['comment'], comment)
 
 
 if __name__ == '__main__':

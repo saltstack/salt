@@ -59,6 +59,9 @@ import datetime
 import salt.loader
 import salt.utils
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 def wait(name, **kwargs):
     '''
@@ -118,7 +121,7 @@ def run(name, **kwargs):
         return ret
 
     aspec = salt.utils.get_function_argspec(__salt__[name])
-
+    logger.info(aspec)
     args = []
     defaults = {}
 
