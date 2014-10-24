@@ -1,6 +1,16 @@
 # -*- coding: utf-8 -*-
 '''
 Support for YUM
+
+.. note::
+    This module makes heavy use of the **repoquery** utility, from the
+    yum-utils_ package. This package will be installed as a dependency if salt
+    is installed via EPEL. However, if salt has been installed using pip, or a
+    host is being managed using salt-ssh, then as of version 2014.7.0
+    yum-utils_ will be installed automatically to satisfy this dependency.
+
+    .. _yum-utils: http://yum.baseurl.org/wiki/YumUtils
+
 '''
 
 # Import python libs
