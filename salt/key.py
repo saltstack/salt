@@ -432,7 +432,7 @@ class Key(object):
     '''
     def __init__(self, opts):
         self.opts = opts
-        kind = self.opts.get('__role', '') # application kind
+        kind = self.opts.get('__role', '')  # application kind
         if kind not in daemons.APPL_KINDS:
             emsg = ("Invalid application kind = '{0}'.".format(kind))
             log.error(emsg + '\n')
@@ -896,7 +896,7 @@ class RaetKey(Key):
                 if minion not in minions:
                     shutil.rmtree(os.path.join(m_cache, minion))
 
-        kind = self.opts.get('__role', '') # application kind
+        kind = self.opts.get('__role', '')  # application kind
         if kind not in daemons.APPL_KINDS:
             emsg = ("Invalid application kind = '{0}'.".format(kind))
             log.error(emsg + '\n')

@@ -184,7 +184,6 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
                 self.stack.value.removeRemote(remote, clear=True)
 
 
-
 class SaltRaetRoadStackCloser(ioflo.base.deeding.Deed):
     '''
     Closes stack server socket connection
