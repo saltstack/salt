@@ -597,7 +597,7 @@ def version():
         if not line:
             continue
         if 'Server version' in line:
-            comps = line.split(': ').lstrip()
+            comps = line.split(': ')
             return comps[1]
 
 
