@@ -45,6 +45,7 @@ import os
 
 # Import salt libs
 import salt.utils
+import salt.modules.cmdmod
 
 __func_alias__ = {
     'reload_': 'reload'

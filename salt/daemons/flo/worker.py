@@ -16,6 +16,7 @@ from raet import raeting
 from raet.lane.stacking import LaneStack
 from raet.lane.yarding import RemoteYard
 
+from salt import daemons
 
 # Import ioflo libs
 import ioflo.base.deeding
@@ -115,24 +116,27 @@ class SaltRaetWorkerSetup(ioflo.base.deeding.Deed):
         name = "worker{0}".format(self.windex.value)
         # master application kind
         kind = self.opts.value['__role']
+        if kind not in daemons.APPL_KINDS:
+            emsg = ("Invalid application kind = '{0}' for Master Worker.".format(kind))
+            log.error(emsg + "\n")
+            raise ValueError(emsg)
         if kind == 'master':
-            lanename = 'master'  # self.opts.value.get('id',
-                                 #                     self.main.data.lanename)
+            lanename = 'master'
         else:  # workers currently are only supported for masters
-            emsg = ("Invalid application kind '{0}' for worker.".format(kind))
+            emsg = ("Invalid application kind '{0}' for Master Worker.".format(kind))
             log.error(emsg + '\n')
             raise ValueError(emsg)
-
+        sockdirpath = self.opts.value['sock_dir']
         self.stack.value = LaneStack(
                                      name=name,
                                      lanename=lanename,
-                                     sockdirpath=self.opts.value['sock_dir'])
+                                     sockdirpath=sockdirpath)
         self.stack.value.Pk = raeting.packKinds.pack
         manor_yard = RemoteYard(
                                  stack=self.stack.value,
                                  name='manor',
                                  lanename=lanename,
-                                 dirpath=self.opts.value['sock_dir'])
+                                 dirpath=sockdirpath)
         self.stack.value.addRemote(manor_yard)
         self.remote_loader.value = salt.daemons.masterapi.RemoteFuncs(
                                                         self.opts.value)
@@ -162,7 +166,6 @@ class SaltRaetWorkerRouter(ioflo.base.deeding.Deed):
             'lane_stack': '.salt.lane.manor.stack',
             'road_stack': '.salt.road.manor.stack',
             'opts': '.salt.opts',
-            #'windex': '.salt.var.fork.worker.windex',
             'worker_verify': '.salt.var.worker_verify',
             'remote_loader': '.salt.loader.remote',
             'local_loader': '.salt.loader.local',

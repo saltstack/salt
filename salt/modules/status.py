@@ -558,7 +558,13 @@ def master(master_ip=None, connected=True):
 
         salt '*' status.master
     '''
-    port = int(__salt__['config.option']('publish_port'))
+
+    # the default publishing port
+    port = 4505
+
+    if __salt__['config.get']('publish_port') != '':
+        port = int(__salt__['config.get']('publish_port'))
+
     ips = _remote_port_tcp(port)
 
     if connected:

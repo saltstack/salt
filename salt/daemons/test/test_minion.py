@@ -59,6 +59,7 @@ def test():
     filepath = 'minion.flo'
     opts = dict(
             id="minion",
+            __role='minion',
             ioflo_period=0.1,
             ioflo_realtime=True,
             minion_floscript=filepath,

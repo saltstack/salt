@@ -39,7 +39,7 @@ _DFLT_LOG_DATEFMT = '%H:%M:%S'
 _DFLT_LOG_DATEFMT_LOGFILE = '%Y-%m-%d %H:%M:%S'
 _DFLT_LOG_FMT_CONSOLE = '[%(levelname)-8s] %(message)s'
 _DFLT_LOG_FMT_LOGFILE = (
-    '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
+    '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s][%(process)d] %(message)s'
 )
 
 FLO_DIR = os.path.join(
@@ -184,7 +184,7 @@ VALID_OPTS = {
     'pillar_version': int,
     'pillar_opts': bool,
     'pillar_source_merging_strategy': str,
-    'ping_on_key_rotate': bool,
+    'ping_on_rotate': bool,
     'peer': dict,
     'preserve_minion_cache': bool,
     'syndic_master': str,
@@ -262,6 +262,7 @@ VALID_OPTS = {
     'zmq_filtering': bool,
     'con_cache': bool,
     'rotate_aes_key': bool,
+    'cache_sreqs': bool,
 }
 
 # default configurations
@@ -409,6 +410,7 @@ DEFAULT_MINION_OPTS = {
     'username': None,
     'password': None,
     'zmq_filtering': False,
+    'cache_sreqs': True,
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -471,9 +473,9 @@ DEFAULT_MASTER_OPTS = {
     'minionfs_blacklist': [],
     'ext_pillar': [],
     'pillar_version': 2,
-    'pillar_opts': True,
+    'pillar_opts': False,
     'pillar_source_merging_strategy': 'smart',
-    'ping_on_key_rotate': False,
+    'ping_on_rotate': False,
     'peer': {},
     'preserve_minion_cache': False,
     'syndic_master': '',
@@ -581,6 +583,7 @@ DEFAULT_MASTER_OPTS = {
     'zmq_filtering': False,
     'con_cache': False,
     'rotate_aes_key': True,
+    'cache_sreqs': True,
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
@@ -693,6 +696,9 @@ def _append_domain(opts):
 
 
 def _read_conf_file(path):
+    '''
+    Read in a config file from a given path and process it into a dictionary
+    '''
     log.debug('Reading configuration from {0}'.format(path))
     with salt.utils.fopen(path, 'r') as conf_file:
         try:
@@ -1042,7 +1048,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
         # configuration file
         master_config_path = overrides['master_config']
     elif 'master_config' not in overrides and not master_config \
-                                                and not master_config_path:
+            and not master_config_path:
         # The configuration setting is not being provided in the main cloud
         # configuration file, and
         master_config_path = os.path.join(config_dir, 'master')
@@ -1055,7 +1061,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
         # configuration file
         providers_config_path = overrides['providers_config']
     elif 'providers_config' not in overrides and not providers_config \
-                                                and not providers_config_path:
+            and not providers_config_path:
         providers_config_path = os.path.join(config_dir, 'cloud.providers')
 
     # Convert relative to absolute paths if necessary
@@ -1218,6 +1224,9 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
 
 
 def apply_cloud_config(overrides, defaults=None):
+    '''
+    Return a cloud config
+    '''
     if defaults is None:
         defaults = CLOUD_CONFIG_DEFAULTS
 
@@ -1865,8 +1874,7 @@ def get_id(opts, minion_id=False):
                 if name.startswith(codecs.BOM):  # Remove BOM if exists
                     name = name.replace(codecs.BOM, '', 1)
             if name:
-                log.debug('Using cached minion ID from {0}: {1}'
-                         .format(id_cache, name))
+                log.debug('Using cached minion ID from {0}: {1}'.format(id_cache, name))
                 return name, False
         except (IOError, OSError):
             pass

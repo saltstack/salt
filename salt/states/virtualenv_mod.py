@@ -45,7 +45,8 @@ def managed(name,
             pip_download=None,
             pip_download_cache=None,
             pip_exists_action=None,
-            proxy=None):
+            proxy=None,
+            use_vt=False):
     '''
     Create a virtualenv and optionally manage it with pip
 
@@ -167,7 +168,8 @@ def managed(name,
             extra_search_dir=extra_search_dir,
             never_download=never_download,
             prompt=prompt,
-            user=user
+            user=user,
+            use_vt=use_vt,
         )
 
         ret['result'] = _ret['retcode'] == 0
@@ -195,7 +197,7 @@ def managed(name,
 
     # Populate the venv via a requirements file
     if requirements:
-        before = set(__salt__['pip.freeze'](bin_env=name))
+        before = set(__salt__['pip.freeze'](bin_env=name, user=user, use_vt=use_vt))
         _ret = __salt__['pip.install'](
             requirements=requirements,
             bin_env=name,
@@ -211,6 +213,7 @@ def managed(name,
             exists_action=pip_exists_action,
             no_deps=no_deps,
             proxy=proxy,
+            use_vt=use_vt
         )
         ret['result'] &= _ret['retcode'] == 0
         if _ret['retcode'] > 0:

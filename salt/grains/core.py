@@ -56,6 +56,8 @@ if salt.utils.is_windows():
             'will be missing'
         )
 
+_INTERFACES = {}
+
 
 def _windows_cpudata():
     '''
@@ -116,7 +118,7 @@ def _linux_cpudata():
                 #
                 # Hardware        : BCM2708
                 # Revision        : 0002
-                # Serial          : 00000000XXXXXXXX
+                # Serial          : 00000000
                 elif key == 'Processor':
                     grains['cpu_model'] = val.split('-')[0]
                     grains['num_cpus'] = 1
@@ -220,13 +222,13 @@ def _netbsd_gpu_data():
 
         for line in pcictl_out.splitlines():
             for vendor in known_vendors:
-                m = re.match(
+                vendor_match = re.match(
                     r'[0-9:]+ ({0}) (.+) \(VGA .+\)'.format(vendor),
                     line,
                     re.IGNORECASE
                 )
-                if m:
-                    gpus.append({'vendor': m.group(1), 'model': m.group(2)})
+                if vendor_match:
+                    gpus.append({'vendor': vendor_match.group(1), 'model': vendor_match.group(2)})
     except OSError:
         pass
 
@@ -299,9 +301,9 @@ def _bsd_cpudata(osdata):
     if osdata['kernel'] == 'NetBSD':
         grains['cpu_flags'] = []
         for line in __salt__['cmd.run']('cpuctl identify 0').splitlines():
-            m = re.match(r'cpu[0-9]:\ features[0-9]?\ .+<(.+)>', line)
-            if m:
-                flag = m.group(1).split(',')
+            cpu_match = re.match(r'cpu[0-9]:\ features[0-9]?\ .+<(.+)>', line)
+            if cpu_match:
+                flag = cpu_match.group(1).split(',')
                 grains['cpu_flags'].extend(flag)
 
     if osdata['kernel'] == 'FreeBSD' and os.path.isfile('/var/run/dmesg.boot'):
@@ -462,9 +464,16 @@ def _virtual(osdata):
     #   virtual_subtype
     grains = {'virtual': 'physical'}
 
+    # Skip the below loop on platforms which have none of the desired cmds
+    # This is a temporary measure until we can write proper virtual hardware
+    # detection.
+    skip_cmds = ('AIX',)
+
     # Check if enable_lspci is True or False
     if __opts__.get('enable_lspci', True) is False:
         _cmds = ('dmidecode', 'dmesg')
+    elif osdata['kernel'] in skip_cmds:
+        _cmds = ()
     else:
         # /proc/bus/pci does not exists, lspci will fail
         if not os.path.exists('/proc/bus/pci'):
@@ -560,12 +569,14 @@ def _virtual(osdata):
             # Break out of the loop so the next log message is not issued
             break
     else:
-        log.warn(
-            'The tools \'dmidecode\', \'lspci\' and \'dmesg\' failed to '
-            'execute because they do not exist on the system of the user '
-            'running this instance or the user does not have the necessary '
-            'permissions to execute them. Grains output might not be accurate.'
-        )
+        if osdata['kernel'] in skip_cmds:
+            log.warn(
+                'The tools \'dmidecode\', \'lspci\' and \'dmesg\' failed to '
+                'execute because they do not exist on the system of the user '
+                'running this instance or the user does not have the '
+                'necessary permissions to execute them. Grains output might '
+                'not be accurate.'
+            )
 
     choices = ('Linux', 'OpenBSD', 'HP-UX')
     isdir = os.path.isdir
@@ -775,7 +786,7 @@ def _windows_platform_data():
             'motherboard': {
                 'productname': motherboardinfo.Product,
                 'serialnumber': motherboardinfo.SerialNumber
-             }
+            }
         }
 
         # test for virtualized environments
@@ -878,6 +889,17 @@ def _linux_bin_exists(binary):
     return __salt__['cmd.retcode'](
         'which {0}'.format(binary)
     ) == 0
+
+
+def _get_interfaces():
+    '''
+    Provide a dict of the connected interfaces and their ip addresses
+    '''
+
+    global _INTERFACES
+    if not _INTERFACES:
+        _INTERFACES = salt.utils.network.interfaces()
+    return _INTERFACES
 
 
 def os_data():
@@ -1270,7 +1292,7 @@ def ip_interfaces():
         return {}
 
     ret = {}
-    ifaces = salt.utils.network.interfaces()
+    ifaces = _get_interfaces()
     for face in ifaces:
         iface_ips = []
         for inet in ifaces[face].get('inet', []):
@@ -1297,7 +1319,7 @@ def ip4_interfaces():
         return {}
 
     ret = {}
-    ifaces = salt.utils.network.interfaces()
+    ifaces = _get_interfaces()
     for face in ifaces:
         iface_ips = []
         for inet in ifaces[face].get('inet', []):
@@ -1321,7 +1343,7 @@ def ip6_interfaces():
         return {}
 
     ret = {}
-    ifaces = salt.utils.network.interfaces()
+    ifaces = _get_interfaces()
     for face in ifaces:
         iface_ips = []
         for inet in ifaces[face].get('inet6', []):
@@ -1342,7 +1364,7 @@ def hwaddr_interfaces():
     # Provides:
     #   hwaddr_interfaces
     ret = {}
-    ifaces = salt.utils.network.interfaces()
+    ifaces = _get_interfaces()
     for face in ifaces:
         if 'hwaddr' in ifaces[face]:
             ret[face] = ifaces[face]['hwaddr']

@@ -51,6 +51,8 @@ def test():
 
     filepath = 'master.flo'
     opts = dict(
+            id='master',
+            __role='master',
             ioflo_period=0.1,
             ioflo_realtime=True,
             master_floscript=filepath,
@@ -63,7 +65,8 @@ def test():
             sock_dir=sockDirpath,
             cachedir=cacheDirpath,
             open_mode=True,
-            auto_accept=True,)
+            auto_accept=True,
+            )
 
     master = salt.daemons.flo.IofloMaster(opts=opts)
     master.start(behaviors=['raet.flo.behaving'])

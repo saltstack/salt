@@ -834,6 +834,7 @@ def start(container,
           dns=None,
           volumes_from=None,
           network_mode=None,
+          restart_policy=None,
           cap_add=None,
           cap_drop=None):
     '''
@@ -880,6 +881,7 @@ def start(container,
                          dns=dns,
                          volumes_from=volumes_from,
                          network_mode=network_mode,
+                         restart_policy=restart_policy,
                          cap_add=cap_add,
                          cap_drop=cap_drop)
 
@@ -1494,12 +1496,20 @@ def _parse_image_multilogs_string(ret, repo):
                     image_logs.append(buf)
                 buf = ''
         image_logs.reverse()
+
+        # Valid statest when pulling an image from the docker registry
+        valid_states = [
+            'Download complete',
+            'Already exists',
+        ]
+
         # search last layer grabbed
         for l in image_logs:
             if isinstance(l, dict):
-                if l.get('status') == 'Download complete' and l.get('id'):
+                if l.get('status') in valid_states and l.get('id'):
                     infos = _get_image_infos(l['id'])
                     break
+
     return image_logs, infos
 
 

@@ -1858,7 +1858,7 @@ def seek_read(path, size, offset):
     '''
     .. versionadded:: 2014.1.0
 
-    Seek to a position on a file and write to it
+    Seek to a position on a file and read it
 
     path
         path to file
@@ -4197,3 +4197,37 @@ def join(*args):
         salt '*' file.join '/' 'usr' 'local' 'bin'
     '''
     return os.path.join(*args)
+
+
+def move(src, dst):
+    '''
+    Move a file or directory
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.move /path/to/src /path/to/dst
+    '''
+    src = os.path.expanduser(src)
+    dst = os.path.expanduser(dst)
+
+    if not os.path.isabs(src):
+        raise SaltInvocationError('Source path must be absolute.')
+
+    if not os.path.isabs(dst):
+        raise SaltInvocationError('Destination path must be absolute.')
+
+    ret = {
+        'result': True,
+        'comment': "'{0}' moved to '{1}'".format(src, dst),
+    }
+
+    try:
+        shutil.move(src, dst)
+    except (OSError, IOError) as exc:
+        raise CommandExecutionError(
+            "Unable to move '{0}' to '{1}': {2}".format(src, dst, exc)
+        )
+
+    return ret

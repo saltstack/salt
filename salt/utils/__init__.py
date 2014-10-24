@@ -1667,7 +1667,10 @@ def print_cli(msg):
     when salt output is piped to less and less is stopped prematurely).
     '''
     try:
-        print(msg)
+        try:
+            print(msg)
+        except UnicodeEncodeError:
+            print(msg.encode('utf-8'))
     except IOError as exc:
         if exc.errno != errno.EPIPE:
             raise

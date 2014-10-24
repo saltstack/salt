@@ -346,14 +346,14 @@ def highstate(test=None,
 
 
 def sls(mods,
-        saltenv='base',
+        saltenv=None,
         test=None,
         exclude=None,
         queue=False,
         env=None,
         **kwargs):
     '''
-    Execute a set list of state modules from an environment.
+    Execute a set list of state files from an environment.
 
     test
         Notify states to execute in test-only (dry-run) mode.
@@ -369,11 +369,15 @@ def sls(mods,
 
         This option starts a new thread for each queued state run so use this
         option sparingly.
-    saltenv : base
+    saltenv : None
         Specify a ``file_roots`` environment.
 
         .. versionchanged:: 0.17.0
             Argument name changed from ``env`` to ``saltenv``.
+        .. versionchanged:: 2014.7
+            Defaults to None. If no saltenv is specified, the minion config will
+            be checked for a saltenv and if found, it will be used. If none is found,
+            base will be used.
     concurrent:
         WARNING: This flag is potentially dangerous. It is designed
         for use when multiple state runs can safely be run at the same
@@ -402,6 +406,11 @@ def sls(mods,
         )
         # Backwards compatibility
         saltenv = env
+    if not saltenv:
+        if __opts__.get('saltenv', None):
+            saltenv = __opts__['saltenv']
+        else:
+            saltenv = 'base'
 
     if queue:
         _wait(kwargs.get('__pub_jid'))
@@ -916,6 +925,10 @@ def pkg(pkg_path, pkg_sum, hash_type, test=False, **kwargs):
     lowstate_json = os.path.join(root, 'lowstate.json')
     with salt.utils.fopen(lowstate_json, 'r') as fp_:
         lowstate = json.load(fp_, object_hook=salt.utils.decode_dict)
+    # Check for errors in the lowstate
+    for chunk in lowstate:
+        if not isinstance(chunk, dict):
+            return lowstate
     pillar_json = os.path.join(root, 'pillar.json')
     if os.path.isfile(pillar_json):
         with salt.utils.fopen(pillar_json, 'r') as fp_:
@@ -936,8 +949,6 @@ def pkg(pkg_path, pkg_sum, hash_type, test=False, **kwargs):
             continue
         popts['file_roots'][fn_] = [full]
     st_ = salt.state.State(popts, pillar=pillar)
-    st_.functions['saltutil.sync_all'](envs)
-    st_.module_refresh()
     ret = st_.call_chunks(lowstate)
     try:
         shutil.rmtree(root)

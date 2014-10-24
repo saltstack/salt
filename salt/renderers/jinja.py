@@ -221,15 +221,9 @@ import salt.utils.templates
 log = logging.getLogger(__name__)
 
 
-class SaltDotLookup(dict):
-    def __init__(self, *args, **kwargs):
-        dict.__init__(self, *args, **kwargs)
-        self.__dict__ = self
-
-
-def _split_module_dicts(__salt__):
+def _split_module_dicts():
     '''
-    Create a dictionary from module.function as module[function]
+    Create a copy of __salt__ dictionary with module.function and module[function]
 
     Takes advantage of Jinja's syntactic sugar lookup:
 
@@ -237,11 +231,15 @@ def _split_module_dicts(__salt__):
 
         {{ salt.cmd.run('uptime') }}
     '''
-    mod_dict = SaltDotLookup()
-    for module_func_name in __salt__.keys():
-        mod, _, fun = module_func_name.partition('.')
-        mod_dict.setdefault(mod,
-                SaltDotLookup())[fun] = __salt__[module_func_name]
+    if not isinstance(__salt__, dict):
+        return __salt__
+    mod_dict = dict(__salt__)
+    for module_func_name, mod_fun in mod_dict.items():
+        mod, fun = module_func_name.split('.', 1)
+        if mod not in mod_dict:
+            # create an empty object that we can add attributes to
+            mod_dict[mod] = lambda: None
+        setattr(mod_dict[mod], fun, mod_fun)
     return mod_dict
 
 
@@ -259,12 +257,9 @@ def render(template_file, saltenv='base', sls='', argline='',
                 'Unknown renderer option: {opt}'.format(opt=argline)
         )
 
-    salt_dict = SaltDotLookup(**__salt__)
-    salt_dict.__dict__.update(_split_module_dicts(__salt__))
-
     tmp_data = salt.utils.templates.JINJA(template_file,
                                           to_str=True,
-                                          salt=salt_dict,
+                                          salt=_split_module_dicts(),
                                           grains=__grains__,
                                           opts=__opts__,
                                           pillar=__pillar__,

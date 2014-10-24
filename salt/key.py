@@ -577,9 +577,13 @@ class Key(object):
 
         for dir_ in key_dirs:
             ret[os.path.basename(dir_)] = []
-            for fn_ in salt.utils.isorted(os.listdir(dir_)):
-                if os.path.isfile(os.path.join(dir_, fn_)):
-                    ret[os.path.basename(dir_)].append(fn_)
+            try:
+                for fn_ in salt.utils.isorted(os.listdir(dir_)):
+                    if os.path.isfile(os.path.join(dir_, fn_)):
+                        ret[os.path.basename(dir_)].append(fn_)
+            except (OSError, IOError):
+                # key dir kind is not created yet, just skip
+                continue
         return ret
 
     def all_keys(self):
@@ -611,6 +615,11 @@ class Key(object):
             for fn_ in salt.utils.isorted(os.listdir(rej)):
                 if os.path.isfile(os.path.join(rej, fn_)):
                     ret[os.path.basename(rej)].append(fn_)
+        elif match.startswith('den'):
+            ret[os.path.basename(den)] = []
+            for fn_ in salt.utils.isorted(os.listdir(den)):
+                if os.path.isfile(os.path.join(den, fn_)):
+                    ret[os.path.basename(den)].append(fn_)
         elif match.startswith('all'):
             return self.all_keys()
         return ret

@@ -37,6 +37,8 @@ the default location::
 # Import python libs
 import logging
 
+# import Salt libs
+import salt.utils
 import salt.returners
 
 # Import third party libs
@@ -61,6 +63,9 @@ def __virtual__():
 
 
 def _remove_dots(src):
+    '''
+    Remove dots from the given data structure
+    '''
     output = {}
     for key, val in src.iteritems():
         if isinstance(val, dict):
@@ -95,12 +100,12 @@ def _get_conn(ret):
 
     host = _options.get('host')
     port = _options.get('port')
-    db = _options.get('db')
+    db_ = _options.get('db')
     user = _options.get('user')
     password = _options.get('password')
 
     conn = pymongo.Connection(host, port)
-    mdb = conn[db]
+    mdb = conn[db_]
 
     if user and password:
         mdb.authenticate(user, password)
@@ -150,3 +155,10 @@ def get_fun(fun):
         if rdata:
             ret[collection] = rdata
     return ret
+
+
+def prep_jid(nocache):  # pylint: disable=unused-argument
+    '''
+    Pre-process the jid and return the jid to use
+    '''
+    return salt.utils.gen_jid()

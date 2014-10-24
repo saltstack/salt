@@ -488,7 +488,7 @@
 # The pillar_opts option adds the master configuration file data to a dict in
 # the pillar called "master". This is used to set simple configurations in the
 # master config file that can then be used on minions.
-#pillar_opts: True
+#pillar_opts: False
 
 
 #####          Syndic settings       #####

@@ -130,6 +130,33 @@ code-block:: yaml
           jid_include: True
           maxrunning: 1
 
+By default, data about jobs runs from the Salt scheduler is not returned to the
+master.  Because of this information for these jobs will not be listed in the
+jobs.list_jobs runner.  The return_job parameter will return the data back to
+the Salt master, making the job available in this list.
+
+    ... versionadded:: Lithium
+
+    schedule:
+      job1:
+          function: scheduled_job_function
+          job_return: True
+
+It can be useful to include specific data to differentiate a job from other
+jobs.  Using the metadata parameter special values can be associated with
+a scheduled job.  These values are not used in the execution of the job,
+but can be used to search for specific jobs later if combined with the
+return_job parameter.  The metadata parameter must be specified as a
+dictionary, othewise it will be ignored.
+
+    ... versionadded:: Lithium
+
+    schedule:
+      job1:
+          function: scheduled_job_function
+          metadata:
+            foo: bar
+
 '''
 
 # Import python libs
@@ -348,6 +375,13 @@ class Schedule(object):
                'schedule': data['name'],
                'jid': '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())}
 
+        if 'metadata' in data:
+            if isinstance(data['metadata'], dict):
+                ret['metadata'] = data['metadata']
+            else:
+                log.warning('schedule: The metadata parameter must be '
+                            'specified as a dictionary.  Ignoring.')
+
         proc_fn = os.path.join(
             salt.minion.get_proc_dir(self.opts['cachedir']),
             ret['jid']
@@ -443,6 +477,17 @@ class Schedule(object):
                                 func, returner
                             )
                         )
+
+            if 'return_job' in data and data['return_job']:
+                # Send back to master so the job is included in the job list
+                mret = ret.copy()
+                mret['jid'] = 'req'
+                channel = salt.transport.Channel.factory(self.opts, usage='salt_schedule')
+                load = {'cmd': '_return', 'id': self.opts['id']}
+                for key, value in mret.items():
+                    load[key] = value
+                channel.send(load)
+
         except Exception:
             log.exception("Unhandled exception running {0}".format(ret['fun']))
             # Although catch-all exception handlers are bad, the exception here
@@ -507,12 +552,14 @@ class Schedule(object):
                     time_conflict = True
 
             if time_conflict:
-                log.error('Unable to use "seconds", "minutes", "hours", or "days" with '
+                log.error('Unable to use "seconds", "minutes",'
+                          '"hours", or "days" with '
                           '"when" or "cron" options. Ignoring.')
                 continue
 
             if 'when' in data and 'cron' in data:
-                log.error('Unable to use "when" and "cron" options together. Ignoring.')
+                log.error('Unable to use "when" and "cron" options together.'
+                          'Ignoring.')
                 continue
 
             time_elements = ['seconds', 'minutes', 'hours', 'days']
@@ -524,20 +571,50 @@ class Schedule(object):
                 seconds += int(data.get('days', 0)) * 86400
             elif 'when' in data:
                 if not _WHEN_SUPPORTED:
-                    log.error('Missing python-dateutil. Ignoring job {0}'.format(job))
+                    log.error('Missing python-dateutil.'
+                              'Ignoring job {0}'.format(job))
                     continue
 
                 if isinstance(data['when'], list):
                     _when = []
                     now = int(time.time())
                     for i in data['when']:
-                        try:
-                            tmp = int(dateutil_parser.parse(i).strftime('%s'))
-                        except ValueError:
-                            log.error('Invalid date string {0}. Ignoring job {1}.'.format(i, job))
-                            continue
-                        if tmp >= now:
-                            _when.append(tmp)
+                        if ('whens' in self.opts['pillar'] and
+                                i in self.opts['pillar']['whens']):
+                            if not isinstance(self.opts['pillar']['whens'],
+                                              dict):
+                                log.error('Pillar item "whens" must be dict.'
+                                          'Ignoring')
+                                continue
+                            __when = self.opts['pillar']['whens'][i]
+                            try:
+                                when__ = dateutil_parser.parse(__when)
+                            except ValueError:
+                                log.error('Invalid date string. Ignoring')
+                                continue
+                        elif ('whens' in self.opts['grains'] and
+                              i in self.opts['grains']['whens']):
+                            if not isinstance(self.opts['grains']['whens'],
+                                              dict):
+                                log.error('Grain "whens" must be dict.'
+                                          'Ignoring')
+                                continue
+                            __when = self.opts['grains']['whens'][i]
+                            try:
+                                when__ = dateutil_parser.parse(__when)
+                            except ValueError:
+                                log.error('Invalid date string. Ignoring')
+                                continue
+                        else:
+                            try:
+                                when__ = dateutil_parser.parse(i)
+                            except ValueError:
+                                log.error('Invalid date string {0}.'
+                                          'Ignoring job {1}.'.format(i, job))
+                                continue
+                        when = int(when__.strftime('%s'))
+                        if when >= now:
+                            _when.append(when)
                     _when.sort()
                     if _when:
                         # Grab the first element
@@ -571,12 +648,36 @@ class Schedule(object):
                         continue
 
                 else:
-                    try:
-                        when = int(dateutil_parser.parse(data['when']).strftime('%s'))
-                    except ValueError:
-                        log.error('Invalid date string. Ignoring')
-                        continue
-
+                    if ('whens' in self.opts['pillar'] and
+                            data['when'] in self.opts['pillar']['whens']):
+                        if not isinstance(self.opts['pillar']['whens'], dict):
+                            log.error('Pillar item "whens" must be dict.'
+                                      'Ignoring')
+                            continue
+                        _when = self.opts['pillar']['whens'][data['when']]
+                        try:
+                            when__ = dateutil_parser.parse(_when)
+                        except ValueError:
+                            log.error('Invalid date string. Ignoring')
+                            continue
+                    elif ('whens' in self.opts['grains'] and
+                          data['when'] in self.opts['grains']['whens']):
+                        if not isinstance(self.opts['grains']['whens'], dict):
+                            log.error('Grain "whens" must be dict. Ignoring')
+                            continue
+                        _when = self.opts['grains']['whens'][data['when']]
+                        try:
+                            when__ = dateutil_parser.parse(_when)
+                        except ValueError:
+                            log.error('Invalid date string. Ignoring')
+                            continue
+                    else:
+                        try:
+                            when__ = dateutil_parser.parse(data['when'])
+                        except ValueError:
+                            log.error('Invalid date string. Ignoring')
+                            continue
+                    when = int(when__.strftime('%s'))
                     now = int(time.time())
                     seconds = when - now
 

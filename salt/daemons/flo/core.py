@@ -25,6 +25,7 @@ from raet.road.estating import RemoteEstate
 from raet.lane.stacking import LaneStack
 from raet.lane.yarding import RemoteYard
 
+from salt import daemons
 from salt.daemons import salting
 
 from salt.exceptions import (
@@ -131,14 +132,20 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
 
         do salt raet road stack setup at enter
         '''
-        role = self.opts.value.get('id', self.local.data.role)
         kind = self.opts.value['__role']  # application kind
+        if kind not in daemons.APPL_KINDS:
+            emsg = ("Invalid application kind = '{0}'.".format(kind))
+            log.error(emsg + '\n')
+            raise ValueError(emsg)
+        role = self.opts.value.get('id', '')
+        if not role:
+            emsg = ("Missing role required to setup RoadStack.")
+            log.error(emsg + "\n")
+            raise ValueError(emsg)
+
+        name = "{0}_{1}".format(role, kind)
         sigkey = self.local.data.sigkey
         prikey = self.local.data.prikey
-        #name = self.opts.value.get('id', self.local.data.name)
-        #name = LocalEstate.nameGuid(prefix='road') # name is  guid
-        #name = 'stack_' +  role
-        name = role
         main = self.opts.value.get('raet_main', self.local.data.main)
         mutable = self.opts.value.get('raet_mutable', self.local.data.mutable)
         always = self.opts.value.get('open_mode', False)
@@ -165,6 +172,7 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
                                      sigkey=sigkey,
                                      prikey=prikey,
                                      main=main,
+                                     kind=daemons.APPL_KINDS[kind],
                                      mutable=mutable,
                                      txMsgs=txMsgs,
                                      rxMsgs=rxMsgs,
@@ -206,21 +214,25 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
                     opts='.salt.opts')
 
     def postinitio(self):
-        self.mha = (self.opts.value['master'], int(self.opts.value['master_port']))
+        self.masters = daemons.extract_masters(self.opts.value)
+        # self.mha = (self.opts.value['master'], int(self.opts.value['master_port']))
 
     def action(self, **kwa):
         '''
-        Receive any udp packets on server socket and put in rxes
-        Send any packets in txes
+        Join with all masters
         '''
         stack = self.stack.value
         if stack and isinstance(stack, RoadStack):
             if not stack.remotes:
-                stack.addRemote(RemoteEstate(stack=stack,
-                                             fuid=0,  # vacuous join
-                                             sid=0,  # always 0 for join
-                                             ha=self.mha))
-            stack.join(uid=stack.remotes.values()[0].uid, timeout=0.0)
+                for master in self.masters:
+                    mha = master['external']
+                    stack.addRemote(RemoteEstate(stack=stack,
+                                                 fuid=0,  # vacuous join
+                                                 sid=0,  # always 0 for join
+                                                 ha=mha))
+            # stack.join(uid=stack.remotes.values()[0].uid, timeout=0.0)
+            for remote in stack.remotes.values():
+                stack.join(uid=remote.uid, timeout=0.0)
 
 
 class SaltRaetRoadStackJoined(ioflo.base.deeding.Deed):
@@ -586,17 +598,30 @@ class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
         '''
         Run once at enter
         '''
-        name = 'manor'
         kind = self.opts.value['__role']
+        if kind not in daemons.APPL_KINDS:
+            emsg = ("Invalid application kind = '{0}' for manor lane.".format(kind))
+            log.error(emsg + "\n")
+            raise ValueError(emsg)
+
         if kind == 'master':
             lanename = 'master'
+        elif kind == 'minion':
+            role = self.opts.value.get('id', '')
+            if not role:
+                emsg = ("Missing role required to setup manor Lane.")
+                log.error(emsg + "\n")
+                raise ValueError(emsg)
+            lanename = "{0}_{1}".format(role, kind)
         else:
-            lanename = self.opts.value.get('id', self.local.data.lanename)
+            emsg = ("Unsupported application kind = '{0}' for manor Lane.".format(kind))
+            log.error(emsg + '\n')
+            raise ValueError(emsg)
 
+        name = 'manor'
         self.stack.value = LaneStack(
                                     name=name,
                                     lanename=lanename,
-                                    uid=0,
                                     sockdirpath=self.opts.value['sock_dir'])
         self.stack.value.Pk = raeting.packKinds.pack
         self.event_yards.value = set()
@@ -1001,20 +1026,38 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
         to communicate with the minion manor yard
 
         '''
-        mid = self.opts['id']
-        uid = nacling.uuid(size=18)
-        name = 'jobber' + uid
+        role = self.opts.get('id', '')
+        if not role:
+            emsg = ("Missing role required to setup Jobber Lane.")
+            log.error(emsg + "\n")
+            raise ValueError(emsg)
+
+        kind = self.opts['__role']
+        if kind not in daemons.APPL_KINDS:
+            emsg = ("Invalid application kind = '{0}' for Jobber lane.".format(kind))
+            log.error(emsg + "\n")
+            raise ValueError(emsg)
+
+        if kind == 'minion':
+            lanename = "{0}_{1}".format(role, kind)
+        else:
+            emsg = ("Unsupported application kind = '{0}' for Jobber Lane.".format(kind))
+            log.error(emsg + '\n')
+            raise ValueError(emsg)
+
+        sockdirpath = self.opts['sock_dir']
+        name = 'jobber' + nacling.uuid(size=18)
         stack = LaneStack(
                 name=name,
-                lanename=mid,
-                sockdirpath=self.opts['sock_dir'])
+                lanename=lanename,
+                sockdirpath=sockdirpath)
 
         stack.Pk = raeting.packKinds.pack
         # add remote for the manor yard
         stack.addRemote(RemoteYard(stack=stack,
                                    name='manor',
-                                   lanename=mid,
-                                   dirpath=self.opts['sock_dir']))
+                                   lanename=lanename,
+                                   dirpath=sockdirpath))
         console.concise("Created Jobber Stack {0}\n".format(stack.name))
         return stack
 
@@ -1043,8 +1086,8 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
         Pull the queue for functions to execute
         '''
         while self.fun.value:
-            exchange = self.fun.value.popleft()
-            data = exchange.get('pub')
+            msg = self.fun.value.popleft()
+            data = msg.get('pub')
             match = getattr(
                     self.matcher,
                     '{0}_match'.format(
@@ -1065,16 +1108,16 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
 
             process = multiprocessing.Process(
                     target=self.proc_run,
-                    kwargs={'exchange': exchange}
+                    kwargs={'msg': msg}
                     )
             process.start()
             process.join()
 
-    def proc_run(self, exchange):
+    def proc_run(self, msg):
         '''
         Execute the run in a dedicated process
         '''
-        data = exchange['pub']
+        data = msg['pub']
         fn_ = os.path.join(self.proc_dir, data['jid'])
         self.opts['__ex_id'] = data['jid']
         salt.utils.daemonize_if(self.opts)
@@ -1147,14 +1190,8 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
                     function_name, exc
                 )
             except TypeError as exc:
-                aspec = salt.utils.get_function_argspec(
-                    self.modules.value[data['fun']]
-                )
                 msg = ('TypeError encountered executing {0}: {1}. See '
-                       'debug log for more info.  Possibly a missing '
-                       'arguments issue:  {2}').format(function_name,
-                                                       exc,
-                                                       aspec)
+                       'debug log for more info.').format(function_name, exc)
                 log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
                 ret['return'] = msg
             except Exception:
@@ -1167,7 +1204,7 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
         ret['jid'] = data['jid']
         ret['fun'] = data['fun']
         ret['fun_args'] = data['arg']
-        self._return_pub(exchange, ret, stack)
+        self._return_pub(msg, ret, stack)
         if data['ret']:
             ret['id'] = self.opts['id']
             for returner in set(data['ret'].split(',')):

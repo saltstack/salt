@@ -490,15 +490,14 @@ def wait_for_fun(fun, timeout=900, **kwargs):
         except Exception as exc:
             log.debug('Caught exception in wait_for_fun: {0}'.format(exc))
             time.sleep(1)
-            if time.time() - start > timeout:
-                log.error('Function timed out: {0}'.format(timeout))
-                return False
-
             log.debug(
                 'Retrying function {0} on  (try {1})'.format(
                     fun, trycount
                 )
             )
+        if time.time() - start > timeout:
+            log.error('Function timed out: {0}'.format(timeout))
+            return False
 
 
 def wait_for_port(host, port=22, timeout=900, gateway=None):
@@ -1120,7 +1119,7 @@ def deploy_script(host,
 
                 if ssh_kwargs['username'] != 'root':
                     root_cmd(
-                        'chown -R root \\"{0}\\"'.format(
+                        'chown -R root "{0}"'.format(
                             preseed_minion_keys_tempdir
                         ),
                         tty, sudo, **ssh_kwargs
@@ -1360,7 +1359,7 @@ def _exec_ssh_cmd(cmd, error_msg=None, allow_failure=False, **kwargs):
             stream_stderr=kwargs.get('display_ssh_output', True)
         )
         sent_password = 0
-        while True:
+        while proc.has_unread_data:
             stdout, stderr = proc.recv()
             if stdout and SSH_PASSWORD_PROMP_RE.search(stdout):
                 if (
@@ -1371,8 +1370,6 @@ def _exec_ssh_cmd(cmd, error_msg=None, allow_failure=False, **kwargs):
                     proc.sendline(kwargs['password'])
                 else:
                     raise SaltCloudPasswordError(error_msg)
-            if not proc.isalive():
-                break
             # 0.0125 is really too fast on some systems
             time.sleep(0.5)
         if proc.exitstatus != 0:
@@ -1875,27 +1872,41 @@ def wait_for_ip(update_callback,
                      'now {0}s'.format(interval))
 
 
-def simple_types_filter(datadict):
+def simple_types_filter(data):
     '''
-    Convert the data dictionary into simple types, ie, int, float, string,
+    Convert the data list, dictionary into simple types, ie, int, float, string,
     bool, etc.
     '''
-    if not isinstance(datadict, dict):
-        # This function is only supposed to work on dictionaries
-        return datadict
+    if data is None:
+        return data
 
     simpletypes_keys = (str, unicode, int, long, float, bool)
     simpletypes_values = tuple(list(simpletypes_keys) + [list, tuple])
-    simpledict = {}
-    for key, value in datadict.iteritems():
-        if key is not None and not isinstance(key, simpletypes_keys):
-            key = repr(key)
-        if value is not None and isinstance(value, dict):
-            value = simple_types_filter(value)
-        elif value is not None and not isinstance(value, simpletypes_values):
-            value = repr(value)
-        simpledict[key] = value
-    return simpledict
+
+    if isinstance(data, list):
+        simplearray = []
+        for value in data:
+            if value is not None:
+                if isinstance(value, (dict, list)):
+                    value = simple_types_filter(value)
+                elif not isinstance(value, simpletypes_values):
+                    value = repr(value)
+            simplearray.append(value)
+        return simplearray
+
+    if isinstance(data, dict):
+        simpledict = {}
+        for key, value in data.iteritems():
+            if key is not None and not isinstance(key, simpletypes_keys):
+                key = repr(key)
+            if value is not None and isinstance(value, (dict, list)):
+                value = simple_types_filter(value)
+            elif value is not None and not isinstance(value, simpletypes_values):
+                value = repr(value)
+            simpledict[key] = value
+        return simpledict
+
+    return data
 
 
 def list_nodes_select(nodes, selection, call=None):

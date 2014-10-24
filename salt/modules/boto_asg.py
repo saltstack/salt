@@ -240,7 +240,7 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
 
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
-        return False
+        return False, 'Failed to connect to AWS'
     if isinstance(availability_zones, string_types):
         availability_zones = json.loads(availability_zones)
     if isinstance(load_balancers, string_types):
@@ -257,12 +257,12 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
                 key = tag.get('key')
             except KeyError:
                 log.error('Tag missing key.')
-                return False
+                return False, 'Tag {0} missing key'.format(tag)
             try:
                 value = tag.get('value')
             except KeyError:
                 log.error('Tag missing value.')
-                return False
+                return False, 'Tag {0} missing value'.format(tag)
             propagate_at_launch = tag.get('propagate_at_launch', False)
             _tag = autoscale.Tag(key=key, value=value, resource_id=name,
                                  propagate_at_launch=propagate_at_launch)
@@ -297,17 +297,17 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
         if suspended_processes is not None and len(suspended_processes) > 0:
             _asg.suspend_processes(suspended_processes)
         log.info('Updated ASG {0}'.format(name))
-        #### scaling policies
+        # ### scaling policies
         # delete all policies, then recreate them
         for policy in conn.get_all_policies(as_group=name):
             conn.delete_policy(policy.name, autoscale_group=name)
         _create_scaling_policies(conn, name, scaling_policies)
-        return True
+        return True, ''
     except boto.exception.BotoServerError as e:
         log.debug(e)
         msg = 'Failed to update ASG {0}'.format(name)
         log.error(msg)
-        return False
+        return False, str(e)
 
 
 def _create_scaling_policies(conn, as_name, scaling_policies):
@@ -367,7 +367,7 @@ def get_cloud_init_mime(cloud_init):
             _cloud_init.attach(_script)
     if 'cloud-config' in cloud_init:
         cloud_config = cloud_init['cloud-config']
-        _cloud_config = email.mime.text.MIMEText(yaml.dump(cloud_config),
+        _cloud_config = email.mime.text.MIMEText(yaml.dump(dict(cloud_config)),
                                                  'cloud-config')
         _cloud_init.attach(_cloud_config)
     return _cloud_init.as_string()
