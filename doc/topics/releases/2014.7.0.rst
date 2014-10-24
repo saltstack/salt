@@ -496,8 +496,3 @@ Deprecations
   - ``vm_config_path`` (deprecated)
 - Removed deprecated ``libcloud_version`` function from ``salt/cloud/libcloudfuncs.py`` (deprecated)
 - Removed deprecated ``CloudConfigMixIn`` class from ``salt/utils/parsers.py`` (deprecated)
-
-Known Issues
-============
-
-- Salt-SSH: pkg module on RedHat-based systems is dependent on yum-utils.
