@@ -366,16 +366,19 @@ def clear_request(name=None):
     return True
 
 
-def run_request(name=None, **kwargs):
+def run_request(name='default', **kwargs):
     '''
     Execute the pending state request
     '''
     req = check_request()
-    if 'mods' not in req or 'kwargs' not in req:
+    if name not in req:
+        return {}
+    n_req = req[name]
+    if 'mods' not in n_req or 'kwargs' not in n_req:
         return {}
     req['kwargs'].update(kwargs)
     if req:
-        ret = apply_(req['mods'], **req['kwargs'])
+        ret = apply_(n_req['mods'], **n_req['kwargs'])
         try:
             os.remove(os.path.join(__opts__['cachedir'], 'req_state.p'))
         except (IOError, OSError):
