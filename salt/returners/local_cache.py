@@ -97,13 +97,16 @@ def _format_jid_instance(jid, job):
 
 
 #TODO: add to returner docs-- this is a new one
-def prep_jid(nocache=False):
+def prep_jid(nocache=False, passed_jid=None):
     '''
     Return a job id and prepare the job id directory
     This is the function responsible for making sure jids don't collide (unless its passed a jid)
     So do what you have to do to make sure that stays the case
     '''
-    jid = salt.utils.gen_jid()
+    if passed_jid is None:  # this can be a None of an empty string
+        jid = salt.utils.gen_jid()
+    else:
+        jid = passed_jid
 
     jid_dir_ = _jid_dir(jid)
 
@@ -113,7 +116,8 @@ def prep_jid(nocache=False):
         os.makedirs(jid_dir_)
     except OSError:
         # TODO: some sort of sleep or something? Spinning is generally bad practice
-        return prep_jid(nocache=nocache)
+        if passed_jid is None:
+            return prep_jid(nocache=nocache)
 
     with salt.utils.fopen(os.path.join(jid_dir_, 'jid'), 'w+') as fn_:
         fn_.write(jid)
