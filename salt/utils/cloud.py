@@ -1048,10 +1048,10 @@ def deploy_script(host,
                     continue
                 remote_dir = os.path.dirname(remote_file)
                 if remote_dir not in remote_dirs:
-                    root_cmd('mkdir -p {0}'.format(remote_dir), tty, sudo, **ssh_kwargs)
+                    root_cmd('mkdir -p {0}'.format(remote_dir), tty, sudo, **kwargs)
                     remote_dirs.append(remote_dir)
                 sftp_file(
-                    remote_file, kwargs=ssh_kwargs, local_file=local_file
+                    remote_file, kwargs=kwargs, local_file=local_file
                 )
                 file_map_success.append({local_file: remote_file})
 

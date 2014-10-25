@@ -85,6 +85,7 @@ import logging
 
 # Import salt libs
 import salt.returners
+import salt.utils
 
 # Import third party libs
 try:
@@ -148,7 +149,7 @@ def _get_serv(ret=None, commit=False):
     try:
         yield cursor
     except MySQLdb.DatabaseError as err:
-        error, = err.args
+        error = err.args
         sys.stderr.write(str(error))
         cursor.execute("ROLLBACK")
         raise err
@@ -196,13 +197,11 @@ def get_load(jid):
     '''
     with _get_serv(ret=None, commit=True) as cur:
 
-        sql = '''SELECT load FROM `jids`
-                WHERE `jid` = '%s';'''
-
+        sql = '''SELECT `load` FROM `jids` WHERE `jid` = %s;'''
         cur.execute(sql, (jid,))
         data = cur.fetchone()
         if data:
-            return json.loads(data)
+            return json.loads(data[0])
         return {}
 
 
@@ -280,3 +279,10 @@ def get_minions():
         for minion in data:
             ret.append(minion[0])
         return ret
+
+
+def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
+    '''
+    Do any work necessary to prepare a JID, including sending a custom id
+    '''
+    return passed_jid if passed_jid is not None else salt.utils.gen_jid()

@@ -6,6 +6,20 @@ This release is the largest Salt release ever, with more features and commits
 then any previous release of Salt. Everything from the new RAET transport to
 major updates in Salt Cloud and the merging of Salt API into the main project.
 
+.. important::
+
+    The Fedora/RHEL/CentOS **salt-master** package has been modified for this
+    release. The following components of Salt have been broken out and placed
+    into their own packages:
+
+    * salt-syndic
+    * salt-cloud
+    * salt-ssh
+
+    When the **salt-master** package is upgraded, these components will be
+    removed, and they will need to be manually installed.
+
+
 New Transport!
 ==============
 
@@ -29,12 +43,12 @@ Simply stated, users running Salt with RAET should expect some hiccups as we
 hammer out the update. This is a BETA release of Salt RAET.
 
 For information about how to use Salt with RAET please see the
-:doc:`tutorial </topics/transports/raet/programming_intro>`.
+:doc:`tutorial </topics/transports/raet/index>`.
 
 Salt SSH Enhancements
 =====================
 
-Salt SSH has just entered a new league, which substantial updates and
+Salt SSH has just entered a new league, with substantial updates and
 improvements to make salt-ssh more reliable and easier then ever! From new
 features like the ansible roster and fileserver backends to the new pypi
 salt-ssh installer to lowered deps and a swath of bugfixes, salt-ssh is
@@ -58,7 +72,7 @@ which may be seen can be safely ignored.
 Fileserver Backends
 -------------------
 
-Salt-ssh can now use the salt fileserver backend system, this allows for
+Salt-ssh can now use the salt fileserver backend system. This allows for
 the gitfs, hgfs, s3, and many more ways to centrally store states to be easily
 used with salt-ssh. This also allows for a distributed team to easily use
 a centralized source.
@@ -78,8 +92,8 @@ to use salt-ssh with teams.
 No More sshpass
 ---------------
 
-Thanks to the enhancements in the salt vt system salt-ssh no longer requires
-sshpass to send passwords to ssh, this also makes the manipulation of ssh
+Thanks to the enhancements in the salt vt system, salt-ssh no longer requires
+sshpass to send passwords to ssh. This also makes the manipulation of ssh
 calls substantially more flexible, allowing for intercepting ssh calls in
 a much more fluid way.
 
@@ -109,11 +123,11 @@ More Thin Directory Options
 ---------------------------
 
 Salt ssh functions by copying a subset of the salt code, or `salt thin` down
-to the target system. In the past this was always transfered to /tmp/.salt
+to the target system. In the past this was always transferred to /tmp/.salt
 and cached there for subsequent commands.
 
 Now, salt thin can be sent to a random directory and removed when the call
-is complete with the `-W` option. The new `-w` option still uses a static
+is complete with the `-W` option. The new `-W` option still uses a static
 location but will clean up that location when finished.
 
 The default `salt thin` location is now user defined, allowing multiple users
@@ -125,9 +139,9 @@ State System Enhancements
 New Imperative State Keyword "Listen"
 -------------------------------------
 
-The new ``listen`` keyword allows for completely imperative states by calling
-the ``mod_watch()`` routine after all states have run instead of re-ordering
-the states.
+The new ``listen`` and ``listen_in`` keywords allow for completely imperative
+states by calling the ``mod_watch()`` routine after all states have run instead
+of re-ordering the states.
 
 Mod Aggregate Runtime Manipulator
 ---------------------------------
@@ -137,7 +151,7 @@ state data during execution. This allows for state definitions to be aggregated
 dynamically at runtime.
 
 The best example is found in the :mod:`pkg <salt.states.pkg>` state. If
-``mod_aggregate`` is turned on, then when the first pkg state is reached the
+``mod_aggregate`` is turned on, then when the first pkg state is reached, the
 state system will scan all of the other running states for pkg states and take
 all other packages set for install and install them all at once in the first
 pkg state.
@@ -152,7 +166,15 @@ For more documentation on ``mod_aggregate``, see :doc:`the documentation
 New Requisites: onchanges and onfail
 ------------------------------------
 
-New requisites!
+The new ``onchanges`` and ``onchanges_in`` requisites make a state apply only if
+there are changes in the required state. This is useful to execute post hooks
+after changes occur on a system.
+
+The other new requisites, ``onfail`` and ``onfail_in``, allow for a state to run
+in reaction to the failure of another state.
+
+For more information about these new requisites, see the
+:doc:`requisites documentation </ref/states/requisites>`.
 
 
 Global onlyif and unless
@@ -200,7 +222,7 @@ Fileserver Backends in salt-call
 
 Fileserver backends like gitfs can now be used without a salt master! Just add
 the fileserver backend configuration to the minion config and execute
-salt-call. This has been a much-requested feature and we are heppy to finally
+salt-call. This has been a much-requested feature and we are happy to finally
 bring it to our users.
 
 Amazon Execution Modules
