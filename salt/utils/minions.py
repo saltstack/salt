@@ -203,6 +203,7 @@ class CkMinions(object):
         Return the minions found by looking via grains with PCRE
         '''
         return self._check_cache_minions(expr,
+                                         delimiter,
                                          greedy,
                                          'grains',
                                          regex_match=True)

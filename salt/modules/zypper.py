@@ -936,7 +936,7 @@ def remove_lock(name=None, pkgs=None, **kwargs):
         __salt__['cmd.run'](('zypper --non-interactive rl {0}'.format(' '.join(removed))),
                             output_loglevel='trace')
 
-    return {'removed' : len(removed), 'not_found' : missing}
+    return {'removed': len(removed), 'not_found': missing}
 
 
 def add_lock(name=None, pkgs=None, **kwargs):
@@ -967,7 +967,7 @@ def add_lock(name=None, pkgs=None, **kwargs):
         __salt__['cmd.run'](('zypper --non-interactive al {0}'.format(' '.join(added))),
                             output_loglevel='trace')
 
-    return {'added' : len(added), 'packages' : added}
+    return {'added': len(added), 'packages': added}
 
 
 def verify(*names, **kwargs):
@@ -1054,8 +1054,8 @@ def _get_patterns(installed_only=None):
         installed = element.getAttribute("status") == "installed"
         if (installed_only and installed) or not installed_only:
             patterns[element.getAttribute("name")] = {
-                'installed' : installed,
-                'summary' : element.getAttribute("summary"),
+                'installed': installed,
+                'summary': element.getAttribute("summary"),
             }
 
     return patterns
