@@ -244,6 +244,18 @@ def template_str(tem, queue=False, **kwargs):
     return ret
 
 
+def apply(mods=None,
+          **kwargs):
+    '''
+    Apply states! This function will call highstate or state.sls based on the
+    arguments passed in, state.apply is intended to be the main gateway for
+    all state executions.
+    '''
+    if mods:
+        return sls(mods, **kwargs)
+    return highstate(**kwargs)
+
+
 def highstate(test=None,
               queue=False,
               **kwargs):
