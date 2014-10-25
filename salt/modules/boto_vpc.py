@@ -1209,6 +1209,52 @@ def _get_conn(region, key, keyid, profile):
     return conn
 
 
+def describe(vpc_id=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Given a VPC ID describe it's properties.
+
+    Returns a dictionary of interesting properties.
+    CLI example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.describe vpc_id=vpc-123456
+
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    _ret = dict(cidr_block=None,
+                is_default=None,
+                state=None,
+                tags=None,
+                dhcp_options_id=None,
+                instance_tenancy=None
+                )
+
+
+    if not conn:
+        return False
+
+    if not vpc_id:
+        raise SaltInvocationError(
+               'VPC ID needs to be specified.')
+
+    try:
+        filter_parameters = {'filters': {'vpc-id': vpc_id}}
+
+        vpcs = conn.get_all_vpcs(**filter_parameters)
+
+        if vpcs:
+            vpc = vpcs[0] # Found!
+            log.debug('Found VPC: {0}'.format(vpc.id))
+            for k in _ret.keys():
+                _ret[k] = getattr(vpc,k)
+            return _ret
+
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return False
+
+
 def _create_dhcp_options(conn, domain_name=None, domain_name_servers=None, ntp_servers=None, netbios_name_servers=None,
                          netbios_node_type=None):
     return conn.create_dhcp_options(domain_name=domain_name, domain_name_servers=domain_name_servers,
