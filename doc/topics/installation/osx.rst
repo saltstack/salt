@@ -5,24 +5,19 @@ OS X
 Dependency Installation
 -----------------------
 
-When installing via Homebrew, dependency resolution is handled for you.
+When using Homebrew, install this way:
 
 .. code-block:: bash
 
-    brew install saltstack
+    sudo brew install saltstack
 
-When using macports, zmq, swig, and pip may need to be installed this way:
+When using MacPorts, install this way:
 
 .. code-block:: bash
 
-    sudo port install py-zmq
-    sudo port install py27-m2crypto
-    sudo port install py27-crypto
-    sudo port install py27-msgpack
-    sudo port install swig-python
-    sudo port install py-pip
-
-For installs using the OS X system python, pip install needs to use 'sudo':
+    sudo port install salt
+    
+When only using the OS X system's pip, install this way:
 
 .. code-block:: bash
 
@@ -47,7 +42,7 @@ Now the salt-master should run without errors:
 
 .. code-block:: bash
 
-    sudo /usr/local/share/python/salt-master --log-level=all
+    sudo salt-master --log-level=all
 
 Post-installation tasks
 =======================
