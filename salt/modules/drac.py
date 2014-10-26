@@ -41,7 +41,20 @@ def __parse_drac(output):
     return drac
 
 
-def getsysinfo():
+def __execute_cmd(command):
+    '''
+    Execute rac commands
+    '''
+    cmd = __salt__['cmd.run_all']('racadm {0}'.format(command))
+
+    if cmd['retcode'] != 0:
+        log.warn('racadm return an exit code \'{0}\'.'.format(cmd['retcode']))
+        return False
+
+    return True
+
+
+def system_info():
     '''
     Return System information
 
@@ -62,7 +75,7 @@ def getsysinfo():
     return __parse_drac(cmd['stdout'])
 
 
-def getniccfg():
+def network_info():
     '''
     Return Network Configuration
 
@@ -89,7 +102,7 @@ def nameservers(*ns):
 
     .. code-block:: bash
 
-        salt dell drac.nameservers ns1.example.com
+        salt dell drac.nameservers [NAMESERVERS]
         salt dell drac.nameservers ns1.example.com ns2.example.com
     '''
     if len(ns) > 2:
@@ -97,10 +110,8 @@ def nameservers(*ns):
         return False
 
     for i in range(1, len(ns) + 1):
-        cmd = __salt__['cmd.run_all']('racadm config -g cfgLanNetworking -o cfgDNSServer{0} {1}'.format(i, ns[i - 1]))
-
-        if cmd['retcode'] != 0:
-            log.warn('racadm return an exit code \'{0}\'.'.format(cmd['retcode']))
+        if not __execute_cmd('config -g cfgLanNetworking -o \
+                cfgDNSServer{0} {1}'.format(i, ns[i - 1])):
             return False
 
     return True
@@ -116,28 +127,16 @@ def syslog(server, enable=True):
 
     .. code-block:: bash
 
-        salt dell drac.syslog 10.0.0.1 True
+        salt dell drac.syslog [SYSLOG IP] [ENABLE/DISABLE]
         salt dell drac.syslog 0.0.0.0 False
     '''
     if enable:
-        cmd = __salt__['cmd.run_all']('racadm config -g cfgRemoteHosts -o cfgRhostsSyslogEnable 1')
+        if __execute_cmd('config -g cfgRemoteHosts -o \
+                cfgRhostsSyslogEnable 1'):
+            return __execute_cmd('config -g cfgRemoteHosts -o \
+                    cfgRhostsSyslogServer1 {0}'.format(server))
 
-        if cmd['retcode'] != 0:
-            log.warn('racadm return an exit code \'{0}\'.'.format(cmd['retcode']))
-        else:
-            cmd = __salt__['cmd.run_all']('racadm config -g cfgRemoteHosts -o cfgRhostsSyslogServer1 {0}'.format(server))
-
-            if cmd['retcode'] != 0:
-                log.warn('racadm return an exit code \'{0}\'.'.format(cmd['retcode']))
-
-            return True
-
-    cmd = __salt__['cmd.run_all']('racadm config -g cfgRemoteHosts -o cfgRhostsSyslogEnable 0')
-
-    if cmd['retcode'] != 0:
-        log.warn('racadm return an exit code \'{0}\'.'.format(cmd['retcode']))
-
-    return True
+    return __execute_cmd('config -g cfgRemoteHosts -o cfgRhostsSyslogEnable 0')
 
 
 def email_alerts(action):
@@ -153,17 +152,11 @@ def email_alerts(action):
     '''
 
     if action:
-        cmd = __salt__['cmd.run_all']('racadm config -g cfgEmailAlert -o cfgEmailAlertEnable -i 1 1')
+        return __execute_cmd('config -g cfgEmailAlert -o \
+                cfgEmailAlertEnable -i 1 1')
     else:
-        cmd = __salt__['cmd.run_all']('racadm config -g cfgEmailAlert -o cfgEmailAlertEnable -i 1 0')
-
-    if cmd['retcode'] != 0:
-        if cmd['retcode'] != 0:
-            log.warn('racadm return an exit code \'{0}\'.'.format(cmd['retcode']))
-
-        return False
-
-    return True
+        return __execute_cmd('config -g cfgEmailAlert -o \
+                cfgEmailAlertEnable -i 1 0')
 
 
 def list_users():
@@ -180,10 +173,12 @@ def list_users():
     _username = ''
 
     for i in range(1, 12):
-        cmd = __salt__['cmd.run_all']('racadm getconfig -g cfgUserAdmin -i {0}'.format(i))
+        cmd = __salt__['cmd.run_all']('racadm getconfig -g \
+                cfgUserAdmin -i {0}'.format(i))
 
         if cmd['retcode'] != 0:
-            log.warn('racadm return an exit code \'{0}\'.'.format(cmd['retcode']))
+            log.warn('racadm return an exit \
+                    code \'{0}\'.'.format(cmd['retcode']))
 
         for user in cmd['stdout'].splitlines():
             if 'cfgUserAdminIndex' in user or user.startswith('#'):
@@ -212,7 +207,7 @@ def delete_user(username, uid=None):
 
     .. code-block:: bash
 
-        salt dell drac.delete_user damian
+        salt dell drac.delete_user [USERNAME] [UID - optional]
         salt dell drac.delete_user diana 4
     '''
     if uid is None:
@@ -220,15 +215,11 @@ def delete_user(username, uid=None):
         uid = user[username]['index']
 
     if uid:
-        cmd = __salt__['cmd.run_all']('racadm config -g cfgUserAdmin -o \
-                                       cfgUserAdminUserName -i {0} ""'.format(
-                                       uid))
+        return __execute_cmd('config -g cfgUserAdmin -o \
+                              cfgUserAdminUserName -i {0} ""'.format(uid))
+
     else:
         log.warn('\'{0}\' does not exist'.format(username))
-        return False
-
-    if cmd['retcode'] != 0:
-        log.warn('racadm return an exit code \'{0}\'.'.format(cmd['retcode']))
         return False
 
     return True
@@ -242,7 +233,7 @@ def change_password(username, password, uid=None):
 
     .. code-block:: bash
 
-        salt dell drac.change_password damian secret
+        salt dell drac.change_password [USERNAME] [PASSWORD] [UID - optional]
         salt dell drac.change_password diana secret
     '''
     if uid is None:
@@ -250,13 +241,8 @@ def change_password(username, password, uid=None):
         uid = user[username]['index']
 
     if uid:
-        cmd = __salt__['cmd.run_all']('racadm config -g cfgUserAdmin -o \
-                                       cfgUserAdminPassword -i {0} {1}'.format(
-                                       uid, password))
-
-        if cmd['retcode'] != 0:
-            log.warn('racadm return an exit code \'{0}\'.'.format(cmd['retcode']))
-            return False
+        return __execute_cmd('config -g cfgUserAdmin -o \
+                cfgUserAdminPassword -i {0} {1}'.format(uid, password))
     else:
         log.warn('\'{0}\' does not exist'.format(username))
         return False
@@ -272,7 +258,7 @@ def create_user(username, password, permissions):
 
     .. code-block:: bash
 
-        salt dell drac.create_user damian secret login,drac,user_management
+        salt dell drac.create_user [USERNAME] [PASSWORD] [PRIVELEGES]
         salt dell drac.create_user diana secret login,test_alerts,clear_logs
 
     DRAC Priveleges
@@ -299,29 +285,27 @@ def create_user(username, password, permissions):
 
     uid = sorted(list(set(xrange(2, 12)) - _uids), reverse=True).pop()
 
-    cmd = __salt__['cmd.run_all']('racadm config -g cfgUserAdmin -o \
-                                   cfgUserAdminUserName -i {0} {1}'.format(uid, username))
-
-    if cmd['retcode'] != 0:
-        log.warn('racadm return an exit code \'{0}\'.'.format(cmd['retcode']))
+    # Create user accountvfirst
+    if not __execute_cmd('config -g cfgUserAdmin -o \
+                 cfgUserAdminUserName -i {0} {1}'.format(uid, username)):
         delete_user(username, uid)
         return False
 
-    cmd = __salt__['cmd.run_all']('racadm config -g cfgUserAdmin -o \
-                                   cfgUserAdminEnable -i {0} 1'.format(uid))
-
-    if cmd['retcode'] != 0:
-        log.warn('racadm return an exit code \'{0}\'.'.format(cmd['retcode']))
-        delete_user(username, uid)
-        return False
-
+    # Configure users permissions
     if not set_permissions(username, permissions, uid):
         log.warn('unable to set user permissions')
         delete_user(username, uid)
         return False
 
+    # Configure users password
     if not change_password(username, password, uid):
         log.warn('unable to set user password')
+        delete_user(username, uid)
+        return False
+
+    # Enable users admin
+    if not __execute_cmd('config -g cfgUserAdmin -o \
+                          cfgUserAdminEnable -i {0} 1'.format(uid)):
         delete_user(username, uid)
         return False
 
@@ -336,7 +320,7 @@ def set_permissions(username, permissions, uid=None):
 
     .. code-block:: bash
 
-        salt dell drac.set_permissions damian login,drac,user_management
+        salt dell drac.set_permissions [USERNAME] [PRIVELEGES] [USER INDEX - optional]
         salt dell drac.set_permissions diana login,test_alerts,clear_logs 4
 
     DRAC Priveleges
@@ -376,13 +360,8 @@ def set_permissions(username, permissions, uid=None):
 
     permission = "0x%0.8X" % permission
 
-    cmd = __salt__['cmd.run_all']('racadm config -g cfgUserAdmin -o cfgUserAdminPrivilege -i {0} {1}'.format(uid, permission))
-
-    if cmd['retcode'] != 0:
-        log.warn('racadm return an exit code \'{0}\'.'.format(cmd['retcode']))
-        return False
-
-    return True
+    return __execute_cmd('config -g cfgUserAdmin -o \
+            cfgUserAdminPrivilege -i {0} {1}'.format(uid, permission))
 
 
 def set_snmp(community):
@@ -393,13 +372,24 @@ def set_snmp(community):
 
     .. code-block:: bash
 
-        salt dell drac.create_user damian login,drac,user_management
-        salt dell drac.create_user diana login,test_alerts,clear_logs 4
+        salt dell drac.set_snmp [COMMUNITY]
+        salt dell drac.set_snmp public
     '''
-    cmd = __salt__['cmd.run_all']('racadm config -g cfgOobSnmp -o cfgOobSnmpAgentCommunity {0}'.format(community))
+    return __execute_cmd('config -g cfgOobSnmp -o \
+            cfgOobSnmpAgentCommunity {0}'.format(community))
 
-    if cmd['retcode'] != 0:
-        log.warn('racadm return an exit code \'{0}\'.'.format(cmd['retcode']))
-        return False
 
-    return True
+def set_network(ip, netmask, gateway):
+    '''
+    Configure Network
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt dell drac.set_network [DRAC IP] [NETMASK] [GATEWAY]
+        salt dell drac.set_network 192.168.0.2 255.255.255.0 192.168.0.1
+    '''
+    return __execute_cmd('setniccfg -s {0} {1} {2}'.format(
+        ip, netmask, gateway
+        ))
