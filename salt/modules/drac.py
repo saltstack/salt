@@ -358,10 +358,8 @@ def set_permissions(username, permissions, uid=None):
         if perm in privileges:
             permission += int(privileges[perm], 16)
 
-    permission = "0x%0.8X" % permission
-
     return __execute_cmd('config -g cfgUserAdmin -o \
-            cfgUserAdminPrivilege -i {0} {1}'.format(uid, permission))
+            cfgUserAdminPrivilege -i {0} 0x{1:08X}'.format(uid, permission))
 
 
 def set_snmp(community):
