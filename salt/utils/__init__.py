@@ -842,13 +842,6 @@ def build_whitespace_split_regex(text):
     return r'(?m)^{0}$'.format(regex)
 
 
-def build_whitepace_splited_regex(text):
-    warnings.warn('The build_whitepace_splited_regex function is deprecated,'
-                  ' please use build_whitespace_split_regex instead.',
-                  DeprecationWarning)
-    build_whitespace_split_regex(text)
-
-
 def format_call(fun,
                 data,
                 initial_ret=None,
