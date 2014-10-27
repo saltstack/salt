@@ -1,4 +1,19 @@
 -------------------------------------------------------------------
+Thu Oct 16 19:26:57 UTC 2014 - aboe76@gmail.com
+
+- Updated to 2014.1.13 a bugfix release on 2014.1.12
+  + fix module run exit code (issue 16420)
+  + salt cloud Check the exit status code of scp before assuming it has failed. (issue 16599)
+  
+
+-------------------------------------------------------------------
+Fri Oct 10 18:47:07 UTC 2014 - aboe76@gmail.com
+ff
+- Updated to 2014.1.12 a bugfix release on 2014.1.11
+  + Fix scp_file always failing (which broke salt-cloud) (issue 16437)
+  + Fix regression in pillar in masterless (issue 16210, issue 16416, issue 16428)
+
+-------------------------------------------------------------------
 Wed Sep 10 18:10:50 UTC 2014 - aboe76@gmail.com
 
 - Updated to 2014.1.11 is another bugfix release for 2014.1.0. Changes include:
