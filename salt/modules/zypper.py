@@ -36,8 +36,6 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is openSUSE
     '''
-    if not HAS_ZYPP:
-        return False
     if __grains__.get('os_family', '') != 'Suse':
         return False
     # Not all versions of Suse use zypper, check that it is available
