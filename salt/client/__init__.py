@@ -251,6 +251,7 @@ class LocalClient(object):
             expr_form='glob',
             ret='',
             timeout=None,
+            jid='',
             kwarg=None,
             **kwargs):
         '''
@@ -268,7 +269,6 @@ class LocalClient(object):
             {'jid': '20131219215650131543', 'minions': ['jerry']}
         '''
         arg = salt.utils.args.condition_input(arg, kwarg)
-        jid = ''
 
         # Subscribe to all events and subscribe as early as possible
         self.event.subscribe(jid)
@@ -292,6 +292,7 @@ class LocalClient(object):
             arg=(),
             expr_form='glob',
             ret='',
+            jid='',
             kwarg=None,
             **kwargs):
         '''
@@ -313,6 +314,7 @@ class LocalClient(object):
                                 arg,
                                 expr_form,
                                 ret,
+                                jid=jid,
                                 **kwargs)
         try:
             return pub_data['jid']
@@ -415,6 +417,7 @@ class LocalClient(object):
             timeout=None,
             expr_form='glob',
             ret='',
+            jid='',
             kwarg=None,
             **kwargs):
         '''
@@ -519,6 +522,7 @@ class LocalClient(object):
                                 expr_form,
                                 ret,
                                 timeout,
+                                jid,
                                 **kwargs)
 
         if not pub_data:

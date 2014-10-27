@@ -367,6 +367,9 @@ def bootstrap(vm_, opts):
         'known_hosts_file': salt.config.get_cloud_config_value(
             'known_hosts_file', vm_, opts, default='/dev/null'
         ),
+        'file_map': salt.config.get_cloud_config_value(
+            'file_map', vm_, opts, default=None
+        ),
     }
     # forward any info about possible ssh gateway to deploy script
     # as some providers need also a 'gateway' configuration
@@ -428,8 +431,10 @@ def bootstrap(vm_, opts):
     else:
         deployed = deploy_script(**deploy_kwargs)
 
-    if deployed:
-        ret['deployed'] = deployed
+    if deployed is not False:
+        ret['deployed'] = True
+        if deployed is not True:
+            ret.update(deployed)
         log.info('Salt installed on {0}'.format(vm_['name']))
         return ret
 
@@ -938,6 +943,7 @@ def deploy_script(host,
                   deploy_command='/tmp/.saltcloud/deploy.sh',
                   opts=None,
                   tmp_dir='/tmp/.saltcloud',
+                  file_map=None,
                   **kwargs):
     '''
     Copy a deploy script to a remote server, execute it, and remove it
@@ -1020,6 +1026,34 @@ def deploy_script(host,
                             raise SaltCloudSystemExit(
                                 'Cant set {0} ownership on {1}'.format(
                                     username, tmp_dir))
+
+            if not isinstance(file_map, dict):
+                file_map = {}
+
+            # Copy an arbitrary group of files to the target system
+            remote_dirs = []
+            file_map_success = []
+            file_map_fail = []
+            for map_item in file_map:
+                local_file = map_item
+                remote_file = file_map[map_item]
+                if not os.path.exists(map_item):
+                    log.error(
+                        'The local file "{0}" does not exist, and will not be '
+                        'copied to "{1}" on the target system'.format(
+                            local_file, remote_file
+                        )
+                    )
+                    file_map_fail.append({local_file: remote_file})
+                    continue
+                remote_dir = os.path.dirname(remote_file)
+                if remote_dir not in remote_dirs:
+                    root_cmd('mkdir -p {0}'.format(remote_dir), tty, sudo, **ssh_kwargs)
+                    remote_dirs.append(remote_dir)
+                sftp_file(
+                    remote_file, kwargs=ssh_kwargs, local_file=local_file
+                )
+                file_map_success.append({local_file: remote_file})
 
             # Minion configuration
             if minion_pem:
@@ -1316,6 +1350,11 @@ def deploy_script(host,
                 },
                 transport=opts.get('transport', 'zeromq')
             )
+            if file_map_fail or file_map_success:
+                return {
+                    'File Upload Success': file_map_success,
+                    'File Upload Failure': file_map_fail,
+                }
             return True
     return False
 
@@ -1359,7 +1398,7 @@ def _exec_ssh_cmd(cmd, error_msg=None, allow_failure=False, **kwargs):
             stream_stderr=kwargs.get('display_ssh_output', True)
         )
         sent_password = 0
-        while True:
+        while proc.has_unread_data:
             stdout, stderr = proc.recv()
             if stdout and SSH_PASSWORD_PROMP_RE.search(stdout):
                 if (
@@ -1370,8 +1409,6 @@ def _exec_ssh_cmd(cmd, error_msg=None, allow_failure=False, **kwargs):
                     proc.sendline(kwargs['password'])
                 else:
                     raise SaltCloudPasswordError(error_msg)
-            if not proc.isalive():
-                break
             # 0.0125 is really too fast on some systems
             time.sleep(0.5)
         if proc.exitstatus != 0:
@@ -1502,13 +1539,17 @@ def smb_file(dest_path, contents, kwargs):
     win_cmd(cmd)
 
 
-def sftp_file(dest_path, contents, kwargs):
+def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
     '''
     Use sftp to upload a file to a server
     '''
-    tmpfh, tmppath = tempfile.mkstemp()
-    with salt.utils.fopen(tmppath, 'w') as tmpfile:
-        tmpfile.write(contents)
+    if contents is not None:
+        tmpfh, tmppath = tempfile.mkstemp()
+        with salt.utils.fopen(tmppath, 'w') as tmpfile:
+            tmpfile.write(contents)
+
+    if local_file is not None:
+        tmppath = local_file
 
     log.debug('Uploading {0} to {1} (sfcp)'.format(dest_path, kwargs['hostname']))
 

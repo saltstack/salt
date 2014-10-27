@@ -33,7 +33,7 @@ class Batch(object):
         args = [self.opts['tgt'],
                 'test.ping',
                 [],
-                5,
+                self.opts['timeout'],
                 ]
 
         selected_target_option = self.opts.get('selected_target_option', None)

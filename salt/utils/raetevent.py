@@ -57,7 +57,7 @@ class SaltEvent(object):
 
         if self.node == 'master':
             lanename = 'master'
-        elif self.node == 'minion':
+        elif self.node in ['minion', 'syndic', 'call']:  # see daemons.APPL_KINDS
             role = self.opts.get('id', '')  # opts required for minion
             if not role:
                 emsg = ("Missing role required to setup RAET SaltEvent.")

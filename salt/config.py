@@ -252,6 +252,7 @@ VALID_OPTS = {
     'raet_port': int,
     'raet_mutable': bool,
     'raet_main': bool,
+    'raet_clear_remotes': bool,
     'sqlite_queue_dir': str,
     'queue_dirs': list,
     'ping_interval': int,
@@ -262,6 +263,7 @@ VALID_OPTS = {
     'zmq_filtering': bool,
     'con_cache': bool,
     'rotate_aes_key': bool,
+    'cache_sreqs': bool,
 }
 
 # default configurations
@@ -292,7 +294,7 @@ DEFAULT_MINION_OPTS = {
     'failhard': False,
     'autoload_dynamic_modules': True,
     'environment': None,
-    'extension_modules': os.path.join(salt.syspaths.CACHE_DIR, 'extmods'),
+    'extension_modules': '',
     'state_top': 'top.sls',
     'startup_states': '',
     'sls_list': [],
@@ -404,11 +406,13 @@ DEFAULT_MINION_OPTS = {
     'raet_port': 4510,
     'raet_mutable': False,
     'raet_main': False,
+    'raet_clear_remotes': True,
     'restart_on_error': False,
     'ping_interval': 0,
     'username': None,
     'password': None,
     'zmq_filtering': False,
+    'cache_sreqs': True,
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -570,6 +574,7 @@ DEFAULT_MASTER_OPTS = {
     'raet_port': 4506,
     'raet_mutable': False,
     'raet_main': True,
+    'raet_clear_remotes': False,
     'sqlite_queue_dir': os.path.join(salt.syspaths.CACHE_DIR, 'master', 'queues'),
     'queue_dirs': [],
     'cli_summary': False,
@@ -581,6 +586,7 @@ DEFAULT_MASTER_OPTS = {
     'zmq_filtering': False,
     'con_cache': False,
     'rotate_aes_key': True,
+    'cache_sreqs': True,
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->

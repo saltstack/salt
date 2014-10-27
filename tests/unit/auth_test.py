@@ -79,6 +79,7 @@ class MasterACLTestCase(integration.ModuleCase):
         opts['client_acl_blacklist'] = {}
         opts['master_job_cache'] = ''
         opts['sign_pub_messages'] = False
+        opts['con_cache'] = ''
         opts['external_auth'] = {'pam': {'test_user': [{'*': ['test.ping']},
                                                        {'minion_glob*': ['foo.bar']},
                                                        {'minion_func_test': ['func_test.*']}],

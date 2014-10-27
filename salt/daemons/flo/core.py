@@ -179,6 +179,10 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
                                      period=3.0,
                                      offset=0.5)
 
+        if self.opts.value.get('raet_clear_remotes'):
+            for remote in self.stack.value.remotes.values():
+                self.stack.value.removeRemote(remote, clear=True)
+
 
 class SaltRaetRoadStackCloser(ioflo.base.deeding.Deed):
     '''
@@ -223,7 +227,14 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
         '''
         stack = self.stack.value
         if stack and isinstance(stack, RoadStack):
-            if not stack.remotes:
+            # minion should default
+            refresh = (self.opts.value.get('raet_clear_remotes', True) or
+                       not stack.remotes)
+
+            if refresh:
+                for remote in stack.remotes.values():
+                    stack.removeRemote(remote, clear=True)
+
                 for master in self.masters:
                     mha = master['external']
                     stack.addRemote(RemoteEstate(stack=stack,

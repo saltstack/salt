@@ -129,7 +129,8 @@ def installed(name,
               allow_all_external=False,
               allow_external=None,
               allow_unverified=None,
-              process_dependency_links=False):
+              process_dependency_links=False,
+              use_vt=False):
     '''
     Make sure the package is installed
 
@@ -265,6 +266,9 @@ def installed(name,
         Absolute path to a virtual environment directory or absolute path to
         a pip executable. The example below assumes a virtual environment
         has been created at ``/foo/.virtualenvs/bar``.
+
+    use_vt
+        Use VT terminal emulation (see ouptut while installing)
 
     Example:
 
@@ -549,7 +553,8 @@ def installed(name,
         allow_external=allow_external,
         allow_unverified=allow_unverified,
         process_dependency_links=process_dependency_links,
-        saltenv=__env__
+        saltenv=__env__,
+        use_vt=use_vt
     )
 
     if pip_install_call and (pip_install_call.get('retcode', 1) == 0):
@@ -629,7 +634,8 @@ def removed(name,
             timeout=None,
             user=None,
             runas=None,
-            cwd=None):
+            cwd=None,
+            use_vt=False):
     '''
     Make sure that a package is not installed.
 
@@ -639,6 +645,8 @@ def removed(name,
         The user under which to run pip
     bin_env : None
         the pip executable or virtualenenv to use
+    use_vt
+        Use VT terminal emulation (see ouptut while installing)
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
@@ -686,7 +694,8 @@ def removed(name,
                                  proxy=proxy,
                                  timeout=timeout,
                                  user=user,
-                                 cwd=cwd):
+                                 cwd=cwd,
+                                 use_vt=use_vt):
         ret['result'] = True
         ret['changes'][name] = 'Removed'
         ret['comment'] = 'Package was successfully removed.'
@@ -700,7 +709,8 @@ def uptodate(name,
              bin_env=None,
              user=None,
              runas=None,
-             cwd=None):
+             cwd=None,
+             use_vt=False):
     '''
     Verify that the system is completely up to date.
 
@@ -711,6 +721,8 @@ def uptodate(name,
         The user under which to run pip
     bin_env
         the pip executable or virtualenenv to use
+    use_vt
+        Use VT terminal emulation (see ouptut while installing)
     '''
     ret = {'name': name,
            'changes': {},
@@ -733,7 +745,7 @@ def uptodate(name,
         ret['result'] = None
         return ret
 
-    updated = __salt__['pip.upgrade'](bin_env=bin_env, user=user, runas=runas, cwd=cwd)
+    updated = __salt__['pip.upgrade'](bin_env=bin_env, user=user, runas=runas, cwd=cwd, use_vt=use_vt)
 
     if updated.get('result') is False:
         ret.update(updated)

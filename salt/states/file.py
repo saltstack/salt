@@ -2288,7 +2288,8 @@ def replace(name,
 
     .. versionadded:: 0.17.0
 
-    Params are identical to :py:func:`~salt.modules.file.replace`.
+    Params are identical to the remote execution function :mod:`file.replace
+    <salt.modules.file.replace>`.
 
     '''
     name = os.path.expanduser(name)
@@ -2494,7 +2495,7 @@ def sed(name,
         negate_match=False):
     '''
     .. deprecated:: 0.17.0
-       Use :py:func:`~salt.states.file.replace` instead.
+       Use the :mod:`file.replace <salt.states.file.replace>` state instead.
 
     Maintain a simple edit to a file
 

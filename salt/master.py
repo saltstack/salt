@@ -1406,7 +1406,12 @@ class ClearFuncs(object):
         self.wheel_ = salt.wheel.Wheel(opts)
         self.masterapi = salt.daemons.masterapi.LocalFuncs(opts, key)
         self.auto_key = salt.daemons.masterapi.AutoKey(opts)
-        self.cache_cli = CacheCli(self.opts)
+
+        # only create a con_cache-client if the con_cache is active
+        if self.opts['con_cache']:
+            self.cache_cli = CacheCli(self.opts)
+        else:
+            self.cache_cli = False
 
     def _auth(self, load):
         '''
@@ -2249,9 +2254,17 @@ class ClearFuncs(object):
                     }
                 }
         # Retrieve the jid
-        if not clear_load['jid']:
-            fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
-            clear_load['jid'] = self.mminion.returners[fstr](nocache=extra.get('nocache', False))
+        fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
+        try:
+            clear_load['jid'] = self.mminion.returners[fstr](nocache=extra.get('nocache', False),
+                                                            # the jid in clear_load can be None, '', or something else.
+                                                            # this is an attempt to clean up the value before passing to plugins
+                                                            passed_jid=clear_load['jid'] if clear_load.get('jid') else None)
+        except TypeError:  # The returner is not present
+            log.error('The requested returner {0} could not be loaded. Publication not sent.'.format(fstr.split('.')[0]))
+            return {}
+            # TODO Error reporting over the master event bus
+
         self.event.fire_event({'minions': minions}, clear_load['jid'])
 
         new_job_load = {
