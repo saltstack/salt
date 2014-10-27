@@ -446,7 +446,7 @@ def _get_repo_info(alias, repos_cfg=None):
         for k, v in meta.items():
             if v in ['0', '1']:
                 meta[k] = int(meta[k]) == 1
-            elif k == 'NONE':
+            elif v == 'NONE':
                 meta[k] = None
         return meta
     except:
