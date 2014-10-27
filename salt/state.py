@@ -31,7 +31,7 @@ import salt.fileclient
 import salt.utils.event
 import salt.syspaths as syspaths
 from salt.utils import context, immutabletypes
-from salt._compat import string_types
+from salt._compat import string_types, text_type
 from salt.template import compile_template, compile_template_str
 from salt.exceptions import SaltRenderError, SaltReqTimeoutError, SaltException
 from salt.utils.odict import OrderedDict, DefaultOrderedDict
@@ -1510,18 +1510,18 @@ class State(object):
                 ret.update(self._run_check(low))
 
             if 'saltenv' in low:
-                inject_globals['__env__'] = low['saltenv']
+                inject_globals['__env__'] = text_type(low['saltenv'])
             elif isinstance(cdata['kwargs'].get('env', None), string_types):
                 # User is using a deprecated env setting which was parsed by
                 # format_call.
                 # We check for a string type since module functions which
                 # allow setting the OS environ also make use of the "env"
                 # keyword argument, which is not a string
-                inject_globals['__env__'] = cdata['kwargs']['env']
+                inject_globals['__env__'] = text_type(cdata['kwargs']['env'])
             elif '__env__' in low:
                 # The user is passing an alternative environment using __env__
                 # which is also not the appropriate choice, still, handle it
-                inject_globals['__env__'] = low['__env__']
+                inject_globals['__env__'] = text_type(low['__env__'])
             else:
                 # Let's use the default environment
                 inject_globals['__env__'] = 'base'
