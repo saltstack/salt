@@ -888,6 +888,9 @@ class LocalClient(object):
                     log.debug('jid {0} return from {1}'.format(jid, raw['data']['id']))
                     yield ret
 
+            if timeout_at >= int(time.time()):
+                continue
+
             # if we have all of the returns, no need for anything fancy
             if len(found.intersection(minions)) >= len(minions):
                 # All minions have returned, break out of the loop
