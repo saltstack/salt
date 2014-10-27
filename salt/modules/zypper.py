@@ -484,8 +484,7 @@ def list_repos():
     return all_repos
 
 
-@_depends('zypp')
-def del_repo(repo, **kwargs):
+def del_repo_nozypp(repo):
     '''
     Delete a repo.
 
@@ -494,13 +493,20 @@ def del_repo(repo, **kwargs):
     .. code-block:: bash
 
         salt '*' pkg.del_repo alias
-        salt '*' pkg.del_repo alias
     '''
-    r = _get_zypp_repo(repo)
-    with _try_zypp():
-        zypp.RepoManager().removeRepository(r)
-    return 'File {1} containing repo {0!r} has been removed.\n'.format(
-        repo, r.path().c_str())
+    repos_cfg = _get_configured_repos()
+    for alias in repos_cfg.sections():
+        if alias == repo:
+            cmd = ('zypper -x --non-interactive rr --loose-auth --loose-query {0}'.format(alias))
+            doc = dom.parseString(__salt__['cmd.run'](cmd, output_loglevel='trace'))
+            msg = doc.getElementsByTagName("message")
+            if doc.getElementsByTagName("progress") and msg:
+                return {
+                    repo: True,
+                    'message': msg[0].childNodes[0].nodeValue,
+                    }
+
+    raise CommandExecutionError('Repository "{0}" not found.'.format(repo))
 
 
 @_depends('zypp')
