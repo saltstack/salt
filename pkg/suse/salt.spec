@@ -15,9 +15,8 @@
 # Please submit bugfixes or comments via http://bugs.opensuse.org/
 #
 
-
 Name:           salt
-Version:        2014.1.11
+Version:        2014.1.13
 Release:        0
 Summary:        A parallel remote execution system
 License:        Apache-2.0
