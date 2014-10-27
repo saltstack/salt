@@ -9,6 +9,7 @@ import logging
 import re
 import os
 import ConfigParser
+import urlparse
 from xml.dom import minidom as dom
 from contextlib import contextmanager as _contextmanager
 
@@ -509,16 +510,29 @@ def del_repo_nozypp(repo):
     raise CommandExecutionError('Repository "{0}" not found.'.format(repo))
 
 
-@_depends('zypp')
 def mod_repo(repo, **kwargs):
     '''
     Modify one or more values for a repo. If the repo does not exist, it will
     be created, so long as the following values are specified:
 
-    repo
+    repo or alias
         alias by which the zypper refers to the repo
+
     url or mirrorlist
         the URL for zypper to reference
+
+    enabled
+        enable or disable (True or False) repository,
+        but do not remove if disabled.
+
+    refresh
+        enable or disable (True or False) auto-refresh of the repository.
+
+    cache
+        Enable or disable (True or False) RPM files caching.
+
+    gpgcheck
+        Enable or disable (True or False) GOG check for this repository.
 
     Key/Value pairs may also be removed from a repo's configuration by setting
     a key to a blank value. Bear in mind that a name cannot be deleted, and a
@@ -529,33 +543,91 @@ def mod_repo(repo, **kwargs):
     .. code-block:: bash
 
         salt '*' pkg.mod_repo alias alias=new_alias
-        salt '*' pkg.mod_repo alias enabled=True
         salt '*' pkg.mod_repo alias url= mirrorlist=http://host.com/
     '''
-    # Filter out '__pub' arguments, as well as saltenv
-    repo_opts = {}
-    for x in kwargs:
-        if not x.startswith('__') and x not in ('saltenv',):
-            repo_opts[x] = kwargs[x]
 
-    repo_manager = zypp.RepoManager()
-    try:
-        r = _RepoInfo(repo_manager.getRepositoryInfo(repo))
-        new_repo = False
-    except RuntimeError:
-        r = _RepoInfo()
-        r.alias = repo
-        new_repo = True
-    try:
-        r.options = repo_opts
-    except ValueError as e:
-        raise SaltInvocationError(str(e))
-    with _try_zypp():
-        if new_repo:
-            repo_manager.addRepository(r.zypp)
-        else:
-            repo_manager.modifyRepository(repo, r.zypp)
-    return r.options
+    repos_cfg = _get_configured_repos()
+    added = False
+
+    # An attempt to add new one?
+    if repo not in repos_cfg.sections():
+        url = kwargs.get("url", kwargs.get("mirrorlist"))
+        if not url:
+            raise CommandExecutionError(
+                'Repository "{0}" not found and no URL passed to create one.'.format(repo))
+
+        if not urlparse.urlparse(url).scheme:
+            raise CommandExecutionError(
+                'Repository "{0}" not found and passed URL looks wrong.'.format(repo))
+
+        # Is there already such repo under different alias?
+        for alias in repos_cfg.sections():
+            repo_meta = _get_repo_info(alias, repos_cfg=repos_cfg)
+
+            # Complete user URL, in case it is not
+            new_url = urlparse.urlparse(url)
+            if not new_url.path:
+                new_url = urlparse.ParseResult(scheme=new_url.scheme,
+                                               netloc=new_url.netloc,
+                                               path='/',
+                                               params=new_url.params,
+                                               query=new_url.query,
+                                               fragment=new_url.fragment)
+            base_url = urlparse.urlparse(repo_meta["baseurl"])
+
+            if new_url == base_url:
+                raise CommandExecutionError(
+                    'Repository "{0}" already exists as "{1}".'.format(repo, alias))
+
+        # Add new repo
+        doc = None
+        try:
+            # Try to parse the output and find the error,
+            # but this not always working (depends on Zypper version)
+            doc = dom.parseString(__salt__['cmd.run'](("zypper -x ar {0} '{1}'".format(url, repo)),
+                                                      output_loglevel='trace'))
+        except:
+            # No XML out available, but it is still unknown the state of the result.
+            pass
+
+        if doc:
+            msg_nodes = doc.getElementsByTagName("message")
+            if msg_nodes:
+                msg_node = msg_nodes[0]
+                if msg_node.getAttribute("type") == "error":
+                    raise CommandExecutionError(msg_node.childNodes[0].nodeValue)
+
+        # Verify the repository has been added
+        repos_cfg = _get_configured_repos()
+        if repo not in repos_cfg.sections():
+            raise CommandExecutionError(
+                'Failed add new repository "{0}" for unknown reason. Please look into Zypper logs.'.format(repo))
+        added = True
+
+    # Modify added or existing repo according to the options
+    cmd_opt = []
+
+    if "enabled" in kwargs:
+        cmd_opt.append(kwargs["enabled"] and "--enable" or "--disable")
+
+    if "refresh" in kwargs:
+        cmd_opt.append(kwargs["refresh"] and "--refresh" or "--no-refresh")
+
+    if "cache" in kwargs:
+        cmd_opt.append(kwargs["cache"] and "--keep-packages" or "--no-keep-packages")
+
+    if "gpgcheck" in kwargs:
+        cmd_opt.append(kwargs["gpgcheck"] and "--gpgcheck" or "--no-gpgcheck")
+
+    if cmd_opt:
+        __salt__['cmd.run'](("zypper -x mr {0} '{1}'".format(' '.join(cmd_opt), repo)),
+                            output_loglevel='trace')
+
+    # If repo nor added neither modified, error should be thrown
+    if not added and not cmd_opt:
+        raise CommandExecutionError('Modification of the repository "{0}" was not specified.'.format(repo))
+
+    return {}
 
 
 def refresh_db():
