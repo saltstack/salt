@@ -8,6 +8,7 @@ import copy
 import logging
 import re
 import os
+import ConfigParser
 from xml.dom import minidom as dom
 from contextlib import contextmanager as _contextmanager
 
@@ -20,7 +21,9 @@ from salt.exceptions import (
 log = logging.getLogger(__name__)
 
 HAS_ZYPP = False
-LOCKS = "/etc/zypp/locks"
+ZYPP_HOME = "/etc/zypp"
+LOCKS = "{0}/locks".format(ZYPP_HOME)
+REPOS = "{0}/repos.d".format(ZYPP_HOME)
 
 try:
     import zypp
@@ -422,8 +425,35 @@ def _get_zypp_repo(repo, **kwargs):
         return zypp.RepoManager().getRepositoryInfo(repo)
 
 
-@_depends('zypp')
-def get_repo(repo, **kwargs):
+def _get_configured_repos():
+    '''
+    Get all the info about repositories from the configurations.
+    '''
+
+    repos_cfg = ConfigParser.ConfigParser()
+    repos_cfg.read([REPOS + "/" + fname for fname in os.listdir(REPOS)])
+
+    return repos_cfg
+
+
+def _get_repo_info(alias, repos_cfg=None):
+    '''
+    Get one repo meta-data.
+    '''
+    try:
+        meta = dict((repos_cfg or _get_configured_repos()).items(alias))
+        meta['alias'] = alias
+        for k, v in meta.items():
+            if v in ['0', '1']:
+                meta[k] = int(meta[k]) == 1
+            elif k == 'NONE':
+                meta[k] = None
+        return meta
+    except:
+        return {}
+
+
+def get_repo(repo):
     '''
     Display a repo.
 
@@ -433,14 +463,9 @@ def get_repo(repo, **kwargs):
 
         salt '*' pkg.get_repo alias
     '''
-    try:
-        r = _RepoInfo(_get_zypp_repo(repo))
-    except CommandExecutionError:
-        return {}
-    return r.options
+    return _get_repo_info(repo)
 
 
-@_depends('zypp')
 def list_repos():
     '''
     Lists all repos.
@@ -451,11 +476,12 @@ def list_repos():
 
        salt '*' pkg.list_repos
     '''
-    with _try_zypp():
-        ret = {}
-        for r in zypp.RepoManager().knownRepositories():
-            ret[r.alias()] = get_repo(r.alias())
-        return ret
+    repos_cfg = _get_configured_repos()
+    all_repos = {}
+    for alias in repos_cfg.sections():
+        all_repos[alias] = _get_repo_info(alias, repos_cfg=repos_cfg)
+
+    return all_repos
 
 
 @_depends('zypp')
