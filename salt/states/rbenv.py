@@ -107,11 +107,6 @@ def installed(name, default=False, runas=None, user=None):
     default : False
         Whether to make this ruby the default.
 
-    runas: None
-        The user to run rbenv as.
-
-        .. deprecated:: 0.17.0
-
     user: None
         The user to run rbenv as.
 
@@ -121,30 +116,6 @@ def installed(name, default=False, runas=None, user=None):
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
     rbenv_installed_ret = copy.deepcopy(ret)
-
-    salt.utils.warn_until(
-        'Lithium',
-        'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 0.17.0',
-        _dont_call_warnings=True
-    )
-    if runas:
-        # Warn users about the deprecation
-        ret.setdefault('warnings', []).append(
-            'The \'runas\' argument is being deprecated in favor of \'user\', '
-            'please update your state files.'
-        )
-    if user is not None and runas is not None:
-        # user wins over runas but let warn about the deprecation.
-        ret.setdefault('warnings', []).append(
-            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
-            '\'runas\' is being ignored in favor of \'user\'.'
-        )
-        runas = None
-    elif runas is not None:
-        # Support old runas usage
-        user = runas
-        runas = None
 
     if name.startswith('ruby-'):
         name = re.sub(r'^ruby-', '', name)
@@ -195,11 +166,6 @@ def absent(name, runas=None, user=None):
     name
         The version of ruby to uninstall
 
-    runas: None
-        The user to run rbenv as.
-
-        .. deprecated:: 0.17.0
-
     user: None
         The user to run rbenv as.
 
@@ -208,30 +174,6 @@ def absent(name, runas=None, user=None):
     .. versionadded:: 0.16.0
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
-
-    salt.utils.warn_until(
-        'Lithium',
-        'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 0.17.0',
-        _dont_call_warnings=True
-    )
-    if runas:
-        # Warn users about the deprecation
-        ret.setdefault('warnings', []).append(
-            'The \'runas\' argument is being deprecated in favor of \'user\', '
-            'please update your state files.'
-        )
-    if user is not None and runas is not None:
-        # user wins over runas but let warn about the deprecation.
-        ret.setdefault('warnings', []).append(
-            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
-            '\'runas\' is being ignored in favor of \'user\'.'
-        )
-        runas = None
-    elif runas is not None:
-        # Support old runas usage
-        user = runas
-        runas = None
 
     if name.startswith('ruby-'):
         name = re.sub(r'^ruby-', '', name)
