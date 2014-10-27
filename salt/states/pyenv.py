@@ -99,7 +99,7 @@ def _check_and_install_python(ret, python, default=False, user=None):
     return ret
 
 
-def installed(name, default=False, runas=None, user=None):
+def installed(name, default=False, user=None):
     '''
     Verify that the specified python is installed with pyenv. pyenv is
     installed if necessary.
