@@ -485,7 +485,7 @@ def list_repos():
     return all_repos
 
 
-def del_repo_nozypp(repo):
+def del_repo(repo):
     '''
     Delete a repo.
 
