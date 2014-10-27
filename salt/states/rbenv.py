@@ -96,7 +96,7 @@ def _check_and_install_ruby(ret, ruby, default=False, user=None):
     return ret
 
 
-def installed(name, default=False, runas=None, user=None):
+def installed(name, default=False, user=None):
     '''
     Verify that the specified ruby is installed with rbenv. Rbenv is
     installed if necessary.
@@ -158,7 +158,7 @@ def _check_and_uninstall_ruby(ret, ruby, user=None):
     return ret
 
 
-def absent(name, runas=None, user=None):
+def absent(name, user=None):
     '''
     Verify that the specified ruby is not installed with rbenv. Rbenv
     is installed if necessary.
