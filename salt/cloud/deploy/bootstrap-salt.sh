@@ -17,7 +17,8 @@
 #       CREATED: 10/15/2012 09:49:37 PM WEST
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
-__ScriptVersion="2014.10.14"
+
+__ScriptVersion="2014.10.21"
 __ScriptName="bootstrap-salt.sh"
 
 #======================================================================================================================
@@ -202,6 +203,7 @@ _INSECURE_DL=${BS_INSECURE_DL:-$BS_FALSE}
 _WGET_ARGS=${BS_WGET_ARGS:-}
 _CURL_ARGS=${BS_CURL_ARGS:-}
 _FETCH_ARGS=${BS_FETCH_ARGS:-}
+_ENABLE_EXTERNAL_ZMQ_REPOS=${BS_ENABLE_EXTERNAL_ZMQ_REPOS:-$BS_FALSE}
 _SALT_MASTER_ADDRESS=${BS_SALT_MASTER_ADDRESS:-null}
 _SALT_MINION_ID="null"
 # __SIMPLIFY_VERSION is mostly used in Solaris based distributions
@@ -271,12 +273,13 @@ usage() {
   -p  Extra-package to install while installing salt dependencies. One package
       per -p flag. You're responsible for providing the proper package name.
   -H  Use the specified http proxy for the installation
+  -Z  Enable external software source for newer ZeroMQ(Only available for RHEL/CentOS/Fedora based distributions)
 
 EOT
 }   # ----------  end of function usage  ----------
 
 
-while getopts ":hvnDc:g:k:MSNXCPFUKIA:i:Lp:H:" opt
+while getopts ":hvnDc:g:k:MSNXCPFUKIA:i:Lp:H:Z" opt
 do
   case "${opt}" in
 
@@ -319,6 +322,7 @@ do
     L )  _INSTALL_CLOUD=$BS_TRUE                        ;;
     p )  _EXTRA_PACKAGES="$_EXTRA_PACKAGES $OPTARG"     ;;
     H )  _HTTP_PROXY="$OPTARG"                          ;;
+    Z)   _ENABLE_EXTERNAL_ZMQ_REPOS=$BS_TRUE            ;;
 
 
     \?)  echo
@@ -1124,7 +1128,10 @@ __git_clone_and_checkout() {
 
     echodebug "Installed git version: $(git --version | awk '{ print $3 }')"
 
-    __SALT_GIT_CHECKOUT_PARENT_DIR=$(dirname "${__SALT_GIT_CHECKOUT_DIR}")
+    local __SALT_GIT_CHECKOUT_PARENT_DIR=$(dirname "${__SALT_GIT_CHECKOUT_DIR}" 2>/dev/null)
+    __SALT_GIT_CHECKOUT_PARENT_DIR="${__SALT_GIT_CHECKOUT_PARENT_DIR:-/tmp/git}"
+    local __SALT_CHECKOUT_REPONAME="$(basename "${__SALT_GIT_CHECKOUT_DIR}" 2>/dev/null)"
+	__SALT_CHECKOUT_REPONAME="${__SALT_CHECKOUT_REPONAME:-salt}"
     [ -d "${__SALT_GIT_CHECKOUT_PARENT_DIR}" ] || mkdir "${__SALT_GIT_CHECKOUT_PARENT_DIR}"
     cd "${__SALT_GIT_CHECKOUT_PARENT_DIR}"
     if [ -d "${__SALT_GIT_CHECKOUT_DIR}" ]; then
@@ -1170,7 +1177,7 @@ __git_clone_and_checkout() {
             if [ "$(git clone --help | grep 'single-branch')" != "" ]; then
                 # The "--single-branch" option is supported, attempt shallow cloning
                 echoinfo "Attempting to shallow clone $GIT_REV from Salt's repository ${_SALT_REPO_URL}"
-                git clone --depth 1 --branch "$GIT_REV" "$_SALT_REPO_URL"
+                git clone --depth 1 --branch "$GIT_REV" "$_SALT_REPO_URL" "$__SALT_CHECKOUT_REPONAME"
                 if [ $? -eq 0 ]; then
                     cd "${__SALT_GIT_CHECKOUT_DIR}"
                     __SHALLOW_CLONE="${BS_TRUE}"
@@ -1178,17 +1185,17 @@ __git_clone_and_checkout() {
                     # Shallow clone above failed(missing upstream tags???), let's resume the old behaviour.
                     echowarn "Failed to shallow clone."
                     echoinfo "Resuming regular git clone and remote SaltStack repository addition procedure"
-                    git clone "$_SALT_REPO_URL" || return 1
+                    git clone "$_SALT_REPO_URL" "$__SALT_CHECKOUT_REPONAME" || return 1
                     cd "${__SALT_GIT_CHECKOUT_DIR}"
                 fi
             else
                 echodebug "Shallow cloning not possible. Required git version not met."
-                git clone "$_SALT_REPO_URL" || return 1
+                git clone "$_SALT_REPO_URL" "$__SALT_CHECKOUT_REPONAME" || return 1
                 cd "${__SALT_GIT_CHECKOUT_DIR}"
             fi
         else
             echowarn "The git revision being installed does not match a Salt version tag. Shallow cloning disabled"
-            git clone "$_SALT_REPO_URL" || return 1
+            git clone "$_SALT_REPO_URL" "$__SALT_CHECKOUT_REPONAME" || return 1
             cd "${__SALT_GIT_CHECKOUT_DIR}"
         fi
 
@@ -1540,7 +1547,7 @@ __check_services_debian() {
     servicename=$1
     echodebug "Checking if service ${servicename} is enabled"
 
-    # shellcheck disable=SC2086,SC2046
+    # shellcheck disable=SC2086,SC2046,SC2144
     if [ -f /etc/rc$(runlevel | awk '{ print $2 }').d/S*${servicename} ]; then
         echodebug "Service ${servicename} is enabled"
         return 0
@@ -1695,6 +1702,10 @@ install_ubuntu_deps() {
     __apt_get_install_noinput python-apt
 
     if [ "$DISTRO_MAJOR_VERSION" -gt 12 ] || ([ "$DISTRO_MAJOR_VERSION" -eq 12 ] && [ "$DISTRO_MINOR_VERSION" -gt 03 ]); then
+        if [ "$_ENABLE_EXTERNAL_ZMQ_REPOS" -eq $BS_TRUE ]; then
+            echoinfo "Installing ZMQ>=4/PyZMQ>=14 from Chris Lea's PPA repository"
+            add-apt-repository -y ppa:chris-lea/zeromq || return 1
+        fi
         __apt_get_install_noinput python-requests
         __PIP_PACKAGES=""
     else
@@ -2360,6 +2371,10 @@ install_debian_check_services() {
 #   Fedora Install Functions
 #
 install_fedora_deps() {
+    if [ "$_ENABLE_EXTERNAL_ZMQ_REPOS" -eq $BS_TRUE ]; then
+        __install_saltstack_copr_zeromq_repository || return 1
+    fi
+
     __PACKAGES="yum-utils PyYAML libyaml m2crypto python-crypto python-jinja2 python-msgpack python-zmq python-requests"
 
     if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
@@ -2531,8 +2546,27 @@ __install_epel_repository() {
     return 0
 }
 
+__install_saltstack_copr_zeromq_repository() {
+    echoinfo "Installing Zeromq >=4 and PyZMQ>=14 from SaltStack's COPR repository"
+    if [ ! -f /etc/yum.repos.d/saltstack-zeromq4.repo ]; then
+        if [ "${DISTRO_NAME_L}" = "fedora" ]; then
+            __REPOTYPE="${DISTRO_NAME_L}"
+        else
+            __REPOTYPE="epel"
+        fi
+        wget -O /etc/yum.repos.d/saltstack-zeromq4.repo \
+                         "https://copr.fedoraproject.org/coprs/saltstack/zeromq4/repo/${__REPOTYPE}-${DISTRO_MAJOR_VERSION}/saltstack-zeromq4-${__REPOTYPE}-${DISTRO_MAJOR_VERSION}.repo" || return 1
+    fi
+    return 0
+}
+
+
 install_centos_stable_deps() {
     __install_epel_repository || return 1
+
+    if [ "$_ENABLE_EXTERNAL_ZMQ_REPOS" -eq $BS_TRUE ]; then
+        __install_saltstack_copr_zeromq_repository || return 1
+    fi
 
     if [ "$_UPGRADE_SYS" -eq $BS_TRUE ]; then
         yum -y update || return 1
@@ -2674,7 +2708,7 @@ install_centos_git() {
 }
 
 install_centos_git_post() {
-    for fname in minion master minion api; do
+    for fname in minion master syndic api; do
 
         # Skip if not meant to be installed
         [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
@@ -3656,9 +3690,9 @@ install_freebsd_git() {
     # Install from git
     if [ ! -f salt/syspaths.py ]; then
         # We still can't provide the system paths, salt 0.16.x
-        /usr/local/bin/python setup.py install || return 1
+        /usr/local/bin/python2 setup.py install || return 1
     else
-        /usr/local/bin/python setup.py install \
+        /usr/local/bin/python2 setup.py install \
             --salt-root-dir=/usr/local \
             --salt-config-dir="${_SALT_ETC_DIR}" \
             --salt-cache-dir=/var/cache/salt \

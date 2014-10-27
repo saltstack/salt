@@ -30,7 +30,7 @@ def _mminion():
     return MMINION
 
 
-def prep_jid(nocache=False):
+def prep_jid(nocache=False, passed_jid=None):
     '''
     Call both with prep_jid on all returners in multi_returner
 
@@ -41,7 +41,7 @@ def prep_jid(nocache=False):
     returners is non-trivial
     '''
 
-    jid = None
+    jid = passed_jid
     for returner in __opts__[CONFIG_KEY]:
         if jid is None:
             jid = _mminion().returners['{0}.prep_jid'.format(returner)](nocache=nocache)

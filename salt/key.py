@@ -19,6 +19,7 @@ import salt.crypt
 import salt.utils
 import salt.utils.event
 import salt.daemons.masterapi
+from salt import daemons
 from salt.utils.event import tagify
 
 # Import third party libs
@@ -431,9 +432,9 @@ class Key(object):
     '''
     def __init__(self, opts):
         self.opts = opts
-        kind = self.opts.get('__role', '')
-        if not kind:
-            emsg = "Missing application kind via opts['__role']"
+        kind = self.opts.get('__role', '')  # application kind
+        if kind not in daemons.APPL_KINDS:
+            emsg = ("Invalid application kind = '{0}'.".format(kind))
             log.error(emsg + '\n')
             raise ValueError(emsg)
         self.event = salt.utils.event.get_event(
@@ -895,9 +896,21 @@ class RaetKey(Key):
                 if minion not in minions:
                     shutil.rmtree(os.path.join(m_cache, minion))
 
+        kind = self.opts.get('__role', '')  # application kind
+        if kind not in daemons.APPL_KINDS:
+            emsg = ("Invalid application kind = '{0}'.".format(kind))
+            log.error(emsg + '\n')
+            raise ValueError(emsg)
+        role = self.opts.get('id', '')
+        if not role:
+            emsg = ("Invalide id.")
+            log.error(emsg + "\n")
+            raise ValueError(emsg)
+
+        name = "{0}_{1}".format(role, kind)
         road_cache = os.path.join(self.opts['cachedir'],
                                   'raet',
-                                  self.opts.get('id', 'master'),
+                                  name,
                                   'remote')
         if os.path.isdir(road_cache):
             for road in os.listdir(road_cache):
