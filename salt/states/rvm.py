@@ -180,41 +180,12 @@ def installed(name, default=False, runas=None, user=None):
     default : False
         Whether to make this ruby the default.
 
-    runas: None
-        The user to run rvm as.
-
-        .. deprecated:: 0.17.0
-
     user: None
         The user to run rvm as.
 
         .. versionadded:: 0.17.0
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
-
-    salt.utils.warn_until(
-        'Lithium',
-        'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 0.17.0',
-        _dont_call_warnings=True
-    )
-    if runas:
-        # Warn users about the deprecation
-        ret.setdefault('warnings', []).append(
-            'The \'runas\' argument is being deprecated in favor of \'user\', '
-            'please update your state files.'
-        )
-    if user is not None and runas is not None:
-        # user wins over runas but let warn about the deprecation.
-        ret.setdefault('warnings', []).append(
-            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
-            '\'runas\' is being ignored in favor of \'user\'.'
-        )
-        runas = None
-    elif runas is not None:
-        # Support old runas usage
-        user = runas
-        runas = None
 
     if __opts__['test']:
         ret['comment'] = 'Ruby {0} is set to be installed'.format(name)
@@ -241,41 +212,12 @@ def gemset_present(name, ruby='default', runas=None, user=None):
     ruby: default
         The ruby version this gemset belongs to.
 
-    runas: None
-        The user to run rvm as.
-
-        .. deprecated:: 0.17.0
-
     user: None
         The user to run rvm as.
 
         .. versionadded:: 0.17.0
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
-
-    salt.utils.warn_until(
-        'Lithium',
-        'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 0.17.0',
-        _dont_call_warnings=True
-    )
-    if runas:
-        # Warn users about the deprecation
-        ret.setdefault('warnings', []).append(
-            'The \'runas\' argument is being deprecated in favor of \'user\', '
-            'please update your state files.'
-        )
-    if user is not None and runas is not None:
-        # user wins over runas but let warn about the deprecation.
-        ret.setdefault('warnings', []).append(
-            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
-            '\'runas\' is being ignored in favor of \'user\'.'
-        )
-        runas = None
-    elif runas is not None:
-        # Support old runas usage
-        user = runas
-        runas = None
 
     ret = _check_rvm(ret, user)
     if ret['result'] is False:
