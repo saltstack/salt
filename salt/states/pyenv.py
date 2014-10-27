@@ -162,7 +162,7 @@ def _check_and_uninstall_python(ret, python, user=None):
     return ret
 
 
-def absent(name, runas=None, user=None):
+def absent(name, user=None):
     '''
     Verify that the specified python is not installed with pyenv. pyenv
     is installed if necessary.
