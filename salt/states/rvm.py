@@ -169,7 +169,7 @@ def _check_ruby(ret, ruby, user=None):
     return ret
 
 
-def installed(name, default=False, runas=None, user=None):
+def installed(name, default=False, user=None):
     '''
     Verify that the specified ruby is installed with RVM. RVM is
     installed when necessary.
@@ -202,7 +202,7 @@ def installed(name, default=False, runas=None, user=None):
         return _check_and_install_ruby(ret, name, default, user=user)
 
 
-def gemset_present(name, ruby='default', runas=None, user=None):
+def gemset_present(name, ruby='default', user=None):
     '''
     Verify that the gemset is present.
 
