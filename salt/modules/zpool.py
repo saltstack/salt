@@ -187,6 +187,7 @@ def create(pool_name, *vdevs, **kwargs):
 
     devs = ' '.join(dlist)
     zpool = _check_zpool()
+    force = kwargs.get('force', False)
     if force is True:
         cmd = '{0} create -f {1} {2}'.format(zpool, pool_name, devs)
     else:
