@@ -45,9 +45,6 @@ This is how a state configuration could look like:
 import re
 import copy
 
-# Import salt libs
-import salt.utils
-
 
 def _check_rbenv(ret, user=None):
     '''
