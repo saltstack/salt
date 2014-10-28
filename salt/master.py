@@ -1169,7 +1169,8 @@ class AESFuncs(object):
             # save the load, since we don't have it
             saveload_fstr = '{0}.save_load'.format(self.opts['master_job_cache'])
             self.mminion.returners[saveload_fstr](load['jid'], load)
-        log.info('Got return from {id} for job {jid}'.format(**load))
+        log.info('Got return from {0} for job {0}'.format(load['id'],
+                                                          load['jid']))
         self.event.fire_event(load, load['jid'])  # old dup event
         self.event.fire_event(
             load, tagify([load['jid'], 'ret', load['id']], 'job'))
@@ -1325,7 +1326,8 @@ class AESFuncs(object):
         :param dict load: The minion payload
 
         :rtype: dict
-        :return: If the load is invalid, it may be returned. No key operation is performed.
+        :return: If the load is invalid, it may be returned.
+        No key operation is performed.
 
         :rtype: bool
         :return: True if key was revoked, False if not
@@ -1458,11 +1460,12 @@ class ClearFuncs(object):
 
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             log.info(
-                'Authentication request from invalid id {id}'.format(**load)
+                'Authentication request from '
+                'invalid ID \'{0}\''.format(load.get('id'))
                 )
             return {'enc': 'clear',
                     'load': {'ret': False}}
-        log.info('Authentication request from {id}'.format(**load))
+        log.info('Authentication request from {0}'.format(load.get('id')))
 
         # 0 is default which should be 'unlimited'
         if self.opts['max_minions'] > 0:
@@ -1516,7 +1519,7 @@ class ClearFuncs(object):
             pass
         elif os.path.isfile(pubfn_rejected):
             # The key has been rejected, don't place it in pending
-            log.info('Public key rejected for {id}'.format(**load))
+            log.info('Public key rejected for {0}'.format(load.get('id')))
             eload = {'result': False,
                      'id': load['id'],
                      'pub': load['pub']}
@@ -1528,9 +1531,9 @@ class ClearFuncs(object):
             # The key has been accepted, check it
             if salt.utils.fopen(pubfn, 'r').read() != load['pub']:
                 log.error(
-                    'Authentication attempt from {id} failed, the public '
+                    'Authentication attempt from {0} failed, the public '
                     'keys did not match. This may be an attempt to compromise '
-                    'the Salt cluster.'.format(**load)
+                    'the Salt cluster.'.format(load.get('id'))
                 )
                 # put denied minion key into minions_denied
                 with salt.utils.fopen(pubfn_denied, 'w+') as fp_:
@@ -1547,7 +1550,7 @@ class ClearFuncs(object):
             if os.path.isdir(pubfn_pend):
                 # The key path is a directory, error out
                 log.info(
-                    'New public key {id} is a directory'.format(**load)
+                    'New public key {0} is a directory'.format(load.get('id'))
                 )
                 eload = {'result': False,
                          'id': load['id'],
@@ -1558,14 +1561,14 @@ class ClearFuncs(object):
 
             if auto_reject:
                 key_path = pubfn_rejected
-                log.info('New public key for {id} rejected via autoreject_file'
-                         .format(**load))
+                log.info('New public key for {0} rejected via autoreject_file'
+                         .format(load.get('id')))
                 key_act = 'reject'
                 key_result = False
             elif not auto_sign:
                 key_path = pubfn_pend
-                log.info('New public key for {id} placed in pending'
-                         .format(**load))
+                log.info('New public key for {0} placed in pending'
+                         .format(load.get('id')))
                 key_act = 'pend'
                 key_result = True
             else:
@@ -1596,8 +1599,8 @@ class ClearFuncs(object):
                     shutil.move(pubfn_pend, pubfn_rejected)
                 except (IOError, OSError):
                     pass
-                log.info('Pending public key for {id} rejected via '
-                         'autoreject_file'.format(**load))
+                log.info('Pending public key for {0} rejected via '
+                         'autoreject_file'.format(load.get('id')))
                 ret = {'enc': 'clear',
                        'load': {'ret': False}}
                 eload = {'result': False,
@@ -1614,10 +1617,10 @@ class ClearFuncs(object):
                 # pending.
                 if salt.utils.fopen(pubfn_pend, 'r').read() != load['pub']:
                     log.error(
-                        'Authentication attempt from {id} failed, the public '
+                        'Authentication attempt from {0} failed, the public '
                         'key in pending did not match. This may be an '
                         'attempt to compromise the Salt cluster.'
-                        .format(**load)
+                        .format(load.get('id'))
                     )
                     # put denied minion key into minions_denied
                     with salt.utils.fopen(pubfn_denied, 'w+') as fp_:
@@ -1630,9 +1633,9 @@ class ClearFuncs(object):
                             'load': {'ret': False}}
                 else:
                     log.info(
-                        'Authentication failed from host {id}, the key is in '
+                        'Authentication failed from host {0}, the key is in '
                         'pending and needs to be accepted with salt-key '
-                        '-a {id}'.format(**load)
+                        '-a {0}'.format(load.get('id'))
                     )
                     eload = {'result': True,
                              'act': 'pend',
@@ -1648,10 +1651,10 @@ class ClearFuncs(object):
                 # accepted below.
                 if salt.utils.fopen(pubfn_pend, 'r').read() != load['pub']:
                     log.error(
-                        'Authentication attempt from {id} failed, the public '
+                        'Authentication attempt from {0} failed, the public '
                         'keys in pending did not match. This may be an '
                         'attempt to compromise the Salt cluster.'
-                        .format(**load)
+                        .format(load.get('id'))
                     )
                     # put denied minion key into minions_denied
                     with salt.utils.fopen(pubfn_denied, 'w+') as fp_:
@@ -1675,7 +1678,7 @@ class ClearFuncs(object):
             return {'enc': 'clear',
                     'load': {'ret': False}}
 
-        log.info('Authentication accepted from {id}'.format(**load))
+        log.info('Authentication accepted from {0}'.format(load.get('id')))
         # only write to disk if you are adding the file, and in open mode,
         # which implies we accept any key from a minion (key needs to be
         # written every time because what's on disk is used for encrypting)
@@ -1710,8 +1713,10 @@ class ClearFuncs(object):
                 log.debug(self.master_key.pubkey_signature())
                 ret.update({'pub_sig': self.master_key.pubkey_signature()})
             else:
-                # the master has its own signing-keypair, compute the master.pub's
-                # signature and append that to the auth-reply
+                # The master has its own signing-keypair.
+                #
+                # Compute the master.pub's signature and append that to the
+                # auth-reply.
                 log.debug("Signing master public key before sending")
                 pub_sign = salt.crypt.sign_message(self.master_key.get_sign_paths()[1],
                                                    ret['pub_key'])
@@ -1720,7 +1725,8 @@ class ClearFuncs(object):
         if self.opts['auth_mode'] >= 2:
             if 'token' in load:
                 try:
-                    mtoken = self.master_key.key.private_decrypt(load['token'], 4)
+                    mtoken = self.master_key.key.private_decrypt(load['token'],
+                                                                 4)
                     aes = '{0}_|-{1}'.format(self.opts['aes'], mtoken)
                 except Exception:
                     # Token failed to decrypt, send back the salty bacon to
@@ -1881,7 +1887,7 @@ class ClearFuncs(object):
                 token = self.loadauth.get_tok(clear_load['token'])
             except Exception as exc:
                 msg = ('Exception occurred when generating '
-                       'auth token: {0}'.format( exc))
+                       'auth token: {0}'.format(exc))
                 log.error(msg)
                 return dict(error=dict(name='TokenAuthenticationError',
                                        message=msg))
@@ -1999,11 +2005,11 @@ class ClearFuncs(object):
             except Exception as exc:
                 log.error('Exception occurred while '
                           'introspecting {0}: {1}'.format(fun, exc))
-                data['return'] = 'Exception occurred in wheel {0}: {1}: {2}'.format(
-                                 fun,
-                                 exc.__class__.__name__,
-                                 exc,
-                )
+                data['return'] = ('Exception occurred in wheel '
+                                  '{0}: {1}: '
+                                  '{2}').format(fun,
+                                                exc.__class__.__name__,
+                                                exc)
                 self.event.fire_event(data, tagify([jid, 'ret'], 'wheel'))
                 return {'tag': tag,
                         'data': data}
@@ -2130,7 +2136,8 @@ class ClearFuncs(object):
                     )
                     return ''
             clear_load['user'] = token['name']
-            log.debug('Minion tokenized user = "{0}"'.format(clear_load['user']))
+            log.debug('Minion tokenized user = '
+                      '"{0}"'.format(clear_load['user']))
         elif 'eauth' in extra:
             if extra['eauth'] not in self.opts['external_auth']:
                 # The eauth system is not enabled, fail
@@ -2139,34 +2146,41 @@ class ClearFuncs(object):
                 )
                 return ''
             try:
-                name = self.loadauth.load_name(extra)  # The username we are attempting to auth with
-                groups = self.loadauth.get_groups(extra)  # The groups this user belongs to
-                group_perm_keys = filter(lambda(item): item.endswith('%'), self.opts['external_auth'][extra['eauth']])  # The configured auth groups
+                # The username we are attempting to auth with
+                name = self.loadauth.load_name(extra)
+                # The groups this user belongs to
+                groups = self.loadauth.get_groups(extra)
+                group_perm_keys = filter(lambda(item): item.endswith('%'),
+                                         # The configured auth groups
+                                         self.opts['external_auth'][extra['eauth']])
 
-                # First we need to know if the user is allowed to proceed via any of their group memberships.
+                # First we need to know if the user is allowed to proceed via
+                # any of their group memberships.
                 group_auth_match = False
                 for group_config in group_perm_keys:
                     group_config = group_config.rstrip('%')
                     for group in groups:
                         if group == group_config:
                             group_auth_match = True
-                # If a group_auth_match is set it means only that we have a user which matches at least one or more
-                # of the groups defined in the configuration file.
+                # If a group_auth_match is set it means only that we have a
+                # user which matches at least one or more of the groups
+                # defined in the configuration file.
 
-                # If neither a catchall, a named membership or a group membership is found, there is no need
-                # to continue. Simply deny the user access.
+                # If neither a catchall, a named membership or a group
+                # membership is found, there is no need to continue.
+                # Simply deny the user access.
                 if not ((name in self.opts['external_auth'][extra['eauth']]) |
                         ('*' in self.opts['external_auth'][extra['eauth']]) |
                         group_auth_match):
                         # A group def is defined and the user is a member
-                        #[group for groups in ['external_auth'][extra['eauth']]]):
                     # Auth successful, but no matching user found in config
                     log.warning(
                         'Authentication failure of type "eauth" occurred.'
                     )
                     return ''
 
-                # Perform the actual authentication. If we fail here, do not continue.
+                # Perform the actual authentication.
+                # If we fail here, do not continue.
                 if not self.loadauth.time_auth(extra):
                     log.warning(
                         'Authentication failure of type "eauth" occurred.'
@@ -2188,7 +2202,10 @@ class ClearFuncs(object):
             if name in self.opts['external_auth'][extra['eauth']]:
                 auth_list = self.opts['external_auth'][extra['eauth']][name]
             if group_auth_match:
-                auth_list.append(self.ckminions.gather_groups(self.opts['external_auth'][extra['eauth']], groups, auth_list))
+                auth_list.append(self.ckminions.gather_groups(
+                    self.opts['external_auth'][extra['eauth']],
+                    groups,
+                    auth_list))
 
             good = self.ckminions.auth_check(
                 auth_list,
@@ -2210,19 +2227,22 @@ class ClearFuncs(object):
                 # If someone can sudo, allow them to act as root
                 if clear_load.get('key', 'invalid') == self.key.get('root'):
                     clear_load.pop('key')
-                elif clear_load.pop('key') != self.key[self.opts.get('user', 'root')]:
+                elif clear_load.pop('key') != self.key[self.opts.get('user',
+                                                                     'root')]:
                     log.warning(
                         'Authentication failure of type "user" occurred.'
                     )
                     return ''
             elif clear_load['user'] == self.opts.get('user', 'root'):
-                if clear_load.pop('key') != self.key[self.opts.get('user', 'root')]:
+                if clear_load.pop('key') != self.key[self.opts.get('user',
+                                                                   'root')]:
                     log.warning(
                         'Authentication failure of type "user" occurred.'
                     )
                     return ''
             elif clear_load['user'] == 'root':
-                if clear_load.pop('key') != self.key.get(self.opts.get('user', 'root')):
+                if clear_load.pop('key') != self.key.get(self.opts.get('user',
+                                                                       'root')):
                     log.warning(
                         'Authentication failure of type "user" occurred.'
                     )
@@ -2271,7 +2291,8 @@ class ClearFuncs(object):
                 )
                 return ''
         # Retrieve the minions list
-        delimiter = clear_load.get('kwargs', {}).get('delimiter', DEFAULT_TARGET_DELIM)
+        delimiter = clear_load.get('kwargs', {}).get('delimiter',
+                                                     DEFAULT_TARGET_DELIM)
         minions = self.ckminions.check_minions(
             clear_load['tgt'],
             clear_load.get('tgt_type', 'glob'),
@@ -2297,7 +2318,8 @@ class ClearFuncs(object):
                                                             # this is an attempt to clean up the value before passing to plugins
                                                             passed_jid=clear_load['jid'] if clear_load.get('jid') else None)
         except TypeError:  # The returner is not present
-            log.error('The requested returner {0} could not be loaded. Publication not sent.'.format(fstr.split('.')[0]))
+            log.error('The requested returner {0} could not be loaded. '
+                      'Publication not sent.'.format(fstr.split('.')[0]))
             return {}
             # TODO Error reporting over the master event bus
 
@@ -2315,7 +2337,8 @@ class ClearFuncs(object):
 
         # Announce the job on the event bus
         self.event.fire_event(new_job_load, 'new_job')  # old dup event
-        self.event.fire_event(new_job_load, tagify([clear_load['jid'], 'new'], 'job'))
+        self.event.fire_event(new_job_load,
+                              tagify([clear_load['jid'], 'new'], 'job'))
 
         if self.opts['ext_job_cache']:
             try:
@@ -2410,7 +2433,8 @@ class ClearFuncs(object):
         if self.opts['sign_pub_messages']:
             master_pem_path = os.path.join(self.opts['pki_dir'], 'master.pem')
             log.debug("Signing data packet")
-            payload['sig'] = salt.crypt.sign_message(master_pem_path, payload['load'])
+            payload['sig'] = salt.crypt.sign_message(master_pem_path,
+                                                     payload['load'])
         # Send 0MQ to the publisher
         context = zmq.Context(1)
         pub_sock = context.socket(zmq.PUSH)
