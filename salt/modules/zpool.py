@@ -153,7 +153,7 @@ def scrub(pool_name=None):
 
 def create(pool_name, *vdevs, **kwargs):
     '''
-    Create a simple zpool, a mirrored zpool, a zpool having nested VDEVs and a hybrid zpool with cache and log drives
+    Create a simple zpool, a mirrored zpool, a zpool having nested VDEVs, a hybrid zpool with cache and log drives or a zpool with RAIDZ-1, RAIDZ-2 or RAIDZ-3
 
     CLI Example:
 
@@ -161,6 +161,7 @@ def create(pool_name, *vdevs, **kwargs):
 
         salt '*' zpool.create myzpool /path/to/vdev1 [...] [force=True|False]
         salt '*' zpool.create myzpool mirror /path/to/vdev1 /path/to/vdev2 [...] [force=True|False]
+        salt '*' zpool.create myzpool raidz1 /path/to/vdev1 /path/to/vdev2 raidz2 /path/to/vdev3 /path/to/vdev4 /path/to/vdev5 [...] [force=True|False]
         salt '*' zpool.create myzpool mirror /path/to/vdev1 [...] mirror /path/to/vdev2 /path/to/vdev3 [...] [force=True|False]
         salt '*' zpool.create myhybridzpool mirror /tmp/file1 [...] log mirror /path/to/vdev1 [...] cache /path/to/vdev2 [...] [force=True|False]
     '''
@@ -174,7 +175,7 @@ def create(pool_name, *vdevs, **kwargs):
 
     # make sure files are present on filesystem
     for vdev in vdevs:
-        if vdev not in ['mirror', 'log', 'cache']:
+        if vdev not in ['mirror', 'log', 'cache', 'raidz1', 'raidz2', 'raidz3']:
             if not os.path.exists(vdev):
                 # Path doesn't exist so error and return
                 ret[vdev] = '{0} not present on filesystem'.format(vdev)
