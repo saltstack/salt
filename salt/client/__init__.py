@@ -220,7 +220,7 @@ class LocalClient(object):
             raise EauthAuthenticationError(
                 'Failed to authenticate!  This is most likely because this '
                 'user is not permitted to execute commands, but there is a '
-                'small possibility that a disk error ocurred (check '
+                'small possibility that a disk error occurred (check '
                 'disk/inode usage).'
             )
 
