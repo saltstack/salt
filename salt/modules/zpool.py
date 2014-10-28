@@ -153,15 +153,16 @@ def scrub(pool_name=None):
 
 def create(pool_name, *vdevs, **kwargs):
     '''
-    Create a simple zpool, a mirrored zpool or nested VDEVs
+    Create a simple zpool, a mirrored zpool, a zpool having nested VDEVs and a hybrid zpool with cache and log drives
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' zpool.create myzpool /path/to/vdev1 [/path/to/vdev2] [...] [force=True|False]
-        salt '*' zpool.create myzpool mirror /path/to/vdev1 /path/to/vdev2 [...]
-        salt '*' zpool.create myzpool mirror /path/to/vdev1 /path/to/vdev2 mirror /path/to/vdev3 /path/to/vdev4 [...]
+        salt '*' zpool.create myzpool /path/to/vdev1 [...] [force=True|False]
+        salt '*' zpool.create myzpool mirror /path/to/vdev1 /path/to/vdev2 [...] [force=True|False]
+        salt '*' zpool.create myzpool mirror /path/to/vdev1 [...] mirror /path/to/vdev2 /path/to/vdev3 [...] [force=True|False]
+        salt '*' zpool.create myhybridzpool mirror /tmp/file1 [...] log mirror /path/to/vdev1 [...] cache /path/to/vdev2 [...] [force=True|False]
     '''
     ret = {}
     dlist = []
