@@ -103,7 +103,7 @@ to them asking that they fetch their pillars from the master:
     
     salt '*' saltutil.refresh_pillar
 
-Now that the minions have the new pillar, it can be retreived:
+Now that the minions have the new pillar, it can be retrieved:
 
 .. code-block:: bash
 
