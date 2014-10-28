@@ -5,6 +5,7 @@ Module for running ZFS zpool command
 
 # Import Python libs
 import os
+import stat
 import logging
 
 # Import Salt libs
@@ -150,15 +151,18 @@ def scrub(pool_name=None):
         ret['Error'] = 'Storage pool {0} does not exist'.format(pool_name)
 
 
-def create(pool_name, *vdevs):
+def create(pool_name, *vdevs, **kwargs):
     '''
-    Create a new storage pool
+    Create a simple zpool, a mirrored zpool, a zpool having nested VDEVs and a hybrid zpool with cache and log drives
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' zpool.create myzpool /path/to/vdev1 [/path/to/vdev2] [...]
+        salt '*' zpool.create myzpool /path/to/vdev1 [...] [force=True|False]
+        salt '*' zpool.create myzpool mirror /path/to/vdev1 /path/to/vdev2 [...] [force=True|False]
+        salt '*' zpool.create myzpool mirror /path/to/vdev1 [...] mirror /path/to/vdev2 /path/to/vdev3 [...] [force=True|False]
+        salt '*' zpool.create myhybridzpool mirror /tmp/file1 [...] log mirror /path/to/vdev1 [...] cache /path/to/vdev2 [...] [force=True|False]
     '''
     ret = {}
     dlist = []
@@ -170,26 +174,37 @@ def create(pool_name, *vdevs):
 
     # make sure files are present on filesystem
     for vdev in vdevs:
-        if not os.path.isfile(vdev):
-            # File is not there error and return
-            ret[vdev] = '{0} not present on filesystem'.format(vdev)
-            return ret
-        else:
-            dlist.append(vdev)
+        if vdev not in ['mirror', 'log', 'cache']:
+            if not os.path.exists(vdev):
+                # Path doesn't exist so error and return
+                ret[vdev] = '{0} not present on filesystem'.format(vdev)
+                return ret
+            mode = os.stat(vdev).st_mode
+            if not stat.S_ISBLK(mode) and not stat.S_ISREG(mode):
+                # Not a block device or file vdev so error and return
+                ret[vdev] = '{0} is not a block device or a file vdev'.format(vdev)
+                return ret
+        dlist.append(vdev)
 
     devs = ' '.join(dlist)
     zpool = _check_zpool()
-    cmd = '{0} create {1} {2}'.format(zpool, pool_name, devs)
+    force = kwargs.get('force', False)
+    if force is True:
+        cmd = '{0} create -f {1} {2}'.format(zpool, pool_name, devs)
+    else:
+        cmd = '{0} create {1} {2}'.format(zpool, pool_name, devs)
 
     # Create storage pool
-    __salt__['cmd.run'](cmd)
+    res = __salt__['cmd.run'](cmd)
 
     # Check and see if the pools is available
     if exists(pool_name):
         ret[pool_name] = 'created'
         return ret
     else:
-        ret['Error'] = 'Unable to create storage pool {0}'.format(pool_name)
+        ret['Error'] = {}
+        ret['Error']['Messsage'] = 'Unable to create storage pool {0}'.format(pool_name)
+        ret['Error']['Reason'] = res
 
     return ret
 
