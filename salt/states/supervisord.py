@@ -240,7 +240,7 @@ def running(name,
         log.debug(comment)
         result = __salt__['supervisord.start'](
             name,
-            user=runas,
+            user=user,
             conf_file=conf_file,
             bin_env=bin_env
         )
@@ -287,7 +287,7 @@ def dead(name,
         log.debug(comment)
 
         all_processes = __salt__['supervisord.status'](
-            user=runas,
+            user=user,
             conf_file=conf_file,
             bin_env=bin_env
         )
