@@ -34,6 +34,7 @@ def __virtual__():
 
 
 def add(name,
+        password=None,
         # Disable pylint checking on the next options. They exist to match the
         # user modules of other distributions.
         # pylint: disable=W0613
@@ -48,8 +49,7 @@ def add(name,
         roomnumber=False,
         workphone=False,
         homephone=False,
-        createhome=False,
-        password=None
+        createhome=False
         # pylint: enable=W0613
         ):
     '''
@@ -62,7 +62,7 @@ def add(name,
         salt '*' user.add name password
     '''
     if password:
-        ret = __salt__['cmd.run_all']('net user {0} {1} /add'.format(name, password))
+        ret = __salt__['cmd.run_all']('net user {0} {1} /add /y'.format(name, password))
     else:
         ret = __salt__['cmd.run_all']('net user {0} /add'.format(name))
     if groups:
