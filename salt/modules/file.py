@@ -3687,8 +3687,12 @@ def list_backups(path, limit=None):
 
     bkroot = _get_bkroot()
     parent_dir, basename = os.path.split(path)
+    if salt.utils.is_windows():
+        src_dir = parent_dir.replace(':', '_')
+    else:
+        src_dir = parent_dir[1:]
     # Figure out full path of location of backup file in minion cache
-    bkdir = os.path.join(bkroot, parent_dir[1:])
+    bkdir = os.path.join(bkroot, src_dir)
 
     if not os.path.isdir(bkdir):
         return {}
@@ -3696,15 +3700,22 @@ def list_backups(path, limit=None):
     files = {}
     for fn in [x for x in os.listdir(bkdir)
                if os.path.isfile(os.path.join(bkdir, x))]:
-        strpfmt = '{0}_%a_%b_%d_%H:%M:%S_%f_%Y'.format(basename)
+        if salt.utils.is_windows():
+            strpfmt = '{0}_%a_%b_%d_%H-%M-%S_%f_%Y'.format(basename)
+        else:
+            strpfmt = '{0}_%a_%b_%d_%H:%M:%S_%f_%Y'.format(basename)
         try:
             timestamp = datetime.datetime.strptime(fn, strpfmt)
         except ValueError:
             # File didn't match the strp format string, so it's not a backup
             # for this file. Move on to the next one.
             continue
+        if salt.utils.is_windows():
+            str_format = '%a %b %d %Y %H-%M-%S.%f'
+        else:
+            str_format = '%a %b %d %Y %H:%M:%S.%f'
         files.setdefault(timestamp, {})['Backup Time'] = \
-            timestamp.strftime('%a %b %d %Y %H:%M:%S.%f')
+            timestamp.strftime(str_format)
         location = os.path.join(bkdir, fn)
         files[timestamp]['Size'] = os.stat(location).st_size
         files[timestamp]['Location'] = location
@@ -3766,12 +3777,13 @@ def restore_backup(path, backup_id):
                          '{1}'.format(backup['Location'], path)
 
     # Try to set proper ownership
-    try:
-        fstat = os.stat(path)
-    except (OSError, IOError):
-        ret['comment'] += ', but was unable to set ownership'
-    else:
-        os.chown(path, fstat.st_uid, fstat.st_gid)
+    if not salt.utils.is_windows():
+        try:
+            fstat = os.stat(path)
+        except (OSError, IOError):
+            ret['comment'] += ', but was unable to set ownership'
+        else:
+            os.chown(path, fstat.st_uid, fstat.st_gid)
 
     return ret
 
