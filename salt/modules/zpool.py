@@ -173,7 +173,7 @@ def create(pool_name, *vdevs, **kwargs):
 
     # make sure files are present on filesystem
     for vdev in vdevs:
-        if vdev != 'mirror':
+        if vdev not in ['mirror', 'log', 'cache']:
             if not os.path.exists(vdev):
                 # Path doesn't exist so error and return
                 ret[vdev] = '{0} not present on filesystem'.format(vdev)
