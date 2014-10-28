@@ -14,7 +14,6 @@ The postgres_group module is used to create and manage Postgres groups.
 # Import Python libs
 
 # Import salt libs
-import salt.utils
 import logging
 
 # Salt imports
