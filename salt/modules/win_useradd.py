@@ -48,7 +48,8 @@ def add(name,
         roomnumber=False,
         workphone=False,
         homephone=False,
-        createhome=False
+        createhome=False,
+        password=None
         # pylint: enable=W0613
         ):
     '''
@@ -60,7 +61,10 @@ def add(name,
 
         salt '*' user.add name password
     '''
-    ret = __salt__['cmd.run_all']('net user {0} /add'.format(name))
+    if password:
+        ret = __salt__['cmd.run_all']('net user {0} {1} /add'.format(name, password))
+    else:
+        ret = __salt__['cmd.run_all']('net user {0} /add'.format(name))
     if groups:
         chgroups(name, groups)
     if fullname:
