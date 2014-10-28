@@ -179,9 +179,9 @@ def create(pool_name, *vdevs, **kwargs):
                 ret[vdev] = '{0} not present on filesystem'.format(vdev)
                 return ret
             mode = os.stat(vdev).st_mode
-            if not stat.S_ISBLK(mode):
-                # Not a block device so error and return
-                ret[vdev] = '{0} is not a block device'.format(vdev)
+            if not stat.S_ISBLK(mode) and not stat.S_ISREG(mode):
+                # Not a block device or file vdev so error and return
+                ret[vdev] = '{0} is not a block device or a file vdev'.format(vdev)
                 return ret
         dlist.append(vdev)
 
