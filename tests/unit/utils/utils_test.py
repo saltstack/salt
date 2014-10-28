@@ -108,13 +108,6 @@ class UtilsTestCase(TestCase):
         ret = utils.build_whitespace_split_regex(' '.join(LORUM_IPSUM.split()[:5]))
         self.assertEqual(ret, expected_regex)
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
-    @patch('warnings.warn')
-    def test_build_whitepace_splited_regex(self, warnings_mock):
-        # noinspection PyDeprecation
-        utils.build_whitepace_splited_regex('foo')
-        self.assertTrue(warnings_mock.called)
-
     def test_get_function_argspec(self):
         def dummy_func(first, second, third, fourth='fifth'):
             pass
