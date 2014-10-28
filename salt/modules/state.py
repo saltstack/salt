@@ -617,7 +617,7 @@ def show_lowstate(queue=False, **kwargs):
 def sls_id(
         id_,
         mods,
-        saltenv,
+        saltenv='base',
         test=None,
         queue=False,
         **kwargs):
