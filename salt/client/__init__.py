@@ -895,7 +895,7 @@ class LocalClient(object):
                 if self.opts['order_masters']:
                     if syndic_wait < self.opts.get('syndic_wait', 1):
                         syndic_wait += 1
-                        timeout_at = int(time.time()) + 1
+                        timeout_at = int(time.time()) + syndic_wait
                         log.debug('jid {0} syndic_wait {1} will now timeout at {2}'.format(
                                   jid, syndic_wait, datetime.fromtimestamp(timeout_at).time()))
                         continue
