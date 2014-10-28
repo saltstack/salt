@@ -1489,7 +1489,8 @@ class ClearFuncs(object):
             pass
         elif os.path.isfile(pubfn_rejected):
             # The key has been rejected, don't place it in pending
-            log.info('Public key rejected for {id}'.format(**load))
+            log.info('Public key rejected for {0}. Key is present in '
+                     'rejection key dir.'.format(load['id']))
             eload = {'result': False,
                      'id': load['id'],
                      'pub': load['pub']}
