@@ -40,7 +40,6 @@ Available Functions
 import sys
 
 # Import salt libs
-import salt.utils
 from salt._compat import string_types
 
 # Define the module's virtual name
