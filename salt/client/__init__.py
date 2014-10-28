@@ -889,8 +889,6 @@ class LocalClient(object):
 
             # if we have all of the returns, no need for anything fancy
             if len(found.intersection(minions)) >= len(minions):
-                # All minions have returned, break out of the loop
-                log.debug('jid {0} found all minions {1}'.format(jid, found))
                 # if you are a master of masters
                 if (self.opts['order_masters'] and
                         # and if you have more syndic_wait to add
@@ -899,11 +897,12 @@ class LocalClient(object):
                         time.time() >= timeout_at):
                     syndic_wait += 1
                     # add one, so as to only add a max of opts['syndic_wait']
-                    # instead of !opts['syndic_wait']
                     timeout_at += 1
                     log.debug('jid {0} syndic_wait {1} will now timeout at {2}'.format(
                               jid, syndic_wait, datetime.fromtimestamp(timeout_at).time()))
                 else:
+                    # All minions have returned, break out of the loop
+                    log.debug('jid {0} found all minions {1}'.format(jid, found))
                     break
 
             # let start the timeouts for all remaining minions
