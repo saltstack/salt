@@ -134,7 +134,7 @@ class CPModuleTest(integration.ModuleCase):
             'cp.get_dir',
             [
                 'salt://{{grains.script}}',
-                tgt.replace('many', '{{grains.alot}}')
+                tgt.replace('many', '{{grains.a lot}}')
             ]
         )
         self.assertIn('grail', os.listdir(tgt))
