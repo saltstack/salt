@@ -15,9 +15,6 @@ you can specify what ruby version and gemset to target.
         - ruby: jruby@jgemset
 '''
 
-# Import salt libs
-import salt.utils
-
 
 def __virtual__():
     '''
