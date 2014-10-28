@@ -97,7 +97,8 @@ def exists(pool_name):
 
         salt '*' zpool.exists myzpool
     '''
-    cmd = '{0} list {1}'.format('zpool', pool_name)
+    zpool = _check_zpool()
+    cmd = '{0} list {1}'.format(zpool, pool_name)
     res = __salt__['cmd.run'](cmd, ignore_retcode=True)
     if "no such pool" in res:
         return None
