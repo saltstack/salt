@@ -818,8 +818,6 @@ class LocalClient(object):
                             yield None
                         else:
                             raise
-
-
             else:
                 raw = event.get_event_noblock()
                 if raw and raw.get('tag', '').startswith(jid):

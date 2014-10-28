@@ -32,12 +32,14 @@ def raise_error(name=None, args=None, message=''):
     else:
         raise ex(message)
 
+
 def pack_exception(exc):
     if hasattr(exc, 'pack'):
         packed_exception = exc.pack()
     else:
         packed_exception = {'message': exc.__unicode__(), 'args': exc.args}
     return packed_exception
+
 
 def fire_exception(exc, opts, job={}, node='minion'):
     '''
