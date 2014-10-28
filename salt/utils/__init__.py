@@ -737,6 +737,7 @@ def backup_minion(path, bkroot):
         fstat = os.stat(path)
     msecs = str(int(time.time() * 1000000))[-6:]
     if salt.utils.is_windows():
+        # ':' is an illegal filesystem path character on Windows
         stamp = time.strftime('%a_%b_%d_%H-%M-%S_%Y')
     else:
         stamp = time.strftime('%a_%b_%d_%H:%M:%S_%Y')

@@ -3688,6 +3688,7 @@ def list_backups(path, limit=None):
     bkroot = _get_bkroot()
     parent_dir, basename = os.path.split(path)
     if salt.utils.is_windows():
+        # ':' is an illegal filesystem path character on Windows
         src_dir = parent_dir.replace(':', '_')
     else:
         src_dir = parent_dir[1:]
@@ -3701,6 +3702,7 @@ def list_backups(path, limit=None):
     for fn in [x for x in os.listdir(bkdir)
                if os.path.isfile(os.path.join(bkdir, x))]:
         if salt.utils.is_windows():
+            # ':' is an illegal filesystem path character on Windows
             strpfmt = '{0}_%a_%b_%d_%H-%M-%S_%f_%Y'.format(basename)
         else:
             strpfmt = '{0}_%a_%b_%d_%H:%M:%S_%f_%Y'.format(basename)
