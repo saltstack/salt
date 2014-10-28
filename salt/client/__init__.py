@@ -834,7 +834,6 @@ class LocalClient(object):
         if timeout is None:
             timeout = self.opts['timeout']
         start = int(time.time())
-        timeout_at = start + timeout
 
         # timeouts per minion, id_ -> timeout time
         minion_timeouts = {}
@@ -849,19 +848,19 @@ class LocalClient(object):
         # Wait for the hosts to check in
         syndic_wait = 0
         last_time = False
+        # iterator for this job's return
+        ret_iter = self.get_returns_no_block(jid)
+        # iterator for the info of this job
+        jinfo_iter = []
+        timeout_at = time.time() + timeout
+        # are there still minions running the job out there
+        # start as True so that we ping at least once
+        minions_running = True
         log.debug(
             'get_iter_returns for jid {0} sent to {1} will timeout at {2}'.format(
                 jid, minions, datetime.fromtimestamp(timeout_at).time()
             )
         )
-        # iterator for this job's return
-        ret_iter = self.get_returns_no_block(jid)
-        # iterator for the info of this job
-        jinfo_iter = []
-        jinfo_timeout = time.time() + timeout
-        # are there still minions running the job out there
-        # start as True so that we ping at least once
-        minions_running = True
         while True:
             # Process events until timeout is reached or all minions have returned
             for raw in ret_iter:
@@ -892,14 +891,20 @@ class LocalClient(object):
             if len(found.intersection(minions)) >= len(minions):
                 # All minions have returned, break out of the loop
                 log.debug('jid {0} found all minions {1}'.format(jid, found))
-                if self.opts['order_masters']:
-                    if syndic_wait < self.opts.get('syndic_wait', 1):
-                        syndic_wait += 1
-                        timeout_at = int(time.time()) + syndic_wait
-                        log.debug('jid {0} syndic_wait {1} will now timeout at {2}'.format(
-                                  jid, syndic_wait, datetime.fromtimestamp(timeout_at).time()))
-                        continue
-                break
+                # if you are a master of masters
+                if (self.opts['order_masters'] and
+                        # and if you have more syndic_wait to add
+                        syndic_wait < self.opts.get('syndic_wait', 1) and
+                        # add you would have timed out
+                        time.time() >= timeout_at):
+                    syndic_wait += 1
+                    # add one, so as to only add a max of opts['syndic_wait']
+                    # instead of !opts['syndic_wait']
+                    timeout_at += 1
+                    log.debug('jid {0} syndic_wait {1} will now timeout at {2}'.format(
+                              jid, syndic_wait, datetime.fromtimestamp(timeout_at).time()))
+                else:
+                    break
 
             # let start the timeouts for all remaining minions
             for id_ in minions - found:
@@ -909,7 +914,7 @@ class LocalClient(object):
 
             # if the jinfo has timed out and some minions are still running the job
             # re-do the ping
-            if time.time() > jinfo_timeout and minions_running:
+            if time.time() > timeout_at and minions_running:
                 # need our own event listener, so we don't clobber the class one
                 event = salt.utils.event.get_event(
                         'master',
@@ -928,7 +933,7 @@ class LocalClient(object):
                     jinfo_iter = []
                 else:
                     jinfo_iter = self.get_returns_no_block(jinfo['jid'], event=event)
-                jinfo_timeout = time.time() + self.opts['gather_job_timeout']
+                timeout_at = time.time() + self.opts['gather_job_timeout']
 
             # check for minions that are running the job still
             for raw in jinfo_iter:
@@ -963,7 +968,7 @@ class LocalClient(object):
             now = time.time()
             # if we have finished waiting, and no minions are running the job
             # then we need to see if each minion has timedout
-            done = (now > jinfo_timeout) and not minions_running
+            done = (now > timeout_at) and not minions_running
             if done:
                 # if all minions have timeod out
                 for id_ in minions - found:
