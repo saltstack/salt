@@ -895,7 +895,7 @@ class RaetKey(Key):
     def check_master(self):
         '''
         Log if the master is not running
-        NOT YET IMPLIMENTED
+        NOT YET IMPLEMENTED
         '''
         return True
 

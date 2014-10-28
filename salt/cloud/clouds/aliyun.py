@@ -623,7 +623,7 @@ def create(vm_):
     log.debug('VM {0} is now running'.format(public_ip))
     vm_['ssh_host'] = public_ip
 
-    # The instance is booted and accessable, let's Salt it!
+    # The instance is booted and accessible, let's Salt it!
     ret = salt.utils.cloud.bootstrap(vm_, __opts__)
     ret.update(data.__dict__)
 

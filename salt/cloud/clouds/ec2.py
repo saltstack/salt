@@ -1793,7 +1793,7 @@ def wait_for_instance(
                                         gateway=ssh_gateway_config
                                         ):
         # If a known_hosts_file is configured, this instance will not be
-        # accessable until it has a host key. Since this is provided on
+        # accessible until it has a host key. Since this is provided on
         # supported instances by cloud-init, and viewable to us only from the
         # console output (which may take several minutes to become available,
         # we have some more waiting to do here.
@@ -2019,7 +2019,7 @@ def create(vm_=None, call=None):
         vm_, data, ip_address, display_ssh_output
     )
 
-    # The instance is booted and accessable, let's Salt it!
+    # The instance is booted and accessible, let's Salt it!
     ret = salt.utils.cloud.bootstrap(vm_, __opts__)
 
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))

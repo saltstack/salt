@@ -3322,7 +3322,7 @@ def makedirs_(path,
     .. note::
 
         The path must end with a trailing slash otherwise the directory/directories
-        will be created upto the parent directory. For example if path is
+        will be created up to the parent directory. For example if path is
         ``/opt/code``, then it would be treated as ``/opt/`` but if the path
         ends with a trailing slash like ``/opt/code/``, then it would be
         treated as ``/opt/code/``.

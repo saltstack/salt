@@ -120,7 +120,7 @@ class Master(SMaster):
         controller for the Salt master. This is where any data that needs to
         be cleanly maintained from the master is maintained.
         '''
-        # TODO: move to a seperate class, with a better name
+        # TODO: move to a separate class, with a better name
         salt.utils.appendproctitle('_clear_old_jobs')
 
         # Set up search object

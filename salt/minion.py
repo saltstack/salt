@@ -1620,7 +1620,7 @@ class Minion(MinionBase):
                                     log.info('Trying to tune in to next master from master-list')
 
                                     # if eval_master finds a new master for us, self.connected
-                                    # will be True again on successfull master authentication
+                                    # will be True again on successful master authentication
                                     self.opts['master'] = self.eval_master(opts=self.opts,
                                                                            failed=True)
                                     if self.connected:
@@ -1653,7 +1653,7 @@ class Minion(MinionBase):
                                                                  schedule=schedule)
 
                         elif package.startswith('__master_connected'):
-                            # handle this event only once. otherwise it will polute the log
+                            # handle this event only once. otherwise it will pollute the log
                             if not self.connected:
                                 log.info('Connection to master {0} re-established'.format(self.opts['master']))
                                 self.connected = True
@@ -2246,7 +2246,7 @@ class MultiSyndic(MinionBase):
                     self.event_forward_timeout < time.time()):
                     self._forward_events()
             # We don't handle ZMQErrors like the other minions
-            # I've put explicit handling around the recieve calls
+            # I've put explicit handling around the receive calls
             # in the process_*_socket methods. If we see any other
             # errors they may need some kind of handling so log them
             # for now.

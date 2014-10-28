@@ -391,7 +391,7 @@ def installed(name, categories=None, includes=None, retries=10):
 
     name
         If ``categories`` is left empty, it will be assumed that you are
-        passing the category option through the name. These are seperate
+        passing the category option through the name. These are separate
         because you can only have one name, but can have multiple categories.
 
     categories
@@ -406,7 +406,7 @@ def installed(name, categories=None, includes=None, retries=10):
         * Update Rollups
 
     includes
-        A list of features of the updates to cull by. Availble features
+        A list of features of the updates to cull by. Available features
         include:
 
         * **UI** - User interaction required, skipped by default
@@ -467,7 +467,7 @@ def downloaded(name, categories=None, includes=None, retries=10):
 
     name
         If ``categories`` is left empty, it will be assumed that you are
-        passing the category option through the name. These are seperate
+        passing the category option through the name. These are separate
         because you can only have one name, but can have multiple categories.
 
     categories
@@ -482,7 +482,7 @@ def downloaded(name, categories=None, includes=None, retries=10):
         * Update Rollups
 
     includes
-        A list of features of the updates to cull by. Availble features
+        A list of features of the updates to cull by. Available features
         include:
 
         * **UI** - User interaction required, skipped by default
