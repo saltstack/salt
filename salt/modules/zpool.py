@@ -5,6 +5,7 @@ Module for running ZFS zpool command
 
 # Import Python libs
 import os
+import stat
 import logging
 
 # Import Salt libs
