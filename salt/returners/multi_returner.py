@@ -35,7 +35,7 @@ def prep_jid(nocache=False, passed_jid=None):
     Call both with prep_jid on all returners in multi_returner
 
     TODO: finish this, what do do when you get different jids from 2 returners...
-    since our jids are time based, this make this problem hard, beacuse they
+    since our jids are time based, this make this problem hard, because they
     aren't unique, meaning that we have to make sure that no one else got the jid
     and if they did we spin to get a new one, which means "locking" the jid in 2
     returners is non-trivial
