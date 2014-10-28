@@ -841,7 +841,7 @@ class LocalClient(object):
 
         found = set()
         # Check to see if the jid is real, if not return the empty dict
-        if not self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) != {}:
+        if self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) == {}:
             log.warning('jid does not exist')
             yield {}
             # stop the iteration, since the jid is invalid
@@ -1002,7 +1002,7 @@ class LocalClient(object):
         found = set()
         ret = {}
         # Check to see if the jid is real, if not return the empty dict
-        if not self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) != {}:
+        if self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) == {}:
             log.warning('jid does not exist')
             return ret
 
@@ -1135,7 +1135,7 @@ class LocalClient(object):
         found = set()
         ret = {}
         # Check to see if the jid is real, if not return the empty dict
-        if not self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) != {}:
+        if self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) == {}:
             log.warning('jid does not exist')
             return ret
         # Wait for the hosts to check in
@@ -1241,7 +1241,7 @@ class LocalClient(object):
 
         found = set()
         # Check to see if the jid is real, if not return the empty dict
-        if not self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) != {}:
+        if self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) == {}:
             log.warning('jid does not exist')
             yield {}
             # stop the iteration, since the jid is invalid
