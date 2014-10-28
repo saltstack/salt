@@ -105,9 +105,6 @@ configuration could look like:
 # Import python libs
 import re
 
-# Import salt libs
-import salt.utils
-
 
 def _check_rvm(ret, user=None):
     '''

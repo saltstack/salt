@@ -48,9 +48,6 @@ This is how a state configuration could look like:
 # Import python libs
 import re
 
-# Import salt libs
-import salt.utils
-
 
 def _check_pyenv(ret, user=None):
     '''

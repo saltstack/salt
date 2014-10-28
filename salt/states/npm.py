@@ -20,7 +20,6 @@ for the package which provides npm (simply ``npm`` in most cases). Example:
 '''
 
 # Import salt libs
-import salt.utils
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 
@@ -94,7 +93,7 @@ def installed(name,
         pkg_list = [name]
 
     try:
-        installed_pkgs = __salt__['npm.list'](dir=dir, runas=runas, env=env)
+        installed_pkgs = __salt__['npm.list'](dir=dir, runas=user, env=env)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = False
         ret['comment'] = 'Error looking up {0!r}: {1}'.format(name, err)

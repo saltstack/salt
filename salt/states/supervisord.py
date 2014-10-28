@@ -17,8 +17,6 @@ Interaction with the Supervisor daemon
 # Import python libs
 import logging
 
-# Import salt libs
-import salt.utils
 
 log = logging.getLogger(__name__)
 
