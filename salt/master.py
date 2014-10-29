@@ -924,6 +924,9 @@ class AESFuncs(object):
         # If the command will make a recursive publish don't run
         if re.match('publish.*', clear_load['fun']):
             return False
+        # Don't allow pillar or compound matching
+        if load.get('tgt_type', 'glob').lower() in ('pillar', 'compound'):
+            return False
         # Check the permissions for this minion
         if not self.__verify_minion(clear_load['id'], clear_load['tok']):
             # The minion is not who it says it is!
@@ -1038,6 +1041,9 @@ class AESFuncs(object):
         '''
         Gathers the data from the specified minions' mine
         '''
+        # Don't allow matching by pillar or compound
+        if load.get('expr_form', 'glob').lower() in ('pillar', 'compound'):
+            return {}
         if any(key not in load for key in ('id', 'tgt', 'fun')):
             return {}
         if 'tok' not in load:
