@@ -1542,7 +1542,7 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
     if local_file is not None:
         tmppath = local_file
 
-    log.debug('Uploading {0} to {1} (sfcp)'.format(dest_path, kwargs.get('hostname', 'unknonw!?'))
+    log.debug('Uploading {0} to {1} (sfcp)'.format(dest_path, kwargs.get('hostname', 'unknonw!?')))
 
     ssh_args = [
         # Don't add new hosts to the host key database
