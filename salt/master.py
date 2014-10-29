@@ -102,6 +102,27 @@ class Maintenance(multiprocessing.Process):
         '''
         super(Maintenance, self).__init__()
         self.opts = opts
+        # Init fileserver manager
+        self.fileserver = salt.fileserver.Fileserver(self.opts)
+        # Load Runners
+        self.runners = salt.loader.runner(self.opts)
+        # Load Returners
+        self.returners = salt.loader.returners(self.opts, {})
+        # Init Scheduler
+        self.schedule = salt.utils.schedule.Schedule(self.opts,
+                                                     self.runners,
+                                                     returners=self.returners)
+        self.ckminions = salt.utils.minions.CkMinions(self.opts)
+        # Make Event bus for firing
+        self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
+        # Init any values needed by the git ext pillar
+        self.pillargitfs = salt.daemons.masterapi.init_git_pillar(self.opts)
+        # Set up search object
+        self.search = salt.search.Search(self.opts)
+        # How often do we perform the maintenance tasks
+        self.loop_interval = int(self.opts['loop_interval'])
+        # Track key rotation intervals
+        self.rotate = int(time.time())
 
     def run(self):
         '''
@@ -113,90 +134,98 @@ class Maintenance(multiprocessing.Process):
         '''
         salt.utils.appendproctitle('Maintenance')
 
-        # Set up search object
-        search = salt.search.Search(self.opts)
         # Make Start Times
         last = int(time.time())
-        rotate = int(time.time())
-        # Init fileserver manager
-        fileserver = salt.fileserver.Fileserver(self.opts)
-        # Load Runners
-        runners = salt.loader.runner(self.opts)
-        # Load Returners
-        returners = salt.loader.returners(self.opts, {})
-        # Init Scheduler
-        schedule = salt.utils.schedule.Schedule(self.opts,
-                                                runners,
-                                                returners=returners)
-        ckminions = salt.utils.minions.CkMinions(self.opts)
-        # Make Event bus for firing
-        event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
-        # Init any values needed by the git ext pillar
-        pillargitfs = salt.daemons.masterapi.init_git_pillar(self.opts)
         # Clean out the fileserver backend cache
         salt.daemons.masterapi.clean_fsbackend(self.opts)
 
         old_present = set()
         while True:
             now = int(time.time())
-            loop_interval = int(self.opts['loop_interval'])
-            if (now - last) >= loop_interval:
+            if (now - last) >= self.loop_interval:
                 salt.daemons.masterapi.clean_old_jobs(self.opts)
                 salt.daemons.masterapi.clean_expired_tokens(self.opts)
-
-            if self.opts.get('publish_session'):
-                if now - rotate >= self.opts['publish_session']:
-                    salt.crypt.dropfile(
-                        self.opts['cachedir'],
-                        self.opts['user'],
-                        self.opts['sock_dir'])
-                    rotate = now
-                    if self.opts.get('ping_on_rotate'):
-                        # Ping all minions to get them to pick up the new key
-                        log.debug('Pinging all connected minions '
-                                  'due to AES key rotation')
-                        salt.utils.master.ping_all_connected_minions(self.opts)
-            if self.opts.get('search'):
-                if now - last >= self.opts['search_index_interval']:
-                    search.index()
-            salt.daemons.masterapi.fileserver_update(fileserver)
-
-            # check how close to FD limits you are
+            self.handle_search(now, last)
+            self.handle_pillargit()
+            self.handle_schedule()
+            self.handle_presence(old_present)
+            self.handle_key_rotate(now)
+            salt.daemons.masterapi.fileserver_update(self.fileserver)
             salt.utils.verify.check_max_open_files(self.opts)
-
-            try:
-                for pillargit in pillargitfs:
-                    pillargit.update()
-            except Exception as exc:
-                log.error('Exception {0} occurred in file server update '
-                          'for git_pillar module.'.format(exc))
-            try:
-                schedule.eval()
-                # Check if scheduler requires lower loop interval than
-                # the loop_interval setting
-                if schedule.loop_interval < loop_interval:
-                    loop_interval = schedule.loop_interval
-            except Exception as exc:
-                log.error(
-                    'Exception {0} occurred in scheduled job'.format(exc)
-                )
             last = now
-            if self.opts.get('presence_events', False):
-                present = ckminions.connected_ids()
-                new = present.difference(old_present)
-                lost = old_present.difference(present)
-                if new or lost:
-                    # Fire new minions present event
-                    data = {'new': list(new),
-                            'lost': list(lost)}
-                    event.fire_event(data, tagify('change', 'presence'))
-                data = {'present': list(present)}
-                event.fire_event(data, tagify('present', 'presence'))
-                old_present = present
             try:
-                time.sleep(loop_interval)
+                time.sleep(self.loop_interval)
             except KeyboardInterrupt:
                 break
+
+    def handle_search(self, now, last):
+        '''
+        Update the search index
+        '''
+        if self.opts.get('search'):
+            if now - last >= self.opts['search_index_interval']:
+                self.search.index()
+
+
+    def handle_key_rotate(self, now):
+        '''
+        Rotate the AES key on a schedule
+        '''
+        if self.opts.get('publish_session'):
+            if now - self.rotate >= self.opts['publish_session']:
+                salt.crypt.dropfile(
+                    self.opts['cachedir'],
+                    self.opts['user'],
+                    self.opts['sock_dir'])
+                self.rotate = now
+                if self.opts.get('ping_on_rotate'):
+                    # Ping all minions to get them to pick up the new key
+                    log.debug('Pinging all connected minions '
+                              'due to AES key rotation')
+                    salt.utils.master.ping_all_connected_minions(self.opts)
+
+    def handle_pillargit(self):
+        '''
+        Update git pillar
+        '''
+        try:
+            for pillargit in self.pillargitfs:
+                pillargit.update()
+        except Exception as exc:
+            log.error('Exception {0} occurred in file server update '
+                      'for git_pillar module.'.format(exc))
+
+    def handle_schedule(self):
+        '''
+        Evaluate the scheduler
+        '''
+        try:
+            self.schedule.eval()
+            # Check if scheduler requires lower loop interval than
+            # the loop_interval setting
+            if self.schedule.loop_interval < self.loop_interval:
+                self.loop_interval = self.schedule.loop_interval
+        except Exception as exc:
+            log.error(
+                'Exception {0} occurred in scheduled job'.format(exc)
+            )
+
+    def handle_presence(self, old_present):
+        '''
+        Fire presence events if enabled
+        '''
+        if self.opts.get('presence_events', False):
+            present = self.ckminions.connected_ids()
+            new = present.difference(old_present)
+            lost = old_present.difference(present)
+            if new or lost:
+                # Fire new minions present event
+                data = {'new': list(new),
+                        'lost': list(lost)}
+                self.event.fire_event(data, tagify('change', 'presence'))
+            data = {'present': list(present)}
+            self.event.fire_event(data, tagify('present', 'presence'))
+            old_present = present
 
 
 class Master(SMaster):
