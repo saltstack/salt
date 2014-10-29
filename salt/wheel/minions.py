@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Wheel system wrapper for con_cache
+Wheel system wrapper for connected minions
 '''
 
 from salt.utils.cache import CacheCli
