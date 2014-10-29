@@ -37,7 +37,7 @@ class StdTest(integration.ModuleCase):
             self.assertTrue(ret['minion'])
         assert num_ret > 0
 
-        # ping a minion that doesnt exist, to make sure that it doesnt hang forever
+        # ping a minion that doesn't exist, to make sure that it doesn't hang forever
         # create fake mininion
         key_file = os.path.join(self.master_opts['pki_dir'], 'minions', 'footest')
         # touch the file

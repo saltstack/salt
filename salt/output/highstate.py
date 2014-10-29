@@ -118,7 +118,7 @@ def _format_host(host, data):
             schanged, ctext = _format_changes(ret['changes'])
             nchanges += 1 if schanged else 0
 
-            # Skip this state if it was successfull & diff output was requested
+            # Skip this state if it was successful & diff output was requested
             if __opts__.get('state_output_diff', False) and \
                ret['result'] and not schanged:
                 continue
