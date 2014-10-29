@@ -519,7 +519,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
 
             timeout = float(chunk.get('timeout', self.application.opts['timeout']))
             # set the timeout
-            timeout_obj = tornado.ioloop.IOLoop.instance().add_timeout(time.time() + timeout, self.timeout_futures)
+            timeout_obj = tornado.ioloop.IOLoop.current().add_timeout(time.time() + timeout, self.timeout_futures)
 
             # ping all the minions (to see who we have to talk to)
             # TODO: actually ping them all? this just gets the pub data
@@ -556,7 +556,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
             self.ret.append(chunk_ret)
 
             # if we finish in time, cancel the timeout
-            tornado.ioloop.IOLoop.instance().remove_timeout(timeout_obj)
+            tornado.ioloop.IOLoop.current().remove_timeout(timeout_obj)
 
         self.write(self.serialize({'return': self.ret}))
         self.finish()
@@ -571,8 +571,8 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
         for chunk in self.lowstate:
             timeout = float(chunk.get('timeout', self.application.opts['timeout']))
             # set the timeout
-            tornado.ioloop.IOLoop.instance().add_timeout(time.time() + timeout, self.timeout_futures)
-            timeout_obj = tornado.ioloop.IOLoop.instance().add_timeout(time.time() + timeout, self.timeout_futures)
+            tornado.ioloop.IOLoop.current().add_timeout(time.time() + timeout, self.timeout_futures)
+            timeout_obj = tornado.ioloop.IOLoop.current().add_timeout(time.time() + timeout, self.timeout_futures)
 
             # TODO: not sure why.... we already verify auth, probably for ACLs
             # require token or eauth
@@ -601,7 +601,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
             self.ret.append(chunk_ret)
 
             # if we finish in time, cancel the timeout
-            tornado.ioloop.IOLoop.instance().remove_timeout(timeout_obj)
+            tornado.ioloop.IOLoop.current().remove_timeout(timeout_obj)
 
         self.write(self.serialize({'return': self.ret}))
         self.finish()
@@ -629,8 +629,8 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
         for chunk in self.lowstate:
             timeout = float(chunk.get('timeout', self.application.opts['timeout']))
             # set the timeout
-            tornado.ioloop.IOLoop.instance().add_timeout(time.time() + timeout, self.timeout_futures)
-            timeout_obj = tornado.ioloop.IOLoop.instance().add_timeout(time.time() + timeout, self.timeout_futures)
+            tornado.ioloop.IOLoop.current().add_timeout(time.time() + timeout, self.timeout_futures)
+            timeout_obj = tornado.ioloop.IOLoop.current().add_timeout(time.time() + timeout, self.timeout_futures)
 
             f_call = {'args': [chunk['fun'], chunk]}
             pub_data = self.saltclients[self.client](chunk['fun'], chunk)
@@ -641,7 +641,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
                 self.ret.append(event['data']['return'])
 
                 # if we finish in time, cancel the timeout
-                tornado.ioloop.IOLoop.instance().remove_timeout(timeout_obj)
+                tornado.ioloop.IOLoop.current().remove_timeout(timeout_obj)
             except TimeoutException:
                 break
 
