@@ -6,12 +6,14 @@ Windows Service module.
 # Import python libs
 import salt.utils
 from subprocess import list2cmdline
+import time
 
 # Define the module's virtual name
 __virtualname__ = 'service'
 
 BUFFSIZE = 5000
-
+SERVICE_STOP_DELAY_SECONDS = 15
+SERVICE_STOP_POLL_MAX_ATTEMPTS = 5
 
 def __virtual__():
     '''
@@ -220,8 +222,23 @@ def stop(name):
 
         salt '*' service.stop <service name>
     '''
+    # net stop issues a stop command and waits briefly (~30s), but will give
+    # up if the service takes too long to stop with a misleading
+    # "service could not be stopped" message.
+
     cmd = list2cmdline(['net', 'stop', name])
-    return not __salt__['cmd.retcode'](cmd)
+    rc = __salt__['cmd.retcode'](cmd)
+    if rc == 0:
+        return True
+
+    # we requested a stop, but the service is still thinking about it.
+    # poll for the real status
+    for attempt in range(SERVICE_STOP_POLL_MAX_ATTEMPTS):
+        time.sleep(SERVICE_STOP_DELAY_SECONDS)
+        if not status(name):
+            return True
+
+    return False
 
 
 def restart(name):
