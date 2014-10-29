@@ -903,7 +903,7 @@ class RaetKey(Key):
             raise ValueError(emsg)
         role = self.opts.get('id', '')
         if not role:
-            emsg = ("Invalide id.")
+            emsg = ("Invalid id.")
             log.error(emsg + "\n")
             raise ValueError(emsg)
 
