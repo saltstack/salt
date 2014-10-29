@@ -137,6 +137,7 @@ def _active_mounts_openbsd(ret):
                          'device_uuid': parens[0]}
     return ret
 
+
 def _active_mounts_darwin(ret):
     '''
     List active mounts on Mac OS systems
@@ -148,6 +149,7 @@ def _active_mounts_darwin(ret):
                          'fstype': parens[0],
                          'opts': parens[1:]}
     return ret
+
 
 def active(extended=False):
     '''
@@ -477,7 +479,6 @@ def set_automaster(
     if not os.path.isfile(config):
         __salt__['file.touch'](config)
         __salt__['file.append'](automaster_file, "/-\t\t\t{0}".format(config))
-
 
     name = "/..{0}".format(name)
     device_fmt = "{0}:{1}".format(fstype, device)

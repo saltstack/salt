@@ -482,7 +482,7 @@ def unmounted(name,
     return ret
 
 
-def mod_watch(name, **kwargs):
+def mod_watch(name, user=None, **kwargs):
     '''
     The mounted watcher, called to invoke the watch command.
 
