@@ -399,7 +399,7 @@ class RemoteFuncs(object):
         if re.match('publish.*', load['fun']):
             return False
         # Don't allow pillar or compound matching
-        if load.get('tgt_type', 'glob') in ('pillar', 'compound'):
+        if load.get('tgt_type', 'glob').lower() in ('pillar', 'compound'):
             return False
         # Check the permissions for this minion
         perms = []
@@ -489,7 +489,7 @@ class RemoteFuncs(object):
         Gathers the data from the specified minions' mine
         '''
         # Don't allow matching by pillar or compound
-        if load.get('expr_form', 'glob') in ('compound', 'pillar'):
+        if load.get('expr_form', 'glob').lower() in ('pillar', 'compound'):
             return {}
         if not skip_verify:
             if any(key not in load for key in ('id', 'tgt', 'fun')):

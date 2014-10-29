@@ -54,7 +54,7 @@ def _publish(
     if fun == 'publish.publish':
         log.info('Function name is \'publish.publish\'. Returning {}')
         return {}
-    if expr_form in ('compound', 'pillar'):
+    if expr_form.lower() in ('pillar', 'compound'):
         log.error('Pillar/compound matching disabled for published commands.')
         return {}
 

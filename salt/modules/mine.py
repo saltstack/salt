@@ -182,7 +182,7 @@ def get(tgt, fun, expr_form='glob'):
         salt '*' mine.get 'os:Fedora' network.interfaces grain
         salt '*' mine.get 'os:Fedora and S@192.168.5.0/24' network.ipaddrs compound
     '''
-    if expr_form.lower in ('pillar', 'compound'):
+    if expr_form.lower() in ('pillar', 'compound'):
         log.error('Pillar/compound matching not supported on mine.get')
         return ''
     if __opts__['file_client'] == 'local':
