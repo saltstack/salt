@@ -353,22 +353,29 @@ def export(pool_name='', force='false'):
 
 def import_(pool_name='', force='false'):
     '''
-    Import a storage pool
+    Import a storage pool or list pools available for import
 
     CLI Example:
 
     .. code-block:: bash
 
+        salt '*' zpool.import
         salt '*' zpool.import myzpool [force=True|False]
     '''
     ret = {}
+    zpool = _check_zpool()
     if not pool_name:
-        ret['Error'] = 'zpool name parameter is mandatory'
+        cmd = '{0} import'.format(zpool)
+        res = __salt__['cmd.run'](cmd, ignore_retcode=True)
+        if not res:
+            ret['Error'] = 'No pools available for import'
+        else:
+            pool_list = [l for l in res.splitlines()]
+            ret['pools'] = pool_list
         return ret
     if exists(pool_name):
         ret['Error'] = 'Storage pool {0} already exists. Import the pool under a different name instead'.format(pool_name)
     else:
-        zpool = _check_zpool()
         if force is True:
             cmd = '{0} import -f {1}'.format(zpool, pool_name)
         else:
