@@ -509,7 +509,7 @@ class RemoteFuncs(object):
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return ret
         checker = salt.utils.minions.CkMinions(self.opts)
-        einions = checker.check_minions(
+        minions = checker.check_minions(
                 load['tgt'],
                 load.get('expr_form', 'glob'),
                 greedy=False
