@@ -89,42 +89,29 @@ class SMaster(object):
         return salt.daemons.masterapi.access_keys(self.opts)
 
 
-class Master(SMaster):
+class Maintenance(multiprocessing.Process):
     '''
-    The salt master server
+    A generalized maintenence process which performances maintenence
+    routines.
     '''
     def __init__(self, opts):
         '''
-        Create a salt master server instance
+        Create a maintenance instance
 
-        :param dict: The salt options
+        :param dict opts: The salt options
         '''
-        # Warn if ZMQ < 3.2
-        try:
-            zmq_version_info = zmq.zmq_version_info()
-        except AttributeError:
-            # PyZMQ <= 2.1.9 does not have zmq_version_info, fall back to
-            # using zmq.zmq_version() and build a version info tuple.
-            zmq_version_info = tuple(
-                [int(x) for x in zmq.zmq_version().split('.')]
-            )
-        if zmq_version_info < (3, 2):
-            log.warning(
-                'You have a version of ZMQ less than ZMQ 3.2! There are '
-                'known connection keep-alive issues with ZMQ < 3.2 which '
-                'may result in loss of contact with minions. Please '
-                'upgrade your ZMQ!'
-            )
-        SMaster.__init__(self, opts)
+        super(Maintenance, self).__init__()
+        self.opts = opts
 
-    def _clear_old_jobs(self):
+    def run(self):
         '''
-        The clean old jobs function is the general passive maintenance process
-        controller for the Salt master. This is where any data that needs to
-        be cleanly maintained from the master is maintained.
+        This is the general passive maintenance process controller for the Salt
+        master.
+
+        This is where any data that needs to be cleanly maintained from the
+        master is maintained.
         '''
-        # TODO: move to a seperate class, with a better name
-        salt.utils.appendproctitle('_clear_old_jobs')
+        salt.utils.appendproctitle('Maintenance')
 
         # Set up search object
         search = salt.search.Search(self.opts)
@@ -138,7 +125,9 @@ class Master(SMaster):
         # Load Returners
         returners = salt.loader.returners(self.opts, {})
         # Init Scheduler
-        schedule = salt.utils.schedule.Schedule(self.opts, runners, returners=returners)
+        schedule = salt.utils.schedule.Schedule(self.opts,
+                                                runners,
+                                                returners=returners)
         ckminions = salt.utils.minions.CkMinions(self.opts)
         # Make Event bus for firing
         event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
@@ -164,7 +153,8 @@ class Master(SMaster):
                     rotate = now
                     if self.opts.get('ping_on_rotate'):
                         # Ping all minions to get them to pick up the new key
-                        log.debug('Pinging all connected minions due to AES key rotation')
+                        log.debug('Pinging all connected minions '
+                                  'due to AES key rotation')
                         salt.utils.master.ping_all_connected_minions(self.opts)
             if self.opts.get('search'):
                 if now - last >= self.opts['search_index_interval']:
@@ -207,6 +197,36 @@ class Master(SMaster):
                 time.sleep(loop_interval)
             except KeyboardInterrupt:
                 break
+
+
+class Master(SMaster):
+    '''
+    The salt master server
+    '''
+    def __init__(self, opts):
+        '''
+        Create a salt master server instance
+
+        :param dict: The salt options
+        '''
+        # Warn if ZMQ < 3.2
+        try:
+            zmq_version_info = zmq.zmq_version_info()
+        except AttributeError:
+            # PyZMQ <= 2.1.9 does not have zmq_version_info, fall back to
+            # using zmq.zmq_version() and build a version info tuple.
+            zmq_version_info = tuple(
+                [int(x) for x in zmq.zmq_version().split('.')]
+            )
+        if zmq_version_info < (3, 2):
+            log.warning(
+                'You have a version of ZMQ less than ZMQ 3.2! There are '
+                'known connection keep-alive issues with ZMQ < 3.2 which '
+                'may result in loss of contact with minions. Please '
+                'upgrade your ZMQ!'
+            )
+        SMaster.__init__(self, opts)
+
 
     def __set_max_open_files(self):
         # Let's check to see how our max open files(ulimit -n) setting is
@@ -289,8 +309,7 @@ class Master(SMaster):
 
         self.__set_max_open_files()
         process_manager = salt.utils.process.ProcessManager()
-        process_manager.add_process(self._clear_old_jobs)
-
+        process_manager.add_process(Maintenance, args=(self.opts,))
         process_manager.add_process(Publisher, args=(self.opts,))
         process_manager.add_process(salt.utils.event.EventPublisher, args=(self.opts,))
 
@@ -366,6 +385,8 @@ class Publisher(multiprocessing.Process):
     def run(self):
         '''
         Bind to the interface specified in the configuration file
+
+        Override of multiprocessing.Process.run()
         '''
         salt.utils.appendproctitle(self.__class__.__name__)
         # Set up the context
