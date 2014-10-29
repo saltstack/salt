@@ -192,7 +192,6 @@ def get(tgt, fun, expr_form='glob'):
                      'list': __salt__['match.list'],
                      'grain': __salt__['match.grain'],
                      'grain_pcre': __salt__['match.grain_pcre'],
-                     'compound': __salt__['match.compound'],
                      'ipcidr': __salt__['match.ipcidr'],
                      }[expr_form](tgt)
         if is_target:
