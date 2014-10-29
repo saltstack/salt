@@ -1190,8 +1190,9 @@ def managed(name,
     check_cmd
         .. versionadded:: 2014.7.0
 
-        Do run the state only if the check_cmd succeeds
-
+        The specified command will be run with the managed file as an argument.
+        If the command exits with a nonzero exit code, the command will not be
+        run.
     '''
     # Make sure that leading zeros stripped by YAML loader are added back
     mode = __salt__['config.manage_mode'](mode)
@@ -1379,14 +1380,12 @@ def managed(name,
                    'comment': '',
                    'name': name,
                    'result': True}
-            check_cmd_opts = {
-                'cmd': check_cmd,
-                'cwd': tmp_filename,
-            }
+
+            check_cmd_opts = {}
             if 'shell' in __grains__:
                 check_cmd_opts['shell'] = __grains__['shell']
 
-            cret = mod_run_check_cmd(**check_cmd_opts)
+            cret = mod_run_check_cmd(check_cmd, tmp_filename, **check_cmd_opts)
             if isinstance(cret, dict):
                 ret.update(cret)
                 return ret
@@ -4010,7 +4009,7 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
     return ret
 
 
-def mod_run_check_cmd(cmd, filename):
+def mod_run_check_cmd(cmd, filename, **check_cmd_opts):
     '''
     Execute the check_cmd logic
     Return a result dict if:
@@ -4020,10 +4019,10 @@ def mod_run_check_cmd(cmd, filename):
 
     log.debug('running our check_cmd')
     _cmd = '{0} {1}'.format(cmd, filename)
-    if __salt__['cmd.retcode'](_cmd) != 0:
+    if __salt__['cmd.retcode'](_cmd, **check_cmd_opts) != 0:
         return {'comment': 'check_cmd execution failed',
                 'skip_watch': True,
-                'result': True}
+                'result': False}
 
     # No reason to stop, return True
     return True
