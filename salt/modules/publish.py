@@ -54,6 +54,9 @@ def _publish(
     if fun == 'publish.publish':
         log.info('Function name is \'publish.publish\'. Returning {}')
         return {}
+    if expr_form in ('compound', 'pillar'):
+        log.error('Pillar/compound matching disabled for published commands.')
+        return {}
 
     arg = [salt.utils.args.yamlify_arg(arg)]
     if len(arg) == 1 and arg[0] is None:
