@@ -151,6 +151,8 @@ class EventListener(object):
             opts['transport'],
             opts=opts)
 
+        self.event.subscribe()  # start listening for events immediately
+
         # tag -> list of futures
         self.tag_map = defaultdict(list)
 
@@ -187,7 +189,7 @@ class EventListener(object):
         if callback is not None:
             def handle_future(future):
                 response = future.result()
-                self.io_loop.add_callback(callback, response)
+                tornado.ioloop.IOLoop.current().add_callback(callback, response)
             future.add_done_callback(handle_future)
         # add this tag and future to the callbacks
         self.tag_map[tag].append(future)
@@ -195,6 +197,7 @@ class EventListener(object):
 
         return future
 
+    # TODO: change to use ZMQStreams (http://zeromq.github.io/pyzmq/api/generated/zmq.eventloop.zmqstream.html)
     def iter_events(self):
         '''
         Iterate over all events that could happen
@@ -211,7 +214,7 @@ class EventListener(object):
                     del self.tag_map[tag_prefix]
 
             # call yourself back!
-            tornado.ioloop.IOLoop.instance().add_callback(self.iter_events)
+            tornado.ioloop.IOLoop.current().add_callback(self.iter_events)
 
         except zmq.ZMQError as e:
             # TODO: not sure what other errors we can get...
@@ -219,17 +222,20 @@ class EventListener(object):
                 raise Exception()
             # add callback in the future (to avoid spinning)
             # TODO: configurable timeout
-            tornado.ioloop.IOLoop.instance().add_timeout(time.time() + 0.1, self.iter_events)
+            tornado.ioloop.IOLoop.current().add_timeout(time.time() + 0.1, self.iter_events)
         except:
             logging.critical('Uncaught exception in the event_listener: {0}'.format(sys.exc_info()))
             # TODO: configurable timeout
-            tornado.ioloop.IOLoop.instance().add_timeout(time.time() + 0.1, self.iter_events)
+            tornado.ioloop.IOLoop.current().add_timeout(time.time() + 0.1, self.iter_events)
 
 
 # TODO: move to a utils function within salt-- the batching stuff is a bit tied together
 def get_batch_size(batch, num_minions):
     '''
     Return the batch size that you should have
+        batch: string
+        num_minions: int
+
     '''
     # figure out how many we can keep in flight
     partition = lambda x: float(x) / 100.0 * num_minions
