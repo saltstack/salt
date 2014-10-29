@@ -8,7 +8,7 @@ Salt SSH
 
 .. note::
 
-    On many systems, ``salt-ssh`` will be in its own package, usually named
+    On many systems, the ``salt-ssh`` executable will be in its own package, usually named
     ``salt-ssh``.
 
 In version 0.17.0 of Salt a new transport system was introduced, the ability

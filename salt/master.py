@@ -1489,7 +1489,8 @@ class ClearFuncs(object):
             pass
         elif os.path.isfile(pubfn_rejected):
             # The key has been rejected, don't place it in pending
-            log.info('Public key rejected for {id}'.format(**load))
+            log.info('Public key rejected for {0}. Key is present in '
+                     'rejection key dir.'.format(load['id']))
             eload = {'result': False,
                      'id': load['id'],
                      'pub': load['pub']}
@@ -2254,14 +2255,17 @@ class ClearFuncs(object):
                     }
                 }
         # Retrieve the jid
-        if not clear_load['jid']:
-            fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
-            try:
-                clear_load['jid'] = self.mminion.returners[fstr](nocache=extra.get('nocache', False))
-            except TypeError:  # The returner is not present
-                log.error('The requested returner {0} could not be loaded. Publication not sent.'.format(fstr.split('.')[0]))
-                return {}
-                # TODO Error reporting over the master event bus
+        fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
+        try:
+            clear_load['jid'] = self.mminion.returners[fstr](nocache=extra.get('nocache', False),
+                                                            # the jid in clear_load can be None, '', or something else.
+                                                            # this is an attempt to clean up the value before passing to plugins
+                                                            passed_jid=clear_load['jid'] if clear_load.get('jid') else None)
+        except TypeError:  # The returner is not present
+            log.error('The requested returner {0} could not be loaded. Publication not sent.'.format(fstr.split('.')[0]))
+            return {}
+            # TODO Error reporting over the master event bus
+
         self.event.fire_event({'minions': minions}, clear_load['jid'])
 
         new_job_load = {

@@ -42,7 +42,6 @@ def latest(name,
            rev=None,
            target=None,
            clean=False,
-           runas=None,
            user=None,
            force=False,
            opts=False):
@@ -61,11 +60,6 @@ def latest(name,
     clean
         Force a clean update with -C (Default: False)
 
-    runas
-        Name of the user performing repository management operations
-
-        .. deprecated:: 0.17.0
-
     user
         Name of the user performing repository management operations
 
@@ -78,30 +72,6 @@ def latest(name,
         Include additional arguments and options to the hg command line
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
-
-    salt.utils.warn_until(
-        'Lithium',
-        'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 0.17.0',
-        _dont_call_warnings=True
-    )
-    if runas:
-        # Warn users about the deprecation
-        ret.setdefault('warnings', []).append(
-            'The \'runas\' argument is being deprecated in favor of \'user\', '
-            'please update your state files.'
-        )
-    if user is not None and runas is not None:
-        # user wins over runas but let warn about the deprecation.
-        ret.setdefault('warnings', []).append(
-            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
-            '\'runas\' is being ignored in favor of \'user\'.'
-        )
-        runas = None
-    elif runas is not None:
-        # Support old runas usage
-        user = runas
-        runas = None
 
     if not target:
         return _fail(ret, '"target option is required')

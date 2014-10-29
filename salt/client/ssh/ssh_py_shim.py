@@ -93,6 +93,7 @@ def unpack_ext(ext_path):
             'var',
             'cache',
             'salt',
+            'minion',
             'extmods')
     tfile = tarfile.TarFile.gzopen(ext_path)
     tfile.extractall(path=modcache)

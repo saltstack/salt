@@ -119,22 +119,28 @@ def _get_ttl():
 
 
 #TODO: add to returner docs-- this is a new one
-def prep_jid(nocache=False):
+def prep_jid(nocache=False, passed_jid=None):
     '''
     Return a job id and prepare the job id directory
     This is the function responsible for making sure jids don't collide (unless its passed a jid)
     So do what you have to do to make sure that stays the case
     '''
+    if passed_jid is None:
+        jid = salt.utils.gen_jid()
+    else:
+        jid = passed_jid
+
     cb_ = _get_connection()
 
-    jid = salt.utils.gen_jid()
     try:
         cb_.add(str(jid),
                {'nocache': nocache},
                ttl=_get_ttl(),
                )
     except couchbase.exceptions.KeyExistsError:
-        return prep_jid(nocache=nocache)
+        # TODO: some sort of sleep or something? Spinning is generally bad practice
+        if passed_jid is None:
+            return prep_jid(nocache=nocache)
 
     return jid
 
