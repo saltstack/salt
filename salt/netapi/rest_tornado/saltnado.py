@@ -92,6 +92,8 @@ logger = logging.getLogger()
 #  - "runner" (done)
 #  - "wheel" (need async api...)
 
+# TODO: change timeouts for jobs to match new iter_client_returns logic
+
 
 class SaltClientsMixIn(object):
     '''

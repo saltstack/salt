@@ -36,8 +36,11 @@ class TestEventListener(tornado.testing.AsyncTestCase):
                                                      'transport': 'zeromq'})
             self.io_loop.add_callback(event_listener.iter_events)
             event_future = event_listener.get_event(1, 'evt1', self.stop)  # get an event future
-            me.fire_event({'data': 'foo1'}, 'evt1')
-            self.wait()
+            me.fire_event({'data': 'foo2'}, 'evt2')  # fire an event we don't want
+            me.fire_event({'data': 'foo1'}, 'evt1')  # fire an event we do want
+            self.wait()  # wait for the future
+
+            # check that we got the event we wanted
             assert event_future.done()
             assert event_future.result()['tag'] ==  'evt1'
             assert event_future.result()['data']['data'] ==  'foo1'
