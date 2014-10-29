@@ -162,7 +162,7 @@ def lock(zk_hosts,
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'attempt to aqcuire lock'
+        ret['comment'] = 'attempt to acquire lock'
         return ret
 
     zk = _get_zk_conn(zk_hosts)
