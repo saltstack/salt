@@ -224,11 +224,11 @@ def stop(name):
     '''
     # net stop issues a stop command and waits briefly (~30s), but will give
     # up if the service takes too long to stop with a misleading
-    # "service could not be stopped" message.
+    # "service could not be stopped" message and RC 0.
 
     cmd = list2cmdline(['net', 'stop', name])
-    rc = __salt__['cmd.retcode'](cmd)
-    if rc == 0:
+    res = __salt__['cmd.run'](cmd)
+    if 'service was stopped' in res:
         return True
 
     # we requested a stop, but the service is still thinking about it.
