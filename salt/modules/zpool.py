@@ -319,3 +319,30 @@ def create_file_vdev(size, *vdevs):
     ret['status'] = True
     ret[cmd] = cmd
     return ret
+
+
+def export(pool_name='', force='false'):
+    '''
+    Export a storage pool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zpool.export myzpool
+    '''
+    ret = {}
+    if not pool_name:
+        ret['Error'] = 'zpool name parameter is mandatory'
+        return ret
+    if exists(pool_name):
+        zpool = _check_zpool()
+        if force is True:
+            cmd = '{0} export -f {1}'.format(zpool, pool_name)
+        else:
+            cmd = '{0} export {1}'.format(zpool, pool_name)
+        __salt__['cmd.run'](cmd)
+        ret[pool_name] = 'exported'
+    else:
+        ret['Error'] = 'Storage pool {0} does not exist'.format(pool_name)
+    return ret
