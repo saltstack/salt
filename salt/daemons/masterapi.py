@@ -398,6 +398,9 @@ class RemoteFuncs(object):
         # If the command will make a recursive publish don't run
         if re.match('publish.*', load['fun']):
             return False
+        # Don't allow pillar or compound matching
+        if load.get('tgt_type', 'glob') in ('pillar', 'compound'):
+            return False
         # Check the permissions for this minion
         perms = []
         for match in self.opts['peer']:
