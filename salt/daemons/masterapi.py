@@ -488,6 +488,9 @@ class RemoteFuncs(object):
         '''
         Gathers the data from the specified minions' mine
         '''
+        # Don't allow matching by pillar or compound
+        if load.get('expr_form', 'glob') in ('compound', 'pillar'):
+            return {}
         if not skip_verify:
             if any(key not in load for key in ('id', 'tgt', 'fun')):
                 return {}
@@ -506,7 +509,7 @@ class RemoteFuncs(object):
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return ret
         checker = salt.utils.minions.CkMinions(self.opts)
-        minions = checker.check_minions(
+        einions = checker.check_minions(
                 load['tgt'],
                 load.get('expr_form', 'glob'),
                 greedy=False
