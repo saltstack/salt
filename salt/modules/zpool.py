@@ -18,6 +18,7 @@ __func_alias__ = {
     'import_': 'import'
 }
 
+
 @decorators.memoize
 def _check_zpool():
     '''
