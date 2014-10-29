@@ -887,23 +887,11 @@ class LocalClient(object):
                     log.debug('jid {0} return from {1}'.format(jid, raw['data']['id']))
                     yield ret
 
-            # if we have all of the returns, no need for anything fancy
-            if len(found.intersection(minions)) >= len(minions):
-                # if you are a master of masters
-                if (self.opts['order_masters'] and
-                        # and if you have more syndic_wait to add
-                        syndic_wait < self.opts.get('syndic_wait', 1) and
-                        # add you would have timed out
-                        time.time() >= timeout_at):
-                    syndic_wait += 1
-                    # add one, so as to only add a max of opts['syndic_wait']
-                    timeout_at += 1
-                    log.debug('jid {0} syndic_wait {1} will now timeout at {2}'.format(
-                              jid, syndic_wait, datetime.fromtimestamp(timeout_at).time()))
-                else:
-                    # All minions have returned, break out of the loop
-                    log.debug('jid {0} found all minions {1}'.format(jid, found))
-                    break
+            # if we have all of the returns (and we aren't a syndic), no need for anything fancy
+            if len(found.intersection(minions)) >= len(minions) and not self.opts['order_masters']:
+                # All minions have returned, break out of the loop
+                log.debug('jid {0} found all minions {1}'.format(jid, found))
+                break
 
             # let start the timeouts for all remaining minions
             for id_ in minions - found:
@@ -933,6 +921,9 @@ class LocalClient(object):
                 else:
                     jinfo_iter = self.get_returns_no_block(jinfo['jid'], event=event)
                 timeout_at = time.time() + self.opts['gather_job_timeout']
+                # if you are a syndic, wait a little longer
+                if self.opts['order_masters']:
+                    timeout_at += self.opts.get('syndic_wait', 1)
 
             # check for minions that are running the job still
             for raw in jinfo_iter:
