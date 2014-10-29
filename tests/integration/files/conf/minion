@@ -21,7 +21,7 @@ integration.test: True
 grains:
   test_grain: cheese
   script: grail
-  a lot: many
+  alot: many
   planets:
     - mercury
     - venus
