@@ -317,6 +317,13 @@ def _write_conf(conf, path=MAIN_CF):
 def show_queue():
     '''
     Show contents of the mail queue
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postfix.show_queue
+
     '''
     cmd = 'mailq'
     out = __salt__['cmd.run'](cmd).splitlines()
@@ -345,6 +352,15 @@ def show_queue():
 def delete(queue_id):
     '''
     Delete message(s) from the mail queue
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postfix.delete 5C33CA0DEA
+
+        salt '*' postfix.delete ALL
+
     '''
 
     ret = {'message': '',
@@ -385,6 +401,15 @@ def delete(queue_id):
 def hold(queue_id):
     '''
     Put message(s) on hold from the mail queue
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postfix.hold 5C33CA0DEA
+
+        salt '*' postfix.hold ALL
+
     '''
 
     ret = {'message': '',
@@ -425,6 +450,15 @@ def hold(queue_id):
 def unhold(queue_id):
     '''
     Set held message(s) in the mail queue to unheld
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postfix.unhold 5C33CA0DEA
+
+        salt '*' postfix.unhold ALL
+
     '''
 
     ret = {'message': '',
@@ -465,6 +499,15 @@ def unhold(queue_id):
 def requeue(queue_id):
     '''
     Requeue message(s) in the mail queue
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postfix.requeue 5C33CA0DEA
+
+        salt '*' postfix.requeue ALL
+
     '''
 
     ret = {'message': '',
