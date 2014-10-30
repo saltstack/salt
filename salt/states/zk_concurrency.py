@@ -129,4 +129,3 @@ def unlock(path,
         ret['comment'] = 'Unable to find lease for path {0}'.format(path)
 
     return ret
-

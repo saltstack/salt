@@ -162,7 +162,6 @@ def lock(path,
     return SEMAPHORE_MAP[path].is_acquired
 
 
-
 def unlock(path,
            zk_hosts=None,  # in case you need to unlock without having run lock (failed execution for example)
            identifier=None,
