@@ -20,31 +20,7 @@ class TestUtils(TestCase):
         assert 11 == saltnado.get_batch_size('110%', 10)
 
 
-class TestEventListener(tornado.testing.AsyncTestCase):
-    def setUp(self):
-        if not os.path.exists(SOCK_DIR):
-            os.makedirs(SOCK_DIR)
-        super(TestEventListener, self).setUp()
-
-    def test_simple(self):
-        '''
-        Test getting a few events
-        '''
-        with eventpublisher_process():
-            me = event.MasterEvent(SOCK_DIR)
-            event_listener = saltnado.EventListener({},  # we don't use mod_opts, don't save?
-                                                    {'sock_dir': SOCK_DIR,
-                                                     'transport': 'zeromq'})
-            event_future = event_listener.get_event(1, 'evt1', self.stop)  # get an event future
-            me.fire_event({'data': 'foo2'}, 'evt2')  # fire an event we don't want
-            me.fire_event({'data': 'foo1'}, 'evt1')  # fire an event we do want
-            self.wait()  # wait for the future
-
-            # check that we got the event we wanted
-            assert event_future.done()
-            assert event_future.result()['tag'] ==  'evt1'
-            assert event_future.result()['data']['data'] ==  'foo1'
-
+class TestSaltnadoUtils(tornado.testing.AsyncTestCase):
     def test_any_future(self):
         '''
         Test that the Any Future does what we think it does
@@ -71,6 +47,32 @@ class TestEventListener(tornado.testing.AsyncTestCase):
 
         # make sure it returned the one that finished
         assert any_.result() == futures[0]
+
+
+class TestEventListener(tornado.testing.AsyncTestCase):
+    def setUp(self):
+        if not os.path.exists(SOCK_DIR):
+            os.makedirs(SOCK_DIR)
+        super(TestEventListener, self).setUp()
+
+    def test_simple(self):
+        '''
+        Test getting a few events
+        '''
+        with eventpublisher_process():
+            me = event.MasterEvent(SOCK_DIR)
+            event_listener = saltnado.EventListener({},  # we don't use mod_opts, don't save?
+                                                    {'sock_dir': SOCK_DIR,
+                                                     'transport': 'zeromq'})
+            event_future = event_listener.get_event(1, 'evt1', self.stop)  # get an event future
+            me.fire_event({'data': 'foo2'}, 'evt2')  # fire an event we don't want
+            me.fire_event({'data': 'foo1'}, 'evt1')  # fire an event we do want
+            self.wait()  # wait for the future
+
+            # check that we got the event we wanted
+            assert event_future.done()
+            assert event_future.result()['tag'] ==  'evt1'
+            assert event_future.result()['data']['data'] ==  'foo1'
 
 
 if __name__ == '__main__':
