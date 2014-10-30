@@ -154,7 +154,7 @@ def lock(path,
                                         max_leases=max_concurrency,
                                         ephemeral_lease=ephemeral_lease)
 
-    # forcible get the lock regardless of max_concurrency
+    # forcibly get the lock regardless of max_concurrency
     if force:
         SEMAPHORE_MAP[path].assured_path = True
 
