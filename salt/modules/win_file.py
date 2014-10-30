@@ -347,7 +347,7 @@ def get_pgid(path, follow_symlinks=True):
         return 'S-1-1-0'
     except pywinerror as exc:
         # Incorrect function error (win2k8+)
-        if exc.winerror == 1:
+        if exc.winerror == 1 or exc.winerror == 50:
             return 'S-1-1-0'
         raise
     group_sid = secdesc.GetSecurityDescriptorGroup()
@@ -543,7 +543,7 @@ def get_uid(path, follow_symlinks=True):
         return 'S-1-1-0'
     except pywinerror as exc:
         # Incorrect function error (win2k8+)
-        if exc.winerror == 1:
+        if exc.winerror == 1 or exc.winerror == 50:
             return 'S-1-1-0'
         raise
     owner_sid = secdesc.GetSecurityDescriptorOwner()
