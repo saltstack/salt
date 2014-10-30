@@ -32,7 +32,7 @@ be used here.
 .. code-block:: yaml
 
     minion:
-        master: saltmaster.example.com
+      master: saltmaster.example.com
 
 
 In particular, this is the location to specify the location of the salt master
@@ -628,7 +628,7 @@ obtained from your cloud provider. Both PAM and PVE users can be used.
       user: saltcloud@pve
       password: xyzzy
       url: your.proxmox.host
-  
+
 lxc
 ---
 
