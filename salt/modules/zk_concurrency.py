@@ -115,8 +115,8 @@ def _close_zk_conn():
     ZK_CONNECTION = None
 
 
-def lock(zk_hosts,
-         path,
+def lock(path,
+         zk_hosts,
          identifier=None,
          max_concurrency=1,
          timeout=None,

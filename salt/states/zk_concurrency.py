@@ -80,8 +80,8 @@ def lock(path,
     if identifier is None:
         identifier = __grains__['id']
 
-    locked = __salt__['zk_concurrency.lock'](zk_hosts,
-                                             path,
+    locked = __salt__['zk_concurrency.lock'](path,
+                                             zk_hosts,
                                              identifier=identifier,
                                              max_concurrency=max_concurrency,
                                              timeout=timeout,
