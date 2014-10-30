@@ -166,7 +166,6 @@ class Maintenance(multiprocessing.Process):
             if now - last >= self.opts['search_index_interval']:
                 self.search.index()
 
-
     def handle_key_rotate(self, now):
         '''
         Rotate the AES key on a schedule
@@ -255,7 +254,6 @@ class Master(SMaster):
                 'upgrade your ZMQ!'
             )
         SMaster.__init__(self, opts)
-
 
     def __set_max_open_files(self):
         # Let's check to see how our max open files(ulimit -n) setting is
