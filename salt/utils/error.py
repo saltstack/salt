@@ -41,10 +41,12 @@ def pack_exception(exc):
     return packed_exception
 
 
-def fire_exception(exc, opts, job={}, node='minion'):
+def fire_exception(exc, opts, job=None, node='minion'):
     '''
     Fire raw exception across the event bus
     '''
+    if job is None:
+        job = {}
     event = salt.utils.event.SaltEvent(node, opts=opts)
     event.fire_event({'exception': pack_exception(exc),
                       'job': job}, '_salt_error')
