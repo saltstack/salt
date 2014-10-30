@@ -644,8 +644,6 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
             if fnmatch.fnmatch(tag, key):
                 if isinstance(val, string_types):
                     reactors.append(val)
-                elif hasattr(val, '__call__'):
-                    reactors.append(val)
                 elif isinstance(val, list):
                     reactors.extend(val)
         return reactors
@@ -658,9 +656,6 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         high = {}
         chunks = []
         for fn_ in reactors:
-            if hasattr(fn_, '__call__'):  # Is a func
-                fn_(data)
-                continue
             high.update(self.render_reaction(fn_, tag, data))
         if high:
             errors = self.verify_high(high)
