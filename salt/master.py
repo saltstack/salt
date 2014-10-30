@@ -365,7 +365,6 @@ class Master(SMaster):
         if self.opts.get('reactor'):
             log.info('Creating master reactor process')
             process_manager.add_process(salt.utils.event.Reactor, args=(self.opts,))
->>>>>>> develop
 
         if HAS_HALITE and 'halite' in self.opts:
             log.info('Creating master halite process')
