@@ -137,6 +137,7 @@ def run(name,
     elif __opts__['test']:
         ret['result'] = None
         ret['comment'] = 'Query would execute, not storing result'
+        return ret
 
     # The database is present, execute the query
     query_result = __salt__['mysql.query'](database, query, **connection_args)
