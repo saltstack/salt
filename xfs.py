@@ -40,26 +40,6 @@ def __virtual__():
     Only work on POSIX-like systems
     '''
     return not salt.utils.is_windows()
-    #and os.popen('mount | grep xfs').read().strip()
-
-
-def mkfs(device, fs_type, **kwargs):
-    '''
-    Create a file system on the specified device
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' extfs.mkfs /dev/sda1 fs_type=ext4 opts='acl,noexec'
-
-    Valid options are:
-
-    * **block_size**: 1024, 2048 or 4096
-
-    See the ``mke2fs(8)`` manpage for a more complete description of these
-    options.
-    '''
 
 
 def _get_xfs_devices():
