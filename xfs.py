@@ -98,4 +98,7 @@ def info(device):
 
         salt '*' xfs.info /dev/sda1
     '''
-    return _parse_xfs_info(__salt__['cmd.run']("xfs_info {0}".format(device)))
+    out = __salt__['cmd.run_all']("xfs_info {0}".format(device))
+    if out.get('stderr'):
+        raise CommandExecutionError(out['stderr'].replace("xfs_info:", "").strip())
+    return _parse_xfs_info(out['stdout'])
