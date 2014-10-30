@@ -1728,43 +1728,57 @@ class ClearFuncs(object):
         self.event.fire_event(eload, tagify(prefix='auth'))
         return ret
 
+    def process_token(self, tok, fun, auth_type):
+        '''
+        Process a token and determine if a command is authorized
+        '''
+        try:
+            token = self.loadauth.get_tok(tok)
+        except Exception as exc:
+            msg = 'Exception occurred when generating auth token: {0}'.format(
+                  exc)
+            log.error(msg)
+            return dict(error=dict(name='TokenAuthenticationError',
+                                   message=msg))
+        if not token:
+            msg = 'Authentication failure of type "token" occurred.'
+            log.warning(msg)
+            return dict(error=dict(name='TokenAuthenticationError',
+                                   message=msg))
+        if token['eauth'] not in self.opts['external_auth']:
+            msg = 'Authentication failure of type "token" occurred.'
+            log.warning(msg)
+            return dict(error=dict(name='TokenAuthenticationError',
+                                   message=msg))
+
+        check_fun = getattr(self.ckminions,
+                            '{auth}_check'.format(auth=auth_type))
+        good = check_fun(
+            self.opts['external_auth'][token['eauth']][token['name']]
+            if token['name'] in self.opts['external_auth'][token['eauth']]
+            else self.opts['external_auth'][token['eauth']]['*'],
+            fun)
+        if not good:
+            msg = ('Authentication failure of type "token" occurred for '
+                   'user {0}.').format(token['name'])
+            log.warning(msg)
+            return dict(error=dict(name='TokenAuthenticationError',
+                                   message=msg))
+        return None
+
     def runner(self, clear_load):
         '''
         Send a master control function back to the runner system
         '''
         # All runner ops pass through eauth
         if 'token' in clear_load:
-            try:
+            auth_error = self.process_token(clear_load['token'],
+                                            clear_load['fun'],
+                                            'runner')
+            if auth_error:
+                return auth_error
+            else:
                 token = self.loadauth.get_tok(clear_load['token'])
-            except Exception as exc:
-                msg = 'Exception occurred when generating auth token: {0}'.format(
-                      exc)
-                log.error(msg)
-                return dict(error=dict(name='TokenAuthenticationError',
-                                       message=msg))
-            if not token:
-                msg = 'Authentication failure of type "token" occurred.'
-                log.warning(msg)
-                return dict(error=dict(name='TokenAuthenticationError',
-                                       message=msg))
-            if token['eauth'] not in self.opts['external_auth']:
-                msg = 'Authentication failure of type "token" occurred.'
-                log.warning(msg)
-                return dict(error=dict(name='TokenAuthenticationError',
-                                       message=msg))
-
-            good = self.ckminions.runner_check(
-                self.opts['external_auth'][token['eauth']][token['name']]
-                if token['name'] in self.opts['external_auth'][token['eauth']]
-                else self.opts['external_auth'][token['eauth']]['*'],
-                clear_load['fun'])
-            if not good:
-                msg = ('Authentication failure of type "token" occurred for '
-                       'user {0}.').format(token['name'])
-                log.warning(msg)
-                return dict(error=dict(name='TokenAuthenticationError',
-                                       message=msg))
-
             try:
                 fun = clear_load.pop('fun')
                 runner_client = salt.runner.RunnerClient(self.opts)
@@ -1846,35 +1860,13 @@ class ClearFuncs(object):
         '''
         # All wheel ops pass through eauth
         if 'token' in clear_load:
-            try:
+            auth_error = self.process_token(clear_load['token'],
+                                            clear_load['fun'],
+                                            'wheel')
+            if auth_error:
+                return auth_error
+            else:
                 token = self.loadauth.get_tok(clear_load['token'])
-            except Exception as exc:
-                msg = 'Exception occurred when generating auth token: {0}'.format(
-                      exc)
-                log.error(msg)
-                return dict(error=dict(name='TokenAuthenticationError',
-                                       message=msg))
-            if not token:
-                msg = 'Authentication failure of type "token" occurred.'
-                log.warning(msg)
-                return dict(error=dict(name='TokenAuthenticationError',
-                                       message=msg))
-            if token['eauth'] not in self.opts['external_auth']:
-                msg = 'Authentication failure of type "token" occurred.'
-                log.warning(msg)
-                return dict(error=dict(name='TokenAuthenticationError',
-                                       message=msg))
-            good = self.ckminions.wheel_check(
-                self.opts['external_auth'][token['eauth']][token['name']]
-                if token['name'] in self.opts['external_auth'][token['eauth']]
-                else self.opts['external_auth'][token['eauth']]['*'],
-                clear_load['fun'])
-            if not good:
-                msg = ('Authentication failure of type "token" occurred for '
-                       'user {0}.').format(token['name'])
-                log.warning(msg)
-                return dict(error=dict(name='TokenAuthenticationError',
-                                       message=msg))
 
             jid = salt.utils.gen_jid()
             fun = clear_load.pop('fun')
