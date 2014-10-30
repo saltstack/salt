@@ -115,6 +115,26 @@ def _close_zk_conn():
     ZK_CONNECTION = None
 
 
+def lock_holders(path,
+                 zk_hosts,
+                 identifier=None,
+                 max_concurrency=1,
+                 timeout=None,
+                 ephemeral_lease=False):
+    '''
+    Return an un-ordered list of lock holders
+    '''
+
+    zk = _get_zk_conn(zk_hosts)
+    if path not in SEMAPHORE_MAP:
+        SEMAPHORE_MAP[path] = _Semaphore(zk,
+                                        path,
+                                        identifier,
+                                        max_leases=max_concurrency,
+                                        ephemeral_lease=ephemeral_lease)
+    return SEMAPHORE_MAP[path].lease_holders()
+
+
 def lock(path,
          zk_hosts,
          identifier=None,
