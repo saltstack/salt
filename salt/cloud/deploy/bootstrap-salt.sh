@@ -1684,7 +1684,7 @@ install_ubuntu_deps() {
     # Install Keys
     __apt_get_install_noinput debian-archive-keyring && apt-get update
 
-    if [ "$DISTRO_MAJOR_VERSION" -gt 12 ] || ([ "$DISTRO_MAJOR_VERSION" -eq 12 ] && [ "$DISTRO_MINOR_VERSION" -eq 10 ]); then
+    if [ "$DISTRO_MAJOR_VERSION" -ge 12 ] && [ "$DISTRO_MINOR_VERSION" -eq 10 ]); then
         # Above Ubuntu 12.04 add-apt-repository is in a different package
         __apt_get_install_noinput software-properties-common || return 1
     else
@@ -1693,7 +1693,7 @@ install_ubuntu_deps() {
 
     __enable_universe_repository || return 1
 
-    if [ "$DISTRO_MAJOR_VERSION" -gt 11 ] || ([ "$DISTRO_MAJOR_VERSION" -eq 11 ] && [ "$DISTRO_MINOR_VERSION" -gt 04 ]); then
+    if [ "$DISTRO_MAJOR_VERSION" -ge 11 ] && [ "$DISTRO_MINOR_VERSION" -gt 04 ]); then
         # Above Ubuntu 11.04 add a -y flag
         add-apt-repository -y ppa:saltstack/salt || return 1
     else
@@ -1708,7 +1708,7 @@ install_ubuntu_deps() {
     # Need python-apt for managing packages via Salt
     __apt_get_install_noinput python-apt
 
-    if [ "$DISTRO_MAJOR_VERSION" -gt 12 ] || ([ "$DISTRO_MAJOR_VERSION" -eq 12 ] && [ "$DISTRO_MINOR_VERSION" -gt 03 ]); then
+    if [ "$DISTRO_MAJOR_VERSION" -ge 12 ] && [ "$DISTRO_MINOR_VERSION" -gt 03 ]); then
         if [ "$_ENABLE_EXTERNAL_ZMQ_REPOS" -eq $BS_TRUE ]; then
             echoinfo "Installing ZMQ>=4/PyZMQ>=14 from Chris Lea's PPA repository"
             add-apt-repository -y ppa:chris-lea/zeromq || return 1
@@ -1764,7 +1764,7 @@ install_ubuntu_daily_deps() {
     __enable_universe_repository || return 1
 
     # for anything up to and including 11.04 do not use the -y option
-    if [ "$DISTRO_MAJOR_VERSION" -gt 11 ] || ([ "$DISTRO_MAJOR_VERSION" -eq 11 ] && [ "$DISTRO_MINOR_VERSION" -gt 04 ]); then
+    if [ "$DISTRO_MAJOR_VERSION" -ge 11 ] && [ "$DISTRO_MINOR_VERSION" -gt 04 ]); then
         # Above Ubuntu 11.04 add a -y flag
         add-apt-repository -y ppa:saltstack/salt-daily || return 1
     else
@@ -2071,7 +2071,7 @@ _eof
     if [ "${_EXTRA_PACKAGES}" != "" ]; then
         echoinfo "Installing the following extra packages as requested: ${_EXTRA_PACKAGES}"
         # shellcheck disable=SC2086
-        __apt_get_install_noinput ${_EXTRA_PACKAGES} || return 1 
+        __apt_get_install_noinput ${_EXTRA_PACKAGES} || return 1
     fi
 
     return 0
@@ -3564,7 +3564,7 @@ __freebsd_get_packagesite() {
 # Using a separate conf step to head for idempotent install...
 __configure_freebsd_pkg_details() {
 
-    ## pkg.conf is deprecated.  
+    ## pkg.conf is deprecated.
     ## We use conf files in /usr/local or /etc instead
     mkdir -p /usr/local/etc/pkg/repos/
     mkdir -p /etc/pkg/
