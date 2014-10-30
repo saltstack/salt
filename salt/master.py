@@ -337,26 +337,28 @@ class Master(SMaster):
         enable_sigusr2_handler()
 
         self.__set_max_open_files()
+        log.info('Creating master process manager')
         process_manager = salt.utils.process.ProcessManager()
+        log.info('Creating master maintenance process')
         process_manager.add_process(Maintenance, args=(self.opts,))
+        log.info('Creating master publisher process')
         process_manager.add_process(Publisher, args=(self.opts,))
+        log.info('Creating master event publisher process')
         process_manager.add_process(salt.utils.event.EventPublisher, args=(self.opts,))
 
         if self.opts.get('reactor'):
+            log.info('Creating master reactor process')
             process_manager.add_process(salt.utils.event.Reactor, args=(self.opts,))
 
         if HAS_HALITE and 'halite' in self.opts:
-            log.info('Halite: Starting up ...')
+            log.info('Creating master halite process')
             process_manager.add_process(Halite, args=(self.opts['halite'],))
-        elif 'halite' in self.opts:
-            log.info('Halite: Not configured, skipping.')
-        else:
-            log.debug('Halite: Unavailable.')
 
         if self.opts['con_cache']:
-            log.debug('Starting ConCache')
+            log.info('Creating master concache process')
             process_manager.add_process(ConnectedCache, args=(self.opts,))
             # workaround for issue #16315, race condition
+            log.debug('Sleeping for two seconds to let concache rest')
             time.sleep(2)
 
         def run_reqserver():
@@ -366,6 +368,7 @@ class Master(SMaster):
                 self.key,
                 self.master_key)
             reqserv.run()
+        log.info('Creating master request server process')
         process_manager.add_process(run_reqserver)
         try:
             process_manager.run()
