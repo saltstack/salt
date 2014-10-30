@@ -255,6 +255,17 @@ class Master(SMaster):
                     )
                 )
 
+    def __handle_error_react(self, event):
+        log.error('Received minion error from [{minion}]: {data}'.format(minion=event['id'], data=event['data']['exception']))
+
+    def __register_reactions(self):
+        '''
+        Register any reactions the master will need
+        '''
+        log.info('Registering master reactions')
+        log.info('Registering master error handling')
+        self.opts['reactor'].append({'_salt_error': self.__handle_error_react})
+
     def _pre_flight(self):
         '''
         Run pre flight checks. If anything in this method fails then the master
@@ -262,6 +273,7 @@ class Master(SMaster):
         '''
         errors = []
         fileserver = salt.fileserver.Fileserver(self.opts)
+        self.__register_reactions()
         if not fileserver.servers:
             errors.append(
                 'Failed to load fileserver backends, the configured backends '
