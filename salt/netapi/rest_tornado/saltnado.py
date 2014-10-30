@@ -300,7 +300,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):
         # verify the content type
         found = False
         for content_type, dumper in self.ct_out_map:
-            if fnmatch.fnmatch(content_type, self.request.headers['Accept']):
+            if fnmatch.fnmatch(content_type, self.request.headers.get('Accept', '*/*')):
                 found = True
                 break
 
@@ -365,25 +365,25 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):
         ct_in_map = {
             'application/x-www-form-urlencoded': self._form_loader,
             'application/json': json.loads,
-            'application/x-yaml': functools.partial(
-                yaml.safe_load, default_flow_style=False),
-            'text/yaml': functools.partial(
-                yaml.safe_load, default_flow_style=False),
+            'application/x-yaml': yaml.safe_load,
+            'text/yaml': yaml.safe_load,
             # because people are terrible and dont mean what they say
             'text/plain': json.loads
         }
 
         try:
-            if self.request.headers['Content-Type'] not in ct_in_map:
-                self.send_error(406)
             return ct_in_map[self.request.headers['Content-Type']](data)
         except KeyError:
-            return []
+            self.send_error(406)
+        except ValueError:
+            self.send_error(400)
 
     def _get_lowstate(self):
         '''
         Format the incoming data into a lowstate object
         '''
+        if not self.request.body:
+            return
         data = self.deserialize(self.request.body)
         self.raw_data = copy(data)
 
