@@ -12,6 +12,17 @@ from contextlib import closing
 
 log = logging.getLogger(__name__)
 
+__virtualname__ = 'archive'
+
+
+def __virtual__():
+    '''
+    Only load if the npm module is available in __salt__
+    '''
+    return __virtualname__ \
+        if [x for x in __salt__ if x.startswith('archive.')] \
+        else False
+
 
 def extracted(name,
               source,
