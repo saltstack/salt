@@ -210,10 +210,10 @@ examples of "changes" dictionaries.)
 
 If the "changes" key contains a populated dictionary, it means that the
 pre-required state expects changes to occur when the state is actually
-executed, as opposed to the test-run. The pre-required state will now
-actually run. If the pre-required state executes successfully, the
-pre-requiring state will then execute. If the pre-required state fails, the
-pre-requiring state will not execute.
+executed, as opposed to the test-run. The pre-requiring state will now
+actually run. If the pre-requiring state executes successfully, the
+pre-required state will then execute. If the pre-requiring state fails, the
+pre-required state will not execute.
 
 If the "changes" key contains an empty dictionary, this means that changes are
 not expected by the pre-required state. Neither the pre-required state nor the

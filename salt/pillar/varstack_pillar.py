@@ -22,8 +22,6 @@ __virtualname__ = 'varstack'
 
 def __virtual__():
     if not HAS_VARSTACK:
-        log.error('Varstack ext_pillar is enabled in configuration but '
-                  'could not be loaded because Varstack is not installed.')
         return False
     return __virtualname__
 

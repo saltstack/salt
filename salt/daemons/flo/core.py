@@ -235,6 +235,8 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
                 for remote in stack.remotes.values():
                     stack.removeRemote(remote, clear=True)
 
+                stack.puid = stack.Uid  # reset puid so reuse same uid each time
+
                 for master in self.masters:
                     mha = master['external']
                     stack.addRemote(RemoteEstate(stack=stack,

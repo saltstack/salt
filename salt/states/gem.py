@@ -15,9 +15,6 @@ you can specify what ruby version and gemset to target.
         - ruby: jruby@jgemset
 '''
 
-# Import salt libs
-import salt.utils
-
 
 def __virtual__():
     '''
@@ -28,7 +25,6 @@ def __virtual__():
 
 def installed(name,          # pylint: disable=C0103
               ruby=None,
-              runas=None,
               user=None,
               version=None,
               rdoc=False,
@@ -43,11 +39,6 @@ def installed(name,          # pylint: disable=C0103
 
     ruby: None
         For RVM or rbenv installations: the ruby version and gemset to target.
-
-    runas: None
-        The user under which to run the ``gem`` command
-
-        .. deprecated:: 0.17.0
 
     user: None
         The user under which to run the ``gem`` command
@@ -72,31 +63,6 @@ def installed(name,          # pylint: disable=C0103
         Format: http://hostname[:port]
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
-
-    salt.utils.warn_until(
-        'Lithium',
-        'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 0.17.0',
-        _dont_call_warnings=True
-    )
-    if runas:
-        # Warn users about the deprecation
-        ret.setdefault('warnings', []).append(
-            'The \'runas\' argument is being deprecated in favor of \'user\', '
-            'please update your state files.'
-        )
-    if user is not None and runas is not None:
-        # user wins over runas but let warn about the deprecation.
-        ret.setdefault('warnings', []).append(
-            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
-            '\'runas\' is being ignored in favor of \'user\'.'
-        )
-        runas = None
-    elif runas is not None:
-        # Support old runas usage
-        user = runas
-        runas = None
-
     gems = __salt__['gem.list'](name, ruby, runas=user)
     if name in gems and version is not None and version in gems[name]:
         ret['result'] = True
@@ -128,7 +94,7 @@ def installed(name,          # pylint: disable=C0103
     return ret
 
 
-def removed(name, ruby=None, runas=None, user=None):
+def removed(name, ruby=None, user=None):
     '''
     Make sure that a gem is not installed.
 
@@ -138,41 +104,12 @@ def removed(name, ruby=None, runas=None, user=None):
     ruby: None
         For RVM or rbenv installations: the ruby version and gemset to target.
 
-    runas: None
-        The user under which to run the ``gem`` command
-
-        .. deprecated:: 0.17.0
-
     user: None
         The user under which to run the ``gem`` command
 
         .. versionadded:: 0.17.0
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
-
-    salt.utils.warn_until(
-        'Lithium',
-        'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 0.17.0',
-        _dont_call_warnings=True
-    )
-    if runas:
-        # Warn users about the deprecation
-        ret.setdefault('warnings', []).append(
-            'The \'runas\' argument is being deprecated in favor of \'user\', '
-            'please update your state files.'
-        )
-    if user is not None and runas is not None:
-        # user wins over runas but let warn about the deprecation.
-        ret.setdefault('warnings', []).append(
-            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
-            '\'runas\' is being ignored in favor of \'user\'.'
-        )
-        runas = None
-    elif runas is not None:
-        # Support old runas usage
-        user = runas
-        runas = None
 
     if name not in __salt__['gem.list'](name, ruby, runas=user):
         ret['result'] = True

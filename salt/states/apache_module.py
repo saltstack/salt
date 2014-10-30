@@ -41,6 +41,9 @@ def enable(name):
         if __opts__['test']:
             msg = 'Apache module {0} is set to be enabled.'.format(name)
             ret['comment'] = msg
+            ret['changes']['old'] = None
+            ret['changes']['new'] = name
+            ret['result'] = None
             return ret
         status = __salt__['apache.a2enmod'](name)['Status']
         if isinstance(status, string_types) and 'enabled' in status:
@@ -72,6 +75,9 @@ def disable(name):
         if __opts__['test']:
             msg = 'Apache module {0} is set to be disabled.'.format(name)
             ret['comment'] = msg
+            ret['changes']['old'] = name
+            ret['changes']['new'] = None
+            ret['result'] = None
             return ret
         status = __salt__['apache.a2dismod'](name)['Status']
         if isinstance(status, string_types) and 'disabled' in status:

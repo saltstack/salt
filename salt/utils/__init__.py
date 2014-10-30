@@ -526,15 +526,13 @@ def dns_check(addr, safe=False, ipv6=False):
             if not addr:
                 error = True
     except TypeError:
-        err = ('Attempt to resolve address failed. Invalid or unresolveable address')
+        err = ('Attempt to resolve address \'{0}\' failed. Invalid or unresolveable address').format(addr)
         raise SaltSystemExit(code=42, msg=err)
     except socket.error:
         error = True
 
     if error:
-        err = ('This master address: \'{0}\' was previously resolvable '
-               'but now fails to resolve! The previously resolved ip addr '
-               'will continue to be used').format(addr)
+        err = ('DNS lookup of \'{0}\' failed.').format(addr)
         if safe:
             if salt.log.is_console_configured():
                 # If logging is not configured it also means that either
@@ -840,13 +838,6 @@ def build_whitespace_split_regex(text):
         parts = [re.escape(s) for s in __build_parts(line)]
         regex += r'(?:[\s]+)?{0}(?:[\s]+)?'.format(r'(?:[\s]+)?'.join(parts))
     return r'(?m)^{0}$'.format(regex)
-
-
-def build_whitepace_splited_regex(text):
-    warnings.warn('The build_whitepace_splited_regex function is deprecated,'
-                  ' please use build_whitespace_split_regex instead.',
-                  DeprecationWarning)
-    build_whitespace_split_regex(text)
 
 
 def format_call(fun,

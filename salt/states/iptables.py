@@ -338,6 +338,14 @@ def append(name, family='ipv4', **kwargs):
             name,
             command.strip(),
             family)
+        if kwargs['save']:
+            if kwargs['save'] is not True:
+                filename = kwargs['save']
+            else:
+                filename = None
+            __salt__['iptables.save'](filename, family=family)
+            ret['comment'] += ('\nSaved iptables rule for {0} to: '
+                               '{1} for {2}'.format(name, command.strip(), family))
         return ret
     if __opts__['test']:
         ret['comment'] = 'iptables rule for {0} needs to be set ({1}) for {2}'.format(
@@ -409,6 +417,11 @@ def insert(name, family='ipv4', **kwargs):
             name,
             family,
             command.strip())
+        if 'save' in kwargs:
+            if kwargs['save']:
+                __salt__['iptables.save'](filename=None, family=family)
+                ret['comment'] += ('\nSaved iptables rule for {0} to: '
+                                   '{1} for {2}').format(name, command.strip(), family)
         return ret
     if __opts__['test']:
         ret['comment'] = 'iptables rule for {0} needs to be set for {1} ({2})'.format(

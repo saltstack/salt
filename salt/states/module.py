@@ -129,7 +129,6 @@ def run(name, **kwargs):
         return ret
 
     aspec = salt.utils.get_function_argspec(__salt__[name])
-
     args = []
     defaults = {}
 

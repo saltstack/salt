@@ -1227,8 +1227,9 @@ def managed(name,
     check_cmd
         .. versionadded:: 2014.7.0
 
-        Do run the state only if the check_cmd succeeds
-
+        The specified command will be run with the managed file as an argument.
+        If the command exits with a nonzero exit code, the command will not be
+        run.
     '''
     name = os.path.expanduser(name)
 
@@ -1418,14 +1419,12 @@ def managed(name,
                    'comment': '',
                    'name': name,
                    'result': True}
-            check_cmd_opts = {
-                'cmd': check_cmd,
-                'cwd': tmp_filename,
-            }
+
+            check_cmd_opts = {}
             if 'shell' in __grains__:
                 check_cmd_opts['shell'] = __grains__['shell']
 
-            cret = mod_run_check_cmd(**check_cmd_opts)
+            cret = mod_run_check_cmd(check_cmd, tmp_filename, **check_cmd_opts)
             if isinstance(cret, dict):
                 ret.update(cret)
                 return ret
@@ -2481,138 +2480,6 @@ def blockreplace(
     else:
         ret['result'] = True
         ret['comment'] = 'No changes needed to be made'
-
-    return ret
-
-
-def sed(name,
-        before,
-        after,
-        limit='',
-        backup='.bak',
-        options='-r -e',
-        flags='g',
-        negate_match=False):
-    '''
-    .. deprecated:: 0.17.0
-       Use the :mod:`file.replace <salt.states.file.replace>` state instead.
-
-    Maintain a simple edit to a file
-
-    The file will be searched for the ``before`` pattern before making the
-    edit.  In general the ``limit`` pattern should be as specific as possible
-    and ``before`` and ``after`` should contain the minimal text to be changed.
-
-    before
-        A pattern that should exist in the file before the edit.
-    after
-        A pattern that should exist in the file after the edit.
-    limit
-        An optional second pattern that can limit the scope of the before
-        pattern.
-    backup : '.bak'
-        The extension for the backed-up version of the file before the edit. If
-        no backups is desired, pass in the empty string: ''
-    options : ``-r -e``
-        Any options to pass to the ``sed`` command. ``-r`` uses extended
-        regular expression syntax and ``-e`` denotes that what follows is an
-        expression that sed will execute.
-    flags : ``g``
-        Any flags to append to the sed expression. ``g`` specifies the edit
-        should be made globally (and not stop after the first replacement).
-    negate_match : False
-        Negate the search command (``!``)
-
-        .. versionadded:: 0.17.0
-
-    Usage:
-
-    .. code-block:: yaml
-
-        # Disable the epel repo by default
-        /etc/yum.repos.d/epel.repo:
-          file.sed:
-            - before: 1
-            - after: 0
-            - limit: ^enabled=
-
-        # Remove ldap from nsswitch
-        /etc/nsswitch.conf:
-          file.sed:
-            - before: 'ldap'
-            - after: ''
-            - limit: '^passwd:'
-
-    .. versionadded:: 0.9.5
-    '''
-    name = os.path.expanduser(name)
-
-    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
-
-    check_res, check_msg = _check_file(name)
-    if not check_res:
-        return _error(ret, check_msg)
-
-    # Mandate that before and after are strings
-    before = str(before)
-    after = str(after)
-
-    # Look for the pattern before attempting the edit
-    if not __salt__['file.sed_contains'](name,
-                                         before,
-                                         limit=limit,
-                                         flags=flags):
-        # Pattern not found; don't try to guess why, just tell the user there
-        # were no changes made, as the changes should only be made once anyway.
-        # This makes it so users can use backreferences without the state
-        # coming back as failed all the time.
-        ret['comment'] = '"before" pattern not found, no changes made'
-        ret['result'] = True
-        return ret
-
-    if __opts__['test']:
-        ret['comment'] = 'File {0} is set to be updated'.format(name)
-        ret['result'] = None
-        return ret
-
-    with salt.utils.fopen(name, 'rb') as fp_:
-        slines = fp_.readlines()
-
-    # should be ok now; perform the edit
-    retcode = __salt__['file.sed'](path=name,
-                                   before=before,
-                                   after=after,
-                                   limit=limit,
-                                   backup=backup,
-                                   options=options,
-                                   flags=flags,
-                                   negate_match=negate_match)['retcode']
-
-    if retcode != 0:
-        ret['result'] = False
-        ret['comment'] = ('There was an error running sed.  '
-                          'Return code {0}').format(retcode)
-        return ret
-
-    with salt.utils.fopen(name, 'rb') as fp_:
-        nlines = fp_.readlines()
-
-    if slines != nlines:
-        if not salt.utils.istextfile(name):
-            ret['changes']['diff'] = 'Replace binary file'
-        else:
-            # Changes happened, add them
-            ret['changes']['diff'] = ''.join(difflib.unified_diff(slines,
-                                                                  nlines))
-
-            # Don't check the result -- sed is not designed to be able to check
-            # the result, because of backreferences and so forth. Just report
-            # that sed was run, and assume it was successful (no error!)
-            ret['result'] = True
-            ret['comment'] = 'sed ran without error'
-    else:
-        ret['result'] = True
-        ret['comment'] = 'sed ran without error, but no changes were made'
 
     return ret
 
@@ -4213,7 +4080,7 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
     return ret
 
 
-def mod_run_check_cmd(cmd, filename):
+def mod_run_check_cmd(cmd, filename, **check_cmd_opts):
     '''
     Execute the check_cmd logic.
 
@@ -4223,10 +4090,10 @@ def mod_run_check_cmd(cmd, filename):
 
     log.debug('running our check_cmd')
     _cmd = '{0} {1}'.format(cmd, filename)
-    if __salt__['cmd.retcode'](_cmd) != 0:
+    if __salt__['cmd.retcode'](_cmd, **check_cmd_opts) != 0:
         return {'comment': 'check_cmd execution failed',
                 'skip_watch': True,
-                'result': True}
+                'result': False}
 
     # No reason to stop, return True
     return True

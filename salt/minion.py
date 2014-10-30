@@ -66,6 +66,7 @@ import salt.utils.args
 import salt.utils.event
 import salt.utils.minion
 import salt.utils.schedule
+import salt.utils.error
 import salt.exitcodes
 
 from salt.defaults import DEFAULT_TARGET_DELIM
@@ -105,10 +106,10 @@ def resolve_dns(opts):
             if opts['retry_dns']:
                 while True:
                     import salt.log
-                    msg = ('Master hostname: {0} not found. Retrying in {1} '
+                    msg = ('Master hostname: \'{0}\' not found. Retrying in {1} '
                            'seconds').format(opts['master'], opts['retry_dns'])
                     if salt.log.is_console_configured():
-                        log.warn(msg)
+                        log.error(msg)
                     else:
                         print('WARNING: {0}'.format(msg))
                     time.sleep(opts['retry_dns'])
@@ -711,6 +712,8 @@ class Minion(MinionBase):
                              ' {0}'.format(opts['master']))
                     if opts['master_shuffle']:
                         shuffle(opts['master'])
+                elif opts['__role'] == 'syndic':
+                    log.info('Syndic setting master_syndic to \'{0}\''.format(opts['master']))
 
                 # if failed=True, the minion was previously connected
                 # we're probably called from the minions main-event-loop
@@ -1088,6 +1091,7 @@ class Minion(MinionBase):
             except Exception:
                 msg = 'The minion function caused an exception'
                 log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
+                salt.utils.error.fire_exception(salt.exceptions.MinionError(msg), opts, job=data)
                 ret['return'] = '{0}: {1}'.format(msg, traceback.format_exc())
                 ret['out'] = 'nested'
         else:
@@ -1621,6 +1625,10 @@ class Minion(MinionBase):
 
                 self.schedule.modify_job(name='__master_alive',
                                          schedule=schedule)
+        elif package.startswith('_salt_error'):
+            tag, data = salt.utils.event.MinionEvent.unpack(package)
+            log.debug('Forwarding salt error event tag={tag}'.format(tag=tag))
+            self._fire_master(data, tag)
 
     # Main Minion Tune In
     def tune_in(self):

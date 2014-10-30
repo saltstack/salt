@@ -44,7 +44,9 @@ LIBCLOUD_FUNCS_NOT_SUPPORTED = (
     'saltify.avail_sizes',
     'saltify.avail_images',
     'saltify.avail_locations',
-    'rackspace.reboot'
+    'rackspace.reboot',
+    'openstack.list_locations',
+    'rackspace.list_locations'
 )
 
 
