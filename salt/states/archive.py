@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Archive states.
+Extract an archive
 
 .. versionadded:: 2014.1.0
 '''
