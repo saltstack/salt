@@ -161,6 +161,9 @@ class EventListener(object):
         # request_obj -> list of (tag, future)
         self.request_map = defaultdict(list)
 
+        # start listening for events
+        tornado.ioloop.IOLoop.current().add_callback(self.iter_events)
+
     def clean_timeout_futures(self, request):
         '''
         Remove all futures that were waiting for request `request` since it is done waiting

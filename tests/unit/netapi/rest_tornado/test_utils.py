@@ -4,6 +4,7 @@ import os
 from salt.netapi.rest_tornado import saltnado
 
 import tornado.testing
+import tornado.concurrent
 from salttesting import skipIf, TestCase
 
 from unit.utils.event_test import eventpublisher_process, event, SOCK_DIR
@@ -34,7 +35,6 @@ class TestEventListener(tornado.testing.AsyncTestCase):
             event_listener = saltnado.EventListener({},  # we don't use mod_opts, don't save?
                                                     {'sock_dir': SOCK_DIR,
                                                      'transport': 'zeromq'})
-            self.io_loop.add_callback(event_listener.iter_events)
             event_future = event_listener.get_event(1, 'evt1', self.stop)  # get an event future
             me.fire_event({'data': 'foo2'}, 'evt2')  # fire an event we don't want
             me.fire_event({'data': 'foo1'}, 'evt1')  # fire an event we do want
@@ -44,6 +44,33 @@ class TestEventListener(tornado.testing.AsyncTestCase):
             assert event_future.done()
             assert event_future.result()['tag'] ==  'evt1'
             assert event_future.result()['data']['data'] ==  'foo1'
+
+    def test_any_future(self):
+        '''
+        Test that the Any Future does what we think it does
+        '''
+        # create a few futures
+        futures = []
+        for x in xrange(0, 3):
+            future = tornado.concurrent.Future()
+            future.add_done_callback(self.stop)
+            futures.append(future)
+
+        # create an any future, make sure it isn't immediately done
+        any_ = saltnado.Any(futures)
+        assert any_.done() is False
+
+        # finish one, lets see who finishes
+        futures[0].set_result('foo')
+        self.wait()
+
+        assert any_.done() is True
+        assert futures[0].done() is True
+        assert futures[1].done() is False
+        assert futures[2].done() is False
+
+        # make sure it returned the one that finished
+        assert any_.result() == futures[0]
 
 
 if __name__ == '__main__':
