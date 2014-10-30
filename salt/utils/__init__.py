@@ -672,8 +672,6 @@ def check_or_die(command):
         raise CommandNotFoundError(command)
 
 
-
-
 def backup_minion(path, bkroot):
     '''
     Backup a file on the minion
