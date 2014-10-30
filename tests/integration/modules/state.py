@@ -665,6 +665,26 @@ fi
                 'comment': 'Command "echo E" run',
                 'result': True}
         }
+        expected_result_simple3 = {
+            'cmd_|-A_|-echo A first_|-run': {
+                '__run_num__': 0,
+                'comment': 'Command "echo A first" run',
+                'result': True,
+                'changes': True,  # whether there should be changes or not
+            },
+            'cmd_|-B_|-echo B second_|-run': {
+                '__run_num__': 1,
+                'comment': 'Command "echo B second" run',
+                'result': True,
+                'changes': True,  # whether there should be changes or not
+            },
+            'cmd_|-C_|-echo C third_|-wait': {
+                '__run_num__': 2,
+                'comment': '',
+                'result': True,
+                'changes': False,
+            }
+        }
         expected_result_complex = {
             'cmd_|-A_|-echo A fourth_|-run': {
                 '__run_num__': 3,
@@ -720,6 +740,18 @@ fi
                 'result': descr['result']
             }
         self.assertEqual(expected_result_simple2, result)
+
+        result = {}
+        ret = self.run_function('state.sls', mods='requisites.prereq_simple3')
+        self.assertReturnNonEmptySaltType(ret)
+        for item, descr in ret.iteritems():
+            result[item] = {
+                '__run_num__': descr['__run_num__'],
+                'comment': descr['comment'],
+                'result': descr['result'],
+                'changes': descr['changes'] != {}
+            }
+        self.assertEqual(expected_result_simple3, result)
 
         #ret = self.run_function('state.sls', mods='requisites.prereq_error_nolist')
         #self.assertEqual(
