@@ -14,6 +14,10 @@ import salt.utils.decorators as decorators
 
 log = logging.getLogger(__name__)
 
+__func_alias__ = {
+    'import_': 'import'
+}
+
 
 @decorators.memoize
 def _check_zpool():
@@ -320,4 +324,70 @@ def create_file_vdev(size, *vdevs):
             ret[vdev] = 'The vdev can\'t be created'
     ret['status'] = True
     ret[cmd] = cmd
+    return ret
+
+
+def export(pool_name='', force='false'):
+    '''
+    Export a storage pool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zpool.export myzpool [force=True|False]
+    '''
+    ret = {}
+    if not pool_name:
+        ret['Error'] = 'zpool name parameter is mandatory'
+        return ret
+    if exists(pool_name):
+        zpool = _check_zpool()
+        if force is True:
+            cmd = '{0} export -f {1}'.format(zpool, pool_name)
+        else:
+            cmd = '{0} export {1}'.format(zpool, pool_name)
+        __salt__['cmd.run'](cmd)
+        ret[pool_name] = 'Exported'
+    else:
+        ret['Error'] = 'Storage pool {0} does not exist'.format(pool_name)
+    return ret
+
+
+def import_(pool_name='', force='false'):
+    '''
+    Import a storage pool or list pools available for import
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zpool.import
+        salt '*' zpool.import myzpool [force=True|False]
+    '''
+    ret = {}
+    zpool = _check_zpool()
+    if not pool_name:
+        cmd = '{0} import'.format(zpool)
+        res = __salt__['cmd.run'](cmd, ignore_retcode=True)
+        if not res:
+            ret['Error'] = 'No pools available for import'
+        else:
+            pool_list = [l for l in res.splitlines()]
+            ret['pools'] = pool_list
+        return ret
+    if exists(pool_name):
+        ret['Error'] = 'Storage pool {0} already exists. Import the pool under a different name instead'.format(pool_name)
+    else:
+        if force is True:
+            cmd = '{0} import -f {1}'.format(zpool, pool_name)
+        else:
+            cmd = '{0} import {1}'.format(zpool, pool_name)
+        res = __salt__['cmd.run'](cmd, ignore_retcode=True)
+        if res:
+            ret['Error'] = {}
+            ret['Error']['Message'] = 'Import failed!'
+            ret['Error']['Reason'] = res
+        else:
+            ret[pool_name] = 'Imported'
     return ret
