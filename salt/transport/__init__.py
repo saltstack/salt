@@ -222,7 +222,6 @@ class ZeroMQChannel(Channel):
         # crypt defaults to 'aes'
         self.crypt = kwargs.get('crypt', 'aes')
 
-        self.serial = salt.payload.Serial(opts)
         if self.crypt != 'clear':
             if 'auth' in kwargs:
                 self.auth = kwargs['auth']
