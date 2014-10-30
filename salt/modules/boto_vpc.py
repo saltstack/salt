@@ -1230,7 +1230,6 @@ def describe(vpc_id=None, region=None, key=None, keyid=None, profile=None):
                 instance_tenancy=None
                 )
 
-
     if not conn:
         return False
 
@@ -1244,10 +1243,10 @@ def describe(vpc_id=None, region=None, key=None, keyid=None, profile=None):
         vpcs = conn.get_all_vpcs(**filter_parameters)
 
         if vpcs:
-            vpc = vpcs[0] # Found!
+            vpc = vpcs[0]  # Found!
             log.debug('Found VPC: {0}'.format(vpc.id))
             for k in _ret.keys():
-                _ret[k] = getattr(vpc,k)
+                _ret[k] = getattr(vpc, k)
             return _ret
 
     except boto.exception.BotoServerError as e:
