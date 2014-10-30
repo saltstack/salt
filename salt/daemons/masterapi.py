@@ -223,7 +223,7 @@ def fileserver_update(fileserver):
 
 class AutoKey(object):
     '''
-    Impliment the methods to run auto key acceptance and rejection
+    Implement the methods to run auto key acceptance and rejection
     '''
     def __init__(self, opts):
         self.opts = opts

@@ -59,7 +59,7 @@ def display_output(data, out=None, opts=None):
                         fdata = fdata.encode('utf-8')
                     except (UnicodeDecodeError, UnicodeEncodeError):
                         # try to let the stream write
-                        # even if we didnt encode it
+                        # even if we didn't encode it
                         pass
                 ofh.write(fdata)
                 ofh.write('\n')

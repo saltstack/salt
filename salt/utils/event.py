@@ -313,7 +313,7 @@ class SaltEvent(object):
     def get_event(self, wait=5, tag='', full=False, use_pending=False, pending_tags=None):
         '''
         Get a single publication.
-        IF no publication available THEN block for upto wait seconds
+        IF no publication available THEN block for up to wait seconds
         AND either return publication OR None IF no publication available.
 
         IF wait is 0 then block forever.

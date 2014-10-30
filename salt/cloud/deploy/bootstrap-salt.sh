@@ -17,7 +17,7 @@
 #       CREATED: 10/15/2012 09:49:37 PM WEST
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
-__ScriptVersion="2014.10.28"
+__ScriptVersion="2014.10.30"
 __ScriptName="bootstrap-salt.sh"
 
 #======================================================================================================================
@@ -3978,6 +3978,12 @@ install_opensuse_git_deps() {
     zypper --non-interactive install --auto-agree-with-licenses git || return 1
 
     __git_clone_and_checkout || return 1
+
+    if [ -f "${__SALT_GIT_CHECKOUT_DIR}/pkg/suse/use-forking-daemon.patch" ]; then
+        cd "${__SALT_GIT_CHECKOUT_DIR}"
+        echowarn "Applying patch to systemd service unit file"
+        patch -p1 < pkg/suse/use-forking-daemon.patch || return 1
+    fi
 
     # Let's trigger config_salt()
     if [ "$_TEMP_CONFIG_DIR" = "null" ]; then

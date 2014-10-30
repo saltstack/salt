@@ -1543,6 +1543,9 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
     '''
     Use sftp to upload a file to a server
     '''
+    if kwargs is None:
+        kwargs = {}
+
     if contents is not None:
         tmpfh, tmppath = tempfile.mkstemp()
         with salt.utils.fopen(tmppath, 'w') as tmpfile:
@@ -1551,7 +1554,7 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
     if local_file is not None:
         tmppath = local_file
 
-    log.debug('Uploading {0} to {1} (sfcp)'.format(dest_path, kwargs['hostname']))
+    log.debug('Uploading {0} to {1} (sfcp)'.format(dest_path, kwargs.get('hostname')))
 
     ssh_args = [
         # Don't add new hosts to the host key database
