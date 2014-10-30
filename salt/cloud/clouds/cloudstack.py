@@ -194,6 +194,7 @@ def get_networkid(vm_):
     else:
         return False
 
+
 def get_project(conn, vm_):
     '''
     Return the project to use.
@@ -210,6 +211,7 @@ def get_project(conn, vm_):
 
     log.warning("Couldn't find project {0} in projects".format(projid))
     return False
+
 
 def create(vm_):
     '''
