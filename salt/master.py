@@ -1815,7 +1815,6 @@ class ClearFuncs(object):
                                    message=msg))
         return None
 
-
     def runner(self, clear_load):
         '''
         Send a master control function back to the runner system
