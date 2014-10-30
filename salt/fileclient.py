@@ -14,7 +14,7 @@ import requests
 
 # Import salt libs
 from salt.exceptions import (
-    CommandExecutionError, MinionError, SaltReqTimeoutError
+    CommandExecutionError, MinionError
 )
 import salt.client
 import salt.crypt
