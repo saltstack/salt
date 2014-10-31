@@ -182,6 +182,7 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
         if self.opts.value.get('raet_clear_remotes'):
             for remote in self.stack.value.remotes.values():
                 self.stack.value.removeRemote(remote, clear=True)
+            self.stack.puid = self.stack.value.Uid  # reset puid
 
 
 class SaltRaetRoadStackCloser(ioflo.base.deeding.Deed):
@@ -1136,6 +1137,10 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
         salt.utils.daemonize_if(self.opts)
 
         salt.transport.jobber_stack = stack = self._setup_jobber_stack()
+        # set up return destination from source
+        src_estate, src_yard, src_share = msg['route']['src']
+        salt.transport.jobber_estate_name = src_estate
+        salt.transport.jobber_yard_name = src_yard
 
         sdata = {'pid': os.getpid()}
         sdata.update(data)
