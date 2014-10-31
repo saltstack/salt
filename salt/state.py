@@ -1577,7 +1577,7 @@ class State(object):
         finish_time = datetime.datetime.now()
         ret['start_time'] = start_time.time().isoformat()
         delta = (finish_time - start_time)
-        #duration in milliseconds.microseconds
+        # duration in milliseconds.microseconds
         ret['duration'] = (delta.seconds * 1000000 + delta.microseconds)/1000.0
         log.info('Completed state [{0}] at time {1}'.format(low['name'], finish_time.time().isoformat()))
         return ret
@@ -1706,7 +1706,8 @@ class State(object):
         elif 'pre' in fun_stats:
             if 'premet' in fun_stats:
                 status = 'met'
-            status = 'pre'
+            else:
+                status = 'pre'
         elif 'onfail' in fun_stats:
             status = 'onfail'
         elif 'onchanges' in fun_stats:
