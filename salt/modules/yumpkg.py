@@ -224,7 +224,7 @@ def _rpm_pkginfo(name):
     Parses RPM metadata and returns a pkginfo namedtuple
     '''
     # REPOID is not a valid tag for the rpm command. Remove it and replace it
-    # witn "none"
+    # with "none"
     queryformat = __QUERYFORMAT.replace('%{REPOID}', 'none')
     output = __salt__['cmd.run_stdout'](
         'rpm -qp --queryformat {0!r} {1}'.format(queryformat, name),

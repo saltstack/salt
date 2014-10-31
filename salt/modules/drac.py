@@ -250,7 +250,7 @@ def change_password(username, password, uid=None):
     return True
 
 
-def create_user(username, password, permissions):
+def create_user(username, password, permissions, users=None):
     '''
     Create user accounts
 
@@ -274,14 +274,15 @@ def create_user(username, password, permissions):
     '''
     _uids = set()
 
-    user = list_users()
+    if users is None:
+        users = list_users()
 
-    if username in user:
+    if username in users:
         log.warn('\'{0}\' already exists'.format(username))
         return False
 
-    for i in user.keys():
-        _uids.add(user[i]['index'])
+    for i in users.keys():
+        _uids.add(users[i]['index'])
 
     uid = sorted(list(set(xrange(2, 12)) - _uids), reverse=True).pop()
 

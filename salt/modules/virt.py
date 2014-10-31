@@ -29,6 +29,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 import salt.utils.templates
 import salt.utils.validate.net
 from salt._compat import StringIO as _StringIO
@@ -571,7 +572,7 @@ def init(name,
             if not os.path.isdir(img_dir):
                 os.makedirs(img_dir)
             try:
-                salt.utils.copyfile(sfn, img_dest)
+                salt.utils.files.copyfile(sfn, img_dest)
                 mask = os.umask(0)
                 os.umask(mask)
                 # Apply umask and remove exec bit
