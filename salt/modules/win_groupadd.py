@@ -10,6 +10,7 @@ import salt.utils
 try:
     import win32com.client
     import pythoncom
+    import pywintypes
     HAS_DEPENDENCIES = True
 except ImportError:
     HAS_DEPENDENCIES = False
@@ -53,11 +54,11 @@ def add(name, gid=None, system=False):
             ret['changes'].append((
                     'Successfully created group {0}'
                     ).format(name))
-        except Exception as e:
+        except pywintypes.com_error as com_err:
             ret['result'] = False
             ret['comment'] = (
                     'Failed to create group {0} exception {1}'
-                    ).format(name, e)
+                    ).format(name, com_err)
     else:
         ret['result'] = None
         ret['comment'] = (
@@ -89,11 +90,11 @@ def delete(name):
             compObj = nt.GetObject('', 'WinNT://.,computer')
             newGroup = compObj.Delete('group', name)
             ret['changes'].append(('Successfully removed group {0}').format(name))
-        except Exception as e:
+        except pywintypes.com_error as com_err:
             ret['result'] = False
             ret['comment'] = (
-                    'Failed to remove group {0} exception {1}'
-                    ).format(name, e)
+                    'Failed to remove group {0}, exception: {1}'
+                    ).format(name, com_err)
     else:
         ret['result'] = None
         ret['comment'] = (
@@ -124,7 +125,7 @@ def info(name):
             gr_mem.append(
                     member.ADSPath.replace('WinNT://', '').replace(
                     '/', '\\').encode('ascii', 'backslashreplace'))
-    except:
+    except pywintypes.com_error:
         return False
 
     if not gr_name:
@@ -210,10 +211,10 @@ def adduser(name, username):
                     'User {0} is already a member of {1}'
                     ).format(username, name)
             ret['result'] = None
-    except Exception as e:
+    except pywintypes.com_error as com_err:
         ret['comment'] = (
-                'Failed to add {0} to group {1}'
-                ).format(username, name)
+                'Failed to add {0} to group {1}, exception: {2}'
+                ).format(username, name, com_err)
         ret['result'] = False
         return ret
 
@@ -258,10 +259,10 @@ def deluser(name, username):
                     'User {0} is not a member of {1}'
                     ).format(username, name)
             ret['result'] = None
-    except Exception as e:
+    except pywintypes.com_error as com_err:
         ret['comment'] = (
-                'Failed to remove {0} from group {1}'
-                ).format(username, name)
+                'Failed to remove {0} from group {1}, exception: {2}'
+                ).format(username, name, com_err)
         ret['result'] = False
         return ret
 
@@ -316,11 +317,11 @@ def members(name, members_list):
                 if not __opts__['test']:
                     groupObj.Add('WinNT://' + member.replace('\\', '/'))
                 ret['changes']['Users Added'].append(member)
-            except Exception as e:
+            except pywintypes.com_error as com_err:
                 ret['result'] = False
                 ret['comment'] = (
-                        'Failed to add {0} to {1}'
-                        ).format(member, name)
+                        'Failed to add {0} to {1}, exception: {2}'
+                        ).format(member, name, com_err)
                 return ret
 
     # remove users not in members_list
@@ -330,11 +331,11 @@ def members(name, members_list):
                 if not __opts__['test']:
                     groupObj.Remove('WinNT://' + member.replace('\\', '/'))
                 ret['changes']['Users Removed'].append(member)
-            except Exception as e:
+            except pywintypes.com_error as com_err:
                 ret['result'] = False
                 ret['comment'] = (
-                        'Failed to remove {0} from {1}'
-                        ).format(member, name)
+                        'Failed to remove {0} from {1}, exception: {2}'
+                        ).format(member, name, com_err)
                 return ret
 
     return ret
