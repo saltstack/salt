@@ -1139,7 +1139,7 @@ def latest(
             up_to_date = [x for x in pkgs if x not in targets]
 
         if __opts__['test']:
-            to_be_upgraded = ', '.join(sorted(targets.keys()))
+            to_be_upgraded = ', '.join(sorted(targets))
             comment = 'The following packages are set to be ' \
                       'installed/upgraded: ' \
                       '{0}.'.format(to_be_upgraded)

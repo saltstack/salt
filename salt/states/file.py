@@ -3563,7 +3563,7 @@ def accumulated(name, filename, text, **kwargs):
     if name not in _ACCUMULATORS_DEPS[filename]:
         _ACCUMULATORS_DEPS[filename][name] = []
     for accumulator in deps:
-        _ACCUMULATORS_DEPS[filename][name].extend(accumulator.values())
+        _ACCUMULATORS_DEPS[filename][name].extend(accumulator.itervalues())
     if name not in _ACCUMULATORS[filename]:
         _ACCUMULATORS[filename][name] = []
     for chunk in text:
