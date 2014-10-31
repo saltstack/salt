@@ -327,7 +327,7 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
             for part in mod.split('_')
         ])
         valid_funcs = "','".join(
-            __context__['pyobjects_states'][mod].keys()
+            __context__['pyobjects_states'][mod]
         )
         mod_cmd = "{0} = StateFactory('{1!s}', valid_funcs=['{2}'])".format(
             mod_camel,
