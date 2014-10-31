@@ -89,10 +89,10 @@ class RAETChannel(Channel):
         if usage == 'master_call':  # runner.py master_call
             self.dst = (None, None, 'local_cmd')
         elif usage == 'salt_call':  # salt_call caller
-            self.dst = (None, None, 'remote_cmd')
-            #self.dst = (jobber_estate_name or None,
-                        #jobber_yard_name or None,
-                        #'remote_cmd')
+            #self.dst = (None, None, 'remote_cmd')
+            self.dst = (jobber_estate_name or None,
+                        jobber_yard_name or None,
+                        'remote_cmd')
         else:  # everything else minion to master
             self.dst = (jobber_estate_name or None,
                         jobber_yard_name or None,
