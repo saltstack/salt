@@ -210,7 +210,7 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
                 name_field = model_meta['name']
                 fields = model_meta['fields']
 
-                if 'filter' in model_meta.keys():
+                if 'filter' in model_meta:
                     qs = (model_orm.objects
                         .filter(**model_meta['filter'])
                         .values(*fields))

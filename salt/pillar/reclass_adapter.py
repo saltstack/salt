@@ -71,7 +71,7 @@ def __virtual__(retry=False):
             return False
 
         for pillar in __opts__.get('ext_pillar', []):
-            if 'reclass' not in pillar.keys():
+            if 'reclass' not in pillar:
                 continue
 
             # each pillar entry is a single-key hash of name -> options
