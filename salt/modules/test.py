@@ -449,5 +449,5 @@ def tty(*args, **kwargs):  # pylint: disable=W0613
     return 'ERROR: This function has been moved to cmd.tty'
 
 
-def assertion(assertion):
-    assert assertion
+def assertion(assertion_):
+    assert assertion_
