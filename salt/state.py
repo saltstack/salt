@@ -2763,6 +2763,111 @@ class BaseHighState(object):
         if '__exclude__' in state:
             highstate.setdefault('__exclude__',
                                  []).extend(state.pop('__exclude__'))
+        
+        #/ Add |env:sls::| prefix to each state id
+        ##  so that same state id value in different sls files would not conflict.
+        ## And the old state id value is used as default value for argument |name|
+        ##  of the state's function.
+        ## E.g.
+        ## ---
+        ## {
+        ##    'sudo': {
+        ##        '__env__': 'base',
+        ##        '__sls__': 'a',
+        ##        'pkg': [
+        ##            'installed',
+        ##            {
+        ##                'order': 10000,
+        ##            }
+        ##        ]
+        ##    }
+        ## }
+        ## ---
+        ## to
+        ## ---
+        ## {
+        ##    'base:a::sudo': {
+        ##        '__env__': 'base',
+        ##        '__sls__': 'a',
+        ##        'pkg': [
+        ##            'installed',
+        ##            {'order': 10000},
+        ##            {'name': 'sudo'},
+        ##        ]
+        ##    }
+        ## }
+        ## ---
+        new_state_d = OrderedDict()
+        
+        for state_id, state_spec_d in state.items():
+            #/
+            env_sls_prefix = '{}:{}::'.format(
+                state_spec_d['__env__'],
+                state_spec_d['__sls__'],
+            )
+            
+            #/ if the state id has been added prefix already
+            if state_id.startswith(env_sls_prefix):
+            ## Y
+                new_state_d[state_id] = state_spec_d
+                continue
+            
+            ## N
+            new_state_id = '{}{}'.format(
+                env_sls_prefix,
+                state_id,
+            )
+            new_state_d[new_state_id] = state_spec_d
+            
+            #/
+            sls_env = state_spec_d['__env__']
+            sls_pth = state_spec_d['__sls__'].replace('.', os.sep)
+            
+            for func_name, func_arg_s in state_spec_d.items():
+                #/ E.g.
+                ## 'pkg': [
+                ##     'installed',
+                ##     {'order': 10000},
+                ##     {'name': 'sudo'},
+                ## ]
+        
+                #/ ignore the two keys that are not func names
+                if func_name in ['__env__', '__sls__']:
+                    continue
+                
+                #/
+                arg_name_is_in = False
+                ## argument |name| is present
+                
+                arg_source_is_in = False
+                ## argument |source| is present
+                
+                for func_arg in func_arg_s:
+                    #/ ignore positional argument, e.g. |'installed'| above
+                    if not isinstance(func_arg, dict):
+                        continue
+                    
+                    #/
+                    func_kwarg_di = func_arg
+                    ## |di| means dict as an item, not a collection of items.
+                    ## Because Salt uses one dict for each kwarg,
+                    ##  dict key for argument name, and dict value for argument value, 
+                    ##  e.g. |'order'| and |'name'| above.
+                    
+                    #/
+                    if 'name' in func_kwarg_di:
+                        arg_name_is_in = True
+                        break
+                
+                #/ use the old state id as default value for argument |name|
+                if not arg_name_is_in:
+                    func_arg_s.append({'name': state_id})
+        
+        #/
+        state.clear()
+        state.update(new_state_d.items())
+        
+        #/
         for id_ in state:
             if id_ in highstate:
                 if highstate[id_] != state[id_]:
