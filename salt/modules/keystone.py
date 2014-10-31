@@ -872,7 +872,7 @@ def user_role_add(user_id=None, user=None, tenant_id=None,
                            **connection_args)[user]['id']
     else:
         user = user_get(user_id, profile=profile,
-                        **connection_args).keys()[0]['name']
+                        **connection_args).iterkeys().next()['name']
     if not user_id:
         return {'Error': 'Unable to resolve user id'}
 
@@ -881,7 +881,7 @@ def user_role_add(user_id=None, user=None, tenant_id=None,
                                **connection_args)[tenant]['id']
     else:
         tenant = tenant_get(tenant_id, profile=profile,
-                            **connection_args).keys()[0]['name']
+                            **connection_args).iterkeys().next()['name']
     if not tenant_id:
         return {'Error': 'Unable to resolve tenant id'}
 
@@ -890,7 +890,7 @@ def user_role_add(user_id=None, user=None, tenant_id=None,
                            **connection_args)[role]['id']
     else:
         role = role_get(role_id, profile=profile,
-                        **connection_args).keys()[0]['name']
+                        **connection_args).iterkeys().next()['name']
     if not role_id:
         return {'Error': 'Unable to resolve role id'}
 
@@ -921,7 +921,7 @@ def user_role_remove(user_id=None, user=None, tenant_id=None,
                            **connection_args)[user]['id']
     else:
         user = user_get(user_id, profile=profile,
-                        **connection_args).keys()[0]['name']
+                        **connection_args).iterkeys().next()['name']
     if not user_id:
         return {'Error': 'Unable to resolve user id'}
 
@@ -930,7 +930,7 @@ def user_role_remove(user_id=None, user=None, tenant_id=None,
                                **connection_args)[tenant]['id']
     else:
         tenant = tenant_get(tenant_id, profile=profile,
-                            **connection_args).keys()[0]['name']
+                            **connection_args).iterkeys().next()['name']
     if not tenant_id:
         return {'Error': 'Unable to resolve tenant id'}
 
@@ -938,7 +938,7 @@ def user_role_remove(user_id=None, user=None, tenant_id=None,
         role_id = role_get(name=role, profile=profile,
                            **connection_args)[role]['id']
     else:
-        role = role_get(role_id).keys()[0]['name']
+        role = role_get(role_id).iterkeys().next()['name']
     if not role_id:
         return {'Error': 'Unable to resolve role id'}
 
