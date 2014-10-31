@@ -49,7 +49,7 @@ def get_url(path, dest, saltenv='base'):
 
 def list_states(saltenv='base'):
     '''
-    List all the avilable state modules in an environment
+    List all the available state modules in an environment
     '''
     return __context__['fileclient'].list_states(saltenv)
 

@@ -130,6 +130,7 @@ def installed(name,
               allow_external=None,
               allow_unverified=None,
               process_dependency_links=False,
+              env_vars=None,
               use_vt=False):
     '''
     Make sure the package is installed
@@ -266,6 +267,11 @@ def installed(name,
         Absolute path to a virtual environment directory or absolute path to
         a pip executable. The example below assumes a virtual environment
         has been created at ``/foo/.virtualenvs/bar``.
+
+    env_vars
+        Add or modify environment variables. Useful for tweaking build steps,
+        such as specifying INCLUDE or LIBRARY paths in Makefiles, build scripts or
+        compiler calls.
 
     use_vt
         Use VT terminal emulation (see ouptut while installing)
@@ -554,6 +560,7 @@ def installed(name,
         allow_unverified=allow_unverified,
         process_dependency_links=process_dependency_links,
         saltenv=__env__,
+        env_vars=env_vars,
         use_vt=use_vt
     )
 

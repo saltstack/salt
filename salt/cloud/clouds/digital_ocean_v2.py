@@ -106,12 +106,12 @@ def avail_images(call=None):
         items = query(method='images', command='?page=' + str(page))
 
         for image in items['images']:
-            ret[image['name']] = {}
+            ret[image['id']] = {}
             for item in image.keys():
-                ret[image['name']][item] = str(image[item])
+                ret[image['id']][item] = str(image[item])
 
         page += 1
-        fetch = next in items['links']['pages']
+        fetch = 'next' in items['links']['pages']
 
     return ret
 

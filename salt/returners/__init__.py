@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
 '''
 Returners Directory
+
+:func:`get_returner_options` is a general purpose function that returners may
+use to fetch their configuration options.
 '''
 
 import logging
+
 log = logging.getLogger(__name__)
 
 
@@ -13,120 +17,201 @@ def get_returner_options(virtualname=None,
                          **kwargs):
     '''
     Get the returner options from salt.
+
+    :param str virtualname: The returner virtualname (as returned
+        by __virtual__()
+    :param ret: result of the module that ran. dit-like object
+
+        May contain a `ret_config` key pointing to a string
+        If a `ret_config` is specified, config options are read from::
+
+            value.virtualname.option
+
+        If not, config options are read from::
+
+            value.virtualname.option
+
+    :param attrs: options the returner wants to read
+    :param __opts__: Optionnal dict-like object that contains a fallback config
+        in case the param `__salt__` is not supplied.
+
+        Defaults to empty dict.
+    :param __salt__: Optionnal dict-like object that exposes the salt API.
+
+        Defaults to empty dict.
+
+        a) if __salt__ contains a 'config.option' configuration options,
+            we infer the returner is being called from a state or module run ->
+            config is a copy of the `config.option` function
+
+        b) if __salt__ was not available, we infer that the returner is being
+        called from the Salt scheduler, so we look for the
+        configuration options in the param `__opts__`
+        -> cfg is a copy for the __opts__ dictionary
+    :param str profile_attr: Optionnal.
+
+        If supplied, an overriding config profile is read from
+        the corresponding key of `__salt__`.
+
+    :param dict profile_attrs: Optionnal
+
+        .. fixme:: only keys are read
+
+        For each key in profile_attr, a value is read in the are
+        used to fetch a value pointed by 'virtualname.%key' in
+        the dict found thanks to the param `profile_attr`
     '''
 
-    if ret:
-        ret_config = '{0}'.format(ret['ret_config']) if 'ret_config' in ret else ''
-    else:
-        ret_config = None
+    ret_config = _fetch_ret_config(ret)
 
+    attrs = attrs = {}
     profile_attr = kwargs.get('profile_attr', None)
     profile_attrs = kwargs.get('profile_attrs', None)
     defaults = kwargs.get('defaults', None)
     __salt__ = kwargs.get('__salt__', {})
     __opts__ = kwargs.get('__opts__', {})
 
-    _options = {}
+    # select the config source
+    cfg = __salt__.get('config.option', __opts__)
 
-    for attr in attrs:
+    # browse the config for relevant options, store them in a dict
+    _options = dict(
+        _options_browser(
+            cfg,
+            ret_config,
+            defaults,
+            virtualname,
+            attrs,
+        )
+    )
+
+    # override some values with relevant profile options
+    _options.update(
+        _fetch_profile_opts(
+            cfg,
+            __salt__,
+            virtualname,
+            _options,
+            profile_attr,
+            profile_attrs
+        )
+    )
+
+    return _options
+
+
+def _fetch_ret_config(ret):
+    """
+    Fetches 'ret_config' if available.
+
+    @see :func:`get_returner_options`
+    """
+    if not ret:
+        return None
+    if 'ret_config' not in ret:
+        return ''
+    return str(ret['ret_config'])
+
+
+def _fetch_option(cfg, ret_config, virtualname, attr_name):
+    """
+    Fetch a given option value from the config.
+
+    @see :func:`get_returner_options`
+    """
+    # c_cfg is a dictionary returned from config.option for
+    # any options configured for this returner.
+    c_cfg = cfg('{0}'.format(virtualname), {})
+
+    default_cfg_key = '{0}.{1}'.format(virtualname, attr_name)
+    if not ret_config:
+        # Using the default configuration key
+        return c_cfg.get(attr_name, cfg(default_cfg_key))
+
+    # Using ret_config to override the default configuration key
+    ret_cfg = cfg('{0}.{1}'.format(ret_config, virtualname), {})
+
+    override_default_cfg_key = '{0}.{1}.{2}'.format(
+        ret_config,
+        virtualname,
+        attr_name,
+    )
+    override_cfg_default = cfg(override_default_cfg_key)
+
+    # Look for the configuration item in the override location
+    ret_override_cfg = ret_cfg.get(
+        attr_name,
+        override_cfg_default
+    )
+    if ret_override_cfg:
+        return ret_override_cfg
+
+    # if not configuration item found, fall back to the default location.
+    return c_cfg.get(attr_name, cfg(default_cfg_key))
+
+
+def _options_browser(cfg, ret_config, defaults, virtualname, options):
+    """
+    Iterator generating all duples ```option name -> value```
+
+    @see :func:`get_returner_options`
+    """
+
+    for option in options:
 
         # default place for the option in the config
-        default_cfg_key = '{0}.{1}'.format(virtualname, attrs[attr])
+        value = _fetch_option(cfg, ret_config, virtualname, options[option])
 
-        if 'config.option' in __salt__:
-            # Look for the configuration options in __salt__
-            # most likely returner is being called from a state or module run
+        if value:
+            yield option, value
+            continue
 
-            # cfg is a copy of the config.option function
-            cfg = __salt__['config.option']
-
-            # c_cfg is a dictionary returned from config.option for
-            # any options configured for this returner.
-            c_cfg = cfg('{0}'.format(virtualname), {})
-            if ret_config:
-                # Using ret_config to override the default configuration key
-                ret_cfg = cfg('{0}.{1}'.format(ret_config, virtualname), {})
-
-                # Look for the configuration item in the override location
-                # if not found, fall back to the default location.
-                override_default_cfg_key = '{0}.{1}.{2}'.format(
-                    ret_config,
-                    virtualname,
-                    attrs[attr]
-                )
-                override_cfg_default = cfg(override_default_cfg_key)
-                ret_override_cfg = ret_cfg.get(
-                    attrs[attr],
-                    override_cfg_default
-                )
-                if ret_override_cfg:
-                    _attr = ret_override_cfg
-                else:
-                    _attr = c_cfg.get(attrs[attr], cfg(default_cfg_key))
-            else:
-                # Using the default configuration key
-                _attr = c_cfg.get(attrs[attr], cfg(default_cfg_key))
-        else:
-            # __salt__ is unavailable, most likely the returner
-            # is being called from the Salt scheduler so
-            # look for the configuration options in __opts__
-
-            # cfg is a copy for the __opts_ dictionary
-            cfg = __opts__
-
-            # c_cfg is a dictionary found in the cfg dictionary
-            # otherwise an empty dict.
-            c_cfg = cfg.get('{0}'.format(virtualname), {})
-
-            if ret_config:
-                # Using ret_config to override the default configuration key
-                ret_cfg = cfg.get('{0}.{1}'.format(ret_config, virtualname), {})
-
-                # Look for the configuration item in the override location
-                # if not found, fall back to the default location.
-                if ret_cfg.get(attrs[attr],
-                               cfg.get('{0}.{1}.{2}'.format(ret_config,
-                                                            virtualname,
-                                                            attrs[attr]))):
-                    _attr = ret_cfg.get(attrs[attr],
-                                        cfg.get('{0}.{1}.{2}'.format(ret_config,
-                                                                     virtualname,
-                                                                     attrs[attr])))
-                else:
-                    _attr = c_cfg.get(attrs[attr],
-                                      cfg.get('{0}.{1}'.format(virtualname,
-                                                               attrs[attr])))
-            else:
-                # Using the default configuration key.
-                _attr = c_cfg.get(attrs[attr],
-                                  cfg.get('{0}.{1}'.format(virtualname,
-                                                           attrs[attr])))
-        if not _attr:
-            # Attribute not found, check for a default value
-            if defaults:
-                if attr in defaults:
-                    log.info('Using default for {0} {1}'.format(virtualname,
-                                                                attr))
-                    _options[attr] = defaults[attr]
-                    continue
-                else:
-                    _options[attr] = ''
-                    continue
-            else:
-                _options[attr] = ''
+        # Attribute not found, check for a default value
+        if defaults:
+            if option in defaults:
+                log.info('Using default for %s %s', virtualname, option)
+                yield option, defaults[option]
                 continue
-        _options[attr] = _attr
 
-    if profile_attr:
-        # Using a profile
-        if profile_attr in _options:
-            log.info('Using profile {0}'.format(_options[profile_attr]))
-            if 'config.option' in __salt__:
-                creds = cfg(_options[profile_attr])
-            else:
-                creds = cfg.get(_options[profile_attr])
-            if creds:
-                for pattr in profile_attrs:
-                    _options[pattr] = creds.get('{0}.{1}'.format(virtualname,
-                                                                 profile_attrs[pattr]))
-    return _options
+        # fallback (implicit else for all ifs)
+        yield option, ''
+
+
+def _fetch_profile_opts(
+        cfg, virtualname,
+        __salt__,
+        _options,
+        profile_attr,
+        profile_attrs
+    ):
+    """
+    Fetches profile specific options if applicable
+
+    @see :func:`get_returner_options`
+
+    :return: a options dict
+    """
+
+    if (not profile_attr) or (profile_attr not in _options):
+        return {}
+
+    # Using a profile and it is in _options
+
+    profile = _options[profile_attr]
+    log.info('Using profile %s', profile)
+
+    if 'config.option' in __salt__:
+        creds = cfg(profile)
+    else:
+        creds = cfg.get(profile)
+
+    if not creds:
+        return {}
+
+    return dict(
+        (
+            pattr,
+            creds.get('{0}.{1}'.format(virtualname, profile_attrs[pattr]))
+        )
+        for pattr in profile_attrs
+        )

@@ -313,7 +313,7 @@ class SaltEvent(object):
     def get_event(self, wait=5, tag='', full=False, use_pending=False, pending_tags=None):
         '''
         Get a single publication.
-        IF no publication available THEN block for upto wait seconds
+        IF no publication available THEN block for up to wait seconds
         AND either return publication OR None IF no publication available.
 
         IF wait is 0 then block forever.
@@ -644,6 +644,8 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
             if fnmatch.fnmatch(tag, key):
                 if isinstance(val, string_types):
                     reactors.append(val)
+                elif hasattr(val, '__call__'):
+                    reactors.append(val)
                 elif isinstance(val, list):
                     reactors.extend(val)
         return reactors
@@ -656,6 +658,9 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         high = {}
         chunks = []
         for fn_ in reactors:
+            if hasattr(fn_, '__call__'):  # Is a func
+                fn_(data)
+                continue
             high.update(self.render_reaction(fn_, tag, data))
         if high:
             errors = self.verify_high(high)

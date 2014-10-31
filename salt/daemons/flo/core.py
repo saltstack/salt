@@ -179,6 +179,11 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
                                      period=3.0,
                                      offset=0.5)
 
+        if self.opts.value.get('raet_clear_remotes'):
+            for remote in self.stack.value.remotes.values():
+                self.stack.value.removeRemote(remote, clear=True)
+            self.stack.puid = self.stack.value.Uid  # reset puid
+
 
 class SaltRaetRoadStackCloser(ioflo.base.deeding.Deed):
     '''
@@ -223,7 +228,16 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
         '''
         stack = self.stack.value
         if stack and isinstance(stack, RoadStack):
-            if not stack.remotes:
+            # minion should default
+            refresh = (self.opts.value.get('raet_clear_remotes', True) or
+                       not stack.remotes)
+
+            if refresh:
+                for remote in stack.remotes.values():
+                    stack.removeRemote(remote, clear=True)
+
+                stack.puid = stack.Uid  # reset puid so reuse same uid each time
+
                 for master in self.masters:
                     mha = master['external']
                     stack.addRemote(RemoteEstate(stack=stack,
@@ -1123,6 +1137,10 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
         salt.utils.daemonize_if(self.opts)
 
         salt.transport.jobber_stack = stack = self._setup_jobber_stack()
+        # set up return destination from source
+        src_estate, src_yard, src_share = msg['route']['src']
+        salt.transport.jobber_estate_name = src_estate
+        salt.transport.jobber_yard_name = src_yard
 
         sdata = {'pid': os.getpid()}
         sdata.update(data)

@@ -17,8 +17,6 @@ Interaction with the Supervisor daemon
 # Import python libs
 import logging
 
-# Import salt libs
-import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -48,7 +46,6 @@ def running(name,
             restart=False,
             update=False,
             user=None,
-            runas=None,
             conf_file=None,
             bin_env=None):
     '''
@@ -62,11 +59,6 @@ def running(name,
 
     update
         Whether to update the supervisor configuration.
-
-    runas
-        Name of the user to run the supervisorctl command
-
-        .. deprecated:: 0.17.0
 
     user
         Name of the user to run the supervisorctl command
@@ -82,30 +74,6 @@ def running(name,
 
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
-
-    salt.utils.warn_until(
-        'Lithium',
-        'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 0.17.0',
-        _dont_call_warnings=True
-    )
-    if runas:
-        # Warn users about the deprecation
-        ret.setdefault('warnings', []).append(
-            'The \'runas\' argument is being deprecated in favor of \'user\', '
-            'please update your state files.'
-        )
-    if user is not None and runas is not None:
-        # user wins over runas but let warn about the deprecation.
-        ret.setdefault('warnings', []).append(
-            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
-            '\'runas\' is being ignored in favor of \'user\'.'
-        )
-        runas = None
-    elif runas is not None:
-        # Support old runas usage
-        user = runas
-        runas = None
 
     if 'supervisord.status' not in __salt__:
         ret['result'] = False
@@ -270,7 +238,7 @@ def running(name,
         log.debug(comment)
         result = __salt__['supervisord.start'](
             name,
-            user=runas,
+            user=user,
             conf_file=conf_file,
             bin_env=bin_env
         )
@@ -285,7 +253,6 @@ def running(name,
 
 def dead(name,
          user=None,
-         runas=None,
          conf_file=None,
          bin_env=None):
     '''
@@ -293,11 +260,6 @@ def dead(name,
 
     name
         Service name as defined in the supervisor configuration file
-
-    runas
-        Name of the user to run the supervisorctl command
-
-        .. deprecated:: 0.17.0
 
     user
         Name of the user to run the supervisorctl command
@@ -314,30 +276,6 @@ def dead(name,
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    salt.utils.warn_until(
-        'Lithium',
-        'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 0.17.0',
-        _dont_call_warnings=True
-    )
-    if runas:
-        # Warn users about the deprecation
-        ret.setdefault('warnings', []).append(
-            'The \'runas\' argument is being deprecated in favor of \'user\', '
-            'please update your state files.'
-        )
-    if user is not None and runas is not None:
-        # user wins over runas but let warn about the deprecation.
-        ret.setdefault('warnings', []).append(
-            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
-            '\'runas\' is being ignored in favor of \'user\'.'
-        )
-        runas = None
-    elif runas is not None:
-        # Support old runas usage
-        user = runas
-        runas = None
-
     if __opts__['test']:
         ret['result'] = None
         ret['comment'] = (
@@ -347,7 +285,7 @@ def dead(name,
         log.debug(comment)
 
         all_processes = __salt__['supervisord.status'](
-            user=runas,
+            user=user,
             conf_file=conf_file,
             bin_env=bin_env
         )
@@ -397,7 +335,6 @@ def mod_watch(name,
               restart=True,
               update=False,
               user=None,
-              runas=None,
               conf_file=None,
               bin_env=None):
     # Always restart on watch
@@ -406,7 +343,6 @@ def mod_watch(name,
         restart=restart,
         update=update,
         user=user,
-        runas=runas,
         conf_file=conf_file,
         bin_env=bin_env
     )

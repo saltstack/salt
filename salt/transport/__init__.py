@@ -26,8 +26,18 @@ except ImportError:
     # Don't die on missing transport libs since only one transport is required
     pass
 
-jobber_stack = None  # global that holds raet jobber LaneStack
-jobber_rxMsgs = {}  # dict of deques one for each RaetChannel
+# Module globals for default LaneStack. Because RaetChannels are created on demand
+# they do not have access to the master estate that motivated their creation
+# Also in Raet a LaneStack can be shared shared by all channels in a given jobber
+# For these reasons module globals are used to setup a shared jobber_stack as
+# well has routing information for the master that motivated the jobber
+# when a channel is not used in a jobber context then a LaneStack is created
+# on demand.
+
+jobber_stack = None  # module global that holds raet jobber LaneStack
+jobber_rxMsgs = {}  # dict of deques one for each RaetChannel for the jobber
+jobber_estate_name = None  # module global of motivating master estate name
+jobber_yard_name = None  # module global of motivating master yard name
 
 
 class Channel(object):
@@ -76,12 +86,17 @@ class RAETChannel(Channel):
     def __init__(self, opts, usage=None, **kwargs):
         self.opts = opts
         self.ttype = 'raet'
-        if usage == 'master_call':
-            self.dst = (None, None, 'local_cmd')  # runner.py master_call
-        elif usage == 'salt_call':
-            self.dst = (None, None, 'remote_cmd')  # salt_call caller
-        else:  # everything else minion
-            self.dst = (None, None, 'remote_cmd')  # normal use case minion to master
+        if usage == 'master_call':  # runner.py master_call
+            self.dst = (None, None, 'local_cmd')
+        elif usage == 'salt_call':  # salt_call caller
+            #self.dst = (None, None, 'remote_cmd')
+            self.dst = (jobber_estate_name or None,
+                        jobber_yard_name or None,
+                        'remote_cmd')
+        else:  # everything else minion to master
+            self.dst = (jobber_estate_name or None,
+                        jobber_yard_name or None,
+                        'remote_cmd')
         self.stack = None
 
     def _setup_stack(self):

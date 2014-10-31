@@ -10,6 +10,7 @@ import exceptions
 
 # Import salt libs
 import salt.exceptions
+import salt.utils.event
 
 
 def raise_error(name=None, args=None, message=''):
@@ -30,3 +31,22 @@ def raise_error(name=None, args=None, message=''):
         raise ex(*args)
     else:
         raise ex(message)
+
+
+def pack_exception(exc):
+    if hasattr(exc, 'pack'):
+        packed_exception = exc.pack()
+    else:
+        packed_exception = {'message': exc.__unicode__(), 'args': exc.args}
+    return packed_exception
+
+
+def fire_exception(exc, opts, job=None, node='minion'):
+    '''
+    Fire raw exception across the event bus
+    '''
+    if job is None:
+        job = {}
+    event = salt.utils.event.SaltEvent(node, opts=opts)
+    event.fire_event({'exception': pack_exception(exc),
+                      'job': job}, '_salt_error')
