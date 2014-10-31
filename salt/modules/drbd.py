@@ -69,6 +69,7 @@ def overview():
                 syncbar=fields[4]
                 synced=fields[6]
                 syncedbytes=fields[7]
+                sync=synced+syncedbytes
                 ret[key] = {
                         'minor number':minnum,
                         'device':device,
@@ -78,6 +79,6 @@ def overview():
                         'local disk state':localdiskstate,
                         'partner disk state':partnerdiskstate,
                         'synchronisation: ':syncbar,
-                        'synched':synced,syncedbytes,
+                        'synched':sync,
                 }
     return ret
