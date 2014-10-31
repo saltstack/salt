@@ -836,7 +836,7 @@ def format_call(fun,
 
     missing_args = []
 
-    for key in kwargs.keys():
+    for key in kwargs:
         try:
             kwargs[key] = data.pop(key)
         except KeyError:
@@ -1964,7 +1964,7 @@ def compare_versions(ver1='', oper='==', ver2='', cmp_func=None):
     '''
     cmp_map = {'<': (-1,), '<=': (-1, 0), '==': (0,),
                '>=': (0, 1), '>': (1,)}
-    if oper not in ['!='] + cmp_map.keys():
+    if oper not in ['!=']  and oper not in cmp_map:
         log.error('Invalid operator "{0}" for version '
                   'comparison'.format(oper))
         return False
@@ -1988,7 +1988,7 @@ def compare_dicts(old=None, new=None):
     dict describing the changes that were made.
     '''
     ret = {}
-    for key in set((new or {}).keys()).union((old or {}).keys()):
+    for key in set((new or {})).union((old or {})):
         if key not in old:
             # New key
             ret[key] = {'old': '',

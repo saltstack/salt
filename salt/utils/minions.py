@@ -565,7 +565,7 @@ class CkMinions(object):
                         if len(ind) != 1:
                             # Invalid argument
                             continue
-                        valid = ind.keys()[0]
+                        valid = ind.iterkeys().next()
                         # Check if minions are allowed
                         if self.validate_tgt(
                                 valid,
@@ -622,7 +622,7 @@ class CkMinions(object):
             elif isinstance(ind, dict):
                 if len(ind) != 1:
                     continue
-                valid = ind.keys()[0]
+                valid = ind.iterkeys().next()
                 if valid.startswith('@') and valid[1:] == mod:
                     if isinstance(ind[valid], str):
                         if self.match_check(ind[valid], fun):
@@ -653,7 +653,7 @@ class CkMinions(object):
             elif isinstance(ind, dict):
                 if len(ind) != 1:
                     continue
-                valid = ind.keys()[0]
+                valid = ind.iterkeys().next()
                 if valid.startswith('@') and valid[1:] == mod:
                     if isinstance(ind[valid], str):
                         if self.match_check(ind[valid], fun):
@@ -687,7 +687,7 @@ class CkMinions(object):
             elif isinstance(ind, dict):
                 if len(ind) != 1:
                     continue
-                valid = ind.keys()[0]
+                valid = ind.iterkeys().next()
                 if valid.startswith('@') and valid[1:] == mod:
                     if isinstance(ind[valid], str):
                         if self.match_check(ind[valid], fun):
