@@ -7,6 +7,9 @@ Windows Service module.
 import salt.utils
 from subprocess import list2cmdline
 import time
+import logging
+
+log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'service'
@@ -238,6 +241,7 @@ def stop(name):
         if not status(name):
             return True
 
+    log.warning('Giving up on waiting for service `%s` to stop', name)
     return False
 
 
