@@ -510,7 +510,7 @@ class MultiMinion(MinionBase):
         while True:
             module_refresh = False
             pillar_refresh = False
-            for minion in minions.values():
+            for minion in minions.itervalues():
                 if isinstance(minion, dict):
                     minion = minion['minion']
                 if not hasattr(minion, 'schedule'):

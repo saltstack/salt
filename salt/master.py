@@ -1078,7 +1078,7 @@ class AESFuncs(object):
             return False
         load['grains']['id'] = load['id']
         mods = set()
-        for func in self.mminion.functions.values():
+        for func in self.mminion.functions.itervalues():
             mods.add(func.__module__)
         for mod in mods:
             sys.modules[mod].__grains__ = load['grains']

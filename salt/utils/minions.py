@@ -598,7 +598,7 @@ class CkMinions(object):
                         groups[group_perm] = matcher
         else:
             return None
-        for item in groups.values():
+        for item in groups.itervalues():
             auth_list.append(item)
         return auth_list
 

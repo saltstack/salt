@@ -219,7 +219,7 @@ class SaltNova(OpenStackComputeShell):
         Make output look like libcloud output for consistency
         '''
         server_info = self.server_show(uuid)
-        server = server_info.values()[0]
+        server = server_info.itervalues().next()
         server_name = server_info.iterkeys().next()
         if not hasattr(self, 'password'):
             self.password = None

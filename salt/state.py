@@ -178,9 +178,9 @@ def format_log(ret):
                 if 'diff' in chg:
                     if isinstance(chg['diff'], string_types):
                         msg = 'File changed:\n{0}'.format(chg['diff'])
-                if all([isinstance(x, dict) for x in chg.values()]):
+                if all([isinstance(x, dict) for x in chg.itervalues()]):
                     if all([('old' in x and 'new' in x)
-                            for x in chg.values()]):
+                            for x in chg.itervalues()]):
                         # This is the return data from a package install
                         msg = 'Installed Packages:\n'
                         for pkg in chg:
@@ -2238,7 +2238,7 @@ class BaseHighState(object):
         Cleanly merge the top files
         '''
         top = DefaultOrderedDict(OrderedDict)
-        for ctops in tops.values():
+        for ctops in tops.itervalues():
             for ctop in ctops:
                 for saltenv, targets in ctop.items():
                     if saltenv == 'include':
@@ -2285,7 +2285,7 @@ class BaseHighState(object):
                     'The top file matches for saltenv {0} are not '
                     'formatted as a dict'.format(saltenv)
                 )
-            for slsmods in matches.values():
+            for slsmods in matches.itervalues():
                 if not isinstance(slsmods, list):
                     errors.append('Malformed topfile (state declarations not '
                                   'formed as a list)')
@@ -2293,7 +2293,7 @@ class BaseHighState(object):
                 for slsmod in slsmods:
                     if isinstance(slsmod, dict):
                         # This value is a match option
-                        for val in slsmod.values():
+                        for val in slsmod.itervalues():
                             if not val:
                                 errors.append(
                                     'Improperly formatted top file matcher '
