@@ -882,17 +882,30 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
             if not self.road_stack.value.remotes:
                 log.error("Missing joined master. Unable to route "
                           "remote_cmd '{0}'.".format(msg))
+                return
+            #log.error("**** Missing destination estate for 'remote_cmd'. Unable to route "
+                                    #"remote_cmd '{0}'.".format(msg))
+            #return
             d_estate = self.road_stack.value.remotes.values()[0].name
             msg['route']['dst'] = (d_estate, d_yard, d_share)
+            log.error("**** Missing destination estate for 'remote_cmd'. "
+                    "Using default route={0}.".format(msg['route']['dst']))
             self.road_stack.value.message(msg,
                     self.road_stack.value.nameRemotes[d_estate].uid)
-        elif d_share == 'call_cmd':  # salt call minion to master
+        elif d_share == 'call_cmd':  # salt call return pub to master
             if not self.road_stack.value.remotes:
                 log.error("Missing joined master. Unable to route "
                           "call_cmd '{0}'.".format(msg))
+                return
+            #log.error("**** Missing destination estate for 'call_cmd'. Unable to route "
+                                                #"call_cmd '{0}'.".format(msg))
+            #return
+
             d_estate = self.road_stack.value.remotes.values()[0].name
             d_share = 'remote_cmd'
             msg['route']['dst'] = (d_estate, d_yard, d_share)
+            log.error("**** Missing destination estate for 'call_cmd'. "
+                        "Using default route={0}.".format(msg['route']['dst']))
             self.road_stack.value.message(msg,
                     self.road_stack.value.nameRemotes[d_estate].uid)
 
