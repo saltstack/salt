@@ -492,6 +492,7 @@ class MultiMinion(MinionBase):
             except SaltClientError as exc:
                 log.error('Error while bringing up minion for multi-master. Is master at {0} responding?'.format(master))
         return ret
+
     # Multi Master Tune In
     def tune_in(self):
         '''
