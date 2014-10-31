@@ -347,7 +347,7 @@ class SaltfileMixIn(object):
                 # one from Saltfile, if any
                 continue
 
-            # We reched this far! Set the Saltfile value on the option
+            # We reached this far! Set the Saltfile value on the option
             setattr(self.options, option.dest, cli_config[option.dest])
 
         # Let's also search for options referred in any option groups

@@ -74,7 +74,7 @@ def lock(path,
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'Attempt to aqcuire lock'
+        ret['comment'] = 'Attempt to acquire lock'
         return ret
 
     if identifier is None:

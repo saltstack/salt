@@ -1174,20 +1174,21 @@ def locale_info():
         defaultencoding
     '''
     grains = {}
+    grains['locale_info'] = {}
 
     if 'proxyminion' in __opts__:
         return grains
 
     try:
         (
-            grains['defaultlanguage'],
-            grains['defaultencoding']
+            grains['locale_info']['defaultlanguage'],
+            grains['locale_info']['defaultencoding']
         ) = locale.getdefaultlocale()
     except Exception:
         # locale.getdefaultlocale can ValueError!! Catch anything else it
         # might do, per #2205
-        grains['defaultlanguage'] = 'unknown'
-        grains['defaultencoding'] = 'unknown'
+        grains['locale_info']['defaultlanguage'] = 'unknown'
+        grains['locale_info']['defaultencoding'] = 'unknown'
     return grains
 
 

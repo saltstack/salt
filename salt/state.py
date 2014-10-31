@@ -664,7 +664,7 @@ class State(object):
 
     def _run_check_cmd(self, low_data):
         '''
-        Alter the way a successfull state run is determined
+        Alter the way a successful state run is determined
         '''
         ret = {'result': False}
         cmd_opts = {}

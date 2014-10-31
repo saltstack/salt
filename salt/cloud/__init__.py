@@ -2238,7 +2238,7 @@ def run_parallel_map_providers_query(data, queue=None):
         return (data['alias'], data['driver'], ())
 
 
-# for pickle and multiprocessing, we cant use directly decorators
+# for pickle and multiprocessing, we can't use directly decorators
 def _run_parallel_map_providers_query(*args, **kw):
     return communicator(run_parallel_map_providers_query)(*args[0], **kw)
 

@@ -165,7 +165,7 @@ def configurable_test_state(name, changes=True, result=True, comment=''):
         Accepts True, False, and 'Random'
         Default is True
     result:
-        Do we return sucessfuly or not?
+        Do we return successfully or not?
         Accepts True, False, and 'Random'
         Default is True
     comment:
