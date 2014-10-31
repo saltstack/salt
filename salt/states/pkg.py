@@ -1262,14 +1262,21 @@ def latest(
                       'installed/upgraded: ' \
                       '{0}.'.format(to_be_upgraded)
             if up_to_date:
-                if len(up_to_date) <= 10:
+                up_to_date_nb = len(up_to_date)
+                if up_to_date_nb <= 10:
+                    up_to_date_sorted = sorted(up_to_date)
+                    up_to_date_details = ', '.join(
+                        '{0} ({1})'.format(name, cur[name])
+                        for name in up_to_date_sorted
+                    )
                     comment += (
                         ' The following packages are already '
                         'up-to-date: {0}.'
-                    ).format(', '.join(sorted(up_to_date)))
+                    ).format(up_to_date_details)
                 else:
                     comment += ' {0} packages are already up-to-date.'.format(
-                        len(up_to_date))
+                        up_to_date_nb
+                    )
 
             return {'name': name,
                     'changes': {},
