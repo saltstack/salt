@@ -55,7 +55,7 @@ def overview():
                         'remains':remainsize,
                         'percent':perc,
                     }
-                else
+                else:
                     ret[key] = {
                         'minor number':minnum,
                         'device':device,
@@ -78,6 +78,6 @@ def overview():
                         'local disk state':localdiskstate,
                         'partner disk state':partnerdiskstate,
                         'synchronisation: ':syncbar,
-                        'synched':synced,syncedbytes
+                        'synched':synced,syncedbytes,
                 }
     return ret
