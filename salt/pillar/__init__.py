@@ -37,7 +37,7 @@ def merge_aggregate(obj_a, obj_b):
 
 def merge_overwrite(obj_a, obj_b):
     for obj in obj_b:
-        if obj in obj_a.keys():
+        if obj in obj_a:
             obj_a[obj] = obj_b[obj]
             return obj_a
     return merge_recurse(obj_a, obj_b)
@@ -306,7 +306,7 @@ class Pillar(object):
                             if isinstance(comp, string_types):
                                 states[comp] = True
                         top[saltenv][tgt] = matches
-                        top[saltenv][tgt].extend(list(states.keys()))
+                        top[saltenv][tgt].extend(states.keys())
         return self.sort_top_targets(top, orders)
 
     def sort_top_targets(self, top, orders):
