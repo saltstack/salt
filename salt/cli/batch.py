@@ -156,7 +156,7 @@ class Batch(object):
                         # add all minions that belong to this iterator and
                         # that have not responded to parts{} with an empty response
                         for minion in minion_tracker[queue]['minions']:
-                            if minion not in parts.keys():
+                            if minion not in parts:
                                 parts[minion] = {}
                                 parts[minion]['ret'] = {}
 
@@ -180,7 +180,7 @@ class Batch(object):
                             self.opts)
 
             # remove inactive iterators from the iters list
-            for queue in minion_tracker.keys():
+            for queue in minion_tracker:
                 # only remove inactive queues
                 if not minion_tracker[queue]['active'] and queue in iters:
                     iters.remove(queue)
