@@ -55,7 +55,7 @@ def overview():
                         'remains':remainsize,
                         'percent':perc,
                     }
-                else
+                else:
                     ret[key] = {
                         'minor number':minnum,
                         'device':device,
