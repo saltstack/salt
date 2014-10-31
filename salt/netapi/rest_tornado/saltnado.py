@@ -417,13 +417,18 @@ class SaltAuthHandler(BaseSaltAPIHandler):
     def post(self):
         '''
         Authenticate against Salt's eauth system
-        {"return": {"start": 1395507384.320007, "token": "6ff4cd2b770ada48713afc629cd3178c", "expire": 1395550584.320007, "name": "jacksontj", "eauth": "pam"}}
         {"return": [{"perms": ["*.*"], "start": 1395507675.396021, "token": "dea8274dc359fee86357d9d0263ec93c0498888e", "expire": 1395550875.396021, "user": "jacksontj", "eauth": "pam"}]}
         '''
-        creds = {'username': self.get_arguments('username')[0],
-                 'password': self.get_arguments('password')[0],
-                 'eauth': self.get_arguments('eauth')[0],
-                 }
+        try:
+            creds = {'username': self.get_arguments('username')[0],
+                     'password': self.get_arguments('password')[0],
+                     'eauth': self.get_arguments('eauth')[0],
+                     }
+        # if any of the args are missing, its a bad request
+        except IndexError:
+            self.send_error(400)
+            return
+
 
         token = self.application.auth.mk_token(creds)
         if 'token' not in token:
@@ -436,12 +441,19 @@ class SaltAuthHandler(BaseSaltAPIHandler):
         # Grab eauth config for the current backend for the current user
         try:
             perms = self.application.opts['external_auth'][token['eauth']][token['name']]
+
+        # If we can't find the creds, then they aren't authorized
+        except KeyError:
+            self.send_error(401)
+            return
+
         except (AttributeError, IndexError):
             logging.debug("Configuration for external_auth malformed for "
                           "eauth '{0}', and user '{1}'."
                           .format(token.get('eauth'), token.get('name')), exc_info=True)
             # TODO better error -- 'Configuration for external_auth could not be read.'
             self.send_error(500)
+            return
 
         ret = {'return': [{
             'token': token['token'],
