@@ -56,9 +56,11 @@ def add(name, gid=None, system=False):
                     ).format(name))
         except pywintypes.com_error as com_err:
             ret['result'] = False
+            if len(com_err.excepinfo) >= 2:
+                friendly_error = com_err.excepinfo[2].rstrip('\r\n')
             ret['comment'] = (
-                    'Failed to create group {0} exception {1}'
-                    ).format(name, com_err)
+                    'Failed to create group {0}.  {1}'
+                    ).format(name, friendly_error)
     else:
         ret['result'] = None
         ret['comment'] = (
@@ -92,9 +94,11 @@ def delete(name):
             ret['changes'].append(('Successfully removed group {0}').format(name))
         except pywintypes.com_error as com_err:
             ret['result'] = False
+            if len(com_err.excepinfo) >= 2:
+                friendly_error = com_err.excepinfo[2].rstrip('\r\n')
             ret['comment'] = (
-                    'Failed to remove group {0}, exception: {1}'
-                    ).format(name, com_err)
+                    'Failed to remove group {0}.  {1}'
+                    ).format(name, friendly_error)
     else:
         ret['result'] = None
         ret['comment'] = (
@@ -212,9 +216,11 @@ def adduser(name, username):
                     ).format(username, name)
             ret['result'] = None
     except pywintypes.com_error as com_err:
+        if len(com_err.excepinfo) >= 2:
+            friendly_error = com_err.excepinfo[2].rstrip('\r\n')
         ret['comment'] = (
-                'Failed to add {0} to group {1}, exception: {2}'
-                ).format(username, name, com_err)
+                'Failed to add {0} to group {1}.  {2}'
+                ).format(username, name, friendly_error)
         ret['result'] = False
         return ret
 
@@ -260,9 +266,11 @@ def deluser(name, username):
                     ).format(username, name)
             ret['result'] = None
     except pywintypes.com_error as com_err:
+        if len(com_err.excepinfo) >= 2:
+            friendly_error = com_err.excepinfo[2].rstrip('\r\n')
         ret['comment'] = (
-                'Failed to remove {0} from group {1}, exception: {2}'
-                ).format(username, name, com_err)
+                'Failed to remove {0} from group {1}.  {2}'
+                ).format(username, name, friendly_error)
         ret['result'] = False
         return ret
 
@@ -285,17 +293,26 @@ def members(name, members_list):
     ret = {'name': name,
            'result': True,
            'changes': {'Users Added': [], 'Users Removed': []},
-           'comment': ''}
+           'comment': []}
 
     members_list = members_list.split(",")
     if not isinstance(members_list, list):
         ret['result'] = False
-        ret['comment'] = 'Members is not a list object'
+        ret['comment'].append('Members is not a list object')
         return ret
 
     pythoncom.CoInitialize()
     nt = win32com.client.Dispatch('AdsNameSpaces')
-    groupObj = nt.GetObject('', 'WinNT://./' + name + ',group')
+    try:
+        groupObj = nt.GetObject('', 'WinNT://./' + name + ',group')
+    except pywintypes.com_error as com_err:
+        if len(com_err.excepinfo) >= 2:
+            friendly_error = com_err.excepinfo[2].rstrip('\r\n')
+        ret['result'] = False
+        ret['comment'].append((
+                'Failure accessing group {0}.  {1}'
+                ).format(name, friendly_error))
+        return ret
     existingMembers = []
     for member in groupObj.members():
         existingMembers.append(
@@ -307,7 +324,7 @@ def members(name, members_list):
 
     if existingMembers == members_list:
         ret['result'] = None
-        ret['comment'] = ('{0} membership is correct').format(name)
+        ret['comment'].append(('{0} membership is correct').format(name))
         return ret
 
     # add users
@@ -318,11 +335,13 @@ def members(name, members_list):
                     groupObj.Add('WinNT://' + member.replace('\\', '/'))
                 ret['changes']['Users Added'].append(member)
             except pywintypes.com_error as com_err:
+                if len(com_err.excepinfo) >= 2:
+                    friendly_error = com_err.excepinfo[2].rstrip('\r\n')
                 ret['result'] = False
-                ret['comment'] = (
-                        'Failed to add {0} to {1}, exception: {2}'
-                        ).format(member, name, com_err)
-                return ret
+                ret['comment'].append((
+                        'Failed to add {0} to {1}.  {2}'
+                        ).format(member, name, friendly_error))
+                #return ret
 
     # remove users not in members_list
     for member in existingMembers:
@@ -332,10 +351,12 @@ def members(name, members_list):
                     groupObj.Remove('WinNT://' + member.replace('\\', '/'))
                 ret['changes']['Users Removed'].append(member)
             except pywintypes.com_error as com_err:
+                if len(com_err.excepinfo) >= 2:
+                    friendly_error = com_err.excepinfo[2].rstrip('\r\n')
                 ret['result'] = False
-                ret['comment'] = (
-                        'Failed to remove {0} from {1}, exception: {2}'
-                        ).format(member, name, com_err)
-                return ret
+                ret['comment'].append((
+                        'Failed to remove {0} from {1}.  {2}'
+                        ).format(member, name, friendly_error))
+                #return ret
 
     return ret
