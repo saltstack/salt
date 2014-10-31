@@ -1174,20 +1174,20 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
 
             iface_data['inet']['ethtool'] = ethtool
             # return a list of sorted keys to ensure consistent order
-            iface_data['inet']['ethtool_keys'] = sorted(ethtool.keys())
+            iface_data['inet']['ethtool_keys'] = sorted(ethtool)
 
     if iface_type == 'bridge':
         bridging = _parse_bridge_opts(opts, iface)
         if bridging:
             iface_data['inet']['bridging'] = bridging
-            iface_data['inet']['bridging_keys'] = sorted(bridging.keys())
+            iface_data['inet']['bridging_keys'] = sorted(bridging)
 
     elif iface_type == 'bond':
         bonding = _parse_settings_bond(opts, iface)
         if bonding:
             iface_data['inet']['bonding'] = bonding
             iface_data['inet']['bonding']['slaves'] = opts['slaves']
-            iface_data['inet']['bonding_keys'] = sorted(bonding.keys())
+            iface_data['inet']['bonding_keys'] = sorted(bonding)
 
     elif iface_type == 'slave':
         adapters[iface]['master'] = opts['master']

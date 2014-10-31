@@ -249,7 +249,7 @@ def avail_platforms():
         salt myminion genesis.avail_platforms
     '''
     ret = {}
-    for platform in CMD_MAP.keys():
+    for platform in CMD_MAP:
         ret[platform] = True
         for cmd in CMD_MAP[platform]:
             if not salt.utils.which(cmd):

@@ -27,7 +27,7 @@ def mount_image(location):
         mnt = __salt__['qemu_nbd.init'](location)
         if not mnt:
             return ''
-        first = mnt.keys()[0]
+        first = mnt.iterkeys().next()
         __context__['img.mnt_{0}'.format(first)] = mnt
         return first
     return ''
@@ -95,4 +95,4 @@ def bootstrap(location, size, fmt):
     __salt__['partition.probe'](nbd)
     __salt__['partition.mkfs']('{0}p1'.format(nbd), 'ext4')
     mnt = __salt__['qemu_nbd.mount'](nbd)
-    #return __salt__['pkg.bootstrap'](nbd, mnt.keys()[0])
+    #return __salt__['pkg.bootstrap'](nbd, mnt.iterkeys().next())

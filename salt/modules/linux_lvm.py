@@ -200,7 +200,7 @@ def pvcreate(devices, **kwargs):
              'pvmetadatacopies', 'metadatacopies', 'metadataignore',
              'restorefile', 'norestorefile', 'labelsector',
              'setphysicalvolumesize')
-    for var in kwargs.keys():
+    for var in kwargs:
         if kwargs[var] and var in valid:
             cmd += ' --{0} {1}'.format(var, kwargs[var])
     out = __salt__['cmd.run'](cmd).splitlines()
@@ -245,7 +245,7 @@ def vgcreate(vgname, devices, **kwargs):
         cmd += ' {0}'.format(device)
     valid = ('clustered', 'maxlogicalvolumes', 'maxphysicalvolumes',
              'vgmetadatacopies', 'metadatacopies', 'physicalextentsize')
-    for var in kwargs.keys():
+    for var in kwargs:
         if kwargs[var] and var in valid:
             cmd += ' --{0} {1}'.format(var, kwargs[var])
     out = __salt__['cmd.run'](cmd).splitlines()

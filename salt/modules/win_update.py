@@ -269,7 +269,7 @@ class PyWinUpdater(object):
         '''
         updates = self.GetInstallationResults()
         ret = 'The following are the updates and their return codes.\n'
-        for i in updates.keys():
+        for i in updates:
             ret += '\t{0}\n'.format(updates[i])
         return ret
 
@@ -316,8 +316,8 @@ class PyWinUpdater(object):
     def SetIncludes(self, includes):
         if includes:
             for i in includes:
-                value = i[i.keys()[0]]
-                include = i.keys()[0]
+                value = i[i.iterkeys().next()]
+                include = i.iterkeys().next()
                 self.SetInclude(include, value)
                 log.debug('was asked to set {0} to {1}'.format(include, value))
 
