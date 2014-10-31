@@ -349,7 +349,7 @@ def _strip_clean(returns):
     '''
     rm_tags = []
     for tag in returns:
-        if not isinstance(tag, dict):
+        if isinstance(tag, dict):
             continue
         if returns[tag]['result'] and not returns[tag]['changes']:
             rm_tags.append(tag)

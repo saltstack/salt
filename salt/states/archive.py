@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Archive states.
+Extract an archive
 
 .. versionadded:: 2014.1.0
 '''
@@ -11,6 +11,17 @@ import tarfile
 from contextlib import closing
 
 log = logging.getLogger(__name__)
+
+__virtualname__ = 'archive'
+
+
+def __virtual__():
+    '''
+    Only load if the npm module is available in __salt__
+    '''
+    return __virtualname__ \
+        if [x for x in __salt__ if x.startswith('archive.')] \
+        else False
 
 
 def extracted(name,
@@ -95,7 +106,7 @@ def extracted(name,
 
     if archive_format not in valid_archives:
         ret['result'] = False
-        ret['comment'] = '{0} is not supported, valids: {1}'.format(
+        ret['comment'] = '{0} is not supported, valid formats are: {1}'.format(
             archive_format, ','.join(valid_archives))
         return ret
 
