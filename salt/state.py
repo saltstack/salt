@@ -495,7 +495,7 @@ class Compiler(object):
                     for entry in names:
                         live = copy.deepcopy(chunk)
                         if isinstance(entry, dict):
-                            low_name = entry.keys()[0]
+                            low_name = entry.iterkeys().next()
                             live['name'] = low_name
                             live.update(entry[low_name][0])
                         else:
@@ -531,7 +531,7 @@ class Compiler(object):
                 # Explicitly declared exclude
                 if len(exc) != 1:
                     continue
-                key = exc.keys()[0]
+                key = exc.iterkeys().next()
                 if key == 'sls':
                     ex_sls.add(exc['sls'])
                 elif key == 'id':
@@ -1098,7 +1098,7 @@ class State(object):
                     for entry in names:
                         live = copy.deepcopy(chunk)
                         if isinstance(entry, dict):
-                            low_name = entry.keys()[0]
+                            low_name = entry.iterkeys().next()
                             live['name'] = low_name
                             live.update(entry[low_name][0])
                         else:
@@ -1209,7 +1209,7 @@ class State(object):
                 # Explicitly declared exclude
                 if len(exc) != 1:
                     continue
-                key = exc.keys()[0]
+                key = exc.iterkeys().next()
                 if key == 'sls':
                     ex_sls.add(exc['sls'])
                 elif key == 'id':
@@ -1381,9 +1381,9 @@ class State(object):
                                         if next(iter(arg)) in ignore_args:
                                             continue
                                         # Don't use name or names
-                                        if arg.keys()[0] == 'name':
+                                        if arg.iterkeys().next() == 'name':
                                             continue
-                                        if arg.keys()[0] == 'names':
+                                        if arg.iterkeys().next() == 'names':
                                             continue
                                         extend[ext_id][_state].append(arg)
                                     continue
@@ -1407,9 +1407,9 @@ class State(object):
                                         if next(iter(arg)) in ignore_args:
                                             continue
                                         # Don't use name or names
-                                        if arg.keys()[0] == 'name':
+                                        if arg.iterkeys().next() == 'name':
                                             continue
-                                        if arg.keys()[0] == 'names':
+                                        if arg.iterkeys().next() == 'names':
                                             continue
                                         extend[id_][state].append(arg)
                                     continue
@@ -2563,7 +2563,7 @@ class BaseHighState(object):
                     for arg in state[name][s_dec]:
                         if isinstance(arg, dict):
                             if len(arg) > 0:
-                                if arg.keys()[0] == 'order':
+                                if arg.iterkeys().next() == 'order':
                                     found = True
                     if not found:
                         if not isinstance(state[name][s_dec], list):

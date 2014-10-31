@@ -403,7 +403,7 @@ def _recursive_compare(v1, v2):
         v2 = dict(v2)
         if sorted(v1.keys()) != sorted(v2.keys()):
             return False
-        for k in v1.keys():
+        for k in v1:
             if not _recursive_compare(v1[k], v2[k]):
                 return False
         return True
