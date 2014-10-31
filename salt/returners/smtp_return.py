@@ -103,7 +103,7 @@ def returner(ret):
         port = 25
     log.debug('SMTP port has been set to {0}'.format(port))
     for field in fields:
-        if field in ret.keys():
+        if field in ret:
             subject += ' {0}'.format(ret[field])
     log.debug("smtp_return: Subject is '{0}'".format(subject))
 
