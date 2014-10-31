@@ -13,7 +13,7 @@ import tornado.testing
 import tornado.concurrent
 from salttesting import skipIf, TestCase
 
-class AsyncHTTPTestMixin(object):
+class SaltnadoTestCase(integration.ModuleCase, tornado.testing.AsyncHTTPTestCase):
     '''
     Mixin to hold some shared things
     '''
@@ -30,8 +30,23 @@ class AsyncHTTPTestMixin(object):
     def auth_creds_dict(self):
         return dict(self.auth_creds)
 
+    @property
+    def opts(self):
+        return self.get_config('master', from_scratch=True)
 
-class TestBaseSaltAPIHandler(tornado.testing.AsyncHTTPTestCase, AsyncHTTPTestMixin):
+    @property
+    def auth(self):
+        if not hasattr(self, '__auth'):
+            self.__auth = salt.auth.LoadAuth(self.opts)
+        return self.__auth
+
+    @property
+    def token(self):
+        ''' Mint and return a valid token for auth_creds '''
+        return self.auth.mk_token(self.auth_creds_dict)
+
+
+class TestBaseSaltAPIHandler(SaltnadoTestCase):
     def get_app(self):
         class StubHandler(saltnado.BaseSaltAPIHandler):
             def get(self):
@@ -173,12 +188,13 @@ class TestBaseSaltAPIHandler(tornado.testing.AsyncHTTPTestCase, AsyncHTTPTestMix
         assert returned_lowstate['arg'] == ['10', 'foo']
 
 
-class TestSaltAuthHandler(tornado.testing.AsyncHTTPTestCase, AsyncHTTPTestMixin, integration.ModuleCase):
+class TestSaltAuthHandler(SaltnadoTestCase):
     def get_app(self):
-        self.opts = self.get_config('master', from_scratch=True)
+
+        # TODO: make a "GET APPPLICATION" func
         application = tornado.web.Application([('/login', saltnado.SaltAuthHandler)], debug=True)
 
-        application.auth = salt.auth.LoadAuth(self.opts)
+        application.auth = self.auth
         application.opts = self.opts
         return application
 
@@ -235,7 +251,6 @@ class TestSaltAuthHandler(tornado.testing.AsyncHTTPTestCase, AsyncHTTPTestMixin,
                                body=urllib.urlencode(bad_creds),
                                headers={'Content-Type': self.content_type_map['form']})
 
-        print response.body
         assert response.code == 401
 
 
