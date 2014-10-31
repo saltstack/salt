@@ -187,7 +187,7 @@ def load_args_and_kwargs(func, args, data=None):
                     'by salt.utils.args.parse_input() before calling '
                     'salt.minion.load_args_and_kwargs().'
                 )
-                if argspec.keywords or string_kwarg.keys()[0] in argspec.args:
+                if argspec.keywords or string_kwarg..iterkeys().next() in argspec.args:
                     # Function supports **kwargs or is a positional argument to
                     # the function.
                     _kwargs.update(string_kwarg)
@@ -1766,7 +1766,7 @@ class Minion(MinionBase):
         self._running = False
         if getattr(self, 'poller', None) is not None:
             if isinstance(self.poller.sockets, dict):
-                for socket in self.poller.sockets.keys():
+                for socket in self.poller.sockets:
                     if socket.closed is False:
                         socket.close()
                     self.poller.unregister(socket)
