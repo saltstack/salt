@@ -1296,7 +1296,7 @@ def old_to_new(opts):
     for provider in providers:
 
         provider_config = {}
-        for opt in opts.keys():
+        for opt in opts:
             if not opt.startswith(provider):
                 continue
             value = opts.pop(opt)
@@ -1392,7 +1392,7 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
                 vms.pop(profile)
                 continue
 
-            driver = providers[details['provider']].keys()[0]
+            driver = providers[details['provider']].iterkeys().next()
             providers[details['provider']][driver].setdefault(
                 'profiles', {}).update({profile: details})
             details['provider'] = '{0[provider]}:{1}'.format(details, driver)
@@ -1427,7 +1427,7 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
                 vms.pop(profile)
                 continue
 
-            driver = providers[extended['provider']].keys()[0]
+            driver = providers[extended['provider']].iterkeys().next()
             providers[extended['provider']][driver].setdefault(
                 'profiles', {}).update({profile: extended})
 
@@ -1744,7 +1744,7 @@ def get_cloud_config_value(name, vm_, opts, default=None, search_global=True):
         if vm_['provider'] in opts['providers']:
             # There's only one driver defined for this provider. This is safe.
             alias_defs = opts['providers'].get(vm_['provider'])
-            provider_driver_defs = alias_defs[alias_defs.keys()[0]]
+            provider_driver_defs = alias_defs[alias_defs.iterkeys().next()]
             if name in provider_driver_defs:
                 # The setting name exists in the VM's provider configuration.
                 # Return it!
