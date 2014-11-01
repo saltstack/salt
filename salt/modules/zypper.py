@@ -986,3 +986,29 @@ def list_installed_patterns():
         salt '*' pkg.list_installed_patterns
     '''
     return _get_patterns(installed_only=True)
+
+
+def search(criteria):
+    '''
+    List known packags, available to the system.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.search <criteria>
+    '''    
+    doc = dom.parseString(__salt__['cmd.run'](('zypper --xmlout se {0}'.format(criteria)),
+                                              output_loglevel='trace'))
+    solvables = doc.getElementsByTagName("solvable")
+    if not solvables:
+        raise CommandExecutionError("No packages found by criteria \"{0}\".".format(criteria))
+
+    out = {}
+    for solvable in [s for s in solvables 
+                     if s.getAttribute("status") == "not-installed" and
+                     s.getAttribute("kind") == "package"]:
+        out[solvable.getAttribute("name")] = {
+            'summary': solvable.getAttribute("summary")
+        }
+    return out
