@@ -186,12 +186,7 @@ def dump(device, destination, level=0, label=None, noerase=None):
                                              time.localtime())
     cmd = "xfsdump -F -E -L '{0}' -l {1} -f {2} {3}".format(label.replace("'", '"'), level, destination, device)
     out = __salt__['cmd.run_all'](cmd)
-    if out.get("retcode", 0) and out['stderr']:
-        log.debug('XFS dump command: "{0}"'.format(cmd))
-        log.debug('Return code: {0}'.format(out.get('retcode')))
-        log.debug('Error output:\n{0}'.format(out.get('stderr', "N/A")))
-
-        raise CommandExecutionError(out['stderr'])
+    _verify_run(out)
 
     return  _xfsdump_output(out['stdout'])
 
