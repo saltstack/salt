@@ -679,14 +679,14 @@ class State(object):
         if full not in self.states:
             if '__sls__' in data:
                 errors.append(
-                    'State {0} found in sls {1} is unavailable'.format(
+                    'State {0} found in sls {1} is unavailable. Please check the module in question to make sure dependencies are met.'.format(
                         full,
                         data['__sls__']
                         )
                     )
             else:
                 errors.append(
-                        'Specified state {0} is unavailable.'.format(
+                        'Specified state {0} is unavailable. Please check the module in question to make sure dependencies are met.'.format(
                             full
                             )
                         )
