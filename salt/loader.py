@@ -704,7 +704,7 @@ class Loader(object):
             context = sys.modules[
                 functions[functions.iterkeys().next()].__module__
             ].__context__
-        except (AttributeError, IndexError):
+        except (AttributeError, StopIteration):
             context = {}
         mod.__context__ = context
         return funcs
