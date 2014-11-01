@@ -174,7 +174,7 @@ def version(*names, **kwargs):
     if len(ret) == 1 and not pkg_glob:
         try:
             return ret.itervalues().next()
-        except IndexError:
+        except StopIteration:
             return ''
     return ret
 
