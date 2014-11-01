@@ -190,3 +190,40 @@ def dump(device, destination, level=0, label=None, noerase=None):
 
     return  _xfsdump_output(out['stdout'])
 
+
+def _xfs_estimate_output(out):
+    '''
+    Parse xfs_estimate output.
+    '''
+    s = re.compile("\s+")
+    data = {}
+    for line in [l for l in out.split("\n") if l.strip()][1:]:
+        directory, bsize, blocks, megabytes, logsize = s.sub(" ", line).split(" ")
+        data[directory] = {
+            'block _size': bsize,
+            'blocks': blocks,
+            'megabytes': megabytes,
+            'logsize': logsize,
+        }
+
+    return data
+
+
+def estimate(path):
+    '''
+    Estimate the space that an XFS filesystem will take.
+    For each directory estimate the space that directory would take
+    if it were copied to an XFS filesystem.
+    Estimation does not cross mount points.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' xfs.estimate /path/to/file
+        salt '*' xfs.estimate /path/to/dir/*
+    '''
+    out = __salt__['cmd.run_all']("xfs_estimate -v {0}".format(path))
+    _verify_run(out)
+
+    return _xfs_estimate_output(out["stdout"])
