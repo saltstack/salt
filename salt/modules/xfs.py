@@ -27,6 +27,7 @@ Module for managing XFS file systems.
 
 import os
 import re
+import time
 import logging
 
 import salt.utils
@@ -102,3 +103,83 @@ def info(device):
     if out.get('stderr'):
         raise CommandExecutionError(out['stderr'].replace("xfs_info:", "").strip())
     return _parse_xfs_info(out['stdout'])
+
+
+def _xfsdump_output(data):
+    '''
+    Parse CLI output of the xfsdump utility.
+    '''
+    out = {}
+    summary = []
+    summary_block = False
+
+    for line in [l.strip() for l in data.split("\n") if l.strip()]:
+        line = re.sub("^xfsdump: ", "", line)
+        if line.startswith("session id:"):
+            out['Session ID'] = line.split(" ")[-1]
+        elif line.startswith("session label:"):
+            out['Session label'] = re.sub("^session label: ", "", line)
+        elif line.startswith("media file size"):
+            out['Media size'] = re.sub("^media file size\s+", "", line)
+        elif line.startswith("dump complete:"):
+            out['Dump complete'] = re.sub("^dump complete:\s+", "", line)
+        elif line.startswith("Dump Status:"):
+            out['Status'] = re.sub("^Dump Status:\s+", "", line)
+        elif line.startswith("Dump Summary:"):
+            summary_block = True
+            continue
+
+        if line.startswith(" ") and summary_block:
+            summary.append(line.strip())
+        elif not line.startswith(" ") and summary_block:
+            summary_block = False
+
+    if summary:
+        out['Summary'] = ' '.join(summary)
+
+    return out
+
+
+def dump(device, destination, level=0, label=None, noerase=None):
+    '''
+    Dump filesystem device to the media (file, tape etc).
+
+    Required parameters:
+
+    * **device**: XFS device, content of which to be dumped.
+    * **destination**: Specifies a dump destination.
+
+    Valid options are:
+
+    * **label**: Label of the dump. Otherwise automatically generated label is used.
+    * **level**: Specifies a dump level of 0 to 9.
+    * **noerase**: Pre-erase media.
+
+    Other options are not used in order to let ``xfsdump`` use its default
+    values, as they are most optimal. See the ``xfsdump(8)`` manpage for
+    a more complete description of these options.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' xfs.dump /dev/sda1 /detination/on/the/client
+        salt '*' xfs.dump /dev/sda1 /detination/on/the/client label='Company accountancy'
+        salt '*' xfs.dump /dev/sda1 /detination/on/the/client noerase=True
+    '''
+    if not salt.utils.which("xfsdump"):
+        raise CommandExecutionError("Utility \"xfsdump\" has to be installed or missing.")
+
+    label = label and label or time.strftime("XFS dump for \"{0}\" of %Y.%m.%d, %H:%M".format(device), 
+                                             time.localtime())
+    cmd = "xfsdump -F -E -L '{0}' -l {1} -f {2} {3}".format(label.replace("'", '"'), level, destination, device)
+    out = __salt__['cmd.run_all'](cmd)
+    if out.get("retcode", 0) and out['stderr']:
+        log.debug('XFS dump command: "{0}"'.format(cmd))
+        log.debug('Return code: {0}'.format(out.get('retcode')))
+        log.debug('Error output:\n{0}'.format(out.get('stderr', "N/A")))
+
+        raise CommandExecutionError(out['stderr'])
+
+    return  _xfsdump_output(out['stdout'])
+
