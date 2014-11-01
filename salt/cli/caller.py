@@ -255,8 +255,11 @@ class RAETCaller(ZeroMQCaller):
         '''
         Pass in the command line options
         '''
-        self.stack = self._setup_caller_stack(opts)
+        stack, estatename, yardname = self._setup_caller_stack(opts)
+        self.stack = stack
         salt.transport.jobber_stack = self.stack
+        #salt.transport.jobber_estate_name = estatename
+        #salt.transport.jobber_yard_name = yardname
 
         super(RAETCaller, self).__init__(opts)
 
@@ -307,8 +310,8 @@ class RAETCaller(ZeroMQCaller):
             raise ValueError(emsg)
 
         sockdirpath = opts['sock_dir']
-        name = 'caller' + nacling.uuid(size=18)
-        stack = LaneStack(name=name,
+        stackname = 'caller' + nacling.uuid(size=18)
+        stack = LaneStack(name=stackname,
                           lanename=lanename,
                           sockdirpath=sockdirpath)
 
@@ -318,4 +321,11 @@ class RAETCaller(ZeroMQCaller):
                                    lanename=lanename,
                                    dirpath=sockdirpath))
         log.debug("Created Caller Jobber Stack {0}\n".format(stack.name))
-        return stack
+
+        # name of Road Estate for this caller
+        estatename = "{0}_{1}".format(role, kind)
+        # name of Yard for this caller
+        yardname = stack.local.name
+
+        # return identifiers needed to route back to this callers master
+        return (stack, estatename, yardname)

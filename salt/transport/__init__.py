@@ -92,7 +92,7 @@ class RAETChannel(Channel):
             #self.dst = (None, None, 'remote_cmd')
             self.dst = (jobber_estate_name or None,
                         jobber_yard_name or None,
-                        'remote_cmd')
+                        'call_cmd')
         else:  # everything else minion to master
             self.dst = (jobber_estate_name or None,
                         jobber_yard_name or None,
