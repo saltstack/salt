@@ -14,7 +14,7 @@ import requests
 
 # Import salt libs
 from salt.exceptions import (
-    CommandExecutionError, MinionError, SaltReqTimeoutError
+    CommandExecutionError, MinionError
 )
 import salt.client
 import salt.crypt
@@ -985,11 +985,8 @@ class RemoteClient(Client):
                 load['loc'] = 0
             else:
                 load['loc'] = fn_.tell()
-            try:
-                channel = self._get_channel()
-                data = channel.send(load)
-            except SaltReqTimeoutError:
-                return ''
+            channel = self._get_channel()
+            data = channel.send(load)
             if not data:
                 if init_retries:
                     init_retries -= 1
@@ -1053,11 +1050,9 @@ class RemoteClient(Client):
         load = {'saltenv': saltenv,
                 'prefix': prefix,
                 'cmd': '_file_list'}
-        try:
-            channel = self._get_channel()
-            return channel.send(load)
-        except SaltReqTimeoutError:
-            return ''
+
+        channel = self._get_channel()
+        return channel.send(load)
 
     def file_list_emptydirs(self, saltenv='base', prefix='', env=None):
         '''
@@ -1076,11 +1071,8 @@ class RemoteClient(Client):
         load = {'saltenv': saltenv,
                 'prefix': prefix,
                 'cmd': '_file_list_emptydirs'}
-        try:
-            channel = self._get_channel()
-            channel.send(load)
-        except SaltReqTimeoutError:
-            return ''
+        channel = self._get_channel()
+        channel.send(load)
 
     def dir_list(self, saltenv='base', prefix='', env=None):
         '''
@@ -1099,11 +1091,8 @@ class RemoteClient(Client):
         load = {'saltenv': saltenv,
                 'prefix': prefix,
                 'cmd': '_dir_list'}
-        try:
-            channel = self._get_channel()
-            return channel.send(load)
-        except SaltReqTimeoutError:
-            return ''
+        channel = self._get_channel()
+        return channel.send(load)
 
     def symlink_list(self, saltenv='base', prefix='', env=None):
         '''
@@ -1112,11 +1101,8 @@ class RemoteClient(Client):
         load = {'saltenv': saltenv,
                 'prefix': prefix,
                 'cmd': '_symlink_list'}
-        try:
-            channel = self._get_channel()
-            return channel.send(load)
-        except SaltReqTimeoutError:
-            return ''
+        channel = self._get_channel()
+        return channel.send(load)
 
     def hash_file(self, path, saltenv='base', env=None):
         '''
@@ -1151,11 +1137,8 @@ class RemoteClient(Client):
         load = {'path': path,
                 'saltenv': saltenv,
                 'cmd': '_file_hash'}
-        try:
-            channel = self._get_channel()
-            return channel.send(load)
-        except SaltReqTimeoutError:
-            return ''
+        channel = self._get_channel()
+        return channel.send(load)
 
     def list_env(self, saltenv='base', env=None):
         '''
@@ -1173,33 +1156,24 @@ class RemoteClient(Client):
 
         load = {'saltenv': saltenv,
                 'cmd': '_file_list'}
-        try:
-            channel = self._get_channel()
-            return channel.send(load)
-        except SaltReqTimeoutError:
-            return ''
+        channel = self._get_channel()
+        return channel.send(load)
 
     def envs(self):
         '''
         Return a list of available environments
         '''
         load = {'cmd': '_file_envs'}
-        try:
-            channel = self._get_channel()
-            return channel.send(load)
-        except SaltReqTimeoutError:
-            return ''
+        channel = self._get_channel()
+        return channel.send(load)
 
     def master_opts(self):
         '''
         Return the master opts data
         '''
         load = {'cmd': '_master_opts'}
-        try:
-            channel = self._get_channel()
-            return channel.send(load)
-        except SaltReqTimeoutError:
-            return ''
+        channel = self._get_channel()
+        return channel.send(load)
 
     def ext_nodes(self):
         '''
@@ -1211,11 +1185,8 @@ class RemoteClient(Client):
                 'opts': self.opts}
         if self.auth:
             load['tok'] = self.auth.gen_token('salt')
-        try:
-            channel = self._get_channel()
-            return channel.send(load)
-        except SaltReqTimeoutError:
-            return ''
+        channel = self._get_channel()
+        return channel.send(load)
 
 
 class FSClient(RemoteClient):

@@ -94,10 +94,9 @@ class Serial(object):
             return msgpack.loads(msg, use_list=True)
         except Exception as exc:
             log.critical('Could not deserialize msgpack message: {0}'
-                         'In an attempt to keep Salt running, returning an empty dict.'
                          'This often happens when trying to read a file not in binary mode.'
                          'Please open an issue and include the following error: {1}'.format(msg, exc))
-            return {}
+            raise
 
     def load(self, fn_):
         '''
