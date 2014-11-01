@@ -408,7 +408,7 @@ def migrate(name, target=''):
     origin_data = _find_vm(name, data, quiet=True)
     try:
         origin_hyper = origin_data.iterkeys().next()
-    except IndexError:
+    except StopIteration:
         print('Named vm {0} was not found to migrate'.format(name))
         return ''
     disks = origin_data[origin_hyper][name]['disks']
