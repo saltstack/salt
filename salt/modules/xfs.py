@@ -330,3 +330,47 @@ def mkfs(device, label=None, ssize=None, noforce=None,
     _verify_run(out, cmd=cmd)
 
     return _parse_xfs_info(out['stdout'])
+
+
+def modify(device, label=None, lazy_counting=None, uuid=None):
+    '''
+    Modify parameters of an XFS filesystem.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' xfs.modify /dev/sda1 label='My backup' lazy_counting=False
+        salt '*' xfs.modify /dev/sda1 uuid=False
+        salt '*' xfs.modify /dev/sda1 uuid=True
+    '''
+    if not label and lazy_counting == None and uuid == None:
+        raise CommandExecutionError("Nothing specified for modification for \"{0}\" device".format(device))
+
+    cmd = ['xfs_admin']
+    if label:
+        cmd.append("-L")
+        cmd.append("'{0}'".format(label))
+
+    if lazy_counting == False:
+        cmd.append("-c")
+        cmd.append("0")
+    elif lazy_counting:
+        cmd.append("-c")
+        cmd.append("1")
+
+    if uuid == False:
+        cmd.append("-U")
+        cmd.append("nil")
+    elif uuid:
+        cmd.append("-U")
+        cmd.append("generate")
+    cmd.append(device)
+
+    cmd = ' '.join(cmd)
+    _verify_run(__salt__['cmd.run_all'](cmd), cmd=cmd)
+
+    out = __salt__['cmd.run_all']("blkid -o export {0}".format(device))
+    _verify_run(out)
+
+    return _blkid_output(out['stdout'])
