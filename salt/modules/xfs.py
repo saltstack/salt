@@ -269,13 +269,23 @@ def estimate(path):
 
 def mkfs(device, label=None, bso=None, gmo=None, ds=None):
     '''
-    Create a file system on the specified device
+    Create a file system on the specified device. By default wipes out with force.
 
-    Valid options are:
+    General options:
 
-    * **ds**: Data section options. These options specify the location, size, and other parameters of the data section of the filesystem.
+    * **label**: Specify volume label.
+    * **ssize**: Specify the fundamental sector size of the filesystem.
+    * **noforce**: Do not force create filesystem, if disk is already formatted.
+
+    Filesystem geometry options:
+
     * **bso**: Block size options.
     * **gmo**: Global metadata options.
+    * **dso**: Data section options. These options specify the location, size, and other parameters of the data section of the filesystem.
+    * **ino**: Inode options to specify the inode size of the filesystem, and other inode allocation parameters.
+    * **lso**: Log section options.
+    * **nmo**: Naming options.
+    * **rso**: Realtime section options.
 
     See the ``mkfs.xfs(8)`` manpage for a more complete description of corresponding options description.
 
@@ -283,9 +293,10 @@ def mkfs(device, label=None, bso=None, gmo=None, ds=None):
 
     .. code-block:: bash
 
-        salt '*' xfs.mkfs /dev/sda1 opts='acl,noexec'
+        salt '*' xfs.mkfs /dev/sda1
+        salt '*' xfs.mkfs /dev/sda1 dso='su=32k,sw=6' noforce=True
+        salt '*' xfs.mkfs /dev/sda1 dso='su=32k,sw=6' lso='logdev=/dev/sda2,size=10000b'
     '''
-    ds = ds and ("=" in ds) and ("," in ds) and ds or None
     getopts = lambda ds: ds and map(lambda kw: kw.split("="), ds.split(",")) or None
 
     cmd = ["mkfs.xfs"]
