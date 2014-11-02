@@ -43,12 +43,14 @@ def __virtual__():
     return not salt.utils.is_windows()
 
 
-def _verify_run(out):
+def _verify_run(out, cmd=None):
     '''
     Crash to the log if command execution was not successful.
     '''
     if out.get("retcode", 0) and out['stderr']:
-        log.debug('XFS dump command: "{0}"'.format(cmd))
+        if cmd:
+            log.debug('Command: "{0}"'.format(cmd))
+
         log.debug('Return code: {0}'.format(out.get('retcode')))
         log.debug('Error output:\n{0}'.format(out.get('stderr', "N/A")))
 
