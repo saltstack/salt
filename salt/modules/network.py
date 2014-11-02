@@ -1021,6 +1021,6 @@ def default_route(family=None):
         else:
             if route['destination'] in default_route['inet'] or \
                route['destination'] in default_route['inet6']:
-                    ret.append(route)
+                ret.append(route)
 
     return ret
