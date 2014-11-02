@@ -335,7 +335,7 @@ def _netstat_route_freebsd():
 
 def _netstat_route_netbsd():
     '''
-    Return netstat routing information for FreeBSD and OS X
+    Return netstat routing information for NetBSD
     '''
     ret = []
     cmd = 'netstat -f inet -rn | tail -n+5'
@@ -360,6 +360,36 @@ def _netstat_route_netbsd():
             'netmask': '',
             'flags': comps[3],
             'interface': comps[6]})
+    return ret
+
+
+def _netstat_route_openbsd():
+    '''
+    Return netstat routing information for OpenBSD
+    '''
+    ret = []
+    cmd = 'netstat -f inet -rn | tail -n+5'
+    out = __salt__['cmd.run'](cmd)
+    for line in out.splitlines():
+        comps = line.split()
+        ret.append({
+            'addr_family': 'inet',
+            'destination': comps[0],
+            'gateway': comps[1],
+            'netmask': '',
+            'flags': comps[2],
+            'interface': comps[7]})
+    cmd = 'netstat -f inet6 -rn | tail -n+5'
+    out = __salt__['cmd.run'](cmd)
+    for line in out.splitlines():
+        comps = line.split()
+        ret.append({
+            'addr_family': 'inet6',
+            'destination': comps[0],
+            'gateway': comps[1],
+            'netmask': '',
+            'flags': comps[2],
+            'interface': comps[7]})
     return ret
 
 
@@ -972,8 +1002,10 @@ def routes(family=None):
         routes = _netstat_route_linux()
     elif __grains__['os'] in ['FreeBSD', 'MacOS', 'Darwin']:
         routes = _netstat_route_freebsd()
-    elif __grains__['os'] in ['NetBSD', 'OpenBSD']:
+    elif __grains__['os'] in ['NetBSD']:
         routes = _netstat_route_netbsd()
+    elif __grains__['os'] in ['OpenBSD']:
+        routes = _netstat_route_openbsd()
     else:
         raise CommandExecutionError('Not yet supported on this platform')
 
@@ -1004,10 +1036,7 @@ def default_route(family=None):
     if __grains__['kernel'] == 'Linux':
         default_route['inet'] = ['0.0.0.0', 'default']
         default_route['inet6'] = ['::/0', 'default']
-    elif __grains__['os'] in ['FreeBSD', 'MacOS', 'Darwin']:
-        default_route['inet'] = ['default']
-        default_route['inet6'] = ['default']
-    elif __grains__['os'] in ['NetBSD', 'OpenBSD']:
+    elif __grains__['os'] in ['FreeBSD', 'NetBSD', 'OpenBSD', 'MacOS', 'Darwin']:
         default_route['inet'] = ['default']
         default_route['inet6'] = ['default']
     else:
