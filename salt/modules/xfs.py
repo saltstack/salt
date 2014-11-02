@@ -191,6 +191,39 @@ def dump(device, destination, level=0, label=None, noerase=None):
     return  _xfsdump_output(out['stdout'])
 
 
+def _blkid_output(out):
+    '''
+    Parse blkid output.
+    '''
+    getval = lambda v: "=" in v and v.split("=")[-1].replace('"', "") or v
+    data = {}
+    for line in [l.strip() for l in out.split("\n") if l.strip()]:
+        d_name, d_uuid, d_type, d_partuid = line.split(" ")
+        if getval(d_type) == "xfs":
+            data[d_name.replace(":", "")] = {
+                'uuid': getval(d_uuid),
+                'partuuid': getval(d_partuid),
+            }
+
+    return data
+
+
+def devices():
+    '''
+    Get known XFS formatted devices on the system.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' xfs.devices
+    '''
+    out = __salt__['cmd.run_all']("blkid")
+    _verify_run(out)
+
+    return _blkid_output(out['stdout'])
+    
+
 def _xfs_estimate_output(out):
     '''
     Parse xfs_estimate output.
