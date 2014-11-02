@@ -267,7 +267,8 @@ def estimate(path):
     return _xfs_estimate_output(out["stdout"])
 
 
-def mkfs(device, label=None, bso=None, gmo=None, ds=None):
+def mkfs(device, label=None, ssize=None, noforce=None,
+         bso=None, gmo=None, ino=None, lso=None, rso=None, nmo=None, dso=None):
     '''
     Create a file system on the specified device. By default wipes out with force.
 
@@ -297,22 +298,34 @@ def mkfs(device, label=None, bso=None, gmo=None, ds=None):
         salt '*' xfs.mkfs /dev/sda1 dso='su=32k,sw=6' noforce=True
         salt '*' xfs.mkfs /dev/sda1 dso='su=32k,sw=6' lso='logdev=/dev/sda2,size=10000b'
     '''
-    getopts = lambda ds: ds and map(lambda kw: kw.split("="), ds.split(",")) or None
-
+    
+    getopts = lambda args: dict(((args and ("=" in args)
+                                  and args or None)) and map(
+                                      lambda kw: kw.split("="), args.split(",")) or [])
     cmd = ["mkfs.xfs"]
     if label:
         cmd.append("-L")
         cmd.append("'{0}'".format(label))
 
-    for switch, opts in [("-b", bso), ("-m", gmo), ("-d", ds)]:
-        if getopts(opts):
-            cmd.append(switch)
-            cmd.append(opts)
+    if ssize:
+        cmd.append("-s")
+        cmd.append(ssize)
 
-    cmd.append("-f")
+    for switch, opts in [("-b", bso), ("-m", gmo), ("-n", nmo), ("-i", ino),
+                         ("-d", dso), ("-l", lso), ("-r", rso)]:
+        try:
+            if getopts(opts):
+                cmd.append(switch)
+                cmd.append(opts)
+        except Exception:
+            raise CommandExecutionError("Wrong parameters \"{0}\" for option \"{1}\"".format(opts, switch))
+
+    if not noforce:
+        cmd.append("-f")
     cmd.append(device)
 
-    out = __salt__['cmd.run_all'](' '.join(cmd))
-    _verify_run(out)
+    cmd = ' '.join(cmd)
+    out = __salt__['cmd.run_all'](cmd)
+    _verify_run(out, cmd=cmd)
 
     return _parse_xfs_info(out['stdout'])
