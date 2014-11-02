@@ -197,15 +197,16 @@ def _blkid_output(out):
     '''
     Parse blkid output.
     '''
-    getval = lambda v: "=" in v and v.split("=")[-1].replace('"', "") or v
+    f = lambda data: [el for el in data if el.strip()]
     data = {}
-    for line in [l.strip() for l in out.split("\n") if l.strip()]:
-        d_name, d_uuid, d_type, d_partuid = line.split(" ")
-        if getval(d_type) == "xfs":
-            data[d_name.replace(":", "")] = {
-                'uuid': getval(d_uuid),
-                'partuuid': getval(d_partuid),
-            }
+    for dev_meta in f(out.split("\n\n")):
+        dev = {}
+        for kv in f(dev_meta.strip().split("\n")):
+            k, v = kv.split("=", 1)
+            dev[k.lower()] = v
+        if dev.pop("type") == "xfs":
+            dev['label'] = dev.get('label')
+            data[dev.pop("devname")] = dev
 
     return data
 
@@ -220,7 +221,7 @@ def devices():
 
         salt '*' xfs.devices
     '''
-    out = __salt__['cmd.run_all']("blkid")
+    out = __salt__['cmd.run_all']("blkid -o export")
     _verify_run(out)
 
     return _blkid_output(out['stdout'])
