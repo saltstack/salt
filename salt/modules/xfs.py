@@ -263,3 +263,43 @@ def estimate(path):
     _verify_run(out)
 
     return _xfs_estimate_output(out["stdout"])
+
+
+def mkfs(device, label=None, bso=None, gmo=None, ds=None):
+    '''
+    Create a file system on the specified device
+
+    Valid options are:
+
+    * **ds**: Data section options. These options specify the location, size, and other parameters of the data section of the filesystem.
+    * **bso**: Block size options.
+    * **gmo**: Global metadata options.
+
+    See the ``mkfs.xfs(8)`` manpage for a more complete description of corresponding options description.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' xfs.mkfs /dev/sda1 opts='acl,noexec'
+    '''
+    ds = ds and ("=" in ds) and ("," in ds) and ds or None
+    getopts = lambda ds: ds and map(lambda kw: kw.split("="), ds.split(",")) or None
+
+    cmd = ["mkfs.xfs"]
+    if label:
+        cmd.append("-L")
+        cmd.append("'{0}'".format(label))
+
+    for switch, opts in [("-b", bso), ("-m", gmo), ("-d", ds)]:
+        if getopts(opts):
+            cmd.append(switch)
+            cmd.append(opts)
+
+    cmd.append("-f")
+    cmd.append(device)
+
+    out = __salt__['cmd.run_all'](' '.join(cmd))
+    _verify_run(out)
+
+    return _parse_xfs_info(out['stdout'])
