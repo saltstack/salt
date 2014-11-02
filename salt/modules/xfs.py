@@ -374,3 +374,38 @@ def modify(device, label=None, lazy_counting=None, uuid=None):
     _verify_run(out)
 
     return _blkid_output(out['stdout'])
+
+
+def defragment(device):
+    '''
+    Defragment mounted XFS filesystem.
+    In order to mount a filesystem, device should be properly mounted and writable.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' xfs.defragment /dev/sda1
+    '''
+    if device == '/':
+        raise CommandExecutionError("Root is not a device.")
+
+    out = __salt__['cmd.run_all']("mount -l")
+    _verify_run(out)
+    is_mounted = False
+    for mntline in out['stdout'].split("\n"):
+        if mntline.startswith(device) and mntline.split(" ")[4] == "xfs":
+            is_mounted = True
+            break
+        elif mntline.startswith(device) and mntline.split(" ")[4] != "xfs":
+            raise CommandExecutionError("Device \"{0}\" is not an XFS filesytem.".format(device))
+
+    if not is_mounted:
+        raise CommandExecutionError("Device \"{0}\" is not mounted".format(device))
+
+    out = __salt__['cmd.run_all']("xfs_fsr {0}".format(device))
+    _verify_run(out)
+
+    return {
+        'log': out['stdout']
+    }
