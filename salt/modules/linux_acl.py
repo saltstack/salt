@@ -36,6 +36,11 @@ def version():
     return ret[1].strip()
 
 
+def _raise_on_no_files(*args):
+    if len(args) == 0:
+        raise CommandExecutionError('You need to specify at least one file or directory to work with!')
+
+
 def getfacl(*args):
     '''
     Return (extremely verbose) map of FACLs on specified file(s)
@@ -47,6 +52,8 @@ def getfacl(*args):
         salt '*' acl.getfacl /tmp/house/kitchen
         salt '*' acl.getfacl /tmp/house/kitchen /tmp/house/livingroom
     '''
+    _raise_on_no_files(*args)
+
     ret = {}
     cmd = 'getfacl -p'
     for dentry in args:
@@ -146,11 +153,6 @@ def _parse_acl(acl, user, group):
     vals['octal'] = octal
 
     return vals
-
-
-def _raise_on_no_files(*args):
-    if len(args) == 0:
-        raise CommandExecutionError('You need to specify at least one file or directory to work with!')
 
 
 def wipefacls(*args):

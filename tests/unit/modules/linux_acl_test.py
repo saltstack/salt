@@ -40,6 +40,17 @@ class LinuxAclTestCase(TestCase):
         # integration
         # self.assertRegexpMatches(linux_acl.version(), r'\d+\.\d+\.\d+')
 
+    def test_getfacl_wo_args(self):
+        self.assertRaises(CommandExecutionError, linux_acl.getfacl)
+
+    def test_getfacl_w_single_arg(self):
+        linux_acl.getfacl(self.file)
+        self.cmdrun.assert_called_once_with('getfacl -p {}'.format(self.file))
+
+    def test_getfacl_w_multiple_args(self):
+        linux_acl.getfacl(*self.files)
+        self.cmdrun.assert_called_once_with('getfacl -p {} {}'.format(*self.files))
+
     def test_wipefacls_wo_args(self):
         self.assertRaises(CommandExecutionError, linux_acl.wipefacls)
 
