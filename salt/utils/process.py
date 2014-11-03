@@ -210,7 +210,6 @@ class ProcessManager(object):
             except OSError:
                 break
 
-
     def check_children(self):
         '''
         Check the children once
@@ -232,7 +231,6 @@ class ProcessManager(object):
                 return signal.default_int_handler(signal.SIGTERM)(*args)
             else:
                 return
-
 
         for pid, p_map in self._process_map.items():
             p_map['Process'].terminate()
