@@ -92,7 +92,7 @@ class RAETChannel(Channel):
             #self.dst = (None, None, 'remote_cmd')
             self.dst = (jobber_estate_name or None,
                         jobber_yard_name or None,
-                        'remote_cmd')
+                        'call_cmd')
         else:  # everything else minion to master
             self.dst = (jobber_estate_name or None,
                         jobber_yard_name or None,
@@ -237,7 +237,6 @@ class ZeroMQChannel(Channel):
         # crypt defaults to 'aes'
         self.crypt = kwargs.get('crypt', 'aes')
 
-        self.serial = salt.payload.Serial(opts)
         if self.crypt != 'clear':
             if 'auth' in kwargs:
                 self.auth = kwargs['auth']

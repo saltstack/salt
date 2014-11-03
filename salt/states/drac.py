@@ -24,6 +24,17 @@ Ensure the user damian does not exist
       drac.absent:
         - name: damian
 
+
+Ensure DRAC network is in a consistent state
+
+  .. code-bock:: yaml
+
+    my_network:
+      drac.network:
+        - ip: 10.225.108.29
+        - netmask: 255.255.255.224
+        - gateway: 10.225.108.1
+
 '''
 
 import salt.exceptions
@@ -113,5 +124,48 @@ def absent(name):
             ret['result'] = False
     else:
         ret['comment'] = '`{0}` does not exist'.format(name)
+
+    return ret
+
+
+def network(ip, netmask, gateway):
+    '''
+    Ensure the DRAC network settings are consistent
+    '''
+    ret = {'name': ip,
+           'result': True,
+           'changes': {},
+           'comment': ''}
+
+    current_network = __salt__['drac.network_info']()
+    new_network = {}
+
+    if ip != current_network['IPv4 settings']['IP Address']:
+        ret['changes'].update({'IP Address':
+                              {'Old': current_network['IPv4 settings']['IP Address'],
+                               'New': ip}})
+
+    if netmask != current_network['IPv4 settings']['Subnet Mask']:
+        ret['changes'].update({'Netmask':
+                              {'Old': current_network['IPv4 settings']['Subnet Mask'],
+                               'New': netmask}})
+
+    if gateway != current_network['IPv4 settings']['Gateway']:
+        ret['changes'].update({'Gateway':
+                              {'Old': current_network['IPv4 settings']['Gateway'],
+                               'New': gateway}})
+
+    if __opts__['test']:
+        ret['result'] = None
+        return ret
+
+    if __salt__['drac.set_network'](ip, netmask, gateway):
+        if not ret['changes']:
+            ret['comment'] = 'Network is in the desired state'
+
+        return ret
+
+    ret['result'] = False
+    ret['comment'] = 'unable to configure network'
 
     return ret

@@ -8,6 +8,7 @@ import subprocess
 # Import salt libs
 import salt.utils
 import salt.modules.selinux
+from salt.exceptions import CommandExecutionError
 
 
 def recursive_copy(source, dest):
@@ -72,7 +73,7 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
         policy = False
         try:
             policy = salt.modules.selinux.getenforce()
-        except ImportError:
+        except (ImportError, CommandExecutionError):
             pass
         if policy == 'Enforcing':
             with salt.utils.fopen(os.devnull, 'w') as dev_null:

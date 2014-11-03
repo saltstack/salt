@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 '''
-A module to wrap archive calls
+A module to wrap (non-Windows) archive calls
 
 .. versionadded:: 2014.1.0
 '''
 
 # Import salt libs
 import salt._compat
-from salt.utils import which as _which, which_bin as _which_bin
+from salt.utils import \
+    which as _which, which_bin as _which_bin, is_windows as _is_windows
 import salt.utils.decorators as decorators
 
 # TODO: Check that the passed arguments are correct
@@ -19,6 +20,8 @@ __func_alias__ = {
 
 
 def __virtual__():
+    if _is_windows():
+        return False
     commands = ('tar', 'gzip', 'gunzip', 'zip', 'unzip', 'rar', 'unrar')
     # If none of the above commands are in $PATH this module is a no-go
     if not any(_which(cmd) for cmd in commands):
