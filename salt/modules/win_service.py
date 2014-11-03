@@ -238,9 +238,10 @@ def stop(name):
     # we requested a stop, but the service is still thinking about it.
     # poll for the real status
     for attempt in range(SERVICE_STOP_POLL_MAX_ATTEMPTS):
-        time.sleep(SERVICE_STOP_DELAY_SECONDS)
         if not status(name):
             return True
+        log.debug('Waiting for %s to stop', name)
+        time.sleep(SERVICE_STOP_DELAY_SECONDS)
 
     log.warning('Giving up on waiting for service `%s` to stop', name)
     return False
