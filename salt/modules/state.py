@@ -339,6 +339,7 @@ def clear_request(name=None):
         salt '*' state.clear_request
     '''
     notify_path = os.path.join(__opts__['cachedir'], 'req_state.p')
+    serial = salt.payload.Serial(__opts__)
     if not os.path.isfile(notify_path):
         return True
     if not name:
@@ -369,6 +370,12 @@ def clear_request(name=None):
 def run_request(name='default', **kwargs):
     '''
     Execute the pending state request
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.run_request
     '''
     req = check_request()
     if name not in req:
