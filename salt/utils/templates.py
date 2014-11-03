@@ -274,6 +274,8 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
 
     jinja_env.filters['strftime'] = salt.utils.date_format
     jinja_env.filters['sequence'] = ensure_sequence_filter
+    jinja_env.filters['yaml_dquote'] = salt.utils.yaml_dquote
+    jinja_env.filters['yaml_squote'] = salt.utils.yaml_squote
 
     jinja_env.globals['odict'] = OrderedDict
     jinja_env.globals['show_full_context'] = show_full_context

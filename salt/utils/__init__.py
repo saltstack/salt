@@ -15,6 +15,7 @@ import errno
 import fnmatch
 import hashlib
 import imp
+import io
 import inspect
 import json
 import logging
@@ -1788,6 +1789,28 @@ def date_format(date=None, format="%Y-%m-%d"):
     '2002-12-25'
     '''
     return date_cast(date).strftime(format)
+
+
+def yaml_dquote(text):
+    """Make text into a double-quoted YAML string with correct escaping
+    for special characters.  Includes the opening and closing double
+    quote characters.
+    """
+    with io.StringIO() as ostream:
+        yemitter = yaml.emitter.Emitter(ostream)
+        yemitter.write_double_quoted(unicode(text))
+        return ostream.getvalue()
+
+
+def yaml_squote(text):
+    """Make text into a single-quoted YAML string with correct escaping
+    for special characters.  Includes the opening and closing single
+    quote characters.
+    """
+    with io.StringIO() as ostream:
+        yemitter = yaml.emitter.Emitter(ostream)
+        yemitter.write_single_quoted(unicode(text))
+        return ostream.getvalue()
 
 
 def warn_until(version,
