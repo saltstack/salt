@@ -8,25 +8,21 @@ import copy
 import logging
 import re
 import os
+import ConfigParser
+import urlparse
 from xml.dom import minidom as dom
-from contextlib import contextmanager as _contextmanager
 
 # Import salt libs
 import salt.utils
-from salt.utils.decorators import depends as _depends
 from salt.exceptions import (
-    CommandExecutionError, MinionError, SaltInvocationError)
+    CommandExecutionError, MinionError)
 
 log = logging.getLogger(__name__)
 
 HAS_ZYPP = False
-LOCKS = "/etc/zypp/locks"
-
-try:
-    import zypp
-    HAS_ZYPP = True
-except ImportError:
-    pass
+ZYPP_HOME = "/etc/zypp"
+LOCKS = "{0}/locks".format(ZYPP_HOME)
+REPOS = "{0}/repos.d".format(ZYPP_HOME)
 
 # Define the module's virtual name
 __virtualname__ = 'pkg'
@@ -36,8 +32,6 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is openSUSE
     '''
-    if not HAS_ZYPP:
-        return False
     if __grains__.get('os_family', '') != 'Suse':
         return False
     # Not all versions of Suse use zypper, check that it is available
@@ -229,203 +223,35 @@ def list_pkgs(versions_as_list=False, **kwargs):
     return ret
 
 
-class _RepoInfo(object):
+def _get_configured_repos():
     '''
-    Incapsulate all properties that are dumped in zypp._RepoInfo.dumpOn:
-    http://doc.opensuse.org/projects/libzypp/HEAD/classzypp_1_1RepoInfo.html#a2ba8fdefd586731621435428f0ec6ff1
+    Get all the info about repositories from the configurations.
     '''
-    repo_types = {}
 
-    if HAS_ZYPP:
-        repo_types = {
-            zypp.RepoType.NONE_e: 'NONE',
-            zypp.RepoType.RPMMD_e: 'rpm-md',
-            zypp.RepoType.YAST2_e: 'yast2',
-            zypp.RepoType.RPMPLAINDIR_e: 'plaindir',
-        }
+    repos_cfg = ConfigParser.ConfigParser()
+    repos_cfg.read([REPOS + "/" + fname for fname in os.listdir(REPOS)])
 
-    def __init__(self, zypp_repo_info=None):
-        self.zypp = zypp_repo_info if zypp_repo_info else zypp.RepoInfo()
-
-    @property
-    def options(self):
-        class_items = self.__class__.__dict__.iteritems()
-        return dict([(k, getattr(self, k)) for k, v in class_items
-                     if isinstance(v, property) and k != 'options'
-                     and getattr(self, k) not in (None, '')])
-
-    def _check_only_mirrorlist_or_url(self):
-        if all(x in self.options for x in ('mirrorlist', 'url')):
-            raise ValueError(
-                'Only one of \'mirrorlist\' and \'url\' can be specified')
-
-    def _zypp_url(self, url):
-        return zypp.Url(url) if url else zypp.Url()
-
-    @options.setter
-    def options(self, value):
-        for k, v in value.iteritems():
-            setattr(self, k, v)
-
-    @property
-    def alias(self):
-        return self.zypp.alias()
-
-    @alias.setter
-    def alias(self, value):
-        if value:
-            self.zypp.setAlias(value)
-        else:
-            raise ValueError('Alias cannot be empty')
-
-    @property
-    def autorefresh(self):
-        return self.zypp.autorefresh()
-
-    @autorefresh.setter
-    def autorefresh(self, value):
-        self.zypp.setAutorefresh(value)
-
-    @property
-    def enabled(self):
-        return self.zypp.enabled()
-
-    @enabled.setter
-    def enabled(self, value):
-        self.zypp.setEnabled(value)
-
-    @property
-    def gpgcheck(self):
-        return self.zypp.gpgCheck()
-
-    @gpgcheck.setter
-    def gpgcheck(self, value):
-        self.zypp.setGpgCheck(value)
-
-    @property
-    def gpgkey(self):
-        return self.zypp.gpgKeyUrl().asCompleteString()
-
-    @gpgkey.setter
-    def gpgkey(self, value):
-        self.zypp.setGpgKeyUrl(self._zypp_url(value))
-
-    @property
-    def keeppackages(self):
-        return self.zypp.keepPackages()
-
-    @keeppackages.setter
-    def keeppackages(self, value):
-        self.zypp.setKeepPackages(value)
-
-    @property
-    def metadataPath(self):
-        return self.zypp.metadataPath().c_str()
-
-    @metadataPath.setter
-    def metadataPath(self, value):
-        self.zypp.setMetadataPath(value)
-
-    @property
-    def mirrorlist(self):
-        return self.zypp.mirrorListUrl().asCompleteString()
-
-    @mirrorlist.setter
-    def mirrorlist(self, value):
-        self.zypp.setMirrorListUrl(self._zypp_url(value))
-        # self._check_only_mirrorlist_or_url()
-
-    @property
-    def name(self):
-        return self.zypp.name()
-
-    @name.setter
-    def name(self, value):
-        self.zypp.setName(value)
-
-    @property
-    def packagesPath(self):
-        return self.zypp.packagesPath().c_str()
-
-    @packagesPath.setter
-    def packagesPath(self, value):
-        self.zypp.setPackagesPath(self._zypp_url(value))
-
-    @property
-    def path(self):
-        return self.zypp.path().c_str()
-
-    @path.setter
-    def path(self, value):
-        self.zypp.setPath(self._zypp_url(value))
-
-    @property
-    def priority(self):
-        return self.zypp.priority()
-
-    @priority.setter
-    def priority(self, value):
-        self.zypp.setPriority(value)
-
-    @property
-    def service(self):
-        return self.zypp.service()
-
-    @service.setter
-    def service(self, value):
-        self.zypp.setService(value)
-
-    @property
-    def targetdistro(self):
-        return self.zypp.targetDistribution()
-
-    @targetdistro.setter
-    def targetdistro(self, value):
-        self.zypp.setTargetDistribution(value)
-
-    @property
-    def type(self):
-        return self.repo_types[self.zypp.type().toEnum()]
-
-    @type.setter
-    def type(self, value):
-        self.zypp.setType(next(k for k, v in self.repo_types if v == value))
-
-    @property
-    def url(self):
-        return self.zypp.url().asCompleteString()
-
-    @url.setter
-    def url(self, value):
-        self.zypp.setBaseUrl(self._zypp_url(value))
-        # self._check_only_mirrorlist_or_url()
+    return repos_cfg
 
 
-@_contextmanager
-def _try_zypp():
+def _get_repo_info(alias, repos_cfg=None):
     '''
-    Convert errors like:
-    'RuntimeError: [|] Repository has no alias defined.'
-    into
-    'ERROR: Repository has no alias defined.'.
+    Get one repo meta-data.
     '''
     try:
-        yield
-    except RuntimeError as e:
-        raise CommandExecutionError(re.sub(r'\[.*\] ', '', str(e)))
+        meta = dict((repos_cfg or _get_configured_repos()).items(alias))
+        meta['alias'] = alias
+        for k, v in meta.items():
+            if v in ['0', '1']:
+                meta[k] = int(meta[k]) == 1
+            elif v == 'NONE':
+                meta[k] = None
+        return meta
+    except Exception:
+        return {}
 
 
-@_depends('zypp')
-def _get_zypp_repo(repo, **kwargs):
-    '''
-    Get zypp._RepoInfo object by repo alias.
-    '''
-    with _try_zypp():
-        return zypp.RepoManager().getRepositoryInfo(repo)
-
-
-@_depends('zypp')
-def get_repo(repo, **kwargs):
+def get_repo(repo):
     '''
     Display a repo.
 
@@ -435,14 +261,9 @@ def get_repo(repo, **kwargs):
 
         salt '*' pkg.get_repo alias
     '''
-    try:
-        r = _RepoInfo(_get_zypp_repo(repo))
-    except CommandExecutionError:
-        return {}
-    return r.options
+    return _get_repo_info(repo)
 
 
-@_depends('zypp')
 def list_repos():
     '''
     Lists all repos.
@@ -453,15 +274,15 @@ def list_repos():
 
        salt '*' pkg.list_repos
     '''
-    with _try_zypp():
-        ret = {}
-        for r in zypp.RepoManager().knownRepositories():
-            ret[r.alias()] = get_repo(r.alias())
-        return ret
+    repos_cfg = _get_configured_repos()
+    all_repos = {}
+    for alias in repos_cfg.sections():
+        all_repos[alias] = _get_repo_info(alias, repos_cfg=repos_cfg)
+
+    return all_repos
 
 
-@_depends('zypp')
-def del_repo(repo, **kwargs):
+def del_repo(repo):
     '''
     Delete a repo.
 
@@ -470,25 +291,45 @@ def del_repo(repo, **kwargs):
     .. code-block:: bash
 
         salt '*' pkg.del_repo alias
-        salt '*' pkg.del_repo alias
     '''
-    r = _get_zypp_repo(repo)
-    with _try_zypp():
-        zypp.RepoManager().removeRepository(r)
-    return 'File {1} containing repo {0!r} has been removed.\n'.format(
-        repo, r.path().c_str())
+    repos_cfg = _get_configured_repos()
+    for alias in repos_cfg.sections():
+        if alias == repo:
+            cmd = ('zypper -x --non-interactive rr --loose-auth --loose-query {0}'.format(alias))
+            doc = dom.parseString(__salt__['cmd.run'](cmd, output_loglevel='trace'))
+            msg = doc.getElementsByTagName("message")
+            if doc.getElementsByTagName("progress") and msg:
+                return {
+                    repo: True,
+                    'message': msg[0].childNodes[0].nodeValue,
+                    }
+
+    raise CommandExecutionError('Repository "{0}" not found.'.format(repo))
 
 
-@_depends('zypp')
 def mod_repo(repo, **kwargs):
     '''
     Modify one or more values for a repo. If the repo does not exist, it will
     be created, so long as the following values are specified:
 
-    repo
+    repo or alias
         alias by which the zypper refers to the repo
+
     url or mirrorlist
         the URL for zypper to reference
+
+    enabled
+        enable or disable (True or False) repository,
+        but do not remove if disabled.
+
+    refresh
+        enable or disable (True or False) auto-refresh of the repository.
+
+    cache
+        Enable or disable (True or False) RPM files caching.
+
+    gpgcheck
+        Enable or disable (True or False) GOG check for this repository.
 
     Key/Value pairs may also be removed from a repo's configuration by setting
     a key to a blank value. Bear in mind that a name cannot be deleted, and a
@@ -499,33 +340,91 @@ def mod_repo(repo, **kwargs):
     .. code-block:: bash
 
         salt '*' pkg.mod_repo alias alias=new_alias
-        salt '*' pkg.mod_repo alias enabled=True
         salt '*' pkg.mod_repo alias url= mirrorlist=http://host.com/
     '''
-    # Filter out '__pub' arguments, as well as saltenv
-    repo_opts = {}
-    for x in kwargs:
-        if not x.startswith('__') and x not in ('saltenv',):
-            repo_opts[x] = kwargs[x]
 
-    repo_manager = zypp.RepoManager()
-    try:
-        r = _RepoInfo(repo_manager.getRepositoryInfo(repo))
-        new_repo = False
-    except RuntimeError:
-        r = _RepoInfo()
-        r.alias = repo
-        new_repo = True
-    try:
-        r.options = repo_opts
-    except ValueError as e:
-        raise SaltInvocationError(str(e))
-    with _try_zypp():
-        if new_repo:
-            repo_manager.addRepository(r.zypp)
-        else:
-            repo_manager.modifyRepository(repo, r.zypp)
-    return r.options
+    repos_cfg = _get_configured_repos()
+    added = False
+
+    # An attempt to add new one?
+    if repo not in repos_cfg.sections():
+        url = kwargs.get("url", kwargs.get("mirrorlist"))
+        if not url:
+            raise CommandExecutionError(
+                'Repository "{0}" not found and no URL passed to create one.'.format(repo))
+
+        if not urlparse.urlparse(url).scheme:
+            raise CommandExecutionError(
+                'Repository "{0}" not found and passed URL looks wrong.'.format(repo))
+
+        # Is there already such repo under different alias?
+        for alias in repos_cfg.sections():
+            repo_meta = _get_repo_info(alias, repos_cfg=repos_cfg)
+
+            # Complete user URL, in case it is not
+            new_url = urlparse.urlparse(url)
+            if not new_url.path:
+                new_url = urlparse.ParseResult(scheme=new_url.scheme,
+                                               netloc=new_url.netloc,
+                                               path='/',
+                                               params=new_url.params,
+                                               query=new_url.query,
+                                               fragment=new_url.fragment)
+            base_url = urlparse.urlparse(repo_meta["baseurl"])
+
+            if new_url == base_url:
+                raise CommandExecutionError(
+                    'Repository "{0}" already exists as "{1}".'.format(repo, alias))
+
+        # Add new repo
+        doc = None
+        try:
+            # Try to parse the output and find the error,
+            # but this not always working (depends on Zypper version)
+            doc = dom.parseString(__salt__['cmd.run'](("zypper -x ar {0} '{1}'".format(url, repo)),
+                                                      output_loglevel='trace'))
+        except Exception:
+            # No XML out available, but it is still unknown the state of the result.
+            pass
+
+        if doc:
+            msg_nodes = doc.getElementsByTagName("message")
+            if msg_nodes:
+                msg_node = msg_nodes[0]
+                if msg_node.getAttribute("type") == "error":
+                    raise CommandExecutionError(msg_node.childNodes[0].nodeValue)
+
+        # Verify the repository has been added
+        repos_cfg = _get_configured_repos()
+        if repo not in repos_cfg.sections():
+            raise CommandExecutionError(
+                'Failed add new repository "{0}" for unknown reason. Please look into Zypper logs.'.format(repo))
+        added = True
+
+    # Modify added or existing repo according to the options
+    cmd_opt = []
+
+    if "enabled" in kwargs:
+        cmd_opt.append(kwargs["enabled"] and "--enable" or "--disable")
+
+    if "refresh" in kwargs:
+        cmd_opt.append(kwargs["refresh"] and "--refresh" or "--no-refresh")
+
+    if "cache" in kwargs:
+        cmd_opt.append(kwargs["cache"] and "--keep-packages" or "--no-keep-packages")
+
+    if "gpgcheck" in kwargs:
+        cmd_opt.append(kwargs["gpgcheck"] and "--gpgcheck" or "--no-gpgcheck")
+
+    if cmd_opt:
+        __salt__['cmd.run'](("zypper -x mr {0} '{1}'".format(' '.join(cmd_opt), repo)),
+                            output_loglevel='trace')
+
+    # If repo nor added neither modified, error should be thrown
+    if not added and not cmd_opt:
+        raise CommandExecutionError('Modification of the repository "{0}" was not specified.'.format(repo))
+
+    return {}
 
 
 def refresh_db():
@@ -1085,3 +984,29 @@ def list_installed_patterns():
         salt '*' pkg.list_installed_patterns
     '''
     return _get_patterns(installed_only=True)
+
+
+def search(criteria):
+    '''
+    List known packags, available to the system.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.search <criteria>
+    '''
+    doc = dom.parseString(__salt__['cmd.run'](('zypper --xmlout se {0}'.format(criteria)),
+                                              output_loglevel='trace'))
+    solvables = doc.getElementsByTagName("solvable")
+    if not solvables:
+        raise CommandExecutionError("No packages found by criteria \"{0}\".".format(criteria))
+
+    out = {}
+    for solvable in [s for s in solvables
+                     if s.getAttribute("status") == "not-installed" and
+                     s.getAttribute("kind") == "package"]:
+        out[solvable.getAttribute("name")] = {
+            'summary': solvable.getAttribute("summary")
+        }
+    return out
