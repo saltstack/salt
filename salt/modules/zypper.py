@@ -11,13 +11,11 @@ import os
 import ConfigParser
 import urlparse
 from xml.dom import minidom as dom
-from contextlib import contextmanager as _contextmanager
 
 # Import salt libs
 import salt.utils
-from salt.utils.decorators import depends as _depends
 from salt.exceptions import (
-    CommandExecutionError, MinionError, SaltInvocationError)
+    CommandExecutionError, MinionError)
 
 log = logging.getLogger(__name__)
 
@@ -249,7 +247,7 @@ def _get_repo_info(alias, repos_cfg=None):
             elif v == 'NONE':
                 meta[k] = None
         return meta
-    except:
+    except Exception:
         return {}
 
 
@@ -385,7 +383,7 @@ def mod_repo(repo, **kwargs):
             # but this not always working (depends on Zypper version)
             doc = dom.parseString(__salt__['cmd.run'](("zypper -x ar {0} '{1}'".format(url, repo)),
                                                       output_loglevel='trace'))
-        except:
+        except Exception:
             # No XML out available, but it is still unknown the state of the result.
             pass
 
@@ -997,7 +995,7 @@ def search(criteria):
     .. code-block:: bash
 
         salt '*' pkg.search <criteria>
-    '''    
+    '''
     doc = dom.parseString(__salt__['cmd.run'](('zypper --xmlout se {0}'.format(criteria)),
                                               output_loglevel='trace'))
     solvables = doc.getElementsByTagName("solvable")
@@ -1005,7 +1003,7 @@ def search(criteria):
         raise CommandExecutionError("No packages found by criteria \"{0}\".".format(criteria))
 
     out = {}
-    for solvable in [s for s in solvables 
+    for solvable in [s for s in solvables
                      if s.getAttribute("status") == "not-installed" and
                      s.getAttribute("kind") == "package"]:
         out[solvable.getAttribute("name")] = {
