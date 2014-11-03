@@ -18,6 +18,7 @@ BUFFSIZE = 5000
 SERVICE_STOP_DELAY_SECONDS = 15
 SERVICE_STOP_POLL_MAX_ATTEMPTS = 5
 
+
 def __virtual__():
     '''
     Only works on Windows systems
