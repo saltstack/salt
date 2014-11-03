@@ -31,7 +31,7 @@ def overview():
         diskstate = fields[3].split('/')
         localdiskstate = diskstate[0]
         partnerdiskstate = diskstate[1]
-        if  localdiskstate == "UpToDate":
+        if localdiskstate == "UpToDate":
             if partnerdiskstate == "UpToDate":
                 if fields[4]:
                     mountpoint = fields[4]
