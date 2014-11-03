@@ -3,14 +3,12 @@
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock
 ensure_in_syspath('../../')
 
 # Import salt libs
 from salt.modules import linux_acl
 from salt.exceptions import CommandExecutionError
-
-# linux_acl.__salt__ = {'cmd.which_bin': lambda _: 'pip'}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -32,13 +30,9 @@ class LinuxAclTestCase(TestCase):
         self.default_user_acl = ['d:user', 'myuser', 'rwx']
         self.default_user_acl_cmd = 'd:u:myuser:rwx'
 
-    # too easy to test
+    # too easy to test (DRY)
     def test_version(self):
         pass
-        # linux_acl.version()
-        # self.cmdrun.called_once_with('getfacl --version')
-        # integration
-        # self.assertRegexpMatches(linux_acl.version(), r'\d+\.\d+\.\d+')
 
     def test_getfacl_wo_args(self):
         self.assertRaises(CommandExecutionError, linux_acl.getfacl)
