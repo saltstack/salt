@@ -238,6 +238,11 @@ def _blkid_output(out):
             dev['label'] = dev.get('label')
             data[dev.pop("devname")] = dev
 
+    mounts = _get_mounts()
+    for device in mounts.keys():
+        if data.get(device):
+            data[device].update(mounts[device])
+
     return data
 
 
@@ -406,6 +411,22 @@ def modify(device, label=None, lazy_counting=None, uuid=None):
     return _blkid_output(out['stdout'])
 
 
+def _get_mounts():
+    '''
+    List mounted filesystems.
+    '''
+    mounts = {}
+    for line in open("/proc/mounts").readlines():
+        device, mntpnt, fstype, options, fs_freq, fs_passno = line.strip().split(" ")
+        if fstype != 'xfs': continue
+        mounts[device] = {
+            'mount_point': mntpnt,
+            'options': options.split(","),
+        }
+        
+    return mounts
+
+
 def defragment(device):
     '''
     Defragment mounted XFS filesystem.
@@ -439,3 +460,4 @@ def defragment(device):
     return {
         'log': out['stdout']
     }
+
