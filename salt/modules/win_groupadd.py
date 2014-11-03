@@ -90,7 +90,7 @@ def delete(name):
         nt = win32com.client.Dispatch('AdsNameSpaces')
         try:
             compObj = nt.GetObject('', 'WinNT://.,computer')
-            newGroup = compObj.Delete('group', name)
+            compObj.Delete('group', name)
             ret['changes'].append(('Successfully removed group {0}').format(name))
         except pywintypes.com_error as com_err:
             ret['result'] = False
@@ -162,9 +162,8 @@ def getent(refresh=False):
     results = nt.GetObject('', 'WinNT://.')
     results.Filter = ['group']
     for result in results:
-        members = result.members()
         member_list = []
-        for member in members:
+        for member in result.members():
             member_list.append(
                     member.AdsPath.replace('WinNT://', '').replace(
                     '/', '\\').encode('ascii', 'backslashreplace'))
@@ -187,7 +186,6 @@ def adduser(name, username):
 
         salt '*' group.adduser foo username
 
-        group and computer names are case sensitive
     '''
 
     ret = {'name': name,
@@ -202,10 +200,10 @@ def adduser(name, username):
     for member in groupObj.members():
         existingMembers.append(
                 member.ADSPath.replace('WinNT://', '').replace(
-                '/', '\\').encode('ascii', 'backslashreplace'))
+                '/', '\\').encode('ascii', 'backslashreplace').lower())
 
     try:
-        if username not in existingMembers:
+        if __fixlocaluser(username.lower()) not in existingMembers:
             if not __opts__['test']:
                 groupObj.Add('WinNT://' + username.replace('\\', '/'))
 
@@ -237,7 +235,6 @@ def deluser(name, username):
 
         salt '*' group.deluser foo username
 
-        group and computer names are case sensitive
     '''
 
     ret = {'name': name,
@@ -252,10 +249,10 @@ def deluser(name, username):
     for member in groupObj.members():
         existingMembers.append(
                 member.ADSPath.replace('WinNT://', '').replace(
-                '/', '\\').encode('ascii', 'backslashreplace'))
+                '/', '\\').encode('ascii', 'backslashreplace').lower())
 
     try:
-        if username in existingMembers:
+        if __fixlocaluser(username.lower()) in existingMembers:
             if not __opts__['test']:
                 groupObj.Remove('WinNT://' + username.replace('\\', '/'))
 
@@ -287,7 +284,6 @@ def members(name, members_list):
 
         salt '*' group.members foo 'user1,user2,user3'
 
-        group and computer names are case sensitive
     '''
 
     ret = {'name': name,
@@ -295,7 +291,7 @@ def members(name, members_list):
            'changes': {'Users Added': [], 'Users Removed': []},
            'comment': []}
 
-    members_list = members_list.split(",")
+    members_list = [__fixlocaluser(thisMember) for thisMember in members_list.lower().split(",")]
     if not isinstance(members_list, list):
         ret['result'] = False
         ret['comment'].append('Members is not a list object')
@@ -317,7 +313,7 @@ def members(name, members_list):
     for member in groupObj.members():
         existingMembers.append(
                 member.ADSPath.replace('WinNT://', '').replace(
-                '/', '\\').encode('ascii', 'backslashreplace'))
+                '/', '\\').encode('ascii', 'backslashreplace').lower())
 
     existingMembers.sort()
     members_list.sort()
@@ -360,3 +356,15 @@ def members(name, members_list):
                 #return ret
 
     return ret
+
+
+def __fixlocaluser(username):
+    '''
+    prefixes a username w/o a backslash with the computername 
+
+    i.e. __fixlocaluser('Administrator') would return 'computername\administrator'
+    '''
+    if '\\' not in username:
+        username = ('{0}\\{1}').format(__salt__['grains.get']('host'), username)
+
+    return username.lower()
