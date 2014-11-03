@@ -48,5 +48,4 @@ def fire_exception(exc, opts, job=None, node='minion'):
     if job is None:
         job = {}
     event = salt.utils.event.SaltEvent(node, opts=opts)
-    event.fire_event({'exception': pack_exception(exc),
-                      'job': job}, '_salt_error')
+    event.fire_event(pack_exception, '_salt_error')
