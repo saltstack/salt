@@ -188,6 +188,41 @@ def dump(device, destination, level=0, label=None, noerase=None):
     return  _xfsdump_output(out['stdout'])
 
 
+def _xfs_prune_output(out, uuid):
+    '''
+    Parse prune output.
+    '''
+    data = {}
+    cnt = []
+    cutpoint = False
+    for line in [l.strip() for l in out.split("\n") if l]:
+        if line.startswith("-"):
+            if cutpoint:
+                break
+            else:
+                cutpoint = True
+                continue
+
+        if cutpoint:
+            cnt.append(line)
+
+    for kset in [e for e in cnt[1:] if ':' in e]:
+        k, v = [t.strip() for t in kset.split(":", 1)]
+        data[k.lower().replace(" ", "_")] = v
+
+    return data
+
+
+def prune_dump(sessionid):
+    '''
+    Prunes the dump session identified by the given session id.
+    '''
+    out = __salt__['cmd.run_all']("xfsinvutil -s {0} -F".format(sessionid))
+    _verify_run(out)
+
+    return _xfs_prune_output(out['stdout'], sessionid)
+
+
 def _blkid_output(out):
     '''
     Parse blkid output.
