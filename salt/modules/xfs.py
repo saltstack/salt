@@ -40,7 +40,7 @@ def __virtual__():
     '''
     Only work on POSIX-like systems
     '''
-    return not salt.utils.is_windows()
+    return not salt.utils.is_windows() and __grains__.get('kernel') == 'Linux'
 
 
 def _verify_run(out, cmd=None):
