@@ -8,10 +8,10 @@
 # deal in the Software without restriction, including without limitation the
 # rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
 # sell copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions: 
+# furnished to do so, subject to the following conditions:
 #
 # The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software. 
+# all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -19,7 +19,7 @@
 # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
-# IN THE SOFTWARE. 
+# IN THE SOFTWARE.
 
 '''
 Module for managing XFS file systems.
@@ -84,11 +84,11 @@ def _parse_xfs_info(data):
     Parse output from "xfs_info" or "xfs_growfs -n".
     '''
     ret = {}
-    s = re.compile("\s+")
-    section = {}
+    spr = re.compile("\s+")
     entry = None
-    for line in [s.sub(" ", l).strip().replace(", ", " ") for l in data.split("\n")]:
-        if not line: continue
+    for line in [spr.sub(" ", l).strip().replace(", ", " ") for l in data.split("\n")]:
+        if not line:
+            continue
         nfo = _xfs_info_get_kv(line)
         if not line.startswith("="):
             entry = nfo.pop(0)
@@ -179,22 +179,34 @@ def dump(device, destination, level=0, label=None, noerase=None):
     if not salt.utils.which("xfsdump"):
         raise CommandExecutionError("Utility \"xfsdump\" has to be installed or missing.")
 
-    label = label and label or time.strftime("XFS dump for \"{0}\" of %Y.%m.%d, %H:%M".format(device), 
-                                             time.localtime())
-    cmd = "xfsdump -F -E -L '{0}' -l {1} -f {2} {3}".format(label.replace("'", '"'), level, destination, device)
+    label = label and label or time.strftime("XFS dump for \"{0}\" of %Y.%m.%d, %H:%M".format(device),
+                                             time.localtime()).replace("'", '"')
+    cmd = ["xfsdump"]
+    cmd.append("-F")                         # Force
+    if not noerase:
+        cmd.append("-E")                     # pre-erase
+    cmd.append("-L '{0}'".format(label))     # Label
+    cmd.append("-l {0}".format(level))       # Dump level
+    cmd.append("-f {0}".format(destination)) # Media destination
+    cmd.append(device)                       # Device
+
+    cmd = ' '.join(cmd)
     out = __salt__['cmd.run_all'](cmd)
-    _verify_run(out)
+    _verify_run(out, cmd=cmd)
 
     return  _xfsdump_output(out['stdout'])
 
 
 def _xr_to_keyset(line):
-    tkns = filter(None, line.strip().split(":", 1))
+    '''
+    Parse xfsrestore output keyset elements.
+    '''
+    tkns = [elm for elm in line.strip().split(":", 1) if elm]
     if len(tkns) == 1:
         return "'{0}': ".format(tkns[0])
     else:
-        k, v = tkns
-        return "'{0}': '{1}',".format(k.strip(), v.strip())
+        key, val = tkns
+        return "'{0}': '{1}',".format(key.strip(), val.strip())
 
 
 def _xfs_inventory_output(out):
@@ -211,17 +223,17 @@ def _xfs_inventory_output(out):
     ident = 0
     data.append("{")
     for line in out[:-1]:
-        if len(filter(None, line.strip().split(":"))) == 1:
+        if len([elm for elm in line.strip().split(":") if elm]) == 1:
             n_ident = len(re.sub("[^\t]", "", line))
             if ident > n_ident:
-                for x in range(ident):
+                for step in range(ident):
                     data.append("},")
             ident = n_ident
             data.append(_xr_to_keyset(line))
             data.append("{")
         else:
             data.append(_xr_to_keyset(line))
-    for x in range(ident + 1):
+    for step in range(ident + 1):
         data.append("},")
     data.append("},")
 
@@ -266,10 +278,10 @@ def _xfs_prune_output(out, uuid):
             cnt.append(line)
 
     for kset in [e for e in cnt[1:] if ':' in e]:
-        k, v = [t.strip() for t in kset.split(":", 1)]
-        data[k.lower().replace(" ", "_")] = v
+        key, val = [t.strip() for t in kset.split(":", 1)]
+        data[key.lower().replace(" ", "_")] = val
 
-    return data
+    return data.get('uuid') == uuid and data or {}
 
 
 def prune_dump(sessionid):
@@ -279,20 +291,24 @@ def prune_dump(sessionid):
     out = __salt__['cmd.run_all']("xfsinvutil -s {0} -F".format(sessionid))
     _verify_run(out)
 
-    return _xfs_prune_output(out['stdout'], sessionid)
+    data = _xfs_prune_output(out['stdout'], sessionid)
+    if data:
+        return data
+
+    raise CommandExecutionError("Session UUID \"{0}\" was not found.".format(sessionid))
 
 
 def _blkid_output(out):
     '''
     Parse blkid output.
     '''
-    f = lambda data: [el for el in data if el.strip()]
+    flt = lambda data: [el for el in data if el.strip()]
     data = {}
-    for dev_meta in f(out.split("\n\n")):
+    for dev_meta in flt(out.split("\n\n")):
         dev = {}
-        for kv in f(dev_meta.strip().split("\n")):
-            k, v = kv.split("=", 1)
-            dev[k.lower()] = v
+        for items in flt(dev_meta.strip().split("\n")):
+            key, val = items.split("=", 1)
+            dev[key.lower()] = val
         if dev.pop("type") == "xfs":
             dev['label'] = dev.get('label')
             data[dev.pop("devname")] = dev
@@ -319,16 +335,16 @@ def devices():
     _verify_run(out)
 
     return _blkid_output(out['stdout'])
-    
+
 
 def _xfs_estimate_output(out):
     '''
     Parse xfs_estimate output.
     '''
-    s = re.compile("\s+")
+    spc = re.compile("\s+")
     data = {}
     for line in [l for l in out.split("\n") if l.strip()][1:]:
-        directory, bsize, blocks, megabytes, logsize = s.sub(" ", line).split(" ")
+        directory, bsize, blocks, megabytes, logsize = spc.sub(" ", line).split(" ")
         data[directory] = {
             'block _size': bsize,
             'blocks': blocks,
@@ -377,7 +393,8 @@ def mkfs(device, label=None, ssize=None, noforce=None,
 
     * **bso**: Block size options.
     * **gmo**: Global metadata options.
-    * **dso**: Data section options. These options specify the location, size, and other parameters of the data section of the filesystem.
+    * **dso**: Data section options. These options specify the location, size,
+               and other parameters of the data section of the filesystem.
     * **ino**: Inode options to specify the inode size of the filesystem, and other inode allocation parameters.
     * **lso**: Log section options.
     * **nmo**: Naming options.
@@ -393,7 +410,7 @@ def mkfs(device, label=None, ssize=None, noforce=None,
         salt '*' xfs.mkfs /dev/sda1 dso='su=32k,sw=6' noforce=True
         salt '*' xfs.mkfs /dev/sda1 dso='su=32k,sw=6' lso='logdev=/dev/sda2,size=10000b'
     '''
-    
+
     getopts = lambda args: dict(((args and ("=" in args)
                                   and args or None)) and map(
                                       lambda kw: kw.split("="), args.split(",")) or [])
@@ -477,12 +494,13 @@ def _get_mounts():
     mounts = {}
     for line in open("/proc/mounts").readlines():
         device, mntpnt, fstype, options, fs_freq, fs_passno = line.strip().split(" ")
-        if fstype != 'xfs': continue
+        if fstype != 'xfs':
+            continue
         mounts[device] = {
             'mount_point': mntpnt,
             'options': options.split(","),
         }
-        
+
     return mounts
 
 
