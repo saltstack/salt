@@ -85,15 +85,25 @@ class PartedTestCase(TestCase):
 
     @patch('salt.utils.kwargs_warn_until')
     def test_probe_w_device_kwarg(self, *args, **kwargs):
-        parted.probe(device="/dev/sda")
-        parted.salt.utils.kwargs_warn_until({'device': '/dev/sda'})
+        device_kwargs = {'device': '/dev/sda'}
+        parted.probe(**device_kwargs)
+
+        def check_args(kwargs, version):
+            assert kwargs == device_kwargs
+            assert version == 'Beryllium'
+        parted.salt.utils.kwargs_warn_until.side_effect = check_args
         self.cmdrun.assert_called_once_with('partprobe -- /dev/sda')
 
     @patch('salt.utils.kwargs_warn_until')
     def test_probe_w_device_kwarg_and_arg(self, *args, **kwargs):
         '''device arg is concatanated with possitional args'''
-        parted.probe("/dev/sdb", device="/dev/sda")
-        parted.salt.utils.kwargs_warn_until({'device': '/dev/sda'})
+        device_kwargs = {'device': '/dev/sda'}
+        parted.probe("/dev/sdb", **device_kwargs)
+
+        def check_args(kwargs, version):
+            assert kwargs == device_kwargs
+            assert version == 'Beryllium'
+        parted.salt.utils.kwargs_warn_until.side_effect = check_args
         self.cmdrun.assert_called_once_with('partprobe -- /dev/sda /dev/sdb')
 
     @patch('salt.utils.kwargs_warn_until')
