@@ -40,6 +40,7 @@ htmlcov/
 /.idea
 /.ropeproject
 .ropeproject
+*_flymake.py
 /*.iml
 *.sublime-project
 *.sublime-workspace
