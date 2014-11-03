@@ -46,8 +46,8 @@ Options
 
     .. versionadded:: 0.17
 
-    Override the configured state_output value for minion output.  Default:
-    full
+    Choose the format of the state output. The options are `full`,
+    `terse`, `mixed`, `changes` and `filter`. Default: full
 
 .. option:: --subset=SUBSET
 
@@ -75,7 +75,9 @@ Options
 .. option:: -a EAUTH, --auth=EAUTH
 
     Pass in an external authentication medium to validate against. The
-    credentials will be prompted for. Can be used with the -T option.
+    credentials will be prompted for. The options are `auto`,
+    `keystone`, `ldap`, `pam` and `stormpath`. Can be used with the -T
+    option.
 
 .. option:: -T, --make-token
 
@@ -85,9 +87,13 @@ Options
 
 .. option:: --return=RETURNER
 
-    Choose an alternative returner to call on the minion, if an alternative
-    returner is used then the return will not come back to the command line
-    but will be sent to the specified return system.
+    Choose an alternative returner to call on the minion, if an
+    alternative returner is used then the return will not come back to
+    the command line but will be sent to the specified return system.
+    The options are `carbon`, `cassandra`, `couchbase`, `couchdb`,
+    `elasticsearch`, `etcd`, `hipchat`, `local`, `local_cache`,
+    `memcache`, `mongo`, `mysql`, `odbc`, `postgres`, `redis`,
+    `sentry`, `slack`, `sms`, `smtp`, `sqlite3`, `syslog` and `xmpp`.
 
 .. option:: -d, --doc, --documentation
 
