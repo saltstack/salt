@@ -45,14 +45,14 @@ Options
 .. option:: --state-output=STATE_OUTPUT
 
     .. versionadded:: 0.17
-    
-    Override the configured state_output value for minion output.  Default: 
+
+    Override the configured state_output value for minion output.  Default:
     full
 
 .. option:: --subset=SUBSET
 
-    Execute the routine on a random subset of the targeted minions.  The 
-    minions will be verified that they have the named function before 
+    Execute the routine on a random subset of the targeted minions.  The
+    minions will be verified that they have the named function before
     executing.
 
 .. option:: -v VERBOSE, --verbose
@@ -85,7 +85,7 @@ Options
 
 .. option:: --return=RETURNER
 
-    Chose an alternative returner to call on the minion, if an alternative
+    Choose an alternative returner to call on the minion, if an alternative
     returner is used then the return will not come back to the command line
     but will be sent to the specified return system.
 
@@ -95,8 +95,8 @@ Options
 
 .. option:: --args-separator=ARGS_SEPARATOR
 
-    Set the special argument used as a delimiter between command arguments of 
-    compound commands. This is useful when one wants to pass commas as 
+    Set the special argument used as a delimiter between command arguments of
+    compound commands. This is useful when one wants to pass commas as
     arguments to some of the commands in a compound command.
 
 .. include:: _includes/logging-options.rst
