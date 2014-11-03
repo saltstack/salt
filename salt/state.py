@@ -1510,18 +1510,18 @@ class State(object):
                 ret.update(self._run_check(low))
 
             if 'saltenv' in low:
-                inject_globals['__env__'] = low['saltenv']
+                inject_globals['__env__'] = str(low['saltenv'])
             elif isinstance(cdata['kwargs'].get('env', None), string_types):
                 # User is using a deprecated env setting which was parsed by
                 # format_call.
                 # We check for a string type since module functions which
                 # allow setting the OS environ also make use of the "env"
                 # keyword argument, which is not a string
-                inject_globals['__env__'] = cdata['kwargs']['env']
+                inject_globals['__env__'] = str(cdata['kwargs']['env'])
             elif '__env__' in low:
                 # The user is passing an alternative environment using __env__
                 # which is also not the appropriate choice, still, handle it
-                inject_globals['__env__'] = low['__env__']
+                inject_globals['__env__'] = str(low['__env__'])
             else:
                 # Let's use the default environment
                 inject_globals['__env__'] = 'base'
