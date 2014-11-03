@@ -219,6 +219,8 @@ def delfacl(acl_type, acl_name, *args):
         salt '*' acl.delfacl d:u myuser /tmp/house/kitchen
         salt '*' acl.delfacl g myuser /tmp/house/kitchen /tmp/house/livingroom
     '''
+    _raise_on_no_files(*args)
+
     cmd = 'setfacl -x'
 
     prefix = ''
