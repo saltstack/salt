@@ -1632,7 +1632,7 @@ def append(path, *args, **kwargs):
                 ofile.seek(0, os.SEEK_END)
         # Append lines
         for line in args:
-            ofile.write('{0}\n'.format(line.encode('UTF-8')))
+            ofile.write('{0}\n'.format(line))
 
     return 'Wrote {0} lines to "{1}"'.format(len(args), path)
 

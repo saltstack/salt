@@ -825,10 +825,7 @@ def build_whitespace_split_regex(text):
 
     '''
     def __build_parts(text):
-        try:
-            lexer = shlex.shlex(text)
-        except UnicodeEncodeError:
-            lexer = shlex.shlex(text.encode('UTF-8'))
+        lexer = shlex.shlex(text)
         lexer.whitespace_split = True
         lexer.commenters = ''
         if '\'' in text:
