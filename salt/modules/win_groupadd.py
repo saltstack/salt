@@ -360,7 +360,7 @@ def members(name, members_list):
 
 def __fixlocaluser(username):
     '''
-    prefixes a username w/o a backslash with the computername 
+    prefixes a username w/o a backslash with the computername
 
     i.e. __fixlocaluser('Administrator') would return 'computername\administrator'
     '''
