@@ -187,6 +187,15 @@ def returners(opts, functions, whitelist=None):
                       )
 
 
+def utils(opts, whitelist=None):
+    '''
+    Returns the utility modules
+    '''
+    load = _create_loader(opts, 'utils', 'utils',
+                          ext_type_dirs='utils_dirs')
+    return LazyLoader(load, whitelist=whitelist)
+
+
 def pillars(opts, functions):
     '''
     Returns the pillars modules
