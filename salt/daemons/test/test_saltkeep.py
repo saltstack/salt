@@ -29,6 +29,7 @@ from raet.road import estating, keeping, stacking
 from salt.key import RaetKey
 from salt.daemons import salting
 from salt import daemons
+from salt.utils import kinds
 
 def setUpModule():
     console.reinit(verbosity=console.Wordage.concise)
@@ -52,7 +53,7 @@ class BasicTestCase(unittest.TestCase):
 
     def createOpts(self,
                    role,
-                   kind='master',
+                   kind=kinds.APPL_KIND_NAMES[kinds.applKinds.master],
                    dirpath='/tmp',
                    openMode=False,
                    autoAccept=True):
@@ -98,7 +99,7 @@ class BasicTestCase(unittest.TestCase):
                      )
         return opts
 
-    def createRoadData(self, role, kind='master',  cachedirpath=''):
+    def createRoadData(self, role, kind=kinds.APPL_KIND_NAMES[kinds.applKinds.master],  cachedirpath=''):
         '''
         Creates odict and populates with data to setup road stack
         {
@@ -113,7 +114,7 @@ class BasicTestCase(unittest.TestCase):
         data = odict()
         data['name'] = "{0}_{1}".format(role, kind )
         data['role'] = role
-        data['kind'] = daemons.APPL_KINDS[kind] # convert to integer from kind name
+        data['kind'] = kinds.APPL_KINDS[kind] # convert to integer from kind name
         data['basedirpath'] = os.path.join(cachedirpath, 'raet')
         signer = nacling.Signer()
         data['sighex'] = signer.keyhex
@@ -207,7 +208,7 @@ class BasicTestCase(unittest.TestCase):
         console.terse("{0}\n".format(self.testBasic.__doc__))
 
         opts = self.createOpts(role='main',
-                               kind='master',
+                               kind=kinds.APPL_KIND_NAMES[kinds.applKinds.master],
                                dirpath=self.tempDirpath,
                                openMode=False,
                                autoAccept=False)
@@ -248,7 +249,7 @@ class BasicTestCase(unittest.TestCase):
                                                          })
 
         data1 = self.createRoadData(role='remote1',
-                                    kind='minion',
+                                    kind=kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
                                     cachedirpath=opts['cachedir'])
         main.addRemote(estating.RemoteEstate(stack=main,
                                              name=data1['name'],
@@ -259,7 +260,7 @@ class BasicTestCase(unittest.TestCase):
                                              pubkey=data1['pubhex'],))
 
         data2 = self.createRoadData(role='remote2',
-                                    kind='minion',
+                                    kind=kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
                                     cachedirpath=opts['cachedir'])
         main.addRemote(estating.RemoteEstate(stack=main,
                                              name=data2['name'],
@@ -330,7 +331,7 @@ class BasicTestCase(unittest.TestCase):
 
         # other stack
         opts = self.createOpts(role='other',
-                               kind='minion',
+                               kind=kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
                                dirpath=self.tempDirpath,
                                openMode=False,
                                autoAccept=False)
@@ -373,7 +374,7 @@ class BasicTestCase(unittest.TestCase):
                             })
 
         data3 = self.createRoadData(role='remote3',
-                                    kind='minion',
+                                    kind=kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
                                     cachedirpath=opts['cachedir'])
         other.addRemote(estating.RemoteEstate(stack=other,
                                               name=data3['name'],
@@ -384,7 +385,7 @@ class BasicTestCase(unittest.TestCase):
                                               pubkey=data3['pubhex'],))
 
         data4 = self.createRoadData(role='remote4',
-                                    kind='minion',
+                                    kind=kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
                                     cachedirpath=opts['cachedir'])
         other.addRemote(estating.RemoteEstate(stack=other,
                                               name=data4['name'],
@@ -447,7 +448,7 @@ class BasicTestCase(unittest.TestCase):
         console.terse("{0}\n".format(self.testBasicOpen.__doc__))
 
         opts = self.createOpts(role='main',
-                               kind='master',
+                               kind=kinds.APPL_KIND_NAMES[kinds.applKinds.master],
                                dirpath=self.tempDirpath,
                                openMode=True,
                                autoAccept=True)
@@ -488,7 +489,7 @@ class BasicTestCase(unittest.TestCase):
                                                          })
 
         data1 = self.createRoadData(role='remote1',
-                                    kind='minion',
+                                    kind=kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
                                     cachedirpath=opts['cachedir'])
         main.addRemote(estating.RemoteEstate(stack=main,
                                              name=data1['name'],
@@ -499,7 +500,7 @@ class BasicTestCase(unittest.TestCase):
                                              pubkey=data1['pubhex'],))
 
         data2 = self.createRoadData(role='remote2',
-                                    kind='minion',
+                                    kind=kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
                                     cachedirpath=opts['cachedir'])
         main.addRemote(estating.RemoteEstate(stack=main,
                                              name=data2['name'],
@@ -568,7 +569,7 @@ class BasicTestCase(unittest.TestCase):
 
         # other stack
         opts = self.createOpts(role='other',
-                               kind='minion',
+                               kind=kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
                                dirpath=self.tempDirpath,
                                openMode=True,
                                autoAccept=True)
@@ -611,7 +612,7 @@ class BasicTestCase(unittest.TestCase):
                             })
 
         data3 = self.createRoadData(role='remote3',
-                                    kind='minion',
+                                    kind=kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
                                     cachedirpath=opts['cachedir'])
         other.addRemote(estating.RemoteEstate(stack=other,
                                               name=data3['name'],
@@ -622,7 +623,7 @@ class BasicTestCase(unittest.TestCase):
                                               pubkey=data3['pubhex'],))
 
         data4 = self.createRoadData(role='remote4',
-                                    kind='minion',
+                                    kind=kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
                                     cachedirpath=opts['cachedir'])
         other.addRemote(estating.RemoteEstate(stack=other,
                                               name=data4['name'],
@@ -685,7 +686,7 @@ class BasicTestCase(unittest.TestCase):
         console.terse("{0}\n".format(self.testBasicAuto.__doc__))
 
         opts = self.createOpts(role='main',
-                               kind='master',
+                               kind=kinds.APPL_KIND_NAMES[kinds.applKinds.master],
                                dirpath=self.tempDirpath,
                                openMode=False,
                                autoAccept=True)
@@ -726,7 +727,7 @@ class BasicTestCase(unittest.TestCase):
                                                          })
 
         data1 = self.createRoadData(role='remote1',
-                                    kind='minion',
+                                    kind=kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
                                     cachedirpath=opts['cachedir'])
         main.addRemote(estating.RemoteEstate(stack=main,
                                              name=data1['name'],
@@ -737,7 +738,7 @@ class BasicTestCase(unittest.TestCase):
                                              pubkey=data1['pubhex'],))
 
         data2 = self.createRoadData(role='remote2',
-                                    kind='minion',
+                                    kind=kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
                                     cachedirpath=opts['cachedir'])
         main.addRemote(estating.RemoteEstate(stack=main,
                                              name=data2['name'],
@@ -808,12 +809,12 @@ class BasicTestCase(unittest.TestCase):
 
         # other stack
         opts = self.createOpts(role='other',
-                               kind='minion',
+                               kind=kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
                                dirpath=self.tempDirpath,
                                openMode=False,
                                autoAccept=True)
         otherData = self.createRoadData(role='other',
-                                        kind='minion',
+                                        kind=kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
                                         cachedirpath=opts['cachedir'] )
         otherKeep = salting.SaltKeep(opts=opts,
                                       basedirpath=otherData['basedirpath'],
@@ -851,7 +852,7 @@ class BasicTestCase(unittest.TestCase):
                             })
 
         data3 = self.createRoadData(role='remote3',
-                                    kind='minion',
+                                    kind=kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
                                     cachedirpath=opts['cachedir'])
         other.addRemote(estating.RemoteEstate(stack=other,
                                               name=data3['name'],
@@ -862,7 +863,7 @@ class BasicTestCase(unittest.TestCase):
                                               pubkey=data3['pubhex'],))
 
         data4 = self.createRoadData(role='remote4',
-                                    kind='minion',
+                                    kind=kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
                                     cachedirpath=opts['cachedir'])
         other.addRemote(estating.RemoteEstate(stack=other,
                                               name=data4['name'],
@@ -925,7 +926,7 @@ class BasicTestCase(unittest.TestCase):
         console.terse("{0}\n".format(self.testBasicRole.__doc__))
 
         opts = self.createOpts(role='main',
-                               kind='master',
+                               kind=kinds.APPL_KIND_NAMES[kinds.applKinds.master],
                                dirpath=self.tempDirpath,
                                openMode=False,
                                autoAccept=False)
@@ -967,7 +968,7 @@ class BasicTestCase(unittest.TestCase):
 
         # add multiple remotes all with same role
         data1 = self.createRoadData(role='primary',
-                                    kind='minion',
+                                    kind=kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
                                     cachedirpath=opts['cachedir'],
                                     )
         main.addRemote(estating.RemoteEstate(stack=main,
@@ -980,7 +981,7 @@ class BasicTestCase(unittest.TestCase):
                                              ) )
 
         data2 = self.createRoadData(role='primary',
-                                    kind='call',
+                                    kind=kinds.APPL_KIND_NAMES[kinds.applKinds.caller],
                                     cachedirpath=opts['cachedir'],
                                     )
         main.addRemote(estating.RemoteEstate(stack=main,
@@ -1017,7 +1018,7 @@ class BasicTestCase(unittest.TestCase):
                      'verhex': data1['verhex'],
                      'pubhex': data1['pubhex'],
                      },
-                'primary_call':
+                'primary_caller':
                     {
                      'name': data2['name'],
                      'uid': 3,
@@ -1116,7 +1117,7 @@ class BasicTestCase(unittest.TestCase):
 
         # add multiple remotes all with same role
         data1 = self.createRoadData(role='primary',
-                                    kind='minion',
+                                    kind=kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
                                     cachedirpath=opts['cachedir'],)
         main.addRemote(estating.RemoteEstate(stack=main,
                                              name=data1['name'],
@@ -1260,7 +1261,7 @@ class BasicTestCase(unittest.TestCase):
 
         # add multiple remotes all with same role but different keys
         data1 = self.createRoadData(role='primary',
-                                    kind='minion',
+                                    kind=kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
                                     cachedirpath=opts['cachedir'],
                                     )
         main.addRemote(estating.RemoteEstate(stack=main,
@@ -1370,7 +1371,7 @@ class BasicTestCase(unittest.TestCase):
         console.terse("{0}\n".format(self.testBootstrapNever.__doc__))
 
         opts = self.createOpts(role='main',
-                               kind='master',
+                               kind=kinds.APPL_KIND_NAMES[kinds.applKinds.master],
                                dirpath=self.tempDirpath,
                                openMode=False,
                                autoAccept=False)
@@ -1411,7 +1412,7 @@ class BasicTestCase(unittest.TestCase):
                                                          })
 
         opts = self.createOpts(role='other',
-                               kind='minion',
+                               kind=kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
                                dirpath=self.tempDirpath,
                                openMode=False,
                                autoAccept=True)
@@ -1496,7 +1497,7 @@ class BasicTestCase(unittest.TestCase):
         console.terse("{0}\n".format(self.testBootstrapOpen.__doc__))
 
         opts = self.createOpts(role='main',
-                               kind='master',
+                               kind=kinds.APPL_KIND_NAMES[kinds.applKinds.master],
                                dirpath=self.tempDirpath,
                                openMode=True,
                                autoAccept=True)
@@ -1537,7 +1538,7 @@ class BasicTestCase(unittest.TestCase):
                                                          })
 
         opts = self.createOpts(role='other',
-                               kind='minion',
+                               kind=kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
                                dirpath=self.tempDirpath,
                                openMode=False,
                                autoAccept=True)
@@ -1618,7 +1619,7 @@ class BasicTestCase(unittest.TestCase):
         console.terse("{0}\n".format(self.testBootstrapAuto.__doc__))
 
         opts = self.createOpts(role='main',
-                               kind='master',
+                               kind=kinds.APPL_KIND_NAMES[kinds.applKinds.master],
                                dirpath=self.tempDirpath,
                                openMode=False,
                                autoAccept=True)
@@ -1659,7 +1660,7 @@ class BasicTestCase(unittest.TestCase):
                                                          })
 
         opts = self.createOpts(role='other',
-                               kind='minion',
+                               kind=kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
                                dirpath=self.tempDirpath,
                                openMode=False,
                                autoAccept=True)
@@ -1740,7 +1741,7 @@ class BasicTestCase(unittest.TestCase):
         console.terse("{0}\n".format(self.testBootstrapRoleNever.__doc__))
 
         opts = self.createOpts(role='main',
-                               kind='master',
+                               kind=kinds.APPL_KIND_NAMES[kinds.applKinds.master],
                                dirpath=self.tempDirpath,
                                openMode=False,
                                autoAccept=False)
@@ -1781,7 +1782,7 @@ class BasicTestCase(unittest.TestCase):
                                                          })
 
         opts = self.createOpts(role='primary',
-                               kind='minion',
+                               kind=kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
                                dirpath=self.tempDirpath,
                                openMode=False,
                                autoAccept=True)
@@ -1849,7 +1850,7 @@ class BasicTestCase(unittest.TestCase):
 
         # create other2 stack but use same role but different keys as other1
         opts = self.createOpts(role='primary',
-                               kind='call',
+                               kind=kinds.APPL_KIND_NAMES[kinds.applKinds.caller],
                                dirpath=self.tempDirpath,
                                openMode=False,
                                autoAccept=True)
@@ -1870,7 +1871,7 @@ class BasicTestCase(unittest.TestCase):
 
         console.terse("{0} keep dirpath = {1}\n".format(
                 other2.name, other2.keep.dirpath))
-        self.assertTrue(other2.keep.dirpath.endswith(os.path.join('primary', 'raet', 'primary_call')))
+        self.assertTrue(other2.keep.dirpath.endswith(os.path.join('primary', 'raet', 'primary_caller')))
         self.assertEqual(other2.ha, ("0.0.0.0", 7532))
         self.assertIs(other2.keep.auto, raeting.autoModes.once)
         self.assertDictEqual(other2.keep.loadLocalData(),
@@ -1907,7 +1908,7 @@ class BasicTestCase(unittest.TestCase):
 
         # recreate other2 stack but use same role and same keys as other1
         opts = self.createOpts(role='primary',
-                               kind='call',
+                               kind=kinds.APPL_KIND_NAMES[kinds.applKinds.caller],
                                dirpath=self.tempDirpath,
                                openMode=False,
                                autoAccept=True)
@@ -1930,7 +1931,7 @@ class BasicTestCase(unittest.TestCase):
 
         console.terse("{0} keep dirpath = {1}\n".format(
                 other2.name, other2.keep.dirpath))
-        self.assertTrue(other2.keep.dirpath.endswith(os.path.join('primary', 'raet', 'primary_call')))
+        self.assertTrue(other2.keep.dirpath.endswith(os.path.join('primary', 'raet', 'primary_caller')))
         self.assertEqual(other2.ha, ("0.0.0.0", 7532))
         self.assertIs(other2.keep.auto, raeting.autoModes.once)
         self.assertDictEqual(other2.keep.loadLocalData(),
@@ -1995,7 +1996,7 @@ class BasicTestCase(unittest.TestCase):
         console.terse("{0}\n".format(self.testBootstrapRoleAuto.__doc__))
 
         opts = self.createOpts(role='main',
-                               kind='master',
+                               kind=kinds.APPL_KIND_NAMES[kinds.applKinds.master],
                                dirpath=self.tempDirpath,
                                openMode=False,
                                autoAccept=True)
@@ -2036,7 +2037,7 @@ class BasicTestCase(unittest.TestCase):
                                                          })
 
         opts = self.createOpts(role='primary',
-                               kind='minion',
+                               kind=kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
                                dirpath=self.tempDirpath,
                                openMode=False,
                                autoAccept=True)
@@ -2100,7 +2101,7 @@ class BasicTestCase(unittest.TestCase):
 
         # create other2 stack but use same role and different keys as other1
         opts = self.createOpts(role='primary',
-                               kind='call',
+                               kind=kinds.APPL_KIND_NAMES[kinds.applKinds.caller],
                                dirpath=self.tempDirpath,
                                openMode=False,
                                autoAccept=True)
@@ -2124,7 +2125,7 @@ class BasicTestCase(unittest.TestCase):
 
         console.terse("{0} keep dirpath = {1}\n".format(
                 other2.name, other2.keep.dirpath))
-        self.assertTrue(other2.keep.dirpath.endswith(os.path.join('primary', 'raet', 'primary_call')))
+        self.assertTrue(other2.keep.dirpath.endswith(os.path.join('primary', 'raet', 'primary_caller')))
         self.assertEqual(other2.ha, ("0.0.0.0", 7532))
         self.assertIs(other2.keep.auto, raeting.autoModes.once)
         self.assertDictEqual(other2.keep.loadLocalData(),

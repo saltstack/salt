@@ -28,6 +28,7 @@ from raet.lane.yarding import RemoteYard
 
 from salt import daemons
 from salt.daemons import salting
+from salt.utils import kinds
 
 from salt.exceptions import (
         CommandExecutionError, CommandNotFoundError, SaltInvocationError)
@@ -134,7 +135,7 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
         do salt raet road stack setup at enter
         '''
         kind = self.opts.value['__role']  # application kind
-        if kind not in daemons.APPL_KINDS:
+        if kind not in kinds.APPL_KINDS:
             emsg = ("Invalid application kind = '{0}'.".format(kind))
             log.error(emsg + '\n')
             raise ValueError(emsg)
@@ -173,7 +174,7 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
                                      sigkey=sigkey,
                                      prikey=prikey,
                                      main=main,
-                                     kind=daemons.APPL_KINDS[kind],
+                                     kind=kinds.APPL_KINDS[kind],
                                      mutable=mutable,
                                      txMsgs=txMsgs,
                                      rxMsgs=rxMsgs,
@@ -628,7 +629,7 @@ class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
         Run once at enter
         '''
         kind = self.opts.value['__role']
-        if kind not in daemons.APPL_KINDS:
+        if kind not in kinds.APPL_KINDS:
             emsg = ("Invalid application kind = '{0}' for manor lane.".format(kind))
             log.error(emsg + "\n")
             raise ValueError(emsg)
@@ -1012,9 +1013,13 @@ class SaltRaetPublisher(ioflo.base.deeding.Deed):
         '''
         Publish the message out to the targeted minions
         '''
+        stack = self.stack.value
         pub_data = pub_msg['return']
         # only publish to available minions by intersecting sets
-        minions = self.availables.value & set(self.stack.value.nameRemotes.keys())
+        minions = (self.availables.value &
+                   set(stack.nameRemotes.keys()) &
+                   set((remote.name for remote in stack.remotes.values()
+                            if remote.kind == kinds.applKinds.minion)))
         for minion in minions:
             uid = self.stack.value.fetchUidByName(minion)
             if uid:
@@ -1075,7 +1080,7 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
             raise ValueError(emsg)
 
         kind = self.opts['__role']
-        if kind not in daemons.APPL_KINDS:
+        if kind not in kinds.APPL_KINDS:
             emsg = ("Invalid application kind = '{0}' for Jobber lane.".format(kind))
             log.error(emsg + "\n")
             raise ValueError(emsg)
