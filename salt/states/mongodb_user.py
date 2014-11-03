@@ -28,13 +28,13 @@ def present(name,
         The name of the user to manage
 
     passwd
-        The password of the user
+        The password of the user to manage
 
     user
         The user to connect as (must be able to create the user)
 
     password
-        The password of the user
+        The password of the user to connect as
 
     host
         The host to connect to
@@ -44,6 +44,18 @@ def present(name,
 
     database
         The database to create the user in (if the db doesn't exist, it will be created)
+        
+    Example:
+    
+    .. code-block:: yaml
+    
+        mongouser-myapp:
+          mongodb_user.present:
+          - name: myapp
+          - passwd: password-of-myapp
+          # Connect as admin:sekrit
+          - user: admin
+          - password: sekrit
 
     '''
     ret = {'name': name,
