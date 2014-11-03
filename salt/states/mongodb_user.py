@@ -31,24 +31,27 @@ def present(name,
         The password of the user to manage
 
     user
-        The user to connect as (must be able to create the user)
+        MongoDB user with sufficient privilege to create the user
 
     password
-        The password of the user to connect as
+        Password for the admin user specified with the ``user`` parameter
 
     host
-        The host to connect to
+        The hostname/IP address of the MongoDB server
 
     port
-        The port to connect to
+        The port on which MongoDB is listening
 
     database
-        The database to create the user in (if the db doesn't exist, it will be created)
-        
+        The database in which to create the user
+
+        .. note::
+            If the database doesn't exist, it will be created.
+
     Example:
-    
+
     .. code-block:: yaml
-    
+
         mongouser-myapp:
           mongodb_user.present:
           - name: myapp
@@ -104,20 +107,20 @@ def absent(name,
         The name of the user to remove
 
     user
-        The user to connect as (must be able to create the user)
+        MongoDB user with sufficient privilege to create the user
 
     password
-        The password of the user
+        Password for the admin user specified by the ``user`` parameter
 
     host
-        The host to connect to
+        The hostname/IP address of the MongoDB server
 
     port
-        The port to connect to
+        The port on which MongoDB is listening
 
     database
-        The database to create the user in (if the db doesn't exist, it will be created)
-
+        The database from which to remove the user specified by the ``name``
+        parameter
     '''
     ret = {'name': name,
            'changes': {},
