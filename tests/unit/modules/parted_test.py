@@ -83,15 +83,18 @@ class PartedTestCase(TestCase):
         parted.probe('/dev/sda', '/dev/sdb')
         self.cmdrun.assert_called_once_with('partprobe -- /dev/sda /dev/sdb')
 
-    @patch('salt.utils.kwargs_warn_until')
-    def test_probe_w_device_kwarg(self, *args, **kwargs):
-        device_kwargs = {'device': '/dev/sda'}
-        parted.probe(**device_kwargs)
-
+    @staticmethod
+    def check_kwargs_warn_until_devices(device_kwargs):
         def check_args(kwargs, version):
             assert kwargs == device_kwargs
             assert version == 'Beryllium'
         parted.salt.utils.kwargs_warn_until.side_effect = check_args
+
+    @patch('salt.utils.kwargs_warn_until')
+    def test_probe_w_device_kwarg(self, *args, **kwargs):
+        device_kwargs = {'device': '/dev/sda'}
+        parted.probe(**device_kwargs)
+        self.check_kwargs_warn_until_devices(device_kwargs)
         self.cmdrun.assert_called_once_with('partprobe -- /dev/sda')
 
     @patch('salt.utils.kwargs_warn_until')
@@ -99,17 +102,14 @@ class PartedTestCase(TestCase):
         '''device arg is concatanated with possitional args'''
         device_kwargs = {'device': '/dev/sda'}
         parted.probe("/dev/sdb", **device_kwargs)
-
-        def check_args(kwargs, version):
-            assert kwargs == device_kwargs
-            assert version == 'Beryllium'
-        parted.salt.utils.kwargs_warn_until.side_effect = check_args
+        self.check_kwargs_warn_until_devices(device_kwargs)
         self.cmdrun.assert_called_once_with('partprobe -- /dev/sda /dev/sdb')
 
     @patch('salt.utils.kwargs_warn_until')
     def test_probe_w_extra_kwarg(self, *args, **kwargs):
-        self.assertRaises(TypeError, parted.probe, foo="bar")
-        parted.salt.utils.kwargs_warn_until({'device': '/dev/sda'})
+        device_kwargs = {'foo': 'bar'}
+        self.assertRaises(TypeError, parted.probe, **device_kwargs)
+        self.check_kwargs_warn_until_devices(device_kwargs)
         self.assertFalse(self.cmdrun.called)
 
     # Test part_list function
