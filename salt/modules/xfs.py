@@ -57,11 +57,6 @@ def _verify_run(out, cmd=None):
         raise CommandExecutionError(out['stderr'])
 
 
-def _get_xfs_devices():
-    '''
-    Get xfs devices
-    '''
-
 def _xfs_info_get_kv(serialized):
     '''
     Parse one line of the XFS info output.
