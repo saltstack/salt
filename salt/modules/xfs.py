@@ -188,6 +188,65 @@ def dump(device, destination, level=0, label=None, noerase=None):
     return  _xfsdump_output(out['stdout'])
 
 
+def _xr_to_keyset(line):
+    tkns = filter(None, line.strip().split(":", 1))
+    if len(tkns) == 1:
+        return "'{0}': ".format(tkns[0])
+    else:
+        k, v = tkns
+        return "'{0}': '{1}',".format(k.strip(), v.strip())
+
+
+def _xfs_inventory_output(out):
+    '''
+    Transform xfsrestore inventory data output to a Python dict source and evaluate it.
+    '''
+    data = []
+    out = [line for line in out.split("\n") if line.strip()]
+
+    # No inventory yet
+    if len(out) == 1 and 'restore status' in out[0].lower():
+        return {'restore_status': out[0]}
+
+    ident = 0
+    data.append("{")
+    for line in out[:-1]:
+        if len(filter(None, line.strip().split(":"))) == 1:
+            n_ident = len(re.sub("[^\t]", "", line))
+            if ident > n_ident:
+                for x in range(ident):
+                    data.append("},")
+            ident = n_ident
+            data.append(_xr_to_keyset(line))
+            data.append("{")
+        else:
+            data.append(_xr_to_keyset(line))
+    for x in range(ident + 1):
+        data.append("},")
+    data.append("},")
+
+    data = eval('\n'.join(data))[0]
+    data['restore_status'] = out[-1]
+
+    return data
+
+
+def inventory():
+    '''
+    Display XFS dump inventory without restoration.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' xfs.inventory
+    '''
+    out = __salt__['cmd.run_all']("xfsrestore -I")
+    _verify_run(out)
+
+    return _xfs_inventory_output(out['stdout'])
+
+
 def _xfs_prune_output(out, uuid):
     '''
     Parse prune output.
