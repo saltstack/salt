@@ -58,6 +58,7 @@ Example output::
 
 # Import python libs
 import pprint
+import sys
 
 # Import salt libs
 import salt.utils
@@ -198,7 +199,10 @@ def _format_host(host, data):
                 state_lines.insert(
                     3, u'    {tcolor}    Name: {comps[2]}{colors[ENDC]}')
             try:
-                stripped_comment = ret['comment'].strip()
+                comment = ret['comment'].decode(sys.getfilesystemencoding())
+                comment = comment.strip().replace(
+                        u'\n',
+                        u'\n' + u' ' * 14)
             except AttributeError:  # Assume comment is a list
                 try:
                     comment = ret['comment'].join(' ').replace(
@@ -210,16 +214,6 @@ def _format_host(host, data):
                     comment = comment.strip().replace(
                         u'\n',
                         u'\n' + u' ' * 14)
-            else:
-                try:
-                    comment = stripped_comment.replace(
-                        u'\n',
-                        u'\n' + u' ' * 14)
-                except UnicodeDecodeError:
-                    comment = stripped_comment.replace(
-                        '\n',
-                        '\n' + ' ' * 14)
-                    comment = comment.decode('UTF-8')
             for detail in ['start_time', 'duration']:
                 ret.setdefault(detail, u'')
             if ret['duration'] != '':
