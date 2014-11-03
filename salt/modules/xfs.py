@@ -518,17 +518,7 @@ def defragment(device):
     if device == '/':
         raise CommandExecutionError("Root is not a device.")
 
-    out = __salt__['cmd.run_all']("mount -l")
-    _verify_run(out)
-    is_mounted = False
-    for mntline in out['stdout'].split("\n"):
-        if mntline.startswith(device) and mntline.split(" ")[4] == "xfs":
-            is_mounted = True
-            break
-        elif mntline.startswith(device) and mntline.split(" ")[4] != "xfs":
-            raise CommandExecutionError("Device \"{0}\" is not an XFS filesytem.".format(device))
-
-    if not is_mounted:
+    if not _get_mounts().get(device):
         raise CommandExecutionError("Device \"{0}\" is not mounted".format(device))
 
     out = __salt__['cmd.run_all']("xfs_fsr {0}".format(device))
