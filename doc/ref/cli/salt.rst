@@ -39,7 +39,7 @@ Options
 
 .. option:: --async
 
-    Instead of waiting for the job to run on minions only print the jod id of
+    Instead of waiting for the job to run on minions only print the job id of
     the started execution and complete.
 
 .. option:: --state-output=STATE_OUTPUT
