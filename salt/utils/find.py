@@ -470,7 +470,7 @@ class PrintOption(Option):
     def requires(self):
         return _REQUIRES_STAT if self.need_stat else _REQUIRES_PATH
 
-    def execute(self, fullpath, fstat):
+    def execute(self, fullpath, fstat, test=False):
         result = []
         for arg in self.fmt:
             if arg == 'path':
@@ -530,7 +530,9 @@ class DeleteOption(TypeOption):
             value = 'bcdpfls'
         super(self.__class__, self).__init__(key, value)
 
-    def execute(self, fullpath, fstat):
+    def execute(self, fullpath, fstat, test=False):
+        if test:
+            return fullpath
         try:
             if os.path.isfile(fullpath) or os.path.islink(fullpath):
                 os.remove(fullpath)
@@ -546,6 +548,7 @@ class Finder(object):
         self.actions = []
         self.maxdepth = None
         self.mindepth = 0
+        self.test = False
         criteria = {_REQUIRES_PATH: list(),
                     _REQUIRES_STAT: list(),
                     _REQUIRES_CONTENTS: list()}
@@ -555,6 +558,9 @@ class Finder(object):
         if 'maxdepth' in options:
             self.maxdepth = options['maxdepth']
             del options['maxdepth']
+        if 'test' in options:
+            self.test = options['test']
+            del options['test']
         for key, value in options.items():
             if key.startswith('_'):
                 # this is a passthrough object, continue
@@ -613,7 +619,7 @@ class Finder(object):
                                 if (fstat is None and
                                     action.requires() & _REQUIRES_STAT):
                                     fstat = os.stat(fullpath)
-                                result = action.execute(fullpath, fstat)
+                                result = action.execute(fullpath, fstat, test=self.test)
                                 if result is not None:
                                     yield result
 
