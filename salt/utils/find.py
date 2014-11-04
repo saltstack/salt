@@ -92,6 +92,8 @@ import stat
 import shutil
 import sys
 import time
+import shlex
+from subprocess import Popen, PIPE
 try:
     import grp
     import pwd
@@ -551,7 +553,7 @@ class ExecOption(Option):
     def __init__(self, key, value):
         self.command = value
 
-    def execute(self, fullpath, fstat):
+    def execute(self, fullpath, fstat, test=False):
         try:
             command = self.command.format(fullpath)
             print(shlex.split(command))
@@ -561,14 +563,14 @@ class ExecOption(Option):
             (out, err) = p.communicate()
             if err:
                 log.error(
-                    'Error running command: {}\n\n{}'.format(
+                    'Error running command: {0}\n\n{1}'.format(
                     command,
                     err))
-            return "{}:\n{}\n".format(command, out)
+            return "{0}:\n{1}\n".format(command, out)
 
         except Exception, e:
             log.error(
-                'Exception while executing command "{}":\n\n{}'.format(
+                'Exception while executing command "{0}":\n\n{1}'.format(
                     command,
                     e))
             return "{}: Failed".format(fullpath)
