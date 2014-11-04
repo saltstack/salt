@@ -36,6 +36,9 @@ __outputter__ = {
     'template_str': 'highstate',
 }
 
+__func_alias__ = {
+    'apply_': 'apply'
+}
 log = logging.getLogger(__name__)
 
 
@@ -243,6 +246,153 @@ def template_str(tem, queue=False, **kwargs):
     ret = st_.call_template_str(tem)
     _set_retcode(ret)
     return ret
+
+
+def apply_(mods=None,
+          **kwargs):
+    '''
+    Apply states! This function will call highstate or state.sls based on the
+    arguments passed in, state.apply is intended to be the main gateway for
+    all state executions.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.apply
+        salt '*' state.apply test
+        salt '*' state.apply test,pkgs
+    '''
+    if mods:
+        return sls(mods, **kwargs)
+    return highstate(**kwargs)
+
+
+def request(mods=None,
+            **kwargs):
+    '''
+    Request that the local admin execute a state run via
+    `salt-callstate.apply_request`
+    All arguments match state.apply
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.request
+        salt '*' state.request test
+        salt '*' state.request test,pkgs
+    '''
+    kwargs['test'] = True
+    ret = apply_(mods, **kwargs)
+    notify_path = os.path.join(__opts__['cachedir'], 'req_state.p')
+    serial = salt.payload.Serial(__opts__)
+    req = check_request()
+    req.update({kwargs.get('name', 'default'): {
+            'test_run': ret,
+            'mods': mods,
+            'kwargs': kwargs
+            }
+        })
+    cumask = os.umask(077)
+    try:
+        if salt.utils.is_windows():
+            # Make sure cache file isn't read-only
+            __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
+        with salt.utils.fopen(notify_path, 'w+b') as fp_:
+            serial.dump(req, fp_)
+    except (IOError, OSError):
+        msg = 'Unable to write state request file {0}. Check permission.'
+        log.error(msg.format(notify_path))
+    os.umask(cumask)
+    return ret
+
+
+def check_request(name=None):
+    '''
+    Return the state request information, if any
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.check_request
+    '''
+    notify_path = os.path.join(__opts__['cachedir'], 'req_state.p')
+    serial = salt.payload.Serial(__opts__)
+    if os.path.isfile(notify_path):
+        with open(notify_path, 'rb') as fp_:
+            req = serial.load(fp_)
+        if name:
+            return req[name]
+        return req
+    return {}
+
+
+def clear_request(name=None):
+    '''
+    Clear out the state execution request without executing it
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.clear_request
+    '''
+    notify_path = os.path.join(__opts__['cachedir'], 'req_state.p')
+    serial = salt.payload.Serial(__opts__)
+    if not os.path.isfile(notify_path):
+        return True
+    if not name:
+        try:
+            os.remove(notify_path)
+        except (IOError, OSError):
+            pass
+    else:
+        req = check_request()
+        if name in req:
+            req.pop(name)
+        else:
+            return False
+        cumask = os.umask(077)
+        try:
+            if salt.utils.is_windows():
+                # Make sure cache file isn't read-only
+                __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
+            with salt.utils.fopen(notify_path, 'w+b') as fp_:
+                serial.dump(req, fp_)
+        except (IOError, OSError):
+            msg = 'Unable to write state request file {0}. Check permission.'
+            log.error(msg.format(notify_path))
+        os.umask(cumask)
+    return True
+
+
+def run_request(name='default', **kwargs):
+    '''
+    Execute the pending state request
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.run_request
+    '''
+    req = check_request()
+    if name not in req:
+        return {}
+    n_req = req[name]
+    if 'mods' not in n_req or 'kwargs' not in n_req:
+        return {}
+    req['kwargs'].update(kwargs)
+    if req:
+        ret = apply_(n_req['mods'], **n_req['kwargs'])
+        try:
+            os.remove(os.path.join(__opts__['cachedir'], 'req_state.p'))
+        except (IOError, OSError):
+            pass
+        return ret
+    return {}
 
 
 def highstate(test=None,
