@@ -1,42 +1,41 @@
 # -*- coding: utf-8 -*-
 '''
-Memcache "Salt DB" Module
+Memcached "Salt DB" Module
 
 :maintainer:    SaltStack
 :maturity:      New
 :depends:       python-memcached
 :platform:      all
 
-This module allows access to memcache using an ``sdb://`` URI. This
+This module allows access to memcached using an ``sdb://`` URI. This
 package is located at ``https://pypi.python.org/pypi/python-memcached``.
 
-Like all sdb modules, the memcache module requires a configuration profile to
+Like all sdb modules, the memcached module requires a configuration profile to
 be configured in either the minion or master configuration file. This profile
 requires very little. In the example:
 
 .. code-block:: yaml
 
     mymemcache:
-      driver: memcache
+      driver: memcached
       host: localhost
       port: 11211
 
-The ``driver`` refers to the memcache module, ``host`` and ``port`` the
-memcache server to connect to (defaults to ``localhost`` and ``11211``,
-and ``mymemcache`` refers to the name that will appear in the URI:
+The ``driver`` refers to the memcached module, ``host`` and ``port`` the
+memcached server to connect to (defaults to ``localhost`` and ``11211``,
+and ``mymemcached`` refers to the name that will appear in the URI:
 
 .. code-block:: yaml
 
-    password: sdb://mymemcache/mykey
+    password: sdb://mymemcached/mykey
 
 '''
 
 # import python libs
-from __future__ import absolute_import
 import logging
 
 # import Salt libs
-import salt.utils.memcache
+import salt.utils.memcached
 
 
 DEFAULT_HOST = '127.0.0.1'
@@ -49,15 +48,13 @@ __func_alias__ = {
     'set_': 'set'
 }
 
-__virtualname__ = 'memcache'
-
 
 def __virtual__():
     '''
-    Only load the module if memcache is installed
+    Only load the module if memcached is installed
     '''
-    if salt.utils.memcache.HAS_LIBS:
-        return __virtualname__
+    if salt.utils.memcached.HAS_LIBS:
+        return True
     return False
 
 
@@ -65,14 +62,14 @@ def set_(key, value, profile=None):
     '''
     Set a key/value pair in memcached
     '''
-    conn = salt.utils.memcache.get_conn(profile)
+    conn = salt.utils.memcached.get_conn(profile)
     time = profile.get('expire', DEFAULT_EXPIRATION)
-    return salt.utils.memcache.set_(conn, key, value, time=time)
+    return salt.utils.memcached.set_(conn, key, value, time=time)
 
 
 def get(key, profile=None):
     '''
     Get a value from memcached
     '''
-    conn = salt.utils.memcache.get_conn(profile)
-    return salt.utils.memcache.get(conn, key)
+    conn = salt.utils.memcached.get_conn(profile)
+    return salt.utils.memcached.get(conn, key)

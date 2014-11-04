@@ -13,24 +13,24 @@ used. The following configurations are both valid:
 .. code-block:: yaml
 
     # No profile name
-    memcache.host: 127.0.0.1
-    memcache.port: 11211
+    memcached.host: 127.0.0.1
+    memcached.port: 11211
 
     # One or more profiles defined
-    my_memcache_config:
-      memcache.host: 127.0.0.1
-      memcache.port: 11211
+    my_memcached_config:
+      memcached.host: 127.0.0.1
+      memcached.port: 11211
 
 Once configured, the get_conn() function is passed a set of opts, and,
 optionally, the name of a profile to be used.
 
 .. code-block:: python
 
-    import salt.utils.memcache_utils.py
-    conn = salt.utils.memcache_utils.get_conn(__opts__,
-                                              profile='my_memcache_config')
+    import salt.utils.memcached_utils.py
+    conn = salt.utils.memcached_utils.get_conn(__opts__,
+                                              profile='my_memcached_config')
 
-It should be noted that some usages of memcache may require a profile to be
+It should be noted that some usages of memcached may require a profile to be
 specified, rather than top-level configurations. This being the case, it is
 better to always use a named configuration profile, as shown above.
 '''
@@ -63,8 +63,6 @@ __func_alias__ = {
     'set_': 'set'
 }
 
-__virtualname__ = 'memcache'
-
 
 # Although utils are often directly imported, it is also possible
 # to use the loader.
@@ -72,7 +70,7 @@ def __virtual__():
     '''
     Only load if python-memcached is installed
     '''
-    return __virtualname__ if HAS_LIBS else False
+    return True if HAS_LIBS else False
 
 
 def get_conn(opts, profile=None, host=None, port=None):
@@ -93,8 +91,8 @@ def get_conn(opts, profile=None, host=None, port=None):
         else:
             conf = opts_merged
 
-        host = conf.get('memcache.host', DEFAULT_HOST)
-        port = conf.get('memcache.port', DEFAULT_PORT)
+        host = conf.get('memcached.host', DEFAULT_HOST)
+        port = conf.get('memcached.port', DEFAULT_PORT)
 
     if not str(port).isdigit():
         raise SaltInvocationError('port must be an integer')
