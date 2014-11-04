@@ -232,7 +232,7 @@ def latest_version(*names, **kwargs):
 
     virtpkgs = _get_virtual()
     all_virt = set()
-    for provides in virtpkgs.values():
+    for provides in virtpkgs.itervalues():
         all_virt.update(provides)
 
     for name in names:
@@ -441,7 +441,7 @@ def install(name=None,
             refreshdb = False
             for pkg in pkgs:
                 if isinstance(pkg, dict):
-                    _name = pkg.keys()[0]
+                    _name = pkg.iterkeys().next()
                     _latest_version = latest_version(_name, refresh=False, show_installed=True)
                     _version = pkg[_name]
                     # If the versions don't match, refresh is True, otherwise no need to refresh
@@ -1156,7 +1156,7 @@ def get_repo(repo, **kwargs):
                 .format(repo)
             )
 
-        for source in repos.values():
+        for source in repos.itervalues():
             for sub in source:
                 if (sub['type'] == repo_type and
                     # strip trailing '/' from repo_uri, it's valid in definition
@@ -1864,5 +1864,5 @@ def owner(*paths):
         if 'no path found' in ret[path].lower():
             ret[path] = ''
     if len(ret) == 1:
-        return ret.values()[0]
+        return ret.itervalues().next()
     return ret

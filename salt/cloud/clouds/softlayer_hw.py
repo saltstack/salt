@@ -721,7 +721,7 @@ def list_nodes(call=None):
                 nodes['error']['Errors']['Error']['Message']
             )
         )
-    for node in nodes.keys():
+    for node in nodes:
         ret[node] = {
             'id': nodes[node]['hostname'],
             'ram': nodes[node]['memoryCount'],

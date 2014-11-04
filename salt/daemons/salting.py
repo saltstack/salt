@@ -24,7 +24,7 @@ from salt.key import RaetKey
 # Python equivalent of an enum
 APPL_KINDS = OrderedDict([('master', 0), ('minion', 1), ('syndic', 2), ('call', 3)])
 APPL_KIND_NAMES = odict((v, k) for k, v in APPL_KINDS.iteritems())  # inverse map
-ApplKind = namedtuple('ApplKind', APPL_KINDS.keys())
+ApplKind = namedtuple('ApplKind', APPL_KINDS)
 applKinds = ApplKind(**APPL_KINDS)
 
 
@@ -113,8 +113,7 @@ class SaltKeep(Keep):
             return None
 
         mid = data['role']
-        statae = raeting.ACCEPTANCES.keys()
-        for status in statae:
+        for status in raeting.ACCEPTANCES:
             keydata = self.saltRaetKey.read_remote(mid, status)
             if keydata:
                 break

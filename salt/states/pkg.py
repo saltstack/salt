@@ -778,8 +778,8 @@ def installed(
         pkgs.extend([dict([(x, y)]) for x, y in to_reinstall.iteritems()])
     elif sources:
         oldsources = sources
-        sources = [x for x in oldsources if x.keys()[0] in targets]
-        sources.extend([x for x in oldsources if x.keys()[0] in to_reinstall])
+        sources = [x for x in oldsources if x.iterkeys().next() in targets]
+        sources.extend([x for x in oldsources if x.iterkeys().next() in to_reinstall])
 
     comment = []
     if __opts__['test']:
@@ -883,7 +883,7 @@ def installed(
 
     # Analyze pkg.install results for packages in targets
     if sources:
-        modified = [x for x in changes['installed'].keys() if x in targets]
+        modified = [x for x in changes['installed'] if x in targets]
         not_modified = [x for x in desired if x not in targets and x not in to_reinstall]
         failed = [x for x in targets if x not in modified]
     else:
@@ -1139,7 +1139,7 @@ def latest(
             up_to_date = [x for x in pkgs if x not in targets]
 
         if __opts__['test']:
-            to_be_upgraded = ', '.join(sorted(targets.keys()))
+            to_be_upgraded = ', '.join(sorted(targets))
             comment = 'The following packages are set to be ' \
                       'installed/upgraded: ' \
                       '{0}.'.format(to_be_upgraded)
@@ -1213,10 +1213,10 @@ def latest(
             elif len(targets) > 1:
                 comment = ('The following targeted packages failed to update. '
                            'See debug log for details: ({0}).'
-                           .format(', '.join(sorted(targets.keys()))))
+                           .format(', '.join(sorted(targets))))
             else:
                 comment = 'Package {0} failed to ' \
-                          'update.'.format(targets.keys()[0])
+                          'update.'.format(targets.iterkeys().next())
             if up_to_date:
                 if len(up_to_date) <= 10:
                     comment += ' The following packages were already ' \

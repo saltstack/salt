@@ -268,7 +268,7 @@ def present(
             args.update(d)
         if not __opts__['test']:
             lc_ret = __salt__["state.single"]('boto_lc.present', **args)
-            lc_ret = lc_ret.values()[0]
+            lc_ret = lc_ret.itervalues().next()
             if lc_ret["result"] is True and lc_ret["changes"]:
                 if "launch_config" not in ret["changes"]:
                     ret["changes"]["launch_config"] = {}
@@ -401,9 +401,9 @@ def _recursive_compare(v1, v2):
     elif isinstance(v1, dict):
         v1 = dict(v1)
         v2 = dict(v2)
-        if sorted(v1.keys()) != sorted(v2.keys()):
+        if sorted(v1) != sorted(v2):
             return False
-        for k in v1.keys():
+        for k in v1:
             if not _recursive_compare(v1[k], v2[k]):
                 return False
         return True

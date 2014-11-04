@@ -220,7 +220,7 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
                                              fuid=0,  # vacuous join
                                              sid=0,  # always 0 for join
                                              ha=self.mha))
-            stack.join(uid=stack.remotes.values()[0].uid, timeout=0.0)
+            stack.join(uid=stack.remotes.itervalues().next().uid, timeout=0.0)
 
 
 class SaltRaetRoadStackJoined(ioflo.base.deeding.Deed):
@@ -249,7 +249,7 @@ class SaltRaetRoadStackJoined(ioflo.base.deeding.Deed):
         joined = False
         if stack and isinstance(stack, RoadStack):
             if stack.remotes:
-                joined = stack.remotes.values()[0].joined
+                joined = stack.remotes.itervalues().next().joined
         self.status.update(joined=joined)
 
 
@@ -279,7 +279,7 @@ class SaltRaetRoadStackRejected(ioflo.base.deeding.Deed):
         rejected = False
         if stack and isinstance(stack, RoadStack):
             if stack.remotes:
-                rejected = (stack.remotes.values()[0].acceptance
+                rejected = (stack.remotes.itervalues().next().acceptance
                                 == raeting.acceptances.rejected)
             else:  # no remotes so assume rejected
                 rejected = True
@@ -335,7 +335,7 @@ class SaltRaetRoadStackAllowed(ioflo.base.deeding.Deed):
         allowed = False
         if stack and isinstance(stack, RoadStack):
             if stack.remotes:
-                allowed = stack.remotes.values()[0].allowed
+                allowed = stack.remotes.itervalues().next().allowed
         self.status.update(allowed=allowed)
 
 
@@ -498,7 +498,7 @@ class SaltLoadPillar(ioflo.base.deeding.Deed):
         # default master is the first remote
         # this default destination will not work with multiple masters
         route = {'src': (self.road_stack.value.local.name, None, None),
-                 'dst': (self.road_stack.value.remotes.values()[0].name, None, 'remote_cmd')}
+                 'dst': (self.road_stack.value.remotes.itervalues().next().name, None, 'remote_cmd')}
         load = {'id': self.opts.value['id'],
                 'grains': self.grains.value,
                 'saltenv': self.opts.value['environment'],
@@ -843,7 +843,7 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
             if not self.road_stack.value.remotes:
                 log.error("Missing joined master. Unable to route "
                           "remote_cmd '{0}'.".format(msg))
-            d_estate = self.road_stack.value.remotes.values()[0].name
+            d_estate = self.road_stack.value.remotes.itervalues().next().name
             msg['route']['dst'] = (d_estate, d_yard, d_share)
             self.road_stack.value.message(msg,
                     self.road_stack.value.nameRemotes[d_estate].uid)
@@ -851,7 +851,7 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
             if not self.road_stack.value.remotes:
                 log.error("Missing joined master. Unable to route "
                           "call_cmd '{0}'.".format(msg))
-            d_estate = self.road_stack.value.remotes.values()[0].name
+            d_estate = self.road_stack.value.remotes.itervalues().next().name
             d_share = 'remote_cmd'
             msg['route']['dst'] = (d_estate, d_yard, d_share)
             self.road_stack.value.message(msg,
@@ -947,7 +947,7 @@ class SaltRaetPublisher(ioflo.base.deeding.Deed):
         '''
         pub_data = pub_msg['return']
         # only publish to available minions by intersecting sets
-        minions = self.availables.value & set(self.stack.value.nameRemotes.keys())
+        minions = self.availables.value & set(self.stack.value.nameRemotes)
         for minion in minions:
             uid = self.stack.value.fetchUidByName(minion)
             if uid:

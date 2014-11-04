@@ -456,7 +456,7 @@ def list_nodes_full(conn=None, call=None):
     ret = {}
     for node in nodes:
         pairs = {}
-        for key, value in zip(node.__dict__.keys(), node.__dict__.values()):
+        for key, value in zip(node.__dict__, node.__dict__.itervalues()):
             pairs[key] = value
         ret[node.name] = pairs
         del ret[node.name]['driver']

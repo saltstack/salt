@@ -289,8 +289,8 @@ class PyWinUpdater(object):
     def SetIncludes(self, includes):
         if includes:
             for i in includes:
-                value = i[i.keys()[0]]
-                include = i.keys()[0]
+                value = i[i.iterkeys().next()]
+                include = i.iterkeys().next()
                 self.SetInclude(include, value)
                 log.debug('was asked to set {0} to {1}'.format(include, value))
 

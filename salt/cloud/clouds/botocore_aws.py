@@ -111,7 +111,7 @@ def __virtual__():
 
     # Let's bring the functions imported from libcloud_aws to the current
     # namespace.
-    keysdiff = set(POST_IMPORT_LOCALS_KEYS.keys()).difference(
+    keysdiff = set(POST_IMPORT_LOCALS_KEYS).difference(
         PRE_IMPORT_LOCALS_KEYS
     )
     for key in keysdiff:
