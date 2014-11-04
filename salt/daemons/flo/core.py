@@ -519,7 +519,8 @@ class SaltLoadPillar(ioflo.base.deeding.Deed):
                'grains': '.salt.grains',
                'modules': '.salt.loader.modules',
                'pillar_refresh': '.salt.var.pillar_refresh',
-               'road_stack': '.salt.road.manor.stack'}
+               'road_stack': '.salt.road.manor.stack',
+               'master_estate_name': '.salt.track.master_estate_name',}
 
     def action(self):
         '''
@@ -538,6 +539,8 @@ class SaltLoadPillar(ioflo.base.deeding.Deed):
             master = available_masters[random.randint(0, len(available_masters) - 1)]
         else:
             master = available_masters[0]
+
+        self.master_estate_name.value = master.name
 
         route = {'src': (self.road_stack.value.local.name, None, None),
                  'dst': (master.name, None, 'remote_cmd')}
@@ -773,7 +776,8 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
                'workers': '.salt.track.workers',
                'worker_verify': '.salt.var.worker_verify',
                'lane_stack': '.salt.lane.manor.stack',
-               'road_stack': '.salt.road.manor.stack'}
+               'road_stack': '.salt.road.manor.stack',
+               'master_estate_name': '.salt.track.master_estate_name',}
 
     def _process_udp_rxmsg(self, msg, sender):
         '''
@@ -899,10 +903,12 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
                 log.error("Missing joined master. Unable to route "
                           "remote_cmd '{0}'.".format(msg))
                 return
-            #log.error("**** Missing destination estate for 'remote_cmd'. Unable to route "
-                                    #"remote_cmd '{0}'.".format(msg))
-            #return
-            d_estate = self.road_stack.value.remotes.values()[0].name
+            d_estate = self._get_master_estate_name()
+            if not d_estate:
+                log.error("**** No available destination estate for 'remote_cmd'."
+                          "Unable to route.".format(msg))
+                return
+            #d_estate = self.road_stack.value.remotes.values()[0].name
             msg['route']['dst'] = (d_estate, d_yard, d_share)
             log.error("**** Missing destination estate for 'remote_cmd'. "
                     "Using default route={0}.".format(msg['route']['dst']))
@@ -913,17 +919,44 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
                 log.error("Missing joined master. Unable to route "
                           "call_cmd '{0}'.".format(msg))
                 return
-            #log.error("**** Missing destination estate for 'call_cmd'. Unable to route "
-                                                #"call_cmd '{0}'.".format(msg))
-            #return
+            d_estate = self._get_master_estate_name()
+            if not d_estate:
+                log.error("**** No available destination estate for 'call_cmd'."
+                          "Unable to route.".format(msg))
+                return
 
-            d_estate = self.road_stack.value.remotes.values()[0].name
+            #d_estate = self.road_stack.value.remotes.values()[0].name
             d_share = 'remote_cmd'
             msg['route']['dst'] = (d_estate, d_yard, d_share)
             log.error("**** Missing destination estate for 'call_cmd'. "
                         "Using default route={0}.".format(msg['route']['dst']))
             self.road_stack.value.message(msg,
                     self.road_stack.value.nameRemotes[d_estate].uid)
+
+    def _get_master_estate_name(self):
+        '''
+        Assign and return the name of the estate for the default master or empty if none
+        If the default master is no longer available then selects one of the available
+        masters
+        '''
+        opts = self.opts.value
+        master = self.road_stack.value.nameRemotes.get(self.master_estate_name.value)
+        if not master or not master.alived: # select a different master
+            available_masters = [remote for remote in
+                                 self.road_stack.value.remotes.values()
+                                                       if remote.alive]
+            if available_masters:
+                random_master = opts.get('random_master')
+                if random_master:
+                    master = available_masters[random.randint(0, len(available_masters) - 1)]
+                else:
+                    master = available_masters[0]
+            else:
+                master = None
+
+        self.master_estate_name.value = master.name if master else ''
+
+        return self.master_estate_name.value
 
     def action(self):
         '''

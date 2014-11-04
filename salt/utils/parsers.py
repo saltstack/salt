@@ -2102,7 +2102,7 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
     def setup_config(self):
         opts = config.minion_config(self.get_config_file_path(),
                                     minion_id=True)
-        opts['__role'] = kinds.APPL_KIND_NAMES[kinds.applKinds.caller]
+        #opts['__role'] = kinds.APPL_KIND_NAMES[kinds.applKinds.caller]
         return opts
 
     def process_module_dirs(self):
