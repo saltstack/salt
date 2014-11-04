@@ -39,6 +39,22 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                                            'local_batch']
         assert response_obj['return'] == 'Welcome'
 
+    def test_post_no_auth(self):
+        '''
+        '''
+        # get a token for this test
+        low = [{'client': 'local',
+                'tgt': '*',
+                'fun': 'test.ping',
+                }]
+        response = self.fetch('/',
+                              method='POST',
+                              body=json.dumps(low),
+                              headers={'Content-Type': self.content_type_map['json']},
+                              follow_redirects=False
+                              )
+        assert response.code == 302
+
     # Local client tests
     def test_simple_local_post(self):
         '''
