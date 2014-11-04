@@ -104,14 +104,11 @@ class SaltClientsMixIn(object):
         if not hasattr(self, '__saltclients'):
             # TODO: refreshing clients using cachedict
             self.__saltclients = {
-                'local': salt.client.get_local_client().run_job,
+                'local': salt.client.get_local_client(mopts=self.application.opts).run_job,
                 # not the actual client we'll use.. but its what we'll use to get args
-                'local_batch': salt.client.get_local_client().cmd_batch,
-                'local_async': salt.client.get_local_client().run_job,
-                'runner': salt.runner.RunnerClient(
-                    salt.config.master_config(
-                        os.path.join(syspaths.CONFIG_DIR, 'master')
-                    )).async,
+                'local_batch': salt.client.get_local_client(mopts=self.application.opts).cmd_batch,
+                'local_async': salt.client.get_local_client(mopts=self.application.opts).run_job,
+                'runner': salt.runner.RunnerClient(opts=self.application.opts).async,
                 }
         return self.__saltclients
 
@@ -500,7 +497,8 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
             self.redirect('/login')
             return
 
-        client = self.get_arguments('client')[0]
+        # TODO: support per-lowstate client disbatch
+        client = self.lowstate[0]['client']
         self._verify_client(client)
         self.disbatch(client)
 
@@ -543,7 +541,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
             minions = self.saltclients['local'](chunk['tgt'],
                                                 'test.ping',
                                                 [],
-                                                expr_form=f_call['kwargs']['expr_form'])['minions']
+                                                expr_form=f_call['kwargs']['expr_form']).get('minions', [])
 
             chunk_ret = {}
             maxflight = get_batch_size(f_call['kwargs']['batch'], len(minions))
@@ -551,15 +549,24 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
             # do this batch
             while len(minions) > 0:
                 # if you have more to go, lets disbatch jobs
-                while len(inflight_futures) < maxflight:
+                while len(inflight_futures) < maxflight and len(minions) > 0:
                     minion_id = minions.pop(0)
                     f_call['args'][0] = minion_id
                     # TODO: list??
                     f_call['kwargs']['expr_form'] = 'glob'
                     pub_data = self.saltclients['local'](*f_call.get('args', ()), **f_call.get('kwargs', {}))
+                    # if the job didn't publish, lets not wait around for nothing
+                    # we'll just skip
+                    # TODO: set header??, some special return?, Or just ignore it (like we do in CLI)
+                    if 'jid' not in pub_data:
+                        continue
                     tag = tagify([pub_data['jid'], 'ret', minion_id], 'job')
                     future = self.application.event_listener.get_event(self, tag=tag)
                     inflight_futures.append(future)
+
+                # if we have nothing to wait for, don't wait
+                if len(inflight_futures) == 0:
+                    continue
 
                 # wait until someone is done
                 finished_future = yield Any(inflight_futures)
@@ -601,9 +608,17 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
             # fire a job off
             pub_data = self.saltclients[self.client](*f_call.get('args', ()), **f_call.get('kwargs', {}))
 
+            # if the job didn't publish, lets not wait around for nothing
+            # TODO: set header??
+            if 'jid' not in pub_data:
+                self.write(self.serialize({'return': self.ret}))
+                self.finish()
+                return
+
             # get the tag that we are looking for
             tag = tagify([pub_data['jid'], 'ret'], 'job')
 
+            # TODO: the same ping-magic from localclient
             minions_remaining = pub_data['minions']
 
             # while we are waiting on all the mininons
