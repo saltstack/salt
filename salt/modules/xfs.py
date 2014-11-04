@@ -289,7 +289,7 @@ def _xfs_prune_output(out, uuid):
 def prune_dump(sessionid):
     '''
     Prunes the dump session identified by the given session id.
-    
+
     CLI Example:
 
     .. code-block:: bash
