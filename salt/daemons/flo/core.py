@@ -276,12 +276,8 @@ class SaltRaetRoadStackJoined(ioflo.base.deeding.Deed):
         joined = False
         if stack and isinstance(stack, RoadStack):
             if stack.remotes:
-<<<<<<< HEAD
                 for remote in stack.remotes.values():
                     joined = any([remote.joined for remote in stack.remotes.values()])
-=======
-                joined = stack.remotes.itervalues().next().joined
->>>>>>> 2014.7
         self.status.update(joined=joined)
 
 
@@ -367,12 +363,8 @@ class SaltRaetRoadStackAllowed(ioflo.base.deeding.Deed):
         allowed = False
         if stack and isinstance(stack, RoadStack):
             if stack.remotes:
-<<<<<<< HEAD
                 for remote in stack.remotes.values():
                     allowed = any([remote.allowed for remote in stack.remotes.values()])
-=======
-                allowed = stack.remotes.itervalues().next().allowed
->>>>>>> 2014.7
         self.status.update(allowed=allowed)
 
 
@@ -547,11 +539,7 @@ class SaltLoadPillar(ioflo.base.deeding.Deed):
             master = available_masters[0]
 
         route = {'src': (self.road_stack.value.local.name, None, None),
-<<<<<<< HEAD
-                 'dst': (master.name, None, 'remote_cmd')}
-=======
                  'dst': (self.road_stack.value.remotes.itervalues().next().name, None, 'remote_cmd')}
->>>>>>> 2014.7
         load = {'id': self.opts.value['id'],
                 'grains': self.grains.value,
                 'saltenv': self.opts.value['environment'],
@@ -909,15 +897,11 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
             if not self.road_stack.value.remotes:
                 log.error("Missing joined master. Unable to route "
                           "remote_cmd '{0}'.".format(msg))
-<<<<<<< HEAD
                 return
             #log.error("**** Missing destination estate for 'remote_cmd'. Unable to route "
                                     #"remote_cmd '{0}'.".format(msg))
             #return
-            d_estate = self.road_stack.value.remotes.values()[0].name
-=======
             d_estate = self.road_stack.value.remotes.itervalues().next().name
->>>>>>> 2014.7
             msg['route']['dst'] = (d_estate, d_yard, d_share)
             log.error("**** Missing destination estate for 'remote_cmd'. "
                     "Using default route={0}.".format(msg['route']['dst']))
@@ -927,16 +911,12 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
             if not self.road_stack.value.remotes:
                 log.error("Missing joined master. Unable to route "
                           "call_cmd '{0}'.".format(msg))
-<<<<<<< HEAD
                 return
             #log.error("**** Missing destination estate for 'call_cmd'. Unable to route "
                                                 #"call_cmd '{0}'.".format(msg))
             #return
 
-            d_estate = self.road_stack.value.remotes.values()[0].name
-=======
             d_estate = self.road_stack.value.remotes.itervalues().next().name
->>>>>>> 2014.7
             d_share = 'remote_cmd'
             msg['route']['dst'] = (d_estate, d_yard, d_share)
             log.error("**** Missing destination estate for 'call_cmd'. "

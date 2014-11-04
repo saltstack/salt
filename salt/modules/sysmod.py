@@ -702,7 +702,6 @@ def list_returners(*args):
     '''
     returners_ = salt.loader.returners(__opts__, [])
     returners = set()
-<<<<<<< HEAD
 
     if not args:
         for func in returners_.keys():
@@ -718,13 +717,6 @@ def list_returners(*args):
             if len(comps) < 2:
                 continue
             returners.add(comps[0])
-=======
-    for func in returners_:
-        comps = func.split('.')
-        if len(comps) < 2:
-            continue
-        returners.add(comps[0])
->>>>>>> 2014.7
     return sorted(returners)
 
 
@@ -768,14 +760,10 @@ def list_returner_functions(*args, **kwargs):
             # allow both "sys" and "sys." to match sys, without also matching
             # sysctl
             module = module + '.' if not module.endswith('.') else module
-<<<<<<< HEAD
         if _use_fnmatch:
-            for func in fnmatch.filter(returners_.keys(), target_mod):
-=======
-        for func in returners_:
-            if func.startswith(module):
->>>>>>> 2014.7
-                names.add(func)
+            for func in returners_:
+                if func.startswith(module):
+                    names.add(func)
         else:
             for func in returners_.keys():
                 if func.startswith(module):
