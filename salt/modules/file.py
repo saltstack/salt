@@ -572,7 +572,8 @@ def find(path, **kwargs):
 
     .. code-block:: text
 
-        delete  = delete-type               # recursive/nonrecursive, r/n, d/f
+        delete [= delete-type]              # recursive/nonrecursive, r/n, d/f
+                                            # default: nonrecursive
         exec    = command [arg ...]         # where {} is replaced by pathname
         print  [= print-opts]
 
