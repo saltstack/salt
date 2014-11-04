@@ -46,6 +46,7 @@ log = logging.getLogger(__name__)
 try:
     import boto
     import boto.ec2
+    import boto.ec2.instance
     import boto.ec2.blockdevicemapping as blockdevicemapping
     import boto.ec2.autoscale as autoscale
     logging.getLogger('boto').setLevel(logging.CRITICAL)
@@ -526,3 +527,65 @@ def _get_conn(region, key, keyid, profile):
                   ' make boto autoscale connection.')
         return None
     return conn
+
+
+def _get_ec2_conn(region, key, keyid, profile):
+    '''
+    Get a boto connection to ec2.   Needed for get_instances
+    '''
+    if profile:
+        if isinstance(profile, string_types):
+            _profile = __salt__['config.option'](profile)
+        elif isinstance(profile, dict):
+            _profile = profile
+        key = _profile.get('key', None)
+        keyid = _profile.get('keyid', None)
+        region = _profile.get('region', None)
+
+    if not region and __salt__['config.option']('secgroup.region'):
+        region = __salt__['config.option']('secgroup.region')
+
+    if not region:
+        region = 'us-east-1'
+
+    if not key and __salt__['config.option']('secgroup.key'):
+        key = __salt__['config.option']('secgroup.key')
+    if not keyid and __salt__['config.option']('secgroup.keyid'):
+        keyid = __salt__['config.option']('secgroup.keyid')
+
+    try:
+        conn = boto.ec2.connect_to_region(region, aws_access_key_id=keyid,
+                                          aws_secret_access_key=key)
+    except boto.exception.NoAuthHandlerFound:
+        log.error('No authentication credentials found when attempting to'
+                  ' make ec2 connection for security groups.')
+        return None
+    return conn
+
+
+def get_instances(name, lifecycle_state="InService", health_status="Healthy", attribute="private_ip_address", region=None, key=None, keyid=None, profile=None):
+    "return attribute of all instances in the named autoscale group."
+    conn = _get_conn(region, key, keyid, profile)
+    ec2_conn = _get_ec2_conn(region, key, keyid, profile)
+    if not conn or not ec2_conn:
+        return False
+    try:
+        asgs = conn.get_all_groups(names=[name])
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        return False
+    if len(asgs) != 1:
+        log.debug("name '{0}' returns multiple ASGs: {1}".format(name, [asg.name for asg in asgs]))
+        return False
+    asg = asgs[0]
+    instance_ids = []
+    # match lifecycle_state and health_status
+    for i in asg.instances:
+        if lifecycle_state is not None and i.lifecycle_state != lifecycle_state:
+            continue
+        if health_status is not None and i.health_status != health_status:
+            continue
+        instance_ids.append(i.instance_id)
+    # get full instance info, so that we can return the attribute
+    instances = ec2_conn.get_only_instances(instance_ids=instance_ids)
+    return [getattr(instance, attribute) for instance in instances]
