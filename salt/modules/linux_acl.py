@@ -5,6 +5,7 @@ Support for Linux File Access Control Lists
 
 # Import salt libs
 import salt.utils
+from salt.exceptions import CommandExecutionError
 
 # Define the module's virtual name
 __virtualname__ = 'acl'
@@ -35,6 +36,11 @@ def version():
     return ret[1].strip()
 
 
+def _raise_on_no_files(*args):
+    if len(args) == 0:
+        raise CommandExecutionError('You need to specify at least one file or directory to work with!')
+
+
 def getfacl(*args):
     '''
     Return (extremely verbose) map of FACLs on specified file(s)
@@ -46,6 +52,8 @@ def getfacl(*args):
         salt '*' acl.getfacl /tmp/house/kitchen
         salt '*' acl.getfacl /tmp/house/kitchen /tmp/house/livingroom
     '''
+    _raise_on_no_files(*args)
+
     ret = {}
     cmd = 'getfacl -p'
     for dentry in args:
@@ -158,6 +166,7 @@ def wipefacls(*args):
         salt '*' acl.wipefacls /tmp/house/kitchen
         salt '*' acl.wipefacls /tmp/house/kitchen /tmp/house/livingroom
     '''
+    _raise_on_no_files(*args)
     cmd = 'setfacl -b'
     for dentry in args:
         cmd += ' {0}'.format(dentry)
@@ -178,6 +187,8 @@ def modfacl(acl_type, acl_name, perms, *args):
         salt '*' acl.modfacl d:u myuser 7 /tmp/house/kitchen
         salt '*' acl.modfacl g mygroup 0 /tmp/house/kitchen /tmp/house/livingroom
     '''
+    _raise_on_no_files(*args)
+
     cmd = 'setfacl -m'
 
     prefix = ''
@@ -210,6 +221,8 @@ def delfacl(acl_type, acl_name, *args):
         salt '*' acl.delfacl d:u myuser /tmp/house/kitchen
         salt '*' acl.delfacl g myuser /tmp/house/kitchen /tmp/house/livingroom
     '''
+    _raise_on_no_files(*args)
+
     cmd = 'setfacl -x'
 
     prefix = ''
