@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 '''
-Return data to a mysql server
+Return data by SMS
 
 :maintainer:    Damian Myerscough
 :maturity:      new
