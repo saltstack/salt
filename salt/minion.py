@@ -617,7 +617,7 @@ class Minion(MinionBase):
 
         # add default scheduling jobs to the minions scheduler
         if 'mine.update' in self.functions:
-            log.info('Added mine.update to schedular')
+            log.info('Added mine.update to scheduler')
             self.schedule.add_job({
                 '__mine_interval':
                 {
