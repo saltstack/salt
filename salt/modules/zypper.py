@@ -2,7 +2,7 @@
 '''
 Package support for openSUSE via the zypper package manager
 
-:optdepends:  - `zypp` Python module.  Install with `zypper install python-zypp`
+:depends: - ``zypp`` Python module.  Install with ``zypper install python-zypp``
 '''
 
 # Import python libs
