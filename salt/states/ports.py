@@ -117,7 +117,7 @@ def installed(name, options=None):
     desired_options.update(options)
     ports_pre = [
         x['origin'] for x in
-        __salt__['pkg.list_pkgs'](with_origin=True).values()
+        __salt__['pkg.list_pkgs'](with_origin=True).itervalues()
     ]
 
     if current_options == desired_options and name in ports_pre:
@@ -166,7 +166,7 @@ def installed(name, options=None):
     ret['changes'] = __salt__['ports.install'](name)
     ports_post = [
         x['origin'] for x in
-        __salt__['pkg.list_pkgs'](with_origin=True).values()
+        __salt__['pkg.list_pkgs'](with_origin=True).itervalues()
     ]
     err = sys.modules[
         __salt__['test.ping'].__module__

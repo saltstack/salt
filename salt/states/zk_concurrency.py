@@ -42,15 +42,12 @@ This example would allow the file state to change, but would limit the
 concurrency of the trafficserver service restart to 4.
 '''
 
-import logging
-
 REQUIRED_FUNCS = ('zk_concurrency.lock', 'zk_concurrency.unlock')
 __virtualname__ = 'zk_concurrency'
 
 
 def __virtual__():
     if not all(func in __salt__ for func in REQUIRED_FUNCS):
-        logging.error('Missing required funcs for zk_concurrency')
         return False
 
     return __virtualname__
