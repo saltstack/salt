@@ -54,6 +54,7 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               follow_redirects=False
                               )
         assert response.code == 302
+        assert response.headers['Location'] == '/login'
 
     # Local client tests
     def test_simple_local_post(self):
