@@ -6,7 +6,7 @@ Module for Management of Memcached Keys
 .. versionadded:: 2014.1.0
 '''
 
-# TODO: use utils.memcache_util
+# TODO: use salt.utils.memcache
 
 # Import python libs
 import logging
