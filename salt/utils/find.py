@@ -89,6 +89,7 @@ import logging
 import os
 import re
 import stat
+import shutil
 import sys
 import time
 try:
@@ -469,7 +470,7 @@ class PrintOption(Option):
     def requires(self):
         return _REQUIRES_STAT if self.need_stat else _REQUIRES_PATH
 
-    def execute(self, fullpath, fstat):
+    def execute(self, fullpath, fstat, test=False):
         result = []
         for arg in self.fmt:
             if arg == 'path':
@@ -511,11 +512,43 @@ class PrintOption(Option):
             return result
 
 
+class DeleteOption(TypeOption):
+    '''
+    Deletes matched file.
+    Delete options are one or more of the following:
+        a: all file types
+        b: block device
+        c: character device
+        d: directory
+        p: FIFO (named pipe)
+        f: plain file
+        l: symlink
+        s: socket
+    '''
+    def __init__(self, key, value):
+        if 'a' in value:
+            value = 'bcdpfls'
+        super(self.__class__, self).__init__(key, value)
+
+    def execute(self, fullpath, fstat, test=False):
+        if test:
+            return fullpath
+        try:
+            if os.path.isfile(fullpath) or os.path.islink(fullpath):
+                os.remove(fullpath)
+            elif os.path.isdir(fullpath):
+                shutil.rmtree(fullpath)
+        except (OSError, IOError) as exc:
+            return None
+        return fullpath
+
+
 class Finder(object):
     def __init__(self, options):
         self.actions = []
         self.maxdepth = None
         self.mindepth = 0
+        self.test = False
         criteria = {_REQUIRES_PATH: list(),
                     _REQUIRES_STAT: list(),
                     _REQUIRES_CONTENTS: list()}
@@ -525,6 +558,9 @@ class Finder(object):
         if 'maxdepth' in options:
             self.maxdepth = options['maxdepth']
             del options['maxdepth']
+        if 'test' in options:
+            self.test = options['test']
+            del options['test']
         for key, value in options.items():
             if key.startswith('_'):
                 # this is a passthrough object, continue
@@ -583,7 +619,7 @@ class Finder(object):
                                 if (fstat is None and
                                     action.requires() & _REQUIRES_STAT):
                                     fstat = os.stat(fullpath)
-                                result = action.execute(fullpath, fstat)
+                                result = action.execute(fullpath, fstat, test=self.test)
                                 if result is not None:
                                     yield result
 
