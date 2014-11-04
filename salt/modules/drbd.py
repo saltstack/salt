@@ -41,29 +41,29 @@ def overview():
                     remainsize = fields[8]
                     perc = fields[9]
                     ret = {
-                        'minor number':minnum, 
-                        'device':device, 
-                        'connection state':connstate, 
-                        'local role':localrole, 
-                        'partner role':partnerrole, 
-                        'local disk state':localdiskstate, 
-                        'partner disk state':partnerdiskstate, 
-                        'mountpoint':mountpoint, 
-                        'fs':fs_mounted, 
-                        'total size':totalsize, 
-                        'used':usedsize, 
-                        'remains':remainsize, 
-                        'percent':perc, 
+                        'minor number': minnum,
+                        'device': device,
+                        'connection state': connstate,
+                        'local role': localrole,
+                        'partner role': partnerrole,
+                        'local disk state': localdiskstate,
+                        'partner disk state': partnerdiskstate,
+                        'mountpoint': mountpoint,
+                        'fs': fs_mounted,
+                        'total size': totalsize,
+                        'used': usedsize,
+                        'remains': remainsize,
+                        'percent': perc,
                     }
                 else:
                     ret = {
-                        'minor number':minnum, 
-                        'device':device, 
-                        'connection state':connstate, 
-                        'local role':localrole, 
-                        'partner role':partnerrole, 
-                        'local disk state':localdiskstate, 
-                        'partner disk state':partnerdiskstate, 
+                        'minor number': minnum,
+                        'device': device,
+                        'connection state': connstate,
+                        'local role': localrole,
+                        'partner role': partnerrole,
+                        'local disk state': localdiskstate,
+                        'partner disk state': partnerdiskstate,
                     }
             else:
                 syncbar = fields[4]
@@ -71,14 +71,14 @@ def overview():
                 syncedbytes = fields[7]
                 sync = synced+syncedbytes
                 ret = {
-                    'minor number':minnum, 
-                    'device':device, 
-                    'connection state':connstate, 
-                    'local role':localrole, 
-                    'partner role':partnerrole, 
-                    'local disk state':localdiskstate, 
-                    'partner disk state':partnerdiskstate, 
-                    'synchronisation: ':syncbar, 
-                    'synched':sync, 
+                    'minor number': minnum,
+                    'device': device,
+                    'connection state': connstate,
+                    'local role': localrole,
+                    'partner role': partnerrole,
+                    'local disk state': localdiskstate,
+                    'partner disk state': partnerdiskstate,
+                    'synchronisation: ': syncbar,
+                    'synched': sync,
                 }
     return ret
