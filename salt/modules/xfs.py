@@ -84,7 +84,7 @@ def _parse_xfs_info(data):
     Parse output from "xfs_info" or "xfs_growfs -n".
     '''
     ret = {}
-    spr = re.compile("\s+")
+    spr = re.compile(r'\s+')
     entry = None
     for line in [spr.sub(" ", l).strip().replace(", ", " ") for l in data.split("\n")]:
         if not line:
@@ -92,7 +92,7 @@ def _parse_xfs_info(data):
         nfo = _xfs_info_get_kv(line)
         if not line.startswith("="):
             entry = nfo.pop(0)
-            ret[entry[0]] = {'section' : entry[(entry[1] != '***' and 1 or 0)]}
+            ret[entry[0]] = {'section': entry[(entry[1] != '***' and 1 or 0)]}
         ret[entry[0]].update(dict(nfo))
 
     return ret
@@ -129,11 +129,11 @@ def _xfsdump_output(data):
         elif line.startswith("session label:"):
             out['Session label'] = re.sub("^session label: ", "", line)
         elif line.startswith("media file size"):
-            out['Media size'] = re.sub("^media file size\s+", "", line)
+            out['Media size'] = re.sub(r"^media file size\s+", "", line)
         elif line.startswith("dump complete:"):
-            out['Dump complete'] = re.sub("^dump complete:\s+", "", line)
+            out['Dump complete'] = re.sub(r"^dump complete:\s+", "", line)
         elif line.startswith("Dump Status:"):
-            out['Status'] = re.sub("^Dump Status:\s+", "", line)
+            out['Status'] = re.sub(r"^Dump Status:\s+", "", line)
         elif line.startswith("Dump Summary:"):
             summary_block = True
             continue
@@ -182,19 +182,19 @@ def dump(device, destination, level=0, label=None, noerase=None):
     label = label and label or time.strftime("XFS dump for \"{0}\" of %Y.%m.%d, %H:%M".format(device),
                                              time.localtime()).replace("'", '"')
     cmd = ["xfsdump"]
-    cmd.append("-F")                         # Force
+    cmd.append("-F")                          # Force
     if not noerase:
-        cmd.append("-E")                     # pre-erase
-    cmd.append("-L '{0}'".format(label))     # Label
-    cmd.append("-l {0}".format(level))       # Dump level
-    cmd.append("-f {0}".format(destination)) # Media destination
-    cmd.append(device)                       # Device
+        cmd.append("-E")                      # pre-erase
+    cmd.append("-L '{0}'".format(label))      # Label
+    cmd.append("-l {0}".format(level))        # Dump level
+    cmd.append("-f {0}".format(destination))  # Media destination
+    cmd.append(device)                        # Device
 
     cmd = ' '.join(cmd)
     out = __salt__['cmd.run_all'](cmd)
     _verify_run(out, cmd=cmd)
 
-    return  _xfsdump_output(out['stdout'])
+    return _xfsdump_output(out['stdout'])
 
 
 def _xr_to_keyset(line):
@@ -237,7 +237,9 @@ def _xfs_inventory_output(out):
         data.append("},")
     data.append("},")
 
-    data = eval('\n'.join(data))[0]
+    # We are evaling into a python dict, a json load
+    # would be safer
+    data = eval('\n'.join(data))[0]  # pylint: disable=W0123
     data['restore_status'] = out[-1]
 
     return data
@@ -341,7 +343,7 @@ def _xfs_estimate_output(out):
     '''
     Parse xfs_estimate output.
     '''
-    spc = re.compile("\s+")
+    spc = re.compile(r"\s+")
     data = {}
     for line in [l for l in out.split("\n") if l.strip()][1:]:
         directory, bsize, blocks, megabytes, logsize = spc.sub(" ", line).split(" ")
@@ -455,7 +457,7 @@ def modify(device, label=None, lazy_counting=None, uuid=None):
         salt '*' xfs.modify /dev/sda1 uuid=False
         salt '*' xfs.modify /dev/sda1 uuid=True
     '''
-    if not label and lazy_counting == None and uuid == None:
+    if not label and lazy_counting is None and uuid is None:
         raise CommandExecutionError("Nothing specified for modification for \"{0}\" device".format(device))
 
     cmd = ['xfs_admin']
@@ -463,14 +465,14 @@ def modify(device, label=None, lazy_counting=None, uuid=None):
         cmd.append("-L")
         cmd.append("'{0}'".format(label))
 
-    if lazy_counting == False:
+    if lazy_counting is False:
         cmd.append("-c")
         cmd.append("0")
     elif lazy_counting:
         cmd.append("-c")
         cmd.append("1")
 
-    if uuid == False:
+    if uuid is False:
         cmd.append("-U")
         cmd.append("nil")
     elif uuid:
@@ -527,4 +529,3 @@ def defragment(device):
     return {
         'log': out['stdout']
     }
-
