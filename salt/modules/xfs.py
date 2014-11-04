@@ -289,6 +289,13 @@ def _xfs_prune_output(out, uuid):
 def prune_dump(sessionid):
     '''
     Prunes the dump session identified by the given session id.
+    
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' xfs.prune_dump b74a3586-e52e-4a4a-8775-c3334fa8ea2c
+
     '''
     out = __salt__['cmd.run_all']("xfsinvutil -s {0} -F".format(sessionid))
     _verify_run(out)
