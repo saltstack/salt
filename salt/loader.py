@@ -187,6 +187,15 @@ def returners(opts, functions, whitelist=None):
                       )
 
 
+def utils(opts, whitelist=None):
+    '''
+    Returns the utility modules
+    '''
+    load = _create_loader(opts, 'utils', 'utils',
+                          ext_type_dirs='utils_dirs')
+    return LazyLoader(load, whitelist=whitelist)
+
+
 def pillars(opts, functions):
     '''
     Returns the pillars modules
@@ -716,9 +725,9 @@ class Loader(object):
             mod.__salt__ = functions
         try:
             context = sys.modules[
-                functions[functions.keys()[0]].__module__
+                functions[functions.iterkeys().next()].__module__
             ].__context__
-        except (AttributeError, IndexError):
+        except (AttributeError, StopIteration):
             context = {}
         mod.__context__ = context
         return funcs

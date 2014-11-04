@@ -15,6 +15,7 @@ import errno
 import fnmatch
 import hashlib
 import imp
+import io
 import inspect
 import json
 import logging
@@ -823,14 +824,14 @@ def format_call(fun,
 
     aspec = get_function_argspec(fun)
 
-    args, kwargs = arg_lookup(fun).values()
+    args, kwargs = arg_lookup(fun).itervalues()
 
     # Since we WILL be changing the data dictionary, let's change a copy of it
     data = data.copy()
 
     missing_args = []
 
-    for key in kwargs.keys():
+    for key in kwargs:
         try:
             kwargs[key] = data.pop(key)
         except KeyError:
@@ -1790,6 +1791,28 @@ def date_format(date=None, format="%Y-%m-%d"):
     return date_cast(date).strftime(format)
 
 
+def yaml_dquote(text):
+    """Make text into a double-quoted YAML string with correct escaping
+    for special characters.  Includes the opening and closing double
+    quote characters.
+    """
+    with io.StringIO() as ostream:
+        yemitter = yaml.emitter.Emitter(ostream)
+        yemitter.write_double_quoted(unicode(text))
+        return ostream.getvalue()
+
+
+def yaml_squote(text):
+    """Make text into a single-quoted YAML string with correct escaping
+    for special characters.  Includes the opening and closing single
+    quote characters.
+    """
+    with io.StringIO() as ostream:
+        yemitter = yaml.emitter.Emitter(ostream)
+        yemitter.write_single_quoted(unicode(text))
+        return ostream.getvalue()
+
+
 def warn_until(version,
                message,
                category=DeprecationWarning,
@@ -1961,7 +1984,7 @@ def compare_versions(ver1='', oper='==', ver2='', cmp_func=None):
     '''
     cmp_map = {'<': (-1,), '<=': (-1, 0), '==': (0,),
                '>=': (0, 1), '>': (1,)}
-    if oper not in ['!='] + cmp_map.keys():
+    if oper not in ['!='] and oper not in cmp_map:
         log.error('Invalid operator "{0}" for version '
                   'comparison'.format(oper))
         return False
@@ -1985,7 +2008,7 @@ def compare_dicts(old=None, new=None):
     dict describing the changes that were made.
     '''
     ret = {}
-    for key in set((new or {}).keys()).union((old or {}).keys()):
+    for key in set((new or {})).union((old or {})):
         if key not in old:
             # New key
             ret[key] = {'old': '',

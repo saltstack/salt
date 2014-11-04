@@ -140,7 +140,9 @@ def lock(path,
          identifier=None,
          max_concurrency=1,
          timeout=None,
-         ephemeral_lease=False):
+         ephemeral_lease=False,
+         force=False,  # foricble get the lock regardless of open slots
+         ):
     '''
     Get lock (with optional timeout)
     '''
@@ -151,6 +153,11 @@ def lock(path,
                                         identifier,
                                         max_leases=max_concurrency,
                                         ephemeral_lease=ephemeral_lease)
+
+    # forcibly get the lock regardless of max_concurrency
+    if force:
+        SEMAPHORE_MAP[path].assured_path = True
+
     # block waiting for lock acquisition
     if timeout:
         logging.info('Acquiring lock {0} with timeout={1}'.format(path, timeout))

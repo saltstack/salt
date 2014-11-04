@@ -520,6 +520,14 @@ class UtilsTestCase(TestCase):
         ret = utils.date_format(src)
         self.assertEqual(ret, expected_ret)
 
+    def test_yaml_dquote(self):
+        ret = utils.yaml_dquote(r'"\ "')
+        self.assertEqual(ret, r'"\"\\ \""')
+
+    def test_yaml_squote(self):
+        ret = utils.yaml_squote(r'"')
+        self.assertEqual(ret, r"""'"'""")
+
     def test_compare_dicts(self):
         ret = utils.compare_dicts(old={'foo': 'bar'}, new={'foo': 'bar'})
         self.assertEqual(ret, {})

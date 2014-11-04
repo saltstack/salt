@@ -730,7 +730,7 @@ def subnets():
     ifaces = interfaces()
     subnetworks = []
 
-    for ipv4_info in ifaces.values():
+    for ipv4_info in ifaces.itervalues():
         for ipv4 in ipv4_info.get('inet', []):
             if ipv4['address'] == '127.0.0.1':
                 continue
@@ -788,7 +788,7 @@ def ip_addrs(interface=None, include_loopback=False):
                               if k == interface])
         if not target_ifaces:
             log.error('Interface {0} not found.'.format(interface))
-    for ipv4_info in target_ifaces.values():
+    for ipv4_info in target_ifaces.itervalues():
         for ipv4 in ipv4_info.get('inet', []):
             loopback = in_subnet('127.0.0.0/8', [ipv4.get('address')]) or ipv4.get('label') == 'lo'
             if not loopback or include_loopback:
@@ -816,7 +816,7 @@ def ip_addrs6(interface=None, include_loopback=False):
                               if k == interface])
         if not target_ifaces:
             log.error('Interface {0} not found.'.format(interface))
-    for ipv6_info in target_ifaces.values():
+    for ipv6_info in target_ifaces.itervalues():
         for ipv6 in ipv6_info.get('inet6', []):
             if include_loopback or ipv6['address'] != '::1':
                 ret.add(ipv6['address'])

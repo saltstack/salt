@@ -768,7 +768,7 @@ class LocalClient(object):
         # get the info from the cache
         ret = self.get_cache_returns(jid)
         if ret != {}:
-            found.update(set(ret.keys()))
+            found.update(set(ret))
             yield ret
 
         # if you have all the returns, stop
@@ -778,7 +778,7 @@ class LocalClient(object):
         # otherwise, get them from the event system
         for event in event_iter:
             if event != {}:
-                found.update(set(event.keys()))
+                found.update(set(event))
                 yield event
             if len(found.intersection(minions)) >= len(minions):
                 raise StopIteration()
@@ -787,8 +787,7 @@ class LocalClient(object):
     def get_returns_no_block(
             self,
             jid,
-            event=None,
-            gather_errors=False):
+            event=None):
         '''
         Raw function to just return events of jid excluding timeout logic
 
@@ -798,30 +797,17 @@ class LocalClient(object):
             event = self.event
         while True:
             if HAS_ZMQ:
-                if not gather_errors:
-                    try:
-                        raw = event.get_event_noblock()
-                        if raw and raw.get('tag', '').startswith(jid):
-                            yield raw
-                        else:
-                            yield None
-                    except zmq.ZMQError as ex:
-                        if ex.errno == errno.EAGAIN or ex.errno == errno.EINTR:
-                            yield None
-                        else:
-                            raise
-                else:
-                    try:
-                        raw = event.get_event_noblock()
-                        if raw and (raw.get('tag', '').startswith(jid) or raw.get('tag', '').startswith('_salt_error')):
-                            yield raw
-                        else:
-                            yield None
-                    except zmq.ZMQError as ex:
-                        if ex.errno == errno.EAGAIN or ex.errno == errno.EINTR:
-                            yield None
-                        else:
-                            raise
+                try:
+                    raw = event.get_event_noblock()
+                    if raw and raw.get('tag', '').startswith(jid):
+                        yield raw
+                    else:
+                        yield None
+                except zmq.ZMQError as ex:
+                    if ex.errno == errno.EAGAIN or ex.errno == errno.EINTR:
+                        yield None
+                    else:
+                        raise
             else:
                 raw = event.get_event_noblock()
                 if raw and raw.get('tag', '').startswith(jid):
@@ -837,7 +823,6 @@ class LocalClient(object):
             tgt='*',
             tgt_type='glob',
             expect_minions=False,
-            gather_errors=True,
             **kwargs):
         '''
         Watch the event system and return job data as it comes in
@@ -868,7 +853,7 @@ class LocalClient(object):
         syndic_wait = 0
         last_time = False
         # iterator for this job's return
-        ret_iter = self.get_returns_no_block(jid, gather_errors=gather_errors)
+        ret_iter = self.get_returns_no_block(jid)
         # iterator for the info of this job
         jinfo_iter = []
         timeout_at = time.time() + timeout
@@ -886,10 +871,7 @@ class LocalClient(object):
                 # if we got None, then there were no events
                 if raw is None:
                     break
-                if gather_errors:
-                    if raw['tag'] == '_salt_error':
-                        ret = {raw['data']['id']: raw['data']['data']}
-                        yield ret
+
                 if 'minions' in raw.get('data', {}):
                     minions.update(raw['data']['minions'])
                     continue
@@ -1078,7 +1060,7 @@ class LocalClient(object):
                 ret[minion] = m_data
 
         # if we have all the minion returns, lets just return
-        if len(set(ret.keys()).intersection(minions)) >= len(minions):
+        if len(set(ret).intersection(minions)) >= len(minions):
             return ret
 
         # otherwise lets use the listener we created above to get the rest
@@ -1094,7 +1076,7 @@ class LocalClient(object):
                     ret[minion] = m_data
 
             # are we done yet?
-            if len(set(ret.keys()).intersection(minions)) >= len(minions):
+            if len(set(ret).intersection(minions)) >= len(minions):
                 return ret
 
         # otherwise we hit the timeout, return what we have

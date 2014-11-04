@@ -69,17 +69,6 @@ def wrap_tmpl_func(render_str):
             context['sls_path'] = slspath.replace('/', '_')
             context['slspath'] = slspath
 
-        if 'sls' in context:
-            slspath = context['sls'].replace('.', '/')
-            if tmplpath is not None:
-                context['tplpath'] = tmplpath
-                if not tmplpath.lower().replace('\\', '/').endswith('/init.sls'):
-                    slspath = os.path.dirname(slspath)
-            context['slsdotpath'] = slspath.replace('/', '.')
-            context['slscolonpath'] = slspath.replace('/', ':')
-            context['sls_path'] = slspath.replace('/', '_')
-            context['slspath'] = slspath
-
         if isinstance(tmplsrc, string_types):
             if from_str:
                 tmplstr = tmplsrc
@@ -274,6 +263,8 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
 
     jinja_env.filters['strftime'] = salt.utils.date_format
     jinja_env.filters['sequence'] = ensure_sequence_filter
+    jinja_env.filters['yaml_dquote'] = salt.utils.yaml_dquote
+    jinja_env.filters['yaml_squote'] = salt.utils.yaml_squote
 
     jinja_env.globals['odict'] = OrderedDict
     jinja_env.globals['show_full_context'] = show_full_context

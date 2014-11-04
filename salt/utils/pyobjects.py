@@ -282,9 +282,9 @@ class SaltObject(object):
 
         # now transform using namedtuples
         self.mods = {}
-        for mod in _mods.keys():
+        for mod in _mods:
             mod_name = '{0}Module'.format(str(mod).capitalize())
-            mod_object = namedtuple(mod_name, _mods[mod].keys())
+            mod_object = namedtuple(mod_name, _mods[mod])
 
             self.mods[mod] = mod_object(**_mods[mod])
 

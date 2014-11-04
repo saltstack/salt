@@ -89,6 +89,42 @@ class SMaster(object):
         return salt.daemons.masterapi.access_keys(self.opts)
 
 
+class Scheduler(multiprocessing.Process):
+    '''
+    The master scheduler process.
+
+    This runs in its own process so that it can have a fully
+    independent loop from the Maintenance process.
+    '''
+    def __init__(self, opts):
+        super(Scheduler, self).__init__()
+        self.opts = opts
+        # Init Scheduler
+        self.schedule = salt.utils.schedule.Schedule(self.opts,
+                                                    salt.loader.runner(self.opts),
+                                                    returners=salt.loader.returners(self.opts, {}))
+
+    def run(self):
+        salt.utils.appendproctitle('Scheduler')
+        while True:
+            self.handle_schedule()
+            try:
+                time.sleep(self.schedule.loop_interval)
+            except KeyboardInterrupt:
+                break
+
+    def handle_schedule(self):
+        '''
+        Evaluate the scheduler
+        '''
+        try:
+            self.schedule.eval()
+        except Exception as exc:
+            log.error(
+                'Exception {0} occurred in scheduled job'.format(exc)
+            )
+
+
 class Maintenance(multiprocessing.Process):
     '''
     A generalized maintenence process which performances maintenence
@@ -104,14 +140,7 @@ class Maintenance(multiprocessing.Process):
         self.opts = opts
         # Init fileserver manager
         self.fileserver = salt.fileserver.Fileserver(self.opts)
-        # Load Runners
-        self.runners = salt.loader.runner(self.opts)
-        # Load Returners
-        self.returners = salt.loader.returners(self.opts, {})
-        # Init Scheduler
-        self.schedule = salt.utils.schedule.Schedule(self.opts,
-                                                     self.runners,
-                                                     returners=self.returners)
+        # Matcher
         self.ckminions = salt.utils.minions.CkMinions(self.opts)
         # Make Event bus for firing
         self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
@@ -147,7 +176,6 @@ class Maintenance(multiprocessing.Process):
                 salt.daemons.masterapi.clean_expired_tokens(self.opts)
             self.handle_search(now, last)
             self.handle_pillargit()
-            self.handle_schedule()
             self.handle_presence(old_present)
             self.handle_key_rotate(now)
             salt.daemons.masterapi.fileserver_update(self.fileserver)
@@ -193,21 +221,6 @@ class Maintenance(multiprocessing.Process):
         except Exception as exc:
             log.error('Exception {0} occurred in file server update '
                       'for git_pillar module.'.format(exc))
-
-    def handle_schedule(self):
-        '''
-        Evaluate the scheduler
-        '''
-        try:
-            self.schedule.eval()
-            # Check if scheduler requires lower loop interval than
-            # the loop_interval setting
-            if self.schedule.loop_interval < self.loop_interval:
-                self.loop_interval = self.schedule.loop_interval
-        except Exception as exc:
-            log.error(
-                'Exception {0} occurred in scheduled job'.format(exc)
-            )
 
     def handle_presence(self, old_present):
         '''
@@ -302,17 +315,6 @@ class Master(SMaster):
                     )
                 )
 
-    def __handle_error_react(self, event):
-        log.error('Received minion error from [{minion}]: {data}'.format(minion=event['id'], data=event['data']['exception']))
-
-    def __register_reactions(self):
-        '''
-        Register any reactions the master will need
-        '''
-        log.info('Registering master reactions')
-        log.info('Registering master error handling')
-        self.opts['reactor'].append({'_salt_error': self.__handle_error_react})
-
     def _pre_flight(self):
         '''
         Run pre flight checks. If anything in this method fails then the master
@@ -320,7 +322,6 @@ class Master(SMaster):
         '''
         errors = []
         fileserver = salt.fileserver.Fileserver(self.opts)
-        self.__register_reactions()
         if not fileserver.servers:
             errors.append(
                 'Failed to load fileserver backends, the configured backends '
@@ -351,6 +352,8 @@ class Master(SMaster):
         process_manager = salt.utils.process.ProcessManager()
         log.info('Creating master maintenance process')
         process_manager.add_process(Maintenance, args=(self.opts,))
+        log.info('Creating master scheduler process')
+        process_manager.add_process(Scheduler, args=(self.opts,))
         log.info('Creating master publisher process')
         process_manager.add_process(Publisher, args=(self.opts,))
         log.info('Creating master event publisher process')
@@ -1138,7 +1141,7 @@ class AESFuncs(object):
             return False
         load['grains']['id'] = load['id']
         mods = set()
-        for func in self.mminion.functions.values():
+        for func in self.mminion.functions.itervalues():
             mods.add(func.__module__)
         for mod in mods:
             sys.modules[mod].__grains__ = load['grains']

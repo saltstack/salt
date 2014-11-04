@@ -1751,7 +1751,7 @@ def _run_wrapper(status, container, func, cmd, *args, **kwargs):
             _invalid(status, id_=container, comment='Container is not running')
             return status
         full_cmd = ('nsenter --target {pid} --mount --uts --ipc --net --pid'
-                    ' {cmd}'.format(pid=container_pid, cmd=cmd))
+                    ' -- {cmd}'.format(pid=container_pid, cmd=cmd))
     else:
         raise NotImplementedError(
             'Unknown docker ExecutionDriver {0!r}. Or didn\'t find command'

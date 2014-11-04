@@ -322,6 +322,57 @@ class BotoVpcTestCase(BotoVpcTestCaseBase):
 
         self.assertFalse(vpc_deletion_result)
 
+    @mock_ec2
+    def test_that_when_describing_vpc_by_id_it_returns_the_dict_of_properties_returns_true(self):
+        '''
+        Tests describing parameters via vpc id if vpc exist
+        '''
+        vpc = self._create_vpc(name='test', tags={'test': 'testvalue'})
+
+        describe_vpc = boto_vpc.describe(vpc_id=vpc.id, **conn_parameters)
+
+        vpc_properties = dict(cidr_block=unicode(cidr_block),
+                              is_default=None,
+                              state=u'available',
+                              tags={'Name': 'test', 'test': 'testvalue'},
+                              dhcp_options_id=u'dopt-7a8b9c2d',
+                              instance_tenancy=u'default')
+
+        self.assertEqual(describe_vpc, vpc_properties)
+
+    @mock_ec2
+    def test_that_when_describing_vpc_by_id_it_returns_the_dict_of_properties_returns_false(self):
+        '''
+        Tests describing parameters via vpc id if vpc does not exist
+        '''
+        vpc = self._create_vpc(name='test', tags={'test': 'testvalue'})
+
+        describe_vpc = boto_vpc.describe(vpc_id='vpc-fake', **conn_parameters)
+
+        self.assertFalse(describe_vpc)
+
+    @mock_ec2
+    def test_that_when_describing_vpc_by_id_on_connection_error_it_returns_returns_false(self):
+        '''
+        Tests describing parameters failure
+        '''
+        vpc = self._create_vpc(name='test', tags={'test': 'testvalue'})
+
+        with patch('moto.ec2.models.VPCBackend.get_all_vpcs',
+                   side_effect=BotoServerError(400, 'Mocked error')):
+            describe_vpc = boto_vpc.describe(vpc_id=vpc.id, **conn_parameters)
+
+        self.assertFalse(describe_vpc)
+
+    @mock_ec2
+    def test_that_when_describing_vpc_but_providing_no_vpc_id_the_describe_method_raises_a_salt_invocation_error(self):
+        '''
+        Tests describing vpc  without vpc id
+        '''
+        with self.assertRaisesRegexp(SaltInvocationError,
+                                     'VPC ID needs to be specified.'):
+            boto_vpc.describe(vpc_id=None, **conn_parameters)
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')

@@ -427,7 +427,7 @@ class SaltEvent(object):
         # that poller gets garbage collected. The Poller itself, its
         # registered sockets and the Context
         if isinstance(self.poller.sockets, dict):
-            for socket in self.poller.sockets.keys():
+            for socket in self.poller.sockets:
                 if socket.closed is False:
                     socket.setsockopt(zmq.LINGER, linger)
                     socket.close()
@@ -639,12 +639,10 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
                 continue
             if len(ropt) != 1:
                 continue
-            key = ropt.keys()[0]
+            key = ropt.iterkeys().next()
             val = ropt[key]
             if fnmatch.fnmatch(tag, key):
                 if isinstance(val, string_types):
-                    reactors.append(val)
-                elif hasattr(val, '__call__'):
                     reactors.append(val)
                 elif isinstance(val, list):
                     reactors.extend(val)
@@ -658,9 +656,6 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         high = {}
         chunks = []
         for fn_ in reactors:
-            if hasattr(fn_, '__call__'):  # Is a func
-                fn_(data)
-                continue
             high.update(self.render_reaction(fn_, tag, data))
         if high:
             errors = self.verify_high(high)
