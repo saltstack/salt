@@ -197,7 +197,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
     data = __salt__['lxc.list'](host, quiet=True)
     for host, containers in data.items():
         for name in names:
-            if name in sum(containers.values(), []):
+            if name in sum(containers.itervalues(), []):
                 log.info('Container \'{0}\' already exists'
                          ' on host \'{1}\','
                          ' init can be a NO-OP'.format(
@@ -363,7 +363,7 @@ def _list_iter(host=None):
         if not isinstance(container_info, dict):
             continue
         chunk = {}
-        id_ = container_info.keys()[0]
+        id_ = container_info.iterkeys().next()
         if host and host != id_:
             continue
         if not isinstance(container_info[id_], dict):

@@ -125,7 +125,7 @@ def present(
             _val = _attributes.get(attr, None)
             if str(_val) != str(val):
                 attrs_to_set[attr] = val
-    attr_names = ','.join(attrs_to_set.keys())
+    attr_names = ','.join(attrs_to_set)
     if attrs_to_set:
         if __opts__['test']:
             ret['comment'] = 'Attribute(s) {0} to be set on {1}.'.format(
