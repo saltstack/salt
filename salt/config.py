@@ -639,11 +639,23 @@ def _validate_file_roots(opts):
     if not isinstance(opts['file_roots'], dict):
         log.warning('The file_roots parameter is not properly formatted,'
                     ' using defaults')
-        return {'base': [salt.syspaths.BASE_FILE_ROOTS_DIR]}
+        return {'base': _expand_glob_path([salt.syspaths.BASE_FILE_ROOTS_DIR])}
     for saltenv, dirs in list(opts['file_roots'].items()):
         if not isinstance(dirs, list) and not isinstance(dirs, tuple):
             opts['file_roots'][saltenv] = []
+        opts['file_roots'][saltenv] = _expand_glob_path(opts['file_roots'][saltenv])
     return opts['file_roots']
+
+
+def _expand_glob_path(file_roots):
+    '''
+    Applies shell globbing to a set of directories and returns
+    the expanded paths
+    '''
+    unglobbed_path = []
+    for path in file_roots:
+        unglobbed_path.extend(glob.glob(path))
+    return unglobbed_path
 
 
 def _validate_opts(opts):
