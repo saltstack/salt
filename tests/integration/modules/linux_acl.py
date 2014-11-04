@@ -5,7 +5,7 @@ import os
 import shutil
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath, requires_salt_modules, skip_if_binaries_missing
+from salttesting.helpers import ensure_in_syspath, skip_if_binaries_missing
 import salt.utils
 ensure_in_syspath('../../')
 
@@ -53,7 +53,7 @@ class LinuxAclModuleTest(integration.ModuleCase,
             os.remove(self.mybadsymlink)
         shutil.rmtree(self.mydir, ignore_errors=True)
         super(LinuxAclModuleTest, self).tearDown()
-    
+
     def test_version(self):
         self.assertRegexpMatches(self.run_function('acl.version'), r'\d+\.\d+\.\d+')
 
@@ -67,4 +67,4 @@ class LinuxAclModuleTest(integration.ModuleCase,
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(TestModuleTest)
+    run_tests(LinuxAclModuleTest)
