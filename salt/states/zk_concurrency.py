@@ -42,8 +42,6 @@ This example would allow the file state to change, but would limit the
 concurrency of the trafficserver service restart to 4.
 '''
 
-import logging
-
 REQUIRED_FUNCS = ('zk_concurrency.lock', 'zk_concurrency.unlock')
 __virtualname__ = 'zk_concurrency'
 
