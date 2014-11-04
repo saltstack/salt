@@ -910,7 +910,7 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
                 return
             #d_estate = self.road_stack.value.remotes.values()[0].name
             msg['route']['dst'] = (d_estate, d_yard, d_share)
-            log.error("**** Missing destination estate for 'remote_cmd'. "
+            log.debug("**** Missing destination estate for 'remote_cmd'. "
                     "Using default route={0}.".format(msg['route']['dst']))
             self.road_stack.value.message(msg,
                     self.road_stack.value.nameRemotes[d_estate].uid)
@@ -928,7 +928,7 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
             #d_estate = self.road_stack.value.remotes.values()[0].name
             d_share = 'remote_cmd'
             msg['route']['dst'] = (d_estate, d_yard, d_share)
-            log.error("**** Missing destination estate for 'call_cmd'. "
+            log.debug("**** Missing destination estate for 'call_cmd'. "
                         "Using default route={0}.".format(msg['route']['dst']))
             self.road_stack.value.message(msg,
                     self.road_stack.value.nameRemotes[d_estate].uid)
