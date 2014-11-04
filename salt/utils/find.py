@@ -89,6 +89,7 @@ import logging
 import os
 import re
 import stat
+import shutil
 import sys
 import time
 try:
@@ -509,6 +510,35 @@ class PrintOption(Option):
             return result[0]
         else:
             return result
+
+
+class DeleteOption(TypeOption):
+    '''
+    Deletes matched file.
+    Delete options are one or more of the following:
+        a: all file types
+        b: block device
+        c: character device
+        d: directory
+        p: FIFO (named pipe)
+        f: plain file
+        l: symlink
+        s: socket
+    '''
+    def __init__(self, key, value):
+        if 'a' in value:
+            value = 'bcdpfls'
+        super(self.__class__, self).__init__(key, value)
+
+    def execute(self, fullpath, fstat):
+        try:
+            if os.path.isfile(fullpath) or os.path.islink(fullpath):
+                os.remove(fullpath)
+            elif os.path.isdir(fullpath):
+                shutil.rmtree(fullpath)
+        except (OSError, IOError) as exc:
+            return None
+        return fullpath
 
 
 class Finder(object):
