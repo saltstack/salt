@@ -259,7 +259,7 @@ def managed(name, **kwargs):
         for kwarg in sanitizedkwargs:
             if kwarg == 'repo':
                 pass
-            elif kwarg not in repo.keys():
+            elif kwarg not in repo:
                 notset = True
             elif kwarg == 'comps':
                 if sorted(sanitizedkwargs[kwarg]) != sorted(repo[kwarg]):
@@ -392,7 +392,7 @@ def absent(name, **kwargs):
         return ret
     __salt__['pkg.del_repo'](repo=name, **kwargs)
     repos = __salt__['pkg.list_repos']()
-    if name not in repos.keys():
+    if name not in repos:
         ret['result'] = True
         ret['changes'] = {'repo': name}
         ret['comment'] = 'Removed package repo {0}'.format(name)

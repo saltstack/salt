@@ -67,7 +67,7 @@ def query(hyper=None, quiet=False):
         if not isinstance(info, dict):
             continue
         chunk = {}
-        id_ = info.keys()[0]
+        id_ = info.iterkeys().next()
         if hyper:
             if hyper != id_:
                 continue
@@ -101,7 +101,7 @@ def list(hyper=None, quiet=False):  # pylint: disable=redefined-builtin
         if not isinstance(info, dict):
             continue
         chunk = {}
-        id_ = info.keys()[0]
+        id_ = info.iterkeys().next()
         if hyper:
             if hyper != id_:
                 continue
@@ -258,7 +258,7 @@ def reset(name):
     if not data:
         print('Failed to find vm {0} to reset'.format(name))
         return 'fail'
-    hyper = data.keys()[0]
+    hyper = data.iterkeys().next()
     cmd_ret = client.cmd_iter(
             hyper,
             'virt.reset',
@@ -280,7 +280,7 @@ def start(name):
     if not data:
         print('Failed to find vm {0} to start'.format(name))
         return 'fail'
-    hyper = data.keys()[0]
+    hyper = data.iterkeys().next()
     if data[hyper][name]['state'] == 'running':
         print('VM {0} is already running'.format(name))
         return 'bad state'
@@ -305,7 +305,7 @@ def force_off(name):
     if not data:
         print('Failed to find vm {0} to destroy'.format(name))
         return 'fail'
-    hyper = data.keys()[0]
+    hyper = data.iterkeys().next()
     if data[hyper][name]['state'] == 'shutdown':
         print('VM {0} is already shutdown'.format(name))
         return'bad state'
@@ -330,7 +330,7 @@ def purge(name, delete_key=True):
     if not data:
         print('Failed to find vm {0} to purge'.format(name))
         return 'fail'
-    hyper = data.keys()[0]
+    hyper = data.iterkeys().next()
     cmd_ret = client.cmd_iter(
             hyper,
             'virt.purge',
@@ -357,7 +357,7 @@ def pause(name):
     if not data:
         print('Failed to find VM {0} to pause'.format(name))
         return 'fail'
-    hyper = data.keys()[0]
+    hyper = data.iterkeys().next()
     if data[hyper][name]['state'] == 'paused':
         print('VM {0} is already paused'.format(name))
         return 'bad state'
@@ -382,7 +382,7 @@ def resume(name):
     if not data:
         print('Failed to find VM {0} to pause'.format(name))
         return 'not found'
-    hyper = data.keys()[0]
+    hyper = data.iterkeys().next()
     if data[hyper][name]['state'] != 'paused':
         print('VM {0} is not paused'.format(name))
         return 'bad state'
@@ -406,8 +406,8 @@ def migrate(name, target=''):
     data = query(quiet=True)
     origin_data = _find_vm(name, data, quiet=True)
     try:
-        origin_hyper = origin_data.keys()[0]
-    except IndexError:
+        origin_hyper = origin_data.iterkeys().next()
+    except StopIteration:
         print('Named vm {0} was not found to migrate'.format(name))
         return ''
     disks = origin_data[origin_hyper][name]['disks']

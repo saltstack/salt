@@ -189,7 +189,7 @@ def load_args_and_kwargs(func, args, data=None):
                     'by salt.utils.args.parse_input() before calling '
                     'salt.minion.load_args_and_kwargs().'
                 )
-                if argspec.keywords or string_kwarg.keys()[0] in argspec.args:
+                if argspec.keywords or string_kwarg.iterkeys().next() in argspec.args:
                     # Function supports **kwargs or is a positional argument to
                     # the function.
                     _kwargs.update(string_kwarg)
@@ -512,7 +512,12 @@ class MultiMinion(MinionBase):
 
         while True:
             package = None
-
+            for minion in minions.itervalues():
+                if isinstance(minion, dict):
+                    minion = minion['minion']
+                if not hasattr(minion, 'schedule'):
+                    continue
+                loop_interval = self.process_schedule(minion, loop_interval)
             socks = dict(self.poller.poll(1))
             if socks.get(self.epull_sock) == zmq.POLLIN:
                 try:
@@ -1801,7 +1806,7 @@ class Minion(MinionBase):
         self._running = False
         if getattr(self, 'poller', None) is not None:
             if isinstance(self.poller.sockets, dict):
-                for socket in self.poller.sockets.keys():
+                for socket in self.poller.sockets:
                     if socket.closed is False:
                         socket.close()
                     self.poller.unregister(socket)

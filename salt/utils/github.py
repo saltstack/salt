@@ -42,7 +42,7 @@ def get_user_pubkeys(users):
     for user in users:
         key_ids = []
         if isinstance(user, dict):
-            tmp_user = user.keys()[0]
+            tmp_user = user.iterkeys().next()
             key_ids = user[tmp_user]
             user = tmp_user
 

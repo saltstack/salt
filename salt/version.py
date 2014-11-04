@@ -262,7 +262,7 @@ class SaltStackVersion(object):
         return cls.from_name(
             cls.VNAMES[
                 max([version_info for version_info in
-                     cls.VNAMES.keys() if
+                     cls.VNAMES if
                      version_info[0] < (sys.maxint - 200)])
             ]
         )

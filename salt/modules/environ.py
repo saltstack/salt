@@ -135,7 +135,7 @@ def setenv(environ, false_unsets=False, clear_all=False, update_minion=False):
         return False
     if clear_all is True:
         # Unset any keys not defined in 'environ' dict supplied by user
-        to_unset = [key for key in os.environ.keys() if key not in environ]
+        to_unset = [key for key in os.environ if key not in environ]
         for key in to_unset:
             ret[key] = setval(key, False, false_unsets)
     for key, val in environ.items():

@@ -152,7 +152,7 @@ def add_user(name, password=None, runas=None):
         # Now, Clear the random password from the account, if necessary
         res2 = clear_password(name, runas)
 
-        if 'Error' in res2.keys():
+        if 'Error' in res2:
             # Clearing the password failed. We should try to cleanup
             # and rerun and error.
             delete_user(name, runas)

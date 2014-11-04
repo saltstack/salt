@@ -2148,7 +2148,7 @@ def access(path, mode):
 
     if mode in modes:
         return os.access(path, modes[mode])
-    elif mode in modes.values():
+    elif mode in modes.itervalues():
         return os.access(path, mode)
     else:
         raise SaltInvocationError('Invalid mode specified.')
@@ -4106,7 +4106,7 @@ def open_files(by_pid=False):
 
     # Then we look at the open files for each PID
     files = {}
-    for pid in pids.keys():
+    for pid in pids:
         ppath = '/proc/{0}'.format(pid)
         try:
             tids = os.listdir('{0}/task'.format(ppath))
