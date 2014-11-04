@@ -4,14 +4,12 @@ Module for running tasks specific for JBoss AS 7.
 
 All module functions require a jboss_config dict object with the following properties set:
   cli_path: the path to jboss-cli script, for example: '/opt/jboss/jboss-7.0/bin/jboss-cli.sh'
-  controller: the ip addres and port of controller, for example: 10.11.12.13:9999
+  controller: the ip address and port of controller, for example: 10.11.12.13:9999
   cli_user: username to connect to jboss administration console if necessary
   cli_password: password to connect to jboss administration console if necessary
 
 '''
 
-
-# Import python libs
 import re
 import logging
 from salt.utils import dictdiffer
@@ -61,7 +59,9 @@ def reload(jboss_config):
     operation = ':reload'
     reload_result = __salt__['jboss7_cli.run_operation'](jboss_config, operation, fail_on_error = False)
     # JBoss seems to occasionaly close the channel immediately when :reload is sent
-    if reload_result['success'] or ( reload_result['success'] == False and 'Operation failed: Channel closed' in reload_result['stdout']):
+    if reload_result['success'] or ( reload_result['success'] == False and
+                                         ('Operation failed: Channel closed' in reload_result['stdout'] or
+                                          'Communication error: java.util.concurrent.ExecutionException: Operation failed' in reload_result['stdout'])):
         return reload_result
     else:
         raise Exception('''Cannot handle error, return code=%(retcode)s, stdout='%(stdout)s', stderr='%(stderr)s' ''' % reload_result)

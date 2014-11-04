@@ -41,7 +41,7 @@ def get_latest_snapshot(artifactory_url, repository, group_id, artifact_id, pack
 
     return __save_artifact(snapshot_url, target_file)
 
-def get_snapshot(artifactory_url, repository, group_id, artifact_id, packaging, version, target_dir='/tmp', target_file=None):
+def get_snapshot(artifactory_url, repository, group_id, artifact_id, packaging, version, snapshot_version=None, target_dir='/tmp', target_file=None):
     '''
        Gets latest snapshot of the desired version of the artifact
        artifactory_url
@@ -64,7 +64,7 @@ def get_snapshot(artifactory_url, repository, group_id, artifact_id, packaging, 
     log.debug('======================== MODULE FUNCTION: artifactory.get_snapshot(artifactory_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, version=%s, target_dir=%s)',
               artifactory_url, repository, group_id, artifact_id, packaging, version, target_dir)
 
-    snapshot_url, file_name = _get_snapshot_url(artifactory_url, repository, group_id, artifact_id, version, packaging)
+    snapshot_url, file_name = _get_snapshot_url(artifactory_url, repository, group_id, artifact_id, version, packaging, snapshot_version)
     target_file = __resolve_target_file(file_name, target_dir, target_file)
 
     return __save_artifact(snapshot_url, target_file)
@@ -103,26 +103,28 @@ def __resolve_target_file(file_name, target_dir, target_file=None):
         target_file = os.path.join(target_dir, file_name)
     return target_file
 
-def _get_snapshot_url(artifactory_url, repository, group_id, artifact_id, version, packaging):
-    snapshot_version_metadata = _get_snapshot_version_metadata(artifactory_url=artifactory_url, repository=repository, group_id=group_id, artifact_id=artifact_id, version=version)
-    if packaging not in snapshot_version_metadata['snapshot_versions']:
-        error_message = '''Cannot find requested packaging '%(packaging)s' in the snapshot version metadata.
-                  artifactory_url: %(artifactory_url)s
-                  repository: %(repository)s
-                  group_id: %(group_id)s
-                  artifact_id: %(artifact_id)s
-                  packaging: %(packaging)s
-                  version: %(version)s''' % {
-                    'artifactory_url': artifactory_url,
-                    'repository': repository,
-                    'group_id': group_id,
-                    'artifact_id': artifact_id,
-                    'packaging': packaging,
-                    'version':version
-                  }
-        raise ArtifactoryError(error_message)
-    snapshot_version = snapshot_version_metadata['snapshot_versions'][packaging]
-    group_url = group_id.replace('.','/')
+def _get_snapshot_url(artifactory_url, repository, group_id, artifact_id, version, packaging, snapshot_version=None):
+    if snapshot_version is None:
+        snapshot_version_metadata = _get_snapshot_version_metadata(artifactory_url=artifactory_url, repository=repository, group_id=group_id, artifact_id=artifact_id, version=version)
+        if packaging not in snapshot_version_metadata['snapshot_versions']:
+            error_message = '''Cannot find requested packaging '%(packaging)s' in the snapshot version metadata.
+                      artifactory_url: %(artifactory_url)s
+                      repository: %(repository)s
+                      group_id: %(group_id)s
+                      artifact_id: %(artifact_id)s
+                      packaging: %(packaging)s
+                      version: %(version)s''' % {
+                        'artifactory_url': artifactory_url,
+                        'repository': repository,
+                        'group_id': group_id,
+                        'artifact_id': artifact_id,
+                        'packaging': packaging,
+                        'version':version
+                      }
+            raise ArtifactoryError(error_message)
+        snapshot_version = snapshot_version_metadata['snapshot_versions'][packaging]
+
+    group_url = __get_group_id_subpath(group_id)
 
     file_name = '%(artifact_id)s-%(snapshot_version)s.%(packaging)s' % {
         'artifact_id': artifact_id,
@@ -144,7 +146,7 @@ def _get_snapshot_url(artifactory_url, repository, group_id, artifact_id, versio
 
 
 def _get_release_url(repository, group_id, artifact_id, packaging, version, artifactory_url):
-    group_url = group_id.replace('.','/')
+    group_url = __get_group_id_subpath(group_id)
     # for released versions the suffix for the file is same as version
     file_name = '%(artifact_id)s-%(version)s.%(packaging)s' % {
         'artifact_id': artifact_id,
@@ -165,7 +167,7 @@ def _get_release_url(repository, group_id, artifact_id, packaging, version, arti
 
 
 def _get_artifact_metadata_url(artifactory_url, repository, group_id, artifact_id):
-    group_url = group_id.replace('.','/')
+    group_url = __get_group_id_subpath(group_id)
     # for released versions the suffix for the file is same as version
     artifact_metadata_url = '%(artifactory_url)s/%(repository)s/%(group_url)s/%(artifact_id)s/maven-metadata.xml' % {
                                  'artifactory_url': artifactory_url,
@@ -198,7 +200,7 @@ def _get_artifact_metadata(artifactory_url, repository, group_id, artifact_id):
 
 # functions for handling snapshots
 def _get_snapshot_version_metadata_url(artifactory_url, repository, group_id, artifact_id, version):
-    group_url = group_id.replace('.','/')
+    group_url = __get_group_id_subpath(group_id)
     # for released versions the suffix for the file is same as version
     snapshot_version_metadata_url = '%(artifactory_url)s/%(repository)s/%(group_url)s/%(artifact_id)s/%(version)s/maven-metadata.xml' % {
                                          'artifactory_url': artifactory_url,
@@ -288,7 +290,9 @@ def __save_artifact(artifact_url, target_file):
 
     return result
 
-
+def __get_group_id_subpath(group_id):
+    group_url = group_id.replace('.','/')
+    return group_url
 
 def __download(request_url):
     log.debug('Downloading content from %s' , request_url )
