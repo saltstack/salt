@@ -205,7 +205,7 @@ class Schedule(object):
             self.intervals = intervals
         else:
             self.intervals = {}
-        if isinstance(returners, dict):
+        if hasattr(returners, '__getitem__'):
             self.returners = returners
         else:
             self.returners = returners.loader.gen_functions()
