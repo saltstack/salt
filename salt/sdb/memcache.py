@@ -38,12 +38,6 @@ import logging
 # import Salt libs
 import salt.utils.memcache
 
-# import third party libs
-try:
-    import memcache
-    HAS_MEMCACHE = True
-except ImportError:
-    HAS_MEMCACHE = False
 
 DEFAULT_HOST = '127.0.0.1'
 DEFAULT_PORT = 11211
@@ -62,7 +56,7 @@ def __virtual__():
     '''
     Only load the module if memcache is installed
     '''
-    if HAS_MEMCACHE:
+    if salt.utils.memcache.HAS_LIBS:
         return __virtualname__
     return False
 
