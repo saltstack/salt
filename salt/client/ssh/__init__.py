@@ -441,7 +441,7 @@ class SSH(object):
         sret = {}
         outputter = self.opts.get('output', 'nested')
         for ret in self.handle_ssh():
-            host = ret.keys()[0]
+            host = ret.iterkeys().next()
             self.cache_job(jid, host, ret[host])
             ret = self.key_deploy(host, ret)
             if not isinstance(ret[host], dict):

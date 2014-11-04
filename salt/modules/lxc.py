@@ -466,7 +466,7 @@ def _get_network_conf(conf_tuples=None, **kwargs):
             new[iface]['lxc.network.hwaddr'] = omac
 
     ret = []
-    for v in new.values():
+    for v in new.itervalues():
         for row in v:
             ret.append({row: v[row]})
     return ret
@@ -2332,7 +2332,7 @@ def write_conf(conf_file, conf):
             if isinstance(line, str):
                 fp_.write(line)
             elif isinstance(line, dict):
-                key = line.keys()[0]
+                key = line.iterkeys().next()
                 out_line = None
                 if isinstance(line[key], str):
                     out_line = ' = '.join((key, line[key]))
@@ -2378,7 +2378,7 @@ def edit_conf(conf_file, out_format='simple', **kwargs):
             data.append(line)
             continue
         else:
-            key = line.keys()[0]
+            key = line.iterkeys().next()
             if key not in kwargs:
                 data.append(line)
                 continue

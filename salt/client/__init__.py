@@ -768,7 +768,7 @@ class LocalClient(object):
         # get the info from the cache
         ret = self.get_cache_returns(jid)
         if ret != {}:
-            found.update(set(ret.keys()))
+            found.update(set(ret))
             yield ret
 
         # if you have all the returns, stop
@@ -778,7 +778,7 @@ class LocalClient(object):
         # otherwise, get them from the event system
         for event in event_iter:
             if event != {}:
-                found.update(set(event.keys()))
+                found.update(set(event))
                 yield event
             if len(found.intersection(minions)) >= len(minions):
                 raise StopIteration()
@@ -1060,7 +1060,7 @@ class LocalClient(object):
                 ret[minion] = m_data
 
         # if we have all the minion returns, lets just return
-        if len(set(ret.keys()).intersection(minions)) >= len(minions):
+        if len(set(ret).intersection(minions)) >= len(minions):
             return ret
 
         # otherwise lets use the listener we created above to get the rest
@@ -1076,7 +1076,7 @@ class LocalClient(object):
                     ret[minion] = m_data
 
             # are we done yet?
-            if len(set(ret.keys()).intersection(minions)) >= len(minions):
+            if len(set(ret).intersection(minions)) >= len(minions):
                 return ret
 
         # otherwise we hit the timeout, return what we have

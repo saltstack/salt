@@ -307,7 +307,7 @@ class SaltRaetRoadStackRejected(ioflo.base.deeding.Deed):
         rejected = False
         if stack and isinstance(stack, RoadStack):
             if stack.remotes:
-                rejected = (stack.remotes.values()[0].acceptance
+                rejected = (stack.remotes.itervalues().next().acceptance
                                 == raeting.acceptances.rejected)
             else:  # no remotes so assume rejected
                 rejected = True
@@ -539,7 +539,7 @@ class SaltLoadPillar(ioflo.base.deeding.Deed):
             master = available_masters[0]
 
         route = {'src': (self.road_stack.value.local.name, None, None),
-                 'dst': (master.name, None, 'remote_cmd')}
+                 'dst': (self.road_stack.value.remotes.itervalues().next().name, None, 'remote_cmd')}
         load = {'id': self.opts.value['id'],
                 'grains': self.grains.value,
                 'saltenv': self.opts.value['environment'],
@@ -901,7 +901,7 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
             #log.error("**** Missing destination estate for 'remote_cmd'. Unable to route "
                                     #"remote_cmd '{0}'.".format(msg))
             #return
-            d_estate = self.road_stack.value.remotes.values()[0].name
+            d_estate = self.road_stack.value.remotes.itervalues().next().name
             msg['route']['dst'] = (d_estate, d_yard, d_share)
             log.error("**** Missing destination estate for 'remote_cmd'. "
                     "Using default route={0}.".format(msg['route']['dst']))
@@ -916,7 +916,7 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
                                                 #"call_cmd '{0}'.".format(msg))
             #return
 
-            d_estate = self.road_stack.value.remotes.values()[0].name
+            d_estate = self.road_stack.value.remotes.itervalues().next().name
             d_share = 'remote_cmd'
             msg['route']['dst'] = (d_estate, d_yard, d_share)
             log.error("**** Missing destination estate for 'call_cmd'. "
@@ -1014,7 +1014,7 @@ class SaltRaetPublisher(ioflo.base.deeding.Deed):
         '''
         pub_data = pub_msg['return']
         # only publish to available minions by intersecting sets
-        minions = self.availables.value & set(self.stack.value.nameRemotes.keys())
+        minions = self.availables.value & set(self.stack.value.nameRemotes)
         for minion in minions:
             uid = self.stack.value.fetchUidByName(minion)
             if uid:

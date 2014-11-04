@@ -113,7 +113,7 @@ def file_list(*packages):
                               'description': ' '.join(comps[3:])}
         if 'No packages found' in line:
             errors.append(line)
-    for pkg in pkgs.keys():
+    for pkg in pkgs:
         files = []
         cmd = 'dpkg -L {0}'.format(pkg)
         for line in __salt__['cmd.run'](cmd).splitlines():
@@ -155,7 +155,7 @@ def file_dict(*packages):
                               'description': ' '.join(comps[3:])}
         if 'No packages found' in line:
             errors.append(line)
-    for pkg in pkgs.keys():
+    for pkg in pkgs:
         files = []
         cmd = 'dpkg -L {0}'.format(pkg)
         for line in __salt__['cmd.run'](cmd).splitlines():

@@ -158,7 +158,7 @@ def extracted(name,
         log.debug('file.managed: {0}'.format(file_result))
         # get value of first key
         try:
-            file_result = file_result[file_result.keys()[0]]
+            file_result = file_result[file_result.iterkeys().next()]
         except AttributeError:
             pass
 

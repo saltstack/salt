@@ -225,7 +225,7 @@ def get_image(conn, vm_):
         'ascii', 'salt-cloud-force-ascii'
     )
 
-    for img in image_list.keys():
+    for img in image_list:
         if vm_image in (image_list[img]['id'], img):
             return image_list[img]['id']
 
@@ -783,7 +783,7 @@ def list_nodes(call=None, **kwargs):
 
     if not server_list:
         return {}
-    for server in server_list.keys():
+    for server in server_list:
         server_tmp = conn.server_show(server_list[server]['id'])[server]
         ret[server] = {
             'id': server_tmp['id'],
@@ -815,7 +815,7 @@ def list_nodes_full(call=None, **kwargs):
 
     if not server_list:
         return {}
-    for server in server_list.keys():
+    for server in server_list:
         try:
             ret[server] = conn.server_show_libcloud(
                 server_list[server]['id']

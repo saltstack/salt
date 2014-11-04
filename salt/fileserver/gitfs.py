@@ -1260,7 +1260,7 @@ def serve_file(load, fnd):
         log.debug(
             'Not all of the required keys present in payload. '
             'Missing: {0}'.format(
-                ', '.join(required_load_keys.difference(load.keys()))
+                ', '.join(required_load_keys.difference(load))
             )
         )
         return ret
