@@ -45,6 +45,21 @@ class LinuxAclTestCase(TestCase):
         linux_acl.getfacl(*self.files)
         self.cmdrun.assert_called_once_with('getfacl -p ' + ' '.join(self.files))
 
+    def test_getfacl_wo_args(self):
+        self.assertRaises(CommandExecutionError, linux_acl.getfacl)
+
+    def test_getfacl_w_single_arg(self):
+        linux_acl.getfacl(self.file)
+        self.cmdrun.assert_called_once_with('getfacl -p ' + self.file)
+
+    def test_getfacl_w_multiple_args(self):
+        linux_acl.getfacl(*self.files)
+        self.cmdrun.assert_called_once_with('getfacl -p ' + ' '.join(self.files))
+
+    def test_getfacl__recursive_w_multiple_args(self):
+        linux_acl.getfacl(*self.files, recursive=True)
+        self.cmdrun.assert_called_once_with('getfacl -p -R ' + ' '.join(self.files))
+
     def test_wipefacls_wo_args(self):
         self.assertRaises(CommandExecutionError, linux_acl.wipefacls)
 
@@ -55,6 +70,10 @@ class LinuxAclTestCase(TestCase):
     def test_wipefacls_w_multiple_args(self):
         linux_acl.wipefacls(*self.files)
         self.cmdrun.assert_called_once_with('setfacl -b ' + ' '.join(self.files))
+
+    def test_wipefacls__recursive_w_multiple_args(self):
+        linux_acl.wipefacls(*self.files, recursive=True)
+        self.cmdrun.assert_called_once_with('setfacl -b -R ' + ' '.join(self.files))
 
     def test_modfacl_wo_args(self):
         for acl in [self.u_acl, self.user_acl, self.g_acl, self.group_acl]:
@@ -116,6 +135,10 @@ class LinuxAclTestCase(TestCase):
         linux_acl.modfacl(*(self.default_user_acl + self.files))
         self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.default_user_acl_cmd] + self.files))
 
+    def test_modfacl__recursive_w_multiple_args(self):
+        linux_acl.modfacl(*(self.user_acl + self.files), recursive=True)
+        self.cmdrun.assert_called_once_with('setfacl -m -R ' + ' '.join([self.user_acl_cmd] + self.files))
+
     def test_delfacl_wo_args(self):
         for acl in [self.u_acl, self.user_acl, self.g_acl, self.group_acl]:
             self.assertRaises(CommandExecutionError, linux_acl.delfacl, *acl[:-1])
@@ -175,3 +198,7 @@ class LinuxAclTestCase(TestCase):
     def test_delfacl__default_user_w_multiple_args(self):
         linux_acl.delfacl(*(self.default_user_acl[:-1] + self.files))
         self.cmdrun.assert_called_once_with('setfacl -x ' + ' '.join([self.default_user_acl_cmd.rpartition(':')[0]] + self.files))
+
+    def test_delfacl__recursive_w_multiple_args(self):
+        linux_acl.delfacl(*(self.default_user_acl[:-1] + self.files), recursive=True)
+        self.cmdrun.assert_called_once_with('setfacl -x -R ' + ' '.join([self.default_user_acl_cmd.rpartition(':')[0]] + self.files))
