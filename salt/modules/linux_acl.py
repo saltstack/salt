@@ -41,7 +41,7 @@ def _raise_on_no_files(*args):
         raise CommandExecutionError('You need to specify at least one file or directory to work with!')
 
 
-def getfacl(*args):
+def getfacl(*args, **kwargs):
     '''
     Return (extremely verbose) map of FACLs on specified file(s)
 
@@ -51,11 +51,16 @@ def getfacl(*args):
 
         salt '*' acl.getfacl /tmp/house/kitchen
         salt '*' acl.getfacl /tmp/house/kitchen /tmp/house/livingroom
+        salt '*' acl.getfacl /tmp/house/kitchen /tmp/house/livingroom recursive=True
     '''
+    recursive = kwargs.pop('recursive', False)
+
     _raise_on_no_files(*args)
 
     ret = {}
     cmd = 'getfacl -p'
+    if recursive:
+        cmd += ' -R'
     for dentry in args:
         cmd += ' {0}'.format(dentry)
     out = __salt__['cmd.run'](cmd).splitlines()
@@ -155,7 +160,7 @@ def _parse_acl(acl, user, group):
     return vals
 
 
-def wipefacls(*args):
+def wipefacls(*args, **kwargs):
     '''
     Remove all FACLs from the specified file(s)
 
@@ -165,16 +170,21 @@ def wipefacls(*args):
 
         salt '*' acl.wipefacls /tmp/house/kitchen
         salt '*' acl.wipefacls /tmp/house/kitchen /tmp/house/livingroom
+        salt '*' acl.wipefacls /tmp/house/kitchen /tmp/house/livingroom recursive=True
     '''
+    recursive = kwargs.pop('recursive', False)
+
     _raise_on_no_files(*args)
     cmd = 'setfacl -b'
+    if recursive:
+        cmd += ' -R'
     for dentry in args:
         cmd += ' {0}'.format(dentry)
     __salt__['cmd.run'](cmd)
     return True
 
 
-def modfacl(acl_type, acl_name, perms, *args):
+def modfacl(acl_type, acl_name, perms, *args, **kwargs):
     '''
     Add or modify a FACL for the specified file(s)
 
@@ -186,10 +196,15 @@ def modfacl(acl_type, acl_name, perms, *args):
         salt '*' acl.modfacl default:group mygroup rx /tmp/house/kitchen
         salt '*' acl.modfacl d:u myuser 7 /tmp/house/kitchen
         salt '*' acl.modfacl g mygroup 0 /tmp/house/kitchen /tmp/house/livingroom
+        salt '*' acl.modfacl user myuser rwx /tmp/house/kitchen recursive=True
     '''
+    recursive = kwargs.pop('recursive', False)
+
     _raise_on_no_files(*args)
 
     cmd = 'setfacl -m'
+    if recursive:
+        cmd += ' -R'
 
     prefix = ''
     if acl_type.startswith('d'):
@@ -208,7 +223,7 @@ def modfacl(acl_type, acl_name, perms, *args):
     return True
 
 
-def delfacl(acl_type, acl_name, *args):
+def delfacl(acl_type, acl_name, *args, **kwargs):
     '''
     Remove specific FACL from the specified file(s)
 
@@ -220,10 +235,15 @@ def delfacl(acl_type, acl_name, *args):
         salt '*' acl.delfacl default:group mygroup /tmp/house/kitchen
         salt '*' acl.delfacl d:u myuser /tmp/house/kitchen
         salt '*' acl.delfacl g myuser /tmp/house/kitchen /tmp/house/livingroom
+        salt '*' acl.delfacl user myuser /tmp/house/kitchen recursive=True
     '''
+    recursive = kwargs.pop('recursive', False)
+
     _raise_on_no_files(*args)
 
     cmd = 'setfacl -x'
+    if recursive:
+        cmd += ' -R'
 
     prefix = ''
     if acl_type.startswith('d'):
