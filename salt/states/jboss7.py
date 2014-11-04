@@ -38,7 +38,7 @@ Example of application deployment:
   jboss7.deployed:
    - artifact:
        artifactory_url: {{ pillar['artifactory']['url'] }}
-       repository: 'ext-snapshot-local'
+       repository: {{ pillar['artifactory']['repository'] }}
        artifact_id: 'webcomponent'
        group_id: 'com.company.application'
        packaging: 'war'
@@ -283,37 +283,26 @@ def deployed(name, jboss_config, artifact=None, salt_source=None):
     jboss_config:
         Dict with connection properties (see state description)
     artifact:
-        Details of the artifact to be downloaded from artifactory. Setting this dictionary implies deployment from artifactory
-        - artifactory_url: URL of the artifactory instance
-        - repository: Repository in artifactory
-        - artifact_id: Artifact ID
-        - group_id: Group ID
-        - packaging: Packaging
-        - version: Version
-        - target_dir: Temporary directory on minion where artifacts will be downloaded
+        If set, the artifact to be deployed will be fetched from artifactory. This is a Dict object with the following properties:
+           - artifactory_url: Full url to artifactory instance, for example: http://artifactory.intranet.company.com/artifactory
+           - repository: One of the repositories, for example: libs-snapshots, ext-release-local, etc..
+           - artifact_id: Artifact ID of the artifact
+           - group_id: Group ID of the artifact
+           - packaging: war/jar/ear, etc...
+           - version: Artifact version. If latest_snapshot is set to True, the value of this attribute will be ignored, and newest snapshot will be taken instead.
+           - latest_snapshot: If set to True and repository is a snapshot repository it will automatically select the newest snapshot.
+           - target_dir: Temporary directory on minion where artifacts will be downloaded
     salt_source:
-        Details of the file to be downloaded from the salt server. Setting this dictionary implies deployment from salt master.
-        - source: File on salt master (eg. salt://application-web-0.39.war)
-        - target_file: Temporary file on minion to save file to (eg. '/tmp/application-web-0.39.war')
-        - undeploy: Regular expression to match against existing deployments. If any deployment matches the regular expression then it will be undeployed.
+        If set, the artifact to be deployed will be fetched from salt master. This is a Dict object with the following properties:
+           - source: File on salt master (eg. salt://application-web-0.39.war)
+           - target_file: Temporary file on minion to save file to (eg. '/tmp/application-web-0.39.war')
+           - undeploy: Regular expression to match against existing deployments. If any deployment matches the regular expression then it will be undeployed.
 
     The deployment consists of the following steps:
     1) Fetch artifact (salt filesystem, artifact or filesystem on minion)
     2) Check if same artifact is not deployed yet (perhaps with different version)
     3) Undeploy the artifact if it is already deployed
     4) Deploy the new artifact
-
-    jboss_config:
-        Dict with connection properties (see state description)
-    artifact:
-        If set, the artifact to be deployed will be fetched from artifactory. This is a Dict object with the following properties:
-           artifactory_url: Full url to artifactory instance, for example: http://artifactory.intranet.company.com/artifactory
-           repository: One of the repositories, for example: libs-snapshots, ext-release-local, etc..
-           artifact_id: Artifact ID of the artifact
-           group_id: Group ID of the artifact
-           packaging: war/jar/ear
-           version: Artifact version. If latest_snapshot is set to True, the value of this attribute will be ignored, and newest snapshot will be taken instead.
-           latest_snapshot: If set to true and repository is a snapshot repository it will automatically select the newest snapshot.
 
     Example ::
 
@@ -565,13 +554,23 @@ def __fetch_from_artifactory(artifact):
                                                                       packaging=artifact['packaging'],
                                                                       target_dir=target_dir)
     elif str(artifact['version']).endswith('SNAPSHOT'):
-        fetch_result = __salt__['artifactory.get_snapshot'](artifactory_url=artifact['artifactory_url'],
-                                                                   repository=artifact['repository'],
-                                                                   group_id=artifact['group_id'],
-                                                                   artifact_id=artifact['artifact_id'],
-                                                                   packaging=artifact['packaging'],
-                                                                   version=artifact['version'],
-                                                                   target_dir=target_dir)
+        if 'snapshot_version' in artifact:
+            fetch_result = __salt__['artifactory.get_snapshot'](artifactory_url=artifact['artifactory_url'],
+                                                                       repository=artifact['repository'],
+                                                                       group_id=artifact['group_id'],
+                                                                       artifact_id=artifact['artifact_id'],
+                                                                       packaging=artifact['packaging'],
+                                                                       version=artifact['version'],
+                                                                       snapshot_version=artifact['snapshot_version'],
+                                                                       target_dir=target_dir)
+        else:
+            fetch_result = __salt__['artifactory.get_snapshot'](artifactory_url=artifact['artifactory_url'],
+                                                                repository=artifact['repository'],
+                                                                group_id=artifact['group_id'],
+                                                                artifact_id=artifact['artifact_id'],
+                                                                packaging=artifact['packaging'],
+                                                                version=artifact['version'],
+                                                                target_dir=target_dir)
     else:
         fetch_result = __salt__['artifactory.get_release'](artifactory_url=artifact['artifactory_url'],
                                                               repository=artifact['repository'],
@@ -617,7 +616,9 @@ def reloaded(name, jboss_config, timeout=60, interval=5):
         return ret
 
     result = __salt__['jboss7.reload'](jboss_config)
-    if result['success'] or 'Operation failed: Channel closed' in result['stdout']:
+    if result['success'] or \
+                    'Operation failed: Channel closed' in result['stdout'] or \
+                    'Communication error: java.util.concurrent.ExecutionException: Operation failed' in result['stdout']:
         wait_time = 0
         status = None
         while (status is None or status['success'] == False or status['result'] != 'running') and wait_time < timeout:
