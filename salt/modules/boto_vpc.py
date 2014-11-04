@@ -1227,18 +1227,16 @@ def describe(vpc_id=None, region=None, key=None, keyid=None, profile=None):
                 state=None,
                 tags=None,
                 dhcp_options_id=None,
-                instance_tenancy=None
-                )
+                instance_tenancy=None)
 
     if not conn:
         return False
 
     if not vpc_id:
-        raise SaltInvocationError(
-               'VPC ID needs to be specified.')
+        raise SaltInvocationError('VPC ID needs to be specified.')
 
     try:
-        filter_parameters = {'filters': {'vpc-id': vpc_id}}
+        filter_parameters = {'vpc_ids': vpc_id}
 
         vpcs = conn.get_all_vpcs(**filter_parameters)
 
