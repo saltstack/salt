@@ -543,6 +543,37 @@ class DeleteOption(TypeOption):
         return fullpath
 
 
+class ExecOption(Option):
+    '''
+    Execute the given command, {} replaced by filename.
+    Quote the {} if commands might include whitespace.
+    '''
+    def __init__(self, key, value):
+        self.command = value
+
+    def execute(self, fullpath, fstat):
+        try:
+            command = self.command.format(fullpath)
+            print(shlex.split(command))
+            p = Popen(shlex.split(command),
+                      stdout=PIPE,
+                      stderr=PIPE)
+            (out, err) = p.communicate()
+            if err:
+                log.error(
+                    'Error running command: {}\n\n{}'.format(
+                    command,
+                    err))
+            return "{}:\n{}\n".format(command, out)
+
+        except Exception, e:
+            log.error(
+                'Exception while executing command "{}":\n\n{}'.format(
+                    command,
+                    e))
+            return "{}: Failed".format(fullpath)
+
+
 class Finder(object):
     def __init__(self, options):
         self.actions = []
