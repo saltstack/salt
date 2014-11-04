@@ -124,7 +124,7 @@ starts at the root of the state tree or pillar.
 Filters
 =======
 
-Saltstack extends `builtin filters`_ with his custom filters:
+Saltstack extends `builtin filters`_ with these custom filters:
 
 strftime
   Converts any time related object into a time based string. It requires a
@@ -139,6 +139,32 @@ strftime
       {{ "1040814000"|strftime("%Y-%m-%d") }}
       {{ datetime|strftime("%u") }}
       {{ "now"|strftime }}
+
+sequence
+  Ensure that parsed data is a sequence.
+
+yaml_dquote
+  Serializes a string into a properly-escaped YAML double-quoted
+  string.  This is useful when the contents of a string are unknown
+  and may contain quotes or unicode that needs to be preserved.  The
+  resulting string will be emitted with opening and closing double
+  quotes.
+
+  .. code-block:: yaml
+
+      {%- set baz = '"The quick brown fox . . ."' %}
+      {%- set zap = 'The word of the day is "salty".' %}
+
+      {%- load_yaml as foo %}
+      bar: {{ baz|yaml_dquote }}
+      zip: {{ zap|yaml_dquote }}
+      {%- endload %}
+
+yaml_squote
+   Similar to the ``yaml_dquote`` filter but with single quotes.  Note
+   that YAML only allows special escapes inside double quotes so
+   ``yaml_squote`` is not nearly as useful (viz. you likely want to
+   use ``yaml_dquote``).
 
 .. _`builtin filters`: http://jinja.pocoo.org/docs/templates/#builtin-filters
 .. _`timelib`: https://github.com/pediapress/timelib/
