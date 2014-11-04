@@ -64,7 +64,9 @@ def get_returner_options(virtualname=None,
 
     ret_config = _fetch_ret_config(ret)
 
-    attrs = attrs = {}
+    if attrs is None:
+        attrs = attrs = {}
+
     profile_attr = kwargs.get('profile_attr', None)
     profile_attrs = kwargs.get('profile_attrs', None)
     defaults = kwargs.get('defaults', None)
