@@ -15,7 +15,8 @@ The options include match criteria:
     mtime   = interval                  # modified since date
     grep    = regex                     # search file contents
 and/or actions:
-    delete [= file-types]               # default type = 'f'
+    delete [= delete-type]              # recursive/nonrecursive, r/n, d/f
+                                        # default: nonrecursive
     exec    = command [arg ...]         # where {} is replaced by pathname
     print  [= print-opts]
 and/or depth criteria:
@@ -91,6 +92,9 @@ import re
 import stat
 import sys
 import time
+import shlex
+from subprocess import Popen, PIPE
+from shutil import rmtree
 try:
     import grp
     import pwd
@@ -511,6 +515,71 @@ class PrintOption(Option):
             return result
 
 
+class DeleteOption(Option):
+    '''
+    Delete a matched directory entry.
+        f, n or nonrecursive = simple delete
+        d, r or recursive = recursively delete
+    The d/recursive is required as a safety to prevent
+    undesirable data deletion.
+    '''
+    def __init__(self, key, value):
+        if value in ['d', 'r', 'recursive']:
+            self.recursive = True
+        elif value in ['f', 'n', 'nonrecursive', True]:
+            self.recursive = False
+        else:
+            message = 'invalid value for delete option: {}'.format(value)
+            log.error(message)
+            raise Exception(message)
+
+    def execute(self, fullpath, fstat):
+        try:
+            if self.recursive:
+                rmtree(fullpath)
+            else:
+                os.unlink(fullpath)
+            return fullpath
+        except Exception, e:
+            log.error(
+                'Exception while deleting {}{}:\n\n{}'.format(
+                    fullpath,
+                    " recursively" if self.recursive else "",
+                    e))
+            return "{}: Failed".format(fullpath)
+
+
+class ExecOption(Option):
+    '''
+    Execute the given command, {} replaced by filename.
+    Quote the {} if commands might include whitespace.
+    '''
+    def __init__(self, key, value):
+        self.command = value
+
+    def execute(self, fullpath, fstat):
+        try:
+            command = self.command.format(fullpath)
+            print(shlex.split(command))
+            p = Popen(shlex.split(command),
+                      stdout=PIPE,
+                      stderr=PIPE)
+            (out, err) = p.communicate()
+            if err:
+                log.error(
+                    'Error running command: {}\n\n{}'.format(
+                    command,
+                    err))
+            return "{}:\n{}\n".format(command, out)
+
+        except Exception, e:
+            log.error(
+                'Exception while executing command "{}":\n\n{}'.format(
+                    command,
+                    e))
+            return "{}: Failed".format(fullpath)
+
+
 class Finder(object):
     def __init__(self, options):
         self.actions = []
@@ -606,8 +675,12 @@ def _main():
     criteria = {}
 
     for arg in sys.argv[2:]:
-        key, value = arg.split('=')
-        criteria[key] = value
+        try:
+            key, value = arg.split('=')
+            criteria[key] = value
+        except ValueError:
+            key = arg
+            value = True
     try:
         finder = Finder(criteria)
     except ValueError as ex:
