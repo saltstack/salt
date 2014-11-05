@@ -559,7 +559,7 @@ class Loader(object):
             if self.opts.get('cython_enable', True) is True:
                 # The module was not found, try to find a cython module
                 try:
-                    import pyximport
+                    import pyximport  # pylint: disable=import-error
                     pyximport.install()
 
                     for mod_dir in self.module_dirs:
@@ -606,7 +606,7 @@ class Loader(object):
         cython_enabled = False
         if self.opts.get('cython_enable', True) is True:
             try:
-                import pyximport
+                import pyximport  # pylint: disable=import-error
                 pyximport.install()
                 cython_enabled = True
             except ImportError:
@@ -829,7 +829,7 @@ class Loader(object):
         cython_enabled = False
         if self.opts.get('cython_enable', True) is True:
             try:
-                import pyximport
+                import pyximport  # pylint: disable=import-error
                 pyximport.install()
                 cython_enabled = True
             except ImportError:
