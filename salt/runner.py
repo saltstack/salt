@@ -44,8 +44,9 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
 
     def __init__(self, opts):
         self.opts = opts
-        self.functions = salt.loader.runner(opts)
-
+        self.functions = salt.loader.runner(opts)  # Must be self.functions for mixin to work correctly :-/
+        self.returners = salt.loader.returners(opts, self.functions)
+        self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
     def cmd(self, fun, arg, pub_data=None, kwarg=None):
         '''
         Execute a runner function
@@ -119,7 +120,28 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         args, kwargs = salt.minion.load_args_and_kwargs(
             self.functions[fun], arglist, pub_data
         )
-        return self.functions[fun](*args, **kwargs)
+        fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
+        jid = self.returners[fstr]()
+        log.debug('Runner starting with jid {0}'.format(jid))
+        # Fire event for any listeners
+        self.event.fire_event({'runner_job':fun}, tagify([jid, 'new'], 'job'))
+        ret = self.functions[fun](*args, **kwargs)  # pylint: disable=star-args
+        try:
+            fstr = '{0}.save_load'.format(self.opts['master_job_cache'])
+            self.returners[fstr]('jid', {})   #FIXME debug empty dict
+        except KeyError:
+            log.critical(
+                'The specified returner used for the master job cache '
+                '"{0}" does not have a save_load function!'.format(
+                    self.opts['master_job_cache']
+                )
+            )
+        except Exception:
+            log.critical(
+                'The specified returner threw a stack trace:\n',
+                exc_info=True
+            )
+        return ret
 
     def master_call(self, **kwargs):
         '''
