@@ -14,7 +14,7 @@ Example configuration:
           raw_data: False
 
 The ``root_dir`` parameter is required and points to the directory where files
-for each host are stored. The ``follow_dir_links`` paramater is optional
+for each host are stored. The ``follow_dir_links`` parameter is optional
 and defaults to False. If ``follow_dir_links`` is set to True, file_tree will
 follow symbolic links to other directories. Be careful when using
 ``follow_dir_links``, the current implementation is dumb and will run into
