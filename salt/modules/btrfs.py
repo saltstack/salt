@@ -166,3 +166,25 @@ def defragment(path):
         result.append(d_res)
 
     return result
+
+
+def mkfs_features():
+    '''
+    List currently available BTRFS features.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' btrfs.mkfs_features    
+    '''
+    out = __salt__['cmd.run_all']("mkfs.btrfs -O list-all")
+    fsutils._verify_run(out)
+
+    ret = {}
+    for line in [re.sub(r"\s+", " ", line) for line in out['stderr'].split("\n") if " - " in line]:
+        option, description = line.split(" - ", 1)
+        ret[option] = description
+
+    return ret
+
