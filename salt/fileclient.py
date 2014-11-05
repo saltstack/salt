@@ -588,7 +588,12 @@ class Client(object):
         else:
             fixed_url = url
         try:
-            response = requests.get(fixed_url, stream=True)
+            if requests.__version__[0] == '0':
+                # 'stream' was called 'prefetch' before 1.0, with flipped meaning
+                get_kwargs = {'prefetch': False}
+            else:
+                get_kwargs = {'stream': True}
+            response = requests.get(fixed_url, **get_kwargs)
             with salt.utils.fopen(dest, 'wb') as destfp:
                 for chunk in response.iter_content(chunk_size=32*1024):
                     destfp.write(chunk)
