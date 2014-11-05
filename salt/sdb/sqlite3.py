@@ -49,24 +49,27 @@ __func_alias__ = {
 
 
 def __virtual__():
+    '''
+    Only load if sqlite3 is available.
+    '''
     if not HAS_SQLITE3:
         return False
     return True
 
 
-def _quote(s, errors="strict"):
-    encodable = s.encode("utf-8", errors).decode("utf-8")
+def _quote(s, errors='strict'):
+    encodable = s.encode('utf-8', errors).decode('utf-8')
 
-    nul_index = encodable.find("\x00")
+    nul_index = encodable.find('\x00')
 
     if nul_index >= 0:
-        error = UnicodeEncodeError("NUL-terminated utf-8", encodable,
-                                   nul_index, nul_index + 1, "NUL not allowed")
+        error = UnicodeEncodeError('NUL-terminated utf-8', encodable,
+                                   nul_index, nul_index + 1, 'NUL not allowed')
         error_handler = codecs.lookup_error(errors)
         replacement, _ = error_handler(error)
-        encodable = encodable.replace("\x00", replacement)
+        encodable = encodable.replace('\x00', replacement)
 
-    return "\"" + encodable.replace("\"", "\"\"") + "\""
+    return '"' + encodable.replace('"', '""') + '"'
 
 
 def _connect(profile):
@@ -88,6 +91,9 @@ def _connect(profile):
 
 
 def set_(key, value, profile=None):
+    '''
+    Set a key/value pair in sqlite3
+    '''
     if not profile:
         return False
     conn, cur, table = _connect(profile)
@@ -99,6 +105,9 @@ def set_(key, value, profile=None):
 
 
 def get(key, profile=None):
+    '''
+    Get a value from sqlite3
+    '''
     if not profile:
         return None
     _, cur, table = _connect(profile)
