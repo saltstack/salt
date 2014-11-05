@@ -944,7 +944,7 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
         if not master or not master.alived: # select a different master
             available_masters = [remote for remote in
                                  self.road_stack.value.remotes.values()
-                                                       if remote.alive]
+                                                       if remote.alived]
             if available_masters:
                 random_master = opts.get('random_master')
                 if random_master:
