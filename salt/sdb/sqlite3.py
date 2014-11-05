@@ -23,6 +23,23 @@ The ``driver`` refers to the sqlite3 module, ``database`` refers to the sqlite3
 database file. ``table`` is the table within the db that will hold keys and
 values (defaults to ``sdb``). The database and table will be created if they
 do not exist.
+
+Advanced Usage:
+==============
+
+Instead of a table name, it is possible to provide custom SQL statements to
+create the table(s) and get and set values.
+
+.. code-block: yaml
+
+    myadvanced
+      driver: sqlite3
+      database: /tmp/sdb-advanced.sqlite
+    create_statements:
+      - "CREATE TABLE advanced (a text, b text, c blob, d blob)"
+      - "CREATE INDEX myidx ON advanced (a)"
+    get_query: "SELECT d FROM advanced WHERE a=:key"
+    set_query: "INSERT OR REPLACE INTO advanced (a, d) VALUES (:key, :value)"
 '''
 from __future__ import absolute_import
 
@@ -74,16 +91,23 @@ def _quote(s, errors='strict'):
 
 def _connect(profile):
     db = profile['database']
-    table = profile.get('table', DEFAULT_TABLE)
-    idx = _quote(table + '_idx')
-    table = _quote(table)
-
+    table = None
     conn = sqlite3.connect(db)
     cur = conn.cursor()
+    stmts = profile.get('create_statements')
 
     try:
-        cur.execute('CREATE TABLE {0} (key text, value blob)'.format(table))
-        cur.execute('CREATE UNIQUE INDEX {0} ON {1} (key)'.format(idx, table))
+        if stmts:
+            for sql in stmts:
+                cur.execute(sql)
+        else:
+            table = profile.get('table', DEFAULT_TABLE)
+            idx = _quote(table + '_idx')
+            table = _quote(table)
+            cur.execute(('CREATE TABLE {0} (key text, '
+                         'value blob)').format(table))
+            cur.execute(('CREATE UNIQUE INDEX {0} ON {1} '
+                         '(key)').format(idx, table))
     except sqlite3.OperationalError:
         pass
 
@@ -98,8 +122,9 @@ def set_(key, value, profile=None):
         return False
     conn, cur, table = _connect(profile)
     value = buffer(msgpack.packb(value))
-    conn.execute('INSERT OR REPLACE INTO {0} VALUES (?, ?)'.format(table),
-                 (key, value))
+    q = profile.get('set_query', ('INSERT OR REPLACE INTO {0} VALUES '
+                                  '(:key, :value)').format(table))
+    conn.execute(q, {'key': key, 'value': value})
     conn.commit()
     return True
 
@@ -111,8 +136,9 @@ def get(key, profile=None):
     if not profile:
         return None
     _, cur, table = _connect(profile)
-    res = cur.execute('SELECT value FROM {0} WHERE key=?'.format(table),
-                      (key,))
+    q = profile.get('get_query', ('SELECT value FROM {0} WHERE '
+                                  'key=:key'.format(table)))
+    res = cur.execute(q, {'key': key})
     res = res.fetchone()
     if not res:
         return None
