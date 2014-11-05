@@ -726,16 +726,15 @@ class JobsSaltAPIHandler(SaltAPIHandler):
             self.redirect('/login')
             return
 
-        self.lowstate = [{
-            'fun': 'jobs.lookup_jid' if jid else 'jobs.list_jobs',
-            'jid': jid,
-        }]
-
         if jid:
-            self.lowstate.append({
+            self.lowstate = [{
                 'fun': 'jobs.list_job',
                 'jid': jid,
-            })
+            }]
+        else:
+            self.lowstate = [{
+                'fun': 'jobs.list_jobs',
+            }]
 
         self.disbatch('runner')
 
