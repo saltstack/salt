@@ -74,6 +74,10 @@ def latest(name,
         Force a checkout even if there might be overwritten changes
         (Default: False)
 
+    force_reset
+        Force the checkout to ``--reset hard`` to the remote ref
+        (Default: False)
+
     submodules
         Update submodules on clone or branch change (Default: False)
 
@@ -244,8 +248,9 @@ def latest(name,
                                               identity=identity)
 
                     if force_reset:
+                        opts = "--hard {0}/{1}".format(remote_name, rev)
                         __salt__['git.reset'](target,
-                                              opts="--hard",
+                                              opts=opts,
                                               user=user)
 
                     __salt__['git.checkout'](target,
