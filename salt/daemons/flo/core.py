@@ -520,7 +520,7 @@ class SaltLoadPillar(ioflo.base.deeding.Deed):
                'modules': '.salt.loader.modules',
                'pillar_refresh': '.salt.var.pillar_refresh',
                'road_stack': '.salt.road.manor.stack',
-               'master_estate_name': '.salt.track.master_estate_name',}
+               'master_estate_name': '.salt.track.master_estate_name', }
 
     def action(self):
         '''
@@ -777,7 +777,7 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
                'worker_verify': '.salt.var.worker_verify',
                'lane_stack': '.salt.lane.manor.stack',
                'road_stack': '.salt.road.manor.stack',
-               'master_estate_name': '.salt.track.master_estate_name',}
+               'master_estate_name': '.salt.track.master_estate_name', }
 
     def _process_udp_rxmsg(self, msg, sender):
         '''
@@ -901,12 +901,12 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
         elif d_share == 'remote_cmd':  # assume must be minion to master
             if not self.road_stack.value.remotes:
                 log.error("Missing joined master. Unable to route "
-                          "remote_cmd '{0}'.".format(msg))
+                          "remote_cmd.".format())
                 return
             d_estate = self._get_master_estate_name()
             if not d_estate:
                 log.error("**** No available destination estate for 'remote_cmd'."
-                          "Unable to route.".format(msg))
+                          "Unable to route.".format())
                 return
             #d_estate = self.road_stack.value.remotes.values()[0].name
             msg['route']['dst'] = (d_estate, d_yard, d_share)
@@ -917,12 +917,12 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
         elif d_share == 'call_cmd':  # salt call return pub to master
             if not self.road_stack.value.remotes:
                 log.error("Missing joined master. Unable to route "
-                          "call_cmd '{0}'.".format(msg))
+                          "call_cmd.".format())
                 return
             d_estate = self._get_master_estate_name()
             if not d_estate:
                 log.error("**** No available destination estate for 'call_cmd'."
-                          "Unable to route.".format(msg))
+                          "Unable to route.".format())
                 return
 
             #d_estate = self.road_stack.value.remotes.values()[0].name
@@ -941,7 +941,7 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
         '''
         opts = self.opts.value
         master = self.road_stack.value.nameRemotes.get(self.master_estate_name.value)
-        if not master or not master.alived: # select a different master
+        if not master or not master.alived:  # select a different master
             available_masters = [remote for remote in
                                  self.road_stack.value.remotes.values()
                                                        if remote.alived]

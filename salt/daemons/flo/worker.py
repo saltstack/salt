@@ -16,7 +16,6 @@ from raet import raeting
 from raet.lane.stacking import LaneStack
 from raet.lane.yarding import RemoteYard
 
-from salt import daemons
 from salt.utils import kinds
 
 # Import ioflo libs
