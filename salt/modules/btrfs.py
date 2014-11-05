@@ -92,3 +92,19 @@ def info(device):
         raise CommandExecutionError(out['stderr'].replace("xfs_info:", "").strip())
     return _parse_btrfs_info(out['stdout'])
 
+
+def devices():
+    '''
+    Get known BTRFS formatted devices on the system.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' btrfs.devices
+    '''
+    out = __salt__['cmd.run_all']("blkid -o export")
+    fsutils._verify_run(out)
+
+    return fsutils._blkid_output(out['stdout'], fs_type='btrfs')
+
