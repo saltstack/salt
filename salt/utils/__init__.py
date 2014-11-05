@@ -2387,6 +2387,7 @@ def appendproctitle(name):
     if HAS_SETPROCTITLE:
         setproctitle.setproctitle(setproctitle.getproctitle() + ' ' + name)
 
+
 def chuid(runas, preserve_current=False):
     '''
     Change the EUID of the currently running
@@ -2407,6 +2408,7 @@ def chuid(runas, preserve_current=False):
         log.debug('Setting perms with setuid()')
         os.setuid(0)
         os.seteuid(0)
+
 
 def chugid(runas):
     '''
