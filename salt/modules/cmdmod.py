@@ -445,7 +445,7 @@ def _run(cmd,
                 # cases
                 ret['stdout'] = stdout
                 if not proc.isalive():
-                    # Process terminated, ie, not canceled by the user or by
+                    # Process terminated, i.e., not canceled by the user or by
                     # the timeout
                     ret['stderr'] = stderr
                     ret['retcode'] = proc.exitstatus

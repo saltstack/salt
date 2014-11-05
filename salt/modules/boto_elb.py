@@ -356,7 +356,7 @@ def detach_subnets(name, subnets, region=None, key=None, keyid=None,
         subnets = json.loads(subnets)
     try:
         conn.detach_lb_from_subnets(name, subnets)
-        msg = 'Detatched ELB {0} from subnets.'.format(name)
+        msg = 'Detached ELB {0} from subnets.'.format(name)
         log.info(msg)
         return True
     except boto.exception.BotoServerError as e:

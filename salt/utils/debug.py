@@ -78,8 +78,8 @@ def enable_sigusr1_handler():
     when any of the salt daemons such as salt-master are sent a SIGUSR1
     '''
     enable_sig_handler('SIGUSR1', _handle_sigusr1)
-    # Also canonical BSD-way of printing profress is SIGINFO
-    # which on BSD-deriviatives can be sent via Ctrl+T
+    # Also canonical BSD-way of printing progress is SIGINFO
+    # which on BSD-derivatives can be sent via Ctrl+T
     enable_sig_handler('SIGINFO', _handle_sigusr1)
 
 

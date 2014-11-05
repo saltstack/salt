@@ -275,7 +275,7 @@ class CkMinions(object):
         '''
         if not HAS_RANGE:
             raise CommandExecutionError(
-                'Range matcher unavailble (unable to import seco.range, '
+                'Range matcher unavailable (unable to import seco.range, '
                 'module most likely not installed)'
             )
         cache_enabled = self.opts.get('minion_data_cache', False)

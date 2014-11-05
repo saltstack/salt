@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Module for manging the Salt schedule on a minion
+Module for managing the Salt schedule on a minion
 
 .. versionadded:: 2014.7.0
 

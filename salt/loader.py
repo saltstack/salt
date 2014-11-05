@@ -943,7 +943,7 @@ class Loader(object):
                             isinstance(getattr(mod, sname), mod.__class__)
                         ]
 
-                        # reload only custom "sub"modules i.e is a submodule in
+                        # reload only custom "sub"modules i.e. is a submodule in
                         # parent module that are still available on disk (i.e. not
                         # removed during sync_modules)
                         for submodule in submodules:
@@ -1048,7 +1048,7 @@ class Loader(object):
         Given a loaded module and its default name determine its virtual name
 
         This function returns a tuple. The first value will be either True or
-        False and will indicate if the module should be loaded or not (ie. if
+        False and will indicate if the module should be loaded or not (i.e. if
         it threw and exception while processing its __virtual__ function). The
         second value is the determined virtual name, which may be the same as
         the value provided.
