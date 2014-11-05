@@ -411,4 +411,39 @@ class TestEventsSaltAPIHandler(SaltnadoTestCase):
             assert tag.startswith('tag: ')
             assert data.startswith('data: ')
 
+
+class TestWebhookSaltAPIHandler(SaltnadoTestCase):
+    def get_app(self):
+        application = tornado.web.Application([(r"/hook(/.*)?", saltnado.WebhookSaltAPIHandler),
+                                               ], debug=True)
+
+        application.auth = self.auth
+        application.opts = self.opts
+
+        self.application = application
+
+        application.event_listener = saltnado.EventListener({}, self.opts)
+        return application
+
+    def test_post(self):
+        # get an event future
+        event = self.application.event_listener.get_event(self,
+                                                          tag='salt/netapi/hook',
+                                                          callback=self.stop,
+                                                          )
+        # fire the event
+        response = self.fetch('/hook',
+                              method='POST',
+                              body='foo=bar',
+                              headers={saltnado.AUTH_TOKEN_HEADER: self.token['token']},
+                              )
+        response_obj = json.loads(response.body)
+        assert response_obj['success'] is True
+        self.wait()
+        assert event.done()
+        assert event.result()['tag'] == 'salt/netapi/hook'
+        assert 'headers' in event.result()['data']
+        assert event.result()['data']['post'] == {'foo': 'bar'}
+
+
 #
