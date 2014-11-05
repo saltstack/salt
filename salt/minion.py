@@ -1032,18 +1032,16 @@ class Minion(MinionBase):
                     data)
                 if kwargs.get('as_me', False):
                     log.info('Switching to user {0}'.format(data['user']))
-                    #salt.utils.verify.check_user(data['user'])
-                    os.setresuid(1000, 1000, 0)
+                    calling_uid = os.getuid()
+                    salt.utils.chuid(data['user'], preserve_current=True)
                     kwargs.pop('as_me')
                     as_me = True
                 sys.modules[func.__module__].__context__['retcode'] = 0
                 return_data = func(*args, **kwargs)
                 if as_me:
-                    log.info('Execution complete. Switching back to root.')
-                    #salt.utils.verify.check_user('root')
-                    os.seteuid(0)
-                    os.setuid(0)
-                    os.setegid(0)
+                    log.info('Execution complete. Switching back to previous user.')
+                    os.seteuid(calling_uid)
+                    os.setuid(calling_uid)
                 if isinstance(return_data, types.GeneratorType):
                     ind = 0
                     iret = {}
