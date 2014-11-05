@@ -188,3 +188,83 @@ def mkfs_features():
 
     return ret
 
+
+def _usage_overall(raw):
+    '''
+    Parse usage/overall.
+    '''
+    data = {}
+    for line in raw.split("\n")[1:]:
+        keyset = [item.strip() for item in re.sub(r"\s+", " ", line).split(":", 1) if item.strip()]
+        if len(keyset) == 2:
+            key = re.sub(r"[()]", "", keyset[0]).replace(" ", "_").lower()
+            if key in ['free_estimated', 'global_reserve']:  # An extra field
+                subk = keyset[1].split("(")
+                data[key] = subk[0].strip()
+                subk = subk[1].replace(")", "").split(": ")
+                data["{0}_{1}".format(key, subk[0])] = subk[1]
+            else:
+                data[key] = keyset[1]
+
+    return data
+
+
+def _usage_specific(raw):
+    '''
+    Parse usage/specific.
+    '''
+    get_key = lambda val: dict([tuple(val.split(":")),])
+    raw = raw.split("\n")
+    section, size, used = raw[0].split(" ")
+    section = section.replace(",", "_").replace(":", "").lower()
+
+    data = {}
+    data[section] = {}
+
+    for val in [size, used]:
+        data[section].update(get_key(val.replace(",", "")))
+
+    for devices in raw[1:]:
+        data[section].update(get_key(re.sub(r"\s+", ":", devices.strip())))
+        
+    return data
+
+
+def _usage_unallocated(raw):
+    '''
+    Parse usage/unallocated.
+    '''
+    ret = {}
+    for line in raw.split("\n")[1:]:
+        keyset = re.sub(r"\s+", " ", line.strip()).split(" ")
+        if len(keyset) == 2:
+            ret[keyset[0]] = keyset[1]
+
+    return ret
+
+
+def usage(path):
+    '''
+    Show in which disk the chunks are allocated.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' btrfs.usage /your/mountpoint
+    '''
+    out = __salt__['cmd.run_all']("btrfs filesystem usage {0}".format(path))
+    fsutils._verify_run(out)
+
+    ret = {}
+    for section in out['stdout'].split("\n\n"):
+        if section.startswith("Overall:\n"):
+            ret['overall'] = _usage_overall(section)
+        elif section.startswith("Unallocated:\n"):
+            ret['unallocated'] = _usage_unallocated(section)
+        else:
+            ret.update(_usage_specific(section))
+
+    return ret
+
+
