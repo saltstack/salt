@@ -33,6 +33,8 @@ import logging
 import salt.utils
 from salt.exceptions import CommandExecutionError
 
+import fsutils
+
 log = logging.getLogger(__name__)
 
 def __virtual__():
@@ -108,3 +110,59 @@ def devices():
 
     return fsutils._blkid_output(out['stdout'], fs_type='btrfs')
 
+
+def _defragment_mountpoint(mountpoint):
+    '''
+    Defragment only one BTRFS mountpoint.
+    '''
+    out = __salt__['cmd.run_all']("btrfs filesystem defragment -f {0}".format(mountpoint))
+    return {
+        'mount_point': mountpoint,
+        'passed': not out['stderr'],
+        'log': out['stderr'] or False,
+        'range': False,
+    }
+
+
+def defragment(path):
+    '''
+    Defragment mounted BTRFS filesystem.
+    In order to defragment a filesystem, device should be properly mounted and writable.
+
+    If passed a device name, then defragmented whole filesystem, mounted on in.
+    If passed a moun tpoint of the filesystem, then only this mount point is defragmented.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' btrfs.defragment /dev/sda1
+        salt '*' btrfs.defragment /path/on/filesystem
+    '''
+    is_device = fsutils._is_device(path)
+    mounts = fsutils._get_mounts("btrfs")
+    if is_device and not mounts.get(path):
+        raise CommandExecutionError("Device \"{0}\" is not mounted".format(path))
+
+    result = []
+    if is_device:
+        for mount_point in mounts[path]:
+            result.append(_defragment_mountpoint(mount_point['mount_point']))
+    else:
+        is_mountpoint = False
+        for device, mountpoints in mounts.items():
+            for mpnt in mountpoints:
+                if path == mpnt['mount_point']:
+                    is_mountpoint = True
+                    break
+        d_res = _defragment_mountpoint(path)
+        if not is_mountpoint and not d_res['passed'] and "range ioctl not supported" in d_res['log']:
+            d_res['log'] = "Range ioctl defragmentation is not supported in this kernel."
+
+        if not is_mountpoint:
+            d_res['mount_point'] = False
+            d_res['range'] = os.path.exists(path) and path or False
+
+        result.append(d_res)
+
+    return result
