@@ -241,7 +241,7 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
 
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
-        return False, 'Failed to connect to AWS'
+        return False, "failed to connect to AWS"
     if isinstance(availability_zones, string_types):
         availability_zones = json.loads(availability_zones)
     if isinstance(load_balancers, string_types):
@@ -258,12 +258,12 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
                 key = tag.get('key')
             except KeyError:
                 log.error('Tag missing key.')
-                return False, 'Tag {0} missing key'.format(tag)
+                return False, "Tag {0} missing key".format(tag)
             try:
                 value = tag.get('value')
             except KeyError:
                 log.error('Tag missing value.')
-                return False, 'Tag {0} missing value'.format(tag)
+                return False, "Tag {0} missing value".format(tag)
             propagate_at_launch = tag.get('propagate_at_launch', False)
             _tag = autoscale.Tag(key=key, value=value, resource_id=name,
                                  propagate_at_launch=propagate_at_launch)
@@ -564,7 +564,13 @@ def _get_ec2_conn(region, key, keyid, profile):
 
 
 def get_instances(name, lifecycle_state="InService", health_status="Healthy", attribute="private_ip_address", region=None, key=None, keyid=None, profile=None):
-    "return attribute of all instances in the named autoscale group."
+    """return attribute of all instances in the named autoscale group.
+
+    CLI example::
+
+        salt-call boto_asg.get_instances my_autoscale_group_name
+
+    """
     conn = _get_conn(region, key, keyid, profile)
     ec2_conn = _get_ec2_conn(region, key, keyid, profile)
     if not conn or not ec2_conn:
@@ -588,4 +594,4 @@ def get_instances(name, lifecycle_state="InService", health_status="Healthy", at
         instance_ids.append(i.instance_id)
     # get full instance info, so that we can return the attribute
     instances = ec2_conn.get_only_instances(instance_ids=instance_ids)
-    return [getattr(instance, attribute) for instance in instances]
+    return [getattr(instance, attribute).encode("ascii") for instance in instances]
