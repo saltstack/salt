@@ -18,6 +18,7 @@ requires very little. For example:
       driver: sqlite3
       database: /tmp/sdb.sqlite
       table: sdb
+      create_table: True
 
 The ``driver`` refers to the sqlite3 module, ``database`` refers to the sqlite3
 database file. ``table`` is the table within the db that will hold keys and
@@ -95,15 +96,15 @@ def _connect(profile):
     conn = sqlite3.connect(db)
     cur = conn.cursor()
     stmts = profile.get('create_statements')
+    table = profile.get('table', DEFAULT_TABLE)
+    idx = _quote(table + '_idx')
+    table = _quote(table)
 
     try:
         if stmts:
             for sql in stmts:
                 cur.execute(sql)
-        else:
-            table = profile.get('table', DEFAULT_TABLE)
-            idx = _quote(table + '_idx')
-            table = _quote(table)
+        elif profile.get('create_table', True):
             cur.execute(('CREATE TABLE {0} (key text, '
                          'value blob)').format(table))
             cur.execute(('CREATE UNIQUE INDEX {0} ON {1} '
