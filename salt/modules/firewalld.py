@@ -230,7 +230,7 @@ def new_service(name, restart=True):
         else:
             return out
 
-    return __service_mgmt(name, 'service', 'new')
+    return __mgmt(name, 'service', 'new')
 
 
 def delete_service(name, restart=True):
@@ -258,7 +258,7 @@ def delete_service(name, restart=True):
         else:
             return out
 
-    return __service_mgmt(name, 'service', 'delete')
+    return __mgmt(name, 'service', 'delete')
 
 
 def list_all(zone=None):
