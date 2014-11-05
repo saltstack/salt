@@ -34,7 +34,10 @@ def raw_arg(*args, **kwargs):
     pprint.pprint(ret)
     return ret
 
-def ping():
+def true():
+    '''
+    Return True
+    '''
     ret = True
     pprint.pprint(ret)
     return ret
