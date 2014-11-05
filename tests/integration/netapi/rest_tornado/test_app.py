@@ -298,4 +298,50 @@ class TestMinionSaltAPIHandler(SaltnadoTestCase):
         assert 'jid' in response_obj['return'][0]
         assert response_obj['return'][0]['minions'] == ['minion', 'sub_minion']
 
+
+class TestJobsSaltAPIHandler(SaltnadoTestCase):
+    def get_app(self):
+        application = tornado.web.Application([(r"/jobs/(.*)", saltnado.JobsSaltAPIHandler),
+                                               (r"/jobs", saltnado.JobsSaltAPIHandler),
+                                               ], debug=True)
+
+        application.auth = self.auth
+        application.opts = self.opts
+
+        application.event_listener = saltnado.EventListener({}, self.opts)
+        return application
+
+    def test_get(self):
+        # test with no JID
+        response = self.fetch('/jobs',
+                              method='GET',
+                              headers={saltnado.AUTH_TOKEN_HEADER: self.token['token']},
+                              follow_redirects=False,
+                              )
+        response_obj = json.loads(response.body)['return'][0]
+        for jid, ret in response_obj.iteritems():
+            assert 'Function' in ret
+            assert 'Target' in ret
+            assert 'Target-type' in ret
+            assert 'User' in ret
+            assert 'StartTime' in ret
+            assert 'Arguments' in ret
+
+        # test with a specific JID passed in
+        jid = response_obj.iterkeys().next()
+        response = self.fetch('/jobs/{0}'.format(jid),
+                              method='GET',
+                              headers={saltnado.AUTH_TOKEN_HEADER: self.token['token']},
+                              follow_redirects=False,
+                              )
+        response_obj = json.loads(response.body)['return'][0]
+        assert 'Function' in response_obj
+        assert 'Target' in response_obj
+        assert 'Target-type' in response_obj
+        assert 'User' in response_obj
+        assert 'StartTime' in response_obj
+        assert 'Arguments' in response_obj
+        assert 'Result' in response_obj
+
+
 #
