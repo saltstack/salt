@@ -344,4 +344,32 @@ class TestJobsSaltAPIHandler(SaltnadoTestCase):
         assert 'Result' in response_obj
 
 
+# TODO: run all the same tests from the root handler, but for now since they are
+# the same code, we'll just sanity check
+class TestRunSaltAPIHandler(SaltnadoTestCase):
+    def get_app(self):
+        application = tornado.web.Application([("/run", saltnado.RunSaltAPIHandler),
+                                               ], debug=True)
+
+        application.auth = self.auth
+        application.opts = self.opts
+
+        application.event_listener = saltnado.EventListener({}, self.opts)
+        return application
+
+    def test_get(self):
+        low = [{'client': 'local',
+                'tgt': '*',
+                'fun': 'test.ping',
+                }]
+        response = self.fetch('/run',
+                              method='POST',
+                              body=json.dumps(low),
+                              headers={'Content-Type': self.content_type_map['json'],
+                                       saltnado.AUTH_TOKEN_HEADER: self.token['token']},
+                              )
+        response_obj = json.loads(response.body)
+        assert response_obj['return'] == [{'minion': True, 'sub_minion': True}]
+
+
 #

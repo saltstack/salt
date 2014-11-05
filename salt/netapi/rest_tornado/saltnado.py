@@ -745,7 +745,9 @@ class RunSaltAPIHandler(SaltAPIHandler):
     '''
     @tornado.web.asynchronous
     def post(self):
-        client = self.get_arguments('client')[0]
+        # TODO: support per-lowstate client disbatch
+        client = self.lowstate[0]['client']
+
         self._verify_client(client)
         self.disbatch(client)
 
@@ -782,7 +784,7 @@ class EventsSaltAPIHandler(SaltAPIHandler):
 
 class WebhookSaltAPIHandler(SaltAPIHandler):
     '''
-    Handler for /run requests
+    Handler for /hook requests
     '''
     def post(self, tag_suffix=None):  # pylint: disable=W0221
         if not self._verify_auth():
