@@ -22,7 +22,7 @@ class SaltnadoTestCase(integration.ModuleCase, tornado.testing.AsyncHTTPTestCase
                         'text': 'text/plain',
                         'form': 'application/x-www-form-urlencoded'}
     auth_creds = (
-        ('username', 'saltdev_auto'),
+        ('username', 'saltdev_api'),
         ('password', 'saltdev'),
         ('eauth', 'auto'))
 

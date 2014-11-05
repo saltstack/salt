@@ -606,7 +606,11 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
 
             f_call = salt.utils.format_call(self.saltclients[self.client], chunk)
             # fire a job off
-            pub_data = self.saltclients[self.client](*f_call.get('args', ()), **f_call.get('kwargs', {}))
+            try:
+                pub_data = self.saltclients[self.client](*f_call.get('args', ()), **f_call.get('kwargs', {}))
+            except EauthAuthenticationError:
+                self.set_status(401)
+                return
 
             # if the job didn't publish, lets not wait around for nothing
             # TODO: set header??
@@ -686,13 +690,13 @@ class MinionSaltAPIHandler(SaltAPIHandler):
     Handler for /minion requests
     '''
     @tornado.web.asynchronous
-    def get(self, mid):  # pylint: disable=W0221
+    def get(self, mid=None):  # pylint: disable=W0221
         # if you aren't authenticated, redirect to login
         if not self._verify_auth():
+            print "not authd"
             self.redirect('/login')
             return
 
-        #'client': 'local', 'tgt': mid or '*', 'fun': 'grains.items',
         self.lowstate = [{
             'client': 'local', 'tgt': mid or '*', 'fun': 'grains.items',
         }]
