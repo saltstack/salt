@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-SQLite "Salt DB" Module
+SQLite sdb Module
 
 :maintainer:    SaltStack
 :maturity:      New
