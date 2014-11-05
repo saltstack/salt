@@ -612,7 +612,7 @@ def export_key(keyids=None, secret=False, user=None):
 
     keyids
         The keyid(s) of the key(s) to be exported.  Can be specified as a comma
-        seperated string or a list.  Anything which GnuPG itself accepts to
+        separated string or a list.  Anything which GnuPG itself accepts to
         identify a key - for example, the keyid or the fingerprint could be used.
 
     secret
@@ -649,7 +649,7 @@ def receive_keys(keyserver=None, keys=None, user=None):
 
     keys
         The keyID(s) to retrieve from the keyserver.  Can be specified as a comma
-        seperated string or a list.
+        separated string or a list.
 
     user
         Which user's keychain to access, defaults to user Salt is running as.  Passing

@@ -2485,7 +2485,7 @@ class BaseHighState(object):
                         env_key = saltenv
 
                     if env_key not in self.avail:
-                        msg = ('Nonexistant saltenv {0!r} found in include '
+                        msg = ('Nonexistent saltenv {0!r} found in include '
                                'of {1!r} within SLS \'{2}:{3}\''
                                .format(env_key, inc_sls, saltenv, sls))
                         log.error(msg)

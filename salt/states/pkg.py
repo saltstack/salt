@@ -440,7 +440,7 @@ def _get_desired_pkg(name, desired):
 
 def _preflight_check(desired, fromrepo, **kwargs):
     '''
-    Perform platform-specifc checks on desired packages
+    Perform platform-specific checks on desired packages
     '''
     if 'pkg.check_db' not in __salt__:
         return {}
