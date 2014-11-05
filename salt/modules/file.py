@@ -57,14 +57,14 @@ __func_alias__ = {
     'makedirs_': 'makedirs'
 }
 
-HASHES = [
-            ['sha512', 128],
-            ['sha384', 96],
-            ['sha256', 64],
-            ['sha224', 56],
-            ['sha1', 40],
-            ['md5', 32],
-         ]
+HASHES = {
+    'sha512': 128,
+    'sha384': 96,
+    'sha256': 64,
+    'sha224': 56,
+    'sha1': 40,
+    'md5': 32,
+}
 
 
 def __virtual__():
@@ -2651,7 +2651,6 @@ def get_managed(
                         return '', {}, ('Source hash file {0} contains an invalid '
                             'hash format, it must be in the format <hash type>=<hash>.'
                             ).format(source_hash)
-
                 else:
                     # The source_hash is a hash string
                     comps = source_hash.split('=')
