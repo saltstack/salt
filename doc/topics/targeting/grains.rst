@@ -171,6 +171,20 @@ distributed to the minions when :mod:`state.highstate
 :mod:`saltutil.sync_grains <salt.modules.saltutil.sync_grains>` or
 :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>` functions.
 
+Grains are easy to write, and only need to return a dictionary.  A common
+approach would be code something similar to the following:
+
+.. code-block:: python
+
+   #!/usr/bin/env python
+   def yourfunction():
+        # initialize a grains dictionary
+        grains = {}
+        # Some code for logic that sets grains like
+        grains['yourcustomgrain']=True
+        grains['anothergrain']='somevalue'
+        return grains
+
 Before adding a grain to Salt, consider what the grain is and remember that
 grains need to be static data. If the data is something that is likely to
 change, consider using :doc:`Pillar <../pillar/index>` instead.
