@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Memcached "Salt DB" Module
+Memcached sdb Module
 
 :maintainer:    SaltStack
 :maturity:      New
