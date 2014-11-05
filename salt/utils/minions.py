@@ -181,7 +181,7 @@ class CkMinions(object):
                     minions.remove(id_)
         return list(minions)
 
-    def _check_pillar_minions(self, expr):
+    def _check_pillar_minions(self, expr, exact_match=False):
         '''
         Return the minions found by looking via pillar
         '''
@@ -201,9 +201,19 @@ class CkMinions(object):
                 pillar = self.serial.load(
                     salt.utils.fopen(datap, 'rb')
                 ).get('pillar')
-                if not salt.utils.subdict_match(pillar, expr):
+                if not salt.utils.subdict_match(pillar,
+                                                expr,
+                                                exact_match=exact_match):
                     minions.remove(id_)
         return list(minions)
+
+    def _check_pillar_exact_minions(self, expr, greedy):
+        '''
+        Return the minions found by looking via pillar
+        '''
+        return self._check_pillar_minions(expr,
+                                         greedy,
+                                         exact_match=True)
 
     def _check_ipcidr_minions(self, expr):
         '''
@@ -286,7 +296,15 @@ class CkMinions(object):
                     minions.remove(id_)
         return list(minions)
 
-    def _check_compound_minions(self, expr):
+    def _check_compound_pillar_exact_minions(self, expr):
+        '''
+        Return the minions found by looking via compound matcher
+
+        Disable pillar glob matching
+        '''
+        return _check_compound_minions(self, expr, greedy, pillar_exact=True)
+
+    def _check_compound_minions(self, expr, pillar_exact=False):
         '''
         Return the minions found by looking via compound matcher
         '''
@@ -301,6 +319,8 @@ class CkMinions(object):
                    'S': self._check_ipcidr_minions,
                    'E': self._check_pcre_minions,
                    'R': self._all_minions}
+            if pillar_exact:
+                ref['I'] = self._check_pillar_exact_minions
             results = []
             unmatched = []
             opers = ['and', 'or', 'not', '(', ')']
@@ -440,6 +460,8 @@ class CkMinions(object):
                        'compound': self._check_compound_minions,
                        'ipcidr': self._check_ipcidr_minions,
                        'range': self._check_range_minions,
+                       'pillar_exact': self._check_pillar_exact_minions,
+                       'compound_pillar_exact': self._check_compound_pillar_exact_minions,
                        }[expr_form](expr)
         except Exception:
             log.exception(
