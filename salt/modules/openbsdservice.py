@@ -27,7 +27,7 @@ def __virtual__():
         krel = map(int, __grains__['kernelrelease'].split('.'))
         # The -f flag, used to force a script to run even if disabled,
         # was added after the 5.0 release.
-        # the rcctl(8) command is the prefered way to manage services.
+        # the rcctl(8) command is the preferred way to manage services.
         if krel[0] > 5 or (krel[0] == 5 and krel[1] > 0):
             if not os.path.exists('/usr/sbin/rcctl'):
                 return __virtualname__
