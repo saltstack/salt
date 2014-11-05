@@ -372,4 +372,43 @@ class TestRunSaltAPIHandler(SaltnadoTestCase):
         assert response_obj['return'] == [{'minion': True, 'sub_minion': True}]
 
 
+class TestEventsSaltAPIHandler(SaltnadoTestCase):
+    def get_app(self):
+        application = tornado.web.Application([(r"/events", saltnado.EventsSaltAPIHandler),
+                                               ], debug=True)
+
+        application.auth = self.auth
+        application.opts = self.opts
+
+        application.event_listener = saltnado.EventListener({}, self.opts)
+        # store a reference, for magic later!
+        self.application = application
+        self.events_to_fire = 0
+        return application
+
+    def test_get(self):
+        self.events_to_fire = 5
+        response = self.fetch('/events',
+                              headers={saltnado.AUTH_TOKEN_HEADER: self.token['token']},
+                              streaming_callback=self.on_event
+                              )
+
+    def on_event(self, event):
+        if self.events_to_fire > 0:
+            self.application.event_listener.event.fire_event({
+                'foo': 'bar',
+                'baz': 'qux',
+            }, 'salt/netapi/test')
+            self.events_to_fire -= 1
+        # once we've fired all the events, lets call it a day
+        else:
+            self.stop()
+
+        event = event.strip()
+        # if we got a retry, just continue
+        if event != 'retry: 400':
+            tag, data = event.splitlines()
+            assert tag.startswith('tag: ')
+            assert data.startswith('data: ')
+
 #
