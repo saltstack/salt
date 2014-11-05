@@ -20,6 +20,10 @@ import json
     - Add support for different client in each chunk
     - fix timeouts (or document how its different)
     - fix "ping" of minions
+    
+    - failed job runs should return an error string (instead of dict)
+    - run the jobs in serial-- if you wanted parallel use async
+    - do *not* require success of previous runs-- since you can use compound commands/overstate
 '''
 class TestSaltAPIHandler(SaltnadoTestCase):
     def get_app(self):
