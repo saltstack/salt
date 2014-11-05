@@ -246,7 +246,6 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
                                                  fuid=0,  # vacuous join
                                                  sid=0,  # always 0 for join
                                                  ha=mha))
-            # stack.join(uid=stack.remotes.values()[0].uid, timeout=0.0)
             for remote in stack.remotes.values():
                 stack.join(uid=remote.uid, timeout=0.0)
 
@@ -308,8 +307,9 @@ class SaltRaetRoadStackRejected(ioflo.base.deeding.Deed):
         rejected = False
         if stack and isinstance(stack, RoadStack):
             if stack.remotes:
-                rejected = (stack.remotes.values()[0].acceptance
-                                == raeting.acceptances.rejected)
+                for remote in stack.remotes.values():
+                    rejected = all([remote.acceptance == raeting.acceptances.rejected
+                                    for remote in stack.remotes.values()])
             else:  # no remotes so assume rejected
                 rejected = True
         self.status.update(rejected=rejected)
@@ -549,7 +549,8 @@ class SaltLoadPillar(ioflo.base.deeding.Deed):
                 'saltenv': self.opts.value['environment'],
                 'ver': '2',
                 'cmd': '_pillar'}
-        self.road_stack.value.transmit({'route': route, 'load': load})
+        self.road_stack.value.transmit({'route': route, 'load': load},
+                                       uid=master.uid)
         self.road_stack.value.serviceAll()
         while True:
             time.sleep(0.1)
@@ -562,7 +563,6 @@ class SaltLoadPillar(ioflo.base.deeding.Deed):
                 self.pillar_refresh.value = False
                 return
             self.road_stack.value.serviceAll()
-        self.pillar_refresh.value = False
 
 
 class SaltSchedule(ioflo.base.deeding.Deed):

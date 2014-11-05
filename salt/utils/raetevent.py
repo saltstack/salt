@@ -27,7 +27,7 @@ from salt.utils import kinds
 log = logging.getLogger(__name__)
 
 
-class SaltEvent(object):
+class RAETEvent(object):
     '''
     The base class used to manage salt events
     '''
