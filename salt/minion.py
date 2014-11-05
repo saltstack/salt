@@ -2428,6 +2428,20 @@ class Matcher(object):
             return False
         return salt.utils.subdict_match(self.opts['pillar'], tgt, delim=delim)
 
+    def pillar_exact_match(self, tgt, delim=':'):
+        '''
+        Reads in the pillar match, no globbing
+        '''
+        log.debug('pillar target: {0}'.format(tgt))
+        if delim not in tgt:
+            log.error('Got insufficient arguments for pillar match '
+                      'statement from master')
+            return False
+        return salt.utils.subdict_match(self.opts['pillar'],
+                                        tgt,
+                                        delim=delim,
+                                        exact_match=True)
+
     def ipcidr_match(self, tgt):
         '''
         Matches based on ip address or CIDR notation
