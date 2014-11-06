@@ -102,23 +102,23 @@ def present(name,
             if password is not None:
                 result = __salt__['rabbitmq.change_password'](
                     name, password, runas=runas)
-                changes['new'] = ' New password'
+                changes['new'] = 'Set password.\n'
             else:
                 log.debug('Password is not set - Clearing password')
                 result = __salt__['rabbitmq.clear_password'](
                     name, runas=runas)
-                changes['old'] += ' Old password removed'
+                changes['old'] += 'Removed password.\n'
             if tags:
                 result.update(__salt__['rabbitmq.set_user_tags'](
                     name, tags, runas=runas)
                 )
-                changes['new'] += ' Tags: {0}'.format(tags)
+                changes['new'] += 'Set tags: {0}\n'.format(tags)
             for element in perms:
                 for vhost, perm in element.items():
                     result.update(__salt__['rabbitmq.set_permissions'](
                         vhost, name, perm[0], perm[1], perm[2], runas)
                     )
-                    changes['new'] += ' {0} {1}'.format(vhost, perm)
+                    changes['new'] += '{0} {1}'.format(vhost, perm)
         else:
             log.debug('User exists, and force is not set - Abandoning')
             ret['comment'] = 'User {0} is not going to be modified'.format(name)
