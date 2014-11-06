@@ -31,7 +31,6 @@ import salt.utils.args
 import salt.utils.xdg
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.validate.path import is_writeable
-from salt.utils import kinds
 
 
 def _sorted(mixins_or_funcs):

@@ -21,7 +21,6 @@ from raet import raeting, nacling
 from raet.lane.stacking import LaneStack
 from raet.lane.yarding import RemoteYard
 
-from salt import daemons
 from salt.utils import kinds
 
 log = logging.getLogger(__name__)
@@ -56,7 +55,7 @@ class RAETEvent(object):
                 log.error(emsg + '\n')
                 raise ValueError(emsg)
 
-        if self.node == kinds.APPL_KIND_NAMES[kinds.applKinds.master] :  # 'master'
+        if self.node == kinds.APPL_KIND_NAMES[kinds.applKinds.master]:  # 'master'
             lanename = 'master'
         elif self.node in [kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
                            kinds.APPL_KIND_NAMES[kinds.applKinds.syndic],

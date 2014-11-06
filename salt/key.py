@@ -19,7 +19,6 @@ import salt.crypt
 import salt.utils
 import salt.utils.event
 import salt.daemons.masterapi
-from salt import daemons
 from salt.utils import kinds
 from salt.utils.event import tagify
 

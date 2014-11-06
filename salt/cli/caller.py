@@ -302,7 +302,7 @@ class RAETCaller(ZeroMQCaller):
             log.error(emsg + "\n")
             raise ValueError(emsg)
         if kind in [kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
-                    kinds.APPL_KIND_NAMES[kinds.applKinds.caller],]:
+                    kinds.APPL_KIND_NAMES[kinds.applKinds.caller]]:
             lanename = "{0}_{1}".format(role, kind)
         else:
             emsg = ("Unsupported application kind '{0}' for RAETChannel.".format(kind))
