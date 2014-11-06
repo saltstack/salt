@@ -617,8 +617,11 @@ def run(cmd,
             else:
                 jid_dict['child_pids'] = [ret['pid']]
             # Rewrite file
-            with salt.utils.fopen(jid_file, 'w+b') as fn_:
-                fn_.write(serial.dumps(jid_dict))
+            try:
+                with salt.utils.fopen(jid_file, 'w+b') as fn_:
+                    fn_.write(serial.dumps(jid_dict))
+            except IOError:
+                log.warning('cmd.run attempted to write job data to {0} but failed.'.format(jid_file))
 
     lvl = _check_loglevel(output_loglevel, quiet)
     if lvl is not None:

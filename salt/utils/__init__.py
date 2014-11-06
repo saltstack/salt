@@ -2388,6 +2388,28 @@ def appendproctitle(name):
         setproctitle.setproctitle(setproctitle.getproctitle() + ' ' + name)
 
 
+def chuid(runas, preserve_current=False):
+    '''
+    Change the EUID of the currently running
+    process to the given username.
+
+    If preserve_current is True, then use setresuid() to
+    store the current uid. This allows permissions
+    to be restored later on.
+
+    WARNING: The preserve_current flag is only available on
+    Python 2.7+. In 2.6 and below, it is ignored.
+    '''
+    uinfo = pwd.getpwnam(runas)
+    if hasattr(os, 'setresuid') and preserve_current:
+        log.debug('Using resuid() to store perms')
+        os.setresuid(uinfo.pw_uid, uinfo.pw_uid, os.getuid())
+    else:
+        log.debug('Setting perms with setuid()')
+        os.setuid(0)
+        os.seteuid(0)
+
+
 def chugid(runas):
     '''
     Change the current process to belong to

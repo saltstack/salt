@@ -173,6 +173,7 @@ def load_args_and_kwargs(func, args, data=None):
     _args = []
     _kwargs = {}
     invalid_kwargs = []
+    minion_kwargs = ['as_me']  # kwargs destined for processing by the minion and not a module
 
     for arg in args:
         if isinstance(arg, string_types):
@@ -203,7 +204,7 @@ def load_args_and_kwargs(func, args, data=None):
         # if the arg is a dict with __kwarg__ == True, then its a kwarg
         elif isinstance(arg, dict) and arg.pop('__kwarg__', False) is True:
             for key, val in arg.iteritems():
-                if argspec.keywords or key in argspec.args:
+                if argspec.keywords or key in argspec.args or key in minion_kwargs:
                     # Function supports **kwargs or is a positional argument to
                     # the function.
                     _kwargs[key] = val
@@ -1029,12 +1030,23 @@ class Minion(MinionBase):
         if function_name in minion_instance.functions:
             try:
                 func = minion_instance.functions[data['fun']]
+                as_me = False
                 args, kwargs = load_args_and_kwargs(
                     func,
                     data['arg'],
                     data)
+                if kwargs.get('as_me', False):
+                    log.info('Switching to user {0}'.format(data['user']))
+                    calling_uid = os.getuid()
+                    salt.utils.chuid(data['user'], preserve_current=True)
+                    kwargs.pop('as_me')
+                    as_me = True
                 sys.modules[func.__module__].__context__['retcode'] = 0
                 return_data = func(*args, **kwargs)
+                if as_me:
+                    log.info('Execution complete. Switching back to previous user.')
+                    os.seteuid(calling_uid)
+                    os.setuid(calling_uid)
                 if isinstance(return_data, types.GeneratorType):
                     ind = 0
                     iret = {}
