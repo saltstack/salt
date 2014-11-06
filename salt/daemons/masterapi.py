@@ -415,7 +415,7 @@ class RemoteFuncs(object):
         tgt_type = load.get('tgt_type', 'glob')
         if tgt_type.lower() == 'pillar':
             tgt_type = 'pillar_exact'
-        elif tgt_typ.lower() == 'compound':
+        elif tgt_type.lower() == 'compound':
             tgt_type = 'compound_pillar_exact'
         good = self.ckminions.auth_check(
                 perms,
