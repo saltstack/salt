@@ -368,7 +368,7 @@ def export(*pools, **kwargs):
     return ret
 
 
-def import_(pool_name='', new_name='', force=False, **kwargs):
+def import_(pool_name='', new_name='', **kwargs):
     '''
     Import storage pools or list pools available for import
 
