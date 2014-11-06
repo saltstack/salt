@@ -90,8 +90,8 @@ def info(device):
         salt '*' btrfs.info /dev/sda1
     '''
     out = __salt__['cmd.run_all']("btrfs filesystem show {0}".format(device))
-    if out.get('stderr'):
-        raise CommandExecutionError(out['stderr'].replace("xfs_info:", "").strip())
+    fsutils._verify_run(out)
+
     return _parse_btrfs_info(out['stdout'])
 
 
