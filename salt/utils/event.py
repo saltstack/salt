@@ -677,7 +677,9 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         '''
         salt.utils.appendproctitle(self.__class__.__name__)
         self.event = SaltEvent('master', self.opts['sock_dir'])
-        for data in self.event.iter_events(full=True):
+        events = self.event.iter_events(full=True)
+        self.event.fire_event({}, 'salt/reactor/start')
+        for data in events:
             reactors = self.list_reactors(data['tag'])
             if not reactors:
                 continue
