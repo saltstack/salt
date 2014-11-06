@@ -368,7 +368,7 @@ def export(*pools, **kwargs):
     return ret
 
 
-def import_(pool_name='', force='false'):
+def import_(pool_name='', new_name='', force='false'):
     '''
     Import a storage pool or list pools available for import
 
@@ -378,6 +378,7 @@ def import_(pool_name='', force='false'):
 
         salt '*' zpool.import
         salt '*' zpool.import myzpool [force=True|False]
+        salt '*' zpool.import myzpool mynewzpool [force=True|False]
     '''
     ret = {}
     zpool = _check_zpool()
@@ -390,13 +391,15 @@ def import_(pool_name='', force='false'):
             pool_list = [l for l in res.splitlines()]
             ret['pools'] = pool_list
         return ret
-    if exists(pool_name):
+    if exists(pool_name) and not new_name:
         ret['Error'] = 'Storage pool {0} already exists. Import the pool under a different name instead'.format(pool_name)
+    elif exists(new_name):
+        ret['Error'] = 'Storage pool {0} already exists. Import the pool under a different name instead'.format(new_name)
     else:
         if force is True:
-            cmd = '{0} import -f {1}'.format(zpool, pool_name)
+            cmd = '{0} import -f {1}'.format(zpool, pool_name, new_name)
         else:
-            cmd = '{0} import {1}'.format(zpool, pool_name)
+            cmd = '{0} import {1}'.format(zpool, pool_name, new_name)
         res = __salt__['cmd.run'](cmd, ignore_retcode=True)
         if res:
             ret['Error'] = {}
