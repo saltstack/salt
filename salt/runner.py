@@ -123,16 +123,20 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
         jid = self.returners[fstr]()
         log.debug('Runner starting with jid {0}'.format(jid))
-        # Fire event for any listeners
+        # Fire new runner event for any listeners
         self.event.fire_event({'runner_job':fun}, tagify([jid, 'new'], 'job'))
         ret = self.functions[fun](*args, **kwargs)  # pylint: disable=star-args
+        # Fire return on event bus
+        ret_load = {'return': ret, 'fun': fun, 'fun_args': args}
+        self.event.fire_event(ret_load, tagify([jid, 'runner_ret'], 'job'))
         try:
-            fstr = '{0}.save_load'.format(self.opts['master_job_cache'])
-            self.returners[fstr]('jid', {})   #FIXME debug empty dict
+            fstr = '{0}.save_runner_load'.format(self.opts['master_job_cache'])
+            self.returners[fstr](jid, ret_load)
         except KeyError:
-            log.critical(
+            log.debug(
                 'The specified returner used for the master job cache '
-                '"{0}" does not have a save_load function!'.format(
+                '"{0}" does not have a save_runner_load function! The results '
+                'of this runner execution will not be stored.'.format(
                     self.opts['master_job_cache']
                 )
             )
