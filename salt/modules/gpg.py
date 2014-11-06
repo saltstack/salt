@@ -141,7 +141,7 @@ def search_keys(text, keyserver=None, user=None):
     Search keys from keyserver
 
     text
-        Text to search the keyserver for, eg. email address, keyID or fingerprint.
+        Text to search the keyserver for, e.g. email address, keyID or fingerprint.
 
     keyserver
         Keyserver to use for searching for GPG keys, defaults to pgp.mit.edu
@@ -287,7 +287,7 @@ def create_key(key_type='RSA',
         package.
 
         The create_key process takes awhile so increasing the timeout
-        may be necessary, eg. -t 15.
+        may be necessary, e.g. -t 15.
 
     key_type
         The type of the primary key to generate. It must be capable of signing.

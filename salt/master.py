@@ -91,7 +91,7 @@ class SMaster(object):
 
 class Maintenance(multiprocessing.Process):
     '''
-    A generalized maintenence process which performances maintenence
+    A generalized maintenance process which performances maintenance
     routines.
     '''
     def __init__(self, opts):

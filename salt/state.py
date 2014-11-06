@@ -1537,8 +1537,8 @@ class State(object):
         except Exception:
             trb = traceback.format_exc()
             # There are a number of possibilities to not have the cdata
-            # populated with what we might have expected, so just be enought
-            # smart to not raise another KeyError as the name is easily
+            # populated with what we might have expected, so just be smart
+            # enough to not raise another KeyError as the name is easily
             # guessable and fallback in all cases to present the real
             # exception to the user
             if len(cdata['args']) > 0:

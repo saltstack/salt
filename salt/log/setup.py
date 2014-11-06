@@ -103,7 +103,7 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, NewStyleClassMixIn):
         is being used, and also some Unicode fixes.
 
         This code overhead will only be executed when the class is
-        instantiated, ie:
+        instantiated, i.e.:
 
             logging.getLogger(__name__)
 

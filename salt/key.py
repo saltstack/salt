@@ -159,7 +159,7 @@ class KeyCLI(object):
         '''
         Accept all keys
 
-        :param bool include_rejected: Whether or not to accept a matched key that was formely rejected
+        :param bool include_rejected: Whether or not to accept a matched key that was formerly rejected
         '''
         self.accept('*', include_rejected=include_rejected)
 

@@ -515,7 +515,7 @@ class LogLevelMixIn(object):
             )
             if self.config.get(cli_setting_name, None) is not None:
                 # There's a configuration setting defining this log file path,
-                # ie, `key_log_file` if the cli tool is `salt-key`
+                # i.e., `key_log_file` if the cli tool is `salt-key`
                 self.options.log_file = self.config.get(cli_setting_name)
             elif self.config.get(self._logfile_config_setting_name_, None):
                 # Is the regular log file setting set?
@@ -534,7 +534,7 @@ class LogLevelMixIn(object):
             )
             if self.config.get(cli_setting_name, None) is not None:
                 # There's a configuration setting defining this log file
-                # logging level, ie, `key_log_file_level` if the cli tool is
+                # logging level, i.e., `key_log_file_level` if the cli tool is
                 # `salt-key`
                 self.options.log_file_level = self.config.get(cli_setting_name)
             elif self.config.get(

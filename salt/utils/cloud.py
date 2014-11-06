@@ -586,7 +586,7 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
     ssh_args.extend([
         # Don't add new hosts to the host key database
         '-oStrictHostKeyChecking=no',
-        # Set hosts key database path to /dev/null, ie, non-existing
+        # Set hosts key database path to /dev/null, i.e., non-existing
         '-oUserKnownHostsFile=/dev/null',
         # Don't re-use the SSH connection. Less failures.
         '-oControlPath=none'
@@ -1441,7 +1441,7 @@ def scp_file(dest_path, contents, kwargs):
     ssh_args = [
         # Don't add new hosts to the host key database
         '-oStrictHostKeyChecking=no',
-        # Set hosts key database path to /dev/null, ie, non-existing
+        # Set hosts key database path to /dev/null, i.e., non-existing
         '-oUserKnownHostsFile=/dev/null',
         # Don't re-use the SSH connection. Less failures.
         '-oControlPath=none'
@@ -1482,7 +1482,7 @@ def scp_file(dest_path, contents, kwargs):
             '-oProxyCommand="ssh {0} {1} {2} {3} {4}@{5} -p {6} nc -q0 %h %p"'.format(
                 # Don't add new hosts to the host key database
                 '-oStrictHostKeyChecking=no',
-                # Set hosts key database path to /dev/null, ie, non-existing
+                # Set hosts key database path to /dev/null, i.e., non-existing
                 '-oUserKnownHostsFile=/dev/null',
                 # Don't re-use the SSH connection. Less failures.
                 '-oControlPath=none',
@@ -1559,7 +1559,7 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
     ssh_args = [
         # Don't add new hosts to the host key database
         '-oStrictHostKeyChecking=no',
-        # Set hosts key database path to /dev/null, ie, non-existing
+        # Set hosts key database path to /dev/null, i.e., non-existing
         '-oUserKnownHostsFile=/dev/null',
         # Don't re-use the SSH connection. Less failures.
         '-oControlPath=none'
@@ -1600,7 +1600,7 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
             '-oProxyCommand="ssh {0} {1} {2} {3} {4}@{5} -p {6} nc -q0 %h %p"'.format(
                 # Don't add new hosts to the host key database
                 '-oStrictHostKeyChecking=no',
-                # Set hosts key database path to /dev/null, ie, non-existing
+                # Set hosts key database path to /dev/null, i.e., non-existing
                 '-oUserKnownHostsFile=/dev/null',
                 # Don't re-use the SSH connection. Less failures.
                 '-oControlPath=none',
@@ -1682,7 +1682,7 @@ def root_cmd(command, tty, sudo, allow_failure=False, **kwargs):
     ssh_args.extend([
         # Don't add new hosts to the host key database
         '-oStrictHostKeyChecking={0}'.format(host_key_checking),
-        # Set hosts key database path to /dev/null, ie, non-existing
+        # Set hosts key database path to /dev/null, i.e., non-existing
         '-oUserKnownHostsFile={0}'.format(known_hosts_file),
         # Don't re-use the SSH connection. Less failures.
         '-oControlPath=none'
@@ -1721,7 +1721,7 @@ def root_cmd(command, tty, sudo, allow_failure=False, **kwargs):
             '-oProxyCommand="ssh {0} {1} {2} {3} {4}@{5} -p {6} nc -q0 %h %p"'.format(
                 # Don't add new hosts to the host key database
                 '-oStrictHostKeyChecking=no',
-                # Set hosts key database path to /dev/null, ie, non-existing
+                # Set hosts key database path to /dev/null, i.e., non-existing
                 '-oUserKnownHostsFile=/dev/null',
                 # Don't re-use the SSH connection. Less failures.
                 '-oControlPath=none',
@@ -1861,7 +1861,7 @@ def wait_for_ip(update_callback,
     :param update_kwargs: Keyword arguments to pass to update_callback
     :param timeout: The maximum amount of time(in seconds) to wait for the IP
                     address.
-    :param interval: The looping interval, ie, the amount of time to sleep
+    :param interval: The looping interval, i.e., the amount of time to sleep
                      before the next iteration.
     :param interval_multiplier: Increase the interval by this multiplier after
                                 each request; helps with throttling
@@ -1920,7 +1920,7 @@ def wait_for_ip(update_callback,
 
 def simple_types_filter(data):
     '''
-    Convert the data list, dictionary into simple types, ie, int, float, string,
+    Convert the data list, dictionary into simple types, i.e., int, float, string,
     bool, etc.
     '''
     if data is None:

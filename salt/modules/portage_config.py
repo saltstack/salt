@@ -49,7 +49,7 @@ def _porttree():
 def _p_to_cp(p):
     '''
     Convert a package name or a DEPEND atom to category/package format.
-    Raises an exception if program name is ambigous.
+    Raises an exception if program name is ambiguous.
     '''
     ret = _porttree().dbapi.xmatch("match-all", p)
     if ret:

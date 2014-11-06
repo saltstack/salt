@@ -555,7 +555,7 @@ class ConnectedCache(multiprocessing.Process):
             except KeyboardInterrupt:
                 self.stop()
             except zmq.ZMQError as zmq_err:
-                log.error('ConCache ZeroMQ-Error occured')
+                log.error('ConCache ZeroMQ-Error occurred')
                 log.exception(zmq_err)
                 self.stop()
 

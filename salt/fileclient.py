@@ -944,7 +944,7 @@ class RemoteClient(Client):
             saltenv = env
 
         # Hash compare local copy with master and skip download
-        # if no diference found.
+        # if no difference found.
         dest2check = dest
         if not dest2check:
             rel_path = self._check_proto(path)

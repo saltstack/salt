@@ -19,7 +19,7 @@ except ImportError:
 
 # ----- ATTENTION --------------------------------------------------------------------------------------------------->
 #
-# ALL major version bumps, new release codenames, MUST be defined in the SaltStackVersion.NAMES dictionary, ie:
+# ALL major version bumps, new release codenames, MUST be defined in the SaltStackVersion.NAMES dictionary, i.e.:
 #
 #    class SaltStackVersion(object):
 #

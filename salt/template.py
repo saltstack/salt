@@ -148,8 +148,8 @@ def template_shebang(template, renderers, default):
     return render_pipe
 
 
-# A dict of combined renderer(ie, rend1_rend2_...) to
-# render-pipe(ie, rend1|rend2|...)
+# A dict of combined renderer (i.e., rend1_rend2_...) to
+# render-pipe (i.e., rend1|rend2|...)
 #
 OLD_STYLE_RENDERERS = {}
 

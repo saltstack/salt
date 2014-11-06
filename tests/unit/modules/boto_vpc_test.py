@@ -527,9 +527,9 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase):
         vpc_b = self.conn.create_vpc(cidr_block)
         subnet_a = self._create_subnet(vpc_a.id, '10.0.0.0/24')
         subnet_b = self._create_subnet(vpc_b.id, '10.0.0.0/24')
-        subnet_assocation = boto_vpc.get_subnet_association([subnet_a.id, subnet_b.id],
+        subnet_association = boto_vpc.get_subnet_association([subnet_a.id, subnet_b.id],
                                                             **conn_parameters)
-        self.assertFalse(subnet_assocation)
+        self.assertFalse(subnet_association)
 
     @mock_ec2
     def test_that_when_creating_a_subnet_succeeds_the_create_subnet_method_returns_true(self):
@@ -1321,15 +1321,15 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
     def test_that_when_associating_a_route_table_succeeds_the_associate_route_table_method_should_return_the_association_id(
             self):
         '''
-        Tests associating route table successsfully
+        Tests associating route table successfully
         '''
         vpc = self._create_vpc()
         subnet = self._create_subnet(vpc.id)
         route_table = self._create_route_table(vpc.id)
 
-        assocation_id = boto_vpc.associate_route_table(route_table.id, subnet.id, **conn_parameters)
+        association_id = boto_vpc.associate_route_table(route_table.id, subnet.id, **conn_parameters)
 
-        self.assertTrue(assocation_id)
+        self.assertTrue(association_id)
 
     @mock_ec2
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
@@ -1341,9 +1341,9 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
         vpc = self._create_vpc()
         subnet = self._create_subnet(vpc.id)
 
-        assocation_id = boto_vpc.associate_route_table('fake', subnet.id, **conn_parameters)
+        association_id = boto_vpc.associate_route_table('fake', subnet.id, **conn_parameters)
 
-        self.assertFalse(assocation_id)
+        self.assertFalse(association_id)
 
     @mock_ec2
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
@@ -1355,9 +1355,9 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
         vpc = self._create_vpc()
         route_table = self._create_route_table(vpc.id)
 
-        assocation_id = boto_vpc.associate_route_table(route_table.id, 'fake', **conn_parameters)
+        association_id = boto_vpc.associate_route_table(route_table.id, 'fake', **conn_parameters)
 
-        self.assertFalse(assocation_id)
+        self.assertFalse(association_id)
 
     @mock_ec2
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')

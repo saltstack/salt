@@ -12,7 +12,7 @@ A flexible renderer that takes a templating engine and a data format
 # FIXME: I really need to review and simplify this renderer, it's getting out of hand!
 #
 # TODO:
-#   - sls meta/info state: Eg,
+#   - sls meta/info state: E.g.,
 #
 #       sls_info:
 #         stateconf.set:
@@ -20,7 +20,7 @@ A flexible renderer that takes a templating engine and a data format
 #           - description: what the salt file does...
 #           - version: 0.1.0
 #
-#   - version constraint for 'include'. Eg,
+#   - version constraint for 'include'. E.g.,
 #
 #       include:
 #         - apache: >= 0.1.0
@@ -453,7 +453,7 @@ def add_implicit_requires(data):
         if prev_state[0] is not None:
             try:
                 nvlist(args, ['require']).next()[2].insert(0, dict([prev_state]))
-            except StopIteration:  # ie, there's no require
+            except StopIteration:  # i.e., there's no require
                 args.append(dict(require=[dict([prev_state])]))
 
         states_before.add(tag)
