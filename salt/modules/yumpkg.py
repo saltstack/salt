@@ -965,7 +965,7 @@ def install(name=None,
             exclude=exclude_arg,
             branch=branch_arg,
             gpgcheck='--nogpgcheck' if skip_verify else '',
-            pkg=' '.join(to_reinstall.values()),
+            pkg=' '.join(to_reinstall.itervalues()),
         )
         __salt__['cmd.run'](cmd, output_loglevel='trace')
 
@@ -1843,5 +1843,5 @@ def owner(*paths):
         if 'not owned' in ret[path].lower():
             ret[path] = ''
     if len(ret) == 1:
-        return ret.values()[0]
+        return ret.itervalues().next()
     return ret

@@ -18,8 +18,8 @@ def output(data):
     Rather basic....
     '''
     tmp = {}
-    for min_ in data.keys():
-        for process in data[min_].keys():
+    for min_ in data:
+        for process in data[min_]:
             add = False
             if data[min_][process]['result'] is False:
                 add = True

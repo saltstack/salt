@@ -556,12 +556,6 @@ class TestDaemon(object):
         sub_minion_opts = salt.config.minion_config(os.path.join(TMP_CONF_DIR, 'sub_minion'))
         syndic_master_opts = salt.config.master_config(os.path.join(TMP_CONF_DIR, 'syndic_master'))
 
-        RUNTIME_CONFIGS['master'] = freeze(master_opts)
-        RUNTIME_CONFIGS['minion'] = freeze(minion_opts)
-        RUNTIME_CONFIGS['syndic'] = freeze(syndic_opts)
-        RUNTIME_CONFIGS['sub_minion'] = freeze(sub_minion_opts)
-        RUNTIME_CONFIGS['syndic_master'] = freeze(syndic_master_opts)
-
         verify_env([os.path.join(master_opts['pki_dir'], 'minions'),
                     os.path.join(master_opts['pki_dir'], 'minions_pre'),
                     os.path.join(master_opts['pki_dir'], 'minions_rejected'),

@@ -475,7 +475,7 @@ def file_list(*packages):
     '''
     ret = file_dict(*packages)
     files = []
-    for pkg_files in ret['files'].values():
+    for pkg_files in ret['files'].itervalues():
         files.extend(pkg_files)
     ret['files'] = files
     return ret

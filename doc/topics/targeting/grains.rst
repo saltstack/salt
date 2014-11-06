@@ -178,7 +178,7 @@ approach would be code something similar to the following:
 .. code-block:: python
 
    #!/usr/bin/env python
-   def yourfunction()
+   def yourfunction():
         # initialize a grains dictionary
         grains = {}
         # Some code for logic that sets grains like

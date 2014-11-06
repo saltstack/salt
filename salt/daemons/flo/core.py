@@ -543,7 +543,7 @@ class SaltLoadPillar(ioflo.base.deeding.Deed):
         self.master_estate_name.value = master.name
 
         route = {'src': (self.road_stack.value.local.name, None, None),
-                 'dst': (master.name, None, 'remote_cmd')}
+                 'dst': (self.road_stack.value.remotes.itervalues().next().name, None, 'remote_cmd')}
         load = {'id': self.opts.value['id'],
                 'grains': self.grains.value,
                 'saltenv': self.opts.value['environment'],
@@ -908,7 +908,6 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
                 log.error("**** No available destination estate for 'remote_cmd'."
                           "Unable to route.".format())
                 return
-            #d_estate = self.road_stack.value.remotes.values()[0].name
             msg['route']['dst'] = (d_estate, d_yard, d_share)
             log.debug("**** Missing destination estate for 'remote_cmd'. "
                     "Using default route={0}.".format(msg['route']['dst']))
@@ -924,8 +923,6 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
                 log.error("**** No available destination estate for 'call_cmd'."
                           "Unable to route.".format())
                 return
-
-            #d_estate = self.road_stack.value.remotes.values()[0].name
             d_share = 'remote_cmd'
             msg['route']['dst'] = (d_estate, d_yard, d_share)
             log.debug("**** Missing destination estate for 'call_cmd'. "
@@ -1049,8 +1046,8 @@ class SaltRaetPublisher(ioflo.base.deeding.Deed):
         stack = self.stack.value
         pub_data = pub_msg['return']
         # only publish to available minions by intersecting sets
+
         minions = (self.availables.value &
-                   set(stack.nameRemotes.keys()) &
                    set((remote.name for remote in stack.remotes.values()
                             if remote.kind == kinds.applKinds.minion)))
         for minion in minions:

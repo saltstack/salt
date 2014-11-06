@@ -95,7 +95,7 @@ class OverState(object):
         '''
         names = set()
         for comp in self.over:
-            names.add(comp.keys()[0])
+            names.add(comp.iterkeys().next())
         return names
 
     def get_stage(self, name):
@@ -177,7 +177,7 @@ class OverState(object):
             if isinstance(fun_d, str):
                 fun = fun_d
             elif isinstance(fun_d, dict):
-                fun = fun_d.keys()[0]
+                fun = fun_d.iterkeys().next()
                 arg = fun_d[fun]
             else:
                 yield {name: {}}
@@ -212,7 +212,7 @@ class OverState(object):
             else:
                 # Req has not be called
                 for comp in self.over:
-                    rname = comp.keys()[0]
+                    rname = comp.iterkeys().next()
                     if req == rname:
                         rstage = comp[rname]
                         v_stage = self.verify_stage(rstage)
@@ -263,7 +263,7 @@ class OverState(object):
         self.over_run = {}
 
         for comp in self.over:
-            name = comp.keys()[0]
+            name = comp.iterkeys().next()
             stage = comp[name]
             if name not in self.over_run:
                 self.call_stage(name, stage)
@@ -286,7 +286,7 @@ class OverState(object):
         self.over_run = {}
         yield self.over
         for comp in self.over:
-            name = comp.keys()[0]
+            name = comp.iterkeys().next()
             stage = comp[name]
             if name not in self.over_run:
                 v_stage = self.verify_stage(stage)
@@ -296,7 +296,7 @@ class OverState(object):
                 else:
                     for sret in self.call_stage(name, stage):
                         for yret in yielder(sret):
-                            sname = yret.keys()[0]
+                            sname = yret.iterkeys().next()
                             yield [self.get_stage(sname)]
                             final = {}
                             for minion in yret[sname]:

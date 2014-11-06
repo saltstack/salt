@@ -178,9 +178,9 @@ def format_log(ret):
                 if 'diff' in chg:
                     if isinstance(chg['diff'], string_types):
                         msg = 'File changed:\n{0}'.format(chg['diff'])
-                if all([isinstance(x, dict) for x in chg.values()]):
+                if all([isinstance(x, dict) for x in chg.itervalues()]):
                     if all([('old' in x and 'new' in x)
-                            for x in chg.values()]):
+                            for x in chg.itervalues()]):
                         # This is the return data from a package install
                         msg = 'Installed Packages:\n'
                         for pkg in chg:
@@ -495,7 +495,7 @@ class Compiler(object):
                     for entry in names:
                         live = copy.deepcopy(chunk)
                         if isinstance(entry, dict):
-                            low_name = entry.keys()[0]
+                            low_name = entry.iterkeys().next()
                             live['name'] = low_name
                             live.update(entry[low_name][0])
                         else:
@@ -531,7 +531,7 @@ class Compiler(object):
                 # Explicitly declared exclude
                 if len(exc) != 1:
                     continue
-                key = exc.keys()[0]
+                key = exc.iterkeys().next()
                 if key == 'sls':
                     ex_sls.add(exc['sls'])
                 elif key == 'id':
@@ -1098,7 +1098,7 @@ class State(object):
                     for entry in names:
                         live = copy.deepcopy(chunk)
                         if isinstance(entry, dict):
-                            low_name = entry.keys()[0]
+                            low_name = entry.iterkeys().next()
                             live['name'] = low_name
                             live.update(entry[low_name][0])
                         else:
@@ -1209,7 +1209,7 @@ class State(object):
                 # Explicitly declared exclude
                 if len(exc) != 1:
                     continue
-                key = exc.keys()[0]
+                key = exc.iterkeys().next()
                 if key == 'sls':
                     ex_sls.add(exc['sls'])
                 elif key == 'id':
@@ -1381,9 +1381,9 @@ class State(object):
                                         if next(iter(arg)) in ignore_args:
                                             continue
                                         # Don't use name or names
-                                        if arg.keys()[0] == 'name':
+                                        if arg.iterkeys().next() == 'name':
                                             continue
-                                        if arg.keys()[0] == 'names':
+                                        if arg.iterkeys().next() == 'names':
                                             continue
                                         extend[ext_id][_state].append(arg)
                                     continue
@@ -1407,9 +1407,9 @@ class State(object):
                                         if next(iter(arg)) in ignore_args:
                                             continue
                                         # Don't use name or names
-                                        if arg.keys()[0] == 'name':
+                                        if arg.iterkeys().next() == 'name':
                                             continue
-                                        if arg.keys()[0] == 'names':
+                                        if arg.iterkeys().next() == 'names':
                                             continue
                                         extend[id_][state].append(arg)
                                     continue
@@ -1510,18 +1510,18 @@ class State(object):
                 ret.update(self._run_check(low))
 
             if 'saltenv' in low:
-                inject_globals['__env__'] = low['saltenv']
+                inject_globals['__env__'] = str(low['saltenv'])
             elif isinstance(cdata['kwargs'].get('env', None), string_types):
                 # User is using a deprecated env setting which was parsed by
                 # format_call.
                 # We check for a string type since module functions which
                 # allow setting the OS environ also make use of the "env"
                 # keyword argument, which is not a string
-                inject_globals['__env__'] = cdata['kwargs']['env']
+                inject_globals['__env__'] = str(cdata['kwargs']['env'])
             elif '__env__' in low:
                 # The user is passing an alternative environment using __env__
                 # which is also not the appropriate choice, still, handle it
-                inject_globals['__env__'] = low['__env__']
+                inject_globals['__env__'] = str(low['__env__'])
             else:
                 # Let's use the default environment
                 inject_globals['__env__'] = 'base'
@@ -2264,7 +2264,7 @@ class BaseHighState(object):
         Cleanly merge the top files
         '''
         top = DefaultOrderedDict(OrderedDict)
-        for ctops in tops.values():
+        for ctops in tops.itervalues():
             for ctop in ctops:
                 for saltenv, targets in ctop.items():
                     if saltenv == 'include':
@@ -2311,7 +2311,7 @@ class BaseHighState(object):
                     'The top file matches for saltenv {0} are not '
                     'formatted as a dict'.format(saltenv)
                 )
-            for slsmods in matches.values():
+            for slsmods in matches.itervalues():
                 if not isinstance(slsmods, list):
                     errors.append('Malformed topfile (state declarations not '
                                   'formed as a list)')
@@ -2319,7 +2319,7 @@ class BaseHighState(object):
                 for slsmod in slsmods:
                     if isinstance(slsmod, dict):
                         # This value is a match option
-                        for val in slsmod.values():
+                        for val in slsmod.itervalues():
                             if not val:
                                 errors.append(
                                     'Improperly formatted top file matcher '
@@ -2589,7 +2589,7 @@ class BaseHighState(object):
                     for arg in state[name][s_dec]:
                         if isinstance(arg, dict):
                             if len(arg) > 0:
-                                if arg.keys()[0] == 'order':
+                                if arg.iterkeys().next() == 'order':
                                     found = True
                     if not found:
                         if not isinstance(state[name][s_dec], list):

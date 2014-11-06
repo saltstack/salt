@@ -178,6 +178,11 @@ at some point be deprecated in favor of a more generic `firewall` state.
         - sport: 1025:65535
         - save: True
 
+    default to accept:
+      iptables.set_policy:
+        - chain: INPUT
+        - policy: ACCEPT
+
 .. note::
 
     Various functions of the ``iptables`` module use the ``--check`` option. If
@@ -539,6 +544,9 @@ def set_policy(name, family='ipv4', **kwargs):
 
     family
         Networking family, either ipv4 or ipv6
+
+    policy
+        The requested table policy
 
     '''
     ret = {'name': name,
