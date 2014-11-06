@@ -125,7 +125,6 @@ def get_subnet_association(subnets, region=None, key=None, keyid=None,
         return False
 
 
-
 def _find_vpc(vpc_id=None, name=None, cidr=None, tags=None, conn=None):
     '''
     Given VPC properties, find and return matching VPC_IDs
@@ -164,6 +163,7 @@ def _find_vpc(vpc_id=None, name=None, cidr=None, tags=None, conn=None):
         log.error(e)
         return False
 
+
 def get_id(name=None, cidr=None, tags=None, region=None, key=None, keyid=None, profile=None):
     '''
     Given a VPC properties, return VPC ID if exist.
@@ -180,7 +180,6 @@ def get_id(name=None, cidr=None, tags=None, region=None, key=None, keyid=None, p
         return None
 
     vpcs_id = _find_vpc(name=name, cidr=cidr, tags=tags, conn=conn)
-    
     if vpcs_id:
         log.info("Matching VPC: {0}".format(" ".join(vpcs_id)))
         if len(vpcs_id) == 1:
@@ -190,8 +189,6 @@ def get_id(name=None, cidr=None, tags=None, region=None, key=None, keyid=None, p
     else:
         log.warning('Could not find VPC.')
         return None
-
-
 
 
 def exists(vpc_id=None, name=None, cidr=None, tags=None, region=None, key=None, keyid=None, profile=None):
@@ -213,7 +210,6 @@ def exists(vpc_id=None, name=None, cidr=None, tags=None, region=None, key=None, 
         return False
 
     vpcs = _find_vpc(vpc_id=vpc_id, name=name, cidr=cidr, tags=tags, conn=conn)
-    
     if vpcs:
         log.info('VPC exists.')
         return True

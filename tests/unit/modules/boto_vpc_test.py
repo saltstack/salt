@@ -369,7 +369,6 @@ class BotoVpcTestCase(BotoVpcTestCaseBase):
         '''
         Tests getting vpc id but providing no filters
         '''
-        
         vpc1 = self._create_vpc(name='vpc-test1')
         vpc2 = self._create_vpc(name='vpc-test2')
 
