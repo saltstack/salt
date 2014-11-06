@@ -120,7 +120,8 @@ def present(name,
             _set_tags_and_perms(tags, perms)
         else:
             log.debug('User exists, and force is not set - Abandoning')
-            ret['comment'] = 'User {0} is not going to be modified'.format(name)
+            ret['comment'] = ('User {0} is not going to be'
+                              ' modified').format(name)
 
         if 'Error' in result:
             ret['result'] = False
