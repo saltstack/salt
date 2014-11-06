@@ -29,6 +29,7 @@ import os
 import re
 import time
 import logging
+import uuid
 
 import salt.utils
 from salt.exceptions import CommandExecutionError
@@ -268,3 +269,79 @@ def usage(path):
     return ret
 
 
+def mkfs(*devices, **kwargs):
+    '''
+    Create a file system on the specified device. By default wipes out with force.
+
+    General options:
+    
+    * **allocsize**: Specify the BTRFS offset from the start of the device.
+    * **bytecount**: Specify the size of the resultant filesystem.
+    * **nodesize**: Node size.
+    * **leafsize**: Specify the nodesize, the tree block size in which btrfs stores data.
+    * **noforce**: Prevent force overwrite when an existing filesystem is detected on the device.
+    * **sectorsize**: Specify the sectorsize, the minimum data block allocation unit.
+    * **nodiscard**: Do not perform whole device TRIM operation by default.
+    * **uuid**: Pass UUID or pass True to generate one.
+    
+
+    Options:
+
+    * **dto**: (raid0|raid1|raid5|raid6|raid10|single|dup) Specify how the data must be spanned across the devices specified.
+    * **mto**: (raid0|raid1|raid5|raid6|raid10|single|dup) Specify how metadata must be spanned across the devices specified.
+    * **fts**: Features (call ``salt <host> btrfs.features`` for full list of available features)
+
+    See the ``mkfs.btrfs(8)`` manpage for a more complete description of corresponding options description.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' btrfs.mkfs /dev/sda1
+        salt '*' btrfs.mkfs /dev/sda1 noforce=True
+    '''
+    # XXX: check for device availability!
+
+
+    if not devices:
+        raise CommandExecutionError("No devices specified")
+
+    mounts = fsutils._get_mounts("btrfs")
+    for device in devices:
+        if mounts.get(device):
+            raise CommandExecutionError("Device \"{0}\" should not be mounted".format(device))
+
+    cmd = ["mkfs.btrfs"]
+
+    dto = kwargs.get("dto")
+    mto = kwargs.get("mto")
+    if len(devices) == 1:
+        dto and cmd.append("-d single")
+        mto and cmd.append("-m single")
+    else:
+        dto and cmd.append("-d {0}".format(dto))
+        mto and cmd.append("-m {0}".format(mto))
+
+    for key, option in [("-l", "leafsize"), ("-L", "label"), ("-O", "fts"),
+                        ("-A", "allocsize"), ("-b", "bytecount"), ("-n", "nodesize"),
+                        ("-s", "sectorsize")]:
+        if option == 'label' and kwargs.has_key(option):
+            kwargs['label'] = "'{0}'".format(kwargs["label"])
+        kwargs.get(option) and cmd.append("{0} {1}".format(key, kwargs.get(option)))
+
+    if kwargs.get("uuid"):
+        cmd.append("-U {0}".format(kwargs.get("uuid") is True and uuid.uuid1() or kwargs.get("uuid")))
+
+    kwargs.get("nodiscard") and cmd.append("-K")
+    if not kwargs.get("noforce"):
+        cmd.append("-f")
+
+    cmd.extend(devices)
+
+    out = __salt__['cmd.run_all'](' '.join(cmd))
+    fsutils._verify_run(out)
+
+    ret = {'log': out['stdout']}
+    ret.update(__salt__['btrfs.info'](devices[0]))
+
+    return ret
