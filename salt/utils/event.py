@@ -508,13 +508,14 @@ class RunnerEvent(MasterEvent):
     It extends MasterEvent to include information about how to
     display events to the user as a runner progresses.
     '''
-    def __init__(self, opts):
+    def __init__(self, opts, jid):
         super(RunnerEvent, self).__init__(opts['sock_dir'])
+        self.jid = jid
 
-    def fire_progress(self, jid, data, outputter='pprint'):
+    def fire_progress(self, data, outputter='pprint'):
         progress_event = {'data': data,
                           'outputter': outputter}
-        self.fire_event(progress_event, tagify([jid, 'progress'], 'runner'))
+        self.fire_event(progress_event, tagify([self.jid, 'progress'], 'runner'))
 
 
 class MinionEvent(SaltEvent):

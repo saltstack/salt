@@ -8,6 +8,8 @@ from __future__ import print_function
 import collections
 import logging
 import time
+import sys
+import multiprocessing
 
 # Import salt libs
 import salt.exceptions
@@ -46,6 +48,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         self.opts = opts
         self.functions = salt.loader.runner(opts)  # Must be self.functions for mixin to work correctly :-/
         self.returners = salt.loader.returners(opts, self.functions)
+        self.outputters = salt.loader.outputters(opts)
         self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
     def cmd(self, fun, arg, pub_data=None, kwarg=None):
         '''
@@ -123,25 +126,37 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
         jid = self.returners[fstr]()
         log.debug('Runner starting with jid {0}'.format(jid))
-        # Fire new runner event for any listeners
         self.event.fire_event({'runner_job':fun}, tagify([jid, 'new'], 'job'))
-        if 'jid' in salt.utils.get_function_argspec(self.functions[fun]).args:
-            kwargs['jid'] = jid
-            ret = self.functions[fun](*args, **kwargs)
-        else:
-            ret = self.functions[fun](*args, **kwargs)  # pylint: disable=star-args
-        # Fire return on event bus
-        ret_load = {'return': ret, 'fun': fun, 'fun_args': args}
-        self.event.fire_event(ret_load, tagify([jid, 'return'], 'runner'))
+        target = RunnerClient._thread_return
+        data = {'fun': fun, 'jid': jid, 'args': args, 'kwargs': kwargs}
+        process = multiprocessing.Process(
+            target=target, args=(self, self.opts, data)
+        )
+        process.start()
+    
+    @classmethod
+    def _thread_return(cls, instance, opts, data):
+        # Provide JID if the runner wants to access it
+        sys.modules[instance.functions[data['fun']].__module__].__jid__ = data['jid']
+        # Runtime injection of the progress event system with the correct jid
+        sys.modules[instance.functions[data['fun']].__module__].progress = \
+                salt.utils.event.RunnerEvent(opts, data['jid']).fire_progress
+        ret = instance.functions[data['fun']](*data['args'], **data['kwargs'])
+        # Sleep for just a moment to let any progress events return
+        time.sleep(0.1)
+        ret_load = {'return': ret, 'fun': data['fun'], 'fun_args': data['args']}
+        # Don't use the invoking processes' event socket because it could be closed down by the time we arrive here.
+        # Create another, for safety's sake.
+        salt.utils.event.MasterEvent(opts['sock_dir']).fire_event(ret_load, tagify([data['jid'], 'return'], 'runner'))
         try:
-            fstr = '{0}.save_runner_load'.format(self.opts['master_job_cache'])
-            self.returners[fstr](jid, ret_load)
+            fstr = '{0}.save_runner_load'.format(opts['master_job_cache'])
+            instance.returners[fstr](data['jid'], ret_load)
         except KeyError:
             log.debug(
                 'The specified returner used for the master job cache '
                 '"{0}" does not have a save_runner_load function! The results '
                 'of this runner execution will not be stored.'.format(
-                    self.opts['master_job_cache']
+                    opts['master_job_cache']
                 )
             )
         except Exception:
@@ -149,7 +164,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
                 'The specified returner threw a stack trace:\n',
                 exc_info=True
             )
-        return ret
+        return data['jid']  # FIXME better return?
 
     def master_call(self, **kwargs):
         '''
@@ -264,9 +279,45 @@ class Runner(RunnerClient):
             self.print_docs()
         else:
             try:
-                return super(Runner, self).cmd(
-                        self.opts['fun'], self.opts['arg'], self.opts)
+                # Run the runner!
+                jid = super(Runner, self).cmd(
+                    self.opts['fun'], self.opts['arg'], self.opts)
+                # Gather the returns
+                for ret in self.get_runner_returns(jid, timeout=60):  # 60 second timeout
+                    if 'outputter' in ret:
+                        print(self.outputters[ret['outputter']](ret['data']))
+                    else:
+                        print(ret)
+
             except salt.exceptions.SaltException as exc:
                 ret = str(exc)
                 print(ret)
                 return ret
+
+    def get_runner_returns(self, jid, timeout=None):
+        '''
+        Gather the return data from the event system, break hard when timeout
+        is reached.
+        '''
+        if timeout is None:
+            timeout = self.opts['timeout']
+            timeout = 10
+
+        timeout_at = time.time() + timeout
+        last_progress_timestamp = time.time()
+
+        while True:
+            raw = self.event.get_event(timeout, full=True)
+            # If we saw no events in the event bus timeout OR we have reached the total timeout AND
+            # have not seen any progress events for the length of the timeout.
+            if raw is None or (time.time() > timeout_at and time.time() - last_progress_timestamp > timeout):
+                # Timeout reached
+                break
+            if not raw['tag'].split('/')[1] == 'runner':
+                continue
+            elif raw['tag'].split('/')[3] == 'progress':
+                last_progress_timestamp = time.time()
+                yield({'data': raw['data']['data'], 'outputter': raw['data']['outputter']})
+            elif raw['tag'].split('/')[3] == 'return':
+                yield('Return: {0}'.format(raw['data']['return']))
+                break
