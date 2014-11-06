@@ -168,7 +168,7 @@ def defragment(path):
     return result
 
 
-def mkfs_features():
+def features():
     '''
     List currently available BTRFS features.
 
