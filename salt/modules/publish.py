@@ -143,6 +143,9 @@ def publish(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
     - range
     - compound
 
+    Note that for pillar matches must be exact, both in the pillar matcher
+    and the compound matcher. No globbing is supported.
+
     The arguments sent to the minion publish function are separated with
     commas. This means that for a minion executing a command with multiple
     args it will look like this:
