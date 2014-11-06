@@ -4,6 +4,7 @@ This runner is used only for test purposes and servers no production purpose
 '''
 # Import python libs
 import pprint
+import time
 
 # Import salt requirements
 import salt.utils.event
@@ -36,10 +37,12 @@ def raw_arg(*args, **kwargs):
     pprint.pprint(ret)
     return ret
 
-def true(jid=None):
+def stream(jid=None):
     '''
     Return True
     '''
     ret = True
-    salt.utils.event.RunnerEvent(__opts__).fire_progress(jid, ret)
+    for i in range(1,100):
+        progress('Runner is {0}% done'.format(i), outputter='pprint')
+        time.sleep(0.1)
     return ret
