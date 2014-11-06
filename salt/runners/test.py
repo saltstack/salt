@@ -5,6 +5,8 @@ This runner is used only for test purposes and servers no production purpose
 # Import python libs
 import pprint
 
+# Import salt requirements
+import salt.utils.event
 
 def arg(*args, **kwargs):
     '''
@@ -34,10 +36,10 @@ def raw_arg(*args, **kwargs):
     pprint.pprint(ret)
     return ret
 
-def true():
+def true(jid=None):
     '''
     Return True
     '''
     ret = True
-    pprint.pprint(ret)
+    salt.utils.event.RunnerEvent(__opts__).fire_progress(jid, ret)
     return ret
