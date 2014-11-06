@@ -345,3 +345,38 @@ def mkfs(*devices, **kwargs):
     ret.update(__salt__['btrfs.info'](devices[0]))
 
     return ret
+
+
+def resize(mountpoint, size):
+    '''
+    Resize filesystem.
+
+    General options:
+    
+    * **mountpoint**: Specify the BTRFS mountpoint to resize.
+    * **size**: ([+/-]<newsize>[kKmMgGtTpPeE]|max) Specify the new size of the target.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' btrfs.resize /mountpoint size=+1g
+        salt '*' btrfs.resize /dev/sda1 size=max
+    '''
+
+    if size == 'max':
+        if not fsutils._is_device(mountpoint):
+            raise CommandExecutionError("Mountpoint \"{0}\" should be a valid device".format(mountpoint))
+        if not fsutils._get_mounts("btrfs").get(mountpoint):
+            raise CommandExecutionError("Device \"{0}\" should be mounted".format(mountpoint))
+    elif len(size) < 3 or size[0] not in '-+' \
+         or size[-1] not in 'kKmMgGtTpPeE' or re.sub(r"\d", "", size[1:][:-1]):
+        raise CommandExecutionError("Unknown size: \"{0}\". Expected: [+/-]<newsize>[kKmMgGtTpPeE]|max".format(size))
+
+    out = __salt__['cmd.run_all']('btrfs filesystem resize {0} {1}'.format(size, mountpoint))
+    fsutils._verify_run(out)
+
+    ret = {'log': out['stdout']}
+    ret.update(__salt__['btrfs.info'](mountpoint))
+
+    return ret
