@@ -125,10 +125,14 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         log.debug('Runner starting with jid {0}'.format(jid))
         # Fire new runner event for any listeners
         self.event.fire_event({'runner_job':fun}, tagify([jid, 'new'], 'job'))
-        ret = self.functions[fun](*args, **kwargs)  # pylint: disable=star-args
+        if 'jid' in salt.utils.get_function_argspec(self.functions[fun]).args:
+            kwargs['jid'] = jid
+            ret = self.functions[fun](*args, **kwargs)
+        else:
+            ret = self.functions[fun](*args, **kwargs)  # pylint: disable=star-args
         # Fire return on event bus
         ret_load = {'return': ret, 'fun': fun, 'fun_args': args}
-        self.event.fire_event(ret_load, tagify([jid, 'runner_ret'], 'job'))
+        self.event.fire_event(ret_load, tagify([jid, 'return'], 'runner'))
         try:
             fstr = '{0}.save_runner_load'.format(self.opts['master_job_cache'])
             self.returners[fstr](jid, ret_load)

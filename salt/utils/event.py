@@ -501,13 +501,20 @@ class LocalClientEvent(MasterEvent):
     specially on logs, but it's the same as MasterEvent.
     '''
 
+
 class RunnerEvent(MasterEvent):
     '''
     This is used to send progress and return events from runners.
     It extends MasterEvent to include information about how to
     display events to the user as a runner progresses.
     '''
+    def __init__(self, opts):
+        super(RunnerEvent, self).__init__(opts['sock_dir'])
 
+    def fire_progress(self, jid, data, outputter='pprint'):
+        progress_event = {'data': data,
+                          'outputter': outputter}
+        self.fire_event(progress_event, tagify([jid, 'progress'], 'runner'))
 
 
 class MinionEvent(SaltEvent):
