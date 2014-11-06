@@ -61,8 +61,8 @@ class UtilsTestCase(TestCase):
         self.assertEqual(utils.jid_to_time(test_jid), expected_jid)
 
         # Test incorrect lengths
-        incorrect_jid_lenth = 2012
-        self.assertEqual(utils.jid_to_time(incorrect_jid_lenth), '')
+        incorrect_jid_length = 2012
+        self.assertEqual(utils.jid_to_time(incorrect_jid_length), '')
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     @patch('random.randint', return_value=1)

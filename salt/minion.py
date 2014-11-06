@@ -1611,7 +1611,7 @@ class Minion(MinionBase):
                                                  schedule=schedule)
 
         elif package.startswith('__master_connected'):
-            # handle this event only once. otherwise it will polute the log
+            # handle this event only once. otherwise it will pollute the log
             if not self.connected:
                 log.info('Connection to master {0} re-established'.format(self.opts['master']))
                 self.connected = True

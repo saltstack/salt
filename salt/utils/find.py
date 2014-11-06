@@ -396,7 +396,7 @@ class MtimeOption(Option):
     Match files modified since the specified time.
     The option name is 'mtime', e.g. {'mtime' : '3d'}.
     The value format is [<num>w] [<num>[d]] [<num>h] [<num>m] [<num>s]
-    where num is an integer or float and the case-insenstive suffixes are:
+    where num is an integer or float and the case-insensitive suffixes are:
         w = week
         d = day
         h = hour

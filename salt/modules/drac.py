@@ -261,7 +261,7 @@ def create_user(username, password, permissions, users=None):
         salt dell drac.create_user [USERNAME] [PASSWORD] [PRIVELEGES]
         salt dell drac.create_user diana secret login,test_alerts,clear_logs
 
-    DRAC Priveleges
+    DRAC Privileges
       * login                   : Login to iDRAC
       * drac                    : Configure iDRAC
       * user_management         : Configure Users
@@ -324,7 +324,7 @@ def set_permissions(username, permissions, uid=None):
         salt dell drac.set_permissions [USERNAME] [PRIVELEGES] [USER INDEX - optional]
         salt dell drac.set_permissions diana login,test_alerts,clear_logs 4
 
-    DRAC Priveleges
+    DRAC Privileges
       * login                   : Login to iDRAC
       * drac                    : Configure iDRAC
       * user_management         : Configure Users
