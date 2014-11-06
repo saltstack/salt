@@ -348,6 +348,19 @@ class Master(SMaster):
             log.info('Creating master reactor process')
             process_manager.add_process(salt.utils.event.Reactor, args=(self.opts,))
 
+        ext_procs = self.opts.get('ext_processes', [])
+        for proc in ext_procs:
+            log.info('Creating ext_processes process: {0}'.format(proc))
+            try:
+                mod = '.'.join(proc.split('.')[:-1])
+                cls = proc.split('.')[-1]
+                _tmp = __import__(mod, globals(), locals(), [cls], -1)
+                cls = _tmp.Test
+                process_manager.add_process(cls, args=(self.opts,))
+            except Exception as e:
+                log.warning(('Error creating ext_processes '
+                           'process: {0}').format(proc))
+
         if HAS_HALITE and 'halite' in self.opts:
             log.info('Creating master halite process')
             process_manager.add_process(Halite, args=(self.opts['halite'],))
