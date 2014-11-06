@@ -639,7 +639,7 @@ def avail_locations(call=None):
         }
 
     # this can be enabled when the bug in the joyent get data centers call is
-    # corrected, currently only the european dc (new api) returns the correct
+    # corrected, currently only the European dc (new api) returns the correct
     # values
     # ret = {}
     # rcode, datacenters = query(

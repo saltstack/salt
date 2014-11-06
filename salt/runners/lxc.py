@@ -163,7 +163,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
         A LXC profile (defined in config or pillar).
 
     nic_opts
-        Extra options for network interfaces. E.g:
+        Extra options for network interfaces. E.g.:
 
         ``{"eth0": {"mac": "aa:bb:cc:dd:ee:ff", "ipv4": "10.1.1.1", "ipv6": "2001:db8::ff00:42:8329"}}``
 

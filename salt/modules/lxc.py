@@ -125,7 +125,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
         This is a list of mappings ``{ip: '', mac: '',netmask:''}``
         Set gateway to ``None`` and an interface with a gateway
         to escape from another interface that's eth0.
-        eg:
+        e.g.:
 
         .. code-block:: python
 
@@ -737,7 +737,7 @@ def init(name,
         This can be either a real profile mapping or a string
         to retrieve it in configuration
     nic_opts
-        Extra options for network interfaces. E.g:
+        Extra options for network interfaces. E.g.:
 
         .. code-block:: bash
 
