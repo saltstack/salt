@@ -49,9 +49,6 @@ def _publish(
         log.info('Function name is \'publish.publish\'. Returning {}')
         # Need to log something here
         return {}
-    if expr_form.lower() in ('pillar', 'compound'):
-        log.error('Pillar/compound matching disabled for published commands.')
-        return {}
 
     arg = _normalize_arg(arg)
 
