@@ -366,7 +366,7 @@ def mod_repo(repo, **kwargs):
             # Complete user URL, in case it is not
             new_url = urlparse.urlparse(url)
             if not new_url.path:
-                new_url = urlparse.ParseResult(scheme=new_url.scheme,
+                new_url = urlparse.ParseResult(scheme=new_url.scheme,  # pylint: disable=E1123
                                                netloc=new_url.netloc,
                                                path='/',
                                                params=new_url.params,
