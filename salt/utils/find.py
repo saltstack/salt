@@ -573,7 +573,7 @@ class ExecOption(Option):
                 'Exception while executing command "{0}":\n\n{1}'.format(
                     command,
                     e))
-            return "{}: Failed".format(fullpath)
+            return '{0}: Failed'.format(fullpath)
 
 
 class Finder(object):
