@@ -357,9 +357,14 @@ def export(*pools, **kwargs):
         cmd = '{0} export -f {1}'.format(zpool, pools)
     else:
         cmd = '{0} export {1}'.format(zpool, pools)
-    __salt__['cmd.run'](cmd)
-    for pool in pool_list:
-        ret[pool] = 'Exported'
+    res = __salt__['cmd.run'](cmd, ignore_retcode=True)
+    if res:
+        ret['Error'] = {}
+        ret['Error']['Message'] = 'Import failed!'
+        ret['Error']['Reason'] = res
+    else:
+        for pool in pool_list:
+            ret[pool] = 'Exported'
     return ret
 
 
