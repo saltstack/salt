@@ -395,7 +395,7 @@ DEBIAN_ATTR_TO_SALT_ATTR_MAP = dict(
 DEBIAN_ATTR_TO_SALT_ATTR_MAP['address'] = 'address'
 DEBIAN_ATTR_TO_SALT_ATTR_MAP['hwaddress'] = 'hwaddress'
 
-IPV4_VALID_PROTO = ['bootp', 'dhcp', 'static', 'manual', 'loopback']
+IPV4_VALID_PROTO = ['bootp', 'dhcp', 'static', 'manual', 'loopback', 'ppp']
 
 IPV4_ATTR_MAP = {
     'proto': __within(IPV4_VALID_PROTO, dtype=str),
