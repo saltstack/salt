@@ -404,9 +404,9 @@ def import_(pool_name='', new_name='', force=False, **kwargs):
         ret['Error'] = 'Storage pool {0} already exists. Import the pool under a different name instead'.format(new_name)
     else:
         if force is True:
-            cmd = '{0} import -f {1}'.format(zpool, pool_name, new_name)
+            cmd = '{0} import -f {1} {2}'.format(zpool, pool_name, new_name)
         else:
-            cmd = '{0} import {1}'.format(zpool, pool_name, new_name)
+            cmd = '{0} import {1} {2}'.format(zpool, pool_name, new_name)
         res = __salt__['cmd.run'](cmd, ignore_retcode=True)
         if res:
             ret['Error'] = {}
