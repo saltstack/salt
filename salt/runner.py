@@ -284,10 +284,10 @@ class Runner(RunnerClient):
                     self.opts['fun'], self.opts['arg'], self.opts)
                 # Gather the returns
                 for ret in self.get_runner_returns(jid, timeout=60):  # 60 second timeout
-                    if 'outputter' in ret:
+                    if isinstance(ret, dict) and 'outputter' in ret:
                         print(self.outputters[ret['outputter']](ret['data']))
                     else:
-                        print(ret)
+                        print(self.outputters['nested'](ret))
 
             except salt.exceptions.SaltException as exc:
                 ret = str(exc)
@@ -319,5 +319,5 @@ class Runner(RunnerClient):
                 last_progress_timestamp = time.time()
                 yield({'data': raw['data']['data'], 'outputter': raw['data']['outputter']})
             elif raw['tag'].split('/')[3] == 'return':
-                yield('Return: {0}'.format(raw['data']['return']))
+                yield(raw['data']['return'])
                 break
