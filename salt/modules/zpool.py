@@ -327,30 +327,39 @@ def create_file_vdev(size, *vdevs):
     return ret
 
 
-def export(pool_name='', force='false'):
+def export(*pools, **kwargs):
     '''
-    Export a storage pool
+    Export storage pools
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' zpool.export myzpool [force=True|False]
+        salt '*' zpool.export myzpool ... [force=True|False]
+        salt '*' zpool.export myzpool2 myzpool2 ... [force=True|False]
     '''
     ret = {}
-    if not pool_name:
+    pool_list = []
+    if not pools:
         ret['Error'] = 'zpool name parameter is mandatory'
         return ret
-    if exists(pool_name):
-        zpool = _check_zpool()
-        if force is True:
-            cmd = '{0} export -f {1}'.format(zpool, pool_name)
-        else:
-            cmd = '{0} export {1}'.format(zpool, pool_name)
-        __salt__['cmd.run'](cmd)
-        ret[pool_name] = 'Exported'
+
+    for pool in pools:
+        if not exists(pool):
+            ret['Error'] = 'Storage pool {0} does not exist'.format(pool)
+            return ret
+        pool_list.append(pool);
+
+    pools = ' '.join(pool_list)
+    zpool = _check_zpool()
+    force = kwargs.get('force', False)
+    if force is True:
+        cmd = '{0} export -f {1}'.format(zpool, pools)
     else:
-        ret['Error'] = 'Storage pool {0} does not exist'.format(pool_name)
+        cmd = '{0} export {1}'.format(zpool, pools)
+    __salt__['cmd.run'](cmd)
+    for pool in pool_list:
+        ret[pool] = 'Exported'
     return ret
 
 
