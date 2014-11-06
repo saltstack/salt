@@ -13,7 +13,7 @@ import salt.utils
 import logging
 from collections import defaultdict
 
-from salt import daemons
+from salt.utils import kinds
 
 log = logging.getLogger(__name__)
 
@@ -112,7 +112,7 @@ class RAETChannel(Channel):
             raise ValueError(emsg)
 
         kind = self.opts.get('__role')  # application kind 'master', 'minion', etc
-        if kind not in daemons.APPL_KINDS:
+        if kind not in kinds.APPL_KINDS:
             emsg = ("Invalid application kind = '{0}' for RAETChannel.".format(kind))
             log.error(emsg + "\n")
             raise ValueError(emsg)

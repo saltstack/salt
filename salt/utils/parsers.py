@@ -31,6 +31,7 @@ import salt.utils.args
 import salt.utils.xdg
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.validate.path import is_writeable
+from salt.utils import kinds
 
 
 def _sorted(mixins_or_funcs):
@@ -2099,8 +2100,10 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             self.config['arg'] = self.args[1:]
 
     def setup_config(self):
-        return config.minion_config(self.get_config_file_path(),
+        opts = config.minion_config(self.get_config_file_path(),
                                     minion_id=True)
+        #opts['__role'] = kinds.APPL_KIND_NAMES[kinds.applKinds.caller]
+        return opts
 
     def process_module_dirs(self):
         for module_dir in self.options.module_dirs:
