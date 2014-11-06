@@ -211,8 +211,12 @@ def run(name, **kwargs):
     ret['comment'] = 'Module function {0} executed'.format(name)
 
     ret['result'] = True
-    if ret['changes'].get('retcode', 0) != 0:
+    # if mret is a dict and there is retcode and its non-zero
+    if isinstance(mret, dict) and mret.get('retcode', 0) != 0:
         ret['result'] = False
+    # if its a boolean, return that as the result
+    elif isinstance(mret, bool):
+        ret['result'] = mret
     else:
         changes_ret = ret['changes'].get('ret', {})
         if isinstance(changes_ret, dict) and changes_ret.get('retcode', 0) != 0:
