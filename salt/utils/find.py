@@ -88,6 +88,9 @@ import re
 import stat
 import sys
 import time
+import shlex
+import shutil
+from subprocess import Popen, PIPE
 try:
     import grp
     import pwd
@@ -506,6 +509,68 @@ class PrintOption(Option):
             return result[0]
         else:
             return result
+
+
+class DeleteOption(TypeOption):
+    '''
+    Deletes matched file.
+    Delete options are one or more of the following:
+        a: all file types
+        b: block device
+        c: character device
+        d: directory
+        p: FIFO (named pipe)
+        f: plain file
+        l: symlink
+        s: socket
+    '''
+    def __init__(self, key, value):
+        if 'a' in value:
+            value = 'bcdpfls'
+        super(self.__class__, self).__init__(key, value)
+
+    def execute(self, fullpath, fstat, test=False):
+        if test:
+            return fullpath
+        try:
+            if os.path.isfile(fullpath) or os.path.islink(fullpath):
+                os.remove(fullpath)
+            elif os.path.isdir(fullpath):
+                shutil.rmtree(fullpath)
+        except (OSError, IOError) as exc:
+            return None
+        return fullpath
+
+
+class ExecOption(Option):
+    '''
+    Execute the given command, {} replaced by filename.
+    Quote the {} if commands might include whitespace.
+    '''
+    def __init__(self, key, value):
+        self.command = value
+
+    def execute(self, fullpath, fstat, test=False):
+        try:
+            command = self.command.replace('{}', fullpath)
+            print(shlex.split(command))
+            p = Popen(shlex.split(command),
+                      stdout=PIPE,
+                      stderr=PIPE)
+            (out, err) = p.communicate()
+            if err:
+                log.error(
+                    'Error running command: {0}\n\n{1}'.format(
+                    command,
+                    err))
+            return "{0}:\n{1}\n".format(command, out)
+
+        except Exception, e:
+            log.error(
+                'Exception while executing command "{0}":\n\n{1}'.format(
+                    command,
+                    e))
+            return '{0}: Failed'.format(fullpath)
 
 
 class Finder(object):
