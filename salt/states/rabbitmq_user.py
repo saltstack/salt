@@ -64,10 +64,7 @@ def present(name,
 
     user_exists = __salt__['rabbitmq.user_exists'](name, runas=runas)
 
-    if user_exists and not force:
-        ret['comment'] = 'User {0} already exists'.format(name)
-
-    elif __opts__['test']:
+    if __opts__['test']:
         ret['result'] = None
 
         if not user_exists:
@@ -75,7 +72,12 @@ def present(name,
         elif force:
             ret['comment'] = 'User {0} is set to be updated'
         ret['comment'] = ret['comment'].format(name)
+        return ret
 
+    if user_exists and not force:
+        log.debug('User exists, and force is not set - Abandoning')
+        ret['comment'] = 'User {0} already presents'.format(name)
+        return ret
     else:
         changes = {'old': '', 'new': ''}
 
@@ -105,7 +107,8 @@ def present(name,
                 name, password, runas=runas)
 
             _set_tags_and_perms(tags, perms)
-        elif force:
+        else:
+            assert (user_exists and force)
             log.debug('User exists and force is set - Overriding')
             if password is not None:
                 result = __salt__['rabbitmq.change_password'](
@@ -118,10 +121,6 @@ def present(name,
                 changes['old'] += 'Removed password.\n'
 
             _set_tags_and_perms(tags, perms)
-        else:
-            log.debug('User exists, and force is not set - Abandoning')
-            ret['comment'] = ('User {0} is not going to be'
-                              ' modified').format(name)
 
         if 'Error' in result:
             ret['result'] = False
@@ -136,7 +135,7 @@ def present(name,
             ret['comment'] = result['Password Cleared']
             ret['changes'] = changes
 
-    return ret
+        return ret
 
 
 def absent(name,
