@@ -368,29 +368,36 @@ def export(*pools, **kwargs):
     return ret
 
 
-def import_(pool_name='', new_name='', force='false'):
+def import_(pool_name='', new_name='', **kwargs):
     '''
-    Import a storage pool or list pools available for import
+    Import storage pools or list pools available for import
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' zpool.import
-        salt '*' zpool.import myzpool [force=True|False]
-        salt '*' zpool.import myzpool mynewzpool [force=True|False]
+        salt '*' zpool.import [all=True|False]
+        salt '*' zpool.import myzpool [mynewzpool] [force=True|False]
     '''
     ret = {}
     zpool = _check_zpool()
+    all = kwargs.get('all', False)
+
     if not pool_name:
-        cmd = '{0} import'.format(zpool)
-        res = __salt__['cmd.run'](cmd, ignore_retcode=True)
-        if not res:
-            ret['Error'] = 'No pools available for import'
+        if all is True:
+            cmd = '{0} import -a'.format(zpool)
         else:
+            cmd = '{0} import'.format(zpool)
+        res = __salt__['cmd.run'](cmd, ignore_retcode=True)
+        if not res and all is False:
+            ret['Error'] = 'No pools available for import'
+        elif all is False:
             pool_list = [l for l in res.splitlines()]
             ret['pools'] = pool_list
+        else:
+            ret['pools'] = 'Imported all pools'
         return ret
+
     if exists(pool_name) and not new_name:
         ret['Error'] = 'Storage pool {0} already exists. Import the pool under a different name instead'.format(pool_name)
     elif exists(new_name):
