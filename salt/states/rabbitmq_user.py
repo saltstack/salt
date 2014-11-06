@@ -83,20 +83,28 @@ def present(name,
         if tags and isinstance(tags, (list, tuple)):
             tags = ' '.join(tags)
 
+        def _set_tags_and_perms(tags, perms):
+            if tags:
+                result.update(__salt__['rabbitmq.set_user_tags'](
+                    name, tags, runas=runas)
+                )
+                changes['new'] += 'Set tags: {0}\n'.format(tags)
+            for element in perms:
+                for vhost, perm in element.items():
+                    result.update(__salt__['rabbitmq.set_permissions'](
+                        vhost, name, perm[0], perm[1], perm[2], runas)
+                    )
+                    changes['new'] += (
+                        'Set permissions {0} for vhost {1}'
+                    ).format(perm, vhost)
+
         if not user_exists:
             log.debug(
                 "User doesn't exist - Creating")
             result = __salt__['rabbitmq.add_user'](
                 name, password, runas=runas)
 
-            if tags:
-                result = __salt__['rabbitmq.set_user_tags'](
-                    name, tags, runas=runas)
-            for element in perms:
-                for vhost, perm in element.items():
-                    result = __salt__['rabbitmq.set_permissions'](
-                        vhost, name, perm[0], perm[1], perm[2], runas)
-                    changes['new'] += tags
+            _set_tags_and_perms(tags, perms)
         elif force:
             log.debug('User exists and force is set - Overriding')
             if password is not None:
@@ -108,17 +116,8 @@ def present(name,
                 result = __salt__['rabbitmq.clear_password'](
                     name, runas=runas)
                 changes['old'] += 'Removed password.\n'
-            if tags:
-                result.update(__salt__['rabbitmq.set_user_tags'](
-                    name, tags, runas=runas)
-                )
-                changes['new'] += 'Set tags: {0}\n'.format(tags)
-            for element in perms:
-                for vhost, perm in element.items():
-                    result.update(__salt__['rabbitmq.set_permissions'](
-                        vhost, name, perm[0], perm[1], perm[2], runas)
-                    )
-                    changes['new'] += '{0} {1}'.format(vhost, perm)
+
+            _set_tags_and_perms(tags, perms)
         else:
             log.debug('User exists, and force is not set - Abandoning')
             ret['comment'] = 'User {0} is not going to be modified'.format(name)
