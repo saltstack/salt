@@ -223,7 +223,9 @@ class Client(object):
             if fn_.strip() and fn_.startswith(path):
                 if salt.utils.check_include_exclude(
                         fn_, include_pat, exclude_pat):
-                    ret.append(self.cache_file('salt://' + fn_, saltenv))
+                    fn_ = self.cache_file('salt://' + fn_, saltenv)
+                    if fn_:
+                        ret.append(fn_)
 
         if include_empty:
             # Break up the path into a list containing the bottom-level
