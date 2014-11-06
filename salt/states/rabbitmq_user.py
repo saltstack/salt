@@ -41,7 +41,7 @@ def present(name,
             force=False,
             tags=None,
             perms=(),
-            runas=None):
+            runas='root'):
     '''
     Ensure the RabbitMQ user exists.
 
@@ -140,7 +140,7 @@ def present(name,
 
 
 def absent(name,
-           runas=None):
+           runas='root'):
     '''
     Ensure the named user is absent
 

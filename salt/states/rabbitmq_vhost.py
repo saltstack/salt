@@ -33,11 +33,11 @@ def __virtual__():
 
 def present(name,
             user=None,
-            owner=None,
+            owner='root',
             conf=None,
             write=None,
             read=None,
-            runas=None):
+            runas='root'):
     '''
     Ensure the RabbitMQ VHost exists.
 
@@ -146,7 +146,7 @@ def present(name,
 
 
 def absent(name,
-           runas=None):
+           runas='root'):
     '''
     Ensure the RabbitMQ Virtual Host is absent
 
