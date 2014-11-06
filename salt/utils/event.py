@@ -501,6 +501,14 @@ class LocalClientEvent(MasterEvent):
     specially on logs, but it's the same as MasterEvent.
     '''
 
+class RunnerEvent(MasterEvent):
+    '''
+    This is used to send progress and return events from runners.
+    It extends MasterEvent to include information about how to
+    display events to the user as a runner progresses.
+    '''
+
+
 
 class MinionEvent(SaltEvent):
     '''
