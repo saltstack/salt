@@ -348,7 +348,7 @@ def export(*pools, **kwargs):
         if not exists(pool):
             ret['Error'] = 'Storage pool {0} does not exist'.format(pool)
             return ret
-        pool_list.append(pool);
+        pool_list.append(pool)
 
     pools = ' '.join(pool_list)
     zpool = _check_zpool()
@@ -368,7 +368,7 @@ def export(*pools, **kwargs):
     return ret
 
 
-def import_(pool_name='', new_name='', **kwargs):
+def import_(pool_name='', new_name='', force=False, **kwargs):
     '''
     Import storage pools or list pools available for import
 
