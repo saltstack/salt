@@ -382,6 +382,7 @@ def import_(pool_name='', new_name='', force=False, **kwargs):
     ret = {}
     zpool = _check_zpool()
     all = kwargs.get('all', False)
+    force = kwargs.get('force', False)
 
     if not pool_name:
         if all is True:
