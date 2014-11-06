@@ -9,7 +9,7 @@ When using Homebrew, install this way:
 
 .. code-block:: bash
 
-    sudo brew install saltstack
+    brew install saltstack
 
 When using MacPorts, install this way:
 
