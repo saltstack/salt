@@ -398,9 +398,6 @@ class RemoteFuncs(object):
         # If the command will make a recursive publish don't run
         if re.match('publish.*', load['fun']):
             return False
-        # Don't allow pillar or compound matching
-        if load.get('tgt_type', 'glob').lower() in ('pillar', 'compound'):
-            return False
         # Check the permissions for this minion
         perms = []
         for match in self.opts['peer']:
@@ -415,11 +412,16 @@ class RemoteFuncs(object):
             for arg in load['arg']:
                 arg_.append(arg.split())
             load['arg'] = arg_
+        tgt_type = load.get('tgt_type', 'glob')
+        if tgt_type.lower() == 'pillar':
+            tgt_type = 'pillar_exact'
+        elif tgt_typ.lower() == 'compound':
+            tgt_type = 'compound_pillar_exact'
         good = self.ckminions.auth_check(
                 perms,
                 load['fun'],
                 load['tgt'],
-                load.get('tgt_type', 'glob'))
+                tgt_type)
         if not good:
             return False
         return True
