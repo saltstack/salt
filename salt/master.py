@@ -355,9 +355,10 @@ class Master(SMaster):
                 mod = '.'.join(proc.split('.')[:-1])
                 cls = proc.split('.')[-1]
                 _tmp = __import__(mod, globals(), locals(), [cls], -1)
-                cls = _tmp.Test
+                cls = _tmp.__getattribute__(cls)
                 process_manager.add_process(cls, args=(self.opts,))
             except Exception as e:
+                log.error(e)
                 log.warning(('Error creating ext_processes '
                            'process: {0}').format(proc))
 
