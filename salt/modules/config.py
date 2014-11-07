@@ -271,8 +271,7 @@ def dot_vals(value):
 
 def gather_bootstrap_script(bootstrap=None):
     '''
-    Download the salt-bootstrap script, and return the first location
-    downloaded to.
+    Download the salt-bootstrap script, and return its location
 
     CLI Example:
 
