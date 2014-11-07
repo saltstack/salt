@@ -3,6 +3,8 @@
 Utility functions for salt.cloud
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 import os
 import sys
@@ -1145,7 +1147,7 @@ def deploy_script(host,
                     )
 
                 # Copy pre-seed minion keys
-                for minion_id, minion_key in preseed_minion_keys.iteritems():
+                for minion_id, minion_key in preseed_minion_keys.items():
                     rpath = os.path.join(
                         preseed_minion_keys_tempdir, minion_id
                     )
@@ -1221,7 +1223,7 @@ def deploy_script(host,
                             )
                         )
                     environ_script_contents = ['#!/bin/sh']
-                    for key, value in script_env.iteritems():
+                    for key, value in script_env.items():
                         environ_script_contents.append(
                             'setenv {0} \'{1}\' >/dev/null 2>&1 || '
                             'export {0}=\'{1}\''.format(key, value)
@@ -1942,7 +1944,7 @@ def simple_types_filter(data):
 
     if isinstance(data, dict):
         simpledict = {}
-        for key, value in data.iteritems():
+        for key, value in data.items():
             if key is not None and not isinstance(key, simpletypes_keys):
                 key = repr(key)
             if value is not None and isinstance(value, (dict, list)):
@@ -1997,7 +1999,7 @@ def init_cachedir(base=None):
     for dir_ in needed_dirs:
         if not os.path.exists(dir_):
             os.makedirs(dir_)
-        os.chmod(base, 0755)
+        os.chmod(base, 0o755)
 
     return base
 
@@ -2103,7 +2105,7 @@ def delete_minion_cachedir(minion_id, provider, opts, base=None):
     if base is None:
         base = os.path.join(syspaths.CACHE_DIR, 'cloud')
 
-    driver = opts['providers'][provider].iterkeys().next()
+    driver = next(iter(opts['providers'][provider].keys()))
     fname = '{0}.p'.format(minion_id)
     for cachedir in ('requested', 'active'):
         path = os.path.join(base, cachedir, driver, provider, fname)
@@ -2266,7 +2268,7 @@ def cache_node_list(nodes, provider, opts):
         return
 
     base = os.path.join(init_cachedir(), 'active')
-    driver = opts['providers'][provider].iterkeys().next()
+    driver = next(iter(opts['providers'][provider].keys()))
     prov_dir = os.path.join(base, driver, provider)
     if not os.path.exists(prov_dir):
         os.makedirs(prov_dir)
