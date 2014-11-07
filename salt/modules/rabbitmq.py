@@ -307,7 +307,7 @@ def list_permissions(vhost, runas=None):
     return [r.split('\t') for r in res.splitlines()]
 
 
-def list_user_permissions(name, user=None):
+def list_user_permissions(name, runas=None):
     '''
     List permissions for a user via rabbitmqctl list_user_permissions
 
@@ -321,7 +321,7 @@ def list_user_permissions(name, user=None):
         runas = salt.utils.get_user()
     res = __salt__['cmd.run'](
         'rabbitmqctl list_user_permissions {0}'.format(name),
-        runas=user)
+        runas=runas)
     return [r.split('\t') for r in res.splitlines()]
 
 
@@ -362,7 +362,7 @@ def status(runas=None):
     return res
 
 
-def cluster_status(user=None):
+def cluster_status(runas=None):
     '''
     return rabbitmq cluster_status
 
@@ -478,7 +478,7 @@ def force_reset(runas=None):
     return res
 
 
-def list_queues(*kwargs):
+def list_queues(runas=None, *kwargs):
     '''
     Returns queue details of the / virtual host
 
@@ -488,12 +488,16 @@ def list_queues(*kwargs):
 
         salt '*' rabbitmq.list_queues messages consumers
     '''
+    if runas is None:
+        runas = salt.utils.get_user()
     res = __salt__['cmd.run'](
-        'rabbitmqctl list_queues {0}'.format(' '.join(list(kwargs))))
+        'rabbitmqctl list_queues {0}'.format(' '.join(list(kwargs))),
+        runas=runas,
+        )
     return res
 
 
-def list_queues_vhost(vhost, *kwargs):
+def list_queues_vhost(vhost, runas=None, *kwargs):
     '''
     Returns queue details of specified virtual host. This command will consider
     first parameter as the vhost name and rest will be treated as
@@ -506,8 +510,12 @@ def list_queues_vhost(vhost, *kwargs):
 
         salt '*' rabbitmq.list_queues messages consumers
     '''
+    if runas is None:
+        runas = salt.utils.get_user()
     res = __salt__['cmd.run'](
-        'rabbitmqctl list_queues -p {0} {1}'.format(vhost, ' '.join(list(kwargs))))
+        'rabbitmqctl list_queues -p {0} {1}'.format(vhost, ' '.join(list(kwargs))),
+        runas=runas,
+        )
     return res
 
 
