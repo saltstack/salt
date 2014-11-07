@@ -259,6 +259,8 @@ TODO
 * Interface for working with reactor files
 '''
 
+from __future__ import absolute_import
+
 import logging
 import re
 import sys
@@ -339,7 +341,7 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
             exec(mod_cmd, mod_globals, mod_locals)
         else:
             # prior to that it is a statement
-            exec mod_cmd in mod_globals, mod_locals
+            exec(mod_cmd, mod_globals, mod_locals)
 
         _globals[mod_camel] = mod_locals[mod_camel]
 
@@ -415,10 +417,10 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
                 exec(state_contents, _globals, state_locals)
             else:
                 # prior to that it is a statement
-                exec state_contents in _globals, state_locals
+                exec(state_contents, _globals, state_locals)
 
             if imports is None:
-                imports = state_locals.keys()
+                imports = list(state_locals.keys())
 
             for name in imports:
                 name = name.strip()
@@ -446,6 +448,6 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
         exec(final_template, _globals, _locals)
     else:
         # prior to that it is a statement
-        exec final_template in _globals, _locals
+        exec(final_template, _globals, _locals)
 
     return Registry.salt_data()
