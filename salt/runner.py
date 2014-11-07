@@ -290,10 +290,10 @@ class Runner(RunnerClient):
                 # Gather the returns
                 for ret in self.get_runner_returns(jid):
                     if not self.opts.get('quiet', False):
-                        if isinstance(ret, dict) and 'outputter' in ret:
+                        if isinstance(ret, dict) and 'outputter' in ret and ret['outputter'] is not None:
                             print(self.outputters[ret['outputter']](ret['data']))
                         else:
-                            print(ret)
+                            salt.output.display_output(ret, '', self.opts)
 
             except salt.exceptions.SaltException as exc:
                 ret = str(exc)
