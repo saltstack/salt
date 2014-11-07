@@ -570,7 +570,10 @@ class SaltDistribution(distutils.dist.Distribution):
             if hasattr(self.metadata, 'set_{0}'.format(attrname)):
                 getattr(self.metadata, 'set_{0}'.format(attrname))(attrvalue)
             elif hasattr(self.metadata, attrname):
-                setattr(self.metadata, attrname, attrvalue)
+                try:
+                    setattr(self.metadata, attrname, attrvalue)
+                except AttributeError:
+                    pass
 
     def discover_packages(self):
         modules = []
