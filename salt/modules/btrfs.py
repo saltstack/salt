@@ -27,7 +27,6 @@ Module for managing BTRFS file systems.
 
 import os
 import re
-import time
 import logging
 import uuid
 
@@ -59,25 +58,25 @@ def _parse_btrfs_info(data):
     '''
     Parse BTRFS device info data.
     '''
-    info = {}
+    ret = {}
     for line in [line for line in data.split("\n") if line][:-1]:
         if line.startswith("Label:"):
             line = re.sub(r"Label:\s+", "", line)
-            label, uuid = [tkn.strip() for tkn in line.split("uuid:")]
-            info['label'] = label != 'none' and label or None
-            info['uuid'] = uuid
+            label, uuid_ = [tkn.strip() for tkn in line.split("uuid:")]
+            ret['label'] = label != 'none' and label or None
+            ret['uuid'] = uuid_
             continue
 
         if line.startswith("\tdevid"):
             dev_data = re.split(r"\s+", line.strip())
             dev_id = dev_data[-1]
-            info[dev_id] = {
+            ret[dev_id] = {
                 'device_id': dev_data[1],
                 'size': dev_data[3],
                 'used': dev_data[5],
                 }
 
-    return info
+    return ret
 
 
 def info(device):
@@ -151,7 +150,7 @@ def defragment(path):
             result.append(_defragment_mountpoint(mount_point['mount_point']))
     else:
         is_mountpoint = False
-        for device, mountpoints in mounts.items():
+        for mountpoints in mounts.values():
             for mpnt in mountpoints:
                 if path == mpnt['mount_point']:
                     is_mountpoint = True
@@ -177,7 +176,7 @@ def features():
 
     .. code-block:: bash
 
-        salt '*' btrfs.mkfs_features    
+        salt '*' btrfs.mkfs_features
     '''
     out = __salt__['cmd.run_all']("mkfs.btrfs -O list-all")
     fsutils._verify_run(out)
@@ -227,7 +226,7 @@ def _usage_specific(raw):
 
     for devices in raw[1:]:
         data[section].update(get_key(re.sub(r"\s+", ":", devices.strip())))
-        
+
     return data
 
 
@@ -274,7 +273,7 @@ def mkfs(*devices, **kwargs):
     Create a file system on the specified device. By default wipes out with force.
 
     General options:
-    
+
     * **allocsize**: Specify the BTRFS offset from the start of the device.
     * **bytecount**: Specify the size of the resultant filesystem.
     * **nodesize**: Node size.
@@ -283,12 +282,14 @@ def mkfs(*devices, **kwargs):
     * **sectorsize**: Specify the sectorsize, the minimum data block allocation unit.
     * **nodiscard**: Do not perform whole device TRIM operation by default.
     * **uuid**: Pass UUID or pass True to generate one.
-    
+
 
     Options:
 
-    * **dto**: (raid0|raid1|raid5|raid6|raid10|single|dup) Specify how the data must be spanned across the devices specified.
-    * **mto**: (raid0|raid1|raid5|raid6|raid10|single|dup) Specify how metadata must be spanned across the devices specified.
+    * **dto**: (raid0|raid1|raid5|raid6|raid10|single|dup)
+               Specify how the data must be spanned across the devices specified.
+    * **mto**: (raid0|raid1|raid5|raid6|raid10|single|dup)
+               Specify how metadata must be spanned across the devices specified.
     * **fts**: Features (call ``salt <host> btrfs.features`` for full list of available features)
 
     See the ``mkfs.btrfs(8)`` manpage for a more complete description of corresponding options description.
@@ -300,9 +301,6 @@ def mkfs(*devices, **kwargs):
         salt '*' btrfs.mkfs /dev/sda1
         salt '*' btrfs.mkfs /dev/sda1 noforce=True
     '''
-    # XXX: check for device availability!
-
-
     if not devices:
         raise CommandExecutionError("No devices specified")
 
@@ -352,7 +350,7 @@ def resize(mountpoint, size):
     Resize filesystem.
 
     General options:
-    
+
     * **mountpoint**: Specify the BTRFS mountpoint to resize.
     * **size**: ([+/-]<newsize>[kKmMgGtTpPeE]|max) Specify the new size of the target.
 
@@ -389,7 +387,7 @@ def _fsck_ext(device):
     This is forced check to determine a filesystem is clean or not.
     NOTE: Maybe this function needs to be moved as a standard method in extfs module in a future.
     '''
-    msgs = {        
+    msgs = {
         0: 'No errors',
         1: 'Filesystem errors corrected',
         2: 'System should be rebooted',
@@ -412,9 +410,10 @@ def convert(device, permanent=False, keeplf=False):
     conversion takes a while as BTRFS filesystem needs to be properly rebalanced afterwards.
 
     General options:
- 
+
     * **permanent**: Specify if the migration should be permanent (false by default)
-    * **keeplf**: Keep ``lost+found`` of the partition (removed by default, but still in the image, if not permanent migration)
+    * **keeplf**: Keep ``lost+found`` of the partition (removed by default,
+                  but still in the image, if not permanent migration)
 
     CLI Example:
 
@@ -431,9 +430,11 @@ def convert(device, permanent=False, keeplf=False):
         raise CommandExecutionError("The device \"{0}\" was is not found.".format(device))
 
     if not devices[device]["type"] in ['ext2', 'ext3', 'ext4']:
-        raise CommandExecutionError("The device \"{0}\" is a \"{1}\" file system.".format(device, devices[device]["type"]))
+        raise CommandExecutionError("The device \"{0}\" is a \"{1}\" file system.".format(
+            device, devices[device]["type"]))
 
-    mountpoint = fsutils._get_mounts(devices[device]["type"]).get(device, [{'mount_point': None}])[0].get('mount_point')
+    mountpoint = fsutils._get_mounts(devices[device]["type"]).get(
+        device, [{'mount_point': None}])[0].get('mount_point')
     if mountpoint == '/':
         raise CommandExecutionError("""One does not simply converts a root filesystem!
 
@@ -478,11 +479,13 @@ documentation regarding this topic.
     orig_fstype = ret['before']['type']
 
     if not os.path.exists(image_path):
-        raise CommandExecutionError("BTRFS migration went wrong: the image \"{0}\" not found!".format(image_path))
+        raise CommandExecutionError(
+            "BTRFS migration went wrong: the image \"{0}\" not found!".format(image_path))
 
     if not permanent:
         ret['after']['{0}_image'.format(orig_fstype)] = image_path
-        ret['after']['{0}_image_info'.format(orig_fstype)] = os.popen("file {0}/image".format(image_path)).read().strip()
+        ret['after']['{0}_image_info'.format(orig_fstype)] = os.popen(
+            "file {0}/image".format(image_path)).read().strip()
     else:
         ret['after']['{0}_image'.format(orig_fstype)] = 'removed'
         ret['after']['{0}_image_info'.format(orig_fstype)] = 'N/A'
@@ -506,8 +509,9 @@ def _restripe(mountpoint, direction, *devices, **kwargs):
     fs_log = []
 
     if fsutils._is_device(mountpoint):
-        raise CommandExecutionError("Mountpount expected, while device \"{0}\" specified".format(mountpoint))
-    
+        raise CommandExecutionError(
+            "Mountpount expected, while device \"{0}\" specified".format(mountpoint))
+
     mounted = False
     for device, mntpoints in fsutils._get_mounts("btrfs").items():
         for mntdata in mntpoints:
@@ -516,7 +520,8 @@ def _restripe(mountpoint, direction, *devices, **kwargs):
                 break
 
     if not mounted:
-        raise CommandExecutionError("No BTRFS device mounted on \"{0}\" mountpoint".format(mountpoint))
+        raise CommandExecutionError(
+            "No BTRFS device mounted on \"{0}\" mountpoint".format(mountpoint))
 
     if not devices:
         raise CommandExecutionError("No devices specified.")
@@ -566,7 +571,7 @@ def add(mountpoint, *devices, **kwargs):
     Add a devices to a BTRFS filesystem.
 
     General options:
- 
+
     * **nodiscard**: Do not perform whole device TRIM
     * **force**: Force overwrite existing filesystem on the disk
 
@@ -611,7 +616,7 @@ def properties(obj, type=None, set=None):
     mount point, or any directories/files inside the BTRFS filesystem.
 
     General options:
- 
+
     * **type**: Possible types are s[ubvol], f[ilesystem], i[node] and d[evice].
     * **force**: Force overwrite existing filesystem on the disk
     * **set**: <key=value,key1=value1...> Options for a filesystem properties.
@@ -624,7 +629,7 @@ def properties(obj, type=None, set=None):
         salt '*' btrfs.properties /dev/sda1 type=subvol set='ro=false,label="My Storage"'
     '''
     if type and type not in ['s', 'subvol', 'f', 'filesystem', 'i', 'inode', 'd', 'device']:
-        raise CommandExecutionError("Unknown property type: \"{0}\" specified".format(mode))
+        raise CommandExecutionError("Unknown property type: \"{0}\" specified".format(type))
 
     cmd = ['btrfs']
     cmd.append('property')
@@ -634,7 +639,8 @@ def properties(obj, type=None, set=None):
 
     if set:
         try:
-            for key, value in [[item.strip() for item in keyset.split("=")] for keyset in set.split(",")]:
+            for key, value in [[item.strip() for item in keyset.split("=")]
+                               for keyset in set.split(",")]:
                 cmd.append(key)
                 cmd.append(value)
         except Exception, ex:
@@ -647,7 +653,8 @@ def properties(obj, type=None, set=None):
         ret = {}
         for prop, descr in _parse_proplist(out['stdout']).items():
             ret[prop] = {'description': descr}
-            value = __salt__['cmd.run_all']("btrfs property get {0} {1}".format(obj, prop))['stdout']
+            value = __salt__['cmd.run_all'](
+                "btrfs property get {0} {1}".format(obj, prop))['stdout']
             ret[prop]['value'] = value and value.split("=")[-1] or "N/A"
 
         return ret
