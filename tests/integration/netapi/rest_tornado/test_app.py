@@ -20,7 +20,7 @@ import json
     - Add support for different client in each chunk
     - fix timeouts (or document how its different)
     - fix "ping" of minions
-    
+
     - failed job runs should return an error string (instead of dict)
     - run the jobs in serial-- if you wanted parallel use async
     - do *not* require success of previous runs-- since you can use compound commands/overstate
@@ -96,7 +96,7 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                               )
         response_obj = json.loads(response.body)
-        assert response_obj['return'] == []
+        assert response_obj['return'] == ["No minions matched the target. No command was sent, no jid was assigned."]
 
     # TODO: fix tracebacks from the minion, it returns after the master process dies
     # if you run just one test. Disabled until then
@@ -286,7 +286,7 @@ class TestMinionSaltAPIHandler(SaltnadoTestCase):
         '''
         '''
         # get a token for this test
-        low = [{'client': 'local_batch',
+        low = [{'client': 'local_async',
                 'tgt': '*',
                 'fun': 'test.ping',
                 }]
@@ -301,6 +301,24 @@ class TestMinionSaltAPIHandler(SaltnadoTestCase):
         assert len(response_obj['return']) == 1
         assert 'jid' in response_obj['return'][0]
         assert response_obj['return'][0]['minions'] == ['minion', 'sub_minion']
+
+    def test_post_with_incorrect_client(self):
+        '''
+        The /minions endpoint is async only, so if you try something else
+        make sure you get an error
+        '''
+        # get a token for this test
+        low = [{'client': 'local_batch',
+                'tgt': '*',
+                'fun': 'test.ping',
+                }]
+        response = self.fetch('/minions',
+                              method='POST',
+                              body=json.dumps(low),
+                              headers={'Content-Type': self.content_type_map['json'],
+                                       saltnado.AUTH_TOKEN_HEADER: self.token['token']},
+                              )
+        assert response.code == 400
 
 
 class TestJobsSaltAPIHandler(SaltnadoTestCase):
