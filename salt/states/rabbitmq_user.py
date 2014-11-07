@@ -67,10 +67,14 @@ def present(name,
     if __opts__['test']:
         ret['result'] = None
 
-        if not user_exists:
+        if user_exists:
+            if force:
+                ret['comment'] = 'User {0} is set to be updated'
+            else:
+                ret['comment'] = 'User {0} already presents'
+        else:
             ret['comment'] = 'User {0} is set to be created'
-        elif force:
-            ret['comment'] = 'User {0} is set to be updated'
+
         ret['comment'] = ret['comment'].format(name)
         return ret
 
