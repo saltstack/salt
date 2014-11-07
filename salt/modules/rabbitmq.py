@@ -49,8 +49,8 @@ def _get_rabbitmq_plugin():
     if rabbitmq is None:
         version = __salt__['pkg.version']('rabbitmq-server').split('-')[0]
 
-        path = '/usr/lib/rabbitmq/lib/rabbitmq_server-{0}/sbin/rabbitmq-plugins'
-        rabbitmq = path.format(version)
+        rabbitmq = ('/usr/lib/rabbitmq/lib/rabbitmq_server-{0}'
+                    '/sbin/rabbitmq-plugins').format(version)
 
     return rabbitmq
 
@@ -268,8 +268,7 @@ def delete_vhost(vhost, runas=None):
     return _format_response(res, msg)
 
 
-def set_permissions(vhost, user, conf='.*', write='.*', read='.*',
-        runas=None):
+def set_permissions(vhost, user, conf='.*', write='.*', read='.*', runas=None):
     '''
     Sets permissions for vhost via rabbitmqctl set_permissions
 
@@ -513,7 +512,10 @@ def list_queues_vhost(vhost, runas=None, *kwargs):
     if runas is None:
         runas = salt.utils.get_user()
     res = __salt__['cmd.run'](
-        'rabbitmqctl list_queues -p {0} {1}'.format(vhost, ' '.join(list(kwargs))),
+        'rabbitmqctl list_queues -p {0} {1}'.format(
+            vhost,
+            ' '.join(list(kwargs))
+            ),
         runas=runas,
         )
     return res
