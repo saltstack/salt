@@ -37,7 +37,7 @@ def present(name,
             definition,
             priority=0,
             vhost='/',
-            runas='root'):
+            runas=None):
     '''
     Ensure the RabbitMQ policy exists.
 
@@ -108,7 +108,7 @@ def present(name,
 
 def absent(name,
            vhost='/',
-           runas='root'):
+           runas=None):
     '''
     Ensure the named policy is absent
 

@@ -29,7 +29,7 @@ def __virtual__():
     return False
 
 
-def enabled(name, runas='root'):
+def enabled(name, runas=None):
     '''
     Ensure the RabbitMQ plugin is enabled.
 
@@ -62,7 +62,7 @@ def enabled(name, runas='root'):
     return ret
 
 
-def disabled(name, runas='root'):
+def disabled(name, runas=None):
     '''
     Ensure the RabbitMQ plugin is enabled.
 
