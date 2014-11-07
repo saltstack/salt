@@ -32,7 +32,6 @@ from __future__ import print_function
 
 # Import salt libs
 import salt.loader
-import salt.output
 import salt.utils.event
 from salt.utils.event import tagify
 from salt.exceptions import SaltInvocationError

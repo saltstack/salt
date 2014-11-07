@@ -18,7 +18,6 @@ except ImportError:
     import msgpack_pure as msgpack
 
 # Import salt libs
-import salt.output
 import salt.utils
 import logging
 import salt.minion

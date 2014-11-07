@@ -9,7 +9,6 @@ import itertools
 # Import salt libs
 import salt.client
 import salt.runner
-import salt.output
 import salt.wheel
 
 
@@ -88,7 +87,7 @@ def __list_functions(user=None):
     for ret in gener:
         funcs.update(ret)
     if not user:
-        salt.output.display_output(funcs, '', __opts__)
+        progress(funcs)
         return funcs
     for _, val in __opts__['external_auth'].items():
         if user in val:

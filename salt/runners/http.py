@@ -7,7 +7,6 @@ like, but also useful for basic http testing.
 import logging
 
 # Import salt libs
-import salt.output
 import salt.utils.http
 
 log = logging.getLogger(__name__)

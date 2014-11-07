@@ -15,7 +15,6 @@ import os
 import salt.client
 import salt.payload
 import salt.utils
-import salt.output
 import salt.minion
 
 from salt._compat import string_types

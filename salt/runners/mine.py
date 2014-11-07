@@ -5,7 +5,6 @@ A runner to access data from the salt mine
 
 # Import salt libs
 import salt.utils.minions
-import salt.output
 
 
 def get(tgt, fun, tgt_type='glob', output='yaml'):

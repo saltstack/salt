@@ -11,7 +11,6 @@ import logging
 import sys
 
 # Import salt libs
-import salt.output
 import salt.overstate
 import salt.syspaths
 import salt.utils.event
@@ -52,15 +51,9 @@ def over(saltenv='base', os_fn=None):
             print('Stage execution results:')
             for key, val in stage.items():
                 if '_|-' in key:
-                    salt.output.display_output(
-                            {'error': {key: val}},
-                            'highstate',
-                            opts=__opts__)
+                    progress({'error': {key: val}}, outputter='highstate')
                 else:
-                    salt.output.display_output(
-                            {key: val},
-                            'highstate',
-                            opts=__opts__)
+                    progress({key: val}, outputter='highstate')
         elif isinstance(stage, list):
             # This is a stage
             if stage_num == 0:
