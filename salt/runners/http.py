@@ -27,7 +27,6 @@ def query(url, output=True, **kwargs):
         kwargs['node'] = 'master'
 
     ret = salt.utils.http.query(url=url, opts=__opts__, **kwargs)
-
     if output:
-        salt.output.display_output(ret, '', __opts__)
+        return salt.output.out_format(ret, '', __opts__)
     return ret
