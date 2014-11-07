@@ -412,16 +412,12 @@ class RemoteFuncs(object):
             for arg in load['arg']:
                 arg_.append(arg.split())
             load['arg'] = arg_
-        tgt_type = load.get('tgt_type', 'glob')
-        if tgt_type.lower() == 'pillar':
-            tgt_type = 'pillar_exact'
-        elif tgt_type.lower() == 'compound':
-            tgt_type = 'compound_pillar_exact'
         good = self.ckminions.auth_check(
                 perms,
                 load['fun'],
                 load['tgt'],
-                tgt_type)
+                load.get('tgt_type', 'glob'),
+                publish_validate=True)
         if not good:
             return False
         return True

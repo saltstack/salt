@@ -854,7 +854,8 @@ class AESFuncs(object):
             perms,
             clear_load['fun'],
             clear_load['tgt'],
-            clear_load.get('tgt_type', 'glob'))
+            clear_load.get('tgt_type', 'glob'),
+            publish_validate=True)
 
     def __verify_load(self, load, verify_keys):
         '''
