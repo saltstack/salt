@@ -22,9 +22,7 @@ def dir_list(saltenv='base', outputter='nested'):
     load = {'saltenv': saltenv}
     output = fileserver.dir_list(load=load)
 
-    if outputter:
-        salt.output.display_output(output, outputter, opts=__opts__)
-    return output
+    return salt.output.out_format(output, outputter, __opts__)
 
 
 def envs(backend=None, sources=False, outputter='nested'):
@@ -42,9 +40,7 @@ def envs(backend=None, sources=False, outputter='nested'):
     fileserver = salt.fileserver.Fileserver(__opts__)
     output = fileserver.envs(back=backend, sources=sources)
 
-    if outputter:
-        salt.output.display_output(output, outputter, opts=__opts__)
-    return output
+    return salt.output.out_format(output, outputter, __opts__)
 
 
 def file_list(saltenv='base', outputter='nested'):
@@ -62,9 +58,7 @@ def file_list(saltenv='base', outputter='nested'):
     load = {'saltenv': saltenv}
     output = fileserver.file_list(load=load)
 
-    if outputter:
-        salt.output.display_output(output, outputter, opts=__opts__)
-    return output
+    return salt.output.out_format(output, outputter, __opts__)
 
 
 def symlink_list(saltenv='base', outputter='nested'):
@@ -82,9 +76,7 @@ def symlink_list(saltenv='base', outputter='nested'):
     load = {'saltenv': saltenv}
     output = fileserver.symlink_list(load=load)
 
-    if outputter:
-        salt.output.display_output(output, outputter, opts=__opts__)
-    return output
+    return salt.output.out_format(output, outputter, __opts__)
 
 
 def update(backend=None):
