@@ -94,7 +94,7 @@ def key_regen():
            'will not be able to reconnect and may require manual\n'
            'regeneration via a local call to\n'
            '    salt-call saltutil.regen_keys')
-    print(msg)
+    return msg
 
 
 def down(removekeys=False):
@@ -115,7 +115,7 @@ def down(removekeys=False):
             wheel = salt.wheel.Wheel(__opts__)
             wheel.call_func('key.delete', match=minion)
         else:
-            salt.output.display_output(minion, '', __opts__)
+            progress(salt.output.out_format(minion, '', __opts__))
     return ret
 
 
