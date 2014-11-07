@@ -9,6 +9,8 @@
     This is where all the black magic happens on all of salt's CLI tools.
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 from __future__ import print_function
 import os
@@ -31,6 +33,7 @@ import salt.utils.args
 import salt.utils.xdg
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.validate.path import is_writeable
+from salt._compat import MAX_SIZE
 
 
 def _sorted(mixins_or_funcs):
@@ -203,7 +206,7 @@ class MergeConfigMixIn(object):
     This mix-in should run last.
     '''
     __metaclass__ = MixInMeta
-    _mixin_prio_ = sys.maxint
+    _mixin_prio_ = MAX_SIZE
 
     def _mixin_setup(self):
         if not hasattr(self, 'setup_config') and not hasattr(self, 'config'):
@@ -668,7 +671,7 @@ class LogLevelMixIn(object):
                                      os.path.expanduser('~/.salt'))
 
                     if not os.path.isdir(user_salt_dir):
-                        os.makedirs(user_salt_dir, 0750)
+                        os.makedirs(user_salt_dir, 0o750)
                     logfile_basename = os.path.basename(
                         self._default_logging_logfile_
                     )
