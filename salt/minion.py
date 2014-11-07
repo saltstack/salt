@@ -191,7 +191,7 @@ def load_args_and_kwargs(func, args, data=None):
                     'by salt.utils.args.parse_input() before calling '
                     'salt.minion.load_args_and_kwargs().'
                 )
-                if argspec.keywords or iter(string_kwarg.keys()).next() in argspec.args:
+                if argspec.keywords or next(iter(string_kwarg.keys())) in argspec.args:
                     # Function supports **kwargs or is a positional argument to
                     # the function.
                     _kwargs.update(string_kwarg)
@@ -227,7 +227,7 @@ def load_args_and_kwargs(func, args, data=None):
 
     if argspec.keywords and isinstance(data, dict):
         # this function accepts **kwargs, pack in the publish data
-        for key, val in list(data.items()):
+        for key, val in data.items():
             _kwargs['__pub_{0}'.format(key)] = val
 
     return _args, _kwargs
@@ -798,7 +798,7 @@ class Minion(MinionBase):
         Returns a copy of the opts with key bits stripped out
         '''
         mod_opts = {}
-        for key, val in list(self.opts.items()):
+        for key, val in self.opts.items():
             if key == 'logger':
                 continue
             mod_opts[key] = val
@@ -1214,7 +1214,7 @@ class Minion(MinionBase):
                     'fun': fun,
                     'load': ret.get('__load__')}
             load['return'] = {}
-            for key, value in list(ret.items()):
+            for key, value in ret.items():
                 if key.startswith('__'):
                     continue
                 load['return'][key] = value
