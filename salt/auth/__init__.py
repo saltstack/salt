@@ -6,6 +6,8 @@ This system allows for authentication to be managed in a module pluggable way
 so that any external authentication system can be used inside of Salt
 '''
 
+from __future__ import absolute_import
+
 # 1. Create auth loader instance
 # 2. Accept arguments as a dict
 # 3. Verify with function introspection
@@ -348,7 +350,7 @@ class Resolver(object):
                 ret[arg] = getpass.getpass('{0}: '.format(arg))
             else:
                 ret[arg] = raw_input('{0}: '.format(arg))
-        for kwarg, default in args['kwargs'].items():
+        for kwarg, default in list(args['kwargs'].items()):
             if kwarg in self.opts:
                 ret['kwarg'] = self.opts[kwarg]
             else:
@@ -366,7 +368,7 @@ class Resolver(object):
         tdata = self._send_token_request(load)
         if 'token' not in tdata:
             return tdata
-        oldmask = os.umask(0177)
+        oldmask = os.umask(0o177)
         try:
             with salt.utils.fopen(self.opts['token_file'], 'w+') as fp_:
                 fp_.write(tdata['token'])
