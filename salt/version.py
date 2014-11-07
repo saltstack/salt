@@ -14,7 +14,6 @@ import sys
 try:
     from salt._compat import string_types, MAX_SIZE
 except ImportError:
-    raise
     if sys.version_info[0] == 3:
         string_types = str
     else:
