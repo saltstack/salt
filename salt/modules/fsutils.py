@@ -80,7 +80,9 @@ def _blkid_output(out, fs_type=None):
         for items in flt(dev_meta.strip().split("\n")):
             key, val = items.split("=", 1)
             dev[key.lower()] = val
-        if fs_type and dev.pop("type") == fs_type or not fs_type:
+        if fs_type and dev.get("type", '') == fs_type or not fs_type:
+            if dev.has_key("type"):
+                dev.pop("type")
             dev['label'] = dev.get('label')
             data[dev.pop("devname")] = dev
 
