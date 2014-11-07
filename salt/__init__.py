@@ -3,6 +3,8 @@
 Make me some salt!
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 import os
 import sys
@@ -206,7 +208,7 @@ class Minion(parsers.MinionOptionParser):
                                                                 'udp://',
                                                                 'file://')):
                     # Logfile is not using Syslog, verify
-                    current_umask = os.umask(0077)
+                    current_umask = os.umask(0o077)
                     verify_files([logfile], self.config['user'])
                     os.umask(current_umask)
         except OSError as err:
