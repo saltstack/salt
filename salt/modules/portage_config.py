@@ -3,6 +3,8 @@
 Configure ``portage(5)``
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 import os
 import shutil
@@ -133,7 +135,7 @@ def _package_conf_file_to_dir(file_name):
                 return False
             else:
                 os.rename(path, path + '.tmpbak')
-                os.mkdir(path, 0755)
+                os.mkdir(path, 0o755)
                 with salt.utils.fopen(path + '.tmpbak') as fh_:
                     for line in fh_:
                         line = line.strip()
@@ -142,7 +144,7 @@ def _package_conf_file_to_dir(file_name):
                 os.remove(path + '.tmpbak')
                 return True
         else:
-            os.mkdir(path, 0755)
+            os.mkdir(path, 0o755)
             return True
 
 
@@ -219,7 +221,7 @@ def _merge_flags(*args):
         else:
             flags[flag] = True
     tmp = []
-    for k, v in flags.iteritems():
+    for k, v in flags.items():
         if v:
             tmp.append(k)
         else:
@@ -286,7 +288,7 @@ def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False
         if len(psplit) == 2:
             pdir = BASE_PATH.format(conf) + '/' + psplit[0]
             if not os.path.exists(pdir):
-                os.mkdir(pdir, 0755)
+                os.mkdir(pdir, 0o755)
 
         complete_file_path = BASE_PATH.format(conf) + '/' + package_file
 
