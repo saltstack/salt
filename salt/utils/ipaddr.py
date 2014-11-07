@@ -24,15 +24,14 @@ This library is used to create/poke/manipulate IPv4 and IPv6 addresses
 and networks.
 
 """
-
-__version__ = 'trunk'
-
 # Import python libs
 from __future__ import absolute_import
 import struct
 
 # Import salt libs
 from salt._compat import xrange
+
+__version__ = 'trunk'
 
 IPV4LENGTH = 32
 IPV6LENGTH = 128
