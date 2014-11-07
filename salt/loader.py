@@ -727,7 +727,7 @@ class Loader(object):
             mod.__salt__ = functions
         try:
             context = sys.modules[
-                functions[iter(functions.keys()).next()].__module__
+                functions[next(iter(functions.keys()))].__module__
             ].__context__
         except (AttributeError, StopIteration):
             context = {}
