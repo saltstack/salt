@@ -27,7 +27,12 @@ and networks.
 
 __version__ = 'trunk'
 
+# Import python libs
+from __future__ import absolute_import
 import struct
+
+# Import salt libs
+from salt._compat import xrange
 
 IPV4LENGTH = 32
 IPV6LENGTH = 128
@@ -1470,7 +1475,7 @@ class _BaseV6(object):
 
         try:
             # Now, parse the hextets into a 128-bit integer.
-            ip_int = 0L
+            ip_int = 0
             for i in xrange(parts_hi):
                 ip_int <<= 16
                 ip_int |= self._parse_hextet(parts[i])
