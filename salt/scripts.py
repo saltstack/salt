@@ -19,7 +19,6 @@ import salt
 from salt.exceptions import SaltSystemExit, SaltClientError, SaltReqTimeoutError
 import salt.cli
 
-from salt.utils import kinds
 
 log = logging.getLogger(__name__)
 
@@ -216,13 +215,6 @@ def salt_call():
     '''
     if '' in sys.path:
         sys.path.remove('')
-
-    prepper = salt.cli.SaltCallPrep()
-    prepper.prep()
-    if (prepper.config.get('__role') ==
-            kinds.APPL_KIND_NAMES[kinds.applKinds.caller]):
-        pass
-
     client = None
     try:
         client = salt.cli.SaltCall()
