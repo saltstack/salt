@@ -497,3 +497,96 @@ documentation regarding this topic.
         fsutils._verify_run(__salt__['cmd.run_all']("rm -rf {0}".format(lost_found)))
 
     return ret
+
+
+def _restripe(mountpoint, direction, *devices, **kwargs):
+    '''
+    Restripe BTRFS: add or remove devices from the particular mounted filesystem.
+    '''
+    fs_log = []
+
+    if fsutils._is_device(mountpoint):
+        raise CommandExecutionError("Mountpount expected, while device \"{0}\" specified".format(mountpoint))
+    
+    mounted = False
+    for device, mntpoints in fsutils._get_mounts("btrfs").items():
+        for mntdata in mntpoints:
+            if mntdata['mount_point'] == mountpoint:
+                mounted = True
+                break
+
+    if not mounted:
+        raise CommandExecutionError("No BTRFS device mounted on \"{0}\" mountpoint".format(mountpoint))
+
+    if not devices:
+        raise CommandExecutionError("No devices specified.")
+
+    available_devices = __salt__['btrfs.devices']()
+    for device in devices:
+        if device not in available_devices.keys():
+            raise CommandExecutionError("Device \"{0}\" is not recognized".format(device))
+
+    cmd = ['btrfs device {0}'.format(direction)]
+    for device in devices:
+        cmd.append(device)
+
+    if direction == 'add':
+        kwargs.get("nodiscard") and cmd.append("-K")
+        kwargs.get("force") and cmd.append("-f")
+
+    cmd.append(mountpoint)
+
+    out = __salt__['cmd.run_all'](' '.join(cmd))
+    fsutils._verify_run(out)
+    out['stdout'] and fs_log.append(out['stdout'])
+
+    if direction == 'add':
+        out = None
+        data_conversion = kwargs.get("dc")
+        meta_conversion = kwargs.get("mc")
+        if data_conversion and meta_conversion:
+            out = __salt__['cmd.run_all'](
+                "btrfs balance start -dconvert={0} -mconvert={1} {2}".format(
+                    data_conversion, meta_conversion, mountpoint))
+        else:
+            out = __salt__['cmd.run_all']("btrfs filesystem balance {0}".format(mountpoint))
+        fsutils._verify_run(out)
+        out['stdout'] and fs_log.append(out['stdout'])
+
+    # Summarize the result
+    ret = {}
+    fs_log and ret.update({'log': '\n'.join(fs_log)})
+    ret.update(__salt__['btrfs.info'](mountpoint))
+
+    return ret
+
+
+def add(mountpoint, *devices, **kwargs):
+    '''
+    Add a devices to a BTRFS filesystem.
+
+    General options:
+ 
+    * **nodiscard**: Do not perform whole device TRIM
+    * **force**: Force overwrite existing filesystem on the disk
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' btrfs.add /mountpoint /dev/sda1 /dev/sda2
+    '''
+    return _restripe(mountpoint, 'add', *devices, **kwargs)
+
+
+def delete(mountpoint, *devices, **kwargs):
+    '''
+    Remove devices from a BTRFS filesystem.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' btrfs.delete /mountpoint /dev/sda1 /dev/sda2
+    '''
+    return _restripe(mountpoint, 'delete', *devices, **kwargs)
