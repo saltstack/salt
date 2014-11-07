@@ -12,6 +12,7 @@ import os
 
 # Import Salt libs
 import salt.cloud
+import salt.output
 
 
 def _get_client():
