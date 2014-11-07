@@ -83,6 +83,8 @@ the following:
     user:  user name
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 from __future__ import print_function
 import logging
@@ -568,7 +570,7 @@ class ExecOption(Option):
                     err))
             return "{0}:\n{1}\n".format(command, out)
 
-        except Exception, e:
+        except Exception as e:
             log.error(
                 'Exception while executing command "{0}":\n\n{1}'.format(
                     command,
