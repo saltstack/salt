@@ -1,7 +1,7 @@
 /build
 *.py[co]
 pkg/arch/*.tar.xz
-*.swp
+*.sw[pon]
 doc/_build
 dist
 MANIFEST
