@@ -8,7 +8,6 @@ import logging
 # Import salt libs
 import salt.log
 import salt.utils.master
-import salt.output
 import salt.payload
 from salt._compat import string_types
 

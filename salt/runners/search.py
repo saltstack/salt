@@ -5,7 +5,6 @@ Runner frontend to search system
 
 # Import salt libs
 import salt.search
-import salt.output
 
 
 def query(term):

@@ -17,7 +17,6 @@ import urllib
 # Import salt libs
 import salt.key
 import salt.client
-import salt.output
 import salt.utils.minions
 import salt.wheel
 import salt.version
@@ -45,7 +44,7 @@ def status(output=True):
     ret['up'] = sorted(minions)
     ret['down'] = sorted(set(keys['minions']) - set(minions))
     if output:
-        progress(salt.output.out_format(ret, '', __opts__))
+        progress(ret)
     return ret
 
 

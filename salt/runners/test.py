@@ -3,7 +3,6 @@
 This runner is used only for test purposes and servers no production purpose
 '''
 # Import python libs
-import pprint
 import time
 
 # Import salt requirements

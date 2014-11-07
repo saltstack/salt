@@ -5,15 +5,14 @@ Control virtual machines via Salt
 
 # Import python libs
 from __future__ import print_function
-import logger
+import logging
 
 # Import Salt libs
 import salt.client
-import salt.output
 import salt.utils.virt
 import salt.key
 
-log = logger.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 def _determine_hyper(data, omit=''):
     '''
@@ -46,10 +45,7 @@ def _find_vm(name, data, quiet=False):
         if name in data[hv_].get('vm_info', {}):
             ret = {hv_: {name: data[hv_]['vm_info'][name]}}
             if not quiet:
-                salt.output.display_output(
-                        ret,
-                        'nested',
-                        __opts__)
+                progress(ret, outputter='nested')
             return ret
     return {}
 
@@ -150,7 +146,7 @@ def hyper_info(hyper=None):
     for id_ in data:
         if 'vm_info' in data[id_]:
             data[id_].pop('vm_info')
-    salt.output.display_output(data, 'nested', __opts__)
+    progress(data, outputter='nested')
     return data
 
 
