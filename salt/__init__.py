@@ -265,6 +265,29 @@ class Minion(parsers.MinionOptionParser):
         finally:
             self.shutdown()
 
+    def call(self):
+        '''
+        Start the actual minion as a caller minion.
+
+        If sub-classed, don't **ever** forget to run:
+
+            super(YourSubClass, self).start()
+
+        NOTE: Run any required code before calling `super()`.
+        '''
+        try:
+            self.prepare()
+            if check_user(self.config['user']):
+                self.minion.call_in()
+        except (KeyboardInterrupt, SaltSystemExit) as exc:
+            logger.warn('Stopping the Salt Minion')
+            if isinstance(exc, KeyboardInterrupt):
+                logger.warn('Exiting on Ctrl-c')
+            else:
+                logger.error(str(exc))
+        finally:
+            self.shutdown()
+
     def shutdown(self):
         '''
         If sub-classed, run any shutdown operations on this method.
