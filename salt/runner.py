@@ -282,6 +282,11 @@ class Runner(RunnerClient):
                 # Run the runner!
                 jid = super(Runner, self).cmd(
                     self.opts['fun'], self.opts['arg'], self.opts)
+                if self.opts.get('async', False):
+                    log.info('Running in async mode. Results of this execution may '
+                             'be collected by attaching to the master event bus or '
+                             'by examing the master job cache, if configured.')
+                    sys.exit(0)
                 # Gather the returns
                 for ret in self.get_runner_returns(jid, timeout=60):  # 60 second timeout
                     if not self.opts.get('quiet', False):
