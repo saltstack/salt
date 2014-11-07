@@ -33,6 +33,7 @@ from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.validate.path import is_writeable
 from salt.utils import kinds
 
+
 def _sorted(mixins_or_funcs):
     return sorted(
         mixins_or_funcs, key=lambda mf: getattr(mf, '_mixin_prio_', 1000)
@@ -2127,7 +2128,7 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             raise ValueError(emsg)
 
         if kind in [kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
-                    kinds.APPL_KIND_NAMES[kinds.applKinds.caller],]:
+                    kinds.APPL_KIND_NAMES[kinds.applKinds.caller], ]:
             lanename = "{0}_{1}".format(role, kind)
         else:
             emsg = ("Unsupported application kind '{0}' for RAET SaltCaller.".format(kind))
@@ -2139,11 +2140,9 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             ha, dirpath = Yard.computeHa(dirpath, lanename, yardname)
             if (os.path.exists(ha) and
                     not os.path.isfile(ha) and
-                    not os.path.isdir(ha)): # minion manor yard
+                    not os.path.isdir(ha)):  # minion manor yard
                 return True
         return False
-
-
 
     def process_module_dirs(self):
         for module_dir in self.options.module_dirs:
