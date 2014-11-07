@@ -284,10 +284,11 @@ class Runner(RunnerClient):
                     self.opts['fun'], self.opts['arg'], self.opts)
                 # Gather the returns
                 for ret in self.get_runner_returns(jid, timeout=60):  # 60 second timeout
-                    if isinstance(ret, dict) and 'outputter' in ret:
-                        print(self.outputters[ret['outputter']](ret['data']))
-                    else:
-                        print(ret)
+                    if not self.opts.get('quiet', False):
+                        if isinstance(ret, dict) and 'outputter' in ret:
+                            print(self.outputters[ret['outputter']](ret['data']))
+                        else:
+                            print(ret)
 
             except salt.exceptions.SaltException as exc:
                 ret = str(exc)
@@ -308,9 +309,13 @@ class Runner(RunnerClient):
 
         while True:
             raw = self.event.get_event(timeout, full=True)
-            # If we saw no events in the event bus timeout OR we have reached the total timeout AND
+            # If we saw no events in the event bus timeout
+            # OR
+            # we have reached the total timeout
+            # AND
             # have not seen any progress events for the length of the timeout.
-            if raw is None or (time.time() > timeout_at and time.time() - last_progress_timestamp > timeout):
+            if raw is None or (time.time() > timeout_at and \
+                    time.time() - last_progress_timestamp > timeout):
                 # Timeout reached
                 break
             try:

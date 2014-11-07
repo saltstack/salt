@@ -2163,6 +2163,12 @@ class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             action='store_true',
             help='Force colored output'
         )
+        group.add_option(
+            '--quiet',
+            default=False,
+            action='store_true',
+            help='Do not display the results of the run'
+        )
 
     def _mixin_after_parsed(self):
         if self.options.doc and len(self.args) > 1:
