@@ -8,7 +8,7 @@ cope with scale.
 :depends:       psycopg2
 :platform:      all
 
-To enable this returner the master will need the psycopg2 installed and
+To enable this returner the minion will need the psycopg2 installed and
 the following values configured in the master config::
 
     master_job_cache: postgres_local_cache
@@ -95,11 +95,13 @@ RETURN_P = 'return.p'
 # out is the "out" from the minion data
 OUT_P = 'out.p'
 
+
 def __virtual__():
     if not HAS_POSTGRES:
         log.info("Could not import psycopg2, postges_local_cache disabled.")
         return False
     return 'postgres_local_cache'
+
 
 def _get_conn():
     '''
@@ -112,10 +114,11 @@ def _get_conn():
                password=__opts__['master_job_cache.postgres.passwd'],
                database=__opts__['master_job_cache.postgres.db'],
                port=__opts__['master_job_cache.postgres.port'])
-    except:
+    except psycopg2.OperationalError:
         log.error("Could not connect to SQL server: " + str(sys.exc_info()[0]))
         return None
     return conn
+
 
 def _close_conn(conn):
     '''
@@ -130,12 +133,13 @@ def _format_job_instance(job):
     Format the job instance correctly
     '''
     ret = {'Function': job.get('fun', 'unknown-function'),
-            'Arguments': json.loads(job.get('arg', '[]')),
-            # unlikely but safeguard from invalid returns
-            'Target': job.get('tgt', 'unknown-target'),
-            'Target-type': job.get('tgt_type', []),
-            'User': job.get('user', 'root')}
-    #TODO: Add Metadata support when it is merged from develop
+           'Arguments': json.loads(job.get('arg', '[]')),
+           # unlikely but safeguard from invalid returns
+           'Target': job.get('tgt', 'unknown-target'),
+           'Target-type': job.get('tgt_type', []),
+           'User': job.get('user', 'root')}
+    # TODO: Add Metadata support when it is merged from develop
+    return ret
 
 
 def _format_jid_instance(jid, job):
@@ -145,6 +149,7 @@ def _format_jid_instance(jid, job):
     ret = _format_job_instance(job)
     ret.update({'StartTime': salt.utils.jid_to_time(jid)})
     return ret
+
 
 def _gen_jid(cur):
     '''
@@ -158,6 +163,7 @@ def _gen_jid(cur):
         return jid
     return None
 
+
 def prep_jid(nocache=False, passed_jid=None):
     '''
     Return a job id and prepare the job id directory
@@ -166,7 +172,7 @@ def prep_jid(nocache=False, passed_jid=None):
     stays the case
     '''
     conn = _get_conn()
-    if conn == None:
+    if conn is None:
         return None
     cur = conn.cursor()
     if passed_jid is None:
@@ -187,7 +193,7 @@ def returner(load):
     Return data to a postgres server
     '''
     conn = _get_conn()
-    if conn == None:
+    if conn is None:
         return None
     cur = conn.cursor()
     sql = '''INSERT INTO salt_returns
@@ -211,43 +217,47 @@ def save_load(jid, clear_load):
     '''
     jid = _escape_jid(jid)
     conn = _get_conn()
-    if conn == None:
+    if conn is None:
         return None
     cur = conn.cursor()
     sql = '''INSERT INTO jids ''' \
           '''(jid, started, tgt_type, cmd, tgt, kwargs, ret, username, arg,''' \
-	  ''' fun) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)'''
+          ''' fun) ''' \
+          '''VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)'''
 
-    cur.execute(sql, (
-                      jid,
-                      salt.utils.jid_to_time(jid),
-                      str(clear_load.get("tgt_type")),
-                      str(clear_load.get("cmd")),
-                      str(clear_load.get("tgt")),
-                      str(clear_load.get("kwargs")),
-                      str(clear_load.get("ret")),
-                      str(clear_load.get("user")),
-                      str(json.dumps(clear_load.get("arg"))),
-                      str(clear_load.get("fun")),
-                )
+    cur.execute(
+        sql, (
+            jid,
+            salt.utils.jid_to_time(jid),
+            str(clear_load.get("tgt_type")),
+            str(clear_load.get("cmd")),
+            str(clear_load.get("tgt")),
+            str(clear_load.get("kwargs")),
+            str(clear_load.get("ret")),
+            str(clear_load.get("user")),
+            str(json.dumps(clear_load.get("arg"))),
+            str(clear_load.get("fun")),
+        )
     )
-    #TODO: Add Metadata support when it is merged from develop
+    # TODO: Add Metadata support when it is merged from develop
     _close_conn(conn)
+
 
 def _escape_jid(jid):
     '''
     Do proper formating of the jid
     '''
-    jid = "%s" % jid
+    jid = str(jid)
     jid = re.sub(r"'*", "", jid)
     return jid
+
 
 def _build_dict(data):
     '''
     Rebuild dict
     '''
     result = {}
-    #TODO: Add Metadata support when it is merged from develop
+    # TODO: Add Metadata support when it is merged from develop
     result["jid"] = data[0]
     result["tgt_type"] = data[1]
     result["cmd"] = data[2]
@@ -259,13 +269,14 @@ def _build_dict(data):
     result["fun"] = data[8]
     return result
 
+
 def get_load(jid):
     '''
     Return the load data that marks a specified jid
     '''
     jid = _escape_jid(jid)
     conn = _get_conn()
-    if conn == None:
+    if conn is None:
         return None
     cur = conn.cursor()
     sql = '''SELECT jid, tgt_type, cmd, tgt, kwargs, ret, username, arg,''' \
@@ -277,13 +288,14 @@ def get_load(jid):
     _close_conn(conn)
     return {}
 
+
 def get_jid(jid):
     '''
     Return the information returned when the specified job id was executed
     '''
     jid = _escape_jid(jid)
     conn = _get_conn()
-    if conn == None:
+    if conn is None:
         return None
     cur = conn.cursor()
     sql = '''SELECT id, return FROM salt_returns WHERE jid = %s'''
@@ -298,6 +310,7 @@ def get_jid(jid):
     _close_conn(conn)
     return ret
 
+
 def get_jids():
     '''
     Return a list of all job ids
@@ -310,7 +323,7 @@ def get_jids():
           '''FROM jids'''
     if __opts__['keep_jobs'] != 0:
         sql = sql + " WHERE started > NOW() - INTERVAL '" \
-	      + str(__opts__['keep_jobs']) + "' HOUR"
+                + str(__opts__['keep_jobs']) + "' HOUR"
 
     cur.execute(sql)
     ret = {}
@@ -318,7 +331,7 @@ def get_jids():
     while data:
         data_dict = _build_dict(data)
         ret[data_dict["jid"]] = \
-	    _format_jid_instance(data_dict["jid"], data_dict)
+            _format_jid_instance(data_dict["jid"], data_dict)
         data = cur.fetchone()
     cur.close()
     conn.close()
