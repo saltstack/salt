@@ -11,6 +11,8 @@ Use section as DEFAULT_IMPLICIT if your ini file does not have any section
 (for example /etc/sysctl.conf)
 '''
 
+from __future__ import absolute_import
+
 # Import Python libs
 import re
 
@@ -297,7 +299,7 @@ class _Ini(object):
             outfile.write(self.current_contents())
 
     def dump(self):
-        print self.current_contents()
+        print(self.current_contents())
 
     def current_contents(self):
         file_contents = ''
