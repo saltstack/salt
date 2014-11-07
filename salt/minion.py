@@ -3,6 +3,8 @@
 Routines to set up a minion
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 from __future__ import print_function
 import copy
@@ -189,7 +191,7 @@ def load_args_and_kwargs(func, args, data=None):
                     'by salt.utils.args.parse_input() before calling '
                     'salt.minion.load_args_and_kwargs().'
                 )
-                if argspec.keywords or string_kwarg.iterkeys().next() in argspec.args:
+                if argspec.keywords or iter(string_kwarg.keys()).next() in argspec.args:
                     # Function supports **kwargs or is a positional argument to
                     # the function.
                     _kwargs.update(string_kwarg)
@@ -202,7 +204,7 @@ def load_args_and_kwargs(func, args, data=None):
 
         # if the arg is a dict with __kwarg__ == True, then its a kwarg
         elif isinstance(arg, dict) and arg.pop('__kwarg__', False) is True:
-            for key, val in arg.iteritems():
+            for key, val in arg.items():
                 if argspec.keywords or key in argspec.args:
                     # Function supports **kwargs or is a positional argument to
                     # the function.
@@ -225,7 +227,7 @@ def load_args_and_kwargs(func, args, data=None):
 
     if argspec.keywords and isinstance(data, dict):
         # this function accepts **kwargs, pack in the publish data
-        for key, val in data.items():
+        for key, val in list(data.items()):
             _kwargs['__pub_{0}'.format(key)] = val
 
     return _args, _kwargs
@@ -356,7 +358,7 @@ class MinionBase(object):
             # Let's try to create the directory defined on the configuration
             # file
             try:
-                os.makedirs(minion_sock_dir, 0755)
+                os.makedirs(minion_sock_dir, 0o755)
             except OSError as exc:
                 log.error('Could not create SOCK_DIR: {0}'.format(exc))
                 # Let's not fail yet and try using the default path
@@ -366,7 +368,7 @@ class MinionBase(object):
 
             if not os.path.isdir(default_minion_sock_dir):
                 try:
-                    os.makedirs(default_minion_sock_dir, 0755)
+                    os.makedirs(default_minion_sock_dir, 0o755)
                 except OSError as exc:
                     log.error('Could not create SOCK_DIR: {0}'.format(exc))
                     # Let's stop at this stage
@@ -377,7 +379,7 @@ class MinionBase(object):
 
         # Securely bind the event sockets
         if self.opts.get('ipc_mode', '') != 'tcp':
-            old_umask = os.umask(0177)
+            old_umask = os.umask(0o177)
         try:
             log.info('Starting pub socket on {0}'.format(epub_uri))
             self.epub_sock.bind(epub_uri)
@@ -512,7 +514,7 @@ class MultiMinion(MinionBase):
 
         while True:
             package = None
-            for minion in minions.itervalues():
+            for minion in minions.values():
                 if isinstance(minion, dict):
                     minion = minion['minion']
                 if not hasattr(minion, 'schedule'):
@@ -525,7 +527,7 @@ class MultiMinion(MinionBase):
                 except Exception:
                     pass
 
-            masters = minions.keys()
+            masters = list(minions.keys())
             shuffle(masters)
             # Do stuff per minion that we have
             for master in masters:
@@ -796,7 +798,7 @@ class Minion(MinionBase):
         Returns a copy of the opts with key bits stripped out
         '''
         mod_opts = {}
-        for key, val in self.opts.items():
+        for key, val in list(self.opts.items()):
             if key == 'logger':
                 continue
             mod_opts[key] = val
@@ -1212,14 +1214,14 @@ class Minion(MinionBase):
                     'fun': fun,
                     'load': ret.get('__load__')}
             load['return'] = {}
-            for key, value in ret.items():
+            for key, value in list(ret.items()):
                 if key.startswith('__'):
                     continue
                 load['return'][key] = value
         else:
             load = {'cmd': ret_cmd,
                     'id': self.opts['id']}
-            for key, value in ret.items():
+            for key, value in list(ret.items()):
                 load[key] = value
 
         if 'out' in ret:
@@ -2222,7 +2224,7 @@ class MultiSyndic(MinionBase):
         '''
         Iterate (in order) over your options for master
         '''
-        masters = self.master_syndics.keys()
+        masters = list(self.master_syndics.keys())
         shuffle(masters)
         if master_id not in self.master_syndics:
             master_id = masters.pop(0)
@@ -2275,7 +2277,7 @@ class MultiSyndic(MinionBase):
                     log.warning('Negative timeout in syndic main loop')
                     socks = {}
                 # check all of your master_syndics, have them do their thing
-                for master_id, syndic_dict in self.master_syndics.iteritems():
+                for master_id, syndic_dict in self.master_syndics.items():
                     # if not connected, lets try
                     if 'generator' not in syndic_dict:
                         # if we couldn't connect, lets try later
@@ -2347,7 +2349,7 @@ class MultiSyndic(MinionBase):
                               kwargs={'events': self.raw_events,
                                       'pretag': tagify(self.opts['id'], base='syndic')},
                               )
-        for jid, jid_ret in self.jids.iteritems():
+        for jid, jid_ret in self.jids.items():
             self._call_syndic('_return_pub', args=(jid_ret, '_syndic_return'), master_id=jid_ret.get('__master_id__'))
 
         self._reset_event_aggregation()
