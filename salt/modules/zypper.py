@@ -1012,3 +1012,64 @@ def search(criteria):
             'summary': solvable.getAttribute("summary")
         }
     return out
+
+
+def _get_first_aggregate_text(node_list):
+    '''
+    Extract text from the first occurred DOM aggregate.
+    '''
+    if not node_list:
+        return ""
+
+    out = []
+    for node in node_list[0].childNodes:
+        if node.nodeType == dom.Document.TEXT_NODE:
+            out.append(node.nodeValue)
+    return "\n".join(out)
+
+
+def _parse_suse_product(path, *info):
+    '''
+    Parse SUSE LLC product.
+    '''
+    doc = dom.parse(path)
+    product = {}
+    [product.update({
+        nfo: _get_first_aggregate_text(doc.getElementsByTagName(nfo))
+    }) for nfo in info]
+
+    return product
+
+
+def list_products():
+    '''
+    List all installed SUSE products.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_products
+    '''
+    PRODUCTS = "/etc/products.d"
+    if not os.path.exists(PRODUCTS):
+        raise CommandExecutionError("Directory {0} does not exists.".format(PRODUCTS))
+
+    products = {}
+    for fname in os.listdir("/etc/products.d"):
+        pth_name = os.path.join(PRODUCTS, fname)
+        r_pth_name = os.path.realpath(pth_name)
+        products[r_pth_name] = r_pth_name != pth_name and 'baseproduct' or None
+
+    info = ['vendor', 'name', 'version', 'baseversion', 'patchlevel',
+            'predecessor', 'release', 'endoflife', 'arch', 'cpeid',
+            'productline', 'updaterepokey', 'summary', 'shortsummary',
+            'description']
+
+    ret = {}
+    for prod_meta, is_base_product in products.items():
+        product = _parse_suse_product(prod_meta, *info)
+        product['baseproduct'] = is_base_product is not None
+        ret[product.pop('name')] = product
+
+    return ret
