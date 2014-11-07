@@ -357,9 +357,8 @@ class Master(SMaster):
                 _tmp = __import__(mod, globals(), locals(), [cls], -1)
                 cls = _tmp.__getattribute__(cls)
                 process_manager.add_process(cls, args=(self.opts,))
-            except Exception as e:
-                log.error(e)
-                log.warning(('Error creating ext_processes '
+            except Exception:
+                log.error(('Error creating ext_processes '
                            'process: {0}').format(proc))
 
         if HAS_HALITE and 'halite' in self.opts:
