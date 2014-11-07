@@ -122,7 +122,7 @@ def show_stages(saltenv='base', os_fn=None):
         salt-run state.show_stages saltenv=dev /root/overstate.sls
     '''
     overstate = salt.overstate.OverState(__opts__, saltenv, os_fn)
-    progress(overstate.over, 'outputter='overstatestage)
+    progress(overstate.over, outputter='overstatestage')
     return overstate.over
 
 
