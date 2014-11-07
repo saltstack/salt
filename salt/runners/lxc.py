@@ -89,7 +89,7 @@ def find_guest(name, quiet=False):
         for x in 'running', 'frozen', 'stopped':
             if name in l[x]:
                 if not quiet:
-                    salt.output.display_output(
+                    return salt.output.out_format(
                             host,
                             'lxc_find_host',
                             __opts__)
@@ -329,7 +329,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
     if not done:
         ret['result'] = False
     if not quiet:
-        salt.output.display_output(ret, '', __opts__)
+        return salt.output.out_format(ret, '', __opts__)
     return ret
 
 
@@ -390,7 +390,7 @@ def list_(host=None, quiet=False):
     for chunk in it:
         ret.update(chunk)
         if not quiet:
-            salt.output.display_output(chunk, 'lxc_list', __opts__)
+            return salt.output.out_format(chunk, 'lxc_list', __opts__)
     return ret
 
 
@@ -415,7 +415,7 @@ def purge(name, delete_key=True, quiet=False):
         return
 
     if not quiet:
-        salt.output.display_output(data, 'lxc_purge', __opts__)
+        return salt.output.out_format(data, 'lxc_purge', __opts__)
     return data
 
 
@@ -429,7 +429,7 @@ def start(name, quiet=False):
     '''
     data = _do_names(name, 'start')
     if data and not quiet:
-        salt.output.display_output(data, 'lxc_start', __opts__)
+        return salt.output.out_format(data, 'lxc_start', __opts__)
     return data
 
 
@@ -443,7 +443,7 @@ def stop(name, quiet=False):
     '''
     data = _do_names(name, 'stop')
     if data and not quiet:
-        salt.output.display_output(data, 'lxc_force_off', __opts__)
+        return salt.output.out_format(data, 'lxc_force_off', __opts__)
     return data
 
 
@@ -457,7 +457,7 @@ def freeze(name, quiet=False):
     '''
     data = _do_names(name, 'freeze')
     if data and not quiet:
-        salt.output.display_output(data, 'lxc_pause', __opts__)
+        return salt.output.out_format(data, 'lxc_pause', __opts__)
     return data
 
 
@@ -471,7 +471,7 @@ def unfreeze(name, quiet=False):
     '''
     data = _do_names(name, 'unfreeze')
     if data and not quiet:
-        salt.output.display_output(data, 'lxc_resume', __opts__)
+        return salt.output.out_format(data, 'lxc_resume', __opts__)
     return data
 
 
@@ -485,5 +485,5 @@ def info(name, quiet=False):
     '''
     data = _do_names(name, 'info')
     if data and not quiet:
-        salt.output.display_output(data, 'lxc_info', __opts__)
+        salt.output.out_format(data, 'lxc_info', __opts__)
     return data
