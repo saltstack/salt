@@ -380,3 +380,120 @@ def resize(mountpoint, size):
     ret.update(__salt__['btrfs.info'](mountpoint))
 
     return ret
+
+
+def _fsck_ext(device):
+    '''
+    Check an ext2/ext3/ext4 file system.
+
+    This is forced check to determine a filesystem is clean or not.
+    NOTE: Maybe this function needs to be moved as a standard method in extfs module in a future.
+    '''
+    msgs = {        
+        0: 'No errors',
+        1: 'Filesystem errors corrected',
+        2: 'System should be rebooted',
+        4: 'Filesystem errors left uncorrected',
+        8: 'Operational error',
+        16: 'Usage or syntax error',
+        32: 'Fsck canceled by user request',
+        128: 'Shared-library error',
+    }
+
+    return msgs.get(__salt__['cmd.run_all']("fsck -f -n {0}".format(device))['retcode'], 'Unknown error')
+
+
+def convert(device, permanent=False, keeplf=False):
+    '''
+    Convert ext2/3/4 to BTRFS. Device should be mounted.
+
+    Filesystem can be converted temporarily so the further processing and rollback is possible,
+    or permanently, where previous extended filesystem image gets deleted. Please note, permanent
+    conversion takes a while as BTRFS filesystem needs to be properly rebalanced afterwards.
+
+    General options:
+ 
+    * **permanent**: Specify if the migration should be permanent (false by default)
+    * **keeplf**: Keep ``lost+found`` of the partition (removed by default, but still in the image, if not permanent migration)
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' btrfs.convert /dev/sda1
+        salt '*' btrfs.convert /dev/sda1 permanent=True
+    '''
+
+    out = __salt__['cmd.run_all']("blkid -o export")
+    fsutils._verify_run(out)
+    devices = fsutils._blkid_output(out['stdout'])
+    if not devices.get(device):
+        raise CommandExecutionError("The device \"{0}\" was is not found.".format(device))
+
+    if not devices[device]["type"] in ['ext2', 'ext3', 'ext4']:
+        raise CommandExecutionError("The device \"{0}\" is a \"{1}\" file system.".format(device, devices[device]["type"]))
+
+    mountpoint = fsutils._get_mounts(devices[device]["type"]).get(device, [{'mount_point': None}])[0].get('mount_point')
+    if mountpoint == '/':
+        raise CommandExecutionError("""One does not simply converts a root filesystem!
+
+Converting an extended root filesystem to BTRFS is a careful
+and lengthy process, among other steps including the following
+requirements:
+
+  1. Proper verified backup.
+  2. System outage.
+  3. Offline system access.
+
+For further details, please refer to your OS vendor
+documentation regarding this topic.
+""")
+
+    fsutils._verify_run(__salt__['cmd.run_all']("umount {0}".format(device)))
+
+    ret = {
+        'before': {
+            'fsck_status': _fsck_ext(device),
+            'mount_point': mountpoint,
+            'type': devices[device]["type"],
+        }
+    }
+
+    fsutils._verify_run(__salt__['cmd.run_all']("btrfs-convert {0}".format(device)))
+    fsutils._verify_run(__salt__['cmd.run_all']("mount {0} {1}".format(device, mountpoint)))
+
+    # Refresh devices
+    out = __salt__['cmd.run_all']("blkid -o export")
+    fsutils._verify_run(out)
+    devices = fsutils._blkid_output(out['stdout'])
+
+    ret['after'] = {
+        'fsck_status': "N/A", # ToDO
+        'mount_point': mountpoint,
+        'type': devices[device]["type"],
+    }
+
+    # Post-migration procedures
+    image_path = "{0}/ext2_saved".format(mountpoint)
+    orig_fstype = ret['before']['type']
+
+    if not os.path.exists(image_path):
+        raise CommandExecutionError("BTRFS migration went wrong: the image \"{0}\" not found!".format(image_path))
+
+    if not permanent:
+        ret['after']['{0}_image'.format(orig_fstype)] = image_path
+        ret['after']['{0}_image_info'.format(orig_fstype)] = os.popen("file {0}/image".format(image_path)).read().strip()
+    else:
+        ret['after']['{0}_image'.format(orig_fstype)] = 'removed'
+        ret['after']['{0}_image_info'.format(orig_fstype)] = 'N/A'
+
+        fsutils._verify_run(__salt__['cmd.run_all']("btrfs subvolume delete {0}".format(image_path)))
+        out = __salt__['cmd.run_all']("btrfs filesystem balance {0}".format(mountpoint))
+        fsutils._verify_run(out)
+        ret['after']['balance_log'] = out['stdout']
+
+    lost_found = "{0}/lost+found".format(mountpoint)
+    if os.path.exists(lost_found) and not keeplf:
+        fsutils._verify_run(__salt__['cmd.run_all']("rm -rf {0}".format(lost_found)))
+
+    return ret
