@@ -38,6 +38,11 @@ if PY3:
 else:
     MAX_SIZE = sys.maxint
 
+if PY3:
+    xrange = range
+else:
+    xrange = xrange
+
 # pylint: disable=C0103
 if PY3:
     string_types = str,
