@@ -287,7 +287,7 @@ class Runner(RunnerClient):
                     if isinstance(ret, dict) and 'outputter' in ret:
                         print(self.outputters[ret['outputter']](ret['data']))
                     else:
-                        print(self.outputters['nested'](ret))
+                        print(ret)
 
             except salt.exceptions.SaltException as exc:
                 ret = str(exc)
