@@ -110,6 +110,8 @@ Available Functions
 
 
 '''
+
+from __future__ import absolute_import
 import functools
 import logging
 
@@ -539,7 +541,7 @@ def installed(name,
     changes = 'Container created'
     try:
         cid = out['out']['info']['id']
-    except Exception, e:
+    except Exception as e:
         log.debug(str(e))
     else:
         changes = 'Container {0} created'.format(cid)
@@ -911,7 +913,7 @@ def running(name,
         for vol in volumes:
             if isinstance(vol, dict):
                 # get source as the dict key
-                source = vol.keys()[0]
+                source = list(vol.keys())[0]
                 # then find target
                 if isinstance(vol[source], dict):
                     target = vol[source]['bind']
@@ -932,7 +934,7 @@ def running(name,
     if isinstance(ports, list):
         for port in ports:
             if isinstance(port, dict):
-                container_port = port.keys()[0]
+                container_port = list(port.keys())[0]
                 #find target
                 if isinstance(port[container_port], dict):
                     host_port = port[container_port]['HostPort']
@@ -967,7 +969,7 @@ def running(name,
         try:
             cid = out['out']['info']['id']
             log.debug(str(cid))
-        except Exception, e:
+        except Exception as e:
             changes.append('Container created')
             log.debug(str(e))
         else:
