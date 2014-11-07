@@ -4,6 +4,7 @@ Package support for pkgin based systems, inspired from freebsdpkg module
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import re
 import logging
@@ -508,7 +509,7 @@ def file_list(package):
     '''
     ret = file_dict(package)
     files = []
-    for pkg_files in ret['files'].itervalues():
+    for pkg_files in ret['files'].values():
         files.extend(pkg_files)
     ret['files'] = files
     return ret
@@ -543,7 +544,6 @@ def file_dict(package):
         else:
             continue  # unexpected string
 
-    print files
     return {'errors': errors, 'files': files}
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
