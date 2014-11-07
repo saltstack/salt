@@ -288,7 +288,7 @@ class Runner(RunnerClient):
                              'by examing the master job cache, if configured.')
                     sys.exit(0)
                 # Gather the returns
-                for ret in self.get_runner_returns(jid, timeout=60):  # 60 second timeout
+                for ret in self.get_runner_returns(jid):
                     if not self.opts.get('quiet', False):
                         if isinstance(ret, dict) and 'outputter' in ret:
                             print(self.outputters[ret['outputter']](ret['data']))
@@ -307,7 +307,6 @@ class Runner(RunnerClient):
         '''
         if timeout is None:
             timeout = self.opts['timeout']
-            timeout = 10
 
         timeout_at = time.time() + timeout
         last_progress_timestamp = time.time()
