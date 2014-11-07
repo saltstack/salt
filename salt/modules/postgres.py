@@ -20,6 +20,8 @@ Module to provide Postgres compatibility to salt.
 :note: This module uses MD5 hashing which may not be compliant with certain
     security audits.
 '''
+
+from __future__ import absolute_import
 # This pylint error is popping up where there are no colons?
 # pylint: disable=E8203
 
@@ -378,7 +380,7 @@ def db_create(name,
         'TABLESPACE': tablespace,
     }
     with_chunks = []
-    for key, value in with_args.iteritems():
+    for key, value in with_args.items():
         if value is not None:
             with_chunks += [key, '=', value]
     # Build a final query
@@ -1538,7 +1540,7 @@ def owner_to(dbname,
 
     sqlfile.write('commit;\n')
     sqlfile.flush()
-    os.chmod(sqlfile.name, 0644)  # ensure psql can read the file
+    os.chmod(sqlfile.name, 0o644)  # ensure psql can read the file
 
     # run the generated sqlfile in the db
     cmdret = _psql_prepare_and_run(['-f', sqlfile.name],
