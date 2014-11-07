@@ -590,3 +590,64 @@ def delete(mountpoint, *devices, **kwargs):
         salt '*' btrfs.delete /mountpoint /dev/sda1 /dev/sda2
     '''
     return _restripe(mountpoint, 'delete', *devices, **kwargs)
+
+
+def _parse_proplist(data):
+    '''
+    Parse properties list.
+    '''
+    out = {}
+    for line in data.split("\n"):
+        line = re.split(r"\s+", line, 1)
+        if len(line) == 2:
+            out[line[0]] = line[1]
+
+    return out
+
+
+def properties(obj, type=None, set=None):
+    '''
+    List properties for given btrfs object. The object can be path of BTRFS device,
+    mount point, or any directories/files inside the BTRFS filesystem.
+
+    General options:
+ 
+    * **type**: Possible types are s[ubvol], f[ilesystem], i[node] and d[evice].
+    * **force**: Force overwrite existing filesystem on the disk
+    * **set**: <key=value,key1=value1...> Options for a filesystem properties.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' btrfs.properties /mountpoint
+        salt '*' btrfs.properties /dev/sda1 type=subvol set='ro=false,label="My Storage"'
+    '''
+    if type and type not in ['s', 'subvol', 'f', 'filesystem', 'i', 'inode', 'd', 'device']:
+        raise CommandExecutionError("Unknown property type: \"{0}\" specified".format(mode))
+
+    cmd = ['btrfs']
+    cmd.append('property')
+    cmd.append(set and 'set' or 'list')
+    type and cmd.append('-t{0}'.format(type))
+    cmd.append(obj)
+
+    if set:
+        try:
+            for key, value in [[item.strip() for item in keyset.split("=")] for keyset in set.split(",")]:
+                cmd.append(key)
+                cmd.append(value)
+        except Exception, ex:
+            raise CommandExecutionError(ex)
+
+    out = __salt__['cmd.run_all'](' '.join(cmd))
+    fsutils._verify_run(out)
+
+    if not set:
+        ret = {}
+        for prop, descr in _parse_proplist(out['stdout']).items():
+            ret[prop] = {'description': descr}
+            value = __salt__['cmd.run_all']("btrfs property get {0} {1}".format(obj, prop))['stdout']
+            ret[prop]['value'] = value and value.split("=")[-1] or "N/A"
+
+        return ret
