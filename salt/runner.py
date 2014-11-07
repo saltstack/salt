@@ -305,6 +305,8 @@ class Runner(RunnerClient):
                 ret = str(exc)
                 print(ret)
                 return ret
+            log.debug('Runner return: {0}'.format(ret))
+            return ret
 
     def get_runner_returns(self, jid, timeout=None):
         '''
@@ -319,6 +321,7 @@ class Runner(RunnerClient):
 
         while True:
             raw = self.event.get_event(timeout, full=True)
+            time.sleep(0.1)
             # If we saw no events in the event bus timeout
             # OR
             # we have reached the total timeout
@@ -329,9 +332,6 @@ class Runner(RunnerClient):
                 # Timeout reached
                 break
             try:
-                # Handle a findjob that might have been kicked off under the covers
-                if raw['data']['fun'] == 'saltutil.findjob':
-                    timeout_at = timeout_at + 10
                 if not raw['tag'].split('/')[1] == 'runner' and raw['tag'].split('/')[2] == jid:
                     continue
                 elif raw['tag'].split('/')[3] == 'progress' and raw['tag'].split('/')[2] == jid:
@@ -340,5 +340,9 @@ class Runner(RunnerClient):
                 elif raw['tag'].split('/')[3] == 'return' and raw['tag'].split('/')[2] == jid:
                     yield raw['data']['return']
                     break
+                # Handle a findjob that might have been kicked off under the covers
+                elif raw['data']['fun'] == 'saltutil.findjob':
+                    timeout_at = timeout_at + 10
+                    continue
             except (IndexError, KeyError):
                 continue
