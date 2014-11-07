@@ -78,6 +78,7 @@ def pillar(tgt=None, expr_form='glob', outputter=None, **kwargs):
     else:
         return cached_pillar
 
+
 def mine(tgt=None, expr_form='glob', outputter=None, **kwargs):
     '''
     Return cached mine data of the targeted minions

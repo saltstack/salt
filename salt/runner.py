@@ -50,6 +50,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         self.returners = salt.loader.returners(opts, self.functions)
         self.outputters = salt.loader.outputters(opts)
         self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
+
     def cmd(self, fun, arg, pub_data=None, kwarg=None):
         '''
         Execute a runner function
@@ -126,21 +127,26 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
         jid = self.returners[fstr]()
         log.debug('Runner starting with jid {0}'.format(jid))
-        self.event.fire_event({'runner_job':fun}, tagify([jid, 'new'], 'job'))
+        self.event.fire_event({'runner_job': fun}, tagify([jid, 'new'], 'job'))
         target = RunnerClient._thread_return
         data = {'fun': fun, 'jid': jid, 'args': args, 'kwargs': kwargs}
         process = multiprocessing.Process(
             target=target, args=(self, self.opts, data)
         )
         process.start()
-    
+        return jid
+
     @classmethod
     def _thread_return(cls, instance, opts, data):
+        '''
+        The multiprocessing process calls back here
+        to stream returns
+        '''
         # Provide JID if the runner wants to access it
         sys.modules[instance.functions[data['fun']].__module__].__jid__ = data['jid']
         # Runtime injection of the progress event system with the correct jid
         sys.modules[instance.functions[data['fun']].__module__].progress = \
-                salt.utils.event.RunnerEvent(opts, data['jid']).fire_progress
+            salt.utils.event.RunnerEvent(opts, data['jid']).fire_progress
         ret = instance.functions[data['fun']](*data['args'], **data['kwargs'])
         # Sleep for just a moment to let any progress events return
         time.sleep(0.1)
@@ -164,7 +170,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
                 'The specified returner threw a stack trace:\n',
                 exc_info=True
             )
-        return data['jid']  # FIXME better return?
+        return data['jid']
 
     def master_call(self, **kwargs):
         '''
@@ -305,6 +311,7 @@ class Runner(RunnerClient):
         Gather the return data from the event system, break hard when timeout
         is reached.
         '''
+        print('TOP JID: {0}'.format(jid))
         if timeout is None:
             timeout = self.opts['timeout'] * 2
 
@@ -313,26 +320,27 @@ class Runner(RunnerClient):
 
         while True:
             raw = self.event.get_event(timeout, full=True)
+            print(raw['tag'])
             # If we saw no events in the event bus timeout
             # OR
             # we have reached the total timeout
             # AND
             # have not seen any progress events for the length of the timeout.
-            if raw is None and (time.time() > timeout_at and \
-                    time.time() - last_progress_timestamp > timeout):
+            if raw is None and (time.time() > timeout_at and
+                                time.time() - last_progress_timestamp > timeout):
                 # Timeout reached
                 break
             try:
                 # Handle a findjob that might have been kicked off under the covers
                 if raw['data']['fun'] == 'saltutil.findjob':
                     timeout_at = timeout_at + 10
-                if not raw['tag'].split('/')[1] == 'runner':
+                if not raw['tag'].split('/')[1] == 'runner' and raw['tag'].split('/')[2] == jid:
                     continue
-                elif raw['tag'].split('/')[3] == 'progress':
+                elif raw['tag'].split('/')[3] == 'progress' and raw['tag'].split('/')[2] == jid:
                     last_progress_timestamp = time.time()
-                    yield({'data': raw['data']['data'], 'outputter': raw['data']['outputter']})
-                elif raw['tag'].split('/')[3] == 'return':
-                    yield(raw['data']['return'])
+                    yield {'data': raw['data']['data'], 'outputter': raw['data']['outputter']}
+                elif raw['tag'].split('/')[3] == 'return' and raw['tag'].split('/')[2] == jid:
+                    yield raw['data']['return']
                     break
             except (IndexError, KeyError):
                 continue
