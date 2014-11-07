@@ -13,7 +13,6 @@ import subprocess
 import tempfile
 import time
 import urllib
-import logging
 
 # Import salt libs
 import salt.key
@@ -25,7 +24,6 @@ import salt.version
 
 FINGERPRINT_REGEX = re.compile(r'^([a-f0-9]{2}:){15}([a-f0-9]{2})$')
 
-log = logging.getLogger(__name__)
 
 def status(output=True):
     '''
@@ -37,9 +35,6 @@ def status(output=True):
 
         salt-run manage.status
     '''
-    if output is not True:
-        log.warn('\'output\' function argument is no longer supported. '
-                 'Please use --quiet.')
     client = salt.client.get_local_client(__opts__['conf_file'])
     minions = client.cmd('*', 'test.ping', timeout=__opts__['timeout'])
 
@@ -49,7 +44,9 @@ def status(output=True):
     ret = {}
     ret['up'] = sorted(minions)
     ret['down'] = sorted(set(keys['minions']) - set(minions))
-    return salt.output.out_format(ret, '', __opts__)
+    if output:
+        return salt.output.out_format(ret, '', __opts__)
+    return ret
 
 
 def key_regen():
