@@ -13,13 +13,14 @@
     logger instance uses our ``salt.log.setup.SaltLoggingClass``.
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 import os
 import re
 import sys
 import types
 import socket
-import urlparse
 import logging
 import logging.handlers
 import traceback
@@ -33,7 +34,7 @@ QUIET = logging.QUIET = 1000
 # Import salt libs
 from salt.log.handlers import TemporaryLoggingHandler, StreamHandler, SysLogHandler, WatchedFileHandler
 from salt.log.mixins import LoggingMixInMeta, NewStyleClassMixIn
-from salt._compat import string_types
+from salt._compat import string_types, urlparse
 
 LOG_LEVELS = {
     'all': logging.NOTSET,
@@ -49,7 +50,7 @@ LOG_LEVELS = {
 
 # Make a list of log level names sorted by log level
 SORTED_LEVEL_NAMES = [
-    l[0] for l in sorted(LOG_LEVELS.iteritems(), key=lambda x: x[1])
+    l[0] for l in sorted(iter(LOG_LEVELS.items()), key=lambda x: x[1])
 ]
 
 # Store an instance of the current logging logger class
@@ -112,7 +113,7 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, NewStyleClassMixIn):
 
         try:
             max_logger_length = len(max(
-                logging.Logger.manager.loggerDict.keys(), key=len
+                list(logging.Logger.manager.loggerDict.keys()), key=len
             ))
             for handler in logging.root.handlers:
                 if handler in (LOGGING_NULL_HANDLER,
@@ -540,7 +541,7 @@ def setup_extended_logging(opts):
     # log records with them
     additional_handlers = []
 
-    for name, get_handlers_func in providers.iteritems():
+    for name, get_handlers_func in providers.items():
         logging.getLogger(__name__).info(
             'Processing `log_handlers.{0}`'.format(name)
         )
