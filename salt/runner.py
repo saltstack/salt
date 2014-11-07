@@ -306,7 +306,7 @@ class Runner(RunnerClient):
         is reached.
         '''
         if timeout is None:
-            timeout = self.opts['timeout']
+            timeout = self.opts['timeout'] * 2
 
         timeout_at = time.time() + timeout
         last_progress_timestamp = time.time()
@@ -318,11 +318,14 @@ class Runner(RunnerClient):
             # we have reached the total timeout
             # AND
             # have not seen any progress events for the length of the timeout.
-            if raw is None or (time.time() > timeout_at and \
+            if raw is None and (time.time() > timeout_at and \
                     time.time() - last_progress_timestamp > timeout):
                 # Timeout reached
                 break
             try:
+                # Handle a findjob that might have been kicked off under the covers
+                if raw['data']['fun'] == 'saltutil.findjob':
+                    timeout_at = timeout_at + 10
                 if not raw['tag'].split('/')[1] == 'runner':
                     continue
                 elif raw['tag'].split('/')[3] == 'progress':
@@ -331,5 +334,5 @@ class Runner(RunnerClient):
                 elif raw['tag'].split('/')[3] == 'return':
                     yield(raw['data']['return'])
                     break
-            except IndexError:
+            except (IndexError, KeyError):
                 continue
