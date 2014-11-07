@@ -12,6 +12,8 @@ The data sent to the state calls is as follows:
       }
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 import os
 import sys
@@ -178,9 +180,9 @@ def format_log(ret):
                 if 'diff' in chg:
                     if isinstance(chg['diff'], string_types):
                         msg = 'File changed:\n{0}'.format(chg['diff'])
-                if all([isinstance(x, dict) for x in chg.itervalues()]):
+                if all([isinstance(x, dict) for x in chg.values()]):
                     if all([('old' in x and 'new' in x)
-                            for x in chg.itervalues()]):
+                            for x in chg.values()]):
                         # This is the return data from a package install
                         msg = 'Installed Packages:\n'
                         for pkg in chg:
@@ -495,7 +497,7 @@ class Compiler(object):
                     for entry in names:
                         live = copy.deepcopy(chunk)
                         if isinstance(entry, dict):
-                            low_name = entry.iterkeys().next()
+                            low_name = next(iter(entry.keys()))
                             live['name'] = low_name
                             live.update(entry[low_name][0])
                         else:
@@ -531,7 +533,7 @@ class Compiler(object):
                 # Explicitly declared exclude
                 if len(exc) != 1:
                     continue
-                key = exc.iterkeys().next()
+                key = next(iter(exc.keys()))
                 if key == 'sls':
                     ex_sls.add(exc['sls'])
                 elif key == 'id':
@@ -1098,7 +1100,7 @@ class State(object):
                     for entry in names:
                         live = copy.deepcopy(chunk)
                         if isinstance(entry, dict):
-                            low_name = entry.iterkeys().next()
+                            low_name = next(iter(entry.keys()))
                             live['name'] = low_name
                             live.update(entry[low_name][0])
                         else:
@@ -1209,7 +1211,7 @@ class State(object):
                 # Explicitly declared exclude
                 if len(exc) != 1:
                     continue
-                key = exc.iterkeys().next()
+                key = next(iter(exc.keys()))
                 if key == 'sls':
                     ex_sls.add(exc['sls'])
                 elif key == 'id':
@@ -1381,9 +1383,9 @@ class State(object):
                                         if next(iter(arg)) in ignore_args:
                                             continue
                                         # Don't use name or names
-                                        if arg.iterkeys().next() == 'name':
+                                        if next(iter(arg.keys())) == 'name':
                                             continue
-                                        if arg.iterkeys().next() == 'names':
+                                        if next(iter(arg.keys())) == 'names':
                                             continue
                                         extend[ext_id][_state].append(arg)
                                     continue
@@ -1407,9 +1409,9 @@ class State(object):
                                         if next(iter(arg)) in ignore_args:
                                             continue
                                         # Don't use name or names
-                                        if arg.iterkeys().next() == 'name':
+                                        if next(iter(arg.keys())) == 'name':
                                             continue
-                                        if arg.iterkeys().next() == 'names':
+                                        if next(iter(arg.keys())) == 'names':
                                             continue
                                         extend[id_][state].append(arg)
                                     continue
@@ -2006,7 +2008,7 @@ class State(object):
         # the low data chunks
         if errors:
             return errors
-        ret = dict(disabled.items() + self.call_chunks(chunks).items())
+        ret = dict(list(disabled.items()) + list(self.call_chunks(chunks).items()))
         ret = self.call_listen(chunks, ret)
         return ret
 
@@ -2264,7 +2266,7 @@ class BaseHighState(object):
         Cleanly merge the top files
         '''
         top = DefaultOrderedDict(OrderedDict)
-        for ctops in tops.itervalues():
+        for ctops in tops.values():
             for ctop in ctops:
                 for saltenv, targets in ctop.items():
                     if saltenv == 'include':
@@ -2311,7 +2313,7 @@ class BaseHighState(object):
                     'The top file matches for saltenv {0} are not '
                     'formatted as a dict'.format(saltenv)
                 )
-            for slsmods in matches.itervalues():
+            for slsmods in matches.values():
                 if not isinstance(slsmods, list):
                     errors.append('Malformed topfile (state declarations not '
                                   'formed as a list)')
@@ -2319,7 +2321,7 @@ class BaseHighState(object):
                 for slsmod in slsmods:
                     if isinstance(slsmod, dict):
                         # This value is a match option
-                        for val in slsmod.itervalues():
+                        for val in slsmod.values():
                             if not val:
                                 errors.append(
                                     'Improperly formatted top file matcher '
@@ -2589,7 +2591,7 @@ class BaseHighState(object):
                     for arg in state[name][s_dec]:
                         if isinstance(arg, dict):
                             if len(arg) > 0:
-                                if arg.iterkeys().next() == 'order':
+                                if next(iter(arg.keys())) == 'order':
                                     found = True
                     if not found:
                         if not isinstance(state[name][s_dec], list):
@@ -2873,7 +2875,7 @@ class BaseHighState(object):
             return err
         if not high:
             return ret
-        cumask = os.umask(077)
+        cumask = os.umask(0o77)
         try:
             if salt.utils.is_windows():
                 # Make sure cache file isn't read-only
