@@ -48,7 +48,7 @@ def over(saltenv='base', os_fn=None):
     for stage in overstate.stages_iter():
         if isinstance(stage, dict):
             # This is highstate data
-            print('Stage execution results:')
+            progress('Stage execution results:')
             for key, val in stage.items():
                 if '_|-' in key:
                     progress({'error': {key: val}}, outputter='highstate')
