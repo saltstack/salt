@@ -180,7 +180,6 @@ at some point be deprecated in favor of a more generic `firewall` state.
 
 
 '''
-
 # Import salt libs
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
@@ -332,14 +331,26 @@ def append(name, family='ipv4', **kwargs):
             name,
             command.strip(),
             family)
-        if kwargs['save']:
+        if 'save' in kwargs and kwargs['save']:
             if kwargs['save'] is not True:
                 filename = kwargs['save']
             else:
                 filename = None
-            __salt__['iptables.save'](filename, family=family)
-            ret['comment'] += ('\nSaved iptables rule for {0} to: '
-                               '{1} for {2}'.format(name, command.strip(), family))
+            saved_rules = __salt__['iptables.get_saved_rules'](family=family)
+            _rules = __salt__['iptables.get_rules'](family=family)
+            __rules = []
+            for table in _rules:
+                for chain in _rules[table]:
+                    __rules.append(_rules[table][chain].get('rules'))
+            __saved_rules = []
+            for table in saved_rules:
+                for chain in saved_rules[table]:
+                    __saved_rules.append(saved_rules[table][chain].get('rules'))
+            # Only save if rules in memory are different than saved rules
+            if __rules != __saved_rules:
+                __salt__['iptables.save'](filename, family=family)
+                ret['comment'] += ('\nSaved iptables rule for {0} to: '
+                                   '{1} for {2}'.format(name, command.strip(), family))
         return ret
     if __opts__['test']:
         ret['comment'] = 'iptables rule for {0} needs to be set ({1}) for {2}'.format(
@@ -411,9 +422,24 @@ def insert(name, family='ipv4', **kwargs):
             name,
             family,
             command.strip())
-        if 'save' in kwargs:
-            if kwargs['save']:
-                __salt__['iptables.save'](filename=None, family=family)
+        if 'save' in kwargs and kwargs['save']:
+            if kwargs['save'] is not True:
+                filename = kwargs['save']
+            else:
+                filename = None
+            saved_rules = __salt__['iptables.get_saved_rules'](family=family)
+            _rules = __salt__['iptables.get_rules'](family=family)
+            __rules = []
+            for table in _rules:
+                for chain in _rules[table]:
+                    __rules.append(_rules[table][chain].get('rules'))
+            __saved_rules = []
+            for table in saved_rules:
+                for chain in saved_rules[table]:
+                    __saved_rules.append(saved_rules[table][chain].get('rules'))
+            # Only save if rules in memory are different than saved rules
+            if __rules != __saved_rules:
+                __salt__['iptables.save'](filename, family=family)
                 ret['comment'] += ('\nSaved iptables rule for {0} to: '
                                    '{1} for {2}').format(name, command.strip(), family)
         return ret
