@@ -48,6 +48,8 @@ Enable MySQL authentication.
 
 :depends:   - MySQL-python Python module
 '''
+
+from __future__ import absolute_import
 import logging
 
 log = logging.getLogger(__name__)
@@ -72,7 +74,7 @@ def __get_connection_info():
         conn_info['database'] = __opts__['mysql_auth']['database']
 
         conn_info['auth_sql'] = __opts__['mysql_auth']['auth_sql']
-    except KeyError, e:
+    except KeyError as e:
         log.error('{0} does not exist'.format(e))
         return None
 
@@ -93,7 +95,7 @@ def auth(username, password):
                                _info['username'],
                                _info['password'],
                                _info['database'])
-    except MySQLdb.OperationalError, e:
+    except MySQLdb.OperationalError as e:
         log.error(e)
         return False
 
