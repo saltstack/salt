@@ -37,7 +37,7 @@ def raw_arg(*args, **kwargs):
     pprint.pprint(ret)
     return ret
 
-def stream(jid=None):
+def stream():
     '''
     Return True
     '''
