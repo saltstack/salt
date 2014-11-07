@@ -254,11 +254,8 @@ class RAETCaller(ZeroMQCaller):
         '''
         Pass in the command line options
         '''
-        stack, estatename, yardname = self._setup_caller_stack(opts)
-        self.stack = stack
+        self.stack = self._setup_caller_stack(opts)
         salt.transport.jobber_stack = self.stack
-        #salt.transport.jobber_estate_name = estatename
-        #salt.transport.jobber_yard_name = yardname
 
         super(RAETCaller, self).__init__(opts)
 
@@ -302,7 +299,7 @@ class RAETCaller(ZeroMQCaller):
             log.error(emsg + "\n")
             raise ValueError(emsg)
         if kind in [kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
-                    kinds.APPL_KIND_NAMES[kinds.applKinds.caller],]:
+                    kinds.APPL_KIND_NAMES[kinds.applKinds.caller], ]:
             lanename = "{0}_{1}".format(role, kind)
         else:
             emsg = ("Unsupported application kind '{0}' for RAETChannel.".format(kind))
@@ -322,15 +319,9 @@ class RAETCaller(ZeroMQCaller):
                                    dirpath=sockdirpath))
         log.debug("Created Caller Jobber Stack {0}\n".format(stack.name))
 
-        # name of Road Estate for this caller
-        estatename = "{0}_{1}".format(role, kind)
-        # name of Yard for this caller
-        yardname = stack.local.name
+        return stack
 
-        # return identifiers needed to route back to this callers master
-        return (stack, estatename, yardname)
-
-    def _setup_caller(self, opts):
+    def _setup_caller_minion(self, opts):
         '''
         Setup up RaetCaller stacks and behaviors
         Essentially a subset of a minion whose only function is to perform
