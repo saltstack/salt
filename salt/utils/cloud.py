@@ -831,7 +831,7 @@ def deploy_windows(host,
 
         salt.utils.smb.mkdirs('salttemp', conn=smb_conn)
         salt.utils.smb.mkdirs('salt/conf/pki/minion', conn=smb_conn)
-        ## minion_pub, minion_pem
+        # minion_pub, minion_pem
         kwargs = {'hostname': host,
                   'creds': creds}
 
@@ -842,17 +842,17 @@ def deploy_windows(host,
             salt.utils.smb.put_str(minion_pem, 'salt\\conf\\pki\\minion\\minion.pem', conn=smb_conn)
 
         # Copy over win_installer
-        ## win_installer refers to a file such as:
-        ## /root/Salt-Minion-0.17.0-win32-Setup.exe
-        ## ..which exists on the same machine as salt-cloud
+        # win_installer refers to a file such as:
+        # /root/Salt-Minion-0.17.0-win32-Setup.exe
+        # ..which exists on the same machine as salt-cloud
         comps = win_installer.split('/')
         local_path = '/'.join(comps[:-1])
         installer = comps[-1]
         with salt.utils.fopen(win_installer, 'rb') as inst_fh:
             smb_conn.putFile('C$', 'salttemp/{0}'.format(installer), inst_fh.read)
         # Shell out to winexe to execute win_installer
-        ## We don't actually need to set the master and the minion here since
-        ## the minion config file will be set next via impacket
+        # We don't actually need to set the master and the minion here since
+        # the minion config file will be set next via impacket
         win_cmd('winexe {0} "c:\\salttemp\\{1} /S /master={2} /minion-name={3}"'.format(
             creds, installer, master, name
         ))
@@ -2209,7 +2209,7 @@ def update_bootstrap(config, url=None):
 
 
     '''
-    default_url = config.get('bootstrap_script__url',
+    default_url = config.get('bootstrap_script_url',
                              'https://bootstrap.saltstack.com')
     if not url:
         url = default_url
