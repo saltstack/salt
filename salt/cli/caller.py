@@ -320,25 +320,3 @@ class RAETCaller(ZeroMQCaller):
         log.debug("Created Caller Jobber Stack {0}\n".format(stack.name))
 
         return stack
-
-    def _setup_caller_minion(self, opts):
-        '''
-        Setup up RaetCaller stacks and behaviors
-        Essentially a subset of a minion whose only function is to perform
-        Salt-calls with raet as the transport
-        The essentials:
-            A RoadStack whose local estate name is of the form "role_kind" where:
-               role is the minion id opts['id']
-               kind is opts['__role'] which should be 'caller' APPL_KIND_NAMES
-               The RoadStack if for communication to/from a master
-
-            A LaneStack with manor yard so that RaetChannels created by the func Jobbers
-            can communicate through this manor yard then through the
-            RoadStack to/from a master
-
-            A Router to route between the stacks (Road and Lane)
-
-            These are all managed via a FloScript named caller.flo
-
-        '''
-        pass
