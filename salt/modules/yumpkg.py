@@ -1,6 +1,16 @@
 # -*- coding: utf-8 -*-
 '''
 Support for YUM
+
+.. note::
+    This module makes heavy use of the **repoquery** utility, from the
+    yum-utils_ package. This package will be installed as a dependency if salt
+    is installed via EPEL. However, if salt has been installed using pip, or a
+    host is being managed using salt-ssh, then as of version 2014.7.0
+    yum-utils_ will be installed automatically to satisfy this dependency.
+
+    .. _yum-utils: http://yum.baseurl.org/wiki/YumUtils
+
 '''
 
 # Import python libs
@@ -102,10 +112,27 @@ def _repoquery_pkginfo(repoquery_args):
     return ret
 
 
+def _check_repoquery():
+    '''
+    Check for existence of repoquery and install yum-utils if it is not
+    present.
+    '''
+    if not salt.utils.which('repoquery'):
+        __salt__['cmd.run'](
+            ['yum', '-y', 'install', 'yum-utils'],
+            python_shell=False,
+            output_loglevel='trace'
+        )
+        # Check again now that we've installed yum-utils
+        if not salt.utils.which('repoquery'):
+            raise CommandExecutionError('Unable to install yum-utils')
+
+
 def _repoquery(repoquery_args, query_format=__QUERYFORMAT):
     '''
     Runs a repoquery command and returns a list of namedtuples
     '''
+    _check_repoquery()
     cmd = 'repoquery --plugins --queryformat="{0}" {1}'.format(
         query_format, repoquery_args
     )
@@ -197,7 +224,7 @@ def _rpm_pkginfo(name):
     Parses RPM metadata and returns a pkginfo namedtuple
     '''
     # REPOID is not a valid tag for the rpm command. Remove it and replace it
-    # witn "none"
+    # with "none"
     queryformat = __QUERYFORMAT.replace('%{REPOID}', 'none')
     output = __salt__['cmd.run_stdout'](
         'rpm -qp --queryformat {0!r} {1}'.format(queryformat, name),
@@ -938,7 +965,7 @@ def install(name=None,
             exclude=exclude_arg,
             branch=branch_arg,
             gpgcheck='--nogpgcheck' if skip_verify else '',
-            pkg=' '.join(to_reinstall.values()),
+            pkg=' '.join(to_reinstall.itervalues()),
         )
         __salt__['cmd.run'](cmd, output_loglevel='trace')
 
@@ -1816,5 +1843,5 @@ def owner(*paths):
         if 'not owned' in ret[path].lower():
             ret[path] = ''
     if len(ret) == 1:
-        return ret.values()[0]
+        return ret.itervalues().next()
     return ret

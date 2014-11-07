@@ -19,7 +19,7 @@ except ImportError:
 
 # ----- ATTENTION --------------------------------------------------------------------------------------------------->
 #
-# ALL major version bumps, new release codenames, MUST be defined in the SaltStackVersion.NAMES dictionary, ie:
+# ALL major version bumps, new release codenames, MUST be defined in the SaltStackVersion.NAMES dictionary, i.e.:
 #
 #    class SaltStackVersion(object):
 #
@@ -262,7 +262,7 @@ class SaltStackVersion(object):
         return cls.from_name(
             cls.VNAMES[
                 max([version_info for version_info in
-                     cls.VNAMES.keys() if
+                     cls.VNAMES if
                      version_info[0] < (sys.maxint - 200)])
             ]
         )

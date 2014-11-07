@@ -178,6 +178,11 @@ at some point be deprecated in favor of a more generic `firewall` state.
         - sport: 1025:65535
         - save: True
 
+    default to accept:
+      iptables.set_policy:
+        - chain: INPUT
+        - policy: ACCEPT
+
 .. note::
 
     Various functions of the ``iptables`` module use the ``--check`` option. If
@@ -338,6 +343,14 @@ def append(name, family='ipv4', **kwargs):
             name,
             command.strip(),
             family)
+        if kwargs['save']:
+            if kwargs['save'] is not True:
+                filename = kwargs['save']
+            else:
+                filename = None
+            __salt__['iptables.save'](filename, family=family)
+            ret['comment'] += ('\nSaved iptables rule for {0} to: '
+                               '{1} for {2}'.format(name, command.strip(), family))
         return ret
     if __opts__['test']:
         ret['comment'] = 'iptables rule for {0} needs to be set ({1}) for {2}'.format(
@@ -409,6 +422,11 @@ def insert(name, family='ipv4', **kwargs):
             name,
             family,
             command.strip())
+        if 'save' in kwargs:
+            if kwargs['save']:
+                __salt__['iptables.save'](filename=None, family=family)
+                ret['comment'] += ('\nSaved iptables rule for {0} to: '
+                                   '{1} for {2}').format(name, command.strip(), family)
         return ret
     if __opts__['test']:
         ret['comment'] = 'iptables rule for {0} needs to be set for {1} ({2})'.format(
@@ -526,6 +544,9 @@ def set_policy(name, family='ipv4', **kwargs):
 
     family
         Networking family, either ipv4 or ipv6
+
+    policy
+        The requested table policy
 
     '''
     ret = {'name': name,

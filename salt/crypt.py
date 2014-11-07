@@ -553,7 +553,7 @@ class Auth(object):
             'pub_key': The RSA public key of the sender.
 
         :rtype: str
-        :return: An empty string on verfication failure. On success, the decrypted AES message in the payload.
+        :return: An empty string on verification failure. On success, the decrypted AES message in the payload.
         '''
         m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
         if os.path.isfile(m_pub_fn) and not self.opts['open_mode']:

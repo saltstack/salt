@@ -1083,7 +1083,7 @@ class Keys(LowDataAdapter):
                     -d username=kickstart \
                     -d password=kickstart \
                     -d eauth=pam \
-                | tar xf -
+                    -o jerry-salt-keys.tar
 
         .. code-block:: http
 

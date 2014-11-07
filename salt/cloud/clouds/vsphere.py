@@ -290,7 +290,7 @@ def wait_for_ip(vm_):
         time.sleep(1)
         return False
 
-    log.debug('Pulling VM {0} {1} seconds for an IP address'.format(vm_['name']))
+    log.debug('Pulling VM {0} for an IP address'.format(vm_['name']))
     ip_address = salt.utils.cloud.wait_for_fun(poll_ip)
 
     if ip_address is not False:
@@ -305,7 +305,7 @@ def _deploy(vm_):
     '''
     # TODO: review salt.utils.cloud.bootstrap(vm_, __opts__)
     # TODO: review salt.utils.cloud.wait_for_ip
-    ip_address = wait_for_ip(vm_['name'])
+    ip_address = wait_for_ip(vm_)
 
     template_user = config.get_cloud_config_value(
         'template_user', vm_, __opts__

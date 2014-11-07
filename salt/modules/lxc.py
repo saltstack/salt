@@ -125,7 +125,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
         This is a list of mappings ``{ip: '', mac: '',netmask:''}``
         Set gateway to ``None`` and an interface with a gateway
         to escape from another interface that's eth0.
-        eg:
+        e.g.:
 
         .. code-block:: python
 
@@ -466,7 +466,7 @@ def _get_network_conf(conf_tuples=None, **kwargs):
             new[iface]['lxc.network.hwaddr'] = omac
 
     ret = []
-    for v in new.values():
+    for v in new.itervalues():
         for row in v:
             ret.append({row: v[row]})
     return ret
@@ -737,7 +737,7 @@ def init(name,
         This can be either a real profile mapping or a string
         to retrieve it in configuration
     nic_opts
-        Extra options for network interfaces. E.g:
+        Extra options for network interfaces. E.g.:
 
         .. code-block:: bash
 
@@ -2144,7 +2144,7 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
                                    stream_stdout=True,
                                    stream_stderr=True)
                 # consume output
-                while 1:
+                while proc.has_unread_data:
                     try:
                         time.sleep(0.5)
                         try:
@@ -2159,13 +2159,6 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
                             stderr += cstderr
                         else:
                             cstderr = ''
-                        # done by vt itself
-                        # if stdout:
-                        #     log.debug(stdout)
-                        # if stderr:
-                        #     log.debug(stderr)
-                        if not cstdout and not cstderr and not proc.isalive():
-                            break
                     except KeyboardInterrupt:
                         break
                 res = {'retcode': proc.exitstatus,
@@ -2180,7 +2173,7 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
                        'stdout': stdout,
                        'stderr': stderr}
             finally:
-                proc.terminate()
+                proc.close(terminate=True, kill=True)
     else:
         rootfs = info(name).get('rootfs')
         res = __salt__['cmd.run_chroot'](rootfs, cmd)
@@ -2339,7 +2332,7 @@ def write_conf(conf_file, conf):
             if isinstance(line, str):
                 fp_.write(line)
             elif isinstance(line, dict):
-                key = line.keys()[0]
+                key = line.iterkeys().next()
                 out_line = None
                 if isinstance(line[key], str):
                     out_line = ' = '.join((key, line[key]))
@@ -2385,7 +2378,7 @@ def edit_conf(conf_file, out_format='simple', **kwargs):
             data.append(line)
             continue
         else:
-            key = line.keys()[0]
+            key = line.iterkeys().next()
             if key not in kwargs:
                 data.append(line)
                 continue

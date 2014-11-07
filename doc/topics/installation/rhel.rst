@@ -108,6 +108,18 @@ If this repo is added *before* Salt is installed, then installing either
 additional states to upgrade ZeroMQ and pyzmq are unnecessary.
 
 
+Package Management
+==================
+
+Salt's interface to :mod:`yum <salt.modules.yumpkg>` makes heavy use of the
+**repoquery** utility, from the yum-utils_ package. This package will be
+installed as a dependency if salt is installed via EPEL. However, if salt has
+been installed using pip, or a host is being managed using salt-ssh, then as of
+version 2014.7.0 yum-utils_ will be installed automatically to satisfy this
+dependency.
+
+.. _yum-utils: http://yum.baseurl.org/wiki/YumUtils
+
 Post-installation tasks
 =======================
 

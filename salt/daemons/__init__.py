@@ -17,12 +17,6 @@ log = logging.getLogger(__name__)
 if sys.version_info[0] == 3:
     basestring = (text_type, binary_type)
 
-# Python equivalent of an enum
-APPL_KINDS = OrderedDict([('master', 0), ('minion', 1), ('syndic', 2), ('call', 3)])
-APPL_KIND_NAMES = OrderedDict((v, k) for k, v in APPL_KINDS.iteritems())  # inverse map
-ApplKind = namedtuple('ApplKind', APPL_KINDS.keys())
-applKinds = ApplKind(**APPL_KINDS)
-
 
 def is_non_string_iterable(obj):
     """

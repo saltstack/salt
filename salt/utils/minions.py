@@ -183,15 +183,12 @@ class CkMinions(object):
                     if not greedy and id_ in minions:
                         minions.remove(id_)
                     continue
-                try:
-                    with salt.utils.fopen(datap, 'rb') as fp_:
-                        search_results = self.serial.load(fp_).get(search_type)
-                except (IOError, OSError):
-                    continue
+                search_results = self.serial.load(
+                    salt.utils.fopen(datap, 'rb')
+                ).get(search_type)
                 if not salt.utils.subdict_match(search_results,
                                                 expr,
-                                                delimiter,
-                                                regex_match=regex_match):
+                                                regex_match=regex_match) and id_ in minions:
                     minions.remove(id_)
         return list(minions)
 
@@ -205,36 +202,11 @@ class CkMinions(object):
         '''
         Return the minions found by looking via grains with PCRE
         '''
-        cache_enabled = self.opts.get('minion_data_cache', False)
-
-        if greedy:
-            minions = set(
-                os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
-            )
-        elif cache_enabled:
-            minions = os.listdir(os.path.join(self.opts['cachedir'], 'minions'))
-        else:
-            return list()
-
-        if cache_enabled:
-            cdir = os.path.join(self.opts['cachedir'], 'minions')
-            if not os.path.isdir(cdir):
-                return list(minions)
-            for id_ in os.listdir(cdir):
-                if not greedy and id_ not in minions:
-                    continue
-                datap = os.path.join(cdir, id_, 'data.p')
-                if not os.path.isfile(datap):
-                    if not greedy and id_ in minions:
-                        minions.remove(id_)
-                    continue
-                grains = self.serial.load(
-                    salt.utils.fopen(datap, 'rb')
-                ).get('grains')
-                if not salt.utils.subdict_match(grains, expr,
-                                                delimiter=':', regex_match=True) and id_ in minions:
-                    minions.remove(id_)
-        return list(minions)
+        return self._check_cache_minions(expr,
+                                         delimiter,
+                                         greedy,
+                                         'grains',
+                                         regex_match=True)
 
     def _check_pillar_minions(self, expr, delimiter, greedy):
         '''
@@ -303,7 +275,7 @@ class CkMinions(object):
         '''
         if not HAS_RANGE:
             raise CommandExecutionError(
-                'Range matcher unavailble (unable to import seco.range, '
+                'Range matcher unavailable (unable to import seco.range, '
                 'module most likely not installed)'
             )
         cache_enabled = self.opts.get('minion_data_cache', False)
@@ -608,7 +580,7 @@ class CkMinions(object):
                         if len(ind) != 1:
                             # Invalid argument
                             continue
-                        valid = ind.keys()[0]
+                        valid = ind.iterkeys().next()
                         # Check if minions are allowed
                         if self.validate_tgt(
                                 valid,
@@ -641,7 +613,7 @@ class CkMinions(object):
                         groups[group_perm] = matcher
         else:
             return None
-        for item in groups.values():
+        for item in groups.itervalues():
             auth_list.append(item)
         return auth_list
 
@@ -665,7 +637,7 @@ class CkMinions(object):
             elif isinstance(ind, dict):
                 if len(ind) != 1:
                     continue
-                valid = ind.keys()[0]
+                valid = ind.iterkeys().next()
                 if valid.startswith('@') and valid[1:] == mod:
                     if isinstance(ind[valid], str):
                         if self.match_check(ind[valid], fun):
@@ -696,7 +668,7 @@ class CkMinions(object):
             elif isinstance(ind, dict):
                 if len(ind) != 1:
                     continue
-                valid = ind.keys()[0]
+                valid = ind.iterkeys().next()
                 if valid.startswith('@') and valid[1:] == mod:
                     if isinstance(ind[valid], str):
                         if self.match_check(ind[valid], fun):
@@ -730,7 +702,7 @@ class CkMinions(object):
             elif isinstance(ind, dict):
                 if len(ind) != 1:
                     continue
-                valid = ind.keys()[0]
+                valid = ind.iterkeys().next()
                 if valid.startswith('@') and valid[1:] == mod:
                     if isinstance(ind[valid], str):
                         if self.match_check(ind[valid], fun):

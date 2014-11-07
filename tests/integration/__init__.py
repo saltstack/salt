@@ -13,6 +13,7 @@ import copy
 import json
 import time
 import errno
+import signal
 import shutil
 import pprint
 import logging
@@ -400,8 +401,10 @@ class TestDaemon(object):
             ssh_config.write('HostKey {0}\n'.format(server_dsa_priv_key_file))
             ssh_config.write('HostKey {0}\n'.format(server_ecdsa_priv_key_file))
             ssh_config.write('HostKey {0}\n'.format(server_ed25519_priv_key_file))
+
+        self.sshd_pidfile = os.path.join(TMP_CONF_DIR, 'sshd.pid')
         self.sshd_process = subprocess.Popen(
-            [sshd, '-f', 'sshd_config'],
+            [sshd, '-f', 'sshd_config', '-oPidFile={0}'.format(self.sshd_pidfile)],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             close_fds=True,
@@ -440,6 +443,10 @@ class TestDaemon(object):
         running_tests_user = pwd.getpwuid(os.getuid()).pw_name
         master_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'master'))
         master_opts['user'] = running_tests_user
+        tests_know_hosts_file = os.path.join(TMP_CONF_DIR, 'salt_ssh_known_hosts')
+        with salt.utils.fopen(tests_know_hosts_file, 'w') as known_hosts:
+            known_hosts.write('')
+        master_opts['known_hosts_file'] = tests_know_hosts_file
 
         minion_config_path = os.path.join(CONF_DIR, 'minion')
         minion_opts = salt.config._read_conf_file(minion_config_path)
@@ -548,12 +555,6 @@ class TestDaemon(object):
         )
         sub_minion_opts = salt.config.minion_config(os.path.join(TMP_CONF_DIR, 'sub_minion'))
         syndic_master_opts = salt.config.master_config(os.path.join(TMP_CONF_DIR, 'syndic_master'))
-
-        RUNTIME_CONFIGS['master'] = freeze(master_opts)
-        RUNTIME_CONFIGS['minion'] = freeze(minion_opts)
-        RUNTIME_CONFIGS['syndic'] = freeze(syndic_opts)
-        RUNTIME_CONFIGS['sub_minion'] = freeze(sub_minion_opts)
-        RUNTIME_CONFIGS['syndic_master'] = freeze(syndic_master_opts)
 
         verify_env([os.path.join(master_opts['pki_dir'], 'minions'),
                     os.path.join(master_opts['pki_dir'], 'minions_pre'),
@@ -716,8 +717,14 @@ class TestDaemon(object):
         if hasattr(self, 'sshd_process'):
             try:
                 self.sshd_process.kill()
-            except OSError:
-                pass
+            except OSError as exc:
+                if exc.errno != 3:
+                    raise
+            try:
+                os.kill(int(open(self.sshd_pidfile).read()), signal.SIGKILL)
+            except OSError as exc:
+                if exc.errno != 3:
+                    raise
 
     def _exit_mockbin(self):
         path = os.environ.get('PATH', '')

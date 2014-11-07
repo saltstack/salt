@@ -24,7 +24,7 @@ from salt._compat import string_types
 from salt.log import LOG_LEVELS
 from salt.utils import print_cli
 
-from salt import daemons
+from salt.utils import kinds
 
 log = logging.getLogger(__name__)
 
@@ -94,7 +94,6 @@ class ZeroMQCaller(object):
         '''
         Call the module
         '''
-        # raet channel here
         ret = {}
         fun = self.opts['fun']
         ret['jid'] = '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
@@ -255,8 +254,11 @@ class RAETCaller(ZeroMQCaller):
         '''
         Pass in the command line options
         '''
-        self.stack = self._setup_caller_stack(opts)
+        stack, estatename, yardname = self._setup_caller_stack(opts)
+        self.stack = stack
         salt.transport.jobber_stack = self.stack
+        #salt.transport.jobber_estate_name = estatename
+        #salt.transport.jobber_yard_name = yardname
 
         super(RAETCaller, self).__init__(opts)
 
@@ -295,11 +297,12 @@ class RAETCaller(ZeroMQCaller):
             raise ValueError(emsg)
 
         kind = opts.get('__role')  # application kind 'master', 'minion', etc
-        if kind not in daemons.APPL_KINDS:
+        if kind not in kinds.APPL_KINDS:
             emsg = ("Invalid application kind = '{0}' for RAETChannel.".format(kind))
             log.error(emsg + "\n")
             raise ValueError(emsg)
-        if kind == 'minion':
+        if kind in [kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
+                    kinds.APPL_KIND_NAMES[kinds.applKinds.caller]]:
             lanename = "{0}_{1}".format(role, kind)
         else:
             emsg = ("Unsupported application kind '{0}' for RAETChannel.".format(kind))
@@ -307,8 +310,8 @@ class RAETCaller(ZeroMQCaller):
             raise ValueError(emsg)
 
         sockdirpath = opts['sock_dir']
-        name = 'caller' + nacling.uuid(size=18)
-        stack = LaneStack(name=name,
+        stackname = 'caller' + nacling.uuid(size=18)
+        stack = LaneStack(name=stackname,
                           lanename=lanename,
                           sockdirpath=sockdirpath)
 
@@ -318,4 +321,33 @@ class RAETCaller(ZeroMQCaller):
                                    lanename=lanename,
                                    dirpath=sockdirpath))
         log.debug("Created Caller Jobber Stack {0}\n".format(stack.name))
-        return stack
+
+        # name of Road Estate for this caller
+        estatename = "{0}_{1}".format(role, kind)
+        # name of Yard for this caller
+        yardname = stack.local.name
+
+        # return identifiers needed to route back to this callers master
+        return (stack, estatename, yardname)
+
+    def _setup_caller(self, opts):
+        '''
+        Setup up RaetCaller stacks and behaviors
+        Essentially a subset of a minion whose only function is to perform
+        Salt-calls with raet as the transport
+        The essentials:
+            A RoadStack whose local estate name is of the form "role_kind" where:
+               role is the minion id opts['id']
+               kind is opts['__role'] which should be 'caller' APPL_KIND_NAMES
+               The RoadStack if for communication to/from a master
+
+            A LaneStack with manor yard so that RaetChannels created by the func Jobbers
+            can communicate through this manor yard then through the
+            RoadStack to/from a master
+
+            A Router to route between the stacks (Road and Lane)
+
+            These are all managed via a FloScript named caller.flo
+
+        '''
+        pass

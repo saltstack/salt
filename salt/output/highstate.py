@@ -118,7 +118,7 @@ def _format_host(host, data):
             schanged, ctext = _format_changes(ret['changes'])
             nchanges += 1 if schanged else 0
 
-            # Skip this state if it was successfull & diff output was requested
+            # Skip this state if it was successful & diff output was requested
             if __opts__.get('state_output_diff', False) and \
                ret['result'] and not schanged:
                 continue
@@ -232,8 +232,8 @@ def _format_host(host, data):
         # Append result counts to end of output
         colorfmt = u'{0}{1}{2[ENDC]}'
         rlabel = {True: u'Succeeded', False: u'Failed', None: u'Not Run'}
-        count_max_len = max([len(str(x)) for x in rcounts.values()] or [0])
-        label_max_len = max([len(x) for x in rlabel.values()] or [0])
+        count_max_len = max([len(str(x)) for x in rcounts.itervalues()] or [0])
+        label_max_len = max([len(x) for x in rlabel.itervalues()] or [0])
         line_max_len = label_max_len + count_max_len + 2  # +2 for ': '
         hstrs.append(
             colorfmt.format(
@@ -295,7 +295,7 @@ def _format_host(host, data):
         )
 
         totals = u'{0}\nTotal states run: {1:>{2}}'.format('-' * line_max_len,
-                                               sum(rcounts.values()),
+                                               sum(rcounts.itervalues()),
                                                line_max_len - 7)
         hstrs.append(colorfmt.format(colors['CYAN'], totals, colors))
 
@@ -349,6 +349,8 @@ def _strip_clean(returns):
     '''
     rm_tags = []
     for tag in returns:
+        if isinstance(tag, dict):
+            continue
         if returns[tag]['result'] and not returns[tag]['changes']:
             rm_tags.append(tag)
     for tag in rm_tags:

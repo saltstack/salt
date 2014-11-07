@@ -39,7 +39,7 @@ class VirtKey(object):
                         'no authorization'.format(self.id, self.hyper))
             return False
 
-        # Limit aceptance window to 10 minutes
+        # Limit acceptance window to 10 minutes
         # TODO: Move this value to the master config file
         if (time.time() - expiry) > 600:
             log.warning('Request to sign key for minion "{0}" on hyper "{1}" denied: '

@@ -256,7 +256,7 @@ def file_list(load):
     if not metadata or saltenv not in metadata:
         return ret
 
-    for buckets in _find_files(metadata[saltenv]).values():
+    for buckets in _find_files(metadata[saltenv]).itervalues():
         files = filter(lambda f: not fs.is_file_ignored(__opts__, f), buckets)
         ret += _trim_env_off_path(files, saltenv)
 
@@ -297,7 +297,7 @@ def dir_list(load):
         return ret
 
     # grab all the dirs from the buckets cache file
-    for dirs in _find_dirs(metadata[saltenv]).values():
+    for dirs in _find_dirs(metadata[saltenv]).itervalues():
         # trim env and trailing slash
         dirs = _trim_env_off_path(dirs, saltenv, trim_slash=True)
         # remove empty string left by the base env dir in single bucket mode

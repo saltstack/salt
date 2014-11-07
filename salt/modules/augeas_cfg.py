@@ -117,7 +117,7 @@ def execute(context=None, lens=None, commands=()):
         aug.load()
 
     for command in commands:
-        # first part up to space is always the command name (ie: set, move)
+        # first part up to space is always the command name (i.e.: set, move)
         cmd, arg = command.split(' ', 1)
         if cmd not in method_map:
             ret['error'] = 'Command {0} is not supported (yet)'.format(cmd)

@@ -259,7 +259,7 @@ syntax for referencing a value is a normal dictionary lookup in Jinja, such as
         },
         'Gentoo': {
             'server': 'dev-db/mysql',
-            'mysql-client': 'dev-db/mysql',
+            'client': 'dev-db/mysql',
             'service': 'mysql',
             'config': '/etc/mysql/my.cnf',
             'python': 'dev-python/mysql-python',
@@ -281,6 +281,43 @@ state file using the following syntax:
         - running
         - name: {{ mysql.service }}
 
+Collecting common values
+````````````````````````
+
+Common values can be collected into a *base* dictionary.  This
+minimizes repetition of identical values in each of the
+``lookup_dict`` sub-dictionaries.  Now only the values that are
+different from the base must be specified of the alternates:
+
+:file:`map.jinja`:
+
+.. code-block:: jinja
+
+    {% set mysql = salt['grains.filter_by']({
+        'default': {
+            'server': 'mysql-server',
+            'client': 'mysql-client',
+            'service': 'mysql',
+            'config': '/etc/mysql/my.cnf',
+            'python': 'python-mysqldb',
+        },
+        'Debian': {
+        },
+        'RedHat': {
+            'client': 'mysql',
+            'service': 'mysqld',
+            'config': '/etc/my.cnf',
+            'python': 'MySQL-python',
+        },
+        'Gentoo': {
+            'server': 'dev-db/mysql',
+            'client': 'dev-db/mysql',
+            'python': 'dev-python/mysql-python',
+        },
+    },
+    merge=salt['pillar.get']('mysql:lookup'), base=default) %}
+
+
 Overriding values in the lookup table
 `````````````````````````````````````
 
@@ -299,6 +336,26 @@ Pillar would replace the ``config`` value from the call above.
     mysql:
       lookup:
         config: /usr/local/etc/mysql/my.cnf
+
+.. note:: Protecting Expansion of Content with Special Characters
+
+  When templating keep in mind that YAML does have special characters
+  for quoting, flows and other special structure and content.  When a
+  Jinja substitution may have special characters that will be
+  incorrectly parsed by YAML the expansion must be protected by quoting.
+  It is a good policy to quote all Jinja expansions especially when
+  values may originate from Pillar.  Salt provides a Jinja filter for
+  doing just this: ``yaml_dquote``
+
+  .. code-block:: jinja
+
+      {%- set baz = '"The quick brown fox . . ."' %}
+      {%- set zap = 'The word of the day is "salty".' %}
+
+      {%- load_yaml as foo %}
+      bar: {{ baz|yaml_dquote }}
+      zip: {{ zap|yaml_dquote }}
+      {%- endload %}
 
 Single-purpose SLS files
 ------------------------

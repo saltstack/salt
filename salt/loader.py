@@ -44,7 +44,9 @@ LIBCLOUD_FUNCS_NOT_SUPPORTED = (
     'saltify.avail_sizes',
     'saltify.avail_images',
     'saltify.avail_locations',
-    'rackspace.reboot'
+    'rackspace.reboot',
+    'openstack.list_locations',
+    'rackspace.list_locations'
 )
 
 
@@ -183,6 +185,15 @@ def returners(opts, functions, whitelist=None):
                       pack,
                       whitelist=whitelist,
                       )
+
+
+def utils(opts, whitelist=None):
+    '''
+    Returns the utility modules
+    '''
+    load = _create_loader(opts, 'utils', 'utils',
+                          ext_type_dirs='utils_dirs')
+    return LazyLoader(load, whitelist=whitelist)
 
 
 def pillars(opts, functions):
@@ -559,7 +570,7 @@ class Loader(object):
             if self.opts.get('cython_enable', True) is True:
                 # The module was not found, try to find a cython module
                 try:
-                    import pyximport
+                    import pyximport  # pylint: disable=import-error
                     pyximport.install()
 
                     for mod_dir in self.module_dirs:
@@ -577,7 +588,7 @@ class Loader(object):
                              'modules.')
         return getattr(mod, fun[fun.rindex('.') + 1:])(*arg)
 
-    def gen_module(self, name, functions, pack=None):
+    def gen_module(self, name, functions, pack=None, virtual_enable=False):
         '''
         Load a single module and pack it with the functions passed
         '''
@@ -606,7 +617,7 @@ class Loader(object):
         cython_enabled = False
         if self.opts.get('cython_enable', True) is True:
             try:
-                import pyximport
+                import pyximport  # pylint: disable=import-error
                 pyximport.install()
                 cython_enabled = True
             except ImportError:
@@ -670,6 +681,20 @@ class Loader(object):
                 pass
         funcs = {}
         module_name = mod.__name__[mod.__name__.rindex('.') + 1:]
+        if virtual_enable:
+            # if virtual modules are enabled, we need to look for the
+            # __virtual__() function inside that module and run it.
+            (virtual_ret, virtual_name, _) = self.process_virtual(
+                                                                mod,
+                                                                module_name)
+
+            # if process_virtual returned a non-True value then we are
+            # supposed to not process this module
+            if virtual_ret is not True:
+                # If a module has information about why it could not be loaded, record it
+                return False  # TODO Support virtual_errors here
+
+                # update our module name to reflect the virtual name
         if getattr(mod, '__load__', False) is not False:
             log.info(
                 'The functions from module {0!r} are being loaded from the '
@@ -700,9 +725,9 @@ class Loader(object):
             mod.__salt__ = functions
         try:
             context = sys.modules[
-                functions[functions.keys()[0]].__module__
+                functions[functions.iterkeys().next()].__module__
             ].__context__
-        except (AttributeError, IndexError):
+        except (AttributeError, StopIteration):
             context = {}
         mod.__context__ = context
         return funcs
@@ -836,7 +861,7 @@ class Loader(object):
         cython_enabled = False
         if self.opts.get('cython_enable', True) is True:
             try:
-                import pyximport
+                import pyximport  # pylint: disable=import-error
                 pyximport.install()
                 cython_enabled = True
             except ImportError:
@@ -869,6 +894,13 @@ class Loader(object):
                         )
                     )
                     continue
+
+                if fn_.endswith(('.pyc', '.pyo')):
+                    non_compiled_filename = '{0}.py'.format(os.path.splitext(fn_)[0])
+                    if os.path.exists(os.path.join(mod_dir, non_compiled_filename)):
+                        # Let's just process the non compiled python modules
+                        continue
+
                 if (fn_.endswith(('.py', '.pyc', '.pyo', '.so'))
                         or (cython_enabled and fn_.endswith('.pyx'))
                         or os.path.isdir(os.path.join(mod_dir, fn_))):
@@ -878,6 +910,20 @@ class Loader(object):
                         _name = fn_[:extpos]
                     else:
                         _name = fn_
+
+                    if _name in names:
+                        # Since we load custom modules first, if this logic is true it means
+                        # that an internal module was shadowed by an external custom module
+                        log.trace(
+                            'The {0!r} module from {1!r} was shadowed by '
+                            'the module in {2!r}'.format(
+                                _name,
+                                mod_dir,
+                                names[_name],
+                            )
+                        )
+                        continue
+
                     names[_name] = os.path.join(mod_dir, fn_)
                 else:
                     log.trace(
@@ -886,72 +932,83 @@ class Loader(object):
                             fn_
                         )
                     )
-        for name in names:
-            try:
-                if names[name].endswith('.pyx'):
-                    # If there's a name which ends in .pyx it means the above
-                    # cython_enabled is True. Continue...
-                    mod = pyximport.load_module(
-                        '{0}.{1}.{2}.{3}'.format(
-                            self.loaded_base_name,
-                            self.mod_type_check(names[name]),
-                            self.tag,
-                            name
-                        ), names[name], tempfile.gettempdir()
-                    )
-                else:
-                    fn_, path, desc = imp.find_module(name, self.module_dirs)
-                    mod = imp.load_module(
-                        '{0}.{1}.{2}.{3}'.format(
-                            self.loaded_base_name,
-                            self.mod_type_check(path),
-                            self.tag,
-                            name
-                        ), fn_, path, desc
-                    )
-                    # reload all submodules if necessary
-                    submodules = [
-                        getattr(mod, sname) for sname in dir(mod) if
-                        isinstance(getattr(mod, sname), mod.__class__)
-                    ]
+        failed_loads = {}
 
-                    # reload only custom "sub"modules i.e is a submodule in
-                    # parent module that are still available on disk (i.e. not
-                    # removed during sync_modules)
-                    for submodule in submodules:
-                        try:
-                            smname = '{0}.{1}.{2}'.format(
+        def load_names(names, failhard=False):
+            for name in names:
+                try:
+                    if names[name].endswith('.pyx'):
+                        # If there's a name which ends in .pyx it means the above
+                        # cython_enabled is True. Continue...
+                        mod = pyximport.load_module(
+                            '{0}.{1}.{2}.{3}'.format(
                                 self.loaded_base_name,
+                                self.mod_type_check(names[name]),
                                 self.tag,
                                 name
-                            )
-                            smfile = '{0}.py'.format(
-                                os.path.splitext(submodule.__file__)[0]
-                            )
-                            if submodule.__name__.startswith(smname) and \
-                                    os.path.isfile(smfile):
-                                reload(submodule)
-                        except AttributeError:
-                            continue
-            except ImportError:
-                log.debug(
-                    'Failed to import {0} {1}, this is most likely NOT a '
-                    'problem:\n'.format(
-                        self.tag, name
-                    ),
-                    exc_info=True
-                )
-                continue
-            except Exception:
-                log.error(
-                    'Failed to import {0} {1}, this is due most likely to a '
-                    'syntax error. Traceback raised:\n'.format(
-                        self.tag, name
-                    ),
-                    exc_info=True
-                )
-                continue
-            self.modules.append(mod)
+                            ), names[name], tempfile.gettempdir()
+                        )
+                    else:
+                        fn_, path, desc = imp.find_module(name, self.module_dirs)
+                        mod = imp.load_module(
+                            '{0}.{1}.{2}.{3}'.format(
+                                self.loaded_base_name,
+                                self.mod_type_check(path),
+                                self.tag,
+                                name
+                            ), fn_, path, desc
+                        )
+                        # reload all submodules if necessary
+                        submodules = [
+                            getattr(mod, sname) for sname in dir(mod) if
+                            isinstance(getattr(mod, sname), mod.__class__)
+                        ]
+
+                        # reload only custom "sub"modules i.e. is a submodule in
+                        # parent module that are still available on disk (i.e. not
+                        # removed during sync_modules)
+                        for submodule in submodules:
+                            try:
+                                smname = '{0}.{1}.{2}'.format(
+                                    self.loaded_base_name,
+                                    self.tag,
+                                    name
+                                )
+                                smfile = '{0}.py'.format(
+                                    os.path.splitext(submodule.__file__)[0]
+                                )
+                                if submodule.__name__.startswith(smname) and \
+                                        os.path.isfile(smfile):
+                                    reload(submodule)
+                            except AttributeError:
+                                continue
+                except ImportError:
+                    if failhard:
+                        log.debug(
+                            'Failed to import {0} {1}, this is most likely NOT a '
+                            'problem:\n'.format(
+                                self.tag, name
+                            ),
+                            exc_info=True
+                        )
+                    if not failhard:
+                        log.debug('Failed to import {0} {1}. Another attempt will be made to try to resolve dependencies.'.format(
+                            self.tag, name))
+                        failed_loads[name] = path
+                    continue
+                except Exception:
+                    log.warning(
+                        'Failed to import {0} {1}, this is due most likely to a '
+                        'syntax error. Traceback raised:\n'.format(
+                            self.tag, name
+                        ),
+                        exc_info=True
+                    )
+                    continue
+                self.modules.append(mod)
+        load_names(names, failhard=False)
+        if failed_loads:
+            load_names(failed_loads, failhard=True)
 
     def load_functions(self, mod, module_name):
         '''
@@ -1012,7 +1069,7 @@ class Loader(object):
         Given a loaded module and its default name determine its virtual name
 
         This function returns a tuple. The first value will be either True or
-        False and will indicate if the module should be loaded or not (ie. if
+        False and will indicate if the module should be loaded or not (i.e. if
         it threw and exception while processing its __virtual__ function). The
         second value is the determined virtual name, which may be the same as
         the value provided.
@@ -1313,6 +1370,7 @@ class LazyLoader(MutableMapping):
         mod_funcs = self.loader.gen_module(mod_key,
                                            self.functions,
                                            pack=self.pack,
+                                           virtual_enable=True
                                            )
         # if you loaded nothing, then we don't have it
         if mod_funcs is None:
@@ -1321,7 +1379,10 @@ class LazyLoader(MutableMapping):
             # TODO: maybe do a load until, with some glob match first?
             self.load_all()
             return self._dict[key]
+        elif mod_funcs is False:  # i.e., the virtual check failed
+            return False
         self._dict.update(mod_funcs)
+        return True
 
     def load_all(self):
         '''
@@ -1343,9 +1404,15 @@ class LazyLoader(MutableMapping):
         '''
         if key not in self._dict and not self.loaded:
             # load the item
-            self._load(key)
-            log.debug('LazyLoaded {0}'.format(key))
-        return self._dict[key]
+            mod_load = self._load(key)
+            if mod_load:
+                log.debug('LazyLoaded {0}'.format(key))
+                return self._dict[key]
+            elif mod_load is False:
+                log.debug('Could not LazyLoad {0}'.format(key))
+                return None
+        else:
+            return self._dict[key]
 
     def __len__(self):
         # if not loaded,

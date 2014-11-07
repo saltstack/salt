@@ -28,8 +28,9 @@ How to Use it
 
 .. note::
 
-    Since this option changes the basic behavior of the state runtime states
-    should be executed in 
+    Since this option changes the basic behavior of the state runtime, after
+    it is enabled states should be executed using `test=True` to ensure that
+    the desired behavior is preserved.
 
 Since this behavior can dramatically change the flow of configuration
 management inside of Salt it is disabled by default. But enabling it is easy.

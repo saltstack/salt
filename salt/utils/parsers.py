@@ -137,7 +137,7 @@ class OptionParser(optparse.OptionParser):
 
         # Gather and run the process_<option> functions in the proper order
         process_option_funcs = []
-        for option_key in options.__dict__.keys():
+        for option_key in options.__dict__:
             process_option_func = getattr(
                 self, 'process_{0}'.format(option_key), None
             )
@@ -347,7 +347,7 @@ class SaltfileMixIn(object):
                 # one from Saltfile, if any
                 continue
 
-            # We reched this far! Set the Saltfile value on the option
+            # We reached this far! Set the Saltfile value on the option
             setattr(self.options, option.dest, cli_config[option.dest])
 
         # Let's also search for options referred in any option groups
@@ -514,7 +514,7 @@ class LogLevelMixIn(object):
             )
             if self.config.get(cli_setting_name, None) is not None:
                 # There's a configuration setting defining this log file path,
-                # ie, `key_log_file` if the cli tool is `salt-key`
+                # i.e., `key_log_file` if the cli tool is `salt-key`
                 self.options.log_file = self.config.get(cli_setting_name)
             elif self.config.get(self._logfile_config_setting_name_, None):
                 # Is the regular log file setting set?
@@ -533,7 +533,7 @@ class LogLevelMixIn(object):
             )
             if self.config.get(cli_setting_name, None) is not None:
                 # There's a configuration setting defining this log file
-                # logging level, ie, `key_log_file_level` if the cli tool is
+                # logging level, i.e., `key_log_file_level` if the cli tool is
                 # `salt-key`
                 self.options.log_file_level = self.config.get(cli_setting_name)
             elif self.config.get(
@@ -660,7 +660,7 @@ class LogLevelMixIn(object):
             if self.config['user'] != current_user:
                 # Yep, not the same user!
                 # Is the current user in ACL?
-                if current_user in self.config.get('client_acl', {}).keys():
+                if current_user in self.config.get('client_acl', {}):
                     # Yep, the user is in ACL!
                     # Let's write the logfile to its home directory instead.
                     xdg_dir = salt.utils.xdg.xdg_config_dir()
@@ -1367,7 +1367,7 @@ class CloudCredentialsMixIn(object):
 
 class MasterOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                          LogLevelMixIn, RunUserMixin, DaemonMixIn,
-                         PidfileMixin):
+                         PidfileMixin, SaltfileMixIn):
 
     __metaclass__ = OptionParserMeta
 
@@ -1402,7 +1402,7 @@ class MinionOptionParser(MasterOptionParser):
 
 class SyndicOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                          LogLevelMixIn, RunUserMixin, DaemonMixIn,
-                         PidfileMixin):
+                         PidfileMixin, SaltfileMixIn):
 
     __metaclass__ = OptionParserMeta
 
@@ -1424,7 +1424,8 @@ class SyndicOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
 class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                           TimeoutMixIn, ExtendedTargetOptionsMixIn,
-                          OutputOptionsMixIn, LogLevelMixIn, HardCrashMixin):
+                          OutputOptionsMixIn, LogLevelMixIn, HardCrashMixin,
+                          SaltfileMixIn):
 
     __metaclass__ = OptionParserMeta
 
@@ -1659,7 +1660,7 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
 class SaltCPOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                          TimeoutMixIn, TargetOptionsMixIn, LogLevelMixIn,
-                         HardCrashMixin):
+                         HardCrashMixin, SaltfileMixIn):
     __metaclass__ = OptionParserMeta
 
     description = (
@@ -1702,7 +1703,7 @@ class SaltCPOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
 class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                           LogLevelMixIn, OutputOptionsMixIn, RunUserMixin,
-                          HardCrashMixin):
+                          HardCrashMixin, SaltfileMixIn):
 
     __metaclass__ = OptionParserMeta
 
@@ -1965,7 +1966,8 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
 
 class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
-                           LogLevelMixIn, OutputOptionsMixIn, HardCrashMixin):
+                           LogLevelMixIn, OutputOptionsMixIn, HardCrashMixin,
+                           SaltfileMixIn):
     __metaclass__ = OptionParserMeta
 
     description = ('Salt call is used to execute module functions locally '
@@ -2097,8 +2099,10 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             self.config['arg'] = self.args[1:]
 
     def setup_config(self):
-        return config.minion_config(self.get_config_file_path(),
+        opts = config.minion_config(self.get_config_file_path(),
                                     minion_id=True)
+        #opts['__role'] = kinds.APPL_KIND_NAMES[kinds.applKinds.caller]
+        return opts
 
     def process_module_dirs(self):
         for module_dir in self.options.module_dirs:
@@ -2113,7 +2117,8 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
 
 class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
-                          TimeoutMixIn, LogLevelMixIn, HardCrashMixin):
+                          TimeoutMixIn, LogLevelMixIn, HardCrashMixin,
+                          SaltfileMixIn):
     __metaclass__ = OptionParserMeta
 
     default_timeout = 1
@@ -2339,7 +2344,8 @@ class SaltCloudParser(OptionParser,
                       ExecutionOptionsMixIn,
                       CloudProvidersListsMixIn,
                       CloudCredentialsMixIn,
-                      HardCrashMixin):
+                      HardCrashMixin,
+                      SaltfileMixIn):
 
     __metaclass__ = OptionParserMeta
 

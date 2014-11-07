@@ -52,7 +52,7 @@ def _ips_get_pkgname(line):
     '''
     Extracts package name from "pkg list -v" output.
     Input: one line of the command output
-    Output: pkg name (e.g: "pkg://solaris/x11/library/toolkit/libxt")
+    Output: pkg name (e.g.: "pkg://solaris/x11/library/toolkit/libxt")
     Example use:
     line = "pkg://solaris/x11/library/toolkit/libxt@1.1.3,5.11-0.175.1.0.0.24.1317:20120904T180030Z i--"
     name = _ips_get_pkgname(line)
@@ -64,7 +64,7 @@ def _ips_get_pkgversion(line):
     '''
     Extracts package version from "pkg list -v" output.
     Input: one line of the command output
-    Output: package version (e.g: "1.1.3,5.11-0.175.1.0.0.24.1317:20120904T180030Z")
+    Output: package version (e.g.: "1.1.3,5.11-0.175.1.0.0.24.1317:20120904T180030Z")
     Example use:
     line = "pkg://solaris/x11/library/toolkit/libxt@1.1.3,5.11-0.175.1.0.0.24.1317:20120904T180030Z i--"
     name = _ips_get_pkgversion(line)
@@ -411,7 +411,7 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
         output['message'] = ret['stderr'] + '\n'
         return output
 
-    # No error occured
+    # No error occurred
     if test:
         return "Test succeeded."
 
@@ -478,7 +478,7 @@ def remove(name=None, pkgs=None, **kwargs):
         output['message'] = ret['stderr'] + '\n'
         return output
 
-    # No error occured
+    # No error occurred
     return changes
 
 

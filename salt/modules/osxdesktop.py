@@ -3,6 +3,9 @@
 Mac OS X implementations of various commands in the "desktop" interface
 '''
 
+# Import salt libs
+import salt.utils
+
 # Define the module's virtual name
 __virtualname__ = 'desktop'
 
@@ -11,7 +14,7 @@ def __virtual__():
     '''
     Only load on Mac systems
     '''
-    if __grains__['os'] == 'MacOS':
+    if salt.utils.is_darwin():
         return __virtualname__
     return False
 

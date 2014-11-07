@@ -373,73 +373,81 @@ fi
             'cmd_|-A_|-echo A_|-run': {
                 '__run_num__': 2,
                 'comment': 'Command "echo A" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-B_|-echo B_|-run': {
                 '__run_num__': 1,
                 'comment': 'Command "echo B" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-C_|-echo C_|-run': {
                 '__run_num__': 0,
                 'comment': 'Command "echo C" run',
-                'result': True}
+                'result': True,
+                'changes': True}
         }
         expected_result = {
             'cmd_|-A_|-echo A fifth_|-run': {
                 '__run_num__': 4,
                 'comment': 'Command "echo A fifth" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-B_|-echo B third_|-run': {
                 '__run_num__': 2,
                 'comment': 'Command "echo B third" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-C_|-echo C second_|-run': {
                 '__run_num__': 1,
                 'comment': 'Command "echo C second" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-D_|-echo D first_|-run': {
                 '__run_num__': 0,
                 'comment': 'Command "echo D first" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-E_|-echo E fourth_|-run': {
                 '__run_num__': 3,
                 'comment': 'Command "echo E fourth" run',
-                'result': True}
+                'result': True,
+                'changes': True}
         }
         expected_req_use_result = {
             'cmd_|-A_|-echo A_|-run': {
                 '__run_num__': 1,
                 'comment': 'Command "echo A" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-B_|-echo B_|-run': {
                 '__run_num__': 4,
                 'comment': 'Command "echo B" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-C_|-echo C_|-run': {
                 '__run_num__': 0,
                 'comment': 'Command "echo C" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-D_|-echo D_|-run': {
                 '__run_num__': 5,
                 'comment': 'Command "echo D" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-E_|-echo E_|-run': {
                 '__run_num__': 2,
                 'comment': 'Command "echo E" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-F_|-echo F_|-run': {
                 '__run_num__': 3,
                 'comment': 'Command "echo F" run',
-                'result': True}
+                'result': True,
+                'changes': True}
         }
-        result = {}
         ret = self.run_function('state.sls', mods='requisites.mixed_simple')
+        result = self.normalize_ret(ret)
         self.assertReturnNonEmptySaltType(ret)
-        for item, descr in ret.iteritems():
-            result[item] = {
-                '__run_num__': descr['__run_num__'],
-                'comment': descr['comment'],
-                'result': descr['result']
-            }
         self.assertEqual(expected_simple_result, result)
 
         # test Traceback recursion prereq+require #8785
@@ -468,15 +476,23 @@ fi
 
         # undetected infinite loopS prevents this test from running...
         # TODO: this is actually failing badly
-        #result = {}
         #ret = self.run_function('state.sls', mods='requisites.mixed_complex1')
-        #for item, descr in ret.iteritems():
-        #    result[item] = {
-        #        '__run_num__': descr['__run_num__'],
-        #        'comment': descr['comment'],
-        #        'result': descr['result']
-        #    }
+        #result = self.normalize_ret(ret)
         #self.assertEqual(expected_result, result)
+
+    def normalize_ret(self, ret):
+        '''
+        Normalize the return to the format that we'll use for result checking
+        '''
+        result = {}
+        for item, descr in ret.iteritems():
+            result[item] = {
+                '__run_num__': descr['__run_num__'],
+                'comment': descr['comment'],
+                'result': descr['result'],
+                'changes': descr['changes'] != {}  # whether there where any changes
+            }
+        return result
 
     def test_requisites_require_ordering_and_errors(self):
         '''
@@ -488,59 +504,61 @@ fi
             'cmd_|-A_|-echo A fifth_|-run': {
                 '__run_num__': 4,
                 'comment': 'Command "echo A fifth" run',
-                'result': True
+                'result': True,
+                'changes': True,
             },
             'cmd_|-B_|-echo B second_|-run': {
                 '__run_num__': 1,
                 'comment': 'Command "echo B second" run',
-                'result': True
+                'result': True,
+                'changes': True,
             },
             'cmd_|-C_|-echo C third_|-run': {
                 '__run_num__': 2,
                 'comment': 'Command "echo C third" run',
-                'result': True
+                'result': True,
+                'changes': True,
             },
             'cmd_|-D_|-echo D first_|-run': {
                 '__run_num__': 0,
                 'comment': 'Command "echo D first" run',
-                'result': True
+                'result': True,
+                'changes': True,
             },
             'cmd_|-E_|-echo E fourth_|-run': {
                 '__run_num__': 3,
                 'comment': 'Command "echo E fourth" run',
-                'result': True
+                'result': True,
+                'changes': True,
             },
             'cmd_|-F_|-echo F_|-run': {
                 '__run_num__': 5,
                 'comment': 'The following requisites were not found:\n'
                            + '                   require:\n'
                            + '                       foobar: A\n',
-                'result': False
+                'result': False,
+                'changes': False,
             },
             'cmd_|-G_|-echo G_|-run': {
                 '__run_num__': 6,
                 'comment': 'The following requisites were not found:\n'
                            + '                   require:\n'
                            + '                       cmd: Z\n',
-                'result': False
+                'result': False,
+                'changes': False,
             },
             'cmd_|-H_|-echo H_|-run': {
                 '__run_num__': 7,
                 'comment': 'The following requisites were not found:\n'
                            + '                   require:\n'
                            + '                       cmd: Z\n',
-                'result': False
+                'result': False,
+                'changes': False,
             }
         }
-        result = {}
         ret = self.run_function('state.sls', mods='requisites.require')
+        result = self.normalize_ret(ret)
         self.assertReturnNonEmptySaltType(ret)
-        for item, descr in ret.iteritems():
-            result[item] = {
-                '__run_num__': descr['__run_num__'],
-                'comment': descr['comment'],
-                'result': descr['result']
-            }
         self.assertEqual(expected_result, result)
 
         ret = self.run_function('state.sls', mods='requisites.require_error1')
@@ -581,25 +599,22 @@ fi
             'cmd_|-A_|-echo A_|-run': {
                 '__run_num__': 2,
                 'comment': 'Command "echo A" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-B_|-echo B_|-run': {
                 '__run_num__': 0,
                 'comment': 'Command "echo B" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-C_|-echo C_|-run': {
                 '__run_num__': 1,
                 'comment': 'Command "echo C" run',
-                'result': True},
+                'result': True,
+                'changes': True},
         }
-        result = {}
         ret = self.run_function('state.sls', mods='requisites.fullsls_require')
         self.assertReturnNonEmptySaltType(ret)
-        for item, descr in ret.iteritems():
-            result[item] = {
-                '__run_num__': descr['__run_num__'],
-                'comment': descr['comment'],
-                'result': descr['result']
-            }
+        result = self.normalize_ret(ret)
         self.assertEqual(expected_result, result)
 
         # TODO: not done
@@ -621,105 +636,126 @@ fi
             'cmd_|-A_|-echo A third_|-run': {
                 '__run_num__': 2,
                 'comment': 'Command "echo A third" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-B_|-echo B first_|-run': {
                 '__run_num__': 0,
                 'comment': 'Command "echo B first" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-C_|-echo C second_|-run': {
                 '__run_num__': 1,
                 'comment': 'Command "echo C second" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-I_|-echo I_|-run': {
                 '__run_num__': 3,
                 'comment': 'The following requisites were not found:\n'
                            + '                   prereq:\n'
                            + '                       cmd: Z\n',
-                'result': False},
+                'result': False,
+                'changes': False},
             'cmd_|-J_|-echo J_|-run': {
                 '__run_num__': 4,
                 'comment': 'The following requisites were not found:\n'
                            + '                   prereq:\n'
                            + '                       foobar: A\n',
-                'result': False}
+                'result': False,
+                'changes': False}
         }
         expected_result_simple2 = {
             'cmd_|-A_|-echo A_|-run': {
                 '__run_num__': 1,
                 'comment': 'Command "echo A" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-B_|-echo B_|-run': {
                 '__run_num__': 2,
                 'comment': 'Command "echo B" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-C_|-echo C_|-run': {
                 '__run_num__': 0,
                 'comment': 'Command "echo C" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-D_|-echo D_|-run': {
                 '__run_num__': 3,
                 'comment': 'Command "echo D" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-E_|-echo E_|-run': {
                 '__run_num__': 4,
                 'comment': 'Command "echo E" run',
-                'result': True}
+                'result': True,
+                'changes': True}
+        }
+        expected_result_simple3 = {
+            'cmd_|-A_|-echo A first_|-run': {
+                '__run_num__': 0,
+                'comment': 'Command "echo A first" run',
+                'result': True,
+                'changes': True,
+            },
+            'cmd_|-B_|-echo B second_|-run': {
+                '__run_num__': 1,
+                'comment': 'Command "echo B second" run',
+                'result': True,
+                'changes': True,
+            },
+            'cmd_|-C_|-echo C third_|-wait': {
+                '__run_num__': 2,
+                'comment': '',
+                'result': True,
+                'changes': False,
+            }
         }
         expected_result_complex = {
             'cmd_|-A_|-echo A fourth_|-run': {
                 '__run_num__': 3,
                 'comment': 'Command "echo A fourth" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-B_|-echo B first_|-run': {
                 '__run_num__': 0,
                 'comment': 'Command "echo B first" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-C_|-echo C second_|-run': {
                 '__run_num__': 1,
                 'comment': 'Command "echo C second" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-D_|-echo D third_|-run': {
                 '__run_num__': 2,
                 'comment': 'Command "echo D third" run',
-                'result': True},
+                'result': True,
+                'changes': True},
         }
-        result = {}
         ret = self.run_function('state.sls', mods='requisites.prereq_simple')
         self.assertReturnNonEmptySaltType(ret)
-        for item, descr in ret.iteritems():
-            result[item] = {
-                '__run_num__': descr['__run_num__'],
-                'comment': descr['comment'],
-                'result': descr['result']
-            }
+        result = self.normalize_ret(ret)
         self.assertEqual(expected_result_simple, result)
 
         # same test, but not using lists in yaml syntax
         # TODO: issue #8235, prereq ignored when not used in list syntax
         # Currently fails badly with :
         # TypeError encountered executing state.sls: string indices must be integers, not str.
-        #result = {}
         #expected_result_simple.pop('cmd_|-I_|-echo I_|-run')
         #expected_result_simple.pop('cmd_|-J_|-echo J_|-run')
         #ret = self.run_function('state.sls', mods='requisites.prereq_simple_nolist')
-        #for item, descr in ret.iteritems():
-        #    result[item] = {
-        #        '__run_num__': descr['__run_num__'],
-        #        'comment': descr['comment'],
-        #        'result': descr['result']
-        #    }
+        #result = self.normalize_ret(ret)
         #self.assertEqual(expected_result_simple, result)
 
-        result = {}
         ret = self.run_function('state.sls', mods='requisites.prereq_simple2')
+        result = self.normalize_ret(ret)
         self.assertReturnNonEmptySaltType(ret)
-        for item, descr in ret.iteritems():
-            result[item] = {
-                '__run_num__': descr['__run_num__'],
-                'comment': descr['comment'],
-                'result': descr['result']
-            }
         self.assertEqual(expected_result_simple2, result)
+
+        ret = self.run_function('state.sls', mods='requisites.prereq_simple3')
+        result = self.normalize_ret(ret)
+        self.assertReturnNonEmptySaltType(ret)
+        self.assertEqual(expected_result_simple3, result)
 
         #ret = self.run_function('state.sls', mods='requisites.prereq_error_nolist')
         #self.assertEqual(
@@ -748,14 +784,8 @@ fi
 
         # issue #8211, chaining complex prereq & prereq_in
         # TODO: Actually this test fails
-        #result = {}
         #ret = self.run_function('state.sls', mods='requisites.prereq_complex')
-        #for item, descr in ret.iteritems():
-        #    result[item] = {
-        #        '__run_num__': descr['__run_num__'],
-        #        'comment': descr['comment'],
-        #        'result': descr['result']
-        #    }
+        #result = self.normalize_ret(ret)
         #self.assertEqual(expected_result_complex, result)
 
         # issue #8210 : prereq recursion undetected

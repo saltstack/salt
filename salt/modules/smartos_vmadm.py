@@ -122,7 +122,7 @@ def init(**kwargs):
         retcode = res['retcode']
         if retcode != 0:
             return CommandExecutionError(_exit_status(retcode))
-        # if succedeed, proceed to the VM creation
+        # if succeeded, proceed to the VM creation
         cmd = 'echo \'{0}\' | {1} create'.format(ret, vmadm)
         res = __salt__['cmd.run_all'](cmd)
         retcode = res['retcode']

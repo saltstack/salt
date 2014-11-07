@@ -15,6 +15,7 @@ import os.path
 import logging
 import struct
 # pylint: disable=W0611
+import datetime  # do not remove.
 import tempfile  # do not remove. Used in salt.modules.file.__clean_tmp
 import itertools  # same as above, do not remove, it's used in __clean_tmp
 import contextlib  # do not remove, used in imported file.py functions
@@ -347,7 +348,7 @@ def get_pgid(path, follow_symlinks=True):
         return 'S-1-1-0'
     except pywinerror as exc:
         # Incorrect function error (win2k8+)
-        if exc.winerror == 1:
+        if exc.winerror == 1 or exc.winerror == 50:
             return 'S-1-1-0'
         raise
     group_sid = secdesc.GetSecurityDescriptorGroup()
@@ -543,7 +544,7 @@ def get_uid(path, follow_symlinks=True):
         return 'S-1-1-0'
     except pywinerror as exc:
         # Incorrect function error (win2k8+)
-        if exc.winerror == 1:
+        if exc.winerror == 1 or exc.winerror == 50:
             return 'S-1-1-0'
         raise
     owner_sid = secdesc.GetSecurityDescriptorOwner()

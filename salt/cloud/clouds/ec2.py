@@ -226,7 +226,7 @@ def _xml_to_dict(xmltree):
         if '}' in name:
             comps = name.split('}')
             name = comps[1]
-        if name not in xmldict.keys():
+        if name not in xmldict:
             if sys.version_info < (2, 7):
                 children_len = len(item.getchildren())
             else:
@@ -329,7 +329,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
         params_with_headers['SignatureMethod'] = 'HmacSHA256'
         params_with_headers['Timestamp'] = '{0}'.format(timestamp)
         params_with_headers['Version'] = ec2_api_version
-        keys = sorted(params_with_headers.keys())
+        keys = sorted(params_with_headers)
         values = map(params_with_headers.get, keys)
         querystring = urllib.urlencode(list(zip(keys, values)))
 
@@ -445,7 +445,7 @@ def _wait_for_spot_instance(update_callback,
     :param update_kwargs: Keyword arguments to pass to update_callback
     :param timeout: The maximum amount of time(in seconds) to wait for the IP
                     address.
-    :param interval: The looping interval, ie, the amount of time to sleep
+    :param interval: The looping interval, i.e., the amount of time to sleep
                      before the next iteration.
     :param interval_multiplier: Increase the interval by this multiplier after
                                 each request; helps with throttling
@@ -928,7 +928,7 @@ def get_availability_zone(vm_):
     zones = _list_availability_zones()
 
     # Validate user-specified AZ
-    if avz not in zones.keys():
+    if avz not in zones:
         raise SaltCloudException(
             'The specified availability zone isn\'t valid in this region: '
             '{0}\n'.format(
@@ -1987,7 +1987,7 @@ def create(vm_=None, call=None):
             '\'tag\' should be a dict.'
         )
 
-    for value in tags.values():
+    for value in tags.itervalues():
         if not isinstance(value, str):
             raise SaltCloudConfigError(
                 '\'tag\' values must be strings. Try quoting the values. '
@@ -2663,7 +2663,7 @@ def list_nodes_full(location=None, call=None):
     if not location:
         ret = {}
         locations = set(
-            get_location(vm_) for vm_ in __opts__['profiles'].values()
+            get_location(vm_) for vm_ in __opts__['profiles'].itervalues()
             if _vm_provider_driver(vm_)
         )
         for loc in locations:
@@ -3524,10 +3524,10 @@ def get_console_output(
     ret = {}
     data = query(params, return_root=True)
     for item in data:
-        if item.keys()[0] == 'output':
-            ret['output_decoded'] = binascii.a2b_base64(item.values()[0])
+        if item.iterkeys().next() == 'output':
+            ret['output_decoded'] = binascii.a2b_base64(item.itervalues().next())
         else:
-            ret[item.keys()[0]] = item.values()[0]
+            ret[item.iterkeys().next()] = item.itervalues().next()
 
     return ret
 

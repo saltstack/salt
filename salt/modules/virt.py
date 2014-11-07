@@ -29,6 +29,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 import salt.utils.templates
 import salt.utils.validate.net
 from salt._compat import StringIO as _StringIO
@@ -98,8 +99,6 @@ def __get_conn():
          - http://libvirt.org/uri.html#URI_config
         '''
         connection = __salt__['config.get']('libvirt:connection', 'esx')
-        if connection.startswith('esx://'):
-            return connection
         return connection
 
     def __esxi_auth():
@@ -462,7 +461,7 @@ def _nic_profile(profile_name, hypervisor, **kwargs):
     elif isinstance(config_data, list):
         for interface in config_data:
             if isinstance(interface, dict):
-                if len(interface.keys()) == 1:
+                if len(interface) == 1:
                     append_dict_profile_to_interface_list(interface)
                 else:
                     interfaces.append(interface)
@@ -552,7 +551,7 @@ def init(name,
 
         # When using a disk profile extract the sole dict key of the first
         # array element as the filename for disk
-        disk_name = diskp[0].keys()[0]
+        disk_name = diskp[0].iterkeys().next()
         disk_type = diskp[0][disk_name]['format']
         disk_file_name = '{0}.{1}'.format(disk_name, disk_type)
 
@@ -573,7 +572,7 @@ def init(name,
             if not os.path.isdir(img_dir):
                 os.makedirs(img_dir)
             try:
-                salt.utils.copyfile(sfn, img_dest)
+                salt.utils.files.copyfile(sfn, img_dest)
                 mask = os.umask(0)
                 os.umask(mask)
                 # Apply umask and remove exec bit
@@ -798,7 +797,7 @@ def get_nics(vm_):
                 # driver, source, and match can all have optional attributes
                 if re.match('(driver|source|address)', v_node.tagName):
                     temp = {}
-                    for key in v_node.attributes.keys():
+                    for key in v_node.attributes:
                         temp[key] = v_node.getAttribute(key)
                     nic[str(v_node.tagName)] = temp
                 # virtualport needs to be handled separately, to pick up the
@@ -806,7 +805,7 @@ def get_nics(vm_):
                 if v_node.tagName == 'virtualport':
                     temp = {}
                     temp['type'] = v_node.getAttribute('type')
-                    for key in v_node.attributes.keys():
+                    for key in v_node.attributes:
                         temp[key] = v_node.getAttribute(key)
                     nic['virtualport'] = temp
             if 'mac' not in nic:
@@ -856,7 +855,7 @@ def get_graphics(vm_):
     for node in doc.getElementsByTagName('domain'):
         g_nodes = node.getElementsByTagName('graphics')
         for g_node in g_nodes:
-            for key in g_node.attributes.keys():
+            for key in g_node.attributes:
                 out[key] = g_node.getAttribute(key)
     return out
 
@@ -1686,7 +1685,7 @@ def vm_netstats(vm_=None):
                 'tx_errs': 0,
                 'tx_drop': 0
                }
-        for attrs in nics.values():
+        for attrs in nics.itervalues():
             if 'target' in attrs:
                 dev = attrs['target']
                 stats = dom.interfaceStats(dev)
