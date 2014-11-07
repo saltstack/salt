@@ -311,7 +311,6 @@ class Runner(RunnerClient):
         Gather the return data from the event system, break hard when timeout
         is reached.
         '''
-        print('TOP JID: {0}'.format(jid))
         if timeout is None:
             timeout = self.opts['timeout'] * 2
 
@@ -320,7 +319,6 @@ class Runner(RunnerClient):
 
         while True:
             raw = self.event.get_event(timeout, full=True)
-            print(raw['tag'])
             # If we saw no events in the event bus timeout
             # OR
             # we have reached the total timeout
