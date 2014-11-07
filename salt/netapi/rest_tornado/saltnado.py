@@ -258,8 +258,7 @@ def get_batch_size(batch, num_minions):
 class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):
     ct_out_map = (
         ('application/json', json.dumps),
-        ('application/x-yaml', functools.partial(
-            yaml.safe_dump, default_flow_style=False)),
+        ('application/x-yaml', yaml.safe_dump),
     )
 
     def _verify_client(self, client):
@@ -268,7 +267,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):
         '''
         if client not in self.saltclients:
             self.set_status(400)
-            self.write('We don\'t serve your kind here')
+            self.write("We don't serve your kind here")
             self.finish()
 
     @property
@@ -497,192 +496,174 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
             self.redirect('/login')
             return
 
-        # TODO: support per-lowstate client disbatch
-        client = self.lowstate[0]['client']
-        self._verify_client(client)
-        self.disbatch(client)
+        self.disbatch()
 
-    def disbatch(self, client):
+    @tornado.gen.coroutine
+    def disbatch(self):
         '''
         Disbatch a lowstate job to the appropriate client
-        '''
-        self.client = client
 
-        for low in self.lowstate:
-            if not self._verify_auth() or 'eauth' in low:
-                # TODO: better error?
-                self.set_status(401)
-                self.finish()
-                return
-        # disbatch to the correct handler
-        try:
-            getattr(self, '_disbatch_{0}'.format(self.client))()
-        except AttributeError:
-            # TODO set the right status... this means we didn't implement it...
-            self.set_status(500)
-            self.finish()
-
-    @tornado.gen.coroutine
-    def _disbatch_local_batch(self):
-        '''
-        Disbatch local client batched commands
-        '''
-        self.ret = []
-
-        for chunk in self.lowstate:
-            f_call = salt.utils.format_call(self.saltclients['local_batch'], chunk)
-
-            timeout = float(chunk.get('timeout', self.application.opts['timeout']))
-            # set the timeout
-            timeout_obj = tornado.ioloop.IOLoop.current().add_timeout(time.time() + timeout, self.timeout_futures)
-
-            # ping all the minions (to see who we have to talk to)
-            # TODO: actually ping them all? this just gets the pub data
-            minions = self.saltclients['local'](chunk['tgt'],
-                                                'test.ping',
-                                                [],
-                                                expr_form=f_call['kwargs']['expr_form']).get('minions', [])
-
-            chunk_ret = {}
-            maxflight = get_batch_size(f_call['kwargs']['batch'], len(minions))
-            inflight_futures = []
-            # do this batch
-            while len(minions) > 0:
-                # if you have more to go, lets disbatch jobs
-                while len(inflight_futures) < maxflight and len(minions) > 0:
-                    minion_id = minions.pop(0)
-                    f_call['args'][0] = minion_id
-                    # TODO: list??
-                    f_call['kwargs']['expr_form'] = 'glob'
-                    pub_data = self.saltclients['local'](*f_call.get('args', ()), **f_call.get('kwargs', {}))
-                    # if the job didn't publish, lets not wait around for nothing
-                    # we'll just skip
-                    # TODO: set header??, some special return?, Or just ignore it (like we do in CLI)
-                    if 'jid' not in pub_data:
-                        continue
-                    tag = tagify([pub_data['jid'], 'ret', minion_id], 'job')
-                    future = self.application.event_listener.get_event(self, tag=tag)
-                    inflight_futures.append(future)
-
-                # if we have nothing to wait for, don't wait
-                if len(inflight_futures) == 0:
-                    continue
-
-                # wait until someone is done
-                finished_future = yield Any(inflight_futures)
-                try:
-                    event = finished_future.result()
-                except TimeoutException:
-                    break
-                chunk_ret[event['data']['id']] = event['data']['return']
-                inflight_futures.remove(finished_future)
-
-            self.ret.append(chunk_ret)
-
-            # if we finish in time, cancel the timeout
-            tornado.ioloop.IOLoop.current().remove_timeout(timeout_obj)
-
-        self.write(self.serialize({'return': self.ret}))
-        self.finish()
-
-    @tornado.gen.coroutine
-    def _disbatch_local(self):
-        '''
-        Disbatch local client commands
-        '''
-        self.ret = []
-
-        for chunk in self.lowstate:
-            timeout = float(chunk.get('timeout', self.application.opts['timeout']))
-            # set the timeout
-            tornado.ioloop.IOLoop.current().add_timeout(time.time() + timeout, self.timeout_futures)
-            timeout_obj = tornado.ioloop.IOLoop.current().add_timeout(time.time() + timeout, self.timeout_futures)
-
-            # TODO: not sure why.... we already verify auth, probably for ACLs
-            # require token or eauth
-            chunk['token'] = self.token
-
-            chunk_ret = {}
-
-            f_call = salt.utils.format_call(self.saltclients[self.client], chunk)
-            # fire a job off
-            try:
-                pub_data = self.saltclients[self.client](*f_call.get('args', ()), **f_call.get('kwargs', {}))
-            except EauthAuthenticationError:
-                self.set_status(401)
-                return
-
-            # if the job didn't publish, lets not wait around for nothing
-            # TODO: set header??
-            if 'jid' not in pub_data:
-                self.write(self.serialize({'return': self.ret}))
-                self.finish()
-                return
-
-            # get the tag that we are looking for
-            tag = tagify([pub_data['jid'], 'ret'], 'job')
-
-            # TODO: the same ping-magic from localclient
-            minions_remaining = pub_data['minions']
-
-            # while we are waiting on all the mininons
-            while len(minions_remaining) > 0:
-                try:
-                    event = yield self.application.event_listener.get_event(self, tag=tag)
-                    chunk_ret[event['data']['id']] = event['data']['return']
-                    minions_remaining.remove(event['data']['id'])
-                # if you hit a timeout, just stop waiting ;)
-                except TimeoutException:
-                    break
-            self.ret.append(chunk_ret)
-
-            # if we finish in time, cancel the timeout
-            tornado.ioloop.IOLoop.current().remove_timeout(timeout_obj)
-
-        self.write(self.serialize({'return': self.ret}))
-        self.finish()
-
-    def _disbatch_local_async(self):
-        '''
-        Disbatch local client_async commands
+        Auth must have been verified before this point
         '''
         ret = []
-        for chunk in self.lowstate:
-            f_call = salt.utils.format_call(self.saltclients[self.client], chunk)
-            # fire a job off
-            pub_data = self.saltclients[self.client](*f_call.get('args', ()), **f_call.get('kwargs', {}))
-            ret.append(pub_data)
+
+        # check clients before going, we want to throw 400 if one is bad
+        for low in self.lowstate:
+            client = low.get('client')
+            self._verify_client(client)
+
+        for low in self.lowstate:
+            # disbatch to the correct handler
+            try:
+                chunk_ret = yield getattr(self, '_disbatch_{0}'.format(low['client']))(low)
+                ret.append(chunk_ret)
+            except Exception as ex:
+                print ex
+                ret.append('Unexpected exception while handling request: {0}'.format(ex))
 
         self.write(self.serialize({'return': ret}))
         self.finish()
 
     @tornado.gen.coroutine
-    def _disbatch_runner(self):
+    def _disbatch_local_batch(self, chunk):
         '''
-        Disbatch runner client commands
+        Disbatch local client batched commands
         '''
-        self.ret = []
-        for chunk in self.lowstate:
-            timeout = float(chunk.get('timeout', self.application.opts['timeout']))
-            # set the timeout
-            tornado.ioloop.IOLoop.current().add_timeout(time.time() + timeout, self.timeout_futures)
-            timeout_obj = tornado.ioloop.IOLoop.current().add_timeout(time.time() + timeout, self.timeout_futures)
+        f_call = salt.utils.format_call(self.saltclients['local_batch'], chunk)
 
-            f_call = {'args': [chunk['fun'], chunk]}
-            pub_data = self.saltclients[self.client](chunk['fun'], chunk)
-            tag = pub_data['tag'] + '/ret'
+        timeout = float(chunk.get('timeout', self.application.opts['timeout']))
+        # set the timeout
+        timeout_obj = tornado.ioloop.IOLoop.current().add_timeout(time.time() + timeout, self.timeout_futures)
+
+        # ping all the minions (to see who we have to talk to)
+        # TODO: actually ping them all? this just gets the pub data
+        minions = self.saltclients['local'](chunk['tgt'],
+                                            'test.ping',
+                                            [],
+                                            expr_form=f_call['kwargs']['expr_form']).get('minions', [])
+
+        chunk_ret = {}
+        maxflight = get_batch_size(f_call['kwargs']['batch'], len(minions))
+        inflight_futures = []
+        # do this batch
+        while len(minions) > 0:
+            # if you have more to go, lets disbatch jobs
+            while len(inflight_futures) < maxflight and len(minions) > 0:
+                minion_id = minions.pop(0)
+                f_call['args'][0] = minion_id
+                # TODO: list??
+                f_call['kwargs']['expr_form'] = 'glob'
+                pub_data = self.saltclients['local'](*f_call.get('args', ()), **f_call.get('kwargs', {}))
+                # if the job didn't publish, lets not wait around for nothing
+                # we'll just skip
+                # TODO: set header??, some special return?, Or just ignore it (like we do in CLI)
+                if 'jid' not in pub_data:
+                    continue
+                tag = tagify([pub_data['jid'], 'ret', minion_id], 'job')
+                future = self.application.event_listener.get_event(self, tag=tag)
+                inflight_futures.append(future)
+
+            # if we have nothing to wait for, don't wait
+            if len(inflight_futures) == 0:
+                continue
+
+            # wait until someone is done
+            finished_future = yield Any(inflight_futures)
+            try:
+                event = finished_future.result()
+            except TimeoutException:
+                break
+            chunk_ret[event['data']['id']] = event['data']['return']
+            inflight_futures.remove(finished_future)
+
+        # if we finish in time, cancel the timeout
+        tornado.ioloop.IOLoop.current().remove_timeout(timeout_obj)
+        raise tornado.gen.Return(chunk_ret)
+
+
+    @tornado.gen.coroutine
+    def _disbatch_local(self, chunk):
+        '''
+        Disbatch local client commands
+        '''
+        timeout = float(chunk.get('timeout', self.application.opts['timeout']))
+        # set the timeout
+        timeout_obj = tornado.ioloop.IOLoop.current().add_timeout(time.time() + timeout, self.timeout_futures)
+
+        # TODO: not sure why.... we already verify auth, probably for ACLs
+        # require token or eauth
+        chunk['token'] = self.token
+
+        chunk_ret = {}
+
+        f_call = salt.utils.format_call(self.saltclients['local'], chunk)
+        # fire a job off
+        try:
+            pub_data = self.saltclients['local'](*f_call.get('args', ()), **f_call.get('kwargs', {}))
+        except EauthAuthenticationError:
+            raise tornado.getn.Return('Not authorized to run this job')
+
+        # if the job didn't publish, lets not wait around for nothing
+        # TODO: set header??
+        if 'jid' not in pub_data:
+            raise tornado.gen.Return('No minions matched the target. No command was sent, no jid was assigned.')
+
+        # get the tag that we are looking for
+        tag = tagify([pub_data['jid'], 'ret'], 'job')
+
+        # TODO: the same ping-magic from localclient
+        minions_remaining = pub_data['minions']
+
+        # while we are waiting on all the mininons
+        while len(minions_remaining) > 0:
             try:
                 event = yield self.application.event_listener.get_event(self, tag=tag)
-                # only return the return data
-                self.ret.append(event['data']['return'])
-
-                # if we finish in time, cancel the timeout
-                tornado.ioloop.IOLoop.current().remove_timeout(timeout_obj)
+                chunk_ret[event['data']['id']] = event['data']['return']
+                minions_remaining.remove(event['data']['id'])
+            # if you hit a timeout, just stop waiting ;)
             except TimeoutException:
                 break
 
-        self.write(self.serialize({'return': self.ret}))
-        self.finish()
+        # if we finish in time, cancel the timeout
+        tornado.ioloop.IOLoop.current().remove_timeout(timeout_obj)
+
+        raise tornado.gen.Return(chunk_ret)
+
+
+    @tornado.gen.coroutine
+    def _disbatch_local_async(self, chunk):
+        '''
+        Disbatch local client_async commands
+        '''
+        f_call = salt.utils.format_call(self.saltclients['local_async'], chunk)
+        # fire a job off
+        pub_data = self.saltclients['local_async'](*f_call.get('args', ()), **f_call.get('kwargs', {}))
+
+        raise tornado.gen.Return(pub_data)
+
+
+    @tornado.gen.coroutine
+    def _disbatch_runner(self, chunk):
+        '''
+        Disbatch runner client commands
+        '''
+        timeout = float(chunk.get('timeout', self.application.opts['timeout']))
+        # set the timeout
+        timeout_obj = tornado.ioloop.IOLoop.current().add_timeout(time.time() + timeout, self.timeout_futures)
+
+        f_call = {'args': [chunk['fun'], chunk]}
+        pub_data = self.saltclients['runner'](chunk['fun'], chunk)
+        tag = pub_data['tag'] + '/ret'
+        try:
+            event = yield self.application.event_listener.get_event(self, tag=tag)
+
+            # if we finish in time, cancel the timeout
+            tornado.ioloop.IOLoop.current().remove_timeout(timeout_obj)
+
+            # only return the return data
+            raise tornado.gen.Return(event['data']['return'])
+        except TimeoutException:
+            raise tornado.gen.Return('Timeout waiting for runner to execute')
 
 
 class MinionSaltAPIHandler(SaltAPIHandler):
@@ -693,14 +674,15 @@ class MinionSaltAPIHandler(SaltAPIHandler):
     def get(self, mid=None):  # pylint: disable=W0221
         # if you aren't authenticated, redirect to login
         if not self._verify_auth():
-            print "not authd"
             self.redirect('/login')
             return
 
         self.lowstate = [{
-            'client': 'local', 'tgt': mid or '*', 'fun': 'grains.items',
+            'client': 'local',
+            'tgt': mid or '*',
+            'fun': 'grains.items',
         }]
-        self.disbatch('local')
+        self.disbatch()
 
     @tornado.web.asynchronous
     def post(self):
@@ -712,7 +694,20 @@ class MinionSaltAPIHandler(SaltAPIHandler):
             self.redirect('/login')
             return
 
-        self.disbatch('local_async')
+        # verify that all lowstates are the correct client type
+        for low in self.lowstate:
+            # if you didn't specify, its fine
+            if 'client' not in low:
+                low['client'] = 'local_async'
+                continue
+            # if you specified something else, we don't do that
+            if low.get('client') != 'local_async':
+                self.set_status(400)
+                self.write('We don\'t serve your kind here')
+                self.finish()
+                return
+
+        self.disbatch()
 
 
 class JobsSaltAPIHandler(SaltAPIHandler):
@@ -730,13 +725,15 @@ class JobsSaltAPIHandler(SaltAPIHandler):
             self.lowstate = [{
                 'fun': 'jobs.list_job',
                 'jid': jid,
+                'client': 'runner',
             }]
         else:
             self.lowstate = [{
                 'fun': 'jobs.list_jobs',
+                'client': 'runner',
             }]
 
-        self.disbatch('runner')
+        self.disbatch()
 
 
 class RunSaltAPIHandler(SaltAPIHandler):
@@ -745,11 +742,7 @@ class RunSaltAPIHandler(SaltAPIHandler):
     '''
     @tornado.web.asynchronous
     def post(self):
-        # TODO: support per-lowstate client disbatch
-        client = self.lowstate[0]['client']
-
-        self._verify_client(client)
-        self.disbatch(client)
+        self.disbatch()
 
 
 class EventsSaltAPIHandler(SaltAPIHandler):
