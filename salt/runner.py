@@ -313,11 +313,14 @@ class Runner(RunnerClient):
             if raw is None or (time.time() > timeout_at and time.time() - last_progress_timestamp > timeout):
                 # Timeout reached
                 break
-            if not raw['tag'].split('/')[1] == 'runner':
+            try:
+                if not raw['tag'].split('/')[1] == 'runner':
+                    continue
+                elif raw['tag'].split('/')[3] == 'progress':
+                    last_progress_timestamp = time.time()
+                    yield({'data': raw['data']['data'], 'outputter': raw['data']['outputter']})
+                elif raw['tag'].split('/')[3] == 'return':
+                    yield(raw['data']['return'])
+                    break
+            except IndexError:
                 continue
-            elif raw['tag'].split('/')[3] == 'progress':
-                last_progress_timestamp = time.time()
-                yield({'data': raw['data']['data'], 'outputter': raw['data']['outputter']})
-            elif raw['tag'].split('/')[3] == 'return':
-                yield(raw['data']['return'])
-                break
