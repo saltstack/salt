@@ -3,6 +3,8 @@
 Control the state system on the minion
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 import os
 import json
@@ -46,7 +48,7 @@ def _filter_running(runnings):
     '''
     Filter out the result: True + no changes data
     '''
-    ret = dict((tag, value) for tag, value in runnings.iteritems()
+    ret = dict((tag, value) for tag, value in runnings.items()
                if not value['result'] or value['changes'])
     return ret
 
@@ -294,7 +296,7 @@ def request(mods=None,
             'kwargs': kwargs
             }
         })
-    cumask = os.umask(077)
+    cumask = os.umask(0o77)
     try:
         if salt.utils.is_windows():
             # Make sure cache file isn't read-only
@@ -354,7 +356,7 @@ def clear_request(name=None):
             req.pop(name)
         else:
             return False
-        cumask = os.umask(077)
+        cumask = os.umask(0o77)
         try:
             if salt.utils.is_windows():
                 # Make sure cache file isn't read-only
@@ -639,7 +641,7 @@ def sls(mods,
     if __salt__['config.option']('state_data', '') == 'terse' or kwargs.get('terse'):
         ret = _filter_running(ret)
     cache_file = os.path.join(__opts__['cachedir'], 'sls.p')
-    cumask = os.umask(077)
+    cumask = os.umask(0o77)
     try:
         if salt.utils.is_windows():
             # Make sure cache file isn't read-only
