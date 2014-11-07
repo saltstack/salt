@@ -37,6 +37,8 @@ Module for Sending Messages via SMTP
             smtp.password: verybadpass
 
 '''
+
+from __future__ import absolute_import
 import logging
 import socket
 
@@ -101,7 +103,7 @@ def send_msg(recipient,
         else:
             smtpconn = smtplib.SMTP(server)
 
-    except socket.gaierror, _error:
+    except socket.gaierror as _error:
         log.debug("Exception: {0}" . format(_error))
         return False
 
@@ -126,7 +128,7 @@ def send_msg(recipient,
     if username and password:
         try:
             smtpconn.login(username, password)
-        except smtplib.SMTPAuthenticationError, _error:
+        except smtplib.SMTPAuthenticationError as _error:
             log.debug("SMTP Authentication Failure")
             return False
 
