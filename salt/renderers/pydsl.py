@@ -336,8 +336,6 @@ For example:
 
 '''
 
-from __future__ import absolute_import
-
 import imp
 from salt.utils import pydsl
 from salt.utils.pydsl import PyDslError
@@ -373,7 +371,7 @@ def render(template, saltenv='base', sls='', tmplpath=None, rendered_sls=None, *
         **kws)
 
     dsl_sls.get_render_stack().append(dsl_sls)
-    exec(template.read(), mod.__dict__)
+    exec template.read() in mod.__dict__
     highstate = dsl_sls.to_highstate(mod)
     dsl_sls.get_render_stack().pop()
     return highstate
