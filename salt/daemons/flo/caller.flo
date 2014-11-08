@@ -24,11 +24,8 @@ framer callerroadstack be active first setup
         bid start bootstrap
         # Start the eventing framer
         bid start eventing
-        # Start the functionmanage framer
-        bid start functionmanager
         # Start the outbound framer
         bid start outbound
-        bid start scheduler
 
         # Cleanup on exit
         exit
@@ -96,10 +93,6 @@ framer bootstrap be inactive first join
 framer eventing be inactive first event
     frame event
         do salt raet eventer
-
-#framer functionmanager be inactive first checkexec
-    #frame checkexec
-        #do salt raet nix jobber
 
 framer manager be inactive first start at 10.0
     frame start
