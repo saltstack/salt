@@ -84,15 +84,17 @@ def find_guest(name, quiet=False):
 
         salt-run lxc.find_guest name
     '''
+    if quiet:
+        log.warn('\'quiet\' argument is being deprecated. Please migrate to --quiet')
     for data in _list_iter():
         host, l = data.items()[0]
         for x in 'running', 'frozen', 'stopped':
             if name in l[x]:
                 if not quiet:
-                    return salt.output.out_format(
+                    progress(salt.output.out_format(
                             host,
                             'lxc_find_host',
-                            __opts__)
+                            __opts__))
                 return host
     return None
 
@@ -181,6 +183,8 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
         Optional config parameters. By default, the id is set to
         the name of the container.
     '''
+    if quiet:
+        log.warn('\'quiet\' argument is being deprecated. Please migrate to --quiet')
     ret = {'comment': '', 'result': True}
     if host is None:
         # TODO: Support selection of host based on available memory/cpu/etc.
@@ -329,7 +333,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
     if not done:
         ret['result'] = False
     if not quiet:
-        return salt.output.out_format(ret, '', __opts__)
+        progress(ret)
     return ret
 
 
@@ -347,6 +351,8 @@ def cloud_init(names, host=None, quiet=False, **kwargs):
     saltcloud_mode
         init the container with the saltcloud opts format instead
     '''
+    if quiet:
+        log.warn('\'quiet\' argument is being deprecated. Please migrate to --quiet')
     return __salt__['lxc.init'](names=names, host=host,
                                 saltcloud_mode=True, quiet=quiet, **kwargs)
 
@@ -390,7 +396,7 @@ def list_(host=None, quiet=False):
     for chunk in it:
         ret.update(chunk)
         if not quiet:
-            return salt.output.out_format(chunk, 'lxc_list', __opts__)
+            progress(salt.output.out_format(chunk, 'lxc_list', __opts__))
     return ret
 
 
@@ -415,7 +421,7 @@ def purge(name, delete_key=True, quiet=False):
         return
 
     if not quiet:
-        return salt.output.out_format(data, 'lxc_purge', __opts__)
+        progress(salt.output.out_format(data, 'lxc_purge', __opts__))
     return data
 
 
@@ -429,7 +435,7 @@ def start(name, quiet=False):
     '''
     data = _do_names(name, 'start')
     if data and not quiet:
-        return salt.output.out_format(data, 'lxc_start', __opts__)
+        progress(salt.output.out_format(data, 'lxc_start', __opts__))
     return data
 
 
@@ -443,7 +449,7 @@ def stop(name, quiet=False):
     '''
     data = _do_names(name, 'stop')
     if data and not quiet:
-        return salt.output.out_format(data, 'lxc_force_off', __opts__)
+        progress(salt.output.out_format(data, 'lxc_force_off', __opts__))
     return data
 
 
@@ -457,7 +463,7 @@ def freeze(name, quiet=False):
     '''
     data = _do_names(name, 'freeze')
     if data and not quiet:
-        return salt.output.out_format(data, 'lxc_pause', __opts__)
+        progress(salt.output.out_format(data, 'lxc_pause', __opts__))
     return data
 
 
@@ -471,7 +477,7 @@ def unfreeze(name, quiet=False):
     '''
     data = _do_names(name, 'unfreeze')
     if data and not quiet:
-        return salt.output.out_format(data, 'lxc_resume', __opts__)
+        salt.output.out_format(data, 'lxc_resume', __opts__)
     return data
 
 
@@ -485,5 +491,5 @@ def info(name, quiet=False):
     '''
     data = _do_names(name, 'info')
     if data and not quiet:
-        salt.output.out_format(data, 'lxc_info', __opts__)
+        progress(salt.output.out_format(data, 'lxc_info', __opts__))
     return data

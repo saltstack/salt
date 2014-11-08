@@ -20,5 +20,4 @@ def query(term):
     '''
     search = salt.search.Search(__opts__)
     result = search.query(term)
-    salt.output.display_output(result, 'pprint', __opts__)
     return result

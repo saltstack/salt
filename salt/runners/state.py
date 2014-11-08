@@ -64,10 +64,10 @@ def over(saltenv='base', os_fn=None):
         elif isinstance(stage, list):
             # This is a stage
             if stage_num == 0:
-                print('Executing the following Over State:')
+                progress('Executing the following Over State:')
             else:
-                print('Executed Stage:')
-            salt.output.display_output(stage, 'overstatestage', opts=__opts__)
+                progress('Executed Stage:')
+            progress(stage, outputter='overstatestage')
             stage_num += 1
     return overstate.over_run
 
@@ -107,7 +107,7 @@ def orchestrate(mods, saltenv='base', test=None, exclude=None, pillar=None):
             exclude,
             pillar=pillar)
     ret = {minion.opts['id']: running}
-    salt.output.display_output(ret, 'highstate', opts=__opts__)
+    progress(ret, outputter='highstate')
     return ret
 
 # Aliases for orchestrate runner
@@ -129,10 +129,7 @@ def show_stages(saltenv='base', os_fn=None):
         salt-run state.show_stages saltenv=dev /root/overstate.sls
     '''
     overstate = salt.overstate.OverState(__opts__, saltenv, os_fn)
-    salt.output.display_output(
-            overstate.over,
-            'overstatestage',
-            opts=__opts__)
+    progress(overstate.over, 'outputter='overstatestage)
     return overstate.over
 
 

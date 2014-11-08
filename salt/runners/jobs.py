@@ -60,7 +60,10 @@ def active(outputter=None, display_progress=False):
             if minion not in ret[jid]['Returned']:
                 ret[jid]['Returned'].append(minion)
 
-    return salt.output.out_format(ret, outputter, opts=__opts__)
+    if outputter:
+        return {'outputter': outputter, 'data': ret}
+    else:
+        return ret
 
 
 def lookup_jid(jid,
@@ -101,7 +104,10 @@ def lookup_jid(jid,
         for minion_id in exp:
             if minion_id not in data:
                 ret[minion_id] = 'Minion did not return'
-    return salt.output.out_format(ret, outputter, __opts__)
+    if outputter:
+        return {'outputter': outputter, 'data': ret}
+    else:
+        return ret
 
 
 def list_job(jid, ext_source=None, outputter=None):
@@ -121,7 +127,10 @@ def list_job(jid, ext_source=None, outputter=None):
     job = mminion.returners['{0}.get_load'.format(returner)](jid)
     ret.update(_format_jid_instance(jid, job))
     ret['Result'] = mminion.returners['{0}.get_jid'.format(returner)](jid)
-    return salt.output.out_format(ret, outputter, __opts__)
+    if outputter:
+        return {'outputter': outputter, 'data': ret}
+    else:
+        return ret
 
 
 def list_jobs(ext_source=None,
@@ -190,7 +199,10 @@ def list_jobs(ext_source=None,
                         _mret[item] = ret[item]
         mret = _mret.copy()
 
-    return salt.output.out_format(mret, outputter, __opts__)
+    if outputter:
+        return {'outputter': outputter, 'data': mret}
+    else:
+        return mret
 
 
 def print_job(jid, ext_source=None, outputter=None):
@@ -216,7 +228,10 @@ def print_job(jid, ext_source=None, outputter=None):
             'Check master log for details.'.format(returner))
         return ret
     ret[jid]['Result'] = mminion.returners['{0}.get_jid'.format(returner)](jid)
-    return salt.output.out_format(ret, outputter, __opts__)
+    if outputter:
+        return {'outputter': outputter, 'data': ret}
+    else:
+        return ret
 
 
 def _get_returner(returner_types):

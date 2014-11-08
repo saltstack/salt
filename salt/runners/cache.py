@@ -42,7 +42,10 @@ def grains(tgt=None, expr_form='glob', outputter=None, **kwargs):
                                                      grains_fallback=False,
                                                      opts=__opts__)
     cached_grains = pillar_util.get_minion_grains()
-    return salt.output.out_format(cached_grains, outputter, __opts__)
+    if outputter:
+        return {'outputter': outputter, 'data': cached_grains}
+    else:
+        return cached_grains
 
 
 def pillar(tgt=None, expr_form='glob', outputter=None, **kwargs):
@@ -71,8 +74,10 @@ def pillar(tgt=None, expr_form='glob', outputter=None, **kwargs):
                                                      pillar_fallback=False,
                                                      opts=__opts__)
     cached_pillar = pillar_util.get_minion_pillar()
-    return salt.output.out_format(cached_pillar, outputter, __opts__)
-
+    if outputter:
+        return {'outputter': outputter, 'data': cached_pillar}
+    else:
+        return cached_pillar
 
 def mine(tgt=None, expr_form='glob', outputter=None, **kwargs):
     '''
@@ -100,7 +105,10 @@ def mine(tgt=None, expr_form='glob', outputter=None, **kwargs):
                                                      pillar_fallback=False,
                                                      opts=__opts__)
     cached_mine = pillar_util.get_cached_mine_data()
-    return salt.output.out_format(cached_mine, outputter, __opts__)
+    if outputter:
+        return {'outputter': outputter, 'data': cached_mine}
+    else:
+        return cached_mine
 
 
 def _clear_cache(tgt=None,
