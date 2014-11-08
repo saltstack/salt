@@ -16,8 +16,10 @@ try:
 except ImportError:
     if sys.version_info[0] == 3:
         string_types = str
+        MAX_SIZE = sys.maxsize
     else:
         string_types = basestring
+        MAX_SIZE = sys.maxint
 
 # ----- ATTENTION --------------------------------------------------------------------------------------------------->
 #
