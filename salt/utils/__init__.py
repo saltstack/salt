@@ -33,6 +33,7 @@ import time
 import types
 import warnings
 import yaml
+import string
 from calendar import month_abbr as months
 
 # Try to load pwd, fallback to getpass if unsuccessful
@@ -1297,7 +1298,7 @@ def sanitize_win_path_string(winpath):
     '''
     intab = '<>:|?*'
     outtab = '_' * len(intab)
-    trantab = intab.maketrans(intab, outtab)
+    trantab = string.maketrans(intab, outtab)
     if isinstance(winpath, str):
         winpath = winpath.translate(trantab)
     elif isinstance(winpath, unicode):
@@ -2148,7 +2149,7 @@ def is_bin_str(data):
     Detects if the passed string of data is bin or text
     '''
     text_characters = ''.join(map(chr, list(range(32, 127))) + list('\n\r\t\b'))
-    _null_trans = ''.maketrans('', '')
+    _null_trans = string.maketrans('', '')
     if '\0' in data:
         return True
     if not data:
