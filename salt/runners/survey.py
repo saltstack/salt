@@ -49,13 +49,13 @@ def hash(*args, **kwargs):
 
     bulk_ret = _get_pool_results(*args, **kwargs)
     for k in bulk_ret:
-        print('minion pool :\n' \
+        print('minion pool :\n'
               '------------')
         print(k['pool'])
-        print('pool size :\n' \
+        print('pool size :\n'
               '----------')
         print('    ' + str(len(k['pool'])))
-        print('pool result :\n' \
+        print('pool result :\n'
               '-------')
         print('    ' + str(k['result']))
         print('\n')
@@ -101,15 +101,15 @@ def diff(*args, **kwargs):
 
     is_first_time = True
     for k in bulk_ret:
-        print('minion pool :\n' \
+        print('minion pool :\n'
               '------------')
         print(k['pool'])
-        print('pool size :\n' \
+        print('pool size :\n'
               '----------')
         print('    ' + str(len(k['pool'])))
         if is_first_time:
             is_first_time = False
-            print('pool result :\n' \
+            print('pool result :\n'
                   '------------')
             print('    ' + bulk_ret[0]['result'])
             print()
