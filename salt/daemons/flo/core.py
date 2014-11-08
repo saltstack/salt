@@ -637,9 +637,10 @@ class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
             log.error(emsg + "\n")
             raise ValueError(emsg)
 
-        if kind == 'master':
+        if kind == kinds.APPL_KIND_NAMES[kinds.applKinds.master]:
             lanename = 'master'
-        elif kind == 'minion':
+        elif kind in [kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
+                      kinds.APPL_KIND_NAMES[kinds.applKinds.caller], ]:
             role = self.opts.value.get('id', '')
             if not role:
                 emsg = ("Missing role required to setup manor Lane.")
