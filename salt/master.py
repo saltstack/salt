@@ -4,6 +4,8 @@ This module contains all of the routines needed to set up a master server, this
 involves preparing the three listeners and the workers needed by the master.
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 import os
 import re
@@ -460,7 +462,7 @@ class Publisher(multiprocessing.Process):
 
         # Securely create socket
         log.info('Starting the Salt Puller on {0}'.format(pull_uri))
-        old_umask = os.umask(0177)
+        old_umask = os.umask(0o177)
         try:
             pull_sock.bind(pull_uri)
         finally:
@@ -752,7 +754,7 @@ class MWorker(multiprocessing.Process):
             stats = os.stat(dfn)
         except os.error:
             return
-        if stats.st_mode != 0100400:
+        if stats.st_mode != 0o100400:
             # Invalid dfn, return
             return
         if stats.st_mtime > self.k_mtime:
@@ -1139,7 +1141,7 @@ class AESFuncs(object):
             return False
         load['grains']['id'] = load['id']
         mods = set()
-        for func in self.mminion.functions.itervalues():
+        for func in self.mminion.functions.values():
             mods.add(func.__module__)
         for mod in mods:
             sys.modules[mod].__grains__ = load['grains']
@@ -2137,7 +2139,7 @@ class ClearFuncs(object):
             try:
                 name = self.loadauth.load_name(extra)  # The username we are attempting to auth with
                 groups = self.loadauth.get_groups(extra)  # The groups this user belongs to
-                group_perm_keys = filter(lambda(item): item.endswith('%'), self.opts['external_auth'][extra['eauth']])  # The configured auth groups
+                group_perm_keys = filter(lambda item: item.endswith('%'), self.opts['external_auth'][extra['eauth']])  # The configured auth groups
 
                 # First we need to know if the user is allowed to proceed via any of their group memberships.
                 group_auth_match = False

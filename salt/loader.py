@@ -3,6 +3,8 @@
 Routines to set up a minion
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 import os
 import imp
@@ -212,7 +214,7 @@ def tops(opts):
     '''
     if 'master_tops' not in opts:
         return {}
-    whitelist = opts['master_tops'].keys()
+    whitelist = list(opts['master_tops'].keys())
     load = _create_loader(opts, 'tops', 'top')
     topmodules = load.filter_func('top', whitelist=whitelist)
     return topmodules
@@ -483,7 +485,7 @@ def _generate_module(name):
 
     code = "'''Salt loaded {0} parent module'''".format(name.split('.')[-1])
     module = imp.new_module(name)
-    exec code in module.__dict__
+    exec(code, module.__dict__)
     sys.modules[name] = module
 
 
@@ -725,7 +727,7 @@ class Loader(object):
             mod.__salt__ = functions
         try:
             context = sys.modules[
-                functions[functions.iterkeys().next()].__module__
+                functions[next(iter(functions.keys()))].__module__
             ].__context__
         except (AttributeError, StopIteration):
             context = {}
@@ -1310,7 +1312,7 @@ class Loader(object):
             grains_data.update(ret)
         # Write cache if enabled
         if self.opts.get('grains_cache', False):
-            cumask = os.umask(077)
+            cumask = os.umask(0o77)
             try:
                 if salt.utils.is_windows():
                     # Make sure cache file isn't read-only
@@ -1462,7 +1464,7 @@ class LazyFilterLoader(LazyLoader):
             return self._dict[key]
 
         # if we got one, now lets check if we have the function name we want
-        for mod_key, mod_fun in mod_funcs.iteritems():
+        for mod_key, mod_fun in mod_funcs.items():
             # if the name (after '.') is "name", then rename to mod_name: fun
             if mod_key[mod_key.index('.') + 1:] == self.name:
                 self._dict[mod_key[:mod_key.index('.')]] = mod_fun

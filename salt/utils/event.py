@@ -47,6 +47,8 @@ Namespaced tag
 
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 import os
 import fnmatch
@@ -539,7 +541,7 @@ class EventPublisher(Process):
         salt.utils.check_ipc_path_max_len(epull_uri)
 
         # Start the master event publisher
-        old_umask = os.umask(0177)
+        old_umask = os.umask(0o177)
         try:
             self.epull_sock.bind(epull_uri)
             self.epub_sock.bind(epub_uri)
@@ -547,7 +549,7 @@ class EventPublisher(Process):
                 os.chmod(
                         os.path.join(self.opts['sock_dir'],
                             'master_event_pub.ipc'),
-                        0666
+                        0o666
                         )
         finally:
             os.umask(old_umask)
@@ -639,7 +641,7 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
                 continue
             if len(ropt) != 1:
                 continue
-            key = ropt.iterkeys().next()
+            key = next(iter(ropt.keys()))
             val = ropt[key]
             if fnmatch.fnmatch(tag, key):
                 if isinstance(val, string_types):

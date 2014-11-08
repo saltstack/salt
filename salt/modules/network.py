@@ -4,6 +4,7 @@ Module for gathering and managing network information
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import datetime
 import hashlib
 import logging
@@ -248,12 +249,12 @@ def _netstat_bsd():
         except KeyError:
             continue
         # Get the pid-to-ppid mappings for this connection
-        conn_ppid = dict((x, y) for x, y in ppid.iteritems() if x in ptr)
+        conn_ppid = dict((x, y) for x, y in ppid.items() if x in ptr)
         try:
             # Master pid for this connection will be the pid whose ppid isn't
             # in the subset dict we created above
             master_pid = next(iter(
-                x for x, y in conn_ppid.iteritems() if y not in ptr
+                x for x, y in conn_ppid.items() if y not in ptr
             ))
         except StopIteration:
             continue
@@ -858,7 +859,7 @@ def connect(host, port=None, **kwargs):
         else:
             s.connect(_address)
             s.shutdown(2)
-    except Exception, e:
+    except Exception as e:
         ret['result'] = False
         try:
             errno, errtxt = e
@@ -962,7 +963,6 @@ def _mod_bufsize_linux(iface, *args, **kwargs):
     if not eargs:
         return ret
     cmd += eargs
-    print cmd
     out = __salt__['cmd.run'](cmd)
     if out:
         ret['comment'] = out
