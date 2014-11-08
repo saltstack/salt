@@ -564,6 +564,8 @@ class SaltDistribution(distutils.dist.Distribution):
 
     def update_metadata(self):
         for attrname in dir(self):
+            if attrname.startswith('__'):
+                continue
             attrvalue = getattr(self, attrname, None)
             if attrvalue == 0:
                 continue
