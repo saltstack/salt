@@ -34,7 +34,7 @@ QUIET = logging.QUIET = 1000
 # Import salt libs
 from salt.log.handlers import TemporaryLoggingHandler, StreamHandler, SysLogHandler, WatchedFileHandler
 from salt.log.mixins import LoggingMixInMeta, NewStyleClassMixIn
-from salt._compat import string_types, urlparse
+from salt._compat import PY3, string_types, text_type, urlparse
 
 LOG_LEVELS = {
     'all': logging.NOTSET,
@@ -187,7 +187,8 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, NewStyleClassMixIn):
         )
 
     # pylint: disable=C0103
-    def makeRecord(self, name, level, fn, lno, msg, args, exc_info, func=None, extra=None):
+    def makeRecord(self, name, level, fn, lno, msg, args, exc_info,
+                   func=None, extra=None, sinfo=None):
         # Let's remove exc_info_on_loglevel from extra
         exc_info_on_loglevel = extra.pop('exc_info_on_loglevel')
         if not extra:
@@ -195,23 +196,42 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, NewStyleClassMixIn):
             extra = None
 
         # Let's try to make every logging message unicode
-        if isinstance(msg, string_types) and not isinstance(msg, unicode):
-            try:
-                logrecord = LOGGING_LOGGER_CLASS.makeRecord(
-                    self, name, level, fn, lno,
-                    msg.decode('utf-8', 'replace'),
-                    args, exc_info, func, extra
-                )
-            except UnicodeDecodeError:
-                logrecord = LOGGING_LOGGER_CLASS.makeRecord(
-                    self, name, level, fn, lno,
-                    msg.decode('utf-8', 'ignore'),
-                    args, exc_info, func, extra
-                )
+        if isinstance(msg, string_types) and not isinstance(msg, text_type):
+            if PY3:
+                try:
+                    logrecord = LOGGING_LOGGER_CLASS.makeRecord(
+                        self, name, level, fn, lno,
+                        msg.decode('utf-8', 'replace'),
+                        args, exc_info, func, extra, sinfo
+                    )
+                except UnicodeDecodeError:
+                    logrecord = LOGGING_LOGGER_CLASS.makeRecord(
+                        self, name, level, fn, lno,
+                        msg.decode('utf-8', 'ignore'),
+                        args, exc_info, func, extra, sinfo
+                    )
+            else:
+                try:
+                    logrecord = LOGGING_LOGGER_CLASS.makeRecord(
+                        self, name, level, fn, lno,
+                        msg.decode('utf-8', 'replace'),
+                        args, exc_info, func, extra
+                    )
+                except UnicodeDecodeError:
+                    logrecord = LOGGING_LOGGER_CLASS.makeRecord(
+                        self, name, level, fn, lno,
+                        msg.decode('utf-8', 'ignore'),
+                        args, exc_info, func, extra
+                    )
         else:
-            logrecord = LOGGING_LOGGER_CLASS.makeRecord(
-                self, name, level, fn, lno, msg, args, exc_info, func, extra
-            )
+            if PY3:
+                logrecord = LOGGING_LOGGER_CLASS.makeRecord(
+                    self, name, level, fn, lno, msg, args, exc_info, func, extra, sinfo
+                )
+            else:
+                logrecord = LOGGING_LOGGER_CLASS.makeRecord(
+                    self, name, level, fn, lno, msg, args, exc_info, func, extra
+                )
 
         if exc_info_on_loglevel is not None:
             # Let's add some custom attributes to the LogRecord class in order to include the exc_info on a per
