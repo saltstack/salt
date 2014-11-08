@@ -795,12 +795,11 @@ class LocalClient(object):
         '''
         if event is None:
             event = self.event
-        jid_tag = 'salt/job/{0}'.format(jid)
         while True:
             if HAS_ZMQ:
                 try:
                     raw = event.get_event_noblock()
-                    if raw and raw.get('tag', '').startswith(jid_tag):
+                    if raw and raw.get('tag', '').startswith(jid):
                         yield raw
                     else:
                         yield None
@@ -811,7 +810,7 @@ class LocalClient(object):
                         raise
             else:
                 raw = event.get_event_noblock()
-                if raw and raw.get('tag', '').startswith(jid_tag):
+                if raw and raw.get('tag', '').startswith(jid):
                     yield raw
                 else:
                     yield None

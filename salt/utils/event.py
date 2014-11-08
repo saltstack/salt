@@ -10,15 +10,25 @@ All of the formatting is self contained in the event module, so
 we should be able to modify the structure in the future since the same module
 used to read events is the same module used to fire off events.
 
-Event messages support event tags longer than 20 characters.
+Old style event messages were comprised of two parts delimited
+at the 20 char point. The first 20 characters are used for the zeromq
+subscriber to match publications and 20 characters was chosen because it was at
+the time a few more characters than the length of a jid (Job ID).
+Any tags of length less than 20 characters were padded with "|" chars out to 20 characters.
+Although not explicit, the data for an event comprised a python dict that was serialized by
+msgpack.
+
+New style event messages support event tags longer than 20 characters while still
+being backwards compatible with old style tags.
 The longer tags better enable name spaced event tags which tend to be longer.
-Moreover, the constraint that the event data be a python dict is an explicit
+Moreover, the constraint that the event data be a python dict is now an explicit
 constraint and fire-event will now raise a ValueError if not. Tags must be
-ascii safe strings, that is, have values less than 0x80.
+ascii safe strings, that is, have values less than 0x80
 
 Since the msgpack dict (map) indicators have values greater than or equal to 0x80
 it can be unambiguously determined if the start of data is at char 21 or not.
 
+In the new style:
 When the tag is longer than 20 characters, an end of tag string
 is appended to the tag given by the string constant TAGEND, that is, two line feeds '\n\n'.
 When the tag is less than 20 characters then the tag is padded with pipes
@@ -26,6 +36,7 @@ When the tag is less than 20 characters then the tag is padded with pipes
 When the tag is exactly 20 characters no padded is done.
 
 The get_event method intelligently figures out if the tag is longer than 20 characters.
+
 
 The convention for namespacing is to use dot characters "." as the name space delimiter.
 The name space "salt" is reserved by SaltStack for internal events.
@@ -239,7 +250,11 @@ class SaltEvent(object):
         if serial is None:
             serial = salt.payload.Serial({'serial': 'msgpack'})
 
-        mtag, sep, mdata = raw.partition(TAGEND)  # split tag from data
+        if ord(raw[20]) >= 0x80:  # old style
+            mtag = raw[0:20].rstrip('|')
+            mdata = raw[20:]
+        else:  # new style
+            mtag, sep, mdata = raw.partition(TAGEND)  # split tag from data
 
         data = serial.loads(mdata)
         return mtag, data
@@ -364,6 +379,8 @@ class SaltEvent(object):
         Send a single event into the publisher with payload dict "data" and event
         identifier "tag"
 
+        Supports new style long tags.
+        The 0MQ push timeout on the send is set to timeout in milliseconds
         The default is 1000 ms
         Note the linger timeout must be at least as long as this timeout
         '''
@@ -378,7 +395,11 @@ class SaltEvent(object):
 
         data['_stamp'] = datetime.datetime.now().isoformat()
 
-        tagend = TAGEND
+        tagend = ''
+        if len(tag) <= 20:  # old style compatible tag
+            tag = '{0:|<20}'.format(tag)  # pad with pipes '|' to 20 character length
+        else:  # new style longer than 20 chars
+            tagend = TAGEND
         serialized_data = salt.utils.trim_dict(self.serial.dumps(data),
                 self.opts.get('max_event_size', 1048576),
                 is_msgpacked=True
