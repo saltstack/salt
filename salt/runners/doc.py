@@ -32,7 +32,7 @@ def runner():
     '''
     client = salt.runner.RunnerClient(__opts__)
     ret = client.get_docs()
-    return salt.output.out_format(ret, '', __opts__)
+    return ret
 
 
 def wheel():
@@ -47,7 +47,7 @@ def wheel():
     '''
     client = salt.wheel.Wheel(__opts__)
     ret = client.get_docs()
-    return salt.output.out_format(ret, '', __opts__)
+    return ret
 
 
 def execution():
@@ -70,7 +70,7 @@ def execution():
     i = itertools.chain.from_iterable([i.items() for i in docs.itervalues()])
     ret = dict(list(i))
 
-    return salt.output.out_format(ret, '', __opts__)
+    return ret
 
 
 # Still need to modify some of the backend for auth checks to make this work

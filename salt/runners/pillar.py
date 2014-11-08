@@ -33,7 +33,6 @@ def show_top(minion=None, saltenv='base'):
         salt.output.display_output(errors, 'nested', __opts__)
         return errors
 
-    salt.output.display_output(top, 'nested', __opts__)
     return top
 
 
@@ -93,5 +92,4 @@ def show_pillar(minion='*', **kwargs):
         saltenv)
 
     compiled_pillar = pillar.compile_pillar()
-    salt.output.display_output(compiled_pillar, 'nested', __opts__)
     return compiled_pillar

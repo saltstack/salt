@@ -45,7 +45,7 @@ def status(output=True):
     ret['up'] = sorted(minions)
     ret['down'] = sorted(set(keys['minions']) - set(minions))
     if output:
-        return salt.output.out_format(ret, '', __opts__)
+        progress(salt.output.out_format(ret, '', __opts__))
     return ret
 
 
@@ -114,8 +114,6 @@ def down(removekeys=False):
         if removekeys:
             wheel = salt.wheel.Wheel(__opts__)
             wheel.call_func('key.delete', match=minion)
-        else:
-            progress(salt.output.out_format(minion, '', __opts__))
     return ret
 
 
@@ -130,8 +128,6 @@ def up():  # pylint: disable=C0103
         salt-run manage.up
     '''
     ret = status(output=False).get('up', [])
-    for minion in ret:
-        salt.output.display_output(minion, '', __opts__)
     return ret
 
 
@@ -157,7 +153,6 @@ def present(subset=None, show_ipv4=False):
     minions = ckminions.connected_ids(show_ipv4=show_ipv4, subset=subset)
     connected = dict(minions) if show_ipv4 else sorted(minions)
 
-    salt.output.display_output(connected, '', __opts__)
     return connected
 
 
@@ -191,7 +186,6 @@ def not_present(subset=None, show_ipv4=False):
         if minion not in connected:
             not_connected.append(minion)
 
-    salt.output.display_output(not_connected, '', __opts__)
     return connected
 
 
@@ -243,7 +237,7 @@ def safe_accept(target, expr_form='glob'):
             print(message)
             print('')
 
-    print('Accepted {0:d} keys'.format(len(ret)))
+    progress('Accepted {0:d} keys'.format(len(ret)))
     return ret, failures
 
 
@@ -289,7 +283,6 @@ def versions():
         else:
             for minion in sorted(version_status[key]):
                 ret.setdefault(labels[key], {})[minion] = version_status[key][minion]
-    salt.output.display_output(ret, '', __opts__)
     return ret
 
 

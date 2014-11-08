@@ -22,7 +22,6 @@ def arg(*args, **kwargs):
         'args': args,
         'kwargs': kwargs,
     }
-    pprint.pprint(ret)
     return ret
 
 
@@ -34,7 +33,6 @@ def raw_arg(*args, **kwargs):
         'args': args,
         'kwargs': kwargs,
     }
-    pprint.pprint(ret)
     return ret
 
 def stream():
