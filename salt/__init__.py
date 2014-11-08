@@ -40,6 +40,7 @@ import salt.log.setup
 # cause the build to fail
 from salt.version import __version__
 from salt.utils import migrations
+from salt.utils import kinds
 
 try:
     from salt.utils import parsers, ip_bracket
@@ -278,6 +279,7 @@ class Minion(parsers.MinionOptionParser):
         try:
             self.prepare()
             if check_user(self.config['user']):
+                self.minion.opts['__role'] = kinds.APPL_KIND_NAMES[kinds.applKinds.caller]
                 self.minion.call_in()
         except (KeyboardInterrupt, SaltSystemExit) as exc:
             logger.warn('Stopping the Salt Minion')
