@@ -15,7 +15,6 @@ from salttesting.mock import (
     MagicMock,
     mock_open,
     patch,
-    call,
     NO_MOCK,
     NO_MOCK_REASON
 )
@@ -31,8 +30,6 @@ cp.__context__ = {}
 templates.TEMPLATE_REGISTRY = {}
 
 
-# TODO: ask about whether 'salt://' et al are consumed prior to handling by
-# cp.py
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class CpTestCase(TestCase):
     '''
@@ -44,8 +41,9 @@ class CpTestCase(TestCase):
         '''
         Test if recv returns unavailable.
         '''
-        files = {'a': '/srv/salt/a', 'b': '/srv/salt/b'}
-        dest = '/srv/salt/c'
+        files = {'saltines': '/srv/salt/saltines',
+                 'biscuits': '/srv/salt/biscuits'}
+        dest = '/srv/salt/cheese'
         self.assertEqual(cp.recv(files, dest), 'Destination unavailable')
 
     @patch('os.path.isdir', MagicMock(return_value=True))
@@ -105,7 +103,7 @@ class CpTestCase(TestCase):
         file_data = '/srv/salt/biscuits'
         mock_jinja = lambda *args, **kwargs: {'result': True,
                                               'data': file_data}
-        ret = (file_data, file_data) # salt.utils.fopen can only be mocked once
+        ret = (file_data, file_data)  # salt.utils.fopen can only be mocked once
         with patch.dict(templates.TEMPLATE_REGISTRY,
                         {'jinja': mock_jinja}):
             with patch('salt.utils.fopen', mock_open(read_data=file_data)):
@@ -132,7 +130,7 @@ class CpTestCase(TestCase):
         saltenv = 'base'
         ret = (path, dest, False, saltenv, None)
 
-        class MockFileClient:
+        class MockFileClient(object):
             def get_file(self, *args):
                 return args
 
@@ -151,7 +149,7 @@ class CpTestCase(TestCase):
         ret = ((path, dest, template, False, saltenv),
                {'grains': {}, 'opts': {}, 'pillar': {}, 'salt': {}})
 
-        class MockFileClient:
+        class MockFileClient(object):
             def get_template(self, *args, **kwargs):
                 return args, kwargs
 
@@ -168,7 +166,7 @@ class CpTestCase(TestCase):
         saltenv = 'base'
         ret = (path, dest, saltenv, None)
 
-        class MockFileClient:
+        class MockFileClient(object):
             def get_dir(self, *args):
                 return args
 
@@ -187,7 +185,7 @@ class CpTestCase(TestCase):
         saltenv = 'base'
         ret = (path, dest, False, saltenv)
 
-        class MockFileClient:
+        class MockFileClient(object):
             def get_url(self, *args):
                 return args
 
@@ -217,7 +215,7 @@ class CpTestCase(TestCase):
         saltenv = 'base'
         ret = path
 
-        class MockFileClient:
+        class MockFileClient(object):
             def cache_file(self, path, saltenv):
                 return path
 
@@ -233,7 +231,7 @@ class CpTestCase(TestCase):
         saltenv = 'base'
         ret = paths
 
-        class MockFileClient:
+        class MockFileClient(object):
             def cache_files(self, paths, saltenv):
                 return paths
 
@@ -250,7 +248,7 @@ class CpTestCase(TestCase):
         saltenv = 'base'
         ret = files
 
-        class MockFileClient:
+        class MockFileClient(object):
             def cache_dir(self, *args):
                 return files
 
@@ -267,7 +265,7 @@ class CpTestCase(TestCase):
         saltenv = 'base'
         ret = files
 
-        class MockFileClient:
+        class MockFileClient(object):
             def cache_master(self, saltenv):
                 return files
 
@@ -310,7 +308,7 @@ class CpTestCase(TestCase):
         dest_file = '/srv/salt/cheese/saltines'
         ret = dest_file
 
-        class MockFileClient:
+        class MockFileClient(object):
             def cache_local_file(self, path):
                 return dest_file
 
@@ -327,7 +325,7 @@ class CpTestCase(TestCase):
         states = ['cheesse.saltines', 'cheese.biscuits']
         ret = states
 
-        class MockFileClient:
+        class MockFileClient(object):
             def list_states(self, saltenv):
                 return states
 
@@ -342,7 +340,7 @@ class CpTestCase(TestCase):
         files = ['cheesse/saltines.sls', 'cheese/biscuits.sls']
         ret = files
 
-        class MockFileClient:
+        class MockFileClient(object):
             def file_list(self, saltenv, prefix):
                 return files
 
@@ -357,7 +355,7 @@ class CpTestCase(TestCase):
         dirs = ['cheesse', 'gravy']
         ret = dirs
 
-        class MockFileClient:
+        class MockFileClient(object):
             def dir_list(self, saltenv, prefix):
                 return dirs
 
@@ -372,7 +370,7 @@ class CpTestCase(TestCase):
         symlinks = ['american_cheesse', 'vegan_gravy']
         ret = symlinks
 
-        class MockFileClient:
+        class MockFileClient(object):
             def symlink_list(self, saltenv, prefix):
                 return symlinks
 
@@ -387,7 +385,7 @@ class CpTestCase(TestCase):
         path = 'salt://saltines'
         ret = path
 
-        class MockFileClient:
+        class MockFileClient(object):
             def is_cached(self, path, saltenv):
                 return path
 
@@ -403,7 +401,7 @@ class CpTestCase(TestCase):
         mock_hash = {'hsum': 'deadbeef', 'htype': 'sha65536'}
         ret = mock_hash
 
-        class MockFileClient:
+        class MockFileClient(object):
             def hash_file(self, path, saltenv):
                 return mock_hash
 
@@ -444,14 +442,15 @@ class CpTestCase(TestCase):
         ret = None
         from time import sleep
 
-        class MockChannel:
+        class MockChannel(object):
             @staticmethod
             def factory(__opts__):
                 return MockChannel()
+
             def send(self, load):
                 return None
 
-        class MockAuth:
+        class MockAuth(object):
             def gen_token(self, salt):
                 return 'token info'
 
@@ -478,14 +477,15 @@ class CpTestCase(TestCase):
         ret = True
         from time import sleep
 
-        class MockChannel:
+        class MockChannel(object):
             @staticmethod
             def factory(__opts__):
                 return MockChannel()
+
             def send(self, load):
                 return 'channel info'
 
-        class MockAuth:
+        class MockAuth(object):
             def gen_token(self, salt):
                 return 'token info'
 
