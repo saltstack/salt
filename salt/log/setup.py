@@ -428,7 +428,7 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
 
     level = LOG_LEVELS.get(log_level.lower(), logging.ERROR)
 
-    parsed_log_path = urlparse.urlparse(log_path)
+    parsed_log_path = urlparse(log_path)
 
     root_logger = logging.getLogger()
 
