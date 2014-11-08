@@ -187,6 +187,7 @@ else:
     from StringIO import StringIO
     from cStringIO import StringIO as cStringIO
 
+
 def string_io(data=None):  # cStringIO can't handle unicode
     '''
     Pass data through to stringIO module and return result
@@ -195,6 +196,7 @@ def string_io(data=None):  # cStringIO can't handle unicode
         return cStringIO(bytes(data))
     except (UnicodeEncodeError, TypeError):
         return StringIO(data)
+
 
 if PY3:
     import queue as Queue
