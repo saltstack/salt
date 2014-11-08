@@ -11,9 +11,9 @@ Use section as DEFAULT_IMPLICIT if your ini file does not have any section
 (for example /etc/sysctl.conf)
 '''
 
-from __future__ import absolute_import
-
 # Import Python libs
+from __future__ import print_function
+from __future__ import absolute_import
 import re
 
 __virtualname__ = 'ini'
