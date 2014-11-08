@@ -1963,7 +1963,7 @@ def apply_minion_config(overrides=None,
 
     # These can be set to syslog, so, not actual paths on the system
     for config_key in ('log_file', 'key_logfile'):
-        if urlparse.urlparse(opts.get(config_key, '')).scheme == '':
+        if urlparse(opts.get(config_key, '')).scheme == '':
             prepend_root_dirs.append(config_key)
 
     prepend_root_dir(opts, prepend_root_dirs)
@@ -2065,7 +2065,7 @@ def apply_master_config(overrides=None, defaults=None):
         if log_setting is None:
             continue
 
-        if urlparse.urlparse(log_setting).scheme == '':
+        if urlparse(log_setting).scheme == '':
             prepend_root_dirs.append(config_key)
 
     prepend_root_dir(opts, prepend_root_dirs)
