@@ -8,6 +8,9 @@ from __future__ import absolute_import
 __docformat__ = 'restructuredtext en'
 import traceback
 
+# Import salt libs
+from salt.exceptions import CommandExecutionError, SaltInvocationError
+
 
 def absent(name):
     '''
@@ -136,52 +139,10 @@ def edited_conf(name, lxc_conf=None, lxc_conf_unset=None):
     return cret
 
 
-def set_pass(name, password=None, user=None, users=None):
-    '''
-    Set the password of system users inside containers
-
-    name
-        id of the container to act on
-    user
-        user to set password
-    users
-        users to set password to
-
-    .. code-block:: yaml
-
-        setpass:
-          lxc.stopped:
-            - name: my_instance_name2
-            - password: s3cret
-            - user: foo
-
-    .. code-block:: yaml
-
-        setpass2:
-          lxc.stopped:
-            - name: my_instance_name2
-            - password: s3cret
-            - users:
-              - foo
-              - bar
-    '''
-    if __opts__['test']:
-        return {'name': name,
-                'comment': 'Passwords for {0} will be udpated'.format(name),
-                'result': True,
-                'changes': {}}
-    if not isinstance(users, list):
-        users = [users]
-    if user and (user not in users):
-        users.append(user)
-    cret = __salt__['lxc.set_pass'](name, users=users, password=password)
-    cret['changes'] = {}
-    cret['name'] = name
-    return cret
-
-
 def created(name,
-            template='ubuntu',
+            template=None,
+            image=None,
+            config=None,
             profile=None,
             fstype=None,
             size=None,
@@ -192,17 +153,42 @@ def created(name,
     Create a container using a template
 
     name
-        id of the container to act on
+        The name of the container to be created
+
     template
-        template to create from
+        The template from which to create the container. Conflicts with the
+        ``image`` argument
+
+    image
+        .. versionadded:: 2014.7.1
+
+        A tar archive to use as the rootfs for the container. Conflicts with
+        the ``template`` argument.
+
+    config
+        .. versionadded:: 2014.7.1
+
+        The config file to use for the container. Defaults to system-wide
+        config (usually in /etc/lxc/lxc.conf). Helpful when combined with the
+        ``image`` argument to deploy a pre-configured LXC image.
+
+        .. warning::
+
+            Use with care when combining with the ``template`` argument.
+
     profile
-        pillar lxc profile
+        Profile to use in container creation (see the :ref:`LXC Tutorial
+        <lxc-tutorial-profiles>` for more information). Values in a profile
+        will be overridden by the parameters listed below.
+
     fstype
-        fstype to use
+        Which fstype to use
+
     size
-        Which size
+        Size of container
+
     backing
-        Which backing
+        Filesystem backing
 
         None
            Filesystem
@@ -210,36 +196,68 @@ def created(name,
            lv
         brtfs
            brtfs
+
     vgname
         If LVM, which volume group
+
     lvname
-        If LVM, which lv
+        If LVM, which logical volume
 
 
     .. code-block:: yaml
 
         mycreation:
           lxc.created:
-            - name: my_instance_name2
+            - name: my_instance_1
             - backing: lvm
             - size: 1G
             - template: ubuntu
 
+        from_ubuntu_profile:
+          lxc.created:
+            - name: my_instance_2
+            - profile: ubuntu
+
+        from_ubuntu_profile_2:
+          lxc.created:
+            - name: my_instance_3
+            - profile:
+                name: ubuntu
+                lvname: instance3
+
+    .. versionchanged:: 2014.7.1
+        For ease of use, profiles like the ones in the
+        ``from_ubuntu_profile_2`` example above can be configured with a
+        leading dash before each parameter. For example:
+
+    .. code-block:: yaml
+
+        from_ubuntu_profile_2:
+          lxc.created:
+            - name: my_instance_3
+            - profile:
+              - name: ubuntu
+              - lvname: instance3
     '''
-    if __opts__['test']:
-        return {'name': name,
-                'result': True,
-                'comment': '{0} will be created'.format(name),
-                'changes': {}}
-    changes = {}
-    ret = {'name': name, 'changes': changes, 'result': True, 'comment': ''}
+    ret = {'name': name,
+           'result': True,
+           'comment': 'Container \'{0}\' already exists'.format(name),
+           'changes': {}}
     exists = __salt__['lxc.exists'](name)
     if exists:
-        ret['comment'] = 'Container already exists'
-    else:
-        cret = __salt__['lxc.create'](
+        return ret
+
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'Container \'{0}\' will be created'.format(name)
+        return ret
+
+    try:
+        __salt__['lxc.create'](
             name=name,
             template=template,
+            image=image,
+            config=config,
             profile=profile,
             fstype=fstype,
             vgname=vgname,
@@ -247,15 +265,12 @@ def created(name,
             lvname=lvname,
             backing=backing,
         )
-        if cret.get('error', ''):
-            ret['result'] = False
-            ret['comment'] = cret['error']
-        else:
-            exists = (
-                cret['created']
-                or 'already exists' in cret.get('comment', ''))
-            ret['comment'] += 'Container created\n'
-            ret['changes']['status'] = 'Created'
+    except (CommandExecutionError, SaltInvocationError) as exc:
+        ret['result'] = False
+        ret['comment'] = '{0}'.format(exc)
+    else:
+        ret['comment'] = 'Created container \'{0}\''.format(name)
+        ret['changes']['status'] = 'created'
     return ret
 
 
