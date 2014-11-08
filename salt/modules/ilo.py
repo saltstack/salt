@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Manage HP ILOM
+Manage HP iLO
 '''
 
 import xml.etree.cElementTree as ET
