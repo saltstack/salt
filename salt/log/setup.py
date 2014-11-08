@@ -187,6 +187,7 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, NewStyleClassMixIn):
         )
 
     # pylint: disable=C0103
+    # pylint: disable=W0221
     def makeRecord(self, name, level, fn, lno, msg, args, exc_info,
                    func=None, extra=None, sinfo=None):
         # Let's remove exc_info_on_loglevel from extra
