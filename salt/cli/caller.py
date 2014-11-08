@@ -255,8 +255,18 @@ class RAETCaller(ZeroMQCaller):
         '''
         Pass in the command line options
         '''
+        if (opts.get('__role') ==
+                kinds.APPL_KIND_NAMES[kinds.applKinds.caller]):
+            # spin up and fork minion here
+            process = multiprocessing.Process(target=self.minion_run,
+                                              kwargs={'stuff': {}, 'opts': opts, })
+            process.start()
+            #process.join()
+
         self.stack = self._setup_caller_stack(opts)
         salt.transport.jobber_stack = self.stack
+
+        # wait here until '/var/run/salt/minion/alpha_caller.manor.uxd' exists
 
         super(RAETCaller, self).__init__(opts)
 
@@ -265,15 +275,6 @@ class RAETCaller(ZeroMQCaller):
         Execute the salt call logic
         '''
         try:
-            if (self.opts.get('__role') ==
-                    kinds.APPL_KIND_NAMES[kinds.applKinds.caller]):
-                # spin up and fork minion here
-                process = multiprocessing.Process(target=self.minion_run,
-                                                  kwargs={'stuff': {}})
-                process.start()
-                process.join()
-
-
             ret = self.call()
             self.stack.server.close()
             salt.transport.jobber_stack = None
@@ -353,7 +354,8 @@ class RAETCaller(ZeroMQCaller):
         '''
         pass
 
-    def minion_run(self, stuff):
-        self._setup_caller_minion(self.opts)
+    def minion_run(self, stuff, opts):
+        self._setup_caller_minion(opts)
         minion = salt.Minion()  # daemonizes here
+        import wingdbstub
         minion.call()  # caller minion.call_in uses caller.flo
