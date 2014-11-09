@@ -27,7 +27,6 @@ cp.__opts__ = {}
 cp.__pillar__ = {}
 cp.__grains__ = {}
 cp.__context__ = {}
-templates.TEMPLATE_REGISTRY = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
