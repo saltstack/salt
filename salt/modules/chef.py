@@ -48,7 +48,7 @@ def client(whyrun=False, localmode=False, logfile='/var/log/chef-client.log', **
         The configuration file to use
 
     config-file-jail
-        Directory under which config files are allowed to be loaded 
+        Directory under which config files are allowed to be loaded
         (no client.rb or knife.rb outside this path will be loaded).
 
     environment
@@ -79,7 +79,7 @@ def client(whyrun=False, localmode=False, logfile='/var/log/chef-client.log', **
         Set the PID file location, defaults to /tmp/chef-client.pid
 
     run-lock-timeout
-        Set maximum duration to wait for another client run to finish, 
+        Set maximum duration to wait for another client run to finish,
         default is indefinitely.
 
     runlist
@@ -97,10 +97,10 @@ def client(whyrun=False, localmode=False, logfile='/var/log/chef-client.log', **
     '''
     args = ['chef-client', '--no-color', '--once', '--logfile {0}'.format(logfile)]
 
-    if whyrun == True:
+    if whyrun:
         args.append('--why-run')
 
-    if localmode == True:
+    if localmode:
         args.append('--local-mode')
 
     return _exec_cmd(*args, **kwargs)
@@ -143,11 +143,11 @@ def solo(whyrun=False, logfile='/var/log/chef-solo.log', **kwargs):
         Replace current run list with specified items for a single run
 
     recipe-url
-        Pull down a remote gzipped tarball of recipes and untar it to 
+        Pull down a remote gzipped tarball of recipes and untar it to
         the cookbook cache
 
     run-lock-timeout
-        Set maximum duration to wait for another client run to finish, 
+        Set maximum duration to wait for another client run to finish,
         default is indefinitely.
 
     user
@@ -155,15 +155,15 @@ def solo(whyrun=False, logfile='/var/log/chef-solo.log', **kwargs):
 
     whyrun
         Enable whyrun mode when set to True
-        
-
     '''
+
     args = ['chef-solo', '--no-color', '--logfile {0}'.format(logfile)]
 
-    if whyrun == True:
+    if whyrun:
         args.append('--why-run')
 
     return _exec_cmd(*args, **kwargs)
+
 
 def _exec_cmd(*args, **kwargs):
 
@@ -177,11 +177,11 @@ def _exec_cmd(*args, **kwargs):
 
     # The only way to capture all the command output, including the
     # summary line, is to use the script command to write out to a file
-    (fd, filename) = tempfile.mkstemp()
+    (filedesc, filename) = tempfile.mkstemp()
     result = __salt__['cmd.run_all']('script -q -c "{0}" {1}'.format(cmd_exec, filename))
 
     # Read the output from the script command, stripping the first line
-    with open (filename, 'r') as outfile:
+    with open(filename, 'r') as outfile:
         stdout = outfile.readlines()
     result['stdout'] = ''.join(stdout[1:])
     os.remove(filename)

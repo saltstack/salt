@@ -23,11 +23,13 @@ Run chef-client or chef-solo
 # Import python libs
 import re
 
+
 def __virtual__():
     '''
     Only load if Chef execution module is available.
     '''
     return True if 'chef.client' in __salt__ else False
+
 
 def client(name, **kwargs):
     '''
@@ -44,7 +46,7 @@ def client(name, **kwargs):
         The configuration file to use
 
     config-file-jail
-        Directory under which config files are allowed to be loaded 
+        Directory under which config files are allowed to be loaded
         (no client.rb or knife.rb outside this path will be loaded).
 
     environment
@@ -75,7 +77,7 @@ def client(name, **kwargs):
         Set the PID file location, defaults to /tmp/chef-client.pid
 
     run-lock-timeout
-        Set maximum duration to wait for another client run to finish, 
+        Set maximum duration to wait for another client run to finish,
         default is indefinitely.
 
     runlist
@@ -89,11 +91,12 @@ def client(name, **kwargs):
     '''
     return _run(name, 'chef.client', kwargs)
 
+
 def solo(name, **kwargs):
     '''
     name
         Unique identifier for the state. Does not affect the Chef run.
-        
+
     config
         The configuration file to use
 
@@ -119,11 +122,11 @@ def solo(name, **kwargs):
         Replace current run list with specified items for a single run
 
     recipe-url
-        Pull down a remote gzipped tarball of recipes and untar it to 
+        Pull down a remote gzipped tarball of recipes and untar it to
         the cookbook cache
 
     run-lock-timeout
-        Set maximum duration to wait for another client run to finish, 
+        Set maximum duration to wait for another client run to finish,
         default is indefinitely.
 
     user
@@ -131,6 +134,7 @@ def solo(name, **kwargs):
 
     '''
     return _run(name, 'chef.solo', kwargs)
+
 
 def _run(name, mod, kwargs):
     ret = {'name': name,
@@ -153,8 +157,10 @@ def _run(name, mod, kwargs):
     ret['comment'] = result['stdout']
     return ret
 
+
 def _summary(stdout):
     return stdout.splitlines()[-1]
+
 
 def _has_changes(stdout):
     regex = re.search(r'Chef Client finished, (\d+)', _summary(stdout), re.IGNORECASE)
