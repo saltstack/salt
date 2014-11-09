@@ -19,4 +19,7 @@ plugin rp-pppoe.so {{iface['pppoe_iface']|default('eth0')}}
 {% if iface['mtu']|default('1492')  %}mtu {{iface['mtu']|default('1492')}} {% endif %} 
 {% if iface['noaccomp']|default(True) %}noaccomp{% endif %} 
 {% if iface['default-asyncmap'] %}default-asyncmap{% endif %} 
+{% if iface['linkname'] is defined %}
+linkname {{ iface['linkname'] }}
+{% endif %}
 {% endif %}
