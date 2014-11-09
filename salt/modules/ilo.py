@@ -125,9 +125,11 @@ def create_user(name, password, *privileges):
 
     .. code-block:: bash
 
-        salt '*' ilo.create_user damian secret
+        salt '*' ilo.create_user damian secretagent VIRTUAL_MEDIA_PRIV RESET_SERVER_PRIV
 
-    Privelges:
+    If no permissions are specify the user will only have a read-only account.
+ 
+    Supported privelges:
 
     * ADMIN_PRIV - Enables the user to administer user accounts.
     * REMOTE_CONS_PRIV - Enables the user to access the Remote Console functionality.
@@ -135,7 +137,7 @@ def create_user(name, password, *privileges):
     * VIRTUAL_MEDIA_PRIV - Enables the user permission to access the virtual media functionality.
     * CONFIG_ILO_PRIV - Enables the user to configure iLO settings.
     '''
-    _priv = ['ADMIN_PRIV', 
+    _priv = ['ADMIN_PRIV',
              'REMOTE_CONS_PRIV',
              'RESET_SERVER_PRIV',
              'VIRTUAL_MEDIA_PRIV',
@@ -179,3 +181,94 @@ def delete_user(username):
               </RIBCL>""".format(username)
 
     return __execute_cmd('Delete_user', _xml)
+
+
+def delete_user_sshkey(username):
+    '''
+    Delete a users SSH key from the ILO
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ilo.delete_user_sshkey damian
+    '''
+    _xml = """<RIBCL VERSION="2.0">
+                <LOGIN USER_LOGIN="admin" PASSWORD="admin123">
+                  <USER_INFO MODE="write">
+                    <MOD_USER USER_LOGIN="{0}">
+                      <DEL_USERS_SSH_KEY/>
+                    </MOD_USER>
+                  </USER_INFO>
+                </LOGIN>
+              </RIBCL>""".format(username)
+
+    return __execute_cmd('Delete_user_SSH_key', _xml)
+
+
+def get_user(username):
+    '''
+    Returns local user information, excluding the password
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ilo.get_user damian
+    '''
+    _xml = """<RIBCL VERSION="2.0">
+                <LOGIN USER_LOGIN="adminname" PASSWORD="password">
+                  <USER_INFO MODE="read">
+                    <GET_USER USER_LOGIN="{0}" />
+                  </USER_INFO>
+                </LOGIN>
+              </RIBCL>""".format(username)
+
+    return __execute_cmd('User_Info', _xml)
+
+
+def change_username(old_username, new_username):
+    '''
+    Change a username
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ilo.change_username damian diana
+    '''
+    _xml = """<RIBCL VERSION="2.0">
+                <LOGIN USER_LOGIN="adminname" PASSWORD="password">
+                  <USER_INFO MODE="write">
+                    <MOD_USER USER_LOGIN="{0}">
+                      <USER_NAME value="{1}"/>
+                      <USER_LOGIN value="{1}"/>
+                    </MOD_USER>
+                  </USER_INFO>
+                </LOGIN>
+              </RIBCL>""".format(old_username, new_username)
+
+    return __execute_cmd('Change_username', _xml)
+
+
+def change_password(username, password):
+    '''
+    Reset a users password
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ilo.change_password damianMyerscough
+    '''
+    _xml = """<RIBCL VERSION="2.0">
+                <LOGIN USER_LOGIN="adminname" PASSWORD="password">
+                  <USER_INFO MODE="write">
+                    <MOD_USER USER_LOGIN="{0}">
+                      <PASSWORD value="{1}"/>
+                    </MOD_USER>
+                  </USER_INFO>
+                </LOGIN>
+              </RIBCL>""".format(username, password)
+
+    return __execute_cmd('Change_password', _xml)
