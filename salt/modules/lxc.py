@@ -43,12 +43,7 @@ __func_alias__ = {
     'list_': 'list'
 }
 
-# init does a lot of stuff. Use highstate outputter for a prettier summary
-__outputter__ = {
-    'init': 'highstate'
-}
-
-DEFAULT_NIC_PROFILE = {'eth0': {'link': 'br0', 'type': 'veth'}}
+DEFAULT_NIC_PROFILE = {'eth0': {'link': 'br0', 'type': 'veth', 'flags': 'up'}}
 SEED_MARKER = '/lxc.initial_seed'
 PATH = 'PATH=/bin:/usr/bin:/sbin:/usr/sbin:/opt/bin:' \
        '/usr/local/bin:/usr/local/sbin'
@@ -154,7 +149,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     ip
         ip for the primary nic
     mac
-        mac for the primary nic
+        mac address for the primary nic
     netmask
         netmask for the primary nic (24)
         = ``vm_.get('netmask', '24')``
@@ -167,7 +162,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
         which is connected to internet.
         Be aware that you may use manual virtual mac addresses
         providen by you provider (online, ovh, etc).
-        This is a list of mappings {ip: '', mac: '',netmask:''}
+        This is a list of mappings {ip: '', mac: '', netmask:''}
         Set gateway to None and an interface with a gateway
         to escape from another interface that eth0.
         eg::
@@ -269,7 +264,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
             fullip += '/{0}'.format(netmask)
         eth0['ipv4'] = fullip
         if mac is not None:
-            eth0['hwaddr'] = mac
+            eth0['mac'] = mac
         if bridge:
             eth0['link'] = bridge
     for ix, iopts in enumerate(vm_.get("additional_ips", [])):
@@ -284,7 +279,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
         nm = iopts.get('netmask', '')
         if nm:
             ethx['ipv4'] += '/{0}'.format(nm)
-        for i in ['mac', 'hwaddr']:
+        for i in ('mac', 'hwaddr'):
             if i in iopts:
                 ethx['hwaddr'] = iopts[i]
         if 'hwaddr' not in ethx:
@@ -394,7 +389,7 @@ def get_network_profile(name=None):
 
     .. code-block:: python
 
-        {'eth0': {'link': 'br0', 'type': 'veth'}}
+        {'eth0': {'link': 'br0', 'type': 'veth', 'flags': 'up'}}
 
     Profiles can be defined in the minion or master config files, or in pillar
     or grains, and are loaded using :mod:`config.get
@@ -463,7 +458,10 @@ def _network_conf(conf_tuples=None, **kwargs):
         if nic_opts:
             for dev, args in nic_opts.items():
                 ethx = nicp.setdefault(dev, {})
-                ethx = salt.utils.dictupdate.update(ethx, args)
+                try:
+                    ethx = salt.utils.dictupdate.update(ethx, args)
+                except AttributeError:
+                    raise SaltInvocationError('Invalid nic_opts configuration')
         ifs = [a for a in nicp]
         ifs.sort()
         gateway_set = False
@@ -473,7 +471,7 @@ def _network_conf(conf_tuples=None, **kwargs):
             ret.append({'lxc.network.name': dev})
             ret.append({'lxc.network.flags': args.pop('flags', 'up')})
             opts = nic_opts.get(dev) if nic_opts else {}
-            hwaddr = opts.get('hwaddr', '')
+            mac = opts.get('mac', '')
             if opts:
                 ipv4 = opts.get('ipv4')
                 ipv6 = opts.get('ipv6')
@@ -481,8 +479,8 @@ def _network_conf(conf_tuples=None, **kwargs):
                 ipv4, ipv6 = None, None
                 if not mac:
                     mac = salt.utils.gen_mac()
-            if hwaddr:
-                ret.append({'lxc.network.hwaddr': hwaddr})
+            if mac:
+                ret.append({'lxc.network.hwaddr': mac})
             if ipv4:
                 ret.append({'lxc.network.ipv4': ipv4})
             if ipv6:
@@ -491,7 +489,7 @@ def _network_conf(conf_tuples=None, **kwargs):
                 if key == 'link' and bridge:
                     val = bridge
                 val = opts.get(key, val)
-                if key in ('gateway', 'hwaddr'):
+                if key in ('gateway', 'mac'):
                     continue
                 ret.append({'lxc.network.{0}'.format(key): val})
             # gateway (in automode) must be appended following network conf !
@@ -707,25 +705,28 @@ class _LXCConfig(object):
         return removed
 
 
-def get_base(**kwargs):
+def _get_base(**kwargs):
     '''
     If the needed base does not exist, then create it, if it does exist
     create nothing and return the name of the base lxc container so
     it can be cloned.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt 'minion' lxc.init name [cpuset=cgroups_cpuset] \\
-                [nic=nic_profile] [profile=lxc_profile] \\
-                [nic_opts=nic_opts] [image=network image path]\\
-                [seed=(True|False)] [install=(True|False)] \\
-                [config=minion_config]
     '''
-    cntrs = __salt__['lxc.ls']()
-    if kwargs.get('image'):
-        image = kwargs.get('image')
+    profile = get_container_profile(copy.deepcopy(kwargs.get('profile')))
+    kw_overrides = copy.deepcopy(kwargs)
+
+    def select(key, default=None):
+        kw_overrides_match = kw_overrides.pop(key, _marker)
+        profile_match = profile.pop(key, default)
+        # let kwarg overrides be the preferred choice
+        if kw_overrides_match is _marker:
+            return profile_match
+        return kw_overrides_match
+
+    cntrs = ls()
+    image = select('image')
+    vgname = select('vgname')
+    template = select('template')
+    if image:
         proto = salt._compat.urlparse(image).scheme
         img_tar = __salt__['cp.cache_file'](image)
         img_name = os.path.basename(img_tar)
@@ -734,32 +735,29 @@ def get_base(**kwargs):
                 __salt__['config.get']('hash_type'))
         name = '__base_{0}_{1}_{2}'.format(proto, img_name, hash_)
         if name not in cntrs:
-            __salt__['lxc.create'](name, **kwargs)
-            if kwargs.get('vgname'):
-                rootfs = os.path.join('/dev', kwargs['vgname'], name)
-                lxc_info = __salt__['lxc.info'](name)
-                edit_conf(lxc_info['config'], **{'lxc.rootfs': rootfs})
+            create(name, **kwargs)
+            if vgname:
+                rootfs = os.path.join('/dev', vgname, name)
+                edit_conf(info(name)['config'], **{'lxc.rootfs': rootfs})
         return name
-    elif kwargs.get('template'):
+    elif template:
         name = '__base_{0}'.format(kwargs['template'])
         if name not in cntrs:
-            __salt__['lxc.create'](name, **kwargs)
-            if kwargs.get('vgname'):
-                rootfs = os.path.join('/dev', kwargs['vgname'], name)
-                lxc_info = __salt__['lxc.info'](name)
-                edit_conf(lxc_info['config'], **{'lxc.rootfs': rootfs})
+            create(name, **kwargs)
+            if vgname:
+                rootfs = os.path.join('/dev', vgname, name)
+                edit_conf(info(name)['config'], **{'lxc.rootfs': rootfs})
         return name
     return ''
 
 
 def init(name,
-         image=None,
          config=None,
          cpuset=None,
          cpushare=None,
          memory=None,
-         nic=None,
          profile=None,
+         network_profile=None,
          nic_opts=None,
          cpu=None,
          autostart=True,
@@ -774,6 +772,7 @@ def init(name,
          priv_key=None,
          force_install=False,
          unconditional_install=False,
+         bootstrap_delay=None,
          bootstrap_args=None,
          bootstrap_shell=None,
          bootstrap_url=None,
@@ -791,7 +790,7 @@ def init(name,
 
         salt 'minion' lxc.init name [cpuset=cgroups_cpuset] \\
                 [cpushare=cgroups_cpushare] [memory=cgroups_memory] \\
-                [nic=nic_profile] [profile=lxc_profile] \\
+                [network_profile=network_profile] [profile=lxc_profile] \\
                 [nic_opts=nic_opts] [start=(True|False)] \\
                 [seed=(True|False)] [install=(True|False)] \\
                 [config=minion_config] [approve_key=(True|False) \\
@@ -839,11 +838,11 @@ def init(name,
     nic_opts
         Extra options for network interfaces, will override
 
-        ``{"eth0": {"hwaddr": "aa:bb:cc:dd:ee:ff", "ipv4": "10.1.1.1", "ipv6": "2001:db8::ff00:42:8329"}}``
+        ``{"eth0": {"mac": "aa:bb:cc:dd:ee:ff", "ipv4": "10.1.1.1", "ipv6": "2001:db8::ff00:42:8329"}}``
 
         or
 
-        ``{"eth0": {"hwaddr": "aa:bb:cc:dd:ee:ff", "ipv4": "10.1.1.1/24", "ipv6": "2001:db8::ff00:42:8329"}}``
+        ``{"eth0": {"mac": "aa:bb:cc:dd:ee:ff", "ipv4": "10.1.1.1/24", "ipv6": "2001:db8::ff00:42:8329"}}``
 
     users
         Sysadmins users to set the administrative password to
@@ -891,9 +890,15 @@ def init(name,
         Original from which to use a clone operation to create the container.
         Default: ``None``
 
+    bootstrap_delay
+        Delay in seconds between end of container creation and bootstrapping.
+        Useful when waiting for container to obtain a DHCP lease.
+
+        .. versionadded:: 2014.7.1
+
     bootstrap_url
         See lxc.bootstrap
-        *
+
     bootstrap_shell
         See lxc.bootstrap
 
@@ -909,12 +914,13 @@ def init(name,
         Run the script even if the container seems seeded
     '''
     ret = {'name': name,
-           'result': False}
+           'result': False,
+           'changes': {}}
 
     # Changes is a pointer to changes_dict['init']. This method is used so that
     # we can have a list of changes as they are made, providing an ordered list
     # of things that were changed.
-    changes_dict = {'init', {})
+    changes_dict = {'init': []}
     changes = changes_dict.get('init')
 
     state_pre = state(name)
@@ -922,10 +928,7 @@ def init(name,
     if users is None:
         users = []
     dusers = ['root']
-    if (
-        __grains__['os'] in ['Ubuntu']
-        and 'ubuntu' not in users
-    ):
+    if __grains__['os'] in ['Ubuntu'] and 'ubuntu' not in users:
         dusers.append('ubuntu')
     for user in dusers:
         if user not in users:
@@ -955,13 +958,19 @@ def init(name,
 
     # If using a volume group then set up to make snapshot cow clones
     if vgname and not clone_from:
-        clone_from = get_base(vgname=vgname, **kwargs)
+        try:
+            clone_from = _get_base(vgname=vgname, profile=profile, **kwargs)
+        except (SaltInvocationError, CommandExecutionError) as exc:
+            ret['comment'] = exc.message
+            if changes:
+                ret['changes'] = changes_dict
+            return ret
         if not kwargs.get('snapshot') is False:
             kwargs['snapshot'] = True
     does_exist = exists(name)
     to_reboot = False
     remove_seed_marker = False
-    elif clone_from:
+    if clone_from:
         remove_seed_marker = True
         try:
             clone(name, clone_from, profile=profile, **kwargs)
@@ -971,9 +980,9 @@ def init(name,
                 ret['changes'] = changes_dict
             return ret
         changes.append({'create': 'Container cloned'})
-        cfg = _LXCConfig(name=name, nic=nic, nic_opts=nic_opts,
-                         bridge=bridge, gateway=gateway,
-                         autostart=autostart,
+        cfg = _LXCConfig(name=name, network_profile=network_profile,
+                         nic_opts=nic_opts, bridge=bridge,
+                         gateway=gateway, autostart=autostart,
                          cpuset=cpuset, cpushare=cpushare, memory=memory)
         old_chunks = read_conf(cfg.path)
         cfg.write()
@@ -982,7 +991,8 @@ def init(name,
             to_reboot = True
     else:
         remove_seed_marker = True
-        cfg = _LXCConfig(nic=nic, nic_opts=nic_opts, cpuset=cpuset,
+        cfg = _LXCConfig(network_profile=network_profile,
+                         nic_opts=nic_opts, cpuset=cpuset,
                          bridge=bridge, gateway=gateway,
                          autostart=autostart,
                          cpushare=cpushare, memory=memory)
@@ -1001,7 +1011,8 @@ def init(name,
             old_chunks = read_conf(path)
         for comp in _config_list(conf_tuples=old_chunks,
                                  cpu=cpu,
-                                 nic=nic, nic_opts=nic_opts, bridge=bridge,
+                                 network_profile=network_profile,
+                                 nic_opts=nic_opts, bridge=bridge,
                                  cpuset=cpuset, cpushare=cpushare,
                                  memory=memory):
             edit_conf(path, **comp)
@@ -1012,9 +1023,9 @@ def init(name,
         cmd_run(name, 'rm -f \'{0}\''.format(SEED_MARKER))
 
     # last time to be sure any of our property is correctly applied
-    cfg = _LXCConfig(name=name, nic=nic, nic_opts=nic_opts,
-                     bridge=bridge, gateway=gateway,
-                     autostart=autostart,
+    cfg = _LXCConfig(name=name, network_profile=network_profile,
+                     nic_opts=nic_opts, bridge=bridge,
+                     gateway=gateway, autostart=autostart,
                      cpuset=cpuset, cpushare=cpushare, memory=memory)
     old_chunks = []
     if os.path.exists(cfg.path):
@@ -1093,7 +1104,7 @@ def init(name,
                 return ret
             changes.append({'dns': 'DNS updated'})
             if cmd_retcode(name,
-                           'sh -c \'touch "{0}"; test -e "{0}"'.format(gid),
+                           'sh -c \'touch "{0}"; test -e "{0}"\''.format(gid),
                            ignore_retcode=True) != 0:
                 ret['comment'] = 'Failed to set DNS marker'
                 if changes:
@@ -1103,6 +1114,13 @@ def init(name,
     if seed or seed_cmd:
         if seed:
             try:
+                if bootstrap_delay is not None:
+                    try:
+                        time.sleep(bootstrap_delay)
+                    except TypeError:
+                        # Bad input, but assume since a value was passed that
+                        # a delay was desired, and sleep for 5 seconds
+                        time.sleep(5)
                 result = bootstrap(
                     name, config=salt_config,
                     approve_key=approve_key,
@@ -1188,13 +1206,62 @@ def cloud_init(name, vm_=None, **kwargs):
     '''
     init_interface = cloud_init_interface(name, vm_, **kwargs)
     name = init_interface.pop('name', name)
-    return init_(name, **init_interface)
+    return init(name, **init_interface)
+
+
+def images(dist=None):
+    '''
+    .. versionadded:: 2014.7.1
+
+    List the available images for LXC's ``download`` template.
+
+    dist : None
+        Filter results to a single Linux distribution
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt myminion lxc.images
+        salt myminion lxc.images dist=centos
+    '''
+    out = __salt__['cmd.run_stdout'](
+        'lxc-create -n __imgcheck -t download -- --list',
+        ignore_retcode=True
+    )
+    if 'DIST' not in out:
+        raise CommandExecutionError(
+            'Unable to run the \'download\' template script. Is it installed?'
+        )
+
+    ret = {}
+    passed_header = False
+    for line in out.splitlines():
+        try:
+            distro, release, arch, variant, build_time = line.split()
+        except ValueError:
+            continue
+
+        if not passed_header and dist == 'DIST':
+            passed_header = True
+            continue
+
+        dist_list = ret.setdefault(distro, [])
+        dist_list.append({
+            'release': release,
+            'arch': arch,
+            'variant': variant,
+            'build_time': build_time,
+        })
+
+    if dist is not None:
+        return dict([(dist, ret.get(dist, []))])
+    return ret
 
 
 def create(name,
            config=None,
            profile=None,
-           options=None,
            **kwargs):
     '''
     Create a new container.
@@ -1211,6 +1278,10 @@ def create(name,
     name
         Name of the container
 
+    config
+        The config file to use for the container. Defaults to system-wide
+        config (usually in /etc/lxc/lxc.conf).
+
     profile
         Profile to use in container creation (see
         :mod:`lxc.get_container_profile
@@ -1219,16 +1290,30 @@ def create(name,
 
     **Container Creation Arguments**
 
-    config
-        The config file to use for the container. Defaults to system-wide
-        config (usually in /etc/lxc/lxc.conf).
-
     template
         The template to use. E.g., 'ubuntu' or 'fedora'. Conflicts with the
         ``image`` argument.
 
+        .. note::
+
+            The ``download`` template requires the following three parameters
+            to be defined in ``options``:
+
+            * **dist** - The name of the distribution
+            * **release** - Release name/version
+            * **arch** - Architecture of the container
+
+            The available images can be listed using the :mod:`lxc.images
+            <salt.modules.lxc.images>` function.
+
     options
-        Template-specific options to pass to the lxc-create command
+        Template-specific options to pass to the lxc-create command. These
+        correspond to the long options (ones beginning with two dashes) that
+        the template script accepts. For example:
+
+        .. code-block:: bash
+
+            options='{"dist": "centos", "release": "6", "arch": "amd64"}'
 
     image
         A tar archive to use as the rootfs for the container. Conflicts with
@@ -1257,6 +1342,9 @@ def create(name,
             'Container \'{0}\' already exists'.format(name)
         )
 
+    # Required params for 'download' template
+    download_template_deps = ('dist', 'release', 'arch')
+
     cmd = 'lxc-create -n {0}'.format(name)
 
     profile = get_container_profile(copy.deepcopy(profile))
@@ -1281,6 +1369,7 @@ def create(name,
             'Only one of \'template\' and \'image\' is permitted'
         )
 
+    options = select('options')
     backing = select('backing')
     if vgname and not backing:
         backing = 'lvm'
@@ -1319,12 +1408,16 @@ def create(name,
                 cmd += ' --fstype {0}'.format(fstype)
             if size:
                 cmd += ' --fssize {0}'.format(size)
-    options = options or {}
-    if profile:
-        profile.update(options)
-        options = profile
 
     if options:
+        if template == 'download':
+            missing_deps = [x for x in download_template_deps
+                            if x not in options]
+            if missing_deps:
+                raise SaltInvocationError(
+                    'Missing params in \'options\' dict: {0}'
+                    .format(', '.join(missing_deps))
+                )
         cmd += ' --'
         for key, val in options.items():
             cmd += ' --{0} {1}'.format(key, val)
@@ -1518,12 +1611,7 @@ def list_(extra=False, limit=None):
             continue
 
         if extra:
-            try:
-                infos = __salt__['lxc.info'](container)
-            except Exception:
-                trace = traceback.format_exc()
-                infos = {'error': 'Error while getting extra infos',
-                         'comment': trace}
+            infos = info(container)
             method = 'update'
             value = {container: infos}
         else:
@@ -1623,7 +1711,7 @@ def start(name, restart=False):
     '''
     _ensure_exists(name)
     if restart:
-        __salt__['lxc.stop'](name)
+        stop(name)
     return _change_state('lxc-start -d', name, 'running')
 
 
@@ -1951,9 +2039,24 @@ def info(name):
 def set_password(name, users, password, encrypted=True):
     '''
     .. versionchanged:: 2014.7.1
-        Function renamed from ``set_pass`` to ``set_password``.
+        Function renamed from ``set_pass`` to ``set_password``. Additionally,
+        this function now supports (and defaults to using) a password hash
+        instead of a plaintext password.
 
     Set the password of one or more system users inside containers
+
+
+    users
+        Comma-separated list (or python list) of users to change password
+
+    password
+        Password to set for the specified user(s)
+
+    encrypted : True
+        If true, ``password`` must be a password hash. Set to ``False`` to set
+        a plaintext password (not recommended).
+
+        .. versionadded:: 2014.7.1
 
     CLI Example:
 
@@ -1993,7 +2096,8 @@ set_pass = set_password
 
 
 def update_lxc_conf(name, lxc_conf, lxc_conf_unset):
-    '''Edit LXC configuration options
+    '''
+    Edit LXC configuration options
 
     CLI Example:
 
@@ -2004,87 +2108,84 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset):
                 lxc_conf_unset="['lxc.utsname']"
 
     '''
+    _ensure_exists(name)
+    lxc_conf_p = '/var/lib/lxc/{0}/config'.format(name)
+    if not os.path.exists(lxc_conf_p):
+        raise SaltInvocationError(
+            'Configuration file {0} does not exist'.format(lxc_conf_p)
+        )
+
     changes = {'edited': [], 'added': [], 'removed': []}
     ret = {'changes': changes, 'result': True, 'comment': ''}
-    lxc_conf_p = '/var/lib/lxc/{0}/config'.format(name)
-    if not __salt__['lxc.exists'](name):
-        ret['result'] = False
-        ret['comment'] = 'Container does not exist: {0}'.format(name)
-    elif not os.path.exists(lxc_conf_p):
-        ret['result'] = False
-        ret['comment'] = (
-            'Configuration does not exist: {0}'.format(lxc_conf_p))
-    else:
-        with open(lxc_conf_p, 'r') as fic:
-            filtered_lxc_conf = []
-            for row in lxc_conf:
-                if not row:
-                    continue
-                for conf in row:
-                    filtered_lxc_conf.append((conf.strip(),
-                                              row[conf].strip()))
-            ret['comment'] = 'lxc.conf is up to date'
-            lines = []
-            orig_config = fic.read()
-            for line in orig_config.splitlines():
-                if line.startswith('#') or not line.strip():
-                    lines.append([line, ''])
-                else:
-                    line = line.split('=')
-                    index = line.pop(0)
-                    val = (index.strip(), '='.join(line).strip())
-                    if val not in lines:
-                        lines.append(val)
-            for k, item in filtered_lxc_conf:
-                matched = False
-                for idx, line in enumerate(lines[:]):
-                    if line[0] == k:
-                        matched = True
-                        lines[idx] = (k, item)
-                        if '='.join(line[1:]).strip() != item.strip():
-                            changes['edited'].append(
-                                ({line[0]: line[1:]}, {k: item}))
-                            break
-                if not matched:
-                    if not (k, item) in lines:
-                        lines.append((k, item))
-                    changes['added'].append({k: item})
-            dest_lxc_conf = []
-            # filter unset
-            if lxc_conf_unset:
-                for line in lines:
-                    for opt in lxc_conf_unset:
-                        if (
-                            not line[0].startswith(opt)
-                            and line not in dest_lxc_conf
-                        ):
-                            dest_lxc_conf.append(line)
-                        else:
-                            changes['removed'].append(opt)
+
+    with open(lxc_conf_p, 'r') as fic:
+        filtered_lxc_conf = []
+        for row in lxc_conf:
+            if not row:
+                continue
+            for conf in row:
+                filtered_lxc_conf.append((conf.strip(),
+                                            row[conf].strip()))
+        ret['comment'] = 'lxc.conf is up to date'
+        lines = []
+        orig_config = fic.read()
+        for line in orig_config.splitlines():
+            if line.startswith('#') or not line.strip():
+                lines.append([line, ''])
             else:
-                dest_lxc_conf = lines
-            conf = ''
-            for k, val in dest_lxc_conf:
-                if not val:
-                    conf += '{0}\n'.format(k)
-                else:
-                    conf += '{0} = {1}\n'.format(k.strip(), val.strip())
-            conf_changed = conf != orig_config
-            chrono = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-            if conf_changed:
-                wfic = open('{0}.{1}'.format(lxc_conf_p, chrono), 'w')
-                wfic.write(conf)
-                wfic.close()
-                wfic = open(lxc_conf_p, 'w')
-                wfic.write(conf)
-                wfic.close()
-                ret['comment'] = 'Updated'
-                ret['result'] = True
-    if (
-        not changes['added']
-        and not changes['edited']
-        and not changes['removed']
-    ):
+                line = line.split('=')
+                index = line.pop(0)
+                val = (index.strip(), '='.join(line).strip())
+                if val not in lines:
+                    lines.append(val)
+        for key, item in filtered_lxc_conf:
+            matched = False
+            for idx, line in enumerate(lines[:]):
+                if line[0] == key:
+                    matched = True
+                    lines[idx] = (key, item)
+                    if '='.join(line[1:]).strip() != item.strip():
+                        changes['edited'].append(
+                            ({line[0]: line[1:]}, {key: item}))
+                        break
+            if not matched:
+                if not (key, item) in lines:
+                    lines.append((key, item))
+                changes['added'].append({key: item})
+        dest_lxc_conf = []
+        # filter unset
+        if lxc_conf_unset:
+            for line in lines:
+                for opt in lxc_conf_unset:
+                    if (
+                        not line[0].startswith(opt)
+                        and line not in dest_lxc_conf
+                    ):
+                        dest_lxc_conf.append(line)
+                    else:
+                        changes['removed'].append(opt)
+        else:
+            dest_lxc_conf = lines
+        conf = ''
+        for key, val in dest_lxc_conf:
+            if not val:
+                conf += '{0}\n'.format(key)
+            else:
+                conf += '{0} = {1}\n'.format(key.strip(), val.strip())
+        conf_changed = conf != orig_config
+        chrono = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        if conf_changed:
+            wfic = open('{0}.{1}'.format(lxc_conf_p, chrono), 'w')
+            wfic.write(conf)
+            wfic.close()
+            wfic = open(lxc_conf_p, 'w')
+            wfic.write(conf)
+            wfic.close()
+            ret['comment'] = 'Updated'
+            ret['result'] = True
+
+    if not any(changes[x] for x in changes):
+        # Ensure an empty changes dict if nothing was modified
         ret['changes'] = {}
     return ret
 
@@ -2197,9 +2298,10 @@ def bootstrap(name,
     c_info = info(name)
     if not c_info:
         return None
-    # default set here as we cannot set them
-    # in def as it can come from a chain of procedures.
-    if not bootstrap_args:
+
+    if bootstrap_args:
+        bootstrap_args = '{0} -c {{0}}'.format(bootstrap_args)
+    else:
         bootstrap_args = '-c {0}'
     if not bootstrap_shell:
         bootstrap_shell = 'sh'
@@ -2974,7 +3076,7 @@ def write_conf(conf_file, conf):
             {'lxc.network.type': 'veth'},
             {'lxc.network.flags': 'up'},
             {'lxc.network.link': 'br0'},
-            {'lxc.network.hwaddr': '$CONTAINER_MACADDR'},
+            {'lxc.network.mac': '$CONTAINER_MACADDR'},
             {'lxc.network.ipv4': '$CONTAINER_IPADDR'},
             {'lxc.network.name': '$CONTAINER_DEVICENAME'},
         ]
@@ -2987,7 +3089,7 @@ def write_conf(conf_file, conf):
             out_format=commented
     '''
     if type(conf) is not list:
-        return {'Error': 'conf must be passed in as a list'}
+        raise SaltInvocationError('Configuration must be passed as a list')
 
     with salt.utils.fopen(conf_file, 'w') as fp_:
         for line in conf:
@@ -3031,7 +3133,7 @@ def edit_conf(conf_file, out_format='simple', **kwargs):
     data = []
 
     try:
-        conf = __salt__['lxc.read_conf'](conf_file, out_format='commented')
+        conf = read_conf(conf_file, out_format='commented')
     except Exception:
         conf = []
 
@@ -3052,5 +3154,5 @@ def edit_conf(conf_file, out_format='simple', **kwargs):
             continue
         data.append({kwarg: kwargs[kwarg]})
 
-    __salt__['lxc.write_conf'](conf_file, data)
+    write_conf(conf_file, data)
     return read_conf(conf_file, out_format)
