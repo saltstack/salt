@@ -1432,7 +1432,6 @@ def create(name,
 
 def clone(name,
           orig,
-          snapshot=False,
           profile=None,
           **kwargs):
     '''
