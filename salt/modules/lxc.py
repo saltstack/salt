@@ -1369,7 +1369,7 @@ def create(name,
             'Only one of \'template\' and \'image\' is permitted'
         )
 
-    options = select('options')
+    options = select('options') or {}
     backing = select('backing')
     if vgname and not backing:
         backing = 'lvm'
@@ -1390,7 +1390,7 @@ def create(name,
                 'templates',
                 'lxc',
                 'salt_tarball')
-        profile['imgtar'] = img_tar
+        options['imgtar'] = img_tar
     if config:
         cmd += ' -f {0}'.format(config)
     if template:
@@ -1425,7 +1425,10 @@ def create(name,
     ret = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
     _clear_context()
     if ret['retcode'] == 0 and exists(name):
-        return True
+        c_state = state(name)
+        return {'result': True,
+                'changes': {'old': None, 'new': c_state},
+                'state': c_state}
     else:
         if exists(name):
             # destroy the container if it was partially created
