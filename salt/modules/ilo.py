@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-Manage HP ILOM
+Manage HP ILO
+
+:depends: hponcfg (SmartStart Scripting Toolkit Linux Edition)
 '''
 
 import xml.etree.cElementTree as ET
@@ -14,7 +16,7 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
-
+    Make sure hponcfg tool is accessiable
     '''
     if salt.utils.which('hponcfg'):
         return True
@@ -85,7 +87,7 @@ def global_settings():
     return __execute_cmd('Global_Settings', _xml)
 
 
-def configure_http_port(port=80):
+def set_http_port(port=80):
     '''
     Configure the port HTTP should listen on
 
@@ -93,9 +95,13 @@ def configure_http_port(port=80):
 
     .. code-block::
 
-        salt '*' ilo.configure_http_port 8080
+        salt '*' ilo.set_http_port 8080
     '''
-    # TODO: Check the status before chaging the port
+    _current = global_settings()
+
+    if _current['Global Settings']['HTTP_PORT']['VALUE'] == port:
+        return True
+
     _xml = """<RIBCL VERSION="2.0">
                 <LOGIN USER_LOGIN="adminname" PASSWORD="password">
                   <RIB_INFO MODE="write">
@@ -109,7 +115,7 @@ def configure_http_port(port=80):
     return __execute_cmd('Set_HTTP_Port', _xml)
 
 
-def configure_https_port(port=443):
+def set_https_port(port=443):
     '''
     Configure the port HTTPS should listen on
 
@@ -117,9 +123,13 @@ def configure_https_port(port=443):
 
     .. code-block:: bash
 
-        salt '*' ilo.configure_https_port 4334
+        salt '*' ilo.set_https_port 4334
     '''
-    # TODO: Check the status before chaging the port
+    _current = global_settings()
+
+    if _current['Global Settings']['HTTP_PORT']['VALUE'] == port:
+        return True
+
     _xml = """<RIBCL VERSION="2.0">
                 <LOGIN USER_LOGIN="adminname" PASSWORD="password">
                   <RIB_INFO MODE="write">
@@ -143,6 +153,11 @@ def enable_ssh():
 
         salt '*' ilo.enable_ssh
     '''
+    _current = global_settings()
+
+    if _current['Global Settings']['SSH_STATUS']['VALUE'] == 'Y':
+        return True
+
     _xml = """<RIBCL VERSION="2.0">
                 <LOGIN USER_LOGIN="adminname" PASSWORD="password">
                   <RIB_INFO MODE="write">
@@ -166,6 +181,11 @@ def disable_ssh():
 
         salt '*' ilo.disable_ssh
     '''
+    _current = global_settings()
+
+    if _current['Global Settings']['SSH_STATUS']['VALUE'] == 'N':
+        return True
+
     _xml = """<RIBCL VERSION="2.0">
                 <LOGIN USER_LOGIN="adminname" PASSWORD="password">
                   <RIB_INFO MODE="write">
@@ -179,7 +199,7 @@ def disable_ssh():
     return __execute_cmd('Disable_SSH', _xml)
 
 
-def configure_ssh_port(port=22):
+def set_ssh_port(port=22):
     '''
     Enable SSH on a user defined port
 
@@ -187,8 +207,13 @@ def configure_ssh_port(port=22):
 
     .. code-block:: bash
 
-        salt '*' ilo.configure_ssh_port 2222
+        salt '*' ilo.set_ssh_port 2222
     '''
+    _current = global_settings()
+
+    if _current['Global Settings']['SSH_PORT']['VALUE'] == port:
+        return True
+
     _xml = """<RIBCL VERSION="2.0">
                 <LOGIN USER_LOGIN="adminname" PASSWORD="password">
                   <RIB_INFO MODE="write">
@@ -200,6 +225,57 @@ def configure_ssh_port(port=22):
               </RIBCL>""".format(port)
 
     return __execute_cmd('Configure_SSH_Port', _xml)
+
+
+def set_ssh_key(public_key):
+    '''
+    Configure SSH public keys for specific users
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ilo.set_ssh_key "ssh-dss AAAAB3NzaC1kc3MAAACBA... damian"
+
+    The SSH public key needs to be DSA and the last argument in the key needs
+    to be the username (case-senstive) of the ILO username.
+    '''
+    _xml = """<RIBCL VERSION="2.0">
+                <LOGIN USER_LOGIN="adminname" PASSWORD="password">
+                  <RIB_INFO MODE="write">
+                    <IMPORT_SSH_KEY>
+                      -----BEGIN SSH KEY-----
+                      {0}
+                      -----END SSH KEY-----
+                    </IMPORT_SSH_KEY>
+                  </RIB_INFO>
+                </LOGIN>
+              </RIBCL>""".format(public_key)
+
+    return __execute_cmd('Import_SSH_Publickey', _xml)
+
+
+def delete_ssh_key(username):
+    '''
+    Delete a users SSH key from the ILO
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ilo.delete_user_sshkey damian
+    '''
+    _xml = """<RIBCL VERSION="2.0">
+                <LOGIN USER_LOGIN="admin" PASSWORD="admin123">
+                  <USER_INFO MODE="write">
+                    <MOD_USER USER_LOGIN="{0}">
+                      <DEL_USERS_SSH_KEY/>
+                    </MOD_USER>
+                  </USER_INFO>
+                </LOGIN>
+              </RIBCL>""".format(username)
+
+    return __execute_cmd('Delete_user_SSH_key', _xml)
 
 
 def list_users():
@@ -319,29 +395,6 @@ def delete_user(username):
     return __execute_cmd('Delete_user', _xml)
 
 
-def delete_user_sshkey(username):
-    '''
-    Delete a users SSH key from the ILO
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' ilo.delete_user_sshkey damian
-    '''
-    _xml = """<RIBCL VERSION="2.0">
-                <LOGIN USER_LOGIN="admin" PASSWORD="admin123">
-                  <USER_INFO MODE="write">
-                    <MOD_USER USER_LOGIN="{0}">
-                      <DEL_USERS_SSH_KEY/>
-                    </MOD_USER>
-                  </USER_INFO>
-                </LOGIN>
-              </RIBCL>""".format(username)
-
-    return __execute_cmd('Delete_user_SSH_key', _xml)
-
-
 def get_user(username):
     '''
     Returns local user information, excluding the password
@@ -445,8 +498,8 @@ def configure_network(ip, netmask, gateway):
 
     # Check to see if the network is already configured
     if (ip in current['Network Settings']['IP_ADDRESS']['VALUE'] and
-        netmask in current['Network Settings']['SUBNET_MASK']['VALUE'] and
-        gateway in current['Network Settings']['GATEWAY_IP_ADDRESS']['VALUE']):
+            netmask in current['Network Settings']['SUBNET_MASK']['VALUE'] and
+            gateway in current['Network Settings']['GATEWAY_IP_ADDRESS']['VALUE']):
         return True
 
     _xml = """<RIBCL VERSION="2.0">
@@ -518,3 +571,37 @@ def disable_dhcp():
               </RIBCL>"""
 
     return __execute_cmd('Disable_DHCP', _xml)
+
+
+def configure_snmp(community, snmp_port=161, snmp_trapport=161):
+    '''
+    Configure SNMP
+
+    CLI Example:
+
+    .. code-bash::
+
+        salt '*' ilo.configure_snmp [COMMUNITY STRING] [SNMP PORT] [SNMP TRAP PORT]
+    '''
+    _xml = """<RIBCL VERSION="2.2">
+                <LOGIN USER_LOGIN="x" PASSWORD="y">
+                  <RIB_INFO mode="write">
+                    <MOD_GLOBAL_SETTINGS>
+                      <SNMP_ACCESS_ENABLED VALUE="Yes"/>
+                      <SNMP_PORT VALUE="{0}"/>
+                      <SNMP_TRAP_PORT VALUE="{1}"/>
+                    </MOD_GLOBAL_SETTINGS>
+
+                   <MOD_SNMP_IM_SETTINGS>
+                     <SNMP_ADDRESS_1 VALUE=""/>
+                     <SNMP_ADDRESS_1_ROCOMMUNITY VALUE="{2}"/>
+                     <SNMP_ADDRESS_1_TRAPCOMMUNITY VERSION="" VALUE=""/>
+                     <RIB_TRAPS VALUE="Y"/>
+                     <OS_TRAPS VALUE="Y"/>
+                     <SNMP_PASSTHROUGH_STATUS VALUE="N"/>
+                  </MOD_SNMP_IM_SETTINGS>
+                </RIB_INFO>
+              </LOGIN>
+           </RIBCL>""".format(snmp_port, snmp_trapport, community)
+
+    return __execute_cmd('Configure_SNMP', _xml)
