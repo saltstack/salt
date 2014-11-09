@@ -12,51 +12,283 @@ import traceback
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 
-def absent(name):
+def present(name,
+            running=True,
+            clone_from=None,
+            snapshot=False,
+            profile=None,
+            template=None,
+            options=None,
+            image=None,
+            config=None,
+            fstype=None,
+            size=None,
+            backing=None,
+            vgname=None,
+            lvname=None):
     '''
-    Destroy a container
+    .. versionchanged:: 2014.7.1
+        The ``lxc.created`` state has been renamed to ``lxc.present``, and the
+        ``lxc.cloned`` state has been merged into this state.
+
+    Create the named container if it does not exist
 
     name
-        id of the container to destroy
+        The name of the container to be created
+
+    running : True
+        * If ``True``, ensure that the container is running
+        * If ``False``, ensure that the container is stopped
+        * If ``None``, do nothing with regards to the running state of the
+          container
+
+        .. versionadded:: 2014.7.1
+
+    clone_from
+        Create named container as a clone of the specified container
+
+    snapshot : False
+        Use Copy On Write snapshots (LVM). Only supported with ``clone_from``.
+
+    profile
+        Profile to use in container creation (see the :ref:`LXC Tutorial
+        <lxc-tutorial-profiles>` for more information). Values in a profile
+        will be overridden by the parameters listed below.
+
+    **Container Creation Arguments**
+
+    template
+        The template to use. E.g., 'ubuntu' or 'fedora'. Conflicts with the
+        ``image`` argument.
+
+        .. note::
+
+            The ``download`` template requires the following three parameters
+            to be defined in ``options``:
+
+            * **dist** - The name of the distribution
+            * **release** - Release name/version
+            * **arch** - Architecture of the container
+
+            The available images can be listed using the :mod:`lxc.images
+            <salt.modules.lxc.images>` function.
+
+    options
+        .. versionadded:: 2014.7.1
+
+        Template-specific options to pass to the lxc-create command. These
+        correspond to the long options (ones beginning with two dashes) that
+        the template script accepts. For example:
+
+        .. code-block:: yaml
+
+            web01:
+              lxc.present:
+                - template: download
+                - options:
+                    dist: centos
+                    release: 6
+                    arch: amd64
+
+        Remember to double-indent the options, due to :ref:`how PyYAML works
+        <nested-dict-indentation>`.
+
+    image
+        A tar archive to use as the rootfs for the container. Conflicts with
+        the ``template`` argument.
+
+    backing
+        The type of storage to use. Set to ``lvm`` to use an LVM group.
+        Defaults to filesystem within /var/lib/lxc.
+
+    fstype
+        Filesystem type to use on LVM logical volume
+
+    size
+        Size of the volume to create. Only applicable if ``backing`` is set to
+        ``lvm``.
+
+    vgname : lxc
+        Name of the LVM volume group in which to create the volume for this
+        container. Only applicable if ``backing`` is set to ``lvm``.
+
+    lvname
+        Name of the LVM logical volume in which to create the volume for this
+        container. Only applicable if ``backing`` is set to ``lvm``.
+    '''
+    ret = {'name': name,
+           'result': True,
+           'comment': 'Container \'{0}\' already exists'.format(name),
+           'changes': {}}
+
+    # Sanity checks
+    create_type_count = len([x for x in (template, image, clone_from) if x])
+    if create_type_count > 1:
+        ret['result'] = False
+        ret['comment'] = ('Only one of template, image, or clone_from is '
+                          'permitted')
+    elif create_type_count == 0:
+        ret['result'] = False
+        ret['comment'] = 'One of template, image, or clone_from is required'
+    elif clone_from and not __salt__['lxc.exists'](clone_from):
+        ret['result'] = False
+        ret['comment'] = ('Clone source \'{0}\' does not exist'
+                          .format(clone_from))
+    if not ret['result']:
+        return ret
+
+    state = {'old': __salt__['lxc.state'](name)}
+    if state['old'] is None:
+        # Container does not exist
+
+        action = 'cloned from {0}'.format(clone_from) if clone_from \
+            else 'created'
+
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = (
+                'Container \'{0}\' will be {1}'.format(
+                    name,
+                    'cloned from {0}'.format(clone_from) if clone_from
+                    else 'created')
+            )
+            return ret
+
+        try:
+            if clone_from:
+                result = __salt__['lxc.clone'](name,
+                                               clone_from,
+                                               profile=profile,
+                                               snapshot=snapshot,
+                                               size=size,
+                                               backing=backing,
+                                               vgname=vgname)
+            else:
+                result = __salt__['lxc.create'](profile=profile,
+                                                template=template,
+                                                options=options,
+                                                image=image,
+                                                config=config,
+                                                fstype=fstype,
+                                                size=size,
+                                                backing=backing,
+                                                vgname=vgname,
+                                                lvname=lvname)
+        except (CommandExecutionError, SaltInvocationError) as exc:
+            ret['result'] = False
+            ret['comment'] = exc.strerror
+        else:
+            if clone_from:
+                ret['comment'] = ('Cloned container \'{0}\' as \'{1}\''
+                                  .format(clone_from, name))
+            else:
+                ret['comment'] = 'Created container \'{0}\''.format(name)
+
+    if ret['result'] is not False:
+        # Enforce the "running" parameter
+        if running is None:
+            # Don't do anything
+            pass
+        elif running:
+            if result['state'] != 'running':
+                error = ', but it could not be started'
+                try:
+                    state['new'] = __salt__['lxc.start'](name)['state']
+                    if post != 'running':
+                        ret['result'] = False
+                        ret['comment'] += error
+                except (SaltInvocationError, CommandExecutionError) as exc:
+                    ret['result'] = False
+                    ret['comment'] += '{0}: {1}'.format(error, exc)
+        else:
+            if result['state'] != 'stopped':
+                error = ', but it could not be stopped'
+                try:
+                    state['new'] = __salt__['lxc.stop'](name)['state']
+                    if post != 'stopped':
+                        ret['result'] = False
+                        ret['comment'] += error
+                except (SaltInvocationError, CommandExecutionError) as exc:
+                    ret['result'] = False
+                    ret['comment'] += '{0}: {1}'.format(error, exc)
+
+    if 'new' not in state:
+        # Make sure we know the final state of the container before we return
+        state['new'] = __salt__['lxc.state'](name)
+    if state['old'] != state['new']:
+        ret['changes'] = state
+    return ret
+
+
+def absent(name):
+    '''
+    Ensure a container is not present, destroying it if present
+
+    name
+        Name of the container to destroy
 
     .. code-block:: yaml
 
-        destroyer:
-          lxc.absent:
-            - name: my_instance_name2
+        my_instance_name2:
+          lxc.absent
 
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': 'Container \'{0}\' does not exist'.format(name)}
+
+    if not __salt__['lxc.exists'](name):
+        return ret
+
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'Container \'{0}\' would be removed'.format(name)
+        return ret
+
+    try:
+        result = __salt__['lxc.destroy'](name)
+    except (SaltInvocationError, CommandExecutionError) as exc:
+        ret['result'] = False
+        ret['comment'] = 'Failed to destroy container: {0}'.format(exc)
+        return ret
+
+    ret['changes'] = result['changes']
+    ret['result'] = result['result']
+    return ret
+
+
+def running(name, restart=False):
+    '''
+    .. versionchanged:: 2014.7.1
+        Renamed from **started** to **running**
+
+    Ensure that a container is running
+
+    .. note::
+
+        This state does not enforce the existence of the named container. For
+        this, use the
+
+    name
+        The name of the container
+
+    restart : False
+        Force reboot if container is running
+
+    .. code-block:: yaml
+
+        web01:
+          lxc.running
     '''
     if __opts__['test']:
         return {'name': name,
-                'comment': '{0} will be removed'.format(name),
+                'comment': '{0} will be started'.format(name),
                 'result': True,
                 'changes': {}}
-    changes = {}
-    exists = __salt__['lxc.exists'](name)
-    ret = {'name': name, 'changes': changes,
-           'result': True, 'comment': 'Absent'}
-    if exists:
-        ret['result'] = False
-        infos = __salt__['lxc.info'](name)
-        try:
-            if infos['state'] == 'running':
-                cret = __salt__['lxc.stop'](name)
-                infos = __salt__['lxc.infos'](name)
-            if infos['state'] == 'running':
-                raise Exception('Container won\'t stop')
-            cret = __salt__['lxc.destroy'](name)
-            if not cret.get('change', False):
-                raise Exception('Container was not destroy')
-            ret['result'] = not __salt__['lxc.exists'](name)
-            if not ret['result']:
-                raise Exception('Container won`t destroy')
-        except Exception as ex:
-            trace = traceback.format_exc()
-            ret['result'] = False
-            ret['comment'] = 'Error in container removal'
-            changes['msg'] = '{1}\n{0}\n'.format(ex, trace)
-        return ret
-    return ret
+    cret = __salt__['lxc.start'](name, restart=restart)
+    cret['name'] = name
+    return cret
 
 
 def stopped(name):
@@ -83,261 +315,27 @@ def stopped(name):
     return cret
 
 
-def started(name, restart=False):
+# Deprecated states
+def created(name, **kwargs):
     '''
-    Start a container
-
-    name
-        id of the container to start
-    force
-        force reboot
-
-    .. code-block:: yaml
-
-        destroyer:
-          lxc.started:
-            - name: my_instance_name2
-
+    State has been renamed, show deprecation notice
     '''
-    if __opts__['test']:
-        return {'name': name,
-                'comment': '{0} will be started'.format(name),
-                'result': True,
-                'changes': {}}
-    cret = __salt__['lxc.start'](name, restart=restart)
-    cret['name'] = name
-    return cret
+    salt.utils.warn_until(
+        'Boron',
+        'The lxc.created state has been renamed to lxc.present, please use '
+        'lxc.present'
+    )
+    return present(name, **kwargs)
 
 
-def edited_conf(name, lxc_conf=None, lxc_conf_unset=None):
+def cloned(name, orig, **kwargs):
     '''
-    Edit LXC configuration options
-
-    .. code-block:: bash
-
-        setconf:
-          lxc.edited_conf:
-            - name: ubuntu
-            - lxc_conf:
-                - network.ipv4.ip: 10.0.3.6
-            - lxc_conf_unset:
-                - lxc.utsname
+    State has been renamed, show deprecation notice
     '''
-    if __opts__['test']:
-        return {'name': name,
-                'comment': '{0} lxc.conf will be edited'.format(name),
-                'result': True,
-                'changes': {}}
-    if not lxc_conf_unset:
-        lxc_conf_unset = {}
-    if not lxc_conf:
-        lxc_conf = {}
-    cret = __salt__['lxc.update_lxc_conf'](name,
-                                           lxc_conf=lxc_conf,
-                                           lxc_conf_unset=lxc_conf_unset)
-    cret['name'] = name
-    return cret
-
-
-def created(name,
-            template=None,
-            image=None,
-            config=None,
-            profile=None,
-            fstype=None,
-            size=None,
-            backing=None,
-            vgname=None,
-            lvname=None):
-    '''
-    Create a container using a template
-
-    name
-        The name of the container to be created
-
-    template
-        The template from which to create the container. Conflicts with the
-        ``image`` argument
-
-    image
-        .. versionadded:: 2014.7.1
-
-        A tar archive to use as the rootfs for the container. Conflicts with
-        the ``template`` argument.
-
-    config
-        .. versionadded:: 2014.7.1
-
-        The config file to use for the container. Defaults to system-wide
-        config (usually in /etc/lxc/lxc.conf). Helpful when combined with the
-        ``image`` argument to deploy a pre-configured LXC image.
-
-        .. warning::
-
-            Use with care when combining with the ``template`` argument.
-
-    profile
-        Profile to use in container creation (see the :ref:`LXC Tutorial
-        <lxc-tutorial-profiles>` for more information). Values in a profile
-        will be overridden by the parameters listed below.
-
-    fstype
-        Which fstype to use
-
-    size
-        Size of container
-
-    backing
-        Filesystem backing
-
-        None
-           Filesystem
-        lvm
-           lv
-        brtfs
-           brtfs
-
-    vgname
-        If LVM, which volume group
-
-    lvname
-        If LVM, which logical volume
-
-
-    .. code-block:: yaml
-
-        mycreation:
-          lxc.created:
-            - name: my_instance_1
-            - backing: lvm
-            - size: 1G
-            - template: ubuntu
-
-        from_ubuntu_profile:
-          lxc.created:
-            - name: my_instance_2
-            - profile: ubuntu
-
-        from_ubuntu_profile_2:
-          lxc.created:
-            - name: my_instance_3
-            - profile:
-                name: ubuntu
-                lvname: instance3
-
-    .. versionchanged:: 2014.7.1
-        For ease of use, profiles like the ones in the
-        ``from_ubuntu_profile_2`` example above can be configured with a
-        leading dash before each parameter. For example:
-
-    .. code-block:: yaml
-
-        from_ubuntu_profile_2:
-          lxc.created:
-            - name: my_instance_3
-            - profile:
-              - name: ubuntu
-              - lvname: instance3
-    '''
-    ret = {'name': name,
-           'result': True,
-           'comment': 'Container \'{0}\' already exists'.format(name),
-           'changes': {}}
-    exists = __salt__['lxc.exists'](name)
-    if exists:
-        return ret
-
-    if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = 'Container \'{0}\' will be created'.format(name)
-        return ret
-
-    try:
-        __salt__['lxc.create'](
-            name=name,
-            template=template,
-            image=image,
-            config=config,
-            profile=profile,
-            fstype=fstype,
-            vgname=vgname,
-            size=size,
-            lvname=lvname,
-            backing=backing,
-        )
-    except (CommandExecutionError, SaltInvocationError) as exc:
-        ret['result'] = False
-        ret['comment'] = '{0}'.format(exc)
-    else:
-        ret['comment'] = 'Created container \'{0}\''.format(name)
-        ret['changes']['status'] = 'created'
-    return ret
-
-
-def cloned(name,
-           orig,
-           snapshot=True,
-           size=None,
-           vgname=None,
-           profile=None):
-    '''
-    Clone a container
-
-    name
-        id of the container to clone to
-    orig
-        id of the container to clone from
-    snapshot
-        do we use snapshots
-    size
-        Which size
-    vgname
-        If LVM, which volume group
-    profile
-        pillar lxc profile
-
-    .. code-block:: yaml
-
-        myclone:
-          lxc.cloned:
-            - name: my_instance_name2
-            - orig: ubuntu
-            - vgname: lxc
-            - snapshot: true
-    '''
-    if __opts__['test']:
-        return {'name': name,
-                'comment': '{0} will be cloned from {1}'.format(
-                    name, orig),
-                'result': True,
-                'changes': {}}
-    changes = {}
-    ret = {'name': name, 'changes': changes, 'result': True, 'comment': ''}
-    exists = __salt__['lxc.exists'](name)
-    oexists = __salt__['lxc.exists'](orig)
-    if exists:
-        ret['comment'] = 'Container already exists'
-    elif not oexists:
-        ret['result'] = False
-        ret['comment'] = (
-            'container could not be cloned: {0}, '
-            '{1} does not exists'.format(name, orig))
-    else:
-        cret = __salt__['lxc.clone'](
-            name=name,
-            orig=orig,
-            snapshot=snapshot,
-            size=size,
-            vgname=vgname,
-            profile=profile,
-        )
-        if cret.get('error', ''):
-            ret['result'] = False
-            ret['comment'] = '{0}\n{1}'.format(
-                cret['error'], 'Container cloning error')
-        else:
-            ret['result'] = (
-                cret['cloned'] or 'already exists' in cret.get('comment', ''))
-            ret['comment'] += 'Container cloned\n'
-            changes['status'] = 'cloned'
-    return ret
+    salt.utils.warn_until(
+        'Boron',
+        'The lxc.cloned state has been merged into the lxc.present state. '
+        'Please update your states to use lxc.present, with the '
+        '\'clone_from\' argument set to the name of the clone source.'
+    )
+    return present(name, clone_from=orig, **kwargs)
