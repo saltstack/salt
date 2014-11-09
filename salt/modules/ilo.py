@@ -32,7 +32,9 @@ def __execute_cmd(name, xml):
     with salt.utils.fopen('/tmp/{0}.{1}'.format(name, os.getpid()), 'w') as fh:
         fh.write(xml)
 
-    cmd = __salt__['cmd.run_all']('hponcfg -f /tmp/{0}.{1}'.format(name, os.getpid()))
+    cmd = __salt__['cmd.run_all']('hponcfg -f /tmp/{0}.{1}'.format(
+        name, os.getpid())
+        )
 
     # Clean up the temp file
     __salt__['file.remove']('/tmp/{0}.{1}'.format(name, os.getpid()))
@@ -43,12 +45,20 @@ def __execute_cmd(name, xml):
                 return {'Failed': i.split('=')[-1]}
         return False
 
-    if len(cmd['stdout'].splitlines()) == 4:
+    try:
+        for i in ET.fromstring(''.join(cmd['stdout'].splitlines()[3:-1])):
+            # Make sure dict keys dont collide
+            if ret[name.replace('_', ' ')].get(i.tag, False):
+                ret[name.replace('_', ' ')].update(
+                    {i.tag + '_' + str(id): i.attrib}
+                )
+                id += 1
+            else:
+                ret[name.replace('_', ' ')].update(
+                    {i.tag: i.attrib}
+                )
+    except SyntaxError:
         return True
-
-    for i in ET.fromstring(''.join(cmd['stdout'].splitlines()[3:-1])):
-        ret[name.replace('_', ' ')].update({i.tag + '_' + str(id): i.attrib})
-        id += 1
 
     return ret
 
@@ -75,7 +85,124 @@ def global_settings():
     return __execute_cmd('Global_Settings', _xml)
 
 
-def all_users():
+def configure_http_port(port=80):
+    '''
+    Configure the port HTTP should listen on
+
+    CLI Example:
+
+    .. code-block::
+
+        salt '*' ilo.configure_http_port 8080
+    '''
+    # TODO: Check the status before chaging the port
+    _xml = """<RIBCL VERSION="2.0">
+                <LOGIN USER_LOGIN="adminname" PASSWORD="password">
+                  <RIB_INFO MODE="write">
+                    <MOD_GLOBAL_SETTINGS>
+                      <HTTP_PORT value="{0}"/>
+                    </MOD_GLOBAL_SETTINGS>
+                  </RIB_INFO>
+                </LOGIN>
+              </RIBCL>""".format(port)
+
+    return __execute_cmd('Set_HTTP_Port', _xml)
+
+
+def configure_https_port(port=443):
+    '''
+    Configure the port HTTPS should listen on
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ilo.configure_https_port 4334
+    '''
+    # TODO: Check the status before chaging the port
+    _xml = """<RIBCL VERSION="2.0">
+                <LOGIN USER_LOGIN="adminname" PASSWORD="password">
+                  <RIB_INFO MODE="write">
+                    <MOD_GLOBAL_SETTINGS>
+                      <HTTPS_PORT value="{0}"/>
+                    </MOD_GLOBAL_SETTINGS>
+                  </RIB_INFO>
+                </LOGIN>
+              </RIBCL>""".format(port)
+
+    return __execute_cmd('Set_HTTPS_Port', _xml)
+
+
+def enable_ssh():
+    '''
+    Enable the SSH daemon
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ilo.enable_ssh
+    '''
+    _xml = """<RIBCL VERSION="2.0">
+                <LOGIN USER_LOGIN="adminname" PASSWORD="password">
+                  <RIB_INFO MODE="write">
+                    <MOD_GLOBAL_SETTINGS>
+                      <SSH_STATUS value="Yes"/>
+                    </MOD_GLOBAL_SETTINGS>
+                  </RIB_INFO>
+                </LOGIN>
+              </RIBCL>"""
+
+    return __execute_cmd('Enable_SSH', _xml)
+
+
+def disable_ssh():
+    '''
+    Disable the SSH daemon
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ilo.disable_ssh
+    '''
+    _xml = """<RIBCL VERSION="2.0">
+                <LOGIN USER_LOGIN="adminname" PASSWORD="password">
+                  <RIB_INFO MODE="write">
+                    <MOD_GLOBAL_SETTINGS>
+                      <SSH_STATUS value="No"/>
+                    </MOD_GLOBAL_SETTINGS>
+                  </RIB_INFO>
+                </LOGIN>
+              </RIBCL>"""
+
+    return __execute_cmd('Disable_SSH', _xml)
+
+
+def configure_ssh_port(port=22):
+    '''
+    Enable SSH on a user defined port
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ilo.configure_ssh_port 2222
+    '''
+    _xml = """<RIBCL VERSION="2.0">
+                <LOGIN USER_LOGIN="adminname" PASSWORD="password">
+                  <RIB_INFO MODE="write">
+                    <MOD_GLOBAL_SETTINGS>
+                       <SSH_PORT value="{0}"/>
+                    </MOD_GLOBAL_SETTINGS>
+                  </RIB_INFO>
+                </LOGIN>
+              </RIBCL>""".format(port)
+
+    return __execute_cmd('Configure_SSH_Port', _xml)
+
+
+def list_users():
     '''
     List all users
 
@@ -83,7 +210,7 @@ def all_users():
 
     .. code-block:: bash
 
-        salt '*' ilo.all_users
+        salt '*' ilo.list_users
     '''
     _xml = """<RIBCL VERSION="2.0">
                 <LOGIN USER_LOGIN="x" PASSWORD="x">
@@ -96,7 +223,7 @@ def all_users():
     return __execute_cmd('All_users', _xml)
 
 
-def all_users_info():
+def list_users_info():
     '''
     List all users in detail
 
@@ -104,7 +231,7 @@ def all_users_info():
 
     .. code-block:: bash
 
-        salt '*' ilo.all_users_info
+        salt '*' ilo.list_users_info
     '''
     _xml = """<RIBCL VERSION="2.0">
                 <LOGIN USER_LOGIN="adminname" PASSWORD="password">
@@ -125,17 +252,26 @@ def create_user(name, password, *privileges):
 
     .. code-block:: bash
 
-        salt '*' ilo.create_user damian secretagent VIRTUAL_MEDIA_PRIV RESET_SERVER_PRIV
+        salt '*' ilo.create_user damian secretagent VIRTUAL_MEDIA_PRIV
 
     If no permissions are specify the user will only have a read-only account.
- 
+
     Supported privelges:
 
-    * ADMIN_PRIV - Enables the user to administer user accounts.
-    * REMOTE_CONS_PRIV - Enables the user to access the Remote Console functionality.
-    * RESET_SERVER_PRIV - Enables the user to remotely manipulate the server power setting.
-    * VIRTUAL_MEDIA_PRIV - Enables the user permission to access the virtual media functionality.
-    * CONFIG_ILO_PRIV - Enables the user to configure iLO settings.
+    * ADMIN_PRIV
+      Enables the user to administer user accounts.
+
+    * REMOTE_CONS_PRIV
+      Enables the user to access the Remote Console functionality.
+
+    * RESET_SERVER_PRIV
+      Enables the user to remotely manipulate the server power setting.
+
+    * VIRTUAL_MEDIA_PRIV
+      Enables the user permission to access the virtual media functionality.
+
+    * CONFIG_ILO_PRIV
+      Enables the user to configure iLO settings.
     '''
     _priv = ['ADMIN_PRIV',
              'REMOTE_CONS_PRIV',
@@ -272,3 +408,113 @@ def change_password(username, password):
               </RIBCL>""".format(username, password)
 
     return __execute_cmd('Change_password', _xml)
+
+
+def network():
+    '''
+    Grab the current network settings
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ilo.network
+    '''
+    _xml = """<RIBCL VERSION="2.0">
+                <LOGIN USER_LOGIN="adminname" PASSWORD="password">
+                  <RIB_INFO MODE="read">
+                    <GET_NETWORK_SETTINGS/>
+                  </RIB_INFO>
+                </LOGIN>
+              </RIBCL>"""
+
+    return __execute_cmd('Network_Settings', _xml)
+
+
+def configure_network(ip, netmask, gateway):
+    '''
+    Configure Network Interface
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ilo.configure_network [IP ADDRESS] [NETMASK] [GATEWAY]
+    '''
+    current = network()
+
+    # Check to see if the network is already configured
+    if (ip in current['Network Settings']['IP_ADDRESS']['VALUE'] and
+        netmask in current['Network Settings']['SUBNET_MASK']['VALUE'] and
+        gateway in current['Network Settings']['GATEWAY_IP_ADDRESS']['VALUE']):
+        return True
+
+    _xml = """<RIBCL VERSION="2.0">
+                <LOGIN USER_LOGIN="adminname" PASSWORD="password">
+                  <RIB_INFO MODE="write">
+                    <MOD_NETWORK_SETTINGS>
+                      <IP_ADDRESS value="{0}"/>
+                      <SUBNET_MASK value="{1}"/>
+                      <GATEWAY_IP_ADDRESS value="{2}"/>
+                    </MOD_NETWORK_SETTINGS>
+                  </RIB_INFO>
+                </LOGIN>
+              </RIBCL> """.format(ip, netmask, gateway)
+
+    return __execute_cmd('Configure_Network', _xml)
+
+
+def enable_dhcp():
+    '''
+    Enable DHCP
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ilo.enable_dhcp
+    '''
+    current = network()
+
+    if current['Network Settings']['DHCP_ENABLE']['VALUE'] == 'Y':
+        return True
+
+    _xml = """<RIBCL VERSION="2.0">
+                <LOGIN USER_LOGIN="adminname" PASSWORD="password">
+                  <RIB_INFO MODE="write">
+                    <MOD_NETWORK_SETTINGS>
+                      <DHCP_ENABLE value="Yes"/>
+                    </MOD_NETWORK_SETTINGS>
+                  </RIB_INFO>
+                </LOGIN>
+              </RIBCL>"""
+
+    return __execute_cmd('Enable_DHCP', _xml)
+
+
+def disable_dhcp():
+    '''
+    Disable DHCP
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ilo.disable_dhcp
+    '''
+    current = network()
+
+    if current['Network Settings']['DHCP_ENABLE']['VALUE'] == 'N':
+        return True
+
+    _xml = """<RIBCL VERSION="2.0">
+                <LOGIN USER_LOGIN="adminname" PASSWORD="password">
+                  <RIB_INFO MODE="write">
+                    <MOD_NETWORK_SETTINGS>
+                      <DHCP_ENABLE value="No"/>
+                    </MOD_NETWORK_SETTINGS>
+                  </RIB_INFO>
+                </LOGIN>
+              </RIBCL>"""
+
+    return __execute_cmd('Disable_DHCP', _xml)
