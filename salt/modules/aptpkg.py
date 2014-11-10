@@ -1132,9 +1132,13 @@ def get_repo(repo, **kwargs):
                                             ppa_name, dist)
         else:
             if HAS_SOFTWAREPROPERTIES:
-                repo = softwareproperties.ppa.expand_ppa_line(
-                    repo,
-                    __grains__['lsb_distrib_codename'])[0]
+                if hasattr(softwareproperties.ppa, 'PPAShortcutHandler'):
+                    repo = softwareproperties.ppa.PPAShortcutHandler(repo).expand(
+                        __grains__['lsb_distrib_codename'])[0]
+                else:
+                    repo = softwareproperties.ppa.expand_ppa_line(
+                        repo,
+                        __grains__['lsb_distrib_codename'])[0]
             else:
                 repo = LP_SRC_FORMAT.format(owner_name, ppa_name, dist)
 
@@ -1205,7 +1209,10 @@ def del_repo(repo, **kwargs):
             else:
                 repo = LP_SRC_FORMAT.format(owner_name, ppa_name, dist)
         else:
-            repo = softwareproperties.ppa.expand_ppa_line(repo, dist)[0]
+            if hasattr(softwareproperties.ppa, 'PPAShortcutHandler'):
+                repo = softwareproperties.ppa.PPAShortcutHandler(repo).expand(dist)[0]
+            else:
+                repo = softwareproperties.ppa.expand_ppa_line(repo, dist)[0]
 
     sources = sourceslist.SourcesList()
     repos = [s for s in sources.list if not s.invalid]
@@ -1596,8 +1603,10 @@ def expand_repo_def(repokwargs):
                                             dist)
         else:
             if HAS_SOFTWAREPROPERTIES:
-                repo = softwareproperties.ppa.expand_ppa_line(
-                    repo, dist)[0]
+                if hasattr(softwareproperties.ppa, 'PPAShortcutHandler'):
+                    repo = softwareproperties.ppa.PPAShortcutHandler(repo).expand(dist)[0]
+                else:
+                    repo = softwareproperties.ppa.expand_ppa_line(repo, dist)[0]
             else:
                 repo = LP_SRC_FORMAT.format(owner_name, ppa_name, dist)
 

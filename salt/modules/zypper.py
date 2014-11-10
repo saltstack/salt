@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
 Package support for openSUSE via the zypper package manager
+
+:depends: - ``zypp`` Python module.  Install with ``zypper install python-zypp``
 '''
 
 # Import python libs

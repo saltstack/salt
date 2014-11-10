@@ -133,6 +133,10 @@ class ProcessManager(object):
 
         self.wait_for_kill = wait_for_kill
 
+        # store some pointers for the SIGTERM handler
+        self._pid = os.getpid()
+        self._sigterm_handler = signal.getsignal(signal.SIGTERM)
+
     def add_process(self, tgt, args=None, kwargs=None):
         '''
         Create a processes and args + kwargs
@@ -181,6 +185,7 @@ class ProcessManager(object):
         Load and start all available api modules
         '''
         salt.utils.appendproctitle(self.name)
+
         # make sure to kill the subprocesses if the parent is killed
         signal.signal(signal.SIGTERM, self.kill_children)
 
@@ -193,6 +198,9 @@ class ProcessManager(object):
 
         while True:
             try:
+                # in case someone died while we were waiting...
+                self.check_children()
+
                 pid, exit_status = os.wait()
                 if pid not in self._process_map:
                     log.debug(('Process of pid {0} died, not a known'
@@ -201,9 +209,6 @@ class ProcessManager(object):
                 self.restart_process(pid)
             except OSError:
                 break
-
-            # in case someone died while we were waiting...
-            self.check_children()
 
     def check_children(self):
         '''
@@ -217,10 +222,19 @@ class ProcessManager(object):
         '''
         Kill all of the children
         '''
+        # check that this is the correct process, children inherit this
+        # handler, if we are in a child lets just run the original handler
+        if os.getpid() != self._pid:
+            if callable(self._sigterm_handler):
+                return self._sigterm_handler(*args)
+            elif self._sigterm_handler is not None:
+                return signal.default_int_handler(signal.SIGTERM)(*args)
+            else:
+                return
+
         for pid, p_map in self._process_map.items():
             p_map['Process'].terminate()
 
-        #
         end_time = time.time() + self.wait_for_kill  # when to die
 
         while self._process_map and time.time() < end_time:
