@@ -377,7 +377,7 @@ def upgrade():
         return {}
 
     old = list_pkgs()
-    call = __salt__['cmd.ret_all']('{0} -y fug'.format(pkgin))
+    call = __salt__['cmd.run_all']('{0} -y fug'.format(pkgin))
     if call['retcode'] != 0:
         ret['result'] = False
         if 'stderr' in call:
