@@ -2,6 +2,7 @@
 '''
 Manage a glusterfs pool
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -9,6 +10,7 @@ import logging
 # Import salt libs
 import salt.utils
 import salt.utils.cloud as suc
+from six.moves import range
 
 log = logging.getLogger(__name__)
 
