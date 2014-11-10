@@ -22,10 +22,10 @@ import salt.exceptions
 import msgpack
 import zmq
 
-
 import errno
 import threading
 import time
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class PayloadTestCase(TestCase):
@@ -56,6 +56,7 @@ class PayloadTestCase(TestCase):
 
 class SREQTestCase(TestCase):
     port = 8845  # TODO: dynamically assign a port?
+
     @classmethod
     def setUpClass(cls):
         '''
@@ -69,7 +70,7 @@ class SREQTestCase(TestCase):
             '''
             context = zmq.Context()
             socket = context.socket(zmq.REP)
-            socket.bind("tcp://*:%s" % SREQTestCase.port)
+            socket.bind("tcp://*:{0}".format(SREQTestCase.port))
             payload = salt.payload.Serial('msgpack')
 
             while SREQTestCase.thread_running.is_set():
@@ -150,7 +151,6 @@ class SREQTestCase(TestCase):
         # ensure no exceptions when we go to destroy the sreq, since __del__
         # swallows exceptions, we have to call destroy directly
         sreq.destroy()
-
 
 
 if __name__ == '__main__':
