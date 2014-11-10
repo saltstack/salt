@@ -434,11 +434,6 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
     Registry.enabled = True
 
     # now exec our template using our created scopes
-    if sys.version_info[0] > 2:
-        # in py3+ exec is a function
-        exec(final_template, _globals, _locals)
-    else:
-        # prior to that it is a statement
-        exec final_template in _globals, _locals
+    salt._compat.exec_(final_template, _globals, _locals)
 
     return Registry.salt_data()
