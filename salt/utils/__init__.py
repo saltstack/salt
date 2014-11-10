@@ -1880,12 +1880,14 @@ def warn_until(version,
             return '{0}:{1}: {2}: {3}'.format(
                 filename, lineno, category.__name__, message
             )
+        saved = warnings.formatwarning
         warnings.formatwarning = _formatwarning
         warnings.warn(
             message.format(version=version.formatted_version),
             category,
             stacklevel=stacklevel
         )
+        warnings.formatwarning = saved
 
 
 def kwargs_warn_until(kwargs,
