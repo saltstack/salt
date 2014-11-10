@@ -66,6 +66,7 @@ variables, if set, but these values can also be overridden in several ways:
               pkg.installed:
                 - fromrepo: ftp://ftp2.freebsd.org/
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import copy
@@ -75,6 +76,7 @@ import re
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError, MinionError
+import six
 
 log = logging.getLogger(__name__)
 
@@ -212,7 +214,7 @@ def version(*names, **kwargs):
     origins = __context__.get('pkg.origin', {})
     return dict([
         (x, {'origin': origins.get(x, ''), 'version': y})
-        for x, y in ret.iteritems()
+        for x, y in six.iteritems(ret)
     ])
 
 
@@ -262,7 +264,7 @@ def list_pkgs(versions_as_list=False, with_origin=False, **kwargs):
             origins = __context__.get('pkg.origin', {})
             return dict([
                 (x, {'origin': origins.get(x, ''), 'version': y})
-                for x, y in ret.iteritems()
+                for x, y in six.iteritems(ret)
             ])
         return ret
 
@@ -288,7 +290,7 @@ def list_pkgs(versions_as_list=False, with_origin=False, **kwargs):
     if salt.utils.is_true(with_origin):
         return dict([
             (x, {'origin': origins.get(x, ''), 'version': y})
-            for x, y in ret.iteritems()
+            for x, y in six.iteritems(ret)
         ])
     return ret
 
@@ -475,7 +477,7 @@ def file_list(*packages):
     '''
     ret = file_dict(*packages)
     files = []
-    for pkg_files in ret['files'].itervalues():
+    for pkg_files in six.itervalues(ret['files']):
         files.extend(pkg_files)
     ret['files'] = files
     return ret
