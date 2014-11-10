@@ -175,6 +175,11 @@ def get(tgt, fun, expr_form='glob'):
         pcre
         grain
         grain_pcre
+        compound
+        pillar
+
+    Note that all pillar matches, whether using the compound matching system or
+    the pillar matching system, will be exact matches, with globbing disabled.
 
     CLI Example:
 
@@ -184,9 +189,6 @@ def get(tgt, fun, expr_form='glob'):
         salt '*' mine.get 'os:Fedora' network.interfaces grain
         salt '*' mine.get 'os:Fedora and S@192.168.5.0/24' network.ipaddrs compound
     '''
-    if expr_form.lower() in ('pillar', 'compound'):
-        log.error('Pillar/compound matching not supported on mine.get')
-        return ''
     if __opts__['file_client'] == 'local':
         ret = {}
         is_target = {'glob': __salt__['match.glob'],
@@ -195,6 +197,8 @@ def get(tgt, fun, expr_form='glob'):
                      'grain': __salt__['match.grain'],
                      'grain_pcre': __salt__['match.grain_pcre'],
                      'ipcidr': __salt__['match.ipcidr'],
+                     'compound': __salt__['match.compound'],
+                     'pillar': __salt__['match.pillar'],
                      }[expr_form](tgt)
         if is_target:
             data = __salt__['data.getval']('mine_cache')
