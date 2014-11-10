@@ -2,6 +2,7 @@
 '''
 Virtual machine image management tools
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -27,7 +28,7 @@ def mount_image(location):
         mnt = __salt__['qemu_nbd.init'](location)
         if not mnt:
             return ''
-        first = mnt.iterkeys().next()
+        first = next(mnt.iterkeys())
         __context__['img.mnt_{0}'.format(first)] = mnt
         return first
     return ''
