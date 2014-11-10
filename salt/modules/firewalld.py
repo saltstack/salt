@@ -3,6 +3,7 @@
 '''
 Support for firewalld
 '''
+from __future__ import absolute_import
 
 import salt.utils
 import logging
