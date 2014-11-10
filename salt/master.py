@@ -112,6 +112,8 @@ class Scheduler(multiprocessing.Process):
                 time.sleep(self.schedule.loop_interval)
             except KeyboardInterrupt:
                 break
+            except IOError:
+                time.sleep(self.opts['loop_interval'])
 
     def handle_schedule(self):
         '''
