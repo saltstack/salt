@@ -52,7 +52,7 @@ framer bootstrap be inactive first join
 
     frame joined
         print Joined
-        go next if elapsed >= 2
+        go next if elapsed >= 0.5
 
     frame allow
         print Allowing...
@@ -66,13 +66,13 @@ framer bootstrap be inactive first join
 
     frame allowed
         print Allowed
-        go next if elapsed >= 2
+        go next if elapsed >= 0.5
 
-    frame pillar
-        print Pillaring
-        enter
-            do salt load pillar
-        go loading
+    #frame pillar
+        #print Pillaring
+        #enter
+            #do salt load pillar
+        #go loading
 
     frame loading
         print Loading
@@ -84,7 +84,7 @@ framer bootstrap be inactive first join
         # start the manager framer
         bid start manager #start alive presence from minion side
         do salt raet router
-        go pillar if .salt.var.pillar_refresh
+        #go pillar if .salt.var.pillar_refresh
         go loading if .salt.var.module_refresh
 
     frame abort

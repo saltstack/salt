@@ -12,6 +12,7 @@ import logging
 import datetime
 import traceback
 import multiprocessing
+import time
 
 # Import salt libs
 import salt
@@ -32,7 +33,7 @@ log = logging.getLogger(__name__)
 try:
     from raet import raeting, nacling
     from raet.lane.stacking import LaneStack
-    from raet.lane.yarding import RemoteYard
+    from raet.lane.yarding import RemoteYard, Yard
 
 except ImportError:
     # Don't die on missing transport libs since only one transport is required
@@ -250,25 +251,55 @@ class RAETCaller(ZeroMQCaller):
     '''
     Object to wrap the calling of local salt modules for the salt-call command
     when transport is raet
+
+    There are two operation modes.
+    1) Use a preexisting minion
+    2) Set up a special caller minion if no preexisting minion
+        The special caller minion is a subset whose only function is to perform
+        Salt-calls with raet as the transport
+        The essentials:
+            A RoadStack whose local estate name is of the form "role_kind" where:
+               role is the minion id opts['id']
+               kind is opts['__role'] which should be 'caller' APPL_KIND_NAMES
+               The RoadStack if for communication to/from a master
+
+            A LaneStack with manor yard so that RaetChannels created by the func Jobbers
+            can communicate through this manor yard then through the
+            RoadStack to/from a master
+
+            A Router to route between the stacks (Road and Lane)
+
+            These are all managed via a FloScript named caller.flo
+
     '''
     def __init__(self, opts):
         '''
         Pass in the command line options
         '''
+        import wingdbstub
+        self.process = None
+
         if (opts.get('__role') ==
                 kinds.APPL_KIND_NAMES[kinds.applKinds.caller]):
             # spin up and fork minion here
-            process = multiprocessing.Process(target=self.minion_run,
+            self.process = multiprocessing.Process(target=self.minion_run,
                                               kwargs={'stuff': {}, 'opts': opts, })
-            process.start()
+            self.process.start()
             #process.join()
 
+        self._wait_caller(opts)
+        time.sleep(5.0)
         self.stack = self._setup_caller_stack(opts)
         salt.transport.jobber_stack = self.stack
 
         # wait here until '/var/run/salt/minion/alpha_caller.manor.uxd' exists
 
         super(RAETCaller, self).__init__(opts)
+
+    def minion_run(self, stuff, opts):
+        minion = salt.Minion()  # daemonizes here
+        #import wingdbstub
+        minion.call()  # caller minion.call_in uses caller.flo
 
     def run(self):
         '''
@@ -283,12 +314,14 @@ class RAETCaller(ZeroMQCaller):
                 print_ret = ret
             else:
                 print_ret = ret.get('return', {})
+            self.process.terminate()
             salt.output.display_output(
                     {'local': print_ret},
                     ret.get('out', 'nested'),
                     self.opts)
             if self.opts.get('retcode_passthrough', False):
                 sys.exit(ret['retcode'])
+
         except SaltInvocationError as err:
             raise SystemExit(err)
 
@@ -332,30 +365,37 @@ class RAETCaller(ZeroMQCaller):
 
         return stack
 
-    def _setup_caller_minion(self, opts):
+    def _wait_caller(self, opts):
         '''
-        Setup up RaetCaller stacks and behaviors
-        Essentially a subset of a minion whose only function is to perform
-        Salt-calls with raet as the transport
-        The essentials:
-            A RoadStack whose local estate name is of the form "role_kind" where:
-               role is the minion id opts['id']
-               kind is opts['__role'] which should be 'caller' APPL_KIND_NAMES
-               The RoadStack if for communication to/from a master
-
-            A LaneStack with manor yard so that RaetChannels created by the func Jobbers
-            can communicate through this manor yard then through the
-            RoadStack to/from a master
-
-            A Router to route between the stacks (Road and Lane)
-
-            These are all managed via a FloScript named caller.flo
-
+        Returns when RAET Minion Yard is available
         '''
-        pass
+        yardname = 'manor'
+        dirpath = opts['sock_dir']
 
-    def minion_run(self, stuff, opts):
-        self._setup_caller_minion(opts)
-        minion = salt.Minion()  # daemonizes here
-        import wingdbstub
-        minion.call()  # caller minion.call_in uses caller.flo
+        role = opts.get('id')
+        if not role:
+            emsg = ("Missing role required to setup RAET SaltCaller.")
+            log.error(emsg + "\n")
+            raise ValueError(emsg)
+
+        kind = opts.get('__role')  # application kind 'master', 'minion', etc
+        if kind not in kinds.APPL_KINDS:
+            emsg = ("Invalid application kind = '{0}' for RAET SaltCaller.".format(kind))
+            log.error(emsg + "\n")
+            raise ValueError(emsg)
+
+        if kind in [kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
+                    kinds.APPL_KIND_NAMES[kinds.applKinds.caller], ]:
+            lanename = "{0}_{1}".format(role, kind)
+        else:
+            emsg = ("Unsupported application kind '{0}' for RAET SaltCaller.".format(kind))
+            log.error(emsg + '\n')
+            raise ValueError(emsg)
+
+        ha, dirpath = Yard.computeHa(dirpath, lanename, yardname)
+
+        while not ((os.path.exists(ha) and
+                    not os.path.isfile(ha) and
+                    not os.path.isdir(ha))):
+            time.sleep(0.1)
+
