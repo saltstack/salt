@@ -819,7 +819,7 @@ class SaltNova(OpenStackComputeShell):
             'priority', 'project_id', 'vlan_start', 'vpn_start'
         ]
 
-        for variable in kwargs:
+        for variable in kwargs.keys():  # iterate over a copy, we might delete some
             if variable not in params:
                 del kwargs[variable]
         return kwargs

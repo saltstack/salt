@@ -202,7 +202,8 @@ class ZeroMQChannel(Channel):
             if master_type == 'failover':
                 # remove all cached sreqs to the old master to prevent
                 # zeromq from reconnecting to old masters automagically
-                for check_key in self.sreq_cache:
+                # iterate over a copy since we will mutate the dict
+                for check_key in self.sreq_cache.keys():
                     if self.opts['master_uri'] != check_key[0]:
                         del self.sreq_cache[check_key]
                         log.debug('Removed obsolete sreq-object from '
