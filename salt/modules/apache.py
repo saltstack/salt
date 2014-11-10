@@ -11,6 +11,7 @@ Support for Apache
 
 # Python3 generators
 from __future__ import generators, print_function, with_statement
+from __future__ import absolute_import
 
 # Import python libs
 import re
@@ -401,7 +402,7 @@ def _parse_config(conf, slot=None):
             file=ret
         )
         del conf['this']
-        for key, value in conf.items():
+        for key, value in list(conf.items()):
             if isinstance(value, str):
                 print('{0} {1}'.format(key, value), file=ret)
             elif isinstance(value, list):
@@ -436,7 +437,7 @@ def config(name, config, edit=True):
     '''
 
     for entry in config:
-        key = entry.iterkeys().next()
+        key = next(entry.iterkeys())
         configs = _parse_config(entry[key], key)
         if edit:
             with salt.utils.fopen(name, 'w') as configfile:
