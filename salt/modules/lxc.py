@@ -1339,10 +1339,11 @@ def create(name,
     kw_overrides = copy.deepcopy(kwargs)
 
     def select(key, default=None):
-        kw_overrides_match = kw_overrides.pop(key, _marker)
+        kw_overrides_match = kw_overrides.pop(key, None)
         profile_match = profile.pop(key, default)
-        # let kwarg overrides be the preferred choice
-        if kw_overrides_match is _marker:
+        # Return the profile match if the the kwarg match was None, as the
+        # lxc.present state will pass these kwargs set to None by default.
+        if kw_overrides_match is None:
             return profile_match
         return kw_overrides_match
 
