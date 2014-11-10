@@ -60,6 +60,11 @@ else:
     long = long
 
 if PY3:
+    exceptions = __builtin__  # pylint: disable=E0602
+else:
+    import exceptions
+
+if PY3:
     def callable(obj):
         return any('__call__' in klass.__dict__ for klass in type(obj).__mro__)
 else:
