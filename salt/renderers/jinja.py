@@ -124,7 +124,7 @@ starts at the root of the state tree or pillar.
 Filters
 =======
 
-Saltstack extends `builtin filters`_ with his custom filters:
+Saltstack extends `builtin filters`_ with these custom filters:
 
 strftime
   Converts any time related object into a time based string. It requires a
@@ -139,6 +139,63 @@ strftime
       {{ "1040814000"|strftime("%Y-%m-%d") }}
       {{ datetime|strftime("%u") }}
       {{ "now"|strftime }}
+
+sequence
+  Ensure that parsed data is a sequence.
+
+yaml_encode
+  Serializes a single object into a YAML scalar with any necessary
+  handling for escaping special characters.  This will work for any
+  scalar YAML data type: ints, floats, timestamps, booleans, strings,
+  unicode.  It will *not* work for multi-objects such as sequences or
+  maps.
+
+  .. code-block:: yaml
+
+      {%- set bar = 7 %}
+      {%- set baz = none %}
+      {%- set zip = true %}
+      {%- set zap = 'The word of the day is "salty"' %}
+
+      {%- load_yaml as foo %}
+      bar: {{ bar|yaml_encode }}
+      baz: {{ baz|yaml_encode }}
+      baz: {{ zip|yaml_encode }}
+      baz: {{ zap|yaml_encode }}
+      {%- endload %}
+
+   In the above case ``{{ bar }}`` and ``{{ foo.bar }}`` should be
+   identical and ``{{ baz }}`` and ``{{ foo.baz }}`` should be
+   identical.
+
+yaml_dquote
+  Serializes a string into a properly-escaped YAML double-quoted
+  string.  This is useful when the contents of a string are unknown
+  and may contain quotes or unicode that needs to be preserved.  The
+  resulting string will be emitted with opening and closing double
+  quotes.
+
+  .. code-block:: yaml
+
+      {%- set bar = '"The quick brown fox . . ."' %}
+      {%- set baz = 'The word of the day is "salty".' %}
+
+      {%- load_yaml as foo %}
+      bar: {{ bar|yaml_dquote }}
+      baz: {{ baz|yaml_dquote }}
+      {%- endload %}
+
+   In the above case ``{{ bar }}`` and ``{{ foo.bar }}`` should be
+   identical and ``{{ baz }}`` and ``{{ foo.baz }}`` should be
+   identical.  If variable contents are not guaranteed to be a string
+   then it is better to use ``yaml_encode`` which handles all YAML
+   scalar types.
+
+yaml_squote
+   Similar to the ``yaml_dquote`` filter but with single quotes.  Note
+   that YAML only allows special escapes inside double quotes so
+   ``yaml_squote`` is not nearly as useful (viz. you likely want to
+   use ``yaml_encode`` or ``yaml_dquote``).
 
 .. _`builtin filters`: http://jinja.pocoo.org/docs/templates/#builtin-filters
 .. _`timelib`: https://github.com/pediapress/timelib/

@@ -52,6 +52,7 @@ import re
 import shutil
 import subprocess
 from datetime import datetime
+from salt._compat import text_type as _text_type
 
 VALID_PROVIDERS = ('gitpython', 'pygit2', 'dulwich')
 PER_REMOTE_PARAMS = ('base', 'mountpoint', 'root')
@@ -614,14 +615,18 @@ def init():
 
     per_remote_defaults = {}
     for param in override_params:
-        per_remote_defaults[param] = __opts__['gitfs_{0}'.format(param)]
+        per_remote_defaults[param] = \
+            _text_type(__opts__['gitfs_{0}'.format(param)])
 
     for remote in __opts__['gitfs_remotes']:
         repo_conf = copy.deepcopy(per_remote_defaults)
         bad_per_remote_conf = False
         if isinstance(remote, dict):
             repo_url = next(iter(remote))
-            per_remote_conf = salt.utils.repack_dictlist(remote[repo_url])
+            per_remote_conf = dict(
+                [(key, _text_type(val)) for key, val in
+                 salt.utils.repack_dictlist(remote[repo_url]).items()]
+            )
             if not per_remote_conf:
                 log.error(
                     'Invalid per-remote configuration for remote {0}. If no '
@@ -1253,10 +1258,9 @@ def serve_file(load, fnd):
     required_load_keys = set(['path', 'loc', 'saltenv'])
     if not all(x in load for x in required_load_keys):
         log.debug(
-            'Not all of the required key in load are present. Missing: {0}'.format(
-                ', '.join(
-                    required_load_keys.difference(load.keys())
-                )
+            'Not all of the required keys present in payload. '
+            'Missing: {0}'.format(
+                ', '.join(required_load_keys.difference(load))
             )
         )
         return ret

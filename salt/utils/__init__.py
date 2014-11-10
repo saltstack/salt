@@ -15,6 +15,7 @@ import errno
 import fnmatch
 import hashlib
 import imp
+import io
 import inspect
 import json
 import logging
@@ -26,16 +27,14 @@ import shlex
 import shutil
 import socket
 import stat
-import string
-import subprocess
 import sys
 import tempfile
 import time
 import types
 import warnings
 import yaml
+import string
 from calendar import month_abbr as months
-from string import maketrans
 
 # Try to load pwd, fallback to getpass if unsuccessful
 try:
@@ -823,14 +822,14 @@ def format_call(fun,
 
     aspec = get_function_argspec(fun)
 
-    args, kwargs = arg_lookup(fun).values()
+    args, kwargs = iter(arg_lookup(fun).values())
 
     # Since we WILL be changing the data dictionary, let's change a copy of it
     data = data.copy()
 
     missing_args = []
 
-    for key in kwargs.keys():
+    for key in kwargs:
         try:
             kwargs[key] = data.pop(key)
         except KeyError:
@@ -861,7 +860,7 @@ def format_call(fun,
     if aspec.keywords:
         # The function accepts **kwargs, any non expected extra keyword
         # arguments will made available.
-        for key, value in data.iteritems():
+        for key, value in data.items():
             if key in expected_extra_kws:
                 continue
             ret['kwargs'][key] = value
@@ -873,7 +872,7 @@ def format_call(fun,
     # Did not return yet? Lets gather any remaining and unexpected keyword
     # arguments
     extra = {}
-    for key, value in data.iteritems():
+    for key, value in data.items():
         if key in expected_extra_kws:
             continue
         extra[key] = copy.deepcopy(value)
@@ -893,7 +892,7 @@ def format_call(fun,
         # Found unexpected keyword arguments, raise an error to the user
         if len(extra) == 1:
             msg = '{0[0]!r} is an invalid keyword argument for {1!r}'.format(
-                extra.keys(),
+                list(extra.keys()),
                 ret.get(
                     # In case this is being called for a state module
                     'full',
@@ -904,7 +903,7 @@ def format_call(fun,
         else:
             msg = '{0} and {1!r} are invalid keyword arguments for {2}'.format(
                 ', '.join(['{0!r}'.format(e) for e in extra][:-1]),
-                extra.keys()[-1],
+                list(extra.keys())[-1],
                 ret.get(
                     # In case this is being called for a state module
                     'full',
@@ -1279,7 +1278,7 @@ def clean_kwargs(**kwargs):
     passing the kwargs forward wholesale.
     '''
     ret = {}
-    for key, val in kwargs.items():
+    for key, val in list(kwargs.items()):
         if not key.startswith('__pub'):
             ret[key] = val
     return ret
@@ -1299,7 +1298,7 @@ def sanitize_win_path_string(winpath):
     '''
     intab = '<>:|?*'
     outtab = '_' * len(intab)
-    trantab = maketrans(intab, outtab)
+    trantab = string.maketrans(intab, outtab)
     if isinstance(winpath, str):
         winpath = winpath.translate(trantab)
     elif isinstance(winpath, unicode):
@@ -1445,7 +1444,7 @@ def check_state_result(running):
         return False
 
     ret = True
-    for state_result in running.itervalues():
+    for state_result in running.values():
         if not isinstance(state_result, dict):
             # return false when hosts return a list instead of a dict
             ret = False
@@ -1472,7 +1471,7 @@ def test_mode(**kwargs):
     "Test" in any variation on capitalization (i.e. "TEST", "Test", "TeSt",
     etc) contains a True value (as determined by salt.utils.is_true).
     '''
-    for arg, value in kwargs.iteritems():
+    for arg, value in kwargs.items():
         try:
             if arg.lower() == 'test' and is_true(value):
                 return True
@@ -1790,6 +1789,49 @@ def date_format(date=None, format="%Y-%m-%d"):
     return date_cast(date).strftime(format)
 
 
+def yaml_dquote(text):
+    """Make text into a double-quoted YAML string with correct escaping
+    for special characters.  Includes the opening and closing double
+    quote characters.
+    """
+    with io.StringIO() as ostream:
+        yemitter = yaml.emitter.Emitter(ostream)
+        yemitter.write_double_quoted(unicode(text))
+        return ostream.getvalue()
+
+
+def yaml_squote(text):
+    """Make text into a single-quoted YAML string with correct escaping
+    for special characters.  Includes the opening and closing single
+    quote characters.
+    """
+    with io.StringIO() as ostream:
+        yemitter = yaml.emitter.Emitter(ostream)
+        yemitter.write_single_quoted(unicode(text))
+        return ostream.getvalue()
+
+
+def yaml_encode(data):
+    """A simple YAML encode that can take a single-element datatype and return
+    a string representation.
+    """
+    yrepr = yaml.representer.SafeRepresenter()
+    ynode = yrepr.represent_data(data)
+    if not isinstance(ynode, yaml.ScalarNode):
+        raise TypeError(
+            "yaml_encode() only works with YAML scalar data;"
+            " failed for {0}".format(type(data))
+        )
+
+    tag = ynode.tag.rsplit(':', 1)[-1]
+    ret = ynode.value
+
+    if tag == "str":
+        ret = yaml_dquote(ynode.value)
+
+    return ret
+
+
 def warn_until(version,
                message,
                category=DeprecationWarning,
@@ -1854,6 +1896,19 @@ def warn_until(version,
         )
 
     if _dont_call_warnings is False:
+        def _formatwarning(message,
+                           category,
+                           filename,
+                           lineno,
+                           line=None):  # pylint: disable=W0613
+            '''
+            Replacement for warnings.formatwarning that disables the echoing of
+            the 'line' parameter.
+            '''
+            return '{0}:{1}: {2}: {3}'.format(
+                filename, lineno, category.__name__, message
+            )
+        warnings.formatwarning = _formatwarning
         warnings.warn(
             message.format(version=version.formatted_version),
             category,
@@ -1961,7 +2016,7 @@ def compare_versions(ver1='', oper='==', ver2='', cmp_func=None):
     '''
     cmp_map = {'<': (-1,), '<=': (-1, 0), '==': (0,),
                '>=': (0, 1), '>': (1,)}
-    if oper not in ['!='] + cmp_map.keys():
+    if oper not in ['!='] and oper not in cmp_map:
         log.error('Invalid operator "{0}" for version '
                   'comparison'.format(oper))
         return False
@@ -1985,7 +2040,7 @@ def compare_dicts(old=None, new=None):
     dict describing the changes that were made.
     '''
     ret = {}
-    for key in set((new or {}).keys()).union((old or {}).keys()):
+    for key in set((new or {})).union((old or {})):
         if key not in old:
             # New key
             ret[key] = {'old': '',
@@ -2077,7 +2132,7 @@ def decode_dict(data):
     JSON decodes as unicode, Jinja needs bytes...
     '''
     rv = {}
-    for key, value in data.iteritems():
+    for key, value in data.items():
         if isinstance(key, unicode):
             key = key.encode('utf-8')
         if isinstance(value, unicode):
@@ -2127,7 +2182,7 @@ def is_bin_str(data):
     '''
     Detects if the passed string of data is bin or text
     '''
-    text_characters = ''.join(map(chr, range(32, 127)) + list('\n\r\t\b'))
+    text_characters = ''.join(map(chr, list(range(32, 127))) + list('\n\r\t\b'))
     _null_trans = string.maketrans('', '')
     if '\0' in data:
         return True
@@ -2237,7 +2292,7 @@ def get_group_dict(user=None, include_default=True):
     '''
     Returns a dict of all of the system groups as keys, and group ids
     as values, of which the user is a member.
-    E.g: {'staff': 501, 'sudo': 27}
+    E.g.: {'staff': 501, 'sudo': 27}
     '''
     if HAS_GRP is False or HAS_PWD is False:
         # We don't work on platforms that don't have grp and pwd
@@ -2259,7 +2314,7 @@ def get_gid_list(user=None, include_default=True):
         # We don't work on platforms that don't have grp and pwd
         # Just return an empty list
         return []
-    gid_list = [gid for (group, gid) in salt.utils.get_group_dict(user, include_default=include_default).items()]
+    gid_list = [gid for (group, gid) in list(salt.utils.get_group_dict(user, include_default=include_default).items())]
     return sorted(set(gid_list))
 
 
@@ -2385,7 +2440,7 @@ def chugid(runas):
     # this does not appear to be strictly true.
     group_list = get_group_dict(runas, include_default=True)
     if sys.platform == 'darwin':
-        group_list = dict((k, v) for k, v in group_list.iteritems()
+        group_list = dict((k, v) for k, v in group_list.items()
                           if not k.startswith('_'))
     for group_name in group_list:
         gid = group_list[group_name]

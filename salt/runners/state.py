@@ -33,6 +33,12 @@ def over(saltenv='base', os_fn=None):
 
         salt-run state.over base /path/to/myoverstate.sls
     '''
+    salt.utils.warn_until(
+            'Boron',
+            'The state.over runner is on a deprecation path and will be '
+            'removed in Salt Boron. Please migrate to state.orchestrate.'
+            )
+
     stage_num = 0
     try:
         overstate = salt.overstate.OverState(__opts__, saltenv, os_fn)

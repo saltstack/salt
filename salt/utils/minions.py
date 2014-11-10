@@ -4,6 +4,8 @@ This module contains routines used to verify the matcher against the minions
 expected to return
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 import os
 import glob
@@ -275,7 +277,7 @@ class CkMinions(object):
         '''
         if not HAS_RANGE:
             raise CommandExecutionError(
-                'Range matcher unavailble (unable to import seco.range, '
+                'Range matcher unavailable (unable to import seco.range, '
                 'module most likely not installed)'
             )
         cache_enabled = self.opts.get('minion_data_cache', False)
@@ -580,7 +582,7 @@ class CkMinions(object):
                         if len(ind) != 1:
                             # Invalid argument
                             continue
-                        valid = ind.keys()[0]
+                        valid = next(iter(ind.keys()))
                         # Check if minions are allowed
                         if self.validate_tgt(
                                 valid,
@@ -604,7 +606,7 @@ class CkMinions(object):
 
         Groups are defined as any dict in which a key has a trailing '%'
         '''
-        group_perm_keys = filter(lambda(item): item.endswith('%'), auth_provider)
+        group_perm_keys = filter(lambda item: item.endswith('%'), auth_provider)
         groups = {}
         if group_perm_keys:
             for group_perm in group_perm_keys:
@@ -637,7 +639,7 @@ class CkMinions(object):
             elif isinstance(ind, dict):
                 if len(ind) != 1:
                     continue
-                valid = ind.keys()[0]
+                valid = next(iter(ind.keys()))
                 if valid.startswith('@') and valid[1:] == mod:
                     if isinstance(ind[valid], str):
                         if self.match_check(ind[valid], fun):
@@ -668,7 +670,7 @@ class CkMinions(object):
             elif isinstance(ind, dict):
                 if len(ind) != 1:
                     continue
-                valid = ind.keys()[0]
+                valid = next(iter(ind.keys()))
                 if valid.startswith('@') and valid[1:] == mod:
                     if isinstance(ind[valid], str):
                         if self.match_check(ind[valid], fun):
@@ -702,7 +704,7 @@ class CkMinions(object):
             elif isinstance(ind, dict):
                 if len(ind) != 1:
                     continue
-                valid = ind.keys()[0]
+                valid = next(iter(ind.keys()))
                 if valid.startswith('@') and valid[1:] == mod:
                     if isinstance(ind[valid], str):
                         if self.match_check(ind[valid], fun):

@@ -23,6 +23,7 @@ from salt.exceptions import (SaltInvocationError, SaltSystemExit, CommandNotFoun
 # Import Python libraries
 import os
 import datetime
+import yaml
 import zmq
 from collections import namedtuple
 
@@ -61,8 +62,8 @@ class UtilsTestCase(TestCase):
         self.assertEqual(utils.jid_to_time(test_jid), expected_jid)
 
         # Test incorrect lengths
-        incorrect_jid_lenth = 2012
-        self.assertEqual(utils.jid_to_time(incorrect_jid_lenth), '')
+        incorrect_jid_length = 2012
+        self.assertEqual(utils.jid_to_time(incorrect_jid_length), '')
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     @patch('random.randint', return_value=1)
@@ -519,6 +520,21 @@ class UtilsTestCase(TestCase):
         src = '1040814000'
         ret = utils.date_format(src)
         self.assertEqual(ret, expected_ret)
+
+    def test_yaml_dquote(self):
+        for teststr in (r'"\ []{}"',):
+            self.assertEqual(teststr, yaml.safe_load(utils.yaml_dquote(teststr)))
+
+    def test_yaml_squote(self):
+        ret = utils.yaml_squote(r'"')
+        self.assertEqual(ret, r"""'"'""")
+
+    def test_yaml_encode(self):
+        for testobj in (None, True, False, '[7, 5]', '"monkey"', 5, 7.5, "2014-06-02 15:30:29.7"):
+            self.assertEqual(testobj, yaml.safe_load(utils.yaml_encode(testobj)))
+
+        for testobj in ({}, [], set()):
+            self.assertRaises(TypeError, utils.yaml_encode, testobj)
 
     def test_compare_dicts(self):
         ret = utils.compare_dicts(old={'foo': 'bar'}, new={'foo': 'bar'})

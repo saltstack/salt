@@ -12,7 +12,7 @@ A flexible renderer that takes a templating engine and a data format
 # FIXME: I really need to review and simplify this renderer, it's getting out of hand!
 #
 # TODO:
-#   - sls meta/info state: Eg,
+#   - sls meta/info state: E.g.,
 #
 #       sls_info:
 #         stateconf.set:
@@ -20,7 +20,7 @@ A flexible renderer that takes a templating engine and a data format
 #           - description: what the salt file does...
 #           - version: 0.1.0
 #
-#   - version constraint for 'include'. Eg,
+#   - version constraint for 'include'. E.g.,
 #
 #       include:
 #         - apache: >= 0.1.0
@@ -220,7 +220,7 @@ def render(input, saltenv='base', sls='', argline='', **kws):
             tmplctx = STATE_CONF.copy()
             if tmplctx:
                 prefix = sls + '::'
-                for k in tmplctx.keys():
+                for k in tmplctx:
                     if k.startswith(prefix):
                         tmplctx[k[len(prefix):]] = tmplctx[k]
                         del tmplctx[k]
@@ -367,7 +367,7 @@ def rename_state_ids(data, sls, is_extend=False):
             if sid.startswith('.'):
                 req[sname] = _local_to_abs_sid(sid, sls)
 
-    for sid in data.keys():
+    for sid in data:
         if sid.startswith('.'):
             newsid = _local_to_abs_sid(sid, sls)
             if newsid in data:
@@ -453,7 +453,7 @@ def add_implicit_requires(data):
         if prev_state[0] is not None:
             try:
                 nvlist(args, ['require']).next()[2].insert(0, dict([prev_state]))
-            except StopIteration:  # ie, there's no require
+            except StopIteration:  # i.e., there's no require
                 args.append(dict(require=[dict([prev_state])]))
 
         states_before.add(tag)

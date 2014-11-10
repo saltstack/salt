@@ -71,7 +71,7 @@ def check_libcloud_version(reqver=LIBCLOUD_MINIMAL_VERSION, why=None):
 
     if not isinstance(reqver, (list, tuple)):
         raise RuntimeError(
-            '\'reqver\' needs to passed as a tuple or list, ie, (0, 14, 0)'
+            '\'reqver\' needs to passed as a tuple or list, i.e., (0, 14, 0)'
         )
     try:
         import libcloud  # pylint: disable=redefined-outer-name
@@ -456,7 +456,7 @@ def list_nodes_full(conn=None, call=None):
     ret = {}
     for node in nodes:
         pairs = {}
-        for key, value in zip(node.__dict__.keys(), node.__dict__.values()):
+        for key, value in zip(node.__dict__, node.__dict__.itervalues()):
             pairs[key] = value
         ret[node.name] = pairs
         del ret[node.name]['driver']

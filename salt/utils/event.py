@@ -47,6 +47,8 @@ Namespaced tag
 
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 import os
 import fnmatch
@@ -112,7 +114,7 @@ def get_event(node, sock_dir=None, transport='zeromq', opts=None, listen=True):
         return SaltEvent(node, sock_dir, opts)
     elif transport == 'raet':
         import salt.utils.raetevent
-        return salt.utils.raetevent.SaltEvent(node,
+        return salt.utils.raetevent.RAETEvent(node,
                                               sock_dir=sock_dir,
                                               listen=listen,
                                               opts=opts)
@@ -427,7 +429,7 @@ class SaltEvent(object):
         # that poller gets garbage collected. The Poller itself, its
         # registered sockets and the Context
         if isinstance(self.poller.sockets, dict):
-            for socket in self.poller.sockets.keys():
+            for socket in self.poller.sockets:
                 if socket.closed is False:
                     socket.setsockopt(zmq.LINGER, linger)
                     socket.close()
@@ -539,7 +541,7 @@ class EventPublisher(Process):
         salt.utils.check_ipc_path_max_len(epull_uri)
 
         # Start the master event publisher
-        old_umask = os.umask(0177)
+        old_umask = os.umask(0o177)
         try:
             self.epull_sock.bind(epull_uri)
             self.epub_sock.bind(epub_uri)
@@ -547,7 +549,7 @@ class EventPublisher(Process):
                 os.chmod(
                         os.path.join(self.opts['sock_dir'],
                             'master_event_pub.ipc'),
-                        0666
+                        0o666
                         )
         finally:
             os.umask(old_umask)
@@ -639,12 +641,10 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
                 continue
             if len(ropt) != 1:
                 continue
-            key = ropt.keys()[0]
+            key = next(iter(ropt.keys()))
             val = ropt[key]
             if fnmatch.fnmatch(tag, key):
                 if isinstance(val, string_types):
-                    reactors.append(val)
-                elif hasattr(val, '__call__'):
                     reactors.append(val)
                 elif isinstance(val, list):
                     reactors.extend(val)
@@ -658,9 +658,6 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         high = {}
         chunks = []
         for fn_ in reactors:
-            if hasattr(fn_, '__call__'):  # Is a func
-                fn_(data)
-                continue
             high.update(self.render_reaction(fn_, tag, data))
         if high:
             errors = self.verify_high(high)
@@ -682,7 +679,9 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         '''
         salt.utils.appendproctitle(self.__class__.__name__)
         self.event = SaltEvent('master', self.opts['sock_dir'])
-        for data in self.event.iter_events(full=True):
+        events = self.event.iter_events(full=True)
+        self.event.fire_event({}, 'salt/reactor/start')
+        for data in events:
             reactors = self.list_reactors(data['tag'])
             if not reactors:
                 continue

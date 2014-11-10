@@ -379,7 +379,7 @@ def _get_recurse_dest(prefix, fn_, source, env):
 
     srcpath = source[7:]  # the path after "salt://"
 
-    # in solo mode(ie, file_client=='local'), fn_ is a path below
+    # in solo mode (i.e., file_client=='local'), fn_ is a path below
     # a file root; in remote mode, fn_ is a path below the cache_dir.
     for root in local_roots:
         rootlen = len(root)
@@ -2229,7 +2229,7 @@ def recurse(name,
             # Check for symlinks that happen to point to an empty dir.
             if keep_symlinks:
                 islink = False
-                for link in symlinks.keys():
+                for link in symlinks:
                     if mdir.startswith(link, 0):
                         log.debug('** skipping empty dir ** {0}, it intersects'
                                   ' a symlink'.format(mdir))
@@ -3631,7 +3631,7 @@ def accumulated(name, filename, text, **kwargs):
     if name not in _ACCUMULATORS_DEPS[filename]:
         _ACCUMULATORS_DEPS[filename][name] = []
     for accumulator in deps:
-        _ACCUMULATORS_DEPS[filename][name].extend(accumulator.values())
+        _ACCUMULATORS_DEPS[filename][name].extend(accumulator.itervalues())
     if name not in _ACCUMULATORS[filename]:
         _ACCUMULATORS[filename][name] = []
     for chunk in text:

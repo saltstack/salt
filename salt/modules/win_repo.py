@@ -10,6 +10,10 @@ The following options must be set in the Minion config:
 Place all Windows package files in the 'win_repo' directory.
 '''
 
+from __future__ import print_function
+
+from __future__ import absolute_import
+
 # Import python libs
 import os
 
@@ -68,11 +72,11 @@ def genrepo():
                         # when log.debug works
                         log.debug('Failed to compile'
                                   '{0}: {1}'.format(os.path.join(root, name), exc))
-                        print 'Failed to compile {0}: {1}'.format(os.path.join(root, name), exc)
+                        print('Failed to compile {0}: {1}'.format(os.path.join(root, name), exc))
                 if config:
                     revmap = {}
-                    for pkgname, versions in config.iteritems():
-                        for version, repodata in versions.iteritems():
+                    for pkgname, versions in config.items():
+                        for version, repodata in versions.items():
                             if not isinstance(version, string_types):
                                 config[pkgname][str(version)] = \
                                     config[pkgname].pop(version)

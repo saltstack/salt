@@ -3,6 +3,8 @@
 Routines to set up a minion
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 from __future__ import print_function
 import copy
@@ -66,7 +68,6 @@ import salt.utils.args
 import salt.utils.event
 import salt.utils.minion
 import salt.utils.schedule
-import salt.utils.error
 import salt.exitcodes
 
 from salt.defaults import DEFAULT_TARGET_DELIM
@@ -190,7 +191,7 @@ def load_args_and_kwargs(func, args, data=None):
                     'by salt.utils.args.parse_input() before calling '
                     'salt.minion.load_args_and_kwargs().'
                 )
-                if argspec.keywords or string_kwarg.keys()[0] in argspec.args:
+                if argspec.keywords or next(iter(string_kwarg.keys())) in argspec.args:
                     # Function supports **kwargs or is a positional argument to
                     # the function.
                     _kwargs.update(string_kwarg)
@@ -203,7 +204,7 @@ def load_args_and_kwargs(func, args, data=None):
 
         # if the arg is a dict with __kwarg__ == True, then its a kwarg
         elif isinstance(arg, dict) and arg.pop('__kwarg__', False) is True:
-            for key, val in arg.iteritems():
+            for key, val in arg.items():
                 if argspec.keywords or key in argspec.args:
                     # Function supports **kwargs or is a positional argument to
                     # the function.
@@ -265,23 +266,24 @@ class SMinion(object):
                 if self.opts['random_master'] is True:
                     log.warning('random_master is True but there is only one master specified. Ignoring.')
                 self.opts.update(resolve_dns(opts))
-                self.gen_modules()
+                self.gen_modules(initial_load=True)
         else:
-            self.gen_modules()
+            self.gen_modules(initial_load=True)
 
-    def gen_modules(self):
+    def gen_modules(self, initial_load=False):
         '''
         Load all of the modules for the minion
         '''
+        self.functions = salt.loader.minion_mods(self.opts, include_errors=True)
+        self.function_errors = self.functions['_errors']
+        self.functions.pop('_errors')  # Keep the funcs clean
         self.opts['pillar'] = salt.pillar.get_pillar(
             self.opts,
             self.opts['grains'],
             self.opts['id'],
             self.opts['environment'],
+            funcs=self.functions
         ).compile_pillar()
-        self.functions = salt.loader.minion_mods(self.opts, include_errors=True)
-        self.function_errors = self.functions['_errors']
-        self.functions.pop('_errors')  # Keep the funcs clean
         self.returners = salt.loader.returners(self.opts, self.functions)
         self.states = salt.loader.states(self.opts, self.functions)
         self.rend = salt.loader.render(self.opts, self.functions)
@@ -357,7 +359,7 @@ class MinionBase(object):
             # Let's try to create the directory defined on the configuration
             # file
             try:
-                os.makedirs(minion_sock_dir, 0755)
+                os.makedirs(minion_sock_dir, 0o755)
             except OSError as exc:
                 log.error('Could not create SOCK_DIR: {0}'.format(exc))
                 # Let's not fail yet and try using the default path
@@ -367,7 +369,7 @@ class MinionBase(object):
 
             if not os.path.isdir(default_minion_sock_dir):
                 try:
-                    os.makedirs(default_minion_sock_dir, 0755)
+                    os.makedirs(default_minion_sock_dir, 0o755)
                 except OSError as exc:
                     log.error('Could not create SOCK_DIR: {0}'.format(exc))
                     # Let's stop at this stage
@@ -378,7 +380,7 @@ class MinionBase(object):
 
         # Securely bind the event sockets
         if self.opts.get('ipc_mode', '') != 'tcp':
-            old_umask = os.umask(0177)
+            old_umask = os.umask(0o177)
         try:
             log.info('Starting pub socket on {0}'.format(epub_uri))
             self.epub_sock.bind(epub_uri)
@@ -429,15 +431,16 @@ class MasterMinion(object):
         self.mk_states = states
         self.mk_rend = rend
         self.mk_matcher = matcher
-        self.gen_modules()
+        self.gen_modules(initial_load=True)
 
-    def gen_modules(self):
+    def gen_modules(self, initial_load=False):
         '''
         Load all of the modules for the minion
         '''
         self.functions = salt.loader.minion_mods(
             self.opts,
-            whitelist=self.whitelist)
+            whitelist=self.whitelist,
+            initial_load=initial_load)
         if self.mk_returners:
             self.returners = salt.loader.returners(self.opts, self.functions)
         if self.mk_states:
@@ -513,7 +516,12 @@ class MultiMinion(MinionBase):
 
         while True:
             package = None
-
+            for minion in minions.values():
+                if isinstance(minion, dict):
+                    minion = minion['minion']
+                if not hasattr(minion, 'schedule'):
+                    continue
+                loop_interval = self.process_schedule(minion, loop_interval)
             socks = dict(self.poller.poll(1))
             if socks.get(self.epull_sock) == zmq.POLLIN:
                 try:
@@ -521,7 +529,7 @@ class MultiMinion(MinionBase):
                 except Exception:
                     pass
 
-            masters = minions.keys()
+            masters = list(minions.keys())
             shuffle(masters)
             # Do stuff per minion that we have
             for master in masters:
@@ -600,15 +608,16 @@ class Minion(MinionBase):
                                           timeout,
                                           safe)
 
+        self.functions, self.returners, self.function_errors = self._load_modules()
         self.opts['pillar'] = salt.pillar.get_pillar(
             opts,
             opts['grains'],
             opts['id'],
             opts['environment'],
+            funcs=self.functions
         ).compile_pillar()
         self.serial = salt.payload.Serial(self.opts)
         self.mod_opts = self._prep_mod_opts()
-        self.functions, self.returners, self.function_errors = self._load_modules()
         self.matcher = Matcher(self.opts, self.functions)
         self.proc_dir = get_proc_dir(opts['cachedir'])
         self.schedule = salt.utils.schedule.Schedule(
@@ -618,7 +627,7 @@ class Minion(MinionBase):
 
         # add default scheduling jobs to the minions scheduler
         if 'mine.update' in self.functions:
-            log.info('Added mine.update to schedular')
+            log.info('Added mine.update to scheduler')
             self.schedule.add_job({
                 '__mine_interval':
                 {
@@ -1091,7 +1100,6 @@ class Minion(MinionBase):
             except Exception:
                 msg = 'The minion function caused an exception'
                 log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
-                salt.utils.error.fire_exception(salt.exceptions.MinionError(msg), opts, job=data)
                 ret['return'] = '{0}: {1}'.format(msg, traceback.format_exc())
                 ret['out'] = 'nested'
         else:
@@ -1216,7 +1224,7 @@ class Minion(MinionBase):
         else:
             load = {'cmd': ret_cmd,
                     'id': self.opts['id']}
-            for key, value in ret.items():
+            for key, value in list(ret.items()):
                 load[key] = value
 
         if 'out' in ret:
@@ -1608,7 +1616,7 @@ class Minion(MinionBase):
                                                  schedule=schedule)
 
         elif package.startswith('__master_connected'):
-            # handle this event only once. otherwise it will polute the log
+            # handle this event only once. otherwise it will pollute the log
             if not self.connected:
                 log.info('Connection to master {0} re-established'.format(self.opts['master']))
                 self.connected = True
@@ -1625,10 +1633,6 @@ class Minion(MinionBase):
 
                 self.schedule.modify_job(name='__master_alive',
                                          schedule=schedule)
-        elif package.startswith('_salt_error'):
-            tag, data = salt.utils.event.MinionEvent.unpack(package)
-            log.debug('Forwarding salt error event tag={tag}'.format(tag=tag))
-            self._fire_master(data, tag)
 
     # Main Minion Tune In
     def tune_in(self):
@@ -1807,7 +1811,7 @@ class Minion(MinionBase):
         self._running = False
         if getattr(self, 'poller', None) is not None:
             if isinstance(self.poller.sockets, dict):
-                for socket in self.poller.sockets.keys():
+                for socket in self.poller.sockets:
                     if socket.closed is False:
                         socket.close()
                     self.poller.unregister(socket)
@@ -2223,7 +2227,7 @@ class MultiSyndic(MinionBase):
         '''
         Iterate (in order) over your options for master
         '''
-        masters = self.master_syndics.keys()
+        masters = list(self.master_syndics.keys())
         shuffle(masters)
         if master_id not in self.master_syndics:
             master_id = masters.pop(0)
@@ -2276,7 +2280,7 @@ class MultiSyndic(MinionBase):
                     log.warning('Negative timeout in syndic main loop')
                     socks = {}
                 # check all of your master_syndics, have them do their thing
-                for master_id, syndic_dict in self.master_syndics.iteritems():
+                for master_id, syndic_dict in self.master_syndics.items():
                     # if not connected, lets try
                     if 'generator' not in syndic_dict:
                         # if we couldn't connect, lets try later
@@ -2348,7 +2352,7 @@ class MultiSyndic(MinionBase):
                               kwargs={'events': self.raw_events,
                                       'pretag': tagify(self.opts['id'], base='syndic')},
                               )
-        for jid, jid_ret in self.jids.iteritems():
+        for jid, jid_ret in self.jids.items():
             self._call_syndic('_return_pub', args=(jid_ret, '_syndic_return'), master_id=jid_ret.get('__master_id__'))
 
         self._reset_event_aggregation()
@@ -2626,15 +2630,16 @@ class ProxyMinion(Minion):
         opts.update(resolve_dns(opts))
         self.opts = opts
         self.authenticate(timeout, safe)
+        self.functions, self.returners, self.function_errors = self._load_modules()
         self.opts['pillar'] = salt.pillar.get_pillar(
             opts,
             opts['grains'],
             opts['id'],
             opts['environment'],
+            funcs=self.functions
         ).compile_pillar()
         self.serial = salt.payload.Serial(self.opts)
         self.mod_opts = self._prep_mod_opts()
-        self.functions, self.returners, self.function_errors = self._load_modules()
         self.matcher = Matcher(self.opts, self.functions)
         self.proc_dir = get_proc_dir(opts['cachedir'])
         self.schedule = salt.utils.schedule.Schedule(

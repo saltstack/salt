@@ -19,7 +19,7 @@ import salt.crypt
 import salt.utils
 import salt.utils.event
 import salt.daemons.masterapi
-from salt import daemons
+from salt.utils import kinds
 from salt.utils.event import tagify
 
 # Import third party libs
@@ -158,7 +158,7 @@ class KeyCLI(object):
         '''
         Accept all keys
 
-        :param bool include_rejected: Whether or not to accept a matched key that was formely rejected
+        :param bool include_rejected: Whether or not to accept a matched key that was formerly rejected
         '''
         self.accept('*', include_rejected=include_rejected)
 
@@ -433,7 +433,7 @@ class Key(object):
     def __init__(self, opts):
         self.opts = opts
         kind = self.opts.get('__role', '')  # application kind
-        if kind not in daemons.APPL_KINDS:
+        if kind not in kinds.APPL_KINDS:
             emsg = ("Invalid application kind = '{0}'.".format(kind))
             log.error(emsg + '\n')
             raise ValueError(emsg)
@@ -897,7 +897,7 @@ class RaetKey(Key):
                     shutil.rmtree(os.path.join(m_cache, minion))
 
         kind = self.opts.get('__role', '')  # application kind
-        if kind not in daemons.APPL_KINDS:
+        if kind not in kinds.APPL_KINDS:
             emsg = ("Invalid application kind = '{0}'.".format(kind))
             log.error(emsg + '\n')
             raise ValueError(emsg)

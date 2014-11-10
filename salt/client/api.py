@@ -250,7 +250,7 @@ class APIClient(object):
         {
             'token': 'tokenstring',
             'start': starttimeinfractionalseconds,
-            'expire': expiretimeinfactionalseconds,
+            'expire': expiretimeinfractionalseconds,
             'name': 'usernamestring',
             'user': 'usernamestring',
             'username': 'usernamestring',

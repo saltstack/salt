@@ -402,7 +402,7 @@ def _run(cmd,
                                log_stderr=True,
                                cwd=cwd,
                                preexec_fn=kwargs.get('preexec_fn', None),
-                               env=env,
+                               env=run_env,
                                log_stdin_level=output_loglevel,
                                log_stdout_level=output_loglevel,
                                log_stderr_level=output_loglevel,
@@ -445,7 +445,7 @@ def _run(cmd,
                 # cases
                 ret['stdout'] = stdout
                 if not proc.isalive():
-                    # Process terminated, ie, not canceled by the user or by
+                    # Process terminated, i.e., not canceled by the user or by
                     # the timeout
                     ret['stderr'] = stderr
                     ret['retcode'] = proc.exitstatus

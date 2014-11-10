@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 # Import Python libs
+from __future__ import print_function
+from __future__ import absolute_import
 import os
 import time
 
@@ -107,4 +109,4 @@ if __name__ == '__main__':
     ccli.put_cache(['test12'])
     ccli.put_cache(['test18'])
     ccli.put_cache(['test21'])
-    print "minions: ", ccli.get_cached()
+    print('minions: {0}'.format(ccli.get_cached()))

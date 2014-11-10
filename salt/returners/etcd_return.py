@@ -88,7 +88,7 @@ def returner(ret):
         ret['jid'],
     )
 
-    for field in ret.keys():
+    for field in ret:
         # Not using os.path.join because we're not dealing with file paths
         dest = '/'.join((
             path,

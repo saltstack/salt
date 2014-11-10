@@ -20,6 +20,9 @@ from raet.keeping import Keep
 
 from salt.key import RaetKey
 
+from salt.utils import kinds
+
+
 class SaltKeep(Keep):
     '''
     RAET protocol estate on road data persistence for a given estate
@@ -105,8 +108,7 @@ class SaltKeep(Keep):
             return None
 
         mid = data['role']
-        statae = raeting.ACCEPTANCES.keys()
-        for status in statae:
+        for status in raeting.ACCEPTANCES:
             keydata = self.saltRaetKey.read_remote(mid, status)
             if keydata:
                 break

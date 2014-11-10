@@ -601,7 +601,7 @@ def installed(name,
                 ret['changes']['{0}==???'.format(name)] = 'Installed'
                 return ret
 
-            version = list(pkg_list.values())[0]
+            version = pkg_list.itervalues().next()
             pkg_name = next(iter(pkg_list))
             ret['changes']['{0}=={1}'.format(pkg_name, version)] = 'Installed'
             ret['comment'] = 'Package was successfully installed'

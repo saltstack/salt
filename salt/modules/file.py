@@ -5,6 +5,8 @@ and special files on the minion, set/read user,
 group, mode, and data
 '''
 
+from __future__ import absolute_import
+
 # TODO: We should add the capability to do u+r type operations here
 # some time in the future
 
@@ -28,6 +30,7 @@ import sys
 import tempfile
 import time
 import glob
+from functools import reduce
 
 try:
     import grp
@@ -77,7 +80,7 @@ def __clean_tmp(sfn):
     if sfn.startswith(tempfile.gettempdir()):
         # Don't remove if it exists in file_roots (any saltenv)
         all_roots = itertools.chain.from_iterable(
-                __opts__['file_roots'].itervalues())
+                iter(__opts__['file_roots'].values()))
         in_roots = any(sfn.startswith(root) for root in all_roots)
         # Only clean up files that exist
         if os.path.exists(sfn) and not in_roots:
@@ -548,7 +551,7 @@ def check_hash(path, file_hash):
     return get_hash(path, hash_form) == hash_value
 
 
-def find(path, **kwargs):
+def find(path, *args, **kwargs):
     '''
     Approximate the Unix ``find(1)`` command and return a list of paths that
     meet the specified criteria.
@@ -662,6 +665,11 @@ def find(path, **kwargs):
         salt '*' file.find /var mtime=+30d size=+10m print=path,size,mtime
         salt '*' file.find /var/log name=\\*.[0-9] mtime=+30d size=+10m delete
     '''
+    if 'delete' in args:
+        kwargs['delete'] = 'f'
+    elif 'print' in args:
+        kwargs['print'] = 'path'
+
     try:
         finder = salt.utils.find.Finder(kwargs)
     except ValueError as ex:
@@ -2148,7 +2156,7 @@ def access(path, mode):
 
     if mode in modes:
         return os.access(path, modes[mode])
-    elif mode in modes.values():
+    elif mode in iter(modes.values()):
         return os.access(path, mode)
     else:
         raise SaltInvocationError('Invalid mode specified.')
@@ -2892,7 +2900,7 @@ def check_managed(
         log.info(changes)
         comments = ['The following values are set to be changed:\n']
         comments.extend('{0}: {1}\n'.format(key, val)
-                        for key, val in changes.iteritems())
+                        for key, val in changes.items())
         return None, ''.join(comments)
     return True, 'The file {0} is in the correct state'.format(name)
 
@@ -3300,7 +3308,7 @@ def manage_file(name,
                         # directories created with makedirs_() below can't be
                         # listed via a shell.
                         mode_list = [x for x in str(mode)][-3:]
-                        for idx in xrange(len(mode_list)):
+                        for idx in salt._compat.xrange(len(mode_list)):
                             if mode_list[idx] != '0':
                                 mode_list[idx] = str(int(mode_list[idx]) | 1)
                         dir_mode = ''.join(mode_list)
@@ -3331,7 +3339,7 @@ def manage_file(name,
             # Create the file, user rw-only if mode will be set to prevent
             # a small security race problem before the permissions are set
             if mode:
-                current_umask = os.umask(077)
+                current_umask = os.umask(0o77)
 
             # Create a new file when test is False and source is None
             if contents is None:
@@ -3381,7 +3389,7 @@ def manage_file(name,
             mask = os.umask(0)
             os.umask(mask)
             # Calculate the mode value that results from the umask
-            mode = oct((0777 ^ mask) & 0666)
+            mode = oct((0o777 ^ mask) & 0o666)
         ret, _ = check_perms(name, ret, user, group, mode)
 
         if not ret['comment']:
@@ -3851,7 +3859,7 @@ def list_backups(path, limit=None):
         files[timestamp]['Location'] = location
 
     return dict(zip(
-        range(len(files)),
+        list(range(len(files))),
         [files[x] for x in sorted(files, reverse=True)[:limit]]
     ))
 
@@ -3913,7 +3921,7 @@ def list_backups_dir(path, limit=None):
                 ssfile[timestamp]['Size'] = os.stat(location).st_size
                 ssfile[timestamp]['Location'] = location
 
-        sfiles = dict(zip(range(n), [ssfile[x] for x in sorted(ssfile, reverse=True)[:limit]]))
+        sfiles = dict(zip(list(range(n)), [ssfile[x] for x in sorted(ssfile, reverse=True)[:limit]]))
         sefiles = {i: sfiles}
         files.update(sefiles)
     return files
@@ -4106,7 +4114,7 @@ def open_files(by_pid=False):
 
     # Then we look at the open files for each PID
     files = {}
-    for pid in pids.keys():
+    for pid in pids:
         ppath = '/proc/{0}'.format(pid)
         try:
             tids = os.listdir('{0}/task'.format(ppath))

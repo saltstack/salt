@@ -5,18 +5,26 @@ OS X
 Dependency Installation
 -----------------------
 
-When using Homebrew, install this way:
+It should be noted that Homebrew explicitly discourages the `use of sudo`_:
+
+    Homebrew is designed to work without using sudo. You can decide to use it but we strongly recommend not to do so. If you have used sudo and run into a bug then it is likely to be the cause. Please don’t file a bug report unless you can reproduce it after reinstalling Homebrew from scratch without using sudo
+
+So when using Homebrew, if you want support from the Homebrew community, install this way:
 
 .. code-block:: bash
 
-    sudo brew install saltstack
+    brew install saltstack
+
+.. _use of sudo: https://github.com/Homebrew/homebrew/blob/master/share/doc/homebrew/FAQ.md#sudo
+
+
 
 When using MacPorts, install this way:
 
 .. code-block:: bash
 
     sudo port install salt
-    
+
 When only using the OS X system's pip, install this way:
 
 .. code-block:: bash

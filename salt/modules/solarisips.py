@@ -19,12 +19,18 @@ Or you can set the provider in sls for each pkg:
         - provider: solarisips
 
 '''
+# Import python libs
+from __future__ import print_function
+from __future__ import absolute_import
+import logging
+
 
 # Import salt libs
 import salt.utils
 
 # Define the module's virtual name
 __virtualname__ = 'solarisips'
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -52,7 +58,7 @@ def _ips_get_pkgname(line):
     '''
     Extracts package name from "pkg list -v" output.
     Input: one line of the command output
-    Output: pkg name (e.g: "pkg://solaris/x11/library/toolkit/libxt")
+    Output: pkg name (e.g.: "pkg://solaris/x11/library/toolkit/libxt")
     Example use:
     line = "pkg://solaris/x11/library/toolkit/libxt@1.1.3,5.11-0.175.1.0.0.24.1317:20120904T180030Z i--"
     name = _ips_get_pkgname(line)
@@ -64,7 +70,7 @@ def _ips_get_pkgversion(line):
     '''
     Extracts package version from "pkg list -v" output.
     Input: one line of the command output
-    Output: package version (e.g: "1.1.3,5.11-0.175.1.0.0.24.1317:20120904T180030Z")
+    Output: package version (e.g.: "1.1.3,5.11-0.175.1.0.0.24.1317:20120904T180030Z")
     Example use:
     line = "pkg://solaris/x11/library/toolkit/libxt@1.1.3,5.11-0.175.1.0.0.24.1317:20120904T180030Z i--"
     name = _ips_get_pkgversion(line)
@@ -373,11 +379,11 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
     pkg2inst = ''
     if pkgs:    # multiple packages specified
         for pkg in pkgs:
-            if pkg.items()[0][1]:   # version specified
-                pkg2inst += '{0}@{1} '.format(pkg.items()[0][0], pkg.items()[0][1])
+            if list(pkg.items())[0][1]:   # version specified
+                pkg2inst += '{0}@{1} '.format(list(pkg.items())[0][0], list(pkg.items())[0][1])
             else:
-                pkg2inst += '{0} '.format(pkg.items()[0][0])
-        print 'Installing these packages instead of {0}: {1}'.format(name, pkg2inst)
+                pkg2inst += '{0} '.format(list(pkg.items())[0][0])
+        log.debug('Installing these packages instead of {0}: {1}'.format(name, pkg2inst))
 
     else:   # install single package
         if version:
@@ -411,7 +417,7 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
         output['message'] = ret['stderr'] + '\n'
         return output
 
-    # No error occured
+    # No error occurred
     if test:
         return "Test succeeded."
 
@@ -454,7 +460,7 @@ def remove(name=None, pkgs=None, **kwargs):
     if pkgs:    # multiple packages specified
         for pkg in pkgs:
             pkg2rm += '{0} '.format(pkg)
-        print 'Installing these packages instead of {0}: {1}'.format(name, pkg2rm)
+        log.debug('Installing these packages instead of {0}: {1}'.format(name, pkg2rm))
     else:   # remove single package
         pkg2rm = "{0}".format(name)
 
@@ -478,7 +484,7 @@ def remove(name=None, pkgs=None, **kwargs):
         output['message'] = ret['stderr'] + '\n'
         return output
 
-    # No error occured
+    # No error occurred
     return changes
 
 

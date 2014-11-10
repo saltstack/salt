@@ -3,6 +3,8 @@
 Helpful decorators module writing
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 import inspect
 import logging
@@ -72,7 +74,7 @@ class Depends(object):
         It will modify the "functions" dict and remove/replace modules that
         are missing dependencies.
         '''
-        for dependency, dependent_set in cls.dependency_dict.iteritems():
+        for dependency, dependent_set in cls.dependency_dict.items():
             # check if dependency is loaded
             for module, func, fallback_function in dependent_set:
                 # check if you have the dependency
@@ -163,7 +165,7 @@ def identical_signature_wrapper(original_function, wrapped_function):
         '    return __wrapped__({2})'.format(
             # Keep the original function name
             original_function.__name__,
-            # The function signature including defaults, ie, 'timeout=1'
+            # The function signature including defaults, i.e., 'timeout=1'
             inspect.formatargspec(
                 *inspect.getargspec(original_function)
             )[1:-1],
@@ -176,7 +178,7 @@ def identical_signature_wrapper(original_function, wrapped_function):
         '<string>',
         'exec'
     )
-    exec function_def in context
+    exec(function_def, context)
     return wraps(original_function)(context[original_function.__name__])
 
 

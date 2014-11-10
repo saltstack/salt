@@ -132,7 +132,7 @@ def mounted(name,
 
     # When included in a Salt state file, FUSE
     # devices are prefaced by the filesystem type
-    # and a hash, eg. sshfs#.  In the mount list
+    # and a hash, e.g. sshfs#.  In the mount list
     # only the hostname is included.  So if we detect
     # that the device is a FUSE device then we
     # remove the prefaced string so that the device in

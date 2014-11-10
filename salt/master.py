@@ -4,6 +4,8 @@ This module contains all of the routines needed to set up a master server, this
 involves preparing the three listeners and the workers needed by the master.
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 import os
 import re
@@ -91,7 +93,7 @@ class SMaster(object):
 
 class Maintenance(multiprocessing.Process):
     '''
-    A generalized maintenence process which performances maintenence
+    A generalized maintenance process which performances maintenance
     routines.
     '''
     def __init__(self, opts):
@@ -302,17 +304,6 @@ class Master(SMaster):
                     )
                 )
 
-    def __handle_error_react(self, event):
-        log.error('Received minion error from [{minion}]: {data}'.format(minion=event['id'], data=event['data']['exception']))
-
-    def __register_reactions(self):
-        '''
-        Register any reactions the master will need
-        '''
-        log.info('Registering master reactions')
-        log.info('Registering master error handling')
-        self.opts['reactor'].append({'_salt_error': self.__handle_error_react})
-
     def _pre_flight(self):
         '''
         Run pre flight checks. If anything in this method fails then the master
@@ -320,7 +311,6 @@ class Master(SMaster):
         '''
         errors = []
         fileserver = salt.fileserver.Fileserver(self.opts)
-        self.__register_reactions()
         if not fileserver.servers:
             errors.append(
                 'Failed to load fileserver backends, the configured backends '
@@ -359,6 +349,19 @@ class Master(SMaster):
         if self.opts.get('reactor'):
             log.info('Creating master reactor process')
             process_manager.add_process(salt.utils.event.Reactor, args=(self.opts,))
+
+        ext_procs = self.opts.get('ext_processes', [])
+        for proc in ext_procs:
+            log.info('Creating ext_processes process: {0}'.format(proc))
+            try:
+                mod = '.'.join(proc.split('.')[:-1])
+                cls = proc.split('.')[-1]
+                _tmp = __import__(mod, globals(), locals(), [cls], -1)
+                cls = _tmp.__getattribute__(cls)
+                process_manager.add_process(cls, args=(self.opts,))
+            except Exception:
+                log.error(('Error creating ext_processes '
+                           'process: {0}').format(proc))
 
         if HAS_HALITE and 'halite' in self.opts:
             log.info('Creating master halite process')
@@ -459,7 +462,7 @@ class Publisher(multiprocessing.Process):
 
         # Securely create socket
         log.info('Starting the Salt Puller on {0}'.format(pull_uri))
-        old_umask = os.umask(0177)
+        old_umask = os.umask(0o177)
         try:
             pull_sock.bind(pull_uri)
         finally:
@@ -751,7 +754,7 @@ class MWorker(multiprocessing.Process):
             stats = os.stat(dfn)
         except os.error:
             return
-        if stats.st_mode != 0100400:
+        if stats.st_mode != 0o100400:
             # Invalid dfn, return
             return
         if stats.st_mtime > self.k_mtime:
@@ -2136,7 +2139,7 @@ class ClearFuncs(object):
             try:
                 name = self.loadauth.load_name(extra)  # The username we are attempting to auth with
                 groups = self.loadauth.get_groups(extra)  # The groups this user belongs to
-                group_perm_keys = filter(lambda(item): item.endswith('%'), self.opts['external_auth'][extra['eauth']])  # The configured auth groups
+                group_perm_keys = filter(lambda item: item.endswith('%'), self.opts['external_auth'][extra['eauth']])  # The configured auth groups
 
                 # First we need to know if the user is allowed to proceed via any of their group memberships.
                 group_auth_match = False
