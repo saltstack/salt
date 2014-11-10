@@ -13,7 +13,7 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 
 def present(name,
-            running=True,
+            running=None,
             clone_from=None,
             snapshot=False,
             profile=None,
@@ -36,7 +36,7 @@ def present(name,
     name
         The name of the container to be created
 
-    running : True
+    running : False
         * If ``True``, ensure that the container is running
         * If ``False``, ensure that the container is stopped
         * If ``None``, do nothing with regards to the running state of the
@@ -121,39 +121,79 @@ def present(name,
            'comment': 'Container \'{0}\' already exists'.format(name),
            'changes': {}}
 
-    # Sanity checks
-    create_type_count = len([x for x in (template, image, clone_from) if x])
-    if create_type_count > 1:
-        ret['result'] = False
-        ret['comment'] = ('Only one of template, image, or clone_from is '
-                          'permitted')
-    elif create_type_count == 0:
-        ret['result'] = False
-        ret['comment'] = 'One of template, image, or clone_from is required'
-    elif clone_from and not __salt__['lxc.exists'](clone_from):
+    if not any((template, image, clone_from)):
+        # Take a peek into the profile to see if there is a clone source there.
+        # Otherwise, we're assuming this is a template/image creation. Also
+        # check to see if none of the create types are in the profile. If this
+        # is the case, then bail out early.
+        c_profile = __salt__['lxc.get_container_profile'](profile)
+        if not any(x for x in c_profile
+                   if x in ('template', 'image', 'clone_from')):
+            ret['result'] = False
+            ret['comment'] = ('No template, image, or clone_from parameter '
+                              'was found in either the state\'s arguments or '
+                              'the LXC profile')
+        else:
+            try:
+                # Assign the profile's clone_from param to the state, so that
+                # we know to invoke lxc.clone to create the container.
+                clone_from = c_profile['clone_from']
+            except KeyError:
+                pass
+
+    # Sanity check(s)
+    if clone_from and not __salt__['lxc.exists'](clone_from):
         ret['result'] = False
         ret['comment'] = ('Clone source \'{0}\' does not exist'
                           .format(clone_from))
     if not ret['result']:
         return ret
 
+    action = 'cloned from {0}'.format(clone_from) if clone_from else 'created'
+
     state = {'old': __salt__['lxc.state'](name)}
-    if state['old'] is None:
-        # Container does not exist
-
-        action = 'cloned from {0}'.format(clone_from) if clone_from \
-            else 'created'
-
-        if __opts__['test']:
-            ret['result'] = None
+    if __opts__['test']:
+        if state['old'] is None:
             ret['comment'] = (
                 'Container \'{0}\' will be {1}'.format(
                     name,
                     'cloned from {0}'.format(clone_from) if clone_from
                     else 'created')
             )
+            ret['result'] = None
             return ret
+        else:
+            if running is None:
+                # Container exists and we're not managing whether or not it's
+                # running. Set the result back to True and return
+                return ret
+            elif running:
+                if state['old'] in ('frozen', 'stopped'):
+                    ret['comment'] = (
+                        'Container \'{0}\' would be {1}'.format(
+                            name,
+                            'unfrozen' if state['old'] == 'frozen'
+                                else 'started'
+                        )
+                    )
+                    ret['result'] = None
+                    return ret
+                else:
+                    ret['comment'] += ' and is running'
+                    return ret
+            else:
+                if state['old'] in ('frozen', 'running'):
+                    ret['comment'] = (
+                        'Container \'{0}\' would be stopped'.format(name)
+                    )
+                    ret['result'] = None
+                    return ret
+                else:
+                    ret['comment'] += ' and is stopped'
+                    return ret
 
+    if state['old'] is None:
+        # Container does not exist
         try:
             if clone_from:
                 result = __salt__['lxc.clone'](name,
@@ -164,7 +204,8 @@ def present(name,
                                                backing=backing,
                                                vgname=vgname)
             else:
-                result = __salt__['lxc.create'](profile=profile,
+                result = __salt__['lxc.create'](name,
+                                                profile=profile,
                                                 template=template,
                                                 options=options,
                                                 image=image,
@@ -183,34 +224,62 @@ def present(name,
                                   .format(clone_from, name))
             else:
                 ret['comment'] = 'Created container \'{0}\''.format(name)
+            state['new'] = result['state']['new']
 
-    if ret['result'] is not False:
+    if ret['result'] is True:
         # Enforce the "running" parameter
         if running is None:
             # Don't do anything
             pass
         elif running:
-            if result['state'] != 'running':
+            c_state = __salt__['lxc.state'](name)
+            if c_state == 'running':
+                ret['comment'] += ' and is running'
+            else:
                 error = ', but it could not be started'
                 try:
-                    state['new'] = __salt__['lxc.start'](name)['state']
-                    if post != 'running':
+                    start_func = 'lxc.unfreeze' if c_state == 'frozen' \
+                        else 'lxc.start'
+                    state['new'] = __salt__[start_func](name)['state']['new']
+                    if state['new'] != 'running':
                         ret['result'] = False
                         ret['comment'] += error
                 except (SaltInvocationError, CommandExecutionError) as exc:
                     ret['result'] = False
                     ret['comment'] += '{0}: {1}'.format(error, exc)
+                else:
+                    if state['old'] is None:
+                        ret['comment'] += ', and the container was started'
+                    else:
+                        ret['comment'] = (
+                            'Container \'{0}\' was {1}'.format(
+                                name,
+                                'unfrozen' if state['old'] == 'frozen'
+                                    else 'started'
+                            )
+                        )
+
         else:
-            if result['state'] != 'stopped':
+            c_state = __salt__['lxc.state'](name)
+            if c_state == 'stopped':
+                if state['old'] is not None:
+                    ret['comment'] += ' and is stopped'
+            else:
                 error = ', but it could not be stopped'
                 try:
-                    state['new'] = __salt__['lxc.stop'](name)['state']
-                    if post != 'stopped':
+                    state['new'] = __salt__['lxc.stop'](name)['state']['new']
+                    if state['new'] != 'stopped':
                         ret['result'] = False
                         ret['comment'] += error
                 except (SaltInvocationError, CommandExecutionError) as exc:
                     ret['result'] = False
                     ret['comment'] += '{0}: {1}'.format(error, exc)
+                else:
+                    if state['old'] is None:
+                        ret['comment'] += ', and the container was stopped'
+                    else:
+                        ret['comment'] = ('Container \'{0}\' was stopped'
+                                          .format(name))
 
     if 'new' not in state:
         # Make sure we know the final state of the container before we return
@@ -229,9 +298,8 @@ def absent(name):
 
     .. code-block:: yaml
 
-        my_instance_name2:
+        web01:
           lxc.absent
-
     '''
     ret = {'name': name,
            'changes': {},
@@ -243,7 +311,7 @@ def absent(name):
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'Container \'{0}\' would be removed'.format(name)
+        ret['comment'] = 'Container \'{0}\' would be destroyed'.format(name)
         return ret
 
     try:
@@ -251,17 +319,16 @@ def absent(name):
     except (SaltInvocationError, CommandExecutionError) as exc:
         ret['result'] = False
         ret['comment'] = 'Failed to destroy container: {0}'.format(exc)
-        return ret
-
-    ret['changes'] = result['changes']
-    ret['result'] = result['result']
+    else:
+        ret['changes']['state'] = result['state']
+        ret['comment'] = 'Container \'{0}\' was destroyed'.format(name)
     return ret
 
 
 def running(name, restart=False):
     '''
     .. versionchanged:: 2014.7.1
-        Renamed from **lxc.started** to **lxc.running**
+        The ``lxc.started`` state has been renamed to ``lxc.running``
 
     Ensure that a container is running
 
@@ -282,6 +349,10 @@ def running(name, restart=False):
 
         web01:
           lxc.running
+
+        web02:
+          lxc.running:
+            - restart: True
     '''
     ret = {'name': name,
            'result': True,
@@ -320,13 +391,16 @@ def running(name, restart=False):
         if state['old'] == 'frozen' and not restart:
             result = __salt__['lxc.unfreeze'](name)
         else:
-            result = __salt__['lxc.start'](name, restart=restart)
+            if restart:
+                result = __salt__['lxc.restart'](name)
+            else:
+                result = __salt__['lxc.start'](name)
     except (CommandExecutionError, SaltInvocationError) as exc:
         ret['result'] = False
         ret['comment'] = exc.strerror
         state['new'] = __salt__['lxc.state'](name)
     else:
-        state['new'] = result['state']
+        state['new'] = result['state']['new']
         if state['new'] != 'running':
             ret['result'] = False
             ret['comment'] = ('Unable to {0} container \'{1}\''
@@ -385,7 +459,7 @@ def frozen(name, start=True):
         ret['result'] = False
         ret['comment'] = 'Container \'{0}\' is stopped'.format(name)
 
-    if ret['result'] == False or state['old'] == 'frozen':
+    if ret['result'] is False or state['old'] == 'frozen':
         return ret
 
     if state['old'] == 'stopped':
@@ -400,13 +474,13 @@ def frozen(name, start=True):
         return ret
 
     try:
-        result = __salt__['lxc.freeze'](name, start_first=start)
+        result = __salt__['lxc.freeze'](name, start=start)
     except (CommandExecutionError, SaltInvocationError) as exc:
         ret['result'] = False
         ret['comment'] = exc.strerror
         state['new'] = __salt__['lxc.state'](name)
     else:
-        state['new'] = result['state']
+        state['new'] = result['state']['new']
         if state['new'] != 'frozen':
             ret['result'] = False
             ret['comment'] = ('Unable to {0} container \'{1}\''
@@ -483,7 +557,7 @@ def stopped(name, kill=False):
         ret['comment'] = exc.strerror
         state['new'] = __salt__['lxc.state'](name)
     else:
-        state['new'] = result['state']
+        state['new'] = result['state']['new']
         if state['new'] != 'stopped':
             ret['result'] = False
             ret['comment'] = ('Unable to {0} container \'{1}\''
