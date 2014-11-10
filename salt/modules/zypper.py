@@ -1034,9 +1034,12 @@ def _parse_suse_product(path, *info):
     '''
     doc = dom.parse(path)
     product = {}
-    [product.update({
-        nfo: _get_first_aggregate_text(doc.getElementsByTagName(nfo))
-    }) for nfo in info]
+    for nfo in info:
+        product.update(
+            {nfo: _get_first_aggregate_text(
+                doc.getElementsByTagName(nfo)
+            )}
+        )
 
     return product
 
