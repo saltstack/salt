@@ -6,6 +6,7 @@ References:
 
 * http://www.debian.org/doc/manuals/debian-reference/ch05.en.html
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import functools
@@ -25,6 +26,7 @@ import salt.utils
 import salt.utils.templates
 import salt.utils.validate.net
 import salt.utils.odict
+import six
 
 
 # Set up logging
@@ -390,7 +392,7 @@ SALT_ATTR_TO_DEBIAN_ATTR_MAP = {
 
 
 DEBIAN_ATTR_TO_SALT_ATTR_MAP = dict(
-    (v, k) for (k, v) in SALT_ATTR_TO_DEBIAN_ATTR_MAP.items())
+    (v, k) for (k, v) in list(SALT_ATTR_TO_DEBIAN_ATTR_MAP.items()))
 
 #TODO
 DEBIAN_ATTR_TO_SALT_ATTR_MAP['address'] = 'address'
@@ -1252,8 +1254,8 @@ def _parse_network_settings(opts, current):
     the global network settings file.
     '''
     # Normalize keys
-    opts = dict((k.lower(), v) for (k, v) in opts.iteritems())
-    current = dict((k.lower(), v) for (k, v) in current.iteritems())
+    opts = dict((k.lower(), v) for (k, v) in six.iteritems(opts))
+    current = dict((k.lower(), v) for (k, v) in six.iteritems(current))
     result = {}
 
     valid = _CONFIG_TRUE + _CONFIG_FALSE
@@ -1295,7 +1297,7 @@ def _parse_routes(iface, opts):
     the route settings file.
     '''
     # Normalize keys
-    opts = dict((k.lower(), v) for (k, v) in opts.iteritems())
+    opts = dict((k.lower(), v) for (k, v) in six.iteritems(opts))
     result = {}
     if 'routes' not in opts:
         _raise_error_routes(iface, 'routes', 'List of routes')
