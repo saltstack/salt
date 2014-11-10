@@ -28,6 +28,7 @@ Connection module for Amazon IAM
 
 :depends: boto
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import logging
