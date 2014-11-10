@@ -33,6 +33,7 @@ Connection module for Amazon Route53
 
 :depends: boto
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import logging
