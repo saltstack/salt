@@ -463,7 +463,7 @@ documentation regarding this topic.
     devices = fsutils._blkid_output(out['stdout'])
 
     ret['after'] = {
-        'fsck_status': "N/A", # ToDO
+        'fsck_status': "N/A",  # ToDO
         'mount_point': mountpoint,
         'type': devices[device]["type"],
     }
