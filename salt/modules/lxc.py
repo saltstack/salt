@@ -1771,10 +1771,18 @@ def stop(name, kill=False):
         salt myminion lxc.stop name
     '''
     _ensure_exists(name)
+    orig_state = state(name)
+    if orig_state == 'frozen' and not kill:
+        # Gracefully stopping a frozen container is slower than unfreezing and
+        # then stopping it (at least in my testing), so if we're not
+        # force-stopping the container, unfreeze it first.
+        unfreeze(name)
     cmd = 'lxc-stop'
     if kill:
         cmd += ' -k'
-    return _change_state(cmd, name, 'stopped')
+    ret = _change_state(cmd, name, 'stopped')
+    ret['state']['old'] = orig_state
+    return ret
 
 
 def freeze(name, **kwargs):
