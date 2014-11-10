@@ -11,6 +11,7 @@ Cassandra NoSQL Database Module
         cassandra.host: localhost
         cassandra.thrift_port: 9160
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -167,13 +168,13 @@ def column_families(keyspace=None):
 
     if keyspace:
         if keyspace in ksps:
-            return sys.get_keyspace_column_families(keyspace).keys()
+            return list(sys.get_keyspace_column_families(keyspace).keys())
         else:
             return None
     else:
         ret = {}
         for kspace in ksps:
-            ret[kspace] = sys.get_keyspace_column_families(kspace).keys()
+            ret[kspace] = list(sys.get_keyspace_column_families(kspace).keys())
 
         return ret
 
