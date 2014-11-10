@@ -253,8 +253,6 @@ def salt_run():
             SystemExit('\nExiting gracefully on Ctrl-c'),
             err,
             hardcrash, trace=trace)
-    except SystemExit:
-        os._exit(0)  # Kick it in the teeth
 
 
 def salt_ssh():
