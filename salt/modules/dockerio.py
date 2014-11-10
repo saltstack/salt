@@ -149,6 +149,7 @@ These are the available methods:
 '''
 
 from __future__ import absolute_import
+from six.moves import range
 __docformat__ = 'restructuredtext en'
 
 import datetime
@@ -279,11 +280,11 @@ def _get_client(version=None, timeout=None):
     # try to authenticate the client using credentials
     # found in pillars
     registry_auth_config = __pillar__.get('docker-registries', {})
-    for k, data in __pillar__.items():
+    for k, data in list(__pillar__.items()):
         if k.endswith('-docker-registries'):
             registry_auth_config.update(data)
 
-    for registry, creds in registry_auth_config.items():
+    for registry, creds in list(registry_auth_config.items()):
         client.login(creds['username'], password=creds['password'],
                      email=creds.get('email'), registry=registry)
 
@@ -407,7 +408,7 @@ def get_containers(all=True,
             if container_id:
                 inspect = _get_container_infos(container_id)
                 container['detail'] = {}
-                for key, value in inspect.items():
+                for key, value in list(inspect.items()):
                     container['detail'][key] = value
             ret.append(container)
 
@@ -889,7 +890,7 @@ def start(container,
             if port_bindings is not None:
                 try:
                     bindings = {}
-                    for k, v in port_bindings.items():
+                    for k, v in list(port_bindings.items()):
                         bindings[k] = (v.get('HostIp', ''), v['HostPort'])
                 except AttributeError:
                     raise SaltInvocationError(
