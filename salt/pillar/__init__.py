@@ -43,7 +43,7 @@ def merge_overwrite(obj_a, obj_b):
     return merge_recurse(obj_a, obj_b)
 
 
-def get_pillar(opts, grains, id_, saltenv=None, ext=None, env=None):
+def get_pillar(opts, grains, id_, saltenv=None, ext=None, env=None, funcs=None):
     '''
     Return the correct pillar driver based on the file_client option
     '''
@@ -59,14 +59,14 @@ def get_pillar(opts, grains, id_, saltenv=None, ext=None, env=None):
     return {
             'remote': RemotePillar,
             'local': Pillar
-            }.get(opts['file_client'], Pillar)(opts, grains, id_, saltenv, ext)
+            }.get(opts['file_client'], Pillar)(opts, grains, id_, saltenv, ext, functions=funcs)
 
 
 class RemotePillar(object):
     '''
     Get the pillar from the master
     '''
-    def __init__(self, opts, grains, id_, saltenv, ext=None):
+    def __init__(self, opts, grains, id_, saltenv, ext=None, functions=None):
         self.opts = opts
         self.opts['environment'] = saltenv
         self.ext = ext
