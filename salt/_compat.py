@@ -38,6 +38,11 @@ if PY3:
 else:
     MAX_SIZE = sys.maxint
 
+if PY3:
+    xrange = range
+else:
+    xrange = xrange
+
 # pylint: disable=C0103
 if PY3:
     string_types = str,
@@ -177,8 +182,21 @@ else:
 
 if PY3:
     from io import StringIO
+    from io import BytesIO as cStringIO
 else:
     from StringIO import StringIO
+    from cStringIO import StringIO as cStringIO
+
+
+def string_io(data=None):  # cStringIO can't handle unicode
+    '''
+    Pass data through to stringIO module and return result
+    '''
+    try:
+        return cStringIO(bytes(data))
+    except (UnicodeEncodeError, TypeError):
+        return StringIO(data)
+
 
 if PY3:
     import queue as Queue

@@ -147,6 +147,8 @@ These are the available methods:
 - :py:func:`script_retcode<salt.modules.dockerio.script_retcode>`
 
 '''
+
+from __future__ import absolute_import
 __docformat__ = 'restructuredtext en'
 
 import datetime
@@ -405,7 +407,7 @@ def get_containers(all=True,
             if container_id:
                 inspect = _get_container_infos(container_id)
                 container['detail'] = {}
-                for key, value in inspect.iteritems():
+                for key, value in inspect.items():
                     container['detail'][key] = value
             ret.append(container)
 
@@ -887,7 +889,7 @@ def start(container,
             if port_bindings is not None:
                 try:
                     bindings = {}
-                    for k, v in port_bindings.iteritems():
+                    for k, v in port_bindings.items():
                         bindings[k] = (v.get('HostIp', ''), v['HostPort'])
                 except AttributeError:
                     raise SaltInvocationError(
@@ -2088,7 +2090,7 @@ def _script(status,
                         'cache_error': True}
             shutil.copyfile(fn_, path)
         in_path = os.path.join('/', os.path.relpath(path, rpath))
-        os.chmod(path, 0755)
+        os.chmod(path, 0o755)
         command = in_path + ' ' + str(args) if args else in_path
         status = run_func_(container,
                            command,

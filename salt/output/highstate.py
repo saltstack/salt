@@ -58,6 +58,7 @@ Example output::
 
 # Import python libs
 import pprint
+import sys
 
 # Import salt libs
 import salt.utils
@@ -205,9 +206,10 @@ def _format_host(host, data):
                 # but try to continue on errors
                 pass
             try:
-                comment = ret['comment'].strip().replace(
-                    u'\n',
-                    u'\n' + u' ' * 14)
+                comment = ret['comment'].decode(sys.getfilesystemencoding())
+                comment = comment.strip().replace(
+                        u'\n',
+                        u'\n' + u' ' * 14)
             except AttributeError:  # Assume comment is a list
                 try:
                     comment = ret['comment'].join(' ').replace(

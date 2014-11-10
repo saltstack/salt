@@ -167,7 +167,6 @@ def deluser(name, username):
     grp_info = __salt__['group.info'](name)
     try:
         if username in grp_info['members']:
-            print username
             if __grains__['kernel'] == 'Linux':
                 retcode = __salt__['cmd.retcode']('gpasswd --del {0} {1}'
                     .format(username, name))
