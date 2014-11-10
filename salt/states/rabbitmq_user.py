@@ -112,8 +112,7 @@ def present(name,
 
             _set_tags_and_perms(tags, perms)
         else:
-            assert (user_exists and force)
-            log.debug('User exists and force is set - Overriding')
+            log.debug('RabbitMQ user exists and force is set - Overriding')
             if password is not None:
                 result = __salt__['rabbitmq.change_password'](
                     name, password, runas=runas)
