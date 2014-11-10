@@ -13,6 +13,7 @@ Module to provide MongoDB functionality to Salt
     This data can also be passed into pillar. Options passed into opts will
     overwrite options passed into pillar.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
