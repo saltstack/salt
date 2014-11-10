@@ -2,6 +2,7 @@
 '''
 Salt-specific interface for calling Salt Cloud directly
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -173,7 +174,7 @@ def get_instance(name, provider=None):
     info = salt.utils.cloud.simple_types_filter(data)
     try:
         # get the first: [alias][driver][vm_name]
-        info = info.itervalues().next().itervalues().next().itervalues().next()
+        info = next(info.itervalues().next().itervalues().next().itervalues())
     except AttributeError:
         return None
     return info
