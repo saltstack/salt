@@ -216,7 +216,7 @@ def present(name,
         # Make sure we know the final state of the container before we return
         state['new'] = __salt__['lxc.state'](name)
     if state['old'] != state['new']:
-        ret['changes'] = state
+        ret['changes']['state'] = state
     return ret
 
 
@@ -261,58 +261,240 @@ def absent(name):
 def running(name, restart=False):
     '''
     .. versionchanged:: 2014.7.1
-        Renamed from **started** to **running**
+        Renamed from **lxc.started** to **lxc.running**
 
     Ensure that a container is running
 
     .. note::
 
-        This state does not enforce the existence of the named container. For
-        this, use the
+        This state does not enforce the existence of the named container, it
+        just starts the container if it is not running. To ensure that the
+        named container exists, use :mod:`lxc.present
+        <salt.states.lxc.present>`.
 
     name
         The name of the container
 
     restart : False
-        Force reboot if container is running
+        Restart container if it is already running
 
     .. code-block:: yaml
 
         web01:
           lxc.running
     '''
+    ret = {'name': name,
+           'result': True,
+           'comment': 'Container \'{0}\' is already running'.format(name),
+           'changes': {}}
+
+    state = {'old': __salt__['lxc.state'](name)}
+    if state['old'] is None:
+        ret['result'] = False
+        ret['comment'] = 'Container \'{0}\' does not exist'.format(name)
+        return ret
+    elif state['old'] == 'running' and not restart:
+        return ret
+    elif state['old'] == 'stopped' and restart:
+        # No need to restart since container is not running
+        restart = False
+
+    if restart:
+        if state['old'] != 'stopped':
+            action = ('restart', 'restarted')
+        else:
+            action = ('start', 'started')
+    else:
+        if state['old'] == 'frozen':
+            action = ('unfreeze', 'unfrozen')
+        else:
+            action = ('start', 'started')
+
     if __opts__['test']:
-        return {'name': name,
-                'comment': '{0} will be started'.format(name),
-                'result': True,
-                'changes': {}}
-    cret = __salt__['lxc.start'](name, restart=restart)
-    cret['name'] = name
-    return cret
+        ret['result'] = None
+        ret['comment'] = ('Container \'{0}\' would be {1}'
+                          .format(name, action[1]))
+        return ret
+
+    try:
+        if state['old'] == 'frozen' and not restart:
+            result = __salt__['lxc.unfreeze'](name)
+        else:
+            result = __salt__['lxc.start'](name, restart=restart)
+    except (CommandExecutionError, SaltInvocationError) as exc:
+        ret['result'] = False
+        ret['comment'] = exc.strerror
+        state['new'] = __salt__['lxc.state'](name)
+    else:
+        state['new'] = result['state']
+        if state['new'] != 'running':
+            ret['result'] = False
+            ret['comment'] = ('Unable to {0} container \'{1}\''
+                              .format(action[0], name))
+        else:
+            ret['comment'] = ('Container \'{0}\' was successfully {1}'
+                              .format(name, action[1]))
+        try:
+            ret['changes']['restarted'] = result['restarted']
+        except KeyError:
+            pass
+
+    if state['old'] != state['new']:
+        ret['changes']['state'] = state
+    return ret
 
 
-def stopped(name):
+def frozen(name, start=True):
     '''
-    Stop a container
+    .. versionadded:: 2014.7.1
+
+    Ensure that a container is frozen
+
+    .. note::
+
+        This state does not enforce the existence of the named container, it
+        just freezes the container if it is running. To ensure that the named
+        container exists, use :mod:`lxc.present <salt.states.lxc.present>`.
 
     name
-        id of the container to stop
+        The name of the container
+
+    start : True
+        Start container first, if necessary. If ``False``, then this state will
+        fail if the container is not running.
 
     .. code-block:: yaml
 
-        sleepingcontainer:
-          lxc.stopped:
-            - name: my_instance_name2
+        web01:
+          lxc.frozen
 
+        web02:
+          lxc.frozen:
+            - start: False
     '''
+    ret = {'name': name,
+           'result': True,
+           'comment': 'Container \'{0}\' is already frozen'.format(name),
+           'changes': {}}
+
+    state = {'old': __salt__['lxc.state'](name)}
+    if state['old'] is None:
+        ret['result'] = False
+        ret['comment'] = 'Container \'{0}\' does not exist'.format(name)
+    elif state['old'] == 'stopped' and not start:
+        ret['result'] = False
+        ret['comment'] = 'Container \'{0}\' is stopped'.format(name)
+
+    if ret['result'] == False or state['old'] == 'frozen':
+        return ret
+
+    if state['old'] == 'stopped':
+        action = ('start and freeze', 'started and frozen')
+    else:
+        action = ('freeze', 'frozen')
+
     if __opts__['test']:
-        return {'name': name,
-                'comment': '{0} will be stopped'.format(name),
-                'result': True,
-                'changes': {}}
-    cret = __salt__['lxc.stop'](name)
-    cret['name'] = name
-    return cret
+        ret['result'] = None
+        ret['comment'] = ('Container \'{0}\' would be {1}'
+                          .format(name, action[1]))
+        return ret
+
+    try:
+        result = __salt__['lxc.freeze'](name, start_first=start)
+    except (CommandExecutionError, SaltInvocationError) as exc:
+        ret['result'] = False
+        ret['comment'] = exc.strerror
+        state['new'] = __salt__['lxc.state'](name)
+    else:
+        state['new'] = result['state']
+        if state['new'] != 'frozen':
+            ret['result'] = False
+            ret['comment'] = ('Unable to {0} container \'{1}\''
+                              .format(action[0], name))
+        else:
+            ret['comment'] = ('Container \'{0}\' was successfully {1}'
+                              .format(name, action[1]))
+        try:
+            ret['changes']['started'] = result['started']
+        except KeyError:
+            pass
+
+    if state['old'] != state['new']:
+        ret['changes']['state'] = state
+    return ret
+
+
+def stopped(name, kill=False):
+    '''
+    Ensure that a container is running
+
+    .. note::
+
+        This state does not enforce the existence of the named container, it
+        just stops the container if it running or frozen. To ensure that the
+        named container exists, use :mod:`lxc.present
+        <salt.states.lxc.present>`, or use the :mod:`lxc.absent
+        <salt.states.lxc.absent>` state to ensure that the container does not
+        exist.
+
+    name
+        The name of the container
+
+    kill : False
+        Do not wait for the container to stop, kill all tasks in the container.
+        Older LXC versions will stop containers like this irrespective of this
+        argument.
+
+        .. versionadded:: 2014.7.1
+
+    .. code-block:: yaml
+
+        web01:
+          lxc.stopped
+    '''
+    ret = {'name': name,
+           'result': True,
+           'comment': 'Container \'{0}\' is already stopped'.format(name),
+           'changes': {}}
+
+    state = {'old': __salt__['lxc.state'](name)}
+    if state['old'] is None:
+        ret['result'] = False
+        ret['comment'] = 'Container \'{0}\' does not exist'.format(name)
+        return ret
+    elif state['old'] == 'stopped':
+        return ret
+
+    if kill:
+        action = ('force-stop', 'force-stopped')
+    else:
+        action = ('stop', 'stopped')
+
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = ('Container \'{0}\' would be {1}'
+                          .format(name, action[1]))
+        return ret
+
+    try:
+        result = __salt__['lxc.stop'](name, kill=kill)
+    except (CommandExecutionError, SaltInvocationError) as exc:
+        ret['result'] = False
+        ret['comment'] = exc.strerror
+        state['new'] = __salt__['lxc.state'](name)
+    else:
+        state['new'] = result['state']
+        if state['new'] != 'stopped':
+            ret['result'] = False
+            ret['comment'] = ('Unable to {0} container \'{1}\''
+                              .format(action[0], name))
+        else:
+            ret['comment'] = ('Container \'{0}\' was successfully {1}'
+                              .format(name, action[1]))
+
+    if state['old'] != state['new']:
+        ret['changes']['state'] = state
+    return ret
 
 
 # Deprecated states
