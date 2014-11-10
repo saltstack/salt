@@ -35,6 +35,7 @@ from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
+
 def _verify_run(out, cmd=None):
     '''
     Crash to the log if command execution was not successful.
@@ -62,7 +63,7 @@ def _get_mounts(fs_type):
             mounts[device] = []
 
         mounts[device].append({
-            'mount_point': mntpnt, 
+            'mount_point': mntpnt,
             'options': options.split(",")
         })
 
