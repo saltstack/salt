@@ -2,6 +2,7 @@
 '''
 Homebrew for Mac OS X
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import copy
