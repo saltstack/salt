@@ -1427,8 +1427,7 @@ def create(name,
     if ret['retcode'] == 0 and exists(name):
         c_state = state(name)
         return {'result': True,
-                'changes': {'old': None, 'new': c_state},
-                'state': c_state}
+                'state': {'old': None, 'new': c_state}}
     else:
         if exists(name):
             # destroy the container if it was partially created
@@ -1529,7 +1528,9 @@ def clone(name,
     ret = __salt__['cmd.run_all'](cmd)
     _clear_context()
     if ret['retcode'] == 0 and exists(name):
-        return True
+        c_state = state(name)
+        return {'result': True,
+                'state': {'old': None, 'new': c_state}}
     else:
         if exists(name):
             # destroy the container if it was partially created
@@ -1637,25 +1638,22 @@ def list_(extra=False, limit=None):
 
 def _change_state(cmd, name, expected):
     pre = state(name)
-    if pre is None:
-        raise CommandExecutionError(
-            'Container \'{0}\' does not exist'.format(name)
-        )
-    elif pre == expected:
-        return {'state': expected,
-                'result': True,
-                'changes': {}}
+    if pre == expected:
+        return {'result': True,
+                'state': {'old': expected, 'new': expected},
+                'comment': 'Container \'{0}\' already {1}'
+                           .format(name, expected)}
 
     if cmd == 'lxc-destroy':
         # Kill the container first
         __salt__['cmd.run']('lxc-stop -k -n {0}'.format(name))
 
     cmd = '{0} -n {1}'.format(cmd, name)
-    err = __salt__['cmd.run_stderr'](cmd)
-    if err:
+    error = __salt__['cmd.run_stderr'](cmd)
+    if error:
         raise CommandExecutionError(
             'Error changing state for container \'{0}\' using command '
-            '\'{1}\': {2}'.format(name, cmd, err)
+            '\'{1}\': {2}'.format(name, cmd, error)
         )
     if expected is not None:
         # some commands do not wait, so we will
@@ -1663,10 +1661,8 @@ def _change_state(cmd, name, expected):
         __salt__['cmd.run'](cmd, timeout=30)
     _clear_context()
     post = state(name)
-    ret = {'state': post,
-           'result': post == expected}
-    if pre != post:
-        ret['changes'] = {'old': pre, 'new': post}
+    ret = {'result': post == expected,
+           'state': {'old': pre, 'new': post}}
     return ret
 
 
@@ -1701,31 +1697,85 @@ def _ensure_running(name, no_start=False):
         return unfreeze(name)
 
 
-def start(name, restart=False):
+def restart(name, force=False):
     '''
-    Start the named container.
+    .. versionadded:: 2014.7.1
+
+    Restart the named container. If the container was not running, the
+    container will merely be started.
+
+    name
+        The name of the container
+
+    force : False
+        If ``True``, the container will be force-stopped instead of gracefully
+        shut down
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' lxc.start name
+        salt myminion lxc.restart name
     '''
     _ensure_exists(name)
-    if restart:
-        stop(name)
+    orig_state = state(name)
+    if orig_state != 'stopped':
+        stop(name, kill=force)
+    ret = start(name)
+    ret['state']['old'] = orig_state
+    if orig_state != 'stopped':
+        ret['restarted'] = True
+    return ret
+
+
+def start(name, **kwargs):
+    '''
+    Start the named container
+
+    restart : False
+        .. deprecated:: 2014.7.1
+            Use :mod:`lxc.restart <salt.modules.lxc.restart>`
+
+        Restart the container if it is already running
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion lxc.start name
+    '''
+    _ensure_exists(name)
+    if kwargs.get('restart', False):
+        salt.utils.warn_until(
+            'Boron',
+            'The \'restart\' argument to \'lxc.start\' has been deprecated, '
+            'please use \'lxc.restart\' instead.'
+        )
+        return restart(name)
+    if state(name) == 'frozen':
+        raise CommandExecutionError(
+            'Container \'{0}\' is frozen, use lxc.unfreeze'.format(name)
+        )
     return _change_state('lxc-start -d', name, 'running')
 
 
-def stop(name, kill=True):
+def stop(name, kill=False):
     '''
-    Stop the named container.
+    Stop the named container
+
+    kill : False
+        Do not wait for the container to stop, kill all tasks in the container.
+        Older LXC versions will stop containers like this irrespective of this
+        argument.
+
+        .. versionchanged:: 2014.7.1
+            Default value changed to ``False``
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' lxc.stop name
+        salt myminion lxc.stop name
     '''
     _ensure_exists(name)
     cmd = 'lxc-stop'
@@ -1734,9 +1784,15 @@ def stop(name, kill=True):
     return _change_state(cmd, name, 'stopped')
 
 
-def freeze(name):
+def freeze(name, **kwargs):
     '''
-    Freeze the named container.
+    Freeze the named container
+
+    start : False
+        If ``True`` and the container is stopped, the container will be started
+        before attempting to freeze.
+
+        .. versionadded:: 2014.7.1
 
     CLI Example:
 
@@ -1745,11 +1801,20 @@ def freeze(name):
         salt '*' lxc.freeze name
     '''
     _ensure_exists(name)
-    if state(name) == 'stopped':
-        raise CommandExecutionError(
-            'Container \'{0}\' is stopped'.format(name)
-        )
-    return _change_state('lxc-freeze', name, 'frozen')
+    orig_state = state(name)
+    start_ = kwargs.get('start', False)
+    if orig_state == 'stopped':
+        if not start_:
+            raise CommandExecutionError(
+                'Container \'{0}\' is stopped'.format(name)
+            )
+        start(name)
+    ret = _change_state('lxc-freeze', name, 'frozen')
+    if orig_state == 'stopped' and start_:
+        ret['state']['old'] = orig_state
+        ret['started'] = True
+    ret['state']['new'] = state(name)
+    return ret
 
 
 def unfreeze(name):
@@ -1785,6 +1850,7 @@ def destroy(name, stop=True):
         salt '*' lxc.destroy foo
         salt '*' lxc.destroy foo stop=False
     '''
+    _ensure_exists(name)
     if not stop and state(name) != 'stopped':
         raise CommandExecutionError(
             'Container \'{0}\' is not stopped'.format(name)
