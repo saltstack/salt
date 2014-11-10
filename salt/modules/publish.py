@@ -54,9 +54,6 @@ def _publish(
     if fun == 'publish.publish':
         log.info('Function name is \'publish.publish\'. Returning {}')
         return {}
-    if expr_form.lower() in ('pillar', 'compound'):
-        log.error('Pillar/compound matching disabled for published commands.')
-        return {}
 
     if not isinstance(arg, list):
         arg = [salt.utils.args.yamlify_arg(arg)]
@@ -148,6 +145,9 @@ def publish(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
     - ipcidr
     - range
     - compound
+
+    Note that for pillar matches must be exact, both in the pillar matcher
+    and the compound matcher. No globbing is supported.
 
     The arguments sent to the minion publish function are separated with
     commas. This means that for a minion executing a command with multiple

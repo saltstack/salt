@@ -1149,7 +1149,8 @@ def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
 def subdict_match(data,
                   expr,
                   delimiter=DEFAULT_TARGET_DELIM,
-                  regex_match=False):
+                  regex_match=False,
+                  exact_match=False):
     '''
     Check for a match in a dictionary using a delimiter character to denote
     levels of subdicts, and also allowing the delimiter character to be
@@ -1157,13 +1158,15 @@ def subdict_match(data,
     data['foo']['bar'] == 'baz'. The former would take priority over the
     latter.
     '''
-    def _match(target, pattern, regex_match=False):
+    def _match(target, pattern, regex_match=False, exact_match=False):
         if regex_match:
             try:
                 return re.match(pattern.lower(), str(target).lower())
             except Exception:
                 log.error('Invalid regex {0!r} in match'.format(pattern))
                 return False
+        elif exact_match:
+            return str(target).lower() == pattern.lower()
         else:
             return fnmatch.fnmatch(str(target).lower(), pattern.lower())
 
@@ -1187,12 +1190,21 @@ def subdict_match(data,
                 if isinstance(member, dict):
                     if matchstr.startswith('*:'):
                         matchstr = matchstr[2:]
-                    if subdict_match(member, matchstr, regex_match=regex_match):
+                    if subdict_match(member,
+                                     matchstr,
+                                     regex_match=regex_match,
+                                     exact_match=exact_match):
                         return True
-                if _match(member, matchstr, regex_match=regex_match):
+                if _match(member,
+                          matchstr,
+                          regex_match=regex_match,
+                          exact_match=exact_match):
                     return True
             continue
-        if _match(match, matchstr, regex_match=regex_match):
+        if _match(match,
+                  matchstr,
+                  regex_match=regex_match,
+                  exact_match=exact_match):
             return True
     return False
 
