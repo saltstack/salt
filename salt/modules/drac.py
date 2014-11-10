@@ -2,10 +2,12 @@
 '''
 Manage Dell DRAC
 '''
+from __future__ import absolute_import
 
 import salt.utils
 
 import logging
+from six.moves import range
 
 log = logging.getLogger(__name__)
 
@@ -281,10 +283,10 @@ def create_user(username, password, permissions, users=None):
         log.warn('\'{0}\' already exists'.format(username))
         return False
 
-    for i in users.keys():
+    for i in list(users.keys()):
         _uids.add(users[i]['index'])
 
-    uid = sorted(list(set(xrange(2, 12)) - _uids), reverse=True).pop()
+    uid = sorted(list(set(range(2, 12)) - _uids), reverse=True).pop()
 
     # Create user accountvfirst
     if not __execute_cmd('config -g cfgUserAdmin -o \
