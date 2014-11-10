@@ -29,6 +29,7 @@ In other words `salt mac-machine pkg.refresh_db` is more like
 `apt-get update; apt-get upgrade dpkg apt-get` than simply `apt-get update`.
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import copy
@@ -172,7 +173,7 @@ def latest_version(*names, **kwargs):
 
     ret = {}
 
-    for k, v in available.items():
+    for k, v in list(available.items()):
         if k not in installed or salt.utils.compare_versions(ver1=installed[k], oper='<', ver2=v):
             ret[k] = v
         else:
@@ -314,7 +315,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         return {}
 
     formulas_array = []
-    for pname, pparams in pkg_params.items():
+    for pname, pparams in list(pkg_params.items()):
         formulas_array.append(pname + (pparams or ''))
 
     formulas = ' '.join(formulas_array)
