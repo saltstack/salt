@@ -77,11 +77,12 @@ class SaltKeep(Keep):
         '''
         Load and return the role data
         '''
-        data = self.saltRaetKey.read_local()
-        if not data:
-            data = odict([('sign', None), ('priv', None)])
-        data.update([('sighex', data['sign']),
-                     ('prihex', data['priv'])])
+        keydata = self.saltRaetKey.read_local()
+        if not keydata:
+            keydata = odict([('sign', None), ('priv', None)])
+        data = odict([('sighex', keydata['sign']),
+                     ('prihex', keydata['priv'])])
+        return data
 
     def clearLocalRoleData(self):
         '''
