@@ -265,6 +265,7 @@ import logging
 import re
 import sys
 
+import salt._compat
 from salt.loader import _create_loader
 from salt.fileclient import get_file_client
 from salt.utils.pyobjects import Registry, StateFactory, SaltObject, Map
@@ -336,12 +337,7 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
             mod,
             valid_funcs
         )
-        if sys.version_info[0] > 2:
-            # in py3+ exec is a function
-            exec(mod_cmd, mod_globals, mod_locals)
-        else:
-            # prior to that it is a statement
-            exec mod_cmd in mod_globals, mod_locals
+        salt._compat.exec_(mod_cmd, mod_globals, mod_locals)
 
         _globals[mod_camel] = mod_locals[mod_camel]
 
@@ -412,12 +408,7 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
                 state_contents = f.read()
 
             state_locals = {}
-            if sys.version_info[0] > 2:
-                # in py3+ exec is a function
-                exec(state_contents, _globals, state_locals)
-            else:
-                # prior to that it is a statement
-                exec state_contents in _globals, state_locals
+            salt._compat.exec_(state_contents, _globals, state_locals)
 
             if imports is None:
                 imports = list(state_locals.keys())
