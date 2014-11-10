@@ -2,6 +2,7 @@
 '''
 Service support for Debian systems (uses update-rc.d and /sbin/service)
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import glob
