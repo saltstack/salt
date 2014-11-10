@@ -5,6 +5,7 @@ A dead simple module wrapping calls to the Chocolatey package manager
 
 .. versionadded:: 2014.1.0
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
