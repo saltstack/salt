@@ -33,12 +33,14 @@ Connection module for Amazon Autoscale Groups
 
 :depends: boto
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import logging
 import json
 import yaml
 import email.mime.multipart
+import six
 
 log = logging.getLogger(__name__)
 
@@ -363,7 +365,7 @@ def get_cloud_init_mime(cloud_init):
         cloud_init = json.loads(cloud_init)
     _cloud_init = email.mime.multipart.MIMEMultipart()
     if 'scripts' in cloud_init:
-        for script_name, script in cloud_init['scripts'].iteritems():
+        for script_name, script in six.iteritems(cloud_init['scripts']):
             _script = email.mime.text.MIMEText(script, 'x-shellscript')
             _cloud_init.attach(_script)
     if 'cloud-config' in cloud_init:
@@ -424,9 +426,9 @@ def create_launch_configuration(name, image_id, key_name=None,
         # Boto requires objects for the mappings and the devices.
         _block_device_map = blockdevicemapping.BlockDeviceMapping()
         for block_device_dict in block_device_mappings:
-            for block_device, attributes in block_device_dict.iteritems():
+            for block_device, attributes in six.iteritems(block_device_dict):
                 _block_device = blockdevicemapping.EBSBlockDeviceType()
-                for attribute, value in attributes.iteritems():
+                for attribute, value in six.iteritems(attributes):
                     setattr(_block_device, attribute, value)
                 _block_device_map[block_device] = _block_device
         _bdms = [_block_device_map]
