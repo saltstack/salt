@@ -123,6 +123,7 @@ _DEB_CONFIG_PPPOE_OPTS = {
     'persist': 'persist',
     'mtu': 'mtu',
     'noaccomp': 'noaccomp',
+    'linkname': 'linkname',
 }
 
 _DEB_ROUTES_FILE = '/etc/network/routes'
