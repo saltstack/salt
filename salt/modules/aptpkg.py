@@ -1640,7 +1640,7 @@ def expand_repo_def(repokwargs):
             else:
                 repo = LP_SRC_FORMAT.format(owner_name, ppa_name, dist)
 
-        if file not in repokwargs:
+        if 'file' not in repokwargs:
             filename = '/etc/apt/sources.list.d/{0}-{1}-{2}.list'
             repokwargs['file'] = filename.format(owner_name, ppa_name,
                                                  dist)
