@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 # -*- coding: utf-8 -*-
 import inspect
 import json
@@ -6,6 +7,7 @@ import yaml
 
 import salt.fileclient
 import salt.utils
+import six
 
 __virtualname__ = 'defaults'
 
@@ -126,7 +128,7 @@ def get(key, default=''):
     if value is None:
         value = default
 
-    if isinstance(value, unicode):
+    if isinstance(value, six.text_type):
         value = str(value)
 
     return value
