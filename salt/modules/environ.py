@@ -3,6 +3,7 @@
 Support for getting and setting the environment variables
 of the current salt process.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -138,7 +139,7 @@ def setenv(environ, false_unsets=False, clear_all=False, update_minion=False):
         to_unset = [key for key in os.environ if key not in environ]
         for key in to_unset:
             ret[key] = setval(key, False, false_unsets)
-    for key, val in environ.items():
+    for key, val in list(environ.items()):
         if isinstance(val, string_types):
             ret[key] = setval(key, val)
         elif val is False:
