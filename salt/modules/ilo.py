@@ -4,6 +4,7 @@ Manage HP ILO
 
 :depends: hponcfg (SmartStart Scripting Toolkit Linux Edition)
 '''
+from __future__ import absolute_import
 
 import xml.etree.cElementTree as ET
 import salt.utils
