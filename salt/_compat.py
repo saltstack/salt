@@ -60,7 +60,8 @@ else:
     long = long
 
 if PY3:
-    exceptions = __builtin__  # pylint: disable=E0602
+    import builtins
+    exceptions = builtins  # pylint: disable=E0602
 else:
     import exceptions
 
@@ -103,7 +104,7 @@ else:
         return str(s)
 
 if PY3:
-    exec_ = getattr(__builtin__, 'exec')  # pylint: disable=E0602
+    exec_ = getattr(builtins, 'exec')  # pylint: disable=E0602
 
     def reraise(tp, value, tb=None):
         if value is None:
