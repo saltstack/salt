@@ -98,7 +98,7 @@ else:
         return str(s)
 
 if PY3:
-    exec_ = getattr(__builtin__, 'exec')
+    exec_ = getattr(__builtin__, 'exec')  # pylint: disable=E0602
 
     def reraise(tp, value, tb=None):
         if value is None:

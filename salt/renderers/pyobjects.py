@@ -263,7 +263,6 @@ from __future__ import absolute_import
 
 import logging
 import re
-import sys
 
 import salt._compat
 from salt.loader import _create_loader
