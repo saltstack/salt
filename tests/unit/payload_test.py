@@ -155,5 +155,5 @@ class SREQTestCase(TestCase):
 
 if __name__ == '__main__':
     from integration import run_tests
-    #run_tests(PayloadTestCase, needs_daemon=False)
+    run_tests(PayloadTestCase, needs_daemon=False)
     run_tests(SREQTestCase, needs_daemon=False)
