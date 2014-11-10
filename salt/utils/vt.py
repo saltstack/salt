@@ -22,7 +22,6 @@
 
 # Import python libs
 import os
-import copy
 import sys
 import time
 import errno
@@ -93,7 +92,6 @@ class Terminal(object):
                  shell=False,
                  cwd=None,
                  env=None,
-                 clean_env=False,
                  preexec_fn=None,
 
                  # Terminal Size
@@ -126,11 +124,7 @@ class Terminal(object):
         self.executable = executable
         self.shell = shell
         self.cwd = cwd
-        self.env = {} if clean_env else copy.deepcopy(os.environ)
-        if isinstance(env, dict):
-            self.env.update(env)
-        elif env is None:
-            self.env = None
+        self.env = env
         self.preexec_fn = preexec_fn
 
         # ----- Set the desired terminal size ------------------------------->
