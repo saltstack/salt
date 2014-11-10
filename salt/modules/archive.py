@@ -4,6 +4,7 @@ A module to wrap (non-Windows) archive calls
 
 .. versionadded:: 2014.1.0
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt._compat
