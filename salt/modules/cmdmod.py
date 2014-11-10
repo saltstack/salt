@@ -5,6 +5,7 @@ A module for shelling out
 Keep in mind that this module is insecure, in that it can give whomever has
 access to the master root execution access to all salt minions.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import time
@@ -25,6 +26,8 @@ import salt.grains.extra
 from salt._compat import string_types
 from salt.exceptions import CommandExecutionError, TimedProcTimeoutError
 from salt.log import LOG_LEVELS
+import six
+from six.moves import range
 
 # Only available on POSIX systems, nonfatal on windows
 try:
@@ -232,7 +235,7 @@ def _run(cmd,
 
     env = _parse_env(env)
 
-    for bad_env_key in (x for x, y in env.iteritems() if y is None):
+    for bad_env_key in (x for x, y in six.iteritems(env) if y is None):
         log.error('Environment variable {0!r} passed without a value. '
                   'Setting value to an empty string'.format(bad_env_key))
         env[bad_env_key] = ''
@@ -277,8 +280,8 @@ def _run(cmd,
             # Encode unicode kwargs to filesystem encoding to avoid a
             # UnicodeEncodeError when the subprocess is invoked.
             fse = sys.getfilesystemencoding()
-            for key, val in env.iteritems():
-                if isinstance(val, unicode):
+            for key, val in six.iteritems(env):
+                if isinstance(val, six.text_type):
                     env[key] = val.encode(fse)
         except ValueError:
             raise CommandExecutionError(
