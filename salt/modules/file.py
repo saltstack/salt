@@ -31,6 +31,8 @@ import tempfile
 import time
 import glob
 from functools import reduce
+from six.moves import range
+from six.moves import zip
 
 try:
     import grp
@@ -80,7 +82,7 @@ def __clean_tmp(sfn):
     if sfn.startswith(tempfile.gettempdir()):
         # Don't remove if it exists in file_roots (any saltenv)
         all_roots = itertools.chain.from_iterable(
-                iter(__opts__['file_roots'].values()))
+                iter(list(__opts__['file_roots'].values())))
         in_roots = any(sfn.startswith(root) for root in all_roots)
         # Only clean up files that exist
         if os.path.exists(sfn) and not in_roots:
@@ -2156,7 +2158,7 @@ def access(path, mode):
 
     if mode in modes:
         return os.access(path, modes[mode])
-    elif mode in iter(modes.values()):
+    elif mode in iter(list(modes.values())):
         return os.access(path, mode)
     else:
         raise SaltInvocationError('Invalid mode specified.')
@@ -2900,7 +2902,7 @@ def check_managed(
         log.info(changes)
         comments = ['The following values are set to be changed:\n']
         comments.extend('{0}: {1}\n'.format(key, val)
-                        for key, val in changes.items())
+                        for key, val in list(changes.items()))
         return None, ''.join(comments)
     return True, 'The file {0} is in the correct state'.format(name)
 
@@ -3858,10 +3860,10 @@ def list_backups(path, limit=None):
         files[timestamp]['Size'] = os.stat(location).st_size
         files[timestamp]['Location'] = location
 
-    return dict(zip(
+    return dict(list(zip(
         list(range(len(files))),
         [files[x] for x in sorted(files, reverse=True)[:limit]]
-    ))
+    )))
 
 list_backup = list_backups
 
@@ -3903,7 +3905,7 @@ def list_backups_dir(path, limit=None):
     files = {}
     f = dict([(i, len(list(n))) for i, n in itertools.groupby([x.split("_")[0] for x in sorted(os.listdir(bkdir))])])
     ff = os.listdir(bkdir)
-    for i, n in f.items():
+    for i, n in list(f.items()):
         ssfile = {}
         for x in sorted(ff):
             basename = x.split('_')[0]
@@ -3921,7 +3923,7 @@ def list_backups_dir(path, limit=None):
                 ssfile[timestamp]['Size'] = os.stat(location).st_size
                 ssfile[timestamp]['Location'] = location
 
-        sfiles = dict(zip(list(range(n)), [ssfile[x] for x in sorted(ssfile, reverse=True)[:limit]]))
+        sfiles = dict(list(zip(list(range(n)), [ssfile[x] for x in sorted(ssfile, reverse=True)[:limit]])))
         sefiles = {i: sfiles}
         files.update(sefiles)
     return files
