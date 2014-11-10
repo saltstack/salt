@@ -34,6 +34,7 @@ Connection module for Amazon VPC
 :depends: boto
 
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import logging
@@ -149,7 +150,7 @@ def _find_vpc(vpc_id=None, name=None, cidr=None, tags=None, conn=None):
             filter_parameters['filters']['tag:Name'] = name
 
         if tags:
-            for tag_name, tag_value in tags.items():
+            for tag_name, tag_value in list(tags.items()):
                 filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
 
         vpcs = conn.get_all_vpcs(**filter_parameters)
@@ -389,7 +390,7 @@ def subnet_exists(subnet_id=None, name=None, tags=None, region=None, key=None, k
             filter_parameters['filters']['tag:Name'] = name
 
         if tags:
-            for tag_name, tag_value in tags.items():
+            for tag_name, tag_value in list(tags.items()):
                 filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
 
         subnets = conn.get_all_subnets(**filter_parameters)
@@ -633,7 +634,7 @@ def dhcp_options_exists(dhcp_options_id=None, name=None, tags=None, region=None,
             filter_parameters['filters']['tag:Name'] = name
 
         if tags:
-            for tag_name, tag_value in tags.items():
+            for tag_name, tag_value in list(tags.items()):
                 filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
 
         dhcp_options = conn.get_all_dhcp_options(**filter_parameters)
@@ -741,7 +742,7 @@ def network_acl_exists(network_acl_id=None, name=None, tags=None, region=None, k
             filter_parameters['filters']['tag:Name'] = name
 
         if tags:
-            for tag_name, tag_value in tags.items():
+            for tag_name, tag_value in list(tags.items()):
                 filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
 
         network_acls = conn.get_all_network_acls(**filter_parameters)
@@ -1029,7 +1030,7 @@ def route_table_exists(route_table_id=None, name=None, tags=None, region=None, k
             filter_parameters['filters']['tag:Name'] = name
 
         if tags:
-            for tag_name, tag_value in tags.items():
+            for tag_name, tag_value in list(tags.items()):
                 filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
 
         route_tables = conn.get_all_route_tables(**filter_parameters)
@@ -1290,7 +1291,7 @@ def describe(vpc_id=None, region=None, key=None, keyid=None, profile=None):
         if vpcs:
             vpc = vpcs[0]  # Found!
             log.debug('Found VPC: {0}'.format(vpc.id))
-            for k in _ret.keys():
+            for k in list(_ret.keys()):
                 _ret[k] = getattr(vpc, k)
             return _ret
 
