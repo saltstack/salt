@@ -5,6 +5,7 @@ Return/control aspects of the grains data
 
 # Import python libs
 from __future__ import print_function
+from __future__ import absolute_import
 import collections
 import copy
 import math
@@ -19,6 +20,8 @@ import salt.utils
 import salt.utils.dictupdate
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
+from functools import reduce
+from six.moves import range
 
 __proxyenabled__ = ['*']
 
@@ -135,7 +138,7 @@ def items(sanitize=False):
     '''
     if salt.utils.is_true(sanitize):
         out = dict(__grains__)
-        for key, func in _SANITIZERS.items():
+        for key, func in list(_SANITIZERS.items()):
             if key in out:
                 out[key] = func(out[key])
         return out
@@ -167,7 +170,7 @@ def item(*args, **kwargs):
         except KeyError:
             pass
     if salt.utils.is_true(kwargs.get('sanitize')):
-        for arg, func in _SANITIZERS.items():
+        for arg, func in list(_SANITIZERS.items()):
             if arg in ret:
                 ret[arg] = func(ret[arg])
     return ret
@@ -213,7 +216,7 @@ def setvals(grains, destructive=False):
                 return 'Unable to read existing grains file: {0}'.format(e)
         if not isinstance(grains, dict):
             grains = {}
-    for key, val in new_grains.items():
+    for key, val in list(new_grains.items()):
         if val is None and destructive is True:
             if key in grains:
                 del grains[key]
