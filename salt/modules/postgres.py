@@ -709,7 +709,7 @@ def _role_cmd_args(name,
         sub_cmd = sub_cmd.replace(' WITH', '')
     if groups:
         for group in groups.split(','):
-            sub_cmd = '{0}; GRANT {1} TO {2}'.format(sub_cmd, group, name)
+            sub_cmd = '{0}; GRANT "{1}" TO "{2}"'.format(sub_cmd, group, name)
     return sub_cmd
 
 
@@ -853,7 +853,7 @@ def _role_update(name,
         log.info('{0} {1!r} could not be found'.format(typ_.capitalize(), name))
         return False
 
-    sub_cmd = 'ALTER ROLE {0} WITH'.format(name)
+    sub_cmd = 'ALTER ROLE "{0}" WITH'.format(name)
     sub_cmd = '{0} {1}'.format(sub_cmd, _role_cmd_args(
         name,
         encrypted=encrypted,
