@@ -149,7 +149,7 @@ def _find_remove_targets(name=None,
     # Check current versions against specified versions
     targets = []
     problems = []
-    for pkgname, pkgver in list(to_remove.items()):
+    for pkgname, pkgver in to_remove.items():
         cver = cur_pkgs.get(pkgname, [])
         # Package not installed, no need to remove
         if not cver:
@@ -311,7 +311,7 @@ def _find_install_targets(name=None,
                     '{0}'.format(', '.join(sorted(problems['no_suggest'])))
                 )
             if problems.get('suggest'):
-                for pkgname, suggestions in list(problems['suggest'].items()):
+                for pkgname, suggestions in problems['suggest'].items():
                     comments.append(
                         'Package {0!r} not found (possible matches: {1})'
                         .format(pkgname, ', '.join(suggestions))
@@ -328,7 +328,7 @@ def _find_install_targets(name=None,
         targets = {}
         to_reinstall = {}
         problems = []
-        for pkgname, pkgver in list(desired.items()):
+        for pkgname, pkgver in desired.items():
             cver = cur_pkgs.get(pkgname, [])
             # Package not yet installed, so add to targets
             if not cver:
@@ -399,7 +399,7 @@ def _verify_install(desired, new_pkgs):
     '''
     ok = []
     failed = []
-    for pkgname, pkgver in list(desired.items()):
+    for pkgname, pkgver in desired.items():
         cver = new_pkgs.get(pkgname)
         if not cver:
             failed.append(pkgname)
