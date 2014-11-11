@@ -2,6 +2,7 @@
 '''
 Modules used to control the master itself
 '''
+from __future__ import absolute_import
 #import python libs
 import collections
 import os
