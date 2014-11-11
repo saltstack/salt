@@ -152,7 +152,10 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
         mutable = mutable or always  # open_made when True takes precedence
         uid = self.local.data.uid
 
-        ha = (self.opts.value['interface'], self.opts.value['raet_port'])
+        if kind == kinds.APPL_KIND_NAMES[kinds.applKinds.caller]:
+            ha = (self.opts.value['interface'], self.opts.value['raet_alt_port'])
+        else:
+            ha = (self.opts.value['interface'], self.opts.value['raet_port'])
 
         basedirpath = os.path.abspath(os.path.join(self.opts.value['cachedir'], 'raet'))
 
