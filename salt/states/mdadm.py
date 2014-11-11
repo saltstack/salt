@@ -17,6 +17,7 @@ A state module for creating or destroying software RAID devices.
         - chunk: 256
         - run: True
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -92,14 +93,14 @@ def present(name,
         cmd = 'mdadm -E {0}'.format(dev)
         can_assemble[dev] = __salt__['cmd.retcode'](cmd) == 0
 
-    if True in can_assemble.values() and False in can_assemble.values():
-        in_raid = sorted([x[0] for x in can_assemble.items() if x[1]])
-        not_in_raid = sorted([x[0] for x in can_assemble.items() if not x[1]])
+    if True in list(can_assemble.values()) and False in list(can_assemble.values()):
+        in_raid = sorted([x[0] for x in list(can_assemble.items()) if x[1]])
+        not_in_raid = sorted([x[0] for x in list(can_assemble.items()) if not x[1]])
         ret['comment'] = 'Devices are a mix of RAID constituents ({0}) and '\
             'non-RAID-constituents({1}).'.format(in_raid, not_in_raid)
         ret['result'] = False
         return ret
-    elif can_assemble.values()[0]:
+    elif list(can_assemble.values())[0]:
         do_assemble = True
         verb = 'assembled'
     else:
