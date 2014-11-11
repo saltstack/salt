@@ -63,7 +63,7 @@ import sys
 # Import salt libs
 import salt.utils
 import salt.output
-from salt._compat import string_types
+from six import string_types
 
 
 def output(data):

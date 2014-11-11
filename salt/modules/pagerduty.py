@@ -24,7 +24,7 @@ import json
 
 # Import salt libs
 import salt.utils.pagerduty
-from salt._compat import string_types
+from six import string_types
 
 
 def __virtual__():

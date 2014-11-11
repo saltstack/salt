@@ -51,7 +51,7 @@ except ImportError:
 # Import salt libs
 import salt.utils
 import salt.fileserver
-from salt._compat import string_types
+from six import string_types
 from salt.utils.event import tagify
 
 log = logging.getLogger(__name__)

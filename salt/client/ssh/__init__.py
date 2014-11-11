@@ -37,7 +37,7 @@ import salt.utils.atomicfile
 import salt.utils.thin
 import salt.utils.verify
 import salt.utils.network
-from salt._compat import string_types
+from six import string_types
 from salt.utils import is_windows
 
 try:

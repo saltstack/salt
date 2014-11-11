@@ -69,7 +69,7 @@ import salt.utils.schedule
 import salt.exitcodes
 
 from salt.defaults import DEFAULT_TARGET_DELIM
-from salt._compat import string_types
+from six import string_types
 from salt.utils.debug import enable_sigusr1_handler
 from salt.utils.event import tagify
 import salt.syspaths

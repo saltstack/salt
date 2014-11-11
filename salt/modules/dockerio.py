@@ -163,7 +163,7 @@ import types
 
 from salt.modules import cmdmod
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt._compat import string_types
+from six import string_types
 import salt.utils
 import salt.utils.odict
 
