@@ -283,7 +283,7 @@ def create_user(username, password, permissions, users=None):
         log.warn('\'{0}\' already exists'.format(username))
         return False
 
-    for i in list(users.keys()):
+    for i in users.keys():
         _uids.add(users[i]['index'])
 
     uid = sorted(list(set(range(2, 12)) - _uids), reverse=True).pop()
