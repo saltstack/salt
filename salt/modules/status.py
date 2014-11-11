@@ -8,6 +8,8 @@ These data can be useful for compiling into stats later.
 import os
 import re
 import fnmatch
+from __future__ import absolute_import
+from six.moves import range
 
 # Import salt libs
 import salt.utils
