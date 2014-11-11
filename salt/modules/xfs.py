@@ -25,11 +25,11 @@
 Module for managing XFS file systems.
 '''
 
+from __future__ import absolute_import
 import os
 import re
 import time
 import logging
-from __future__ import absolute_import
 from six.moves import range
 
 import salt.utils
