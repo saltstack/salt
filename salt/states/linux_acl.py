@@ -1,6 +1,26 @@
 # -*- coding: utf-8 -*-
 '''
 Linux File Access Control Lists
+
+Ensure a Linux ACL is present
+
+  .. code-block:: yaml
+    root:
+      acl.present:
+        - name: /root
+        - acl_type: users
+        - acl_name: damian
+        - perms: rwx
+
+Ensure a Linux ACL does not exist
+
+  .. code-block:: yaml
+    root:
+      acl.absent:
+        - name: /root
+        - acl_type: user
+        - acl_name: damian
+        - perms: rwx
 '''
 
 # Import salt libs
@@ -8,6 +28,7 @@ import salt.utils
 from salt.exceptions import CommandExecutionError
 
 __virtualname__ = 'acl'
+
 
 def __virtual__():
     '''
@@ -19,7 +40,7 @@ def __virtual__():
     return False
 
 
-def present(name, acl_type, acl_name, perms, recursive=False):
+def present(name, acl_type, acl_name, perms, recurse=False):
     '''
     Ensure a Linux ACL is present
     '''
@@ -29,35 +50,79 @@ def present(name, acl_type, acl_name, perms, recursive=False):
            'comment': ''}
 
     _octal = {'r': 4, 'w': 2, 'x': 1}
+    _current_perms = __salt__['acl.getfacl'](name)
 
-    if __opts__['test']:
-        _current_perms = __salt__['acl.getfacl'](name)
+    if _current_perms[name].get(acl_type, None):
+        try:
+            user = [i for i in _current_perms[name][acl_type] if i.keys()[0] == acl_name].pop()
+        except IndexError:
+            user = None
 
-        if _current_perms[name].get(acl_type, None):
-            try:
-                user = [i for i in _current_perms[name][acl_type] if i.keys()[0] == acl_name].pop()
-            except IndexError:
-                pass
-
-            if user:
-                if user[acl_name]['octal'] == sum([_octal.get(i, i) for i in perms]):
-                    ret['comment'] = '{0} has the desired permissions'.format(name)
-                else:
-                    ret['comment'] = '{0} permissions will be set'.format(perms)
+        if user:
+            if user[acl_name]['octal'] == sum([_octal.get(i, i) for i in perms]):
+                ret['comment'] = 'Permissions are in the desired state'
             else:
-                ret['comment'] = '{0} permissions will be set'.format(perms)
-                ret['changes'] = {acl_name: 'will be set'}
+                ret['comment'] = 'Permissions have been updated'.format(name, perms)
+
+                if __opts__['test']:
+                    ret['result'] = None
+                    return ret
+
+                if recurse:
+                    __salt__['acl.modfacl'](acl_type, acl_name, perms, name, recursive=True)
+                else:
+                    __salt__['acl.modfacl'](acl_type, acl_name, perms, name)
         else:
-            ret['comment'] = 'ACL Type does not exist'
-            ret['result'] = False
+            ret['comment'] = 'Permissions will be applied'.format(name, perms)
 
-        return ret
-    #__salt__['acl.modfacl'](acl_type, acl_name, perms, name)
-    pass
+            if __opts__['test']:
+                ret['result'] = None
+                return ret
+
+            if recurse:
+                __salt__['acl.modfacl'](acl_type, acl_name, perms, name, recursive=True)
+            else:
+                __salt__['acl.modfacl'](acl_type, acl_name, perms, '/root')
+    else:
+        ret['comment'] = 'ACL Type does not exist'
+        ret['result'] = False
+
+    return ret
 
 
-def absent(name, obj, acl, recurse=False):
+def absent(name, acl_type, acl_name, perms, recurse=False):
     '''
     Ensure a Linux ACL does not exist
     '''
-    pass
+    ret = {'name': name,
+           'result': True,
+           'changes': {},
+           'comment': ''}
+
+    _current_perms = __salt__['acl.getfacl'](name)
+
+    if _current_perms[name].get(acl_type, None):
+        try:
+            user = [i for i in _current_perms[name][acl_type] if i.keys()[0] == acl_name].pop()
+        except IndexError:
+            user = None
+
+        if user:
+            ret['comment'] = 'Removing permissions'
+
+            if __opts__['test']:
+                ret['result'] = None
+                return ret
+
+            if recurse:
+                __salt__['acl.delfacl'](acl_type, acl_name, perms, name, recursive=True)
+            else:
+                __salt__['acl.delfacl'](acl_type, acl_name, perms, name)
+        else:
+            ret['comment'] = 'Permissions are in the desired state'
+
+    else:
+        ret['comment'] = 'ACL Type does not exist'
+        ret['result'] = False
+
+    return ret
