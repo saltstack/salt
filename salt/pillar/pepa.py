@@ -279,6 +279,7 @@ import yaml
 import jinja2
 import re
 from os.path import isfile, join
+from six.moves import input
 
 # Only used when called from a terminal
 log = None
@@ -566,7 +567,7 @@ if __name__ == '__main__':
         username = args.username
         password = args.password
         if username is None:
-            username = raw_input('Username: ')
+            username = input('Username: ')
         if password is None:
             password = getpass.getpass()
 
