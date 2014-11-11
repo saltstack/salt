@@ -23,6 +23,7 @@ import time
 import shutil
 import re
 import random
+import six
 
 # Import salt libs
 import salt
@@ -33,7 +34,6 @@ from salt.utils import vt
 import salt.utils.cloud
 import salt.config
 import salt._compat
-import six
 
 # Set up logging
 log = logging.getLogger(__name__)
