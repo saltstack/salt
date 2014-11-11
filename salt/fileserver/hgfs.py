@@ -26,6 +26,7 @@ will set the desired branch method. Possible values are: ``branches``,
 :depends:   - mercurial
             - python bindings for mercurial (``python-hglib``)
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import copy
@@ -180,7 +181,7 @@ def init():
             repo_url = next(iter(remote))
             per_remote_conf = dict(
                 [(key, _text_type(val)) for key, val in
-                 salt.utils.repack_dictlist(remote[repo_url]).items()]
+                 list(salt.utils.repack_dictlist(remote[repo_url]).items())]
             )
             if not per_remote_conf:
                 log.error(
