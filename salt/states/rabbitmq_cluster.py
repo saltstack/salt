@@ -12,6 +12,7 @@ Example:
           - user: rabbit
           - host: rabbit.example.com
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging

@@ -37,6 +37,7 @@ the location of composer in the state.
         - php: /usr/local/bin/php
         - no_dev: true
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError, CommandNotFoundError

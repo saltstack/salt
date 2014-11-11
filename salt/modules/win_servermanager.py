@@ -2,6 +2,7 @@
 '''
 Manage Windows features via the ServerManager powershell module
 '''
+from __future__ import absolute_import
 
 
 # Import salt libs

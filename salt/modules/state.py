@@ -2,7 +2,6 @@
 '''
 Control the state system on the minion
 '''
-
 from __future__ import absolute_import
 
 # Import python libs

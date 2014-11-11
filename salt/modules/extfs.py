@@ -2,6 +2,7 @@
 '''
 Module for managing ext2/3/4 file systems
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging

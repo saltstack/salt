@@ -15,6 +15,7 @@ This state is used to manage NTP servers. Currently only Windows is supported.
           - pool.ntp.org
           - us.pool.ntp.org
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging

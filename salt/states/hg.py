@@ -13,6 +13,7 @@ in ~/.ssh/known_hosts, and the remote host has this host's public key.
           - rev: tip
           - target: /tmp/example_repo
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging

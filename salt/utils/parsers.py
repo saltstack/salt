@@ -2146,6 +2146,12 @@ class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'runner.function to see documentation on only that runner '
                   'or function.')
         )
+        self.add_option(
+            '--async',
+            default=False,
+            action='store_true',
+            help=('Start the runner operation and immediately return control.')
+        )
         group = self.output_options_group = optparse.OptionGroup(
             self, 'Output Options', 'Configure your preferred output format'
         )
@@ -2162,6 +2168,12 @@ class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             default=False,
             action='store_true',
             help='Force colored output'
+        )
+        group.add_option(
+            '--quiet',
+            default=False,
+            action='store_true',
+            help='Do not display the results of the run'
         )
 
     def _mixin_after_parsed(self):

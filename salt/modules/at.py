@@ -5,6 +5,7 @@ Wrapper module for at(1)
 Also, a 'tag' feature has been added to more
 easily tag jobs.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import re
@@ -13,6 +14,7 @@ import datetime
 
 # Import salt libs
 import salt.utils
+from six.moves import map
 
 # OS Families that should work (Ubuntu and Debian are the default)
 # TODO: Refactor some of this module to remove the checks for binaries
@@ -155,14 +157,14 @@ def atrm(*args):
 
     if args[0] == 'all':
         if len(args) > 1:
-            opts = map(str, [j['job'] for j in atq(args[1])['jobs']])
+            opts = list(list(map(str, [j['job'] for j in atq(args[1])['jobs']])))
             ret = {'jobs': {'removed': opts, 'tag': args[1]}}
         else:
-            opts = map(str, [j['job'] for j in atq()['jobs']])
+            opts = list(list(map(str, [j['job'] for j in atq()['jobs']])))
             ret = {'jobs': {'removed': opts, 'tag': None}}
     else:
-        opts = map(str, [i['job'] for i in atq()['jobs']
-            if i['job'] in args])
+        opts = list(list(map(str, [i['job'] for i in atq()['jobs']
+            if i['job'] in args])))
         ret = {'jobs': {'removed': opts, 'tag': None}}
 
     # Shim to produce output similar to what __virtual__() should do

@@ -118,6 +118,7 @@ import logging
 # Import salt libs
 from salt._compat import string_types
 import salt.utils
+import six
 
 # Enable proper logging
 log = logging.getLogger(__name__)
@@ -501,12 +502,12 @@ def installed(name,
         volumes = []
     if isinstance(environment, dict):
         for k in environment:
-            denvironment[unicode(k)] = unicode(environment[k])
+            denvironment[six.text_type(k)] = six.text_type(environment[k])
     if isinstance(environment, list):
         for p in environment:
             if isinstance(p, dict):
                 for k in p:
-                    denvironment[unicode(k)] = unicode(p[k])
+                    denvironment[six.text_type(k)] = six.text_type(p[k])
     for p in ports:
         if not isinstance(p, dict):
             dports[str(p)] = {}
@@ -901,12 +902,12 @@ def running(name,
         volumes_from = []
     if isinstance(environment, dict):
         for key in environment:
-            denvironment[unicode(key)] = unicode(environment[key])
+            denvironment[six.text_type(key)] = six.text_type(environment[key])
     if isinstance(environment, list):
         for var in environment:
             if isinstance(var, dict):
                 for key in var:
-                    denvironment[unicode(key)] = unicode(var[key])
+                    denvironment[six.text_type(key)] = six.text_type(var[key])
     if isinstance(volumes, dict):
         bindvolumes = volumes
     if isinstance(volumes, list):

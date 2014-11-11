@@ -5,6 +5,7 @@ Module for managing the Salt schedule on a minion
 .. versionadded:: 2014.7.0
 
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import difflib
@@ -13,6 +14,7 @@ import yaml
 
 import salt.utils
 import salt.utils.odict
+import six
 
 __proxyenabled__ = ['*']
 
@@ -691,7 +693,7 @@ def move(name, target, **kwargs):
             ret['comment'] = 'Job: {0} would be moved from schedule.'.format(name)
         else:
             schedule_opts = []
-            for key, value in __opts__['schedule'][name].iteritems():
+            for key, value in six.iteritems(__opts__['schedule'][name]):
                 temp = '{0}={1}'.format(key, value)
                 schedule_opts.append(temp)
             response = __salt__['publish.publish'](target, 'schedule.add', schedule_opts)
@@ -723,7 +725,7 @@ def move(name, target, **kwargs):
             ret['comment'] = 'Job: {0} would be moved from schedule.'.format(name)
         else:
             schedule_opts = []
-            for key, value in __opts__['schedule'][name].iteritems():
+            for key, value in six.iteritems(__opts__['schedule'][name]):
                 temp = '{0}={1}'.format(key, value)
                 schedule_opts.append(temp)
             response = __salt__['publish.publish'](target, 'schedule.add', schedule_opts)
@@ -779,7 +781,7 @@ def copy(name, target, **kwargs):
             ret['comment'] = 'Job: {0} would be copied.'.format(name)
         else:
             schedule_opts = []
-            for key, value in __opts__['schedule'][name].iteritems():
+            for key, value in six.iteritems(__opts__['schedule'][name]):
                 temp = '{0}={1}'.format(key, value)
                 schedule_opts.append(temp)
             response = __salt__['publish.publish'](target, 'schedule.add', schedule_opts)
@@ -810,7 +812,7 @@ def copy(name, target, **kwargs):
             ret['comment'] = 'Job: {0} would be moved from schedule.'.format(name)
         else:
             schedule_opts = []
-            for key, value in __opts__['schedule'][name].iteritems():
+            for key, value in six.iteritems(__opts__['schedule'][name]):
                 temp = '{0}={1}'.format(key, value)
                 schedule_opts.append(temp)
             response = __salt__['publish.publish'](target, 'schedule.add', schedule_opts)

@@ -84,8 +84,10 @@ passed in as a dict, or as a string to pull from pillars or minion config:
                 keyid: GKTADJGHEIQSXMKKRBJ08H
                 key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 '''
+from __future__ import absolute_import
 import salt.utils.dictupdate as dictupdate
 from salt.exceptions import SaltInvocationError
+import six
 
 
 def __virtual__():
@@ -378,7 +380,7 @@ def _attributes_present(
         if czlb['enabled'] != _czlb['enabled']:
             attrs_to_set.append('cross_zone_load_balancing')
     if 'access_log' in attributes:
-        for attr, val in attributes['access_log'].iteritems():
+        for attr, val in six.iteritems(attributes['access_log']):
             if str(_attributes['access_log'][attr]) != str(val):
                 attrs_to_set.append('access_log')
         if 's3_bucket_prefix' in attributes['access_log']:
@@ -426,7 +428,7 @@ def _health_check_present(
         ret['comment'] = msg
         return ret
     need_to_set = False
-    for attr, val in health_check.iteritems():
+    for attr, val in six.iteritems(health_check):
         if str(_health_check[attr]) != str(val):
             need_to_set = True
     if need_to_set:

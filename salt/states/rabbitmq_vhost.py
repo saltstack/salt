@@ -14,6 +14,7 @@ Example:
             - write: .*
             - read: .*
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -33,11 +34,11 @@ def __virtual__():
 
 def present(name,
             user=None,
-            owner='root',
+            owner=None,
             conf=None,
             write=None,
             read=None,
-            runas='root'):
+            runas=None):
     '''
     Ensure the RabbitMQ VHost exists.
 
@@ -146,7 +147,7 @@ def present(name,
 
 
 def absent(name,
-           runas='root'):
+           runas=None):
     '''
     Ensure the RabbitMQ Virtual Host is absent
 

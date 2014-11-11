@@ -2,6 +2,7 @@
 '''
 Module for running ZFS zpool command
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import os
@@ -368,7 +369,7 @@ def export(*pools, **kwargs):
     return ret
 
 
-def import_(pool_name='', new_name='', force=False, **kwargs):
+def import_(pool_name='', new_name='', **kwargs):
     '''
     Import storage pools or list pools available for import
 
@@ -381,17 +382,18 @@ def import_(pool_name='', new_name='', force=False, **kwargs):
     '''
     ret = {}
     zpool = _check_zpool()
-    all = kwargs.get('all', False)
+    import_all = kwargs.get('all', False)
+    force = kwargs.get('force', False)
 
     if not pool_name:
-        if all is True:
+        if import_all is True:
             cmd = '{0} import -a'.format(zpool)
         else:
             cmd = '{0} import'.format(zpool)
         res = __salt__['cmd.run'](cmd, ignore_retcode=True)
-        if not res and all is False:
+        if not res and import_all is False:
             ret['Error'] = 'No pools available for import'
-        elif all is False:
+        elif import_all is False:
             pool_list = [l for l in res.splitlines()]
             ret['pools'] = pool_list
         else:
@@ -404,9 +406,9 @@ def import_(pool_name='', new_name='', force=False, **kwargs):
         ret['Error'] = 'Storage pool {0} already exists. Import the pool under a different name instead'.format(new_name)
     else:
         if force is True:
-            cmd = '{0} import -f {1}'.format(zpool, pool_name, new_name)
+            cmd = '{0} import -f {1} {2}'.format(zpool, pool_name, new_name)
         else:
-            cmd = '{0} import {1}'.format(zpool, pool_name, new_name)
+            cmd = '{0} import {1} {2}'.format(zpool, pool_name, new_name)
         res = __salt__['cmd.run'](cmd, ignore_retcode=True)
         if res:
             ret['Error'] = {}

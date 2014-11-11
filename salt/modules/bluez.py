@@ -9,6 +9,7 @@ The following packages are required packages for this module:
     bluez-utils >= 5.7
     pybluez >= 0.18
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging

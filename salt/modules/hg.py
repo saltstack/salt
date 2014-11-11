@@ -2,6 +2,7 @@
 '''
 Support for the Mercurial SCM
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 from salt import utils

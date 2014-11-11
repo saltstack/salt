@@ -2,6 +2,7 @@
 '''
 Support for nginx
 '''
+from __future__ import absolute_import
 import urllib2
 # Import salt libs
 import salt.utils

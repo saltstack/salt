@@ -23,6 +23,7 @@ import time
 import logging
 import random
 import getpass
+from six.moves import input
 
 # Import salt libs
 import salt.config
@@ -349,12 +350,12 @@ class Resolver(object):
             elif arg.startswith('pass'):
                 ret[arg] = getpass.getpass('{0}: '.format(arg))
             else:
-                ret[arg] = raw_input('{0}: '.format(arg))
+                ret[arg] = input('{0}: '.format(arg))
         for kwarg, default in list(args['kwargs'].items()):
             if kwarg in self.opts:
                 ret['kwarg'] = self.opts[kwarg]
             else:
-                ret[kwarg] = raw_input('{0} [{1}]: '.format(kwarg, default))
+                ret[kwarg] = input('{0} [{1}]: '.format(kwarg, default))
 
         return ret
 

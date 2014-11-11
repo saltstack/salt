@@ -4,10 +4,13 @@ Windows Service module.
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import salt.utils
-from subprocess import list2cmdline
 import time
 import logging
+from subprocess import list2cmdline
+from six.moves import zip
+from six.moves import range
 
 log = logging.getLogger(__name__)
 

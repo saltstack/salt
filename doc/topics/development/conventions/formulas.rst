@@ -339,23 +339,36 @@ Pillar would replace the ``config`` value from the call above.
 
 .. note:: Protecting Expansion of Content with Special Characters
 
-  When templating keep in mind that YAML does have special characters
-  for quoting, flows and other special structure and content.  When a
-  Jinja substitution may have special characters that will be
-  incorrectly parsed by YAML the expansion must be protected by quoting.
-  It is a good policy to quote all Jinja expansions especially when
-  values may originate from Pillar.  Salt provides a Jinja filter for
-  doing just this: ``yaml_dquote``
+  When templating keep in mind that YAML does have special characters for
+  quoting, flows and other special structure and content.  When a Jinja
+  substitution may have special characters that will be incorrectly parsed by
+  YAML care must be taken.  It is a good policy to use the ``yaml_encode`` or
+  the ``yaml_dquote`` Jinja filters:
 
   .. code-block:: jinja
 
-      {%- set baz = '"The quick brown fox . . ."' %}
+      {%- set foo = 7.7 %}
+      {%- set bar = none %}
+      {%- set baz = true %}
       {%- set zap = 'The word of the day is "salty".' %}
+      {%- set zip = '"The quick brown fox . . ."' %}
 
-      {%- load_yaml as foo %}
-      bar: {{ baz|yaml_dquote }}
-      zip: {{ zap|yaml_dquote }}
-      {%- endload %}
+      foo: {{ foo|yaml_encode }}
+      bar: {{ bar|yaml_encode }}
+      baz: {{ baz|yaml_encode }}
+      zap: {{ zap|yaml_encode }}
+      zip: {{ zip|yaml_dquote }}
+
+  The above will be rendered as below:
+
+  .. code-block:: yaml
+
+      foo: 7.7
+      bar: null
+      baz: true
+      zap: "The word of the day is \"salty\"."
+      zip: "\"The quick brown fox . . .\""
+
 
 Single-purpose SLS files
 ------------------------

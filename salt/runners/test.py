@@ -3,8 +3,10 @@
 This runner is used only for test purposes and servers no production purpose
 '''
 # Import python libs
-import pprint
+import time
 
+# Import salt requirements
+import salt.utils.event
 
 def arg(*args, **kwargs):
     '''
@@ -19,7 +21,6 @@ def arg(*args, **kwargs):
         'args': args,
         'kwargs': kwargs,
     }
-    pprint.pprint(ret)
     return ret
 
 
@@ -31,5 +32,14 @@ def raw_arg(*args, **kwargs):
         'args': args,
         'kwargs': kwargs,
     }
-    pprint.pprint(ret)
+    return ret
+
+def stream():
+    '''
+    Return True
+    '''
+    ret = True
+    for i in range(1,100):
+        progress('Runner is {0}% done'.format(i), outputter='pprint')
+        time.sleep(0.1)
     return ret

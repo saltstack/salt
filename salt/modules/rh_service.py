@@ -2,6 +2,7 @@
 '''
 Service support for RHEL-based systems, including support for both upstart and sysvinit
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import glob

@@ -2,6 +2,7 @@
 '''
 Salt module to manage unix mounts and the fstab file
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
