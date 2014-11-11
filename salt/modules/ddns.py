@@ -18,6 +18,7 @@ Support for RFC 2136 dynamic DNS updates.
 
         {"keyname.": "keycontent"}
 '''
+from __future__ import absolute_import
 # Import python libs
 import logging
 import json

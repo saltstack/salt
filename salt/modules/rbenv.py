@@ -4,6 +4,7 @@ Manage ruby installations with rbenv.
 
 .. versionadded:: 0.16.0
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
