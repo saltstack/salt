@@ -1633,6 +1633,9 @@ class Minion(MinionBase):
 
                 self.schedule.modify_job(name='__master_alive',
                                          schedule=schedule)
+        elif package.startswith('__salt_call_master'):
+            event = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
+            event.fire_event({'cur_master': self.opts['master']}, '__current_master')
 
     # Main Minion Tune In
     def tune_in(self):
