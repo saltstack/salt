@@ -249,8 +249,7 @@ import salt.utils.templates
 from salt.exceptions import CommandExecutionError
 from salt.utils.serializers import yaml as yaml_serializer
 from salt.utils.serializers import json as json_serializer
-from salt._compat import integer_types
-from six import string_types
+from six import string_types, integer_types
 
 log = logging.getLogger(__name__)
 
