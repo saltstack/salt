@@ -428,7 +428,7 @@ def _get_type_id_options(name, configuration):
         type, sep, id = name.partition('.')
         options = configuration
     else:
-        type = list(configuration.keys())[0]
+        type = configuration.keys()[0]
         id = name
         options = configuration[type]
 
@@ -439,7 +439,7 @@ def _expand_one_key_dictionary(d):
     '''
     Returns the only one key and it's value from a dictionary.
     '''
-    key = list(d.keys())[0]
+    key = d.keys()[0]
     value = d[key]
     return key, value
 
@@ -526,14 +526,14 @@ def _is_reference(arg):
     '''
     Return True, if arg is a reference to a previously defined statement.
     '''
-    return isinstance(arg, dict) and len(arg) == 1 and isinstance(list(arg.values())[0], str)
+    return isinstance(arg, dict) and len(arg) == 1 and isinstance(arg.values()[0], str)
 
 
 def _is_junction(arg):
     '''
     Return True, if arg is a junction statement.
     '''
-    return isinstance(arg, dict) and len(arg) == 1 and list(arg.keys())[0] == 'junction'
+    return isinstance(arg, dict) and len(arg) == 1 and arg.keys()[0] == 'junction'
 
 
 def _add_reference(reference, statement):
@@ -551,7 +551,7 @@ def _is_inline_definition(arg):
     '''
     Returns True, if arg is an inline definition of a statement.
     '''
-    return isinstance(arg, dict) and len(arg) == 1 and isinstance(list(arg.values())[0], list)
+    return isinstance(arg, dict) and len(arg) == 1 and isinstance(arg.values()[0], list)
 
 
 def _add_inline_definition(item, statement):
@@ -1137,7 +1137,7 @@ def _write_config(config, newlines=2):
     '''
     text = config
     if isinstance(config, dict) and len(list(list(config.keys()))) == 1:
-        key = list(list(config.keys()))[0]
+        key = config.keys()[0]
         text = config[key]
 
     try:
