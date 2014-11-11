@@ -63,12 +63,14 @@ arguments. For example:
         - kwargs:
             interface: eth0
 '''
+from __future__ import absolute_import
 # Import python libs
 import datetime
 
 # Import salt libs
 import salt.loader
 import salt.utils
+from six.moves import range
 
 
 def wait(name, **kwargs):
