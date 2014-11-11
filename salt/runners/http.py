@@ -11,6 +11,7 @@ import salt.utils.http
 
 log = logging.getLogger(__name__)
 
+
 def query(url, output=True, **kwargs):
     '''
     Query a resource, and decode the return data
