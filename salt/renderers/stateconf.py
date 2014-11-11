@@ -258,7 +258,7 @@ def rewrite_single_shorthand_state_decl(data):  # pylint: disable=C0103
       state_id_decl:
         state.func: []
     '''
-    for sid, states in list(data.items()):
+    for sid, states in data.items():
         if isinstance(states, string_types):
             data[sid] = {states: []}
 
