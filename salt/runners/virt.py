@@ -25,7 +25,7 @@ def _determine_hyper(data, omit=''):
     # to be much more complicated.
     hyper = ''
     bestmem = 0
-    for hv_, comps in list(data.items()):
+    for hv_, comps in data.items():
         if hv_ == omit:
             continue
         if not isinstance(comps, dict):
@@ -116,7 +116,7 @@ def list(hyper=None, quiet=False):  # pylint: disable=redefined-builtin
         if not isinstance(info[id_]['ret'], dict):
             continue
         data = {}
-        for key, val in list(info[id_]['ret'].items()):
+        for key, val in info[id_]['ret'].items():
             if val['state'] in data:
                 data[val['state']].append(key)
             else:
