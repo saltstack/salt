@@ -25,6 +25,7 @@ The salt.state declaration can call out a highstate or a list of sls:
         - tgt_type: grain
         - highstate: True
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import fnmatch
@@ -36,6 +37,7 @@ import salt.syspaths
 import salt.utils
 import salt.utils.event
 import salt._compat
+import six
 
 log = logging.getLogger(__name__)
 
@@ -223,7 +225,7 @@ def state(
         )
         fail_minions = ()
 
-    for minion, mdata in cmd_ret.iteritems():
+    for minion, mdata in six.iteritems(cmd_ret):
         if mdata.get('out', '') != 'highstate':
             log.warning("Output from salt state not highstate")
 
@@ -240,7 +242,7 @@ def state(
                 fail.add(minion)
             failures[minion] = m_ret and m_ret or 'Minion did not respond'
             continue
-        for state_item in m_ret.itervalues():
+        for state_item in six.itervalues(m_ret):
             if state_item['changes']:
                 changes[minion] = m_ret
                 break
@@ -260,7 +262,7 @@ def state(
             ret['comment'] += ' No changes made to {0}.'.format(', '.join(no_change))
     if failures:
         ret['comment'] += '\nFailures:\n'
-        for minion, failure in failures.iteritems():
+        for minion, failure in six.iteritems(failures):
             ret['comment'] += '\n'.join(
                     (' ' * 4 + l)
                     for l in salt.output.out_format(
@@ -368,7 +370,7 @@ def function(
         )
         fail_minions = ()
 
-    for minion, mdata in cmd_ret.iteritems():
+    for minion, mdata in six.iteritems(cmd_ret):
         m_ret = False
 
         if mdata.get('failed', False):
@@ -395,7 +397,7 @@ def function(
         ret['comment'] += ' Function {0} ran on {1}.'.format(name, ', '.join(changes))
     if failures:
         ret['comment'] += '\nFailures:\n'
-        for minion, failure in failures.iteritems():
+        for minion, failure in six.iteritems(failures):
             ret['comment'] += '\n'.join(
                     (' ' * 4 + l)
                     for l in salt.output.out_format(
