@@ -22,6 +22,7 @@ This backend assumes a standard svn layout with directories for ``branches``,
     per-remote configuration parameters was added. See the
     :conf_master:`documentation <svnfs_remotes>` for more information.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import copy
