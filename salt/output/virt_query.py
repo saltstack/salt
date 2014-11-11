@@ -30,7 +30,7 @@ def output(data):
                             id_,
                             vm_data['graphics']['port'])
             if 'disks' in vm_data:
-                for disk, d_data in list(vm_data['disks'].items()):
+                for disk, d_data in vm_data['disks'].items():
                     out += '    Disk - {0}:\n'.format(disk)
                     out += '      Size: {0}\n'.format(d_data['disk size'])
                     out += '      File: {0}\n'.format(d_data['file'])
