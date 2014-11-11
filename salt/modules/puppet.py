@@ -2,6 +2,7 @@
 '''
 Execute puppet routines
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -101,7 +102,7 @@ class _Puppet(object):
             [' --{0}'.format(k) for k in self.args]  # single spaces
         )
         args += ''.join([
-            ' --{0} {1}'.format(k, v) for k, v in self.kwargs.items()]
+            ' --{0} {1}'.format(k, v) for k, v in list(self.kwargs.items())]
         )
 
         return '{0} {1}'.format(cmd, args)
