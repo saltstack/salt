@@ -76,7 +76,7 @@ def iter_roots(roots):
      'saltenv': <saltenv>,
      'cont': <contents>}
     '''
-    for saltenv, dirs in list(roots.items()):
+    for saltenv, dirs in roots.items():
         for dir_ in dirs:
             if not os.path.isdir(dir_):
                 continue
