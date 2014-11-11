@@ -2489,7 +2489,7 @@ class Matcher(object):
             return False
         return salt.utils.subdict_match(self.opts['pillar'],
                                         tgt,
-                                        delim=delim,
+                                        delimiter=delim,
                                         exact_match=True)
 
     def ipcidr_match(self, tgt):
