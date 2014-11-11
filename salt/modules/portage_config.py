@@ -221,7 +221,7 @@ def _merge_flags(*args):
         else:
             flags[flag] = True
     tmp = []
-    for k, v in flags.items():
+    for k, v in list(flags.items()):
         if v:
             tmp.append(k)
         else:
