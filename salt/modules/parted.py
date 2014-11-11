@@ -15,6 +15,7 @@ In light of parted not directly supporting partition IDs, some of this module
 has been written to utilize sfdisk instead. For further information, please
 reference the man page for ``sfdisk(8)``.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os

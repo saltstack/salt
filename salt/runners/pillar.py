@@ -6,7 +6,6 @@ Functions to interact with the pillar compiler on the master
 # Import salt libs
 import salt.pillar
 import salt.utils.minions
-import salt.output
 
 
 def show_top(minion=None, saltenv='base'):
@@ -30,10 +29,9 @@ def show_top(minion=None, saltenv='base'):
     top, errors = pillar.get_top()
 
     if errors:
-        salt.output.display_output(errors, 'nested', __opts__)
+        progress(errors, outputter='nested')
         return errors
 
-    salt.output.display_output(top, 'nested', __opts__)
     return top
 
 
@@ -93,5 +91,4 @@ def show_pillar(minion='*', **kwargs):
         saltenv)
 
     compiled_pillar = pillar.compile_pillar()
-    salt.output.display_output(compiled_pillar, 'nested', __opts__)
     return compiled_pillar

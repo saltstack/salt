@@ -4,6 +4,7 @@ Manage cygwin packages.
 
 Module file to accompany the cyg state.
 """
+from __future__ import absolute_import
 
 # Import python libs
 import logging

@@ -23,6 +23,9 @@ You have those following methods:
 * run_buildout
 * buildout
 '''
+from __future__ import absolute_import
+import six
+from six.moves import range
 
 # Define the module's virtual name
 __virtualname__ = 'buildout'
@@ -137,7 +140,7 @@ class _Logger(object):
         self._by_level = {}
 
     def _log(self, level, msg):
-        if not isinstance(msg, unicode):
+        if not isinstance(msg, six.text_type):
             msg = msg.decode('utf-8')
         if level not in self._by_level:
             self._by_level[level] = []
@@ -180,7 +183,7 @@ LOG = _Logger()
 
 
 def _encode_string(string):
-    if isinstance(string, unicode):
+    if isinstance(string, six.text_type):
         string = string.encode('utf-8')
     return string
 

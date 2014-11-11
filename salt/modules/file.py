@@ -31,6 +31,8 @@ import tempfile
 import time
 import glob
 from functools import reduce
+from six.moves import range
+from six.moves import zip
 
 try:
     import grp
@@ -3858,10 +3860,10 @@ def list_backups(path, limit=None):
         files[timestamp]['Size'] = os.stat(location).st_size
         files[timestamp]['Location'] = location
 
-    return dict(zip(
+    return dict(list(zip(
         list(range(len(files))),
         [files[x] for x in sorted(files, reverse=True)[:limit]]
-    ))
+    )))
 
 list_backup = list_backups
 
@@ -3921,7 +3923,7 @@ def list_backups_dir(path, limit=None):
                 ssfile[timestamp]['Size'] = os.stat(location).st_size
                 ssfile[timestamp]['Location'] = location
 
-        sfiles = dict(zip(list(range(n)), [ssfile[x] for x in sorted(ssfile, reverse=True)[:limit]]))
+        sfiles = dict(list(zip(list(range(n)), [ssfile[x] for x in sorted(ssfile, reverse=True)[:limit]])))
         sefiles = {i: sfiles}
         files.update(sefiles)
     return files

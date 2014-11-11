@@ -1149,7 +1149,8 @@ def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
 def subdict_match(data,
                   expr,
                   delimiter=DEFAULT_TARGET_DELIM,
-                  regex_match=False):
+                  regex_match=False,
+                  exact_match=False):
     '''
     Check for a match in a dictionary using a delimiter character to denote
     levels of subdicts, and also allowing the delimiter character to be
@@ -1157,13 +1158,15 @@ def subdict_match(data,
     data['foo']['bar'] == 'baz'. The former would take priority over the
     latter.
     '''
-    def _match(target, pattern, regex_match=False):
+    def _match(target, pattern, regex_match=False, exact_match=False):
         if regex_match:
             try:
                 return re.match(pattern.lower(), str(target).lower())
             except Exception:
                 log.error('Invalid regex {0!r} in match'.format(pattern))
                 return False
+        elif exact_match:
+            return str(target).lower() == pattern.lower()
         else:
             return fnmatch.fnmatch(str(target).lower(), pattern.lower())
 
@@ -1187,12 +1190,21 @@ def subdict_match(data,
                 if isinstance(member, dict):
                     if matchstr.startswith('*:'):
                         matchstr = matchstr[2:]
-                    if subdict_match(member, matchstr, regex_match=regex_match):
+                    if subdict_match(member,
+                                     matchstr,
+                                     regex_match=regex_match,
+                                     exact_match=exact_match):
                         return True
-                if _match(member, matchstr, regex_match=regex_match):
+                if _match(member,
+                          matchstr,
+                          regex_match=regex_match,
+                          exact_match=exact_match):
                     return True
             continue
-        if _match(match, matchstr, regex_match=regex_match):
+        if _match(match,
+                  matchstr,
+                  regex_match=regex_match,
+                  exact_match=exact_match):
             return True
     return False
 
@@ -1811,6 +1823,27 @@ def yaml_squote(text):
         return ostream.getvalue()
 
 
+def yaml_encode(data):
+    """A simple YAML encode that can take a single-element datatype and return
+    a string representation.
+    """
+    yrepr = yaml.representer.SafeRepresenter()
+    ynode = yrepr.represent_data(data)
+    if not isinstance(ynode, yaml.ScalarNode):
+        raise TypeError(
+            "yaml_encode() only works with YAML scalar data;"
+            " failed for {0}".format(type(data))
+        )
+
+    tag = ynode.tag.rsplit(':', 1)[-1]
+    ret = ynode.value
+
+    if tag == "str":
+        ret = yaml_dquote(ynode.value)
+
+    return ret
+
+
 def warn_until(version,
                message,
                category=DeprecationWarning,
@@ -1875,11 +1908,26 @@ def warn_until(version,
         )
 
     if _dont_call_warnings is False:
+        def _formatwarning(message,
+                           category,
+                           filename,
+                           lineno,
+                           line=None):  # pylint: disable=W0613
+            '''
+            Replacement for warnings.formatwarning that disables the echoing of
+            the 'line' parameter.
+            '''
+            return '{0}:{1}: {2}: {3}'.format(
+                filename, lineno, category.__name__, message
+            )
+        saved = warnings.formatwarning
+        warnings.formatwarning = _formatwarning
         warnings.warn(
             message.format(version=version.formatted_version),
             category,
             stacklevel=stacklevel
         )
+        warnings.formatwarning = saved
 
 
 def kwargs_warn_until(kwargs,

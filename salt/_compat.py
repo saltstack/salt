@@ -60,6 +60,12 @@ else:
     long = long
 
 if PY3:
+    import builtins
+    exceptions = builtins  # pylint: disable=E0602
+else:
+    import exceptions
+
+if PY3:
     def callable(obj):
         return any('__call__' in klass.__dict__ for klass in type(obj).__mro__)
 else:
@@ -96,6 +102,31 @@ else:
         if isinstance(s, text_type):
             s = s.encode('ascii')
         return str(s)
+
+if PY3:
+    exec_ = getattr(builtins, 'exec')  # pylint: disable=E0602
+
+    def reraise(tp, value, tb=None):
+        if value is None:
+            value = tp()
+        if value.__traceback__ is not tb:
+            raise value.with_traceback(tb)
+        raise value
+else:
+    def exec_(code_, globals_=None, locals_=None):
+        '''
+        Execute code directly in a passed namespace
+        '''
+        if globals_ is None:
+            frame = sys._getframe(1)
+            globals_ = frame.f_globals
+            if locals_ is None:
+                locals_ = frame.f_locals
+            del frame
+        elif locals_ is None:
+            locals_ = globals_
+        exec('''exec code_ in globals_, locals_''')
+
 
 ascii_native_.__doc__ = '''
 Python 3: If ``s`` is an instance of ``text_type``, return

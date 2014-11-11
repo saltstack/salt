@@ -33,6 +33,7 @@ Connection module for Amazon CloudWatch
 
 :depends: boto
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import logging
@@ -92,7 +93,7 @@ def _safe_dump(data):
     # boto.describe_alarms()
     ###########################################
     def ordered_dict_presenter(dumper, data):
-        return dumper.represent_dict(data.items())
+        return dumper.represent_dict(list(data.items()))
 
     yaml.add_representer(odict.OrderedDict, ordered_dict_presenter,
                          Dumper=yaml.dumper.SafeDumper)

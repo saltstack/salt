@@ -27,6 +27,7 @@ configuration file.
 '''
 
 from __future__ import generators, with_statement
+from __future__ import absolute_import
 
 import time
 import logging
@@ -35,6 +36,7 @@ import os
 import os.path
 import salt.utils
 from salt.exceptions import CommandExecutionError
+from six.moves import range
 
 
 __SYSLOG_NG_BINARY_PATH = None
@@ -125,7 +127,7 @@ class Buildable(object):
         Builds the body of a syslog-ng configuration object.
         '''
         _increase_indent()
-        body_array = map(lambda x: x.build(), self.iterable)
+        body_array = [x.build() for x in self.iterable]
 
         nl = "\n" if self.append_extra_newline else ''
 
@@ -1134,7 +1136,7 @@ def _write_config(config, newlines=2):
     Writes the given parameter config into the config file.
     '''
     text = config
-    if isinstance(config, dict) and len(config.keys()) == 1:
+    if isinstance(config, dict) and len(list(list(config.keys()))) == 1:
         key = config.keys()[0]
         text = config[key]
 

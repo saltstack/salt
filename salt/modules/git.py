@@ -2,6 +2,7 @@
 '''
 Support for the Git SCM
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os

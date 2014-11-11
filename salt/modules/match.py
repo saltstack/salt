@@ -2,6 +2,7 @@
 '''
 The match module allows for match routines to be run and determine target specs
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import inspect

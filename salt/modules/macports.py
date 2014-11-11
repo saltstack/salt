@@ -34,6 +34,7 @@ In other words `salt mac-machine pkg.refresh_db` is more like
 import copy
 import logging
 import re
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils

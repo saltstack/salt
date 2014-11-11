@@ -8,6 +8,7 @@ import logging
 import os
 import yaml
 import datetime
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils

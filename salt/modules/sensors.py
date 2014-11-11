@@ -4,6 +4,7 @@ Read lm-sensors
 
 .. versionadded:: 2014.1.3
 '''
+from __future__ import absolute_import
 
 #Import python libs
 import logging

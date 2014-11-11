@@ -16,6 +16,7 @@ import time
 import codecs
 # import third party libs
 import yaml
+import six
 try:
     yaml.Loader = yaml.CLoader
     yaml.Dumper = yaml.CDumper
@@ -670,7 +671,7 @@ def _validate_opts(opts):
     errors = []
     err = ('Key {0} with value {1} has an invalid type of {2}, a {3} is '
            'required for this value')
-    for key, val in list(opts.items()):
+    for key, val in opts.items():
         if key in VALID_OPTS:
             if isinstance(VALID_OPTS[key](), list):
                 if isinstance(val, VALID_OPTS[key]):
@@ -739,7 +740,7 @@ def _read_conf_file(path):
         if 'id' in conf_opts:
             conf_opts['id'] = str(conf_opts['id'])
         for key, value in conf_opts.copy().items():
-            if isinstance(value, unicode):
+            if isinstance(value, six.text_type):
                 # We do not want unicode settings
                 conf_opts[key] = value.encode('utf-8')
         return conf_opts
@@ -1013,7 +1014,7 @@ def apply_sdb(opts, sdb_opts=None):
     if isinstance(sdb_opts, string_types) and sdb_opts.startswith('sdb://'):
         return salt.utils.sdb.sdb_get(sdb_opts, opts)
     elif isinstance(sdb_opts, dict):
-        for key, value in list(sdb_opts.items()):
+        for key, value in sdb_opts.items():
             if value is None:
                 continue
             sdb_opts[key] = apply_sdb(opts, value)
@@ -1261,7 +1262,7 @@ def apply_cloud_config(overrides, defaults=None):
         # Reset the providers dictionary
         config['providers'] = {}
         # Populate the providers dictionary
-        for alias, details in list(providers.items()):
+        for alias, details in providers.items():
             if isinstance(details, list):
                 for detail in details:
                     if 'provider' not in detail:
@@ -1381,7 +1382,7 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
 
     vms = {}
 
-    for key, val in list(config.items()):
+    for key, val in config.items():
         if key in ('conf_file', 'include', 'default_include', 'user'):
             continue
         if not isinstance(val, dict):
@@ -1393,7 +1394,7 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
         vms[key] = val
 
     # Is any VM profile extending data!?
-    for profile, details in list(vms.copy().items()):
+    for profile, details in vms.copy().items():
         if 'extends' not in details:
             if ':' in details['provider']:
                 alias, driver = details['provider'].split(':')
@@ -1421,7 +1422,7 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
                 vms.pop(profile)
                 continue
 
-            driver = iter(providers[details['provider']].keys()).next()
+            driver = next(iter(list(providers[details['provider']].keys())))
             providers[details['provider']][driver].setdefault(
                 'profiles', {}).update({profile: details})
             details['provider'] = '{0[provider]}:{1}'.format(details, driver)
@@ -1456,7 +1457,7 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
                 vms.pop(profile)
                 continue
 
-            driver = iter(providers[extended['provider']].keys()).next()
+            driver = next(iter(list(providers[extended['provider']].keys())))
             providers[extended['provider']][driver].setdefault(
                 'profiles', {}).update({profile: extended})
 
@@ -1522,7 +1523,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
         config.update(overrides)
 
     # Is the user still using the old format in the new configuration file?!
-    for name, settings in list(config.copy().items()):
+    for name, settings in config.copy().items():
         if '.' in name:
             log.warn(
                 'Please switch to the new providers configuration syntax'
@@ -1533,13 +1534,13 @@ def apply_cloud_providers_config(overrides, defaults=None):
 
             # old_to_new will migrate the old data into the 'providers' key of
             # the config dictionary. Let's map it correctly
-            for prov_name, prov_settings in list(config.pop('providers').items()):
+            for prov_name, prov_settings in config.pop('providers').items():
                 config[prov_name] = prov_settings
             break
 
     providers = {}
     ext_count = 0
-    for key, val in list(config.items()):
+    for key, val in config.items():
         if key in ('conf_file', 'include', 'default_include', 'user'):
             continue
 
@@ -1587,7 +1588,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
     # Is any provider extending data!?
     while True:
         keep_looping = False
-        for provider_alias, entries in list(providers.copy().items()):
+        for provider_alias, entries in providers.copy().items():
 
             for driver, details in entries.items():
                 # Set a holder for the defined profiles
@@ -1661,7 +1662,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
     while True:
         # Merge provided extends
         keep_looping = False
-        for alias, entries in list(providers.copy().items()):
+        for alias, entries in providers.copy().items():
             for driver, details in entries.items():
 
                 if 'extends' not in details:
@@ -1695,7 +1696,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
 
     # Now clean up any providers entry that was just used to be a data tree to
     # extend from
-    for provider_alias, entries in list(providers.copy().items()):
+    for provider_alias, entries in providers.copy().items():
         for driver, details in entries.copy().items():
             if not driver.startswith('-only-extendable-'):
                 continue
@@ -1773,7 +1774,7 @@ def get_cloud_config_value(name, vm_, opts, default=None, search_global=True):
         if vm_['provider'] in opts['providers']:
             # There's only one driver defined for this provider. This is safe.
             alias_defs = opts['providers'].get(vm_['provider'])
-            provider_driver_defs = alias_defs[iter(alias_defs.keys()).next()]
+            provider_driver_defs = alias_defs[next(iter(list(alias_defs.keys())))]
             if name in provider_driver_defs:
                 # The setting name exists in the VM's provider configuration.
                 # Return it!

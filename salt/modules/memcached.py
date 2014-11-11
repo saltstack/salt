@@ -5,6 +5,7 @@ Module for Management of Memcached Keys
 
 .. versionadded:: 2014.1.0
 '''
+from __future__ import absolute_import
 
 # TODO: use salt.utils.memcache
 

@@ -3,6 +3,7 @@
 Provide the service module for system supervisord or supervisord in a
 virtualenv
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os

@@ -23,6 +23,7 @@ from salt.exceptions import (SaltInvocationError, SaltSystemExit, CommandNotFoun
 # Import Python libraries
 import os
 import datetime
+import yaml
 import zmq
 from collections import namedtuple
 
@@ -521,12 +522,19 @@ class UtilsTestCase(TestCase):
         self.assertEqual(ret, expected_ret)
 
     def test_yaml_dquote(self):
-        ret = utils.yaml_dquote(r'"\ "')
-        self.assertEqual(ret, r'"\"\\ \""')
+        for teststr in (r'"\ []{}"',):
+            self.assertEqual(teststr, yaml.safe_load(utils.yaml_dquote(teststr)))
 
     def test_yaml_squote(self):
         ret = utils.yaml_squote(r'"')
         self.assertEqual(ret, r"""'"'""")
+
+    def test_yaml_encode(self):
+        for testobj in (None, True, False, '[7, 5]', '"monkey"', 5, 7.5, "2014-06-02 15:30:29.7"):
+            self.assertEqual(testobj, yaml.safe_load(utils.yaml_encode(testobj)))
+
+        for testobj in ({}, [], set()):
+            self.assertRaises(TypeError, utils.yaml_encode, testobj)
 
     def test_compare_dicts(self):
         ret = utils.compare_dicts(old={'foo': 'bar'}, new={'foo': 'bar'})

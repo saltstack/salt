@@ -13,6 +13,7 @@ import glob
 import tempfile
 import time
 import logging
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils
