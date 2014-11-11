@@ -3,6 +3,7 @@
 The daemons package is used to store implementations of the Salt Master and
 Minion enabling different transports.
 '''
+from __future__ import absolute_import
 # Import Python Libs
 import sys
 from collections import namedtuple, Iterable, Sequence, Mapping
@@ -11,11 +12,12 @@ import logging
 # Import Salt Libs
 from salt.utils.odict import OrderedDict
 from salt._compat import text_type, binary_type
+import six
 
 log = logging.getLogger(__name__)
 
 if sys.version_info[0] == 3:
-    basestring = (text_type, binary_type)
+    six.string_types = (text_type, binary_type)
 
 
 def is_non_string_iterable(obj):
@@ -26,7 +28,7 @@ def is_non_string_iterable(obj):
     for non string iterables.
     Assumes in Python3 that, basestring = (str, bytes)
     """
-    return not isinstance(obj, basestring) and isinstance(obj, Iterable)
+    return not isinstance(obj, six.string_types) and isinstance(obj, Iterable)
 
 
 def is_non_string_sequence(obj):
@@ -37,7 +39,7 @@ def is_non_string_sequence(obj):
     for non string sequences.
     Assumes in Python3 that, basestring = (str, bytes)
     """
-    return not isinstance(obj, basestring) and isinstance(obj, Sequence)
+    return not isinstance(obj, six.string_types) and isinstance(obj, Sequence)
 
 
 def extract_masters(opts):
@@ -152,7 +154,7 @@ def extract_masters(opts):
                 internal = entry.get('internal', '')
                 hostages.append(dict(external=external, internal=internal))
 
-            elif isinstance(entry, basestring):  # string
+            elif isinstance(entry, six.string_types):  # string
                 external = entry
                 internal = ''
                 hostages.append(dict(external=external, internal=internal))
@@ -162,7 +164,7 @@ def extract_masters(opts):
         internal = entries.get('internal', '')
         hostages.append(dict(external=external, internal=internal))
 
-    elif isinstance(entries, basestring):  # string
+    elif isinstance(entries, six.string_types):  # string
         external = entries
         internal = ''
         hostages.append(dict(external=external, internal=internal))
