@@ -36,7 +36,7 @@ import logging
 import os
 import shutil
 from datetime import datetime
-from salt._compat import text_type as _text_type
+from six import text_type as _text_type
 
 VALID_BRANCH_METHODS = ('branches', 'bookmarks', 'mixed')
 PER_REMOTE_PARAMS = ('base', 'branch_method', 'mountpoint', 'root')

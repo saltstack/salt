@@ -11,13 +11,12 @@ import logging
 
 # Import Salt Libs
 from salt.utils.odict import OrderedDict
-from salt._compat import text_type, binary_type
 import six
 
 log = logging.getLogger(__name__)
 
 if sys.version_info[0] == 3:
-    six.string_types = (text_type, binary_type)
+    six.string_types = (six.text_type, six.binary_type)
 
 
 def is_non_string_iterable(obj):
