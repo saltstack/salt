@@ -106,6 +106,7 @@ correctly.  Replace with equivalent SQL for other ODBC-compliant servers::
 
     salt '*' test.ping --return odbc --return_config alternative
 '''
+from __future__ import absolute_import
 # Let's not allow PyLint complain about string substitution
 # pylint: disable=W1321,E1321
 

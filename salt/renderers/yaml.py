@@ -15,8 +15,8 @@ from yaml.constructor import ConstructorError
 from salt.utils.yamlloader import SaltYamlSafeLoader, load
 from salt.utils.odict import OrderedDict
 from salt.exceptions import SaltRenderError
-from salt._compat import string_types
 import six
+from six import string_types
 from six.moves import range
 
 log = logging.getLogger(__name__)
