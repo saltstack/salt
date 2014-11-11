@@ -17,6 +17,7 @@ Enable and disable apache modules.
         apache_module.disable:
             - name: cgi
 '''
+from __future__ import absolute_import
 from salt._compat import string_types
 
 
