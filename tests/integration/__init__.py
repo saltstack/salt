@@ -22,6 +22,7 @@ import subprocess
 import multiprocessing
 from hashlib import md5
 from datetime import datetime, timedelta
+from six import string_types
 try:
     import pwd
 except ImportError:
@@ -50,7 +51,6 @@ ensure_in_syspath(CODE_DIR, SALT_LIBS)
 
 # Import Salt libs
 import salt
-import salt._compat
 import salt.config
 import salt.minion
 import salt.runner
@@ -905,7 +905,7 @@ class TestDaemon(object):
                         syncing.remove(name)
                         continue
 
-                    if isinstance(output['ret'], salt._compat.string_types):
+                    if isinstance(output['ret'], string_types):
                         # An errors has occurred
                         print(
                             ' {RED_BOLD}*{ENDC} {0} Failed to sync {2}: '
@@ -1086,7 +1086,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
             jids = []
             # These are usually errors
             for item in ret[:]:
-                if not isinstance(item, salt._compat.string_types):
+                if not isinstance(item, string_types):
                     # We don't know how to handle this
                     continue
                 match = STATE_FUNCTION_RUNNING_RE.match(item)
