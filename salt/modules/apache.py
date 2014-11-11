@@ -402,7 +402,7 @@ def _parse_config(conf, slot=None):
             file=ret
         )
         del conf['this']
-        for key, value in list(conf.items()):
+        for key, value in conf.items():
             if isinstance(value, str):
                 print('{0} {1}'.format(key, value), file=ret)
             elif isinstance(value, list):
