@@ -1692,20 +1692,20 @@ def mod_repo(repo, basedir=None, **kwargs):
     # Error out if they tried to delete baseurl or mirrorlist improperly
     if 'baseurl' in todelete:
         if 'mirrorlist' not in repo_opts and 'mirrorlist' \
-                not in list(filerepos[repo].keys()):
+                not in filerepos[repo].keys():
             raise SaltInvocationError(
                 'Cannot delete baseurl without specifying mirrorlist'
             )
     if 'mirrorlist' in todelete:
         if 'baseurl' not in repo_opts and 'baseurl' \
-                not in list(filerepos[repo].keys()):
+                not in filerepos[repo].keys():
             raise SaltInvocationError(
                 'Cannot delete mirrorlist without specifying baseurl'
             )
 
     # Delete anything in the todelete list
     for key in todelete:
-        if key in list(filerepos[repo].keys()):
+        if key in filerepos[repo].keys():
             del filerepos[repo][key]
 
     # Old file or new, write out the repos(s)
@@ -1713,7 +1713,7 @@ def mod_repo(repo, basedir=None, **kwargs):
     content = header
     for stanza in filerepos.keys():
         comments = ''
-        if 'comments' in list(filerepos[stanza].keys()):
+        if 'comments' in filerepos[stanza].keys():
             comments = '\n'.join(filerepos[stanza]['comments'])
             del filerepos[stanza]['comments']
         content += '\n[{0}]'.format(stanza)
