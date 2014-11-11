@@ -85,7 +85,7 @@ framer bootstrap be inactive first join
         bid start manager #start alive presence from minion side
         do salt raet router
         #go pillar if .salt.var.pillar_refresh
-        go loading if .salt.var.module_refresh
+        #go loading if .salt.var.module_refresh
 
     frame abort
         bid stop all
