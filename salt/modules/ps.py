@@ -10,6 +10,7 @@ See http://code.google.com/p/psutil.
 # Import python libs
 import time
 import datetime
+from __future__ import absolute_import
 
 # Import salt libs
 from salt.exceptions import SaltInvocationError, CommandExecutionError
