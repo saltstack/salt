@@ -23,6 +23,7 @@ Example output::
                 - Hello
                 - World
 '''
+from __future__ import absolute_import
 # Import python libs
 from numbers import Number
 import re
