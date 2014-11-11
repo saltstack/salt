@@ -5,13 +5,13 @@ Wrapper around Server Density API
 
 .. versionadded:: 2014.7.0
 '''
-from __future__ import absolute_import
 import requests
 import json
 import logging
+from __future__ import absolute_import
+from six.moves import map
 
 from salt.exceptions import CommandExecutionError
-from six.moves import map
 
 log = logging.getLogger(__name__)
 
@@ -144,7 +144,7 @@ def ls(**params):
         endpoint = 'resources'
 
     # Convert all ints to strings:
-    for k, v in list(params.items()):
+    for k, v in params.items():
         params[k] = str(v)
 
     api_response = requests.get(
