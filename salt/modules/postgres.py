@@ -21,7 +21,6 @@ Module to provide Postgres compatibility to salt.
     security audits.
 '''
 
-from __future__ import absolute_import
 # This pylint error is popping up where there are no colons?
 # pylint: disable=E8203
 
@@ -33,6 +32,7 @@ import StringIO
 import hashlib
 import os
 import tempfile
+from __future__ import absolute_import
 from six.moves import zip
 try:
     import pipes
@@ -281,7 +281,7 @@ def psql_query(query, user=None, host=None, port=None, maintenance_db=None,
         if not header:
             header = row
             continue
-        ret.append(dict(list(zip(header, row))))
+        ret.append(dict(zip(header, row)))
 
     return ret
 
@@ -381,7 +381,7 @@ def db_create(name,
         'TABLESPACE': tablespace,
     }
     with_chunks = []
-    for key, value in list(with_args.items()):
+    for key, value in with_args.items():
         if value is not None:
             with_chunks += [key, '=', value]
     # Build a final query
