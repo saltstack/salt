@@ -150,7 +150,7 @@ def _find_vpc(vpc_id=None, name=None, cidr=None, tags=None, conn=None):
             filter_parameters['filters']['tag:Name'] = name
 
         if tags:
-            for tag_name, tag_value in list(tags.items()):
+            for tag_name, tag_value in tags.items():
                 filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
 
         vpcs = conn.get_all_vpcs(**filter_parameters)
