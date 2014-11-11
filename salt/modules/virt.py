@@ -4,11 +4,11 @@ Work with virtual machines managed by libvirt
 
 :depends: libvirt Python module
 '''
-from __future__ import absolute_import
 # Special Thanks to Michael Dehann, many of the concepts, and a few structures
 # of his in the virt func module have been used
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import re
 import sys
@@ -16,12 +16,12 @@ import shutil
 import subprocess
 import string  # pylint: disable=deprecated-module
 import logging
+import six
 
 # Import third party libs
 import yaml
 import jinja2
 import jinja2.exceptions
-import six
 try:
     import libvirt
     from xml.dom import minidom
@@ -249,7 +249,7 @@ def _gen_xml(name,
 
     context['disks'] = {}
     for i, disk in enumerate(diskp):
-        for disk_name, args in list(disk.items()):
+        for disk_name, args in disk.items():
             context['disks'][disk_name] = {}
             fn_ = '{0}.{1}'.format(disk_name, args['format'])
             context['disks'][disk_name]['file_name'] = fn_
@@ -317,7 +317,7 @@ def _qemu_image_info(path):
     match_map = {'size': r'virtual size: \w+ \((\d+) byte[s]?\)',
                  'format': r'file format: (\w+)'}
 
-    for info, search in list(match_map.items()):
+    for info, search in match_map.items():
         try:
             ret[info] = re.search(search, out).group(1)
         except AttributeError:
@@ -397,7 +397,7 @@ def _disk_profile(profile, hypervisor, **kwargs):
         overlay = {}
 
     disklist = __salt__['config.get']('virt:disk', {}).get(profile, default)
-    for key, val in list(overlay.items()):
+    for key, val in overlay.items():
         for i, disks in enumerate(disklist):
             for disk in disks:
                 if key not in disks[disk]:
@@ -430,7 +430,7 @@ def _nic_profile(profile_name, hypervisor, **kwargs):
     interfaces = []
 
     def append_dict_profile_to_interface_list(profile_dict):
-        for interface_name, attributes in list(profile_dict.items()):
+        for interface_name, attributes in profile_dict.items():
             attributes['name'] = interface_name
             interfaces.append(attributes)
 
@@ -493,7 +493,7 @@ def _nic_profile(profile_name, hypervisor, **kwargs):
         attributes['source'] = attributes.get('source', None)
 
     def _apply_default_overlay(attributes):
-        for key, value in list(overlays[hypervisor].items()):
+        for key, value in overlays[hypervisor].items():
             if key not in attributes or not attributes[key]:
                 attributes[key] = value
 
@@ -600,7 +600,7 @@ def init(name,
         else:
             # assume libvirt manages disks for us
             for disk in diskp:
-                for disk_name, args in list(disk.items()):
+                for disk_name, args in disk.items():
                     xml = _gen_vol_xml(name,
                                        disk_name,
                                        args['size'],
@@ -1410,7 +1410,7 @@ def seed_non_shared_migrate(disks, force=False):
 
         salt '*' virt.seed_non_shared_migrate <disks>
     '''
-    for _, data in list(disks.items()):
+    for _, data in disks.items():
         fn_ = data['file']
         form = data['file format']
         size = data['virtual size'].split()[1][1:]
