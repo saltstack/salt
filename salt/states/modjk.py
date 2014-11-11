@@ -2,6 +2,7 @@
 '''
 State to control Apache modjk
 '''
+from __future__ import absolute_import
 
 # Python Libs
 import logging
@@ -50,7 +51,7 @@ def _bulk_state(saltfunc, lbn, workers, profile):
         return ret
 
     errors = []
-    for worker, ok in cmdret.items():
+    for worker, ok in list(cmdret.items()):
         if not ok:
             errors.append(worker)
 
