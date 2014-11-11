@@ -1291,7 +1291,7 @@ def describe(vpc_id=None, region=None, key=None, keyid=None, profile=None):
         if vpcs:
             vpc = vpcs[0]  # Found!
             log.debug('Found VPC: {0}'.format(vpc.id))
-            for k in list(_ret.keys()):
+            for k in _ret.keys():
                 _ret[k] = getattr(vpc, k)
             return _ret
 
