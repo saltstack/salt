@@ -14,6 +14,7 @@ import salt.key
 
 log = logging.getLogger(__name__)
 
+
 def _determine_hyper(data, omit=''):
     '''
     Determine what the most resource free hypervisor is based on the given
