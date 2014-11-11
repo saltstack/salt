@@ -86,7 +86,7 @@ def _rev(repo):
     Returns revision ID of repo
     '''
     try:
-        repo_info = dict(list(CLIENT.info(repo['repo']).items()))
+        repo_info = dict(CLIENT.info(repo['repo']).items())
     except (pysvn._pysvn.ClientError, TypeError,
             KeyError, AttributeError) as exc:
         log.error(
