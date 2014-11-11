@@ -2,10 +2,12 @@
 '''
 Provide the service module for systemd
 '''
+from __future__ import absolute_import
 # Import python libs
 import logging
 import os
 import re
+import six
 
 log = logging.getLogger(__name__)
 
@@ -162,7 +164,7 @@ def get_enabled():
         salt '*' service.get_enabled
     '''
     ret = []
-    for name, state in _get_all_unit_files().iteritems():
+    for name, state in six.iteritems(_get_all_unit_files()):
         if state == 'enabled':
             ret.append(name)
     return sorted(ret)
@@ -179,7 +181,7 @@ def get_disabled():
         salt '*' service.get_disabled
     '''
     ret = []
-    for name, state in _get_all_unit_files().iteritems():
+    for name, state in six.iteritems(_get_all_unit_files()):
         if state == 'disabled':
             ret.append(name)
     return sorted(ret)
@@ -195,7 +197,7 @@ def get_all():
 
         salt '*' service.get_all
     '''
-    return sorted(set(_get_all_units().keys() + _get_all_unit_files().keys()))
+    return sorted(set(list(_get_all_units().keys()) + list(_get_all_unit_files().keys())))
 
 
 def available(name):
