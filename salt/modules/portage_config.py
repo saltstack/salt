@@ -3,11 +3,10 @@
 Configure ``portage(5)``
 '''
 
-from __future__ import absolute_import
-
 # Import python libs
 import os
 import shutil
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils
@@ -221,7 +220,7 @@ def _merge_flags(*args):
         else:
             flags[flag] = True
     tmp = []
-    for k, v in list(flags.items()):
+    for k, v in flags.items():
         if v:
             tmp.append(k)
         else:
