@@ -272,14 +272,14 @@ def dot_vals(value):
         salt '*' config.dot_vals host
     '''
     ret = {}
-    for key, val in list(__pillar__.get('master', {}).items()):
+    for key, val in __pillar__.get('master', {}).items():
         salt.utils.warn_until(
             'Lithium',
             'pillar_opts will default to False in the Lithium release'
         )
         if key.startswith('{0}.'.format(value)):
             ret[key] = val
-    for key, val in list(__opts__.items()):
+    for key, val in __opts__.items():
         if key.startswith('{0}.'.format(value)):
             ret[key] = val
     return ret
