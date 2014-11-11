@@ -232,6 +232,7 @@ A more complex ``recurse`` example:
         - source: salt://project/templates_dir
         - include_empty: True
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import difflib
@@ -250,6 +251,8 @@ from salt.exceptions import CommandExecutionError
 from salt.utils.serializers import yaml as yaml_serializer
 from salt.utils.serializers import json as json_serializer
 from salt._compat import string_types, integer_types
+from six.moves import map
+import six
 
 log = logging.getLogger(__name__)
 
@@ -466,7 +469,7 @@ def _check_directory(name,
     if changes:
         comments = ['The following files will be changed:\n']
         for fn_ in changes:
-            for key, val in changes[fn_].items():
+            for key, val in list(changes[fn_].items()):
                 comments.append('{0}: {1} - {2}\n'.format(fn_, key, val))
         return None, ''.join(comments)
     return True, 'The directory {0} is in the correct state'.format(name)
@@ -1299,7 +1302,7 @@ def managed(name,
         return _error(
             ret, 'Defaults must be formed as a dict')
 
-    if len(filter(None, [contents, contents_pillar, contents_grains])) > 1:
+    if len([_f for _f in [contents, contents_pillar, contents_grains] if _f]) > 1:
         return _error(
             ret, 'Only one of contents, contents_pillar, and contents_grains is permitted')
 
@@ -2126,7 +2129,7 @@ def recurse(name,
 
     # Process symlinks and return the updated filenames list
     def process_symlinks(filenames, symlinks):
-        for lname, ltarget in symlinks.items():
+        for lname, ltarget in list(list(symlinks.items())):
             if not salt.utils.check_include_exclude(
                     os.path.relpath(lname, srcpath), include_pat, exclude_pat):
                 continue
@@ -2258,7 +2261,7 @@ def recurse(name,
     # to display structured comments in a readable fashion
     ret['comment'] = '\n'.join('\n#### {0} ####\n{1}'.format(
         k, v if isinstance(v, string_types) else '\n'.join(v)
-    ) for (k, v) in ret['comment'].iteritems()).strip()
+    ) for (k, v) in six.iteritems(ret['comment'])).strip()
 
     if not ret['comment']:
         ret['comment'] = 'Recursively updated {0}'.format(name)
@@ -3614,7 +3617,7 @@ def accumulated(name, filename, text, **kwargs):
     require_in = __low__.get('require_in', [])
     watch_in = __low__.get('watch_in', [])
     deps = require_in + watch_in
-    if not filter(lambda x: 'file' in x, deps):
+    if not [x for x in deps if 'file' in x]:
         ret['result'] = False
         ret['comment'] = 'Orphaned accumulator {0} in {1}:{2}'.format(
             name,
@@ -3631,7 +3634,7 @@ def accumulated(name, filename, text, **kwargs):
     if name not in _ACCUMULATORS_DEPS[filename]:
         _ACCUMULATORS_DEPS[filename][name] = []
     for accumulator in deps:
-        _ACCUMULATORS_DEPS[filename][name].extend(accumulator.itervalues())
+        _ACCUMULATORS_DEPS[filename][name].extend(six.itervalues(accumulator))
     if name not in _ACCUMULATORS[filename]:
         _ACCUMULATORS[filename][name] = []
     for chunk in text:
@@ -3657,10 +3660,10 @@ def _merge_dict(obj, k, v):
                     obj[k] = v
         elif isinstance(obj[k], dict):
             if isinstance(v, dict):
-                for a, b in v.iteritems():
+                for a, b in six.iteritems(v):
                     if isinstance(b, dict) or isinstance(b, list):
                         updates = _merge_dict(obj[k], a, b)
-                        for x, y in updates.iteritems():
+                        for x, y in six.iteritems(updates):
                             changes[k + "." + x] = y
                     else:
                         if obj[k][a] != b:
@@ -3814,7 +3817,7 @@ def serialize(name,
                         'result': False}
 
             if existing_data is not None:
-                for k, v in dataset.iteritems():
+                for k, v in six.iteritems(dataset):
                     if k in existing_data:
                         ret['changes'].update(_merge_dict(existing_data, k, v))
                     else:
