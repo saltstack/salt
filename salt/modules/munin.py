@@ -2,6 +2,7 @@
 '''
 Run munin plugins/checks from salt and format the output as data.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
