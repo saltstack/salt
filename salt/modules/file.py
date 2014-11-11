@@ -2158,7 +2158,7 @@ def access(path, mode):
 
     if mode in modes:
         return os.access(path, modes[mode])
-    elif mode in iter(list(modes.values())):
+    elif mode in iter(modes.values()):
         return os.access(path, mode)
     else:
         raise SaltInvocationError('Invalid mode specified.')
