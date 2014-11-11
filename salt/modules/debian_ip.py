@@ -6,9 +6,10 @@ References:
 
 * http://www.debian.org/doc/manuals/debian-reference/ch05.en.html
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
+import six
 import functools
 import logging
 import os.path
@@ -26,7 +27,6 @@ import salt.utils
 import salt.utils.templates
 import salt.utils.validate.net
 import salt.utils.odict
-import six
 
 
 # Set up logging
