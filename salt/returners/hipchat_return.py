@@ -58,6 +58,7 @@ Hipchat settings may also be configured as::
 
     salt '*' test.ping --return hipchat --return_config alternative
 '''
+from __future__ import absolute_import
 
 import salt.returners
 
