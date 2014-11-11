@@ -75,8 +75,8 @@ def genrepo():
                         print('Failed to compile {0}: {1}'.format(os.path.join(root, name), exc))
                 if config:
                     revmap = {}
-                    for pkgname, versions in config.items():
-                        for version, repodata in versions.items():
+                    for pkgname, versions in list(config.items()):
+                        for version, repodata in list(versions.items()):
                             if not isinstance(version, string_types):
                                 config[pkgname][str(version)] = \
                                     config[pkgname].pop(version)
