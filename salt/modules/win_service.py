@@ -4,11 +4,11 @@ Windows Service module.
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import salt.utils
 import time
 import logging
 from subprocess import list2cmdline
-from __future__ import absolute_import
 from six.moves import zip
 from six.moves import range
 
