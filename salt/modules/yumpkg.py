@@ -12,14 +12,16 @@ Support for YUM
     .. _yum-utils: http://yum.baseurl.org/wiki/YumUtils
 
 '''
-from __future__ import absolute_import
 
 # Import python libs
 import copy
 import logging
 import os
 import re
+import six
+from __future__ import absolute_import
 from distutils.version import LooseVersion as _LooseVersion
+from six.moves import range
 
 # Import salt libs
 import salt.utils
@@ -27,8 +29,6 @@ from salt._compat import string_types
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
-import six
-from six.moves import range
 
 log = logging.getLogger(__name__)
 
@@ -1508,7 +1508,7 @@ def list_repos(basedir='/etc/yum.repos.d'):
         if not repofile.endswith('.repo'):
             continue
         filerepos = _parse_repo_file(repopath)[1]
-        for reponame in list(filerepos.keys()):
+        for reponame in filerepos.keys():
             repo = filerepos[reponame]
             repo['file'] = repopath
             repos[reponame] = repo
@@ -1530,7 +1530,7 @@ def get_repo(repo, basedir='/etc/yum.repos.d', **kwargs):  # pylint: disable=W06
 
     # Find out what file the repo lives in
     repofile = ''
-    for arepo in list(repos.keys()):
+    for arepo in repos.keys():
         if arepo == repo:
             repofile = repos[arepo]['file']
 
@@ -1569,7 +1569,7 @@ def del_repo(repo, basedir='/etc/yum.repos.d', **kwargs):  # pylint: disable=W06
 
     # See if the repo is the only one in the file
     onlyrepo = True
-    for arepo in list(repos.keys()):
+    for arepo in repos.keys():
         if arepo == repo:
             continue
         if repos[arepo]['file'] == repofile:
@@ -1584,7 +1584,7 @@ def del_repo(repo, basedir='/etc/yum.repos.d', **kwargs):  # pylint: disable=W06
     # There must be other repos in this file, write the file with them
     header, filerepos = _parse_repo_file(repofile)
     content = header
-    for stanza in list(filerepos.keys()):
+    for stanza in filerepos.keys():
         if stanza == repo:
             continue
         comments = ''
@@ -1711,13 +1711,13 @@ def mod_repo(repo, basedir=None, **kwargs):
     # Old file or new, write out the repos(s)
     filerepos[repo].update(repo_opts)
     content = header
-    for stanza in list(filerepos.keys()):
+    for stanza in filerepos.keys():
         comments = ''
         if 'comments' in list(filerepos[stanza].keys()):
             comments = '\n'.join(filerepos[stanza]['comments'])
             del filerepos[stanza]['comments']
         content += '\n[{0}]'.format(stanza)
-        for line in list(filerepos[stanza].keys()):
+        for line in filerepos[stanza].keys():
             content += '\n{0}={1}'.format(line, filerepos[stanza][line])
         content += '\n{0}\n'.format(comments)
 
