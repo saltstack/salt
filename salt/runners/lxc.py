@@ -7,6 +7,7 @@ Control Linux Containers via Salt
 
 # Import python libs
 from __future__ import print_function
+from __future__ import absolute_import
 import time
 import os
 import copy
@@ -19,6 +20,7 @@ import salt.client
 import salt.utils.virt
 import salt.utils.cloud
 import salt.key
+import six
 
 
 log = logging.getLogger(__name__)
@@ -366,7 +368,7 @@ def _list_iter(host=None):
         if not isinstance(container_info, dict):
             continue
         chunk = {}
-        id_ = container_info.iterkeys().next()
+        id_ = next(six.iterkeys(container_info))
         if host and host != id_:
             continue
         if not isinstance(container_info[id_], dict):
