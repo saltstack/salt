@@ -31,6 +31,7 @@ import salt.utils as utils
 import salt.version as version
 import salt.utils.args
 import salt.utils.xdg
+from salt.utils import kinds
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.validate.path import is_writeable
 from salt._compat import MAX_SIZE
@@ -2104,8 +2105,47 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
     def setup_config(self):
         opts = config.minion_config(self.get_config_file_path(),
                                     minion_id=True)
-        #opts['__role'] = kinds.APPL_KIND_NAMES[kinds.applKinds.caller]
+
+        if opts.get('transport') == 'raet':
+            if not self._find_raet_minion(opts):  # must create caller minion
+                opts['__role'] = kinds.APPL_KIND_NAMES[kinds.applKinds.caller]
         return opts
+
+    def _find_raet_minion(self, opts):
+        '''
+        Returns true if local RAET Minion is available
+        '''
+        yardname = 'manor'
+        dirpath = opts['sock_dir']
+
+        role = opts.get('id')
+        if not role:
+            emsg = ("Missing role required to setup RAET SaltCaller.")
+            log.error(emsg + "\n")
+            raise ValueError(emsg)
+
+        kind = opts.get('__role')  # application kind 'master', 'minion', etc
+        if kind not in kinds.APPL_KINDS:
+            emsg = ("Invalid application kind = '{0}' for RAET SaltCaller.".format(kind))
+            log.error(emsg + "\n")
+            raise ValueError(emsg)
+
+        if kind in [kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
+                    kinds.APPL_KIND_NAMES[kinds.applKinds.caller], ]:
+            lanename = "{0}_{1}".format(role, kind)
+        else:
+            emsg = ("Unsupported application kind '{0}' for RAET SaltCaller.".format(kind))
+            log.error(emsg + '\n')
+            raise ValueError(emsg)
+
+        if kind == kinds.APPL_KIND_NAMES[kinds.applKinds.minion]:  # minion check
+            from raet.lane.yarding import Yard
+            ha, dirpath = Yard.computeHa(dirpath, lanename, yardname)
+            if (os.path.exists(ha) and
+                    not os.path.isfile(ha) and
+                    not os.path.isdir(ha)):  # minion manor yard
+                return True
+        return False
 
     def process_module_dirs(self):
         for module_dir in self.options.module_dirs:

@@ -38,6 +38,9 @@ from salt.template import compile_template, compile_template_str
 from salt.exceptions import SaltRenderError, SaltReqTimeoutError, SaltException
 from salt.utils.odict import OrderedDict, DefaultOrderedDict
 
+# Import third party libs
+from six.moves import range
+
 log = logging.getLogger(__name__)
 
 

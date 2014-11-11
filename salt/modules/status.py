@@ -9,6 +9,7 @@ from __future__ import absolute_import
 import os
 import re
 import fnmatch
+
 from six.moves import range
 
 # Import salt libs

@@ -73,18 +73,15 @@ class SaltKeep(Keep):
         '''
         self.saltRaetKey.delete_pki_dir()
 
-    def loadLocalData(self):
+    def loadLocalRoleData(self):
         '''
-        Load and Return the data from the local estate
+        Load and return the role data
         '''
-        data = super(SaltKeep, self).loadLocalData()
-        if not data:
-            return None
-        srkdata = self.saltRaetKey.read_local()
-        if not srkdata:
-            srkdata = dict(sign=None, priv=None)
-        data.update([('sighex', srkdata['sign']),
-                     ('prihex', srkdata['priv'])])
+        keydata = self.saltRaetKey.read_local()
+        if not keydata:
+            keydata = odict([('sign', None), ('priv', None)])
+        data = odict([('sighex', keydata['sign']),
+                     ('prihex', keydata['priv'])])
         return data
 
     def clearLocalRoleData(self):
@@ -98,6 +95,18 @@ class SaltKeep(Keep):
         Clear the Local Role directory
         '''
         self.saltRaetKey.delete_pki_dir()
+
+    def loadLocalData(self):
+        '''
+        Load and Return the data from the local estate
+        '''
+        data = super(SaltKeep, self).loadLocalData()
+        if not data:
+            return None
+        roleData = self.loadLocalRoleData() # if not present defaults None values
+        data.update([('sighex', roleData.get('sighex')),
+                     ('prihex', roleData.get('prihex'))])
+        return data
 
     def loadRemoteData(self, name):
         '''
