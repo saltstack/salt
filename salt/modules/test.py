@@ -456,7 +456,7 @@ def assertion(assertion):
     Assert the given argument
 
     CLI Example:
-    
+
     .. code-block:: bash
 
         salt '*' test.assert False
