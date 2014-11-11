@@ -33,6 +33,7 @@ import StringIO
 import hashlib
 import os
 import tempfile
+from six.moves import zip
 try:
     import pipes
     import csv
@@ -280,7 +281,7 @@ def psql_query(query, user=None, host=None, port=None, maintenance_db=None,
         if not header:
             header = row
             continue
-        ret.append(dict(zip(header, row)))
+        ret.append(dict(list(zip(header, row))))
 
     return ret
 
@@ -380,7 +381,7 @@ def db_create(name,
         'TABLESPACE': tablespace,
     }
     with_chunks = []
-    for key, value in with_args.items():
+    for key, value in list(with_args.items()):
         if value is not None:
             with_chunks += [key, '=', value]
     # Build a final query
