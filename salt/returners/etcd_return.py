@@ -40,6 +40,7 @@ CLI Example:
 
     salt '*' test.ping --return etcd
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import json
