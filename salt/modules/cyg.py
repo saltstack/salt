@@ -132,7 +132,7 @@ def _run_silent_cygwin(cyg_arch='x86_64',
 
     if mirrors is None:
         mirrors = {DEFAULT_MIRROR: DEFAULT_MIRROR_KEY}
-    for mirror, key in list(mirrors.items()):
+    for mirror, key in mirrors.items():
         options.append('--site {0}'.format(mirror))
         if key:
             options.append('--pubkey {0}'.format(key))
