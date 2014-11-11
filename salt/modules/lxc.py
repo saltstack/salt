@@ -397,7 +397,7 @@ def _get_network_conf(conf_tuples=None, **kwargs):
             nic, DEFAULT_NIC_PROFILE)
         nic_opts = kwargs.pop('nic_opts', {})
         if nic_opts:
-            for dev, args in list(nic_opts.items()):
+            for dev, args in nic_opts.items():
                 ethx = nicp.setdefault(dev, {})
                 ethx = salt.utils.dictupdate.update(ethx, args)
         ifs = [a for a in nicp]
@@ -423,7 +423,7 @@ def _get_network_conf(conf_tuples=None, **kwargs):
                 ret.append({'lxc.network.ipv4': ipv4})
             if ipv6:
                 ret.append({'lxc.network.ipv6': ipv6})
-            for k, v in list(args.items()):
+            for k, v in args.items():
                 if k == 'link' and bridge:
                     v = bridge
                 v = opts.get(k, v)
@@ -469,7 +469,7 @@ def _get_network_conf(conf_tuples=None, **kwargs):
             new[iface]['lxc.network.hwaddr'] = omac
 
     ret = []
-    for v in list(new.values()):
+    for v in new.values():
         for row in v:
             ret.append({row: v[row]})
     return ret
@@ -528,7 +528,7 @@ def _config_list(conf_tuples=None, **kwargs):
     kwargs = copy.deepcopy(kwargs)
     ret = []
     default_data = _get_lxc_default_data(**kwargs)
-    for k, val in list(default_data.items()):
+    for k, val in default_data.items():
         ret.append({k: val})
     net_datas = _get_network_conf(conf_tuples=conf_tuples, **kwargs)
     ret.extend(net_datas)
@@ -585,7 +585,7 @@ class _LXCConfig(object):
                 self.data.append((k, v))
 
         default_data = _get_lxc_default_data(**kwargs)
-        for k, val in list(default_data.items()):
+        for k, val in default_data.items():
             _replace(k, val)
         old_net = self._filter_data('lxc.network')
         net_datas = _get_network_conf(conf_tuples=old_net, **kwargs)
@@ -1170,7 +1170,7 @@ def create(name, config=None, profile=None, options=None, **kwargs):
 
     if options:
         cmd += ' --'
-        for k, v in list(options.items()):
+        for k, v in options.items():
             cmd += ' --{0} {1}'.format(k, v)
 
     ret = __salt__['cmd.run_all'](cmd)
