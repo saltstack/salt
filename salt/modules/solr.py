@@ -59,12 +59,12 @@ optimize : True
 verbose : True
     Get verbose output
 '''
-from __future__ import absolute_import
 
 # Import python Libs
 import json
 import os
 import urllib2
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils
@@ -358,7 +358,7 @@ def _merge_options(options):
     defaults = __salt__['config.option']('solr.dih.import_options')
     if isinstance(options, dict):
         defaults.update(options)
-    for key, val in list(defaults.items()):
+    for key, val in defaults.items():
         if isinstance(val, bool):
             defaults[key] = str(val).lower()
     return defaults
@@ -437,7 +437,7 @@ def _find_value(ret_dict, key, path=None):
         path = "{0}:{1}".format(path, key)
 
     ret = []
-    for ikey, val in list(ret_dict.items()):
+    for ikey, val in ret_dict.items():
         if ikey == key:
             ret.append({path: val})
         if isinstance(val, list):
@@ -1238,7 +1238,7 @@ def full_import(handler, host=None, core_name=None, options=None, extra=None):
             errors = ['Failed to set the replication status on the master.']
             return _get_return_dict(False, errors=errors)
     params = ['command=full-import']
-    for key, val in list(options.items()):
+    for key, val in options.items():
         params.append('&{0}={1}'.format(key, val))
     url = _format_url(handler, host=host, core_name=core_name,
                       extra=params + extra)
@@ -1292,7 +1292,7 @@ def delta_import(handler, host=None, core_name=None, options=None, extra=None):
             errors = ['Failed to set the replication status on the master.']
             return _get_return_dict(False, errors=errors)
     params = ['command=delta-import']
-    for key, val in list(options.items()):
+    for key, val in options.items():
         params.append("{0}={1}".format(key, val))
     url = _format_url(handler, host=host, core_name=core_name,
                       extra=params + extra)
