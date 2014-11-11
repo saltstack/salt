@@ -4,8 +4,10 @@ The service module for OpenBSD
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import logging
+from six.moves import map
 
 log = logging.getLogger(__name__)
 
@@ -24,7 +26,7 @@ def __virtual__():
     Only work on OpenBSD
     '''
     if __grains__['os'] == 'OpenBSD' and os.path.exists('/etc/rc.d/rc.subr'):
-        krel = map(int, __grains__['kernelrelease'].split('.'))
+        krel = list(list(map(int, __grains__['kernelrelease'].split('.'))))
         # The -f flag, used to force a script to run even if disabled,
         # was added after the 5.0 release.
         # the rcctl(8) command is the preferred way to manage services.
