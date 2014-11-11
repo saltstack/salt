@@ -61,10 +61,10 @@ verbose : True
 '''
 
 # Import python Libs
+from __future__ import absolute_import
 import json
 import os
 import urllib2
-from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils
