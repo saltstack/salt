@@ -163,7 +163,7 @@ def _walk(path, value, metrics, timestamp, skip):
     '''
 
     if isinstance(value, collections.Mapping):
-        for key, val in list(value.items()):
+        for key, val in value.items():
             _walk('{0}.{1}'.format(path, key), val, metrics, timestamp, skip)
     else:
         try:
