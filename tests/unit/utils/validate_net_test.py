@@ -45,7 +45,6 @@ class ValidateNetTestCase(TestCase):
         for addr in false_addrs:
             self.assertFalse(net.ipv4_addr(addr))
 
-
     def test_ipv6_addr(self):
         '''
         Test IPv6 address validation
