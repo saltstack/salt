@@ -55,6 +55,7 @@ Example output::
     ------------
     Total:     0
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import pprint
@@ -64,6 +65,7 @@ import sys
 import salt.utils
 import salt.output
 from salt._compat import string_types
+import six
 
 
 def output(data):
@@ -71,7 +73,7 @@ def output(data):
     The HighState Outputter is only meant to be used with the state.highstate
     function, or a function that returns highstate return data.
     '''
-    for host, hostdata in data.iteritems():
+    for host, hostdata in six.iteritems(data):
         return _format_host(host, hostdata)[0]
 
 
@@ -99,7 +101,7 @@ def _format_host(host, data):
         if not __opts__.get('state_verbose', False):
             data = _strip_clean(data)
         # Verify that the needed data is present
-        for tname, info in data.items():
+        for tname, info in list(data.items()):
             if '__run_num__' not in info:
                 err = (u'The State execution failed to record the order '
                        'in which all states were executed. The state '
@@ -200,7 +202,7 @@ def _format_host(host, data):
                     3, u'    {tcolor}    Name: {comps[2]}{colors[ENDC]}')
             # be sure that ret['comment'] is utf-8 friendly
             try:
-                if not isinstance(ret['comment'], unicode):
+                if not isinstance(ret['comment'], six.text_type):
                     ret['comment'] = ret['comment'].decode('utf-8')
             except UnicodeDecodeError:
                 # but try to continue on errors
@@ -241,8 +243,8 @@ def _format_host(host, data):
         # Append result counts to end of output
         colorfmt = u'{0}{1}{2[ENDC]}'
         rlabel = {True: u'Succeeded', False: u'Failed', None: u'Not Run'}
-        count_max_len = max([len(str(x)) for x in rcounts.itervalues()] or [0])
-        label_max_len = max([len(x) for x in rlabel.itervalues()] or [0])
+        count_max_len = max([len(str(x)) for x in six.itervalues(rcounts)] or [0])
+        label_max_len = max([len(x) for x in six.itervalues(rlabel)] or [0])
         line_max_len = label_max_len + count_max_len + 2  # +2 for ': '
         hstrs.append(
             colorfmt.format(
@@ -304,7 +306,7 @@ def _format_host(host, data):
         )
 
         totals = u'{0}\nTotal states run: {1:>{2}}'.format('-' * line_max_len,
-                                               sum(rcounts.itervalues()),
+                                               sum(six.itervalues(rcounts)),
                                                line_max_len - 7)
         hstrs.append(colorfmt.format(colors['CYAN'], totals, colors))
 
@@ -330,7 +332,7 @@ def _format_changes(changes):
     if ret is not None and changes.get('out') == 'highstate':
         ctext = u''
         changed = False
-        for host, hostdata in ret.iteritems():
+        for host, hostdata in six.iteritems(ret):
             s, c = _format_host(host, hostdata)
             ctext += u'\n' + u'\n'.join((u' ' * 14 + l) for l in s.splitlines())
             changed = changed or c
