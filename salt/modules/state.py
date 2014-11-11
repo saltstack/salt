@@ -48,7 +48,7 @@ def _filter_running(runnings):
     '''
     Filter out the result: True + no changes data
     '''
-    ret = dict((tag, value) for tag, value in list(runnings.items())
+    ret = dict((tag, value) for tag, value in runnings.items()
                if not value['result'] or value['changes'])
     return ret
 
