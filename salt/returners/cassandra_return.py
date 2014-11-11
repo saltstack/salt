@@ -66,7 +66,7 @@ def returner(ret):
     columns = {'fun': ret['fun'],
                'id': ret['id']}
     if isinstance(ret['return'], dict):
-        for key, value in list(ret['return'].items()):
+        for key, value in ret['return'].items():
             columns['return.{0}'.format(key)] = str(value)
     else:
         columns['return'] = str(ret['return'])
