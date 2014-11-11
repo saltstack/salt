@@ -7,6 +7,7 @@ This module allows you to acquire and release a slot. This is primarily useful
 for ensureing that no more than N hosts take a specific action at once. This can
 also be used to coordinate between masters.
 '''
+from __future__ import absolute_import
 
 import logging
 
