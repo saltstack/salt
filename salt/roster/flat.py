@@ -2,6 +2,7 @@
 '''
 Read in the roster from a flat file using the renderer system
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import fnmatch
