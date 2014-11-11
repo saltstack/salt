@@ -9,6 +9,7 @@ will always be executed first, so that any grains loaded here in the core
 module can be overwritten just by returning dict keys with the same value
 as those returned here
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -22,6 +23,7 @@ import locale
 # Extend the default list of supported distros. This will be used for the
 # /etc/DISTRO-release checking that is part of platform.linux_distribution()
 from platform import _supported_dists
+import six
 _supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
                      'slamd64', 'ovs', 'system', 'mint', 'oracle')
 
@@ -293,7 +295,7 @@ def _bsd_cpudata(osdata):
         cmds['cpu_model'] = '{0} -n machdep.cpu.brand_string'.format(sysctl)
         cmds['cpu_flags'] = '{0} -n machdep.cpu.features'.format(sysctl)
 
-    grains = dict([(k, __salt__['cmd.run'](v)) for k, v in cmds.items()])
+    grains = dict([(k, __salt__['cmd.run'](v)) for k, v in list(cmds.items())])
 
     if 'cpu_flags' in grains and isinstance(grains['cpu_flags'], string_types):
         grains['cpu_flags'] = grains['cpu_flags'].split(' ')
@@ -401,8 +403,7 @@ def _memdata(osdata):
             wmi_c = wmi.WMI()
             # this is a list of each stick of ram in a system
             # WMI returns it as the string value of the number of bytes
-            tot_bytes = sum(map(lambda x: int(x.Capacity),
-                                wmi_c.Win32_PhysicalMemory()), 0)
+            tot_bytes = sum([int(x.Capacity) for x in wmi_c.Win32_PhysicalMemory()], 0)
             # return memory info in gigabytes
             grains['mem_total'] = int(tot_bytes / (1024 ** 2))
     return grains
@@ -950,7 +951,7 @@ def os_data():
         try:
             import lsb_release
             release = lsb_release.get_distro_information()
-            for key, value in release.iteritems():
+            for key, value in six.iteritems(release):
                 key = key.lower()
                 lsb_param = 'lsb_{0}{1}'.format(
                     '' if key.startswith('distrib_') else 'distrib_',
@@ -1585,7 +1586,7 @@ def _hw_data(osdata):
                 'productname': 'smbios.system.product',
                 'biosreleasedate': 'smbios.bios.reldate',
             }
-            for key, val in fbsd_hwdata.items():
+            for key, val in list(fbsd_hwdata.items()):
                 grains[key] = __salt__['cmd.run']('{0} {1}'.format(kenv, val))
     elif osdata['kernel'] == 'OpenBSD':
         sysctl = salt.utils.which('sysctl')
@@ -1593,7 +1594,7 @@ def _hw_data(osdata):
                   'manufacturer': 'hw.vendor',
                   'productname': 'hw.product',
                   'serialnumber': 'hw.serialno'}
-        for key, oid in hwdata.items():
+        for key, oid in list(hwdata.items()):
             value = __salt__['cmd.run']('{0} -n {1}'.format(sysctl, oid))
             if not value.endswith(' value is not available'):
                 grains[key] = value
@@ -1606,7 +1607,7 @@ def _hw_data(osdata):
             'productname': 'machdep.dmi.system-product',
             'biosreleasedate': 'machdep.dmi.bios-date',
         }
-        for key, oid in nbsd_hwdata.items():
+        for key, oid in list(nbsd_hwdata.items()):
             result = __salt__['cmd.run_all']('{0} -n {1}'.format(sysctl, oid))
             if result['retcode'] == 0:
                 grains[key] = result['stdout']
