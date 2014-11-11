@@ -20,13 +20,14 @@ The data structure needs to be:
 #
 # Import python libs
 from __future__ import print_function
+from __future__ import absolute_import
 import os
 import time
 import copy
 import logging
 import errno
 from datetime import datetime
-from salt._compat import string_types
+from six import string_types
 
 # Import salt libs
 import salt.config
@@ -42,6 +43,7 @@ import salt.syspaths as syspaths
 from salt.exceptions import (
     EauthAuthenticationError, SaltInvocationError, SaltReqTimeoutError
 )
+import six
 
 # Import third party libs
 try:
@@ -1070,7 +1072,7 @@ class LocalClient(object):
             if event_ret == {}:
                 time.sleep(0.02)
                 continue
-            for minion, m_data in event_ret.iteritems():
+            for minion, m_data in six.iteritems(event_ret):
                 if minion in ret:
                     ret[minion].update(m_data)
                 else:
@@ -1212,7 +1214,7 @@ class LocalClient(object):
                                          expect_minions=(verbose or show_timeout)
                                          ):
             # replace the return structure for missing minions
-            for id_, min_ret in ret.iteritems():
+            for id_, min_ret in six.iteritems(ret):
                 if min_ret.get('failed') is True:
                     if connected_minions is None:
                         connected_minions = salt.utils.minions.CkMinions(self.opts).connected_ids()

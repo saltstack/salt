@@ -2,6 +2,7 @@
 '''
 Classes that manage file clients
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import contextlib

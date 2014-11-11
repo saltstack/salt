@@ -2,6 +2,7 @@
 '''
 Return cached data from minions
 '''
+from __future__ import absolute_import
 # Import python libs
 import logging
 
@@ -9,7 +10,7 @@ import logging
 import salt.log
 import salt.utils.master
 import salt.payload
-from salt._compat import string_types
+from six import string_types
 
 log = logging.getLogger(__name__)
 

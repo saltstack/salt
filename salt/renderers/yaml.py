@@ -15,7 +15,8 @@ from yaml.constructor import ConstructorError
 from salt.utils.yamlloader import SaltYamlSafeLoader, load
 from salt.utils.odict import OrderedDict
 from salt.exceptions import SaltRenderError
-from salt._compat import string_types
+from six import string_types
+from six.moves import range
 
 log = logging.getLogger(__name__)
 
@@ -86,10 +87,10 @@ def _yaml_result_unicode_to_utf8(data):
             elif isinstance(elt, OrderedDict):
                 data[key] = _yaml_result_unicode_to_utf8(elt)
             elif isinstance(elt, list):
-                for i in xrange(len(elt)):
+                for i in range(len(elt)):
                     elt[i] = _yaml_result_unicode_to_utf8(elt[i])
     elif isinstance(data, list):
-        for i in xrange(len(data)):
+        for i in range(len(data)):
             data[i] = _yaml_result_unicode_to_utf8(data[i])
     elif isinstance(data, unicode):
         # here also

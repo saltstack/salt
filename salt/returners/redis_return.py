@@ -28,6 +28,7 @@ the default location::
 
     salt '*' test.ping --return redis --return_config alternative
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import json
