@@ -872,8 +872,8 @@ def installed(
 
     # Remove any targets not returned by _find_install_targets
     if pkgs:
-        pkgs = [dict([(x, y)]) for x, y in list(targets.items())]
-        pkgs.extend([dict([(x, y)]) for x, y in list(to_reinstall.items())])
+        pkgs = [dict([(x, y)]) for x, y in targets.items()]
+        pkgs.extend([dict([(x, y)]) for x, y in to_reinstall.items()])
     elif sources:
         oldsources = sources
         sources = [x for x in oldsources if next(iter(list(x.keys()))) in targets]
