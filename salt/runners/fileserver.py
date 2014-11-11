@@ -84,7 +84,7 @@ def symlink_list(saltenv='base', outputter='nested'):
     fileserver = salt.fileserver.Fileserver(__opts__)
     load = {'saltenv': saltenv}
     output = fileserver.symlink_list(load=load)
-    
+
     if outputter:
         return {'outputter': outputter, 'data': output}
     else:
