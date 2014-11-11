@@ -2,11 +2,14 @@
 '''
 This runner is used only for test purposes and servers no production purpose
 '''
+from __future__ import absolute_import
 # Import python libs
 import time
 
 # Import salt requirements
 import salt.utils.event
+import six
+from six.moves import range
 
 def arg(*args, **kwargs):
     '''
@@ -14,7 +17,7 @@ def arg(*args, **kwargs):
 
     Kwargs will be filtered for 'private' keynames.
     '''
-    kwargs = dict((k, v) for k, v in kwargs.iteritems()
+    kwargs = dict((k, v) for k, v in six.iteritems(kwargs)
             if not k.startswith('__'))
 
     ret = {
