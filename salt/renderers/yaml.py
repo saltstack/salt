@@ -15,6 +15,7 @@ from yaml.constructor import ConstructorError
 from salt.utils.yamlloader import SaltYamlSafeLoader, load
 from salt.utils.odict import OrderedDict
 from salt.exceptions import SaltRenderError
+import six
 from six import string_types
 from six.moves import range
 
@@ -80,8 +81,8 @@ def _yaml_result_unicode_to_utf8(data):
     This is a recursive function
     '''
     if isinstance(data, OrderedDict):
-        for key, elt in data.iteritems():
-            if isinstance(elt, unicode):
+        for key, elt in six.iteritems(data):
+            if isinstance(elt, six.text_type):
                 # Here be dragons
                 data[key] = elt.encode('utf-8')
             elif isinstance(elt, OrderedDict):
@@ -92,7 +93,7 @@ def _yaml_result_unicode_to_utf8(data):
     elif isinstance(data, list):
         for i in range(len(data)):
             data[i] = _yaml_result_unicode_to_utf8(data[i])
-    elif isinstance(data, unicode):
+    elif isinstance(data, six.text_type):
         # here also
         data = data.encode('utf-8')
     return data
