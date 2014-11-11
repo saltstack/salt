@@ -12,6 +12,7 @@ Support for YUM
     .. _yum-utils: http://yum.baseurl.org/wiki/YumUtils
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import copy
@@ -26,6 +27,8 @@ from salt._compat import string_types
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
+import six
+from six.moves import range
 
 log = logging.getLogger(__name__)
 
@@ -480,7 +483,7 @@ def list_repo_pkgs(*args, **kwargs):
     except AttributeError:
         # Search in all enabled repos
         repos = tuple(
-            x for x, y in list_repos().iteritems()
+            x for x, y in six.iteritems(list_repos())
             if str(y.get('enabled', '1')) == '1'
         )
 
@@ -893,7 +896,7 @@ def install(name=None,
     downgrade = []
     to_reinstall = {}
     if pkg_type == 'repository':
-        pkg_params_items = pkg_params.iteritems()
+        pkg_params_items = six.iteritems(pkg_params)
     else:
         pkg_params_items = []
         for pkg_source in pkg_params:
@@ -965,7 +968,7 @@ def install(name=None,
             exclude=exclude_arg,
             branch=branch_arg,
             gpgcheck='--nogpgcheck' if skip_verify else '',
-            pkg=' '.join(to_reinstall.itervalues()),
+            pkg=' '.join(six.itervalues(to_reinstall)),
         )
         __salt__['cmd.run'](cmd, output_loglevel='trace')
 
@@ -1378,7 +1381,7 @@ def group_list():
     cmd = 'yum grouplist'
     out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace').splitlines()
     key = None
-    for idx in xrange(len(out)):
+    for idx in range(len(out)):
         if out[idx] == 'Installed Groups:':
             key = 'installed'
             continue
@@ -1505,7 +1508,7 @@ def list_repos(basedir='/etc/yum.repos.d'):
         if not repofile.endswith('.repo'):
             continue
         filerepos = _parse_repo_file(repopath)[1]
-        for reponame in filerepos.keys():
+        for reponame in list(filerepos.keys()):
             repo = filerepos[reponame]
             repo['file'] = repopath
             repos[reponame] = repo
@@ -1527,7 +1530,7 @@ def get_repo(repo, basedir='/etc/yum.repos.d', **kwargs):  # pylint: disable=W06
 
     # Find out what file the repo lives in
     repofile = ''
-    for arepo in repos.keys():
+    for arepo in list(repos.keys()):
         if arepo == repo:
             repofile = repos[arepo]['file']
 
@@ -1566,7 +1569,7 @@ def del_repo(repo, basedir='/etc/yum.repos.d', **kwargs):  # pylint: disable=W06
 
     # See if the repo is the only one in the file
     onlyrepo = True
-    for arepo in repos.keys():
+    for arepo in list(repos.keys()):
         if arepo == repo:
             continue
         if repos[arepo]['file'] == repofile:
@@ -1581,7 +1584,7 @@ def del_repo(repo, basedir='/etc/yum.repos.d', **kwargs):  # pylint: disable=W06
     # There must be other repos in this file, write the file with them
     header, filerepos = _parse_repo_file(repofile)
     content = header
-    for stanza in filerepos.keys():
+    for stanza in list(filerepos.keys()):
         if stanza == repo:
             continue
         comments = ''
@@ -1689,32 +1692,32 @@ def mod_repo(repo, basedir=None, **kwargs):
     # Error out if they tried to delete baseurl or mirrorlist improperly
     if 'baseurl' in todelete:
         if 'mirrorlist' not in repo_opts and 'mirrorlist' \
-                not in filerepos[repo].keys():
+                not in list(filerepos[repo].keys()):
             raise SaltInvocationError(
                 'Cannot delete baseurl without specifying mirrorlist'
             )
     if 'mirrorlist' in todelete:
         if 'baseurl' not in repo_opts and 'baseurl' \
-                not in filerepos[repo].keys():
+                not in list(filerepos[repo].keys()):
             raise SaltInvocationError(
                 'Cannot delete mirrorlist without specifying baseurl'
             )
 
     # Delete anything in the todelete list
     for key in todelete:
-        if key in filerepos[repo].keys():
+        if key in list(filerepos[repo].keys()):
             del filerepos[repo][key]
 
     # Old file or new, write out the repos(s)
     filerepos[repo].update(repo_opts)
     content = header
-    for stanza in filerepos.keys():
+    for stanza in list(filerepos.keys()):
         comments = ''
-        if 'comments' in filerepos[stanza].keys():
+        if 'comments' in list(filerepos[stanza].keys()):
             comments = '\n'.join(filerepos[stanza]['comments'])
             del filerepos[stanza]['comments']
         content += '\n[{0}]'.format(stanza)
-        for line in filerepos[stanza].keys():
+        for line in list(filerepos[stanza].keys()):
             content += '\n{0}={1}'.format(line, filerepos[stanza][line])
         content += '\n{0}\n'.format(comments)
 
@@ -1843,5 +1846,5 @@ def owner(*paths):
         if 'not owned' in ret[path].lower():
             ret[path] = ''
     if len(ret) == 1:
-        return ret.itervalues().next()
+        return next(ret.itervalues())
     return ret
