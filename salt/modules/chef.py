@@ -2,6 +2,7 @@
 '''
 Execute chef in server or solo mode
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import logging
