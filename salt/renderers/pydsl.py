@@ -335,6 +335,7 @@ For example:
         my_mod = sys.modules['salt.loaded.ext.module.my_mod']
 
 '''
+from __future__ import absolute_import
 
 import imp
 import salt._compat
