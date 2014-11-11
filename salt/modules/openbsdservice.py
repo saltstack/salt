@@ -239,7 +239,7 @@ def get_enabled():
         salt '*' service.get_enabled
     '''
     services = []
-    for daemon, is_enabled in list(_get_rc().items()):
+    for daemon, is_enabled in _get_rc().items():
         if is_enabled:
             services.append(daemon)
     return sorted(set(get_all()) & set(services))
@@ -273,7 +273,7 @@ def get_disabled():
         salt '*' service.get_disabled
     '''
     services = []
-    for daemon, is_enabled in list(_get_rc().items()):
+    for daemon, is_enabled in _get_rc().items():
         if not is_enabled:
             services.append(daemon)
     return sorted(set(get_all()) & set(services))
