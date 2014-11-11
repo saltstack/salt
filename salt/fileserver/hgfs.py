@@ -26,6 +26,7 @@ will set the desired branch method. Possible values are: ``branches``,
 :depends:   - mercurial
             - python bindings for mercurial (``python-hglib``)
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import copy
