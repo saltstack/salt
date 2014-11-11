@@ -532,7 +532,7 @@ class Fileserver(object):
         prefix = load.get('prefix', '').strip('/')
         if prefix != '':
             ret = dict([
-                (x, y) for x, y in list(ret.items()) if x.startswith(prefix)
+                (x, y) for x, y in ret.items() if x.startswith(prefix)
             ])
         return ret
 
