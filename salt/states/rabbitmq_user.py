@@ -101,7 +101,7 @@ def present(name,
                 )
                 changes['new'] += 'Set tags: {0}\n'.format(tags)
             for element in perms:
-                for vhost, perm in list(element.items()):
+                for vhost, perm in element.items():
                     result.update(__salt__['rabbitmq.set_permissions'](
                         vhost, name, perm[0], perm[1], perm[2], runas)
                     )
