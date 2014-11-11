@@ -24,6 +24,7 @@ import socket
 import logging
 import logging.handlers
 import traceback
+import six
 
 # Let's define these custom logging levels before importing the salt.log.mixins
 # since they will be used there
@@ -50,7 +51,7 @@ LOG_LEVELS = {
 
 # Make a list of log level names sorted by log level
 SORTED_LEVEL_NAMES = [
-    l[0] for l in sorted(LOG_LEVELS.items(), key=lambda x: x[1])
+    l[0] for l in sorted(list(LOG_LEVELS.items()), key=lambda x: x[1])
 ]
 
 # Store an instance of the current logging logger class
@@ -94,9 +95,7 @@ LOGGING_TEMP_HANDLER = StreamHandler(sys.stderr)
 LOGGING_STORE_HANDLER = TemporaryLoggingHandler()
 
 
-class SaltLoggingClass(LOGGING_LOGGER_CLASS, NewStyleClassMixIn):
-    __metaclass__ = LoggingMixInMeta
-
+class SaltLoggingClass(six.with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS, NewStyleClassMixIn)):
     def __new__(cls, *args):  # pylint: disable=W0613
         '''
         We override `__new__` in our logging logger class in order to provide
@@ -562,7 +561,7 @@ def setup_extended_logging(opts):
     # log records with them
     additional_handlers = []
 
-    for name, get_handlers_func in providers.items():
+    for name, get_handlers_func in list(providers.items()):
         logging.getLogger(__name__).info(
             'Processing `log_handlers.{0}`'.format(name)
         )
