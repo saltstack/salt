@@ -6,6 +6,7 @@ See http://code.google.com/p/psutil.
 :depends:   - psutil Python module, version 0.3.0 or later
             - python-utmp package (optional)
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import time
@@ -119,7 +120,7 @@ def top(num_processes=5, interval=3):
         start_usage[process] = user + system
     time.sleep(interval)
     usage = set()
-    for process, start in start_usage.items():
+    for process, start in list(start_usage.items()):
         try:
             user, system = process.get_cpu_times()
         except psutil.NoSuchProcess:
@@ -143,9 +144,9 @@ def top(num_processes=5, interval=3):
                 'cpu': {},
                 'mem': {},
         }
-        for key, value in process.get_cpu_times()._asdict().items():
+        for key, value in list(process.get_cpu_times()._asdict().items()):
             info['cpu'][key] = value
-        for key, value in process.get_memory_info()._asdict().items():
+        for key, value in list(process.get_memory_info()._asdict().items()):
             info['mem'][key] = value
         result.append(info)
 
