@@ -509,7 +509,7 @@ def file_list(package):
     '''
     ret = file_dict(package)
     files = []
-    for pkg_files in ret['files'].values():
+    for pkg_files in list(ret['files'].values()):
         files.extend(pkg_files)
     ret['files'] = files
     return ret
