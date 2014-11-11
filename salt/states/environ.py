@@ -101,7 +101,7 @@ def setenv(name,
 
     current_environ = dict(os.environ)
     already_set = []
-    for key, val in list(environ.items()):
+    for key, val in environ.items():
         if val is False:
             # We unset this key from the environment if
             # false_unsets is True. Otherwise we want to set
