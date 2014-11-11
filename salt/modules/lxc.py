@@ -1431,7 +1431,7 @@ def create(name,
 
 
 def clone(name,
-          orig,
+          clone_from=None,
           profile=None,
           **kwargs):
     '''
@@ -1441,7 +1441,22 @@ def clone(name,
         Name of the container
 
     orig
-        Name of the cloned original container
+        .. deprecated:: 2014.7.1
+            Use ``clone_from`` instead
+
+    clone_from
+        Name of the cloned clone_frominal container
+
+        .. versionadded:: 2014.7.1
+
+    profile
+        Profile to use in container cloning (see
+        :mod:`lxc.get_container_profile
+        <salt.modules.lxc.get_container_profile>`). Values in a profile will be
+        overridden by the **Container Creation Arguments** listed below.
+
+    **Container Cloning Arguments**
+
     snapshot
         Use Copy On Write snapshots (LVM)
 
@@ -1452,37 +1467,35 @@ def clone(name,
         The type of storage to use. Set to ``lvm`` to use an LVM group.
         Defaults to filesystem within /var/lib/lxc.
 
-    profile
-        Profile to use in container creation (see :mod:`lxc.get_profile
-        <salt.modules.lxc.get_profile>`). Values in a profile will be
-        overridden by the following parameters:
-
-        * snapshot
-        * size
-        * vgname
-
-        A profile can be passed either as the name of the profile, or a
-        dictionary of variable names and values. See the :ref:`LXC Tutorial
-        <tutorial-lxc-profiles>` for more information on how to use LXC
-        profiles.
-
 
     CLI Examples:
 
     .. code-block:: bash
 
-        salt '*' lxc.clone myclone orig=orig_container
-        salt '*' lxc.clone myclone orig=orig_container snapshot=True
+        salt '*' lxc.clone myclone clone_from=orig_container
+        salt '*' lxc.clone myclone clone_from=orig_container snapshot=True
     '''
+    if 'orig' in kwargs:
+        salt.utils.warn_until(
+            'Boron',
+            'The \'orig\' argument to \'lxc.clone\' has been deprecated, '
+            'please use \'clone_from\' instead.'
+        )
+        clone_from = kwargs['orig']
+
     if exists(name):
         raise CommandExecutionError(
             'Container \'{0}\' already exists'.format(name)
         )
+    elif clone_from is None:
+        raise SaltInvocationError(
+            '\'clone_from\' argument is required'.format(name)
+        )
 
-    _ensure_exists(orig)
-    if state(orig) != 'stopped':
+    _ensure_exists(clone_from)
+    if state(clone_from) != 'stopped':
         raise CommandExecutionError(
-            'Container \'{0}\' must be stopped to be cloned'.format(orig)
+            'Container \'{0}\' must be stopped to be cloned'.format(clone_from)
         )
 
     profile = get_container_profile(copy.deepcopy(profile))
@@ -1497,6 +1510,7 @@ def clone(name,
         return kw_overrides_match
 
     backing = select('backing')
+    snapshot = select('snapshot')
     if backing in ('dir',):
         snapshot = False
     if not snapshot:
@@ -1508,7 +1522,7 @@ def clone(name,
     if backing in ('dir', 'overlayfs', 'btrfs'):
         size = None
 
-    cmd = 'lxc-clone {0} -o {1} -n {2}'.format(snapshot, orig, name)
+    cmd = 'lxc-clone {0} -o {1} -n {2}'.format(snapshot, clone_from, name)
     if backing:
         backing = backing.lower()
         cmd += ' -B {0}'.format(backing)
