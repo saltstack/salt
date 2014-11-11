@@ -8,6 +8,8 @@ Wrapper around Server Density API
 import requests
 import json
 import logging
+from __future__ import absolute_import
+from six.moves import map
 
 from salt.exceptions import CommandExecutionError
 
@@ -43,7 +45,7 @@ def _clean_salt_variables(params, variable_prefix="__"):
     '''
     Pops out variables from params which starts with `variable_prefix`.
     '''
-    map(params.pop, [k for k in params if k.startswith(variable_prefix)])
+    list(list(map(params.pop, [k for k in params if k.startswith(variable_prefix)])))
     return params
 
 
