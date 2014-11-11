@@ -245,7 +245,7 @@ def _get_repo_info(alias, repos_cfg=None):
     try:
         meta = dict((repos_cfg or _get_configured_repos()).items(alias))
         meta['alias'] = alias
-        for k, v in list(meta.items()):
+        for k, v in meta.items():
             if v in ['0', '1']:
                 meta[k] = int(meta[k]) == 1
             elif v == 'NONE':
@@ -1070,7 +1070,7 @@ def list_products():
             'description']
 
     ret = {}
-    for prod_meta, is_base_product in list(products.items()):
+    for prod_meta, is_base_product in products.items():
         product = _parse_suse_product(prod_meta, *info)
         product['baseproduct'] = is_base_product is not None
         ret[product.pop('name')] = product
