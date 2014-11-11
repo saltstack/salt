@@ -3,11 +3,11 @@
 Provide the service module for systemd
 '''
 # Import python libs
+from __future__ import absolute_import
 import logging
 import os
 import re
 import six
-from __future__ import absolute_import
 
 log = logging.getLogger(__name__)
 
