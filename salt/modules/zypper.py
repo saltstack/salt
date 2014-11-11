@@ -4,13 +4,15 @@ Package support for openSUSE via the zypper package manager
 
 :depends: - ``zypp`` Python module.  Install with ``zypper install python-zypp``
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import copy
 import logging
 import re
 import os
-import ConfigParser
+import six
+import six.moves.configparser
 import urlparse
 from xml.dom import minidom as dom
 
@@ -230,7 +232,7 @@ def _get_configured_repos():
     Get all the info about repositories from the configurations.
     '''
 
-    repos_cfg = ConfigParser.ConfigParser()
+    repos_cfg = six.moves.configparser.ConfigParser()
     repos_cfg.read([REPOS + "/" + fname for fname in os.listdir(REPOS)])
 
     return repos_cfg
@@ -563,7 +565,7 @@ def install(name=None,
     if pkg_type == 'repository':
         targets = []
         problems = []
-        for param, version_num in pkg_params.iteritems():
+        for param, version_num in six.iteritems(pkg_params):
             if version_num is None:
                 targets.append(param)
             else:
@@ -773,13 +775,11 @@ def list_locks():
         return False
 
     locks = {}
-    for meta in map(lambda item: item.split("\n"),
-                    open(LOCKS).read().split("\n\n")):
+    for meta in [item.split("\n") for item in open(LOCKS).read().split("\n\n")]:
         lock = {}
         for element in [el for el in meta if el]:
             if ":" in element:
-                lock.update(dict([tuple(map(lambda i: i.strip(),
-                                            element.split(":", 1))), ]))
+                lock.update(dict([tuple([i.strip() for i in element.split(":", 1)]), ]))
         if lock.get('solvable_name'):
             locks[lock.pop('solvable_name')] = lock
 
@@ -821,7 +821,7 @@ def remove_lock(name=None, pkgs=None, **kwargs):
     locks = list_locks()
     packages = []
     try:
-        packages = __salt__['pkg_resource.parse_targets'](name, pkgs)[0].keys()
+        packages = list(__salt__['pkg_resource.parse_targets'](name, pkgs)[0].keys())
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
@@ -856,7 +856,7 @@ def add_lock(name=None, pkgs=None, **kwargs):
     packages = []
     added = []
     try:
-        packages = __salt__['pkg_resource.parse_targets'](name, pkgs)[0].keys()
+        packages = list(__salt__['pkg_resource.parse_targets'](name, pkgs)[0].keys())
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
