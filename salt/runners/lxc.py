@@ -7,6 +7,7 @@ Control Linux Containers via Salt
 
 # Import python libs
 from __future__ import print_function
+from __future__ import absolute_import
 import time
 import os
 import copy
@@ -18,6 +19,7 @@ import salt.client
 import salt.utils.virt
 import salt.utils.cloud
 import salt.key
+import six
 
 
 log = logging.getLogger(__name__)
@@ -60,7 +62,7 @@ def _do_names(names, fun):
 
     client = salt.client.get_local_client(__opts__['conf_file'])
     cmds = []
-    for host, sub_names in hosts.items():
+    for host, sub_names in list(hosts.items()):
         for name in sub_names:
             cmds.append(client.cmd_iter(
                     host,
@@ -86,7 +88,7 @@ def find_guest(name, quiet=False):
     if quiet:
         log.warn('\'quiet\' argument is being deprecated. Please migrate to --quiet')
     for data in _list_iter():
-        host, l = data.items()[0]
+        host, l = list(data.items())[0]
         for x in 'running', 'frozen', 'stopped':
             if name in l[x]:
                 if not quiet:
@@ -102,7 +104,7 @@ def find_guests(names):
     ret = {}
     names = names.split(',')
     for data in _list_iter():
-        host, stat = data.items()[0]
+        host, stat = list(data.items())[0]
         for state in stat:
             for name in stat[state]:
                 if name in names:
@@ -187,7 +189,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
         ret['comment'] = 'A host must be provided'
         ret['result'] = False
         return ret
-    if isinstance(names, basestring):
+    if isinstance(names, six.string_types):
         names = names.split(',')
     if not isinstance(names, list):
         ret['comment'] = 'Container names are not formed as a list'
@@ -195,9 +197,9 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
         return ret
     log.info('Searching for LXC Hosts')
     data = __salt__['lxc.list'](host, quiet=True)
-    for host, containers in data.items():
+    for host, containers in list(list(data.items())):
         for name in names:
-            if name in sum(containers.values(), []):
+            if name in sum(list(list(containers.values())), []):
                 log.info('Container \'{0}\' already exists'
                          ' on host \'{1}\','
                          ' init can be a NO-OP'.format(
@@ -209,7 +211,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
 
     client = salt.client.get_local_client(__opts__['conf_file'])
 
-    kw = dict((k, v) for k, v in kwargs.items() if not k.startswith('__'))
+    kw = dict((k, v) for k, v in list(list(kwargs.items())) if not k.startswith('__'))
     pub_key = kw.get('pub_key', None)
     priv_key = kw.get('priv_key', None)
     explicit_auth = pub_key and priv_key
@@ -365,7 +367,7 @@ def _list_iter(host=None):
         if not isinstance(container_info, dict):
             continue
         chunk = {}
-        id_ = container_info.iterkeys().next()
+        id_ = next(container_info.iterkeys())
         if host and host != id_:
             continue
         if not isinstance(container_info[id_], dict):
