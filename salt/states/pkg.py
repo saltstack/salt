@@ -149,7 +149,7 @@ def _find_remove_targets(name=None,
     # Check current versions against specified versions
     targets = []
     problems = []
-    for pkgname, pkgver in to_remove.items():
+    for pkgname, pkgver in list(to_remove.items()):
         cver = cur_pkgs.get(pkgname, [])
         # Package not installed, no need to remove
         if not cver:
@@ -311,7 +311,7 @@ def _find_install_targets(name=None,
                     '{0}'.format(', '.join(sorted(problems['no_suggest'])))
                 )
             if problems.get('suggest'):
-                for pkgname, suggestions in problems['suggest'].items():
+                for pkgname, suggestions in list(problems['suggest'].items()):
                     comments.append(
                         'Package {0!r} not found (possible matches: {1})'
                         .format(pkgname, ', '.join(suggestions))
@@ -328,7 +328,7 @@ def _find_install_targets(name=None,
         targets = {}
         to_reinstall = {}
         problems = []
-        for pkgname, pkgver in desired.items():
+        for pkgname, pkgver in list(desired.items()):
             cver = cur_pkgs.get(pkgname, [])
             # Package not yet installed, so add to targets
             if not cver:
@@ -399,7 +399,7 @@ def _verify_install(desired, new_pkgs):
     '''
     ok = []
     failed = []
-    for pkgname, pkgver in desired.items():
+    for pkgname, pkgver in list(desired.items()):
         cver = new_pkgs.get(pkgname)
         if not cver:
             failed.append(pkgname)
@@ -872,12 +872,12 @@ def installed(
 
     # Remove any targets not returned by _find_install_targets
     if pkgs:
-        pkgs = [dict([(x, y)]) for x, y in targets.items()]
-        pkgs.extend([dict([(x, y)]) for x, y in to_reinstall.items()])
+        pkgs = [dict([(x, y)]) for x, y in list(targets.items())]
+        pkgs.extend([dict([(x, y)]) for x, y in list(to_reinstall.items())])
     elif sources:
         oldsources = sources
-        sources = [x for x in oldsources if next(iter(x.keys())) in targets]
-        sources.extend([x for x in oldsources if next(iter(x.keys())) in to_reinstall])
+        sources = [x for x in oldsources if next(iter(list(x.keys()))) in targets]
+        sources.extend([x for x in oldsources if next(iter(list(x.keys()))) in to_reinstall])
 
     comment = []
     if __opts__['test']:
@@ -1343,7 +1343,7 @@ def latest(
                            .format(', '.join(sorted(targets))))
             else:
                 comment = 'Package {0} failed to ' \
-                          'update.'.format(next(iter(targets.keys())))
+                          'update.'.format(next(iter(list(targets.keys()))))
             if up_to_date:
                 if len(up_to_date) <= 10:
                     comment += ' The following packages were already ' \
