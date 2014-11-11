@@ -347,7 +347,7 @@ def key_value_to_tree(data):
     Convert key/value to tree
     '''
     tree = {}
-    for flatkey, value in data.items():
+    for flatkey, value in list(data.items()):
         t = tree
         keys = flatkey.split(__opts__['pepa_delimiter'])
         for key in keys:
@@ -381,7 +381,7 @@ def ext_pillar(minion_id, pillar, resource, sequence, subkey=False, subkey_only=
     output['pepa_templates'] = []
     immutable = {}
 
-    for categ, info in [s.items()[0] for s in sequence]:
+    for categ, info in [list(s.items())[0] for s in sequence]:
         if categ not in inp:
             log.warn("Category is not defined: {0}".format(categ))
             continue
@@ -519,7 +519,7 @@ def validate(output, resource):
 
     val = cerberus.Validator()
     if not val.validate(output['pepa_keys'], all_schemas):
-        for ekey, error in val.errors.items():
+        for ekey, error in list(val.errors.items()):
             log.warning('Validation failed for key {0}: {1}'.format(ekey, error))
 
     output['pepa_schema_keys'] = all_schemas
@@ -537,7 +537,7 @@ if __name__ == '__main__':
     __opts__.update(yaml.load(open(args.config).read()))
 
     loc = 0
-    for name in [next(iter(e.keys())) for e in __opts__['ext_pillar']]:
+    for name in [next(iter(list(e.keys()))) for e in __opts__['ext_pillar']]:
         if name == 'pepa':
             break
         loc += 1
