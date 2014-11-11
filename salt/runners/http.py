@@ -3,6 +3,7 @@
 Module for making various web calls. Primarily designed for webhooks and the
 like, but also useful for basic http testing.
 '''
+from __future__ import absolute_import
 # Import Python libs
 import logging
 
