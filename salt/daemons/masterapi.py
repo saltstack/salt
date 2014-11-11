@@ -735,7 +735,7 @@ class RemoteFuncs(object):
             self.mminion.returners[fstr](load['jid'], load['load'])
 
         # Format individual return loads
-        for key, item in list(load['return'].items()):
+        for key, item in load['return'].items():
             ret = {'jid': load['jid'],
                    'id': key,
                    'return': item}
@@ -923,7 +923,7 @@ class RemoteFuncs(object):
                 ret[minion['id']] = minion['return']
                 if 'jid' in minion:
                     ret['__jid__'] = minion['jid']
-        for key, val in list(self.local.get_cache_returns(ret['__jid__']).items()):
+        for key, val in self.local.get_cache_returns(ret['__jid__']).items():
             if key not in ret:
                 ret[key] = val
         if load.get('form', '') != 'full':
