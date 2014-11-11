@@ -3,19 +3,19 @@
 Module for returning various status data about a minion.
 These data can be useful for compiling into stats later.
 '''
-from __future__ import absolute_import
 
 # Import python libs
 import os
 import re
 import fnmatch
+from __future__ import absolute_import
+from six.moves import range
 
 # Import salt libs
 import salt.utils
 from salt.utils.network import remote_port_tcp as _remote_port_tcp
 import salt.utils.event
 import salt.config
-from six.moves import range
 
 
 __opts__ = {}
@@ -105,7 +105,7 @@ def custom():
     '''
     ret = {}
     conf = __salt__['config.dot_vals']('status')
-    for key, val in list(conf.items()):
+    for key, val in conf.items():
         func = '{0}()'.format(key.split('.')[1])
         vals = eval(func)  # pylint: disable=W0123
 
