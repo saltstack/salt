@@ -115,8 +115,8 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
                                'mutable': False,
                                'uid': None,
                                'role': 'master',
-                               'sigkey': None,
-                               'prikey': None}},
+                               'sighex': None,
+                               'prihex': None}},
             }
 
     def postinitio(self):
@@ -146,15 +146,16 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
             raise ValueError(emsg)
 
         name = "{0}_{1}".format(role, kind)
-        sigkey = self.local.data.sigkey
-        prikey = self.local.data.prikey
         main = self.opts.value.get('raet_main', self.local.data.main)
         mutable = self.opts.value.get('raet_mutable', self.local.data.mutable)
         always = self.opts.value.get('open_mode', False)
         mutable = mutable or always  # open_made when True takes precedence
         uid = self.local.data.uid
 
-        ha = (self.opts.value['interface'], self.opts.value['raet_port'])
+        if kind == kinds.APPL_KIND_NAMES[kinds.applKinds.caller]:
+            ha = (self.opts.value['interface'], self.opts.value['raet_alt_port'])
+        else:
+            ha = (self.opts.value['interface'], self.opts.value['raet_port'])
 
         basedirpath = os.path.abspath(os.path.join(self.opts.value['cachedir'], 'raet'))
 
@@ -165,14 +166,18 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
                                 basedirpath=basedirpath,
                                 stackname=name)
 
+        roledata = keep.loadLocalRoleData()
+        sighex = roledata['sighex'] or self.local.data.sighex
+        prihex = roledata['prihex'] or self.local.data.prihex
+
         self.stack.value = RoadStack(store=self.store,
                                      keep=keep,
                                      name=name,
                                      uid=uid,
                                      ha=ha,
                                      role=role,
-                                     sigkey=sigkey,
-                                     prikey=prikey,
+                                     sigkey=sighex,
+                                     prikey=prihex,
                                      main=main,
                                      kind=kinds.APPL_KINDS[kind],
                                      mutable=mutable,
@@ -637,9 +642,10 @@ class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
             log.error(emsg + "\n")
             raise ValueError(emsg)
 
-        if kind == 'master':
+        if kind == kinds.APPL_KIND_NAMES[kinds.applKinds.master]:
             lanename = 'master'
-        elif kind == 'minion':
+        elif kind in [kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
+                      kinds.APPL_KIND_NAMES[kinds.applKinds.caller], ]:
             role = self.opts.value.get('id', '')
             if not role:
                 emsg = ("Missing role required to setup manor Lane.")
