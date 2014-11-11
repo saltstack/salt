@@ -276,7 +276,6 @@ class RAETCaller(ZeroMQCaller):
         '''
         Pass in the command line options
         '''
-        import wingdbstub
         self.process = None
 
         if (opts.get('__role') ==
@@ -285,10 +284,9 @@ class RAETCaller(ZeroMQCaller):
             self.process = multiprocessing.Process(target=self.minion_run,
                                               kwargs={'stuff': {}, 'opts': opts, })
             self.process.start()
+            self._wait_caller(opts)
             #process.join()
 
-        self._wait_caller(opts)
-        time.sleep(5.0)
         self.stack = self._setup_caller_stack(opts)
         salt.transport.jobber_stack = self.stack
 
@@ -298,7 +296,6 @@ class RAETCaller(ZeroMQCaller):
 
     def minion_run(self, stuff, opts):
         minion = salt.Minion()  # daemonizes here
-        #import wingdbstub
         minion.call()  # caller minion.call_in uses caller.flo
 
     def run(self):
@@ -314,7 +311,8 @@ class RAETCaller(ZeroMQCaller):
                 print_ret = ret
             else:
                 print_ret = ret.get('return', {})
-            self.process.terminate()
+            if self.process:
+                self.process.terminate()
             salt.output.display_output(
                     {'local': print_ret},
                     ret.get('out', 'nested'),
@@ -398,4 +396,5 @@ class RAETCaller(ZeroMQCaller):
                     not os.path.isfile(ha) and
                     not os.path.isdir(ha))):
             time.sleep(0.1)
+        time.sleep(7.0)
 
