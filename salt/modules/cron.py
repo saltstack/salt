@@ -2,16 +2,16 @@
 '''
 Work with cron
 '''
-from __future__ import absolute_import
 
 # Import python libs
 import os
 import random
+from __future__ import absolute_import
+import six
+from six.moves import range
 
 # Import salt libs
 import salt.utils
-import six
-from six.moves import range
 
 
 TAG = '# Lines below here are managed by Salt, do not edit\n'
@@ -322,10 +322,10 @@ def _get_cron_date_time(**kwargs):
     '''
     # Define ranges (except daymonth, as it depends on the month)
     range_max = {
-        'minute': list(list(range(60))),
-        'hour': list(list(range(24))),
-        'month': list(list(range(1, 13))),
-        'dayweek': list(list(range(7)))
+        'minute': range(60),
+        'hour': range(24),
+        'month': range(1, 13),
+        'dayweek': range(7)
     }
 
     ret = {}
@@ -347,7 +347,7 @@ def _get_cron_date_time(**kwargs):
     daymonth = str(kwargs.get('daymonth', '1')).lower()
     if daymonth == 'random':
         ret['daymonth'] = \
-            str(random.sample(list(list(range(1, (daymonth_max + 1)))), 1)[0])
+            str(random.sample(range(1, (daymonth_max + 1)), 1)[0])
     else:
         ret['daymonth'] = daymonth
 
