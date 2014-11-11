@@ -263,7 +263,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         ret = {}
         out = ''
         retcode = 0
-        for key, data in list(full_ret.items()):
+        for key, data in full_ret.items():
             ret[key] = data['ret']
             if 'out' in data:
                 out = data['out']
