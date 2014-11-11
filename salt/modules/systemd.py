@@ -2,12 +2,12 @@
 '''
 Provide the service module for systemd
 '''
-from __future__ import absolute_import
 # Import python libs
 import logging
 import os
 import re
 import six
+from __future__ import absolute_import
 
 log = logging.getLogger(__name__)
 
@@ -197,7 +197,7 @@ def get_all():
 
         salt '*' service.get_all
     '''
-    return sorted(set(list(_get_all_units().keys()) + list(_get_all_unit_files().keys())))
+    return sorted(set(_get_all_units().keys() + _get_all_unit_files().keys()))
 
 
 def available(name):
