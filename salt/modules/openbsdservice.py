@@ -2,9 +2,9 @@
 '''
 The service module for OpenBSD
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import logging
 from six.moves import map
