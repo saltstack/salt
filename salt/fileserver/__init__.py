@@ -2,6 +2,7 @@
 '''
 File server pluggable modules and generic backend functions
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import errno
@@ -14,6 +15,7 @@ import time
 # Import salt libs
 import salt.loader
 import salt.utils
+import six
 
 log = logging.getLogger(__name__)
 
@@ -170,7 +172,7 @@ def generate_mtime_map(path_map):
     Generate a dict of filename -> mtime
     '''
     file_map = {}
-    for saltenv, path_list in path_map.iteritems():
+    for saltenv, path_list in six.iteritems(path_map):
         for path in path_list:
             for directory, dirnames, filenames in os.walk(path):
                 for item in filenames:
@@ -530,7 +532,7 @@ class Fileserver(object):
         prefix = load.get('prefix', '').strip('/')
         if prefix != '':
             ret = dict([
-                (x, y) for x, y in ret.items() if x.startswith(prefix)
+                (x, y) for x, y in list(ret.items()) if x.startswith(prefix)
             ])
         return ret
 
