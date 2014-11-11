@@ -8,6 +8,7 @@ Work with virtual machines managed by libvirt
 # of his in the virt func module have been used
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import re
 import sys
@@ -15,6 +16,7 @@ import shutil
 import subprocess
 import string  # pylint: disable=deprecated-module
 import logging
+import six
 
 # Import third party libs
 import yaml
@@ -551,7 +553,7 @@ def init(name,
 
         # When using a disk profile extract the sole dict key of the first
         # array element as the filename for disk
-        disk_name = diskp[0].iterkeys().next()
+        disk_name = next(diskp[0].iterkeys())
         disk_type = diskp[0][disk_name]['format']
         disk_file_name = '{0}.{1}'.format(disk_name, disk_type)
 
@@ -1685,7 +1687,7 @@ def vm_netstats(vm_=None):
                 'tx_errs': 0,
                 'tx_drop': 0
                }
-        for attrs in nics.itervalues():
+        for attrs in six.itervalues(nics):
             if 'target' in attrs:
                 dev = attrs['target']
                 stats = dom.interfaceStats(dev)
