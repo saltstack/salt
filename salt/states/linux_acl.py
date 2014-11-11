@@ -25,7 +25,6 @@ Ensure a Linux ACL does not exist
 
 # Import salt libs
 import salt.utils
-from salt.exceptions import CommandExecutionError
 
 __virtualname__ = 'acl'
 
