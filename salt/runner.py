@@ -133,14 +133,15 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         target = RunnerClient._thread_return
         data = {'fun': fun, 'jid': jid, 'args': args, 'kwargs': kwargs}
         args = (self, self.opts, data)
+        ret = jid
         if self.opts.get('async', False):
             process = multiprocessing.Process(
                 target=target, args=args
             )
             process.start()
         else:
-            target(*args)
-        return jid
+            ret = target(*args)
+        return ret
 
     @classmethod
     def _thread_return(cls, instance, opts, data):
@@ -176,7 +177,10 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
                 'The specified returner threw a stack trace:\n',
                 exc_info=True
             )
-        return data['jid']
+        if opts.get('async', False):
+            return data['jid']
+        else:
+            return ret
 
     def master_call(self, **kwargs):
         '''
@@ -300,8 +304,11 @@ class Runner(RunnerClient):
                              'be collected by attaching to the master event bus or '
                              'by examing the master job cache, if configured.')
                     sys.exit(0)
+                    rets = self.get_runner_returns(jid)
+                else:
+                    rets = [jid]
                 # Gather the returns
-                for ret in self.get_runner_returns(jid):
+                for ret in rets:
                     if not self.opts.get('quiet', False):
                         if isinstance(ret, dict) and 'outputter' in ret and ret['outputter'] is not None:
                             print(self.outputters[ret['outputter']](ret['data']))
