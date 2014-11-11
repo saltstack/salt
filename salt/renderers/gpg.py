@@ -69,6 +69,7 @@ Now you can include your ciphers in your pillar data like so:
       =Eqsm
       -----END PGP MESSAGE-----
 '''
+from __future__ import absolute_import
 
 import re
 import salt.utils
@@ -115,7 +116,7 @@ def decrypt_object(o, gpg):
         else:
             return o
     elif isinstance(o, dict):
-        for k, v in o.items():
+        for k, v in list(o.items()):
             o[k] = decrypt_object(v, gpg)
         return o
     elif isinstance(o, list):
