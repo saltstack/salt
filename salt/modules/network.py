@@ -1012,10 +1012,7 @@ def routes(family=None):
     if not family:
         return routes
     else:
-        ret = []
-        for route in routes:
-            if route['addr_family'] == family:
-                ret.append(route)
+        ret = [route for route in routes if route['addr_family'] == family]
         return ret
 
 
