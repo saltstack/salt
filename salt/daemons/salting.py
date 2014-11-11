@@ -139,16 +139,16 @@ class SaltKeep(Keep):
         Load and Return the data from the all the remote estate files
         '''
         keeps = super(SaltKeep, self).loadAllRemoteData()
-        for name, data in list(keeps.items()):
+        for name, data in keeps.items():
             keeps[name].update([('acceptance', None),
                                 ('verhex', None),
                                 ('pubhex', None)])
 
-        for status, mids in list(self.saltRaetKey.list_keys().items()):
+        for status, mids in self.saltRaetKey.list_keys().items():
             for mid in mids:
                 keydata = self.saltRaetKey.read_remote(mid, status)
                 if keydata:
-                    for name, data in list(keeps.items()):
+                    for name, data in keeps.items():
                         if data['role'] == mid:
                             keeps[name].update(
                                     [('acceptance', raeting.ACCEPTANCES[status]),
