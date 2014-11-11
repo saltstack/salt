@@ -561,7 +561,7 @@ def setup_extended_logging(opts):
     # log records with them
     additional_handlers = []
 
-    for name, get_handlers_func in list(providers.items()):
+    for name, get_handlers_func in providers.items():
         logging.getLogger(__name__).info(
             'Processing `log_handlers.{0}`'.format(name)
         )
