@@ -37,7 +37,7 @@ def recv(files, dest):
     It does not work via the CLI.
     '''
     ret = {}
-    for path, data in list(files.items()):
+    for path, data in files.items():
         if os.path.basename(path) == os.path.basename(dest) \
                 and not os.path.isdir(dest):
             final = dest
