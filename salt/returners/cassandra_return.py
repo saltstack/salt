@@ -18,6 +18,7 @@ Required python modules: pycassa
 
     salt '*' test.ping --return cassandra
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -65,7 +66,7 @@ def returner(ret):
     columns = {'fun': ret['fun'],
                'id': ret['id']}
     if isinstance(ret['return'], dict):
-        for key, value in ret['return'].items():
+        for key, value in list(ret['return'].items()):
             columns['return.{0}'.format(key)] = str(value)
     else:
         columns['return'] = str(ret['return'])
