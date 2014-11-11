@@ -51,7 +51,7 @@ LOG_LEVELS = {
 
 # Make a list of log level names sorted by log level
 SORTED_LEVEL_NAMES = [
-    l[0] for l in sorted(list(LOG_LEVELS.items()), key=lambda x: x[1])
+    l[0] for l in sorted(LOG_LEVELS.items(), key=lambda x: x[1])
 ]
 
 # Store an instance of the current logging logger class
