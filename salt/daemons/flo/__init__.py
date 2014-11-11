@@ -173,4 +173,3 @@ class IofloMinion(object):
                 verbose=int(self.opts['ioflo_verbose']),
                 consolepath=consolepath,
                 )
-

@@ -396,5 +396,4 @@ class RAETCaller(ZeroMQCaller):
                     not os.path.isfile(ha) and
                     not os.path.isdir(ha))):
             time.sleep(0.1)
-        time.sleep(7.0)
-
+        time.sleep(7.0)  # need to fix this
