@@ -381,18 +381,18 @@ def import_(pool_name='', new_name='', **kwargs):
     '''
     ret = {}
     zpool = _check_zpool()
-    all = kwargs.get('all', False)
+    import_all = kwargs.get('all', False)
     force = kwargs.get('force', False)
 
     if not pool_name:
-        if all is True:
+        if import_all is True:
             cmd = '{0} import -a'.format(zpool)
         else:
             cmd = '{0} import'.format(zpool)
         res = __salt__['cmd.run'](cmd, ignore_retcode=True)
-        if not res and all is False:
+        if not res and import_all is False:
             ret['Error'] = 'No pools available for import'
-        elif all is False:
+        elif import_all is False:
             pool_list = [l for l in res.splitlines()]
             ret['pools'] = pool_list
         else:
