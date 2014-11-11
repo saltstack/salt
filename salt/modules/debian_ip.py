@@ -392,7 +392,7 @@ SALT_ATTR_TO_DEBIAN_ATTR_MAP = {
 
 
 DEBIAN_ATTR_TO_SALT_ATTR_MAP = dict(
-    (v, k) for (k, v) in list(SALT_ATTR_TO_DEBIAN_ATTR_MAP.items()))
+    (v, k) for (k, v) in SALT_ATTR_TO_DEBIAN_ATTR_MAP.items())
 
 #TODO
 DEBIAN_ATTR_TO_SALT_ATTR_MAP['address'] = 'address'
