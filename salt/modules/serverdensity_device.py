@@ -5,11 +5,13 @@ Wrapper around Server Density API
 
 .. versionadded:: 2014.7.0
 '''
+from __future__ import absolute_import
 import requests
 import json
 import logging
 
 from salt.exceptions import CommandExecutionError
+from six.moves import map
 
 log = logging.getLogger(__name__)
 
@@ -43,7 +45,7 @@ def _clean_salt_variables(params, variable_prefix="__"):
     '''
     Pops out variables from params which starts with `variable_prefix`.
     '''
-    map(params.pop, [k for k in params if k.startswith(variable_prefix)])
+    list(list(map(params.pop, [k for k in params if k.startswith(variable_prefix)])))
     return params
 
 
@@ -142,7 +144,7 @@ def ls(**params):
         endpoint = 'resources'
 
     # Convert all ints to strings:
-    for k, v in params.items():
+    for k, v in list(params.items()):
         params[k] = str(v)
 
     api_response = requests.get(
