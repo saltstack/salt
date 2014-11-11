@@ -137,7 +137,7 @@ def monitored(name, group=None, salt_name=True, salt_params=True, **params):
 
     # override salt_params with given params
     if salt_params:
-        for k, v in list(params.items()):
+        for k, v in params.items():
             params_from_salt[k] = v
         params_to_use = params_from_salt
     else:
