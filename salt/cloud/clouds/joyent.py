@@ -745,7 +745,7 @@ def reformat_node(item=None, full=False):
 
     # remove all the extra key value pairs to provide a brief listing
     if not full:
-        for key in item:
+        for key in item.keys():  # iterate over a copy of the keys
             if key not in desired_keys:
                 del item[key]
 
