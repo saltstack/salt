@@ -53,7 +53,7 @@ import re
 import shutil
 import subprocess
 from datetime import datetime
-from salt._compat import text_type as _text_type
+from six import text_type as _text_type
 
 VALID_PROVIDERS = ('gitpython', 'pygit2', 'dulwich')
 PER_REMOTE_PARAMS = ('base', 'mountpoint', 'root')

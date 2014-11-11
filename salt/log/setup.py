@@ -25,6 +25,7 @@ import logging
 import logging.handlers
 import traceback
 import six
+from six import string_types, text_type
 
 # Let's define these custom logging levels before importing the salt.log.mixins
 # since they will be used there
@@ -35,7 +36,7 @@ QUIET = logging.QUIET = 1000
 # Import salt libs
 from salt.log.handlers import TemporaryLoggingHandler, StreamHandler, SysLogHandler, WatchedFileHandler
 from salt.log.mixins import LoggingMixInMeta, NewStyleClassMixIn
-from salt._compat import PY3, string_types, text_type, urlparse
+from salt._compat import PY3, urlparse
 
 LOG_LEVELS = {
     'all': logging.NOTSET,
