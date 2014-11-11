@@ -43,13 +43,14 @@ the default location::
 
     salt '*' test.ping --return carbon --return_config alternative
 '''
+from __future__ import absolute_import
 
 
 # Import python libs
 from contextlib import contextmanager
 import collections
 import logging
-import cPickle as pickle
+import six.moves.cPickle as pickle
 import socket
 import struct
 import time
@@ -57,6 +58,7 @@ import time
 # Import salt libs
 import salt.utils
 import salt.returners
+from six.moves import map
 
 log = logging.getLogger(__name__)
 
@@ -161,7 +163,7 @@ def _walk(path, value, metrics, timestamp, skip):
     '''
 
     if isinstance(value, collections.Mapping):
-        for key, val in value.items():
+        for key, val in list(value.items()):
             _walk('{0}.{1}'.format(path, key), val, metrics, timestamp, skip)
     else:
         try:
