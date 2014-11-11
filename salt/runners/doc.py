@@ -68,7 +68,7 @@ def execution():
         for v in six.itervalues(ret):
             docs.update(v)
 
-    i = itertools.chain.from_iterable([list(list(i.items())) for i in six.itervalues(docs)])
+    i = itertools.chain.from_iterable([i.items() for i in six.itervalues(docs)])
     ret = dict(list(i))
 
     return ret
@@ -91,6 +91,6 @@ def __list_functions(user=None):
     if not user:
         progress(funcs)
         return funcs
-    for _, val in list(__opts__['external_auth'].items()):
+    for _, val in __opts__['external_auth'].items():
         if user in val:
             pass
