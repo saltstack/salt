@@ -2,10 +2,8 @@
 '''
 Routines to set up a minion
 '''
-
-from __future__ import absolute_import
-
 # Import python libs
+from __future__ import absolute_import
 from __future__ import print_function
 import copy
 import errno
@@ -567,7 +565,7 @@ class MultiMinion(MinionBase):
                         pass
 
                 # have the Minion class run anything it has to run
-                minion['generator'].next()
+                next(minion['generator'])
 
 
 class Minion(MinionBase):
@@ -2286,7 +2284,7 @@ class MultiSyndic(MinionBase):
                         # if we couldn't connect, lets try later
                         if not self._connect_to_master(master_id):
                             continue
-                    syndic_dict['generator'].next()
+                    next(syndic_dict['generator'])
 
                 # events
                 if socks.get(self.local.event.sub) == zmq.POLLIN:
