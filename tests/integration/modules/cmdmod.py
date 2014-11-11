@@ -112,7 +112,7 @@ class CMDModuleTest(integration.ModuleCase):
         '''
         cmd.run_all
         '''
-        from salt._compat import string_types
+        from six import string_types
 
         if sys.platform.startswith(('freebsd', 'openbsd')):
             shell = '/bin/sh'

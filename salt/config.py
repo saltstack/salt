@@ -31,7 +31,8 @@ import salt.syspaths
 import salt.utils.validate.path
 import salt.utils.xdg
 import salt.exceptions
-from salt._compat import string_types, urlparse
+from salt._compat import urlparse
+from six import string_types
 
 import sys
 

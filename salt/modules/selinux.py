@@ -18,7 +18,7 @@ import os
 # Import salt libs
 import salt.utils
 import salt.utils.decorators as decorators
-from salt._compat import string_types
+from six import string_types
 from salt.exceptions import CommandExecutionError
 
 
