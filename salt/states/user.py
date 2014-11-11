@@ -23,6 +23,7 @@ as either absent or present
     testuser:
       user.absent
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -373,7 +374,7 @@ def present(name,
             ret['result'] = None
             ret['comment'] = ('The following user attributes are set to be '
                               'changed:\n')
-            for key, val in changes.items():
+            for key, val in list(changes.items()):
                 ret['comment'] += '{0}: {1}\n'.format(key, val)
             return ret
         # The user is present
@@ -382,7 +383,7 @@ def present(name,
         if __grains__['kernel'] == 'OpenBSD':
             lcpre = __salt__['user.get_loginclass'](name)
         pre = __salt__['user.info'](name)
-        for key, val in changes.items():
+        for key, val in list(changes.items()):
             if key == 'passwd' and not empty_password:
                 __salt__['shadow.set_password'](name, password)
                 continue
