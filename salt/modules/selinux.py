@@ -10,6 +10,7 @@ Execute calls on selinux
     documentation for your distro to ensure that the proper packages are
     installed.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -162,7 +163,7 @@ def setsebools(pairs, persist=False):
         cmd = 'setsebool -P '
     else:
         cmd = 'setsebool '
-    for boolean, value in pairs.items():
+    for boolean, value in list(pairs.items()):
         cmd = '{0} {1}={2}'.format(cmd, boolean, value)
     return not __salt__['cmd.retcode'](cmd)
 
