@@ -603,6 +603,12 @@ def run(cmd,
 
         salt '*' cmd.run cmd='sed -e s/=/:/g'
     '''
+    try:
+        if __opts__.get('cmd_safe', True) is False and python_shell is None:
+            # Override-switch for python_shell
+            python_shell = True
+    except NameError:
+        pass
     ret = _run(cmd,
                runas=runas,
                shell=shell,
@@ -699,6 +705,12 @@ def run_stdout(cmd,
 
         salt '*' cmd.run_stdout "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
+    try:
+        if __opts__.get('cmd_safe', True) is False and python_shell is None:
+            # Override-switch for python_shell
+            python_shell = True
+    except NameError:
+        pass
     ret = _run(cmd,
                runas=runas,
                cwd=cwd,
@@ -782,6 +794,12 @@ def run_stderr(cmd,
 
         salt '*' cmd.run_stderr "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
+    try:
+        if __opts__.get('cmd_safe', True) is False and python_shell is None:
+            # Override-switch for python_shell
+            python_shell = True
+    except NameError:
+        pass
     ret = _run(cmd,
                runas=runas,
                cwd=cwd,
@@ -865,6 +883,12 @@ def run_all(cmd,
 
         salt '*' cmd.run_all "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
+    try:
+        if __opts__.get('cmd_safe', True) is False and python_shell is None:
+            # Override-switch for python_shell
+            python_shell = True
+    except NameError:
+        pass
     ret = _run(cmd,
                runas=runas,
                cwd=cwd,
@@ -1068,6 +1092,12 @@ def script(source,
 
         salt '*' cmd.script salt://scripts/runme.sh stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
+    try:
+        if __opts__.get('cmd_safe', True) is False and python_shell is None:
+            # Override-switch for python_shell
+            python_shell = True
+    except NameError:
+        pass
     def _cleanup_tempfile(path):
         try:
             os.remove(path)
@@ -1172,6 +1202,12 @@ def script_retcode(source,
 
         salt '*' cmd.script_retcode salt://scripts/runme.sh stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
+    try:
+        if __opts__.get('cmd_safe', True) is False and python_shell is None:
+            # Override-switch for python_shell
+            python_shell = True
+    except NameError:
+        pass
     if isinstance(__env__, string_types):
         salt.utils.warn_until(
             'Boron',
