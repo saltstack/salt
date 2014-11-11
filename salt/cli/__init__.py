@@ -5,6 +5,7 @@ The management of salt command line utilities are stored in here
 
 # Import python libs
 from __future__ import print_function
+from __future__ import absolute_import
 import logging
 import os
 import sys
@@ -30,6 +31,7 @@ from salt.exceptions import (
     SaltClientError,
     EauthAuthenticationError,
 )
+import six
 
 log = logging.getLogger(__name__)
 
@@ -261,7 +263,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         ret = {}
         out = ''
         retcode = 0
-        for key, data in full_ret.items():
+        for key, data in list(full_ret.items()):
             ret[key] = data['ret']
             if 'out' in data:
                 out = data['out']
@@ -484,13 +486,12 @@ class SaltSSH(parsers.SaltSSHOptionParser):
         ssh.run()
 
 
-class SaltAPI(parsers.OptionParser, parsers.ConfigDirMixIn,
+class SaltAPI(six.with_metaclass(parsers.OptionParserMeta, parsers.OptionParser, parsers.ConfigDirMixIn,
         parsers.LogLevelMixIn, parsers.PidfileMixin, parsers.DaemonMixIn,
-        parsers.MergeConfigMixIn):
+        parsers.MergeConfigMixIn)):
     '''
     The cli parser object used to fire up the salt api system.
     '''
-    __metaclass__ = parsers.OptionParserMeta
 
     VERSION = salt.version.__version__
 
