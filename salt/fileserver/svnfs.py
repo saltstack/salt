@@ -118,7 +118,7 @@ def init():
             repo_url = next(iter(remote))
             per_remote_conf = dict(
                 [(key, _text_type(val)) for key, val in
-                 list(salt.utils.repack_dictlist(remote[repo_url]).items())]
+                 salt.utils.repack_dictlist(remote[repo_url]).items()]
             )
             if not per_remote_conf:
                 log.error(
