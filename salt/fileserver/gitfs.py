@@ -626,7 +626,7 @@ def init():
             repo_url = next(iter(remote))
             per_remote_conf = dict(
                 [(key, _text_type(val)) for key, val in
-                 list(salt.utils.repack_dictlist(remote[repo_url]).items())]
+                 salt.utils.repack_dictlist(remote[repo_url]).items()]
             )
             if not per_remote_conf:
                 log.error(
@@ -1480,7 +1480,7 @@ def _file_list_dulwich(repo, tgt_env):
         Traverse through a dulwich Tree object recursively, accumulating all the
         blob paths within it in the "blobs" list
         '''
-        for item in list(tree.items()):
+        for item in tree.items():
             obj = repo_obj.get_object(item.sha)
             if isinstance(obj, dulwich.objects.Blob):
                 blobs.append(os.path.join(prefix, item.path))
@@ -1631,7 +1631,7 @@ def _dir_list_dulwich(repo, tgt_env):
         Traverse through a dulwich Tree object recursively, accumulating all
         the empty directories within it in the "blobs" list
         '''
-        for item in list(tree.items()):
+        for item in tree.items():
             obj = repo_obj.get_object(item.sha)
             if not isinstance(obj, dulwich.objects.Tree):
                 continue
