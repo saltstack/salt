@@ -41,6 +41,7 @@ otherwise multi-minion targetting can lead to losing output:
 * the first returning minion is able to create a document in the database
 * other minions fail with ``{'error': 'HTTP Error 409: Conflict'}``
 '''
+from __future__ import absolute_import
 # Import Python libs
 import logging
 import time
