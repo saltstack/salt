@@ -2,6 +2,7 @@
 '''
 Minion side functions for salt-cp
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -713,7 +714,7 @@ def push_dir(path, glob=None):
         for root, dirs, files in os.walk(path):
             filelist += [os.path.join(root, tmpfile) for tmpfile in files]
         if glob is not None:
-            filelist = filter(lambda fi: fnmatch.fnmatch(fi, glob), filelist)
+            filelist = [fi for fi in filelist if fnmatch.fnmatch(fi, glob)]
         for tmpfile in filelist:
             ret = push(tmpfile)
             if not ret:
