@@ -2,12 +2,15 @@
 '''
 Windows Service module.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import salt.utils
 from subprocess import list2cmdline
 import time
 import logging
+from six.moves import zip
+from six.moves import range
 
 log = logging.getLogger(__name__)
 
@@ -191,7 +194,7 @@ def get_service_name(*args):
                 continue
             display_names.append(comps[1].strip())
     if len(services) == len(display_names):
-        service_dict = dict(zip(display_names, services))
+        service_dict = dict(list(list(zip(display_names, services))))
     else:
         return 'Service Names and Display Names mismatch'
     if len(args) == 0:
