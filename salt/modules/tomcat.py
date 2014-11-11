@@ -40,6 +40,7 @@ Notes:
   Tomcat Version:
       Apache Tomcat/7.0.37
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import glob
