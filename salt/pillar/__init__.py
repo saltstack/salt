@@ -238,7 +238,7 @@ class Pillar(object):
                         .format(exc)))
 
         # Search initial top files for includes
-        for saltenv, ctops in list(list(tops.items())):
+        for saltenv, ctops in tops.items():
             for ctop in ctops:
                 if 'include' not in ctop:
                     continue
@@ -248,7 +248,7 @@ class Pillar(object):
         # Go through the includes and pull out the extra tops and add them
         while include:
             pops = []
-            for saltenv, states in list(list(include.items())):
+            for saltenv, states in include.items():
                 pops.append(saltenv)
                 if not states:
                     continue
@@ -286,7 +286,7 @@ class Pillar(object):
         orders = collections.defaultdict(OrderedDict)
         for ctops in six.itervalues(tops):
             for ctop in ctops:
-                for saltenv, targets in list(list(ctop.items())):
+                for saltenv, targets in ctop.items():
                     if saltenv == 'include':
                         continue
                     for tgt in targets:
@@ -317,7 +317,7 @@ class Pillar(object):
         '''
         sorted_top = collections.defaultdict(OrderedDict)
         # pylint: disable=cell-var-from-loop
-        for saltenv, targets in list(list(top.items())):
+        for saltenv, targets in top.items():
             sorted_targets = sorted(targets,
                     key=lambda target: orders[saltenv][target])
             for target in sorted_targets:
@@ -346,11 +346,11 @@ class Pillar(object):
         {'saltenv': ['state1', 'state2', ...]}
         '''
         matches = {}
-        for saltenv, body in list(list(top.items())):
+        for saltenv, body in top.items():
             if self.opts['environment']:
                 if saltenv != self.opts['environment']:
                     continue
-            for match, data in list(list(body.items())):
+            for match, data in body.items():
                 if self.matcher.confirm_top(
                         match,
                         data,
@@ -443,7 +443,7 @@ class Pillar(object):
         '''
         pillar = {}
         errors = []
-        for saltenv, pstates in list(list(matches.items())):
+        for saltenv, pstates in matches.items():
             mods = set()
             for sls in pstates:
                 pstate, mods, err = self.render_pstate(sls, saltenv, mods)
@@ -511,7 +511,7 @@ class Pillar(object):
             if not isinstance(run, dict):
                 log.critical('The "ext_pillar" option is malformed')
                 return {}
-            for key, val in list(list(run.items())):
+            for key, val in run.items():
                 if key not in self.ext_pillars:
                     err = ('Specified ext_pillar interface {0} is '
                            'unavailable').format(key)
