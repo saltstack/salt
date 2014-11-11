@@ -2,6 +2,7 @@
 '''
 The sys module provides information about the available functions on the minion
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import fnmatch
@@ -70,7 +71,7 @@ def doc(*args):
         else:
             target_mod = ''
         if _use_fnmatch:
-            for fun in fnmatch.filter(__salt__.keys(), target_mod):
+            for fun in fnmatch.filter(list(__salt__.keys()), target_mod):
                 docs[fun] = __salt__[fun].__doc__
         else:
             for fun in __salt__:
@@ -255,7 +256,7 @@ def returner_doc(*args):
                 if fun == module or fun.startswith(target_mod):
                     docs[fun] = returners_[fun].__doc__
         else:
-            for fun in returners_.keys():
+            for fun in list(returners_.keys()):
                 if fun == module or fun.startswith(target_mod):
                     docs[fun] = returners_[fun].__doc__
     return _strip_rst(docs)
@@ -291,16 +292,16 @@ def renderer_doc(*args):
     renderers_ = salt.loader.render(__opts__, [])
     docs = {}
     if not args:
-        for fun in renderers_.keys():
+        for fun in list(renderers_.keys()):
             docs[fun] = renderers_[fun].__doc__
         return _strip_rst(docs)
 
     for module in args:
         if '*' in module:
-            for fun in fnmatch.filter(renderers_.keys(), module):
+            for fun in fnmatch.filter(list(renderers_.keys()), module):
                 docs[fun] = renderers_[fun].__doc__
         else:
-            for fun in renderers_.keys():
+            for fun in list(renderers_.keys()):
                 docs[fun] = renderers_[fun].__doc__
     return _strip_rst(docs)
 
@@ -704,7 +705,7 @@ def list_returners(*args):
     returners = set()
 
     if not args:
-        for func in returners_.keys():
+        for func in list(returners_.keys()):
             comps = func.split('.')
             if len(comps) < 2:
                 continue
@@ -712,7 +713,7 @@ def list_returners(*args):
         return sorted(returners)
 
     for module in args:
-        for func in fnmatch.filter(returners_.keys(), module):
+        for func in fnmatch.filter(list(returners_.keys()), module):
             comps = func.split('.')
             if len(comps) < 2:
                 continue
@@ -765,7 +766,7 @@ def list_returner_functions(*args, **kwargs):
                 if func.startswith(module):
                     names.add(func)
         else:
-            for func in returners_.keys():
+            for func in list(returners_.keys()):
                 if func.startswith(module):
                     names.add(func)
     return sorted(names)
@@ -794,7 +795,7 @@ def list_renderers(*args):
     ren = set()
 
     if not args:
-        for func in ren_.keys():
+        for func in list(ren_.keys()):
             ren.add(func)
         return sorted(ren)
 
