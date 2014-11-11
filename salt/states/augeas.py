@@ -28,6 +28,7 @@ Augeas_ can be used to manage configuration files.
     known to resolve the issue.
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import re
