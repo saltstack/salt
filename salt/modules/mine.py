@@ -6,6 +6,7 @@ The function cache system allows for data to be stored on the master so it can b
 # Import python libs
 import copy
 import logging
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.crypt
