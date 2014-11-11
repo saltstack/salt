@@ -35,6 +35,8 @@ import warnings
 import yaml
 import string
 from calendar import month_abbr as months
+from six import string_types
+from six.moves.urllib.parse import urlparse
 
 # Try to load pwd, fallback to getpass if unsuccessful
 try:
@@ -97,7 +99,6 @@ except ImportError:
 
 # Import salt libs
 from salt.defaults import DEFAULT_TARGET_DELIM
-import salt._compat
 import salt.log
 import salt.payload
 import salt.version
@@ -1570,7 +1571,7 @@ def valid_url(url, protos):
     '''
     Return true if the passed URL is in the list of accepted protos
     '''
-    if salt._compat.urlparse(url).scheme in protos:
+    if urlparse(url).scheme in protos:
         return True
     return False
 
@@ -1752,7 +1753,7 @@ def date_cast(date):
 
     # fuzzy date
     try:
-        if isinstance(date, salt._compat.string_types):
+        if isinstance(date, string_types):
             try:
                 if HAS_TIMELIB:
                     return timelib.strtodatetime(date)
@@ -1873,7 +1874,7 @@ def warn_until(version,
                                 checks to raise a ``RuntimeError``.
     '''
     if not isinstance(version, (tuple,
-                                salt._compat.string_types,
+                                string_types,
                                 salt.version.SaltStackVersion)):
         raise RuntimeError(
             'The \'version\' argument should be passed as a tuple, string or '
@@ -1881,7 +1882,7 @@ def warn_until(version,
         )
     elif isinstance(version, tuple):
         version = salt.version.SaltStackVersion(*version)
-    elif isinstance(version, salt._compat.string_types):
+    elif isinstance(version, string_types):
         version = salt.version.SaltStackVersion.from_name(version)
 
     if stacklevel is None:
@@ -1965,7 +1966,7 @@ def kwargs_warn_until(kwargs,
                                 checks to raise a ``RuntimeError``.
     '''
     if not isinstance(version, (tuple,
-                                salt._compat.string_types,
+                                string_types,
                                 salt.version.SaltStackVersion)):
         raise RuntimeError(
             'The \'version\' argument should be passed as a tuple, string or '
@@ -1973,7 +1974,7 @@ def kwargs_warn_until(kwargs,
         )
     elif isinstance(version, tuple):
         version = salt.version.SaltStackVersion(*version)
-    elif isinstance(version, salt._compat.string_types):
+    elif isinstance(version, string_types):
         version = salt.version.SaltStackVersion.from_name(version)
 
     if stacklevel is None:
