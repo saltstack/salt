@@ -2,12 +2,14 @@
 '''
 Support for Linux LVM2
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os.path
 
 # Import salt libs
 import salt.utils
+import six
 
 # Define the module's virtual name
 __virtualname__ = 'lvm'
@@ -279,7 +281,7 @@ def lvcreate(lvname, vgname, size=None, extents=None, snapshot=None, pv='', **kw
     no_parameter = ('noudevsync', 'ignoremonitoring')
     extra_arguments = [
         '--{0}'.format(k) if k in no_parameter else '--{0} {1}'.format(k, v)
-        for k, v in kwargs.iteritems() if k in valid
+        for k, v in six.iteritems(kwargs) if k in valid
     ]
 
     cmd = ['lvcreate', '-n', lvname]
