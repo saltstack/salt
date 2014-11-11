@@ -5,6 +5,7 @@ used to manage salt keys directly without interfacing with the CLI.
 '''
 
 # Import python libs
+from __future__ import absolute_import
 from __future__ import print_function
 import os
 import stat
