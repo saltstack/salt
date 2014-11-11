@@ -97,7 +97,7 @@ class OverState(object):
         '''
         names = set()
         for comp in self.over:
-            names.add(six.iterkeys(comp))
+            names.add(next(six.iterkeys(comp)))
         return names
 
     def get_stage(self, name):
@@ -179,7 +179,7 @@ class OverState(object):
             if isinstance(fun_d, str):
                 fun = fun_d
             elif isinstance(fun_d, dict):
-                fun = six.iterkeys(fun_d)
+                fun = next(six.iterkeys(fun_d))
                 arg = fun_d[fun]
             else:
                 yield {name: {}}
@@ -214,7 +214,7 @@ class OverState(object):
             else:
                 # Req has not be called
                 for comp in self.over:
-                    rname = six.iterkeys(comp)
+                    rname = next(six.iterkeys(comp))
                     if req == rname:
                         rstage = comp[rname]
                         v_stage = self.verify_stage(rstage)
@@ -265,7 +265,7 @@ class OverState(object):
         self.over_run = {}
 
         for comp in self.over:
-            name = six.iterkeys(comp)
+            name = next(six.iterkeys(comp))
             stage = comp[name]
             if name not in self.over_run:
                 self.call_stage(name, stage)
@@ -288,7 +288,7 @@ class OverState(object):
         self.over_run = {}
         yield self.over
         for comp in self.over:
-            name = six.iterkeys(comp)
+            name = next(six.iterkeys(comp))
             stage = comp[name]
             if name not in self.over_run:
                 v_stage = self.verify_stage(stage)
@@ -298,7 +298,7 @@ class OverState(object):
                 else:
                     for sret in self.call_stage(name, stage):
                         for yret in yielder(sret):
-                            sname = six.iterkeys(yret)
+                            sname = next(six.iterkeys(yret))
                             yield [self.get_stage(sname)]
                             final = {}
                             for minion in yret[sname]:
