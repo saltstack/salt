@@ -207,7 +207,7 @@ def safe_accept(target, expr_form='glob'):
     ret = ssh_client.cmd(target, 'key.finger', expr_form=expr_form)
 
     failures = {}
-    for minion, finger in list(list(ret.items())):
+    for minion, finger in ret.items():
         if not FINGERPRINT_REGEX.match(finger):
             failures[minion] = finger
         else:
