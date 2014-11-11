@@ -30,6 +30,7 @@ this module.
         realm: authentication realm2 for digest passwords
         timeout: 600
 '''
+from __future__ import absolute_import
 
 # Python libs
 import urllib
@@ -188,7 +189,7 @@ def list_configured_members(lbn, profile='default'):
     except KeyError:
         return []
 
-    return filter(None, ret.strip().split(','))
+    return [_f for _f in ret.strip().split(',') if _f]
 
 
 def workers(profile='default'):
