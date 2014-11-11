@@ -53,6 +53,7 @@ as a passed in dict, or as a string to pull from pillars or minion config:
             alarm_actions:
               - arn:aws:sns:us-east-1:1111111:myalerting-action
 '''
+from __future__ import absolute_import
 
 from salt._compat import string_types
 
@@ -109,7 +110,7 @@ def present(
     # AWS type transformations
     difference = []
     if alarm_details:
-        for k, v in attributes.items():
+        for k, v in list(attributes.items()):
             if k not in alarm_details:
                 difference.append("{0}={1} (new)".format(k, v))
                 continue
