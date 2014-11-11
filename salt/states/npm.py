@@ -101,7 +101,7 @@ def installed(name,
         return ret
     else:
         installed_pkgs = dict((p.lower(), info)
-                for p, info in list(installed_pkgs.items()))
+                for p, info in installed_pkgs.items())
 
     pkgs_satisfied = []
     pkgs_to_install = []
