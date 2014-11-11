@@ -24,6 +24,7 @@ from salt.exceptions import (
     SaltInvocationError,
     CommandExecutionError,
 )
+from six.moves import range
 
 log = logging.getLogger(__name__)
 
