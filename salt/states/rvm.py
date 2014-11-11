@@ -101,6 +101,7 @@ configuration could look like:
         - require:
           - rvm: ruby-1.9.2
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import re
