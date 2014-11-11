@@ -30,7 +30,7 @@ def output(data):
                             id_,
                             vm_data['graphics']['port'])
             if 'disks' in vm_data:
-                for disk, d_data in vm_data['disks'].items():
+                for disk, d_data in list(vm_data['disks'].items()):
                     out += '    Disk - {0}:\n'.format(disk)
                     out += '      Size: {0}\n'.format(d_data['disk size'])
                     out += '      File: {0}\n'.format(d_data['file'])
@@ -38,6 +38,6 @@ def output(data):
             if 'nics' in vm_data:
                 for mac in vm_data['nics']:
                     out += '    Nic - {0}:\n'.format(mac)
-                    out += '      Source: {0}\n'.format(vm_data['nics'][mac]['source'][vm_data['nics'][mac]['source'].iterkeys().next()])
+                    out += '      Source: {0}\n'.format(vm_data['nics'][mac]['source'][next(vm_data['nics'][mac]['source'].iterkeys())])
                     out += '      Type: {0}\n'.format(vm_data['nics'][mac]['type'])
     return out
