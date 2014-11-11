@@ -2129,7 +2129,7 @@ def recurse(name,
 
     # Process symlinks and return the updated filenames list
     def process_symlinks(filenames, symlinks):
-        for lname, ltarget in list(list(symlinks.items())):
+        for lname, ltarget in symlinks.items():
             if not salt.utils.check_include_exclude(
                     os.path.relpath(lname, srcpath), include_pat, exclude_pat):
                 continue
