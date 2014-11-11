@@ -22,6 +22,7 @@ This backend assumes a standard svn layout with directories for ``branches``,
     per-remote configuration parameters was added. See the
     :conf_master:`documentation <svnfs_remotes>` for more information.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import copy
@@ -85,7 +86,7 @@ def _rev(repo):
     Returns revision ID of repo
     '''
     try:
-        repo_info = dict(CLIENT.info(repo['repo']).items())
+        repo_info = dict(list(CLIENT.info(repo['repo']).items()))
     except (pysvn._pysvn.ClientError, TypeError,
             KeyError, AttributeError) as exc:
         log.error(
@@ -117,7 +118,7 @@ def init():
             repo_url = next(iter(remote))
             per_remote_conf = dict(
                 [(key, _text_type(val)) for key, val in
-                 salt.utils.repack_dictlist(remote[repo_url]).items()]
+                 list(salt.utils.repack_dictlist(remote[repo_url]).items())]
             )
             if not per_remote_conf:
                 log.error(
