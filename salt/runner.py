@@ -132,10 +132,14 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         self.event.fire_event({'runner_job': fun}, tagify([jid, 'new'], 'job'))
         target = RunnerClient._thread_return
         data = {'fun': fun, 'jid': jid, 'args': args, 'kwargs': kwargs}
-        process = multiprocessing.Process(
-            target=target, args=(self, self.opts, data)
-        )
-        process.start()
+        args = (self, self.opts, data)
+        if self.opts.get('async', False):
+            process = multiprocessing.Process(
+                target=target, args=args
+            )
+            process.start()
+        else:
+            target(*args)
         return jid
 
     @classmethod
