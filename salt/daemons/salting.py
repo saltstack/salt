@@ -96,6 +96,18 @@ class SaltKeep(Keep):
         '''
         self.saltRaetKey.delete_pki_dir()
 
+    def loadLocalData(self):
+        '''
+        Load and Return the data from the local estate
+        '''
+        data = super(SaltKeep, self).loadLocalData()
+        if not data:
+            return None
+        roleData = self.loadLocalRoleData() # if not present defaults None values
+        data.update([('sighex', roleData.get('sighex')),
+                     ('prihex', roleData.get('prihex'))])
+        return data
+
     def loadRemoteData(self, name):
         '''
         Load and Return the data from the remote file
