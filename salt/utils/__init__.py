@@ -101,7 +101,7 @@ import salt._compat
 import salt.log
 import salt.payload
 import salt.version
-from salt._compat import string_types
+from six import string_types
 from salt.utils.decorators import memoize as real_memoize
 from salt.exceptions import (
     CommandExecutionError, SaltClientError,

@@ -21,7 +21,7 @@ except ImportError:
 import salt.utils
 import logging
 import salt.minion
-from salt._compat import string_types
+from six import string_types
 
 log = logging.getLogger(__name__)
 
