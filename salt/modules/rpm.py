@@ -2,6 +2,7 @@
 '''
 Support for rpm
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -212,5 +213,5 @@ def owner(*paths):
         if 'not owned' in ret[path].lower():
             ret[path] = ''
     if len(ret) == 1:
-        return ret.values()[0]
+        return list(ret.values())[0]
     return ret
