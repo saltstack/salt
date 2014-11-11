@@ -40,6 +40,7 @@ Walkthrough <tutorial-gitfs>`.
 .. _libgit2: https://libgit2.github.com/
 .. _dulwich: https://www.samba.org/~jelmer/dulwich/
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import copy
