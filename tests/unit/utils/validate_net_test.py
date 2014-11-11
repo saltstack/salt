@@ -39,7 +39,11 @@ class ValidateNetTestCase(TestCase):
             '::1/28',
         ]
 
-        __ip_addr(true_addrs, false_addrs)
+        for addr in true_addrs:
+            self.assertTrue(net.ipv4_addr(addr))
+
+        for addr in false_addrs:
+            self.assertFalse(net.ipv4_addr(addr))
 
 
     def test_ipv6_addr(self):
@@ -61,15 +65,12 @@ class ValidateNetTestCase(TestCase):
             '::1/129',
         ]
 
-        __ip_addr(true_addrs, false_addrs)
-
-
-    def __ip_addr(self, true_addrs=[], false_addrs=[]):
         for addr in true_addrs:
-            self.assertTrue(net.ipv4_addr(addr))
+            self.assertTrue(net.ipv6_addr(addr))
 
         for addr in false_addrs:
-            self.assertFalse(net.ipv4_addr(addr))
+            self.assertFalse(net.ipv6_addr(addr))
+
 
 if __name__ == '__main__':
     from integration import run_tests
