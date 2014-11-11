@@ -55,7 +55,8 @@ class NetapiClientTest(TestCase):
 
         ret = self.netapi.run(low)
 
-        self.assertEqual(ret, {'jid': '123abc', 'minions': ['minion', 'sub_minion']})
+        self.assertEqual(ret, {'jid': '123abc',
+                               'minions': ['minion', 'sub_minion']})
 
     def test_wheel(self):
         low = {'client': 'wheel', 'fun': 'key.list_all'}
