@@ -60,6 +60,7 @@ Use the commands to create the sqlite3 database and tables::
     salt '*' test.ping --return sqlite3 --return_config alternative
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
