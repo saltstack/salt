@@ -4,6 +4,7 @@ Execute overstate functions
 '''
 # Import pytohn libs
 from __future__ import print_function
+from __future__ import absolute_import
 
 import fnmatch
 import json
@@ -49,7 +50,7 @@ def over(saltenv='base', os_fn=None):
         if isinstance(stage, dict):
             # This is highstate data
             progress('Stage execution results:')
-            for key, val in stage.items():
+            for key, val in list(stage.items()):
                 if '_|-' in key:
                     progress({'error': {key: val}}, outputter='highstate')
                 else:
