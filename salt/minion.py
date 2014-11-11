@@ -2478,7 +2478,7 @@ class Matcher(object):
             self.opts['pillar'], tgt, delimiter=delimiter
         )
 
-    def pillar_exact_match(self, tgt, delim=':'):
+    def pillar_exact_match(self, tgt, delimiter=':'):
         '''
         Reads in the pillar match, no globbing
         '''
@@ -2489,7 +2489,7 @@ class Matcher(object):
             return False
         return salt.utils.subdict_match(self.opts['pillar'],
                                         tgt,
-                                        delimiter=delim,
+                                        delimiter=delimiter,
                                         exact_match=True)
 
     def ipcidr_match(self, tgt):
