@@ -201,8 +201,7 @@ def present(name,
                                                profile=profile,
                                                snapshot=snapshot,
                                                size=size,
-                                               backing=backing,
-                                               vgname=vgname)
+                                               backing=backing)
             else:
                 result = __salt__['lxc.create'](name,
                                                 profile=profile,
