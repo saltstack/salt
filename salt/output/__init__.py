@@ -11,6 +11,7 @@ import sys
 import errno
 import logging
 import traceback
+from six import string_types
 
 # Import salt libs
 import salt.loader
@@ -126,7 +127,7 @@ def strip_esc_sequence(txt):
     Replace ESC (ASCII 27/Oct 33) to prevent unsafe strings
     from writing their own terminal manipulation commands
     '''
-    if isinstance(txt, basestring):
+    if isinstance(txt, string_types):
         return txt.replace('\033', '?')
     else:
         return txt
