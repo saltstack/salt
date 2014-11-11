@@ -250,12 +250,12 @@ def _netstat_bsd():
         except KeyError:
             continue
         # Get the pid-to-ppid mappings for this connection
-        conn_ppid = dict((x, y) for x, y in list(list(ppid.items())) if x in ptr)
+        conn_ppid = dict((x, y) for x, y in list(ppid.items()) if x in ptr)
         try:
             # Master pid for this connection will be the pid whose ppid isn't
             # in the subset dict we created above
             master_pid = next(iter(
-                x for x, y in list(list(conn_ppid.items())) if y not in ptr
+                x for x, y in list(conn_ppid.items()) if y not in ptr
             ))
         except StopIteration:
             continue
