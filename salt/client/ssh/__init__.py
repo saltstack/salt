@@ -17,6 +17,7 @@ import re
 import time
 import yaml
 import uuid
+from six.moves import input
 
 # Import salt libs
 import salt.client.ssh.shell
@@ -247,7 +248,7 @@ class SSH(object):
             # permission denied, attempt to auto deploy ssh key
             print(('Permission denied for host {0}, do you want to deploy '
                    'the salt-ssh key? (password required):').format(host))
-            deploy = raw_input('[Y/n] ')
+            deploy = input('[Y/n] ')
             if deploy.startswith(('n', 'N')):
                 return ret
             target['passwd'] = getpass.getpass(
