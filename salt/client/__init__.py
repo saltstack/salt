@@ -349,7 +349,7 @@ class LocalClient(object):
         '''
         group = self.cmd(tgt, 'sys.list_functions', expr_form=expr_form)
         f_tgt = []
-        for minion, ret in list(group.items()):
+        for minion, ret in group.items():
             if len(f_tgt) >= sub:
                 break
             if fun in ret:
@@ -404,7 +404,7 @@ class LocalClient(object):
                 'ret': ret,
                 'batch': batch,
                 'raw': kwargs.get('raw', False)}
-        for key, val in list(self.opts.items()):
+        for key, val in self.opts.items():
             if key not in opts:
                 opts[key] = val
         batch = salt.cli.batch.Batch(opts, quiet=True)
@@ -540,7 +540,7 @@ class LocalClient(object):
                 **kwargs):
 
             if fn_ret:
-                for mid, data in list(fn_ret.items()):
+                for mid, data in fn_ret.items():
                     ret[mid] = data.get('ret', {})
 
         return ret
