@@ -161,7 +161,7 @@ import logging.handlers
 import datetime
 
 # Import salt libs
-from salt._compat import string_types
+from six import string_types
 from salt.log.setup import LOG_LEVELS
 from salt.log.mixins import NewStyleClassMixIn
 import salt.utils.network

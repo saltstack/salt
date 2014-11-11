@@ -7,7 +7,7 @@ Functions used for CLI argument handling
 import re
 
 # Import salt libs
-from salt._compat import string_types, integer_types
+from six import string_types, integer_types
 
 #KWARG_REGEX = re.compile(r'^([^\d\W][\w.-]*)=(?!=)(.*)$', re.UNICODE)  # python 3
 KWARG_REGEX = re.compile(r'^([^\d\W][\w.-]*)=(?!=)(.*)$')

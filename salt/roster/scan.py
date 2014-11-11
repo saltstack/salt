@@ -2,6 +2,7 @@
 '''
 Scan a netmask or ipaddr for open ssh ports
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import socket

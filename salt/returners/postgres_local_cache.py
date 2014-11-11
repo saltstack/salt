@@ -68,6 +68,7 @@ and then:
 
 Required python modules: psycopg2
 '''
+from __future__ import absolute_import
 # Import python libs
 import json
 import logging

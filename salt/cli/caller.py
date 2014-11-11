@@ -6,6 +6,7 @@ minion modules.
 
 # Import python libs
 from __future__ import print_function
+from __future__ import absolute_import
 import os
 import sys
 import logging
@@ -23,7 +24,7 @@ import salt.output
 import salt.payload
 import salt.transport
 import salt.utils.args
-from salt._compat import string_types
+from six import string_types
 from salt.log import LOG_LEVELS
 from salt.utils import print_cli
 from salt.utils import kinds

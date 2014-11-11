@@ -6,7 +6,7 @@ For configuration options, see the docs for specific sdb
 modules.
 '''
 import salt.loader
-from salt._compat import string_types
+from six import string_types
 
 
 def sdb_get(uri, opts):

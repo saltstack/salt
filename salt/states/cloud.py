@@ -16,7 +16,7 @@ Use this minion to spin up a cloud instance:
 from __future__ import absolute_import
 
 import pprint
-from salt._compat import string_types
+from six import string_types
 import salt.utils.cloud as suc
 
 

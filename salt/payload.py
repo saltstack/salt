@@ -6,13 +6,14 @@ in here
 '''
 
 # Import python libs
-#import sys  # Use of sys is commented out below
+from __future__ import absolute_import
 import logging
 
 # Import salt libs
 import salt.log
 import salt.crypt
 from salt.exceptions import SaltReqTimeoutError
+import six
 
 # Import third party libs
 try:
@@ -126,7 +127,7 @@ class Serial(object):
             # list/tuple
             def odict_encoder(obj):
                 if isinstance(obj, dict):
-                    for key, value in obj.copy().iteritems():
+                    for key, value in six.iteritems(obj.copy()):
                         obj[key] = odict_encoder(value)
                     return dict(obj)
                 elif isinstance(obj, (list, tuple)):

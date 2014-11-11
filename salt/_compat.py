@@ -63,7 +63,7 @@ if PY3:
     import builtins
     exceptions = builtins  # pylint: disable=E0602
 else:
-    import exceptions
+    import exceptions  # pylint: disable=W0403
 
 if PY3:
     def callable(obj):

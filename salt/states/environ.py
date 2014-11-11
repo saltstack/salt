@@ -3,12 +3,13 @@
 Support for getting and setting the environment variables
 of the current salt process.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
 
 # Import salt libs
-from salt._compat import string_types
+from six import string_types
 
 
 def __virtual__():
