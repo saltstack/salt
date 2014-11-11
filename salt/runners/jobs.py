@@ -38,8 +38,8 @@ def active(outputter=None, display_progress=False):
     client = salt.client.get_local_client(__opts__['conf_file'])
     active_ = client.cmd('*', 'saltutil.running', timeout=__opts__['timeout'])
     if display_progress:
-        progress('Attempting to contact minions: {0}'.format(active_.keys()))
-    for minion, data in active_.items():
+        progress('Attempting to contact minions: {0}'.format(list(active_.keys())))
+    for minion, data in list(active_.items()):
         if display_progress:
             progress('Received reply from minion {0}'.format(minion))
         if not isinstance(data, list):
