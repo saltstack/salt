@@ -12,6 +12,7 @@ Example output::
     virtucentos:
         Minion did not return
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils
