@@ -28,6 +28,7 @@ can be either present or absent:
           - user1
           - user2
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import sys
@@ -130,14 +131,14 @@ def present(name,
     if changes:
         ret['comment'] = (
             'The following group attributes are set to be changed:\n')
-        for key, val in changes.items():
+        for key, val in list(changes.items()):
             ret['comment'] += '{0}: {1}\n'.format(key, val)
 
         if __opts__['test']:
             ret['result'] = None
             return ret
 
-        for key, val in changes.items():
+        for key, val in list(changes.items()):
             if key == 'gid':
                 __salt__['group.chgid'](name, gid)
                 continue
