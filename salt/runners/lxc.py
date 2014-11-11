@@ -368,7 +368,7 @@ def _list_iter(host=None):
         if not isinstance(container_info, dict):
             continue
         chunk = {}
-        id_ = next(container_info.iterkeys())
+        id_ = next(six.iterkeys(container_info))
         if host and host != id_:
             continue
         if not isinstance(container_info[id_], dict):
