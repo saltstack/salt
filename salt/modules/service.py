@@ -3,6 +3,7 @@
 The default service module, if not otherwise specified salt will fall back
 to this basic module
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
