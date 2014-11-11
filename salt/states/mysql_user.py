@@ -35,6 +35,7 @@ overridden in states using the following arguments: ``connection_host``,
         - saltenv:
           - LC_ALL: "en_US.utf8"
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import sys
