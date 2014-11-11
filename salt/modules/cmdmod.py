@@ -566,6 +566,19 @@ def run(cmd,
     Note that ``env`` represents the environment variables for the command, and
     should be formatted as a dict, or a YAML string which resolves to a dict.
 
+    *************************************************************************
+    WARNING: This function does not process commands through a shell 
+    unless the python_shell flag is set to True. This means that any
+    shell-specific functionality such as 'echo' or the use of pipes,
+    redirection or &&, should either be migrated to cmd.shell or 
+    have the python_shell=True flag set here.
+
+    The use of python_shell=True means that the shell will accept _any_ input
+    including potentially malicious commands such as 'good_command;rm -rf /'.
+    Be absolutely certain that you have sanitized your input prior to using
+    python_shell=True
+    *************************************************************************
+
     CLI Example:
 
     .. code-block:: bash
@@ -657,6 +670,93 @@ def run(cmd,
         log.log(lvl, 'output: {0}'.format(ret['stdout']))
     return ret['stdout']
 
+def shell(cmd,
+        cwd=None,
+        stdin=None,
+        runas=None,
+        shell=DEFAULT_SHELL,
+        env=None,
+        clean_env=False,
+        template=None,
+        rstrip=True,
+        umask=None,
+        output_loglevel='debug',
+        quiet=False,
+        timeout=None,
+        reset_system_locale=True,
+        ignore_retcode=False,
+        saltenv='base',
+        use_vt=False,
+        **kwargs):
+    '''
+    Execute the passed command and return the output as a string.
+
+    ************************************************************
+    WARNING: This passes the cmd argument directly to the shell
+    without any further processing! Be absolutely sure that you
+    have properly santized the command passed to this function 
+    and do not use untrusted inputs.
+    ************************************************************
+
+    Note that ``env`` represents the environment variables for the command, and
+    should be formatted as a dict, or a YAML string which resolves to a dict.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cmd.run "ls -l | awk '/foo/{print \\$2}'"
+
+    The template arg can be set to 'jinja' or another supported template
+    engine to render the command arguments before execution.
+    For example:
+
+    .. code-block:: bash
+
+        salt '*' cmd.run template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print \\$2}'"
+
+    Specify an alternate shell with the shell parameter:
+
+    .. code-block:: bash
+
+        salt '*' cmd.run "Get-ChildItem C:\\ " shell='powershell'
+
+    A string of standard input can be specified for the command to be run using
+    the ``stdin`` parameter. This can be useful in cases where sensitive
+    information must be read from standard input.:
+
+    .. code-block:: bash
+
+        salt '*' cmd.run "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
+
+    If an equal sign (``=``) appears in an argument to a Salt command it is
+    interpreted as a keyword argument in the format ``key=val``. That
+    processing can be bypassed in order to pass an equal sign through to the
+    remote shell command by manually specifying the kwarg:
+
+    .. code-block:: bash
+
+        salt '*' cmd.run cmd='sed -e s/=/:/g'
+    '''
+    run(cmd,
+        cwd=cwd,
+        stdin=stdin,
+        runas=runas,
+        shell=shell,
+        env=env,
+        clean_env=clean_env,
+        template=template,
+        rstrip=rstrip,
+        umask=umask,
+        output_loglevel=output_loglevel,
+        quiet=quiet,
+        timeout=timeout,
+        reset_system_locale=reset_system_locale,
+        ignore_retcode=ignore_retcode,
+        saltenv=saltenv,
+        use_vt=use_vt,
+        python_shell=True,
+        **kwargs)
 
 def run_stdout(cmd,
                cwd=None,
