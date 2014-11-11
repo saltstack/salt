@@ -29,12 +29,12 @@ In other words `salt mac-machine pkg.refresh_db` is more like
 `apt-get update; apt-get upgrade dpkg apt-get` than simply `apt-get update`.
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import copy
 import logging
 import re
-from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils

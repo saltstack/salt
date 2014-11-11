@@ -2,6 +2,7 @@
 '''
 Control the state system on the minion
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -13,7 +14,6 @@ import logging
 import tarfile
 import datetime
 import tempfile
-from __future__ import absolute_import
 
 # Import salt libs
 import salt.config
