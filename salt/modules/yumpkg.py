@@ -14,12 +14,12 @@ Support for YUM
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import copy
 import logging
 import os
 import re
 import six
-from __future__ import absolute_import
 from distutils.version import LooseVersion as _LooseVersion
 from six.moves import range
 
