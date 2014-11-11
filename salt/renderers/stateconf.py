@@ -6,6 +6,7 @@ A flexible renderer that takes a templating engine and a data format
 :maturity: new
 :platform: all
 '''
+from __future__ import absolute_import
 # See http://docs.saltstack.org/en/latest/ref/renderers/all/salt.renderers.stateconf.html
 # for a guide to using this module.
 #
@@ -37,6 +38,7 @@ from cStringIO import StringIO
 # Import salt libs
 import salt.utils
 from salt.exceptions import SaltRenderError
+import six
 from six import string_types
 
 __all__ = ['render']
@@ -310,7 +312,7 @@ def nvlist(thelist, names=None):
     for nvitem in thelist:
         if isinstance(nvitem, dict):
             # then nvitem is a name-value item(a dict) of the list.
-            name, value = nvitem.iteritems().next()
+            name, value = next(nvitem.iteritems())
             if names is None or name in names:
                 yield nvitem, name, value
 
@@ -336,12 +338,12 @@ def nvlist2(thelist, names=None):
 
 
 def statelist(states_dict, sid_excludes=frozenset(['include', 'exclude'])):
-    for sid, states in states_dict.iteritems():
+    for sid, states in six.iteritems(states_dict):
         if sid.startswith('__'):
             continue
         if sid in sid_excludes:
             continue
-        for sname, args in states.iteritems():
+        for sname, args in six.iteritems(states):
             if sname.startswith('__'):
                 continue
             yield sid, states, sname, args
@@ -376,11 +378,11 @@ def rename_state_ids(data, sls, is_extend=False):
                     'already exists!'.format(sid, newsid)
                 )
             # add a '- name: sid' to those states without '- name'.
-            for sname, args in data[sid].iteritems():
+            for sname, args in six.iteritems(data[sid]):
                 if state_name(sname) == STATE_NAME:
                     continue
                 for arg in args:
-                    if isinstance(arg, dict) and iter(arg).next() == 'name':
+                    if isinstance(arg, dict) and next(iter(arg)) == 'name':
                         break
                 else:
                     # then no '- name: ...' is defined in the state args
@@ -474,14 +476,14 @@ def add_start_state(data, sls):
     # no __sls__, or it's the first state whose id declaration has a
     # __sls__ == sls.
     non_sids = set(['include', 'exclude', 'extend'])
-    for sid, states in data.iteritems():
+    for sid, states in six.iteritems(data):
         if sid in non_sids or sid.startswith('__'):
             continue
         if '__sls__' not in states or states['__sls__'] == sls:
             break
     else:
         raise SaltRenderError('Can\'t determine the first state in the sls file!')
-    reqin = {state_name(data[sid].iterkeys().next()): sid}
+    reqin = {state_name(next(data[sid].iterkeys())): sid}
     data[start_sid] = {STATE_FUNC: [{'require_in': [reqin]}]}
 
 
@@ -534,7 +536,7 @@ STATE_CONF_EXT = {}   # stateconf.set under extend: ...
 
 
 def extract_state_confs(data, is_extend=False):
-    for state_id, state_dict in data.iteritems():
+    for state_id, state_dict in six.iteritems(data):
         if state_id == 'extend' and not is_extend:
             extract_state_confs(state_dict, True)
             continue
@@ -551,7 +553,7 @@ def extract_state_confs(data, is_extend=False):
         for sdk in state_dict[key]:
             if not isinstance(sdk, dict):
                 continue
-            key, val = sdk.iteritems().next()
+            key, val = next(sdk.iteritems())
             conf[key] = val
 
         if not is_extend and state_id in STATE_CONF_EXT:
