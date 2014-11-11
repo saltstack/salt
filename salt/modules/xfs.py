@@ -24,16 +24,16 @@
 '''
 Module for managing XFS file systems.
 '''
-from __future__ import absolute_import
 
 import os
 import re
 import time
 import logging
+from __future__ import absolute_import
+from six.moves import range
 
 import salt.utils
 from salt.exceptions import CommandExecutionError
-from six.moves import range
 
 log = logging.getLogger(__name__)
 
@@ -325,7 +325,7 @@ def _blkid_output(out):
             data[dev.pop("devname")] = dev
 
     mounts = _get_mounts()
-    for device in list(mounts.keys()):
+    for device in mounts.keys():
         if data.get(device):
             data[device].update(mounts[device])
 
