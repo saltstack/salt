@@ -23,6 +23,7 @@ and https://pypi.python.org/pypi/raven installed
 The tags list (optional) specifies grains items that will be used as sentry tags, allowing tagging of events
 in the sentry ui.
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import logging
