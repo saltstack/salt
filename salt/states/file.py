@@ -3803,9 +3803,9 @@ def serialize(name,
     if merge_if_exists:
         if os.path.isfile(name):
             if formatter == 'yaml':
-                existing_data = yaml.safe_load(file(name, 'r'))
+                existing_data = yaml.safe_load(open(name, 'r'))
             elif formatter == 'json':
-                existing_data = json.load(file(name, 'r'))
+                existing_data = json.load(open(name, 'r'))
             else:
                 return {'changes': {},
                         'comment': ('{0} format is not supported for merging'
