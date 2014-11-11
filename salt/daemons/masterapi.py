@@ -3,6 +3,7 @@
 This module contains all of the routines needed to set up a master server, this
 involves preparing the three listeners and the workers needed by the master.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import fnmatch
