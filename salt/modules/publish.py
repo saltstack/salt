@@ -2,6 +2,7 @@
 '''
 Publish a command from a minion to a target
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import time
@@ -95,7 +96,7 @@ def _publish(
                     'tok': tok,
                     'jid': peer_data['jid']}
             ret = sreq.send(load)
-            returned_minions = ret.keys()
+            returned_minions = list(ret.keys())
             if returned_minions >= matched_minions:
                 if form == 'clean':
                     cret = {}
