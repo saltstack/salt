@@ -110,7 +110,7 @@ def present(
     # AWS type transformations
     difference = []
     if alarm_details:
-        for k, v in list(attributes.items()):
+        for k, v in attributes.items():
             if k not in alarm_details:
                 difference.append("{0}={1} (new)".format(k, v))
                 continue
