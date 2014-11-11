@@ -211,6 +211,8 @@ def save_load(jid, clear_load):
 
     # Save the invocation information
     try:
+        if not os.path.exists(jid_dir):
+            os.mkdir(jid_dir)
         serial.dump(
             clear_load,
             salt.utils.fopen(os.path.join(jid_dir, LOAD_P), 'w+b')
