@@ -6,6 +6,7 @@ and what hosts are down
 
 # Import python libs
 from __future__ import print_function
+from __future__ import absolute_import
 import os
 import operator
 import re
@@ -20,6 +21,7 @@ import salt.client
 import salt.utils.minions
 import salt.wheel
 import salt.version
+import six
 
 FINGERPRINT_REGEX = re.compile(r'^([a-f0-9]{2}:){15}([a-f0-9]{2})$')
 
@@ -205,7 +207,7 @@ def safe_accept(target, expr_form='glob'):
     ret = ssh_client.cmd(target, 'key.finger', expr_form=expr_form)
 
     failures = {}
-    for minion, finger in ret.items():
+    for minion, finger in list(list(ret.items())):
         if not FINGERPRINT_REGEX.match(finger):
             failures[minion] = finger
         else:
@@ -230,7 +232,7 @@ def safe_accept(target, expr_form='glob'):
 
     if failures:
         print('safe_accept failed on the following minions:')
-        for minion, message in failures.iteritems():
+        for minion, message in six.iteritems(failures):
             print(minion)
             print('-' * len(minion))
             print(message)
