@@ -27,6 +27,7 @@ configuration file.
 '''
 
 from __future__ import generators, with_statement
+from __future__ import absolute_import
 
 import time
 import logging
@@ -35,6 +36,7 @@ import os
 import os.path
 import salt.utils
 from salt.exceptions import CommandExecutionError
+from six.moves import range
 
 
 __SYSLOG_NG_BINARY_PATH = None
@@ -125,7 +127,7 @@ class Buildable(object):
         Builds the body of a syslog-ng configuration object.
         '''
         _increase_indent()
-        body_array = map(lambda x: x.build(), self.iterable)
+        body_array = [x.build() for x in self.iterable]
 
         nl = "\n" if self.append_extra_newline else ''
 
@@ -426,7 +428,7 @@ def _get_type_id_options(name, configuration):
         type, sep, id = name.partition('.')
         options = configuration
     else:
-        type = configuration.keys()[0]
+        type = list(configuration.keys())[0]
         id = name
         options = configuration[type]
 
@@ -437,7 +439,7 @@ def _expand_one_key_dictionary(d):
     '''
     Returns the only one key and it's value from a dictionary.
     '''
-    key = d.keys()[0]
+    key = list(d.keys())[0]
     value = d[key]
     return key, value
 
@@ -524,14 +526,14 @@ def _is_reference(arg):
     '''
     Return True, if arg is a reference to a previously defined statement.
     '''
-    return isinstance(arg, dict) and len(arg) == 1 and isinstance(arg.values()[0], str)
+    return isinstance(arg, dict) and len(arg) == 1 and isinstance(list(arg.values())[0], str)
 
 
 def _is_junction(arg):
     '''
     Return True, if arg is a junction statement.
     '''
-    return isinstance(arg, dict) and len(arg) == 1 and arg.keys()[0] == 'junction'
+    return isinstance(arg, dict) and len(arg) == 1 and list(arg.keys())[0] == 'junction'
 
 
 def _add_reference(reference, statement):
@@ -549,7 +551,7 @@ def _is_inline_definition(arg):
     '''
     Returns True, if arg is an inline definition of a statement.
     '''
-    return isinstance(arg, dict) and len(arg) == 1 and isinstance(arg.values()[0], list)
+    return isinstance(arg, dict) and len(arg) == 1 and isinstance(list(arg.values())[0], list)
 
 
 def _add_inline_definition(item, statement):
@@ -1134,8 +1136,8 @@ def _write_config(config, newlines=2):
     Writes the given parameter config into the config file.
     '''
     text = config
-    if isinstance(config, dict) and len(config.keys()) == 1:
-        key = config.keys()[0]
+    if isinstance(config, dict) and len(list(list(config.keys()))) == 1:
+        key = list(list(config.keys()))[0]
         text = config[key]
 
     try:
