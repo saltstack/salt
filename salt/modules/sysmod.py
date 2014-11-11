@@ -2,11 +2,11 @@
 '''
 The sys module provides information about the available functions on the minion
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import fnmatch
 import logging
-from __future__ import absolute_import
 
 # Import salt libs
 import salt.loader

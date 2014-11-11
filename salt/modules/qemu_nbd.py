@@ -6,6 +6,7 @@ Qemu Command Wrapper
 The qemu system comes with powerful tools, such as qemu-img and qemu-nbd which
 are used here to build up kvm images.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -13,7 +14,6 @@ import glob
 import tempfile
 import time
 import logging
-from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils
