@@ -2,11 +2,11 @@
 '''
 The function cache system allows for data to be stored on the master so it can be easily read by other minions
 '''
-from __future__ import absolute_import
 
 # Import python libs
 import copy
 import logging
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.crypt
@@ -313,12 +313,12 @@ def get_docker(interfaces=None, cidrs=None):
     proxy_lists = {}
 
     # Process docker info
-    for host, containers in list(docker_hosts.items()):
+    for host, containers in docker_hosts.items():
         host_ips = []
 
         # Prepare host_ips list
         if not interfaces:
-            for iface, info in list(containers['host']['interfaces'].items()):
+            for iface, info in containers['host']['interfaces'].items():
                 if 'inet' in info:
                     for ip_ in info['inet']:
                         host_ips.append(ip_['address'])
