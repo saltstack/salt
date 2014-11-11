@@ -116,7 +116,7 @@ def decrypt_object(o, gpg):
         else:
             return o
     elif isinstance(o, dict):
-        for k, v in list(o.items()):
+        for k, v in o.items():
             o[k] = decrypt_object(v, gpg)
         return o
     elif isinstance(o, list):
