@@ -29,7 +29,7 @@ def __execute_cmd(name, xml):
     Execute ilom commands
     '''
     ret = {name.replace('_', ' '): {}}
-    id = 0
+    id_num = 0
 
     with salt.utils.fopen('/tmp/{0}.{1}'.format(name, os.getpid()), 'w') as fh:
         fh.write(xml)
@@ -52,9 +52,9 @@ def __execute_cmd(name, xml):
             # Make sure dict keys dont collide
             if ret[name.replace('_', ' ')].get(i.tag, False):
                 ret[name.replace('_', ' ')].update(
-                    {i.tag + '_' + str(id): i.attrib}
+                    {i.tag + '_' + str(id_num): i.attrib}
                 )
-                id += 1
+                id_num += 1
             else:
                 ret[name.replace('_', ' ')].update(
                     {i.tag: i.attrib}
