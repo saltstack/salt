@@ -23,6 +23,7 @@ import time
 import datetime
 import logging
 import hashlib
+from six.moves import range
 
 HAS_SSL = False
 try:
