@@ -2,6 +2,7 @@
 '''
 Module for running arbitrary tests
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import os
@@ -15,6 +16,7 @@ import random
 import salt
 import salt.version
 import salt.loader
+import six
 
 __proxyenabled__ = ['*']
 
@@ -212,7 +214,7 @@ def arg_type(*args, **kwargs):
         ret['args'].append(str(type(argument)))
 
     # all the kwargs
-    for key, val in kwargs.iteritems():
+    for key, val in six.iteritems(kwargs):
         ret['kwargs'][key] = str(type(val))
 
     return ret
