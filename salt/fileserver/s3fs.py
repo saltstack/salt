@@ -402,7 +402,7 @@ def _refresh_buckets_cache_file(cache_file):
 
     if _is_env_per_bucket():
         # Single environment per bucket
-        for saltenv, buckets in list(_get_buckets().items()):
+        for saltenv, buckets in _get_buckets().items():
             bucket_files = {}
             for bucket_name in buckets:
                 s3_meta = __get_s3_meta(bucket_name)
