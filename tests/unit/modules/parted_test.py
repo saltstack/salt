@@ -99,7 +99,7 @@ class PartedTestCase(TestCase):
 
     @patch('salt.utils.kwargs_warn_until')
     def test_probe_w_device_kwarg_and_arg(self, *args, **kwargs):
-        '''device arg is concatanated with possitional args'''
+        '''device arg is concatenated with positional args'''
         device_kwargs = {'device': '/dev/sda'}
         parted.probe("/dev/sdb", **device_kwargs)
         self.check_kwargs_warn_until_devices(device_kwargs)

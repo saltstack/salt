@@ -153,7 +153,7 @@ class Shell(object):
         '''
         if self.passwd:
             # Using single quotes prevents shell expansion and
-            # passwords containig '$'
+            # passwords containing '$'
             return "{0} {1} '{2} -p {3} {4}@{5}'".format(
                     'ssh-copy-id',
                     '-i {0}.pub'.format(self.priv),
@@ -170,7 +170,7 @@ class Shell(object):
         '''
         if self.passwd:
             # Using single quotes prevents shell expansion and
-            # passwords containig '$'
+            # passwords containing '$'
             return "{0} {1} {2} -p {3} {4}@{5}".format(
                     'ssh-copy-id',
                     '-i {0}.pub'.format(self.priv),

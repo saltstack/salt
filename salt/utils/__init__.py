@@ -27,16 +27,14 @@ import shlex
 import shutil
 import socket
 import stat
-import string
-import subprocess
 import sys
 import tempfile
 import time
 import types
 import warnings
 import yaml
+import string
 from calendar import month_abbr as months
-from string import maketrans
 
 # Try to load pwd, fallback to getpass if unsuccessful
 try:
@@ -824,7 +822,7 @@ def format_call(fun,
 
     aspec = get_function_argspec(fun)
 
-    args, kwargs = arg_lookup(fun).itervalues()
+    args, kwargs = iter(arg_lookup(fun).values())
 
     # Since we WILL be changing the data dictionary, let's change a copy of it
     data = data.copy()
@@ -862,7 +860,7 @@ def format_call(fun,
     if aspec.keywords:
         # The function accepts **kwargs, any non expected extra keyword
         # arguments will made available.
-        for key, value in data.iteritems():
+        for key, value in data.items():
             if key in expected_extra_kws:
                 continue
             ret['kwargs'][key] = value
@@ -874,7 +872,7 @@ def format_call(fun,
     # Did not return yet? Lets gather any remaining and unexpected keyword
     # arguments
     extra = {}
-    for key, value in data.iteritems():
+    for key, value in data.items():
         if key in expected_extra_kws:
             continue
         extra[key] = copy.deepcopy(value)
@@ -894,7 +892,7 @@ def format_call(fun,
         # Found unexpected keyword arguments, raise an error to the user
         if len(extra) == 1:
             msg = '{0[0]!r} is an invalid keyword argument for {1!r}'.format(
-                extra.keys(),
+                list(extra.keys()),
                 ret.get(
                     # In case this is being called for a state module
                     'full',
@@ -905,7 +903,7 @@ def format_call(fun,
         else:
             msg = '{0} and {1!r} are invalid keyword arguments for {2}'.format(
                 ', '.join(['{0!r}'.format(e) for e in extra][:-1]),
-                extra.keys()[-1],
+                list(extra.keys())[-1],
                 ret.get(
                     # In case this is being called for a state module
                     'full',
@@ -1151,7 +1149,8 @@ def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
 def subdict_match(data,
                   expr,
                   delimiter=DEFAULT_TARGET_DELIM,
-                  regex_match=False):
+                  regex_match=False,
+                  exact_match=False):
     '''
     Check for a match in a dictionary using a delimiter character to denote
     levels of subdicts, and also allowing the delimiter character to be
@@ -1159,13 +1158,15 @@ def subdict_match(data,
     data['foo']['bar'] == 'baz'. The former would take priority over the
     latter.
     '''
-    def _match(target, pattern, regex_match=False):
+    def _match(target, pattern, regex_match=False, exact_match=False):
         if regex_match:
             try:
                 return re.match(pattern.lower(), str(target).lower())
             except Exception:
                 log.error('Invalid regex {0!r} in match'.format(pattern))
                 return False
+        elif exact_match:
+            return str(target).lower() == pattern.lower()
         else:
             return fnmatch.fnmatch(str(target).lower(), pattern.lower())
 
@@ -1189,12 +1190,21 @@ def subdict_match(data,
                 if isinstance(member, dict):
                     if matchstr.startswith('*:'):
                         matchstr = matchstr[2:]
-                    if subdict_match(member, matchstr, regex_match=regex_match):
+                    if subdict_match(member,
+                                     matchstr,
+                                     regex_match=regex_match,
+                                     exact_match=exact_match):
                         return True
-                if _match(member, matchstr, regex_match=regex_match):
+                if _match(member,
+                          matchstr,
+                          regex_match=regex_match,
+                          exact_match=exact_match):
                     return True
             continue
-        if _match(match, matchstr, regex_match=regex_match):
+        if _match(match,
+                  matchstr,
+                  regex_match=regex_match,
+                  exact_match=exact_match):
             return True
     return False
 
@@ -1280,7 +1290,7 @@ def clean_kwargs(**kwargs):
     passing the kwargs forward wholesale.
     '''
     ret = {}
-    for key, val in kwargs.items():
+    for key, val in list(kwargs.items()):
         if not key.startswith('__pub'):
             ret[key] = val
     return ret
@@ -1300,7 +1310,7 @@ def sanitize_win_path_string(winpath):
     '''
     intab = '<>:|?*'
     outtab = '_' * len(intab)
-    trantab = maketrans(intab, outtab)
+    trantab = string.maketrans(intab, outtab)
     if isinstance(winpath, str):
         winpath = winpath.translate(trantab)
     elif isinstance(winpath, unicode):
@@ -1446,7 +1456,7 @@ def check_state_result(running):
         return False
 
     ret = True
-    for state_result in running.itervalues():
+    for state_result in running.values():
         if not isinstance(state_result, dict):
             # return false when hosts return a list instead of a dict
             ret = False
@@ -1473,7 +1483,7 @@ def test_mode(**kwargs):
     "Test" in any variation on capitalization (i.e. "TEST", "Test", "TeSt",
     etc) contains a True value (as determined by salt.utils.is_true).
     '''
-    for arg, value in kwargs.iteritems():
+    for arg, value in kwargs.items():
         try:
             if arg.lower() == 'test' and is_true(value):
                 return True
@@ -1813,6 +1823,27 @@ def yaml_squote(text):
         return ostream.getvalue()
 
 
+def yaml_encode(data):
+    """A simple YAML encode that can take a single-element datatype and return
+    a string representation.
+    """
+    yrepr = yaml.representer.SafeRepresenter()
+    ynode = yrepr.represent_data(data)
+    if not isinstance(ynode, yaml.ScalarNode):
+        raise TypeError(
+            "yaml_encode() only works with YAML scalar data;"
+            " failed for {0}".format(type(data))
+        )
+
+    tag = ynode.tag.rsplit(':', 1)[-1]
+    ret = ynode.value
+
+    if tag == "str":
+        ret = yaml_dquote(ynode.value)
+
+    return ret
+
+
 def warn_until(version,
                message,
                category=DeprecationWarning,
@@ -1877,11 +1908,26 @@ def warn_until(version,
         )
 
     if _dont_call_warnings is False:
+        def _formatwarning(message,
+                           category,
+                           filename,
+                           lineno,
+                           line=None):  # pylint: disable=W0613
+            '''
+            Replacement for warnings.formatwarning that disables the echoing of
+            the 'line' parameter.
+            '''
+            return '{0}:{1}: {2}: {3}'.format(
+                filename, lineno, category.__name__, message
+            )
+        saved = warnings.formatwarning
+        warnings.formatwarning = _formatwarning
         warnings.warn(
             message.format(version=version.formatted_version),
             category,
             stacklevel=stacklevel
         )
+        warnings.formatwarning = saved
 
 
 def kwargs_warn_until(kwargs,
@@ -2100,7 +2146,7 @@ def decode_dict(data):
     JSON decodes as unicode, Jinja needs bytes...
     '''
     rv = {}
-    for key, value in data.iteritems():
+    for key, value in data.items():
         if isinstance(key, unicode):
             key = key.encode('utf-8')
         if isinstance(value, unicode):
@@ -2150,7 +2196,7 @@ def is_bin_str(data):
     '''
     Detects if the passed string of data is bin or text
     '''
-    text_characters = ''.join(map(chr, range(32, 127)) + list('\n\r\t\b'))
+    text_characters = ''.join(map(chr, list(range(32, 127))) + list('\n\r\t\b'))
     _null_trans = string.maketrans('', '')
     if '\0' in data:
         return True
@@ -2260,7 +2306,7 @@ def get_group_dict(user=None, include_default=True):
     '''
     Returns a dict of all of the system groups as keys, and group ids
     as values, of which the user is a member.
-    E.g: {'staff': 501, 'sudo': 27}
+    E.g.: {'staff': 501, 'sudo': 27}
     '''
     if HAS_GRP is False or HAS_PWD is False:
         # We don't work on platforms that don't have grp and pwd
@@ -2282,7 +2328,7 @@ def get_gid_list(user=None, include_default=True):
         # We don't work on platforms that don't have grp and pwd
         # Just return an empty list
         return []
-    gid_list = [gid for (group, gid) in salt.utils.get_group_dict(user, include_default=include_default).items()]
+    gid_list = [gid for (group, gid) in list(salt.utils.get_group_dict(user, include_default=include_default).items())]
     return sorted(set(gid_list))
 
 
@@ -2408,7 +2454,7 @@ def chugid(runas):
     # this does not appear to be strictly true.
     group_list = get_group_dict(runas, include_default=True)
     if sys.platform == 'darwin':
-        group_list = dict((k, v) for k, v in group_list.iteritems()
+        group_list = dict((k, v) for k, v in group_list.items()
                           if not k.startswith('_'))
     for group_name in group_list:
         gid = group_list[group_name]

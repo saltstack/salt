@@ -2,6 +2,7 @@
 '''
 Salt module to manage RAID arrays with mdadm
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os

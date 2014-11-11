@@ -8,6 +8,8 @@ References:
 '''
 
 # Import python libs
+from __future__ import absolute_import
+import six
 import functools
 import logging
 import os.path
@@ -123,6 +125,7 @@ _DEB_CONFIG_PPPOE_OPTS = {
     'persist': 'persist',
     'mtu': 'mtu',
     'noaccomp': 'noaccomp',
+    'linkname': 'linkname',
 }
 
 _DEB_ROUTES_FILE = '/etc/network/routes'
@@ -395,7 +398,7 @@ DEBIAN_ATTR_TO_SALT_ATTR_MAP = dict(
 DEBIAN_ATTR_TO_SALT_ATTR_MAP['address'] = 'address'
 DEBIAN_ATTR_TO_SALT_ATTR_MAP['hwaddress'] = 'hwaddress'
 
-IPV4_VALID_PROTO = ['bootp', 'dhcp', 'static', 'manual', 'loopback']
+IPV4_VALID_PROTO = ['bootp', 'dhcp', 'static', 'manual', 'loopback', 'ppp']
 
 IPV4_ATTR_MAP = {
     'proto': __within(IPV4_VALID_PROTO, dtype=str),
@@ -1251,8 +1254,8 @@ def _parse_network_settings(opts, current):
     the global network settings file.
     '''
     # Normalize keys
-    opts = dict((k.lower(), v) for (k, v) in opts.iteritems())
-    current = dict((k.lower(), v) for (k, v) in current.iteritems())
+    opts = dict((k.lower(), v) for (k, v) in six.iteritems(opts))
+    current = dict((k.lower(), v) for (k, v) in six.iteritems(current))
     result = {}
 
     valid = _CONFIG_TRUE + _CONFIG_FALSE
@@ -1294,7 +1297,7 @@ def _parse_routes(iface, opts):
     the route settings file.
     '''
     # Normalize keys
-    opts = dict((k.lower(), v) for (k, v) in opts.iteritems())
+    opts = dict((k.lower(), v) for (k, v) in six.iteritems(opts))
     result = {}
     if 'routes' not in opts:
         _raise_error_routes(iface, 'routes', 'List of routes')

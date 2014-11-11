@@ -9,6 +9,7 @@ Support for Varnish
     These functions are designed to work with all implementations of Varnish
     from 3.x onwards
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging

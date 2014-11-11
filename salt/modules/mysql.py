@@ -33,6 +33,7 @@ Module to provide MySQL compatibility to salt.
     </ref/states/all/salt.states.mysql_user>`. Additionally, it is now possible
     to setup a user with no password.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import time
@@ -40,6 +41,8 @@ import logging
 import re
 import sys
 import shlex
+from six.moves import zip
+from six.moves import range
 
 # Import salt libs
 import salt.utils
@@ -1461,7 +1464,7 @@ def __ssl_option_sanitize(ssl_option):
 
     # Like most other "salt dsl" YAML structures, ssl_option is a list of single-element dicts
     for opt in ssl_option:
-        key = opt.iterkeys().next()
+        key = next(opt.iterkeys())
         value = opt[key]
 
         normal_key = key.strip().upper()

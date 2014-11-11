@@ -2,6 +2,7 @@
 '''
 Pkgutil support for Solaris
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import copy
@@ -9,6 +10,7 @@ import copy
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError, MinionError
+import six
 
 
 def __virtual__():
@@ -275,7 +277,7 @@ def install(name=None, refresh=False, version=None, pkgs=None, **kwargs):
     if pkgs is None and version and len(pkg_params) == 1:
         pkg_params = {name: version}
     targets = []
-    for param, pkgver in pkg_params.iteritems():
+    for param, pkgver in six.iteritems(pkg_params):
         if pkgver is None:
             targets.append(param)
         else:

@@ -3,6 +3,8 @@
 Support for modifying make.conf under Gentoo
 
 '''
+# Impot python libs
+from __future__ import print_function
 
 
 def __virtual__():
@@ -43,7 +45,6 @@ def _add_var(var, value):
             layman.replace("/", "\\/"),
             fullvar,
             makeconf)
-        print cmd
         __salt__['cmd.run'](cmd)
     else:
         __salt__['file.append'](makeconf, fullvar)

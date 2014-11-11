@@ -3,6 +3,8 @@
 Virtual machine image management tools
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 import os
 import shutil
@@ -51,7 +53,7 @@ def prep_bootstrap(mpt):
         uuid.uuid4()))
     if not os.path.exists(fpd_):
         os.makedirs(fpd_)
-    os.chmod(fpd_, 0700)
+    os.chmod(fpd_, 0o700)
     fp_ = os.path.join(fpd_, os.path.basename(bs_))
     # Copy script into tmp
     shutil.copy(bs_, fp_)
@@ -208,8 +210,8 @@ def mkconfig(config=None, tmp=None, id_=None, approve_key=True,
             fic.write(_file_or_content(pub_key))
         with open(privkeyfn, 'w') as fic:
             fic.write(_file_or_content(priv_key))
-        os.chmod(pubkeyfn, 0600)
-        os.chmod(privkeyfn, 0600)
+        os.chmod(pubkeyfn, 0o600)
+        os.chmod(privkeyfn, 0o600)
     else:
         salt.crypt.gen_keys(tmp, 'minion', 2048)
     if approve_key and not preseeded:

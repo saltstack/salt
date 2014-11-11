@@ -2,6 +2,7 @@
 '''
 The jail module for FreeBSD
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -144,7 +145,7 @@ def show_config(jail):
                             if line.split()[-1] == '{':
                                 if line.split()[0] != jail and line.split()[0] != '*':
                                     while line.split()[-1] != '}':
-                                        line = _fp.next()
+                                        line = next(_fp)
                                         line = line.partition('#')[0].strip()
                                 else:
                                     continue

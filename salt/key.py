@@ -13,13 +13,13 @@ import fnmatch
 import hashlib
 import json
 import logging
+from six.moves import input
 
 # Import salt libs
 import salt.crypt
 import salt.utils
 import salt.utils.event
 import salt.daemons.masterapi
-from salt import daemons
 from salt.utils import kinds
 from salt.utils.event import tagify
 
@@ -130,7 +130,7 @@ class KeyCLI(object):
                     'key',
                     self.opts)
             try:
-                veri = raw_input('Proceed? [n/Y] ')
+                veri = input('Proceed? [n/Y] ')
             except KeyboardInterrupt:
                 raise SystemExit("\nExiting on CTRL-c")
             if not veri or veri.lower().startswith('y'):
@@ -159,7 +159,7 @@ class KeyCLI(object):
         '''
         Accept all keys
 
-        :param bool include_rejected: Whether or not to accept a matched key that was formely rejected
+        :param bool include_rejected: Whether or not to accept a matched key that was formerly rejected
         '''
         self.accept('*', include_rejected=include_rejected)
 
@@ -194,7 +194,7 @@ class KeyCLI(object):
                     'key',
                     self.opts)
             try:
-                veri = raw_input('Proceed? [N/y] ')
+                veri = input('Proceed? [N/y] ')
             except KeyboardInterrupt:
                 raise SystemExit("\nExiting on CTRL-c")
             if veri.lower().startswith('y'):
@@ -255,7 +255,7 @@ class KeyCLI(object):
                     keys,
                     'key',
                     self.opts)
-            veri = raw_input('Proceed? [n/Y] ')
+            veri = input('Proceed? [n/Y] ')
             if veri.lower().startswith('n'):
                 return
         _print_rejected(

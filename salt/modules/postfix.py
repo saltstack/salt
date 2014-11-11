@@ -11,6 +11,7 @@ The design of this module is such that when files are edited, a minimum of
 changes are made to them. Each file should look as if it has been edited by
 hand; order, comments and whitespace are all preserved.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import re

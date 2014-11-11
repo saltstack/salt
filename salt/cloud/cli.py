@@ -16,6 +16,7 @@ from __future__ import print_function
 import os
 import sys
 import logging
+from six.moves import input
 
 # Import salt libs
 import salt.config
@@ -325,7 +326,7 @@ class SaltCloud(parsers.SaltCloudParser):
         if self.options.assume_yes:
             return True
         print(msg)
-        res = raw_input('Proceed? [N/y] ')
+        res = input('Proceed? [N/y] ')
         if not res.lower().startswith('y'):
             return False
         print('... proceeding')

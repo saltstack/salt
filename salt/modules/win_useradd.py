@@ -4,6 +4,7 @@ Manage Windows users with the net user command
 
 NOTE: This currently only works with local user accounts, not domain accounts
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils

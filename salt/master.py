@@ -4,6 +4,8 @@ This module contains all of the routines needed to set up a master server, this
 involves preparing the three listeners and the workers needed by the master.
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 import os
 import re
@@ -91,7 +93,7 @@ class SMaster(object):
 
 class Maintenance(multiprocessing.Process):
     '''
-    A generalized maintenence process which performances maintenence
+    A generalized maintenance process which performances maintenance
     routines.
     '''
     def __init__(self, opts):
@@ -348,6 +350,19 @@ class Master(SMaster):
             log.info('Creating master reactor process')
             process_manager.add_process(salt.utils.event.Reactor, args=(self.opts,))
 
+        ext_procs = self.opts.get('ext_processes', [])
+        for proc in ext_procs:
+            log.info('Creating ext_processes process: {0}'.format(proc))
+            try:
+                mod = '.'.join(proc.split('.')[:-1])
+                cls = proc.split('.')[-1]
+                _tmp = __import__(mod, globals(), locals(), [cls], -1)
+                cls = _tmp.__getattribute__(cls)
+                process_manager.add_process(cls, args=(self.opts,))
+            except Exception:
+                log.error(('Error creating ext_processes '
+                           'process: {0}').format(proc))
+
         if HAS_HALITE and 'halite' in self.opts:
             log.info('Creating master halite process')
             process_manager.add_process(Halite, args=(self.opts['halite'],))
@@ -447,7 +462,7 @@ class Publisher(multiprocessing.Process):
 
         # Securely create socket
         log.info('Starting the Salt Puller on {0}'.format(pull_uri))
-        old_umask = os.umask(0177)
+        old_umask = os.umask(0o177)
         try:
             pull_sock.bind(pull_uri)
         finally:
@@ -739,7 +754,7 @@ class MWorker(multiprocessing.Process):
             stats = os.stat(dfn)
         except os.error:
             return
-        if stats.st_mode != 0100400:
+        if stats.st_mode != 0o100400:
             # Invalid dfn, return
             return
         if stats.st_mtime > self.k_mtime:
@@ -902,7 +917,8 @@ class AESFuncs(object):
             perms,
             clear_load['fun'],
             clear_load['tgt'],
-            clear_load.get('tgt_type', 'glob'))
+            clear_load.get('tgt_type', 'glob'),
+            publish_validate=True)
 
     def __verify_load(self, load, verify_keys):
         '''
@@ -1126,7 +1142,7 @@ class AESFuncs(object):
             return False
         load['grains']['id'] = load['id']
         mods = set()
-        for func in self.mminion.functions.itervalues():
+        for func in self.mminion.functions.values():
             mods.add(func.__module__)
         for mod in mods:
             sys.modules[mod].__grains__ = load['grains']
@@ -1194,7 +1210,6 @@ class AESFuncs(object):
             saveload_fstr = '{0}.save_load'.format(self.opts['master_job_cache'])
             self.mminion.returners[saveload_fstr](load['jid'], load)
         log.info('Got return from {id} for job {jid}'.format(**load))
-        self.event.fire_event(load, load['jid'])  # old dup event
         self.event.fire_event(
             load, tagify([load['jid'], 'ret', load['id']], 'job'))
         self.event.fire_ret_load(load)
@@ -2124,7 +2139,7 @@ class ClearFuncs(object):
             try:
                 name = self.loadauth.load_name(extra)  # The username we are attempting to auth with
                 groups = self.loadauth.get_groups(extra)  # The groups this user belongs to
-                group_perm_keys = filter(lambda(item): item.endswith('%'), self.opts['external_auth'][extra['eauth']])  # The configured auth groups
+                group_perm_keys = filter(lambda item: item.endswith('%'), self.opts['external_auth'][extra['eauth']])  # The configured auth groups
 
                 # First we need to know if the user is allowed to proceed via any of their group memberships.
                 group_auth_match = False
@@ -2297,7 +2312,6 @@ class ClearFuncs(object):
             }
 
         # Announce the job on the event bus
-        self.event.fire_event(new_job_load, 'new_job')  # old dup event
         self.event.fire_event(new_job_load, tagify([clear_load['jid'], 'new'], 'job'))
 
         if self.opts['ext_job_cache']:

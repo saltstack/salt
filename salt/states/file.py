@@ -379,7 +379,7 @@ def _get_recurse_dest(prefix, fn_, source, env):
 
     srcpath = source[7:]  # the path after "salt://"
 
-    # in solo mode(ie, file_client=='local'), fn_ is a path below
+    # in solo mode (i.e., file_client=='local'), fn_ is a path below
     # a file root; in remote mode, fn_ is a path below the cache_dir.
     for root in local_roots:
         rootlen = len(root)
@@ -3803,9 +3803,9 @@ def serialize(name,
     if merge_if_exists:
         if os.path.isfile(name):
             if formatter == 'yaml':
-                existing_data = yaml.safe_load(file(name, 'r'))
+                existing_data = yaml.safe_load(open(name, 'r'))
             elif formatter == 'json':
-                existing_data = json.load(file(name, 'r'))
+                existing_data = json.load(open(name, 'r'))
             else:
                 return {'changes': {},
                         'comment': ('{0} format is not supported for merging'

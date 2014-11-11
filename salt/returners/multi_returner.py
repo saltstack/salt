@@ -5,6 +5,7 @@ Read/Write multiple returners
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import logging
 
 # Import salt libs
@@ -48,7 +49,7 @@ def prep_jid(nocache=False, passed_jid=None):
         else:
             r_jid = _mminion().returners['{0}.prep_jid'.format(returner)](nocache=nocache)
             if r_jid != jid:
-                print 'Uhh.... crud the jids do not match'
+                log.debug('Uhh.... crud the jids do not match')
     return jid
 
 

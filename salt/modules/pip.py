@@ -2,6 +2,7 @@
 '''
 Install Python packages with pip to either the system or a virtualenv
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os

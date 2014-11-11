@@ -2,6 +2,7 @@
 '''
 Salt interface to ZFS commands
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import logging
@@ -125,7 +126,7 @@ if _check_zfs():
     for available_cmd in available_cmds:
 
         # Set the output from _make_function to be 'available_cmd_'.
-        # ie 'list' becomes 'list_' in local module.
+        # i.e. 'list' becomes 'list_' in local module.
         setattr(
                 sys.modules[__name__],
                 '{0}_'.format(available_cmd),

@@ -2,6 +2,7 @@
 '''
 Manage users with the useradd command
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import re

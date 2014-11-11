@@ -13,6 +13,7 @@ Use this minion to spin up a cloud instance:
       cloud.profile:
         my-ec2-config
 '''
+from __future__ import absolute_import
 
 import pprint
 from salt._compat import string_types
@@ -95,7 +96,7 @@ def present(name, cloud_provider, onlyif=None, unless=None, **kwargs):
                 return _valid(name, comment='unless execution succeeded')
 
     # provider=None not cloud_provider because
-    # need to ensure ALL providers dont have the instance
+    # need to ensure ALL providers don't have the instance
     if __salt__['cloud.has_instance'](name=name, provider=None):
         ret['result'] = True
         ret['comment'] = 'Already present instance {0}'.format(name)
@@ -245,7 +246,7 @@ def profile(name, profile, onlyif=None, unless=None, **kwargs):
             if retcode(unless) == 0:
                 return _valid(name, comment='unless execution succeeded')
     instance = __salt__['cloud.action'](fun='show_instance', names=[name])
-    prov = str(instance.iterkeys().next())
+    prov = str(next(instance.iterkeys()))
     if instance and 'Not Actioned' not in prov:
         ret['result'] = True
         ret['comment'] = 'Already present instance {0}'.format(name)

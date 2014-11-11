@@ -14,6 +14,7 @@ authentication, it is also possible to pass private keys to use explicitly.
         - rev: develop
         - target: /tmp/salt
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -72,6 +73,10 @@ def latest(name,
 
     force_checkout
         Force a checkout even if there might be overwritten changes
+        (Default: False)
+
+    force_reset
+        Force the checkout to ``--reset hard`` to the remote ref
         (Default: False)
 
     submodules
@@ -244,8 +249,9 @@ def latest(name,
                                               identity=identity)
 
                     if force_reset:
+                        opts = "--hard {0}/{1}".format(remote_name, rev)
                         __salt__['git.reset'](target,
-                                              opts="--hard",
+                                              opts=opts,
                                               user=user)
 
                     __salt__['git.checkout'](target,

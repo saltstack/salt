@@ -83,6 +83,8 @@ the following:
     user:  user name
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 from __future__ import print_function
 import logging
@@ -92,6 +94,8 @@ import stat
 import shutil
 import sys
 import time
+import shlex
+from subprocess import Popen, PIPE
 try:
     import grp
     import pwd
@@ -394,7 +398,7 @@ class MtimeOption(Option):
     Match files modified since the specified time.
     The option name is 'mtime', e.g. {'mtime' : '3d'}.
     The value format is [<num>w] [<num>[d]] [<num>h] [<num>m] [<num>s]
-    where num is an integer or float and the case-insenstive suffixes are:
+    where num is an integer or float and the case-insensitive suffixes are:
         w = week
         d = day
         h = hour
@@ -541,6 +545,37 @@ class DeleteOption(TypeOption):
         except (OSError, IOError) as exc:
             return None
         return fullpath
+
+
+class ExecOption(Option):
+    '''
+    Execute the given command, {} replaced by filename.
+    Quote the {} if commands might include whitespace.
+    '''
+    def __init__(self, key, value):
+        self.command = value
+
+    def execute(self, fullpath, fstat, test=False):
+        try:
+            command = self.command.replace('{}', fullpath)
+            print(shlex.split(command))
+            p = Popen(shlex.split(command),
+                      stdout=PIPE,
+                      stderr=PIPE)
+            (out, err) = p.communicate()
+            if err:
+                log.error(
+                    'Error running command: {0}\n\n{1}'.format(
+                    command,
+                    err))
+            return "{0}:\n{1}\n".format(command, out)
+
+        except Exception as e:
+            log.error(
+                'Exception while executing command "{0}":\n\n{1}'.format(
+                    command,
+                    e))
+            return '{0}: Failed'.format(fullpath)
 
 
 class Finder(object):

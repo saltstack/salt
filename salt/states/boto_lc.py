@@ -92,6 +92,7 @@ and autoscale groups are completely dependent on each other.
             key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
             region: us-east-1
 '''
+from __future__ import absolute_import
 from salt.exceptions import SaltInvocationError
 
 
@@ -150,7 +151,7 @@ def present(
 
     cloud_init
         A dict of cloud_init configuration. Currently supported values:
-        scripts, cloud-config. Mutually exlusive with user_data.
+        scripts, cloud-config. Mutually exclusive with user_data.
 
     instance_type
         The instance type. ex: m1.small.

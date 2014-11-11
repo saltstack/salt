@@ -58,6 +58,7 @@ Example output::
 
 # Import python libs
 import pprint
+import sys
 
 # Import salt libs
 import salt.utils
@@ -197,10 +198,18 @@ def _format_host(host, data):
             if comps[1] != comps[2]:
                 state_lines.insert(
                     3, u'    {tcolor}    Name: {comps[2]}{colors[ENDC]}')
+            # be sure that ret['comment'] is utf-8 friendly
             try:
-                comment = ret['comment'].strip().replace(
-                    u'\n',
-                    u'\n' + u' ' * 14)
+                if not isinstance(ret['comment'], unicode):
+                    ret['comment'] = ret['comment'].decode('utf-8')
+            except UnicodeDecodeError:
+                # but try to continue on errors
+                pass
+            try:
+                comment = ret['comment'].decode(sys.getfilesystemencoding())
+                comment = comment.strip().replace(
+                        u'\n',
+                        u'\n' + u' ' * 14)
             except AttributeError:  # Assume comment is a list
                 try:
                     comment = ret['comment'].join(' ').replace(

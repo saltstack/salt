@@ -4,6 +4,7 @@ Interact with virtual machine images via libguestfs
 
 :depends:   - libguestfs
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import os

@@ -9,7 +9,6 @@ import itertools
 # Import salt libs
 import salt.client
 import salt.runner
-import salt.output
 import salt.wheel
 
 
@@ -32,7 +31,6 @@ def runner():
     '''
     client = salt.runner.RunnerClient(__opts__)
     ret = client.get_docs()
-    salt.output.display_output(ret, '', __opts__)
     return ret
 
 
@@ -48,7 +46,6 @@ def wheel():
     '''
     client = salt.wheel.Wheel(__opts__)
     ret = client.get_docs()
-    salt.output.display_output(ret, '', __opts__)
     return ret
 
 
@@ -72,7 +69,6 @@ def execution():
     i = itertools.chain.from_iterable([i.items() for i in docs.itervalues()])
     ret = dict(list(i))
 
-    salt.output.display_output(ret, '', __opts__)
     return ret
 
 
@@ -91,7 +87,7 @@ def __list_functions(user=None):
     for ret in gener:
         funcs.update(ret)
     if not user:
-        salt.output.display_output(funcs, '', __opts__)
+        progress(funcs)
         return funcs
     for _, val in __opts__['external_auth'].items():
         if user in val:

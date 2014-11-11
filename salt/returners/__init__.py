@@ -32,11 +32,11 @@ def get_returner_options(virtualname=None,
             value.virtualname.option
 
     :param attrs: options the returner wants to read
-    :param __opts__: Optionnal dict-like object that contains a fallback config
+    :param __opts__: Optional dict-like object that contains a fallback config
         in case the param `__salt__` is not supplied.
 
         Defaults to empty dict.
-    :param __salt__: Optionnal dict-like object that exposes the salt API.
+    :param __salt__: Optional dict-like object that exposes the salt API.
 
         Defaults to empty dict.
 
@@ -48,12 +48,12 @@ def get_returner_options(virtualname=None,
         called from the Salt scheduler, so we look for the
         configuration options in the param `__opts__`
         -> cfg is a copy for the __opts__ dictionary
-    :param str profile_attr: Optionnal.
+    :param str profile_attr: Optional.
 
         If supplied, an overriding config profile is read from
         the corresponding key of `__salt__`.
 
-    :param dict profile_attrs: Optionnal
+    :param dict profile_attrs: Optional
 
         .. fixme:: only keys are read
 

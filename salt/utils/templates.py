@@ -223,7 +223,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
 
     if not saltenv:
         if tmplpath:
-            # ie, the template is from a file outside the state tree
+            # i.e., the template is from a file outside the state tree
             #
             # XXX: FileSystemLoader is not being properly instantiated here is
             # it? At least it ain't according to:
@@ -265,6 +265,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     jinja_env.filters['sequence'] = ensure_sequence_filter
     jinja_env.filters['yaml_dquote'] = salt.utils.yaml_dquote
     jinja_env.filters['yaml_squote'] = salt.utils.yaml_squote
+    jinja_env.filters['yaml_encode'] = salt.utils.yaml_encode
 
     jinja_env.globals['odict'] = OrderedDict
     jinja_env.globals['show_full_context'] = show_full_context
@@ -344,7 +345,7 @@ def render_mako_tmpl(tmplstr, context, tmplpath=None):
     lookup = None
     if not saltenv:
         if tmplpath:
-            # ie, the template is from a file outside the state tree
+            # i.e., the template is from a file outside the state tree
             from mako.lookup import TemplateLookup
             lookup = TemplateLookup(directories=[os.path.dirname(tmplpath)])
     else:

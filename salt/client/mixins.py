@@ -25,6 +25,9 @@ class SyncClientMixin(object):
         '''
         Check that the function passed really exists
         '''
+        if not fun:
+            err = 'Must specify a function to run'
+            raise salt.exceptions.CommandExecutionError(err)
         if fun not in self.functions:
             err = 'Function {0!r} is unavailable'.format(fun)
             raise salt.exceptions.CommandExecutionError(err)

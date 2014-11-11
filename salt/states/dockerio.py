@@ -110,12 +110,15 @@ Available Functions
 
 
 '''
+
+from __future__ import absolute_import
 import functools
 import logging
 
 # Import salt libs
 from salt._compat import string_types
 import salt.utils
+import six
 
 # Enable proper logging
 log = logging.getLogger(__name__)
@@ -499,12 +502,12 @@ def installed(name,
         volumes = []
     if isinstance(environment, dict):
         for k in environment:
-            denvironment[unicode(k)] = unicode(environment[k])
+            denvironment[six.text_type(k)] = six.text_type(environment[k])
     if isinstance(environment, list):
         for p in environment:
             if isinstance(p, dict):
                 for k in p:
-                    denvironment[unicode(k)] = unicode(p[k])
+                    denvironment[six.text_type(k)] = six.text_type(p[k])
     for p in ports:
         if not isinstance(p, dict):
             dports[str(p)] = {}
@@ -539,7 +542,7 @@ def installed(name,
     changes = 'Container created'
     try:
         cid = out['out']['info']['id']
-    except Exception, e:
+    except Exception as e:
         log.debug(str(e))
     else:
         changes = 'Container {0} created'.format(cid)
@@ -899,19 +902,19 @@ def running(name,
         volumes_from = []
     if isinstance(environment, dict):
         for key in environment:
-            denvironment[unicode(key)] = unicode(environment[key])
+            denvironment[six.text_type(key)] = six.text_type(environment[key])
     if isinstance(environment, list):
         for var in environment:
             if isinstance(var, dict):
                 for key in var:
-                    denvironment[unicode(key)] = unicode(var[key])
+                    denvironment[six.text_type(key)] = six.text_type(var[key])
     if isinstance(volumes, dict):
         bindvolumes = volumes
     if isinstance(volumes, list):
         for vol in volumes:
             if isinstance(vol, dict):
                 # get source as the dict key
-                source = vol.keys()[0]
+                source = list(vol.keys())[0]
                 # then find target
                 if isinstance(vol[source], dict):
                     target = vol[source]['bind']
@@ -932,7 +935,7 @@ def running(name,
     if isinstance(ports, list):
         for port in ports:
             if isinstance(port, dict):
-                container_port = port.keys()[0]
+                container_port = list(port.keys())[0]
                 #find target
                 if isinstance(port[container_port], dict):
                     host_port = port[container_port]['HostPort']
@@ -967,7 +970,7 @@ def running(name,
         try:
             cid = out['out']['info']['id']
             log.debug(str(cid))
-        except Exception, e:
+        except Exception as e:
             changes.append('Container created')
             log.debug(str(e))
         else:

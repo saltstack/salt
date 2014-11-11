@@ -198,7 +198,7 @@ class State(object):
     This represents a single item in the state tree
 
     The id_ is the id of the state, the func is the full name of the salt
-    state (ie. file.managed). All the keyword args you pass in become the
+    state (i.e. file.managed). All the keyword args you pass in become the
     properties of your state.
     '''
 

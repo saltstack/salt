@@ -2,6 +2,7 @@
 '''
 Service support for the REST example
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging

@@ -21,11 +21,13 @@ major updates in Salt Cloud and the merging of Salt API into the main project.
 
 .. important::
 
-    Compound and pillar matching have been temporarily disabled for this
-    release due to the possibility of inferring pillar data using pillar glob
-    matching. We will have a proper fix (just disabling pillar glob matching)
-    in the 2014.7.1 release, and compound matching and non-globbing pillar
-    matching will be re-enabled at that point.
+    Compound/pillar matching have been temporarily disabled for the ``mine``
+    and ``publish`` modules for this release due to the possibility of
+    inferring pillar data using pillar glob matching. A proper fix is now in
+    the 2014.7 branch and scheduled for the  2014.7.1 release, and compound
+    matching and non-globbing pillar matching will be re-enabled at that point.
+
+    Compound and pillar matching for normal salt commands are unaffected.
 
 
 New Transport!

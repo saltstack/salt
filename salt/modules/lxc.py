@@ -8,6 +8,8 @@ lxc >= 1.0 (even beta alpha) is required
 
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 from __future__ import print_function
 import traceback
@@ -21,6 +23,7 @@ import time
 import shutil
 import re
 import random
+import six
 
 # Import salt libs
 import salt
@@ -125,7 +128,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
         This is a list of mappings ``{ip: '', mac: '',netmask:''}``
         Set gateway to ``None`` and an interface with a gateway
         to escape from another interface that's eth0.
-        eg:
+        e.g.:
 
         .. code-block:: python
 
@@ -466,7 +469,7 @@ def _get_network_conf(conf_tuples=None, **kwargs):
             new[iface]['lxc.network.hwaddr'] = omac
 
     ret = []
-    for v in new.itervalues():
+    for v in new.values():
         for row in v:
             ret.append({row: v[row]})
     return ret
@@ -536,12 +539,12 @@ def _get_veths(net_data):
     '''Parse the nic setup inside lxc conf tuples back
     to a dictionary indexed by network interface'''
     if isinstance(net_data, dict):
-        net_data = net_data.items()
+        net_data = list(net_data.items())
     nics = salt.utils.odict.OrderedDict()
     current_nic = salt.utils.odict.OrderedDict()
     for item in net_data:
         if item and isinstance(item, dict):
-            item = item.items()[0]
+            item = list(item.items())[0]
         if item[0] == 'lxc.network.type':
             current_nic = salt.utils.odict.OrderedDict()
         if item[0] == 'lxc.network.name':
@@ -588,7 +591,7 @@ class _LXCConfig(object):
         net_datas = _get_network_conf(conf_tuples=old_net, **kwargs)
         if net_datas:
             for row in net_datas:
-                self.data.extend(row.items())
+                self.data.extend(list(row.items()))
 
         # be sure to reset harmful settings
         for i in ['lxc.cgroup.memory.limit_in_bytes']:
@@ -737,7 +740,7 @@ def init(name,
         This can be either a real profile mapping or a string
         to retrieve it in configuration
     nic_opts
-        Extra options for network interfaces. E.g:
+        Extra options for network interfaces. E.g.:
 
         .. code-block:: bash
 
@@ -1433,7 +1436,7 @@ def start(name, restart=False):
         ret['result'] = infos['state'] == 'running'
         if ret['change']:
             ret['changes']['started'] = 'started'
-    except Exception, ex:
+    except Exception as ex:
         trace = traceback.format_exc()
         ret['result'] = False
         ret['comment'] = 'Error in starting container'
@@ -1470,7 +1473,7 @@ def stop(name, kill=True):
         ret['result'] = infos['state'] == 'stopped'
         if ret['change']:
             ret['changes']['stopped'] = 'stopped'
-    except Exception, ex:
+    except Exception as ex:
         trace = traceback.format_exc()
         ret['result'] = False
         ret['comment'] = 'Error in stopping container'
@@ -1754,7 +1757,7 @@ def set_pass(name, users, password):
             if cret['retcode'] != 0:
                 raise ValueError('Can\'t change passwords')
             ret['comment'] = 'Password updated for {0}'.format(users)
-        except ValueError, ex:
+        except ValueError as ex:
             trace = traceback.format_exc()
             ret['result'] = False
             ret['comment'] = 'Error in setting base password\n'
@@ -2122,7 +2125,7 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
     if not prior_state:
         return prior_state
     if attachable(name):
-        if isinstance(keep_env, basestring):
+        if isinstance(keep_env, six.string_types):
             keep_env = keep_env.split(',')
         env = ' '.join('--set-var {0}={1}'.format(
                        x, pipes.quote(os.environ[x]))
@@ -2332,7 +2335,7 @@ def write_conf(conf_file, conf):
             if isinstance(line, str):
                 fp_.write(line)
             elif isinstance(line, dict):
-                key = line.iterkeys().next()
+                key = next(iter(list(line.keys())))
                 out_line = None
                 if isinstance(line[key], str):
                     out_line = ' = '.join((key, line[key]))
@@ -2378,7 +2381,7 @@ def edit_conf(conf_file, out_format='simple', **kwargs):
             data.append(line)
             continue
         else:
-            key = line.iterkeys().next()
+            key = next(iter(list(line.keys())))
             if key not in kwargs:
                 data.append(line)
                 continue

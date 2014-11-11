@@ -4,6 +4,8 @@
 The setup script for salt
 '''
 
+from __future__ import absolute_import
+
 # pylint: disable=C0111,E1101,E1103,F0401,W0611,W0201,W0232,R0201,R0902,R0903
 
 # For Python 2.5.  A no-op on 2.6 and above.
@@ -12,7 +14,10 @@ from __future__ import print_function, with_statement
 import os
 import sys
 import glob
-import urllib2
+try:
+    from urllib2 import urlopen
+except ImportError:
+    from urllib.request import urlopen
 from datetime import datetime
 # pylint: disable=E0611
 import distutils.dist
@@ -270,7 +275,7 @@ class CloudSdist(Sdist):
                         )
                     )
             except ImportError:
-                req = urllib2.urlopen(url)
+                req = urlopen(url)
 
                 if req.getcode() == 200:
                     script_contents = req.read()
@@ -489,7 +494,7 @@ class InstallLib(install_lib):
                     chmod.append(idx)
         for idx in chmod:
             filename = out[idx]
-            os.chmod(filename, 0755)
+            os.chmod(filename, 0o755)
 # <---- Custom Distutils/Setuptools Commands -------------------------------------------------------------------------
 
 
@@ -559,13 +564,18 @@ class SaltDistribution(distutils.dist.Distribution):
 
     def update_metadata(self):
         for attrname in dir(self):
+            if attrname.startswith('__'):
+                continue
             attrvalue = getattr(self, attrname, None)
             if attrvalue == 0:
                 continue
             if hasattr(self.metadata, 'set_{0}'.format(attrname)):
                 getattr(self.metadata, 'set_{0}'.format(attrname))(attrvalue)
             elif hasattr(self.metadata, attrname):
-                setattr(self.metadata, attrname, attrvalue)
+                try:
+                    setattr(self.metadata, attrname, attrvalue)
+                except AttributeError:
+                    pass
 
     def discover_packages(self):
         modules = []
