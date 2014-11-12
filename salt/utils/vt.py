@@ -19,6 +19,7 @@
     .. __: https://github.com/pexpect/pexpect
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
