@@ -79,7 +79,7 @@ def _get_values(data):
     # This would enable us to toggle
     # this functionality.
     values = []
-    for _, minion_values in data.items():
+    for _, minion_values in list(data.items()):
         if isinstance(minion_values, list):
             values.extend(minion_values)
         else:
