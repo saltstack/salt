@@ -484,7 +484,7 @@ class Schedule(object):
                 mret['jid'] = 'req'
                 channel = salt.transport.Channel.factory(self.opts, usage='salt_schedule')
                 load = {'cmd': '_return', 'id': self.opts['id']}
-                for key, value in list(mret.items()):
+                for key, value in mret.items():
                     load[key] = value
                 channel.send(load)
 
@@ -516,7 +516,7 @@ class Schedule(object):
             raise ValueError('Schedule must be of type dict.')
         if 'enabled' in schedule and not schedule['enabled']:
             return
-        for job, data in list(schedule.items()):
+        for job, data in schedule.items():
             if job == 'enabled':
                 continue
             # Job is disabled, continue
