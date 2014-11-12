@@ -94,7 +94,7 @@ capabilities. It has been designed to allow for development into features
 which out ZeroMQ topologies can't match.
 
 Many of the proposed features are still under development and will be
-announced as they enter proff of concept phases, but these features include
+announced as they enter proof of concept phases, but these features include
 `salt-fuse` - a filesystem over salt, `salt-vt` - a parallel api driven shell
 over the salt transport and many others.
 
