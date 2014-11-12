@@ -37,7 +37,7 @@ def output(grains):
         encoding = 'utf-8'  # let's hope for the best
 
     ret = u''
-    for id_, minion in list(list(grains.items())):
+    for id_, minion in grains.items():
         ret += u'{0}{1}{2}:\n'.format(colors['GREEN'], id_.decode(encoding), colors['ENDC'])
         for key in sorted(minion):
             ret += u'  {0}{1}{2}:'.format(colors['CYAN'], key.decode(encoding), colors['ENDC'])
