@@ -37,6 +37,10 @@ import string
 from calendar import month_abbr as months
 from six import string_types
 from six.moves.urllib.parse import urlparse
+import six
+from six.moves import range
+from six.moves import zip
+from six.moves import map
 
 # Try to load pwd, fallback to getpass if unsuccessful
 try:
@@ -252,7 +256,7 @@ def get_context(template, line, num_lines=5, marker=None):
 
     # warning: jinja content may contain unicode strings
     # instead of utf-8.
-    buf = [i.encode('UTF-8') if isinstance(i, unicode) else i for i in buf]
+    buf = [i.encode('UTF-8') if isinstance(i, six.text_type) else i for i in buf]
 
     return '---\n{0}\n---'.format('\n'.join(buf))
 
@@ -823,7 +827,7 @@ def format_call(fun,
 
     aspec = get_function_argspec(fun)
 
-    args, kwargs = iter(arg_lookup(fun).values())
+    args, kwargs = iter(list(arg_lookup(fun).values()))
 
     # Since we WILL be changing the data dictionary, let's change a copy of it
     data = data.copy()
@@ -861,7 +865,7 @@ def format_call(fun,
     if aspec.keywords:
         # The function accepts **kwargs, any non expected extra keyword
         # arguments will made available.
-        for key, value in data.items():
+        for key, value in list(data.items()):
             if key in expected_extra_kws:
                 continue
             ret['kwargs'][key] = value
@@ -873,7 +877,7 @@ def format_call(fun,
     # Did not return yet? Lets gather any remaining and unexpected keyword
     # arguments
     extra = {}
-    for key, value in data.items():
+    for key, value in list(data.items()):
         if key in expected_extra_kws:
             continue
         extra[key] = copy.deepcopy(value)
@@ -937,7 +941,7 @@ def arg_lookup(fun):
     ret = {'kwargs': {}}
     aspec = get_function_argspec(fun)
     if aspec.defaults:
-        ret['kwargs'] = dict(zip(aspec.args[::-1], aspec.defaults[::-1]))
+        ret['kwargs'] = dict(list(zip(aspec.args[::-1], aspec.defaults[::-1])))
     ret['args'] = [arg for arg in aspec.args if arg not in ret['kwargs']]
     return ret
 
@@ -1314,7 +1318,7 @@ def sanitize_win_path_string(winpath):
     trantab = string.maketrans(intab, outtab)
     if isinstance(winpath, str):
         winpath = winpath.translate(trantab)
-    elif isinstance(winpath, unicode):
+    elif isinstance(winpath, six.text_type):
         winpath = winpath.translate(dict((ord(c), u'_') for c in intab))
     return winpath
 
@@ -1457,7 +1461,7 @@ def check_state_result(running):
         return False
 
     ret = True
-    for state_result in running.values():
+    for state_result in list(running.values()):
         if not isinstance(state_result, dict):
             # return false when hosts return a list instead of a dict
             ret = False
@@ -1484,7 +1488,7 @@ def test_mode(**kwargs):
     "Test" in any variation on capitalization (i.e. "TEST", "Test", "TeSt",
     etc) contains a True value (as determined by salt.utils.is_true).
     '''
-    for arg, value in kwargs.items():
+    for arg, value in list(kwargs.items()):
         try:
             if arg.lower() == 'test' and is_true(value):
                 return True
@@ -1809,7 +1813,7 @@ def yaml_dquote(text):
     """
     with io.StringIO() as ostream:
         yemitter = yaml.emitter.Emitter(ostream)
-        yemitter.write_double_quoted(unicode(text))
+        yemitter.write_double_quoted(six.text_type(text))
         return ostream.getvalue()
 
 
@@ -1820,7 +1824,7 @@ def yaml_squote(text):
     """
     with io.StringIO() as ostream:
         yemitter = yaml.emitter.Emitter(ostream)
-        yemitter.write_single_quoted(unicode(text))
+        yemitter.write_single_quoted(six.text_type(text))
         return ostream.getvalue()
 
 
@@ -2132,7 +2136,7 @@ def decode_list(data):
     '''
     rv = []
     for item in data:
-        if isinstance(item, unicode):
+        if isinstance(item, six.text_type):
             item = item.encode('utf-8')
         elif isinstance(item, list):
             item = decode_list(item)
@@ -2147,10 +2151,10 @@ def decode_dict(data):
     JSON decodes as unicode, Jinja needs bytes...
     '''
     rv = {}
-    for key, value in data.items():
-        if isinstance(key, unicode):
+    for key, value in list(data.items()):
+        if isinstance(key, six.text_type):
             key = key.encode('utf-8')
-        if isinstance(value, unicode):
+        if isinstance(value, six.text_type):
             value = value.encode('utf-8')
         elif isinstance(value, list):
             value = decode_list(value)
@@ -2197,7 +2201,7 @@ def is_bin_str(data):
     '''
     Detects if the passed string of data is bin or text
     '''
-    text_characters = ''.join(map(chr, list(range(32, 127))) + list('\n\r\t\b'))
+    text_characters = ''.join(list(map(chr, list(range(32, 127)))) + list('\n\r\t\b'))
     _null_trans = string.maketrans('', '')
     if '\0' in data:
         return True
@@ -2455,7 +2459,7 @@ def chugid(runas):
     # this does not appear to be strictly true.
     group_list = get_group_dict(runas, include_default=True)
     if sys.platform == 'darwin':
-        group_list = dict((k, v) for k, v in group_list.items()
+        group_list = dict((k, v) for k, v in list(group_list.items())
                           if not k.startswith('_'))
     for group_name in group_list:
         gid = group_list[group_name]
