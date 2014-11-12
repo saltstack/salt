@@ -1143,7 +1143,7 @@ class AESFuncs(object):
             return False
         load['grains']['id'] = load['id']
         mods = set()
-        for func in self.mminion.functions.values():
+        for func in list(self.mminion.functions.values()):
             mods.add(func.__module__)
         for mod in mods:
             sys.modules[mod].__grains__ = load['grains']
@@ -1251,7 +1251,7 @@ class AESFuncs(object):
             self.mminion.returners[fstr](load['jid'], load)
 
         # Format individual return loads
-        for key, item in load['return'].items():
+        for key, item in list(load['return'].items()):
             ret = {'jid': load['jid'],
                    'id': key,
                    'return': item}
