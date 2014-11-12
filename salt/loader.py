@@ -742,8 +742,7 @@ class Loader(object):
         '''
         funcs = {}
         error_funcs = {}
-        if not hasattr(self, 'modules'):
-            self.load_modules()
+        self.load_modules()
         for mod in self.modules:
             # If this is a proxy minion then MOST modules cannot work.  Therefore, require that
             # any module that does work with salt-proxy-minion define __proxyenabled__ as a list
