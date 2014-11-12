@@ -253,7 +253,6 @@ from salt.utils.serializers import json as json_serializer
 from six.moves import map
 import six
 from six import string_types, integer_types
->>>>>>> 10395c004e456a3290243ff2405a7eec982ecf8f
 
 log = logging.getLogger(__name__)
 
