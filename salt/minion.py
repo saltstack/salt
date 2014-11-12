@@ -190,7 +190,7 @@ def load_args_and_kwargs(func, args, data=None):
                     'by salt.utils.args.parse_input() before calling '
                     'salt.minion.load_args_and_kwargs().'
                 )
-                if argspec.keywords or next(iter(list(string_kwarg.keys()))) in argspec.args:
+                if argspec.keywords or next(iter(string_kwarg.keys())) in argspec.args:
                     # Function supports **kwargs or is a positional argument to
                     # the function.
                     _kwargs.update(string_kwarg)
@@ -203,7 +203,7 @@ def load_args_and_kwargs(func, args, data=None):
 
         # if the arg is a dict with __kwarg__ == True, then its a kwarg
         elif isinstance(arg, dict) and arg.pop('__kwarg__', False) is True:
-            for key, val in list(arg.items()):
+            for key, val in arg.items():
                 if argspec.keywords or key in argspec.args:
                     # Function supports **kwargs or is a positional argument to
                     # the function.
@@ -226,7 +226,7 @@ def load_args_and_kwargs(func, args, data=None):
 
     if argspec.keywords and isinstance(data, dict):
         # this function accepts **kwargs, pack in the publish data
-        for key, val in list(data.items()):
+        for key, val in data.items():
             _kwargs['__pub_{0}'.format(key)] = val
 
     return _args, _kwargs
@@ -515,7 +515,7 @@ class MultiMinion(MinionBase):
 
         while True:
             package = None
-            for minion in list(minions.values()):
+            for minion in minions.values():
                 if isinstance(minion, dict):
                     minion = minion['minion']
                 if not hasattr(minion, 'schedule'):
@@ -800,7 +800,7 @@ class Minion(MinionBase):
         Returns a copy of the opts with key bits stripped out
         '''
         mod_opts = {}
-        for key, val in list(self.opts.items()):
+        for key, val in self.opts.items():
             if key == 'logger':
                 continue
             mod_opts[key] = val
@@ -1216,7 +1216,7 @@ class Minion(MinionBase):
                     'fun': fun,
                     'load': ret.get('__load__')}
             load['return'] = {}
-            for key, value in list(ret.items()):
+            for key, value in ret.items():
                 if key.startswith('__'):
                     continue
                 load['return'][key] = value
@@ -2279,7 +2279,7 @@ class MultiSyndic(MinionBase):
                     log.warning('Negative timeout in syndic main loop')
                     socks = {}
                 # check all of your master_syndics, have them do their thing
-                for master_id, syndic_dict in list(self.master_syndics.items()):
+                for master_id, syndic_dict in self.master_syndics.items():
                     # if not connected, lets try
                     if 'generator' not in syndic_dict:
                         # if we couldn't connect, lets try later
@@ -2351,7 +2351,7 @@ class MultiSyndic(MinionBase):
                               kwargs={'events': self.raw_events,
                                       'pretag': tagify(self.opts['id'], base='syndic')},
                               )
-        for jid, jid_ret in list(self.jids.items()):
+        for jid, jid_ret in self.jids.items():
             self._call_syndic('_return_pub', args=(jid_ret, '_syndic_return'), master_id=jid_ret.get('__master_id__'))
 
         self._reset_event_aggregation()
