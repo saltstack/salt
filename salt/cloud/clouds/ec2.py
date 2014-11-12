@@ -61,8 +61,9 @@ To use the EC2 cloud module, set up the cloud configuration at
 
 :depends: requests
 '''
-from __future__ import absolute_import
 # pylint: disable=E0102
+
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -73,6 +74,10 @@ import uuid
 import pprint
 import logging
 import yaml
+import six
+from six.moves import map
+from six.moves import zip
+from six.moves import range
 
 # Import libs for talking to the EC2 API
 import hmac
@@ -100,10 +105,6 @@ from salt.exceptions import (
     SaltCloudExecutionTimeout,
     SaltCloudExecutionFailure
 )
-import six
-from six.moves import map
-from six.moves import zip
-from six.moves import range
 
 # Try to import PyCrypto, which may not be installed on a RAET-based system
 try:
@@ -1256,7 +1257,7 @@ def _param_from_config(key, data):
     param = {}
 
     if isinstance(data, dict):
-        for k, v in list(data.items()):
+        for k, v in data.items():
             param.update(_param_from_config('{0}.{1}'.format(key, k), v))
 
     elif isinstance(data, list) or isinstance(data, tuple):
@@ -2090,7 +2091,7 @@ def create(vm_=None, call=None):
         )
         ret['Attached Volumes'] = created
 
-    for key, value in list(salt.utils.cloud.bootstrap(vm_, __opts__).items()):
+    for key, value in salt.utils.cloud.bootstrap(vm_, __opts__).items():
         ret.setdefault(key, value)
 
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
@@ -3116,7 +3117,7 @@ def create_volume(kwargs=None, call=None, wait_to_finish=False):
     data = query(params, return_root=True)
     r_data = {}
     for d in data:
-        for k, v in list(d.items()):
+        for k, v in d.items():
             r_data[k] = v
     volume_id = r_data['volumeId']
 
@@ -3361,7 +3362,7 @@ def create_snapshot(kwargs=None, call=None, wait_to_finish=False):
     data = query(params, return_root=True)
     r_data = {}
     for d in data:
-        for k, v in list(d.items()):
+        for k, v in d.items():
             r_data[k] = v
     snapshot_id = r_data['snapshotId']
 
@@ -3586,7 +3587,7 @@ def get_password_data(
     ret = {}
     data = query(params, return_root=True)
     for item in data:
-        ret[list(item.keys())[0]] = list(item.values())[0]
+        ret[item.keys()[0]] = item.values()[0]
 
     if not HAS_PYCRYPTO:
         return ret
