@@ -524,20 +524,21 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
 
         for low in self.lowstate:
             # make sure that the chunk has a token, if not we can't do auth per-request
-            # Note: this means that you *could* send different tokens per lowstate
+            # Note: this means that you can send different tokens per lowstate
             # as long as the base token (to auth with the API) is valid
-            # TODO: add test for per-chunk token
             if 'token' not in low:
-                chunk['token'] = self.token
+                low['token'] = self.token
             # disbatch to the correct handler
             try:
                 chunk_ret = yield getattr(self, '_disbatch_{0}'.format(low['client']))(low)
                 ret.append(chunk_ret)
             except Exception as ex:
                 # TODO: log?
+                '''
                 print ex
                 import traceback
                 traceback.print_exc()
+                '''
                 ret.append('Unexpected exception while handling request: {0}'.format(ex))
 
         self.write(self.serialize({'return': ret}))

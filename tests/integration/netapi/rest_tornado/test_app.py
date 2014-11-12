@@ -216,6 +216,62 @@ class TestSaltAPIHandler(SaltnadoTestCase):
         assert 'jid' in response_obj['return'][0]
         assert response_obj['return'][0]['minions'] == ['minion', 'sub_minion']
 
+    def test_multi_local_async_post(self):
+        '''
+        '''
+        low = [{'client': 'local_async',
+                'tgt': '*',
+                'fun': 'test.ping',
+                },
+                {'client': 'local_async',
+                'tgt': '*',
+                'fun': 'test.ping',
+                }]
+        response = self.fetch('/',
+                              method='POST',
+                              body=json.dumps(low),
+                              headers={'Content-Type': self.content_type_map['json'],
+                                       saltnado.AUTH_TOKEN_HEADER: self.token['token']},
+                              )
+        response_obj = json.loads(response.body)
+        assert len(response_obj['return']) == 2
+        assert 'jid' in response_obj['return'][0]
+        assert 'jid' in response_obj['return'][1]
+        assert response_obj['return'][0]['minions'] == ['minion', 'sub_minion']
+        assert response_obj['return'][1]['minions'] == ['minion', 'sub_minion']
+
+    def test_multi_local_async_post_multitoken(self):
+        '''
+        '''
+        low = [{'client': 'local_async',
+                'tgt': '*',
+                'fun': 'test.ping',
+                },
+                {'client': 'local_async',
+                'tgt': '*',
+                'fun': 'test.ping',
+                'token': self.token['token'],  # send a different (but still valid token)
+                },
+                {'client': 'local_async',
+                'tgt': '*',
+                'fun': 'test.ping',
+                'token': 'BAD_TOKEN',  # send a bad token
+                },
+                ]
+        response = self.fetch('/',
+                              method='POST',
+                              body=json.dumps(low),
+                              headers={'Content-Type': self.content_type_map['json'],
+                                       saltnado.AUTH_TOKEN_HEADER: self.token['token']},
+                              )
+        response_obj = json.loads(response.body)
+        assert len(response_obj['return']) == 3  # make sure we got 3 responses
+        assert 'jid' in response_obj['return'][0]  # the first 2 are regular returns
+        assert 'jid' in response_obj['return'][1]
+        assert 'Failed to authenticate' in response_obj['return'][2]  # bad auth
+        assert response_obj['return'][0]['minions'] == ['minion', 'sub_minion']
+        assert response_obj['return'][1]['minions'] == ['minion', 'sub_minion']
+
     def test_simple_local_async_post_no_tgt(self):
         '''
         '''
