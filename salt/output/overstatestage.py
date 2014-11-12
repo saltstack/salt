@@ -6,6 +6,7 @@ Display clean output of an overstate stage
 This outputter is used to display :ref:`OverState <states-overstate>` stages,
 and should not be called directly.
 '''
+from __future__ import absolute_import
 
 
 #[{'group2': {'match': ['fedora17-2', 'fedora17-3'],
