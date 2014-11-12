@@ -559,7 +559,6 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
         maxflight = get_batch_size(f_call['kwargs']['batch'], len(minions))
         inflight_futures = []
         # do this batch
-        # TODO: self.min_syndic_wait_done()
         while len(minions) > 0 or len(inflight_futures) > 0:
             # if you have more to go, lets disbatch jobs
             while len(inflight_futures) < maxflight and len(minions) > 0:
