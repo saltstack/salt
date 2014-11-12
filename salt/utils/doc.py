@@ -1,12 +1,14 @@
+from __future__ import absolute_import
 # -*- coding: utf-8 -*-
 import re
+import six
 
 
 def strip_rst(docs):
     '''
     Strip/replace reStructuredText directives in docstrings
     '''
-    for func, docstring in docs.iteritems():
+    for func, docstring in six.iteritems(docs):
         if not docstring:
             continue
         docstring_new = re.sub(r' *.. code-block:: \S+\n{1,2}',
