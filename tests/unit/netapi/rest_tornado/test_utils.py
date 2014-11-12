@@ -52,6 +52,15 @@ class TestSaltnadoUtils(tornado.testing.AsyncTestCase):
         # make sure it returned the one that finished
         assert any_.result() == futures[0]
 
+        futures = futures[1:]
+        # re-wait on some other futures
+        any_ = saltnado.Any(futures)
+        futures[0].set_result('foo')
+        self.wait
+        assert any_.done() is True
+        assert futures[0].done() is True
+        assert futures[1].done() is False
+
 
 class TestEventListener(tornado.testing.AsyncTestCase):
     def setUp(self):
