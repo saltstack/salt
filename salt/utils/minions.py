@@ -626,7 +626,7 @@ class CkMinions(object):
                         if len(ind) != 1:
                             # Invalid argument
                             continue
-                        valid = next(iter(ind.keys()))
+                        valid = next(iter(list(ind.keys())))
                         # Check if minions are allowed
                         if self.validate_tgt(
                                 valid,
@@ -650,7 +650,7 @@ class CkMinions(object):
 
         Groups are defined as any dict in which a key has a trailing '%'
         '''
-        group_perm_keys = filter(lambda item: item.endswith('%'), auth_provider)
+        group_perm_keys = [item for item in auth_provider if item.endswith('%')]
         groups = {}
         if group_perm_keys:
             for group_perm in group_perm_keys:
@@ -659,7 +659,7 @@ class CkMinions(object):
                         groups[group_perm] = matcher
         else:
             return None
-        for item in groups.values():
+        for item in list(groups.values()):
             auth_list.append(item)
         return auth_list
 
@@ -683,7 +683,7 @@ class CkMinions(object):
             elif isinstance(ind, dict):
                 if len(ind) != 1:
                     continue
-                valid = next(iter(ind.keys()))
+                valid = next(iter(list(ind.keys())))
                 if valid.startswith('@') and valid[1:] == mod:
                     if isinstance(ind[valid], str):
                         if self.match_check(ind[valid], fun):
@@ -714,7 +714,7 @@ class CkMinions(object):
             elif isinstance(ind, dict):
                 if len(ind) != 1:
                     continue
-                valid = next(iter(ind.keys()))
+                valid = next(iter(list(ind.keys())))
                 if valid.startswith('@') and valid[1:] == mod:
                     if isinstance(ind[valid], str):
                         if self.match_check(ind[valid], fun):
@@ -748,7 +748,7 @@ class CkMinions(object):
             elif isinstance(ind, dict):
                 if len(ind) != 1:
                     continue
-                valid = next(iter(ind.keys()))
+                valid = next(iter(list(ind.keys())))
                 if valid.startswith('@') and valid[1:] == mod:
                     if isinstance(ind[valid], str):
                         if self.match_check(ind[valid], fun):
