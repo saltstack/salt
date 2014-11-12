@@ -68,12 +68,14 @@ we might write the skeleton for testing ``fib.py``:
         tests begin.
         '''
         def setUp(self):
-            # Declare a simple set of five Fibonacci numbers starting at zero that we know are correct.
+            # Declare a simple set of five Fibonacci numbers starting at zero
+            # that we know are correct.
             self.fib_five = [0, 1, 1, 2, 3]
 
         def test_fib(self):
             '''
-            To create a unit test, we should prefix the name with `test_' so that it's recognized by the test runner.
+            To create a unit test, we should prefix the name with `test_' so
+            that it's recognized by the test runner.
             '''
             self.assertEqual(fib.calculate(5), self.fib_five)
 
@@ -159,8 +161,9 @@ additional imports for MagicMock:
     from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, call
 
     # Create test case class and inherit from Salt's customized TestCase
-
-    @skipIf(NO_MOCK, NO_MOCK_REASON) #  Skip this test case if we don't have access to mock!
+ 
+    # Skip this test case if we don't have access to mock!
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
     class DbTestCase(TestCase):
         def test_create_user(self):
             # First, we replace 'execute_query' with our own mock function
@@ -170,24 +173,29 @@ additional imports for MagicMock:
 
             db.create_user('testuser')
 
-            # We could now query our mock object to see which calls were made to it.
+            # We could now query our mock object to see which calls were made
+            # to it.
             ## print db.execute_query.mock_calls
 
             '''
-            We want to test to ensure that the correct query was formed.
-            This is a contrived example, just designed to illustrate the concepts at hand.
+            We want to test to ensure that the correct query was formed.  This
+            is a contrived example, just designed to illustrate the concepts at
+            hand.
 
-            We're going to first contruct a call() object that represents the way we expect
-            our mocked execute_query() function to have been called.
-            Then, we'll examine the list of calls that were actually made to to execute_function().
+            We're going to first construct a call() object that represents the
+            way we expect our mocked execute_query() function to have been
+            called.  Then, we'll examine the list of calls that were actually
+            made to to execute_function().
 
-            By comparing our expected call to execute_query() with create_user()'s call to
-            execute_query(), we can determine the success or failure of our unit test.
+            By comparing our expected call to execute_query() with
+            create_user()'s call to execute_query(), we can determine the
+            success or failure of our unit test.
             '''
 
             expected_call = call('CREATE USER testuser')
 
-            # Do the comparison! Will assert False if execute_query() was not called with the given call
+            # Do the comparison! Will assert False if execute_query() was not
+            # called with the given call
 
             db.execute_query.assert_has_calls(expected_call)
 
@@ -208,5 +216,6 @@ function into ``__salt__`` that's actually a MagicMock instance.
 .. code-block:: python
 
     def show_patch(self):
-        with patch.dict(my_module.__salt__, {'function.to_replace': MagicMock()}:
+        with patch.dict(my_module.__salt__,
+                        {'function.to_replace': MagicMock()}:
             # From this scope, carry on with testing, with a modified __salt__!
