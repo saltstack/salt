@@ -919,22 +919,6 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
                     "Using default route={0}.".format(msg['route']['dst']))
             self.road_stack.value.message(msg,
                     self.road_stack.value.nameRemotes[d_estate].uid)
-        elif d_share == 'call_cmd':  # salt call return pub to master
-            if not self.road_stack.value.remotes:
-                log.error("Missing joined master. Unable to route "
-                          "call_cmd.".format())
-                return
-            d_estate = self._get_master_estate_name()
-            if not d_estate:
-                log.error("**** No available destination estate for 'call_cmd'."
-                          "Unable to route.".format())
-                return
-            d_share = 'remote_cmd'
-            msg['route']['dst'] = (d_estate, d_yard, d_share)
-            log.debug("**** Missing destination estate for 'call_cmd'. "
-                        "Using default route={0}.".format(msg['route']['dst']))
-            self.road_stack.value.message(msg,
-                    self.road_stack.value.nameRemotes[d_estate].uid)
 
     def _get_master_estate_name(self):
         '''
