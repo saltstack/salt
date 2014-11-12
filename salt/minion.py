@@ -2483,7 +2483,7 @@ class Matcher(object):
         Reads in the pillar match, no globbing
         '''
         log.debug('pillar target: {0}'.format(tgt))
-        if delim not in tgt:
+        if delimiter not in tgt:
             log.error('Got insufficient arguments for pillar match '
                       'statement from master')
             return False
