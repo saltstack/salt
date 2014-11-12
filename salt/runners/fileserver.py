@@ -2,6 +2,7 @@
 '''
 Directly manage the Salt fileserver plugins
 '''
+from __future__ import absolute_import
 
 # Import Salt libs
 import salt.fileserver
@@ -84,7 +85,7 @@ def symlink_list(saltenv='base', outputter='nested'):
     fileserver = salt.fileserver.Fileserver(__opts__)
     load = {'saltenv': saltenv}
     output = fileserver.symlink_list(load=load)
-    
+
     if outputter:
         return {'outputter': outputter, 'data': output}
     else:

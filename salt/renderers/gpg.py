@@ -69,6 +69,7 @@ Now you can include your ciphers in your pillar data like so:
       =Eqsm
       -----END PGP MESSAGE-----
 '''
+from __future__ import absolute_import
 
 import re
 import salt.utils

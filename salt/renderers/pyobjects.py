@@ -263,8 +263,8 @@ from __future__ import absolute_import
 
 import logging
 import re
+from six import exec_
 
-import salt._compat
 from salt.loader import _create_loader
 from salt.fileclient import get_file_client
 from salt.utils.pyobjects import Registry, StateFactory, SaltObject, Map
@@ -336,7 +336,7 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
             mod,
             valid_funcs
         )
-        salt._compat.exec_(mod_cmd, mod_globals, mod_locals)
+        exec_(mod_cmd, mod_globals, mod_locals)
 
         _globals[mod_camel] = mod_locals[mod_camel]
 
@@ -407,7 +407,7 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
                 state_contents = f.read()
 
             state_locals = {}
-            salt._compat.exec_(state_contents, _globals, state_locals)
+            exec_(state_contents, _globals, state_locals)
 
             if imports is None:
                 imports = list(state_locals.keys())
@@ -433,6 +433,6 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
     Registry.enabled = True
 
     # now exec our template using our created scopes
-    salt._compat.exec_(final_template, _globals, _locals)
+    exec_(final_template, _globals, _locals)
 
     return Registry.salt_data()
