@@ -8,8 +8,9 @@ be experimental and unstable. It is not recommended for production use. Unless
 you are actively developing code in this module, you should use the OpenStack
 module instead.
 '''
-from __future__ import absolute_import
 # pylint: disable=E0102
+
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils.cloud
