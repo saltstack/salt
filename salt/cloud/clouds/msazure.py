@@ -22,8 +22,9 @@ file can be found at:
 
 http://www.windowsazure.com/en-us/develop/python/how-to-guides/service-management/
 '''
-from __future__ import absolute_import
 # pylint: disable=E0102
+
+from __future__ import absolute_import
 
 # Import python libs
 import time
