@@ -19,6 +19,7 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       provider: parallels
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import copy

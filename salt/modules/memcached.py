@@ -14,7 +14,7 @@ import logging
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt._compat import integer_types
+from six import integer_types
 
 # Import third party libs
 try:

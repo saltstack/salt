@@ -35,6 +35,12 @@ import warnings
 import yaml
 import string
 from calendar import month_abbr as months
+from six import string_types
+from six.moves.urllib.parse import urlparse  # pylint: disable=E0611
+import six
+from six.moves import range
+from six.moves import zip
+from six.moves import map
 
 # Try to load pwd, fallback to getpass if unsuccessful
 try:
@@ -97,11 +103,10 @@ except ImportError:
 
 # Import salt libs
 from salt.defaults import DEFAULT_TARGET_DELIM
-import salt._compat
 import salt.log
 import salt.payload
 import salt.version
-from salt._compat import string_types
+from six import string_types
 from salt.utils.decorators import memoize as real_memoize
 from salt.exceptions import (
     CommandExecutionError, SaltClientError,
@@ -251,7 +256,7 @@ def get_context(template, line, num_lines=5, marker=None):
 
     # warning: jinja content may contain unicode strings
     # instead of utf-8.
-    buf = [i.encode('UTF-8') if isinstance(i, unicode) else i for i in buf]
+    buf = [i.encode('UTF-8') if isinstance(i, six.text_type) else i for i in buf]
 
     return '---\n{0}\n---'.format('\n'.join(buf))
 
@@ -1313,7 +1318,7 @@ def sanitize_win_path_string(winpath):
     trantab = string.maketrans(intab, outtab)
     if isinstance(winpath, str):
         winpath = winpath.translate(trantab)
-    elif isinstance(winpath, unicode):
+    elif isinstance(winpath, six.text_type):
         winpath = winpath.translate(dict((ord(c), u'_') for c in intab))
     return winpath
 
@@ -1570,7 +1575,7 @@ def valid_url(url, protos):
     '''
     Return true if the passed URL is in the list of accepted protos
     '''
-    if salt._compat.urlparse(url).scheme in protos:
+    if urlparse(url).scheme in protos:
         return True
     return False
 
@@ -1752,7 +1757,7 @@ def date_cast(date):
 
     # fuzzy date
     try:
-        if isinstance(date, salt._compat.string_types):
+        if isinstance(date, string_types):
             try:
                 if HAS_TIMELIB:
                     return timelib.strtodatetime(date)
@@ -1808,7 +1813,7 @@ def yaml_dquote(text):
     """
     with io.StringIO() as ostream:
         yemitter = yaml.emitter.Emitter(ostream)
-        yemitter.write_double_quoted(unicode(text))
+        yemitter.write_double_quoted(six.text_type(text))
         return ostream.getvalue()
 
 
@@ -1819,7 +1824,7 @@ def yaml_squote(text):
     """
     with io.StringIO() as ostream:
         yemitter = yaml.emitter.Emitter(ostream)
-        yemitter.write_single_quoted(unicode(text))
+        yemitter.write_single_quoted(six.text_type(text))
         return ostream.getvalue()
 
 
@@ -1873,7 +1878,7 @@ def warn_until(version,
                                 checks to raise a ``RuntimeError``.
     '''
     if not isinstance(version, (tuple,
-                                salt._compat.string_types,
+                                string_types,
                                 salt.version.SaltStackVersion)):
         raise RuntimeError(
             'The \'version\' argument should be passed as a tuple, string or '
@@ -1881,7 +1886,7 @@ def warn_until(version,
         )
     elif isinstance(version, tuple):
         version = salt.version.SaltStackVersion(*version)
-    elif isinstance(version, salt._compat.string_types):
+    elif isinstance(version, string_types):
         version = salt.version.SaltStackVersion.from_name(version)
 
     if stacklevel is None:
@@ -1965,7 +1970,7 @@ def kwargs_warn_until(kwargs,
                                 checks to raise a ``RuntimeError``.
     '''
     if not isinstance(version, (tuple,
-                                salt._compat.string_types,
+                                string_types,
                                 salt.version.SaltStackVersion)):
         raise RuntimeError(
             'The \'version\' argument should be passed as a tuple, string or '
@@ -1973,7 +1978,7 @@ def kwargs_warn_until(kwargs,
         )
     elif isinstance(version, tuple):
         version = salt.version.SaltStackVersion(*version)
-    elif isinstance(version, salt._compat.string_types):
+    elif isinstance(version, string_types):
         version = salt.version.SaltStackVersion.from_name(version)
 
     if stacklevel is None:
@@ -2131,7 +2136,7 @@ def decode_list(data):
     '''
     rv = []
     for item in data:
-        if isinstance(item, unicode):
+        if isinstance(item, six.text_type):
             item = item.encode('utf-8')
         elif isinstance(item, list):
             item = decode_list(item)
@@ -2147,9 +2152,9 @@ def decode_dict(data):
     '''
     rv = {}
     for key, value in data.items():
-        if isinstance(key, unicode):
+        if isinstance(key, six.text_type):
             key = key.encode('utf-8')
-        if isinstance(value, unicode):
+        if isinstance(value, six.text_type):
             value = value.encode('utf-8')
         elif isinstance(value, list):
             value = decode_list(value)

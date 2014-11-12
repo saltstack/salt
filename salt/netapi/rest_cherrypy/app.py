@@ -188,6 +188,8 @@ The following example (in JSON format) causes Salt to execute two commands::
 # We need a custom pylintrc here...
 # pylint: disable=W0212,E1101,C0103,R0201,W0221,W0613
 
+from __future__ import absolute_import
+
 # Import Python libs
 import collections
 import itertools
@@ -270,7 +272,7 @@ def salt_auth_tool():
     Redirect all unauthenticated requests to the login page
     '''
     # Redirect to the login page if the session hasn't been authed
-    if not cherrypy.session.has_key('token'):  # pylint: disable=W8601
+    if 'token' not in cherrypy.session:  # pylint: disable=W8601
         raise cherrypy.HTTPError(401)
 
     # Session is authenticated; inform caches
@@ -1543,7 +1545,7 @@ class Events(object):
             yield u'retry: {0}\n'.format(400)
 
             while True:
-                data = stream.next()
+                data = next(stream)
                 yield u'tag: {0}\n'.format(data.get('tag', ''))
                 yield u'data: {0}\n\n'.format(json.dumps(data))
 
@@ -1714,7 +1716,7 @@ class WebsocketEndpoint(object):
             stream = event.iter_events(full=True)
             SaltInfo = event_processor.SaltInfo(handler)
             while True:
-                data = stream.next()
+                data = next(stream)
                 if data:
                     try:  # work around try to decode catch unicode errors
                         if 'format_events' in kwargs:

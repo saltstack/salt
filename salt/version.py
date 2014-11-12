@@ -9,16 +9,19 @@ from __future__ import absolute_import
 from __future__ import print_function
 import re
 import sys
+import six
+from six.moves import map
 
 # Import salt libs
 try:
-    from salt._compat import string_types, MAX_SIZE
+    from salt._compat import MAX_SIZE
+    from six import string_types
 except ImportError:
     if sys.version_info[0] == 3:
         string_types = str
         MAX_SIZE = sys.maxsize
     else:
-        string_types = basestring
+        string_types = six.string_types
         MAX_SIZE = sys.maxint
 
 # ----- ATTENTION --------------------------------------------------------------------------------------------------->

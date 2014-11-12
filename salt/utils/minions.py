@@ -218,12 +218,13 @@ class CkMinions(object):
         '''
         return self._check_cache_minions(expr, delimiter, greedy, 'pillar')
 
-    def _check_pillar_exact_minions(self, expr, greedy):
+    def _check_pillar_exact_minions(self, expr, delimiter, greedy):
         '''
         Return the minions found by looking via pillar
         '''
         return self._check_cache_minions(expr,
                                          greedy,
+                                         delimiter,
                                          'pillar',
                                          exact_match=True)
 
@@ -332,13 +333,16 @@ class CkMinions(object):
                         pass
         return list(minions)
 
-    def _check_compound_pillar_exact_minions(self, expr, greedy):
+    def _check_compound_pillar_exact_minions(self, expr, delimiter, greedy):
         '''
         Return the minions found by looking via compound matcher
 
         Disable pillar glob matching
         '''
-        return self._check_compound_minions(expr, greedy, pillar_exact=True)
+        return self._check_compound_minions(expr,
+                                            delimiter,
+                                            greedy,
+                                            pillar_exact=True)
 
     def _check_compound_minions(self,
                                 expr,
@@ -502,7 +506,12 @@ class CkMinions(object):
         '''
         try:
             check_func = getattr(self, '_check_{0}_minions'.format(expr_form), None)
-            if expr_form in ('grain', 'grain_pcre', 'pillar', 'compound'):
+            if expr_form in ('grain',
+                             'grain_pcre',
+                             'pillar',
+                             'pillar_exact',
+                             'compound',
+                             'compound_pillar_exact'):
                 minions = check_func(expr, delimiter, greedy)
             else:
                 minions = check_func(expr, greedy)
@@ -650,7 +659,7 @@ class CkMinions(object):
 
         Groups are defined as any dict in which a key has a trailing '%'
         '''
-        group_perm_keys = filter(lambda item: item.endswith('%'), auth_provider)
+        group_perm_keys = [item for item in auth_provider if item.endswith('%')]
         groups = {}
         if group_perm_keys:
             for group_perm in group_perm_keys:

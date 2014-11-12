@@ -20,7 +20,7 @@ import salt.config
 import salt.utils
 import salt.state
 import salt.payload
-from salt._compat import string_types
+from six import string_types
 from salt.exceptions import SaltInvocationError
 
 

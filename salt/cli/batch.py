@@ -5,6 +5,7 @@ Execute batch runs
 
 # Import python libs
 from __future__ import print_function
+from __future__ import absolute_import
 import math
 import time
 import copy
@@ -13,6 +14,7 @@ import copy
 import salt.client
 import salt.output
 from salt.utils import print_cli
+from six.moves import range
 
 
 class Batch(object):

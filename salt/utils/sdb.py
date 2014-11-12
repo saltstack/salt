@@ -5,8 +5,9 @@ Basic functions for accessing the SDB interface
 For configuration options, see the docs for specific sdb
 modules.
 '''
+from __future__ import absolute_import
 import salt.loader
-from salt._compat import string_types
+from six import string_types
 
 
 def sdb_get(uri, opts):

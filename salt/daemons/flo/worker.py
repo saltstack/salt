@@ -4,11 +4,14 @@ The core behaviors used by minion and master
 '''
 # pylint: disable=W0232
 
+from __future__ import absolute_import
+
 # Import python libs
 import time
 import os
 import multiprocessing
 import logging
+from six.moves import range
 
 # Import salt libs
 import salt.daemons.masterapi

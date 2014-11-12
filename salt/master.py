@@ -50,6 +50,7 @@ from salt.utils.event import tagify
 import binascii
 from salt.utils.master import ConnectedCache
 from salt.utils.cache import CacheCli
+from six.moves import range
 
 # Import halite libs
 try:
@@ -89,6 +90,44 @@ class SMaster(object):
         clients are required to run as root.
         '''
         return salt.daemons.masterapi.access_keys(self.opts)
+
+
+class Scheduler(multiprocessing.Process):
+    '''
+    The master scheduler process.
+
+    This runs in its own process so that it can have a fully
+    independent loop from the Maintenance process.
+    '''
+    def __init__(self, opts):
+        super(Scheduler, self).__init__()
+        self.opts = opts
+        # Init Scheduler
+        self.schedule = salt.utils.schedule.Schedule(self.opts,
+                                                    salt.loader.runner(self.opts),
+                                                    returners=salt.loader.returners(self.opts, {}))
+
+    def run(self):
+        salt.utils.appendproctitle('Scheduler')
+        while True:
+            self.handle_schedule()
+            try:
+                time.sleep(self.schedule.loop_interval)
+            except KeyboardInterrupt:
+                break
+            except IOError:
+                time.sleep(self.opts['loop_interval'])
+
+    def handle_schedule(self):
+        '''
+        Evaluate the scheduler
+        '''
+        try:
+            self.schedule.eval()
+        except Exception as exc:
+            log.error(
+                'Exception {0} occurred in scheduled job'.format(exc)
+            )
 
 
 class Maintenance(multiprocessing.Process):
@@ -1181,7 +1220,19 @@ class AESFuncs(object):
         load = self.__verify_load(load, ('id', 'tok'))
         if load is False:
             return {}
+        # Route to master event bus
         self.masterapi._minion_event(load)
+        # Process locally
+        self._handle_minion_event(load)
+
+    def _handle_minion_event(self, load):
+        '''
+        Act on specific events from minions
+        '''
+        if load.get('tag', '') == '_salt_error':
+            log.error('Received minion error from [{minion}]: '
+                      '{data}'.format(minion=load['id'],
+                                      data=load['data']['exception']))
 
     def _return(self, load):
         '''
@@ -2139,7 +2190,7 @@ class ClearFuncs(object):
             try:
                 name = self.loadauth.load_name(extra)  # The username we are attempting to auth with
                 groups = self.loadauth.get_groups(extra)  # The groups this user belongs to
-                group_perm_keys = filter(lambda item: item.endswith('%'), self.opts['external_auth'][extra['eauth']])  # The configured auth groups
+                group_perm_keys = [item for item in self.opts['external_auth'][extra['eauth']] if item.endswith('%')]  # The configured auth groups
 
                 # First we need to know if the user is allowed to proceed via any of their group memberships.
                 group_auth_match = False

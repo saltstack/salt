@@ -4,6 +4,7 @@ Connection library for Amazon S3
 
 :depends: requests
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import binascii

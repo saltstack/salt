@@ -24,6 +24,7 @@ import shutil
 import re
 import random
 import six
+from six.moves.urllib.parse import urlparse  # pylint: disable=E0611
 
 # Import salt libs
 import salt
@@ -33,7 +34,6 @@ import salt.utils.dictupdate
 from salt.utils import vt
 import salt.utils.cloud
 import salt.config
-import salt._compat
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -650,7 +650,7 @@ def get_base(**kwargs):
     cntrs = ls_()
     if kwargs.get('image'):
         image = kwargs.get('image')
-        proto = salt._compat.urlparse(image).scheme
+        proto = urlparse(image).scheme
         img_tar = __salt__['cp.cache_file'](image)
         img_name = os.path.basename(img_tar)
         hash_ = salt.utils.get_hash(

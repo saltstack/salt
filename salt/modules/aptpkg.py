@@ -25,7 +25,7 @@ import yaml
 # Import salt libs
 from salt.modules.cmdmod import _parse_env
 import salt.utils
-from salt._compat import string_types
+from six import string_types
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )

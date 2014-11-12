@@ -5,6 +5,7 @@ Execute salt convenience routines
 
 # Import python libs
 from __future__ import print_function
+from __future__ import absolute_import
 import collections
 import logging
 import time
@@ -22,6 +23,7 @@ from salt.client import mixins
 from salt.output import display_output
 from salt.utils.error import raise_error
 from salt.utils.event import tagify
+import six
 
 log = logging.getLogger(__name__)
 
@@ -107,7 +109,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
             try:
                 if isinstance(arglist[-1], dict) \
                         and '__kwarg__' in arglist[-1]:
-                    for key, val in kwarg.iteritems():
+                    for key, val in six.iteritems(kwarg):
                         if key in arglist[-1]:
                             log.warning(
                                 'Overriding keyword argument {0!r}'.format(key)

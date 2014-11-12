@@ -12,7 +12,7 @@ import logging
 import re
 import os
 import six
-import six.moves.configparser
+import six.moves.configparser  # pylint: disable=E0611
 import urlparse
 from xml.dom import minidom as dom
 
