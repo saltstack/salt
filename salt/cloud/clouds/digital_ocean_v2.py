@@ -83,7 +83,7 @@ def avail_locations(call=None):
     ret = {}
     for region in items['regions']:
         ret[region['name']] = {}
-        for item in list(region.keys()):
+        for item in region.keys():
             ret[region['name']][item] = str(region[item])
 
     return ret
@@ -108,7 +108,7 @@ def avail_images(call=None):
 
         for image in items['images']:
             ret[image['id']] = {}
-            for item in list(image.keys()):
+            for item in image.keys():
                 ret[image['id']][item] = str(image[item])
 
         page += 1
@@ -131,7 +131,7 @@ def avail_sizes(call=None):
     ret = {}
     for size in items['sizes']:
         ret[size['slug']] = {}
-        for item in list(size.keys()):
+        for item in size.keys():
             ret[size['slug']][item] = str(size[item])
 
     return ret
@@ -174,7 +174,7 @@ def list_nodes_full(call=None, forOutput=True):
     ret = {}
     for node in items['droplets']:
         ret[node['name']] = {}
-        for item in list(node.keys()):
+        for item in node.keys():
             value = node[item]
             if value is not None and forOutput:
                 value = str(value)
@@ -648,7 +648,7 @@ def list_keypairs(call=None):
     ret = {}
     for keypair in items['ssh_keys']:
         ret[keypair['name']] = {}
-        for item in list(keypair.keys()):
+        for item in keypair.keys():
             ret[keypair['name']][item] = str(keypair[item])
 
     return ret
