@@ -738,6 +738,7 @@ class SaltRaetRoadStackServiceRx(ioflo.base.deeding.Deed):
         '''
         self.road_stack.value.serviceAllRx()
 
+
 class SaltRaetRoadStackServiceTx(ioflo.base.deeding.Deed):
     '''
     Process the outbound Road traffic
@@ -758,6 +759,7 @@ class SaltRaetRoadStackServiceTx(ioflo.base.deeding.Deed):
         '''
         self.road_stack.value.serviceAllTx()
 
+
 class SaltRaetLaneStackServiceRx(ioflo.base.deeding.Deed):
     '''
     Process the inbound Lane traffic
@@ -775,6 +777,7 @@ class SaltRaetLaneStackServiceRx(ioflo.base.deeding.Deed):
         Process inboud queues
         '''
         self.lane_stack.value.serviceAllRx()
+
 
 class SaltRaetLaneStackServiceTx(ioflo.base.deeding.Deed):
     '''
@@ -795,6 +798,7 @@ class SaltRaetLaneStackServiceTx(ioflo.base.deeding.Deed):
         Process outbound queues
         '''
         self.lane_stack.value.serviceAllTx()
+
 
 class SaltRaetRouter(ioflo.base.deeding.Deed):
     '''
@@ -819,8 +823,8 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
                'lane_stack': '.salt.lane.manor.stack',
                'road_stack': '.salt.road.manor.stack',
                'master_estate_name': '.salt.track.master_estate_name',
-               'laters': {'ipath': '.salt.lane.manor.laters', #requeuing when not yet routable
-                          'ival': deque()},               }
+               'laters': {'ipath': '.salt.lane.manor.laters',  # requeuing when not yet routable
+                          'ival': deque()}, }
 
     def _process_udp_rxmsg(self, msg, sender):
         '''
