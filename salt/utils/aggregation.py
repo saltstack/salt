@@ -218,7 +218,7 @@ def aggregate(obj_a, obj_b, level=False, map_class=Map, sequence_class=Sequence)
             # introspection on obj_b keys only
             response = copy(obj_b)
 
-        for key, value in obj_b.items():
+        for key, value in list(obj_b.items()):
             if key in obj_a:
                 value = aggregate(obj_a[key], value,
                                   subdeep, map_class, sequence_class)
