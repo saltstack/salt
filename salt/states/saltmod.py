@@ -36,8 +36,8 @@ import time
 import salt.syspaths
 import salt.utils
 import salt.utils.event
-import salt._compat
 import six
+from six import string_types
 
 log = logging.getLogger(__name__)
 
@@ -216,7 +216,7 @@ def state(
 
     if fail_minions is None:
         fail_minions = ()
-    elif isinstance(fail_minions, salt._compat.string_types):
+    elif isinstance(fail_minions, string_types):
         fail_minions = [minion.strip() for minion in fail_minions.split(',')]
     elif not isinstance(fail_minions, list):
         ret.setdefault('warnings', []).append(
@@ -361,7 +361,7 @@ def function(
 
     if fail_minions is None:
         fail_minions = ()
-    elif isinstance(fail_minions, salt._compat.string_types):
+    elif isinstance(fail_minions, string_types):
         fail_minions = [minion.strip() for minion in fail_minions.split(',')]
     elif not isinstance(fail_minions, list):
         ret.setdefault('warnings', []).append(

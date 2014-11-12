@@ -2,6 +2,7 @@
 '''
 Encapsulate the different transports available to Salt.  Currently this is only ZeroMQ.
 '''
+from __future__ import absolute_import
 import time
 import os
 import threading

@@ -239,7 +239,6 @@ class PostgresTestCase(TestCase):
            Mock(return_value={'retcode': None}))
     @patch('salt.modules.postgres.user_exists',
            Mock(return_value=False))
-    
     def test_user_create(self):
         postgres.user_create(
             'testuser',
@@ -432,7 +431,7 @@ class PostgresTestCase(TestCase):
                 '-c \'ALTER ROLE "test_username" WITH  INHERIT NOCREATEDB '
                 'CREATEROLE NOREPLICATION LOGIN;'
                 ' GRANT "test_groups" TO "test_username"\'',
-                call_output) 
+                call_output)
         )
 
     @patch('salt.modules.postgres._run_psql',
@@ -526,7 +525,6 @@ class PostgresTestCase(TestCase):
             '--dbname test_maint '
             '-c (\'|\")SELECT setting FROM pg_catalog.pg_settings',
             call_output))
-            
 
     @patch('salt.modules.postgres.psql_query',
            Mock(return_value=[{'extname': "foo", 'extversion': "1"}]))

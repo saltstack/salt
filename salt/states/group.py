@@ -28,6 +28,7 @@ can be either present or absent:
           - user1
           - user2
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import sys
