@@ -449,7 +449,7 @@ class SaltEvent(object):
             # Minion fired a bad retcode, fire an event
             if load['fun'] in SUB_EVENT:
                 try:
-                    for tag, data in load.get('return', {}).items():
+                    for tag, data in list(load.get('return', {}).items()):
                         data['retcode'] = load['retcode']
                         tags = tag.split('_|-')
                         if data.get('result') is False:
@@ -647,7 +647,7 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
                 continue
             if len(ropt) != 1:
                 continue
-            key = next(iter(ropt.keys()))
+            key = next(iter(list(ropt.keys())))
             val = ropt[key]
             if fnmatch.fnmatch(tag, key):
                 if isinstance(val, string_types):
