@@ -26,6 +26,7 @@ JID/MINION_ID
 return: return_data
 out: out_data
 '''
+from __future__ import absolute_import
 
 import logging
 

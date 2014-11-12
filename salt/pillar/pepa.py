@@ -537,7 +537,7 @@ if __name__ == '__main__':
     __opts__.update(yaml.load(open(args.config).read()))
 
     loc = 0
-    for name in [next(iter(e.keys())) for e in __opts__['ext_pillar']]:
+    for name in [next(iter(list(e.keys()))) for e in __opts__['ext_pillar']]:
         if name == 'pepa':
             break
         loc += 1

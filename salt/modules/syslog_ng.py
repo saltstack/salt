@@ -425,14 +425,14 @@ def _get_type_id_options(name, configuration):
     '''
     # it's in a form of source.name
     if '.' in name:
-        type, sep, id = name.partition('.')
+        type_, sep, id_ = name.partition('.')
         options = configuration
     else:
-        type = configuration.keys()[0]
-        id = name
-        options = configuration[type]
+        type_ = configuration.keys()[0]
+        id_ = name
+        options = configuration[type_]
 
-    return type, id, options
+    return type_, id_, options
 
 
 def _expand_one_key_dictionary(d):
@@ -448,9 +448,9 @@ def _parse_typed_parameter_typed_value(values):
     '''
     Creates Arguments in a TypedParametervalue.
     '''
-    type, value = _expand_one_key_dictionary(values)
+    type_, value = _expand_one_key_dictionary(values)
 
-    _current_parameter_value.type = type
+    _current_parameter_value.type = type_
     if _is_simple_type(value):
         a = Argument(value)
         _current_parameter_value.add_argument(a)
@@ -465,8 +465,8 @@ def _parse_typed_parameter(param):
     Parses a TypedParameter and fills it with values.
     '''
     global _current_parameter_value
-    type, value = _expand_one_key_dictionary(param)
-    _current_parameter.type = type
+    type_, value = _expand_one_key_dictionary(param)
+    _current_parameter.type = type_
 
     if _is_simple_type(value) and value != '':
         _current_parameter_value = SimpleParameterValue(value)
@@ -508,8 +508,8 @@ def _create_and_add_option(option):
     global _current_option
 
     _current_option = Option()
-    type, params = _expand_one_key_dictionary(option)
-    _current_option.type = type
+    type_, params = _expand_one_key_dictionary(option)
+    _current_option.type = type_
     _create_and_add_parameters(params)
     _current_statement.add_child(_current_option)
 
@@ -540,8 +540,8 @@ def _add_reference(reference, statement):
     '''
     Adds a reference to statement.
     '''
-    type, value = _expand_one_key_dictionary(reference)
-    o = Option(type)
+    type_, value = _expand_one_key_dictionary(reference)
+    o = Option(type_)
     p = SimpleParameter(value)
     o.add_parameter(p)
     statement.add_child(o)
@@ -561,8 +561,8 @@ def _add_inline_definition(item, statement):
     global _current_statement
     backup = _current_statement
 
-    type, options = _expand_one_key_dictionary(item)
-    _current_statement = UnnamedStatement(type=type)
+    type_, options = _expand_one_key_dictionary(item)
+    _current_statement = UnnamedStatement(type=type_)
     _parse_statement(options)
     statement.add_child(_current_statement)
 
@@ -573,10 +573,10 @@ def _add_junction(item):
     '''
     Adds a junction to the _current_statement.
     '''
-    type, channels = _expand_one_key_dictionary(item)
+    type_, channels = _expand_one_key_dictionary(item)
     junction = UnnamedStatement(type='junction')
     for ch in channels:
-        type, value = _expand_one_key_dictionary(ch)
+        type_, value = _expand_one_key_dictionary(ch)
         channel = UnnamedStatement(type='channel')
         for j in value:
             if _is_reference(j):
@@ -606,19 +606,19 @@ def _build_config_tree(name, configuration):
 
     The root object is _current_statement.
     '''
-    type, id, options = _get_type_id_options(name, configuration)
+    type_, id_, options = _get_type_id_options(name, configuration)
     global _INDENT, _current_statement
     _INDENT = ''
-    if type == 'config':
+    if type_ == 'config':
         _current_statement = GivenStatement(options)
-    elif type == 'log':
+    elif type_ == 'log':
         _current_statement = UnnamedStatement(type='log')
         _parse_log_statement(options)
     else:
-        if _is_statement_unnamed(type):
-            _current_statement = UnnamedStatement(type=type)
+        if _is_statement_unnamed(type_):
+            _current_statement = UnnamedStatement(type=type_)
         else:
-            _current_statement = NamedStatement(type=type, id=id)
+            _current_statement = NamedStatement(type=type_, id=id_)
         _parse_statement(options)
 
 

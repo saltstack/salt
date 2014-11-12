@@ -449,3 +449,16 @@ def tty(*args, **kwargs):  # pylint: disable=W0613
         salt '*' test.tty pts3 'This is a test'
     '''
     return 'ERROR: This function has been moved to cmd.tty'
+
+
+def assertion(assertion):
+    '''
+    Assert the given argument
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' test.assert False
+    '''
+    assert assertion

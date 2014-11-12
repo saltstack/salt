@@ -2,6 +2,7 @@
 '''
 Functions to interact with the pillar compiler on the master
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.pillar

@@ -3,6 +3,7 @@
 Utilities to enable exception reraising across the master commands
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import exceptions

@@ -158,6 +158,7 @@ dictionary, othewise it will be ignored.
             foo: bar
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -255,7 +256,7 @@ class Schedule(object):
         if not len(data) == 1:
             raise ValueError('You can only schedule one new job at a time.')
 
-        new_job = data.iterkeys().next()
+        new_job = next(data.iterkeys())
 
         if new_job in self.opts['schedule']:
             log.info('Updating job settings for scheduled '
