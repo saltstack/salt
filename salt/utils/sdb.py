@@ -5,6 +5,7 @@ Basic functions for accessing the SDB interface
 For configuration options, see the docs for specific sdb
 modules.
 '''
+from __future__ import absolute_import
 import salt.loader
 from six import string_types
 
