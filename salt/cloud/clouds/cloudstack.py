@@ -21,6 +21,7 @@ Use of this module requires the ``apikey``, ``secretkey``, ``host`` and
       provider: cloudstack
 
 '''
+from __future__ import absolute_import
 # pylint: disable=E0102
 
 # Import python libs
@@ -308,7 +309,7 @@ def create(vm_):
         )
         return False
 
-    for device_name in volumes.keys():
+    for device_name in list(volumes.keys()):
         try:
             conn.attach_volume(data, volumes[device_name], device_name)
         except Exception as exc:
