@@ -289,6 +289,7 @@ in which each job's information is keyed by salt's ``jid``.
 Setup
 =====
 '''
+from __future__ import absolute_import
 
 import tornado.websocket
 from . import event_processor
