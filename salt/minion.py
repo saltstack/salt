@@ -21,6 +21,7 @@ import time
 import traceback
 import types
 from random import randint, shuffle
+from six.moves import range
 
 # Import third party libs
 try:
