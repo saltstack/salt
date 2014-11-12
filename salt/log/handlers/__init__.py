@@ -7,6 +7,7 @@
 
     Custom logging handlers to be used in salt.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import sys
