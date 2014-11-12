@@ -26,7 +26,7 @@ def output(data):
     colors = salt.utils.get_colors(__opts__.get('color'))
     ostr = ''
     for comp in data:
-        for name, stage in list(comp.items()):
+        for name, stage in comp.items():
             ostr += '{0}{1}: {2}\n'.format(
                     colors['LIGHT_BLUE'],
                     name,
