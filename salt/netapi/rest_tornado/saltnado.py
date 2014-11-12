@@ -69,6 +69,7 @@ import functools
 import yaml
 import zmq
 import fnmatch
+import six
 
 # salt imports
 import salt.netapi
@@ -79,7 +80,6 @@ import salt.client
 import salt.runner
 import salt.auth
 from salt import syspaths
-import six
 
 
 json = salt.utils.import_json()
@@ -229,7 +229,7 @@ class EventListener(object):
         try:
             data = self.event.get_event_noblock()
             # see if we have any futures that need this info:
-            for tag_prefix, futures in list(self.tag_map.items()):
+            for tag_prefix, futures in self.tag_map.items():
                 if data['tag'].startswith(tag_prefix):
                     for future in futures:
                         if future.done():
