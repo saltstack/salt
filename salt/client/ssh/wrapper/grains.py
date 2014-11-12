@@ -2,6 +2,7 @@
 '''
 Return/control aspects of the grains data
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import math
@@ -88,7 +89,7 @@ def items(sanitize=False):
     '''
     if salt.utils.is_true(sanitize):
         out = dict(__grains__)
-        for key, func in _SANITIZERS.items():
+        for key, func in list(_SANITIZERS.items()):
             if key in out:
                 out[key] = func(out[key])
         return out
@@ -120,7 +121,7 @@ def item(*args, **kwargs):
         except KeyError:
             pass
     if salt.utils.is_true(kwargs.get('sanitize')):
-        for arg, func in _SANITIZERS.items():
+        for arg, func in list(_SANITIZERS.items()):
             if arg in ret:
                 ret[arg] = func(ret[arg])
     return ret
