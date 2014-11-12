@@ -141,6 +141,24 @@ class TestSaltAPIHandler(SaltnadoTestCase):
         response_obj = json.loads(response.body)
         assert response_obj['return'] == [{'minion': True, 'sub_minion': True}]
 
+    # local_batch tests
+    def test_full_local_batch_post(self):
+        '''
+        '''
+        low = [{'client': 'local_batch',
+                'tgt': '*',
+                'fun': 'test.ping',
+                'batch': '100%',
+                }]
+        response = self.fetch('/',
+                              method='POST',
+                              body=json.dumps(low),
+                              headers={'Content-Type': self.content_type_map['json'],
+                                       saltnado.AUTH_TOKEN_HEADER: self.token['token']},
+                              )
+        response_obj = json.loads(response.body)
+        assert response_obj['return'] == [{'minion': True, 'sub_minion': True}]
+
     def test_simple_local_batch_post_no_tgt(self):
         '''
         '''
@@ -393,6 +411,7 @@ class TestRunSaltAPIHandler(SaltnadoTestCase):
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                               )
+        print response.body
         response_obj = json.loads(response.body)
         assert response_obj['return'] == [{'minion': True, 'sub_minion': True}]
 
