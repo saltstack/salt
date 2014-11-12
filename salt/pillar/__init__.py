@@ -2,6 +2,7 @@
 '''
 Render the pillar data
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -21,6 +22,7 @@ from salt.utils.dictupdate import update
 from salt.utils.serializers.yamlex import merge_recursive
 from salt.utils.odict import OrderedDict
 from salt.version import __version__
+import six
 
 
 log = logging.getLogger(__name__)
@@ -282,7 +284,7 @@ class Pillar(object):
         '''
         top = collections.defaultdict(OrderedDict)
         orders = collections.defaultdict(OrderedDict)
-        for ctops in tops.itervalues():
+        for ctops in six.itervalues(tops):
             for ctop in ctops:
                 for saltenv, targets in ctop.items():
                     if saltenv == 'include':
@@ -410,7 +412,7 @@ class Pillar(object):
                     else:
                         for sub_sls in state.pop('include'):
                             if isinstance(sub_sls, dict):
-                                sub_sls, v = sub_sls.iteritems().next()
+                                sub_sls, v = next(sub_sls.iteritems())
                                 defaults = v.get('defaults', {})
                                 key = v.get('key', None)
                             else:
