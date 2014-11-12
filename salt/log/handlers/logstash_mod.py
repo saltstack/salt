@@ -304,7 +304,7 @@ class LogstashFormatter(logging.Formatter, NewStyleClassMixIn):
             )
 
         # Add any extra attributes to the message field
-        for key, value in list(record.__dict__.items()):
+        for key, value in record.__dict__.items():
             if key in ('args', 'asctime', 'created', 'exc_info', 'exc_text',
                        'filename', 'funcName', 'id', 'levelname', 'levelno',
                        'lineno', 'module', 'msecs', 'msecs', 'message', 'msg',
@@ -348,7 +348,7 @@ class LogstashFormatter(logging.Formatter, NewStyleClassMixIn):
             )
 
         # Add any extra attributes to the message field
-        for key, value in list(record.__dict__.items()):
+        for key, value in record.__dict__.items():
             if key in ('args', 'asctime', 'created', 'exc_info', 'exc_text',
                        'filename', 'funcName', 'id', 'levelname', 'levelno',
                        'lineno', 'module', 'msecs', 'msecs', 'message', 'msg',
