@@ -596,7 +596,7 @@ class Finder(object):
         if 'test' in options:
             self.test = options['test']
             del options['test']
-        for key, value in options.items():
+        for key, value in list(options.items()):
             if key.startswith('_'):
                 # this is a passthrough object, continue
                 continue
