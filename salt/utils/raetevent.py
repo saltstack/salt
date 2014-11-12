@@ -4,6 +4,7 @@ Manage events
 
 This module is used to manage events via RAET
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -208,7 +209,7 @@ class RAETEvent(object):
             # Minion fired a bad retcode, fire an event
             if load['fun'] in salt.utils.event.SUB_EVENT:
                 try:
-                    for tag, data in load.get('return', {}).items():
+                    for tag, data in list(load.get('return', {}).items()):
                         data['retcode'] = load['retcode']
                         tags = tag.split('_|-')
                         if data.get('result') is False:
