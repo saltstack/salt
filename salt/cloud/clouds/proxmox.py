@@ -25,6 +25,7 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 :depends: requests >= 2.2.1
 :depends: IPy >= 0.81
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import copy
@@ -181,7 +182,7 @@ def _getVmById(vmid, allDetails=False):
     '''
     Retrieve a VM based on the ID.
     '''
-    for vm_name, vm_details in get_resources_vms(includeConfig=allDetails).items():
+    for vm_name, vm_details in list(get_resources_vms(includeConfig=allDetails).items()):
         if str(vm_details['vmid']) == str(vmid):
             return vm_details
 
@@ -203,7 +204,7 @@ def _check_ip_available(ip_addr):
     This function can be used to prevent VMs being created with duplicate
     IP's or to generate a warning.
     '''
-    for vm_name, vm_details in get_resources_vms(includeConfig=True).items():
+    for vm_name, vm_details in list(get_resources_vms(includeConfig=True).items()):
         vm_config = vm_details['config']
         if ip_addr in vm_config['ip_address'] or vm_config['ip_address'] == ip_addr:
             log.debug('IP "{0}" is already defined'.format(ip_addr))
@@ -382,7 +383,7 @@ def avail_images(call=None, location='local'):
         )
 
     ret = {}
-    for host_name, host_details in avail_locations().items():
+    for host_name, host_details in list(avail_locations().items()):
         for item in query('get', 'nodes/{0}/storage/{1}/content'.format(host_name, location)):
             ret[item['volid']] = item
     return ret
@@ -404,7 +405,7 @@ def list_nodes(call=None):
         )
 
     ret = {}
-    for vm_name, vm_details in get_resources_vms(includeConfig=True).items():
+    for vm_name, vm_details in list(get_resources_vms(includeConfig=True).items()):
         log.debug('VM_Name: {0}'.format(vm_name))
         log.debug('vm_details: {0}'.format(vm_details))
 
@@ -766,7 +767,7 @@ def get_vmconfig(vmid, node=None, node_type='openvz'):
     '''
     if node is None:
         # We need to figure out which node this VM is on.
-        for host_name, host_details in avail_locations().items():
+        for host_name, host_details in list(avail_locations().items()):
             for item in query('get', 'nodes/{0}/{1}'.format(host_name, node_type)):
                 if item['vmid'] == vmid:
                     node = host_name
