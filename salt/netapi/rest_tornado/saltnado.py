@@ -550,8 +550,6 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
         Disbatch local client batched commands
         '''
         f_call = salt.utils.format_call(self.saltclients['local_batch'], chunk)
-        # override the expr_form
-        f_call['kwargs']['expr_form'] = 'list'
 
         # ping all the minions (to see who we have to talk to)
         # Don't catch any exception, since we won't know what to do, we'll
@@ -568,6 +566,9 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
 
         maxflight = get_batch_size(f_call['kwargs']['batch'], len(minions))
         inflight_futures = []
+
+        # override the expr_form
+        f_call['kwargs']['expr_form'] = 'list'
         # do this batch
         while len(minions) > 0 or len(inflight_futures) > 0:
             # if you have more to go, lets disbatch jobs
