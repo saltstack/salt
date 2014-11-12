@@ -21,6 +21,7 @@ A state module to manage blockdevices
 
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os

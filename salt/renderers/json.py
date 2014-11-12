@@ -9,7 +9,7 @@ from __future__ import absolute_import
 import json
 
 # Import salt libs
-from salt._compat import string_types
+from six import string_types
 
 
 def render(json_data, saltenv='base', sls='', **kws):
