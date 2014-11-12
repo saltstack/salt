@@ -185,9 +185,10 @@ The following example (in JSON format) causes Salt to execute two commands::
 .. |401| replace:: authentication required
 .. |406| replace:: requested Content-Type not available
 '''
-from __future__ import absolute_import
 # We need a custom pylintrc here...
 # pylint: disable=W0212,E1101,C0103,R0201,W0221,W0613
+
+from __future__ import absolute_import
 
 # Import Python libs
 import collections
@@ -1977,7 +1978,7 @@ class API(object):
 
         CherryPy uses class attributes to resolve URLs.
         '''
-        for url, cls in list(self.url_map.items()):
+        for url, cls in self.url_map.items():
             setattr(self, url, cls())
 
     def _update_url_map(self):
