@@ -79,7 +79,7 @@ else:  # msgpack.version < 0.2.0
         tuples.
         '''
         if isinstance(obj, dict):
-            data = [(key, _encoder(value)) for key, value in obj.items()]
+            data = [(key, _encoder(value)) for key, value in list(obj.items())]
             return dict(data)
         elif isinstance(obj, (list, tuple)):
             return [_encoder(value) for value in obj]
