@@ -2,6 +2,7 @@
 '''
 Various network validation utilities
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import re
