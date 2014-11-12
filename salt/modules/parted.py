@@ -432,7 +432,7 @@ def mkpart(device, part_type, fs_type=None, start=None, end=None):
             'Invalid part_type passed to partition.mkpart'
         )
 
-    if fs_type not in set(['ext2', 'fat32', 'fat16', 'linux-swap', 'reiserfs',
+    if fs_type and fs_type not in set(['ext2', 'fat32', 'fat16', 'linux-swap', 'reiserfs',
                           'hfs', 'hfs+', 'hfsx', 'NTFS', 'ufs', 'xfs']):
         raise CommandExecutionError(
             'Invalid fs_type passed to partition.mkpart'
