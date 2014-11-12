@@ -1,3 +1,113 @@
+commit 729ad1899b56b12f64c66ab912a6ce3152457c11
+Merge: a8a9305b 33a97c3
+Author: Mathieu Le Marec - Pasquet <kiorky@cryptelium.net>
+Date:   Wed Nov 12 17:19:46 2014 +0100
+
+    Merge remote-tracking branch 'salt/develop' into develop
+    
+    Conflicts:
+    	salt/runners/jobs.py
+
+diff --cc salt/runners/jobs.py
+index e4bb645,cbc2274..6a30c1b
+--- a/salt/runners/jobs.py
++++ b/salt/runners/jobs.py
+@@@ -38,10 -38,10 +38,10 @@@ def active(outputter=None, display_prog
+      client = salt.client.get_local_client(__opts__['conf_file'])
+      active_ = client.cmd('*', 'saltutil.running', timeout=__opts__['timeout'])
+      if display_progress:
+-         __progress__('Attempting to contact minions: {0}'.format(active_.keys()))
+ -        progress('Attempting to contact minions: {0}'.format(list(active_.keys())))
+++        __progress__('Attempting to contact minions: {0}'.format(list(active_.keys())))
+      for minion, data in active_.items():
+          if display_progress:
+ -            progress('Received reply from minion {0}'.format(minion))
+ +            __progress__('Received reply from minion {0}'.format(minion))
+          if not isinstance(data, list):
+              continue
+          for job in data:
+diff --cc salt/runners/virt.py
+index 50b17c8,5752c8a..c952f29
+--- a/salt/runners/virt.py
++++ b/salt/runners/virt.py
+@@@ -259,9 -260,9 +260,9 @@@ def reset(name)
+      client = salt.client.get_local_client(__opts__['conf_file'])
+      data = vm_info(name, quiet=True)
+      if not data:
+ -        progress('Failed to find vm {0} to reset'.format(name))
+ +        __progress__('Failed to find vm {0} to reset'.format(name))
+          return 'fail'
+-     hyper = data.iterkeys().next()
++     hyper = next(data.iterkeys())
+      cmd_ret = client.cmd_iter(
+              hyper,
+              'virt.reset',
+@@@ -281,9 -282,9 +282,9 @@@ def start(name)
+      client = salt.client.get_local_client(__opts__['conf_file'])
+      data = vm_info(name, quiet=True)
+      if not data:
+ -        progress('Failed to find vm {0} to start'.format(name))
+ +        __progress__('Failed to find vm {0} to start'.format(name))
+          return 'fail'
+-     hyper = data.iterkeys().next()
++     hyper = next(data.iterkeys())
+      if data[hyper][name]['state'] == 'running':
+          print('VM {0} is already running'.format(name))
+          return 'bad state'
+@@@ -331,9 -332,9 +332,9 @@@ def purge(name, delete_key=True)
+      client = salt.client.get_local_client(__opts__['conf_file'])
+      data = vm_info(name, quiet=True)
+      if not data:
+ -        progress('Failed to find vm {0} to purge'.format(name))
+ +        __progress__('Failed to find vm {0} to purge'.format(name))
+          return 'fail'
+-     hyper = data.iterkeys().next()
++     hyper = next(data.iterkeys())
+      cmd_ret = client.cmd_iter(
+              hyper,
+              'virt.purge',
+@@@ -358,11 -359,11 +359,11 @@@ def pause(name)
+  
+      data = vm_info(name, quiet=True)
+      if not data:
+ -        progress('Failed to find VM {0} to pause'.format(name))
+ +        __progress__('Failed to find VM {0} to pause'.format(name))
+          return 'fail'
+-     hyper = data.iterkeys().next()
++     hyper = next(data.iterkeys())
+      if data[hyper][name]['state'] == 'paused':
+ -        progress('VM {0} is already paused'.format(name))
+ +        __progress__('VM {0} is already paused'.format(name))
+          return 'bad state'
+      cmd_ret = client.cmd_iter(
+              hyper,
+@@@ -383,11 -384,11 +384,11 @@@ def resume(name)
+      client = salt.client.get_local_client(__opts__['conf_file'])
+      data = vm_info(name, quiet=True)
+      if not data:
+ -        progress('Failed to find VM {0} to pause'.format(name))
+ +        __progress__('Failed to find VM {0} to pause'.format(name))
+          return 'not found'
+-     hyper = data.iterkeys().next()
++     hyper = next(data.iterkeys())
+      if data[hyper][name]['state'] != 'paused':
+ -        progress('VM {0} is not paused'.format(name))
+ +        __progress__('VM {0} is not paused'.format(name))
+          return 'bad state'
+      cmd_ret = client.cmd_iter(
+              hyper,
+@@@ -409,9 -410,9 +410,9 @@@ def migrate(name, target='')
+      data = query(quiet=True)
+      origin_data = _find_vm(name, data, quiet=True)
+      try:
+-         origin_hyper = origin_data.keys()[0]
++         origin_hyper = list(origin_data.keys())[0]
+      except IndexError:
+ -        progress('Named vm {0} was not found to migrate'.format(name))
+ +        __progress__('Named vm {0} was not found to migrate'.format(name))
+          return ''
+      disks = origin_data[origin_hyper][name]['disks']
+      if not origin_data:
 # -*- coding: utf-8 -*-
 '''
 A convenience system to manage jobs, both active and already run
@@ -17,7 +127,7 @@ import salt.payload
 import salt.utils
 import salt.minion
 
-from salt._compat import string_types
+from six import string_types
 
 import logging
 log = logging.getLogger(__name__)
@@ -38,10 +148,10 @@ def active(outputter=None, display_progress=False):
     client = salt.client.get_local_client(__opts__['conf_file'])
     active_ = client.cmd('*', 'saltutil.running', timeout=__opts__['timeout'])
     if display_progress:
-        progress('Attempting to contact minions: {0}'.format(active_.keys()))
+        __progress__('Attempting to contact minions: {0}'.format(list(active_.keys())))
     for minion, data in active_.items():
         if display_progress:
-            progress('Received reply from minion {0}'.format(minion))
+            __progress__('Received reply from minion {0}'.format(minion))
         if not isinstance(data, list):
             continue
         for job in data:
@@ -84,7 +194,7 @@ def lookup_jid(jid,
     mminion = salt.minion.MasterMinion(__opts__)
     returner = _get_returner((__opts__['ext_job_cache'], ext_source, __opts__['master_job_cache']))
     if display_progress:
-        progress('Querying returner: {0}'.format(returner))
+        __progress__('Querying returner: {0}'.format(returner))
 
     try:
         data = mminion.returners['{0}.get_jid'.format(returner)](jid)
@@ -92,7 +202,7 @@ def lookup_jid(jid,
         return 'Requested returner could not be loaded. No JIDs could be retrieved.'
     for minion in data:
         if display_progress:
-            progress(minion)
+            __progress__(minion)
         if u'return' in data[minion]:
             ret[minion] = data[minion].get(u'return')
         else:
@@ -149,7 +259,7 @@ def list_jobs(ext_source=None,
     '''
     returner = _get_returner((__opts__['ext_job_cache'], ext_source, __opts__['master_job_cache']))
     if display_progress:
-        progress('Querying returner {0} for jobs.'.format(returner))
+        __progress__('Querying returner {0} for jobs.'.format(returner))
     mminion = salt.minion.MasterMinion(__opts__)
 
     try:
@@ -293,5 +403,5 @@ def _walk_through(job_dir, display_progress=False):
             job = serial.load(salt.utils.fopen(load_path, 'rb'))
             jid = job['jid']
             if display_progress:
-                progress('Found JID {0}'.format(jid))
+                __progress__('Found JID {0}'.format(jid))
             yield jid, job, t_path, final
