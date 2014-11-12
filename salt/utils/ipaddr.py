@@ -1205,7 +1205,7 @@ class IPv4Address(_BaseV4, _BaseIP):
         _BaseV4.__init__(self, address)
 
         # Efficient constructor from integer.
-        if isinstance(address, (int, int)):
+        if isinstance(address, (int, long)):
             self._ip = address
             if address < 0 or address > self._ALL_ONES:
                 raise AddressValueError(address)
@@ -1287,7 +1287,7 @@ class IPv4Network(_BaseV4, _BaseNet):
         _BaseV4.__init__(self, address)
 
         # Constructing from an integer or packed bytes.
-        if isinstance(address, (int, int, Bytes)):
+        if isinstance(address, (int, long, Bytes)):
             self.ip = IPv4Address(address)
             self._ip = self.ip._ip
             self._prefixlen = self._max_prefixlen
@@ -1781,7 +1781,7 @@ class IPv6Address(_BaseV6, _BaseIP):
         _BaseV6.__init__(self, address)
 
         # Efficient constructor from integer.
-        if isinstance(address, (int, int)):
+        if isinstance(address, (int, long)):
             self._ip = address
             if address < 0 or address > self._ALL_ONES:
                 raise AddressValueError(address)
@@ -1855,7 +1855,7 @@ class IPv6Network(_BaseV6, _BaseNet):
         _BaseV6.__init__(self, address)
 
         # Constructing from an integer or packed bytes.
-        if isinstance(address, (int, int, Bytes)):
+        if isinstance(address, (int, long, Bytes)):
             self.ip = IPv6Address(address)
             self._ip = self.ip._ip
             self._prefixlen = self._max_prefixlen
