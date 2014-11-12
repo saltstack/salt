@@ -543,6 +543,8 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
         Disbatch local client batched commands
         '''
         f_call = salt.utils.format_call(self.saltclients['local_batch'], chunk)
+        # override the expr_form
+        f_call['kwargs']['expr_form'] = 'list'
 
         # ping all the minions (to see who we have to talk to)
         # Don't catch any exception, since we won't know what to do, we'll
@@ -551,9 +553,12 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
                                                'fun': 'test.ping',
                                                'expr_form': f_call['kwargs']['expr_form']})
 
+        chunk_ret = {}
+
+        if not isinstance(ping_ret, dict):
+            raise tornado.gen.Return(chunk_ret)
         minions = ping_ret.keys()
 
-        chunk_ret = {}
         maxflight = get_batch_size(f_call['kwargs']['batch'], len(minions))
         inflight_futures = []
         # do this batch
@@ -561,10 +566,9 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
             # if you have more to go, lets disbatch jobs
             while len(inflight_futures) < maxflight and len(minions) > 0:
                 minion_id = minions.pop(0)
-                f_call['args'][0] = minion_id
-                # TODO: list??
-                f_call['kwargs']['expr_form'] = 'glob'
-                pub_data = self.saltclients['local'](*f_call.get('args', ()), **f_call.get('kwargs', {}))
+                f_call['args'][0] = [minion_id]  # set the tgt to the minion
+                pub_data = self.saltclients['local'](*f_call.get('args', ()),
+                                                     **f_call.get('kwargs', {}))
                 # if the job didn't publish, lets not wait around for nothing
                 # we'll just skip
                 # TODO: set header??, some special return?, Or just ignore it (like we do in CLI)
