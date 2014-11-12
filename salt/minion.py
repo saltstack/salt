@@ -272,16 +272,15 @@ class SMinion(object):
         '''
         Load all of the modules for the minion
         '''
-        self.functions = salt.loader.minion_mods(self.opts, include_errors=True)
-        self.function_errors = self.functions['_errors']
-        self.functions.pop('_errors')  # Keep the funcs clean
         self.opts['pillar'] = salt.pillar.get_pillar(
             self.opts,
             self.opts['grains'],
             self.opts['id'],
             self.opts['environment'],
-            funcs=self.functions
         ).compile_pillar()
+        self.functions = salt.loader.minion_mods(self.opts, include_errors=True)
+        self.function_errors = self.functions['_errors']
+        self.functions.pop('_errors')  # Keep the funcs clean
         self.returners = salt.loader.returners(self.opts, self.functions)
         self.states = salt.loader.states(self.opts, self.functions)
         self.rend = salt.loader.render(self.opts, self.functions)
