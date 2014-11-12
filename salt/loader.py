@@ -553,7 +553,7 @@ class Loader(object):
         Strip out of the opts any logger instance
         '''
         mod_opts = {}
-        for key, val in opts.items():
+        for key, val in list(opts.items()):
             if key in ('logger', 'grains'):
                 continue
             mod_opts[key] = val
@@ -728,7 +728,7 @@ class Loader(object):
             mod.__salt__ = functions
         try:
             context = sys.modules[
-                functions[next(iter(functions.keys()))].__module__
+                functions[next(iter(list(functions.keys())))].__module__
             ].__context__
         except (AttributeError, StopIteration):
             context = {}
@@ -823,7 +823,7 @@ class Loader(object):
         # Handle provider overrides
         if provider_overrides and self.opts.get('providers', False):
             if isinstance(self.opts['providers'], dict):
-                for mod, provider in self.opts['providers'].items():
+                for mod, provider in list(self.opts['providers'].items()):
                     newfuncs = raw_mod(self.opts, provider, funcs)
                     if newfuncs:
                         for newfunc in newfuncs:
@@ -1235,7 +1235,7 @@ class Loader(object):
         '''
         funcs = {}
         gen = self.gen_functions(pack=pack, whitelist=whitelist)
-        for key, fun in gen.items():
+        for key, fun in list(gen.items()):
             # if the name (after '.') is "name", then rename to mod_name: fun
             if key == '_errors':
                 continue
@@ -1249,7 +1249,7 @@ class Loader(object):
         used to generate the grains
         '''
         funcs = {}
-        for key, fun in self.gen_functions().items():
+        for key, fun in list(self.gen_functions().items()):
             funcs[key[key.rindex('.')] + 1:] = fun
         return funcs
 
@@ -1289,14 +1289,14 @@ class Loader(object):
                 log.debug('Grains cache file does not exist.')
         grains_data = {}
         funcs = self.gen_functions()
-        for key, fun in funcs.items():
+        for key, fun in list(funcs.items()):
             if not key.startswith('core.'):
                 continue
             ret = fun()
             if not isinstance(ret, dict):
                 continue
             grains_data.update(ret)
-        for key, fun in funcs.items():
+        for key, fun in list(funcs.items()):
             if key.startswith('core.') or key == '_errors':
                 continue
             try:
@@ -1467,7 +1467,7 @@ class LazyFilterLoader(LazyLoader):
             return self._dict[key]
 
         # if we got one, now lets check if we have the function name we want
-        for mod_key, mod_fun in mod_funcs.items():
+        for mod_key, mod_fun in list(mod_funcs.items()):
             # if the name (after '.') is "name", then rename to mod_name: fun
             if mod_key[mod_key.index('.') + 1:] == self.name:
                 self._dict[mod_key[:mod_key.index('.')]] = mod_fun
