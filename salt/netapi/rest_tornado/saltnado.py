@@ -523,6 +523,12 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
             self._verify_client(client)
 
         for low in self.lowstate:
+            # make sure that the chunk has a token, if not we can't do auth per-request
+            # Note: this means that you *could* send different tokens per lowstate
+            # as long as the base token (to auth with the API) is valid
+            # TODO: add test for per-chunk token
+            if 'token' not in low:
+                chunk['token'] = self.token
             # disbatch to the correct handler
             try:
                 chunk_ret = yield getattr(self, '_disbatch_{0}'.format(low['client']))(low)
@@ -599,10 +605,6 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
         '''
         Disbatch local client commands
         '''
-        # TODO: not sure why.... we already verify auth, probably for ACLs
-        # require token or eauth
-        chunk['token'] = self.token
-
         chunk_ret = {}
 
         f_call = salt.utils.format_call(self.saltclients['local'], chunk)
