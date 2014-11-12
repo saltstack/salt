@@ -183,9 +183,9 @@ def format_log(ret):
                 if 'diff' in chg:
                     if isinstance(chg['diff'], string_types):
                         msg = 'File changed:\n{0}'.format(chg['diff'])
-                if all([isinstance(x, dict) for x in chg.values()]):
+                if all([isinstance(x, dict) for x in list(chg.values())]):
                     if all([('old' in x and 'new' in x)
-                            for x in chg.values()]):
+                            for x in list(chg.values())]):
                         # This is the return data from a package install
                         msg = 'Installed Packages:\n'
                         for pkg in chg:
@@ -302,7 +302,7 @@ class Compiler(object):
         if not isinstance(high, dict):
             errors.append('High data is not a dictionary and is invalid')
         reqs = {}
-        for name, body in high.items():
+        for name, body in list(high.items()):
             if name.startswith('__'):
                 continue
             if not isinstance(name, string_types):
@@ -469,10 +469,10 @@ class Compiler(object):
         the individual state executor structures
         '''
         chunks = []
-        for name, body in high.items():
+        for name, body in list(high.items()):
             if name.startswith('__'):
                 continue
-            for state, run in body.items():
+            for state, run in list(body.items()):
                 funcs = set()
                 names = set()
                 if state.startswith('__'):
@@ -489,7 +489,7 @@ class Compiler(object):
                         funcs.add(arg)
                         continue
                     if isinstance(arg, dict):
-                        for key, val in arg.items():
+                        for key, val in list(arg.items()):
                             if key == 'names':
                                 names.update(val)
                                 continue
@@ -500,7 +500,7 @@ class Compiler(object):
                     for entry in names:
                         live = copy.deepcopy(chunk)
                         if isinstance(entry, dict):
-                            low_name = next(iter(entry.keys()))
+                            low_name = next(iter(list(entry.keys())))
                             live['name'] = low_name
                             live.update(entry[low_name][0])
                         else:
@@ -536,7 +536,7 @@ class Compiler(object):
                 # Explicitly declared exclude
                 if len(exc) != 1:
                     continue
-                key = next(iter(exc.keys()))
+                key = next(iter(list(exc.keys())))
                 if key == 'sls':
                     ex_sls.add(exc['sls'])
                 elif key == 'id':
@@ -544,7 +544,7 @@ class Compiler(object):
         # Now the excludes have been simplified, use them
         if ex_sls:
             # There are sls excludes, find the associtaed ids
-            for name, body in high.items():
+            for name, body in list(high.items()):
                 if name.startswith('__'):
                     continue
                 if body.get('__sls__', '') in ex_sls:
@@ -870,7 +870,7 @@ class State(object):
         if not isinstance(high, dict):
             errors.append('High data is not a dictionary and is invalid')
         reqs = {}
-        for name, body in high.items():
+        for name, body in list(high.items()):
             try:
                 if name.startswith('__'):
                     continue
@@ -1066,10 +1066,10 @@ class State(object):
         the individual state executor structures
         '''
         chunks = []
-        for name, body in high.items():
+        for name, body in list(high.items()):
             if name.startswith('__'):
                 continue
-            for state, run in body.items():
+            for state, run in list(body.items()):
                 funcs = set()
                 names = set()
                 if state.startswith('__'):
@@ -1086,7 +1086,7 @@ class State(object):
                         funcs.add(arg)
                         continue
                     if isinstance(arg, dict):
-                        for key, val in arg.items():
+                        for key, val in list(arg.items()):
                             if key == 'names':
                                 names.update(val)
                             elif key == 'state':
@@ -1103,7 +1103,7 @@ class State(object):
                     for entry in names:
                         live = copy.deepcopy(chunk)
                         if isinstance(entry, dict):
-                            low_name = next(iter(entry.keys()))
+                            low_name = next(iter(list(entry.keys())))
                             live['name'] = low_name
                             live.update(entry[low_name][0])
                         else:
@@ -1130,7 +1130,7 @@ class State(object):
             return high, errors
         ext = high.pop('__extend__')
         for ext_chunk in ext:
-            for name, body in ext_chunk.items():
+            for name, body in list(ext_chunk.items()):
                 if name not in high:
                     state_type = next(
                         x for x in body if not x.startswith('__')
@@ -1152,7 +1152,7 @@ class State(object):
                                 body.get('__sls__', 'base'))
                             )
                         continue
-                for state, run in body.items():
+                for state, run in list(body.items()):
                     if state.startswith('__'):
                         continue
                     if state not in high[name]:
@@ -1214,7 +1214,7 @@ class State(object):
                 # Explicitly declared exclude
                 if len(exc) != 1:
                     continue
-                key = next(iter(exc.keys()))
+                key = next(iter(list(exc.keys())))
                 if key == 'sls':
                     ex_sls.add(exc['sls'])
                 elif key == 'id':
@@ -1222,7 +1222,7 @@ class State(object):
         # Now the excludes have been simplified, use them
         if ex_sls:
             # There are sls excludes, find the associated ids
-            for name, body in high.items():
+            for name, body in list(high.items()):
                 if name.startswith('__'):
                     continue
                 sls = body.get('__sls__', '')
@@ -1259,10 +1259,10 @@ class State(object):
                     ]))
         extend = {}
         errors = []
-        for id_, body in high.items():
+        for id_, body in list(high.items()):
             if not isinstance(body, dict):
                 continue
-            for state, run in body.items():
+            for state, run in list(body.items()):
                 if state.startswith('__'):
                     continue
                 for arg in run:
@@ -1281,7 +1281,7 @@ class State(object):
                         items = arg[key]
                         if isinstance(items, dict):
                             # Formatted as a single req_in
-                            for _state, name in items.items():
+                            for _state, name in list(items.items()):
 
                                 # Not a use requisite_in
                                 found = False
@@ -1386,9 +1386,9 @@ class State(object):
                                         if next(iter(arg)) in ignore_args:
                                             continue
                                         # Don't use name or names
-                                        if next(iter(arg.keys())) == 'name':
+                                        if next(iter(list(arg.keys()))) == 'name':
                                             continue
-                                        if next(iter(arg.keys())) == 'names':
+                                        if next(iter(list(arg.keys()))) == 'names':
                                             continue
                                         extend[ext_id][_state].append(arg)
                                     continue
@@ -1412,9 +1412,9 @@ class State(object):
                                         if next(iter(arg)) in ignore_args:
                                             continue
                                         # Don't use name or names
-                                        if next(iter(arg.keys())) == 'name':
+                                        if next(iter(list(arg.keys()))) == 'name':
                                             continue
-                                        if next(iter(arg.keys())) == 'names':
+                                        if next(iter(list(arg.keys()))) == 'names':
                                             continue
                                         extend[id_][state].append(arg)
                                     continue
@@ -1440,7 +1440,7 @@ class State(object):
                                         {rkey: [{state: id_}]}
                                         )
         high['__extend__'] = []
-        for key, val in extend.items():
+        for key, val in list(extend.items()):
             high['__extend__'].append({key: val})
         req_in_high, req_in_errors = self.reconcile_extend(high)
         errors.extend(req_in_errors)
@@ -1672,7 +1672,7 @@ class State(object):
                     if not found:
                         return 'unmet', ()
         fun_stats = set()
-        for r_state, chunks in reqs.items():
+        for r_state, chunks in list(reqs.items()):
             if r_state == 'prereq':
                 run_dict = self.pre
             else:
@@ -1788,7 +1788,7 @@ class State(object):
                         lost[requisite].append(req)
             if lost['require'] or lost['watch'] or lost['prereq'] or lost['onfail'] or lost['onchanges'] or lost.get('prerequired'):
                 comment = 'The following requisites were not found:\n'
-                for requisite, lreqs in lost.items():
+                for requisite, lreqs in list(lost.items()):
                     if not lreqs:
                         continue
                     comment += \
@@ -1920,14 +1920,14 @@ class State(object):
                 listeners.append({(chunk['state'], chunk['name']): chunk['listen']})
             if 'listen_in' in chunk:
                 for l_in in chunk['listen_in']:
-                    for key, val in l_in.items():
+                    for key, val in list(l_in.items()):
                         listeners.append({(key, val): [{chunk['state']: chunk['name']}]})
         mod_watchers = []
         errors = {}
         for l_dict in listeners:
-            for key, val in l_dict.items():
+            for key, val in list(l_dict.items()):
                 for listen_to in val:
-                    for lkey, lval in listen_to.items():
+                    for lkey, lval in list(listen_to.items()):
                         if (lkey, lval) not in crefs:
                             rerror = {_l_tag(lkey, lval):
                                          {'comment': 'Referenced state {0}: {1} does not exist'.format(lkey, lval),
@@ -2229,7 +2229,7 @@ class BaseHighState(object):
                         )
 
         # Search initial top files for includes
-        for saltenv, ctops in tops.items():
+        for saltenv, ctops in list(tops.items()):
             for ctop in ctops:
                 if 'include' not in ctop:
                     continue
@@ -2239,7 +2239,7 @@ class BaseHighState(object):
         # Go through the includes and pull out the extra tops and add them
         while include:
             pops = []
-            for saltenv, states in include.items():
+            for saltenv, states in list(include.items()):
                 pops.append(saltenv)
                 if not states:
                     continue
@@ -2269,9 +2269,9 @@ class BaseHighState(object):
         Cleanly merge the top files
         '''
         top = DefaultOrderedDict(OrderedDict)
-        for ctops in tops.values():
+        for ctops in list(tops.values()):
             for ctop in ctops:
-                for saltenv, targets in ctop.items():
+                for saltenv, targets in list(ctop.items()):
                     if saltenv == 'include':
                         continue
                     try:
@@ -2301,7 +2301,7 @@ class BaseHighState(object):
             errors.append('Top data was not formed as a dict')
             # No further checks will work, bail out
             return errors
-        for saltenv, matches in tops.items():
+        for saltenv, matches in list(tops.items()):
             if saltenv == 'include':
                 continue
             if not isinstance(saltenv, string_types):
@@ -2316,7 +2316,7 @@ class BaseHighState(object):
                     'The top file matches for saltenv {0} are not '
                     'formatted as a dict'.format(saltenv)
                 )
-            for slsmods in matches.values():
+            for slsmods in list(matches.values()):
                 if not isinstance(slsmods, list):
                     errors.append('Malformed topfile (state declarations not '
                                   'formed as a list)')
@@ -2324,7 +2324,7 @@ class BaseHighState(object):
                 for slsmod in slsmods:
                     if isinstance(slsmod, dict):
                         # This value is a match option
-                        for val in slsmod.values():
+                        for val in list(slsmod.values()):
                             if not val:
                                 errors.append(
                                     'Improperly formatted top file matcher '
@@ -2360,11 +2360,11 @@ class BaseHighState(object):
         '''
         matches = {}
         # pylint: disable=cell-var-from-loop
-        for saltenv, body in top.items():
+        for saltenv, body in list(top.items()):
             if self.opts['environment']:
                 if saltenv != self.opts['environment']:
                     continue
-            for match, data in body.items():
+            for match, data in list(body.items()):
                 def _filter_matches(_match, _data, _opts):
                     if isinstance(_data, string_types):
                         _data = [_data]
@@ -2378,7 +2378,7 @@ class BaseHighState(object):
                         for item in _data:
                             if 'subfilter' in item:
                                 _tmpdata = item.pop('subfilter')
-                                for match, data in _tmpdata.items():
+                                for match, data in list(_tmpdata.items()):
                                     _filter_matches(match, data, _opts)
                             if isinstance(item, string_types):
                                 matches[saltenv].append(item)
@@ -2594,7 +2594,7 @@ class BaseHighState(object):
                     for arg in state[name][s_dec]:
                         if isinstance(arg, dict):
                             if len(arg) > 0:
-                                if next(iter(arg.keys())) == 'order':
+                                if next(iter(list(arg.keys()))) == 'order':
                                     found = True
                     if not found:
                         if not isinstance(state[name][s_dec], list):
@@ -2717,7 +2717,7 @@ class BaseHighState(object):
         all_errors = []
         mods = set()
         statefiles = []
-        for saltenv, states in matches.items():
+        for saltenv, states in list(matches.items()):
             for sls_match in states:
                 try:
                     statefiles = fnmatch.filter(self.avail[saltenv], sls_match)
@@ -2755,7 +2755,7 @@ class BaseHighState(object):
     def clean_duplicate_extends(self, highstate):
         if '__extend__' in highstate:
             highext = []
-            for items in (ext.items() for ext in highstate['__extend__']):
+            for items in (list(ext.items()) for ext in highstate['__extend__']):
                 for item in items:
                     if item not in highext:
                         highext.append(item)
