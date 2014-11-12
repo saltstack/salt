@@ -101,29 +101,6 @@ class TestSaltAPIHandler(SaltnadoTestCase):
         response_obj = json.loads(response.body)
         assert response_obj['return'] == ["No minions matched the target. No command was sent, no jid was assigned."]
 
-    # TODO: fix tracebacks from the minion, it returns after the master process dies
-    # if you run just one test. Disabled until then
-    def tsest_simple_local_timeout(self):
-        '''
-        Send a request that should timeout and make sure it does
-        '''
-        low = [{'client': 'local',
-                'tgt': '*',
-                'fun': 'test.sleep',
-                'arg': [5],
-                'timeout': 1,
-                }]
-        response = self.fetch('/',
-                              method='POST',
-                              body=json.dumps(low),
-                              headers={'Content-Type': self.content_type_map['json'],
-                                       saltnado.AUTH_TOKEN_HEADER: self.token['token']},
-                              )
-        # TODO: some exceptional case for timeouts? Maybe some mechanism to
-        # return pub_data?
-        response_obj = json.loads(response.body)
-        assert response_obj['return'] == [{}]
-
     # local_batch tests
     def test_simple_local_batch_post(self):
         '''
