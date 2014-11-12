@@ -31,7 +31,8 @@ import salt.syspaths
 import salt.utils.validate.path
 import salt.utils.xdg
 import salt.exceptions
-from salt._compat import string_types, urlparse
+from salt._compat import urlparse
+from six import string_types
 
 import sys
 
@@ -252,6 +253,7 @@ VALID_OPTS = {
     'ioflo_realtime': bool,
     'ioflo_console_logdir': str,
     'raet_port': int,
+    'raet_alt_port': int,
     'raet_mutable': bool,
     'raet_main': bool,
     'raet_clear_remotes': bool,
@@ -401,11 +403,13 @@ DEFAULT_MINION_OPTS = {
     'auth_safemode': False,
     'random_master': False,
     'minion_floscript': os.path.join(FLO_DIR, 'minion.flo'),
+    'caller_floscript': os.path.join(FLO_DIR, 'caller.flo'),
     'ioflo_verbose': 0,
     'ioflo_period': 0.1,
     'ioflo_realtime': True,
     'ioflo_console_logdir': '',
     'raet_port': 4510,
+    'raet_alt_port': 4511,
     'raet_mutable': False,
     'raet_main': False,
     'raet_clear_remotes': True,
@@ -574,6 +578,7 @@ DEFAULT_MASTER_OPTS = {
     'ioflo_realtime': True,
     'ioflo_console_logdir': '',
     'raet_port': 4506,
+    'raet_alt_port': 4511,
     'raet_mutable': False,
     'raet_main': True,
     'raet_clear_remotes': False,

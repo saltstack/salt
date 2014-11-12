@@ -279,6 +279,7 @@ import yaml
 import jinja2
 import re
 from os.path import isfile, join
+from six.moves import input
 
 # Only used when called from a terminal
 log = None
@@ -536,7 +537,7 @@ if __name__ == '__main__':
     __opts__.update(yaml.load(open(args.config).read()))
 
     loc = 0
-    for name in [next(iter(e.keys())) for e in __opts__['ext_pillar']]:
+    for name in [next(iter(list(e.keys()))) for e in __opts__['ext_pillar']]:
         if name == 'pepa':
             break
         loc += 1
@@ -566,7 +567,7 @@ if __name__ == '__main__':
         username = args.username
         password = args.password
         if username is None:
-            username = raw_input('Username: ')
+            username = input('Username: ')
         if password is None:
             password = getpass.getpass()
 

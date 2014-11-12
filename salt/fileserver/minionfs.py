@@ -14,6 +14,7 @@ Other minionfs settings include: :conf_master:`minionfs_whitelist`,
 .. seealso:: :ref:`tutorial-minionfs`
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os

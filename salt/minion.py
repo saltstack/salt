@@ -2,10 +2,8 @@
 '''
 Routines to set up a minion
 '''
-
-from __future__ import absolute_import
-
 # Import python libs
+from __future__ import absolute_import
 from __future__ import print_function
 import copy
 import errno
@@ -71,7 +69,7 @@ import salt.utils.schedule
 import salt.exitcodes
 
 from salt.defaults import DEFAULT_TARGET_DELIM
-from salt._compat import string_types
+from six import string_types
 from salt.utils.debug import enable_sigusr1_handler
 from salt.utils.event import tagify
 import salt.syspaths
@@ -567,7 +565,7 @@ class MultiMinion(MinionBase):
                         pass
 
                 # have the Minion class run anything it has to run
-                minion['generator'].next()
+                next(minion['generator'])
 
 
 class Minion(MinionBase):
@@ -2286,7 +2284,7 @@ class MultiSyndic(MinionBase):
                         # if we couldn't connect, lets try later
                         if not self._connect_to_master(master_id):
                             continue
-                    syndic_dict['generator'].next()
+                    next(syndic_dict['generator'])
 
                 # events
                 if socks.get(self.local.event.sub) == zmq.POLLIN:
@@ -2491,7 +2489,7 @@ class Matcher(object):
             return False
         return salt.utils.subdict_match(self.opts['pillar'],
                                         tgt,
-                                        delim=delim,
+                                        delimiter=delim,
                                         exact_match=True)
 
     def ipcidr_match(self, tgt):

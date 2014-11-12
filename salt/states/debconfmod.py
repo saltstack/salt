@@ -38,6 +38,8 @@ set_file
     </topics/troubleshooting/yaml_idiosyncrasies>`), the values in the ``data``
     dict must be indented four spaces instead of two.
 '''
+from __future__ import absolute_import
+import six
 
 
 # Define the module's virtual name
@@ -136,7 +138,7 @@ def set(name, data):
 
     current = __salt__['debconf.show'](name)
 
-    for (key, args) in data.iteritems():
+    for (key, args) in six.iteritems(data):
         # For debconf data, valid booleans are 'true' and 'false';
         # But str()'ing the args['value'] will result in 'True' and 'False'
         # which will be ignored and overridden by a dpkg-reconfigure.

@@ -52,6 +52,7 @@ XMPP settings may also be configured as::
 
     salt '*' test.ping --return xmpp --return_config alternative
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import distutils.version

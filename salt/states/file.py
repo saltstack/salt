@@ -250,9 +250,10 @@ import salt.utils.templates
 from salt.exceptions import CommandExecutionError
 from salt.utils.serializers import yaml as yaml_serializer
 from salt.utils.serializers import json as json_serializer
-from salt._compat import string_types, integer_types
 from six.moves import map
 import six
+from six import string_types, integer_types
+>>>>>>> 10395c004e456a3290243ff2405a7eec982ecf8f
 
 log = logging.getLogger(__name__)
 
@@ -1277,7 +1278,7 @@ def managed(name,
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
 
-    if isinstance(env, salt._compat.string_types):
+    if isinstance(env, string_types):
         msg = (
             'Passing a salt environment should be done using \'saltenv\' not '
             '\'env\'. This warning will go away in Salt Boron and this '
@@ -1969,7 +1970,7 @@ def recurse(name,
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
 
-    if isinstance(env, salt._compat.string_types):
+    if isinstance(env, string_types):
         msg = (
             'Passing a salt environment should be done using \'saltenv\' not '
             '\'env\'. This warning will go away in Salt Boron and this '
@@ -3180,7 +3181,7 @@ def patch(name,
         ret.update(result=True, comment='Patch is already applied')
         return ret
 
-    if isinstance(env, salt._compat.string_types):
+    if isinstance(env, string_types):
         msg = (
             'Passing a salt environment should be done using \'saltenv\' not '
             '\'env\'. This warning will go away in Salt Boron and this '
@@ -3783,7 +3784,7 @@ def serialize(name,
            'name': name,
            'result': True}
 
-    if isinstance(env, salt._compat.string_types):
+    if isinstance(env, string_types):
         msg = (
             'Passing a salt environment should be done using \'saltenv\' not '
             '\'env\'. This warning will go away in Salt Boron and this '

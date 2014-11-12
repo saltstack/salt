@@ -92,6 +92,7 @@ and autoscale groups are completely dependent on each other.
             key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
             region: us-east-1
 '''
+from __future__ import absolute_import
 from salt.exceptions import SaltInvocationError
 
 

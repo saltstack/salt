@@ -14,6 +14,7 @@ authentication, it is also possible to pass private keys to use explicitly.
         - rev: develop
         - target: /tmp/salt
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging

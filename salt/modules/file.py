@@ -31,8 +31,10 @@ import tempfile
 import time
 import glob
 from functools import reduce
+from six import string_types
 from six.moves import range
 from six.moves import zip
+from six.moves.urllib.parse import urlparse
 
 try:
     import grp
@@ -47,7 +49,6 @@ import salt.utils.filebuffer
 import salt.utils.files
 import salt.utils.atomicfile
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-import salt._compat
 
 log = logging.getLogger(__name__)
 
@@ -2516,7 +2517,7 @@ def source_list(source, source_hash, saltenv):
                     continue
                 single_src = next(iter(single))
                 single_hash = single[single_src] if single[single_src] else source_hash
-                proto = salt._compat.urlparse(single_src).scheme
+                proto = urlparse(single_src).scheme
                 if proto == 'salt':
                     if single_src[7:] in mfiles or single_src[7:] in mdirs:
                         ret = (single_src, single_hash)
@@ -2528,7 +2529,7 @@ def source_list(source, source_hash, saltenv):
                     if fn_:
                         ret = (single_src, single_hash)
                         break
-            elif isinstance(single, salt._compat.string_types):
+            elif isinstance(single, string_types):
                 if single[7:] in mfiles or single[7:] in mdirs:
                     ret = (single, source_hash)
                     break
@@ -2636,13 +2637,13 @@ def get_managed(
     else:
         # Copy the file down if there is a source
         if source:
-            if salt._compat.urlparse(source).scheme == 'salt':
+            if urlparse(source).scheme == 'salt':
                 source_sum = __salt__['cp.hash_file'](source, saltenv)
                 if not source_sum:
                     return '', {}, 'Source file {0} not found'.format(source)
             elif source_hash:
                 protos = ['salt', 'http', 'https', 'ftp', 'swift']
-                if salt._compat.urlparse(source_hash).scheme in protos:
+                if urlparse(source_hash).scheme in protos:
                     # The source_hash is a file on a server
                     hash_fn = __salt__['cp.cache_file'](source_hash, saltenv)
                     if not hash_fn:
@@ -2839,7 +2840,7 @@ def check_perms(name, ret, user, group, mode, follow_symlinks=False):
         elif 'cgroup' in perms and user != '':
             ret['changes']['group'] = group
 
-    if isinstance(orig_comment, salt._compat.string_types):
+    if isinstance(orig_comment, string_types):
         if orig_comment:
             ret['comment'].insert(0, orig_comment)
         ret['comment'] = '; '.join(ret['comment'])
@@ -3013,7 +3014,7 @@ def get_diff(
 
     ret = ''
 
-    if isinstance(env, salt._compat.string_types):
+    if isinstance(env, string_types):
         salt.utils.warn_until(
             'Boron',
             'Passing a salt environment should be done using \'saltenv\' not '
@@ -3147,7 +3148,7 @@ def manage_file(name,
                     ret, 'Source file {0} not found'.format(source))
             # If the downloaded file came from a non salt server source verify
             # that it matches the intended sum value
-            if salt._compat.urlparse(source).scheme != 'salt':
+            if urlparse(source).scheme != 'salt':
                 dl_sum = get_hash(sfn, source_sum['hash_type'])
                 if dl_sum != source_sum['hsum']:
                     ret['comment'] = ('File sum set for file {0} of {1} does '
@@ -3238,7 +3239,7 @@ def manage_file(name,
                     ret, 'Source file {0} not found'.format(source))
             # If the downloaded file came from a non salt server source verify
             # that it matches the intended sum value
-            if salt._compat.urlparse(source).scheme != 'salt':
+            if urlparse(source).scheme != 'salt':
                 dl_sum = get_hash(sfn, source_sum['hash_type'])
                 if dl_sum != source_sum['hsum']:
                     ret['comment'] = ('File sum set for file {0} of {1} does '
@@ -3285,7 +3286,7 @@ def manage_file(name,
                     ret, 'Source file {0} not found'.format(source))
             # If the downloaded file came from a non salt server source verify
             # that it matches the intended sum value
-            if salt._compat.urlparse(source).scheme != 'salt':
+            if urlparse(source).scheme != 'salt':
                 dl_sum = get_hash(sfn, source_sum['hash_type'])
                 if dl_sum != source_sum['hsum']:
                     ret['comment'] = ('File sum set for file {0} of {1} does '
@@ -3310,7 +3311,7 @@ def manage_file(name,
                         # directories created with makedirs_() below can't be
                         # listed via a shell.
                         mode_list = [x for x in str(mode)][-3:]
-                        for idx in salt._compat.xrange(len(mode_list)):
+                        for idx in range(len(mode_list)):
                             if mode_list[idx] != '0':
                                 mode_list[idx] = str(int(mode_list[idx]) | 1)
                         dir_mode = ''.join(mode_list)

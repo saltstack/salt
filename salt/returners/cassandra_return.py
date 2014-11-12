@@ -18,6 +18,7 @@ Required python modules: pycassa
 
     salt '*' test.ping --return cassandra
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging

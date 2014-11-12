@@ -26,6 +26,7 @@ python2-memcache uses 'localhost' and '11211' as syntax on connection.
 
     salt '*' test.ping --return memcache --return_config alternative
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import json

@@ -3,6 +3,7 @@
 A collection of mixins useful for the various *Client interfaces
 '''
 from __future__ import print_function
+from __future__ import absolute_import
 import datetime
 import logging
 import multiprocessing
