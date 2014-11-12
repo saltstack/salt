@@ -10,6 +10,7 @@ from __future__ import absolute_import
 # pylint: skip-file
 # pylint: disable=C0103
 import sys
+from six.moves import map
 if sys.version_info < (2, 7):
     import unittest2 as unittest
 else:
@@ -1463,21 +1464,21 @@ class BasicTestCase(unittest.TestCase):
         self.service(main, other, duration=1.0)
 
         self.assertEqual(len(main.transactions), 0)
-        remote = next(iter(main.remotes.values()))
+        remote = next(iter(list(main.remotes.values())))
         self.assertTrue(remote.joined)
         self.assertEqual(len(other.transactions), 0)
-        remote = next(iter(other.remotes.values()))
+        remote = next(iter(list(other.remotes.values())))
         self.assertTrue(remote.joined)
 
         self.allow(other, main)
         self.assertEqual(len(main.transactions), 0)
-        remote = next(iter(main.remotes.values()))
+        remote = next(iter(list(main.remotes.values())))
         self.assertTrue(remote.allowed)
         self.assertEqual(len(other.transactions), 0)
-        remote = next(iter(other.remotes.values()))
+        remote = next(iter(list(other.remotes.values())))
         self.assertTrue(remote.allowed)
 
-        for remote in main.remotes.values():
+        for remote in list(main.remotes.values()):
             path = os.path.join(main.keep.remotedirpath,
                     "{0}.{1}.{2}".format(main.keep.prefix, remote.name, main.keep.ext))
             self.assertTrue(os.path.exists(path))
@@ -1585,21 +1586,21 @@ class BasicTestCase(unittest.TestCase):
 
         self.join(other, main)
         self.assertEqual(len(main.transactions), 0)
-        remote = next(iter(main.remotes.values()))
+        remote = next(iter(list(main.remotes.values())))
         self.assertTrue(remote.joined)
         self.assertEqual(len(other.transactions), 0)
-        remote = next(iter(other.remotes.values()))
+        remote = next(iter(list(other.remotes.values())))
         self.assertTrue(remote.joined)
 
         self.allow(other, main)
         self.assertEqual(len(main.transactions), 0)
-        remote = next(iter(main.remotes.values()))
+        remote = next(iter(list(main.remotes.values())))
         self.assertTrue(remote.allowed)
         self.assertEqual(len(other.transactions), 0)
-        remote = next(iter(other.remotes.values()))
+        remote = next(iter(list(other.remotes.values())))
         self.assertTrue(remote.allowed)
 
-        for remote in main.remotes.values():
+        for remote in list(main.remotes.values()):
             path = os.path.join(main.keep.remotedirpath,
                     "{0}.{1}.{2}".format(main.keep.prefix, remote.name, main.keep.ext))
             self.assertTrue(os.path.exists(path))
@@ -1707,21 +1708,21 @@ class BasicTestCase(unittest.TestCase):
 
         self.join(other, main)
         self.assertEqual(len(main.transactions), 0)
-        remote = next(iter(main.remotes.values()))
+        remote = next(iter(list(main.remotes.values())))
         self.assertTrue(remote.joined)
         self.assertEqual(len(other.transactions), 0)
-        remote = next(iter(other.remotes.values()))
+        remote = next(iter(list(other.remotes.values())))
         self.assertTrue(remote.joined)
 
         self.allow(other, main)
         self.assertEqual(len(main.transactions), 0)
-        remote = next(iter(main.remotes.values()))
+        remote = next(iter(list(main.remotes.values())))
         self.assertTrue(remote.allowed)
         self.assertEqual(len(other.transactions), 0)
-        remote = next(iter(other.remotes.values()))
+        remote = next(iter(list(other.remotes.values())))
         self.assertTrue(remote.allowed)
 
-        for remote in main.remotes.values():
+        for remote in list(main.remotes.values()):
             path = os.path.join(main.keep.remotedirpath,
                     "{0}.{1}.{2}".format(main.keep.prefix, remote.name, main.keep.ext))
             self.assertTrue(os.path.exists(path))
@@ -1833,21 +1834,21 @@ class BasicTestCase(unittest.TestCase):
         self.service(main, other1, duration=1.0)
 
         self.assertEqual(len(main.transactions), 0)
-        remote = next(iter(main.remotes.values()))
+        remote = next(iter(list(main.remotes.values())))
         self.assertTrue(remote.joined)
         self.assertEqual(len(other1.transactions), 0)
-        remote = next(iter(other1.remotes.values()))
+        remote = next(iter(list(other1.remotes.values())))
         self.assertTrue(remote.joined)
 
         self.allow(other1, main)
         self.assertEqual(len(main.transactions), 0)
-        remote = next(iter(main.remotes.values()))
+        remote = next(iter(list(main.remotes.values())))
         self.assertTrue(remote.allowed)
         self.assertEqual(len(other1.transactions), 0)
-        remote = next(iter(other1.remotes.values()))
+        remote = next(iter(list(other1.remotes.values())))
         self.assertTrue(remote.allowed)
 
-        for remote in main.remotes.values():
+        for remote in list(main.remotes.values()):
             path = os.path.join(main.keep.remotedirpath,
                     "{0}.{1}.{2}".format(main.keep.prefix, remote.name, main.keep.ext))
             self.assertTrue(os.path.exists(path))
@@ -1959,21 +1960,21 @@ class BasicTestCase(unittest.TestCase):
         self.join(other2, main)
 
         self.assertEqual(len(main.transactions), 0)
-        remote = next(iter(main.remotes.values()))
+        remote = next(iter(list(main.remotes.values())))
         self.assertTrue(remote.joined)
         self.assertEqual(len(other2.transactions), 0)
-        remote = next(iter(other2.remotes.values()))
+        remote = next(iter(list(other2.remotes.values())))
         self.assertTrue(remote.joined)
 
         self.allow(other2, main)
         self.assertEqual(len(main.transactions), 0)
-        remote = next(iter(main.remotes.values()))
+        remote = next(iter(list(main.remotes.values())))
         self.assertTrue(remote.allowed)
         self.assertEqual(len(other2.transactions), 0)
-        remote = next(iter(other2.remotes.values()))
+        remote = next(iter(list(other2.remotes.values())))
         self.assertTrue(remote.allowed)
 
-        for remote in main.remotes.values():
+        for remote in list(main.remotes.values()):
             path = os.path.join(main.keep.remotedirpath,
                     "{0}.{1}.{2}".format(main.keep.prefix, remote.name, main.keep.ext))
             self.assertTrue(os.path.exists(path))
@@ -2084,21 +2085,21 @@ class BasicTestCase(unittest.TestCase):
 
         self.join(other1, main)
         self.assertEqual(len(main.transactions), 0)
-        remote = next(iter(main.remotes.values()))
+        remote = next(iter(list(main.remotes.values())))
         self.assertTrue(remote.joined)
         self.assertEqual(len(other1.transactions), 0)
-        remote = next(iter(other1.remotes.values()))
+        remote = next(iter(list(other1.remotes.values())))
         self.assertTrue(remote.joined)
 
         self.allow(other1, main)
         self.assertEqual(len(main.transactions), 0)
-        remote = next(iter(main.remotes.values()))
+        remote = next(iter(list(main.remotes.values())))
         self.assertTrue(remote.allowed)
         self.assertEqual(len(other1.transactions), 0)
-        remote = next(iter(other1.remotes.values()))
+        remote = next(iter(list(other1.remotes.values())))
         self.assertTrue(remote.allowed)
 
-        for remote in main.remotes.values():
+        for remote in list(main.remotes.values()):
             path = os.path.join(main.keep.remotedirpath,
                     "{0}.{1}.{2}".format(main.keep.prefix, remote.name, main.keep.ext))
             self.assertTrue(os.path.exists(path))
@@ -2153,21 +2154,21 @@ class BasicTestCase(unittest.TestCase):
         self.join(other2, main)
 
         self.assertEqual(len(main.transactions), 0)
-        remote = next(iter(main.remotes.values()))
+        remote = next(iter(list(main.remotes.values())))
         self.assertTrue(remote.joined)
         self.assertEqual(len(other2.transactions), 0)
-        remote = next(iter(other2.remotes.values()))
+        remote = next(iter(list(other2.remotes.values())))
         self.assertTrue(remote.joined)
 
         self.allow(other2, main)
         self.assertEqual(len(main.transactions), 0)
-        remote = next(iter(main.remotes.values()))
+        remote = next(iter(list(main.remotes.values())))
         self.assertTrue(remote.allowed)
         self.assertEqual(len(other2.transactions), 0)
-        remote = next(iter(other2.remotes.values()))
+        remote = next(iter(list(other2.remotes.values())))
         self.assertTrue(remote.allowed)
 
-        for remote in main.remotes.values():
+        for remote in list(main.remotes.values()):
             path = os.path.join(main.keep.remotedirpath,
                     "{0}.{1}.{2}".format(main.keep.prefix, remote.name, main.keep.ext))
             self.assertTrue(os.path.exists(path))
@@ -2214,7 +2215,7 @@ def runSome():
              'testBootstrapRoleAuto',
              ]
 
-    tests.extend(map(BasicTestCase, names))
+    tests.extend(list(list(map(BasicTestCase, names))))
 
     suite = unittest.TestSuite(tests)
     unittest.TextTestRunner(verbosity=2).run(suite)
