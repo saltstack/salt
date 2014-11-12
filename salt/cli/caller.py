@@ -276,27 +276,24 @@ class RAETCaller(ZeroMQCaller):
         '''
         Pass in the command line options
         '''
-        self.process = None
+        self.stack = self._setup_caller_stack(opts)
+        salt.transport.jobber_stack = self.stack
 
+        self.process = None
         if (opts.get('__role') ==
                 kinds.APPL_KIND_NAMES[kinds.applKinds.caller]):
             # spin up and fork minion here
             self.process = multiprocessing.Process(target=self.minion_run,
-                                              kwargs={'stuff': {}, 'opts': opts, })
+                                kwargs={'cleanup_protecteds': [self.stack.ha], })
             self.process.start()
+            # wait here until '/var/run/salt/minion/alpha_caller.manor.uxd' exists
             self._wait_caller(opts)
-            #process.join()
-
-        self.stack = self._setup_caller_stack(opts)
-        salt.transport.jobber_stack = self.stack
-
-        # wait here until '/var/run/salt/minion/alpha_caller.manor.uxd' exists
 
         super(RAETCaller, self).__init__(opts)
 
-    def minion_run(self, stuff, opts):
+    def minion_run(self, cleanup_protecteds):
         minion = salt.Minion()  # daemonizes here
-        minion.call()  # caller minion.call_in uses caller.flo
+        minion.call(cleanup_protecteds=cleanup_protecteds)  # caller minion.call_in uses caller.flo
 
     def run(self):
         '''
@@ -396,4 +393,4 @@ class RAETCaller(ZeroMQCaller):
                     not os.path.isfile(ha) and
                     not os.path.isdir(ha))):
             time.sleep(0.1)
-        time.sleep(7.0)  # need to fix this
+        time.sleep(0.5)
