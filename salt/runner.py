@@ -149,11 +149,18 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         The multiprocessing process calls back here
         to stream returns
         '''
-        # Provide JID if the runner wants to access it
-        sys.modules[instance.functions[data['fun']].__module__].__jid__ = data['jid']
-        # Runtime injection of the progress event system with the correct jid
-        sys.modules[instance.functions[data['fun']].__module__].progress = \
-            salt.utils.event.RunnerEvent(opts, data['jid']).fire_progress
+        # Runners modules runtime injection:
+        # - the progress event system with the correct jid
+        # - Provide JID if the runner wants to access it directly
+        done = {}
+        progress = salt.utils.event.RunnerEvent(opts, data['jid']).fire_progress
+        for func_name, func in instance.functions.items():
+            if func.__module__ in done:
+                continue
+            mod = sys.modules[func.__module__]
+            mod.__jid__ = data['jid']
+            mod.__progress__ = progress
+            done[func.__module__] = mod
         ret = instance.functions[data['fun']](*data['args'], **data['kwargs'])
         # Sleep for just a moment to let any progress events return
         time.sleep(0.1)

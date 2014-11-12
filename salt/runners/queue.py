@@ -182,7 +182,7 @@ def process_queue(queue, quantity=1, backend='sqlite'):
         items = pop(queue=queue, quantity=quantity, backend=backend)
     except SaltInvocationError as exc:
         error_txt = '{0}'.format(exc)
-        progress(error_txt)
+        __progress__(error_txt)
         return False
 
     data = {'items': items,

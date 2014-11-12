@@ -46,7 +46,7 @@ def status(output=True):
     ret['up'] = sorted(minions)
     ret['down'] = sorted(set(keys['minions']) - set(minions))
     if output:
-        progress(ret)
+        __progress__(ret)
     return ret
 
 
@@ -238,7 +238,7 @@ def safe_accept(target, expr_form='glob'):
             print(message)
             print('')
 
-    progress('Accepted {0:d} keys'.format(len(ret)))
+    __progress__('Accepted {0:d} keys'.format(len(ret)))
     return ret, failures
 
 
