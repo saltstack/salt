@@ -191,7 +191,7 @@ class MasterPillarUtil(object):
         cret = {}
         lret = {}
         if self.use_cached_grains:
-            cret = dict([(minion_id, mcache) for (minion_id, mcache) in cached_grains.items() if mcache])
+            cret = dict([(minion_id, mcache) for (minion_id, mcache) in list(cached_grains.items()) if mcache])
             missed_minions = [minion_id for minion_id in minion_ids if minion_id not in cret]
             log.debug('Missed cached minion grains for: {0}'.format(missed_minions))
             if self.grains_fallback:
@@ -202,7 +202,7 @@ class MasterPillarUtil(object):
             missed_minions = [minion_id for minion_id in minion_ids if minion_id not in lret]
             log.debug('Missed live minion grains for: {0}'.format(missed_minions))
             if self.grains_fallback:
-                cret = dict([(minion_id, mcache) for (minion_id, mcache) in cached_grains.items() if mcache])
+                cret = dict([(minion_id, mcache) for (minion_id, mcache) in list(cached_grains.items()) if mcache])
             ret = dict(list(dict([(minion_id, {}) for minion_id in minion_ids]).items()) + list(lret.items()) + list(cret.items()))
         return ret
 
@@ -216,7 +216,7 @@ class MasterPillarUtil(object):
         cret = {}
         lret = {}
         if self.use_cached_pillar:
-            cret = dict([(minion_id, mcache) for (minion_id, mcache) in cached_pillar.items() if mcache])
+            cret = dict([(minion_id, mcache) for (minion_id, mcache) in list(cached_pillar.items()) if mcache])
             missed_minions = [minion_id for minion_id in minion_ids if minion_id not in cret]
             log.debug('Missed cached minion pillars for: {0}'.format(missed_minions))
             if self.pillar_fallback:
@@ -227,7 +227,7 @@ class MasterPillarUtil(object):
             missed_minions = [minion_id for minion_id in minion_ids if minion_id not in lret]
             log.debug('Missed live minion pillars for: {0}'.format(missed_minions))
             if self.pillar_fallback:
-                cret = dict([(minion_id, mcache) for (minion_id, mcache) in cached_pillar.items() if mcache])
+                cret = dict([(minion_id, mcache) for (minion_id, mcache) in list(cached_pillar.items()) if mcache])
             ret = dict(list(dict([(minion_id, {}) for minion_id in minion_ids]).items()) + list(lret.items()) + list(cret.items()))
         return ret
 
