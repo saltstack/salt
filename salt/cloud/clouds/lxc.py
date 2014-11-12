@@ -271,8 +271,8 @@ def list_nodes(conn=None, call=None):
         return
     lxclist = _salt('lxc.list', extra=True)
     nodes = {}
-    for state, lxcs in list(lxclist.items()):
-        for lxcc, linfos in list(lxcs.items()):
+    for state, lxcs in lxclist.items():
+        for lxcc, linfos in lxcs.items():
             info = {
                 'id': lxcc,
                 'image': None,
