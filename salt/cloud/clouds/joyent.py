@@ -33,6 +33,7 @@ associated with that vm. An example profile might look like:
 
 :depends: requests
 '''
+from __future__ import absolute_import
 # pylint: disable=E0102
 
 # The import section is mostly libcloud boilerplate
@@ -40,7 +41,7 @@ associated with that vm. An example profile might look like:
 # Import python libs
 import os
 import copy
-import httplib
+import six.moves.http_client
 import requests
 import json
 import logging
@@ -86,10 +87,10 @@ DEFAULT_LOCATION = 'us-east-1'
 POLL_ALL_LOCATIONS = True
 
 VALID_RESPONSE_CODES = [
-    httplib.OK,
-    httplib.ACCEPTED,
-    httplib.CREATED,
-    httplib.NO_CONTENT
+    six.moves.http_client.OK,
+    six.moves.http_client.ACCEPTED,
+    six.moves.http_client.CREATED,
+    six.moves.http_client.NO_CONTENT
 ]
 
 
