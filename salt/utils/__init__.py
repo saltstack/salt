@@ -36,7 +36,7 @@ import yaml
 import string
 from calendar import month_abbr as months
 from six import string_types
-from six.moves.urllib.parse import urlparse
+from six.moves.urllib.parse import urlparse  # pylint: disable=E0611
 import six
 from six.moves import range
 from six.moves import zip
