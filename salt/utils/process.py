@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 # -*- coding: utf-8 -*-
 # Import python libs
 import logging
@@ -9,6 +10,7 @@ import signal
 
 # Import salt libs
 import salt.utils
+import six
 
 log = logging.getLogger(__name__)
 
@@ -215,7 +217,7 @@ class ProcessManager(object):
         '''
         Check the children once
         '''
-        for pid, mapping in self._process_map.iteritems():
+        for pid, mapping in six.iteritems(self._process_map):
             if not mapping['Process'].is_alive():
                 self.restart_process(pid)
 
@@ -233,13 +235,13 @@ class ProcessManager(object):
             else:
                 return
 
-        for pid, p_map in self._process_map.items():
+        for pid, p_map in list(self._process_map.items()):
             p_map['Process'].terminate()
 
         end_time = time.time() + self.wait_for_kill  # when to die
 
         while self._process_map and time.time() < end_time:
-            for pid, p_map in self._process_map.items():
+            for pid, p_map in list(self._process_map.items()):
                 p_map['Process'].join(0)
 
                 # This is a race condition if a signal was passed to all children
