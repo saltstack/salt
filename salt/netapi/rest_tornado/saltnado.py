@@ -483,7 +483,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
         '''
         return data about what clients you have
         '''
-        ret = {"clients": list(self.saltclients.keys()),
+        ret = {"clients": self.saltclients.keys(),
                "return": "Welcome"}
         self.write(self.serialize(ret))
         self.finish()
