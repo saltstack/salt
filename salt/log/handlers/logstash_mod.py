@@ -152,6 +152,7 @@
     .. _`high water mark`: http://api.zeromq.org/3-2:zmq-setsockopt
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
