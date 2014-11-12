@@ -195,9 +195,9 @@ class SaltStackVersion(object):
         # pylint: enable=E8203,E8265
     }
 
-    LNAMES = dict((k.lower(), v) for (k, v) in NAMES.items())
-    VNAMES = dict((v, k) for (k, v) in NAMES.items())
-    RMATCH = dict((v[:2], k) for (k, v) in NAMES.items())
+    LNAMES = dict((k.lower(), v) for (k, v) in list(NAMES.items()))
+    VNAMES = dict((v, k) for (k, v) in list(NAMES.items()))
+    RMATCH = dict((v[:2], k) for (k, v) in list(NAMES.items()))
 
     def __init__(self,              # pylint: disable=C0103
                  major,
