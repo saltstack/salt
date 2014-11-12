@@ -21,7 +21,7 @@ def condition_input(args, kwargs):
     '''
     ret = []
     for arg in args:
-        if isinstance(arg, int):
+        if isinstance(arg, long):
             ret.append(str(arg))
         else:
             ret.append(arg)
