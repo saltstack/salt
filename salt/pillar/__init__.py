@@ -15,7 +15,7 @@ import salt.fileclient
 import salt.minion
 import salt.crypt
 import salt.transport
-from salt._compat import string_types
+from six import string_types
 from salt.template import compile_template
 from salt.utils.dictupdate import update
 from salt.utils.serializers.yamlex import merge_recursive

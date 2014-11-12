@@ -17,6 +17,7 @@ A state module for creating or destroying software RAID devices.
         - chunk: 256
         - run: True
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging

@@ -34,7 +34,7 @@ import salt.loader
 import salt.utils
 import salt.utils.cloud
 from salt.utils import context
-from salt._compat import string_types
+from six import string_types
 from salt.template import compile_template
 
 # Import third party libs

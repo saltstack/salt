@@ -50,7 +50,7 @@ import urllib2
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError
-from salt._compat import string_types
+from six import string_types
 
 
 INVALID_RESPONSE = 'We did not get any expectable answer from buildout'

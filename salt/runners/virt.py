@@ -5,6 +5,7 @@ Control virtual machines via Salt
 
 # Import python libs
 from __future__ import print_function
+from __future__ import absolute_import
 import logging
 
 # Import Salt libs
@@ -13,6 +14,7 @@ import salt.utils.virt
 import salt.key
 
 log = logging.getLogger(__name__)
+
 
 def _determine_hyper(data, omit=''):
     '''
@@ -67,7 +69,7 @@ def query(hyper=None, quiet=False):
         if not isinstance(info, dict):
             continue
         chunk = {}
-        id_ = info.iterkeys().next()
+        id_ = next(info.iterkeys())
         if hyper:
             if hyper != id_:
                 continue
@@ -103,7 +105,7 @@ def list(hyper=None, quiet=False):  # pylint: disable=redefined-builtin
         if not isinstance(info, dict):
             continue
         chunk = {}
-        id_ = info.iterkeys().next()
+        id_ = next(info.iterkeys())
         if hyper:
             if hyper != id_:
                 continue
@@ -260,7 +262,7 @@ def reset(name):
     if not data:
         progress('Failed to find vm {0} to reset'.format(name))
         return 'fail'
-    hyper = data.iterkeys().next()
+    hyper = next(data.iterkeys())
     cmd_ret = client.cmd_iter(
             hyper,
             'virt.reset',
@@ -282,7 +284,7 @@ def start(name):
     if not data:
         progress('Failed to find vm {0} to start'.format(name))
         return 'fail'
-    hyper = data.iterkeys().next()
+    hyper = next(data.iterkeys())
     if data[hyper][name]['state'] == 'running':
         print('VM {0} is already running'.format(name))
         return 'bad state'
@@ -307,7 +309,7 @@ def force_off(name):
     if not data:
         print('Failed to find vm {0} to destroy'.format(name))
         return 'fail'
-    hyper = data.iterkeys().next()
+    hyper = next(data.iterkeys())
     if data[hyper][name]['state'] == 'shutdown':
         print('VM {0} is already shutdown'.format(name))
         return'bad state'
@@ -332,7 +334,7 @@ def purge(name, delete_key=True):
     if not data:
         progress('Failed to find vm {0} to purge'.format(name))
         return 'fail'
-    hyper = data.iterkeys().next()
+    hyper = next(data.iterkeys())
     cmd_ret = client.cmd_iter(
             hyper,
             'virt.purge',
@@ -359,7 +361,7 @@ def pause(name):
     if not data:
         progress('Failed to find VM {0} to pause'.format(name))
         return 'fail'
-    hyper = data.iterkeys().next()
+    hyper = next(data.iterkeys())
     if data[hyper][name]['state'] == 'paused':
         progress('VM {0} is already paused'.format(name))
         return 'bad state'
@@ -384,7 +386,7 @@ def resume(name):
     if not data:
         progress('Failed to find VM {0} to pause'.format(name))
         return 'not found'
-    hyper = data.iterkeys().next()
+    hyper = next(data.iterkeys())
     if data[hyper][name]['state'] != 'paused':
         progress('VM {0} is not paused'.format(name))
         return 'bad state'
@@ -408,7 +410,7 @@ def migrate(name, target=''):
     data = query(quiet=True)
     origin_data = _find_vm(name, data, quiet=True)
     try:
-        origin_hyper = origin_data.keys()[0]
+        origin_hyper = list(origin_data.keys())[0]
     except IndexError:
         progress('Named vm {0} was not found to migrate'.format(name))
         return ''

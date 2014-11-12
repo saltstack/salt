@@ -74,6 +74,7 @@ Required python modules: MySQLdb
 
     salt '*' test.ping --return mysql --return_config alternative
 '''
+from __future__ import absolute_import
 # Let's not allow PyLint complain about string substitution
 # pylint: disable=W1321,E1321
 
