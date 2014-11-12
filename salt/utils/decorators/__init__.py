@@ -74,7 +74,7 @@ class Depends(object):
         It will modify the "functions" dict and remove/replace modules that
         are missing dependencies.
         '''
-        for dependency, dependent_set in cls.dependency_dict.items():
+        for dependency, dependent_set in list(cls.dependency_dict.items()):
             # check if dependency is loaded
             for module, func, fallback_function in dependent_set:
                 # check if you have the dependency
