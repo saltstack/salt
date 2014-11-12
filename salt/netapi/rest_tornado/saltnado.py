@@ -263,6 +263,16 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):
         ('application/x-yaml', yaml.safe_dump),
     )
 
+    def min_syndic_wait_done(self):
+        '''
+        Ensure that the request has been open for a minimum of syndic_wait time
+        '''
+        if not self.application.opts['order_masters']:
+            return True
+        elif time.time() > self.start + self.application.opts['syndic_wait']:
+            return True
+        return False
+
     def _verify_client(self, client):
         '''
         Verify that the client is in fact one we have
@@ -537,16 +547,19 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
         f_call = salt.utils.format_call(self.saltclients['local_batch'], chunk)
 
         # ping all the minions (to see who we have to talk to)
-        # TODO: actually look at return?? this just looks at the pub data
-        minions = self.saltclients['local'](chunk['tgt'],
-                                            'test.ping',
-                                            [],
-                                            expr_form=f_call['kwargs']['expr_form']).get('minions', [])
+        # Don't catch any exception, since we won't know what to do, we'll
+        # let the upper level deal with this one
+        ping_ret = yield self._disbatch_local({'tgt': chunk['tgt'],
+                                               'fun': 'test.ping',
+                                               'expr_form': f_call['kwargs']['expr_form']})
+
+        minions = ping_ret.keys()
 
         chunk_ret = {}
         maxflight = get_batch_size(f_call['kwargs']['batch'], len(minions))
         inflight_futures = []
         # do this batch
+        # TODO: self.min_syndic_wait_done()
         while len(minions) > 0 or len(inflight_futures) > 0:
             # if you have more to go, lets disbatch jobs
             while len(inflight_futures) < maxflight and len(minions) > 0:
@@ -617,18 +630,8 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
         ret_event = self.application.event_listener.get_event(self, tag=ret_tag)
         ping_event = self.application.event_listener.get_event(self, tag=ping_tag)
 
-        def min_syndic_wait_done():
-            '''
-            Ensure that we wait a minimum of syndic_wait time
-            '''
-            if not self.application.opts['order_masters']:
-                return True
-            elif time.time() > self.start + self.application.opts['syndic_wait']:
-                return True
-            return False
-
         # while we are waiting on all the mininons
-        while len(minions_remaining) > 0 or not min_syndic_wait_done():
+        while len(minions_remaining) > 0 or not self.min_syndic_wait_done():
             event_future = yield Any([ret_event, ping_event])
             try:
                 event = event_future.result()

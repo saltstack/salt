@@ -411,7 +411,6 @@ class TestRunSaltAPIHandler(SaltnadoTestCase):
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                               )
-        print response.body
         response_obj = json.loads(response.body)
         assert response_obj['return'] == [{'minion': True, 'sub_minion': True}]
 
