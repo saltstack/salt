@@ -61,6 +61,7 @@ To use the EC2 cloud module, set up the cloud configuration at
 
 :depends: requests
 '''
+from __future__ import absolute_import
 # pylint: disable=E0102
 
 # Import python libs
@@ -99,6 +100,10 @@ from salt.exceptions import (
     SaltCloudExecutionTimeout,
     SaltCloudExecutionFailure
 )
+import six
+from six.moves import map
+from six.moves import zip
+from six.moves import range
 
 # Try to import PyCrypto, which may not be installed on a RAET-based system
 try:
@@ -165,7 +170,7 @@ def __virtual__():
     if get_configured_provider() is False:
         return False
 
-    for provider, details in __opts__['providers'].iteritems():
+    for provider, details in six.iteritems(__opts__['providers']):
         if 'provider' not in details or details['provider'] != 'ec2':
             continue
 
@@ -260,7 +265,7 @@ def optimize_providers(providers):
     tmp_providers = {}
     optimized_providers = {}
 
-    for name, data in providers.iteritems():
+    for name, data in six.iteritems(providers):
         if 'location' not in data:
             data['location'] = DEFAULT_LOCATION
 
@@ -273,8 +278,8 @@ def optimize_providers(providers):
                                                       'data': data,
                                                       }
 
-    for location, tmp_data in tmp_providers.iteritems():
-        for creds, data in tmp_data.iteritems():
+    for location, tmp_data in six.iteritems(tmp_providers):
+        for creds, data in six.iteritems(tmp_data):
             _id, _key = creds
             _name = data['name']
             _data = data['data']
@@ -330,7 +335,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
         params_with_headers['Timestamp'] = '{0}'.format(timestamp)
         params_with_headers['Version'] = ec2_api_version
         keys = sorted(params_with_headers)
-        values = map(params_with_headers.get, keys)
+        values = list(map(params_with_headers.get, keys))
         querystring = urllib.urlencode(list(zip(keys, values)))
 
         # AWS signature version 2 requires that spaces be encoded as
@@ -1251,7 +1256,7 @@ def _param_from_config(key, data):
     param = {}
 
     if isinstance(data, dict):
-        for k, v in data.items():
+        for k, v in list(data.items()):
             param.update(_param_from_config('{0}.{1}'.format(key, k), v))
 
     elif isinstance(data, list) or isinstance(data, tuple):
@@ -1987,7 +1992,7 @@ def create(vm_=None, call=None):
             '\'tag\' should be a dict.'
         )
 
-    for value in tags.itervalues():
+    for value in six.itervalues(tags):
         if not isinstance(value, str):
             raise SaltCloudConfigError(
                 '\'tag\' values must be strings. Try quoting the values. '
@@ -2085,7 +2090,7 @@ def create(vm_=None, call=None):
         )
         ret['Attached Volumes'] = created
 
-    for key, value in salt.utils.cloud.bootstrap(vm_, __opts__).items():
+    for key, value in list(salt.utils.cloud.bootstrap(vm_, __opts__).items()):
         ret.setdefault(key, value)
 
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
@@ -2300,7 +2305,7 @@ def set_tags(name=None,
     if kwargs and not tags:
         tags = kwargs
 
-    for idx, (tag_k, tag_v) in enumerate(tags.iteritems()):
+    for idx, (tag_k, tag_v) in enumerate(six.iteritems(tags)):
         params['Tag.{0}.Key'.format(idx)] = tag_k
         params['Tag.{0}.Value'.format(idx)] = tag_v
 
@@ -2663,7 +2668,7 @@ def list_nodes_full(location=None, call=None):
     if not location:
         ret = {}
         locations = set(
-            get_location(vm_) for vm_ in __opts__['profiles'].itervalues()
+            get_location(vm_) for vm_ in six.itervalues(__opts__['profiles'])
             if _vm_provider_driver(vm_)
         )
         for loc in locations:
@@ -3111,7 +3116,7 @@ def create_volume(kwargs=None, call=None, wait_to_finish=False):
     data = query(params, return_root=True)
     r_data = {}
     for d in data:
-        for k, v in d.items():
+        for k, v in list(d.items()):
             r_data[k] = v
     volume_id = r_data['volumeId']
 
@@ -3356,7 +3361,7 @@ def create_snapshot(kwargs=None, call=None, wait_to_finish=False):
     data = query(params, return_root=True)
     r_data = {}
     for d in data:
-        for k, v in d.items():
+        for k, v in list(d.items()):
             r_data[k] = v
     snapshot_id = r_data['snapshotId']
 
@@ -3524,10 +3529,10 @@ def get_console_output(
     ret = {}
     data = query(params, return_root=True)
     for item in data:
-        if item.iterkeys().next() == 'output':
-            ret['output_decoded'] = binascii.a2b_base64(item.itervalues().next())
+        if next(item.iterkeys()) == 'output':
+            ret['output_decoded'] = binascii.a2b_base64(next(item.itervalues()))
         else:
-            ret[item.iterkeys().next()] = item.itervalues().next()
+            ret[next(item.iterkeys())] = next(item.itervalues())
 
     return ret
 
@@ -3581,7 +3586,7 @@ def get_password_data(
     ret = {}
     data = query(params, return_root=True)
     for item in data:
-        ret[item.keys()[0]] = item.values()[0]
+        ret[list(item.keys())[0]] = list(item.values())[0]
 
     if not HAS_PYCRYPTO:
         return ret
