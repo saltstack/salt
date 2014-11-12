@@ -1112,13 +1112,6 @@ def init(name,
     if seed or seed_cmd:
         if seed:
             try:
-                if bootstrap_delay is not None:
-                    try:
-                        time.sleep(bootstrap_delay)
-                    except TypeError:
-                        # Bad input, but assume since a value was passed that
-                        # a delay was desired, and sleep for 5 seconds
-                        time.sleep(5)
                 result = bootstrap(
                     name, config=salt_config,
                     approve_key=approve_key,
@@ -1126,6 +1119,7 @@ def init(name,
                     install=install,
                     force_install=force_install,
                     unconditional_install=unconditional_install,
+                    bootstrap_delay=bootstrap_delay,
                     bootstrap_url=bootstrap_url,
                     bootstrap_shell=bootstrap_shell,
                     bootstrap_args=bootstrap_args)
@@ -1431,6 +1425,7 @@ def create(name,
 
 
 def clone(name,
+          orig,
           clone_from=None,
           profile=None,
           **kwargs):
@@ -1441,11 +1436,10 @@ def clone(name,
         Name of the container
 
     orig
-        .. deprecated:: 2014.7.1
-            Use ``clone_from`` instead
+        Name of the original container to be cloned
 
     clone_from
-        Name of the cloned clone_frominal container
+        Name of the original container to be cloned
 
         .. versionadded:: 2014.7.1
 
@@ -1475,22 +1469,16 @@ def clone(name,
         salt '*' lxc.clone myclone clone_from=orig_container
         salt '*' lxc.clone myclone clone_from=orig_container snapshot=True
     '''
-    if 'orig' in kwargs:
-        salt.utils.warn_until(
-            'Boron',
-            'The \'orig\' argument to \'lxc.clone\' has been deprecated, '
-            'please use \'clone_from\' instead.'
-        )
-        clone_from = kwargs['orig']
-
     if exists(name):
         raise CommandExecutionError(
             'Container \'{0}\' already exists'.format(name)
         )
-    elif clone_from is None:
-        raise SaltInvocationError(
-            '\'clone_from\' argument is required'.format(name)
-        )
+
+    if clone_from and orig:
+        log.warning('Both \'clone_from\' and \'orig\' were passed, using '
+                    'ignoring \'orig\'')
+    elif orig and not clone_from:
+        clone_from = orig
 
     _ensure_exists(clone_from)
     if state(clone_from) != 'stopped':
@@ -1502,10 +1490,10 @@ def clone(name,
     kw_overrides = copy.deepcopy(kwargs)
 
     def select(key, default=None):
-        kw_overrides_match = kw_overrides.pop(key, _marker)
+        kw_overrides_match = kw_overrides.pop(key, None)
         profile_match = profile.pop(key, default)
         # let kwarg overrides be the preferred choice
-        if kw_overrides_match is _marker:
+        if kw_overrides_match is None:
             return profile_match
         return kw_overrides_match
 
@@ -2345,6 +2333,7 @@ def bootstrap(name,
               bootstrap_url=None,
               force_install=False,
               unconditional_install=False,
+              bootstrap_delay=None,
               bootstrap_args=None,
               bootstrap_shell=None):
     '''
@@ -2366,6 +2355,12 @@ def bootstrap(name,
     priv_key
         Explicit private key to pressed the minion with (optional).
         This can be either a filepath or a string representing the key
+
+    bootstrap_delay
+        Delay in seconds between end of container creation and bootstrapping.
+        Useful when waiting for container to obtain a DHCP lease.
+
+        .. versionadded:: 2014.7.1
 
     bootstrap_url
         url, content or filepath to the salt bootstrap script
@@ -2395,6 +2390,14 @@ def bootstrap(name,
                 [approve_key=(True|False)] [install=(True|False)]
 
     '''
+    if bootstrap_delay is not None:
+        try:
+            time.sleep(bootstrap_delay)
+        except TypeError:
+            # Bad input, but assume since a value was passed that
+            # a delay was desired, and sleep for 5 seconds
+            time.sleep(5)
+
     c_info = info(name)
     if not c_info:
         return None
