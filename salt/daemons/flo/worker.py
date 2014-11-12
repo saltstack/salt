@@ -2,6 +2,7 @@
 '''
 The core behaviors used by minion and master
 '''
+from __future__ import absolute_import
 # pylint: disable=W0232
 
 # Import python libs
@@ -20,6 +21,7 @@ from salt.utils import kinds
 
 # Import ioflo libs
 import ioflo.base.deeding
+from six.moves import range
 
 log = logging.getLogger(__name__)
 
