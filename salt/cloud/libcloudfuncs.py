@@ -3,11 +3,14 @@
 The generic libcloud template used to create the connections and deploy the
 cloud virtual machines
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
 import logging
 from six import string_types
+import six
+from six.moves import zip
 
 
 # pylint: disable=W0611
@@ -456,7 +459,7 @@ def list_nodes_full(conn=None, call=None):
     ret = {}
     for node in nodes:
         pairs = {}
-        for key, value in zip(node.__dict__, node.__dict__.itervalues()):
+        for key, value in zip(node.__dict__, six.itervalues(node.__dict__)):
             pairs[key] = value
         ret[node.name] = pairs
         del ret[node.name]['driver']
