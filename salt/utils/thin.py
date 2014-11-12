@@ -2,6 +2,7 @@
 '''
 Generate the salt thin tarball from the installed python files
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
