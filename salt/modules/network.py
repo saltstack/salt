@@ -17,6 +17,7 @@ import salt.utils
 import salt.utils.network
 from salt.exceptions import CommandExecutionError
 import salt.utils.validate.net
+from six.moves import range
 
 
 log = logging.getLogger(__name__)
@@ -1012,10 +1013,7 @@ def routes(family=None):
     if not family:
         return routes
     else:
-        ret = []
-        for route in routes:
-            if route['addr_family'] == family:
-                ret.append(route)
+        ret = [route for route in routes if route['addr_family'] == family]
         return ret
 
 

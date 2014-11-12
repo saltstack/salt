@@ -2,6 +2,7 @@
 '''
 The match module allows for match routines to be run and determine target specs
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import inspect
@@ -12,7 +13,7 @@ import sys
 import salt.minion
 import salt.utils
 from salt.defaults import DEFAULT_TARGET_DELIM
-from salt._compat import string_types
+from six import string_types
 
 __func_alias__ = {
     'list_': 'list'

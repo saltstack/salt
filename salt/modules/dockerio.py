@@ -149,6 +149,7 @@ These are the available methods:
 '''
 
 from __future__ import absolute_import
+from six.moves import range
 __docformat__ = 'restructuredtext en'
 
 import datetime
@@ -162,7 +163,7 @@ import types
 
 from salt.modules import cmdmod
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt._compat import string_types
+from six import string_types
 import salt.utils
 import salt.utils.odict
 

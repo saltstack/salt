@@ -4,6 +4,7 @@ Module to provide RabbitMQ compatibility to Salt.
 Todo: A lot, need to add cluster support, logging, and minion configuration
 data.
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils
@@ -12,6 +13,7 @@ import salt.utils
 import logging
 import random
 import string
+from six.moves import range
 
 log = logging.getLogger(__name__)
 

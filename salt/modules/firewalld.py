@@ -3,6 +3,7 @@
 '''
 Support for firewalld
 '''
+from __future__ import absolute_import
 
 import salt.utils
 import logging
@@ -87,12 +88,12 @@ def list_zones():
             if bool(re.match('^[a-z0-9]', i, re.I)):
                 zone_name = i.rstrip()
             else:
-                (id, val) = i.strip().split(':')
+                (id_, val) = i.strip().split(':')
 
                 if zones.get(zone_name, None):
-                    zones[zone_name].update({id: val})
+                    zones[zone_name].update({id_: val})
                 else:
-                    zones[zone_name] = {id: val}
+                    zones[zone_name] = {id_: val}
 
     return zones
 
@@ -289,12 +290,12 @@ def list_all(zone=None):
             if bool(re.match('^[a-z0-9]', i, re.I)):
                 zone_name = i.rstrip()
             else:
-                (id, val) = i.strip().split(':')
+                (id_, val) = i.strip().split(':')
 
                 if _zone.get(zone_name, None):
-                    _zone[zone_name].update({id: val})
+                    _zone[zone_name].update({id_: val})
                 else:
-                    _zone[zone_name] = {id: val}
+                    _zone[zone_name] = {id_: val}
 
     return _zone
 

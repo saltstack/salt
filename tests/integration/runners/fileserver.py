@@ -21,24 +21,24 @@ class ManageTest(integration.ShellCase):
         fileserver.dir_list
         '''
         ret = self.run_run_plus(fun='fileserver.dir_list')
-        self.assertIsInstance(ret['fun'], list)
+        self.assertIsInstance(ret['fun'], dict)
 
     def test_envs(self):
         '''
         fileserver.envs
         '''
         ret = self.run_run_plus(fun='fileserver.envs')
-        self.assertIsInstance(ret['fun'], list)
+        self.assertIsInstance(ret['fun'], dict)
 
         ret = self.run_run_plus(fun='fileserver.envs', args=['backend="{0}"'.format(['root'])])
-        self.assertIsInstance(ret['fun'], list)
+        self.assertIsInstance(ret['fun'], dict)
 
     def test_file_list(self):
         '''
         fileserver.file_list
         '''
         ret = self.run_run_plus(fun='fileserver.file_list')
-        self.assertIsInstance(ret['fun'], list)
+        self.assertIsInstance(ret['fun'], dict)
 
     def test_symlink_list(self):
         '''

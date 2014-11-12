@@ -6,6 +6,7 @@ minion.
 
 :depends:   - esky Python module for update functionality
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -32,7 +33,7 @@ import salt.wheel
 from salt.exceptions import (
     SaltReqTimeoutError, SaltRenderError, CommandExecutionError
 )
-from salt._compat import string_types
+from six import string_types
 
 __proxyenabled__ = ['*']
 
@@ -58,7 +59,7 @@ def _get_top_file_envs():
             st_ = salt.state.HighState(__opts__)
             top = st_.get_top()
             if top:
-                envs = st_.top_matches(top).keys() or 'base'
+                envs = list(st_.top_matches(top).keys()) or 'base'
             else:
                 envs = 'base'
         except SaltRenderError as exc:

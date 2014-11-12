@@ -2,6 +2,7 @@
 '''
 Print a stacktrace when sent a SIGUSR1 for debugging
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os

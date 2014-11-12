@@ -2,6 +2,7 @@
 '''
 Module for viewing and modifying sysctl parameters
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -10,7 +11,7 @@ import re
 
 # Import salt libs
 import salt.utils
-from salt._compat import string_types
+from six import string_types
 from salt.exceptions import CommandExecutionError
 from salt.modules.systemd import _sd_booted
 

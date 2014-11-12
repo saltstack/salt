@@ -171,6 +171,7 @@ all interfaces are ignored unless specified.
     .. versionadded:: Lithium
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import difflib

@@ -9,6 +9,7 @@ from keyservers.  Sign, encrypt and sign & encrypt text and files.
     required to be installed.
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import distutils.version
@@ -18,7 +19,7 @@ import time
 
 # Import salt libs
 import salt.utils
-from salt._compat import string_types
+from six import string_types
 
 from salt.exceptions import (
     SaltInvocationError

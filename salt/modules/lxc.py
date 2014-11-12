@@ -23,6 +23,8 @@ import time
 import shutil
 import re
 import random
+import six
+from six.moves.urllib.parse import urlparse
 
 # Import salt libs
 import salt
@@ -32,7 +34,6 @@ import salt.utils.dictupdate
 from salt.utils import vt
 import salt.utils.cloud
 import salt.config
-import salt._compat
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -649,7 +650,7 @@ def get_base(**kwargs):
     cntrs = ls_()
     if kwargs.get('image'):
         image = kwargs.get('image')
-        proto = salt._compat.urlparse(image).scheme
+        proto = urlparse(image).scheme
         img_tar = __salt__['cp.cache_file'](image)
         img_name = os.path.basename(img_tar)
         hash_ = salt.utils.get_hash(
@@ -2124,7 +2125,7 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
     if not prior_state:
         return prior_state
     if attachable(name):
-        if isinstance(keep_env, basestring):
+        if isinstance(keep_env, six.string_types):
             keep_env = keep_env.split(',')
         env = ' '.join('--set-var {0}={1}'.format(
                        x, pipes.quote(os.environ[x]))
@@ -2334,7 +2335,7 @@ def write_conf(conf_file, conf):
             if isinstance(line, str):
                 fp_.write(line)
             elif isinstance(line, dict):
-                key = next(iter(line.keys()))
+                key = next(iter(list(line.keys())))
                 out_line = None
                 if isinstance(line[key], str):
                     out_line = ' = '.join((key, line[key]))
@@ -2380,7 +2381,7 @@ def edit_conf(conf_file, out_format='simple', **kwargs):
             data.append(line)
             continue
         else:
-            key = next(iter(line.keys()))
+            key = next(iter(list(line.keys())))
             if key not in kwargs:
                 data.append(line)
                 continue

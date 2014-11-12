@@ -2,6 +2,7 @@
 '''
 The sys module provides information about the available functions on the minion
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import fnmatch
@@ -297,7 +298,7 @@ def renderer_doc(*args):
 
     for module in args:
         if '*' in module:
-            for fun in fnmatch.filter(renderers_.keys(), module):
+            for fun in fnmatch.filter(list(renderers_.keys()), module):
                 docs[fun] = renderers_[fun].__doc__
         else:
             for fun in renderers_.keys():

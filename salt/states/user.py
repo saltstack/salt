@@ -23,6 +23,7 @@ as either absent or present
     testuser:
       user.absent
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging

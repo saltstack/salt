@@ -14,6 +14,7 @@ client applications.
     http://docs.saltstack.com/ref/clients/index.html
 
 '''
+from __future__ import absolute_import
 # Import Python libs
 import os
 

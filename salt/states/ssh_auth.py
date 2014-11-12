@@ -48,6 +48,7 @@ to use a YAML 'explicit key', as demonstrated in the second example below.
           - option3="value3" ssh-dss AAAAB3NzaC1kcQ9J5bYTEyY== other@testdomain
           - AAAAB3NzaC1kcQ9fJFF435bYTEyY== newcomment
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import re

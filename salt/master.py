@@ -50,6 +50,7 @@ from salt.utils.event import tagify
 import binascii
 from salt.utils.master import ConnectedCache
 from salt.utils.cache import CacheCli
+from six.moves import range
 
 # Import halite libs
 try:
@@ -917,7 +918,8 @@ class AESFuncs(object):
             perms,
             clear_load['fun'],
             clear_load['tgt'],
-            clear_load.get('tgt_type', 'glob'))
+            clear_load.get('tgt_type', 'glob'),
+            publish_validate=True)
 
     def __verify_load(self, load, verify_keys):
         '''
@@ -1180,7 +1182,19 @@ class AESFuncs(object):
         load = self.__verify_load(load, ('id', 'tok'))
         if load is False:
             return {}
+        # Route to master event bus
         self.masterapi._minion_event(load)
+        # Process locally
+        self._handle_minion_event(load)
+
+    def _handle_minion_event(self, load):
+        '''
+        Act on specific events from minions
+        '''
+        if load.get('tag', '') == '_salt_error':
+            log.error('Received minion error from [{minion}]: '
+                      '{data}'.format(minion=load['id'],
+                                      data=load['data']['exception']))
 
     def _return(self, load):
         '''
@@ -1209,7 +1223,6 @@ class AESFuncs(object):
             saveload_fstr = '{0}.save_load'.format(self.opts['master_job_cache'])
             self.mminion.returners[saveload_fstr](load['jid'], load)
         log.info('Got return from {id} for job {jid}'.format(**load))
-        self.event.fire_event(load, load['jid'])  # old dup event
         self.event.fire_event(
             load, tagify([load['jid'], 'ret', load['id']], 'job'))
         self.event.fire_ret_load(load)
@@ -2139,7 +2152,7 @@ class ClearFuncs(object):
             try:
                 name = self.loadauth.load_name(extra)  # The username we are attempting to auth with
                 groups = self.loadauth.get_groups(extra)  # The groups this user belongs to
-                group_perm_keys = filter(lambda item: item.endswith('%'), self.opts['external_auth'][extra['eauth']])  # The configured auth groups
+                group_perm_keys = [item for item in self.opts['external_auth'][extra['eauth']] if item.endswith('%')]  # The configured auth groups
 
                 # First we need to know if the user is allowed to proceed via any of their group memberships.
                 group_auth_match = False
@@ -2312,7 +2325,6 @@ class ClearFuncs(object):
             }
 
         # Announce the job on the event bus
-        self.event.fire_event(new_job_load, 'new_job')  # old dup event
         self.event.fire_event(new_job_load, tagify([clear_load['jid'], 'new'], 'job'))
 
         if self.opts['ext_job_cache']:

@@ -33,6 +33,7 @@ Connection module for Amazon CloudWatch
 
 :depends: boto
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import logging
@@ -54,7 +55,7 @@ try:
 except ImportError:
     HAS_BOTO = False
 
-from salt._compat import string_types
+from six import string_types
 
 
 def __virtual__():
@@ -92,7 +93,7 @@ def _safe_dump(data):
     # boto.describe_alarms()
     ###########################################
     def ordered_dict_presenter(dumper, data):
-        return dumper.represent_dict(data.items())
+        return dumper.represent_dict(list(data.items()))
 
     yaml.add_representer(odict.OrderedDict, ordered_dict_presenter,
                          Dumper=yaml.dumper.SafeDumper)

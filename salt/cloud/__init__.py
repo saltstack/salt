@@ -17,6 +17,7 @@ import signal
 import logging
 import multiprocessing
 from itertools import groupby
+from six.moves import input
 
 # Import salt.cloud libs
 from salt.exceptions import (
@@ -33,7 +34,7 @@ import salt.loader
 import salt.utils
 import salt.utils.cloud
 from salt.utils import context
-from salt._compat import string_types
+from six import string_types
 from salt.template import compile_template
 
 # Import third party libs
@@ -1070,7 +1071,7 @@ class Cloud(object):
                     print(' {0}: {1}'.format(
                         idx, os.path.basename(filename)
                     ))
-                selection = raw_input(
+                selection = input(
                     'Which minion key should be deleted(number)? '
                 )
                 try:
@@ -1087,7 +1088,7 @@ class Cloud(object):
                 except Exception:
                     continue
 
-                delete = raw_input(
+                delete = input(
                     'Delete {0!r}? [Y/n]? '.format(filename)
                 )
                 if delete == '' or delete.lower().startswith('y'):

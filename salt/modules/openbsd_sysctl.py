@@ -2,6 +2,7 @@
 '''
 Module for viewing and modifying OpenBSD sysctl parameters
 '''
+from __future__ import absolute_import
 import os
 
 # Import salt libs

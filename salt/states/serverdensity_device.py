@@ -37,6 +37,7 @@ Example:
     'server_name':
       serverdensity_device.monitored
 '''
+from __future__ import absolute_import
 
 # TODO:
 #

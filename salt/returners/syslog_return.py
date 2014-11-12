@@ -12,6 +12,7 @@ To use the syslog returner, append '--return syslog' to the salt command. ex:
     salt '*' test.ping --return syslog
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import json

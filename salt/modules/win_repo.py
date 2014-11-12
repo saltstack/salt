@@ -10,11 +10,9 @@ The following options must be set in the Minion config:
 Place all Windows package files in the 'win_repo' directory.
 '''
 
-from __future__ import print_function
-
-from __future__ import absolute_import
-
 # Import python libs
+from __future__ import absolute_import
+from __future__ import print_function
 import os
 
 # Import third party libs
@@ -28,7 +26,7 @@ except ImportError:
 import salt.output
 import salt.utils
 import logging
-from salt._compat import string_types
+from six import string_types
 
 log = logging.getLogger(__name__)
 

@@ -2,6 +2,7 @@
 '''
 Compendium of generic DNS utilities
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils

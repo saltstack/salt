@@ -2,6 +2,7 @@
 '''
 Publish a command from a minion to a target
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import time

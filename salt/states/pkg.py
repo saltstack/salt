@@ -45,11 +45,12 @@ import salt.utils
 from salt.output import nested
 from salt.utils import namespaced_function as _namespaced_function
 from salt.utils.odict import OrderedDict as _OrderedDict
-from salt._compat import string_types
+from six import string_types
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
 from salt.modules.pkg_resource import _repack_pkgs
+import six
 
 _repack_pkgs = _namespaced_function(_repack_pkgs, globals())
 
@@ -876,8 +877,8 @@ def installed(
         pkgs.extend([dict([(x, y)]) for x, y in to_reinstall.items()])
     elif sources:
         oldsources = sources
-        sources = [x for x in oldsources if next(iter(x.keys())) in targets]
-        sources.extend([x for x in oldsources if next(iter(x.keys())) in to_reinstall])
+        sources = [x for x in oldsources if next(iter(list(x.keys()))) in targets]
+        sources.extend([x for x in oldsources if next(iter(list(x.keys()))) in to_reinstall])
 
     comment = []
     if __opts__['test']:
@@ -1343,7 +1344,7 @@ def latest(
                            .format(', '.join(sorted(targets))))
             else:
                 comment = 'Package {0} failed to ' \
-                          'update.'.format(next(iter(targets.keys())))
+                          'update.'.format(next(iter(list(targets.keys()))))
             if up_to_date:
                 if len(up_to_date) <= 10:
                     comment += ' The following packages were already ' \

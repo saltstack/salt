@@ -6,6 +6,7 @@ the bottle-based web service contained in salt/tests/rest.py.
 Note this example needs the 'requests' library.
 Requests is not a hard dependency for Salt
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import requests

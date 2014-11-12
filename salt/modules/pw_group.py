@@ -2,6 +2,7 @@
 '''
 Manage groups on FreeBSD
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging

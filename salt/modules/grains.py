@@ -5,6 +5,7 @@ Return/control aspects of the grains data
 
 # Import python libs
 from __future__ import print_function
+from __future__ import absolute_import
 import collections
 import copy
 import math
@@ -19,6 +20,8 @@ import salt.utils
 import salt.utils.dictupdate
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
+from functools import reduce
+from six.moves import range
 
 __proxyenabled__ = ['*']
 

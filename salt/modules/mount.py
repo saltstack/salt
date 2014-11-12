@@ -2,6 +2,7 @@
 '''
 Salt module to manage unix mounts and the fstab file
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -10,7 +11,7 @@ import logging
 
 # Import salt libs
 import salt.utils
-from salt._compat import string_types
+from six import string_types
 from salt.utils import which as _which
 from salt.exceptions import CommandNotFoundError, CommandExecutionError
 

@@ -28,7 +28,8 @@ from salt.utils.jinja import SaltCacheLoader as JinjaSaltCacheLoader
 from salt.utils.jinja import SerializerExtension as JinjaSerializerExtension
 from salt.utils.odict import OrderedDict
 from salt import __path__ as saltpath
-from salt._compat import string_types
+from six import string_types
+import six
 
 log = logging.getLogger(__name__)
 
@@ -214,7 +215,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     loader = None
     newline = False
 
-    if tmplstr and not isinstance(tmplstr, unicode):
+    if tmplstr and not isinstance(tmplstr, six.text_type):
         # http://jinja.pocoo.org/docs/api/#unicode
         tmplstr = tmplstr.decode(SLS_ENCODING)
 
@@ -271,17 +272,17 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     jinja_env.globals['show_full_context'] = show_full_context
 
     unicode_context = {}
-    for key, value in context.iteritems():
+    for key, value in six.iteritems(context):
         if not isinstance(value, string_types):
             unicode_context[key] = value
             continue
 
         # Let's try UTF-8 and fail if this still fails, that's why this is not
         # wrapped in a try/except
-        if isinstance(value, unicode):
+        if isinstance(value, six.text_type):
             unicode_context[key] = value
         else:
-            unicode_context[key] = unicode(value, 'utf-8')
+            unicode_context[key] = six.text_type(value, 'utf-8')
 
     try:
         template = jinja_env.from_string(tmplstr)

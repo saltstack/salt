@@ -5,6 +5,7 @@ Returners Directory
 :func:`get_returner_options` is a general purpose function that returners may
 use to fetch their configuration options.
 '''
+from __future__ import absolute_import
 
 import logging
 

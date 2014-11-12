@@ -2,6 +2,7 @@
 '''
 Support for the softwareupdate command on MacOS.
 '''
+from __future__ import absolute_import
 
 
 # Import python libs

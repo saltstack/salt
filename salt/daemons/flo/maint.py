@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Define the behaviors used in the maintinance process
+Define the behaviors used in the maintenance process
 '''
 # Import python libs
 import multiprocessing
