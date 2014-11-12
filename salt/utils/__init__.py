@@ -827,7 +827,7 @@ def format_call(fun,
 
     aspec = get_function_argspec(fun)
 
-    args, kwargs = iter(list(arg_lookup(fun).values()))
+    args, kwargs = iter(arg_lookup(fun).values())
 
     # Since we WILL be changing the data dictionary, let's change a copy of it
     data = data.copy()
@@ -865,7 +865,7 @@ def format_call(fun,
     if aspec.keywords:
         # The function accepts **kwargs, any non expected extra keyword
         # arguments will made available.
-        for key, value in list(data.items()):
+        for key, value in data.items():
             if key in expected_extra_kws:
                 continue
             ret['kwargs'][key] = value
@@ -877,7 +877,7 @@ def format_call(fun,
     # Did not return yet? Lets gather any remaining and unexpected keyword
     # arguments
     extra = {}
-    for key, value in list(data.items()):
+    for key, value in data.items():
         if key in expected_extra_kws:
             continue
         extra[key] = copy.deepcopy(value)
@@ -941,7 +941,7 @@ def arg_lookup(fun):
     ret = {'kwargs': {}}
     aspec = get_function_argspec(fun)
     if aspec.defaults:
-        ret['kwargs'] = dict(list(zip(aspec.args[::-1], aspec.defaults[::-1])))
+        ret['kwargs'] = dict(zip(aspec.args[::-1], aspec.defaults[::-1]))
     ret['args'] = [arg for arg in aspec.args if arg not in ret['kwargs']]
     return ret
 
@@ -1461,7 +1461,7 @@ def check_state_result(running):
         return False
 
     ret = True
-    for state_result in list(running.values()):
+    for state_result in running.values():
         if not isinstance(state_result, dict):
             # return false when hosts return a list instead of a dict
             ret = False
@@ -1488,7 +1488,7 @@ def test_mode(**kwargs):
     "Test" in any variation on capitalization (i.e. "TEST", "Test", "TeSt",
     etc) contains a True value (as determined by salt.utils.is_true).
     '''
-    for arg, value in list(kwargs.items()):
+    for arg, value in kwargs.items():
         try:
             if arg.lower() == 'test' and is_true(value):
                 return True
@@ -2151,7 +2151,7 @@ def decode_dict(data):
     JSON decodes as unicode, Jinja needs bytes...
     '''
     rv = {}
-    for key, value in list(data.items()):
+    for key, value in data.items():
         if isinstance(key, six.text_type):
             key = key.encode('utf-8')
         if isinstance(value, six.text_type):
@@ -2201,7 +2201,7 @@ def is_bin_str(data):
     '''
     Detects if the passed string of data is bin or text
     '''
-    text_characters = ''.join(list(map(chr, list(range(32, 127)))) + list('\n\r\t\b'))
+    text_characters = ''.join(map(chr, list(range(32, 127))) + list('\n\r\t\b'))
     _null_trans = string.maketrans('', '')
     if '\0' in data:
         return True
@@ -2459,7 +2459,7 @@ def chugid(runas):
     # this does not appear to be strictly true.
     group_list = get_group_dict(runas, include_default=True)
     if sys.platform == 'darwin':
-        group_list = dict((k, v) for k, v in list(group_list.items())
+        group_list = dict((k, v) for k, v in group_list.items()
                           if not k.startswith('_'))
     for group_name in group_list:
         gid = group_list[group_name]
