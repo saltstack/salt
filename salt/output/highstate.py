@@ -101,7 +101,7 @@ def _format_host(host, data):
         if not __opts__.get('state_verbose', False):
             data = _strip_clean(data)
         # Verify that the needed data is present
-        for tname, info in list(data.items()):
+        for tname, info in data.items():
             if '__run_num__' not in info:
                 err = (u'The State execution failed to record the order '
                        'in which all states were executed. The state '
