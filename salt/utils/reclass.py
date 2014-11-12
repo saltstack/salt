@@ -3,6 +3,7 @@
 Common utility functions for the reclass adapters
 http://reclass.pantsfullofunix.net
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import sys
