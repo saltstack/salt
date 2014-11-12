@@ -1860,7 +1860,7 @@ def get_id(opts, minion_id=False):
     if opts.get('minion_id_caching', True):
         try:
             with salt.utils.fopen(id_cache) as idf:
-                name = idf.read().strip()
+                name = idf.readline().strip()
                 if name.startswith(codecs.BOM):  # Remove BOM if exists
                     name = name.replace(codecs.BOM, '', 1)
             if name:
