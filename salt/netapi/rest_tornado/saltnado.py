@@ -46,6 +46,7 @@ Notes
 # pylint: disable=W0232
 
 from __future__ import print_function
+from __future__ import absolute_import
 
 import logging
 from copy import copy
@@ -78,6 +79,7 @@ import salt.client
 import salt.runner
 import salt.auth
 from salt import syspaths
+import six
 
 
 json = salt.utils.import_json()
@@ -227,7 +229,7 @@ class EventListener(object):
         try:
             data = self.event.get_event_noblock()
             # see if we have any futures that need this info:
-            for tag_prefix, futures in self.tag_map.items():
+            for tag_prefix, futures in list(self.tag_map.items()):
                 if data['tag'].startswith(tag_prefix):
                     for future in futures:
                         if future.done():
@@ -368,7 +370,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):
         ignore the data passed in and just get the args from wherever they are
         '''
         data = {}
-        for key, val in self.request.arguments.iteritems():
+        for key, val in six.iteritems(self.request.arguments):
             if len(val) == 1:
                 data[key] = val[0]
             else:
@@ -481,7 +483,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
         '''
         return data about what clients you have
         '''
-        ret = {"clients": self.saltclients.keys(),
+        ret = {"clients": list(self.saltclients.keys()),
                "return": "Welcome"}
         self.write(self.serialize(ret))
         self.finish()
