@@ -8,6 +8,7 @@ This is a base library used by a number of AWS services.
 
 :depends: requests
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import sys
@@ -24,6 +25,9 @@ import requests
 # Import Salt libs
 import salt.utils.xmlutil as xml
 from salt._compat import ElementTree as ET
+from six.moves import map
+from six.moves import zip
+from six.moves import range
 
 LOG = logging.getLogger(__name__)
 DEFAULT_LOCATION = 'us-east-1'
@@ -55,7 +59,7 @@ def sig2(method, endpoint, params, provider, aws_api_version):
     params_with_headers['Timestamp'] = '{0}'.format(timestamp)
     params_with_headers['Version'] = aws_api_version
     keys = sorted(params_with_headers.keys())
-    values = map(params_with_headers.get, keys)
+    values = list(list(map(params_with_headers.get, keys)))
     querystring = urllib.urlencode(list(zip(keys, values)))
 
     canonical = '{0}\n{1}\n/\n{2}'.format(
@@ -86,7 +90,7 @@ def sig4(method, endpoint, params, provider, aws_api_version, location,
     params_with_headers = params.copy()
     params_with_headers['Version'] = aws_api_version
     keys = sorted(params_with_headers.keys())
-    values = map(params_with_headers.get, keys)
+    values = list(map(params_with_headers.get, keys))
     querystring = urllib.urlencode(list(zip(keys, values)))
 
     amzdate = timenow.strftime('%Y%m%dT%H%M%SZ')
@@ -231,7 +235,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
         providers = opts.get('providers', {})
         prov_dict = providers.get(function[1], None)
         if prov_dict is not None:
-            driver = prov_dict.keys()[0]
+            driver = list(list(prov_dict.keys()))[0]
             provider = prov_dict[driver]
 
     service_url = provider.get('service_url', 'amazonaws.com')
