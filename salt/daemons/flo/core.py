@@ -2,6 +2,7 @@
 '''
 The core behaviors used by minion and master
 '''
+from __future__ import absolute_import
 # pylint: disable=W0232
 
 # Import python libs
@@ -38,6 +39,8 @@ from ioflo.base.odicting import odict
 import ioflo.base.deeding
 
 from ioflo.base.consoling import getConsole
+import six
+from six.moves import range
 console = getConsole()
 
 # Import Third Party Libs
@@ -187,7 +190,7 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
                                      offset=0.5)
 
         if self.opts.value.get('raet_clear_remotes'):
-            for remote in self.stack.value.remotes.values():
+            for remote in list(self.stack.value.remotes.values()):
                 self.stack.value.removeRemote(remote, clear=True)
             self.stack.puid = self.stack.value.Uid  # reset puid
 
@@ -240,7 +243,7 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
                        not stack.remotes)
 
             if refresh:
-                for remote in stack.remotes.values():
+                for remote in list(stack.remotes.values()):
                     stack.removeRemote(remote, clear=True)
 
                 stack.puid = stack.Uid  # reset puid so reuse same uid each time
@@ -251,7 +254,7 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
                                                  fuid=0,  # vacuous join
                                                  sid=0,  # always 0 for join
                                                  ha=mha))
-            for remote in stack.remotes.values():
+            for remote in list(stack.remotes.values()):
                 stack.join(uid=remote.uid, timeout=0.0)
 
 
@@ -281,8 +284,8 @@ class SaltRaetRoadStackJoined(ioflo.base.deeding.Deed):
         joined = False
         if stack and isinstance(stack, RoadStack):
             if stack.remotes:
-                for remote in stack.remotes.values():
-                    joined = any([remote.joined for remote in stack.remotes.values()])
+                for remote in list(stack.remotes.values()):
+                    joined = any([remote.joined for remote in list(stack.remotes.values())])
         self.status.update(joined=joined)
 
 
@@ -312,9 +315,9 @@ class SaltRaetRoadStackRejected(ioflo.base.deeding.Deed):
         rejected = False
         if stack and isinstance(stack, RoadStack):
             if stack.remotes:
-                for remote in stack.remotes.values():
+                for remote in list(stack.remotes.values()):
                     rejected = all([remote.acceptance == raeting.acceptances.rejected
-                                    for remote in stack.remotes.values()])
+                                    for remote in list(stack.remotes.values())])
             else:  # no remotes so assume rejected
                 rejected = True
         self.status.update(rejected=rejected)
@@ -369,8 +372,8 @@ class SaltRaetRoadStackAllowed(ioflo.base.deeding.Deed):
         allowed = False
         if stack and isinstance(stack, RoadStack):
             if stack.remotes:
-                for remote in stack.remotes.values():
-                    allowed = any([remote.allowed for remote in stack.remotes.values()])
+                for remote in list(stack.remotes.values()):
+                    allowed = any([remote.allowed for remote in list(stack.remotes.values())])
         self.status.update(allowed=allowed)
 
 
@@ -532,10 +535,10 @@ class SaltLoadPillar(ioflo.base.deeding.Deed):
         Initial pillar
         '''
         # default master is the first remote that is allowed
-        available_masters = [remote for remote in self.road_stack.value.remotes.values()
+        available_masters = [remote for remote in list(self.road_stack.value.remotes.values())
                                                if remote.allowed]
         while not available_masters:
-            available_masters = [remote for remote in self.road_stack.value.remotes.values()
+            available_masters = [remote for remote in list(self.road_stack.value.remotes.values())
                                                            if remote.allowed]
             time.sleep(0.1)
 
@@ -548,7 +551,7 @@ class SaltLoadPillar(ioflo.base.deeding.Deed):
         self.master_estate_name.value = master.name
 
         route = {'src': (self.road_stack.value.local.name, None, None),
-                 'dst': (self.road_stack.value.remotes.itervalues().next().name, None, 'remote_cmd')}
+                 'dst': (six.itervalues(self.road_stack.value.remotes), None, 'remote_cmd')}
         load = {'id': self.opts.value['id'],
                 'grains': self.grains.value,
                 'saltenv': self.opts.value['environment'],
@@ -946,7 +949,7 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
         master = self.road_stack.value.nameRemotes.get(self.master_estate_name.value)
         if not master or not master.alived:  # select a different master
             available_masters = [remote for remote in
-                                 self.road_stack.value.remotes.values()
+                                 list(self.road_stack.value.remotes.values())
                                                        if remote.alived]
             if available_masters:
                 random_master = opts.get('random_master')
@@ -1054,7 +1057,7 @@ class SaltRaetPublisher(ioflo.base.deeding.Deed):
         # only publish to available minions by intersecting sets
 
         minions = (self.availables.value &
-                   set((remote.name for remote in stack.remotes.values()
+                   set((remote.name for remote in list(stack.remotes.values())
                             if remote.kind == kinds.applKinds.minion)))
         for minion in minions:
             uid = self.stack.value.fetchUidByName(minion)
