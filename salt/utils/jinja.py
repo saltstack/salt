@@ -149,7 +149,7 @@ class PrintableDict(OrderedDict):
     '''
     def __str__(self):
         output = []
-        for key, value in list(self.items()):
+        for key, value in self.items():
             if isinstance(value, string_types):
                 # keeps quotes around strings
                 output.append('{0!r}: {1!r}'.format(key, value))
@@ -160,7 +160,7 @@ class PrintableDict(OrderedDict):
 
     def __repr__(self):  # pylint: disable=W0221
         output = []
-        for key, value in list(self.items()):
+        for key, value in self.items():
             output.append('{0!r}: {1!r}'.format(key, value))
         return '{' + ', '.join(output) + '}'
 
@@ -359,7 +359,7 @@ class SerializerExtension(Extension, object):
         '''
         def explore(data):
             if isinstance(data, (dict, OrderedDict)):
-                return PrintableDict([(key, explore(value)) for key, value in list(data.items())])
+                return PrintableDict([(key, explore(value)) for key, value in data.items()])
             elif isinstance(data, (list, tuple, set)):
                 return data.__class__([explore(value) for value in data])
             return data
