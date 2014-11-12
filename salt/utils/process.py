@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+
+from __future__ import absolute_import
+
 # Import python libs
 import logging
 import os
@@ -9,6 +12,7 @@ import signal
 
 # Import salt libs
 import salt.utils
+import six
 
 log = logging.getLogger(__name__)
 
@@ -215,7 +219,7 @@ class ProcessManager(object):
         '''
         Check the children once
         '''
-        for pid, mapping in self._process_map.iteritems():
+        for pid, mapping in six.iteritems(self._process_map):
             if not mapping['Process'].is_alive():
                 self.restart_process(pid)
 
