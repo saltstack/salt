@@ -1478,7 +1478,7 @@ class BasicTestCase(unittest.TestCase):
         remote = next(iter(list(other.remotes.values())))
         self.assertTrue(remote.allowed)
 
-        for remote in list(main.remotes.values()):
+        for remote in main.remotes.values():
             path = os.path.join(main.keep.remotedirpath,
                     "{0}.{1}.{2}".format(main.keep.prefix, remote.name, main.keep.ext))
             self.assertTrue(os.path.exists(path))
@@ -1600,7 +1600,7 @@ class BasicTestCase(unittest.TestCase):
         remote = next(iter(list(other.remotes.values())))
         self.assertTrue(remote.allowed)
 
-        for remote in list(main.remotes.values()):
+        for remote in main.remotes.values():
             path = os.path.join(main.keep.remotedirpath,
                     "{0}.{1}.{2}".format(main.keep.prefix, remote.name, main.keep.ext))
             self.assertTrue(os.path.exists(path))
@@ -1722,7 +1722,7 @@ class BasicTestCase(unittest.TestCase):
         remote = next(iter(list(other.remotes.values())))
         self.assertTrue(remote.allowed)
 
-        for remote in list(main.remotes.values()):
+        for remote in main.remotes.values():
             path = os.path.join(main.keep.remotedirpath,
                     "{0}.{1}.{2}".format(main.keep.prefix, remote.name, main.keep.ext))
             self.assertTrue(os.path.exists(path))
@@ -1848,7 +1848,7 @@ class BasicTestCase(unittest.TestCase):
         remote = next(iter(list(other1.remotes.values())))
         self.assertTrue(remote.allowed)
 
-        for remote in list(main.remotes.values()):
+        for remote in main.remotes.values():
             path = os.path.join(main.keep.remotedirpath,
                     "{0}.{1}.{2}".format(main.keep.prefix, remote.name, main.keep.ext))
             self.assertTrue(os.path.exists(path))
@@ -1974,7 +1974,7 @@ class BasicTestCase(unittest.TestCase):
         remote = next(iter(list(other2.remotes.values())))
         self.assertTrue(remote.allowed)
 
-        for remote in list(main.remotes.values()):
+        for remote in main.remotes.values():
             path = os.path.join(main.keep.remotedirpath,
                     "{0}.{1}.{2}".format(main.keep.prefix, remote.name, main.keep.ext))
             self.assertTrue(os.path.exists(path))
@@ -2099,7 +2099,7 @@ class BasicTestCase(unittest.TestCase):
         remote = next(iter(list(other1.remotes.values())))
         self.assertTrue(remote.allowed)
 
-        for remote in list(main.remotes.values()):
+        for remote in main.remotes.values():
             path = os.path.join(main.keep.remotedirpath,
                     "{0}.{1}.{2}".format(main.keep.prefix, remote.name, main.keep.ext))
             self.assertTrue(os.path.exists(path))
@@ -2168,7 +2168,7 @@ class BasicTestCase(unittest.TestCase):
         remote = next(iter(list(other2.remotes.values())))
         self.assertTrue(remote.allowed)
 
-        for remote in list(main.remotes.values()):
+        for remote in main.remotes.values():
             path = os.path.join(main.keep.remotedirpath,
                     "{0}.{1}.{2}".format(main.keep.prefix, remote.name, main.keep.ext))
             self.assertTrue(os.path.exists(path))
