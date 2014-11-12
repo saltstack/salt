@@ -24,11 +24,8 @@ framer callerroadstack be active first setup
         bid start bootstrap
         # Start the eventing framer
         bid start eventing
-        # Start the functionmanage framer
-        bid start functionmanager
         # Start the outbound framer
         bid start outbound
-        bid start scheduler
 
         # Cleanup on exit
         exit
@@ -55,7 +52,7 @@ framer bootstrap be inactive first join
 
     frame joined
         print Joined
-        go next if elapsed >= 2
+        go next if elapsed >= 0.5
 
     frame allow
         print Allowing...
@@ -69,13 +66,13 @@ framer bootstrap be inactive first join
 
     frame allowed
         print Allowed
-        go next if elapsed >= 2
+        go next if elapsed >= 0.5
 
-    frame pillar
-        print Pillaring
-        enter
-            do salt load pillar
-        go loading
+    #frame pillar
+        #print Pillaring
+        #enter
+            #do salt load pillar
+        #go loading
 
     frame loading
         print Loading
@@ -87,8 +84,8 @@ framer bootstrap be inactive first join
         # start the manager framer
         bid start manager #start alive presence from minion side
         do salt raet router
-        go pillar if .salt.var.pillar_refresh
-        go loading if .salt.var.module_refresh
+        #go pillar if .salt.var.pillar_refresh
+        #go loading if .salt.var.module_refresh
 
     frame abort
         bid stop all
@@ -96,10 +93,6 @@ framer bootstrap be inactive first join
 framer eventing be inactive first event
     frame event
         do salt raet eventer
-
-#framer functionmanager be inactive first checkexec
-    #frame checkexec
-        #do salt raet nix jobber
 
 framer manager be inactive first start at 10.0
     frame start

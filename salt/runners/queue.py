@@ -29,6 +29,7 @@ other custom action.
 
 # Import python libs
 from __future__ import print_function
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.loader

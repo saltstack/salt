@@ -10,15 +10,15 @@ Execute calls on selinux
     documentation for your distro to ensure that the proper packages are
     installed.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
-from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils
 import salt.utils.decorators as decorators
-from salt._compat import string_types
+from six import string_types
 from salt.exceptions import CommandExecutionError
 
 

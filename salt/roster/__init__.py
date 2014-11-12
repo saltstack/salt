@@ -5,6 +5,7 @@ hit from the master rather than acting as an independent entity. This covers
 hitting minions without zeromq in place via an ssh agent, and connecting to
 systems that cannot or should not host a minion agent.
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.loader

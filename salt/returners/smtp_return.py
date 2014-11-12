@@ -62,6 +62,7 @@ There are a few things to keep in mind:
     salt '*' test.ping --return smtp --return_config alternative
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os

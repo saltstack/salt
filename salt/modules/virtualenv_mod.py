@@ -14,7 +14,7 @@ import os.path
 # Import salt libs
 import salt.utils
 import salt.exceptions
-from salt._compat import string_types
+from six import string_types
 
 KNOWN_BINARY_NAMES = frozenset(
     ['virtualenv',

@@ -4,6 +4,7 @@ HTTP monitoring states
 
 Perform an HTTP query and statefully return the result
 '''
+from __future__ import absolute_import
 
 # Import python libs
 

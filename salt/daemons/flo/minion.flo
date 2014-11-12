@@ -55,7 +55,7 @@ framer bootstrap be inactive first join
 
     frame joined
         print Joined
-        go next if elapsed >= 2
+        go next if elapsed >= 0.5
 
     frame allow
         print Allowing...
@@ -69,7 +69,7 @@ framer bootstrap be inactive first join
 
     frame allowed
         print Allowed
-        go next if elapsed >= 2
+        go next if elapsed >= 0.5
 
     frame pillar
         print Pillaring

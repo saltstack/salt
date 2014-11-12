@@ -62,6 +62,7 @@ these states. Here is some example SLS:
     ``python-apt`` will need to be manually installed if it is not present.
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import sys

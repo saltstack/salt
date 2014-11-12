@@ -3,6 +3,7 @@
 A runner module to collect and display the inline documentation from the
 various module types
 '''
+from __future__ import absolute_import
 # Import Python libs
 import itertools
 
@@ -10,6 +11,7 @@ import itertools
 import salt.client
 import salt.runner
 import salt.wheel
+import six
 
 
 def __virtual__():
@@ -63,10 +65,10 @@ def execution():
 
     docs = {}
     for ret in client.cmd_iter('*', 'sys.doc', timeout=__opts__['timeout']):
-        for v in ret.itervalues():
+        for v in six.itervalues(ret):
             docs.update(v)
 
-    i = itertools.chain.from_iterable([i.items() for i in docs.itervalues()])
+    i = itertools.chain.from_iterable([i.items() for i in six.itervalues(docs)])
     ret = dict(list(i))
 
     return ret
