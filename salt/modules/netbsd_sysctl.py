@@ -2,6 +2,8 @@
 '''
 Module for viewing and modifying sysctl parameters
 '''
+from __future__ import absolute_import
+import os
 import re
 
 # Import salt libs
@@ -95,7 +97,7 @@ def assign(name, value):
     return ret
 
 
-def persist(name, value):
+def persist(name, value, config='/etc/sysctl.conf'):
     '''
     Assign and persist a simple sysctl parameter for this minion
 
@@ -108,7 +110,14 @@ def persist(name, value):
     nlines = []
     edited = False
     value = str(value)
-    config = '/etc/sysctl.conf'
+
+    # create /etc/sysctl.conf if not present
+    if not os.path.isfile(config):
+        try:
+            salt.utils.fopen(config, 'w+').close()
+        except (IOError, OSError):
+            msg = 'Could not create {0}'
+            raise CommandExecutionError(msg.format(config))
 
     with salt.utils.fopen(config, 'r') as ifile:
         for line in ifile:
