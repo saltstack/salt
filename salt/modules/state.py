@@ -628,7 +628,14 @@ def show_sls(mods, saltenv='base', test=None, queue=False, env=None, **kwargs):
         opts['test'] = True
     else:
         opts['test'] = __opts__.get('test', None)
-    st_ = salt.state.HighState(opts)
+
+    pillar = kwargs.get('pillar')
+    if pillar is not None and not isinstance(pillar, dict):
+        raise SaltInvocationError(
+            'Pillar data must be formatted as a dictionary'
+        )
+
+    st_ = salt.state.HighState(opts, pillar)
     if isinstance(mods, string_types):
         mods = mods.split(',')
     st_.push_active()
