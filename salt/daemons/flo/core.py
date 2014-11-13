@@ -77,6 +77,7 @@ class SaltRaetCleanup(ioflo.base.deeding.Deed):
         if self.opts.value.get('sock_dir'):
             sockdirpath = os.path.abspath(self.opts.value['sock_dir'])
             console.concise("Cleaning up uxd files in {0}\n".format(sockdirpath))
+            protecteds = self.opts.value.get('raet_cleanup_protecteds', [])
             for name in os.listdir(sockdirpath):
                 path = os.path.join(sockdirpath, name)
                 if os.path.isdir(path):
@@ -85,6 +86,8 @@ class SaltRaetCleanup(ioflo.base.deeding.Deed):
                 if ext != '.uxd':
                     continue
                 if not all(root.partition('.')):
+                    continue
+                if path in protecteds:
                     continue
                 try:
                     os.unlink(path)
@@ -719,14 +722,13 @@ class SaltRaetRoadStackService(ioflo.base.deeding.Deed):
 
 class SaltRaetRoadStackServiceRx(ioflo.base.deeding.Deed):
     '''
-    Process the inbound udp traffic
+    Process the inbound Road traffic
     FloScript:
 
-    do rx
+    do salt raet road stack service rx
 
     '''
     Ioinits = {
-               'lane_stack': '.salt.lane.manor.stack',
                'road_stack': '.salt.road.manor.stack',
                }
 
@@ -735,21 +737,19 @@ class SaltRaetRoadStackServiceRx(ioflo.base.deeding.Deed):
         Process inboud queues
         '''
         self.road_stack.value.serviceAllRx()
-        self.lane_stack.value.serviceAllRx()
 
 
 class SaltRaetRoadStackServiceTx(ioflo.base.deeding.Deed):
     '''
-    Process the inbound udp traffic
+    Process the outbound Road traffic
     FloScript:
 
-    do tx
+    do salt raet road stack service tx
 
     '''
     # Yes, this class is identical to RX, this is because we still need to
     # separate out rx and tx in raet itself
     Ioinits = {
-               'lane_stack': '.salt.lane.manor.stack',
                'road_stack': '.salt.road.manor.stack',
                }
 
@@ -757,13 +757,52 @@ class SaltRaetRoadStackServiceTx(ioflo.base.deeding.Deed):
         '''
         Process inbound queues
         '''
-        self.lane_stack.value.serviceAllTx()
         self.road_stack.value.serviceAllTx()
+
+
+class SaltRaetLaneStackServiceRx(ioflo.base.deeding.Deed):
+    '''
+    Process the inbound Lane traffic
+    FloScript:
+
+    do salt raet lane stack service rx
+
+    '''
+    Ioinits = {
+               'lane_stack': '.salt.lane.manor.stack',
+               }
+
+    def action(self):
+        '''
+        Process inboud queues
+        '''
+        self.lane_stack.value.serviceAllRx()
+
+
+class SaltRaetLaneStackServiceTx(ioflo.base.deeding.Deed):
+    '''
+    Process the outbound Lane traffic
+    FloScript:
+
+    do salt raet lane stack service tx
+
+    '''
+    # Yes, this class is identical to RX, this is because we still need to
+    # separate out rx and tx in raet itself
+    Ioinits = {
+               'lane_stack': '.salt.lane.manor.stack',
+               }
+
+    def action(self):
+        '''
+        Process outbound queues
+        '''
+        self.lane_stack.value.serviceAllTx()
 
 
 class SaltRaetRouter(ioflo.base.deeding.Deed):
     '''
-    Routes the communication in and out of uxd connections
+    Routes the communication in and out of Road and Lane connections
 
     This is the initial static salt router, we want to create a dynamic
     router that takes a map that defines where packets are send
@@ -783,7 +822,9 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
                'worker_verify': '.salt.var.worker_verify',
                'lane_stack': '.salt.lane.manor.stack',
                'road_stack': '.salt.road.manor.stack',
-               'master_estate_name': '.salt.track.master_estate_name', }
+               'master_estate_name': '.salt.track.master_estate_name',
+               'laters': {'ipath': '.salt.lane.manor.laters',  # requeuing when not yet routable
+                          'ival': deque()}, }
 
     def _process_udp_rxmsg(self, msg, sender):
         '''
@@ -812,7 +853,7 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
             pass
         elif d_estate != self.road_stack.value.local.name:
             log.error(
-                    'Received message for wrong estate: {0}'.format(d_estate))
+                    'Road Router Received message for wrong estate: {0}'.format(d_estate))
             return
 
         if d_yard is not None:
@@ -852,7 +893,7 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
             s_estate, s_yard, s_share = msg['route']['src']
             d_estate, d_yard, d_share = msg['route']['dst']
         except (ValueError, IndexError):
-            log.error('Received invalid message: {0}'.format(msg))
+            log.error('Lane Router Received invalid message: {0}'.format(msg))
             return
 
         if s_yard is None:
@@ -893,7 +934,7 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
             return
         if d_share is None:
             # No queue destination!
-            log.error('Received message without share: {0}'.format(msg))
+            log.error('Lane Router Received message without share: {0}'.format(msg))
             return
         elif d_share == 'local_cmd':
             self.lane_stack.value.transmit(msg,
@@ -904,35 +945,21 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
         elif d_share == 'event_fire':
             self.event.value.append(msg)
             #log.debug("\n**** Event Fire \n {0}\n".format(msg))
-        elif d_share == 'remote_cmd':  # assume must be minion to master
+        elif d_share == 'remote_cmd':  # assume  minion to master or salt-call
             if not self.road_stack.value.remotes:
-                log.error("Missing joined master. Unable to route "
-                          "remote_cmd.".format())
+                log.error("**** Lane Router: Missing joined master. Unable to route "
+                          "remote_cmd. Requeuing".format())
+                self.laters.value.append((msg, sender))
                 return
             d_estate = self._get_master_estate_name()
             if not d_estate:
-                log.error("**** No available destination estate for 'remote_cmd'."
-                          "Unable to route.".format())
+                log.error("**** Lane Router: No available destination estate for 'remote_cmd'."
+                          "Unable to route. Requeuing".format())
+                self.laters.value.append((msg, sender))
                 return
             msg['route']['dst'] = (d_estate, d_yard, d_share)
-            log.debug("**** Missing destination estate for 'remote_cmd'. "
+            log.debug("**** Lane Router: Missing destination estate for 'remote_cmd'. "
                     "Using default route={0}.".format(msg['route']['dst']))
-            self.road_stack.value.message(msg,
-                    self.road_stack.value.nameRemotes[d_estate].uid)
-        elif d_share == 'call_cmd':  # salt call return pub to master
-            if not self.road_stack.value.remotes:
-                log.error("Missing joined master. Unable to route "
-                          "call_cmd.".format())
-                return
-            d_estate = self._get_master_estate_name()
-            if not d_estate:
-                log.error("**** No available destination estate for 'call_cmd'."
-                          "Unable to route.".format())
-                return
-            d_share = 'remote_cmd'
-            msg['route']['dst'] = (d_estate, d_yard, d_share)
-            log.debug("**** Missing destination estate for 'call_cmd'. "
-                        "Using default route={0}.".format(msg['route']['dst']))
             self.road_stack.value.message(msg,
                     self.road_stack.value.nameRemotes[d_estate].uid)
 
@@ -968,6 +995,9 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
         while self.road_stack.value.rxMsgs:
             msg, sender = self.road_stack.value.rxMsgs.popleft()
             self._process_udp_rxmsg(msg=msg, sender=sender)
+        while self.laters.value:  # process requeued LaneMsgs
+            msg, sender = self.laters.value.popleft()
+            self.lane_stack.value.rxMsgs.append((msg, sender))
         while self.lane_stack.value.rxMsgs:
             msg, sender = self.lane_stack.value.rxMsgs.popleft()
             self._process_uxd_rxmsg(msg=msg, sender=sender)

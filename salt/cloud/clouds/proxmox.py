@@ -25,6 +25,7 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 :depends: requests >= 2.2.1
 :depends: IPy >= 0.81
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import copy

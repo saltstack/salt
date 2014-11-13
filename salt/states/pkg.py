@@ -50,7 +50,6 @@ from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
 from salt.modules.pkg_resource import _repack_pkgs
-import six
 
 _repack_pkgs = _namespaced_function(_repack_pkgs, globals())
 

@@ -69,6 +69,7 @@
     .. _`Raven`: http://raven.readthedocs.org
     .. _`Raven client documentation`: http://raven.readthedocs.org/en/latest/config/index.html#client-arguments
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging

@@ -2,6 +2,7 @@
 '''
 Jinja loading utils to enable a more powerful backend for jinja templates
 '''
+from __future__ import absolute_import
 
 # Import python libs
 from os import path

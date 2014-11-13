@@ -24,7 +24,7 @@ import shutil
 import re
 import random
 import six
-from six.moves.urllib.parse import urlparse
+from six.moves.urllib.parse import urlparse  # pylint: disable=E0611
 
 # Import salt libs
 import salt

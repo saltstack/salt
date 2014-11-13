@@ -90,6 +90,7 @@ accept them
 Note: You must include the default net-ids when setting networks or the server
 will be created without the rest of the interfaces
 '''
+from __future__ import absolute_import
 # pylint: disable=E0102
 
 # The import section is mostly libcloud boilerplate
@@ -102,6 +103,7 @@ import pprint
 
 # Import generic libcloud functions
 from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
+import six
 try:
     from salt.utils.openstack import nova
     HAS_NOVA = True
@@ -461,7 +463,7 @@ def request_instance(vm_=None, call=None):
         group_list = []
 
         for vmg in vm_groups:
-            if vmg in [name for name, details in avail_groups.iteritems()]:
+            if vmg in [name for name, details in six.iteritems(avail_groups)]:
                 group_list.append(vmg)
             else:
                 raise SaltCloudNotFound(
