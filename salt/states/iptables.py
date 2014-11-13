@@ -192,7 +192,9 @@ at some point be deprecated in favor of a more generic `firewall` state.
     releases of ``iptables``.
 '''
 from __future__ import absolute_import
+
 # Import salt libs
+import salt.utils
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
 
@@ -328,6 +330,35 @@ def append(name, family='ipv4', **kwargs):
            'result': None,
            'comment': ''}
 
+    if 'rules' in kwargs:
+        ret['changes']['locale'] = []
+        comments = []
+        save = False
+        for rule in kwargs['rules']:
+            if 'rules' in rule:
+                del rule['rules']
+            if '__agg__' in rule:
+                del rule['__agg__']
+            if 'save' in rule and rule['save']:
+                if rule['save'] is not True:
+                    save_file = rule['save']
+                else:
+                    save_file = True
+                rule['save'] = False
+            _ret = append(**rule)
+            if 'locale' in _ret['changes']:
+                ret['changes']['locale'].append(_ret['changes']['locale'])
+            comments.append(_ret['comment'])
+            ret['result'] = _ret['result']
+        if save:
+            if save_file is True:
+                save_file = None
+            __salt__['iptables.save'](save_file, family=family)
+        if not ret['changes']['locale']:
+            del ret['changes']['locale']
+        ret['comment'] = '\n'.join(comments)
+        return ret
+
     for ignore in _STATE_INTERNAL_KEYWORDS:
         if ignore in kwargs:
             del kwargs[ignore]
@@ -419,6 +450,35 @@ def insert(name, family='ipv4', **kwargs):
            'result': None,
            'comment': ''}
 
+    if 'rules' in kwargs:
+        ret['changes']['locale'] = []
+        comments = []
+        save = False
+        for rule in kwargs['rules']:
+            if 'rules' in rule:
+                del rule['rules']
+            if '__agg__' in rule:
+                del rule['__agg__']
+            if 'save' in rule and rule['save']:
+                if rule['save'] is not True:
+                    save_file = rule['save']
+                else:
+                    save_file = True
+                rule['save'] = False
+            _ret = insert(**rule)
+            if 'locale' in _ret['changes']:
+                ret['changes']['locale'].append(_ret['changes']['locale'])
+            comments.append(_ret['comment'])
+            ret['result'] = _ret['result']
+        if save:
+            if save_file is True:
+                save_file = None
+            __salt__['iptables.save'](save_file, family=family)
+        if not ret['changes']['locale']:
+            del ret['changes']['locale']
+        ret['comment'] = '\n'.join(comments)
+        return ret
+
     for ignore in _STATE_INTERNAL_KEYWORDS:
         if ignore in kwargs:
             del kwargs[ignore]
@@ -506,6 +566,35 @@ def delete(name, family='ipv4', **kwargs):
            'result': None,
            'comment': ''}
 
+    if 'rules' in kwargs:
+        ret['changes']['locale'] = []
+        comments = []
+        save = False
+        for rule in kwargs['rules']:
+            if 'rules' in rule:
+                del rule['rules']
+            if '__agg__' in rule:
+                del rule['__agg__']
+            if 'save' in rule and rule['save']:
+                if rule['save'] is not True:
+                    save_file = rule['save']
+                else:
+                    save_file = True
+                rule['save'] = False
+            _ret = delete(**rule)
+            if 'locale' in _ret['changes']:
+                ret['changes']['locale'].append(_ret['changes']['locale'])
+            comments.append(_ret['comment'])
+            ret['result'] = _ret['result']
+        if save:
+            if save_file is True:
+                save_file = None
+            __salt__['iptables.save'](save_file, family=family)
+        if not ret['changes']['locale']:
+            del ret['changes']['locale']
+        ret['comment'] = '\n'.join(comments)
+        return ret
+
     for ignore in _STATE_INTERNAL_KEYWORDS:
         if ignore in kwargs:
             del kwargs[ignore]
@@ -513,9 +602,9 @@ def delete(name, family='ipv4', **kwargs):
     rule = __salt__['iptables.build_rule'](family=family, **kwargs)
     command = __salt__['iptables.build_rule'](full=True, family=family, command='D', **kwargs)
     if not __salt__['iptables.check'](kwargs['table'],
-                                  kwargs['chain'],
-                                  rule,
-                                  family) is True:
+                                      kwargs['chain'],
+                                      rule,
+                                      family) is True:
         ret['result'] = True
         ret['comment'] = 'iptables rule for {0} already absent for {1} ({2})'.format(
             name,
@@ -671,3 +760,39 @@ def flush(name, family='ipv4', **kwargs):
         ret['result'] = False
         ret['comment'] = 'Failed to flush iptables rules'
         return ret
+
+
+def mod_aggregate(low, chunks, running):
+    '''
+    The mod_aggregate function which looks up all rules in the available
+    low chunks and merges them into a single rules ref in the present low data
+    '''
+    rules = []
+    agg_enabled = [
+            'append',
+            'insert',
+    ]
+    if low.get('fun') not in agg_enabled:
+        return low
+    for chunk in chunks:
+        tag = salt.utils.gen_state_tag(chunk)
+        if tag in running:
+            # Already ran the iptables state, skip aggregation
+            continue
+        if chunk.get('state') == 'iptables':
+            if '__agg__' in chunk:
+                continue
+            # Check for the same function
+            if chunk.get('fun') != low.get('fun'):
+                continue
+
+            if chunk not in rules:
+                rules.append(chunk)
+                chunk['__agg__'] = True
+
+    if rules:
+        if 'rules' in low:
+            low['rules'].extend(rules)
+        else:
+            low['rules'] = rules
+    return low
