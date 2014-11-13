@@ -152,7 +152,7 @@ class OptionParser(optparse.OptionParser):
             try:
                 process_option_func()
             except Exception as err:
-                logging.getLogger(__name__).exception(err)
+                logging.getlogger(__name__).exception(err)
                 self.error(
                     'Error while processing {0}: {1}'.format(
                         process_option_func, traceback.format_exc(err)
@@ -2121,13 +2121,13 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         role = opts.get('id')
         if not role:
             emsg = ("Missing role required to setup RAET SaltCaller.")
-            log.error(emsg + "\n")
+            logging.getLogger(__name__).error(emsg + "\n")
             raise ValueError(emsg)
 
         kind = opts.get('__role')  # application kind 'master', 'minion', etc
         if kind not in kinds.APPL_KINDS:
             emsg = ("Invalid application kind = '{0}' for RAET SaltCaller.".format(kind))
-            log.error(emsg + "\n")
+            logging.getLogger(__name__).error(emsg + "\n")
             raise ValueError(emsg)
 
         if kind in [kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
@@ -2135,7 +2135,7 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             lanename = "{0}_{1}".format(role, kind)
         else:
             emsg = ("Unsupported application kind '{0}' for RAET SaltCaller.".format(kind))
-            log.error(emsg + '\n')
+            logging.getLogger(__name__).error(emsg + '\n')
             raise ValueError(emsg)
 
         if kind == kinds.APPL_KIND_NAMES[kinds.applKinds.minion]:  # minion check
