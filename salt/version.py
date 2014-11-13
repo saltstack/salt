@@ -9,17 +9,18 @@ from __future__ import absolute_import
 from __future__ import print_function
 import re
 import sys
+
+# do not use six as versions is imported 
+# in setup.py and  so you must not rely
+# on extra dependency !
+# Without that, zc.buildout install wont work
+# from six import string_types
 if sys.version_info[0] < 3:
     from itertools import imap as map
 
 # Import salt libs
 try:
     from salt._compat import MAX_SIZE
-    # do not use six as versions #is imported 
-    # in setup.py and # so you must not rely
-    # on extra dependency !
-    # Without that, zc.buildout install wont work
-    # from six import string_types
 except ImportError:
     if sys.version_info[0] == 3:
         string_types = str
