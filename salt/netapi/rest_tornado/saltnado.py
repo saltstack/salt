@@ -93,6 +93,21 @@ Multiple commands in a Salt API request will be executed in serial and makes
 no gaurantees that all commands will run. Meaning that if test.fib (from the
 example above) had an exception, the API would still execute "jobs.lookup_jid".
 
+Responses to these lowstates are an in-order list of dicts containing the
+return data, a yaml response could look like::
+
+    - ms-1: true
+      ms-2: true
+    - ms-1: foo
+      ms-2: bar
+
+In the event of an exception while executing a command the return for that lowstate
+will be a string, for example if no minions matched the first lowstate we would get
+a return like::
+
+    - No minions matched the target. No command was sent, no jid was assigned.
+    - ms-1: true
+      ms-2: true
 
 .. admonition:: x-www-form-urlencoded
 
