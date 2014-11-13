@@ -258,7 +258,7 @@ def vgcreate(vgname, devices, **kwargs):
     return vgdata
 
 
-def lvcreate(lvname, vgname, size=None, extents=None, snapshot=None, pv='', **kwargs):
+def lvcreate(lvname, vgname, size=None, extents=None, snapshot=None, pv=None, **kwargs):
     '''
     Create a new logical volume, with option for which physical volume to be used
 
