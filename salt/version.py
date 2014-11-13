@@ -15,9 +15,9 @@ if sys.version_info[0] < 3:
 # Import salt libs
 try:
     from salt._compat import MAX_SIZE
-    # do not use six as versions
-    # this one is imported in setup.py and
-    # so you must not rely on extra dependency !
+    # do not use six as versions #is imported 
+    # in setup.py and # so you must not rely
+    # on extra dependency !
     # Without that, zc.buildout install wont work
     # from six import string_types
 except ImportError:
