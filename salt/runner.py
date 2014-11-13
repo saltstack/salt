@@ -298,6 +298,7 @@ class Runner(RunnerClient):
         '''
         Execute the runner sequence
         '''
+        ret = {}
         if self.opts.get('doc', False):
             self.print_docs()
         else:

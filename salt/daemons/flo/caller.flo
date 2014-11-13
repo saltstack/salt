@@ -32,10 +32,11 @@ framer callerroadstack be active first setup
             do salt raet road stack closer per inode ".salt.road.manor."
             do salt raet lane stack closer per inode ".salt.lane.manor."
 
-# Framer for handling inbound traffic
+
 framer inbound be inactive first start
     frame start
         do salt raet road stack service rx
+        do salt raet lane stack service rx
 
 framer bootstrap be inactive first join
     frame join
@@ -68,11 +69,10 @@ framer bootstrap be inactive first join
         print Allowed
         go next if elapsed >= 0.5
 
-    #frame pillar
-        #print Pillaring
-        #enter
-            #do salt load pillar
-        #go loading
+    frame manager
+        # start the manager framer
+        bid start manager #start alive presence from minion side
+        go next if elapsed >= 3.0
 
     frame loading
         print Loading
@@ -81,11 +81,8 @@ framer bootstrap be inactive first join
         go router
 
     frame router
-        # start the manager framer
-        bid start manager #start alive presence from minion side
         do salt raet router
-        #go pillar if .salt.var.pillar_refresh
-        #go loading if .salt.var.module_refresh
+
 
     frame abort
         bid stop all
@@ -98,8 +95,8 @@ framer manager be inactive first start at 10.0
     frame start
          do salt raet road stack manager per inode ".salt.road.manor"
 
-# Framer for handling outbound traffic
 framer outbound be inactive first start
     frame start
+        do salt raet lane stack service tx
         do salt raet road stack service tx
 

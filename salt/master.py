@@ -92,6 +92,44 @@ class SMaster(object):
         return salt.daemons.masterapi.access_keys(self.opts)
 
 
+class Scheduler(multiprocessing.Process):
+    '''
+    The master scheduler process.
+
+    This runs in its own process so that it can have a fully
+    independent loop from the Maintenance process.
+    '''
+    def __init__(self, opts):
+        super(Scheduler, self).__init__()
+        self.opts = opts
+        # Init Scheduler
+        self.schedule = salt.utils.schedule.Schedule(self.opts,
+                                                    salt.loader.runner(self.opts),
+                                                    returners=salt.loader.returners(self.opts, {}))
+
+    def run(self):
+        salt.utils.appendproctitle('Scheduler')
+        while True:
+            self.handle_schedule()
+            try:
+                time.sleep(self.schedule.loop_interval)
+            except KeyboardInterrupt:
+                break
+            except IOError:
+                time.sleep(self.opts['loop_interval'])
+
+    def handle_schedule(self):
+        '''
+        Evaluate the scheduler
+        '''
+        try:
+            self.schedule.eval()
+        except Exception as exc:
+            log.error(
+                'Exception {0} occurred in scheduled job'.format(exc)
+            )
+
+
 class Maintenance(multiprocessing.Process):
     '''
     A generalized maintenance process which performances maintenance

@@ -20,6 +20,7 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       provider: linode
 
 '''
+from __future__ import absolute_import
 # pylint: disable=E0102
 
 # Import python libs
