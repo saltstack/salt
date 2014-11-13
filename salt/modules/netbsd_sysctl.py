@@ -132,7 +132,7 @@ def persist(name, value):
                 edited = True
 
     if not edited:
-        newline = '{0}{1}{2}'.format(name, m.group(1), value)
+        newline = '{0}={1}'.format(name, value)
         nlines.append("{0}\n".format(newline))
 
     with salt.utils.fopen(config, 'w+') as ofile:
