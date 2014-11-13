@@ -1,5 +1,4 @@
 # coding: utf-8
-import os
 
 import json
 import yaml
@@ -11,7 +10,8 @@ import integration
 
 import tornado.testing
 import tornado.concurrent
-from salttesting import skipIf, TestCase
+from salttesting import TestCase
+
 
 class SaltnadoTestCase(integration.ModuleCase, tornado.testing.AsyncHTTPTestCase):
     '''
@@ -165,7 +165,6 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
                               headers={'Content-Type': self.content_type_map['text']})
         assert valid_lowstate == json.loads(response.body)['lowstate']
 
-
         # send form-urlencoded
         form_lowstate = (
             ('client', 'local'),
@@ -205,7 +204,6 @@ class TestSaltAuthHandler(SaltnadoTestCase):
         response = self.fetch('/login')
         assert response.code == 401
 
-
     def test_login(self):
         '''
         Test valid logins
@@ -229,7 +227,7 @@ class TestSaltAuthHandler(SaltnadoTestCase):
         for key, val in self.auth_creds_dict.iteritems():
             if key == 'password':
                 continue
-            bad_creds.append((key,val))
+            bad_creds.append((key, val))
         response = self.fetch('/login',
                                method='POST',
                                body=urllib.urlencode(bad_creds),
@@ -245,17 +243,10 @@ class TestSaltAuthHandler(SaltnadoTestCase):
         for key, val in self.auth_creds_dict.iteritems():
             if key == 'username':
                 val = val + 'foo'
-            bad_creds.append((key,val))
+            bad_creds.append((key, val))
         response = self.fetch('/login',
                                method='POST',
                                body=urllib.urlencode(bad_creds),
                                headers={'Content-Type': self.content_type_map['form']})
 
         assert response.code == 401
-
-
-
-
-
-
-#

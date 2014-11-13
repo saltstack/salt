@@ -1,6 +1,4 @@
 # coding: utf-8
-import os
-
 import json
 
 from salt.netapi.rest_tornado import saltnado
@@ -11,17 +9,11 @@ import tornado.web
 
 from unit.netapi.rest_tornado.test_handlers import SaltnadoTestCase
 
-from salttesting import skipIf, TestCase
+from salttesting import TestCase
 
 import json
 
-# TODO: TODOC
-'''
-/ endpoint
-    - failed job runs should return an error string (instead of dict)
-    - run the jobs in serial-- if you wanted parallel use async
-    - do *not* require success of previous runs-- since you can use compound commands/overstate
-'''
+
 class TestSaltAPIHandler(SaltnadoTestCase):
     def get_app(self):
         application = tornado.web.Application([('/', saltnado.SaltAPIHandler)], debug=True)
@@ -47,6 +39,7 @@ class TestSaltAPIHandler(SaltnadoTestCase):
 
     def test_post_no_auth(self):
         '''
+        Test post with no auth token, should 401
         '''
         # get a token for this test
         low = [{'client': 'local',
@@ -65,6 +58,7 @@ class TestSaltAPIHandler(SaltnadoTestCase):
     # Local client tests
     def test_simple_local_post(self):
         '''
+        Test a basic API of /
         '''
         low = [{'client': 'local',
                 'tgt': '*',
@@ -81,6 +75,7 @@ class TestSaltAPIHandler(SaltnadoTestCase):
 
     def test_simple_local_post_no_tgt(self):
         '''
+        POST job with invalid tgt
         '''
         low = [{'client': 'local',
                 'tgt': 'minion_we_dont_have',
@@ -98,6 +93,7 @@ class TestSaltAPIHandler(SaltnadoTestCase):
     # local_batch tests
     def test_simple_local_batch_post(self):
         '''
+        Basic post against local_batch
         '''
         low = [{'client': 'local_batch',
                 'tgt': '*',
@@ -115,6 +111,7 @@ class TestSaltAPIHandler(SaltnadoTestCase):
     # local_batch tests
     def test_full_local_batch_post(self):
         '''
+        Test full parallelism of local_batch
         '''
         low = [{'client': 'local_batch',
                 'tgt': '*',
@@ -132,6 +129,7 @@ class TestSaltAPIHandler(SaltnadoTestCase):
 
     def test_simple_local_batch_post_no_tgt(self):
         '''
+        Local_batch testing with no tgt
         '''
         low = [{'client': 'local_batch',
                 'tgt': 'minion_we_dont_have',
@@ -165,8 +163,6 @@ class TestSaltAPIHandler(SaltnadoTestCase):
         assert response_obj['return'][0]['minions'] == ['minion', 'sub_minion']
 
     def test_multi_local_async_post(self):
-        '''
-        '''
         low = [{'client': 'local_async',
                 'tgt': '*',
                 'fun': 'test.ping',
@@ -189,8 +185,6 @@ class TestSaltAPIHandler(SaltnadoTestCase):
         assert response_obj['return'][1]['minions'] == ['minion', 'sub_minion']
 
     def test_multi_local_async_post_multitoken(self):
-        '''
-        '''
         low = [{'client': 'local_async',
                 'tgt': '*',
                 'fun': 'test.ping',
@@ -221,8 +215,6 @@ class TestSaltAPIHandler(SaltnadoTestCase):
         assert response_obj['return'][1]['minions'] == ['minion', 'sub_minion']
 
     def test_simple_local_async_post_no_tgt(self):
-        '''
-        '''
         low = [{'client': 'local_async',
                 'tgt': 'minion_we_dont_have',
                 'fun': 'test.ping',
@@ -238,8 +230,6 @@ class TestSaltAPIHandler(SaltnadoTestCase):
 
     # runner tests
     def test_simple_local_runner_post(self):
-        '''
-        '''
         low = [{'client': 'runner',
                 'fun': 'manage.up',
                 }]
@@ -308,8 +298,6 @@ class TestMinionSaltAPIHandler(SaltnadoTestCase):
         assert response_obj['return'][0]['minions'] == ['minion', 'sub_minion']
 
     def test_post_with_client(self):
-        '''
-        '''
         # get a token for this test
         low = [{'client': 'local_async',
                 'tgt': '*',

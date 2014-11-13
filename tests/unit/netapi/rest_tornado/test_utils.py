@@ -1,15 +1,11 @@
 # coding: utf-8
 import os
 
-import json
-import yaml
-import urllib
-
 from salt.netapi.rest_tornado import saltnado
 
 import tornado.testing
 import tornado.concurrent
-from salttesting import skipIf, TestCase
+from salttesting import TestCase
 
 from unit.utils.event_test import eventpublisher_process, event, SOCK_DIR
 
@@ -56,7 +52,7 @@ class TestSaltnadoUtils(tornado.testing.AsyncTestCase):
         # re-wait on some other futures
         any_ = saltnado.Any(futures)
         futures[0].set_result('foo')
-        self.wait
+        self.wait()
         assert any_.done() is True
         assert futures[0].done() is True
         assert futures[1].done() is False
@@ -84,11 +80,8 @@ class TestEventListener(tornado.testing.AsyncTestCase):
 
             # check that we got the event we wanted
             assert event_future.done()
-            assert event_future.result()['tag'] ==  'evt1'
-            assert event_future.result()['data']['data'] ==  'foo1'
-
-
-
+            assert event_future.result()['tag'] == 'evt1'
+            assert event_future.result()['data']['data'] == 'foo1'
 
 
 if __name__ == '__main__':

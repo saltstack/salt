@@ -176,8 +176,7 @@ from salt.utils.event import tagify
 import salt.client
 import salt.runner
 import salt.auth
-from salt import syspaths
-
+from salt.exceptions import EauthAuthenticationError
 
 json = salt.utils.import_json()
 logger = logging.getLogger()
@@ -932,7 +931,6 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
 
         raise tornado.gen.Return(chunk_ret)
 
-
     @tornado.gen.coroutine
     def _disbatch_local_async(self, chunk):
         '''
@@ -943,7 +941,6 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
         pub_data = self.saltclients['local_async'](*f_call.get('args', ()), **f_call.get('kwargs', {}))
 
         raise tornado.gen.Return(pub_data)
-
 
     @tornado.gen.coroutine
     def _disbatch_runner(self, chunk):
