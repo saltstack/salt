@@ -15,18 +15,18 @@ import sys
 # on extra dependency !
 # Without that, zc.buildout install wont work
 # from six import string_types
+string_types = (str,)
 if sys.version_info[0] < 3:
     from itertools import imap as map
+    string_types = (basestring,)
 
 # Import salt libs
 try:
     from salt._compat import MAX_SIZE
 except ImportError:
     if sys.version_info[0] == 3:
-        string_types = str
         MAX_SIZE = sys.maxsize
     else:
-        string_types = (basestring,)
         MAX_SIZE = sys.maxint
 
 # ----- ATTENTION --------------------------------------------------------------------------------------------------->
