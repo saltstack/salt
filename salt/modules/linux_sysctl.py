@@ -34,7 +34,7 @@ def __virtual__():
     return __virtualname__
 
 
-def default_config(config):
+def default_config():
     '''
     Linux hosts using systemd 207 or later ignore ``/etc/sysctl.conf`` and only
     load from ``/etc/sysctl.d/*.conf``. This function will do the proper checks
@@ -92,7 +92,7 @@ def show(config_file=False):
                     key = key.strip()
                     value = value.lstrip()
                     ret[key] = value
-        except OSError, IOError:
+        except (OSError, IOError):
             log.error('Could not open sysctl file')
             return None
     else:
