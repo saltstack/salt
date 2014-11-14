@@ -258,6 +258,28 @@ def vgcreate(vgname, devices, **kwargs):
     return vgdata
 
 
+def vgextend(vgname, devices):
+    '''
+    Add physical volumes to an LVM volume group
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt mymachine lvm.vgextend my_vg /dev/sdb1,/dev/sdb2
+        salt mymachine lvm.vgextend my_vg /dev/sdb1
+    '''
+    if not vgname or not devices:
+        return 'Error: vgname and device(s) are both required'
+
+    cmd = ['vgextend', vgname]
+    for device in devices.split(','):
+        cmd.append(device)
+    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
+    vgdata = {'Output from vgextend': out[0].strip()}
+    return vgdata
+
+
 def lvcreate(lvname, vgname, size=None, extents=None, snapshot=None, pv=None, **kwargs):
     '''
     Create a new logical volume, with option for which physical volume to be used
