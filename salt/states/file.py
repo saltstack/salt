@@ -2199,7 +2199,7 @@ def replace(name,
             not_found_content=None,
             backup='.bak',
             show_changes=True):
-    '''
+    r'''
     Maintain an edit in a file
 
     .. versionadded:: 0.17.0
@@ -2207,6 +2207,17 @@ def replace(name,
     Params are identical to the remote execution function :mod:`file.replace
     <salt.modules.file.replace>`.
 
+    For complex regex patterns it can be useful to avoid the need for complex
+    quoting and escape sequences by making use of YAML's multiline string
+    syntax.
+
+    .. code-block:: yaml
+
+        complex_search_and_replace:
+          file.replace:
+            # <...snip...>
+            - pattern: |
+                CentOS \(2.6.32[^\n]+\n\s+root[^\n]+\n\)+
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
