@@ -6,6 +6,7 @@ involves preparing the three listeners and the workers needed by the master.
 
 # Import python libs
 import os
+import grp
 import re
 import time
 import errno
@@ -2509,6 +2510,7 @@ class ClearFuncs(object):
                     ('*' in self.opts['external_auth'][token['eauth']])):
                 log.warning('Authentication failure of type "token" occurred.')
                 return ''
+
             good = self.ckminions.auth_check(
                     self.opts['external_auth'][token['eauth']][token['name']]
                         if token['name'] in self.opts['external_auth'][token['eauth']]
@@ -2526,6 +2528,7 @@ class ClearFuncs(object):
             clear_load['user'] = token['name']
             log.debug('Minion tokenized user = "{0}"'.format(clear_load['user']))
         elif 'eauth' in extra:
+
             if extra['eauth'] not in self.opts['external_auth']:
                 # The eauth system is not enabled, fail
                 log.warning(
@@ -2533,13 +2536,31 @@ class ClearFuncs(object):
                 )
                 return ''
             try:
+                # Get the name of the user we are authorizing
                 name = self.loadauth.load_name(extra)
-                if not ((name in self.opts['external_auth'][extra['eauth']]) |
-                        ('*' in self.opts['external_auth'][extra['eauth']])):
-                    log.warning(
-                        'Authentication failure of type "eauth" occurred.'
-                    )
-                    return ''
+
+                # group membership
+                auth_by_group_ok = []
+
+                # extra['eauth'] could have many groups
+                for gr in self.opts['external_auth'][extra['eauth']]:
+                    # This is a group entry--they end with '%'
+                    if gr.endswith('%'):
+                        try:
+                            if name in grp.getgrnam(gr[:-1])[3]:
+                                auth_by_group_ok.append(gr)
+                        except KeyError, e:
+                            log.warning(
+                                'Problem looking up members in Unix group {0} ({1})'.format(gr[:-1], e)
+                            )
+                            pass
+                if len(auth_by_group_ok) == 0:
+                    if not ((name in self.opts['external_auth'][extra['eauth']]) |
+                            ('*' in self.opts['external_auth'][extra['eauth']])):
+                        log.warning(
+                            'Authentication failure of type "eauth" occurred.'
+                        )
+                        return ''
                 if not self.loadauth.time_auth(extra):
                     log.warning(
                         'Authentication failure of type "eauth" occurred.'
@@ -2550,14 +2571,32 @@ class ClearFuncs(object):
                     'Exception occurred while authenticating: {0}'.format(exc)
                 )
                 return ''
-            good = self.ckminions.auth_check(
-                    self.opts['external_auth'][extra['eauth']][name]
-                        if name in self.opts['external_auth'][extra['eauth']]
-                        else self.opts['external_auth'][extra['eauth']]['*'],
-                    clear_load['fun'],
-                    clear_load['tgt'],
-                    clear_load.get('tgt_type', 'glob'))
-            if not good:
+
+            # import pydevd
+            # pydevd.settrace('172.16.207.1', port=9999, stdoutToServer=True, stderrToServer=True)
+
+            good = False
+            if len(auth_by_group_ok) > 0:
+                group_good = []
+                for g in auth_by_group_ok:
+                    if self.ckminions.auth_check(self.opts['external_auth'][extra['eauth']][g]
+                                                     if g in self.opts['external_auth'][extra['eauth']]
+                                                     else self.opts['external_auth'][extra['eauth']]['*'],
+                                                 clear_load['fun'],
+                                                 clear_load['tgt'],
+                                                 clear_load.get('tgt_type', 'glob')):
+                            group_good.append(g)
+
+            if name in self.opts['external_auth'][extra['eauth']] or \
+                '*' in self.opts['external_auth'][extra['eauth']]:
+                good = self.ckminions.auth_check(
+                        self.opts['external_auth'][extra['eauth']][name]
+                            if name in self.opts['external_auth'][extra['eauth']]
+                            else self.opts['external_auth'][extra['eauth']]['*'],
+                        clear_load['fun'],
+                        clear_load['tgt'],
+                        clear_load.get('tgt_type', 'glob'))
+            if not good and len(group_good) == 0:
                 # Accept find_job so the CLI will function cleanly
                 if clear_load['fun'] != 'saltutil.find_job':
                     log.warning(
