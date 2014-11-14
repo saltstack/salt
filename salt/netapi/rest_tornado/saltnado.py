@@ -941,18 +941,11 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
         '''
         Disbatch runner client commands
         '''
-        timeout = float(chunk.get('timeout', self.application.opts['timeout']))
-        # set the timeout
-        timeout_obj = tornado.ioloop.IOLoop.current().add_timeout(time.time() + timeout, self.timeout_futures)
-
         f_call = {'args': [chunk['fun'], chunk]}
         pub_data = self.saltclients['runner'](chunk['fun'], chunk)
         tag = pub_data['tag'] + '/ret'
         try:
             event = yield self.application.event_listener.get_event(self, tag=tag)
-
-            # if we finish in time, cancel the timeout
-            tornado.ioloop.IOLoop.current().remove_timeout(timeout_obj)
 
             # only return the return data
             raise tornado.gen.Return(event['data']['return'])
