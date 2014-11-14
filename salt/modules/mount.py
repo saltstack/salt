@@ -317,12 +317,6 @@ def set_fstab(
                     # check to see if there are changes
                     # and fix them if there are any
                     present = True
-                    if comps[0] != device:
-                        change = True
-                        comps[0] = device
-                    if comps[1] != name:
-                        change = True
-                        comps[1] = name
                     if comps[2] != fstype:
                         change = True
                         comps[2] = fstype
