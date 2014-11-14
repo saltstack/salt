@@ -526,6 +526,8 @@ def _virtual(osdata):
             if 'Vendor: QEMU' in output:
                 # FIXME: Make this detect between kvm or qemu
                 grains['virtual'] = 'kvm'
+            if 'Manufacturer: QEMU' in output:
+                grains['virtual'] = 'kvm'
             if 'Vendor: Bochs' in output:
                 grains['virtual'] = 'kvm'
             if 'BHYVE  BVXSDT' in output:
