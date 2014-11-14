@@ -1,36 +1,16 @@
 # -*- coding: utf-8 -*-
 #
-# The MIT License (MIT)
 # Copyright (C) 2014 SUSE LLC
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to
-# deal in the Software without restriction, including without limitation the
-# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-# sell copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
-# IN THE SOFTWARE.
 
 '''
 Run-time utilities
 '''
 
-import os
+# Import Python libs
 import re
-import time
 import logging
 
-import salt.utils
+# Import Salt libs
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -82,7 +62,7 @@ def _blkid_output(out, fs_type=None):
             key, val = items.split("=", 1)
             dev[key.lower()] = val
         if fs_type and dev.get("type", '') == fs_type or not fs_type:
-            if dev.has_key("type"):
+            if 'type' in dev:
                 dev.pop("type")
             dev['label'] = dev.get('label')
             data[dev.pop("devname")] = dev
