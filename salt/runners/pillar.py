@@ -30,7 +30,7 @@ def show_top(minion=None, saltenv='base'):
     top, errors = pillar.get_top()
 
     if errors:
-        progress(errors, outputter='nested')
+        __progress__(errors, outputter='nested')
         return errors
 
     return top
