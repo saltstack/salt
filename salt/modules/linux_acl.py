@@ -75,10 +75,10 @@ def getfacl(*args, **kwargs):
             comps = line.replace('# ', '').split(': ')
             if comps[0] == 'file':
                 dentry = comps[1]
-                ret[dentry] = {'comments': {},
-                               'users': [],
-                               'groups': []}
-            ret[dentry]['comments'][comps[0]] = comps[1]
+                ret[dentry] = {'comment': {},
+                               'user': [],
+                               'group': []}
+            ret[dentry]['comment'][comps[0]] = comps[1]
             if comps[0] == 'flags':
                 flags = list(comps[1])
                 if flags[0] == 's':
@@ -89,23 +89,22 @@ def getfacl(*args, **kwargs):
                     ret[dentry]['sticky'] = True
         else:
             vals = _parse_acl(acl=line,
-                              user=ret[dentry]['comments']['owner'],
-                              group=ret[dentry]['comments']['group'])
+                              user=ret[dentry]['comment']['owner'],
+                              group=ret[dentry]['comment']['group'])
             acl_type = vals['type']
             del vals['type']
             for entity in ('user', 'group'):
-                plural = entity + 's'
                 if entity in vals:
                     usergroup = vals[entity]
                     del vals[entity]
                     if acl_type == 'acl':
-                        ret[dentry][plural].append({usergroup: vals})
+                        ret[dentry][entity].append({usergroup: vals})
                     elif acl_type == 'default':
                         if 'defaults' not in ret[dentry]:
                             ret[dentry]['defaults'] = {}
-                        if plural not in ret[dentry]['defaults']:
-                            ret[dentry]['defaults'][plural] = []
-                        ret[dentry]['defaults'][plural].append({usergroup: vals})
+                        if entity not in ret[dentry]['defaults']:
+                            ret[dentry]['defaults'][entity] = []
+                        ret[dentry]['defaults'][entity].append({usergroup: vals})
             for entity in ('other', 'mask'):
                 if entity in vals:
                     del vals[entity]
