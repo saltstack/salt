@@ -1809,7 +1809,7 @@ class Minion(MinionBase):
         self._running = False
         if getattr(self, 'poller', None) is not None:
             if isinstance(self.poller.sockets, dict):
-                for socket in self.poller.sockets:
+                for socket in self.poller.sockets.keys():
                     if socket.closed is False:
                         socket.close()
                     self.poller.unregister(socket)

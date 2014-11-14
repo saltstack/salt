@@ -2908,6 +2908,59 @@ def check_managed(
     return True, 'The file {0} is in the correct state'.format(name)
 
 
+def check_managed_changes(
+        name,
+        source,
+        source_hash,
+        user,
+        group,
+        mode,
+        template,
+        context,
+        defaults,
+        saltenv,
+        contents=None,
+        **kwargs):
+    '''
+    Return a dictionary of what changes need to be made for a file
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.check_managed_changes /etc/httpd/conf.d/httpd.conf salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' root, root, '755' jinja True None None base
+    '''
+    # If the source is a list then find which file exists
+    source, source_hash = source_list(source,           # pylint: disable=W0633
+                                      source_hash,
+                                      saltenv)
+
+    sfn = ''
+    source_sum = None
+
+    if contents is None:
+        # Gather the source file from the server
+        sfn, source_sum, comments = get_managed(
+            name,
+            template,
+            source,
+            source_hash,
+            user,
+            group,
+            mode,
+            saltenv,
+            context,
+            defaults,
+            **kwargs)
+        if comments:
+            __clean_tmp(sfn)
+            return False, comments
+    changes = check_file_meta(name, sfn, source, source_sum, user,
+                              group, mode, saltenv, template, contents)
+    __clean_tmp(sfn)
+    return changes
+
+
 def check_file_meta(
         name,
         sfn,
