@@ -55,6 +55,7 @@ host: MOR of the host where the virtual machine should be registered.
 template: Specifies whether or not the new virtual machine should be marked as a
           template. Default is False.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import pprint

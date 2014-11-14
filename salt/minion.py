@@ -21,6 +21,7 @@ import time
 import traceback
 import types
 from random import randint, shuffle
+from six.moves import range
 
 # Import third party libs
 try:
@@ -2478,18 +2479,18 @@ class Matcher(object):
             self.opts['pillar'], tgt, delimiter=delimiter
         )
 
-    def pillar_exact_match(self, tgt, delim=':'):
+    def pillar_exact_match(self, tgt, delimiter=':'):
         '''
         Reads in the pillar match, no globbing
         '''
         log.debug('pillar target: {0}'.format(tgt))
-        if delim not in tgt:
+        if delimiter not in tgt:
             log.error('Got insufficient arguments for pillar match '
                       'statement from master')
             return False
         return salt.utils.subdict_match(self.opts['pillar'],
                                         tgt,
-                                        delimiter=delim,
+                                        delimiter=delimiter,
                                         exact_match=True)
 
     def ipcidr_match(self, tgt):

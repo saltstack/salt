@@ -4,6 +4,7 @@ Create ssh executor system
 '''
 # Import python libs
 from __future__ import print_function
+from __future__ import absolute_import
 import copy
 import getpass
 import json
@@ -442,7 +443,7 @@ class SSH(object):
         sret = {}
         outputter = self.opts.get('output', 'nested')
         for ret in self.handle_ssh():
-            host = ret.iterkeys().next()
+            host = next(ret.iterkeys())
             self.cache_job(jid, host, ret[host])
             ret = self.key_deploy(host, ret)
             if not isinstance(ret[host], dict):

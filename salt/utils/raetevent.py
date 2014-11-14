@@ -4,6 +4,7 @@ Manage events
 
 This module is used to manage events via RAET
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os

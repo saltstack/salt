@@ -17,6 +17,7 @@ opts['ioflo_realtime']
 opts['ioflo_verbose']
 opts['caller_floscript']
 '''
+from __future__ import absolute_import
 import os
 
 # Import modules

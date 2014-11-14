@@ -29,7 +29,6 @@ from __future__ import absolute_import
 import struct
 
 # Import salt libs
-from six.moves import range as xrange
 from six.moves import range
 
 __version__ = 'trunk'

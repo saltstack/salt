@@ -89,12 +89,7 @@ class RAETChannel(Channel):
         self.ttype = 'raet'
         if usage == 'master_call':  # runner.py master_call
             self.dst = (None, None, 'local_cmd')
-        elif usage == 'salt_call':  # salt_call caller
-            #self.dst = (None, None, 'remote_cmd')
-            self.dst = (jobber_estate_name or None,
-                        jobber_yard_name or None,
-                        'call_cmd')
-        else:  # everything else minion to master
+        else:  # everything else minion to master including salt-call
             self.dst = (jobber_estate_name or None,
                         jobber_yard_name or None,
                         'remote_cmd')
@@ -221,7 +216,7 @@ class ZeroMQChannel(Channel):
                 if master_type == 'failover':
                     # remove all cached sreqs to the old master to prevent
                     # zeromq from reconnecting to old masters automagically
-                    for check_key in self.sreq_cache:
+                    for check_key in self.sreq_cache.keys():
                         if self.opts['master_uri'] != check_key[0]:
                             del self.sreq_cache[check_key]
                             log.debug('Removed obsolete sreq-object from '

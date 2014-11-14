@@ -44,6 +44,7 @@ framer masterudpstack be active first setup
 framer inbound be inactive first start
     frame start
         do salt raet road stack service rx
+        do salt raet lane stack service rx
 
 # Router framer
 framer uxdrouter be inactive first start
@@ -68,4 +69,5 @@ framer manager be inactive first start at 10.0
 # Outbound framer
 framer outbound be inactive first start
     frame start
+        do salt raet lane stack service tx
         do salt raet road stack service tx
