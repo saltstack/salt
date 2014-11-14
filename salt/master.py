@@ -2572,9 +2572,6 @@ class ClearFuncs(object):
                 )
                 return ''
 
-            # import pydevd
-            # pydevd.settrace('172.16.207.1', port=9999, stdoutToServer=True, stderrToServer=True)
-
             good = False
             if len(auth_by_group_ok) > 0:
                 group_good = []
