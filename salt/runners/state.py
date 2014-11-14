@@ -79,6 +79,11 @@ def orchestrate(mods, saltenv='base', test=None, exclude=None, pillar=None):
     Execute a state run from the master, used as a powerful orchestration
     system.
 
+    .. seealso:: More Orchestrate documentation
+
+        * :ref:`Full Orchestrate Tutorial <orchestrate-tutorial>`
+        * :py:mod:`Docs for the master-side state module <salt.states.saltmod>`
+
     CLI Examples:
 
     .. code-block:: bash
