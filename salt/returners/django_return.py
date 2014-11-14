@@ -45,12 +45,14 @@ except ImportError:
     HAS_DJANGO = False
 
 # Define this module's virtual name
-__virtualname__ = 'django' 
+__virtualname__ = 'django'
+
 
 def __virtual__():
     if not HAS_DJANGO:
         return False
     return True
+
 
 def returner(ret):
     '''
@@ -61,6 +63,7 @@ def returner(ret):
     for signal in signaled:
         log.debug('Django returner function \'returner\' signaled {0} '
                   'which responded with {1}'.format(signal[0], signal[1]))
+
 
 def save_load(jid, load):
     '''
@@ -73,6 +76,7 @@ def save_load(jid, load):
     for signal in signaled:
         log.debug('Django returner function \'save_load\' signaled {0} '
                   'which responded with {1}'.format(signal[0], signal[1]))
+
 
 def prep_jid(nocache, passed_jid=None):
     '''
