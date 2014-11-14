@@ -6,10 +6,12 @@ from salt.netapi.rest_tornado import saltnado
 import tornado.testing
 import tornado.concurrent
 import tornado.web
+import tornado.ioloop
 
 from unit.netapi.rest_tornado.test_handlers import SaltnadoTestCase
 
 import json
+import time
 
 
 class TestSaltAPIHandler(SaltnadoTestCase):
@@ -426,6 +428,9 @@ class TestEventsSaltAPIHandler(SaltnadoTestCase):
                               streaming_callback=self.on_event
                               )
 
+    def _stop(self):
+        self.stop()
+
     def on_event(self, event):
         if self.events_to_fire > 0:
             self.application.event_listener.event.fire_event({
@@ -435,7 +440,9 @@ class TestEventsSaltAPIHandler(SaltnadoTestCase):
             self.events_to_fire -= 1
         # once we've fired all the events, lets call it a day
         else:
-            self.stop()
+            # wait so that we can ensure that the next future is ready to go
+            # to make sure we don't explode if the next one is ready
+            tornado.ioloop.IOLoop.current().add_timeout(time.time() + 0.5, self._stop)
 
         event = event.strip()
         # if we got a retry, just continue
