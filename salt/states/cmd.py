@@ -599,7 +599,7 @@ def run(name,
         if not __opts__['test']:
             try:
                 cmd_all = __salt__['cmd.run_all'](
-                    name, timeout=timeout, **cmd_kwargs
+                    name, timeout=timeout, python_shell=True, **cmd_kwargs
                 )
             except CommandExecutionError as err:
                 ret['comment'] = str(err)
@@ -770,7 +770,7 @@ def script(name,
 
         # Wow, we passed the test, run this sucker!
         try:
-            cmd_all = __salt__['cmd.script'](source, **cmd_kwargs)
+            cmd_all = __salt__['cmd.script'](source, python_shell=True, **cmd_kwargs)
         except (CommandExecutionError, SaltRenderError, IOError) as err:
             ret['comment'] = str(err)
             return ret
