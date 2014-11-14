@@ -54,7 +54,7 @@ def present(name, value, config=None):
             config = '/etc/sysctl.conf'
 
     current = __salt__['sysctl.show']()
-    configured = __salt__['sysctl.show'](config_file=True)
+    configured = __salt__['sysctl.show'](config_file=config)
     if __opts__['test']:
         if name in current and name not in configured:
             if re.sub(' +|\t+', ' ', current[name]) != re.sub(' +|\t+', ' ', str(value)):
