@@ -82,7 +82,10 @@ def show(config_file=False):
     '''
     ret = {}
     if config_file:
-        config_file_path = default_config()
+        if config_file is True:
+            config_file_path = default_config()
+        else:
+            config_file_path = config_file
         try:
             for line in salt.utils.fopen(config_file_path):
                 if not line.startswith('#') and '=' in line:
