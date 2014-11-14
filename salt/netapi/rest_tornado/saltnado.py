@@ -269,8 +269,9 @@ class EventListener(object):
             # TODO: log, this shouldn't happen...
             if tag not in self.tag_map:
                 continue
-            # mark the future done
-            future.set_exception(TimeoutException())
+            # if the future isn't complete, mark it as a timeout
+            if not future.done():
+                future.set_exception(TimeoutException())
             self.tag_map[tag].remove(future)
 
             # if that was the last of them, remove the key all together
