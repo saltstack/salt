@@ -10,6 +10,8 @@ module instead.
 '''
 # pylint: disable=E0102
 
+from __future__ import absolute_import
+
 # Import salt libs
 import salt.utils.cloud
 import salt.config as config
