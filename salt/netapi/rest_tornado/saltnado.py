@@ -272,7 +272,8 @@ class EventListener(object):
             # if the future isn't complete, mark it as a timeout
             if not future.done():
                 future.set_exception(TimeoutException())
-            self.tag_map[tag].remove(future)
+                # if we marked it as a timeout, we need to remove it from tag_map
+                self.tag_map[tag].remove(future)
 
             # if that was the last of them, remove the key all together
             if len(self.tag_map[tag]) == 0:
