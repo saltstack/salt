@@ -150,7 +150,6 @@ import logging
 from copy import copy
 
 import time
-import os
 import sys
 
 import tornado.httpserver
@@ -163,7 +162,6 @@ from tornado.concurrent import Future
 from collections import defaultdict
 
 import math
-import functools
 import yaml
 import zmq
 import fnmatch
@@ -191,6 +189,7 @@ logger = logging.getLogger()
 # # master side
 #  - "runner" (done)
 #  - "wheel" (need async api...)
+
 
 class SaltClientsMixIn(object):
     '''
@@ -620,7 +619,6 @@ class SaltAuthHandler(BaseSaltAPIHandler):
             self.send_error(400)
             return
 
-
         token = self.application.auth.mk_token(creds)
         if 'token' not in token:
             # TODO: nicer error message
@@ -804,11 +802,6 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
                 ret.append(chunk_ret)
             except Exception as ex:
                 # TODO: log?
-                '''
-                print ex
-                import traceback
-                traceback.print_exc()
-                '''
                 ret.append('Unexpected exception while handling request: {0}'.format(ex))
 
         self.write(self.serialize({'return': ret}))
@@ -870,7 +863,6 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
             inflight_futures.remove(finished_future)
 
         raise tornado.gen.Return(chunk_ret)
-
 
     @tornado.gen.coroutine
     def _disbatch_local(self, chunk):

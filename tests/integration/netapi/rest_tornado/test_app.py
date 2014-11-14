@@ -9,8 +9,6 @@ import tornado.web
 
 from unit.netapi.rest_tornado.test_handlers import SaltnadoTestCase
 
-from salttesting import TestCase
-
 import json
 
 

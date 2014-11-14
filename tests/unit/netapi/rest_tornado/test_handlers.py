@@ -10,7 +10,6 @@ import integration
 
 import tornado.testing
 import tornado.concurrent
-from salttesting import TestCase
 
 
 class SaltnadoTestCase(integration.ModuleCase, tornado.testing.AsyncHTTPTestCase):
