@@ -24,6 +24,7 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 
 :depends: requests
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import time
@@ -669,7 +670,7 @@ def _compute_signature(parameters, access_key_secret):
         res = res.replace('%7E', '~')
         return res
 
-    sortedParameters = sorted(parameters.items(), key=lambda items: items[0])
+    sortedParameters = sorted(list(parameters.items()), key=lambda items: items[0])
 
     canonicalizedQueryString = ''
     for (k, v) in sortedParameters:
