@@ -2201,13 +2201,13 @@ def is_bin_str(data):
     '''
     Detects if the passed string of data is bin or text
     '''
-    text_characters = ''.join(map(chr, list(range(32, 127))) + list('\n\r\t\b'))
-    _null_trans = string.maketrans('', '')
     if '\0' in data:
         return True
     if not data:
         return False
 
+    text_characters = ''.join(list(map(chr, list(range(32, 127)))) + list('\n\r\t\b'))
+    _null_trans = string.maketrans('', '')
     # Get the non-text characters (maps a character to itself then
     # use the 'remove' option to get rid of the text characters.)
     text = data.translate(_null_trans, text_characters)
