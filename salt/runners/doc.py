@@ -89,7 +89,7 @@ def __list_functions(user=None):
     for ret in gener:
         funcs.update(ret)
     if not user:
-        progress(funcs)
+        __progress__(funcs)
         return funcs
     for _, val in __opts__['external_auth'].items():
         if user in val:
