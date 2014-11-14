@@ -2,15 +2,13 @@
 '''
 Salt compatibility code
 '''
-from __future__ import absolute_import
 # pylint: disable=W0611
 
 # Import python libs
 import sys
 import types
-import six
 try:
-    import six.moves.cPickle as pickle
+    import cPickle as pickle
 except ImportError:
     import pickle
 try:
@@ -54,18 +52,18 @@ if PY3:
     binary_type = bytes
     long = int
 else:
-    string_types = six.string_types,
-    integer_types = (int, int)
-    class_types = (type, type)
-    text_type = six.text_type
+    string_types = basestring,
+    integer_types = (int, long)
+    class_types = (type, types.ClassType)
+    text_type = unicode
     binary_type = str
-    long = int
+    long = long
 
 if PY3:
     import builtins
     exceptions = builtins  # pylint: disable=E0602
 else:
-    from . import exceptions  # pylint: disable=W0403
+    import exceptions  # pylint: disable=W0403
 
 if PY3:
     def callable(obj):
@@ -188,7 +186,7 @@ if PY3:
 else:
     from urlparse import urlparse
     from urlparse import urlunparse
-    import six.moves.BaseHTTPServer
+    import BaseHTTPServer
     from urllib2 import HTTPError, URLError
     from urllib import quote as url_quote
     from urllib import quote_plus as url_quote_plus
@@ -199,7 +197,7 @@ else:
     from urllib2 import HTTPBasicAuthHandler as url_auth_handler
     from urllib2 import build_opener as url_build_opener
     from urllib2 import install_opener as url_install_opener
-    import six.moves.configparser as configparser
+    import ConfigParser as configparser
 
     def url_unquote_text(v, encoding='utf-8', errors='replace'):
         v = url_unquote(v)
@@ -234,5 +232,5 @@ def string_io(data=None):  # cStringIO can't handle unicode
 if PY3:
     import queue as Queue
 else:
-    import six.moves.queue
+    import Queue
 # pylint: enable=C0103
