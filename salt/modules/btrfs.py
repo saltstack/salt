@@ -41,6 +41,12 @@ def __virtual__():
 def version():
     '''
     Return BTRFS version.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' btrfs.version
     '''
     out = __salt__['cmd.run_all']("btrfs --version")
     if out.get('stderr'):
