@@ -16,6 +16,9 @@ to look for Pillar files (such as ``top.sls``).
 .. versionchanged:: 2014.7.0
     The optional ``root`` parameter will be added.
 
+.. versionchanged:: @TBD
+    The special branch name '_' will be replace by the environment ({{env}})
+
 Note that this is not the same thing as configuring pillar data using the
 :conf_master:`pillar_roots` parameter. The branch referenced in the
 :conf_master:`ext_pillar` entry above (``master``), would evaluate to the
@@ -43,6 +46,23 @@ section in it, like this:
 .. code-block:: yaml
 
     dev:
+      '*':
+        - bar
+
+In a gitfs base setup with pillars from the same repository as the states,
+the ``ext_pillar:`` configuration would be like:
+
+.. code-block:: yaml
+
+    ext_pillar:
+      - git: _ git://gitserver/git-pillar.git root=pillar
+
+The (optinal) root=pillar defines the directory that contains the pillar data.
+The corresponding ``top.sls`` would be like:
+
+.. code-block:: yaml
+
+    {{env}}:
       '*':
         - bar
 '''
@@ -97,7 +117,7 @@ class GitPillar(object):
         '''
         Try to initialize the Git repo object
         '''
-        self.branch = branch
+        self.branch = self.map_branch(branch, opts)
         self.rp_location = repo_location
         self.opts = opts
         self._envs = set()
@@ -143,6 +163,14 @@ class GitPillar(object):
             else:
                 if self.repo.remotes.origin.url != self.rp_location:
                     self.repo.remotes.origin.config_writer.set('url', self.rp_location)
+
+    def map_branch(self, branch, opts=None):
+        opts = __opts__ if opts is None else opts
+        if branch == '_':
+            branch = opts['environment']
+            if branch == 'base':
+                branch = opts['gitfs_base']
+        return branch
 
     def update(self):
         '''
@@ -248,6 +276,7 @@ def ext_pillar(minion_id,
             log.warning('Unrecognized extra parameter: {0}'.format(key))
 
     gitpil = GitPillar(branch, repo_location, __opts__)
+    branch = gitpil.branch
 
     # environment is "different" from the branch
     branch = (branch == 'master' and 'base' or branch)
