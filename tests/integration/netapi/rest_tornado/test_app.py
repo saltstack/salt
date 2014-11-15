@@ -348,11 +348,14 @@ class TestJobsSaltAPIHandler(SaltnadoTestCase):
 
     def test_get(self):
         # test with no JID
-        response = self.fetch('/jobs',
-                              method='GET',
-                              headers={saltnado.AUTH_TOKEN_HEADER: self.token['token']},
-                              follow_redirects=False,
-                              )
+        self.http_client.fetch(self.get_url('/jobs'),
+                               self.stop,
+                               method='GET',
+                               headers={saltnado.AUTH_TOKEN_HEADER: self.token['token']},
+                               follow_redirects=False,
+                               request_timeout=10,  # wait up to 10s for this response-- jenkins seems to be slow
+                               )
+        response = self.wait(timeout=10)
         response_obj = json.loads(response.body)['return'][0]
         for jid, ret in response_obj.iteritems():
             assert 'Function' in ret
@@ -364,11 +367,14 @@ class TestJobsSaltAPIHandler(SaltnadoTestCase):
 
         # test with a specific JID passed in
         jid = response_obj.iterkeys().next()
-        response = self.fetch('/jobs/{0}'.format(jid),
-                              method='GET',
-                              headers={saltnado.AUTH_TOKEN_HEADER: self.token['token']},
-                              follow_redirects=False,
-                              )
+        self.http_client.fetch(self.get_url('/jobs/{0}'.format(jid)),
+                               self.stop,
+                               method='GET',
+                               headers={saltnado.AUTH_TOKEN_HEADER: self.token['token']},
+                               follow_redirects=False,
+                               request_timeout=10,  # wait up to 10s for this response-- jenkins seems to be slow
+                               )
+        response = self.wait(timeout=10)
         response_obj = json.loads(response.body)['return'][0]
         assert 'Function' in response_obj
         assert 'Target' in response_obj
