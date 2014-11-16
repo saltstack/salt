@@ -255,7 +255,7 @@ def _get_repo_info(alias, repos_cfg=None):
         return {}
 
 
-def get_repo(repo):
+def get_repo(repo, **dummy_kwargs):
     '''
     Display a repo.
 
