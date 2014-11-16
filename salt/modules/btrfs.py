@@ -655,7 +655,7 @@ def properties(obj, type=None, set=None):
                                for keyset in set.split(",")]:
                 cmd.append(key)
                 cmd.append(value)
-        except Exception, ex:
+        except Exception as ex:
             raise CommandExecutionError(ex)
 
     out = __salt__['cmd.run_all'](' '.join(cmd))
