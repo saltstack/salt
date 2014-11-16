@@ -572,7 +572,9 @@ def create_container(image,
                      dns=None,
                      volumes=None,
                      volumes_from=None,
-                     name=None):
+                     name=None,
+                     cpu_shares=None,
+                     cpuset=None):
     '''
     Create a new container
 
@@ -601,7 +603,10 @@ def create_container(image,
         let stdin open, Default is ``False``
     name
         name given to container
-
+    cpu_shares
+        CPU shares (relative weight)
+    cpuset
+        CPUs in which to allow execution ('0-3' or '0,1')
     CLI Example:
 
     .. code-block:: bash
@@ -640,6 +645,8 @@ def create_container(image,
             volumes=mountpoints,
             volumes_from=volumes_from,
             name=name,
+            cpu_shares=cpu_shares,
+            cpuset=cpuset
         )
         container = container_info['Id']
         callback = _valid

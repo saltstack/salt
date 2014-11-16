@@ -451,6 +451,8 @@ def installed(name,
               dns=None,
               volumes=None,
               volumes_from=None,
+              cpu_shares=None,
+              cpuset=None,
               *args, **kwargs):
     '''
     Ensure that a container with the given name exists;
@@ -535,7 +537,9 @@ def installed(name,
         dns=dns,
         volumes=dvolumes,
         volumes_from=volumes_from,
-        name=name)
+        name=name,
+        cpu_shares=cpu_shares,
+        cpuset=cpuset)
     out = create(*a, **kw)
     # if container has been created, even if not started, we mark
     # it as installed
@@ -752,6 +756,8 @@ def running(name,
             publish_all_ports=False,
             links=None,
             restart_policy=None,
+            cpu_shares=None,
+            cpuset=None,
             *args, **kwargs):
     '''
     Ensure that a container is running. If the container does not exist, it
@@ -866,6 +872,19 @@ def running(name,
         Useful for data-only containers that must be linked to another one.
         e.g. nginx <- static-files
 
+    cpu_shares
+        CPU shares (relative weight)
+
+        .. code-block:: yaml
+
+            - cpu_shares: 2
+    cpuset
+        CPUs in which to allow execution ('0-3' or '0,1')
+
+        .. code-block:: yaml
+
+            - cpuset: '0-3'
+
     For other parameters, see salt.modules.dockerio execution module
     and the docker-py python bindings for docker documentation
     <https://github.com/dotcloud/docker-py#api>`_ for
@@ -963,7 +982,9 @@ def running(name,
                         environment=denvironment,
                         dns=dns,
                         volumes=contvolumes,
-                        name=name)
+                        name=name,
+                        cpu_shares=cpu_shares,
+                        cpuset=cpuset)
         out = create(*args, **kwargs)
         # if container has been created, even if not started, we mark
         # it as installed
