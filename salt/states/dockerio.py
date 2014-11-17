@@ -498,12 +498,27 @@ def absent(name):
                     comment=('Container {0!r}'
                              ' could not be stopped'.format(cid)))
             else:
-                return _valid(comment=('Container {0!r}'
-                                       ' was stopped,'.format(cid)),
-                              changes={name: True})
+                __salt__['docker.remove_container'](cid)
+                is_gone = __salt__['docker.exists'](cid)
+                if is_gone:
+                    return _valid(comment=('Container {0!r}'
+                                           ' was stopped and destroyed, '.format(cid)),
+                                           changes={name: True})
+                else:
+                    return _valid(comment=('Container {0!r}'
+                                           ' was stopped but could not be destroyed,'.format(cid)),
+                                           changes={name: True})
         else:
-            return _valid(comment=('Container {0!r}'
-                                   ' is stopped,'.format(cid)))
+            __salt__['docker.remove_container'](cid)
+            is_gone = __salt__['docker.exists'](cid)
+            if is_gone:
+                return _valid(comment=('Container {0!r}'
+                                       ' is stopped and was destroyed, '.format(cid)),
+                                       changes={name: True})
+            else:
+                return _valid(comment=('Container {0!r}'
+                                       ' is stopped but could not be destroyed,'.format(cid)),
+                                       changes={name: True})
     else:
         return _valid(comment='Container {0!r} not found'.format(name))
 
