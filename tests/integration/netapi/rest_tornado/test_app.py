@@ -472,10 +472,17 @@ class TestWebhookSaltAPIHandler(SaltnadoTestCase):
         return application
 
     def test_post(self):
+        def verify_event(event):
+            '''
+            Verify that the event fired on the master matches what we sent
+            '''
+            assert event['tag'] == 'salt/netapi/hook'
+            assert 'headers' in event['data']
+            assert event['data']['post'] == {'foo': 'bar'}
         # get an event future
         event = self.application.event_listener.get_event(self,
                                                           tag='salt/netapi/hook',
-                                                          callback=self.stop,
+                                                          callback=verify_event,
                                                           )
         # fire the event
         response = self.fetch('/hook',
@@ -485,11 +492,3 @@ class TestWebhookSaltAPIHandler(SaltnadoTestCase):
                               )
         response_obj = json.loads(response.body)
         assert response_obj['success'] is True
-        self.wait()
-        assert event.done()
-        assert event.result()['tag'] == 'salt/netapi/hook'
-        assert 'headers' in event.result()['data']
-        assert event.result()['data']['post'] == {'foo': 'bar'}
-
-
-#

@@ -150,7 +150,6 @@ import logging
 from copy import copy
 
 import time
-import sys
 
 import tornado.httpserver
 import tornado.ioloop
@@ -163,8 +162,12 @@ from collections import defaultdict
 
 import math
 import yaml
-import zmq
 import fnmatch
+
+from zmq.eventloop import ioloop, zmqstream
+
+# instantiate the zmq IOLoop (specialized poller)
+ioloop.install()
 
 # salt imports
 import salt.netapi
@@ -256,8 +259,9 @@ class EventListener(object):
         # request_obj -> list of (tag, future)
         self.request_map = defaultdict(list)
 
-        # start listening for events
-        tornado.ioloop.IOLoop.current().add_callback(self.iter_events)
+        self.stream = zmqstream.ZMQStream(self.event.sub,
+                                          io_loop=tornado.ioloop.IOLoop.current())
+        self.stream.on_recv(self._handle_event_socket_recv)
 
     def clean_timeout_futures(self, request):
         '''
@@ -299,36 +303,19 @@ class EventListener(object):
 
         return future
 
-    # TODO: change to use ZMQStreams (http://zeromq.github.io/pyzmq/api/generated/zmq.eventloop.zmqstream.html)
-    def iter_events(self):
+    def _handle_event_socket_recv(self, raw):
         '''
-        Iterate over all events that could happen
+        Callback for events on the event sub socket
         '''
-        try:
-            data = self.event.get_event_noblock()
-            # see if we have any futures that need this info:
-            for tag_prefix, futures in self.tag_map.items():
-                if data['tag'].startswith(tag_prefix):
-                    for future in futures:
-                        if future.done():
-                            continue
-                        future.set_result(data)
-                        self.tag_map[tag_prefix].remove(future)
-
-            # call yourself back!
-            tornado.ioloop.IOLoop.current().add_callback(self.iter_events)
-
-        except zmq.ZMQError as e:
-            # TODO: not sure what other errors we can get...
-            if e.errno != zmq.EAGAIN:
-                raise Exception()
-            # add callback in the future (to avoid spinning)
-            # TODO: configurable timeout
-            tornado.ioloop.IOLoop.current().add_timeout(time.time() + 0.1, self.iter_events)
-        except:
-            logging.critical('Uncaught exception in the event_listener: {0}'.format(sys.exc_info()))
-            # TODO: configurable timeout
-            tornado.ioloop.IOLoop.current().add_timeout(time.time() + 0.1, self.iter_events)
+        mtag, data = self.event.unpack(raw[0], self.event.serial)
+        # see if we have any futures that need this info:
+        for tag_prefix, futures in self.tag_map.items():
+            if mtag.startswith(tag_prefix):
+                for future in futures:
+                    if future.done():
+                        continue
+                    future.set_result({'data': data, 'tag': mtag})
+                    self.tag_map[tag_prefix].remove(future)
 
 
 # TODO: move to a utils function within salt-- the batching stuff is a bit tied together
