@@ -47,7 +47,6 @@ MOCK_MODULES = [
     'Crypto.PublicKey',
     'Crypto.Random',
     'M2Crypto',
-    'six',
     'msgpack',
     'yaml',
     'yaml.constructor',
