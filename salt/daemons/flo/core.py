@@ -4,6 +4,8 @@ The core behaviors used by minion and master
 '''
 # pylint: disable=W0232
 
+from __future__ import absolute_import
+
 # Import python libs
 import os
 import sys
@@ -15,6 +17,8 @@ import traceback
 import itertools
 from collections import deque
 import random
+import six
+from six.moves import range
 
 # Import salt libs
 import salt.daemons.masterapi
@@ -551,7 +555,7 @@ class SaltLoadPillar(ioflo.base.deeding.Deed):
         self.master_estate_name.value = master.name
 
         route = {'src': (self.road_stack.value.local.name, None, None),
-                 'dst': (self.road_stack.value.remotes.itervalues().next().name, None, 'remote_cmd')}
+                 'dst': (six.itervalues(self.road_stack.value.remotes), None, 'remote_cmd')}
         load = {'id': self.opts.value['id'],
                 'grains': self.grains.value,
                 'saltenv': self.opts.value['environment'],
