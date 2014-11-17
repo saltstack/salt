@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Qemu Command Wrapper
-====================
 
 The qemu system comes with powerful tools, such as qemu-img and qemu-nbd which
 are used here to build up kvm images.

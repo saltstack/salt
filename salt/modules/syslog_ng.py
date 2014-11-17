@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Module for getting information about syslog-ng
-===============================================
 
 :maintainer:    Tibor Benke <btibi@sch.bme.hu>
 :maturity:      new
