@@ -40,6 +40,7 @@ Notes:
   Tomcat Version:
       Apache Tomcat/7.0.37
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import glob
@@ -48,6 +49,7 @@ import urllib
 import urllib2
 import tempfile
 import os
+import re
 
 # Import Salt libs
 import salt.utils
@@ -523,12 +525,20 @@ def deploy_war(war,
             __salt__['file.set_mode'](cached, '0644')
         except KeyError:
             pass
+    else:
+        tfile = war
+
+    version_extract = re.findall("\\d+.\\d+.\\d+?", os.path.basename(war).replace('.war', ''))
+    if len(version_extract) == 1:
+        version_string = version_extract[0]
+    else:
+        version_string = None
 
     # Prepare options
     opts = {
         'war': 'file:{0}'.format(tfile),
         'path': context,
-        'version': os.path.basename(war).replace('.war', ''),
+        'version': version_string,
     }
     if force == 'yes':
         opts['update'] = 'true'

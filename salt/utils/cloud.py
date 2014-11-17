@@ -3,6 +3,8 @@
 Utility functions for salt.cloud
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 import os
 import sys
@@ -22,6 +24,7 @@ import traceback
 import copy
 import re
 import uuid
+import six
 
 
 # Let's import pwd and catch the ImportError. We'll raise it if this is not
@@ -463,7 +466,7 @@ def ssh_usernames(vm_, opts, default_users=None):
         usernames = [usernames]
 
     # get rid of None's or empty names
-    usernames = filter(lambda x: x, usernames)
+    usernames = [x for x in usernames if x]
     # Keep a copy of the usernames the user might have provided
     initial = usernames[:]
 
@@ -586,7 +589,7 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
     ssh_args.extend([
         # Don't add new hosts to the host key database
         '-oStrictHostKeyChecking=no',
-        # Set hosts key database path to /dev/null, ie, non-existing
+        # Set hosts key database path to /dev/null, i.e., non-existing
         '-oUserKnownHostsFile=/dev/null',
         # Don't re-use the SSH connection. Less failures.
         '-oControlPath=none'
@@ -1145,7 +1148,7 @@ def deploy_script(host,
                     )
 
                 # Copy pre-seed minion keys
-                for minion_id, minion_key in preseed_minion_keys.iteritems():
+                for minion_id, minion_key in preseed_minion_keys.items():
                     rpath = os.path.join(
                         preseed_minion_keys_tempdir, minion_id
                     )
@@ -1221,7 +1224,7 @@ def deploy_script(host,
                             )
                         )
                     environ_script_contents = ['#!/bin/sh']
-                    for key, value in script_env.iteritems():
+                    for key, value in script_env.items():
                         environ_script_contents.append(
                             'setenv {0} \'{1}\' >/dev/null 2>&1 || '
                             'export {0}=\'{1}\''.format(key, value)
@@ -1441,7 +1444,7 @@ def scp_file(dest_path, contents, kwargs):
     ssh_args = [
         # Don't add new hosts to the host key database
         '-oStrictHostKeyChecking=no',
-        # Set hosts key database path to /dev/null, ie, non-existing
+        # Set hosts key database path to /dev/null, i.e., non-existing
         '-oUserKnownHostsFile=/dev/null',
         # Don't re-use the SSH connection. Less failures.
         '-oControlPath=none'
@@ -1482,7 +1485,7 @@ def scp_file(dest_path, contents, kwargs):
             '-oProxyCommand="ssh {0} {1} {2} {3} {4}@{5} -p {6} nc -q0 %h %p"'.format(
                 # Don't add new hosts to the host key database
                 '-oStrictHostKeyChecking=no',
-                # Set hosts key database path to /dev/null, ie, non-existing
+                # Set hosts key database path to /dev/null, i.e., non-existing
                 '-oUserKnownHostsFile=/dev/null',
                 # Don't re-use the SSH connection. Less failures.
                 '-oControlPath=none',
@@ -1543,6 +1546,9 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
     '''
     Use sftp to upload a file to a server
     '''
+    if kwargs is None:
+        kwargs = {}
+
     if contents is not None:
         tmpfh, tmppath = tempfile.mkstemp()
         with salt.utils.fopen(tmppath, 'w') as tmpfile:
@@ -1551,12 +1557,12 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
     if local_file is not None:
         tmppath = local_file
 
-    log.debug('Uploading {0} to {1} (sfcp)'.format(dest_path, kwargs['hostname']))
+    log.debug('Uploading {0} to {1} (sfcp)'.format(dest_path, kwargs.get('hostname')))
 
     ssh_args = [
         # Don't add new hosts to the host key database
         '-oStrictHostKeyChecking=no',
-        # Set hosts key database path to /dev/null, ie, non-existing
+        # Set hosts key database path to /dev/null, i.e., non-existing
         '-oUserKnownHostsFile=/dev/null',
         # Don't re-use the SSH connection. Less failures.
         '-oControlPath=none'
@@ -1597,7 +1603,7 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
             '-oProxyCommand="ssh {0} {1} {2} {3} {4}@{5} -p {6} nc -q0 %h %p"'.format(
                 # Don't add new hosts to the host key database
                 '-oStrictHostKeyChecking=no',
-                # Set hosts key database path to /dev/null, ie, non-existing
+                # Set hosts key database path to /dev/null, i.e., non-existing
                 '-oUserKnownHostsFile=/dev/null',
                 # Don't re-use the SSH connection. Less failures.
                 '-oControlPath=none',
@@ -1679,7 +1685,7 @@ def root_cmd(command, tty, sudo, allow_failure=False, **kwargs):
     ssh_args.extend([
         # Don't add new hosts to the host key database
         '-oStrictHostKeyChecking={0}'.format(host_key_checking),
-        # Set hosts key database path to /dev/null, ie, non-existing
+        # Set hosts key database path to /dev/null, i.e., non-existing
         '-oUserKnownHostsFile={0}'.format(known_hosts_file),
         # Don't re-use the SSH connection. Less failures.
         '-oControlPath=none'
@@ -1718,7 +1724,7 @@ def root_cmd(command, tty, sudo, allow_failure=False, **kwargs):
             '-oProxyCommand="ssh {0} {1} {2} {3} {4}@{5} -p {6} nc -q0 %h %p"'.format(
                 # Don't add new hosts to the host key database
                 '-oStrictHostKeyChecking=no',
-                # Set hosts key database path to /dev/null, ie, non-existing
+                # Set hosts key database path to /dev/null, i.e., non-existing
                 '-oUserKnownHostsFile=/dev/null',
                 # Don't re-use the SSH connection. Less failures.
                 '-oControlPath=none',
@@ -1858,7 +1864,7 @@ def wait_for_ip(update_callback,
     :param update_kwargs: Keyword arguments to pass to update_callback
     :param timeout: The maximum amount of time(in seconds) to wait for the IP
                     address.
-    :param interval: The looping interval, ie, the amount of time to sleep
+    :param interval: The looping interval, i.e., the amount of time to sleep
                      before the next iteration.
     :param interval_multiplier: Increase the interval by this multiplier after
                                 each request; helps with throttling
@@ -1917,13 +1923,13 @@ def wait_for_ip(update_callback,
 
 def simple_types_filter(data):
     '''
-    Convert the data list, dictionary into simple types, ie, int, float, string,
+    Convert the data list, dictionary into simple types, i.e., int, float, string,
     bool, etc.
     '''
     if data is None:
         return data
 
-    simpletypes_keys = (str, unicode, int, long, float, bool)
+    simpletypes_keys = (str, six.text_type, int, long, float, bool)
     simpletypes_values = tuple(list(simpletypes_keys) + [list, tuple])
 
     if isinstance(data, list):
@@ -1939,7 +1945,7 @@ def simple_types_filter(data):
 
     if isinstance(data, dict):
         simpledict = {}
-        for key, value in data.iteritems():
+        for key, value in data.items():
             if key is not None and not isinstance(key, simpletypes_keys):
                 key = repr(key)
             if value is not None and isinstance(value, (dict, list)):
@@ -1994,7 +2000,7 @@ def init_cachedir(base=None):
     for dir_ in needed_dirs:
         if not os.path.exists(dir_):
             os.makedirs(dir_)
-        os.chmod(base, 0755)
+        os.chmod(base, 0o755)
 
     return base
 
@@ -2100,7 +2106,7 @@ def delete_minion_cachedir(minion_id, provider, opts, base=None):
     if base is None:
         base = os.path.join(syspaths.CACHE_DIR, 'cloud')
 
-    driver = opts['providers'][provider].keys()[0]
+    driver = next(iter(opts['providers'][provider].keys()))
     fname = '{0}.p'.format(minion_id)
     for cachedir in ('requested', 'active'):
         path = os.path.join(base, cachedir, driver, provider, fname)
@@ -2263,7 +2269,7 @@ def cache_node_list(nodes, provider, opts):
         return
 
     base = os.path.join(init_cachedir(), 'active')
-    driver = opts['providers'][provider].keys()[0]
+    driver = next(iter(opts['providers'][provider].keys()))
     prov_dir = os.path.join(base, driver, provider)
     if not os.path.exists(prov_dir):
         os.makedirs(prov_dir)

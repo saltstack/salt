@@ -9,6 +9,23 @@ Salt 2014.1.0 Release Notes - Codename Hydrogen
    More info on backwards-compatibility policy :doc:`here
    </topics/installation/index>`, under the "Upgrading Salt" subheading.
 
+.. note::
+
+    A change in the grammar in the state compiler makes ``module.run`` in
+    requisites illegal syntax.  Its use is replaced simply with the word
+    ``module``.  In other words you will need to change requisites like this::
+
+        require:
+            module.run: some_module_name
+
+    to::
+
+        require:
+            module: some_module_name
+
+    This is a breaking change.  We apologize for the inconvenience, we needed to
+    do this to remove some ambiguity in parsing requisites.
+
 :release: 2014-02-24
 
 The 2014.1.0 release of Salt is a major release which not only increases

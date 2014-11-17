@@ -2,6 +2,7 @@
 '''
 Salt module to manage RAID arrays with mdadm
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -142,6 +143,24 @@ def destroy(device):
         return True
     else:
         return False
+
+
+def stop():
+    '''
+    Shut down all arrays that can be shut down (i.e. are not currently in use).
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' raid.stop
+    '''
+    cmd = 'mdadm --stop --scan'
+
+    if __salt__['cmd.retcode'](cmd):
+        return True
+
+    return False
 
 
 def create(name,

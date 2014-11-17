@@ -14,6 +14,7 @@ authentication, it is also possible to pass private keys to use explicitly.
         - rev: develop
         - target: /tmp/salt
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -22,7 +23,6 @@ import os.path
 import shutil
 
 # Import salt libs
-import salt.utils
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -38,7 +38,6 @@ def __virtual__():
 def latest(name,
            rev=None,
            target=None,
-           runas=None,
            user=None,
            force=None,
            force_checkout=False,
@@ -64,11 +63,6 @@ def latest(name,
     target
         Name of the target directory where repository is about to be cloned
 
-    runas
-        Name of the user performing repository management operations
-
-        .. deprecated:: 0.17.0
-
     user
         Name of the user performing repository management operations
 
@@ -79,6 +73,10 @@ def latest(name,
 
     force_checkout
         Force a checkout even if there might be overwritten changes
+        (Default: False)
+
+    force_reset
+        Force the checkout to ``--reset hard`` to the remote ref
         (Default: False)
 
     submodules
@@ -161,30 +159,6 @@ def latest(name,
     if not target:
         return _fail(ret, '"target" option is required')
     target = os.path.expanduser(target)
-
-    salt.utils.warn_until(
-        'Lithium',
-        'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 0.17.0',
-        _dont_call_warnings=True
-    )
-    if runas:
-        # Warn users about the deprecation
-        ret.setdefault('warnings', []).append(
-            'The \'runas\' argument is being deprecated in favor of \'user\', '
-            'please update your state files.'
-        )
-    if user is not None and runas is not None:
-        # user wins over runas but let warn about the deprecation.
-        ret.setdefault('warnings', []).append(
-            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
-            '\'runas\' is being ignored in favor of \'user\'.'
-        )
-        runas = None
-    elif runas is not None:
-        # Support old runas usage
-        user = runas
-        runas = None
 
     run_check_cmd_kwargs = {'runas': user}
     if 'shell' in __grains__:
@@ -275,8 +249,9 @@ def latest(name,
                                               identity=identity)
 
                     if force_reset:
+                        opts = "--hard {0}/{1}".format(remote_name, rev)
                         __salt__['git.reset'](target,
-                                              opts="--hard",
+                                              opts=opts,
                                               user=user)
 
                     __salt__['git.checkout'](target,
@@ -405,7 +380,7 @@ def latest(name,
     return ret
 
 
-def present(name, bare=True, runas=None, user=None, force=False):
+def present(name, bare=True, user=None, force=False):
     '''
     Make sure the repository is present in the given directory
 
@@ -414,11 +389,6 @@ def present(name, bare=True, runas=None, user=None, force=False):
 
     bare
         Create a bare repository (Default: True)
-
-    runas
-        Name of the user performing repository management operations
-
-        .. deprecated:: 0.17.0
 
     user
         Name of the user performing repository management operations
@@ -431,30 +401,6 @@ def present(name, bare=True, runas=None, user=None, force=False):
     '''
     name = os.path.expanduser(name)
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
-
-    salt.utils.warn_until(
-        'Lithium',
-        'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 0.17.0',
-        _dont_call_warnings=True
-    )
-    if runas:
-        # Warn users about the deprecation
-        ret.setdefault('warnings', []).append(
-            'The \'runas\' argument is being deprecated in favor of \'user\', '
-            'please update your state files.'
-        )
-    if user is not None and runas is not None:
-        # user wins over runas but let warn about the deprecation.
-        ret.setdefault('warnings', []).append(
-            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
-            '\'runas\' is being ignored in favor of \'user\'.'
-        )
-        runas = None
-    elif runas is not None:
-        # Support old runas usage
-        user = runas
-        runas = None
 
     # If the named directory is a git repo return True
     if os.path.isdir(name):

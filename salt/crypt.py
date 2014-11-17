@@ -4,6 +4,8 @@ The crypt module manages all of the cryptography functions for minions and
 masters, encrypting and decrypting payloads, preparing messages, and
 authenticating peers
 '''
+from __future__ import absolute_import
+from __future__ import print_function
 
 # Import python libs
 import os
@@ -15,6 +17,7 @@ import hashlib
 import logging
 import traceback
 import binascii
+from six.moves import zip
 
 # Import third party libs
 try:
@@ -553,7 +556,7 @@ class Auth(object):
             'pub_key': The RSA public key of the sender.
 
         :rtype: str
-        :return: An empty string on verfication failure. On success, the decrypted AES message in the payload.
+        :return: An empty string on verification failure. On success, the decrypted AES message in the payload.
         '''
         m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
         if os.path.isfile(m_pub_fn) and not self.opts['open_mode']:

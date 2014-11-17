@@ -13,6 +13,7 @@ import copy
 import json
 import time
 import errno
+import signal
 import shutil
 import pprint
 import logging
@@ -21,6 +22,7 @@ import subprocess
 import multiprocessing
 from hashlib import md5
 from datetime import datetime, timedelta
+from six import string_types
 try:
     import pwd
 except ImportError:
@@ -49,7 +51,6 @@ ensure_in_syspath(CODE_DIR, SALT_LIBS)
 
 # Import Salt libs
 import salt
-import salt._compat
 import salt.config
 import salt.minion
 import salt.runner
@@ -400,8 +401,10 @@ class TestDaemon(object):
             ssh_config.write('HostKey {0}\n'.format(server_dsa_priv_key_file))
             ssh_config.write('HostKey {0}\n'.format(server_ecdsa_priv_key_file))
             ssh_config.write('HostKey {0}\n'.format(server_ed25519_priv_key_file))
+
+        self.sshd_pidfile = os.path.join(TMP_CONF_DIR, 'sshd.pid')
         self.sshd_process = subprocess.Popen(
-            [sshd, '-f', 'sshd_config'],
+            [sshd, '-f', 'sshd_config', '-oPidFile={0}'.format(self.sshd_pidfile)],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             close_fds=True,
@@ -413,6 +416,7 @@ class TestDaemon(object):
         roster_path = os.path.join(FILES, 'conf/_ssh/roster')
         shutil.copy(roster_path, TMP_CONF_DIR)
         with open(os.path.join(TMP_CONF_DIR, 'roster'), 'a') as roster:
+            roster.write('  user: {0}\n'.format(pwd.getpwuid(os.getuid()).pw_name))
             roster.write('  priv: {0}/{1}'.format(TMP_CONF_DIR, 'key_test'))
 
     @property
@@ -440,6 +444,10 @@ class TestDaemon(object):
         running_tests_user = pwd.getpwuid(os.getuid()).pw_name
         master_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'master'))
         master_opts['user'] = running_tests_user
+        tests_know_hosts_file = os.path.join(TMP_CONF_DIR, 'salt_ssh_known_hosts')
+        with salt.utils.fopen(tests_know_hosts_file, 'w') as known_hosts:
+            known_hosts.write('')
+        master_opts['known_hosts_file'] = tests_know_hosts_file
 
         minion_config_path = os.path.join(CONF_DIR, 'minion')
         minion_opts = salt.config._read_conf_file(minion_config_path)
@@ -716,8 +724,14 @@ class TestDaemon(object):
         if hasattr(self, 'sshd_process'):
             try:
                 self.sshd_process.kill()
-            except OSError:
-                pass
+            except OSError as exc:
+                if exc.errno != 3:
+                    raise
+            try:
+                os.kill(int(open(self.sshd_pidfile).read()), signal.SIGKILL)
+            except OSError as exc:
+                if exc.errno != 3:
+                    raise
 
     def _exit_mockbin(self):
         path = os.environ.get('PATH', '')
@@ -891,7 +905,7 @@ class TestDaemon(object):
                         syncing.remove(name)
                         continue
 
-                    if isinstance(output['ret'], salt._compat.string_types):
+                    if isinstance(output['ret'], string_types):
                         # An errors has occurred
                         print(
                             ' {RED_BOLD}*{ENDC} {0} Failed to sync {2}: '
@@ -1072,7 +1086,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
             jids = []
             # These are usually errors
             for item in ret[:]:
-                if not isinstance(item, salt._compat.string_types):
+                if not isinstance(item, string_types):
                     # We don't know how to handle this
                     continue
                 match = STATE_FUNCTION_RUNNING_RE.match(item)
@@ -1140,7 +1154,7 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
         '''
         Execute salt-ssh
         '''
-        arg_str = '-c {0} -i --priv {1} --roster-file {2} localhost {3} --out=json'.format(self.get_config_dir(), os.path.join(TMP_CONF_DIR, 'key_test'), os.path.join(TMP_CONF_DIR, 'roster'), arg_str)
+        arg_str = '-c {0} -i --priv {1} --roster-file {2} --out=json localhost {3}'.format(self.get_config_dir(), os.path.join(TMP_CONF_DIR, 'key_test'), os.path.join(TMP_CONF_DIR, 'roster'), arg_str)
         return self.run_script('salt-ssh', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, raw=True)
 
     def run_run(self, arg_str, with_retcode=False, catch_stderr=False):

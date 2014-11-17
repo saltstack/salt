@@ -26,6 +26,7 @@ JID/MINION_ID
 return: return_data
 out: out_data
 '''
+from __future__ import absolute_import
 
 import logging
 
@@ -283,7 +284,7 @@ def _format_job_instance(job):
 
 def _format_jid_instance(jid, job):
     '''
-    Return a properly formated jid dict
+    Return a properly formatted jid dict
     '''
     ret = _format_job_instance(job)
     ret.update({'StartTime': salt.utils.jid_to_time(jid)})

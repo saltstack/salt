@@ -4,6 +4,7 @@ Execute overstate functions
 '''
 # Import pytohn libs
 from __future__ import print_function
+from __future__ import absolute_import
 
 import fnmatch
 import json
@@ -11,7 +12,6 @@ import logging
 import sys
 
 # Import salt libs
-import salt.output
 import salt.overstate
 import salt.syspaths
 import salt.utils.event
@@ -33,6 +33,12 @@ def over(saltenv='base', os_fn=None):
 
         salt-run state.over base /path/to/myoverstate.sls
     '''
+    salt.utils.warn_until(
+            'Boron',
+            'The state.over runner is on a deprecation path and will be '
+            'removed in Salt Boron. Please migrate to state.orchestrate.'
+            )
+
     stage_num = 0
     try:
         overstate = salt.overstate.OverState(__opts__, saltenv, os_fn)
@@ -43,25 +49,19 @@ def over(saltenv='base', os_fn=None):
     for stage in overstate.stages_iter():
         if isinstance(stage, dict):
             # This is highstate data
-            print('Stage execution results:')
+            __progress__('Stage execution results:')
             for key, val in stage.items():
                 if '_|-' in key:
-                    salt.output.display_output(
-                            {'error': {key: val}},
-                            'highstate',
-                            opts=__opts__)
+                    __progress__({'error': {key: val}}, outputter='highstate')
                 else:
-                    salt.output.display_output(
-                            {key: val},
-                            'highstate',
-                            opts=__opts__)
+                    __progress__({key: val}, outputter='highstate')
         elif isinstance(stage, list):
             # This is a stage
             if stage_num == 0:
-                print('Executing the following Over State:')
+                __progress__('Executing the following Over State:')
             else:
-                print('Executed Stage:')
-            salt.output.display_output(stage, 'overstatestage', opts=__opts__)
+                __progress__('Executed Stage:')
+            __progress__(stage, outputter='overstatestage')
             stage_num += 1
     return overstate.over_run
 
@@ -101,7 +101,7 @@ def orchestrate(mods, saltenv='base', test=None, exclude=None, pillar=None):
             exclude,
             pillar=pillar)
     ret = {minion.opts['id']: running}
-    salt.output.display_output(ret, 'highstate', opts=__opts__)
+    __progress__(ret, outputter='highstate')
     return ret
 
 # Aliases for orchestrate runner
@@ -123,10 +123,7 @@ def show_stages(saltenv='base', os_fn=None):
         salt-run state.show_stages saltenv=dev /root/overstate.sls
     '''
     overstate = salt.overstate.OverState(__opts__, saltenv, os_fn)
-    salt.output.display_output(
-            overstate.over,
-            'overstatestage',
-            opts=__opts__)
+    __progress__(overstate.over, outputter='overstatestage')
     return overstate.over
 
 

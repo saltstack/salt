@@ -73,37 +73,43 @@ class PartedTestCase(TestCase):
 
     def test_probe_wo_args(self):
         parted.probe()
-        self.cmdrun.called_once_with(
-            ['partprobe'], python_shell=False)
+        self.cmdrun.assert_called_once_with('partprobe -- ')
 
     def test_probe_w_single_arg(self):
         parted.probe("/dev/sda")
-        self.cmdrun.called_once_with(
-            ['partprobe', '/dev/sda'], python_shell=False)
+        self.cmdrun.assert_called_once_with('partprobe -- /dev/sda')
 
     def test_probe_w_multiple_args(self):
         parted.probe('/dev/sda', '/dev/sdb')
-        self.cmdrun.called_once_with(
-            ['partprobe', '/dev/sda', '/dev/sdb'], python_shell=False)
+        self.cmdrun.assert_called_once_with('partprobe -- /dev/sda /dev/sdb')
+
+    @staticmethod
+    def check_kwargs_warn_until_devices(device_kwargs):
+        def check_args(kwargs, version):
+            assert kwargs == device_kwargs
+            assert version == 'Beryllium'
+        parted.salt.utils.kwargs_warn_until.side_effect = check_args
 
     @patch('salt.utils.kwargs_warn_until')
     def test_probe_w_device_kwarg(self, *args, **kwargs):
-        parted.probe(device="/dev/sda")
-        parted.salt.utils.kwargs_warn_until.called_once_with({'device': '/dev/sda'})
-        self.cmdrun.called_once_with(['partprobe', '/dev/sda'], python_shell=False)
+        device_kwargs = {'device': '/dev/sda'}
+        parted.probe(**device_kwargs)
+        self.check_kwargs_warn_until_devices(device_kwargs)
+        self.cmdrun.assert_called_once_with('partprobe -- /dev/sda')
 
     @patch('salt.utils.kwargs_warn_until')
     def test_probe_w_device_kwarg_and_arg(self, *args, **kwargs):
-        '''device arg is concatanated with possitional args'''
-        parted.probe("/dev/sdb", device="/dev/sda")
-        parted.salt.utils.kwargs_warn_until.called_once_with({'device': '/dev/sda'})
-        self.cmdrun.called_once_with(
-            ['partprobe', '/dev/sda', '/dev/sdb'], python_shell=False)
+        '''device arg is concatenated with positional args'''
+        device_kwargs = {'device': '/dev/sda'}
+        parted.probe("/dev/sdb", **device_kwargs)
+        self.check_kwargs_warn_until_devices(device_kwargs)
+        self.cmdrun.assert_called_once_with('partprobe -- /dev/sda /dev/sdb')
 
     @patch('salt.utils.kwargs_warn_until')
     def test_probe_w_extra_kwarg(self, *args, **kwargs):
-        self.assertRaises(TypeError, parted.probe, foo="bar")
-        parted.salt.utils.kwargs_warn_until.called_once_with({'device': '/dev/sda'})
+        device_kwargs = {'foo': 'bar'}
+        self.assertRaises(TypeError, parted.probe, **device_kwargs)
+        self.check_kwargs_warn_until_devices(device_kwargs)
         self.assertFalse(self.cmdrun.called)
 
     # Test part_list function
@@ -113,12 +119,11 @@ class PartedTestCase(TestCase):
     def test_part_list(self, *args, **kwargs):
         '''Function should call new function and raise deprecation warning'''
         parted.part_list("foo", "bar")
-        parted.list_.called_once_with("foo", "bar")
-        parted.salt.utils.warn_until.called_once_with(
+        parted.list_.assert_called_once_with("foo", "bar")
+        parted.salt.utils.warn_until.assert_called_once_with(
             'Beryllium',
             '''The \'part_list\' function has been deprecated in favor of
-            \'list\'. Please update your code and configs to reflect
-            this.''')
+        \'list_\'. Please update your code and configs to reflect this.''')
 
     # Test _list function
 
@@ -165,28 +170,14 @@ class PartedTestCase(TestCase):
     def test_list__empty_cmd_output(self):
         self.cmdrun.return_value = self.parted_print_output('empty')
         output = parted.list_('/dev/sda')
-        self.cmdrun.called_once_with(
-            ['parted',
-             '-m',
-             '-s',
-             '/dev/sda'
-             'print']
-        )
+        self.cmdrun.assert_called_once_with('parted -m -s /dev/sda print')
         expected = {'info': {}, 'partitions': {}}
         self.assertEqual(output, expected)
 
     def test_list__valid_unit_empty_cmd_output(self):
         self.cmdrun.return_value = self.parted_print_output('empty')
         output = parted.list_('/dev/sda', unit='s')
-        self.cmdrun.called_once_with(
-            ['parted',
-             '-m',
-             '-s',
-             '/dev/sda'
-             'unit',
-             's',
-             'print']
-        )
+        self.cmdrun.assert_called_once_with('parted -m -s /dev/sda unit s print')
         expected = {'info': {}, 'partitions': {}}
         self.assertEqual(output, expected)
 
@@ -198,46 +189,22 @@ class PartedTestCase(TestCase):
     def test_list__bad_header(self):
         self.cmdrun.return_value = self.parted_print_output('bad_header')
         self.assertRaises(CommandExecutionError, parted.list_, '/dev/sda')
-        self.cmdrun.called_once_with(
-            ['parted',
-             '-m',
-             '-s',
-             '/dev/sda'
-             'print']
-        )
+        self.cmdrun.assert_called_once_with('parted -m -s /dev/sda print')
 
     def test_list__bad_label_info(self):
         self.cmdrun.return_value = self.parted_print_output('bad_label_info')
         self.assertRaises(CommandExecutionError, parted.list_, '/dev/sda')
-        self.cmdrun.called_once_with(
-            ['parted',
-             '-m',
-             '-s',
-             '/dev/sda'
-             'print']
-        )
+        self.cmdrun.assert_called_once_with('parted -m -s /dev/sda print')
 
     def test_list__bad_partition(self):
         self.cmdrun.return_value = self.parted_print_output('bad_partition')
         self.assertRaises(CommandExecutionError, parted.list_, '/dev/sda')
-        self.cmdrun.called_once_with(
-            ['parted',
-             '-m',
-             '-s',
-             '/dev/sda'
-             'print']
-        )
+        self.cmdrun.assert_called_once_with('parted -m -s /dev/sda print')
 
     def test_list__valid_cmd_output(self):
         self.cmdrun.return_value = self.parted_print_output('valid')
         output = parted.list_('/dev/sda')
-        self.cmdrun.called_once_with(
-            ['parted',
-             '-m',
-             '-s',
-             '/dev/sda'
-             'print']
-        )
+        self.cmdrun.assert_called_once_with('parted -m -s /dev/sda print')
         expected = {
             'info': {
                 'logical sector': '512',
@@ -274,15 +241,7 @@ class PartedTestCase(TestCase):
     def test_list__valid_unit_valid_cmd_output(self):
         self.cmdrun.return_value = self.parted_print_output('valid')
         output = parted.list_('/dev/sda', unit='s')
-        self.cmdrun.called_once_with(
-            ['parted',
-             '-m',
-             '-s',
-             '/dev/sda'
-             'unit',
-             's',
-             'print']
-        )
+        self.cmdrun.assert_called_once_with('parted -m -s /dev/sda unit s print')
         expected = {
             'info': {
                 'logical sector': '512',
@@ -319,13 +278,7 @@ class PartedTestCase(TestCase):
     def test_list__valid_legacy_cmd_output(self):
         self.cmdrun.return_value = self.parted_print_output('valid_legacy')
         output = parted.list_('/dev/sda')
-        self.cmdrun.called_once_with(
-            ['parted',
-             '-m',
-             '-s',
-             '/dev/sda'
-             'print']
-        )
+        self.cmdrun.assert_called_once_with('parted -m -s /dev/sda print')
         expected = {
             'info': {
                 'logical sector': '512',
@@ -361,15 +314,7 @@ class PartedTestCase(TestCase):
     def test_list__valid_unit_valid_legacy_cmd_output(self):
         self.cmdrun.return_value = self.parted_print_output('valid_legacy')
         output = parted.list_('/dev/sda', unit='s')
-        self.cmdrun.called_once_with(
-            ['parted',
-             '-m',
-             '-s',
-             '/dev/sda'
-             'unit',
-             's',
-             'print']
-        )
+        self.cmdrun.assert_called_once_with('parted -m -s /dev/sda unit s print')
         expected = {
             'info': {
                 'logical sector': '512',

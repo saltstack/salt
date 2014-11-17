@@ -19,6 +19,16 @@ major updates in Salt Cloud and the merging of Salt API into the main project.
     When the **salt-master** package is upgraded, these components will be
     removed, and they will need to be manually installed.
 
+.. important::
+
+    Compound/pillar matching have been temporarily disabled for the ``mine``
+    and ``publish`` modules for this release due to the possibility of
+    inferring pillar data using pillar glob matching. A proper fix is now in
+    the 2014.7 branch and scheduled for the  2014.7.1 release, and compound
+    matching and non-globbing pillar matching will be re-enabled at that point.
+
+    Compound and pillar matching for normal salt commands are unaffected.
+
 
 New Transport!
 ==============
@@ -289,6 +299,69 @@ Chef Execution Module
 ---------------------
 
 Managing Chef with Salt just got even easier!
+
+salt-api Project Merge
+----------------------
+
+The ``salt-api`` project has been merged into Salt core and is now available as
+part of the regular ``salt-master`` package install. No API changes were made,
+the :command:`salt-api` script and init scripts remain intact.
+
+``salt-api`` has always provided Yet Another Pluggable Interface to Salt (TM)
+in the form of "netapi" modules. These are modules that bind to a port and
+start a service. Like many of Salt's other module types, netapi modules often
+have library and configuration dependencies. See the documentaiton for each
+module for instructions.
+
+.. seealso:: :ref:`The full list of netapi modules. <all-netapi-modules>`
+
+Synchronous and Asynchronous Execution of Runner and Wheel Modules
+******************************************************************
+
+:py:class:`salt.runner.RunnerClient` and :py:class:`salt.wheel.WheelClient`
+have both gained complimentary ``cmd_sync`` and ``cmd_async`` methods allowing
+for synchronous and asynchronous execution of any Runner or Wheel module
+function, all protected using Salt's :ref:`external authentication <acl-eauth>`
+system. ``salt-api`` benefits from this addition as well.
+
+``rest_cherrypy`` Additions
+***************************
+
+The :py:mod:`rest_cherrypy <salt.netapi.rest_cherrypy.app>` netapi module
+provides the main REST API for Salt.
+
+Web Hooks
+~~~~~~~~~
+
+This release of course includes the Web Hook additions from the most recent
+``salt-api`` release, which allows external services to signal actions within a
+Salt infrastructure. External services such as Amazon SNS, Travis-CI, or
+GitHub, as well as internal services that cannot or should not run a Salt
+minion daemon can be used as first-class components in Salt's rich
+orchestration capabilities.
+
+The raw HTTP request body is now available in the event data. This is sometimes
+required information for checking an HMAC signature in order to verify a HTTP
+request. As an example, Amazon or GitHub requests are signed this way.
+
+Generating and Accepting Minion Keys
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The :py:method:`/key <salt.netapi.rest_cherrypy.app.Keys.POST>` convenience URL
+generates a public and private key for a minion, automatically pre-accepts the
+public key on the Salt Master, and returns both keys as a tarball for download.
+
+This allows for easily bootstrapping the key on a new minion with a single HTTP
+call, such as with a Kickstart script, all using regular shell tools.
+
+.. code-block:: bash
+
+    curl -sS http://salt-api.example.com:8000/keys \
+            -d mid=jerry \
+            -d username=kickstart \
+            -d password=kickstart \
+            -d eauth=pam \
+            -o jerry-salt-keys.tar
 
 Fileserver Backend Enhancements
 -------------------------------

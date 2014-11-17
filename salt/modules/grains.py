@@ -5,6 +5,7 @@ Return/control aspects of the grains data
 
 # Import python libs
 from __future__ import print_function
+from __future__ import absolute_import
 import collections
 import copy
 import math
@@ -19,6 +20,8 @@ import salt.utils
 import salt.utils.dictupdate
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
+from functools import reduce
+from six.moves import range
 
 __proxyenabled__ = ['*']
 
@@ -409,23 +412,31 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default', bas
         Python version from the default Python version provided by the OS
         (e.g., ``python26-mysql`` instead of ``python-mysql``).
     :param default: default lookup_dict's key used if the grain does not exists
-         or if the grain value has no match on lookup_dict.
-    :param base: A dictionary to use as a base set of defaults.  The grain-selected
-        ``lookup_dict`` is merged over this and then finally the ``merge``
-        dictionary is merged.
+        or if the grain value has no match on lookup_dict.  If unspecified
+        the value is "default".
 
-         .. versionadded:: 2014.1.0
+        .. versionadded:: 2014.1.0
+
+    :param base: A lookup_dict key to use for a base dictionary.  The
+        grain-selected ``lookup_dict`` is merged over this and then finally
+        the ``merge`` dictionary is merged.  This allows common values for
+        each case to be collected in the base and overridden by the grain
+        selection dictionary and the merge dictionary.  Default is unset.
+
+        .. versionadded:: Lithium
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' grains.filter_by '{Debian: Debheads rule, RedHat: I love my hat}'
-        # this one will render {D: {E: I, G: H}, J: K, L: M}
-        salt '*' grains.filter_by '{A: {B: Z}, C: {D: {E: F,G: H}}}' 'xxx' '{D: {E: I},J: K}' 'C' '{D: {E: X}, L: M}'
-        # The same with default selected as 'A' rather than 'C':
-        # {B: Z, D: {E: I}, J: K, L: M}
+        # this one will render {D: {E: I, G: H}, J: K}
+        salt '*' grains.filter_by '{A: B, C: {D: {E: F,G: H}}}' 'xxx' '{D: {E: I},J: K}' 'C'
+        # next one renders {A: {B: G}, D: J}
+        salt '*' grains.filter_by '{default: {A: {B: C}, D: E}, F: {A: {B: G}}, H: {D: I}}' 'xxx' '{D: J}' 'F' 'default'
+        # next same as above when default='H' instead of 'F' renders {A: {B: C}, D: J}
     '''
+
     ret = lookup_dict.get(
             __grains__.get(
                 grain, default),
@@ -433,14 +444,15 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default', bas
                 default, None)
             )
 
-    if base:
-        if not isinstance(base, collections.Mapping):
-            raise SaltException('filter_by base argument must be a dictionary.')
-
+    if base and base in lookup_dict:
+        base_values = lookup_dict[base]
         if ret is None:
-            ret = copy.deepcopy(base)
-        else:
-            ret = salt.utils.dictupdate.update(copy.deepcopy(base), ret)
+            ret = base_values
+
+        elif isinstance(base_values, collections.Mapping):
+            if not isinstance(ret, collections.Mapping):
+                raise SaltException('filter_by default and look-up values must both be dictionaries.')
+            ret = salt.utils.dictupdate.update(copy.deepcopy(base_values), ret)
 
     if merge:
         if not isinstance(merge, collections.Mapping):

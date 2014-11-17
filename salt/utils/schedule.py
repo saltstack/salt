@@ -158,6 +158,7 @@ dictionary, othewise it will be ignored.
             foo: bar
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -205,7 +206,7 @@ class Schedule(object):
             self.intervals = intervals
         else:
             self.intervals = {}
-        if isinstance(returners, dict):
+        if hasattr(returners, '__getitem__'):
             self.returners = returners
         else:
             self.returners = returners.loader.gen_functions()
@@ -252,10 +253,10 @@ class Schedule(object):
         # eval() already does for us and raises errors accordingly
         if not isinstance(data, dict):
             raise ValueError('Scheduled jobs have to be of type dict.')
-        if not len(data.keys()) == 1:
+        if not len(data) == 1:
             raise ValueError('You can only schedule one new job at a time.')
 
-        new_job = data.keys()[0]
+        new_job = next(data.iterkeys())
 
         if new_job in self.opts['schedule']:
             log.info('Updating job settings for scheduled '
@@ -465,8 +466,7 @@ class Schedule(object):
                     elif isinstance(returner, list):
                         rets.extend(returner)
                 # simple de-duplication with order retained
-                rets = OrderedDict.fromkeys(rets).keys()
-                for returner in rets:
+                for returner in OrderedDict.fromkeys(rets):
                     ret_str = '{0}.returner'.format(returner)
                     if ret_str in self.returners:
                         ret['success'] = True

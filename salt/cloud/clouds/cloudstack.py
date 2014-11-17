@@ -23,6 +23,8 @@ Use of this module requires the ``apikey``, ``secretkey``, ``host`` and
 '''
 # pylint: disable=E0102
 
+from __future__ import absolute_import
+
 # Import python libs
 import copy
 import pprint
@@ -45,6 +47,7 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 # Redirect CloudStack functions to this module namespace
+get_node = namespaced_function(get_node, globals())
 get_size = namespaced_function(get_size, globals())
 get_image = namespaced_function(get_image, globals())
 avail_locations = namespaced_function(avail_locations, globals())
@@ -195,6 +198,24 @@ def get_networkid(vm_):
         return False
 
 
+def get_project(conn, vm_):
+    '''
+    Return the project to use.
+    '''
+    projects = conn.ex_list_projects()
+    projid = config.get_cloud_config_value('projectid', vm_, __opts__)
+
+    if not projid:
+        return False
+
+    for project in projects:
+        if str(projid) in (str(project.id), str(project.name)):
+            return project
+
+    log.warning("Couldn't find project {0} in projects".format(projid))
+    return False
+
+
 def create(vm_):
     '''
     Create a single VM from a data dict
@@ -230,6 +251,9 @@ def create(vm_):
                                                    kwargs['networkids'],
                                                    None, None),
                              )
+
+    if get_project(conn, vm_) is not False:
+        kwargs['project'] = get_project(conn, vm_)
 
     salt.utils.cloud.fire_event(
         'event',

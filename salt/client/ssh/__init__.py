@@ -4,6 +4,7 @@ Create ssh executor system
 '''
 # Import python libs
 from __future__ import print_function
+from __future__ import absolute_import
 import copy
 import getpass
 import json
@@ -17,6 +18,7 @@ import re
 import time
 import yaml
 import uuid
+from six.moves import input
 
 # Import salt libs
 import salt.client.ssh.shell
@@ -36,7 +38,7 @@ import salt.utils.atomicfile
 import salt.utils.thin
 import salt.utils.verify
 import salt.utils.network
-from salt._compat import string_types
+from six import string_types
 from salt.utils import is_windows
 
 try:
@@ -72,7 +74,7 @@ RSTR_RE = r'(?:^|\r?\n)' + RSTR + '(?:\r?\n|$)'
 #   1) Make the _thinnest_ /bin/sh shim (SSH_SH_SHIM) to find the python
 #      interpreter and get it invoked
 #   2) Once a qualified python is found start it with the SSH_PY_SHIM
-#   3) The shim is converted to a single semicolon seperated line, so
+#   3) The shim is converted to a single semicolon separated line, so
 #      some constructs are needed to keep it clean.
 
 # NOTE:
@@ -247,7 +249,7 @@ class SSH(object):
             # permission denied, attempt to auto deploy ssh key
             print(('Permission denied for host {0}, do you want to deploy '
                    'the salt-ssh key? (password required):').format(host))
-            deploy = raw_input('[Y/n] ')
+            deploy = input('[Y/n] ')
             if deploy.startswith(('n', 'N')):
                 return ret
             target['passwd'] = getpass.getpass(
@@ -441,7 +443,7 @@ class SSH(object):
         sret = {}
         outputter = self.opts.get('output', 'nested')
         for ret in self.handle_ssh():
-            host = ret.keys()[0]
+            host = next(ret.iterkeys())
             self.cache_job(jid, host, ret[host])
             ret = self.key_deploy(host, ret)
             if not isinstance(ret[host], dict):
@@ -734,7 +736,7 @@ class Single(object):
         except TypeError as exc:
             result = 'TypeError encountered executing {0}: {1}'.format(self.fun, exc)
         except Exception as exc:
-            result = 'An Exception occured while executing {0}: {1}'.format(self.fun, exc)
+            result = 'An Exception occurred while executing {0}: {1}'.format(self.fun, exc)
         # Mimic the json data-structure that "salt-call --local" will
         # emit (as seen in ssh_py_shim.py)
         if isinstance(result, dict) and 'local' in result:

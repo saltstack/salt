@@ -4,6 +4,7 @@ Swift utility class
 ===================
 Author: Anthony Stanton <anthony.stanton@gmail.com>
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -48,7 +49,7 @@ def _sanitize(kwargs):
         'insecure', 'ssl_compression'
     )
     ret = {}
-    for var in kwargs.keys():
+    for var in kwargs:
         if var in variables:
             ret[var] = kwargs[var]
 
@@ -82,7 +83,7 @@ class SaltSwift(object):
         self.kwargs['tenant_name'] = tenant_name
         self.kwargs['authurl'] = auth_url
         self.kwargs['auth_version'] = auth_version
-        if 'key' not in self.kwargs.keys():
+        if 'key' not in self.kwargs:
             self.kwargs['key'] = password
 
         self.kwargs = _sanitize(self.kwargs)

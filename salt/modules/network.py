@@ -4,6 +4,7 @@ Module for gathering and managing network information
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import datetime
 import hashlib
 import logging
@@ -16,6 +17,7 @@ import salt.utils
 import salt.utils.network
 from salt.exceptions import CommandExecutionError
 import salt.utils.validate.net
+from six.moves import range
 
 
 log = logging.getLogger(__name__)
@@ -248,17 +250,148 @@ def _netstat_bsd():
         except KeyError:
             continue
         # Get the pid-to-ppid mappings for this connection
-        conn_ppid = dict((x, y) for x, y in ppid.iteritems() if x in ptr)
+        conn_ppid = dict((x, y) for x, y in ppid.items() if x in ptr)
         try:
             # Master pid for this connection will be the pid whose ppid isn't
             # in the subset dict we created above
             master_pid = next(iter(
-                x for x, y in conn_ppid.iteritems() if y not in ptr
+                x for x, y in conn_ppid.items() if y not in ptr
             ))
         except StopIteration:
             continue
         ret[idx]['user'] = ptr[master_pid]['user']
         ret[idx]['program'] = '/'.join((master_pid, ptr[master_pid]['cmd']))
+    return ret
+
+
+def _netstat_route_linux():
+    '''
+    Return netstat routing information for Linux distros
+    '''
+    ret = []
+    cmd = 'netstat -A inet -rn | tail -n+3'
+    out = __salt__['cmd.run'](cmd)
+    for line in out.splitlines():
+        comps = line.split()
+        ret.append({
+            'addr_family': 'inet',
+            'destination': comps[0],
+            'gateway': comps[1],
+            'netmask': comps[2],
+            'flags': comps[3],
+            'interface': comps[7]})
+    cmd = 'netstat -A inet6 -rn | tail -n+3'
+    out = __salt__['cmd.run'](cmd)
+    for line in out.splitlines():
+        comps = line.split()
+        if len(comps) == 6:
+            ret.append({
+                'addr_family': 'inet6',
+                'destination': comps[0],
+                'gateway': comps[1],
+                'netmask': '',
+                'flags': comps[3],
+                'interface': comps[5]})
+        elif len(comps) == 7:
+            ret.append({
+                'addr_family': 'inet6',
+                'destination': comps[0],
+                'gateway': comps[1],
+                'netmask': '',
+                'flags': comps[3],
+                'interface': comps[6]})
+        else:
+            continue
+    return ret
+
+
+def _netstat_route_freebsd():
+    '''
+    Return netstat routing information for FreeBSD and OS X
+    '''
+    ret = []
+    cmd = 'netstat -f inet -rn | tail -n+5'
+    out = __salt__['cmd.run'](cmd)
+    for line in out.splitlines():
+        comps = line.split()
+        ret.append({
+            'addr_family': 'inet',
+            'destination': comps[0],
+            'gateway': comps[1],
+            'netmask': comps[2],
+            'flags': comps[3],
+            'interface': comps[5]})
+    cmd = 'netstat -f inet6 -rn | tail -n+5'
+    out = __salt__['cmd.run'](cmd)
+    for line in out.splitlines():
+        comps = line.split()
+        ret.append({
+            'addr_family': 'inet6',
+            'destination': comps[0],
+            'gateway': comps[1],
+            'netmask': '',
+            'flags': comps[2],
+            'interface': comps[3]})
+    return ret
+
+
+def _netstat_route_netbsd():
+    '''
+    Return netstat routing information for NetBSD
+    '''
+    ret = []
+    cmd = 'netstat -f inet -rn | tail -n+5'
+    out = __salt__['cmd.run'](cmd)
+    for line in out.splitlines():
+        comps = line.split()
+        ret.append({
+            'addr_family': 'inet',
+            'destination': comps[0],
+            'gateway': comps[1],
+            'netmask': '',
+            'flags': comps[3],
+            'interface': comps[6]})
+    cmd = 'netstat -f inet6 -rn | tail -n+5'
+    out = __salt__['cmd.run'](cmd)
+    for line in out.splitlines():
+        comps = line.split()
+        ret.append({
+            'addr_family': 'inet6',
+            'destination': comps[0],
+            'gateway': comps[1],
+            'netmask': '',
+            'flags': comps[3],
+            'interface': comps[6]})
+    return ret
+
+
+def _netstat_route_openbsd():
+    '''
+    Return netstat routing information for OpenBSD
+    '''
+    ret = []
+    cmd = 'netstat -f inet -rn | tail -n+5'
+    out = __salt__['cmd.run'](cmd)
+    for line in out.splitlines():
+        comps = line.split()
+        ret.append({
+            'addr_family': 'inet',
+            'destination': comps[0],
+            'gateway': comps[1],
+            'netmask': '',
+            'flags': comps[2],
+            'interface': comps[7]})
+    cmd = 'netstat -f inet6 -rn | tail -n+5'
+    out = __salt__['cmd.run'](cmd)
+    for line in out.splitlines():
+        comps = line.split()
+        ret.append({
+            'addr_family': 'inet6',
+            'destination': comps[0],
+            'gateway': comps[1],
+            'netmask': '',
+            'flags': comps[2],
+            'interface': comps[7]})
     return ret
 
 
@@ -727,7 +860,7 @@ def connect(host, port=None, **kwargs):
         else:
             s.connect(_address)
             s.shutdown(2)
-    except Exception, e:
+    except Exception as e:
         ret['result'] = False
         try:
             errno, errtxt = e
@@ -831,7 +964,6 @@ def _mod_bufsize_linux(iface, *args, **kwargs):
     if not eargs:
         return ret
     cmd += eargs
-    print cmd
     out = __salt__['cmd.run'](cmd)
     if out:
         ret['comment'] = out
@@ -854,3 +986,68 @@ def mod_bufsize(iface, *args, **kwargs):
             return _mod_bufsize_linux(iface, *args, **kwargs)
 
     return False
+
+
+def routes(family=None):
+    '''
+    Return currently configured routes from routing table
+
+    CLI Example::
+
+        salt '*' network.routes
+    '''
+    if family != 'inet' and family != 'inet6' and family is not None:
+        raise CommandExecutionError('Invalid address family {0}'.format(family))
+
+    if __grains__['kernel'] == 'Linux':
+        routes = _netstat_route_linux()
+    elif __grains__['os'] in ['FreeBSD', 'MacOS', 'Darwin']:
+        routes = _netstat_route_freebsd()
+    elif __grains__['os'] in ['NetBSD']:
+        routes = _netstat_route_netbsd()
+    elif __grains__['os'] in ['OpenBSD']:
+        routes = _netstat_route_openbsd()
+    else:
+        raise CommandExecutionError('Not yet supported on this platform')
+
+    if not family:
+        return routes
+    else:
+        ret = [route for route in routes if route['addr_family'] == family]
+        return ret
+
+
+def default_route(family=None):
+    '''
+    Return default route(s) from routing table
+
+    CLI Example::
+
+        salt '*' network.default_route
+    '''
+
+    if family != 'inet' and family != 'inet6' and family is not None:
+        raise CommandExecutionError('Invalid address family {0}'.format(family))
+
+    _routes = routes()
+    default_route = {}
+    if __grains__['kernel'] == 'Linux':
+        default_route['inet'] = ['0.0.0.0', 'default']
+        default_route['inet6'] = ['::/0', 'default']
+    elif __grains__['os'] in ['FreeBSD', 'NetBSD', 'OpenBSD', 'MacOS', 'Darwin']:
+        default_route['inet'] = ['default']
+        default_route['inet6'] = ['default']
+    else:
+        raise CommandExecutionError('Not yet supported on this platform')
+
+    ret = []
+    for route in _routes:
+        if family:
+            if route['destination'] in default_route[family]:
+                ret.append(route)
+        else:
+            if route['destination'] in default_route['inet'] or \
+               route['destination'] in default_route['inet6']:
+                ret.append(route)
+
+    return ret

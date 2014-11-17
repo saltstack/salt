@@ -20,13 +20,14 @@ The data structure needs to be:
 #
 # Import python libs
 from __future__ import print_function
+from __future__ import absolute_import
 import os
 import time
 import copy
 import logging
 import errno
 from datetime import datetime
-from salt._compat import string_types
+from six import string_types
 
 # Import salt libs
 import salt.config
@@ -42,6 +43,7 @@ import salt.syspaths as syspaths
 from salt.exceptions import (
     EauthAuthenticationError, SaltInvocationError, SaltReqTimeoutError
 )
+import six
 
 # Import third party libs
 try:
@@ -220,7 +222,7 @@ class LocalClient(object):
             raise EauthAuthenticationError(
                 'Failed to authenticate!  This is most likely because this '
                 'user is not permitted to execute commands, but there is a '
-                'small possibility that a disk error ocurred (check '
+                'small possibility that a disk error occurred (check '
                 'disk/inode usage).'
             )
 
@@ -768,7 +770,7 @@ class LocalClient(object):
         # get the info from the cache
         ret = self.get_cache_returns(jid)
         if ret != {}:
-            found.update(set(ret.keys()))
+            found.update(set(ret))
             yield ret
 
         # if you have all the returns, stop
@@ -778,7 +780,7 @@ class LocalClient(object):
         # otherwise, get them from the event system
         for event in event_iter:
             if event != {}:
-                found.update(set(event.keys()))
+                found.update(set(event))
                 yield event
             if len(found.intersection(minions)) >= len(minions):
                 raise StopIteration()
@@ -795,11 +797,12 @@ class LocalClient(object):
         '''
         if event is None:
             event = self.event
+        jid_tag = 'salt/job/{0}'.format(jid)
         while True:
             if HAS_ZMQ:
                 try:
                     raw = event.get_event_noblock()
-                    if raw and raw.get('tag', '').startswith(jid):
+                    if raw and raw.get('tag', '').startswith(jid_tag):
                         yield raw
                     else:
                         yield None
@@ -810,7 +813,7 @@ class LocalClient(object):
                         raise
             else:
                 raw = event.get_event_noblock()
-                if raw and raw.get('tag', '').startswith(jid):
+                if raw and raw.get('tag', '').startswith(jid_tag):
                     yield raw
                 else:
                     yield None
@@ -838,14 +841,13 @@ class LocalClient(object):
         if timeout is None:
             timeout = self.opts['timeout']
         start = int(time.time())
-        timeout_at = start + timeout
 
         # timeouts per minion, id_ -> timeout time
         minion_timeouts = {}
 
         found = set()
         # Check to see if the jid is real, if not return the empty dict
-        if not self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) != {}:
+        if self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) == {}:
             log.warning('jid does not exist')
             yield {}
             # stop the iteration, since the jid is invalid
@@ -853,19 +855,19 @@ class LocalClient(object):
         # Wait for the hosts to check in
         syndic_wait = 0
         last_time = False
+        # iterator for this job's return
+        ret_iter = self.get_returns_no_block(jid)
+        # iterator for the info of this job
+        jinfo_iter = []
+        timeout_at = time.time() + timeout
+        # are there still minions running the job out there
+        # start as True so that we ping at least once
+        minions_running = True
         log.debug(
             'get_iter_returns for jid {0} sent to {1} will timeout at {2}'.format(
                 jid, minions, datetime.fromtimestamp(timeout_at).time()
             )
         )
-        # iterator for this job's return
-        ret_iter = self.get_returns_no_block(jid)
-        # iterator for the info of this job
-        jinfo_iter = []
-        jinfo_timeout = time.time() + timeout
-        # are there still minions running the job out there
-        # start as True so that we ping at least once
-        minions_running = True
         while True:
             # Process events until timeout is reached or all minions have returned
             for raw in ret_iter:
@@ -892,17 +894,10 @@ class LocalClient(object):
                     log.debug('jid {0} return from {1}'.format(jid, raw['data']['id']))
                     yield ret
 
-            # if we have all of the returns, no need for anything fancy
-            if len(found.intersection(minions)) >= len(minions):
+            # if we have all of the returns (and we aren't a syndic), no need for anything fancy
+            if len(found.intersection(minions)) >= len(minions) and not self.opts['order_masters']:
                 # All minions have returned, break out of the loop
                 log.debug('jid {0} found all minions {1}'.format(jid, found))
-                if self.opts['order_masters']:
-                    if syndic_wait < self.opts.get('syndic_wait', 1):
-                        syndic_wait += 1
-                        timeout_at = int(time.time()) + 1
-                        log.debug('jid {0} syndic_wait {1} will now timeout at {2}'.format(
-                                  jid, syndic_wait, datetime.fromtimestamp(timeout_at).time()))
-                        continue
                 break
 
             # let start the timeouts for all remaining minions
@@ -913,7 +908,7 @@ class LocalClient(object):
 
             # if the jinfo has timed out and some minions are still running the job
             # re-do the ping
-            if time.time() > jinfo_timeout and minions_running:
+            if time.time() > timeout_at and minions_running:
                 # need our own event listener, so we don't clobber the class one
                 event = salt.utils.event.get_event(
                         'master',
@@ -932,7 +927,10 @@ class LocalClient(object):
                     jinfo_iter = []
                 else:
                     jinfo_iter = self.get_returns_no_block(jinfo['jid'], event=event)
-                jinfo_timeout = time.time() + self.opts['gather_job_timeout']
+                timeout_at = time.time() + self.opts['gather_job_timeout']
+                # if you are a syndic, wait a little longer
+                if self.opts['order_masters']:
+                    timeout_at += self.opts.get('syndic_wait', 1)
 
             # check for minions that are running the job still
             for raw in jinfo_iter:
@@ -967,7 +965,7 @@ class LocalClient(object):
             now = time.time()
             # if we have finished waiting, and no minions are running the job
             # then we need to see if each minion has timedout
-            done = (now > jinfo_timeout) and not minions_running
+            done = (now > timeout_at) and not minions_running
             if done:
                 # if all minions have timeod out
                 for id_ in minions - found:
@@ -1006,7 +1004,7 @@ class LocalClient(object):
         found = set()
         ret = {}
         # Check to see if the jid is real, if not return the empty dict
-        if not self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) != {}:
+        if self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) == {}:
             log.warning('jid does not exist')
             return ret
 
@@ -1065,7 +1063,7 @@ class LocalClient(object):
                 ret[minion] = m_data
 
         # if we have all the minion returns, lets just return
-        if len(set(ret.keys()).intersection(minions)) >= len(minions):
+        if len(set(ret).intersection(minions)) >= len(minions):
             return ret
 
         # otherwise lets use the listener we created above to get the rest
@@ -1074,14 +1072,14 @@ class LocalClient(object):
             if event_ret == {}:
                 time.sleep(0.02)
                 continue
-            for minion, m_data in event_ret.iteritems():
+            for minion, m_data in six.iteritems(event_ret):
                 if minion in ret:
                     ret[minion].update(m_data)
                 else:
                     ret[minion] = m_data
 
             # are we done yet?
-            if len(set(ret.keys()).intersection(minions)) >= len(minions):
+            if len(set(ret).intersection(minions)) >= len(minions):
                 return ret
 
         # otherwise we hit the timeout, return what we have
@@ -1139,7 +1137,7 @@ class LocalClient(object):
         found = set()
         ret = {}
         # Check to see if the jid is real, if not return the empty dict
-        if not self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) != {}:
+        if self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) == {}:
             log.warning('jid does not exist')
             return ret
         # Wait for the hosts to check in
@@ -1148,7 +1146,8 @@ class LocalClient(object):
             time_left = timeout_at - int(time.time())
             # Wait 0 == forever, use a minimum of 1s
             wait = max(1, time_left)
-            raw = self.event.get_event(wait, jid)
+            jid_tag = 'salt/job/{0}'.format(jid)
+            raw = self.event.get_event(wait, jid_tag)
             if raw is not None and 'return' in raw:
                 if 'minions' in raw.get('data', {}):
                     minions.update(raw['data']['minions'])
@@ -1215,7 +1214,7 @@ class LocalClient(object):
                                          expect_minions=(verbose or show_timeout)
                                          ):
             # replace the return structure for missing minions
-            for id_, min_ret in ret.iteritems():
+            for id_, min_ret in six.iteritems(ret):
                 if min_ret.get('failed') is True:
                     if connected_minions is None:
                         connected_minions = salt.utils.minions.CkMinions(self.opts).connected_ids()
@@ -1245,7 +1244,7 @@ class LocalClient(object):
 
         found = set()
         # Check to see if the jid is real, if not return the empty dict
-        if not self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) != {}:
+        if self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) == {}:
             log.warning('jid does not exist')
             yield {}
             # stop the iteration, since the jid is invalid

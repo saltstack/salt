@@ -29,10 +29,10 @@ other custom action.
 
 # Import python libs
 from __future__ import print_function
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.loader
-import salt.output
 import salt.utils.event
 from salt.utils.event import tagify
 from salt.exceptions import SaltInvocationError
@@ -56,7 +56,6 @@ def insert(queue, items, backend='sqlite'):
     if cmd not in queue_funcs:
         raise SaltInvocationError('Function "{0}" is not available'.format(cmd))
     ret = queue_funcs[cmd](items=items, queue=queue)
-    salt.output.display_output(ret, 'nested', __opts__)
     return ret
 
 
@@ -77,7 +76,6 @@ def delete(queue, items, backend='sqlite'):
     if cmd not in queue_funcs:
         raise SaltInvocationError('Function "{0}" is not available'.format(cmd))
     ret = queue_funcs[cmd](items=items, queue=queue)
-    salt.output.display_output(ret, 'nested', __opts__)
     return ret
 
 
@@ -97,7 +95,6 @@ def list_queues(backend='sqlite'):
     if cmd not in queue_funcs:
         raise SaltInvocationError('Function "{0}" is not available'.format(cmd))
     ret = queue_funcs[cmd]()
-    salt.output.display_output(ret, 'nested', __opts__)
     return ret
 
 
@@ -117,7 +114,6 @@ def list_length(queue, backend='sqlite'):
     if cmd not in queue_funcs:
         raise SaltInvocationError('Function "{0}" is not available'.format(cmd))
     ret = queue_funcs[cmd](queue=queue)
-    salt.output.display_output(ret, 'nested', __opts__)
     return ret
 
 
@@ -137,7 +133,6 @@ def list_items(queue, backend='sqlite'):
     if cmd not in queue_funcs:
         raise SaltInvocationError('Function "{0}" is not available'.format(cmd))
     ret = queue_funcs[cmd](queue=queue)
-    salt.output.display_output(ret, 'nested', __opts__)
     return ret
 
 
@@ -160,7 +155,6 @@ def pop(queue, quantity=1, backend='sqlite'):
     if cmd not in queue_funcs:
         raise SaltInvocationError('Function "{0}" is not available'.format(cmd))
     ret = queue_funcs[cmd](quantity=quantity, queue=queue)
-    salt.output.display_output(ret, 'nested', __opts__)
     return ret
 
 
@@ -188,7 +182,7 @@ def process_queue(queue, quantity=1, backend='sqlite'):
         items = pop(queue=queue, quantity=quantity, backend=backend)
     except SaltInvocationError as exc:
         error_txt = '{0}'.format(exc)
-        salt.output.display_output(error_txt, 'nested', __opts__)
+        __progress__(error_txt)
         return False
 
     data = {'items': items,

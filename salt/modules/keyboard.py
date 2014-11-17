@@ -3,6 +3,7 @@
 Module for managing keyboards on supported POSIX-like systems such as
 Arch, Redhat, Debian, and Gentoo systems.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging

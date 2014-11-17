@@ -2,6 +2,7 @@
 '''
 Encapsulate the different transports available to Salt.  Currently this is only ZeroMQ.
 '''
+from __future__ import absolute_import
 import time
 import os
 import threading
@@ -13,7 +14,7 @@ import salt.utils
 import logging
 from collections import defaultdict
 
-from salt import daemons
+from salt.utils import kinds
 
 log = logging.getLogger(__name__)
 
@@ -26,8 +27,18 @@ except ImportError:
     # Don't die on missing transport libs since only one transport is required
     pass
 
-jobber_stack = None  # global that holds raet jobber LaneStack
-jobber_rxMsgs = {}  # dict of deques one for each RaetChannel
+# Module globals for default LaneStack. Because RaetChannels are created on demand
+# they do not have access to the master estate that motivated their creation
+# Also in Raet a LaneStack can be shared shared by all channels in a given jobber
+# For these reasons module globals are used to setup a shared jobber_stack as
+# well has routing information for the master that motivated the jobber
+# when a channel is not used in a jobber context then a LaneStack is created
+# on demand.
+
+jobber_stack = None  # module global that holds raet jobber LaneStack
+jobber_rxMsgs = {}  # dict of deques one for each RaetChannel for the jobber
+jobber_estate_name = None  # module global of motivating master estate name
+jobber_yard_name = None  # module global of motivating master yard name
 
 
 class Channel(object):
@@ -76,12 +87,12 @@ class RAETChannel(Channel):
     def __init__(self, opts, usage=None, **kwargs):
         self.opts = opts
         self.ttype = 'raet'
-        if usage == 'master_call':
-            self.dst = (None, None, 'local_cmd')  # runner.py master_call
-        elif usage == 'salt_call':
-            self.dst = (None, None, 'remote_cmd')  # salt_call caller
-        else:  # everything else minion
-            self.dst = (None, None, 'remote_cmd')  # normal use case minion to master
+        if usage == 'master_call':  # runner.py master_call
+            self.dst = (None, None, 'local_cmd')
+        else:  # everything else minion to master including salt-call
+            self.dst = (jobber_estate_name or None,
+                        jobber_yard_name or None,
+                        'remote_cmd')
         self.stack = None
 
     def _setup_stack(self):
@@ -97,7 +108,7 @@ class RAETChannel(Channel):
             raise ValueError(emsg)
 
         kind = self.opts.get('__role')  # application kind 'master', 'minion', etc
-        if kind not in daemons.APPL_KINDS:
+        if kind not in kinds.APPL_KINDS:
             emsg = ("Invalid application kind = '{0}' for RAETChannel.".format(kind))
             log.error(emsg + "\n")
             raise ValueError(emsg)
@@ -222,7 +233,6 @@ class ZeroMQChannel(Channel):
         # crypt defaults to 'aes'
         self.crypt = kwargs.get('crypt', 'aes')
 
-        self.serial = salt.payload.Serial(opts)
         if self.crypt != 'clear':
             if 'auth' in kwargs:
                 self.auth = kwargs['auth']

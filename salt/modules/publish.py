@@ -2,6 +2,7 @@
 '''
 Publish a command from a minion to a target
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import time
@@ -95,7 +96,7 @@ def _publish(
                     'tok': tok,
                     'jid': peer_data['jid']}
             ret = sreq.send(load)
-            returned_minions = ret.keys()
+            returned_minions = list(ret.keys())
             if returned_minions >= matched_minions:
                 if form == 'clean':
                     cret = {}
@@ -145,6 +146,9 @@ def publish(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
     - ipcidr
     - range
     - compound
+
+    Note that for pillar matches must be exact, both in the pillar matcher
+    and the compound matcher. No globbing is supported.
 
     The arguments sent to the minion publish function are separated with
     commas. This means that for a minion executing a command with multiple

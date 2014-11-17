@@ -3,6 +3,8 @@
 This module contains the function calls to execute command line scripts
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 from __future__ import print_function
 import os
@@ -175,7 +177,7 @@ def salt_key():
     try:
         client = salt.cli.SaltKey()
         client.run()
-    except KeyboardInterrupt, err:
+    except KeyboardInterrupt as err:
         trace = traceback.format_exc()
         try:
             hardcrash = client.options.hard_crash
@@ -196,7 +198,7 @@ def salt_cp():
     try:
         client = salt.cli.SaltCP()
         client.run()
-    except KeyboardInterrupt, err:
+    except KeyboardInterrupt as err:
         trace = traceback.format_exc()
         try:
             hardcrash = client.options.hard_crash
@@ -219,7 +221,7 @@ def salt_call():
     try:
         client = salt.cli.SaltCall()
         client.run()
-    except KeyboardInterrupt, err:
+    except KeyboardInterrupt as err:
         trace = traceback.format_exc()
         try:
             hardcrash = client.options.hard_crash
@@ -241,7 +243,7 @@ def salt_run():
     try:
         client = salt.cli.SaltRun()
         client.run()
-    except KeyboardInterrupt, err:
+    except KeyboardInterrupt as err:
         trace = traceback.format_exc()
         try:
             hardcrash = client.options.hard_crash
@@ -263,7 +265,7 @@ def salt_ssh():
     try:
         client = salt.cli.SaltSSH()
         client.run()
-    except KeyboardInterrupt, err:
+    except KeyboardInterrupt as err:
         trace = traceback.format_exc()
         try:
             hardcrash = client.options.hard_crash
@@ -306,7 +308,7 @@ def salt_cloud():
     try:
         client = salt.cloud.cli.SaltCloud()
         client.run()
-    except KeyboardInterrupt, err:
+    except KeyboardInterrupt as err:
         trace = traceback.format_exc()
         try:
             hardcrash = client.options.hard_crash
@@ -322,7 +324,7 @@ def salt_api():
     '''
     The main function for salt-api
     '''
-    sapi = salt.cli.SaltAPI()
+    sapi = salt.cli.SaltAPI()  # pylint: disable=E1120
     sapi.run()
 
 
@@ -337,7 +339,7 @@ def salt_main():
     try:
         client = salt.cli.SaltCMD()
         client.run()
-    except KeyboardInterrupt, err:
+    except KeyboardInterrupt as err:
         trace = traceback.format_exc()
         try:
             hardcrash = client.options.hard_crash

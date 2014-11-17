@@ -2,6 +2,7 @@
 '''
 Control the state system on the minion
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -19,7 +20,7 @@ import salt.config
 import salt.utils
 import salt.state
 import salt.payload
-from salt._compat import string_types
+from six import string_types
 from salt.exceptions import SaltInvocationError
 
 
@@ -27,6 +28,7 @@ __proxyenabled__ = ['*']
 
 __outputter__ = {
     'sls': 'highstate',
+    'sls_id': 'highstate',
     'pkg': 'highstate',
     'top': 'highstate',
     'single': 'highstate',
@@ -35,6 +37,9 @@ __outputter__ = {
     'template_str': 'highstate',
 }
 
+__func_alias__ = {
+    'apply_': 'apply'
+}
 log = logging.getLogger(__name__)
 
 
@@ -42,7 +47,7 @@ def _filter_running(runnings):
     '''
     Filter out the result: True + no changes data
     '''
-    ret = dict((tag, value) for tag, value in runnings.iteritems()
+    ret = dict((tag, value) for tag, value in runnings.items()
                if not value['result'] or value['changes'])
     return ret
 
@@ -242,6 +247,153 @@ def template_str(tem, queue=False, **kwargs):
     ret = st_.call_template_str(tem)
     _set_retcode(ret)
     return ret
+
+
+def apply_(mods=None,
+          **kwargs):
+    '''
+    Apply states! This function will call highstate or state.sls based on the
+    arguments passed in, state.apply is intended to be the main gateway for
+    all state executions.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.apply
+        salt '*' state.apply test
+        salt '*' state.apply test,pkgs
+    '''
+    if mods:
+        return sls(mods, **kwargs)
+    return highstate(**kwargs)
+
+
+def request(mods=None,
+            **kwargs):
+    '''
+    Request that the local admin execute a state run via
+    `salt-callstate.apply_request`
+    All arguments match state.apply
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.request
+        salt '*' state.request test
+        salt '*' state.request test,pkgs
+    '''
+    kwargs['test'] = True
+    ret = apply_(mods, **kwargs)
+    notify_path = os.path.join(__opts__['cachedir'], 'req_state.p')
+    serial = salt.payload.Serial(__opts__)
+    req = check_request()
+    req.update({kwargs.get('name', 'default'): {
+            'test_run': ret,
+            'mods': mods,
+            'kwargs': kwargs
+            }
+        })
+    cumask = os.umask(0o77)
+    try:
+        if salt.utils.is_windows():
+            # Make sure cache file isn't read-only
+            __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
+        with salt.utils.fopen(notify_path, 'w+b') as fp_:
+            serial.dump(req, fp_)
+    except (IOError, OSError):
+        msg = 'Unable to write state request file {0}. Check permission.'
+        log.error(msg.format(notify_path))
+    os.umask(cumask)
+    return ret
+
+
+def check_request(name=None):
+    '''
+    Return the state request information, if any
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.check_request
+    '''
+    notify_path = os.path.join(__opts__['cachedir'], 'req_state.p')
+    serial = salt.payload.Serial(__opts__)
+    if os.path.isfile(notify_path):
+        with open(notify_path, 'rb') as fp_:
+            req = serial.load(fp_)
+        if name:
+            return req[name]
+        return req
+    return {}
+
+
+def clear_request(name=None):
+    '''
+    Clear out the state execution request without executing it
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.clear_request
+    '''
+    notify_path = os.path.join(__opts__['cachedir'], 'req_state.p')
+    serial = salt.payload.Serial(__opts__)
+    if not os.path.isfile(notify_path):
+        return True
+    if not name:
+        try:
+            os.remove(notify_path)
+        except (IOError, OSError):
+            pass
+    else:
+        req = check_request()
+        if name in req:
+            req.pop(name)
+        else:
+            return False
+        cumask = os.umask(0o77)
+        try:
+            if salt.utils.is_windows():
+                # Make sure cache file isn't read-only
+                __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
+            with salt.utils.fopen(notify_path, 'w+b') as fp_:
+                serial.dump(req, fp_)
+        except (IOError, OSError):
+            msg = 'Unable to write state request file {0}. Check permission.'
+            log.error(msg.format(notify_path))
+        os.umask(cumask)
+    return True
+
+
+def run_request(name='default', **kwargs):
+    '''
+    Execute the pending state request
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.run_request
+    '''
+    req = check_request()
+    if name not in req:
+        return {}
+    n_req = req[name]
+    if 'mods' not in n_req or 'kwargs' not in n_req:
+        return {}
+    req['kwargs'].update(kwargs)
+    if req:
+        ret = apply_(n_req['mods'], **n_req['kwargs'])
+        try:
+            os.remove(os.path.join(__opts__['cachedir'], 'req_state.p'))
+        except (IOError, OSError):
+            pass
+        return ret
+    return {}
 
 
 def highstate(test=None,
@@ -488,7 +640,7 @@ def sls(mods,
     if __salt__['config.option']('state_data', '') == 'terse' or kwargs.get('terse'):
         ret = _filter_running(ret)
     cache_file = os.path.join(__opts__['cachedir'], 'sls.p')
-    cumask = os.umask(077)
+    cumask = os.umask(0o77)
     try:
         if salt.utils.is_windows():
             # Make sure cache file isn't read-only
@@ -629,7 +781,7 @@ def show_lowstate(queue=False, **kwargs):
 def sls_id(
         id_,
         mods,
-        saltenv,
+        saltenv='base',
         test=None,
         queue=False,
         **kwargs):
@@ -655,10 +807,10 @@ def sls_id(
         opts['test'] = __opts__.get('test', None)
     st_ = salt.state.HighState(opts)
     if isinstance(mods, string_types):
-        mods = mods.split(',')
+        split_mods = mods.split(',')
     st_.push_active()
     try:
-        high_, errors = st_.render_highstate({saltenv: mods})
+        high_, errors = st_.render_highstate({saltenv: split_mods})
     finally:
         st_.pop_active()
     errors += st_.state.verify_high(high_)
@@ -666,12 +818,18 @@ def sls_id(
         __context__['retcode'] = 1
         return errors
     chunks = st_.state.compile_high_data(high_)
+    ret = {}
     for chunk in chunks:
         if chunk.get('__id__', '') == id_:
-            ret = st_.state.call_chunk(chunk, {}, chunks)
+            ret.update(st_.state.call_chunk(chunk, {}, chunks))
     # Work around Windows multiprocessing bug, set __opts__['test'] back to
     # value from before this function was run.
     __opts__['test'] = orig_test
+    if not ret:
+        raise SaltInvocationError(
+            'No matches for ID \'{0}\' found in SLS \'{1}\' within saltenv '
+            '\'{2}\''.format(id_, mods, saltenv)
+        )
     return ret
 
 

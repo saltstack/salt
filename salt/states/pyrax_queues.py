@@ -21,6 +21,7 @@ This module is greatly inspired by boto_* modules from SaltStack code source.
         pyrax_queues.absent:
             - provider: my-pyrax
 '''
+from __future__ import absolute_import
 
 import salt.utils.openstack.pyrax as suop
 
@@ -44,7 +45,7 @@ def present(name, provider):
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    is_present = __salt__['cloud.action']('queues_exists', provider=provider, name=name)[provider].values()[0]
+    is_present = list(__salt__['cloud.action']('queues_exists', provider=provider, name=name)[provider].values())[0]
 
     if not is_present:
         if __opts__['test']:
@@ -79,7 +80,7 @@ def absent(name, provider):
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    is_present = __salt__['cloud.action']('queues_exists', provider=provider, name=name)[provider].values()[0]
+    is_present = list(__salt__['cloud.action']('queues_exists', provider=provider, name=name)[provider].values())[0]
 
     if is_present:
         if __opts__['test']:

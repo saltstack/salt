@@ -6,13 +6,14 @@ in here
 '''
 
 # Import python libs
-#import sys  # Use of sys is commented out below
+from __future__ import absolute_import
 import logging
 
 # Import salt libs
 import salt.log
 import salt.crypt
 from salt.exceptions import SaltReqTimeoutError
+import six
 
 # Import third party libs
 try:
@@ -94,10 +95,9 @@ class Serial(object):
             return msgpack.loads(msg, use_list=True)
         except Exception as exc:
             log.critical('Could not deserialize msgpack message: {0}'
-                         'In an attempt to keep Salt running, returning an empty dict.'
                          'This often happens when trying to read a file not in binary mode.'
                          'Please open an issue and include the following error: {1}'.format(msg, exc))
-            return {}
+            raise
 
     def load(self, fn_):
         '''
@@ -127,7 +127,7 @@ class Serial(object):
             # list/tuple
             def odict_encoder(obj):
                 if isinstance(obj, dict):
-                    for key, value in obj.copy().iteritems():
+                    for key, value in six.iteritems(obj.copy()):
                         obj[key] = odict_encoder(value)
                     return dict(obj)
                 elif isinstance(obj, (list, tuple)):

@@ -4,6 +4,7 @@ Connection library for Amazon S3
 
 :depends: requests
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import binascii
@@ -108,7 +109,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
         string_to_sign = '{0}\n'.format(method)
 
         new_headers = []
-        for header in sorted(headers.keys()):
+        for header in sorted(headers):
             if header.lower().startswith('x-amz'):
                 log.debug(header.lower())
                 new_headers.append('{0}:{1}'.format(header.lower(),

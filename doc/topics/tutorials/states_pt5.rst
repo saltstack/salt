@@ -194,7 +194,7 @@ To execute a function, use :mod:`salt.function <salt.states.saltmod.function>`:
 Triggering a Highstate
 ~~~~~~~~~~~~~~~~~~~~~~
 
-Wheras with the OverState, a Highstate is run by simply omitting an ``sls`` or
+Whereas with the OverState, a Highstate is run by simply omitting an ``sls`` or
 ``function`` argument, with the Orchestrate Runner the Highstate must
 explicitly be requested by using ``highstate: True``:
 

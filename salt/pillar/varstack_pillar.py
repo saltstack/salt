@@ -2,6 +2,7 @@
 '''
 Use varstack data as a Pillar source
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -22,8 +23,6 @@ __virtualname__ = 'varstack'
 
 def __virtual__():
     if not HAS_VARSTACK:
-        log.error('Varstack ext_pillar is enabled in configuration but '
-                  'could not be loaded because Varstack is not installed.')
         return False
     return __virtualname__
 

@@ -3,6 +3,7 @@
 This module contains all of the routines needed to set up a master server, this
 involves preparing the three listeners and the workers needed by the master.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import fnmatch
@@ -223,7 +224,7 @@ def fileserver_update(fileserver):
 
 class AutoKey(object):
     '''
-    Impliment the methods to run auto key acceptance and rejection
+    Implement the methods to run auto key acceptance and rejection
     '''
     def __init__(self, opts):
         self.opts = opts
@@ -416,7 +417,8 @@ class RemoteFuncs(object):
                 perms,
                 load['fun'],
                 load['tgt'],
-                load.get('tgt_type', 'glob'))
+                load.get('tgt_type', 'glob'),
+                publish_validate=True)
         if not good:
             return False
         return True
@@ -502,10 +504,15 @@ class RemoteFuncs(object):
         ret = {}
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return ret
+        match_type = load.get('expr_form', 'glob')
+        if match_type.lower() == 'pillar':
+            match_type = 'pillar_exact'
+        if match_type.lower() == 'compound':
+            match_type = 'compound_pillar_exact'
         checker = salt.utils.minions.CkMinions(self.opts)
         minions = checker.check_minions(
                 load['tgt'],
-                load.get('expr_form', 'glob'),
+                match_type,
                 greedy=False
                 )
         for minion in minions:

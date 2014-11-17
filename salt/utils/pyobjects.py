@@ -5,12 +5,14 @@
 Pythonic object interface to creating state data, see the pyobjects renderer
 for more documentation.
 '''
+from __future__ import absolute_import
 import inspect
 import logging
 
 from collections import namedtuple
 
 from salt.utils.odict import OrderedDict
+import six
 
 REQUISITES = ('require', 'watch', 'use', 'require_in', 'watch_in', 'use_in')
 
@@ -57,7 +59,7 @@ class Registry(object):
     def salt_data(cls):
         states = OrderedDict([
             (id_, states_)
-            for id_, states_ in cls.states.iteritems()
+            for id_, states_ in six.iteritems(cls.states)
         ])
 
         if cls.includes:
@@ -66,7 +68,7 @@ class Registry(object):
         if cls.extends:
             states['extend'] = OrderedDict([
                 (id_, states_)
-                for id_, states_ in cls.extends.iteritems()
+                for id_, states_ in six.iteritems(cls.extends)
             ])
 
         cls.empty()
@@ -198,7 +200,7 @@ class State(object):
     This represents a single item in the state tree
 
     The id_ is the id of the state, the func is the full name of the salt
-    state (ie. file.managed). All the keyword args you pass in become the
+    state (i.e. file.managed). All the keyword args you pass in become the
     properties of your state.
     '''
 
@@ -240,7 +242,7 @@ class State(object):
         # have consistent ordering for tests
         return [
             {k: kwargs[k]}
-            for k in sorted(kwargs.iterkeys())
+            for k in sorted(six.iterkeys(kwargs))
         ]
 
     @property
@@ -282,9 +284,9 @@ class SaltObject(object):
 
         # now transform using namedtuples
         self.mods = {}
-        for mod in _mods.keys():
+        for mod in _mods:
             mod_name = '{0}Module'.format(str(mod).capitalize())
-            mod_object = namedtuple(mod_name, _mods[mod].keys())
+            mod_object = namedtuple(mod_name, _mods[mod])
 
             self.mods[mod] = mod_object(**_mods[mod])
 
@@ -360,8 +362,7 @@ def need_salt(*a, **k):
     return {}
 
 
-class Map(object):
-    __metaclass__ = MapMeta
+class Map(six.with_metaclass(MapMeta, object)):  # pylint: disable=W0232
     __salt__ = {
         'grains.filter_by': need_salt,
         'pillar.get': need_salt

@@ -18,9 +18,9 @@ for the package which provides npm (simply ``npm`` in most cases). Example:
         - require:
           - pkg: npm
 '''
+from __future__ import absolute_import
 
 # Import salt libs
-import salt.utils
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 
@@ -34,7 +34,6 @@ def __virtual__():
 def installed(name,
               pkgs=None,
               dir=None,
-              runas=None,
               user=None,
               force_reinstall=False,
               registry=None,
@@ -67,11 +66,6 @@ def installed(name,
         The target directory in which to install the package, or None for
         global installation
 
-    runas
-        The user to run NPM with
-
-        .. deprecated:: 0.17.0
-
     user
         The user to run NPM with
 
@@ -94,37 +88,13 @@ def installed(name,
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
-    salt.utils.warn_until(
-        'Lithium',
-        'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 0.17.0',
-        _dont_call_warnings=True
-    )
-    if runas:
-        # Warn users about the deprecation
-        ret.setdefault('warnings', []).append(
-            'The \'runas\' argument is being deprecated in favor of \'user\', '
-            'please update your state files.'
-        )
-    if user is not None and runas is not None:
-        # user wins over runas but let warn about the deprecation.
-        ret.setdefault('warnings', []).append(
-            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
-            '\'runas\' is being ignored in favor of \'user\'.'
-        )
-        runas = None
-    elif runas is not None:
-        # Support old runas usage
-        user = runas
-        runas = None
-
     if pkgs is not None:
         pkg_list = pkgs
     else:
         pkg_list = [name]
 
     try:
-        installed_pkgs = __salt__['npm.list'](dir=dir, runas=runas, env=env)
+        installed_pkgs = __salt__['npm.list'](dir=dir, runas=user, env=env)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = False
         ret['comment'] = 'Error looking up {0!r}: {1}'.format(name, err)
@@ -221,7 +191,6 @@ def installed(name,
 
 def removed(name,
             dir=None,
-            runas=None,
             user=None):
     '''
     Verify that the given package is not installed.
@@ -230,41 +199,12 @@ def removed(name,
         The target directory in which to install the package, or None for
         global installation
 
-    runas
-        The user to run NPM with
-
-        .. deprecated:: 0.17.0
-
     user
         The user to run NPM with
 
         .. versionadded:: 0.17.0
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
-
-    salt.utils.warn_until(
-        'Lithium',
-        'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 0.17.0',
-        _dont_call_warnings=True
-    )
-    if runas:
-        # Warn users about the deprecation
-        ret.setdefault('warnings', []).append(
-            'The \'runas\' argument is being deprecated in favor of \'user\', '
-            'please update your state files.'
-        )
-    if user is not None and runas is not None:
-        # user wins over runas but let warn about the deprecation.
-        ret.setdefault('warnings', []).append(
-            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
-            '\'runas\' is being ignored in favor of \'user\'.'
-        )
-        runas = None
-    elif runas is not None:
-        # Support old runas usage
-        user = runas
-        runas = None
 
     try:
         installed_pkgs = __salt__['npm.list'](dir=dir)
@@ -295,50 +235,18 @@ def removed(name,
 
 
 def bootstrap(name,
-              runas=None,
               user=None):
     '''
     Bootstraps a node.js application.
 
-    will execute npm install --json on the specified directory
-
-
-    runas
-        The user to run NPM with
-
-        .. deprecated:: 0.17.0
+    Will execute 'npm install --json' on the specified directory.
 
     user
         The user to run NPM with
 
         .. versionadded:: 0.17.0
-
-
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
-    salt.utils.warn_until(
-        'Lithium',
-        'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 0.17.0',
-        _dont_call_warnings=True
-    )
-    if runas:
-        # Warn users about the deprecation
-        ret.setdefault('warnings', []).append(
-            'The \'runas\' argument is being deprecated in favor of \'user\', '
-            'please update your state files.'
-        )
-    if user is not None and runas is not None:
-        # user wins over runas but let warn about the deprecation.
-        ret.setdefault('warnings', []).append(
-            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
-            '\'runas\' is being ignored in favor of \'user\'.'
-        )
-        runas = None
-    elif runas is not None:
-        # Support old runas usage
-        user = runas
-        runas = None
 
     try:
         call = __salt__['npm.install'](dir=name, runas=user, pkg=None)

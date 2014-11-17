@@ -169,7 +169,7 @@ once with
     $ salt * test.ping
 
 it may cause thousands of minions trying to return their data to the salt-master
-open port 4506. Also causing a flood of syn-flood if the master cant handle that many
+open port 4506. Also causing a flood of syn-flood if the master can't handle that many
 returns at once.
 
 This can be easily avoided with salts batch mode:

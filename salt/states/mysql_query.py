@@ -19,6 +19,7 @@ Its output may be stored in a file or in a grain.
         - query:    "SELECT * FROM table;"
         - output:   "/tmp/query_id.txt"
 '''
+from __future__ import absolute_import
 
 import sys
 import os.path
@@ -137,6 +138,7 @@ def run(name,
     elif __opts__['test']:
         ret['result'] = None
         ret['comment'] = 'Query would execute, not storing result'
+        return ret
 
     # The database is present, execute the query
     query_result = __salt__['mysql.query'](database, query, **connection_args)

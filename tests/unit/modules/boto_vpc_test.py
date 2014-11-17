@@ -4,7 +4,7 @@
 
 from mock import patch
 
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.modules.boto_vpc import _maybe_set_name_tag, _maybe_set_tags
 
 
@@ -258,12 +258,122 @@ class BotoVpcTestCase(BotoVpcTestCaseBase):
         self.assertFalse(vpc_exists)
 
     @mock_ec2
+    def test_that_when_checking_if_a_vpc_exists_by_cidr_and_a_vpc_exists_the_vpc_exists_method_returns_true(self):
+        '''
+        Tests checking vpc existence via cidr when vpc exists
+        '''
+        self._create_vpc()
+
+        vpc_exists = boto_vpc.exists(cidr=u'10.0.0.0/24', **conn_parameters)
+
+        self.assertTrue(vpc_exists)
+
+    @mock_ec2
+    @skipIf(_has_required_moto() is False, 'The moto module does not support filtering vpcs.'
+                                           'Added support in spulec/moto#218. Next release should solve this issue.')
+    def test_that_when_checking_if_a_vpc_exists_by_cidr_and_a_vpc_does_not_exist_the_vpc_exists_method_returns_false(
+            self):
+        '''
+        Tests checking vpc existence via cidr when vpc does not exist
+        '''
+        self._create_vpc()  # Created to ensure that the filters are applied correctly
+
+        vpc_exists = boto_vpc.exists(cidr=u'10.10.10.10/24', **conn_parameters)
+
+        self.assertFalse(vpc_exists)
+
+    @mock_ec2
     def test_that_when_checking_if_a_vpc_exists_but_providing_no_filters_the_vpc_exists_method_raises_a_salt_invocation_error(self):
         '''
         Tests checking vpc existence when no filters are provided
         '''
-        with self.assertRaisesRegexp(SaltInvocationError, 'At least on of the following must be specified: vpc id, name or tags.'):
+        with self.assertRaisesRegexp(SaltInvocationError, 'At least on of the following must be specified: vpc id, name, cidr or tags.'):
             boto_vpc.exists(**conn_parameters)
+
+    @mock_ec2
+    def test_get_vpc_id_method_when_filtering_by_name(self):
+        '''
+        Tests getting vpc id when filtering by name
+        '''
+        vpc = self._create_vpc(name='test')
+
+        vpc_id = boto_vpc.get_id(name='test', **conn_parameters)
+
+        self.assertEqual(vpc.id, vpc_id)
+
+    @mock_ec2
+    def test_get_vpc_id_method_when_filtering_by_invalid_name(self):
+        '''
+        Tests getting vpc id when filtering by invalid name
+        '''
+        self._create_vpc(name='test')
+
+        vpc_id = boto_vpc.get_id(name='test_fake', **conn_parameters)
+
+        self.assertFalse(vpc_id)
+
+    @mock_ec2
+    def test_get_vpc_id_method_when_filtering_by_cidr(self):
+        '''
+        Tests getting vpc id when filtering by cidr
+        '''
+        vpc = self._create_vpc()
+
+        vpc_id = boto_vpc.get_id(cidr=u'10.0.0.0/24', **conn_parameters)
+
+        self.assertEqual(vpc.id, vpc_id)
+
+    @mock_ec2
+    def test_get_vpc_id_method_when_filtering_by_invalid_cidr(self):
+        '''
+        Tests getting vpc id when filtering by invalid cidr
+        '''
+        self._create_vpc()
+
+        vpc_id = boto_vpc.get_id(cidr=u'10.10.10.10/24', **conn_parameters)
+
+        self.assertFalse(vpc_id)
+
+    @mock_ec2
+    def test_get_vpc_id_method_when_filtering_by_tags(self):
+        '''
+        Tests getting vpc id when filtering by tags
+        '''
+        vpc = self._create_vpc(tags={'test': 'testvalue'})
+
+        vpc_id = boto_vpc.get_id(tags={'test': 'testvalue'}, **conn_parameters)
+
+        self.assertEqual(vpc.id, vpc_id)
+
+    @mock_ec2
+    def test_get_vpc_id_method_when_filtering_by_invalid_tags(self):
+        '''
+        Tests getting vpc id when filtering by invalid tags
+        '''
+        self._create_vpc(tags={'test': 'testvalue'})
+
+        vpc_id = boto_vpc.get_id(tags={'test': 'fake-testvalue'}, **conn_parameters)
+
+        self.assertFalse(vpc_id)
+
+    @mock_ec2
+    def test_get_vpc_id_method_when_not_providing_filters_raises_a_salt_invocation_error(self):
+        '''
+        Tests getting vpc id but providing no filters
+        '''
+        with self.assertRaisesRegexp(SaltInvocationError, 'At least on of the following must be specified: vpc id, name, cidr or tags.'):
+            boto_vpc.get_id(**conn_parameters)
+
+    @mock_ec2
+    def test_get_vpc_id_method_when_more_than_one_vpc_is_matched_raises_a_salt_command_execution_error(self):
+        '''
+        Tests getting vpc id but providing no filters
+        '''
+        vpc1 = self._create_vpc(name='vpc-test1')
+        vpc2 = self._create_vpc(name='vpc-test2')
+
+        with self.assertRaisesRegexp(CommandExecutionError, 'Found more than one VPC matching the criteria.'):
+            boto_vpc.get_id(cidr=u'10.0.0.0/24', **conn_parameters)
 
     @mock_ec2
     def test_that_when_creating_a_vpc_succeeds_the_create_vpc_method_returns_true(self):
@@ -322,6 +432,57 @@ class BotoVpcTestCase(BotoVpcTestCaseBase):
 
         self.assertFalse(vpc_deletion_result)
 
+    @mock_ec2
+    def test_that_when_describing_vpc_by_id_it_returns_the_dict_of_properties_returns_true(self):
+        '''
+        Tests describing parameters via vpc id if vpc exist
+        '''
+        vpc = self._create_vpc(name='test', tags={'test': 'testvalue'})
+
+        describe_vpc = boto_vpc.describe(vpc_id=vpc.id, **conn_parameters)
+
+        vpc_properties = dict(cidr_block=unicode(cidr_block),
+                              is_default=None,
+                              state=u'available',
+                              tags={'Name': 'test', 'test': 'testvalue'},
+                              dhcp_options_id=u'dopt-7a8b9c2d',
+                              instance_tenancy=u'default')
+
+        self.assertEqual(describe_vpc, vpc_properties)
+
+    @mock_ec2
+    def test_that_when_describing_vpc_by_id_it_returns_the_dict_of_properties_returns_false(self):
+        '''
+        Tests describing parameters via vpc id if vpc does not exist
+        '''
+        vpc = self._create_vpc(name='test', tags={'test': 'testvalue'})
+
+        describe_vpc = boto_vpc.describe(vpc_id='vpc-fake', **conn_parameters)
+
+        self.assertFalse(describe_vpc)
+
+    @mock_ec2
+    def test_that_when_describing_vpc_by_id_on_connection_error_it_returns_returns_false(self):
+        '''
+        Tests describing parameters failure
+        '''
+        vpc = self._create_vpc(name='test', tags={'test': 'testvalue'})
+
+        with patch('moto.ec2.models.VPCBackend.get_all_vpcs',
+                   side_effect=BotoServerError(400, 'Mocked error')):
+            describe_vpc = boto_vpc.describe(vpc_id=vpc.id, **conn_parameters)
+
+        self.assertFalse(describe_vpc)
+
+    @mock_ec2
+    def test_that_when_describing_vpc_but_providing_no_vpc_id_the_describe_method_raises_a_salt_invocation_error(self):
+        '''
+        Tests describing vpc  without vpc id
+        '''
+        with self.assertRaisesRegexp(SaltInvocationError,
+                                     'VPC ID needs to be specified.'):
+            boto_vpc.describe(vpc_id=None, **conn_parameters)
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
@@ -366,9 +527,9 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase):
         vpc_b = self.conn.create_vpc(cidr_block)
         subnet_a = self._create_subnet(vpc_a.id, '10.0.0.0/24')
         subnet_b = self._create_subnet(vpc_b.id, '10.0.0.0/24')
-        subnet_assocation = boto_vpc.get_subnet_association([subnet_a.id, subnet_b.id],
+        subnet_association = boto_vpc.get_subnet_association([subnet_a.id, subnet_b.id],
                                                             **conn_parameters)
-        self.assertFalse(subnet_assocation)
+        self.assertFalse(subnet_association)
 
     @mock_ec2
     def test_that_when_creating_a_subnet_succeeds_the_create_subnet_method_returns_true(self):
@@ -1160,15 +1321,15 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
     def test_that_when_associating_a_route_table_succeeds_the_associate_route_table_method_should_return_the_association_id(
             self):
         '''
-        Tests associating route table successsfully
+        Tests associating route table successfully
         '''
         vpc = self._create_vpc()
         subnet = self._create_subnet(vpc.id)
         route_table = self._create_route_table(vpc.id)
 
-        assocation_id = boto_vpc.associate_route_table(route_table.id, subnet.id, **conn_parameters)
+        association_id = boto_vpc.associate_route_table(route_table.id, subnet.id, **conn_parameters)
 
-        self.assertTrue(assocation_id)
+        self.assertTrue(association_id)
 
     @mock_ec2
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
@@ -1180,9 +1341,9 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
         vpc = self._create_vpc()
         subnet = self._create_subnet(vpc.id)
 
-        assocation_id = boto_vpc.associate_route_table('fake', subnet.id, **conn_parameters)
+        association_id = boto_vpc.associate_route_table('fake', subnet.id, **conn_parameters)
 
-        self.assertFalse(assocation_id)
+        self.assertFalse(association_id)
 
     @mock_ec2
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
@@ -1194,9 +1355,9 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
         vpc = self._create_vpc()
         route_table = self._create_route_table(vpc.id)
 
-        assocation_id = boto_vpc.associate_route_table(route_table.id, 'fake', **conn_parameters)
+        association_id = boto_vpc.associate_route_table(route_table.id, 'fake', **conn_parameters)
 
-        self.assertFalse(assocation_id)
+        self.assertFalse(association_id)
 
     @mock_ec2
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')

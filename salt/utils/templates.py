@@ -28,7 +28,8 @@ from salt.utils.jinja import SaltCacheLoader as JinjaSaltCacheLoader
 from salt.utils.jinja import SerializerExtension as JinjaSerializerExtension
 from salt.utils.odict import OrderedDict
 from salt import __path__ as saltpath
-from salt._compat import string_types
+from six import string_types
+import six
 
 log = logging.getLogger(__name__)
 
@@ -57,17 +58,6 @@ def wrap_tmpl_func(render_str):
         context = kws
         assert 'opts' in context
         assert 'saltenv' in context
-
-        if 'sls' in context:
-            slspath = context['sls'].replace('.', '/')
-            if tmplpath is not None:
-                context['tplpath'] = tmplpath
-                if not tmplpath.lower().replace('\\', '/').endswith('/init.sls'):
-                    slspath = os.path.dirname(slspath)
-            context['slsdotpath'] = slspath.replace('/', '.')
-            context['slscolonpath'] = slspath.replace('/', ':')
-            context['sls_path'] = slspath.replace('/', '_')
-            context['slspath'] = slspath
 
         if 'sls' in context:
             slspath = context['sls'].replace('.', '/')
@@ -225,7 +215,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     loader = None
     newline = False
 
-    if tmplstr and not isinstance(tmplstr, unicode):
+    if tmplstr and not isinstance(tmplstr, six.text_type):
         # http://jinja.pocoo.org/docs/api/#unicode
         tmplstr = tmplstr.decode(SLS_ENCODING)
 
@@ -234,7 +224,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
 
     if not saltenv:
         if tmplpath:
-            # ie, the template is from a file outside the state tree
+            # i.e., the template is from a file outside the state tree
             #
             # XXX: FileSystemLoader is not being properly instantiated here is
             # it? At least it ain't according to:
@@ -274,22 +264,25 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
 
     jinja_env.filters['strftime'] = salt.utils.date_format
     jinja_env.filters['sequence'] = ensure_sequence_filter
+    jinja_env.filters['yaml_dquote'] = salt.utils.yaml_dquote
+    jinja_env.filters['yaml_squote'] = salt.utils.yaml_squote
+    jinja_env.filters['yaml_encode'] = salt.utils.yaml_encode
 
     jinja_env.globals['odict'] = OrderedDict
     jinja_env.globals['show_full_context'] = show_full_context
 
     unicode_context = {}
-    for key, value in context.iteritems():
+    for key, value in six.iteritems(context):
         if not isinstance(value, string_types):
             unicode_context[key] = value
             continue
 
         # Let's try UTF-8 and fail if this still fails, that's why this is not
         # wrapped in a try/except
-        if isinstance(value, unicode):
+        if isinstance(value, six.text_type):
             unicode_context[key] = value
         else:
-            unicode_context[key] = unicode(value, 'utf-8')
+            unicode_context[key] = six.text_type(value, 'utf-8')
 
     try:
         template = jinja_env.from_string(tmplstr)
@@ -353,7 +346,7 @@ def render_mako_tmpl(tmplstr, context, tmplpath=None):
     lookup = None
     if not saltenv:
         if tmplpath:
-            # ie, the template is from a file outside the state tree
+            # i.e., the template is from a file outside the state tree
             from mako.lookup import TemplateLookup
             lookup = TemplateLookup(directories=[os.path.dirname(tmplpath)])
     else:

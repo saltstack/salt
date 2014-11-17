@@ -28,6 +28,7 @@ Augeas_ can be used to manage configuration files.
     known to resolve the issue.
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import re
@@ -201,50 +202,4 @@ def change(name, context=None, changes=None, lens=None, **kwargs):
         ret['comment'] = 'Changes have been saved'
         ret['changes'] = changes
 
-    return ret
-
-
-def setvalue(name, prefix=None, changes=None, **kwargs):
-    '''
-    .. deprecated:: 2014.7.0
-       Use :py:func:`~salt.states.augeas.change` instead.
-
-    Set a value for a specific augeas path
-    '''
-    ret = {'name': name, 'result': False, 'comment': '', 'changes': {}}
-
-    args = []
-    if not changes:
-        ret['comment'] = '\'changes\' must be specified'
-        return ret
-    else:
-        if not isinstance(changes, list):
-            ret['comment'] = '\'changes\' must be formatted as a list'
-            return ret
-        for change_ in changes:
-            if not isinstance(change_, dict) or len(change_) > 1:
-                ret['comment'] = 'Invalidly-formatted change'
-                return ret
-            key = next(iter(change_))
-            args.extend([key, change_[key]])
-
-    if prefix is not None:
-        args.insert(0, 'prefix={0}'.format(prefix))
-
-    if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = 'Calling setvalue with {0}'.format(args)
-        return ret
-
-    call = __salt__['augeas.setvalue'](*args)
-
-    ret['result'] = call['retval']
-
-    if ret['result'] is False:
-        ret['comment'] = 'Error: {0}'.format(call['error'])
-        return ret
-
-    ret['comment'] = 'Success'
-    for change_ in changes:
-        ret['changes'].update(change_)
     return ret

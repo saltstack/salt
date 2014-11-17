@@ -34,11 +34,12 @@ Connection module for Amazon VPC
 :depends: boto
 
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import logging
 from distutils.version import LooseVersion as _LooseVersion
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -52,7 +53,7 @@ try:
 except ImportError:
     HAS_BOTO = False
 
-from salt._compat import string_types
+from six import string_types
 
 
 def __virtual__():
@@ -125,7 +126,73 @@ def get_subnet_association(subnets, region=None, key=None, keyid=None,
         return False
 
 
-def exists(vpc_id=None, name=None, tags=None, region=None, key=None, keyid=None, profile=None):
+def _find_vpc(vpc_id=None, name=None, cidr=None, tags=None, conn=None):
+    '''
+    Given VPC properties, find and return matching VPC_IDs
+
+    '''
+    if not conn:
+        return False
+
+    if not vpc_id and not name and not tags and not cidr:
+        raise SaltInvocationError('At least on of the following must be specified: vpc id, name, cidr or tags.')
+
+    try:
+        filter_parameters = {'filters': {}}
+
+        if vpc_id:
+            filter_parameters['vpc_ids'] = [vpc_id]
+
+        if cidr:
+            filter_parameters['filters']['cidr'] = cidr
+
+        if name:
+            filter_parameters['filters']['tag:Name'] = name
+
+        if tags:
+            for tag_name, tag_value in tags.items():
+                filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
+
+        vpcs = conn.get_all_vpcs(**filter_parameters)
+        log.debug('The filters criteria {0} matched the following VPCs:{1}'.format(filter_parameters, vpcs))
+
+        if vpcs:
+            return [vpc.id for vpc in vpcs]
+        else:
+            return False
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return False
+
+
+def get_id(name=None, cidr=None, tags=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Given a VPC properties, return VPC ID if exist.
+
+    CLI example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.get_id myvpc
+
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return None
+
+    vpcs_id = _find_vpc(name=name, cidr=cidr, tags=tags, conn=conn)
+    if vpcs_id:
+        log.info("Matching VPC: {0}".format(" ".join(vpcs_id)))
+        if len(vpcs_id) == 1:
+            return vpcs_id[0]
+        else:
+            raise CommandExecutionError('Found more than one VPC matching the criteria.')
+    else:
+        log.warning('Could not find VPC.')
+        return None
+
+
+def exists(vpc_id=None, name=None, cidr=None, tags=None, region=None, key=None, keyid=None, profile=None):
     '''
     Given a VPC ID, check to see if the given VPC ID exists.
 
@@ -143,31 +210,12 @@ def exists(vpc_id=None, name=None, tags=None, region=None, key=None, keyid=None,
     if not conn:
         return False
 
-    if not vpc_id and not name and not tags:
-        raise SaltInvocationError('At least on of the following must be specified: vpc id, name or tags.')
-
-    try:
-        filter_parameters = {'filters': {}}
-
-        if vpc_id:
-            filter_parameters['vpc_ids'] = [vpc_id]
-
-        if name:
-            filter_parameters['filters']['tag:Name'] = name
-
-        if tags:
-            for tag_name, tag_value in tags.items():
-                filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
-        vpcs = conn.get_all_vpcs(**filter_parameters)
-        log.debug('The filters criteria {0} matched the following VPCs:{1}'.format(filter_parameters, vpcs))
-        if vpcs:
-            log.info('VPC exists.')
-            return True
-        else:
-            log.warning('VPC does not exist.')
-            return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    vpcs = _find_vpc(vpc_id=vpc_id, name=name, cidr=cidr, tags=tags, conn=conn)
+    if vpcs:
+        log.info('VPC exists.')
+        return True
+    else:
+        log.warning('VPC does not exist.')
         return False
 
 
@@ -1207,6 +1255,49 @@ def _get_conn(region, key, keyid, profile):
                   ' make boto VPC connection.')
         return None
     return conn
+
+
+def describe(vpc_id=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Given a VPC ID describe it's properties.
+
+    Returns a dictionary of interesting properties.
+    CLI example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.describe vpc_id=vpc-123456
+
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    _ret = dict(cidr_block=None,
+                is_default=None,
+                state=None,
+                tags=None,
+                dhcp_options_id=None,
+                instance_tenancy=None)
+
+    if not conn:
+        return False
+
+    if not vpc_id:
+        raise SaltInvocationError('VPC ID needs to be specified.')
+
+    try:
+        filter_parameters = {'vpc_ids': vpc_id}
+
+        vpcs = conn.get_all_vpcs(**filter_parameters)
+
+        if vpcs:
+            vpc = vpcs[0]  # Found!
+            log.debug('Found VPC: {0}'.format(vpc.id))
+            for k in _ret.keys():
+                _ret[k] = getattr(vpc, k)
+            return _ret
+
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return False
 
 
 def _create_dhcp_options(conn, domain_name=None, domain_name_servers=None, ntp_servers=None, netbios_name_servers=None,

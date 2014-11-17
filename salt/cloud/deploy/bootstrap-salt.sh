@@ -17,8 +17,7 @@
 #       CREATED: 10/15/2012 09:49:37 PM WEST
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
-
-__ScriptVersion="2014.10.21"
+__ScriptVersion="2014.10.30"
 __ScriptName="bootstrap-salt.sh"
 
 #======================================================================================================================
@@ -244,6 +243,7 @@ usage() {
   -D  Show debug output.
   -c  Temporary configuration directory
   -g  Salt repository URL. (default: git://github.com/saltstack/salt.git)
+  -G  Insteady of cloning from git://github.com/saltstack/salt.git, clone from https://github.com/saltstack/salt.git (Usually necessary on systems which have the regular git protocol port blocked, where https usualy is not)
   -k  Temporary directory holding the minion keys which will pre-seed
       the master.
   -s  Sleep time used when waiting for daemons to start, restart and when checking
@@ -279,7 +279,7 @@ EOT
 }   # ----------  end of function usage  ----------
 
 
-while getopts ":hvnDc:g:k:MSNXCPFUKIA:i:Lp:H:Z" opt
+while getopts ":hvnDc:Gg:k:MSNXCPFUKIA:i:Lp:H:Z" opt
 do
   case "${opt}" in
 
@@ -300,6 +300,13 @@ do
          fi
          ;;
     g ) _SALT_REPO_URL=$OPTARG                          ;;
+    G ) if [ "${_SALT_REPO_URL}" = "${_SALTSTACK_REPO_URL}" ]; then
+            _SALTSTACK_REPO_URL="https://github.com/saltstack/salt.git"
+            _SALT_REPO_URL=${_SALTSTACK_REPO_URL}
+        else
+            _SALTSTACK_REPO_URL="https://github.com/saltstack/salt.git"
+        fi
+         ;;
     k )  _TEMP_KEYS_DIR="$OPTARG"
          # If the configuration directory does not exist, error out
          if [ ! -d "$_TEMP_KEYS_DIR" ]; then
@@ -1131,7 +1138,7 @@ __git_clone_and_checkout() {
     local __SALT_GIT_CHECKOUT_PARENT_DIR=$(dirname "${__SALT_GIT_CHECKOUT_DIR}" 2>/dev/null)
     __SALT_GIT_CHECKOUT_PARENT_DIR="${__SALT_GIT_CHECKOUT_PARENT_DIR:-/tmp/git}"
     local __SALT_CHECKOUT_REPONAME="$(basename "${__SALT_GIT_CHECKOUT_DIR}" 2>/dev/null)"
-	__SALT_CHECKOUT_REPONAME="${__SALT_CHECKOUT_REPONAME:-salt}"
+    __SALT_CHECKOUT_REPONAME="${__SALT_CHECKOUT_REPONAME:-salt}"
     [ -d "${__SALT_GIT_CHECKOUT_PARENT_DIR}" ] || mkdir "${__SALT_GIT_CHECKOUT_PARENT_DIR}"
     cd "${__SALT_GIT_CHECKOUT_PARENT_DIR}"
     if [ -d "${__SALT_GIT_CHECKOUT_DIR}" ]; then
@@ -2430,7 +2437,7 @@ install_fedora_stable_post() {
 install_fedora_git_deps() {
     install_fedora_deps || return 1
 
-    yum install -y git || return 1
+    yum install -y git systemd-python || return 1
 
     __git_clone_and_checkout || return 1
 
@@ -3378,7 +3385,7 @@ install_arch_linux_git_deps() {
     pacman -R --noconfirm --needed python2-distribute
     pacman -Sy --noconfirm --needed git python2-crypto python2-setuptools python2-jinja \
         python2-m2crypto python2-markupsafe python2-msgpack python2-psutil python2-yaml \
-        python2-pyzmq zeromq python2-requests || return 1
+        python2-pyzmq zeromq python2-requests python2-systemd || return 1
 
     __git_clone_and_checkout || return 1
 
@@ -3971,6 +3978,12 @@ install_opensuse_git_deps() {
     zypper --non-interactive install --auto-agree-with-licenses git || return 1
 
     __git_clone_and_checkout || return 1
+
+    if [ -f "${__SALT_GIT_CHECKOUT_DIR}/pkg/suse/use-forking-daemon.patch" ]; then
+        cd "${__SALT_GIT_CHECKOUT_DIR}"
+        echowarn "Applying patch to systemd service unit file"
+        patch -p1 < pkg/suse/use-forking-daemon.patch || return 1
+    fi
 
     # Let's trigger config_salt()
     if [ "$_TEMP_CONFIG_DIR" = "null" ]; then

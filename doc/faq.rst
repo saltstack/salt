@@ -240,6 +240,9 @@ distro the minion is running, in case they differ from the example below.
 Windows
 *******
 
+For Windows machines, restarting the minion at can be accomplished by
+adding the following state:
+
 .. code-block:: yaml
 
     schedule-start:

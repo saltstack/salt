@@ -592,7 +592,7 @@ def build_scp_command(options, *arguments):
         os.path.join(options.workspace, 'jenkins_ssh_key_test'),
         # Don't add new hosts to the host key database
         '-oStrictHostKeyChecking=no',
-        # Set hosts key database path to /dev/null, ie, non-existing
+        # Set hosts key database path to /dev/null, i.e., non-existing
         '-oUserKnownHostsFile=/dev/null',
         # Don't re-use the SSH connection. Less failures.
         '-oControlPath=none',

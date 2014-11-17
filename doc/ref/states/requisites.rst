@@ -202,11 +202,11 @@ a state that has not yet been executed. The state containing the ``prereq``
 requisite is defined as the pre-requiring state. The state specified in the
 ``prereq`` statement is defined as the pre-required state.
 
-When ``prereq`` is called, the pre-required state reports if it expects to
-have any changes. It does this by running the pre-required single state as a
-test-run by enabling ``test=True``. This test-run will return a dictionary
-containing a key named "changes". (See the ``watch`` section above for
-examples of "changes" dictionaries.)
+When a ``prereq`` requisite is evaluated, the pre-required state reports if it
+expects to have any changes. It does this by running the pre-required single
+state as a test-run by enabling ``test=True``. This test-run will return a
+dictionary containing a key named "changes". (See the ``watch`` section above
+for examples of "changes" dictionaries.)
 
 If the "changes" key contains a populated dictionary, it means that the
 pre-required state expects changes to occur when the state is actually

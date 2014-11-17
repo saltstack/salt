@@ -24,6 +24,8 @@ http://www.windowsazure.com/en-us/develop/python/how-to-guides/service-managemen
 '''
 # pylint: disable=E0102
 
+from __future__ import absolute_import
+
 # Import python libs
 import time
 import copy

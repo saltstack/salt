@@ -239,7 +239,7 @@ And the following ``sls`` file will start a highstate run on the target minion:
     # /srv/reactor/startup_highstate.sls 
     reactor_highstate:
       cmd.state.highstate:
-        - tgt: {{ data['id'] }}
+        - tgt: {{ data['name'] }}
 
 Because this event will not be fired until Salt Cloud has cleaned up after
 itself, the highstate run will not step on Salt Cloud's toes. And because every

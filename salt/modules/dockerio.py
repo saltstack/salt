@@ -147,6 +147,9 @@ These are the available methods:
 - :py:func:`script_retcode<salt.modules.dockerio.script_retcode>`
 
 '''
+
+from __future__ import absolute_import
+from six.moves import range
 __docformat__ = 'restructuredtext en'
 
 import datetime
@@ -160,7 +163,7 @@ import types
 
 from salt.modules import cmdmod
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt._compat import string_types
+from six import string_types
 import salt.utils
 import salt.utils.odict
 
@@ -357,7 +360,8 @@ def get_containers(all=True,
                    since=None,
                    before=None,
                    limit=-1,
-                   host=False):
+                   host=False,
+                   inspect=False):
     '''
     Get a list of mappings representing all containers
 
@@ -370,27 +374,49 @@ def get_containers(all=True,
     host
         include the Docker host's ipv4 and ipv6 address in return, Default is ``False``
 
+    inspect
+        Get more granular information about each container by running a docker inspect
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' docker.get_containers
         salt '*' docker.get_containers host=True
+        salt '*' docker.get_containers host=True inspect=True
     '''
+
     client = _get_client()
     status = base_status.copy()
+
     if host:
         status['host'] = {}
         status['host']['interfaces'] = __salt__['network.interfaces']()
-    ret = client.containers(all=all,
-                            trunc=trunc,
-                            since=since,
-                            before=before,
-                            limit=limit)
+
+    containers = ret = client.containers(all=all,
+                                         trunc=trunc,
+                                         since=since,
+                                         before=before,
+                                         limit=limit)
+
+    # Optionally for each container get more granular information from them
+    # by inspecting the container
+    if inspect:
+        ret = []
+        for container in containers:
+            container_id = container.get('Id')
+            if container_id:
+                inspect = _get_container_infos(container_id)
+                container['detail'] = {}
+                for key, value in inspect.items():
+                    container['detail'][key] = value
+            ret.append(container)
+
     if ret:
         _valid(status, comment='All containers in out', out=ret)
     else:
         _invalid(status)
+
     return status
 
 
@@ -864,7 +890,7 @@ def start(container,
             if port_bindings is not None:
                 try:
                     bindings = {}
-                    for k, v in port_bindings.iteritems():
+                    for k, v in port_bindings.items():
                         bindings[k] = (v.get('HostIp', ''), v['HostPort'])
                 except AttributeError:
                     raise SaltInvocationError(
@@ -1728,7 +1754,7 @@ def _run_wrapper(status, container, func, cmd, *args, **kwargs):
             _invalid(status, id_=container, comment='Container is not running')
             return status
         full_cmd = ('nsenter --target {pid} --mount --uts --ipc --net --pid'
-                    ' {cmd}'.format(pid=container_pid, cmd=cmd))
+                    ' -- {cmd}'.format(pid=container_pid, cmd=cmd))
     else:
         raise NotImplementedError(
             'Unknown docker ExecutionDriver {0!r}. Or didn\'t find command'
@@ -2065,7 +2091,7 @@ def _script(status,
                         'cache_error': True}
             shutil.copyfile(fn_, path)
         in_path = os.path.join('/', os.path.relpath(path, rpath))
-        os.chmod(path, 0755)
+        os.chmod(path, 0o755)
         command = in_path + ' ' + str(args) if args else in_path
         status = run_func_(container,
                            command,

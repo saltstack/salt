@@ -2,6 +2,7 @@
 '''
 Manage ruby installations and gemsets with RVM, the Ruby Version Manager.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import re

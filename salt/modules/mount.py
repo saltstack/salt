@@ -2,6 +2,7 @@
 '''
 Salt module to manage unix mounts and the fstab file
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -10,7 +11,7 @@ import logging
 
 # Import salt libs
 import salt.utils
-from salt._compat import string_types
+from six import string_types
 from salt.utils import which as _which
 from salt.exceptions import CommandNotFoundError, CommandExecutionError
 
@@ -33,7 +34,12 @@ def __virtual__():
 
 def _list_mounts():
     ret = {}
-    for line in __salt__['cmd.run_stdout']('mount -l').split('\n'):
+    if __grains__['os'] in ['MacOS', 'Darwin']:
+        mounts = __salt__['cmd.run_stdout']('mount')
+    else:
+        mounts = __salt__['cmd.run_stdout']('mount -l')
+
+    for line in mounts.split('\n'):
         comps = re.sub(r"\s+", " ", line).split()
         ret[comps[2]] = comps[0]
     return ret
@@ -133,6 +139,19 @@ def _active_mounts_openbsd(ret):
     return ret
 
 
+def _active_mounts_darwin(ret):
+    '''
+    List active mounts on Mac OS systems
+    '''
+    for line in __salt__['cmd.run_stdout']('mount').split('\n'):
+        comps = re.sub(r"\s+", " ", line).split()
+        parens = re.findall(r'\((.*?)\)', line, re.DOTALL)[0].split(", ")
+        ret[comps[2]] = {'device': comps[0],
+                         'fstype': parens[0],
+                         'opts': parens[1:]}
+    return ret
+
+
 def active(extended=False):
     '''
     List the active mounts.
@@ -148,8 +167,10 @@ def active(extended=False):
         _active_mounts_freebsd(ret)
     elif __grains__['os'] == 'Solaris':
         _active_mounts_solaris(ret)
-    if __grains__['os'] == 'OpenBSD':
+    elif __grains__['os'] == 'OpenBSD':
         _active_mounts_openbsd(ret)
+    elif __grains__['os'] in ['MacOS', 'Darwin']:
+        _active_mounts_darwin(ret)
     else:
         if extended:
             try:
@@ -292,16 +313,10 @@ def set_fstab(
                     # Invalid entry
                     lines.append(line)
                     continue
-                if comps[1] == name or comps[0] == device:
+                if comps[1] == name and comps[0] == device:
                     # check to see if there are changes
                     # and fix them if there are any
                     present = True
-                    if comps[0] != device:
-                        change = True
-                        comps[0] = device
-                    if comps[1] != name:
-                        change = True
-                        comps[1] = name
                     if comps[2] != fstype:
                         change = True
                         comps[2] = fstype
@@ -370,7 +385,223 @@ def set_fstab(
     return 'new'
 
 
-def mount(name, device, mkmnt=False, fstype='', opts='defaults'):
+def rm_automaster(name, device, config='/etc/auto_salt'):
+    '''
+    Remove the mount point from the auto_master
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mount.rm_automaster /mnt/foo
+    '''
+    contents = automaster(config)
+    if name not in contents:
+        return True
+    # The entry is present, get rid of it
+    lines = []
+    try:
+        with salt.utils.fopen(config, 'r') as ifile:
+            for line in ifile:
+                if line.startswith('#'):
+                    # Commented
+                    lines.append(line)
+                    continue
+                if not line.strip():
+                    # Blank line
+                    lines.append(line)
+                    continue
+                comps = line.split()
+                if len(comps) != 3:
+                    # Invalid entry
+                    lines.append(line)
+                    continue
+
+                comps = line.split()
+                prefix = "/.."
+                name_chk = comps[0].replace(prefix, "")
+                device_fmt = comps[2].split(":")
+
+                if device:
+                    if name_chk == name and device_fmt[1] == device:
+                        continue
+                else:
+                    if name_chk == name:
+                        continue
+                lines.append(line)
+    except (IOError, OSError) as exc:
+        msg = "Couldn't read from {0}: {1}"
+        raise CommandExecutionError(msg.format(config, str(exc)))
+
+    try:
+        with salt.utils.fopen(config, 'w+') as ofile:
+            ofile.writelines(lines)
+    except (IOError, OSError) as exc:
+        msg = "Couldn't write to {0}: {1}"
+        raise CommandExecutionError(msg.format(config, str(exc)))
+
+    # Update automount
+    __salt__['cmd.run']('automount -cv')
+    return True
+
+
+def set_automaster(
+        name,
+        device,
+        fstype,
+        opts='',
+        config='/etc/auto_salt',
+        test=False,
+        **kwargs):
+    '''
+    Verify that this mount is represented in the auto_salt, change the mount
+    to match the data passed, or add the mount if it is not present.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mount.set_automaster /mnt/foo /dev/sdz1 ext4
+    '''
+    # Fix the opts type if it is a list
+    if isinstance(opts, list):
+        opts = ','.join(opts)
+    lines = []
+    change = False
+    present = False
+    automaster_file = "/etc/auto_master"
+
+    if not os.path.isfile(config):
+        __salt__['file.touch'](config)
+        __salt__['file.append'](automaster_file, "/-\t\t\t{0}".format(config))
+
+    name = "/..{0}".format(name)
+    device_fmt = "{0}:{1}".format(fstype, device)
+    type_opts = "-fstype={0},{1}".format(fstype, opts)
+
+    if fstype == 'smbfs':
+        device_fmt = device_fmt.replace(fstype, "")
+
+    try:
+        with salt.utils.fopen(config, 'r') as ifile:
+            for line in ifile:
+                if line.startswith('#'):
+                    # Commented
+                    lines.append(line)
+                    continue
+                if not line.strip():
+                    # Blank line
+                    lines.append(line)
+                    continue
+                comps = line.split()
+                if len(comps) != 3:
+                    # Invalid entry
+                    lines.append(line)
+                    continue
+                if comps[0] == name or comps[2] == device_fmt:
+                    # check to see if there are changes
+                    # and fix them if there are any
+                    present = True
+                    if comps[0] != name:
+                        change = True
+                        comps[0] = name
+                    if comps[1] != type_opts:
+                        change = True
+                        comps[1] = type_opts
+                    if comps[2] != device_fmt:
+                        change = True
+                        comps[2] = device_fmt
+                    if change:
+                        log.debug(
+                            'auto_master entry for mount point {0} needs to be '
+                            'updated'.format(name)
+                        )
+                        newline = (
+                            '{0}\t{1}\t{2}\n'.format(
+                                name, type_opts, device_fmt)
+                        )
+                        lines.append(newline)
+                else:
+                    lines.append(line)
+    except (IOError, OSError) as exc:
+        msg = 'Couldn\'t read from {0}: {1}'
+        raise CommandExecutionError(msg.format(config, str(exc)))
+
+    if change:
+        if not salt.utils.test_mode(test=test, **kwargs):
+            try:
+                with salt.utils.fopen(config, 'w+') as ofile:
+                    # The line was changed, commit it!
+                    ofile.writelines(lines)
+            except (IOError, OSError):
+                msg = 'File not writable {0}'
+                raise CommandExecutionError(msg.format(config))
+
+        return 'change'
+
+    if not change:
+        if present:
+            # The right entry is already here
+            return 'present'
+        else:
+            if not salt.utils.test_mode(test=test, **kwargs):
+                # The entry is new, add it to the end of the fstab
+                newline = (
+                    '{0}\t{1}\t{2}\n'.format(
+                        name, type_opts, device_fmt)
+                )
+                lines.append(newline)
+                try:
+                    with salt.utils.fopen(config, 'w+') as ofile:
+                        # The line was changed, commit it!
+                        ofile.writelines(lines)
+                except (IOError, OSError):
+                    raise CommandExecutionError(
+                        'File not writable {0}'.format(
+                            config
+                        )
+                    )
+    return 'new'
+
+
+def automaster(config='/etc/auto_salt'):
+    '''
+    List the contents of the fstab
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mount.fstab
+    '''
+    ret = {}
+    if not os.path.isfile(config):
+        return ret
+    with salt.utils.fopen(config) as ifile:
+        for line in ifile:
+            if line.startswith('#'):
+                # Commented
+                continue
+            if not line.strip():
+                # Blank line
+                continue
+            comps = line.split()
+            if len(comps) != 3:
+                # Invalid entry
+                continue
+
+            prefix = "/.."
+            name = comps[0].replace(prefix, "")
+            device_fmt = comps[2].split(":")
+            opts = comps[1].split(',')
+
+            ret[name] = {'device': device_fmt[1],
+                         'fstype': opts[0],
+                         'opts': opts[1:]}
+    return ret
+
+
+def mount(name, device, mkmnt=False, fstype='', opts='defaults', user=None):
     '''
     Mount a device
 
@@ -380,22 +611,31 @@ def mount(name, device, mkmnt=False, fstype='', opts='defaults'):
 
         salt '*' mount.mount /mnt/foo /dev/sdz1 True
     '''
+
+    # Darwin doesn't expect defaults when mounting without other options
+    if 'defaults' in opts and __grains__['os'] in ['MacOS', 'Darwin']:
+        opts = None
+
     if isinstance(opts, string_types):
         opts = opts.split(',')
+
     if not os.path.exists(name) and mkmnt:
-        os.makedirs(name)
-    lopts = ','.join(opts)
-    args = '-o {0}'.format(lopts)
+        __salt__['file.mkdir'](name=name, user=user)
+
+    args = ''
+    if opts is not None:
+        lopts = ','.join(opts)
+        args = '-o {0}'.format(lopts)
     if fstype:
         args += ' -t {0}'.format(fstype)
     cmd = 'mount {0} {1} {2} '.format(args, device, name)
-    out = __salt__['cmd.run_all'](cmd)
+    out = __salt__['cmd.run_all'](cmd, runas=user)
     if out['retcode']:
         return out['stderr']
     return True
 
 
-def remount(name, device, mkmnt=False, fstype='', opts='defaults'):
+def remount(name, device, mkmnt=False, fstype='', opts='defaults', user=None):
     '''
     Attempt to remount a device, if the device is not already mounted, mount
     is called
@@ -406,30 +646,40 @@ def remount(name, device, mkmnt=False, fstype='', opts='defaults'):
 
         salt '*' mount.remount /mnt/foo /dev/sdz1 True
     '''
+    force_mount = False
+    if __grains__['os'] in ['MacOS', 'Darwin']:
+        if opts == 'defaults':
+            opts = 'noowners'
+        if fstype == 'smbfs':
+            force_mount = True
+
     if isinstance(opts, string_types):
         opts = opts.split(',')
     mnts = active()
     if name in mnts:
         # The mount point is mounted, attempt to remount it with the given data
-        if 'remount' not in opts and __grains__['os'] != 'OpenBSD':
+        if 'remount' not in opts and __grains__['os'] not in ['OpenBSD', 'MacOS', 'Darwin']:
             opts.append('remount')
+        if force_mount:
+            # We need to force the mount but first we should unmount
+            umount(name, device, user=user)
         lopts = ','.join(opts)
         args = '-o {0}'.format(lopts)
         if fstype:
             args += ' -t {0}'.format(fstype)
-        if __grains__['os'] != 'OpenBSD':
+        if __grains__['os'] not in ['OpenBSD', 'MacOS', 'Darwin'] or force_mount:
             cmd = 'mount {0} {1} {2} '.format(args, device, name)
         else:
             cmd = 'mount -u {0} {1} {2} '.format(args, device, name)
-        out = __salt__['cmd.run_all'](cmd)
+        out = __salt__['cmd.run_all'](cmd, runas=user)
         if out['retcode']:
             return out['stderr']
         return True
     # Mount a filesystem that isn't already
-    return mount(name, device, mkmnt, fstype, opts)
+    return mount(name, device, mkmnt, fstype, opts, user=user)
 
 
-def umount(name, device=None):
+def umount(name, device=None, user=None):
     '''
     Attempt to unmount a device by specifying the directory it is mounted on
 
@@ -451,7 +701,7 @@ def umount(name, device=None):
         cmd = 'umount {0}'.format(name)
     else:
         cmd = 'umount {0}'.format(device)
-    out = __salt__['cmd.run_all'](cmd)
+    out = __salt__['cmd.run_all'](cmd, runas=user)
     if out['retcode']:
         return out['stderr']
     return True

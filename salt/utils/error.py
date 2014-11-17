@@ -3,10 +3,13 @@
 Utilities to enable exception reraising across the master commands
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
-import exceptions
-
+try:
+    import exceptions
+except ImportError:
+    pass
 
 # Import salt libs
 import salt.exceptions
@@ -30,3 +33,21 @@ def raise_error(name=None, args=None, message=''):
         raise ex(*args)
     else:
         raise ex(message)
+
+
+def pack_exception(exc):
+    if hasattr(exc, 'pack'):
+        packed_exception = exc.pack()
+    else:
+        packed_exception = {'message': exc.__unicode__(), 'args': exc.args}
+    return packed_exception
+
+
+def fire_exception(exc, opts, job=None, node='minion'):
+    '''
+    Fire raw exception across the event bus
+    '''
+    if job is None:
+        job = {}
+    event = salt.utils.event.SaltEvent(node, opts=opts)
+    event.fire_event(pack_exception(exc), '_salt_error')

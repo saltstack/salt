@@ -2,6 +2,7 @@
 '''
 A few checks to make sure the environment is sane
 '''
+from __future__ import absolute_import
 
 # Original Author: Jeff Schroeder <jeffschroeder@computer.org>
 

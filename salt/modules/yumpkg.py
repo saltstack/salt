@@ -14,15 +14,18 @@ Support for YUM
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import copy
 import logging
 import os
 import re
+import six
 from distutils.version import LooseVersion as _LooseVersion
+from six.moves import range
 
 # Import salt libs
 import salt.utils
-from salt._compat import string_types
+from six import string_types
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
@@ -224,7 +227,7 @@ def _rpm_pkginfo(name):
     Parses RPM metadata and returns a pkginfo namedtuple
     '''
     # REPOID is not a valid tag for the rpm command. Remove it and replace it
-    # witn "none"
+    # with "none"
     queryformat = __QUERYFORMAT.replace('%{REPOID}', 'none')
     output = __salt__['cmd.run_stdout'](
         'rpm -qp --queryformat {0!r} {1}'.format(queryformat, name),
@@ -480,7 +483,7 @@ def list_repo_pkgs(*args, **kwargs):
     except AttributeError:
         # Search in all enabled repos
         repos = tuple(
-            x for x, y in list_repos().iteritems()
+            x for x, y in six.iteritems(list_repos())
             if str(y.get('enabled', '1')) == '1'
         )
 
@@ -893,7 +896,7 @@ def install(name=None,
     downgrade = []
     to_reinstall = {}
     if pkg_type == 'repository':
-        pkg_params_items = pkg_params.iteritems()
+        pkg_params_items = six.iteritems(pkg_params)
     else:
         pkg_params_items = []
         for pkg_source in pkg_params:
@@ -965,7 +968,7 @@ def install(name=None,
             exclude=exclude_arg,
             branch=branch_arg,
             gpgcheck='--nogpgcheck' if skip_verify else '',
-            pkg=' '.join(to_reinstall.values()),
+            pkg=' '.join(six.itervalues(to_reinstall)),
         )
         __salt__['cmd.run'](cmd, output_loglevel='trace')
 
@@ -1378,7 +1381,7 @@ def group_list():
     cmd = 'yum grouplist'
     out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace').splitlines()
     key = None
-    for idx in xrange(len(out)):
+    for idx in range(len(out)):
         if out[idx] == 'Installed Groups:':
             key = 'installed'
             continue
@@ -1843,5 +1846,5 @@ def owner(*paths):
         if 'not owned' in ret[path].lower():
             ret[path] = ''
     if len(ret) == 1:
-        return ret.values()[0]
+        return next(ret.itervalues())
     return ret

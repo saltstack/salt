@@ -2,6 +2,7 @@
 '''
 Compendium of generic DNS utilities
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils
@@ -155,7 +156,7 @@ def parse_zone(zonefile=None, zone=None):
                 line = multi.replace('(', '').replace(')', '')
             else:
                 continue
-        if 'ORIGIN' in zonedict.keys():
+        if 'ORIGIN' in zonedict:
             comps = line.replace('@', zonedict['ORIGIN']).split()
         else:
             comps = line.split()
@@ -179,7 +180,7 @@ def parse_zone(zonefile=None, zone=None):
         if comps[2] == 'NS':
             zonedict.setdefault('NS', []).append(comps[3])
         elif comps[2] == 'MX':
-            if 'MX' not in zonedict.keys():
+            if 'MX' not in zonedict:
                 zonedict.setdefault('MX', []).append({'priority': comps[3],
                                                       'host': comps[4]})
         else:

@@ -5,13 +5,16 @@ Module for Management of Memcached Keys
 
 .. versionadded:: 2014.1.0
 '''
+from __future__ import absolute_import
+
+# TODO: use salt.utils.memcache
 
 # Import python libs
 import logging
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt._compat import integer_types
+from six import integer_types
 
 # Import third party libs
 try:

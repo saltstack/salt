@@ -2,10 +2,12 @@
 '''
 Manage Dell DRAC
 '''
+from __future__ import absolute_import
 
 import salt.utils
 
 import logging
+from six.moves import range
 
 log = logging.getLogger(__name__)
 
@@ -250,7 +252,7 @@ def change_password(username, password, uid=None):
     return True
 
 
-def create_user(username, password, permissions):
+def create_user(username, password, permissions, users=None):
     '''
     Create user accounts
 
@@ -261,7 +263,7 @@ def create_user(username, password, permissions):
         salt dell drac.create_user [USERNAME] [PASSWORD] [PRIVELEGES]
         salt dell drac.create_user diana secret login,test_alerts,clear_logs
 
-    DRAC Priveleges
+    DRAC Privileges
       * login                   : Login to iDRAC
       * drac                    : Configure iDRAC
       * user_management         : Configure Users
@@ -274,16 +276,17 @@ def create_user(username, password, permissions):
     '''
     _uids = set()
 
-    user = list_users()
+    if users is None:
+        users = list_users()
 
-    if username in user:
+    if username in users:
         log.warn('\'{0}\' already exists'.format(username))
         return False
 
-    for i in user.keys():
-        _uids.add(user[i]['index'])
+    for i in users.keys():
+        _uids.add(users[i]['index'])
 
-    uid = sorted(list(set(xrange(2, 12)) - _uids), reverse=True).pop()
+    uid = sorted(list(set(range(2, 12)) - _uids), reverse=True).pop()
 
     # Create user accountvfirst
     if not __execute_cmd('config -g cfgUserAdmin -o \
@@ -323,7 +326,7 @@ def set_permissions(username, permissions, uid=None):
         salt dell drac.set_permissions [USERNAME] [PRIVELEGES] [USER INDEX - optional]
         salt dell drac.set_permissions diana login,test_alerts,clear_logs 4
 
-    DRAC Priveleges
+    DRAC Privileges
       * login                   : Login to iDRAC
       * drac                    : Configure iDRAC
       * user_management         : Configure Users
@@ -391,3 +394,79 @@ def set_network(ip, netmask, gateway):
     return __execute_cmd('setniccfg -s {0} {1} {2}'.format(
         ip, netmask, gateway
         ))
+
+
+def server_reboot():
+    '''
+    Issues a power-cycle operation on the managed server. This action is
+    similar to pressing the power button on the system's front panel to
+    power down and then power up the system.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt dell drac.server_reboot
+    '''
+    return __execute_cmd('serveraction powercycle')
+
+
+def server_poweroff():
+    '''
+    Powers down the managed server.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt dell drac.server_poweroff
+    '''
+    return __execute_cmd('serveraction powerdown')
+
+
+def server_poweron():
+    '''
+    Powers up the managed server.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt dell drac.server_poweron
+    '''
+    return __execute_cmd('serveraction powerup')
+
+
+def server_hardreset():
+    '''
+    Performs a reset (reboot) operation on the managed server.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt dell drac.server_hardreset
+    '''
+    return __execute_cmd('serveraction hardreset')
+
+
+def server_pxe():
+    '''
+    Configure server to PXE perform a one off PXE boot
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt dell drac.server_pxe
+    '''
+    if __execute_cmd('config -g cfgServerInfo -o \
+            cfgServerFirstBootDevice PXE'):
+        if __execute_cmd('config -g cfgServerInfo -o cfgServerBootOnce 1'):
+            return server_reboot
+        else:
+            log.warn('failed to set boot order')
+            return False
+
+    log.warn('failed to to configure PXE boot')
+    return False

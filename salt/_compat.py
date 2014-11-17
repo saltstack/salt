@@ -38,6 +38,11 @@ if PY3:
 else:
     MAX_SIZE = sys.maxint
 
+if PY3:
+    xrange = range
+else:
+    xrange = xrange
+
 # pylint: disable=C0103
 if PY3:
     string_types = str,
@@ -53,6 +58,12 @@ else:
     text_type = unicode
     binary_type = str
     long = long
+
+if PY3:
+    import builtins
+    exceptions = builtins  # pylint: disable=E0602
+else:
+    import exceptions  # pylint: disable=W0403
 
 if PY3:
     def callable(obj):
@@ -91,6 +102,31 @@ else:
         if isinstance(s, text_type):
             s = s.encode('ascii')
         return str(s)
+
+if PY3:
+    exec_ = getattr(builtins, 'exec')  # pylint: disable=E0602
+
+    def reraise(tp, value, tb=None):
+        if value is None:
+            value = tp()
+        if value.__traceback__ is not tb:
+            raise value.with_traceback(tb)
+        raise value
+else:
+    def exec_(code_, globals_=None, locals_=None):
+        '''
+        Execute code directly in a passed namespace
+        '''
+        if globals_ is None:
+            frame = sys._getframe(1)
+            globals_ = frame.f_globals
+            if locals_ is None:
+                locals_ = frame.f_locals
+            del frame
+        elif locals_ is None:
+            locals_ = globals_
+        exec('''exec code_ in globals_, locals_''')
+
 
 ascii_native_.__doc__ = '''
 Python 3: If ``s`` is an instance of ``text_type``, return
@@ -177,8 +213,21 @@ else:
 
 if PY3:
     from io import StringIO
+    from io import BytesIO as cStringIO
 else:
     from StringIO import StringIO
+    from cStringIO import StringIO as cStringIO
+
+
+def string_io(data=None):  # cStringIO can't handle unicode
+    '''
+    Pass data through to stringIO module and return result
+    '''
+    try:
+        return cStringIO(bytes(data))
+    except (UnicodeEncodeError, TypeError):
+        return StringIO(data)
+
 
 if PY3:
     import queue as Queue

@@ -232,6 +232,7 @@ A more complex ``recurse`` example:
         - source: salt://project/templates_dir
         - include_empty: True
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import difflib
@@ -249,7 +250,9 @@ import salt.utils.templates
 from salt.exceptions import CommandExecutionError
 from salt.utils.serializers import yaml as yaml_serializer
 from salt.utils.serializers import json as json_serializer
-from salt._compat import string_types, integer_types
+from six.moves import map
+import six
+from six import string_types, integer_types
 
 log = logging.getLogger(__name__)
 
@@ -379,7 +382,7 @@ def _get_recurse_dest(prefix, fn_, source, env):
 
     srcpath = source[7:]  # the path after "salt://"
 
-    # in solo mode(ie, file_client=='local'), fn_ is a path below
+    # in solo mode (i.e., file_client=='local'), fn_ is a path below
     # a file root; in remote mode, fn_ is a path below the cache_dir.
     for root in local_roots:
         rootlen = len(root)
@@ -1227,8 +1230,9 @@ def managed(name,
     check_cmd
         .. versionadded:: 2014.7.0
 
-        Do run the state only if the check_cmd succeeds
-
+        The specified command will be run with the managed file as an argument.
+        If the command exits with a nonzero exit code, the command will not be
+        run.
     '''
     name = os.path.expanduser(name)
 
@@ -1273,7 +1277,7 @@ def managed(name,
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
 
-    if isinstance(env, salt._compat.string_types):
+    if isinstance(env, string_types):
         msg = (
             'Passing a salt environment should be done using \'saltenv\' not '
             '\'env\'. This warning will go away in Salt Boron and this '
@@ -1298,7 +1302,7 @@ def managed(name,
         return _error(
             ret, 'Defaults must be formed as a dict')
 
-    if len(filter(None, [contents, contents_pillar, contents_grains])) > 1:
+    if len([_f for _f in [contents, contents_pillar, contents_grains] if _f]) > 1:
         return _error(
             ret, 'Only one of contents, contents_pillar, and contents_grains is permitted')
 
@@ -1331,7 +1335,8 @@ def managed(name,
 
     try:
         if __opts__['test']:
-            ret['result'], ret['comment'] = __salt__['file.check_managed'](
+            ret['result'] = None
+            ret['changes'] = __salt__['file.check_managed_changes'](
                 name,
                 source,
                 source_hash,
@@ -1345,6 +1350,12 @@ def managed(name,
                 contents,
                 **kwargs
             )
+
+            if ret['changes']:
+                ret['comment'] = 'The file {0} is set to be changed'.format(name)
+            else:
+                ret['comment'] = 'The file {0} is in the correct state'.format(name)
+
             return ret
 
         # If the source is a list then find which file exists
@@ -1418,14 +1429,12 @@ def managed(name,
                    'comment': '',
                    'name': name,
                    'result': True}
-            check_cmd_opts = {
-                'cmd': check_cmd,
-                'cwd': tmp_filename,
-            }
+
+            check_cmd_opts = {}
             if 'shell' in __grains__:
                 check_cmd_opts['shell'] = __grains__['shell']
 
-            cret = mod_run_check_cmd(**check_cmd_opts)
+            cret = mod_run_check_cmd(check_cmd, tmp_filename, **check_cmd_opts)
             if isinstance(cret, dict):
                 ret.update(cret)
                 return ret
@@ -1967,7 +1976,7 @@ def recurse(name,
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
 
-    if isinstance(env, salt._compat.string_types):
+    if isinstance(env, string_types):
         msg = (
             'Passing a salt environment should be done using \'saltenv\' not '
             '\'env\'. This warning will go away in Salt Boron and this '
@@ -2230,7 +2239,7 @@ def recurse(name,
             # Check for symlinks that happen to point to an empty dir.
             if keep_symlinks:
                 islink = False
-                for link in symlinks.keys():
+                for link in symlinks:
                     if mdir.startswith(link, 0):
                         log.debug('** skipping empty dir ** {0}, it intersects'
                                   ' a symlink'.format(mdir))
@@ -2259,7 +2268,7 @@ def recurse(name,
     # to display structured comments in a readable fashion
     ret['comment'] = '\n'.join('\n#### {0} ####\n{1}'.format(
         k, v if isinstance(v, string_types) else '\n'.join(v)
-    ) for (k, v) in ret['comment'].iteritems()).strip()
+    ) for (k, v) in six.iteritems(ret['comment'])).strip()
 
     if not ret['comment']:
         ret['comment'] = 'Recursively updated {0}'.format(name)
@@ -2283,7 +2292,7 @@ def replace(name,
             not_found_content=None,
             backup='.bak',
             show_changes=True):
-    '''
+    r'''
     Maintain an edit in a file
 
     .. versionadded:: 0.17.0
@@ -2291,6 +2300,17 @@ def replace(name,
     Params are identical to the remote execution function :mod:`file.replace
     <salt.modules.file.replace>`.
 
+    For complex regex patterns it can be useful to avoid the need for complex
+    quoting and escape sequences by making use of YAML's multiline string
+    syntax.
+
+    .. code-block:: yaml
+
+        complex_search_and_replace:
+          file.replace:
+            # <...snip...>
+            - pattern: |
+                CentOS \(2.6.32[^\n]+\n\s+root[^\n]+\n\)+
     '''
     name = os.path.expanduser(name)
 
@@ -2481,138 +2501,6 @@ def blockreplace(
     else:
         ret['result'] = True
         ret['comment'] = 'No changes needed to be made'
-
-    return ret
-
-
-def sed(name,
-        before,
-        after,
-        limit='',
-        backup='.bak',
-        options='-r -e',
-        flags='g',
-        negate_match=False):
-    '''
-    .. deprecated:: 0.17.0
-       Use the :mod:`file.replace <salt.states.file.replace>` state instead.
-
-    Maintain a simple edit to a file
-
-    The file will be searched for the ``before`` pattern before making the
-    edit.  In general the ``limit`` pattern should be as specific as possible
-    and ``before`` and ``after`` should contain the minimal text to be changed.
-
-    before
-        A pattern that should exist in the file before the edit.
-    after
-        A pattern that should exist in the file after the edit.
-    limit
-        An optional second pattern that can limit the scope of the before
-        pattern.
-    backup : '.bak'
-        The extension for the backed-up version of the file before the edit. If
-        no backups is desired, pass in the empty string: ''
-    options : ``-r -e``
-        Any options to pass to the ``sed`` command. ``-r`` uses extended
-        regular expression syntax and ``-e`` denotes that what follows is an
-        expression that sed will execute.
-    flags : ``g``
-        Any flags to append to the sed expression. ``g`` specifies the edit
-        should be made globally (and not stop after the first replacement).
-    negate_match : False
-        Negate the search command (``!``)
-
-        .. versionadded:: 0.17.0
-
-    Usage:
-
-    .. code-block:: yaml
-
-        # Disable the epel repo by default
-        /etc/yum.repos.d/epel.repo:
-          file.sed:
-            - before: 1
-            - after: 0
-            - limit: ^enabled=
-
-        # Remove ldap from nsswitch
-        /etc/nsswitch.conf:
-          file.sed:
-            - before: 'ldap'
-            - after: ''
-            - limit: '^passwd:'
-
-    .. versionadded:: 0.9.5
-    '''
-    name = os.path.expanduser(name)
-
-    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
-
-    check_res, check_msg = _check_file(name)
-    if not check_res:
-        return _error(ret, check_msg)
-
-    # Mandate that before and after are strings
-    before = str(before)
-    after = str(after)
-
-    # Look for the pattern before attempting the edit
-    if not __salt__['file.sed_contains'](name,
-                                         before,
-                                         limit=limit,
-                                         flags=flags):
-        # Pattern not found; don't try to guess why, just tell the user there
-        # were no changes made, as the changes should only be made once anyway.
-        # This makes it so users can use backreferences without the state
-        # coming back as failed all the time.
-        ret['comment'] = '"before" pattern not found, no changes made'
-        ret['result'] = True
-        return ret
-
-    if __opts__['test']:
-        ret['comment'] = 'File {0} is set to be updated'.format(name)
-        ret['result'] = None
-        return ret
-
-    with salt.utils.fopen(name, 'rb') as fp_:
-        slines = fp_.readlines()
-
-    # should be ok now; perform the edit
-    retcode = __salt__['file.sed'](path=name,
-                                   before=before,
-                                   after=after,
-                                   limit=limit,
-                                   backup=backup,
-                                   options=options,
-                                   flags=flags,
-                                   negate_match=negate_match)['retcode']
-
-    if retcode != 0:
-        ret['result'] = False
-        ret['comment'] = ('There was an error running sed.  '
-                          'Return code {0}').format(retcode)
-        return ret
-
-    with salt.utils.fopen(name, 'rb') as fp_:
-        nlines = fp_.readlines()
-
-    if slines != nlines:
-        if not salt.utils.istextfile(name):
-            ret['changes']['diff'] = 'Replace binary file'
-        else:
-            # Changes happened, add them
-            ret['changes']['diff'] = ''.join(difflib.unified_diff(slines,
-                                                                  nlines))
-
-            # Don't check the result -- sed is not designed to be able to check
-            # the result, because of backreferences and so forth. Just report
-            # that sed was run, and assume it was successful (no error!)
-            ret['result'] = True
-            ret['comment'] = 'sed ran without error'
-    else:
-        ret['result'] = True
-        ret['comment'] = 'sed ran without error, but no changes were made'
 
     return ret
 
@@ -3310,7 +3198,7 @@ def patch(name,
         ret.update(result=True, comment='Patch is already applied')
         return ret
 
-    if isinstance(env, salt._compat.string_types):
+    if isinstance(env, string_types):
         msg = (
             'Passing a salt environment should be done using \'saltenv\' not '
             '\'env\'. This warning will go away in Salt Boron and this '
@@ -3747,7 +3635,7 @@ def accumulated(name, filename, text, **kwargs):
     require_in = __low__.get('require_in', [])
     watch_in = __low__.get('watch_in', [])
     deps = require_in + watch_in
-    if not filter(lambda x: 'file' in x, deps):
+    if not [x for x in deps if 'file' in x]:
         ret['result'] = False
         ret['comment'] = 'Orphaned accumulator {0} in {1}:{2}'.format(
             name,
@@ -3764,7 +3652,7 @@ def accumulated(name, filename, text, **kwargs):
     if name not in _ACCUMULATORS_DEPS[filename]:
         _ACCUMULATORS_DEPS[filename][name] = []
     for accumulator in deps:
-        _ACCUMULATORS_DEPS[filename][name].extend(accumulator.values())
+        _ACCUMULATORS_DEPS[filename][name].extend(six.itervalues(accumulator))
     if name not in _ACCUMULATORS[filename]:
         _ACCUMULATORS[filename][name] = []
     for chunk in text:
@@ -3790,10 +3678,10 @@ def _merge_dict(obj, k, v):
                     obj[k] = v
         elif isinstance(obj[k], dict):
             if isinstance(v, dict):
-                for a, b in v.iteritems():
+                for a, b in six.iteritems(v):
                     if isinstance(b, dict) or isinstance(b, list):
                         updates = _merge_dict(obj[k], a, b)
-                        for x, y in updates.iteritems():
+                        for x, y in six.iteritems(updates):
                             changes[k + "." + x] = y
                     else:
                         if obj[k][a] != b:
@@ -3913,7 +3801,7 @@ def serialize(name,
            'name': name,
            'result': True}
 
-    if isinstance(env, salt._compat.string_types):
+    if isinstance(env, string_types):
         msg = (
             'Passing a salt environment should be done using \'saltenv\' not '
             '\'env\'. This warning will go away in Salt Boron and this '
@@ -3936,9 +3824,9 @@ def serialize(name,
     if merge_if_exists:
         if os.path.isfile(name):
             if formatter == 'yaml':
-                existing_data = yaml.safe_load(file(name, 'r'))
+                existing_data = yaml.safe_load(open(name, 'r'))
             elif formatter == 'json':
-                existing_data = json.load(file(name, 'r'))
+                existing_data = json.load(open(name, 'r'))
             else:
                 return {'changes': {},
                         'comment': ('{0} format is not supported for merging'
@@ -3947,7 +3835,7 @@ def serialize(name,
                         'result': False}
 
             if existing_data is not None:
-                for k, v in dataset.iteritems():
+                for k, v in six.iteritems(dataset):
                     if k in existing_data:
                         ret['changes'].update(_merge_dict(existing_data, k, v))
                     else:
@@ -4213,7 +4101,7 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
     return ret
 
 
-def mod_run_check_cmd(cmd, filename):
+def mod_run_check_cmd(cmd, filename, **check_cmd_opts):
     '''
     Execute the check_cmd logic.
 
@@ -4223,10 +4111,10 @@ def mod_run_check_cmd(cmd, filename):
 
     log.debug('running our check_cmd')
     _cmd = '{0} {1}'.format(cmd, filename)
-    if __salt__['cmd.retcode'](_cmd) != 0:
+    if __salt__['cmd.retcode'](_cmd, **check_cmd_opts) != 0:
         return {'comment': 'check_cmd execution failed',
                 'skip_watch': True,
-                'result': True}
+                'result': False}
 
     # No reason to stop, return True
     return True

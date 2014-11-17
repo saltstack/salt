@@ -2,6 +2,7 @@
 '''
 Install Python packages with pip to either the system or a virtualenv
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -11,7 +12,7 @@ import shutil
 
 # Import salt libs
 import salt.utils
-from salt._compat import string_types
+from six import string_types
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 # It would be cool if we could use __virtual__() in this module, though, since
@@ -197,6 +198,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             process_dependency_links=False,
             __env__=None,
             saltenv='base',
+            env_vars=None,
             use_vt=False):
     '''
     Install packages with pip
@@ -311,6 +313,11 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         Enable the processing of dependency links
     use_vt
         Use VT terminal emulation (see ouptut while installing)
+    env_vars
+        Set environment variables that some builds will depend on. For example,
+        a Python C-module may have a Makefile that needs INCLUDE_PATH set to
+        pick up a header file while compiling.
+
 
     CLI Example:
 
@@ -575,6 +582,9 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
     if process_dependency_links:
         cmd.append('--process-dependency-links')
+
+    if env_vars:
+        os.environ.update(env_vars)
 
     try:
         cmd_kwargs = dict(runas=user, cwd=cwd, saltenv=saltenv, use_vt=use_vt)

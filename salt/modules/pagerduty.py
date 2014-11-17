@@ -16,6 +16,7 @@ Module for Firing Events via PagerDuty
             pagerduty.api_key: F3Rbyjbve43rfFWf2214
             pagerduty.subdomain: mysubdomain
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import yaml
@@ -23,7 +24,7 @@ import json
 
 # Import salt libs
 import salt.utils.pagerduty
-from salt._compat import string_types
+from six import string_types
 
 
 def __virtual__():

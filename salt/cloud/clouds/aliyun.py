@@ -24,6 +24,7 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 
 :depends: requests
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import time
@@ -102,7 +103,7 @@ def avail_locations(call=None):
     ret = {}
     for region in items['Regions']['Region']:
         ret[region['RegionId']] = {}
-        for item in region.keys():
+        for item in region:
             ret[region['RegionId']][item] = str(region[item])
 
     return ret
@@ -133,7 +134,7 @@ def avail_images(kwargs=None, call=None):
     ret = {}
     for image in items['Images']['Image']:
         ret[image['ImageId']] = {}
-        for item in image.keys():
+        for item in image:
             ret[image['ImageId']][item] = str(image[item])
 
     return ret
@@ -155,7 +156,7 @@ def avail_sizes(call=None):
     ret = {}
     for image in items['InstanceTypes']['InstanceType']:
         ret[image['InstanceTypeId']] = {}
-        for item in image.keys():
+        for item in image:
             ret[image['InstanceTypeId']][item] = str(image[item])
 
     return ret
@@ -192,7 +193,7 @@ def list_availability_zones(call=None):
 
     for zone in items['Zones']['Zone']:
         ret[zone['ZoneId']] = {}
-        for item in zone.keys():
+        for item in zone:
             ret[zone['ZoneId']][item] = str(zone[item])
 
     return ret
@@ -225,7 +226,7 @@ def list_nodes_min(call=None):
 
     for node in nodes['InstanceStatuses']['InstanceStatus']:
         ret[node['InstanceId']] = {}
-        for item in node.keys():
+        for item in node:
             ret[node['InstanceId']][item] = node[item]
 
     return ret
@@ -299,7 +300,7 @@ def list_nodes_full(call=None):
             'size': 'TODO',
             'state': items['Status']
         }
-        for item in items.keys():
+        for item in items:
             value = items[item]
             if value is not None:
                 value = str(value)
@@ -350,7 +351,7 @@ def list_securitygroup(call=None):
     ret = {}
     for sg in result['SecurityGroups']['SecurityGroup']:
         ret[sg['SecurityGroupId']] = {}
-        for item in sg.keys():
+        for item in sg:
             ret[sg['SecurityGroupId']][item] = sg[item]
 
     return ret
@@ -368,7 +369,7 @@ def get_image(vm_):
     if not vm_image:
         raise SaltCloudNotFound('No image specified for this VM.')
 
-    if vm_image and str(vm_image) in images.keys():
+    if vm_image and str(vm_image) in images:
         return images[vm_image]['ImageId']
     raise SaltCloudNotFound(
         'The specified image, {0!r}, could not be found.'.format(vm_image)
@@ -387,7 +388,7 @@ def get_securitygroup(vm_):
     if not securitygroup:
         raise SaltCloudNotFound('No securitygroup ID specified for this VM.')
 
-    if securitygroup and str(securitygroup) in sgs.keys():
+    if securitygroup and str(securitygroup) in sgs:
         return sgs[securitygroup]['SecurityGroupId']
     raise SaltCloudNotFound(
         'The specified security group, {0!r}, could not be found.'.format(
@@ -407,7 +408,7 @@ def get_size(vm_):
     if not vm_size:
         raise SaltCloudNotFound('No size specified for this VM.')
 
-    if vm_size and str(vm_size) in sizes.keys():
+    if vm_size and str(vm_size) in sizes:
         return sizes[vm_size]['InstanceTypeId']
 
     raise SaltCloudNotFound(
@@ -427,7 +428,7 @@ def __get_location(vm_):
     if not vm_location:
         raise SaltCloudNotFound('No location specified for this VM.')
 
-    if vm_location and str(vm_location) in locations.keys():
+    if vm_location and str(vm_location) in locations:
         return locations[vm_location]['RegionId']
     raise SaltCloudNotFound(
         'The specified location, {0!r}, could not be found.'.format(
@@ -669,7 +670,7 @@ def _compute_signature(parameters, access_key_secret):
         res = res.replace('%7E', '~')
         return res
 
-    sortedParameters = sorted(parameters.items(), key=lambda items: items[0])
+    sortedParameters = sorted(list(parameters.items()), key=lambda items: items[0])
 
     canonicalizedQueryString = ''
     for (k, v) in sortedParameters:
@@ -779,7 +780,7 @@ def show_disk(name, call=None):
 
     for disk in items['Disks']['Disk']:
         ret[disk['DiskId']] = {}
-        for item in disk.keys():
+        for item in disk:
             ret[disk['DiskId']][item] = str(disk[item])
 
     return ret
@@ -817,7 +818,7 @@ def list_monitor_data(kwargs=None, call=None):
 
     for data in monitorData['InstanceMonitorData']:
         ret[data['InstanceId']] = {}
-        for item in data.keys():
+        for item in data:
             ret[data['InstanceId']][item] = str(data[item])
 
     return ret
@@ -892,7 +893,7 @@ def show_image(kwargs, call=None):
 
     for image in items['Images']['Image']:
         ret[image['ImageId']] = {}
-        for item in image.keys():
+        for item in image:
             ret[image['ImageId']][item] = str(image[item])
 
     return ret
