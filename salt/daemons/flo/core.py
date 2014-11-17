@@ -879,7 +879,10 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
                 self.lane_stack.value.transmit(msg,
                         self.lane_stack.value.fetchUidByName(next(self.workers.value)))
         elif d_share == 'fun':
-            self.fun.value.append(msg)
+            if self.road_stack.value.kind == kinds.applKinds.minion:
+                self.fun.value.append(msg)
+            elif self.road_stack.value.kind == kinds.applKinds.syndic:
+                self.self.publish.value.append(msg)
 
     def _process_uxd_rxmsg(self, msg, sender):
         '''
@@ -1085,7 +1088,8 @@ class SaltRaetPublisher(ioflo.base.deeding.Deed):
 
         minions = (self.availables.value &
                    set((remote.name for remote in stack.remotes.values()
-                            if remote.kind == kinds.applKinds.minion)))
+                            if remote.kind in [kinds.applKinds.minion,
+                                               kinds.applKinds.syndic])))
         for minion in minions:
             uid = self.stack.value.fetchUidByName(minion)
             if uid:
