@@ -150,7 +150,6 @@ import logging
 from copy import copy
 
 import time
-import sys
 
 import tornado.httpserver
 import tornado.ioloop
@@ -163,7 +162,6 @@ from collections import defaultdict
 
 import math
 import yaml
-import zmq
 import fnmatch
 
 from zmq.eventloop import ioloop, zmqstream
