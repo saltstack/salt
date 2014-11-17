@@ -22,6 +22,12 @@ key in one step:
 
         sudo apt-get install python-software-properties
 
+    The following may be required as well:
+
+    .. code-block:: bash
+
+        sudo apt-get install software-properties-common
+
     Note that since Ubuntu 12.10 (Raring Ringtail), ``add-apt-repository`` is
     found in the `software-properties-common` package, and is part of the base
     install. Thus, ``add-apt-repository`` should be able to be used

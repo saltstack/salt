@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Module for Management of Memcached Keys
-=======================================
 
 .. versionadded:: 2014.1.0
 '''

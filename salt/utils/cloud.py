@@ -24,6 +24,7 @@ import traceback
 import copy
 import re
 import uuid
+import six
 
 
 # Let's import pwd and catch the ImportError. We'll raise it if this is not
@@ -465,7 +466,7 @@ def ssh_usernames(vm_, opts, default_users=None):
         usernames = [usernames]
 
     # get rid of None's or empty names
-    usernames = filter(lambda x: x, usernames)
+    usernames = [x for x in usernames if x]
     # Keep a copy of the usernames the user might have provided
     initial = usernames[:]
 
@@ -1928,7 +1929,7 @@ def simple_types_filter(data):
     if data is None:
         return data
 
-    simpletypes_keys = (str, unicode, int, long, float, bool)
+    simpletypes_keys = (str, six.text_type, int, long, float, bool)
     simpletypes_values = tuple(list(simpletypes_keys) + [list, tuple])
 
     if isinstance(data, list):

@@ -486,7 +486,8 @@ class SaltSSH(parsers.SaltSSHOptionParser):
         ssh.run()
 
 
-class SaltAPI(six.with_metaclass(parsers.OptionParserMeta, parsers.OptionParser, parsers.ConfigDirMixIn,
+class SaltAPI(six.with_metaclass(parsers.OptionParserMeta,  # pylint: disable=W0232
+        parsers.OptionParser, parsers.ConfigDirMixIn,
         parsers.LogLevelMixIn, parsers.PidfileMixin, parsers.DaemonMixIn,
         parsers.MergeConfigMixIn)):
     '''

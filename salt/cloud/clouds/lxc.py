@@ -7,6 +7,7 @@ Install Salt on an LXC Container
 
 Please read :ref:`core config documentation <config_lxc>`.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import json
@@ -170,7 +171,7 @@ def _salt(fun, *args, **kw):
                 pings = conn.cmd(tgt=target,
                                  timeout=10,
                                  fun='test.ping')
-                values = pings.values()
+                values = list(pings.values())
                 if not values:
                     ping = False
                 for v in values:
@@ -335,7 +336,7 @@ def _checkpoint(ret):
     sret = '''
 id: {name}
 last message: {comment}'''.format(**ret)
-    keys = ret['changes'].items()
+    keys = list(ret['changes'].items())
     keys.sort()
     for ch, comment in keys:
         sret += (
