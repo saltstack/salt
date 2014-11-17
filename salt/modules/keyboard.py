@@ -39,7 +39,7 @@ def get_sys():
         cmd = 'grep XKBLAYOUT /etc/default/keyboard | grep -vE "^#"'
     elif 'Gentoo' in __grains__['os_family']:
         cmd = 'grep "^keymap" /etc/conf.d/keymaps | grep -vE "^#"'
-    out = __salt__['cmd.run'](cmd).split('=')
+    out = __salt__['cmd.run'](cmd, python_shell=True).split('=')
     ret = out[1].replace('"', '')
     return ret
 
@@ -82,7 +82,7 @@ def get_x():
         salt '*' keyboard.get_x
     '''
     cmd = 'setxkbmap -query | grep layout'
-    out = __salt__['cmd.run'](cmd).split(':')
+    out = __salt__['cmd.run'](cmd, python_shell=True).split(':')
     return out[1].strip()
 
 
