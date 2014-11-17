@@ -2264,7 +2264,7 @@ class ClearFuncs(object):
                         'Authentication failure of type "user" occurred.'
                     )
                     return ''
-                if self.opts['client_acl']:
+                if self.opts['sudo_acl'] and self.opts['client_acl']:
                     good = self.ckminions.auth_check(
                                 self.opts['client_acl'].get(clear_load['user'].split('_', 1)[-1]),
                                 clear_load['fun'],
