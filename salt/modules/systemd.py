@@ -18,6 +18,7 @@ __func_alias__ = {
 }
 
 LOCAL_CONFIG_PATH = '/etc/systemd/system'
+LEGACY_INIT_SCRIPT_PATH = '/etc/init.d'
 VALID_UNIT_TYPES = ['service', 'socket', 'device', 'mount', 'automount',
                     'swap', 'target', 'path', 'timer']
 
@@ -122,6 +123,20 @@ def _get_all_unit_files():
     return ret
 
 
+def _get_all_legacy_init_scripts():
+    '''
+    Get all old-fashioned init-style scripts. State is always inactive, because systemd would already show them
+    otherwise.
+    '''
+    ret = {}
+    for fn in os.listdir(LEGACY_INIT_SCRIPT_PATH):
+        if not os.path.isfile(os.path.join(LEGACY_INIT_SCRIPT_PATH,fn)) or fn.startswith('rc'):
+            continue
+        log.info('Legacy init script: "%s".'%fn)
+        ret[fn] = 'inactive'
+    return ret
+
+
 def _untracked_custom_unit_found(name):
     '''
     If the passed service name is not in the output from get_all(), but a unit
@@ -185,7 +200,7 @@ def get_disabled():
         salt '*' service.get_disabled
     '''
     ret = []
-    for name, state in six.iteritems(_get_all_unit_files()):
+    for name, state in six.iteritems(_get_all_unit_files() + _get_all_legacy_init_scripts()):
         if state == 'disabled':
             ret.append(name)
     return sorted(ret)
@@ -201,7 +216,7 @@ def get_all():
 
         salt '*' service.get_all
     '''
-    return sorted(set(list(_get_all_units().keys()) + list(_get_all_unit_files().keys())))
+    return sorted(set(list(_get_all_units().keys()) + list(_get_all_unit_files().keys()) + list(_get_all_legacy_init_scripts().keys())))
 
 
 def available(name):
