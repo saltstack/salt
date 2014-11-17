@@ -375,7 +375,7 @@ class Dumper(BaseDumper):  # pylint: disable=W0232
     sls dumper.
     '''
     def represent_odict(self, data):
-        return self.represent_mapping('tag:yaml.org,2002:map', data.items())
+        return self.represent_mapping('tag:yaml.org,2002:map', list(data.items()))
 
 Dumper.add_multi_representer(type(None), Dumper.represent_none)
 Dumper.add_multi_representer(binary_type, Dumper.represent_str)
@@ -386,7 +386,7 @@ except AttributeError:
 Dumper.add_multi_representer(bool, Dumper.represent_bool)
 Dumper.add_multi_representer(int, Dumper.represent_int)
 try:
-    Dumper.add_multi_representer(long, Dumper.represent_long)
+    Dumper.add_multi_representer(int, Dumper.represent_long)
 except NameError:
     # Python 3 yaml does not have representation
     pass
