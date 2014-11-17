@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Management of zc.buildout
-=========================
 
 .. versionadded:: 2014.1.0
 
