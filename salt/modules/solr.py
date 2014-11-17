@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Apache Solr Salt Module
-=======================
 
 Author: Jed Glazner
 Version: 0.2.1
