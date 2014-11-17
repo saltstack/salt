@@ -324,7 +324,7 @@ def salt_api():
     '''
     The main function for salt-api
     '''
-    sapi = salt.cli.SaltAPI()
+    sapi = salt.cli.SaltAPI()  # pylint: disable=E1120
     sapi.run()
 
 

@@ -3,26 +3,19 @@
 Set up the version of Salt
 '''
 
-from __future__ import absolute_import
-
 # Import python libs
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 import re
 import sys
-import six
-from six.moves import map
 
-# Import salt libs
-try:
-    from salt._compat import MAX_SIZE
-    from six import string_types
-except ImportError:
-    if sys.version_info[0] == 3:
-        string_types = str
-        MAX_SIZE = sys.maxsize
-    else:
-        string_types = six.string_types
-        MAX_SIZE = sys.maxint
+# Don't rely on external packages in this module since it's used at install time
+if sys.version_info[0] == 3:
+    MAX_SIZE = sys.maxsize
+    string_types = (str,)
+else:
+    MAX_SIZE = sys.maxint
+    string_types = (basestring,)
+    from itertools import imap as map
 
 # ----- ATTENTION --------------------------------------------------------------------------------------------------->
 #

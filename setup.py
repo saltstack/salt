@@ -712,40 +712,37 @@ class SaltDistribution(distutils.dist.Distribution):
                         'scripts/salt-unity'])
         return scripts
 
-    # We don't actually need to set the console_scripts entry point since the
-    # packaged scripts with do the same work
-    #@property
-    #def _property_entry_points(self):
-    #    return {}
-    #    # console scripts common to all scenarios
-    #    scripts = ['salt-call = salt.scripts:salt_call']
-    #    if self.ssh_packaging or PACKAGED_FOR_SALT_SSH:
-    #        scripts.append('salt-ssh = salt.scripts:salt_ssh')
-    #        if IS_WINDOWS_PLATFORM:
-    #            return {'console_scripts': scripts}
-    #        scripts.extend(['salt-cloud = salt.scripts:salt_cloud',
-    #                        'salt-run = salt.scripts:salt_run'])
-    #        return {'console_scripts': scripts}
-    #
-    #    if IS_WINDOWS_PLATFORM:
-    #        scripts.extend(['salt-cp = salt.scripts:salt_cp'
-    #                        'salt-minion = salt.scripts:salt_minion',
-    #                        'salt-unity = salt.scripts:salt_unity'])
-    #        return {'console_scripts': scripts}
-    #
-    #    # *nix, so, we need all scripts
-    #    scripts.extend(['salt = salt.scripts:salt_main',
-    #                    'salt-api = salt.scripts:salt_api',
-    #                    'salt-cloud = salt.scripts:salt_cloud',
-    #                    'salt-cp = salt.scripts:salt_cp',
-    #                    'salt-key = salt.scripts:salt_key',
-    #                    'salt-master = salt.scripts:salt_master',
-    #                    'salt-minion = salt.scripts:salt_minion',
-    #                    'salt-run = salt.scripts:salt_run',
-    #                    'salt-ssh = salt.scripts:salt_ssh',
-    #                    'salt-syndic = salt.scripts:salt_syndic',
-    #                    'salt-unity = salt.scripts:salt_unity'])
-    #    return {'console_scripts': scripts}
+    @property
+    def _property_entry_points(self):
+        # console scripts common to all scenarios
+        scripts = ['salt-call = salt.scripts:salt_call']
+        if self.ssh_packaging or PACKAGED_FOR_SALT_SSH:
+            scripts.append('salt-ssh = salt.scripts:salt_ssh')
+            if IS_WINDOWS_PLATFORM:
+                return {'console_scripts': scripts}
+            scripts.extend(['salt-cloud = salt.scripts:salt_cloud',
+                            'salt-run = salt.scripts:salt_run'])
+            return {'console_scripts': scripts}
+
+        if IS_WINDOWS_PLATFORM:
+            scripts.extend(['salt-cp = salt.scripts:salt_cp'
+                            'salt-minion = salt.scripts:salt_minion',
+                            'salt-unity = salt.scripts:salt_unity'])
+            return {'console_scripts': scripts}
+
+        # *nix, so, we need all scripts
+        scripts.extend(['salt = salt.scripts:salt_main',
+                        'salt-api = salt.scripts:salt_api',
+                        'salt-cloud = salt.scripts:salt_cloud',
+                        'salt-cp = salt.scripts:salt_cp',
+                        'salt-key = salt.scripts:salt_key',
+                        'salt-master = salt.scripts:salt_master',
+                        'salt-minion = salt.scripts:salt_minion',
+                        'salt-run = salt.scripts:salt_run',
+                        'salt-ssh = salt.scripts:salt_ssh',
+                        'salt-syndic = salt.scripts:salt_syndic',
+                        'salt-unity = salt.scripts:salt_unity'])
+        return {'console_scripts': scripts}
     # <---- Dynamic Data ---------------------------------------------------------------------------------------------
 
     # ----- Esky Setup ---------------------------------------------------------------------------------------------->

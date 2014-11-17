@@ -42,6 +42,6 @@ def stream():
     '''
     ret = True
     for i in range(1, 100):
-        progress('Runner is {0}% done'.format(i), outputter='pprint')
+        __progress__('Runner is {0}% done'.format(i), outputter='pprint')
         time.sleep(0.1)
     return ret

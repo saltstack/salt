@@ -502,6 +502,10 @@ def request_instance(vm_=None, call=None):
         with salt.utils.fopen(userdata_file, 'r') as fp:
             kwargs['userdata'] = fp.read()
 
+    kwargs['config_drive'] = config.get_cloud_config_value(
+        'config_drive', vm_, __opts__, search_global=False
+    )
+
     salt.utils.cloud.fire_event(
         'event',
         'requesting instance',

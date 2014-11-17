@@ -526,6 +526,8 @@ def _virtual(osdata):
             if 'Vendor: QEMU' in output:
                 # FIXME: Make this detect between kvm or qemu
                 grains['virtual'] = 'kvm'
+            if 'Manufacturer: QEMU' in output:
+                grains['virtual'] = 'kvm'
             if 'Vendor: Bochs' in output:
                 grains['virtual'] = 'kvm'
             if 'BHYVE  BVXSDT' in output:
@@ -583,6 +585,14 @@ def _virtual(osdata):
     isdir = os.path.isdir
     sysctl = salt.utils.which('sysctl')
     if osdata['kernel'] in choices:
+        if os.path.isdir('/proc'):
+            try:
+                self_root = os.stat('/')
+                init_root = os.stat('/proc/1/root/.')
+                if self_root != init_root:
+                    grains['virtual_subtype'] = 'chroot'
+            except (IOError, OSError):
+                pass
         if os.path.isfile('/proc/1/cgroup'):
             try:
                 if ':/lxc/' in salt.utils.fopen(
