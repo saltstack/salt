@@ -217,6 +217,8 @@ def query(key, keyid, method='GET', params=None, headers=None,
         if return_url is True:
             return ret, requesturl
     else:
+        if method == 'GET' or method == 'HEAD':
+            return
         ret = {'headers': []}
         for header in result.headers:
             ret['headers'].append(header.strip())

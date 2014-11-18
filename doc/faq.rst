@@ -237,6 +237,18 @@ distro the minion is running, in case they differ from the example below.
         - name: atd
         - enable: True
 
+An alternatvie to using the :program:`atd` daemon is to fork and disown the
+process.
+
+.. code-block:: yaml
+
+    restart_minion:
+      cmd.run:
+        - name: |
+            nohup /bin/sh -c 'sleep 10 && salt-call --local service.restart salt-minion'
+        - python_shell: True
+        - order: last
+
 Windows
 *******
 
