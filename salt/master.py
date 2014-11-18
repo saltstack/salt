@@ -924,9 +924,6 @@ class AESFuncs(object):
         # If the command will make a recursive publish don't run
         if re.match('publish.*', clear_load['fun']):
             return False
-        # Don't allow pillar or compound matching
-        if clear_load.get('tgt_type', 'glob').lower() in ('pillar', 'compound'):
-            return False
         # Check the permissions for this minion
         if not self.__verify_minion(clear_load['id'], clear_load['tok']):
             # The minion is not who it says it is!
@@ -952,11 +949,16 @@ class AESFuncs(object):
             for arg in clear_load['arg']:
                 arg_.append(arg.split())
             clear_load['arg'] = arg_
+        tgt_type = clear_load.get('tgt_type', 'glob')
+        if tgt_type.lower() == 'pillar':
+            tgt_type = 'pillar_exact'
+        elif tgt_typ.lower() == 'compound':
+            tgt_type = 'compound_pillar_exact'
         good = self.ckminions.auth_check(
                 perms,
                 clear_load['fun'],
                 clear_load['tgt'],
-                clear_load.get('tgt_type', 'glob'))
+                tgt_type)
         if not good:
             return False
         return True
