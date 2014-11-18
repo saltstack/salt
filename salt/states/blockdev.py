@@ -20,6 +20,7 @@ A state module to manage blockdevices
         - read-ahead: 1024
 
 
+.. versionadded:: 2014.7.0
 '''
 from __future__ import absolute_import
 
