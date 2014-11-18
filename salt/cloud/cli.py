@@ -17,7 +17,7 @@ from __future__ import absolute_import
 import os
 import sys
 import logging
-from six.moves import input
+from salt.utils.six.moves import input
 
 # Import salt libs
 import salt.config
