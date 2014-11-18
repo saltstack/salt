@@ -7,9 +7,9 @@ Service support for Debian systems (uses update-rc.d and /sbin/service)
 import glob
 import re
 try:
-    from shlex import quote as cmd_quote
+    from shlex import quote as _cmd_quote
 except ImportError:
-    from pipes import quote as cmd_quote
+    from pipes import quote as _cmd_quote
 
 # Import salt libs
 from .systemd import _sd_booted
@@ -248,15 +248,15 @@ def enable(name, **kwargs):
     '''
     osmajor = _osrel()[0]
     if osmajor < '6':
-        cmd = 'update-rc.d -f {0} defaults 99'.format(cmd_quote(name))
+        cmd = 'update-rc.d -f {0} defaults 99'.format(_cmd_quote(name))
     else:
-        cmd = 'update-rc.d {0} enable'.format(cmd_quote(name))
+        cmd = 'update-rc.d {0} enable'.format(_cmd_quote(name))
     try:
         if int(osmajor) >= 6:
-            cmd = 'insserv {0} && '.format(cmd_quote(name)) + cmd
+            cmd = 'insserv {0} && '.format(_cmd_quote(name)) + cmd
     except ValueError:
         if osmajor == 'testing/unstable' or osmajor == 'unstable':
-            cmd = 'insserv {0} && '.format(cmd_quote(name)) + cmd
+            cmd = 'insserv {0} && '.format(_cmd_quote(name)) + cmd
     return not __salt__['cmd.retcode'](cmd, python_shell=True)
 
 
