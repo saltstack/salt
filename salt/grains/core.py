@@ -957,6 +957,15 @@ def os_data():
                     'getenforce'
                 ).strip()
 
+        # Add systemd grain, if you have it
+        if _linux_bin_exists('systemctl') and _linux_bin_exists('localectl'):
+            grains['systemd'] = {}
+            systemd_info = __salt__['cmd.run'](
+                'systemctl --version'
+            ).splitlines()
+            grains['systemd']['version'] = systemd_info[0].split()[1]
+            grains['systemd']['features'] = systemd_info[1]
+
         # Add lsb grains on any distro with lsb-release
         try:
             import lsb_release
