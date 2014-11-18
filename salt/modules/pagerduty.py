@@ -67,9 +67,11 @@ def create_event(service_key=None, description=None, details=None,
 
     CLI Example:
 
+    .. code-block:: yaml
+
         pagerduty.create_event <service_key> <description> <details> \
-            profile=my-pagerduty-account
-:
+        profile=my-pagerduty-account
+
     The following parameters are required:
 
     service_key
