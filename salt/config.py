@@ -32,7 +32,7 @@ import salt.utils.validate.path
 import salt.utils.xdg
 import salt.exceptions
 from salt._compat import urlparse
-from six import string_types
+from salt.utils.six import string_types
 
 import sys
 
