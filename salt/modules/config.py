@@ -7,7 +7,7 @@ from __future__ import absolute_import
 # Import python libs
 import re
 import os
-from salt.utils.six import string_types
+from salt.ext.six import string_types
 
 # Import salt libs
 import salt.utils

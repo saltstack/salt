@@ -32,10 +32,10 @@ import os.path
 import re
 
 # Import salt libs
-from salt.utils.six import string_types
+from salt.ext.six import string_types
 
 import logging
-import salt.utils.six as six
+import salt.ext.six as six
 log = logging.getLogger(__name__)
 
 

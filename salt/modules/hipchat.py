@@ -20,7 +20,7 @@ import requests
 import logging
 from urlparse import urljoin as _urljoin
 from requests.exceptions import ConnectionError
-from salt.utils.six.moves import range
+from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'hipchat'

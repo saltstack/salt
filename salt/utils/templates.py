@@ -28,8 +28,8 @@ from salt.utils.jinja import SaltCacheLoader as JinjaSaltCacheLoader
 from salt.utils.jinja import SerializerExtension as JinjaSerializerExtension
 from salt.utils.odict import OrderedDict
 from salt import __path__ as saltpath
-from salt.utils.six import string_types
-import salt.utils.six as six
+from salt.ext.six import string_types
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 

@@ -13,7 +13,7 @@ import re
 import salt.utils
 
 from salt.exceptions import CommandExecutionError
-from salt.utils.six.moves import zip
+from salt.ext.six.moves import zip
 
 log = logging.getLogger(__name__)
 

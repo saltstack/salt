@@ -23,7 +23,7 @@ import time
 import datetime
 import logging
 import hashlib
-from salt.utils.six.moves import range
+from salt.ext.six.moves import range
 
 HAS_SSL = False
 try:

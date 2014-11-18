@@ -14,7 +14,7 @@ import copy
 import salt.client
 import salt.output
 from salt.utils import print_cli
-from salt.utils.six.moves import range
+from salt.ext.six.moves import range
 
 
 class Batch(object):

@@ -10,7 +10,7 @@ import os
 import re
 import fnmatch
 
-from salt.utils.six.moves import range
+from salt.ext.six.moves import range
 
 # Import salt libs
 import salt.utils

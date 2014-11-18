@@ -7,7 +7,7 @@ from __future__ import absolute_import
 import logging
 import os
 import re
-import salt.utils.six as six
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 

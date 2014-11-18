@@ -39,7 +39,7 @@ set_file
     dict must be indented four spaces instead of two.
 '''
 from __future__ import absolute_import
-import salt.utils.six as six
+import salt.ext.six as six
 
 
 # Define the module's virtual name

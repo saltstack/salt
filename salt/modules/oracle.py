@@ -32,7 +32,7 @@ from __future__ import absolute_import
 import os
 import logging
 from salt.utils.decorators import depends
-import salt.utils.six as six
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 

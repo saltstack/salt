@@ -25,9 +25,9 @@ import requests
 # Import Salt libs
 import salt.utils.xmlutil as xml
 from salt._compat import ElementTree as ET
-from salt.utils.six.moves import map
-from salt.utils.six.moves import zip
-from salt.utils.six.moves import range
+from salt.ext.six.moves import map
+from salt.ext.six.moves import zip
+from salt.ext.six.moves import range
 
 LOG = logging.getLogger(__name__)
 DEFAULT_LOCATION = 'us-east-1'

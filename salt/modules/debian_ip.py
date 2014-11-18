@@ -9,7 +9,7 @@ References:
 
 # Import python libs
 from __future__ import absolute_import
-import salt.utils.six as six
+import salt.ext.six as six
 import functools
 import logging
 import os.path

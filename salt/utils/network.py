@@ -11,8 +11,8 @@ import re
 import logging
 import os
 from string import ascii_letters, digits
-from salt.utils.six.moves import range
-import salt.utils.six as six
+from salt.ext.six.moves import range
+import salt.ext.six as six
 
 # Attempt to import wmi
 try:

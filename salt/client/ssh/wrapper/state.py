@@ -20,7 +20,7 @@ import salt.state
 import salt.loader
 import salt.minion
 import salt.log
-from salt.utils.six import string_types
+from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 

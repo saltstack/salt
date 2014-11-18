@@ -33,13 +33,13 @@ import salt.fileclient
 import salt.utils.event
 import salt.syspaths as syspaths
 from salt.utils import context, immutabletypes
-from salt.utils.six import string_types
+from salt.ext.six import string_types
 from salt.template import compile_template, compile_template_str
 from salt.exceptions import SaltRenderError, SaltReqTimeoutError, SaltException
 from salt.utils.odict import OrderedDict, DefaultOrderedDict
 
 # Import third party libs
-from salt.utils.six.moves import range
+from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 

@@ -14,7 +14,7 @@ import logging
 # Import salt libs
 import salt.utils
 from salt._compat import string_io
-from salt.utils.six import string_types
+from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 

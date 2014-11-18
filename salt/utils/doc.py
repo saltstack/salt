@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 import re
-import salt.utils.six as six
+import salt.ext.six as six
 
 
 def strip_rst(docs):

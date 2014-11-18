@@ -19,7 +19,7 @@ import time
 
 # Import salt libs
 import salt.utils
-from salt.utils.six import string_types
+from salt.ext.six import string_types
 
 from salt.exceptions import (
     SaltInvocationError

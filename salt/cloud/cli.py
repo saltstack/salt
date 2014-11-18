@@ -17,7 +17,7 @@ from __future__ import absolute_import
 import os
 import sys
 import logging
-from salt.utils.six.moves import input
+from salt.ext.six.moves import input
 
 # Import salt libs
 import salt.config
@@ -30,7 +30,7 @@ from salt.utils.verify import check_user, verify_env, verify_files
 # Import salt.cloud libs
 import salt.cloud
 from salt.exceptions import SaltCloudException, SaltCloudSystemExit
-import salt.utils.six as six
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 

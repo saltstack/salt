@@ -19,7 +19,7 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
-from salt.utils.six import string_types
+from salt.ext.six import string_types
 
 # Import third party libs
 try:

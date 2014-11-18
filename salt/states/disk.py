@@ -7,7 +7,7 @@ Monitor the state of disk resources
 from __future__ import absolute_import
 
 # Import salt libs
-from salt.utils.six import string_types
+from salt.ext.six import string_types
 
 __monitor__ = [
         'status',

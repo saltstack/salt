@@ -26,7 +26,7 @@ from ctypes.util import find_library
 
 # Import Salt libs
 from salt.utils import get_group_list
-from salt.utils.six.moves import range
+from salt.ext.six.moves import range
 
 LIBPAM = CDLL(find_library('pam'))
 LIBC = CDLL(find_library('c'))

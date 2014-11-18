@@ -17,7 +17,7 @@ import hashlib
 import logging
 import traceback
 import binascii
-from salt.utils.six.moves import zip
+from salt.ext.six.moves import zip
 
 # Import third party libs
 try:

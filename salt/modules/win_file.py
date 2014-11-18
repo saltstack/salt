@@ -28,9 +28,9 @@ import re  # do not remove, used in imported file.py functions
 import sys  # do not remove, used in imported file.py functions
 import fileinput  # do not remove, used in imported file.py functions
 import fnmatch  # do not remove, used in imported file.py functions
-from salt.utils.six import string_types  # do not remove, used in imported file.py functions
+from salt.ext.six import string_types  # do not remove, used in imported file.py functions
 # do not remove, used in imported file.py functions
-from salt.utils.six.moves.urllib.parse import urlparse  # pylint: disable=E0611
+from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=E0611
 import salt.utils.atomicfile  # do not remove, used in imported file.py functions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 # pylint: enable=W0611

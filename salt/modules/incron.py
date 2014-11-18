@@ -10,7 +10,7 @@ import os
 
 # Import salt libs
 import salt.utils
-from salt.utils.six.moves import range
+from salt.ext.six.moves import range
 
 # Set up logging
 log = logging.getLogger(__name__)

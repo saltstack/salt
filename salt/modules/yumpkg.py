@@ -25,11 +25,14 @@ try:
 except ImportError:
     from pipes import quote as _cmd_quote
 
+import salt.ext.six as six
+from distutils.version import LooseVersion as _LooseVersion
+from salt.ext.six.moves import range
+
 # Import salt libs
 import salt.utils
-import salt.utils.six as six
-from salt.utils.six import string_types
-from salt.utils.six.moves import range
+import salt.ext.six as six
+from salt.ext.six import string_types
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )

@@ -23,7 +23,7 @@ import time
 import logging
 import random
 import getpass
-from salt.utils.six.moves import input
+from salt.ext.six.moves import input
 
 # Import salt libs
 import salt.config

@@ -51,7 +51,7 @@ from salt.exceptions import (
     SaltCloudExecutionTimeout,
     SaltCloudExecutionFailure
 )
-import salt.utils.six as six
+import salt.ext.six as six
 
 try:
     from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401

@@ -30,7 +30,7 @@ import os
 import re
 import time
 import logging
-from salt.utils.six.moves import range
+from salt.ext.six.moves import range
 
 import salt.utils
 from salt.exceptions import CommandExecutionError

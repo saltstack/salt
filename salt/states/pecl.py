@@ -21,7 +21,7 @@ requisite to a pkg.installed state for the package which provides pecl
 from __future__ import absolute_import
 
 # Import salt libs
-from salt.utils.six import string_types
+from salt.ext.six import string_types
 
 
 def __virtual__():

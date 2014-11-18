@@ -23,11 +23,11 @@ from salt.utils import vt
 import salt.utils
 import salt.utils.timed_subprocess
 import salt.grains.extra
-from salt.utils.six import string_types
+from salt.ext.six import string_types
 from salt.exceptions import CommandExecutionError, TimedProcTimeoutError
 from salt.log import LOG_LEVELS
-import salt.utils.six as six
-from salt.utils.six.moves import range
+import salt.ext.six as six
+from salt.ext.six.moves import range
 
 # Only available on POSIX systems, nonfatal on windows
 try:

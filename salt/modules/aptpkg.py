@@ -25,12 +25,12 @@ import yaml
 # Import salt libs
 from salt.modules.cmdmod import _parse_env
 import salt.utils
-from salt.utils.six import string_types
+from salt.ext.six import string_types
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
-import salt.utils.six as six
-from salt.utils.six.moves import range
+import salt.ext.six as six
+from salt.ext.six.moves import range
 
 
 log = logging.getLogger(__name__)

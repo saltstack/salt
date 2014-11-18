@@ -27,7 +27,7 @@ import copy
 import logging
 import errno
 from datetime import datetime
-from salt.utils.six import string_types
+from salt.ext.six import string_types
 
 # Import salt libs
 import salt.config
@@ -43,7 +43,7 @@ import salt.syspaths as syspaths
 from salt.exceptions import (
     EauthAuthenticationError, SaltInvocationError, SaltReqTimeoutError
 )
-import salt.utils.six as six
+import salt.ext.six as six
 
 # Import third party libs
 try:

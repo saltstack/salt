@@ -7,7 +7,7 @@ from __future__ import absolute_import
 import salt.utils
 
 import logging
-from salt.utils.six.moves import range
+from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 

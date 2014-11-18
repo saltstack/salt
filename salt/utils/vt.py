@@ -46,7 +46,7 @@ else:
     import resource
 
 # Import salt libs
-from salt.utils.six import string_types
+from salt.ext.six import string_types
 from salt.log.setup import LOG_LEVELS
 
 log = logging.getLogger(__name__)

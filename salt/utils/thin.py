@@ -31,7 +31,7 @@ except ImportError:
     except ImportError:
         HAS_URLLIB3 = False
 try:
-    import salt.utils.six as six
+    import salt.ext.six as six
     HAS_SIX = True
 except ImportError:
     # Import the bundled package

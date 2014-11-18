@@ -14,7 +14,7 @@ import fnmatch
 import hashlib
 import json
 import logging
-from salt.utils.six.moves import input
+from salt.ext.six.moves import input
 
 # Import salt libs
 import salt.crypt

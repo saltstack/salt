@@ -29,7 +29,7 @@ from __future__ import absolute_import
 import struct
 
 # Import salt libs
-from salt.utils.six.moves import range
+from salt.ext.six.moves import range
 
 __version__ = 'trunk'
 

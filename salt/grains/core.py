@@ -23,7 +23,7 @@ import locale
 # Extend the default list of supported distros. This will be used for the
 # /etc/DISTRO-release checking that is part of platform.linux_distribution()
 from platform import _supported_dists
-import salt.utils.six as six
+import salt.ext.six as six
 _supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
                      'slamd64', 'ovs', 'system', 'mint', 'oracle')
 
@@ -31,7 +31,7 @@ _supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
 import salt.log
 import salt.utils
 import salt.utils.network
-from salt.utils.six import string_types
+from salt.ext.six import string_types
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.

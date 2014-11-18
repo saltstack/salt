@@ -13,7 +13,7 @@ import sys
 import salt.minion
 import salt.utils
 from salt.defaults import DEFAULT_TARGET_DELIM
-from salt.utils.six import string_types
+from salt.ext.six import string_types
 
 __func_alias__ = {
     'list_': 'list'

@@ -9,7 +9,7 @@ import os.path
 
 # Import salt libs
 import salt.utils
-import salt.utils.six as six
+import salt.ext.six as six
 
 # Define the module's virtual name
 __virtualname__ = 'lvm'

@@ -14,7 +14,7 @@ import yaml
 
 import salt.utils
 import salt.utils.odict
-import salt.utils.six as six
+import salt.ext.six as six
 
 __proxyenabled__ = ['*']
 
