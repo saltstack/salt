@@ -17,7 +17,6 @@ import salt.config
 import salt.client
 import salt.utils
 import salt.syspaths as syspaths
-
 from salt.utils import kinds
 
 log = logging.getLogger(__name__)
@@ -60,7 +59,8 @@ class LocalClient(salt.client.LocalClient):
             emsg = ("Invalid application kind = '{0}' for Raet LocalClient.".format(kind))
             log.error(emsg + "\n")
             raise ValueError(emsg)
-        if kind == 'master':
+        if kind in  [kinds.APPL_KIND_NAMES[kinds.applKinds.master],
+                     kinds.APPL_KIND_NAMES[kinds.applKinds.syndic]]:
             lanename = 'master'
         else:
             emsg = ("Unsupported application kind '{0}' for Raet LocalClient.".format(kind))

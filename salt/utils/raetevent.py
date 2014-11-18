@@ -56,10 +56,10 @@ class RAETEvent(object):
                 log.error(emsg + '\n')
                 raise ValueError(emsg)
 
-        if self.node == kinds.APPL_KIND_NAMES[kinds.applKinds.master]:  # 'master'
+        if self.node in [kinds.APPL_KIND_NAMES[kinds.applKinds.master],
+                         kinds.APPL_KIND_NAMES[kinds.applKinds.syndic]]: # 'master'
             lanename = 'master'
         elif self.node in [kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
-                           kinds.APPL_KIND_NAMES[kinds.applKinds.syndic],
                            kinds.APPL_KIND_NAMES[kinds.applKinds.caller]]:  # ['minion', 'syndic', 'caller']
             role = self.opts.get('id', '')  # opts required for minion
             if not role:

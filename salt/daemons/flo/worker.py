@@ -126,7 +126,8 @@ class SaltRaetWorkerSetup(ioflo.base.deeding.Deed):
             emsg = ("Invalid application kind = '{0}' for Master Worker.".format(kind))
             log.error(emsg + "\n")
             raise ValueError(emsg)
-        if kind == 'master':
+        if kind in [kinds.APPL_KIND_NAMES[kinds.applKinds.master],
+                    kinds.APPL_KIND_NAMES[kinds.applKinds.syndic]]:
             lanename = 'master'
         else:  # workers currently are only supported for masters
             emsg = ("Invalid application kind '{0}' for Master Worker.".format(kind))

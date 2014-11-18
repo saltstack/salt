@@ -649,7 +649,8 @@ class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
             log.error(emsg + "\n")
             raise ValueError(emsg)
 
-        if kind == kinds.APPL_KIND_NAMES[kinds.applKinds.master]:
+        if kind in [kinds.APPL_KIND_NAMES[kinds.applKinds.master],
+                    kinds.APPL_KIND_NAMES[kinds.applKinds.syndic]]:
             lanename = 'master'
         elif kind in [kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
                       kinds.APPL_KIND_NAMES[kinds.applKinds.caller], ]:
