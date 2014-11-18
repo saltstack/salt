@@ -13,7 +13,7 @@ import time
 import requests
 import pprint
 from six.moves import range
-import six
+import salt.utils.six as six
 
 log = logging.getLogger(__name__)
 
