@@ -20,7 +20,7 @@ import os
 import re
 from distutils.version import LooseVersion as _LooseVersion
 try:
-    from shlex import quote as _cmd_quote
+    from shlex import quote as _cmd_quote  # pylint: disable=E0611
 except ImportError:
     from pipes import quote as _cmd_quote
 
