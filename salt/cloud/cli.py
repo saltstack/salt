@@ -30,7 +30,7 @@ from salt.utils.verify import check_user, verify_env, verify_files
 # Import salt.cloud libs
 import salt.cloud
 from salt.exceptions import SaltCloudException, SaltCloudSystemExit
-import six
+import salt.utils.six as six
 
 log = logging.getLogger(__name__)
 
