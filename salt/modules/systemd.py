@@ -82,7 +82,8 @@ def _get_all_unit_files():
                       r')\s+(?P<state>.+)$')
 
     out = __salt__['cmd.run_stdout'](
-        'systemctl --full list-unit-files | col -b'
+        'systemctl --full list-unit-files | col -b',
+        python_shell=True
     )
 
     ret = {}
@@ -295,8 +296,7 @@ def status(name, sig=None):
     '''
     if _untracked_custom_unit_found(name) or _unit_file_changed(name):
         systemctl_reload()
-    cmd = 'systemctl is-active {0}'.format(_canonical_unit_name(name))
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](_systemctl_cmd('is-active', name))
 
 
 def enable(name, **kwargs):
