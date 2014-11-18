@@ -6,7 +6,7 @@ from __future__ import absolute_import
 # Import python libs
 import time
 import salt.utils.six as six
-from six.moves import range
+from salt.utils.six.moves import range
 
 
 def arg(*args, **kwargs):
