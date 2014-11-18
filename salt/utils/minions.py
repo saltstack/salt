@@ -584,7 +584,6 @@ class CkMinions(object):
         Used to evaluate the standard structure under external master
         authentication interfaces, like eauth, peer, peer_run, etc.
         '''
-        # compound commands will come in a list so treat everything as a list
         if publish_validate:
             v_tgt_type = tgt_type
             if tgt_type.lower() == 'pillar':
@@ -598,6 +597,7 @@ class CkMinions(object):
             # then pillar globbing is being used, and we have a problem
             if mismatch:
                 return False
+        # compound commands will come in a list so treat everything as a list
         if not isinstance(funs, list):
             funs = [funs]
         try:
