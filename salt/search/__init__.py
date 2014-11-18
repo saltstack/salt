@@ -11,7 +11,7 @@ import os
 import salt.minion
 import salt.loader
 import salt.utils
-import six
+import salt.utils.six as six
 
 
 def iter_ret(opts, ret):
