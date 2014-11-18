@@ -8,9 +8,9 @@ from __future__ import absolute_import
 # Import python libs
 import os
 import logging
-from six import string_types
+from salt.utils.six import string_types
 import salt.utils.six as six
-from six.moves import zip
+from salt.utils.six.moves import zip
 
 
 # pylint: disable=W0611
