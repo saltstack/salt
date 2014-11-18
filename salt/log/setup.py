@@ -25,7 +25,7 @@ import logging
 import logging.handlers
 import traceback
 import salt.utils.six as six
-from six import string_types, text_type
+from salt.utils.six import string_types, text_type
 
 # Let's define these custom logging levels before importing the salt.log.mixins
 # since they will be used there
