@@ -1607,7 +1607,7 @@ def pull(repo, tag=None, insecure_registry=False):
     client = _get_client()
     status = base_status.copy()
     try:
-        kwargs = {'tag' : tag}
+        kwargs = {'tag': tag}
         # if docker-py version is greater than 0.5.0 use the
         # insecure_registry parameter
         if salt.utils.compare_versions(ver1=docker.__version__,
@@ -1706,7 +1706,7 @@ def push(repo, tag=None, quiet=False, insecure_registry=False):
     status = base_status.copy()
     registry, repo_name = docker.auth.resolve_repository_name(repo)
     try:
-        kwargs = {'tag' : tag}
+        kwargs = {'tag': tag}
         # if docker-py version is greater than 0.5.0 use the
         # insecure_registry parameter
         if salt.utils.compare_versions(ver1=docker.__version__,
