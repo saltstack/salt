@@ -12,7 +12,7 @@ import sys
 import errno
 import logging
 import traceback
-from six import string_types
+from salt.utils.six import string_types
 
 # Import salt libs
 import salt.loader
