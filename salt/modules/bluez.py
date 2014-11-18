@@ -17,9 +17,9 @@ import logging
 import salt.utils.validate.net
 from salt.exceptions import CommandExecutionError
 try:
-    from shlex import quote as cmd_quote
+    from shlex import quote as _cmd_quote
 except ImportError:
-    from pipes import quote as cmd_quote
+    from pipes import quote as _cmd_quote
 
 log = logging.getLogger(__name__)
 HAS_PYBLUEZ = False
@@ -258,7 +258,7 @@ def pair(address, key):
 
     addy = address_()
     cmd = 'echo {0} | bluez-simple-agent {1} {2}'.format(
-        cmd_quote(addy['device']), cmd_quote(address), cmd_quote(key)
+        _cmd_quote(addy['device']), _cmd_quote(address), _cmd_quote(key)
     )
     out = __salt__['cmd.run'](cmd, python_shell=True).splitlines()
     return out
