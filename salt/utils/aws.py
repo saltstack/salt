@@ -231,12 +231,14 @@ def query(params=None, setname=None, requesturl=None, location=None,
         opts = {}
 
     if provider is None:
-        function = opts.get('function', ())
+        function = opts.get('function', (None, None))
         providers = opts.get('providers', {})
         prov_dict = providers.get(function[1], None)
-        if prov_dict is not None:
+        if prov_dict is not None and len(prov_dict.keys()) > 0:
             driver = list(list(prov_dict.keys()))[0]
             provider = prov_dict[driver]
+        else:
+            provider = {}
 
     service_url = provider.get('service_url', 'amazonaws.com')
 
