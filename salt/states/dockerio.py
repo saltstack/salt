@@ -221,7 +221,12 @@ def mod_watch(name, sfun=None, *args, **kw):
                         ' implemented for {0}'.format(sfun))}
 
 
-def pulled(name, tag=None, force=False, *args, **kwargs):
+def pulled(name,
+           tag=None,
+           force=False,
+           insecure_registry=False,
+           *args,
+           **kwargs):
     '''
     Pull an image from a docker registry. (`docker pull`)
 
@@ -245,6 +250,9 @@ def pulled(name, tag=None, force=False, *args, **kwargs):
 
     force
         Pull even if the image is already pulled
+
+    insecure_registry
+        Set to ``True``to allow connections to non-HTTPS registries. Default ``False``.
     '''
     inspect_image = __salt__['docker.inspect_image']
     image_infos = inspect_image(name)
@@ -262,7 +270,7 @@ def pulled(name, tag=None, force=False, *args, **kwargs):
 
     previous_id = image_infos['out']['Id'] if image_infos['status'] else None
     pull = __salt__['docker.pull']
-    returned = pull(name, tag=tag)
+    returned = pull(name, tag=tag, insecure_registry=insecure_registry)
     if previous_id != returned['id']:
         changes = {name: {'old': previous_id,
                           'new': returned['id']}}
@@ -271,7 +279,7 @@ def pulled(name, tag=None, force=False, *args, **kwargs):
     return _ret_status(returned, name, changes=changes)
 
 
-def pushed(name, tag=None):
+def pushed(name, tag=None, insecure_registry=False):
     '''
     Push an image from a docker registry. (`docker push`)
 
@@ -293,6 +301,8 @@ def pushed(name, tag=None):
     tag
         Tag of the image [Optional]
 
+    insecure_registry
+        Set to ``True``to allow connections to non-HTTPS registries. Default ``False``.
     '''
 
     if __opts__['test']:
@@ -303,7 +313,7 @@ def pushed(name, tag=None):
                 'comment': comment}
 
     push = __salt__['docker.push']
-    returned = push(name, tag=tag)
+    returned = push(name, tag=tag, insecure_registry=insecure_registry)
     log.debug("Returned: "+str(returned))
     if returned['status']:
         changes = {name: {'Rev': returned['id']}}
