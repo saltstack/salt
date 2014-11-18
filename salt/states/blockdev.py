@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Management of Block Devices
-===================================
 
 A state module to manage blockdevices
 

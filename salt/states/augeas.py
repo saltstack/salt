@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Configuration management using Augeas
-=====================================
 
 .. versionadded:: 0.17.0
 
