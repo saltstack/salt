@@ -38,7 +38,7 @@ from __future__ import absolute_import
 # Import Python libs
 import logging
 import time
-import six
+import salt.utils.six as six
 
 log = logging.getLogger(__name__)
 
