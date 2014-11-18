@@ -10,7 +10,6 @@ import collections
 import six
 
 
-
 def update(dest, upd):
     for key, val in six.iteritems(upd):
         if isinstance(val, collections.Mapping):
