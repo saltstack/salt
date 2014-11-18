@@ -52,7 +52,7 @@ try:
 except ImportError:
     HAS_BOTO = False
 
-from six import string_types
+from salt.utils.six import string_types
 import salt.utils.odict as odict
 
 
