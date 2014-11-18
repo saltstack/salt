@@ -75,7 +75,7 @@ with the role. This is the default behavior of the AWS console.
 '''
 from __future__ import absolute_import
 import salt.utils.dictupdate as dictupdate
-import six
+import salt.utils.six as six
 
 
 def __virtual__():
