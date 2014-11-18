@@ -87,10 +87,10 @@ DEFAULT_LOCATION = 'us-east-1'
 POLL_ALL_LOCATIONS = True
 
 VALID_RESPONSE_CODES = [
-    six.moves.http_client.OK,
-    six.moves.http_client.ACCEPTED,
-    six.moves.http_client.CREATED,
-    six.moves.http_client.NO_CONTENT
+    salt.utils.six.moves.http_client.OK,
+    salt.utils.six.moves.http_client.ACCEPTED,
+    salt.utils.six.moves.http_client.CREATED,
+    salt.utils.six.moves.http_client.NO_CONTENT
 ]
 
 
