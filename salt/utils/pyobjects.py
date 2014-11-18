@@ -12,7 +12,7 @@ import logging
 from collections import namedtuple
 
 from salt.utils.odict import OrderedDict
-import six
+import salt.utils.six as six
 
 REQUISITES = ('require', 'watch', 'use', 'require_in', 'watch_in', 'use_in')
 
