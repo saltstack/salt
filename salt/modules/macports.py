@@ -56,8 +56,8 @@ def __virtual__():
 
 def _list(query=''):
     ret = {}
-    cmd = 'port list {0}'.format(query)
-    out = __salt__['cmd.run'](cmd, output_loglevel='trace')
+    cmd = ['port','list',query]
+    out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
     for line in out.splitlines():
         try:
             name, version_num, category = re.split(r'\s+', line.lstrip())[0:3]
@@ -96,8 +96,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
             return ret
 
     ret = {}
-    cmd = 'port installed'
-    out = __salt__['cmd.run'](cmd, output_loglevel='trace')
+    cmd = ['port','installed']
+    out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
     for line in out.splitlines():
         try:
             name, version_num, active = re.split(r'\s+', line.lstrip())[0:3]
@@ -206,8 +206,8 @@ def remove(name=None, pkgs=None, **kwargs):
     targets = [x for x in pkg_params if x in old]
     if not targets:
         return {}
-    cmd = 'port uninstall {0}'.format(' '.join(targets))
-    __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+    cmd = ['port','uninstall'].append(targets)
+    __salt__['cmd.run_all'](cmd, output_loglevel='trace', python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return __salt__['saltutil.compare_dicts'](old, new)
@@ -301,12 +301,10 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
     for pname, pparams in pkg_params.items():
         formulas_array.append(pname + (pparams or ''))
 
-    formulas = ' '.join(formulas_array)
-
     old = list_pkgs()
-    cmd = 'port install {0}'.format(formulas)
+    cmd = ['port','install'].append(formulas_array)
 
-    __salt__['cmd.run'](cmd, output_loglevel='trace')
+    __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)
@@ -350,7 +348,14 @@ def refresh_db():
     '''
     Update ports with ``port selfupdate``
     '''
-    __salt__['cmd.run_all']('port selfupdate', output_loglevel='trace')
+    cmd = ['port','selfupdate']
+    ret = __salt__['cmd.run_all'](cmd, output_loglevel='trace',
+                                  python_shell=False)
+    if ret['retcode'] != 0:
+        ret['success'] = False
+        return ret
+    else:
+        return {'success':True, 'retcode':0}
 
 
 def upgrade(refresh=True):  # pylint: disable=W0613
@@ -374,9 +379,13 @@ def upgrade(refresh=True):  # pylint: disable=W0613
         salt '*' pkg.upgrade
     '''
 
-    old = list_pkgs()
+    if refresh:
+        refresh_db()
 
-    __salt__['cmd.run_all']('port upgrade outdated', output_loglevel='trace')
+    old = list_pkgs()
+    cmd = ['port','upgrade','outdated']
+
+    __salt__['cmd.run_all'](cmd, output_loglevel='trace', python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)
