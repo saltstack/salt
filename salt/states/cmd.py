@@ -194,7 +194,7 @@ import logging
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError, SaltRenderError
-from six import string_types
+from salt.utils.six import string_types
 
 log = logging.getLogger(__name__)
 
