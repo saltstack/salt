@@ -24,7 +24,7 @@ You have those following methods:
 '''
 from __future__ import absolute_import
 import salt.utils.six as six
-from six.moves import range
+from salt.utils.six.moves import range
 
 # Define the module's virtual name
 __virtualname__ = 'buildout'
@@ -49,7 +49,7 @@ import urllib2
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError
-from six import string_types
+from salt.utils.six import string_types
 
 
 INVALID_RESPONSE = 'We did not get any expectable answer from buildout'
