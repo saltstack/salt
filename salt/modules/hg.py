@@ -157,7 +157,7 @@ def archive(cwd, output, rev='tip', fmt=None, prefix=None, user=None):
     return __salt__['cmd.run'](cmd, cwd=cwd, runas=user, python_shell=False)
 
 
-def pull(cwd, repository=None, opts=None, user=None):
+def pull(cwd, opts=None, user=None, repository=None):
     '''
     Perform a pull on the given repository
 
