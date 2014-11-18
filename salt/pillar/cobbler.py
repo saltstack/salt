@@ -54,7 +54,7 @@ def ext_pillar(minion_id,
 
     log.info("Querying cobbler at %r for information for %r", url, minion_id)
     try:
-        server = six.moves.xmlrpc_client.Server(url, allow_none=True)
+        server = salt.utils.six.moves.xmlrpc_client.Server(url, allow_none=True)
         if user:
             server.login(user, password)
         result = server.get_blended_data(None, minion_id)
