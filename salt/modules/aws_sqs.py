@@ -8,7 +8,7 @@ import json
 
 # Import salt libs
 import salt.utils
-import six
+import salt.utils.six as six
 
 log = logging.getLogger(__name__)
 
