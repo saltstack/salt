@@ -27,7 +27,7 @@ import copy
 import logging
 import errno
 from datetime import datetime
-from six import string_types
+from salt.utils.six import string_types
 
 # Import salt libs
 import salt.config
