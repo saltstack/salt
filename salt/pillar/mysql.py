@@ -188,7 +188,7 @@ import logging
 
 # Import Salt libs
 from salt.utils.odict import OrderedDict
-from six.moves import range
+from salt.utils.six.moves import range
 
 # Set up logging
 log = logging.getLogger(__name__)
