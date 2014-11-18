@@ -32,7 +32,7 @@ import os.path
 import re
 
 # Import salt libs
-from six import string_types
+from salt.utils.six import string_types
 
 import logging
 import salt.utils.six as six
