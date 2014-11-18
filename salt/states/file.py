@@ -251,7 +251,7 @@ from salt.exceptions import CommandExecutionError
 from salt.utils.serializers import yaml as yaml_serializer
 from salt.utils.serializers import json as json_serializer
 from six.moves import map
-import six
+import salt.utils.six as six
 from six import string_types, integer_types
 
 log = logging.getLogger(__name__)
