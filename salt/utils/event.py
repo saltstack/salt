@@ -704,8 +704,8 @@ class ReactWrap(object):
         LowData
         '''
         l_fun = getattr(self, low['state'])
-        f_call = salt.utils.format_call(l_fun, low)
         try:
+            f_call = salt.utils.format_call(l_fun, low)
             ret = l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
         except Exception:
             log.error(
