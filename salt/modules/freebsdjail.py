@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import os
 import subprocess
 import shlex
+import re
 
 # Import salt libs
 import salt.utils
@@ -75,8 +76,12 @@ def is_enabled():
 
         salt '*' jail.is_enabled <jail name>
     '''
-    cmd = 'service -e | grep jail'
-    return not __salt__['cmd.retcode'](cmd)
+    cmd = 'service -e'
+    services = __salt__['cmd.run'](cmd, python_shell=False)
+    for service in services.split('\\n'):
+        if re.search('jail', service):
+            return True
+    return False
 
 
 def get_enabled():
@@ -214,8 +219,12 @@ def status(jail):
 
         salt '*' jail.status <jail name>
     '''
-    cmd = 'jls | grep {0}'.format(jail)
-    return not __salt__['cmd.retcode'](cmd)
+    cmd = 'jls'
+    found_jails = __salt__['cmd.run'](cmd, python_shell=False)
+    for found_jail in found_jails.split('\\n'):
+        if re.search(jail, found_jail):
+            return True
+    return False
 
 
 def sysctl():

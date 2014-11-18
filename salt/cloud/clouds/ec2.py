@@ -2138,7 +2138,7 @@ def queue_instances(instances):
         salt.utils.cloud.cache_node(node, __active_provider_name__, __opts__)
 
 
-def create_attach_volumes(name, kwargs, call=None):
+def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
     '''
     Create and attach volumes to created node
     '''
@@ -2178,7 +2178,7 @@ def create_attach_volumes(name, kwargs, call=None):
                 volume_dict['iops'] = volume['iops']
 
         if 'volume_id' not in volume_dict:
-            created_volume = create_volume(volume_dict, call='function')
+            created_volume = create_volume(volume_dict, call='function', wait_to_finish=wait_to_finish)
             created = True
             for item in created_volume:
                 if 'volumeId' in item:
