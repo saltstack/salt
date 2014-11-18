@@ -35,7 +35,7 @@ import re
 from six import string_types
 
 import logging
-import six
+import salt.utils.six as six
 log = logging.getLogger(__name__)
 
 
