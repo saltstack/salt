@@ -7,7 +7,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import collections
-import six
+import salt.utils.six as six
 
 # Import salt libs
 from salt.utils.odict import OrderedDict
