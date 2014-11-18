@@ -129,7 +129,7 @@ def list_upgrades(refresh=False):
         r'"^\s|^:"'
     ).format(' '.join(options))
 
-    out = __salt__['cmd.run'](cmd, output_loglevel='trace')
+    out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=True)
     for line in out.splitlines():
         comps = line.split(' ')
         if len(comps) < 2:
