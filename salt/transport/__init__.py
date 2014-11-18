@@ -94,8 +94,21 @@ class RAETChannel(Channel):
                         jobber_yard_name or None,
                         'remote_cmd')
         self.stack = None
+        self.ryn = 'manor'  # remote yard name
 
-    def _setup_stack(self):
+    def __prep_stack(self):
+        '''
+        Prepare the stack objects
+        '''
+        global jobber_stack
+        if not self.stack:
+            if jobber_stack:
+                self.stack = jobber_stack
+            else:
+                self.stack = jobber_stack = self._setup_stack(ryn=self.ryn)
+        log.debug("RAETChannel Using Jobber Stack at = {0}\n".format(self.stack.ha))
+
+    def _setup_stack(self, ryn='manor'):
         '''
         Setup and return the LaneStack and Yard used by by channel when global
         not already setup such as in salt-call to communicate to-from the minion
@@ -130,23 +143,11 @@ class RAETChannel(Channel):
 
         stack.Pk = raeting.packKinds.pack
         stack.addRemote(RemoteYard(stack=stack,
-                                   name='manor',
+                                   name=ryn,
                                    lanename=lanename,
                                    dirpath=self.opts['sock_dir']))
         log.debug("Created Channel Jobber Stack {0}\n".format(stack.name))
         return stack
-
-    def __prep_stack(self):
-        '''
-        Prepare the stack objects
-        '''
-        global jobber_stack
-        if not self.stack:
-            if jobber_stack:
-                self.stack = jobber_stack
-            else:
-                self.stack = jobber_stack = self._setup_stack()
-        log.debug("Using Jobber Stack at = {0}\n".format(self.stack.ha))
 
     def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
         '''
@@ -167,7 +168,7 @@ class RAETChannel(Channel):
         src = (None, self.stack.local.name, track)
         self.route = {'src': src, 'dst': self.dst}
         msg = {'route': self.route, 'load': load}
-        self.stack.transmit(msg, self.stack.nameRemotes['manor'].uid)
+        self.stack.transmit(msg, self.stack.nameRemotes[self.ryn].uid)
         while track not in jobber_rxMsgs:
             self.stack.serviceAll()
             while self.stack.rxMsgs:
@@ -180,7 +181,6 @@ class RAETChannel(Channel):
                 if tried >= tries:
                     raise ValueError("Message send timed out after '{0} * {1}'"
                              " secs on route = {2}".format(tries, timeout, self.route))
-                #self.stack.transmit(msg, self.stack.nameRemotes['manor'].uid)
                 tried += 1
             time.sleep(0.01)
         return jobber_rxMsgs.pop(track).get('return', {})
