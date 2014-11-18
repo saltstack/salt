@@ -1913,6 +1913,9 @@ def create(vm_=None, call=None):
         },
         transport=__opts__['transport']
     )
+    salt.utils.cloud.cachedir_index_add(
+        vm_['name'], vm_['profile'], 'ec2', vm_['provider']
+    )
 
     key_filename = config.get_cloud_config_value(
         'private_key', vm_, __opts__, search_global=False, default=None
@@ -2540,6 +2543,8 @@ def destroy(name, call=None):
         {'name': name, 'instance_id': instance_id},
         transport=__opts__['transport']
     )
+
+    salt.utils.cloud.cachedir_index_del(name)
 
     if __opts__.get('update_cachedir', False) is True:
         salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
