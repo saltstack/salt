@@ -272,27 +272,16 @@ class SaltObject(object):
         Salt.cmd.run(bar)
     '''
     def __init__(self, salt):
-        _mods = {}
-        for full_func in salt:
-            mod, func = full_func.split('.')
-
-            if mod not in _mods:
-                _mods[mod] = {}
-            _mods[mod][func] = salt[full_func]
-
-        # now transform using namedtuples
-        self.mods = {}
-        for mod in _mods:
-            mod_name = '{0}Module'.format(str(mod).capitalize())
-            mod_object = namedtuple(mod_name, _mods[mod])
-
-            self.mods[mod] = mod_object(**_mods[mod])
+        self._salt = salt
 
     def __getattr__(self, mod):
-        if mod not in self.mods:
-            raise AttributeError
-
-        return self.mods[mod]
+        class __wrapper__(object):
+            def __getattr__(wself, func):
+                try:
+                    return self._salt["%s.%s" % (mod, func)]
+                except KeyError:
+                    raise AttributeError
+        return __wrapper__()
 
 
 class MapMeta(type):
