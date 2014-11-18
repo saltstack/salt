@@ -23,7 +23,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
-import six.moves.xmlrpc_client  # pylint: disable=E0611
+import salt.utils.six.moves.xmlrpc_client  # pylint: disable=E0611
 
 
 # Set up logging
