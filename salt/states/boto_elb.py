@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Manage ELBs
-=================
 
 .. versionadded:: 2014.7.0
 

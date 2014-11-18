@@ -9,14 +9,11 @@ from __future__ import absolute_import
 import collections
 import salt.utils.six as six
 
-# Import salt libs
-from salt.utils.odict import OrderedDict
-
 
 def update(dest, upd):
     for key, val in six.iteritems(upd):
         if isinstance(val, collections.Mapping):
-            ret = update(dest.get(key, OrderedDict()), val)
+            ret = update(dest.get(key, {}), val)
             dest[key] = ret
         else:
             dest[key] = upd[key]

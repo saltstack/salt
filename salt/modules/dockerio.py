@@ -606,11 +606,13 @@ def create_container(image,
         CPU shares (relative weight)
     cpuset
         CPUs in which to allow execution ('0-3' or '0,1')
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' docker.create_container o/ubuntu volumes="['/s','/m:/f']"
+
     '''
     status = base_status.copy()
     client = _get_client()

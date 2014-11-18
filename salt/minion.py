@@ -557,12 +557,21 @@ class MultiMinion(MinionBase):
                 # if you have an event to handle, do it on a single minion
                 # (first one to not throw an exception)
                 if package:
-                    try:
-                        minion['minion'].handle_event(package)
-                        package = None
-                        self.epub_sock.send(package)
-                    except Exception:
-                        pass
+                    # If we need to expand this, we may want to consider a specific header
+                    # or another approach entirely.
+                    if package.startswith('_minion_mine'):
+                        for multi_minion in minions:
+                            try:
+                                minions[master]['minion'].handle_event(package)
+                            except Exception:
+                                pass
+                    else:
+                        try:
+                            minion['minion'].handle_event(package)
+                            package = None
+                            self.epub_sock.send(package)
+                        except Exception:
+                            pass
 
                 # have the Minion class run anything it has to run
                 next(minion['generator'])
@@ -1534,6 +1543,15 @@ class Minion(MinionBase):
                 exc_info=err
             )
 
+    def _mine_send(self, package):
+        '''
+        Send mine data to the master
+        '''
+        sreq = salt.transport.Channel.factory(self.opts)
+        load = salt.utils.event.SaltEvent.unpack(package)[1]
+        ret = sreq.send(load)
+        return ret
+
     def handle_event(self, package):
         '''
         Handle an event from the epull_sock (all local minion events)
@@ -1551,6 +1569,8 @@ class Minion(MinionBase):
                 self.grains_cache = self.opts['grains']
         elif package.startswith('environ_setenv'):
             self.environ_setenv(package)
+        elif package.startswith('_minion_mine'):
+            self._mine_send(package)
         elif package.startswith('fire_master'):
             tag, data = salt.utils.event.MinionEvent.unpack(package)
             log.debug('Forwarding master event tag={tag}'.format(tag=data['tag']))

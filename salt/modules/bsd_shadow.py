@@ -9,6 +9,11 @@ try:
 except ImportError:
     pass
 
+try:
+    from shlex import quote as _cmd_quote
+except ImportError:
+    from pipes import quote as _cmd_quote
+
 # Define the module's virtual name
 __virtualname__ = 'shadow'
 
@@ -59,7 +64,7 @@ def info(name):
     if cmd:
         cmd += '| cut -f6,7 -d:'
         try:
-            change, expire = __salt__['cmd.run_all'](cmd)['stdout'].split(':')
+            change, expire = __salt__['cmd.run_all'](cmd, python_shell=True)['stdout'].split(':')
         except ValueError:
             pass
         else:

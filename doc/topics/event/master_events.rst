@@ -17,11 +17,25 @@ Authentication events
         ``reject``.
     :var pub: The minion public key.
 
+Start events
+============
+
 .. salt:event:: salt/minion/<MID>/start
 
     Fired every time a minion connects to the Salt master.
 
     :var id: The minion ID.
+
+Key events
+==========
+
+.. salt:event:: salt/key
+
+    Fired when accepting and rejecting minions keys on the Salt master.
+
+    :var id: The minion ID.
+    :var act: The new status of the minion key: ``accept``, ``pend``,
+        ``reject``.
 
 Job events
 ==========
