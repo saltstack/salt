@@ -11,7 +11,7 @@ import random
 # Import salt libs
 import salt.utils
 import salt.utils.six as six
-from six.moves import range
+from salt.utils.six.moves import range
 
 
 TAG = '# Lines below here are managed by Salt, do not edit\n'
