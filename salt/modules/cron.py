@@ -10,7 +10,7 @@ import random
 
 # Import salt libs
 import salt.utils
-import six
+import salt.utils.six as six
 from six.moves import range
 
 
