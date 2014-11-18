@@ -19,9 +19,7 @@ import copy
 import logging
 import os
 import re
-import salt.utils.six as six
 from distutils.version import LooseVersion as _LooseVersion
-from six.moves import range
 try:
     from shlex import quote as _cmd_quote
 except ImportError:
@@ -29,7 +27,9 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
-from six import string_types
+import salt.utils.six as six
+from salt.utils.six import string_types
+from salt.utils.six.moves import range
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
