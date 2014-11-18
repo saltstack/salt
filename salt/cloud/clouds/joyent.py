@@ -41,7 +41,7 @@ from __future__ import absolute_import
 # Import python libs
 import os
 import copy
-import six.moves.http_client  # pylint: disable=E0611
+import salt.utils.six.moves.http_client  # pylint: disable=E0611
 import requests
 import json
 import logging
