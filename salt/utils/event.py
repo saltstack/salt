@@ -120,6 +120,17 @@ def get_event(node, sock_dir=None, transport='zeromq', opts=None, listen=True):
                                               opts=opts)
 
 
+def get_runner_event(opts, jid):
+    '''
+    Return an event object suitable for the named transport
+    '''
+    if opts['transport'] == 'zeromq':
+        return RunnerEvent(opts, jid)
+    elif opts['transport'] == 'raet':
+        import salt.utils.raetevent
+        return salt.utils.raetevent.RunnerEvent(opts, jid)
+
+
 def tagify(suffix='', prefix='', base=SALT):
     '''
     convenience function to build a namespaced event tag string
