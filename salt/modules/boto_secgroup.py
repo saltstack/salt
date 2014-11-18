@@ -39,7 +39,7 @@ from __future__ import absolute_import
 import logging
 import re
 from distutils.version import LooseVersion as _LooseVersion
-import six
+import salt.utils.six as six
 
 log = logging.getLogger(__name__)
 
