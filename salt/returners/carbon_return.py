@@ -58,7 +58,7 @@ import time
 # Import salt libs
 import salt.utils
 import salt.returners
-from six.moves import map
+from salt.utils.six.moves import map
 
 log = logging.getLogger(__name__)
 
