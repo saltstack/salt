@@ -42,7 +42,7 @@ from salt.exceptions import (
 
 # Attempt to import xmlrpclib and lxml
 try:
-    import six.moves.xmlrpc_client  # pylint: disable=E0611
+    import salt.utils.six as six.moves.xmlrpc_client  # pylint: disable=E0611
     from lxml import etree
     HAS_XMLLIBS = True
 except ImportError:
