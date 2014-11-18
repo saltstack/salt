@@ -59,7 +59,6 @@ import logging
 import time
 import datetime
 import multiprocessing
-from multiprocessing import Process
 from collections import MutableMapping
 
 # Import third party libs
@@ -527,7 +526,7 @@ class MinionEvent(SaltEvent):
         super(MinionEvent, self).__init__('minion', sock_dir=opts.get('sock_dir', None), opts=opts)
 
 
-class EventPublisher(Process):
+class EventPublisher(multiprocessing.Process):
     '''
     The interface that takes master events and republishes them out to anyone
     who wants to listen
@@ -725,8 +724,8 @@ class ReactWrap(object):
         LowData
         '''
         l_fun = getattr(self, low['state'])
-        f_call = salt.utils.format_call(l_fun, low)
         try:
+            f_call = salt.utils.format_call(l_fun, low)
             ret = l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
         except Exception:
             log.error(
