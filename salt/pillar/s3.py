@@ -70,7 +70,7 @@ from copy import deepcopy
 from salt.pillar import Pillar
 import salt.utils
 import salt.utils.s3 as s3
-import six
+import salt.utils.six as six
 from six.moves import filter
 
 # Set up logging
