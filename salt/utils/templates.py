@@ -29,7 +29,7 @@ from salt.utils.jinja import SerializerExtension as JinjaSerializerExtension
 from salt.utils.odict import OrderedDict
 from salt import __path__ as saltpath
 from six import string_types
-import six
+import salt.utils.six as six
 
 log = logging.getLogger(__name__)
 
