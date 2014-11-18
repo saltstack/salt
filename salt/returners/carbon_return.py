@@ -50,7 +50,7 @@ from __future__ import absolute_import
 from contextlib import contextmanager
 import collections
 import logging
-import six.moves.cPickle as pickle  # pylint: disable=E0611
+import salt.utils.six.moves.cPickle as pickle  # pylint: disable=E0611
 import socket
 import struct
 import time
