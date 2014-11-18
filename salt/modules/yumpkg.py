@@ -21,11 +21,11 @@ import os
 import re
 import salt.utils.six as six
 from distutils.version import LooseVersion as _LooseVersion
-from six.moves import range
+from salt.utils.six.moves import range
 
 # Import salt libs
 import salt.utils
-from six import string_types
+from salt.utils.six import string_types
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
