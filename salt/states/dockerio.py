@@ -118,7 +118,7 @@ import logging
 # Import salt libs
 from six import string_types
 import salt.utils
-import six
+import salt.utils.six as six
 
 # Enable proper logging
 log = logging.getLogger(__name__)
