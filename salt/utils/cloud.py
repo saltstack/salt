@@ -2204,7 +2204,7 @@ def list_cache_nodes_full(opts, provider=None, base=None):
                 fname = '{0}.p'.format(minion_id)
                 fpath = os.path.join(min_dir, fname)
                 with salt.utils.fopen(fpath, 'r') as fh_:
-                    minions[driver][prov][minion] = msgpack.load(fh_)
+                    minions[driver][prov][minion_id] = msgpack.load(fh_)
 
     return minions
 
