@@ -69,7 +69,7 @@ import functools
 import yaml
 import zmq
 import fnmatch
-import six
+import salt.utils.six as six
 
 # salt imports
 import salt.netapi
