@@ -14,7 +14,7 @@ import yaml
 
 # Import salt libs
 import salt.utils
-from six import string_types
+from salt.utils.six import string_types
 import salt.utils.six as six
 
 log = logging.getLogger(__name__)
