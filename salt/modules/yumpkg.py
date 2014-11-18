@@ -20,9 +20,9 @@ import os
 import re
 from distutils.version import LooseVersion as _LooseVersion
 try:
- from shlex import quote as cmd_quote
+ from shlex import quote as _cmd_quote
 except ImportError:
- from pipes import quote as cmd_quote
+ from pipes import quote as _cmd_quote
 
 # Import salt libs
 import salt.utils
@@ -138,7 +138,7 @@ def _repoquery(repoquery_args, query_format=__QUERYFORMAT):
     '''
     _check_repoquery()
     cmd = 'repoquery --plugins --queryformat={0} {1}'.format(
-        cmd_quote(query_format), repoquery_args
+        _cmd_quote(query_format), repoquery_args
     )
     out = __salt__['cmd.run_stdout'](
             cmd,
@@ -224,7 +224,7 @@ def _rpm_pkginfo(name):
     # with "none"
     queryformat = __QUERYFORMAT.replace('%{REPOID}', 'none')
     output = __salt__['cmd.run_stdout'](
-        'rpm -qp --queryformat {0!r} {1}'.format(cmd_quote(queryformat), name),
+        'rpm -qp --queryformat {0!r} {1}'.format(_cmd_quote(queryformat), name),
         output_loglevel='trace',
         ignore_retcode=True,
         python_shell=True
@@ -1081,7 +1081,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     targets = [x for x in pkg_params if x in old]
     if not targets:
         return {}
-    quoted_targets = [cmd_quote(target) for target in targets]
+    quoted_targets = [_cmd_quote(target) for target in targets]
     cmd = 'yum -q -y remove {0}'.format(' '.join(quoted_targets))
     __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=True)
     __context__.pop('pkg.list_pkgs', None)
@@ -1281,7 +1281,7 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
                 ret[target]['comment'] = ('Package {0} is set to be unheld.'
                                           .format(target))
             else:
-                quoted_targets = [cmd_quote(item) for item in search_locks]
+                quoted_targets = [_cmd_quote(item) for item in search_locks]
                 cmd = 'yum -q versionlock delete {0}'.format(
                         ' '.join(quoted_targets)
                         )
@@ -1432,7 +1432,7 @@ def group_info(name):
     }
     cmd_template = 'repoquery --plugins --group --grouppkgs={0} --list {1!r}'
 
-    cmd = cmd_template.format('all', cmd_quote(name))
+    cmd = cmd_template.format('all', _cmd_quote(name))
     out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace', python_shell=True)
     all_pkgs = set(out.splitlines())
 
@@ -1440,7 +1440,7 @@ def group_info(name):
         raise CommandExecutionError('Group {0!r} not found'.format(name))
 
     for pkgtype in ('mandatory', 'optional', 'default'):
-        cmd = cmd_template.format(pkgtype, cmd_quote(name))
+        cmd = cmd_template.format(pkgtype, _cmd_quote(name))
         packages = set(
             __salt__['cmd.run_stdout'](
                 cmd, output_loglevel='trace', python_shell=True
@@ -1454,7 +1454,7 @@ def group_info(name):
     # considered to be conditional packages.
     ret['conditional packages'] = sorted(all_pkgs)
 
-    cmd = 'repoquery --plugins --group --info {0!r}'.format(cmd_quote(name))
+    cmd = 'repoquery --plugins --group --info {0!r}'.format(_cmd_quote(name))
     out = __salt__['cmd.run_stdout'](
             cmd, output_loglevel='trace', python_shell=True
             )
@@ -1841,7 +1841,7 @@ def owner(*paths):
     ret = {}
     for path in paths:
         cmd = 'rpm -qf --queryformat {0} {1!r}'.format(
-                cmd_quote('%{{NAME}}'),
+                _cmd_quote('%{{NAME}}'),
                 path
                 )
         ret[path] = __salt__['cmd.run_stdout'](
