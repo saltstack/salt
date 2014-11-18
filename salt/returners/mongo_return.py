@@ -41,7 +41,7 @@ import logging
 # import Salt libs
 import salt.utils
 import salt.returners
-import six
+import salt.utils.six as six
 
 # Import third party libs
 try:
