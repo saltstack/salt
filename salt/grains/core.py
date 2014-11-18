@@ -960,7 +960,7 @@ def os_data():
         # Add systemd grain, if you have it
         if _linux_bin_exists('systemctl') and _linux_bin_exists('localectl'):
             grains['systemd'] = {}
-            systemd_info =  __salt__['cmd.run'](
+            systemd_info = __salt__['cmd.run'](
                 'systemctl --version'
             ).splitlines()
             grains['systemd']['version'] = systemd_info[0].split()[1]
