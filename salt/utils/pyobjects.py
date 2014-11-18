@@ -8,8 +8,6 @@ for more documentation.
 import inspect
 import logging
 
-from collections import namedtuple
-
 from salt.utils.odict import OrderedDict
 
 REQUISITES = ('require', 'watch', 'use', 'require_in', 'watch_in', 'use_in')
@@ -276,9 +274,9 @@ class SaltObject(object):
 
     def __getattr__(self, mod):
         class __wrapper__(object):
-            def __getattr__(wself, func):
+            def __getattr__(wself, func):  # pylint: disable=E0213
                 try:
-                    return self._salt["%s.%s" % (mod, func)]
+                    return self._salt['{0}.{1}'.format(mod, func)]
                 except KeyError:
                     raise AttributeError
         return __wrapper__()
