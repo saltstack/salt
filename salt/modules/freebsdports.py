@@ -26,7 +26,7 @@ import logging
 import salt.utils
 from six import string_types
 from salt.exceptions import SaltInvocationError, CommandExecutionError
-import six
+import salt.utils.six as six
 
 log = logging.getLogger(__name__)
 
