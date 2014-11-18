@@ -26,7 +26,7 @@ import salt.grains.extra
 from six import string_types
 from salt.exceptions import CommandExecutionError, TimedProcTimeoutError
 from salt.log import LOG_LEVELS
-import six
+import salt.utils.six as six
 from six.moves import range
 
 # Only available on POSIX systems, nonfatal on windows
