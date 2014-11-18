@@ -347,7 +347,7 @@ request. As an example, Amazon or GitHub requests are signed this way.
 Generating and Accepting Minion Keys
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The :py:method:`/key <salt.netapi.rest_cherrypy.app.Keys.POST>` convenience URL
+The :py:func:`/key <salt.netapi.rest_cherrypy.app.Keys.POST>` convenience URL
 generates a public and private key for a minion, automatically pre-accepts the
 public key on the Salt Master, and returns both keys as a tarball for download.
 
