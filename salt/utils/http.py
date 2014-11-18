@@ -10,7 +10,7 @@ import pprint
 import os.path
 import json
 import logging
-import six.moves.http_cookiejar  # pylint: disable=E0611
+import salt.utils.six.moves.http_cookiejar  # pylint: disable=E0611
 from salt._compat import ElementTree as ET
 
 # Import salt libs
