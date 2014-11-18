@@ -16,7 +16,7 @@ import random
 import salt
 import salt.version
 import salt.loader
-import six
+import salt.utils.six as six
 
 __proxyenabled__ = ['*']
 
