@@ -325,4 +325,3 @@ def delete(target, stop=True):
             return 'Volume {0} deleted'.format(target)
     else:
         return result
-
