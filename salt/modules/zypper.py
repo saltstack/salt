@@ -11,9 +11,9 @@ import logging
 import re
 from contextlib import contextmanager as _contextmanager
 try:
- from shlex import quote as cmd_quote
+    from shlex import quote as _cmd_quote
 except ImportError:
- from pipes import quote as cmd_quote
+    from pipes import quote as _cmd_quote
 
 # Import salt libs
 import salt.utils
@@ -211,7 +211,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
             return ret
 
     pkg_fmt = '%{NAME}_|-%{VERSION}_|-%{RELEASE}\\n'
-    cmd = 'rpm -qa --queryformat {0}'.format(cmd_quote(pkg_fmt))
+    cmd = 'rpm -qa --queryformat {0}'.format(_cmd_quote(pkg_fmt))
     ret = {}
     out = __salt__['cmd.run'](
             cmd,
@@ -693,7 +693,7 @@ def install(name=None,
     while targets:
         # Quotes needed around package targets because of the possibility of
         # output redirection characters "<" or ">" in zypper command.
-        quoted_targets = [cmd_quote(target) for target in targets[:500]]
+        quoted_targets = [_cmd_quote(target) for target in targets[:500]]
         cmd = (
                 'zypper --non-interactive install --name '
                 '--auto-agree-with-licenses {0}{1}'
