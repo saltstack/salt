@@ -223,9 +223,7 @@ def _rcconf_status(name, service_status):
     newstatus = '{0}={1}'.format(name, service_status)
     ret = __salt__['cmd.retcode']('grep \'{0}\' {1}'.format(rxname, rcconf))
     if ret == 0:  # service found in rc.conf, modify its status
-        # NetBSD sed does not support -i flag, call sed by hand
-        cmd = 'cp -f {0} {0}.bak && sed -E -e s/{1}/{2}/g {0}.bak > {0}'
-        ret = __salt__['cmd.run'](cmd.format(rcconf, rxname, newstatus))
+        __salt__['file.replace'](rcconf, rxname, newstatus)
     else:
         ret = __salt__['file.append'](rcconf, newstatus)
 
