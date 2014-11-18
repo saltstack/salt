@@ -5,7 +5,7 @@ This runner is used only for test purposes and servers no production purpose
 from __future__ import absolute_import
 # Import python libs
 import time
-import six
+import salt.utils.six as six
 from six.moves import range
 
 
