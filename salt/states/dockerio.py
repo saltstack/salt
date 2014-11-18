@@ -116,7 +116,7 @@ import functools
 import logging
 
 # Import salt libs
-from six import string_types
+from salt.utils.six import string_types
 import salt.utils
 import salt.utils.six as six
 
