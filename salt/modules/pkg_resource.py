@@ -15,7 +15,7 @@ import yaml
 # Import salt libs
 import salt.utils
 from six import string_types
-import six
+import salt.utils.six as six
 
 log = logging.getLogger(__name__)
 __SUFFIX_NOT_NEEDED = ('x86_64', 'noarch')
