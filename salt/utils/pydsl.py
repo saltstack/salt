@@ -91,7 +91,7 @@ from uuid import uuid4 as _uuid
 from salt.utils.odict import OrderedDict
 from salt.utils import warn_until
 from salt.state import HighState
-from six import string_types
+from salt.utils.six import string_types
 import salt.utils.six as six
 
 
