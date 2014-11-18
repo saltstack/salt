@@ -8,6 +8,8 @@ Tests for the Git state
 import os
 import shutil
 import socket
+import subprocess
+import tempfile
 
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath
@@ -185,6 +187,35 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             self.assertTrue(os.path.isfile(os.path.join(name, 'HEAD')))
         finally:
             shutil.rmtree(name, ignore_errors=True)
+
+    def test_config_set_value_with_space_character(self):
+        '''
+        git.config
+        '''
+        from salt.utils import which
+        git = which('git')
+        if not git:
+            self.skipTest('The git binary is not available')
+
+        name = tempfile.mkdtemp(dir=integration.TMP)
+        self.addCleanup(shutil.rmtree, name, ignore_errors=True)
+        subprocess.check_call(['git', 'init', '--quiet', name])
+
+        config_key = 'user.name'
+        config_value = 'foo bar'
+
+        ret = self.run_state(
+            'git.config',
+            name=config_key,
+            value=config_value,
+            repo=name,
+            is_global=False)
+        self.assertSaltTrueReturn(ret)
+
+        output = subprocess.check_output(
+            ['git', 'config', '--local', config_key],
+            cwd=name)
+        self.assertEqual(config_value + "\n", output)
 
 
 if __name__ == '__main__':
