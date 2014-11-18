@@ -18,7 +18,7 @@ from six import string_types
 import salt.loader
 import salt.utils
 from salt.utils import print_cli
-import six
+import salt.utils.six as six
 
 # Are you really sure !!!
 # dealing with unicode is not as simple as setting defaultencoding
