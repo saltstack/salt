@@ -43,12 +43,14 @@ def _mine_send(load, opts):
     eventer = salt.utils.event.MinionEvent(opts)
     return eventer.fire_event(load, '_minion_mine')
 
+
 def _mine_get(load, opts):
     if opts.get('transport', '') == 'zeromq':
         load['tok'] = _auth().gen_token('salt')
     sreq = salt.transport.Channel.factory(opts)
     ret = sreq.send(load)
     return ret
+
 
 def update(clear=False):
     '''
