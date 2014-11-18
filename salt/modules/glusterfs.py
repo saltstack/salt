@@ -10,7 +10,7 @@ import logging
 # Import salt libs
 import salt.utils
 import salt.utils.cloud as suc
-from six.moves import range
+from salt.utils.six.moves import range
 
 log = logging.getLogger(__name__)
 
