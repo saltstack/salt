@@ -43,7 +43,7 @@ import salt.syspaths as syspaths
 from salt.exceptions import (
     EauthAuthenticationError, SaltInvocationError, SaltReqTimeoutError
 )
-import six
+import salt.utils.six as six
 
 # Import third party libs
 try:
