@@ -19,6 +19,7 @@ MANIFEST
 bin/
 include/
 lib/
+lib64
 pip/
 share/
 tests/integration/tmp/
