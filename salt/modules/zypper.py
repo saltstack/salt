@@ -246,7 +246,7 @@ def _get_configured_repos():
     Get all the info about repositories from the configurations.
     '''
 
-    repos_cfg = six.moves.configparser.ConfigParser()
+    repos_cfg = salt.utils.six.moves.configparser.ConfigParser()
     repos_cfg.read([REPOS + "/" + fname for fname in os.listdir(REPOS)])
 
     return repos_cfg
