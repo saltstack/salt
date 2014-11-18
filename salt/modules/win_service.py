@@ -9,8 +9,8 @@ import salt.utils
 import time
 import logging
 from subprocess import list2cmdline
-from six.moves import zip
-from six.moves import range
+from salt.utils.six.moves import zip
+from salt.utils.six.moves import range
 
 log = logging.getLogger(__name__)
 
