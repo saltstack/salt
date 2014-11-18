@@ -7,12 +7,6 @@ Module for gathering and managing network information
 import re
 import logging
 
-try:
-    from shlex import quote as _cmd_quote  # pylint: disable=E0611
-
-except ImportError:
-    from pipes import quote as _cmd_quote  # pylint: disable=E0611
-
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError
