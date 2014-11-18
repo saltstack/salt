@@ -159,7 +159,7 @@ The OverState System
 .. warning::
 
     The OverState runner is deprecated, and will be removed in the feature
-    release of Salt codenamed Beryllium. (Two feature releases after 2014.7.0,
+    release of Salt codenamed Boron. (Three feature releases after 2014.7.0,
     which is codenamed Helium)
 
 Often, servers need to be set up and configured in a specific order, and systems
