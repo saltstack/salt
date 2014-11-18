@@ -23,7 +23,7 @@ import yaml
 import salt
 import salt.fileclient
 from salt.utils.odict import OrderedDict
-from six import string_types
+from salt.utils.six import string_types
 
 log = logging.getLogger(__name__)
 
