@@ -254,4 +254,4 @@ class RunnerEvent(RAETEvent):
     def fire_progress(self, data, outputter='pprint'):
         progress_event = {'data': data,
                           'outputter': outputter}
-        self.fire_event(progress_event, salt.utils.tagify([self.jid, 'progress'], 'runner'))
+        self.fire_event(progress_event, salt.utils.event.tagify([self.jid, 'progress'], 'runner'))
