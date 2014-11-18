@@ -12,8 +12,10 @@ import logging
 # Import salt libs
 import salt.log
 import salt.crypt
+import salt.utils.six as six
 from salt.exceptions import SaltReqTimeoutError
-import six
+from salt.utils.odict import OrderedDict
+
 
 # Import third party libs
 try:
