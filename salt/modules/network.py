@@ -10,12 +10,6 @@ import logging
 import re
 import socket
 
-try:
-    from shlex import quote as _cmd_quote  # pylint: disable=E0611
-
-except ImportError:
-    from pipes import quote as _cmd_quote  # pylint: disable=E0611
-
 # Import salt libs
 import salt.utils
 import salt.utils.network
