@@ -11,9 +11,9 @@ import re
 import time
 import datetime
 try:
-    from shlex import quote as cmd_quote
+    from shlex import quote as _cmd_quote
 except ImportError:
-    from pipes import quote as cmd_quote
+    from pipes import quote as _cmd_quote
 # Import salt libs
 import salt.utils
 
@@ -209,10 +209,10 @@ def at(*args, **kwargs):  # pylint: disable=C0103
 
     # Ensure untrusted input is quoted when passing to shell
     if 'tag' in kwargs:
-        cmd = '{4} "### SALT: {0}\n{1}" | {2} {3}'.format(cmd_quote(kwargs['tag']),
-            cmd_quote(' '.join(args[1:])), binary, cmd_quote(args[0]), echo_cmd)
+        cmd = '{4} "### SALT: {0}\n{1}" | {2} {3}'.format(_cmd_quote(kwargs['tag']),
+            cmd_quote(' '.join(args[1:])), binary, _cmd_quote(args[0]), echo_cmd)
     else:
-        cmd = '{3} {1} | {2} {0}'.format(cmd_quote(args[0]), cmd_quote(' '.join(args[1:])),
+        cmd = '{3} {1} | {2} {0}'.format(_cmd_quote(args[0]), _cmd_quote(' '.join(args[1:])),
             binary, echo_cmd)
 
     # Can't use _cmd here since we need to prepend 'echo_cmd'
