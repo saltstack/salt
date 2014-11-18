@@ -29,7 +29,7 @@ from six import string_types
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
-import six
+import salt.utils.six as six
 from six.moves import range
 
 
