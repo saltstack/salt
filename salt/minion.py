@@ -21,7 +21,7 @@ import time
 import traceback
 import types
 from random import randint, shuffle
-from six.moves import range
+from salt.utils.six.moves import range
 
 # Import third party libs
 try:
@@ -70,7 +70,7 @@ import salt.utils.schedule
 import salt.exitcodes
 
 from salt.defaults import DEFAULT_TARGET_DELIM
-from six import string_types
+from salt.utils.six import string_types
 from salt.utils.debug import enable_sigusr1_handler
 from salt.utils.event import tagify
 import salt.syspaths
