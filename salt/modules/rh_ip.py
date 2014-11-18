@@ -18,7 +18,7 @@ import jinja2.exceptions
 import salt.utils
 import salt.utils.templates
 import salt.utils.validate.net
-import salt.utils.six as six
+import salt.ext.six as six
 
 # Set up logging
 log = logging.getLogger(__name__)
