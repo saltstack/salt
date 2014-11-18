@@ -124,7 +124,7 @@ def _update_repo(ret, name, target, clean, user, rev, opts):
                 ret,
                 test_result)
 
-    pull_out = __salt__['hg.pull'](target, repository=name, user=user, opts=opts)
+    pull_out = __salt__['hg.pull'](target, user=user, opts=opts, repository=name)
 
     if rev:
         __salt__['hg.update'](target, rev, force=clean, user=user)
