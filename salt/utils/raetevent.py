@@ -237,8 +237,8 @@ class RAETEvent(object):
         if hasattr(self, 'stack'):
             self.stack.server.close()
 
-    def __del__(self):
-        self.destroy()
+    #def __del__(self):  # Need to manually call destroy when we are done
+        #self.destroy()
 
 
 class RunnerEvent(RAETEvent):
