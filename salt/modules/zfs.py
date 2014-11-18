@@ -43,7 +43,9 @@ def _available_commands():
     ret = {}
     # Note that we append '|| :' as a unix hack to force return code to be 0.
     res = salt_cmd.run_stderr(
-        '{0} help || :'.format(zfs_path), output_loglevel='trace'
+        '{0} help || :'.format(zfs_path),
+        output_loglevel='trace',
+        python_shell=True
     )
 
     # This bit is dependent on specific output from `zfs help` - any major changes
