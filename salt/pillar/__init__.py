@@ -22,7 +22,7 @@ from salt.utils.dictupdate import update
 from salt.utils.serializers.yamlex import merge_recursive
 from salt.utils.odict import OrderedDict
 from salt.version import __version__
-import six
+import salt.utils.six as six
 
 
 log = logging.getLogger(__name__)
