@@ -207,13 +207,11 @@ class CkMinions(object):
                     minions.remove(id_)
         return list(minions)
 
-    def _check_pillar_exact_minions(self, expr, greedy):
+    def _check_pillar_exact_minions(self, expr):
         '''
         Return the minions found by looking via pillar
         '''
-        return self._check_pillar_minions(expr,
-                                         greedy,
-                                         exact_match=True)
+        return self._check_pillar_minions(expr, exact_match=True)
 
     def _check_ipcidr_minions(self, expr):
         '''
