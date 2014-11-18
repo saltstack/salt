@@ -949,16 +949,12 @@ class AESFuncs(object):
             for arg in clear_load['arg']:
                 arg_.append(arg.split())
             clear_load['arg'] = arg_
-        tgt_type = clear_load.get('tgt_type', 'glob')
-        if tgt_type.lower() == 'pillar':
-            tgt_type = 'pillar_exact'
-        elif tgt_type.lower() == 'compound':
-            tgt_type = 'compound_pillar_exact'
         good = self.ckminions.auth_check(
                 perms,
                 clear_load['fun'],
                 clear_load['tgt'],
-                tgt_type)
+                clear_load.get('tgt_type', 'glob'),
+                publish_validate=True)
         if not good:
             return False
         return True
