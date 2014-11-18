@@ -23,7 +23,7 @@ You have those following methods:
 * buildout
 '''
 from __future__ import absolute_import
-import six
+import salt.utils.six as six
 from six.moves import range
 
 # Define the module's virtual name
