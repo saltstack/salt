@@ -129,9 +129,9 @@ def query(url,
 
     if cookies is not None:
         if cookie_format == 'mozilla':
-            sess.cookies = six.moves.http_cookiejar.MozillaCookieJar(cookie_jar)
+            sess.cookies = salt.utils.six.moves.http_cookiejar.MozillaCookieJar(cookie_jar)
         else:
-            sess.cookies = six.moves.http_cookiejar.LWPCookieJar(cookie_jar)
+            sess.cookies = salt.utils.six.moves.http_cookiejar.LWPCookieJar(cookie_jar)
         if not os.path.isfile(cookie_jar):
             sess.cookies.save()
         else:

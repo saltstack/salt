@@ -48,7 +48,7 @@ def top(**kwargs):
 
     log.info("Querying cobbler for information for %r", minion_id)
     try:
-        server = six.moves.xmlrpc_client.Server(url, allow_none=True)
+        server = salt.utils.six.moves.xmlrpc_client.Server(url, allow_none=True)
         if user:
             server.login(user, password)
         data = server.get_blended_data(None, minion_id)
