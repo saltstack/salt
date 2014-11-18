@@ -206,7 +206,7 @@ def filter_by(lookup_dict, grain='os_family', merge=None):
 
         salt '*' grains.filter_by '{Debian: Debheads rule, RedHat: I love my hat}'
     '''
-    ret = lookup_dict.get(__grains__[grain], None)
+    ret = lookup_dict.get(__grains__[grain], {})
 
     if merge:
         salt.utils.dictupdate.update(ret, merge)
