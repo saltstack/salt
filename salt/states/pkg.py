@@ -46,7 +46,7 @@ from salt.output import nested
 from salt.utils import namespaced_function as _namespaced_function
 from salt.utils.odict import OrderedDict as _OrderedDict
 from salt.utils.six import string_types
-import six  # pylint: disable=W0611
+import salt.utils.six as six  # pylint: disable=W0611
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
