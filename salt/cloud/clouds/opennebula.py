@@ -42,7 +42,7 @@ from salt.exceptions import (
 
 # Attempt to import xmlrpclib and lxml
 try:
-    import salt.utils.six as six.moves.xmlrpc_client  # pylint: disable=E0611
+    import salt.utils.six.moves.xmlrpc_client  # pylint: disable=E0611
     from lxml import etree
     HAS_XMLLIBS = True
 except ImportError:
@@ -79,7 +79,7 @@ def _get_xml_rpc():
     password = config.get_cloud_config_value(
         'password', get_configured_provider(), __opts__
     )
-    server = six.moves.xmlrpc_client.ServerProxy(xml_rpc)
+    server = salt.utils.six.moves.xmlrpc_client.ServerProxy(xml_rpc)
 
     return server, user, password
 
