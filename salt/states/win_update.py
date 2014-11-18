@@ -62,7 +62,7 @@ from __future__ import absolute_import
 
 # Import Python libs
 import logging
-from six.moves import range
+from salt.utils.six.moves import range
 try:
     import win32com.client
     import pythoncom
