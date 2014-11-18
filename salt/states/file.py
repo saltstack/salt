@@ -616,7 +616,7 @@ def _unify_sources_and_hashes(source=None, source_hash=None,
         return (True, '', [(source, source_hash)])
 
     # Make a nice neat list of tuples exactly len(sources) long..
-    return (True, '', map(None, sources, source_hashes[:len(sources)]))
+    return True, '', list(map(None, sources, source_hashes[:len(sources)]))
 
 
 def _get_template_texts(source_list=None,

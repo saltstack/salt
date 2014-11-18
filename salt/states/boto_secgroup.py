@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Manage Security Groups
-======================
 
 .. versionadded:: 2014.7.0
 
