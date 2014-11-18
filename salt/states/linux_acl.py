@@ -81,7 +81,7 @@ def present(name, acl_type, acl_name, perms, recurse=False):
             if recurse:
                 __salt__['acl.modfacl'](acl_type, acl_name, perms, name, recursive=True)
             else:
-                __salt__['acl.modfacl'](acl_type, acl_name, perms, '/root')
+                __salt__['acl.modfacl'](acl_type, acl_name, perms, name)
     else:
         ret['comment'] = 'ACL Type does not exist'
         ret['result'] = False
