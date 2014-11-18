@@ -12,6 +12,7 @@ import logging
 import salt.crypt
 import salt.payload
 import salt.utils.network
+import salt.utils.event
 
 __proxyenabled__ = ['*']
 
@@ -34,6 +35,20 @@ def _mine_function_available(func):
         return False
     return True
 
+
+def _mine_send(load, opts):
+    if opts.get('transport', '') == 'zeromq':
+        load['tok'] = _auth().gen_token('salt')
+
+    eventer = salt.utils.event.MinionEvent(opts)
+    return eventer.fire_event(load, '_minion_mine')
+
+def _mine_get(load, opts):
+    if opts.get('transport', '') == 'zeromq':
+        load['tok'] = _auth().gen_token('salt')
+    sreq = salt.transport.Channel.factory(opts)
+    ret = sreq.send(load)
+    return ret
 
 def update(clear=False):
     '''
@@ -96,15 +111,7 @@ def update(clear=False):
             'id': __opts__['id'],
             'clear': clear,
     }
-    if __opts__.get('transport', '') == 'zeromq':
-        load['tok'] = _auth().gen_token('salt')
-    # Changed for transport plugin
-    # sreq = salt.payload.SREQ(__opts__['master_uri'])
-    # ret = sreq.send('aes', auth.crypticle.dumps(load))
-    # return auth.crypticle.loads(ret)
-    sreq = salt.transport.Channel.factory(__opts__)
-    ret = sreq.send(load)
-    return ret
+    return _mine_send(load, __opts__)
 
 
 def send(func, *args, **kwargs):
@@ -154,15 +161,7 @@ def send(func, *args, **kwargs):
             'data': data,
             'id': __opts__['id'],
     }
-    if __opts__.get('transport', '') == 'zeromq':
-        load['tok'] = _auth().gen_token('salt')
-    # Changed for transport plugin
-    # sreq = salt.payload.SREQ(__opts__['master_uri'])
-    # ret = sreq.send('aes', auth.crypticle.dumps(load))
-    # return auth.crypticle.loads(ret)
-    sreq = salt.transport.Channel.factory(__opts__)
-    ret = sreq.send(load)
-    return ret
+    return _mine_send(load, __opts__)
 
 
 def get(tgt, fun, expr_form='glob'):
@@ -213,15 +212,7 @@ def get(tgt, fun, expr_form='glob'):
             'fun': fun,
             'expr_form': expr_form,
     }
-    if __opts__.get('transport', '') == 'zeromq':
-        load['tok'] = _auth().gen_token('salt')
-    # Changed for transport plugin
-    # sreq = salt.payload.SREQ(__opts__['master_uri'])
-    # ret = sreq.send('aes', auth.crypticle.dumps(load))
-    # return auth.crypticle.loads(ret)
-    sreq = salt.transport.Channel.factory(__opts__)
-    ret = sreq.send(load)
-    return ret
+    return _mine_get(load, __opts__)
 
 
 def delete(fun):
@@ -244,15 +235,7 @@ def delete(fun):
             'id': __opts__['id'],
             'fun': fun,
     }
-    if __opts__.get('transport', '') == 'zeromq':
-        load['tok'] = _auth().gen_token('salt')
-    # Changed for transport plugin
-    # sreq = salt.payload.SREQ(__opts__['master_uri'])
-    # ret = sreq.send('aes', auth.crypticle.dumps(load))
-    # return auth.crypticle.loads(ret)
-    sreq = salt.transport.Channel.factory(__opts__)
-    ret = sreq.send(load)
-    return ret
+    return _mine_send(load, __opts__)
 
 
 def flush():
@@ -271,15 +254,7 @@ def flush():
             'cmd': '_mine_flush',
             'id': __opts__['id'],
     }
-    if __opts__.get('transport', '') == 'zeromq':
-        load['tok'] = _auth().gen_token('salt')
-    # Changed for transport plugin
-    # sreq = salt.payload.SREQ(__opts__['master_uri'])
-    # ret = sreq.send('aes', auth.crypticle.dumps(load))
-    # return auth.crypticle.loads(ret)
-    sreq = salt.transport.Channel.factory(__opts__)
-    ret = sreq.send(load)
-    return ret
+    return _mine_send(load, __opts__)
 
 
 def get_docker(interfaces=None, cidrs=None):
