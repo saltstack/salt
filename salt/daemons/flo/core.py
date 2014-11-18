@@ -17,7 +17,7 @@ import traceback
 import itertools
 from collections import deque
 import random
-import six
+import salt.utils.six as six
 from six.moves import range
 
 # Import salt libs
