@@ -16,7 +16,7 @@ import time
 import codecs
 # import third party libs
 import yaml
-import six
+import salt.utils.six as six
 try:
     yaml.Loader = yaml.CLoader
     yaml.Dumper = yaml.CDumper
