@@ -33,7 +33,7 @@ import salt.wheel
 from salt.exceptions import (
     SaltReqTimeoutError, SaltRenderError, CommandExecutionError
 )
-from six import string_types
+from salt.utils.six import string_types
 
 __proxyenabled__ = ['*']
 
