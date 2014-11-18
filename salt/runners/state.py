@@ -24,6 +24,13 @@ def over(saltenv='base', os_fn=None):
     '''
     .. versionadded:: 0.11.0
 
+    .. warning::
+
+        ``state.over`` is deprecated in favor of ``state.orchestrate``, and
+        will be removed in the Salt feature release codenamed Boron.
+        (Three feature releases after the 2014.7.0 release, which is codenamed
+        Helium)
+
     Execute an overstate sequence to orchestrate the executing of states
     over a group of systems
 
@@ -38,6 +45,9 @@ def over(saltenv='base', os_fn=None):
             'The state.over runner is on a deprecation path and will be '
             'removed in Salt Boron. Please migrate to state.orchestrate.'
             )
+
+    print('The state.over runner is on a deprecation path and will be '
+          'removed in Salt Boron. Please migrate to state.orchestrate.')
 
     stage_num = 0
     try:
