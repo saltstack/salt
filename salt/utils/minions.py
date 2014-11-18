@@ -302,7 +302,7 @@ class CkMinions(object):
 
         Disable pillar glob matching
         '''
-        return self._check_compound_minions(self, expr, greedy, pillar_exact=True)
+        return self._check_compound_minions(self, expr, pillar_exact=True)
 
     def _check_compound_minions(self, expr, pillar_exact=False):
         '''
