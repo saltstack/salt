@@ -24,7 +24,7 @@ import salt.syspaths
 import salt.utils
 import salt.utils.event
 import salt.utils.six as six
-from six import string_types
+from salt.utils.six import string_types
 
 log = logging.getLogger(__name__)
 
