@@ -12,6 +12,7 @@ import six
 # Import salt libs
 from salt.utils.odict import OrderedDict
 
+
 def update(dest, upd):
     for key, val in six.iteritems(upd):
         if isinstance(val, collections.Mapping):
