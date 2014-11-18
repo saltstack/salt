@@ -12,7 +12,7 @@ import time
 import os
 import copy
 import logging
-from six import string_types
+from salt.utils.six import string_types
 
 # Import Salt libs
 from salt.utils.odict import OrderedDict
