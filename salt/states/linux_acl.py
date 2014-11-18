@@ -61,7 +61,7 @@ def present(name, acl_type, acl_name, perms, recurse=False):
             if user[acl_name]['octal'] == sum([_octal.get(i, i) for i in perms]):
                 ret['comment'] = 'Permissions are in the desired state'
             else:
-                ret['comment'] = 'Permissions have been updated'.format(name, perms)
+                ret['comment'] = 'Permissions have been updated'
 
                 if __opts__['test']:
                     ret['result'] = None
@@ -72,7 +72,7 @@ def present(name, acl_type, acl_name, perms, recurse=False):
                 else:
                     __salt__['acl.modfacl'](acl_type, acl_name, perms, name)
         else:
-            ret['comment'] = 'Permissions will be applied'.format(name, perms)
+            ret['comment'] = 'Permissions will be applied'
 
             if __opts__['test']:
                 ret['result'] = None

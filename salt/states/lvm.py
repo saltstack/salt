@@ -142,7 +142,7 @@ def vg_present(name, devices=None, **kwargs):
                 else:
                     ret['comment'] = '{0}\n{1}'.format(
                         ret['comment'],
-                        '{0} is part of {0}'.format(
+                        '{0} is part of {1}'.format(
                             device, pvs[device]['Volume Group Name']))
                     ret['result'] = False
             else:
