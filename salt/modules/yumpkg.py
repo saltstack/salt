@@ -19,7 +19,7 @@ import copy
 import logging
 import os
 import re
-import six
+import salt.utils.six as six
 from distutils.version import LooseVersion as _LooseVersion
 from six.moves import range
 try:
