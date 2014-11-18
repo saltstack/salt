@@ -47,7 +47,7 @@ except ImportError:
     HAS_BOTO = False
 
 # Import salt libs
-from salt.utils.six import string_types
+from salt.ext.six import string_types
 import salt.utils.odict as odict
 
 

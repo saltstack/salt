@@ -106,8 +106,8 @@ from __future__ import absolute_import
 # Import Python libs
 import hashlib
 import logging
-import salt.utils.six as six
-from salt.utils.six.moves import zip
+import salt.ext.six as six
+from salt.ext.six.moves import zip
 
 log = logging.getLogger(__name__)
 

@@ -11,7 +11,7 @@ import json
 from salt.exceptions import CommandExecutionError
 import salt.utils
 import salt.utils.decorators as decorators
-import salt.utils.six as six
+import salt.ext.six as six
 
 # Define the module's virtual name
 __virtualname__ = 'virt'

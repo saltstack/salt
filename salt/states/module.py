@@ -70,7 +70,7 @@ import datetime
 # Import salt libs
 import salt.loader
 import salt.utils
-from salt.utils.six.moves import range
+from salt.ext.six.moves import range
 
 
 def wait(name, **kwargs):

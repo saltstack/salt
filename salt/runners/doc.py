@@ -11,7 +11,7 @@ import itertools
 import salt.client
 import salt.runner
 import salt.wheel
-import salt.utils.six as six
+import salt.ext.six as six
 
 
 def __virtual__():

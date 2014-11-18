@@ -40,7 +40,7 @@ import logging
 import json
 import yaml
 import email.mime.multipart
-import salt.utils.six as six
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -56,7 +56,7 @@ try:
 except ImportError:
     HAS_BOTO = False
 
-from salt.utils.six import string_types
+from salt.ext.six import string_types
 import salt.utils.odict as odict
 
 
