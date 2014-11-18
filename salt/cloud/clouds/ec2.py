@@ -74,7 +74,7 @@ import uuid
 import pprint
 import logging
 import yaml
-import six
+import salt.utils.six as six
 from six.moves import map
 from six.moves import zip
 from six.moves import range
