@@ -24,7 +24,7 @@ import traceback
 import copy
 import re
 import uuid
-import six
+import salt.utils.six as six
 
 
 # Let's import pwd and catch the ImportError. We'll raise it if this is not
