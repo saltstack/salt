@@ -42,9 +42,10 @@ def _available_commands():
         return False
 
     ret = {}
-    # Note that we append '|| :' as a unix hack to force return code to be 0.
-    res = salt_cmd.run_stdout(
-        '{0} -? || :'.format(zfs_path), output_loglevel='trace'
+    res = salt_cmd.run_stderr(
+        '{0} -?'.format(zfs_path),
+        output_loglevel='trace',
+        ignore_retcode=True
     )
 
     # This bit is dependent on specific output from `zfs -?` - any major changes

@@ -23,9 +23,9 @@ import six
 from distutils.version import LooseVersion as _LooseVersion
 from six.moves import range
 try:
-    from shlex import quote as _cmd_quote
+    from shlex import quote as _cmd_quote  # pylint: disable=E0611
 except ImportError:
-    from pipes import quote as _cmd_quote
+    from pipes import quote as _cmd_quote  # pylint: disable=E0611
 
 # Import salt libs
 import salt.utils
@@ -140,7 +140,7 @@ def _repoquery(repoquery_args, query_format=__QUERYFORMAT):
     Runs a repoquery command and returns a list of namedtuples
     '''
     _check_repoquery()
-    cmd = 'repoquery --plugins --queryformat={0} {1}'.format(
+    cmd = 'repoquery --plugins --queryformat {0} {1}'.format(
         _cmd_quote(query_format), repoquery_args
     )
     call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
@@ -236,8 +236,7 @@ def _rpm_pkginfo(name):
     output = __salt__['cmd.run_stdout'](
         'rpm -qp --queryformat {0!r} {1}'.format(_cmd_quote(queryformat), name),
         output_loglevel='trace',
-        ignore_retcode=True,
-        python_shell=True
+        ignore_retcode=True
     )
     return _parse_pkginfo(output)
 
@@ -957,7 +956,7 @@ def install(name=None,
             gpgcheck='--nogpgcheck' if skip_verify else '',
             pkg=' '.join(targets),
         )
-        __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=True)
+        __salt__['cmd.run'](cmd, output_loglevel='trace')
 
     if downgrade:
         cmd = 'yum -y {repo} {exclude} {branch} {gpgcheck} downgrade {pkg}'.format(
@@ -967,7 +966,7 @@ def install(name=None,
             gpgcheck='--nogpgcheck' if skip_verify else '',
             pkg=' '.join(downgrade),
         )
-        __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=True)
+        __salt__['cmd.run'](cmd, output_loglevel='trace')
 
     if to_reinstall:
         cmd = 'yum -y {repo} {exclude} {branch} {gpgcheck} reinstall {pkg}'.format(
@@ -977,7 +976,7 @@ def install(name=None,
             gpgcheck='--nogpgcheck' if skip_verify else '',
             pkg=' '.join(six.itervalues(to_reinstall)),
         )
-        __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=True)
+        __salt__['cmd.run'](cmd, output_loglevel='trace')
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -1046,7 +1045,7 @@ def upgrade(refresh=True, fromrepo=None, skip_verify=False, **kwargs):
         branch=branch_arg,
         gpgcheck='--nogpgcheck' if skip_verify else '')
 
-    __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=True)
+    __salt__['cmd.run'](cmd, output_loglevel='trace')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     ret = salt.utils.compare_dicts(old, new)
@@ -1093,7 +1092,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
         return {}
     quoted_targets = [_cmd_quote(target) for target in targets]
     cmd = 'yum -q -y remove {0}'.format(' '.join(quoted_targets))
-    __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=True)
+    __salt__['cmd.run'](cmd, output_loglevel='trace')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     ret = salt.utils.compare_dicts(old, new)
@@ -1295,7 +1294,7 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
                 cmd = 'yum -q versionlock delete {0}'.format(
                         ' '.join(quoted_targets)
                         )
-                out = __salt__['cmd.run_all'](cmd, python_shell=True)
+                out = __salt__['cmd.run_all'](cmd)
 
                 if out['retcode'] == 0:
                     ret[target].update(result=True)
@@ -1443,7 +1442,7 @@ def group_info(name):
     cmd_template = 'repoquery --plugins --group --grouppkgs={0} --list {1!r}'
 
     cmd = cmd_template.format('all', _cmd_quote(name))
-    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace', python_shell=True)
+    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
     all_pkgs = set(out.splitlines())
 
     if not all_pkgs:
@@ -1453,7 +1452,7 @@ def group_info(name):
         cmd = cmd_template.format(pkgtype, _cmd_quote(name))
         packages = set(
             __salt__['cmd.run_stdout'](
-                cmd, output_loglevel='trace', python_shell=True
+                cmd, output_loglevel='trace'
             ).splitlines()
         )
         ret['{0} packages'.format(pkgtype)].extend(sorted(packages))
@@ -1466,7 +1465,7 @@ def group_info(name):
 
     cmd = 'repoquery --plugins --group --info {0!r}'.format(_cmd_quote(name))
     out = __salt__['cmd.run_stdout'](
-            cmd, output_loglevel='trace', python_shell=True
+            cmd, output_loglevel='trace'
             )
     if out:
         ret['description'] = '\n'.join(out.splitlines()[1:]).strip()
@@ -1858,8 +1857,7 @@ def owner(*paths):
                 )
         ret[path] = __salt__['cmd.run_stdout'](
                 cmd.format(path),
-                output_loglevel='trace',
-                python_shell=True
+                output_loglevel='trace'
                 )
         if 'not owned' in ret[path].lower():
             ret[path] = ''
