@@ -39,7 +39,7 @@ from cStringIO import StringIO
 import salt.utils
 from salt.exceptions import SaltRenderError
 import salt.utils.six as six
-from six import string_types
+from salt.utils.six import string_types
 
 __all__ = ['render']
 
