@@ -8,11 +8,6 @@ import copy
 import logging
 import re
 
-try:
-    from shlex import quote as cmd_quote
-except ImportError:
-    from pipes import quote as cmd_quote
-
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError, MinionError
@@ -51,7 +46,6 @@ def list_upgrades(refresh=True):
     out = __salt__['cmd.run_stdout'](
         'zypper list-updates',
         output_loglevel='debug',
-        python_shell=Ture
     )
     for line in out.splitlines():
         if not line:
@@ -108,7 +102,6 @@ def latest_version(*names, **kwargs):
         output = __salt__['cmd.run_stdout'](
             cmd,
             output_loglevel='debug',
-            python_shell=True
         )
         outputs.extend(re.split('Information for package \\S+:\n', output))
         restpackages = restpackages[500:]
@@ -196,13 +189,12 @@ def list_pkgs(versions_as_list=False, **kwargs):
             __salt__['pkg_resource.stringify'](ret)
             return ret
 
-    pkg_fmt = '%{NAME}_|-%{VERSION}_|-%{RELEASE}\\n'
-    cmd = 'rpm -qa --queryformat {0}'.format(cmd_quote(pkg_fmt))
+    cmd = ('rpm', '-qa', '--queryformat', '%{NAME}_|-%{VERSION}_|-%{RELEASE}\\n')
     ret = {}
     out = __salt__['cmd.run'](
         cmd,
         output_loglevel='debug',
-        python_shell=True
+        python_shell=False
     )
     for line in out.splitlines():
         name, pkgver, rel = line.split('_|-')
@@ -234,7 +226,6 @@ def refresh_db():
     out = __salt__['cmd.run'](
         cmd,
         output_loglevel='debug',
-        python_shell=True
     )
     for line in out.splitlines():
         if not line:
@@ -371,26 +362,22 @@ def install(name=None,
     old = list_pkgs()
     downgrades = []
     if fromrepo:
-        fromrepoopt = "--force --force-resolution --from {0} ".format(fromrepo)
+        fromrepoopt = ('--force', '--force-resolution', '--from', fromrepo)
         log.info('Targeting repo {0!r}'.format(fromrepo))
-    else:
-        fromrepoopt = ""
     # Split the targets into batches of 500 packages each, so that
     # the maximal length of the command line is not broken
     while targets:
-        # Quotes needed around package targets because of the possibility of
-        # output redirection characters "<" or ">" in zypper command.
-        quoted_targets = [cmd_quote(target) for target in targets[:500]]
-        cmd = (
-                'zypper --non-interactive install --name '
-                '--auto-agree-with-licenses {0}{1}'
-                .format(fromrepoopt, ' '.join(quoted_targets))
-                )
+        cmd = ['zypper', '--non-interactive', 'install', '--name',
+                '--auto-agree-with-licenses']
+        if fromrepo:
+            cmd.extend(fromrepoopt)
+        cmd.extend(targets[:500])
         targets = targets[500:]
+
         out = __salt__['cmd.run'](
             cmd,
             output_loglevel='debug',
-            python_shell=True
+            python_shell=False
         )
         for line in out.splitlines():
             match = re.match(
@@ -401,13 +388,14 @@ def install(name=None,
                 downgrades.append(match.group(1))
 
     while downgrades:
-        cmd = (
-            'zypper --non-interactive install --name '
-            '--auto-agree-with-licenses --force {0}{1}'
-            .format(fromrepoopt, ' '.join(downgrades[:500]))
-        )
-        __salt__['cmd.run'](cmd, output_loglevel='debug', python_shell=True)
+        cmd = ['zypper', '--non-interactive', 'install', '--name',
+               '--auto-agree-with-licenses', '--force']
+        if fromrepo:
+            cmd.extend(fromrepoopt)
+        cmd.extend(downgrades[:500])
         downgrades = downgrades[500:]
+
+        __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)
@@ -432,7 +420,7 @@ def upgrade(refresh=True):
         refresh_db()
     old = list_pkgs()
     cmd = 'zypper --non-interactive update --auto-agree-with-licenses'
-    __salt__['cmd.run'](cmd, output_loglevel='debug', python_shell=True)
+    __salt__['cmd.run'](cmd, output_loglevel='debug')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)
@@ -458,7 +446,7 @@ def _uninstall(action='remove', name=None, pkgs=None):
             'zypper --non-interactive remove {0} {1}'
             .format(purge_arg, ' '.join(targets[:500]))
         )
-        __salt__['cmd.run'](cmd, output_loglevel='debug', python_shell=True)
+        __salt__['cmd.run'](cmd, output_loglevel='debug')
         targets = targets[500:]
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
