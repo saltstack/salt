@@ -71,7 +71,7 @@ from salt.pillar import Pillar
 import salt.utils
 import salt.utils.s3 as s3
 import salt.utils.six as six
-from six.moves import filter
+from salt.utils.six.moves import filter
 
 # Set up logging
 log = logging.getLogger(__name__)
