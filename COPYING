@@ -67,7 +67,7 @@ License: MIT License
   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
   THE SOFTWARE.
 
-Files: salt/utils/ipaddr.py
+Files: salt/ext/ipaddr.py
 Copyright: 2007 Google Inc.
 License: Apache-2.0
  Licensed under the Apache License, Version 2.0 (the "License");
