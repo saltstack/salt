@@ -40,11 +40,8 @@ def _add_var(var, value):
     fullvar = '{0}="{1}"'.format(var, value)
     if __salt__['file.contains'](makeconf, layman):
         # TODO perhaps make this a function in the file module?
-        cmd = r"sed -i '/{0}/ i\{1}' {2}".format(
-            layman.replace("/", "\\/"),
-            fullvar,
-            makeconf)
-        print cmd
+        cmd = ['sed', '-i', '/{0}/'.format(layman.replace('/', '\\/')),
+               fullvar, makeconf]
         __salt__['cmd.run'](cmd)
     else:
         __salt__['file.append'](makeconf, fullvar)
