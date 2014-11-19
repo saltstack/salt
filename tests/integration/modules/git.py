@@ -6,27 +6,15 @@ import subprocess
 import tempfile
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+from salttesting.helpers import ensure_in_syspath, skip_if_binaries_missing
+ensure_in_syspath('../..')
 
 # Import salt libs
 import integration
 
 
+@skip_if_binaries_missing('git')
 class GitModuleTest(integration.ModuleCase):
-    '''
-    Integration tests for the git module
-    '''
-
-    @classmethod
-    def setUpClass(cls):
-        '''
-        Check if git is installed. If it isn't, skip everything in this class.
-        '''
-        from salt.utils import which
-        git = which('git')
-        if not git:
-            cls.skipTest('The git binary is not available')
 
     def setUp(self):
         self.repos = tempfile.mkdtemp(dir=integration.TMP)
