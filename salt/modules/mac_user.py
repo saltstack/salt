@@ -18,6 +18,11 @@ import salt.utils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt._compat import string_types
 
+try:
+    from pipes import quote as _cmd_quote
+except ImportError:
+    from shlex import quote as _cmd_quote
+
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
@@ -47,11 +52,12 @@ def _dscl(cmd, ctype='create'):
         source, noderoot = '.', ''
     else:
         source, noderoot = 'localhost', '/Local/Default'
-    return __salt__['cmd.run_all'](
-        'dscl {0} -{1} {2}{3}'.format(source, ctype, noderoot, cmd),
-        output_loglevel='quiet' if ctype == 'passwd' else False
-    )
 
+    cmd = ['dscl', source, ctype, _cmd_quote('{0}{1}'.format(noderoot, cmd))]
+    return __salt__['cmd.run_all'](cmd, python_shell=False,
+                                   output_loglevel='quiet' \
+                                     if ctype == 'passwd' \
+                                     else False)
 
 def _first_avail_uid():
     uids = set(x.pw_uid for x in pwd.getpwall())
