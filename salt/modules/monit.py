@@ -7,6 +7,11 @@ service watcher.
 # Import salt libs
 import salt.utils
 
+try:
+    import pipes.quote as _cmd_quote
+except ImportError:
+    import shlex.quote as _cmd_quote
+
 
 def __virtual__():
     if salt.utils.which('monit') is not None:
@@ -24,7 +29,7 @@ def start(name):
 
         salt '*' monit.start <service name>
     '''
-    cmd = 'monit start {0}'.format(name)
+    cmd = 'monit start {0}'.format(_cmd_quote(name))
 
     return not __salt__['cmd.retcode'](cmd)
 
@@ -39,7 +44,7 @@ def stop(name):
 
         salt '*' monit.stop <service name>
     '''
-    cmd = 'monit stop {0}'.format(name)
+    cmd = 'monit stop {0}'.format(_cmd_quote(name))
 
     return not __salt__['cmd.retcode'](cmd)
 
@@ -54,7 +59,7 @@ def restart(name):
 
         salt '*' monit.restart <service name>
     '''
-    cmd = 'monit restart {0}'.format(name)
+    cmd = 'monit restart {0}'.format(_cmd_quote(name))
 
     return not __salt__['cmd.retcode'](cmd)
 
@@ -69,7 +74,7 @@ def unmonitor(name):
 
         salt '*' monit.unmonitor <service name>
     '''
-    cmd = 'monit unmonitor {0}'.format(name)
+    cmd = 'monit unmonitor {0}'.format(_cmd_quote(name))
 
     return not __salt__['cmd.retcode'](cmd)
 
@@ -84,7 +89,7 @@ def monitor(name):
 
         salt '*' monit.monitor <service name>
     '''
-    cmd = 'monit monitor {0}'.format(name)
+    cmd = 'monit monitor {0}'.format(_cmd_quote(name))
 
     return not __salt__['cmd.retcode'](cmd)
 
