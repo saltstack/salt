@@ -68,7 +68,7 @@ import os
 # pylint: disable=no-name-in-module,import-error
 from salt.ext.six import string_types
 from salt.ext.six.moves.urllib.request import (
-        url_open as _url_open,
+        urlopen as _urlopen,
         HTTPBasicAuthHandler as _HTTPBasicAuthHandler,
         HTTPDigestAuthHandler as _HTTPDigestAuthHandler,
         build_opener as _build_opener,
@@ -275,9 +275,9 @@ def _http_request(url, request_timeout=None):
 
         request_timeout = __salt__['config.option']('solr.request_timeout')
         if request_timeout is None:
-            data = json.load(_url_open(url))
+            data = json.load(_urlopen(url))
         else:
-            data = json.load(_url_open(url, timeout=request_timeout))
+            data = json.load(_urlopen(url, timeout=request_timeout))
         return _get_return_dict(True, data, [])
     except Exception as err:
         return _get_return_dict(False, {}, ["{0} : {1}".format(url, err)])
