@@ -29,8 +29,8 @@ from __future__ import absolute_import
 import os
 import re
 import logging
-from six.moves import zip
-import six
+from salt.utils.six.moves import zip
+import salt.utils.six as six
 
 # Make sure augeas python interface is installed
 HAS_AUGEAS = False

@@ -12,7 +12,7 @@ import time
 import os
 import copy
 import logging
-from six import string_types
+from salt.utils.six import string_types
 
 # Import Salt libs
 from salt.utils.odict import OrderedDict
@@ -20,7 +20,7 @@ import salt.client
 import salt.utils.virt
 import salt.utils.cloud
 import salt.key
-import six
+import salt.utils.six as six
 
 
 log = logging.getLogger(__name__)

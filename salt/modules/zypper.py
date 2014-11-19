@@ -11,8 +11,8 @@ import copy
 import logging
 import re
 import os
-import six
-import six.moves.configparser  # pylint: disable=E0611
+import salt.utils.six as six
+import salt.utils.six.moves.configparser  # pylint: disable=E0611
 import urlparse
 from xml.dom import minidom as dom
 try:
@@ -245,7 +245,7 @@ def _get_configured_repos():
     Get all the info about repositories from the configurations.
     '''
 
-    repos_cfg = six.moves.configparser.ConfigParser()
+    repos_cfg = salt.utils.six.moves.configparser.ConfigParser()
     repos_cfg.read([REPOS + "/" + fname for fname in os.listdir(REPOS)])
 
     return repos_cfg

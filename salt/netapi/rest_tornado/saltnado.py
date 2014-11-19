@@ -163,6 +163,7 @@ from collections import defaultdict
 import math
 import yaml
 import fnmatch
+import salt.utils.six as six
 
 from zmq.eventloop import ioloop, zmqstream
 

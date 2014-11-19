@@ -23,8 +23,8 @@ import time
 import salt.syspaths
 import salt.utils
 import salt.utils.event
-import six
-from six import string_types
+import salt.utils.six as six
+from salt.utils.six import string_types
 
 log = logging.getLogger(__name__)
 

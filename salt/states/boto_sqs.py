@@ -58,7 +58,7 @@ passed in as a dict, or as a string to pull from pillars or minion config:
                 key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 '''
 from __future__ import absolute_import
-import six
+import salt.utils.six as six
 
 
 def __virtual__():

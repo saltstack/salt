@@ -17,7 +17,7 @@ import signal
 
 # Import salt libs
 import salt.utils
-from six.moves import range
+from salt.utils.six.moves import range
 
 log = logging.getLogger(__name__)
 

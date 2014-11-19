@@ -17,7 +17,7 @@ import salt.payload
 import salt.utils
 import salt.minion
 
-from six import string_types
+from salt.utils.six import string_types
 
 import logging
 log = logging.getLogger(__name__)
