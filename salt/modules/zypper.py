@@ -703,7 +703,7 @@ def install(name=None,
             '--auto-agree-with-licenses', '--force']
         if fromrepo:
             cmd.extend(fromrepoopt)
-        cmd.extend(downgrades[:500]))
+        cmd.extend(downgrades[:500])
         downgrades = downgrades[500:]
 
         __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
