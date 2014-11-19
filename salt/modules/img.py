@@ -7,6 +7,8 @@ from __future__ import absolute_import
 # Import python libs
 import logging
 
+# Import 3rd-party libs
+#from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=import-error,no-name-in-module
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -33,7 +35,7 @@ def mount_image(location):
         return first
     return ''
 
-#compatibility for api change
+# compatibility for api change
 mnt_image = mount_image
 
 
@@ -60,7 +62,7 @@ def umount_image(mnt):
 #    system
 #    '''
 #    cache_dir = os.path.join(__salt__['config.option']('img.cache'), 'src')
-#    parse = urlparse.urlparse(name)
+#    parse = urlparse(name)
 #    if __salt__['config.valid_file_proto'](parse.scheme):
 #        # Valid scheme to download
 #        dest = os.path.join(cache_dir, parse.netloc)
