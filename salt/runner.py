@@ -310,7 +310,6 @@ class Runner(RunnerClient):
                     log.info('Running in async mode. Results of this execution may '
                              'be collected by attaching to the master event bus or '
                              'by examing the master job cache, if configured.')
-                    sys.exit(0)
                     rets = self.get_runner_returns(jid)
                 else:
                     rets = [jid]
