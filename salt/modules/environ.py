@@ -10,7 +10,7 @@ import os
 import logging
 
 # Import salt libs
-from six import string_types
+from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 

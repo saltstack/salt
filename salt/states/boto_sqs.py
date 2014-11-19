@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Manage SQS Queues
-=================
 
 .. versionadded:: 2014.7.0
 
@@ -59,7 +58,7 @@ passed in as a dict, or as a string to pull from pillars or minion config:
                 key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 '''
 from __future__ import absolute_import
-import six
+import salt.ext.six as six
 
 
 def __virtual__():

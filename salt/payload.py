@@ -12,8 +12,10 @@ import logging
 # Import salt libs
 import salt.log
 import salt.crypt
+import salt.ext.six as six
+
 from salt.exceptions import SaltReqTimeoutError
-import six
+from salt.utils.odict import OrderedDict
 
 # Import third party libs
 try:
@@ -193,7 +195,7 @@ class SREQ(object):
         '''
         if hasattr(self, '_socket'):
             if isinstance(self.poller.sockets, dict):
-                for socket in self.poller.sockets:
+                for socket in self.poller.sockets.keys():
                     self.poller.unregister(socket)
             else:
                 for socket in self.poller.sockets:
@@ -235,7 +237,7 @@ class SREQ(object):
 
     def destroy(self):
         if isinstance(self.poller.sockets, dict):
-            for socket in self.poller.sockets:
+            for socket in self.poller.sockets.keys():
                 if socket.closed is False:
                     socket.setsockopt(zmq.LINGER, 1)
                     socket.close()

@@ -21,7 +21,7 @@ import time
 import traceback
 import types
 from random import randint, shuffle
-from six.moves import range
+from salt.ext.six.moves import range
 
 # Import third party libs
 try:
@@ -70,7 +70,7 @@ import salt.utils.schedule
 import salt.exitcodes
 
 from salt.defaults import DEFAULT_TARGET_DELIM
-from six import string_types
+from salt.ext.six import string_types
 from salt.utils.debug import enable_sigusr1_handler
 from salt.utils.event import tagify
 import salt.syspaths
@@ -273,16 +273,15 @@ class SMinion(object):
         '''
         Load all of the modules for the minion
         '''
-        self.functions = salt.loader.minion_mods(self.opts, include_errors=True)
-        self.function_errors = self.functions['_errors']
-        self.functions.pop('_errors')  # Keep the funcs clean
         self.opts['pillar'] = salt.pillar.get_pillar(
             self.opts,
             self.opts['grains'],
             self.opts['id'],
             self.opts['environment'],
-            funcs=self.functions
         ).compile_pillar()
+        self.functions = salt.loader.minion_mods(self.opts, include_errors=True)
+        self.function_errors = self.functions['_errors']
+        self.functions.pop('_errors')  # Keep the funcs clean
         self.returners = salt.loader.returners(self.opts, self.functions)
         self.states = salt.loader.states(self.opts, self.functions)
         self.rend = salt.loader.render(self.opts, self.functions)
@@ -558,12 +557,21 @@ class MultiMinion(MinionBase):
                 # if you have an event to handle, do it on a single minion
                 # (first one to not throw an exception)
                 if package:
-                    try:
-                        minion['minion'].handle_event(package)
-                        package = None
-                        self.epub_sock.send(package)
-                    except Exception:
-                        pass
+                    # If we need to expand this, we may want to consider a specific header
+                    # or another approach entirely.
+                    if package.startswith('_minion_mine'):
+                        for multi_minion in minions:
+                            try:
+                                minions[master]['minion'].handle_event(package)
+                            except Exception:
+                                pass
+                    else:
+                        try:
+                            minion['minion'].handle_event(package)
+                            package = None
+                            self.epub_sock.send(package)
+                        except Exception:
+                            pass
 
                 # have the Minion class run anything it has to run
                 next(minion['generator'])
@@ -1535,6 +1543,15 @@ class Minion(MinionBase):
                 exc_info=err
             )
 
+    def _mine_send(self, package):
+        '''
+        Send mine data to the master
+        '''
+        sreq = salt.transport.Channel.factory(self.opts)
+        load = salt.utils.event.SaltEvent.unpack(package)[1]
+        ret = sreq.send(load)
+        return ret
+
     def handle_event(self, package):
         '''
         Handle an event from the epull_sock (all local minion events)
@@ -1552,6 +1569,8 @@ class Minion(MinionBase):
                 self.grains_cache = self.opts['grains']
         elif package.startswith('environ_setenv'):
             self.environ_setenv(package)
+        elif package.startswith('_minion_mine'):
+            self._mine_send(package)
         elif package.startswith('fire_master'):
             tag, data = salt.utils.event.MinionEvent.unpack(package)
             log.debug('Forwarding master event tag={tag}'.format(tag=data['tag']))
@@ -1810,7 +1829,7 @@ class Minion(MinionBase):
         self._running = False
         if getattr(self, 'poller', None) is not None:
             if isinstance(self.poller.sockets, dict):
-                for socket in self.poller.sockets:
+                for socket in self.poller.sockets.keys():
                     if socket.closed is False:
                         socket.close()
                     self.poller.unregister(socket)

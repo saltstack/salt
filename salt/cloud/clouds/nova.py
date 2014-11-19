@@ -103,7 +103,7 @@ import pprint
 
 # Import generic libcloud functions
 from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
-import six
+import salt.ext.six as six
 try:
     from salt.utils.openstack import nova
     HAS_NOVA = True
@@ -501,6 +501,10 @@ def request_instance(vm_=None, call=None):
     if userdata_file is not None:
         with salt.utils.fopen(userdata_file, 'r') as fp:
             kwargs['userdata'] = fp.read()
+
+    kwargs['config_drive'] = config.get_cloud_config_value(
+        'config_drive', vm_, __opts__, search_global=False
+    )
 
     salt.utils.cloud.fire_event(
         'event',

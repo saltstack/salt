@@ -50,7 +50,7 @@ from salt.utils.event import tagify
 import binascii
 from salt.utils.master import ConnectedCache
 from salt.utils.cache import CacheCli
-from six.moves import range
+from salt.ext.six.moves import range
 
 # Import halite libs
 try:
@@ -2268,7 +2268,7 @@ class ClearFuncs(object):
         # Verify that the caller has root on master
         elif 'user' in clear_load:
             if clear_load['user'].startswith('sudo_'):
-                # If someone can sudo, allow them to act as root
+                # If someone sudos check to make sure there is no ACL's around their username
                 if clear_load.get('key', 'invalid') == self.key.get('root'):
                     clear_load.pop('key')
                 elif clear_load.pop('key') != self.key[self.opts.get('user', 'root')]:
@@ -2276,6 +2276,20 @@ class ClearFuncs(object):
                         'Authentication failure of type "user" occurred.'
                     )
                     return ''
+                if self.opts['sudo_acl'] and self.opts['client_acl']:
+                    good = self.ckminions.auth_check(
+                                self.opts['client_acl'].get(clear_load['user'].split('_', 1)[-1]),
+                                clear_load['fun'],
+                                clear_load['tgt'],
+                                clear_load.get('tgt_type', 'glob'))
+                    if not good:
+                        # Accept find_job so the CLI will function cleanly
+                        if clear_load['fun'] != 'saltutil.find_job':
+                            log.warning(
+                                'Authentication failure of type "user" '
+                                'occurred.'
+                            )
+                            return ''
             elif clear_load['user'] == self.opts.get('user', 'root'):
                 if clear_load.pop('key') != self.key[self.opts.get('user', 'root')]:
                     log.warning(

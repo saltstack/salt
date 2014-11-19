@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Manage Apache Modules
-=====================
 
 .. versionadded:: 2014.7.0
 
@@ -18,7 +17,7 @@ Enable and disable apache modules.
             - name: cgi
 '''
 from __future__ import absolute_import
-from six import string_types
+from salt.ext.six import string_types
 
 
 def __virtual__():

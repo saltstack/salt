@@ -17,7 +17,7 @@ import salt.utils
 import salt.utils.network
 from salt.exceptions import CommandExecutionError
 import salt.utils.validate.net
-from six.moves import range
+from salt.ext.six.moves import range
 
 
 log = logging.getLogger(__name__)

@@ -175,6 +175,7 @@ More complete example
             as_list: True
             with_lists: [1,3]
 '''
+from __future__ import absolute_import
 
 # Please don't strip redundant parentheses from this file.
 # I have added some for clarity.
@@ -187,6 +188,7 @@ import logging
 
 # Import Salt libs
 from salt.utils.odict import OrderedDict
+from salt.ext.six.moves import range
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -283,20 +285,18 @@ class merger(object):
 
         # And then the keywords...
         # They aren't in definition order, but they can't conflict each other.
-        klist = kwargs.keys()
+        klist = list(kwargs.keys())
         klist.sort()
         qbuffer.extend([[k, kwargs[k]] for k in klist])
 
         # Filter out values that don't have queries.
-        qbuffer = filter(
-            lambda x: (
+        qbuffer = [x for x in qbuffer if (
                 (isinstance(x[1], str) and len(x[1]))
                 or
                 (isinstance(x[1], (list, tuple)) and (len(x[1]) > 0) and x[1][0])
                 or
                 (isinstance(x[1], dict) and 'query' in x[1] and len(x[1]['query']))
-            ),
-            qbuffer)
+            )]
 
         # Next, turn the whole buffer in to full dicts.
         for qb in qbuffer:
@@ -445,13 +445,13 @@ class merger(object):
                         if not self.ignore_null or ret[i]:
                             crd[nk] = ret[i]
         # Get key list and work backwards.  This is inner-out processing
-        ks = listify_dicts.keys()
+        ks = list(listify_dicts.keys())
         ks.reverse()
         for i in ks:
             d = listify_dicts[i]
             for k in listify[i]:
                 if isinstance(d[k], dict):
-                    d[k] = d[k].values()
+                    d[k] = list(d[k].values())
                 elif isinstance(d[k], list):
                     d[k] = [d[k]]
 

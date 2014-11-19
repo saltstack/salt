@@ -11,7 +11,7 @@ import requests
 import json
 import logging
 
-from six.moves import map
+from salt.ext.six.moves import map
 
 from salt.exceptions import CommandExecutionError
 

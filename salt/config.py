@@ -16,7 +16,7 @@ import time
 import codecs
 # import third party libs
 import yaml
-import six
+import salt.ext.six as six
 try:
     yaml.Loader = yaml.CLoader
     yaml.Dumper = yaml.CDumper
@@ -32,7 +32,7 @@ import salt.utils.validate.path
 import salt.utils.xdg
 import salt.exceptions
 from salt._compat import urlparse
-from six import string_types
+from salt.ext.six import string_types
 
 import sys
 
@@ -194,6 +194,7 @@ VALID_OPTS = {
     'runner_dirs': list,
     'client_acl': dict,
     'client_acl_blacklist': dict,
+    'sudo_acl': bool,
     'external_auth': dict,
     'token_expire': int,
     'file_recv': bool,
@@ -491,6 +492,7 @@ DEFAULT_MASTER_OPTS = {
     'outputter_dirs': [],
     'client_acl': {},
     'client_acl_blacklist': {},
+    'sudo_acl': False,
     'external_auth': {},
     'token_expire': 43200,
     'extension_modules': os.path.join(salt.syspaths.CACHE_DIR, 'extmods'),
@@ -1895,7 +1897,7 @@ def get_id(opts, minion_id=False):
     if opts.get('minion_id_caching', True):
         try:
             with salt.utils.fopen(id_cache) as idf:
-                name = idf.read().strip()
+                name = idf.readline().strip()
                 if name.startswith(codecs.BOM):  # Remove BOM if exists
                     name = name.replace(codecs.BOM, '', 1)
             if name:

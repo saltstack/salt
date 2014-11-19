@@ -59,7 +59,6 @@ import logging
 import time
 import datetime
 import multiprocessing
-from multiprocessing import Process
 from collections import MutableMapping
 
 # Import third party libs
@@ -76,7 +75,7 @@ import salt.loader
 import salt.state
 import salt.utils
 import salt.utils.cache
-from six import string_types
+from salt.ext.six import string_types
 log = logging.getLogger(__name__)
 
 # The SUB_EVENT set is for functions that require events fired based on
@@ -118,6 +117,17 @@ def get_event(node, sock_dir=None, transport='zeromq', opts=None, listen=True):
                                               sock_dir=sock_dir,
                                               listen=listen,
                                               opts=opts)
+
+
+def get_runner_event(opts, jid):
+    '''
+    Return an event object suitable for the named transport
+    '''
+    if opts['transport'] == 'zeromq':
+        return RunnerEvent(opts, jid)
+    elif opts['transport'] == 'raet':
+        import salt.utils.raetevent
+        return salt.utils.raetevent.RunnerEvent(opts, jid)
 
 
 def tagify(suffix='', prefix='', base=SALT):
@@ -419,7 +429,7 @@ class SaltEvent(object):
         # that poller gets garbage collected. The Poller itself, its
         # registered sockets and the Context
         if isinstance(self.poller.sockets, dict):
-            for socket in self.poller.sockets:
+            for socket in self.poller.sockets.keys():
                 if socket.closed is False:
                     socket.setsockopt(zmq.LINGER, linger)
                     socket.close()
@@ -516,7 +526,7 @@ class MinionEvent(SaltEvent):
         super(MinionEvent, self).__init__('minion', sock_dir=opts.get('sock_dir', None), opts=opts)
 
 
-class EventPublisher(Process):
+class EventPublisher(multiprocessing.Process):
     '''
     The interface that takes master events and republishes them out to anyone
     who wants to listen
@@ -714,8 +724,8 @@ class ReactWrap(object):
         LowData
         '''
         l_fun = getattr(self, low['state'])
-        f_call = salt.utils.format_call(l_fun, low)
         try:
+            f_call = salt.utils.format_call(l_fun, low)
             ret = l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
         except Exception:
             log.error(

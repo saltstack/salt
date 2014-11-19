@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Module for Management of Memcached Keys
-=======================================
 
 .. versionadded:: 2014.1.0
 '''
@@ -14,7 +13,7 @@ import logging
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from six import integer_types
+from salt.ext.six import integer_types
 
 # Import third party libs
 try:

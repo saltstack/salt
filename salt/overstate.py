@@ -21,7 +21,7 @@ import salt.utils
 
 # Import third party libs
 import yaml
-import six
+import salt.ext.six as six
 
 
 class OverState(object):

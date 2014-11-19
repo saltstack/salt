@@ -15,6 +15,7 @@ Module for Sending Messages via SMTP
 
         my-smtp-login:
             smtp.server: smtp.domain.com
+            smtp.tls: True
             smtp.sender: admin@domain.com
             smtp.username: myuser
             smtp.password: verybadpass
@@ -26,12 +27,14 @@ Module for Sending Messages via SMTP
 
         my-smtp-login:
             smtp.server: smtp.domain.com
+            smtp.tls: True
             smtp.sender: admin@domain.com
             smtp.username: myuser
             smtp.password: verybadpass
 
         another-smtp-login:
             smtp.server: smtp.domain.com
+            smtp.tls: True
             smtp.sender: admin@domain.com
             smtp.username: myuser
             smtp.password: verybadpass
@@ -88,6 +91,7 @@ def send_msg(recipient,
     if profile:
         creds = __salt__['config.option'](profile)
         server = creds.get('smtp.server')
+        use_ssl = creds.get('smtp.tls')
         sender = creds.get('smtp.sender')
         username = creds.get('smtp.username')
         password = creds.get('smtp.password')

@@ -49,19 +49,19 @@ def over(saltenv='base', os_fn=None):
     for stage in overstate.stages_iter():
         if isinstance(stage, dict):
             # This is highstate data
-            progress('Stage execution results:')
+            __progress__('Stage execution results:')
             for key, val in stage.items():
                 if '_|-' in key:
-                    progress({'error': {key: val}}, outputter='highstate')
+                    __progress__({'error': {key: val}}, outputter='highstate')
                 else:
-                    progress({key: val}, outputter='highstate')
+                    __progress__({key: val}, outputter='highstate')
         elif isinstance(stage, list):
             # This is a stage
             if stage_num == 0:
-                progress('Executing the following Over State:')
+                __progress__('Executing the following Over State:')
             else:
-                progress('Executed Stage:')
-            progress(stage, outputter='overstatestage')
+                __progress__('Executed Stage:')
+            __progress__(stage, outputter='overstatestage')
             stage_num += 1
     return overstate.over_run
 
@@ -72,6 +72,11 @@ def orchestrate(mods, saltenv='base', test=None, exclude=None, pillar=None):
 
     Execute a state run from the master, used as a powerful orchestration
     system.
+
+    .. seealso:: More Orchestrate documentation
+
+        * :ref:`Full Orchestrate Tutorial <orchestrate-tutorial>`
+        * :py:mod:`Docs for the master-side state module <salt.states.saltmod>`
 
     CLI Examples:
 
@@ -101,7 +106,7 @@ def orchestrate(mods, saltenv='base', test=None, exclude=None, pillar=None):
             exclude,
             pillar=pillar)
     ret = {minion.opts['id']: running}
-    progress(ret, outputter='highstate')
+    __progress__(ret, outputter='highstate')
     return ret
 
 # Aliases for orchestrate runner
@@ -123,7 +128,7 @@ def show_stages(saltenv='base', os_fn=None):
         salt-run state.show_stages saltenv=dev /root/overstate.sls
     '''
     overstate = salt.overstate.OverState(__opts__, saltenv, os_fn)
-    progress(overstate.over, outputter='overstatestage')
+    __progress__(overstate.over, outputter='overstatestage')
     return overstate.over
 
 
@@ -177,7 +182,8 @@ def event(tagmatch='*', count=-1, quiet=False, sock_dir=None, pretty=False):
         # Usage: ./eventlisten.sh '*' test.sleep 10
 
         # Mimic fnmatch from the Python stdlib.
-        fnmatch () { case "$2" in $1) return 0 ;; *) return 1 ;; esac ; }
+        fnmatch() { case "$2" in $1) return 0 ;; *) return 1 ;; esac ; }
+        count() { printf '%s\n' "$#" ; }
 
         listen() {
             events='events'
@@ -189,14 +195,31 @@ def event(tagmatch='*', count=-1, quiet=False, sock_dir=None, pretty=False):
             salt-run state.event count=-1 >&3 &
             events_pid=$!
 
+            (
+                timeout=$(( 60 * 60 ))
+                sleep $timeout
+                kill -s USR2 $$
+            ) &
+            timeout_pid=$!
+
+            # Give the runner a few to connect to the event bus.
+            printf 'Subscribing to the Salt event bus...\n'
+            sleep 4
+
             trap '
                 excode=$?; trap - EXIT;
                 exec 3>&-
+                kill '"${timeout_pid}"'
                 kill '"${events_pid}"'
                 rm '"${events}"'
                 exit
                 echo $excode
             ' INT TERM EXIT
+
+            trap '
+                printf '\''Timeout reached; exiting.\n'\''
+                exit 4
+            ' USR2
 
             # Run the command and get the JID.
             jid=$(salt --async "$@")
@@ -206,11 +229,13 @@ def event(tagmatch='*', count=-1, quiet=False, sock_dir=None, pretty=False):
             start_tag="salt/job/${jid}/new"
             ret_tag="salt/job/${jid}/ret/*"
 
+            # ``read`` will block when no events are going through the bus.
             printf 'Waiting for tag %s\n' "$ret_tag"
             while read -r tag data; do
                 if fnmatch "$start_tag" "$tag"; then
                     minions=$(printf '%s\n' "${data}" | jq -r '.["minions"][]')
-                    printf 'Waiting for minions: %s\n' "${minions}" | xargs
+                    num_minions=$(count $minions)
+                    printf 'Waiting for %s minions.\n' "$num_minions"
                     continue
                 fi
 
@@ -221,10 +246,12 @@ def event(tagmatch='*', count=-1, quiet=False, sock_dir=None, pretty=False):
                     printf '%s\n' "$data" | jq .
 
                     minions="$(printf '%s\n' "$minions" | sed -e '/'"$mid"'/d')"
-                    if (( ${#minions} )); then
-                        printf 'Remaining minions: %s\n' "$minions" | xargs
-                    else
+                    num_minions=$(count $minions)
+                    if [ $((num_minions)) -eq 0 ]; then
+                        printf 'All minions returned.\n'
                         break
+                    else
+                        printf 'Remaining minions: %s\n' "$num_minions"
                     fi
                 else
                     printf 'Skipping tag: %s\n' "$tag"

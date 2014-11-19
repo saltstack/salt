@@ -113,7 +113,7 @@ from yaml.scanner import ScannerError
 from salt.utils.serializers import DeserializationError, SerializationError
 from salt.utils.aggregation import aggregate, Map, Sequence
 from salt.utils.odict import OrderedDict
-from six import text_type, binary_type
+from salt.ext.six import text_type, binary_type
 
 __all__ = ['deserialize', 'serialize', 'available']
 

@@ -12,12 +12,12 @@ import logging
 import random
 import string
 import time
-from six.moves import range
+from salt.ext.six.moves import range
 
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from six import string_types
+from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 

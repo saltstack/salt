@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Manage Launch Configurations
-============================
 
 .. versionadded:: 2014.7.0
 

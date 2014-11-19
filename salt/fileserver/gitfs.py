@@ -53,7 +53,7 @@ import re
 import shutil
 import subprocess
 from datetime import datetime
-from six import text_type as _text_type
+from salt.ext.six import text_type as _text_type
 
 VALID_PROVIDERS = ('gitpython', 'pygit2', 'dulwich')
 PER_REMOTE_PARAMS = ('base', 'mountpoint', 'root')
@@ -90,7 +90,7 @@ _INVALID_REPO = (
 # Import salt libs
 import salt.utils
 import salt.fileserver
-from six import string_types
+from salt.ext.six import string_types
 from salt.exceptions import SaltException
 from salt.utils.event import tagify
 

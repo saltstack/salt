@@ -23,7 +23,7 @@ from salt.client import mixins
 from salt.output import display_output
 from salt.utils.error import raise_error
 from salt.utils.event import tagify
-import six
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -132,11 +132,16 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         self.event.fire_event({'runner_job': fun}, tagify([jid, 'new'], 'job'))
         target = RunnerClient._thread_return
         data = {'fun': fun, 'jid': jid, 'args': args, 'kwargs': kwargs}
-        process = multiprocessing.Process(
-            target=target, args=(self, self.opts, data)
-        )
-        process.start()
-        return jid
+        args = (self, self.opts, data)
+        ret = jid
+        if self.opts.get('async', False):
+            process = multiprocessing.Process(
+                target=target, args=args
+            )
+            process.start()
+        else:
+            ret = target(*args)
+        return ret
 
     @classmethod
     def _thread_return(cls, instance, opts, data):
@@ -144,11 +149,18 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         The multiprocessing process calls back here
         to stream returns
         '''
-        # Provide JID if the runner wants to access it
-        sys.modules[instance.functions[data['fun']].__module__].__jid__ = data['jid']
-        # Runtime injection of the progress event system with the correct jid
-        sys.modules[instance.functions[data['fun']].__module__].progress = \
-            salt.utils.event.RunnerEvent(opts, data['jid']).fire_progress
+        # Runners modules runtime injection:
+        # - the progress event system with the correct jid
+        # - Provide JID if the runner wants to access it directly
+        done = {}
+        progress = salt.utils.event.get_runner_event(opts, data['jid']).fire_progress
+        for func_name, func in instance.functions.items():
+            if func.__module__ in done:
+                continue
+            mod = sys.modules[func.__module__]
+            mod.__jid__ = data['jid']
+            mod.__progress__ = progress
+            done[func.__module__] = mod
         ret = instance.functions[data['fun']](*data['args'], **data['kwargs'])
         # Sleep for just a moment to let any progress events return
         time.sleep(0.1)
@@ -172,7 +184,10 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
                 'The specified returner threw a stack trace:\n',
                 exc_info=True
             )
-        return data['jid']
+        if opts.get('async', False):
+            return data['jid']
+        else:
+            return ret
 
     def master_call(self, **kwargs):
         '''
@@ -296,8 +311,11 @@ class Runner(RunnerClient):
                              'be collected by attaching to the master event bus or '
                              'by examing the master job cache, if configured.')
                     sys.exit(0)
+                    rets = self.get_runner_returns(jid)
+                else:
+                    rets = [jid]
                 # Gather the returns
-                for ret in self.get_runner_returns(jid):
+                for ret in rets:
                     if not self.opts.get('quiet', False):
                         if isinstance(ret, dict) and 'outputter' in ret and ret['outputter'] is not None:
                             print(self.outputters[ret['outputter']](ret['data']))

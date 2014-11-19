@@ -25,9 +25,9 @@ import requests
 # Import Salt libs
 import salt.utils.xmlutil as xml
 from salt._compat import ElementTree as ET
-from six.moves import map
-from six.moves import zip
-from six.moves import range
+from salt.ext.six.moves import map
+from salt.ext.six.moves import zip
+from salt.ext.six.moves import range
 
 LOG = logging.getLogger(__name__)
 DEFAULT_LOCATION = 'us-east-1'
@@ -231,12 +231,14 @@ def query(params=None, setname=None, requesturl=None, location=None,
         opts = {}
 
     if provider is None:
-        function = opts.get('function', ())
+        function = opts.get('function', (None, None))
         providers = opts.get('providers', {})
         prov_dict = providers.get(function[1], None)
-        if prov_dict is not None:
+        if prov_dict is not None and len(prov_dict.keys()) > 0:
             driver = list(list(prov_dict.keys()))[0]
             provider = prov_dict[driver]
+        else:
+            provider = {}
 
     service_url = provider.get('service_url', 'amazonaws.com')
 

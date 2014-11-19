@@ -4,6 +4,8 @@ The core behaviors used by minion and master
 '''
 # pylint: disable=W0232
 
+from __future__ import absolute_import
+
 # Import python libs
 import os
 import sys
@@ -15,6 +17,8 @@ import traceback
 import itertools
 from collections import deque
 import random
+import salt.ext.six as six
+from salt.ext.six.moves import range
 
 # Import salt libs
 import salt.daemons.masterapi
@@ -551,7 +555,7 @@ class SaltLoadPillar(ioflo.base.deeding.Deed):
         self.master_estate_name.value = master.name
 
         route = {'src': (self.road_stack.value.local.name, None, None),
-                 'dst': (self.road_stack.value.remotes.itervalues().next().name, None, 'remote_cmd')}
+                 'dst': (next(six.itervalues(self.road_stack.value.remotes)).name, None, 'remote_cmd')}
         load = {'id': self.opts.value['id'],
                 'grains': self.grains.value,
                 'saltenv': self.opts.value['environment'],
@@ -879,7 +883,10 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
                 self.lane_stack.value.transmit(msg,
                         self.lane_stack.value.fetchUidByName(next(self.workers.value)))
         elif d_share == 'fun':
-            self.fun.value.append(msg)
+            if self.road_stack.value.kind == kinds.applKinds.minion:
+                self.fun.value.append(msg)
+            elif self.road_stack.value.kind == kinds.applKinds.syndic:
+                self.self.publish.value.append(msg)
 
     def _process_uxd_rxmsg(self, msg, sender):
         '''
@@ -1085,7 +1092,8 @@ class SaltRaetPublisher(ioflo.base.deeding.Deed):
 
         minions = (self.availables.value &
                    set((remote.name for remote in stack.remotes.values()
-                            if remote.kind == kinds.applKinds.minion)))
+                            if remote.kind in [kinds.applKinds.minion,
+                                               kinds.applKinds.syndic])))
         for minion in minions:
             uid = self.stack.value.fetchUidByName(minion)
             if uid:

@@ -23,7 +23,7 @@ import locale
 # Extend the default list of supported distros. This will be used for the
 # /etc/DISTRO-release checking that is part of platform.linux_distribution()
 from platform import _supported_dists
-import six
+import salt.ext.six as six
 _supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
                      'slamd64', 'ovs', 'system', 'mint', 'oracle')
 
@@ -31,7 +31,7 @@ _supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
 import salt.log
 import salt.utils
 import salt.utils.network
-from six import string_types
+from salt.ext.six import string_types
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
@@ -526,6 +526,8 @@ def _virtual(osdata):
             if 'Vendor: QEMU' in output:
                 # FIXME: Make this detect between kvm or qemu
                 grains['virtual'] = 'kvm'
+            if 'Manufacturer: QEMU' in output:
+                grains['virtual'] = 'kvm'
             if 'Vendor: Bochs' in output:
                 grains['virtual'] = 'kvm'
             if 'BHYVE  BVXSDT' in output:
@@ -584,10 +586,13 @@ def _virtual(osdata):
     sysctl = salt.utils.which('sysctl')
     if osdata['kernel'] in choices:
         if os.path.isdir('/proc'):
-            self_root = os.stat('/')
-            init_root = os.stat('/proc/1/root/.')
-            if self_root != init_root:
-                grains['virtual_subtype'] = 'chroot'
+            try:
+                self_root = os.stat('/')
+                init_root = os.stat('/proc/1/root/.')
+                if self_root != init_root:
+                    grains['virtual_subtype'] = 'chroot'
+            except (IOError, OSError):
+                pass
         if os.path.isfile('/proc/1/cgroup'):
             try:
                 if ':/lxc/' in salt.utils.fopen(
@@ -951,6 +956,15 @@ def os_data():
                 grains['selinux']['enforced'] = __salt__['cmd.run'](
                     'getenforce'
                 ).strip()
+
+        # Add systemd grain, if you have it
+        if _linux_bin_exists('systemctl') and _linux_bin_exists('localectl'):
+            grains['systemd'] = {}
+            systemd_info = __salt__['cmd.run'](
+                'systemctl --version'
+            ).splitlines()
+            grains['systemd']['version'] = systemd_info[0].split()[1]
+            grains['systemd']['features'] = systemd_info[1]
 
         # Add lsb grains on any distro with lsb-release
         try:

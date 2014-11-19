@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Manage IAM roles.
-=================
+Manage IAM roles
 
 .. versionadded:: 2014.7.0
 
@@ -76,7 +75,7 @@ with the role. This is the default behavior of the AWS console.
 '''
 from __future__ import absolute_import
 import salt.utils.dictupdate as dictupdate
-import six
+import salt.ext.six as six
 
 
 def __virtual__():

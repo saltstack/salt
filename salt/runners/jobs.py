@@ -17,7 +17,7 @@ import salt.payload
 import salt.utils
 import salt.minion
 
-from six import string_types
+from salt.ext.six import string_types
 
 import logging
 log = logging.getLogger(__name__)
@@ -38,10 +38,10 @@ def active(outputter=None, display_progress=False):
     client = salt.client.get_local_client(__opts__['conf_file'])
     active_ = client.cmd('*', 'saltutil.running', timeout=__opts__['timeout'])
     if display_progress:
-        progress('Attempting to contact minions: {0}'.format(list(active_.keys())))
+        __progress__('Attempting to contact minions: {0}'.format(list(active_.keys())))
     for minion, data in active_.items():
         if display_progress:
-            progress('Received reply from minion {0}'.format(minion))
+            __progress__('Received reply from minion {0}'.format(minion))
         if not isinstance(data, list):
             continue
         for job in data:
@@ -84,7 +84,7 @@ def lookup_jid(jid,
     mminion = salt.minion.MasterMinion(__opts__)
     returner = _get_returner((__opts__['ext_job_cache'], ext_source, __opts__['master_job_cache']))
     if display_progress:
-        progress('Querying returner: {0}'.format(returner))
+        __progress__('Querying returner: {0}'.format(returner))
 
     try:
         data = mminion.returners['{0}.get_jid'.format(returner)](jid)
@@ -92,7 +92,7 @@ def lookup_jid(jid,
         return 'Requested returner could not be loaded. No JIDs could be retrieved.'
     for minion in data:
         if display_progress:
-            progress(minion)
+            __progress__(minion)
         if u'return' in data[minion]:
             ret[minion] = data[minion].get(u'return')
         else:
@@ -149,7 +149,7 @@ def list_jobs(ext_source=None,
     '''
     returner = _get_returner((__opts__['ext_job_cache'], ext_source, __opts__['master_job_cache']))
     if display_progress:
-        progress('Querying returner {0} for jobs.'.format(returner))
+        __progress__('Querying returner {0} for jobs.'.format(returner))
     mminion = salt.minion.MasterMinion(__opts__)
 
     try:
@@ -293,5 +293,5 @@ def _walk_through(job_dir, display_progress=False):
             job = serial.load(salt.utils.fopen(load_path, 'rb'))
             jid = job['jid']
             if display_progress:
-                progress('Found JID {0}'.format(jid))
+                __progress__('Found JID {0}'.format(jid))
             yield jid, job, t_path, final

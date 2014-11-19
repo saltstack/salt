@@ -21,7 +21,7 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
-from six import string_types
+from salt.ext.six import string_types
 import salt.utils
 
 

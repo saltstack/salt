@@ -1,4 +1,1 @@
-# -*- coding: utf-8 -*-
-'''
-Salt extension packages.
-'''
+# coding: utf-8 -*-

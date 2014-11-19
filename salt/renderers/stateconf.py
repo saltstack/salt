@@ -38,8 +38,8 @@ from cStringIO import StringIO
 # Import salt libs
 import salt.utils
 from salt.exceptions import SaltRenderError
-import six
-from six import string_types
+import salt.ext.six as six
+from salt.ext.six import string_types
 
 __all__ = ['render']
 
@@ -222,7 +222,7 @@ def render(input, saltenv='base', sls='', argline='', **kws):
             tmplctx = STATE_CONF.copy()
             if tmplctx:
                 prefix = sls + '::'
-                for k in tmplctx:
+                for k in tmplctx.keys():  # iterate over a copy of keys
                     if k.startswith(prefix):
                         tmplctx[k[len(prefix):]] = tmplctx[k]
                         del tmplctx[k]

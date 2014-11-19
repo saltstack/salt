@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Management of Dockers
-=====================
+Management of Docker Containers
 
 .. versionadded:: 2014.1.0
 
@@ -149,7 +148,7 @@ These are the available methods:
 '''
 
 from __future__ import absolute_import
-from six.moves import range
+from salt.ext.six.moves import range
 __docformat__ = 'restructuredtext en'
 
 import datetime
@@ -163,7 +162,7 @@ import types
 
 from salt.modules import cmdmod
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from six import string_types
+from salt.ext.six import string_types
 import salt.utils
 import salt.utils.odict
 
@@ -572,7 +571,9 @@ def create_container(image,
                      dns=None,
                      volumes=None,
                      volumes_from=None,
-                     name=None):
+                     name=None,
+                     cpu_shares=None,
+                     cpuset=None):
     '''
     Create a new container
 
@@ -601,12 +602,17 @@ def create_container(image,
         let stdin open, Default is ``False``
     name
         name given to container
+    cpu_shares
+        CPU shares (relative weight)
+    cpuset
+        CPUs in which to allow execution ('0-3' or '0,1')
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' docker.create_container o/ubuntu volumes="['/s','/m:/f']"
+
     '''
     status = base_status.copy()
     client = _get_client()
@@ -640,6 +646,8 @@ def create_container(image,
             volumes=mountpoints,
             volumes_from=volumes_from,
             name=name,
+            cpu_shares=cpu_shares,
+            cpuset=cpuset
         )
         container = container_info['Id']
         callback = _valid
@@ -1577,7 +1585,7 @@ def _pull_assemble_error_status(status, ret, logs):
     return status
 
 
-def pull(repo, tag=None):
+def pull(repo, tag=None, insecure_registry=False):
     '''
     Pulls an image from any registry. See documentation at top of this page to
     configure authenticated access
@@ -1588,6 +1596,10 @@ def pull(repo, tag=None):
     tag
         specific tag to pull (Optional)
 
+    insecure_registry
+        set as ``True`` to use insecure (non HTTPS) registry. Default is ``False``
+        (only available if using docker-py >= 0.5.0)
+
     CLI Example:
 
     .. code-block:: bash
@@ -1597,7 +1609,14 @@ def pull(repo, tag=None):
     client = _get_client()
     status = base_status.copy()
     try:
-        ret = client.pull(repo, tag=tag)
+        kwargs = {'tag': tag}
+        # if docker-py version is greater than 0.5.0 use the
+        # insecure_registry parameter
+        if salt.utils.compare_versions(ver1=docker.__version__,
+                                       oper='>=',
+                                       ver2='0.5.0'):
+            kwargs['insecure_registry'] = insecure_registry
+        ret = client.pull(repo, **kwargs)
         if ret:
             image_logs, infos = _parse_image_multilogs_string(ret, repo)
             if infos and infos.get('Id', None):
@@ -1661,7 +1680,7 @@ def _push_assemble_error_status(status, ret, logs):
     return status
 
 
-def push(repo, tag=None, quiet=False):
+def push(repo, tag=None, quiet=False, insecure_registry=False):
     '''
     Pushes an image to any registry. See documentation at top of this page to
     configure authenticated access
@@ -1675,6 +1694,10 @@ def push(repo, tag=None, quiet=False):
     quiet
         set as ``True`` to quiet output, Default is ``False``
 
+    insecure_registry
+        set as ``True`` to use insecure (non HTTPS) registry. Default is ``False``
+        (only available if using docker-py >= 0.5.0)
+
     CLI Example:
 
     .. code-block:: bash
@@ -1685,7 +1708,14 @@ def push(repo, tag=None, quiet=False):
     status = base_status.copy()
     registry, repo_name = docker.auth.resolve_repository_name(repo)
     try:
-        ret = client.push(repo, tag=tag)
+        kwargs = {'tag': tag}
+        # if docker-py version is greater than 0.5.0 use the
+        # insecure_registry parameter
+        if salt.utils.compare_versions(ver1=docker.__version__,
+                                       oper='>=',
+                                       ver2='0.5.0'):
+            kwargs['insecure_registry'] = insecure_registry
+        ret = client.pull(repo, **kwargs)
         if ret:
             image_logs, infos = _parse_image_multilogs_string(ret, repo_name)
             if image_logs:

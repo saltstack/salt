@@ -237,5 +237,21 @@ class RAETEvent(object):
         if hasattr(self, 'stack'):
             self.stack.server.close()
 
-    def __del__(self):
-        self.destroy()
+    #def __del__(self):  # Need to manually call destroy when we are done
+        #self.destroy()
+
+
+class RunnerEvent(RAETEvent):
+    '''
+    This is used to send progress and return events from runners.
+    It extends MasterEvent to include information about how to
+    display events to the user as a runner progresses.
+    '''
+    def __init__(self, opts, jid):
+        super(RunnerEvent, self).__init__('master', opts['sock_dir'])
+        self.jid = jid
+
+    def fire_progress(self, data, outputter='pprint'):
+        progress_event = {'data': data,
+                          'outputter': outputter}
+        self.fire_event(progress_event, salt.utils.event.tagify([self.jid, 'progress'], 'runner'))

@@ -116,9 +116,9 @@ import functools
 import logging
 
 # Import salt libs
-from six import string_types
+from salt.ext.six import string_types
 import salt.utils
-import six
+import salt.ext.six as six
 
 # Enable proper logging
 log = logging.getLogger(__name__)
@@ -221,7 +221,12 @@ def mod_watch(name, sfun=None, *args, **kw):
                         ' implemented for {0}'.format(sfun))}
 
 
-def pulled(name, tag=None, force=False, *args, **kwargs):
+def pulled(name,
+           tag=None,
+           force=False,
+           insecure_registry=False,
+           *args,
+           **kwargs):
     '''
     Pull an image from a docker registry. (`docker pull`)
 
@@ -245,6 +250,9 @@ def pulled(name, tag=None, force=False, *args, **kwargs):
 
     force
         Pull even if the image is already pulled
+
+    insecure_registry
+        Set to ``True``to allow connections to non-HTTPS registries. Default ``False``.
     '''
     inspect_image = __salt__['docker.inspect_image']
     image_infos = inspect_image(name)
@@ -262,7 +270,7 @@ def pulled(name, tag=None, force=False, *args, **kwargs):
 
     previous_id = image_infos['out']['Id'] if image_infos['status'] else None
     pull = __salt__['docker.pull']
-    returned = pull(name, tag=tag)
+    returned = pull(name, tag=tag, insecure_registry=insecure_registry)
     if previous_id != returned['id']:
         changes = {name: {'old': previous_id,
                           'new': returned['id']}}
@@ -271,7 +279,7 @@ def pulled(name, tag=None, force=False, *args, **kwargs):
     return _ret_status(returned, name, changes=changes)
 
 
-def pushed(name, tag=None):
+def pushed(name, tag=None, insecure_registry=False):
     '''
     Push an image from a docker registry. (`docker push`)
 
@@ -293,6 +301,8 @@ def pushed(name, tag=None):
     tag
         Tag of the image [Optional]
 
+    insecure_registry
+        Set to ``True``to allow connections to non-HTTPS registries. Default ``False``.
     '''
 
     if __opts__['test']:
@@ -303,7 +313,7 @@ def pushed(name, tag=None):
                 'comment': comment}
 
     push = __salt__['docker.push']
-    returned = push(name, tag=tag)
+    returned = push(name, tag=tag, insecure_registry=insecure_registry)
     log.debug("Returned: "+str(returned))
     if returned['status']:
         changes = {name: {'Rev': returned['id']}}
@@ -451,6 +461,8 @@ def installed(name,
               dns=None,
               volumes=None,
               volumes_from=None,
+              cpu_shares=None,
+              cpuset=None,
               *args, **kwargs):
     '''
     Ensure that a container with the given name exists;
@@ -535,7 +547,9 @@ def installed(name,
         dns=dns,
         volumes=dvolumes,
         volumes_from=volumes_from,
-        name=name)
+        name=name,
+        cpu_shares=cpu_shares,
+        cpuset=cpuset)
     out = create(*a, **kw)
     # if container has been created, even if not started, we mark
     # it as installed
@@ -577,25 +591,27 @@ def absent(name):
                 return _invalid(comment=("Container {0!r} could not be stopped"
                                          .format(cid)))
             else:
-                changes[cid]['new'] = 'stopped'
+                __salt__['docker.remove_container'](cid)
+                is_gone = __salt__['docker.exists'](cid)
+                if is_gone:
+                    return _valid(comment=('Container {0!r}'
+                                           ' was stopped and destroyed, '.format(cid)),
+                                           changes={name: True})
+                else:
+                    return _valid(comment=('Container {0!r}'
+                                           ' was stopped but could not be destroyed,'.format(cid)),
+                                           changes={name: True})
         else:
-            changes[cid]['old'] = 'stopped'
-
-        # Remove the stopped container
-        removal = __salt__['docker.remove_container'](cid)
-
-        if removal['status'] is True:
-            changes[cid]['new'] = 'removed'
-            return _valid(comment=("Container {0!r} has been destroyed"
-                                   .format(cid)),
-                          changes=changes)
-        else:
-            if 'new' not in changes[cid]:
-                changes = None
-            return _invalid(comment=("Container {0!r} could not be destroyed"
-                                     .format(cid)),
-                            changes=changes)
-
+            __salt__['docker.remove_container'](cid)
+            is_gone = __salt__['docker.exists'](cid)
+            if is_gone:
+                return _valid(comment=('Container {0!r}'
+                                       ' is stopped and was destroyed, '.format(cid)),
+                                       changes={name: True})
+            else:
+                return _valid(comment=('Container {0!r}'
+                                       ' is stopped but could not be destroyed,'.format(cid)),
+                                       changes={name: True})
     else:
         return _valid(comment="Container {0!r} not found".format(name))
 
@@ -752,6 +768,8 @@ def running(name,
             publish_all_ports=False,
             links=None,
             restart_policy=None,
+            cpu_shares=None,
+            cpuset=None,
             *args, **kwargs):
     '''
     Ensure that a container is running. If the container does not exist, it
@@ -866,6 +884,19 @@ def running(name,
         Useful for data-only containers that must be linked to another one.
         e.g. nginx <- static-files
 
+    cpu_shares
+        CPU shares (relative weight)
+
+        .. code-block:: yaml
+
+            - cpu_shares: 2
+    cpuset
+        CPUs in which to allow execution ('0-3' or '0,1')
+
+        .. code-block:: yaml
+
+            - cpuset: '0-3'
+
     For other parameters, see salt.modules.dockerio execution module
     and the docker-py python bindings for docker documentation
     <https://github.com/dotcloud/docker-py#api>`_ for
@@ -963,7 +994,9 @@ def running(name,
                         environment=denvironment,
                         dns=dns,
                         volumes=contvolumes,
-                        name=name)
+                        name=name,
+                        cpu_shares=cpu_shares,
+                        cpuset=cpuset)
         out = create(*args, **kwargs)
         # if container has been created, even if not started, we mark
         # it as installed

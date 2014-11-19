@@ -3,27 +3,14 @@
 Control the Salt command interface
 ==================================
 
-The Salt state is used to control the salt command interface. This state is
-intended for use primarily from the state runner from the master.
+This state is intended for use from the Salt Master. It provides access to
+sending commands down to minions as well as access to executing master-side
+modules. These state functions wrap Salt's :ref:`Python API <python-api>`.
 
-The salt.state declaration can call out a highstate or a list of sls:
+.. seealso:: More Orchestrate documentation
 
-.. code-block:: yaml
-
-    webservers:
-      salt.state:
-        - tgt: 'web*'
-        - sls:
-          - apache
-          - django
-          - core
-        - saltenv: prod
-
-    databases:
-      salt.state:
-        - tgt: role:database
-        - tgt_type: grain
-        - highstate: True
+    * :ref:`Full Orchestrate Tutorial <orchestrate-tutorial>`
+    * :py:func:`The Orchestrate runner <salt.runners.state.orchestrate>`
 '''
 from __future__ import absolute_import
 
@@ -36,8 +23,8 @@ import time
 import salt.syspaths
 import salt.utils
 import salt.utils.event
-import six
-from six import string_types
+import salt.ext.six as six
+from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 
@@ -129,6 +116,33 @@ def state(
         WARNING: This flag is potentially dangerous. It is designed
         for use when multiple state runs can safely be run at the same
         Do not use this flag for performance optimization.
+
+    Examples:
+
+    Run a list of sls files via :py:func:`state.sls <salt.state.sls>` on target
+    minions:
+
+    .. code-block:: yaml
+
+        webservers:
+          salt.state:
+            - tgt: 'web*'
+            - sls:
+              - apache
+              - django
+              - core
+            - saltenv: prod
+
+    Run a full :py:func:`state.highstate <salt.state.highstate>` on target
+    mininons.
+
+    .. code-block:: yaml
+
+        databases:
+          salt.state:
+            - tgt: role:database
+            - tgt_type: grain
+            - highstate: True
     '''
     cmd_kw = {'arg': [], 'kwarg': {}, 'ret': ret, 'timeout': timeout}
 

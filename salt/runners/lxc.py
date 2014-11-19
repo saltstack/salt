@@ -12,7 +12,7 @@ import time
 import os
 import copy
 import logging
-from six import string_types
+from salt.ext.six import string_types
 
 # Import Salt libs
 from salt.utils.odict import OrderedDict
@@ -20,7 +20,7 @@ import salt.client
 import salt.utils.virt
 import salt.utils.cloud
 import salt.key
-import six
+import salt.ext.six as six
 
 
 log = logging.getLogger(__name__)
@@ -93,7 +93,7 @@ def find_guest(name, quiet=False):
         for x in 'running', 'frozen', 'stopped':
             if name in l[x]:
                 if not quiet:
-                    progress(host, outputter='lxc_find_host')
+                    __progress__(host, outputter='lxc_find_host')
                 return host
     return None
 
@@ -332,7 +332,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
     if not done:
         ret['result'] = False
     if not quiet:
-        progress(ret)
+        __progress__(ret)
     return ret
 
 
@@ -395,7 +395,7 @@ def list_(host=None, quiet=False):
     for chunk in it:
         ret.update(chunk)
         if not quiet:
-            progress(chunk, outputter='lxc_list')
+            __progress__(chunk, outputter='lxc_list')
     return ret
 
 
@@ -420,7 +420,7 @@ def purge(name, delete_key=True, quiet=False):
         return
 
     if not quiet:
-        progress(data, outputter='lxc_purge')
+        __progress__(data, outputter='lxc_purge')
     return data
 
 
@@ -434,7 +434,7 @@ def start(name, quiet=False):
     '''
     data = _do_names(name, 'start')
     if data and not quiet:
-        progress(data, outputter='lxc_start')
+        __progress__(data, outputter='lxc_start')
     return data
 
 
@@ -448,7 +448,7 @@ def stop(name, quiet=False):
     '''
     data = _do_names(name, 'stop')
     if data and not quiet:
-        progress(data, outputter='lxc_force_off')
+        __progress__(data, outputter='lxc_force_off')
     return data
 
 
@@ -462,7 +462,7 @@ def freeze(name, quiet=False):
     '''
     data = _do_names(name, 'freeze')
     if data and not quiet:
-        progress(data, outputter='lxc_pause')
+        __progress__(data, outputter='lxc_pause')
     return data
 
 
@@ -476,7 +476,7 @@ def unfreeze(name, quiet=False):
     '''
     data = _do_names(name, 'unfreeze')
     if data and not quiet:
-        progress(data, outputter='lxc_resume')
+        __progress__(data, outputter='lxc_resume')
     return data
 
 
@@ -490,5 +490,5 @@ def info(name, quiet=False):
     '''
     data = _do_names(name, 'info')
     if data and not quiet:
-        progress(data, outputter='lxc_info')
+        __progress__(data, outputter='lxc_info')
     return data

@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Management of Block Devices
-===================================
 
 A state module to manage blockdevices
 
@@ -20,6 +19,7 @@ A state module to manage blockdevices
         - read-ahead: 1024
 
 
+.. versionadded:: 2014.7.0
 '''
 from __future__ import absolute_import
 

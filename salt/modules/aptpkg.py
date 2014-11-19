@@ -25,12 +25,12 @@ import yaml
 # Import salt libs
 from salt.modules.cmdmod import _parse_env
 import salt.utils
-from six import string_types
+from salt.ext.six import string_types
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
-import six
-from six.moves import range
+import salt.ext.six as six
+from salt.ext.six.moves import range
 
 
 log = logging.getLogger(__name__)
@@ -1347,10 +1347,10 @@ def mod_repo(repo, saltenv='base', **kwargs):
             # implementation via apt-add-repository.  The code path for
             # secure PPAs should be the same as urllib method
             if HAS_SOFTWAREPROPERTIES and 'ppa_auth' not in kwargs:
-                try:
-                    get_repo(repo)
-                    return {repo: ''}
-                except Exception:
+                repo_info = get_repo(repo)
+                if repo_info:
+                    return {repo: repo_info}
+                else:
                     if float(__grains__['osrelease']) < 12.04:
                         cmd = 'apt-add-repository {0}'.format(repo)
                     else:

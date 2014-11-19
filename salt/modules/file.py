@@ -31,10 +31,10 @@ import tempfile
 import time
 import glob
 from functools import reduce
-from six import string_types
-from six.moves import range
-from six.moves import zip
-from six.moves.urllib.parse import urlparse  # pylint: disable=E0611
+from salt.ext.six import string_types
+from salt.ext.six.moves import range
+from salt.ext.six.moves import zip
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=E0611
 
 try:
     import grp
@@ -2517,7 +2517,7 @@ def source_list(source, source_hash, saltenv):
                     continue
                 single_src = next(iter(single))
                 single_hash = single[single_src] if single[single_src] else source_hash
-                proto = urlparse(single_src).scheme
+                proto = _urlparse(single_src).scheme
                 if proto == 'salt':
                     if single_src[7:] in mfiles or single_src[7:] in mdirs:
                         ret = (single_src, single_hash)
@@ -2637,13 +2637,13 @@ def get_managed(
     else:
         # Copy the file down if there is a source
         if source:
-            if urlparse(source).scheme == 'salt':
+            if _urlparse(source).scheme == 'salt':
                 source_sum = __salt__['cp.hash_file'](source, saltenv)
                 if not source_sum:
                     return '', {}, 'Source file {0} not found'.format(source)
             elif source_hash:
                 protos = ['salt', 'http', 'https', 'ftp', 'swift']
-                if urlparse(source_hash).scheme in protos:
+                if _urlparse(source_hash).scheme in protos:
                     # The source_hash is a file on a server
                     hash_fn = __salt__['cp.cache_file'](source_hash, saltenv)
                     if not hash_fn:
@@ -2908,6 +2908,59 @@ def check_managed(
     return True, 'The file {0} is in the correct state'.format(name)
 
 
+def check_managed_changes(
+        name,
+        source,
+        source_hash,
+        user,
+        group,
+        mode,
+        template,
+        context,
+        defaults,
+        saltenv,
+        contents=None,
+        **kwargs):
+    '''
+    Return a dictionary of what changes need to be made for a file
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.check_managed_changes /etc/httpd/conf.d/httpd.conf salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' root, root, '755' jinja True None None base
+    '''
+    # If the source is a list then find which file exists
+    source, source_hash = source_list(source,           # pylint: disable=W0633
+                                      source_hash,
+                                      saltenv)
+
+    sfn = ''
+    source_sum = None
+
+    if contents is None:
+        # Gather the source file from the server
+        sfn, source_sum, comments = get_managed(
+            name,
+            template,
+            source,
+            source_hash,
+            user,
+            group,
+            mode,
+            saltenv,
+            context,
+            defaults,
+            **kwargs)
+        if comments:
+            __clean_tmp(sfn)
+            return False, comments
+    changes = check_file_meta(name, sfn, source, source_sum, user,
+                              group, mode, saltenv, template, contents)
+    __clean_tmp(sfn)
+    return changes
+
+
 def check_file_meta(
         name,
         sfn,
@@ -3148,7 +3201,7 @@ def manage_file(name,
                     ret, 'Source file {0} not found'.format(source))
             # If the downloaded file came from a non salt server source verify
             # that it matches the intended sum value
-            if urlparse(source).scheme != 'salt':
+            if _urlparse(source).scheme != 'salt':
                 dl_sum = get_hash(sfn, source_sum['hash_type'])
                 if dl_sum != source_sum['hsum']:
                     ret['comment'] = ('File sum set for file {0} of {1} does '
@@ -3239,7 +3292,7 @@ def manage_file(name,
                     ret, 'Source file {0} not found'.format(source))
             # If the downloaded file came from a non salt server source verify
             # that it matches the intended sum value
-            if urlparse(source).scheme != 'salt':
+            if _urlparse(source).scheme != 'salt':
                 dl_sum = get_hash(sfn, source_sum['hash_type'])
                 if dl_sum != source_sum['hsum']:
                     ret['comment'] = ('File sum set for file {0} of {1} does '
@@ -3286,7 +3339,7 @@ def manage_file(name,
                     ret, 'Source file {0} not found'.format(source))
             # If the downloaded file came from a non salt server source verify
             # that it matches the intended sum value
-            if urlparse(source).scheme != 'salt':
+            if _urlparse(source).scheme != 'salt':
                 dl_sum = get_hash(sfn, source_sum['hash_type'])
                 if dl_sum != source_sum['hsum']:
                     ret['comment'] = ('File sum set for file {0} of {1} does '

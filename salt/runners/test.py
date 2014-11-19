@@ -5,8 +5,8 @@ This runner is used only for test purposes and servers no production purpose
 from __future__ import absolute_import
 # Import python libs
 import time
-import six
-from six.moves import range
+import salt.ext.six as six
+from salt.ext.six.moves import range
 
 
 def arg(*args, **kwargs):
@@ -42,6 +42,6 @@ def stream():
     '''
     ret = True
     for i in range(1, 100):
-        progress('Runner is {0}% done'.format(i), outputter='pprint')
+        __progress__('Runner is {0}% done'.format(i), outputter='pprint')
         time.sleep(0.1)
     return ret

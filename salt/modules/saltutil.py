@@ -33,7 +33,7 @@ import salt.wheel
 from salt.exceptions import (
     SaltReqTimeoutError, SaltRenderError, CommandExecutionError
 )
-from six import string_types
+from salt.ext.six import string_types
 
 __proxyenabled__ = ['*']
 
@@ -373,6 +373,9 @@ def sync_all(saltenv=None, refresh=True):
     '''
     Sync down all of the dynamic modules from the file server for a specific
     environment
+
+    refresh : True
+        Also refresh the execution modules available to the minion.
 
     CLI Example:
 

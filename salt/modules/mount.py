@@ -11,7 +11,7 @@ import logging
 
 # Import salt libs
 import salt.utils
-from six import string_types
+from salt.ext.six import string_types
 from salt.utils import which as _which
 from salt.exceptions import CommandNotFoundError, CommandExecutionError
 
@@ -313,16 +313,10 @@ def set_fstab(
                     # Invalid entry
                     lines.append(line)
                     continue
-                if comps[1] == name or comps[0] == device:
+                if comps[1] == name and comps[0] == device:
                     # check to see if there are changes
                     # and fix them if there are any
                     present = True
-                    if comps[0] != device:
-                        change = True
-                        comps[0] = device
-                    if comps[1] != name:
-                        change = True
-                        comps[1] = name
                     if comps[2] != fstype:
                         change = True
                         comps[2] = fstype

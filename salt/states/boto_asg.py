@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Manage Autoscale Groups
-=======================
 
 .. versionadded:: 2014.7.0
 
@@ -25,6 +24,8 @@ in the minion's config file::
 
 It's also possible to specify key, keyid and region via a profile, either
 as a passed in dict, or as a string to pull from pillars or minion config:
+
+.. code-block:: yaml
 
     myprofile:
         keyid: GKTADJGHEIQSXMKKRBJ08H
@@ -105,8 +106,8 @@ from __future__ import absolute_import
 # Import Python libs
 import hashlib
 import logging
-import six
-from six.moves import zip
+import salt.ext.six as six
+from salt.ext.six.moves import zip
 
 log = logging.getLogger(__name__)
 

@@ -35,12 +35,12 @@ import warnings
 import yaml
 import string
 from calendar import month_abbr as months
-from six import string_types
-from six.moves.urllib.parse import urlparse  # pylint: disable=E0611
-import six
-from six.moves import range
-from six.moves import zip
-from six.moves import map
+from salt.ext.six import string_types
+from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=E0611
+import salt.ext.six as six
+from salt.ext.six.moves import range
+from salt.ext.six.moves import zip
+from salt.ext.six.moves import map
 
 # Try to load pwd, fallback to getpass if unsuccessful
 try:
@@ -106,7 +106,6 @@ from salt.defaults import DEFAULT_TARGET_DELIM
 import salt.log
 import salt.payload
 import salt.version
-from six import string_types
 from salt.utils.decorators import memoize as real_memoize
 from salt.exceptions import (
     CommandExecutionError, SaltClientError,
@@ -2201,13 +2200,13 @@ def is_bin_str(data):
     '''
     Detects if the passed string of data is bin or text
     '''
-    text_characters = ''.join(map(chr, list(range(32, 127))) + list('\n\r\t\b'))
-    _null_trans = string.maketrans('', '')
     if '\0' in data:
         return True
     if not data:
         return False
 
+    text_characters = ''.join(list(map(chr, list(range(32, 127)))) + list('\n\r\t\b'))
+    _null_trans = string.maketrans('', '')
     # Get the non-text characters (maps a character to itself then
     # use the 'remove' option to get rid of the text characters.)
     text = data.translate(_null_trans, text_characters)
@@ -2425,7 +2424,7 @@ def import_json():
     for fast_json in ('ujson', 'yajl', 'json'):
         try:
             mod = __import__(fast_json)
-            log.info('loaded {0} json lib'.format(fast_json))
+            log.trace('loaded {0} json lib'.format(fast_json))
             return mod
         except ImportError:
             continue
