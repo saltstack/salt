@@ -67,6 +67,13 @@ if __name__ == '__main__':
 '''
 
 
+def thin_path(cachedir):
+    '''
+    Return the path to the thin tarball
+    '''
+    return os.path.join(cachedir, 'thin', 'thin.tgz')
+
+
 def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods=''):
     '''
     Generate the salt-thin tarball and print the location of the tarball
@@ -92,7 +99,10 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods=''):
         fp_.write(SALTCALL)
     if os.path.isfile(thintar):
         if overwrite or not os.path.isfile(thinver):
-            os.remove(thintar)
+            try:
+                os.remove(thintar)
+            except OSError:
+                pass
         elif open(thinver).read() == salt.__version__:
             return thintar
     tops = [
