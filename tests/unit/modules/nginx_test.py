@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
-import urllib2
+# Import 3rd-party libs
+from salt.ext.six.moves.urllib.request import urlopen  # pylint: disable=no-name-in-module,import-error
+
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
@@ -29,10 +31,10 @@ class MockUrllibStatus(object):
 @patch('salt.utils.which', Mock(return_value='/usr/bin/nginx'))
 class NginxTestCase(TestCase):
 
-    @patch('urllib2.urlopen', Mock(return_value=MockUrllibStatus()))
+    @patch('urlopen', Mock(return_value=MockUrllibStatus()))
     def test_nginx_status(self):
         result = nginx.status()
-        urllib2.urlopen.assert_called_once_with('http://127.0.0.1/status')
+        urlopen.assert_called_once_with('http://127.0.0.1/status')
         self.assertEqual(result, {
             'active connections': 7,
             'accepted': 46756,
@@ -43,11 +45,11 @@ class NginxTestCase(TestCase):
             'waiting': 0,
         })
 
-    @patch('urllib2.urlopen', Mock(return_value=MockUrllibStatus()))
+    @patch('urlopen', Mock(return_value=MockUrllibStatus()))
     def test_nginx_status_with_arg(self):
         other_path = 'http://localhost/path'
         result = nginx.status(other_path)
-        urllib2.urlopen.assert_called_once_with(other_path)
+        urlopen.assert_called_once_with(other_path)
 
 
 if __name__ == '__main__':
