@@ -11,14 +11,15 @@ import copy
 import logging
 import re
 import os
+
+# Import 3rd-party libs
+# pylint: disable=import-error,redefined-builtin,no-name-in-module
 import salt.ext.six as six
-import salt.ext.six.moves.configparser  # pylint: disable=E0611
-import urlparse
+from salt.ext.six.moves import shlex_quote as _cmd_quote, configparser
+from salt.ext.six.moves.urllib.parse import urlparse
+# pylint: enable=import-error,redefined-builtin,no-name-in-module
+
 from xml.dom import minidom as dom
-try:
-    from shlex import quote as _cmd_quote  # pylint: disable=E0611
-except ImportError:
-    from pipes import quote as _cmd_quote
 
 # Import salt libs
 import salt.utils
@@ -28,9 +29,9 @@ from salt.exceptions import (
 log = logging.getLogger(__name__)
 
 HAS_ZYPP = False
-ZYPP_HOME = "/etc/zypp"
-LOCKS = "{0}/locks".format(ZYPP_HOME)
-REPOS = "{0}/repos.d".format(ZYPP_HOME)
+ZYPP_HOME = '/etc/zypp'
+LOCKS = '{0}/locks'.format(ZYPP_HOME)
+REPOS = '{0}/repos.d'.format(ZYPP_HOME)
 
 # Define the module's virtual name
 __virtualname__ = 'pkg'
@@ -245,8 +246,8 @@ def _get_configured_repos():
     Get all the info about repositories from the configurations.
     '''
 
-    repos_cfg = salt.ext.six.moves.configparser.ConfigParser()
-    repos_cfg.read([REPOS + "/" + fname for fname in os.listdir(REPOS)])
+    repos_cfg = configparser.ConfigParser()
+    repos_cfg.read([REPOS + '/' + fname for fname in os.listdir(REPOS)])
 
     return repos_cfg
 
@@ -314,14 +315,14 @@ def del_repo(repo):
         if alias == repo:
             cmd = ('zypper -x --non-interactive rr --loose-auth --loose-query {0}'.format(alias))
             doc = dom.parseString(__salt__['cmd.run'](cmd, output_loglevel='trace'))
-            msg = doc.getElementsByTagName("message")
-            if doc.getElementsByTagName("progress") and msg:
+            msg = doc.getElementsByTagName('message')
+            if doc.getElementsByTagName('progress') and msg:
                 return {
                     repo: True,
                     'message': msg[0].childNodes[0].nodeValue,
                     }
 
-    raise CommandExecutionError('Repository "{0}" not found.'.format(repo))
+    raise CommandExecutionError('Repository \'{0}\' not found.'.format(repo))
 
 
 def mod_repo(repo, **kwargs):
@@ -365,21 +366,21 @@ def mod_repo(repo, **kwargs):
 
     # An attempt to add new one?
     if repo not in repos_cfg.sections():
-        url = kwargs.get("url", kwargs.get("mirrorlist"))
+        url = kwargs.get('url', kwargs.get('mirrorlist'))
         if not url:
             raise CommandExecutionError(
-                'Repository "{0}" not found and no URL passed to create one.'.format(repo))
+                'Repository \'{0}\' not found and no URL passed to create one.'.format(repo))
 
-        if not urlparse.urlparse(url).scheme:
+        if not urlparse(url).scheme:
             raise CommandExecutionError(
-                'Repository "{0}" not found and passed URL looks wrong.'.format(repo))
+                'Repository \'{0}\' not found and passed URL looks wrong.'.format(repo))
 
         # Is there already such repo under different alias?
         for alias in repos_cfg.sections():
             repo_meta = _get_repo_info(alias, repos_cfg=repos_cfg)
 
             # Complete user URL, in case it is not
-            new_url = urlparse.urlparse(url)
+            new_url = urlparse(url)
             if not new_url.path:
                 new_url = urlparse.ParseResult(scheme=new_url.scheme,  # pylint: disable=E1123
                                                netloc=new_url.netloc,
@@ -387,59 +388,61 @@ def mod_repo(repo, **kwargs):
                                                params=new_url.params,
                                                query=new_url.query,
                                                fragment=new_url.fragment)
-            base_url = urlparse.urlparse(repo_meta["baseurl"])
+            base_url = urlparse(repo_meta['baseurl'])
 
             if new_url == base_url:
                 raise CommandExecutionError(
-                    'Repository "{0}" already exists as "{1}".'.format(repo, alias))
+                    'Repository \'{0}\' already exists as \'{1}\'.'.format(repo, alias))
 
         # Add new repo
         doc = None
         try:
             # Try to parse the output and find the error,
             # but this not always working (depends on Zypper version)
-            doc = dom.parseString(__salt__['cmd.run'](("zypper -x ar {0} '{1}'".format(url, repo)),
+            doc = dom.parseString(__salt__['cmd.run'](('zypper -x ar {0} \'{1}\''.format(url, repo)),
                                                       output_loglevel='trace'))
         except Exception:
             # No XML out available, but it is still unknown the state of the result.
             pass
 
         if doc:
-            msg_nodes = doc.getElementsByTagName("message")
+            msg_nodes = doc.getElementsByTagName('message')
             if msg_nodes:
                 msg_node = msg_nodes[0]
-                if msg_node.getAttribute("type") == "error":
+                if msg_node.getAttribute('type') == 'error':
                     raise CommandExecutionError(msg_node.childNodes[0].nodeValue)
 
         # Verify the repository has been added
         repos_cfg = _get_configured_repos()
         if repo not in repos_cfg.sections():
             raise CommandExecutionError(
-                'Failed add new repository "{0}" for unknown reason. Please look into Zypper logs.'.format(repo))
+                'Failed add new repository \'{0}\' for unknown reason. '
+                'Please look into Zypper logs.'.format(repo))
         added = True
 
     # Modify added or existing repo according to the options
     cmd_opt = []
 
-    if "enabled" in kwargs:
-        cmd_opt.append(kwargs["enabled"] and "--enable" or "--disable")
+    if 'enabled' in kwargs:
+        cmd_opt.append(kwargs['enabled'] and '--enable' or '--disable')
 
-    if "refresh" in kwargs:
-        cmd_opt.append(kwargs["refresh"] and "--refresh" or "--no-refresh")
+    if 'refresh' in kwargs:
+        cmd_opt.append(kwargs['refresh'] and '--refresh' or '--no-refresh')
 
-    if "cache" in kwargs:
-        cmd_opt.append(kwargs["cache"] and "--keep-packages" or "--no-keep-packages")
+    if 'cache' in kwargs:
+        cmd_opt.append(kwargs['cache'] and '--keep-packages' or '--no-keep-packages')
 
-    if "gpgcheck" in kwargs:
-        cmd_opt.append(kwargs["gpgcheck"] and "--gpgcheck" or "--no-gpgcheck")
+    if 'gpgcheck' in kwargs:
+        cmd_opt.append(kwargs['gpgcheck'] and '--gpgcheck' or '--no-gpgcheck')
 
     if cmd_opt:
-        __salt__['cmd.run'](("zypper -x mr {0} '{1}'".format(' '.join(cmd_opt), repo)),
+        __salt__['cmd.run'](('zypper -x mr {0} \'{1}\''.format(' '.join(cmd_opt), repo)),
                             output_loglevel='trace')
 
     # If repo nor added neither modified, error should be thrown
     if not added and not cmd_opt:
-        raise CommandExecutionError('Modification of the repository "{0}" was not specified.'.format(repo))
+        raise CommandExecutionError(
+                'Modification of the repository \'{0}\' was not specified.'.format(repo))
 
     return {}
 
@@ -474,11 +477,11 @@ def refresh_db():
         if not line:
             continue
         if line.strip().startswith('Repository'):
-            key = line.split("'")[1].strip()
+            key = line.split('\'')[1].strip()
             if 'is up to date' in line:
                 ret[key] = False
         elif line.strip().startswith('Building'):
-            key = line.split("'")[1].strip()
+            key = line.split('\'')[1].strip()
             if 'done' in line:
                 ret[key] = True
     return ret
@@ -572,7 +575,7 @@ def install(name=None,
             # Allow "version" to work for single package target
             pkg_params = {name: version_num}
         else:
-            log.warning('"version" parameter will be ignored for multiple '
+            log.warning('\'version\' parameter will be ignored for multiple '
                         'package targets')
 
     if pkg_type == 'repository':
@@ -605,10 +608,10 @@ def install(name=None,
     old = list_pkgs()
     downgrades = []
     if fromrepo:
-        fromrepoopt = "--force --force-resolution --from {0} ".format(fromrepo)
+        fromrepoopt = '--force --force-resolution --from {0} '.format(fromrepo)
         log.info('Targeting repo {0!r}'.format(fromrepo))
     else:
-        fromrepoopt = ""
+        fromrepoopt = ''
     # Split the targets into batches of 500 packages each, so that
     # the maximal length of the command line is not broken
     while targets:
@@ -793,11 +796,11 @@ def list_locks():
         return False
 
     locks = {}
-    for meta in [item.split("\n") for item in open(LOCKS).read().split("\n\n")]:
+    for meta in [item.split('\n') for item in open(LOCKS).read().split('\n\n')]:
         lock = {}
         for element in [el for el in meta if el]:
-            if ":" in element:
-                lock.update(dict([tuple([i.strip() for i in element.split(":", 1)]), ]))
+            if ':' in element:
+                lock.update(dict([tuple([i.strip() for i in element.split(':', 1)]), ]))
         if lock.get('solvable_name'):
             locks[lock.pop('solvable_name')] = lock
 
@@ -969,12 +972,12 @@ def _get_patterns(installed_only=None):
     patterns = {}
     doc = dom.parseString(__salt__['cmd.run'](('zypper --xmlout se -t pattern'),
                                               output_loglevel='trace'))
-    for element in doc.getElementsByTagName("solvable"):
-        installed = element.getAttribute("status") == "installed"
+    for element in doc.getElementsByTagName('solvable'):
+        installed = element.getAttribute('status') == 'installed'
         if (installed_only and installed) or not installed_only:
-            patterns[element.getAttribute("name")] = {
+            patterns[element.getAttribute('name')] = {
                 'installed': installed,
-                'summary': element.getAttribute("summary"),
+                'summary': element.getAttribute('summary'),
             }
 
     return patterns
@@ -1018,16 +1021,16 @@ def search(criteria):
     '''
     doc = dom.parseString(__salt__['cmd.run'](('zypper --xmlout se {0}'.format(criteria)),
                                               output_loglevel='trace'))
-    solvables = doc.getElementsByTagName("solvable")
+    solvables = doc.getElementsByTagName('solvable')
     if not solvables:
-        raise CommandExecutionError("No packages found by criteria \"{0}\".".format(criteria))
+        raise CommandExecutionError('No packages found by criteria "{0}".'.format(criteria))
 
     out = {}
     for solvable in [s for s in solvables
-                     if s.getAttribute("status") == "not-installed" and
-                     s.getAttribute("kind") == "package"]:
-        out[solvable.getAttribute("name")] = {
-            'summary': solvable.getAttribute("summary")
+                     if s.getAttribute('status') == 'not-installed' and
+                     s.getAttribute('kind') == 'package']:
+        out[solvable.getAttribute('name')] = {
+            'summary': solvable.getAttribute('summary')
         }
     return out
 
@@ -1037,13 +1040,13 @@ def _get_first_aggregate_text(node_list):
     Extract text from the first occurred DOM aggregate.
     '''
     if not node_list:
-        return ""
+        return ''
 
     out = []
     for node in node_list[0].childNodes:
         if node.nodeType == dom.Document.TEXT_NODE:
             out.append(node.nodeValue)
-    return "\n".join(out)
+    return '\n'.join(out)
 
 
 def _parse_suse_product(path, *info):
@@ -1072,12 +1075,12 @@ def list_products():
 
         salt '*' pkg.list_products
     '''
-    PRODUCTS = "/etc/products.d"
+    PRODUCTS = '/etc/products.d'
     if not os.path.exists(PRODUCTS):
-        raise CommandExecutionError("Directory {0} does not exists.".format(PRODUCTS))
+        raise CommandExecutionError('Directory {0} does not exists.'.format(PRODUCTS))
 
     products = {}
-    for fname in os.listdir("/etc/products.d"):
+    for fname in os.listdir('/etc/products.d'):
         pth_name = os.path.join(PRODUCTS, fname)
         r_pth_name = os.path.realpath(pth_name)
         products[r_pth_name] = r_pth_name != pth_name and 'baseproduct' or None
