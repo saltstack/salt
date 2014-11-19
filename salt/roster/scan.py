@@ -8,7 +8,7 @@ from __future__ import absolute_import
 import socket
 
 # Import salt libs
-import salt.utils.ipaddr
+import salt.ext.ipaddr
 
 
 def targets(tgt, tgt_type='glob', **kwargs):
@@ -36,11 +36,11 @@ class RosterMatcher(object):
         addrs = ()
         ret = {}
         try:
-            salt.utils.ipaddr.IPAddress(self.tgt)
+            salt.ext.ipaddr.IPAddress(self.tgt)
             addrs = [self.tgt]
         except ValueError:
             try:
-                addrs = salt.utils.ipaddr.IPNetwork(self.tgt).iterhosts()
+                addrs = salt.ext.ipaddr.IPNetwork(self.tgt).iterhosts()
             except ValueError:
                 pass
         for addr in addrs:
