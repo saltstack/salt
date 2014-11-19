@@ -31,10 +31,12 @@ import tempfile
 import time
 import glob
 from functools import reduce
+
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext.six import string_types
-from salt.ext.six.moves import range
-from salt.ext.six.moves import zip
-from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=E0611
+from salt.ext.six.moves import range, zip
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
+# pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 try:
     import grp
