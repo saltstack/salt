@@ -8,9 +8,9 @@ service watcher.
 import salt.utils
 
 try:
-    import pipes.quote as _cmd_quote
+    from pipes import quote as _cmd_quote
 except ImportError:
-    import shlex.quote as _cmd_quote
+    from shlex import quote as _cmd_quote
 
 
 def __virtual__():
