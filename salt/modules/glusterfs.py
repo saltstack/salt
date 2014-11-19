@@ -6,10 +6,11 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
-try:
-    from shlex import quote as _cmd_quote
-except ImportError:
-    from pipes import quote as _cmd_quote
+
+# Import 3rd-party libs
+# pylint: disable=import-error
+from salt.ext.six.moves import shlex_quote as _cmd_quote
+# pylint: enable=import-error
 
 # Import salt libs
 import salt.utils
