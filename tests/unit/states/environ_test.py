@@ -1,25 +1,15 @@
 # -*- coding: utf-8 -*-
 
-# Import python libs
-import json
-import pprint
-
 # Import Salt Testing libs
-from salttesting import skipIf, TestCase
+from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON
 ensure_in_syspath('../../')
-
-# Import third party libs
-import yaml
 
 # Import salt libs
 import salt.states.environ as envstate
 import salt.modules.environ as envmodule
 
 
-
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class TestEnvironState(TestCase):
 
     def setUp(self):
