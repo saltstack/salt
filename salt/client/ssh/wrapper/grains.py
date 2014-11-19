@@ -11,6 +11,7 @@ import math
 # Import salt libs
 import salt.utils
 import salt.utils.dictupdate
+from salt.exceptions import SaltException
 
 # Seed the grains dict so cython will build
 __grains__ = {}
