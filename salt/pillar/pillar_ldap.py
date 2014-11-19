@@ -2,12 +2,58 @@
 '''
 Use LDAP data as a Pillar source
 
-This pillar module parses a config file (specified in the salt master config),
-and executes a series of LDAP searches based on that config.  Data returned by
-these searches is aggregated, with data items found later in the LDAP search
-order overriding data found earlier on.
+This pillar module executes a series of LDAP searches.
+Data returned by these searches are aggregated, whereby data returned by later
+searches override data by previous searches with the same key.
 
-The final result set is merged with the pillar data.
+The final result is merged with existing pillar data.
+
+The configuration of this external pillar module is done via an external
+file which provides the actual configuration for the LDAP searches.
+
+===============================
+Configuring the LDAP ext_pillar
+===============================
+
+The basic configuration is part of the `master configuration
+<master-configuration-ext-pillar>`_.
+.. code-block:: yaml
+
+    ext_pillar:
+      - pillar_ldap: /etc/salt/master.d/pillar_ldap.yaml
+
+.. note::
+
+    When placing the file in the ``master.d`` directory, make sure its name
+    doesn't end in ``.conf``, otherwise the salt-master process will attempt
+    to parse its content.
+
+.. warning::
+
+    Make sure this file has very restrictive permissions, as it will contain
+    possibly sensitive LDAP credentials!
+
+The only required key in the master configuration is ``pillar_ldap`` pointing
+to a file containing the actual configuration.
+
+Configuring the LDAP searches
+=============================
+
+The file is processed using `Salt's Renderers <renderers>` which makes it
+possible to reference grains within the configuration.
+
+.. note::
+
+    The following example uses YAML as format for the configuration which
+    allows to shorten the configuration significantly by re-using a pre-defined
+    ``defaults`` block for each search definition.
+
+.. code-block:: yaml
+
+    ldap: &defaults
+    server: 
+
+
 '''
 
 # Import python libs
