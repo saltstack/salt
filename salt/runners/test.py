@@ -5,8 +5,8 @@ This runner is used only for test purposes and servers no production purpose
 from __future__ import absolute_import
 # Import python libs
 import time
-import six
-from six.moves import range
+import salt.ext.six as six
+from salt.ext.six.moves import range
 
 
 def arg(*args, **kwargs):

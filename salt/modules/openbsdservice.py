@@ -7,7 +7,7 @@ The service module for OpenBSD
 from __future__ import absolute_import
 import os
 import logging
-from six.moves import map
+from salt.ext.six.moves import map
 
 log = logging.getLogger(__name__)
 

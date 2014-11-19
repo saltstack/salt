@@ -21,7 +21,7 @@ import salt.client
 import salt.utils.minions
 import salt.wheel
 import salt.version
-import six
+import salt.ext.six as six
 
 FINGERPRINT_REGEX = re.compile(r'^([a-f0-9]{2}:){15}([a-f0-9]{2})$')
 

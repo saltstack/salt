@@ -38,8 +38,8 @@ from cStringIO import StringIO
 # Import salt libs
 import salt.utils
 from salt.exceptions import SaltRenderError
-import six
-from six import string_types
+import salt.ext.six as six
+from salt.ext.six import string_types
 
 __all__ = ['render']
 

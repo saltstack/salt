@@ -23,8 +23,8 @@ You have those following methods:
 * buildout
 '''
 from __future__ import absolute_import
-import six
-from six.moves import range
+import salt.ext.six as six
+from salt.ext.six.moves import range
 
 # Define the module's virtual name
 __virtualname__ = 'buildout'
@@ -49,7 +49,7 @@ import urllib2
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError
-from six import string_types
+from salt.ext.six import string_types
 
 
 INVALID_RESPONSE = 'We did not get any expectable answer from buildout'
