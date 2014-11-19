@@ -1,15 +1,20 @@
 # coding: utf-8
 
+# Import Python libs
 import json
 import yaml
-import urllib
 
+# Import Salt libs
 from salt.netapi.rest_tornado import saltnado
 import salt.auth
 import integration
 
+# Import 3rd-party libs
+# pylint: disable=import-error
 import tornado.testing
 import tornado.concurrent
+from salt.ext.six.moves.urllib.parse import urlencode  # pylint: disable=no-name-in-module
+# pylint: enable=import-error
 
 
 class SaltnadoTestCase(integration.ModuleCase, tornado.testing.AsyncHTTPTestCase):
@@ -174,7 +179,7 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
         )
         response = self.fetch('/',
                               method='POST',
-                              body=urllib.urlencode(form_lowstate),
+                              body=urlencode(form_lowstate),
                               headers={'Content-Type': self.content_type_map['form']})
         returned_lowstate = json.loads(response.body)['lowstate']
         assert len(returned_lowstate) == 1
@@ -209,7 +214,7 @@ class TestSaltAuthHandler(SaltnadoTestCase):
         '''
         response = self.fetch('/login',
                                method='POST',
-                               body=urllib.urlencode(self.auth_creds),
+                               body=urlencode(self.auth_creds),
                                headers={'Content-Type': self.content_type_map['form']})
 
         response_obj = json.loads(response.body)['return'][0]
@@ -229,7 +234,7 @@ class TestSaltAuthHandler(SaltnadoTestCase):
             bad_creds.append((key, val))
         response = self.fetch('/login',
                                method='POST',
-                               body=urllib.urlencode(bad_creds),
+                               body=urlencode(bad_creds),
                                headers={'Content-Type': self.content_type_map['form']})
 
         assert response.code == 400
@@ -245,7 +250,7 @@ class TestSaltAuthHandler(SaltnadoTestCase):
             bad_creds.append((key, val))
         response = self.fetch('/login',
                                method='POST',
-                               body=urllib.urlencode(bad_creds),
+                               body=urlencode(bad_creds),
                                headers={'Content-Type': self.content_type_map['form']})
 
         assert response.code == 401
