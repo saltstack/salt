@@ -14,18 +14,16 @@ import integration
 
 class GitModuleTest(integration.ModuleCase):
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
         from salt.utils import which
         git = which('git')
         if not git:
             self.skipTest('The git binary is not available')
 
-
     def setUp(self):
         self.repos = tempfile.mkdtemp(dir=integration.TMP)
         self.addCleanup(shutil.rmtree, self.repos, ignore_errors=True)
         subprocess.check_call(['git', 'init', '--quiet', self.repos])
-
 
     def test_config_set_value_has_space_characters(self):
         '''
