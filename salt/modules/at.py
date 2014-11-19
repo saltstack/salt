@@ -12,13 +12,14 @@ import re
 import time
 import datetime
 
-try:
-    from shlex import quote as _cmd_quote  # pylint: disable=E0611
-except ImportError:
-    from pipes import quote as _cmd_quote
+# Import 3rd-party libs
+# pylint: disable=import-error,redefined-builtin
+from salt.ext.six.moves import map
+from salt.ext.six.moves import shlex_quote as _cmd_quote
+# pylint: enable=import-error,redefined-builtin
+
 # Import salt libs
 import salt.utils
-from salt.ext.six.moves import map
 
 # OS Families that should work (Ubuntu and Debian are the default)
 # TODO: Refactor some of this module to remove the checks for binaries
