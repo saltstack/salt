@@ -61,6 +61,7 @@ def get(key, default='', merge=False, delimiter=DEFAULT_TARGET_DELIM):
                                              default,
                                              delimiter)
 
+
 def item(*args):
     '''
     .. versionadded:: 0.16.2
