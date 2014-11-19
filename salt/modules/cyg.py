@@ -11,9 +11,14 @@ import logging
 import re
 import os
 import bz2
-from urllib import urlopen
+
+# Import 3rd-party libs
+from salt.ext.six.urllib.request import urlopen as _urlopen  # pylint: disable=no-name-in-module,import-error
+
+# Import Salt libs
 import salt.utils
 from salt.exceptions import SaltInvocationError
+
 
 LOG = logging.getLogger(__name__)
 
@@ -73,7 +78,7 @@ def _get_all_packages(mirror=DEFAULT_MIRROR,
     if not len(__context__['cyg.all_packages'][mirror]):
         pkg_source = '/'.join([mirror, cyg_arch, 'setup.bz2'])
 
-        file_data = urlopen(pkg_source).read()
+        file_data = _urlopen(pkg_source).read()
         file_lines = bz2.decompress(file_data).decode('utf_8',
                                                       errors='replace'
                                                      ).splitlines()
@@ -123,7 +128,7 @@ def _run_silent_cygwin(cyg_arch='x86_64',
     elif os.path.exists(cyg_setup_path):
         os.remove(cyg_setup_path)
 
-    file_data = urlopen(cyg_setup_source)
+    file_data = _urlopen(cyg_setup_source)
     open(cyg_setup_path, "wb").write(file_data.read())
 
     setup_command = cyg_setup_path
