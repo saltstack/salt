@@ -56,7 +56,7 @@ def __virtual__():
 
 def _list(query=''):
     ret = {}
-    cmd = ['port','list',query]
+    cmd = ['port', 'list', query]
     out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
     for line in out.splitlines():
         try:
@@ -96,7 +96,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
             return ret
 
     ret = {}
-    cmd = ['port','installed']
+    cmd = ['port', 'installed']
     out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
     for line in out.splitlines():
         try:
@@ -206,7 +206,7 @@ def remove(name=None, pkgs=None, **kwargs):
     targets = [x for x in pkg_params if x in old]
     if not targets:
         return {}
-    cmd = ['port','uninstall'].append(targets)
+    cmd = ['port', 'uninstall'].append(targets)
     __salt__['cmd.run_all'](cmd, output_loglevel='trace', python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -302,7 +302,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         formulas_array.append(pname + (pparams or ''))
 
     old = list_pkgs()
-    cmd = ['port','install'].append(formulas_array)
+    cmd = ['port', 'install'].append(formulas_array)
 
     __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
@@ -348,14 +348,14 @@ def refresh_db():
     '''
     Update ports with ``port selfupdate``
     '''
-    cmd = ['port','selfupdate']
+    cmd = ['port', 'selfupdate']
     ret = __salt__['cmd.run_all'](cmd, output_loglevel='trace',
                                   python_shell=False)
     if ret['retcode'] != 0:
         ret['success'] = False
         return ret
     else:
-        return {'success':True, 'retcode':0}
+        return {'success': True, 'retcode': 0}
 
 
 def upgrade(refresh=True):  # pylint: disable=W0613
@@ -383,7 +383,7 @@ def upgrade(refresh=True):  # pylint: disable=W0613
         refresh_db()
 
     old = list_pkgs()
-    cmd = ['port','upgrade','outdated']
+    cmd = ['port', 'upgrade', 'outdated']
 
     __salt__['cmd.run_all'](cmd, output_loglevel='trace', python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
