@@ -29,7 +29,7 @@ import salt.utils.gzip_util
 from salt.utils.openstack.swift import SaltSwift
 
 # pylint: disable=no-name-in-module,import-error
-import salt.ext.six.moves.http.server as BaseHTTPServer
+import salt.ext.six.moves.BaseHTTPServer as BaseHTTPServer
 from salt.ext.six.moves.urllib.error import HTTPError, URLError
 from salt.ext.six.moves.urllib.parse import urlparse, urlunparse
 from salt.ext.six.moves.urllib.request import (
