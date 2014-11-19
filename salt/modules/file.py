@@ -31,10 +31,10 @@ import tempfile
 import time
 import glob
 from functools import reduce
-from six import string_types
-from six.moves import range
-from six.moves import zip
-from six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=E0611
+from salt.ext.six import string_types
+from salt.ext.six.moves import range
+from salt.ext.six.moves import zip
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=E0611
 
 try:
     import grp

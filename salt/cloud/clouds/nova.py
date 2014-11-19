@@ -103,7 +103,7 @@ import pprint
 
 # Import generic libcloud functions
 from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
-import six
+import salt.ext.six as six
 try:
     from salt.utils.openstack import nova
     HAS_NOVA = True

@@ -31,7 +31,7 @@ from salt.exceptions import (
     SaltClientError,
     EauthAuthenticationError,
 )
-import six
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 

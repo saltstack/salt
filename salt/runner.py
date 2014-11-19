@@ -23,7 +23,7 @@ from salt.client import mixins
 from salt.output import display_output
 from salt.utils.error import raise_error
 from salt.utils.event import tagify
-import six
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 

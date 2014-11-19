@@ -279,7 +279,7 @@ import yaml
 import jinja2
 import re
 from os.path import isfile, join
-from six.moves import input
+from salt.ext.six.moves import input
 
 # Only used when called from a terminal
 log = None

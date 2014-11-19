@@ -11,7 +11,7 @@ import time
 import os
 import multiprocessing
 import logging
-from six.moves import range
+from salt.ext.six.moves import range
 
 # Import salt libs
 import salt.daemons.masterapi

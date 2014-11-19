@@ -75,7 +75,7 @@ import salt.loader
 import salt.state
 import salt.utils
 import salt.utils.cache
-from six import string_types
+from salt.ext.six import string_types
 log = logging.getLogger(__name__)
 
 # The SUB_EVENT set is for functions that require events fired based on

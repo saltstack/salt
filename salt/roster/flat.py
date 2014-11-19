@@ -11,7 +11,7 @@ import re
 # Import Salt libs
 import salt.loader
 from salt.template import compile_template
-from six import string_types
+from salt.ext.six import string_types
 from salt.roster import get_roster_file
 
 import logging

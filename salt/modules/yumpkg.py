@@ -19,17 +19,20 @@ import copy
 import logging
 import os
 import re
-import six
 from distutils.version import LooseVersion as _LooseVersion
-from six.moves import range
 try:
     from shlex import quote as _cmd_quote
 except ImportError:
     from pipes import quote as _cmd_quote
 
+import salt.ext.six as six
+from distutils.version import LooseVersion as _LooseVersion
+from salt.ext.six.moves import range
+
 # Import salt libs
 import salt.utils
-from six import string_types
+import salt.ext.six as six
+from salt.ext.six import string_types
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )

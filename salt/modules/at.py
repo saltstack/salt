@@ -14,7 +14,7 @@ import datetime
 
 # Import salt libs
 import salt.utils
-from six.moves import map
+from salt.ext.six.moves import map
 
 # OS Families that should work (Ubuntu and Debian are the default)
 # TODO: Refactor some of this module to remove the checks for binaries

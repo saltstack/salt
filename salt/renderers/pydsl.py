@@ -338,7 +338,7 @@ For example:
 from __future__ import absolute_import
 
 import imp
-from six import exec_
+from salt.ext.six import exec_
 from salt.utils import pydsl
 from salt.utils.pydsl import PyDslError
 from salt.exceptions import SaltRenderError

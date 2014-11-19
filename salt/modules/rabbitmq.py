@@ -13,7 +13,7 @@ import salt.utils
 import logging
 import random
 import string
-from six.moves import range
+from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 

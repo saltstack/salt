@@ -24,7 +24,7 @@ import salt.output
 import salt.payload
 import salt.transport
 import salt.utils.args
-from six import string_types
+from salt.ext.six import string_types
 from salt.log import LOG_LEVELS
 from salt.utils import print_cli
 from salt.utils import kinds

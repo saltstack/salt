@@ -16,7 +16,7 @@ import shutil
 import subprocess
 import string  # pylint: disable=deprecated-module
 import logging
-import six
+import salt.ext.six as six
 
 # Import third party libs
 import yaml

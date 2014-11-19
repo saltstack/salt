@@ -17,7 +17,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
-import six
+import salt.ext.six as six
 
 
 log = logging.getLogger(__name__)

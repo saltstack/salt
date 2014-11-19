@@ -8,8 +8,8 @@ from __future__ import absolute_import
 import re
 
 # Import salt libs
-from six import string_types, integer_types
-import six
+from salt.ext.six import string_types, integer_types
+import salt.ext.six as six
 
 #KWARG_REGEX = re.compile(r'^([^\d\W][\w.-]*)=(?!=)(.*)$', re.UNICODE)  # python 3
 KWARG_REGEX = re.compile(r'^([^\d\W][\w.-]*)=(?!=)(.*)$')

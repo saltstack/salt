@@ -24,8 +24,7 @@ import socket
 import logging
 import logging.handlers
 import traceback
-import six
-from six import string_types, text_type
+from salt.ext.six import string_types, text_type, with_metaclass
 
 # Let's define these custom logging levels before importing the salt.log.mixins
 # since they will be used there
@@ -96,7 +95,7 @@ LOGGING_TEMP_HANDLER = StreamHandler(sys.stderr)
 LOGGING_STORE_HANDLER = TemporaryLoggingHandler()
 
 
-class SaltLoggingClass(six.with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS, NewStyleClassMixIn)):  # pylint: disable=W0232
+class SaltLoggingClass(with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS, NewStyleClassMixIn)):  # pylint: disable=W0232
     def __new__(cls, *args):  # pylint: disable=W0613, E1002
         '''
         We override `__new__` in our logging logger class in order to provide

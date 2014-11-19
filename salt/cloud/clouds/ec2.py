@@ -74,10 +74,10 @@ import uuid
 import pprint
 import logging
 import yaml
-import six
-from six.moves import map
-from six.moves import zip
-from six.moves import range
+import salt.ext.six as six
+from salt.ext.six.moves import map
+from salt.ext.six.moves import zip
+from salt.ext.six.moves import range
 
 # Import libs for talking to the EC2 API
 import hmac

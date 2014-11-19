@@ -10,7 +10,7 @@ import inspect
 import logging
 
 from salt.utils.odict import OrderedDict
-import six
+import salt.ext.six as six
 
 REQUISITES = ('require', 'watch', 'use', 'require_in', 'watch_in', 'use_in')
 

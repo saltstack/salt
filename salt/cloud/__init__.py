@@ -17,7 +17,7 @@ import signal
 import logging
 import multiprocessing
 from itertools import groupby
-from six.moves import input
+from salt.ext.six.moves import input
 
 # Import salt.cloud libs
 from salt.exceptions import (
@@ -34,7 +34,7 @@ import salt.loader
 import salt.utils
 import salt.utils.cloud
 from salt.utils import context
-from six import string_types
+from salt.ext.six import string_types
 from salt.template import compile_template
 
 # Import third party libs

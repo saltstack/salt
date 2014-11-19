@@ -17,8 +17,8 @@ import traceback
 import itertools
 from collections import deque
 import random
-import six
-from six.moves import range
+import salt.ext.six as six
+from salt.ext.six.moves import range
 
 # Import salt libs
 import salt.daemons.masterapi

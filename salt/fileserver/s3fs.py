@@ -77,8 +77,8 @@ import salt.fileserver as fs
 import salt.modules
 import salt.utils
 import salt.utils.s3 as s3
-import six
-from six.moves import filter
+import salt.ext.six as six
+from salt.ext.six.moves import filter
 
 log = logging.getLogger(__name__)
 

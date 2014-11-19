@@ -35,12 +35,12 @@ import warnings
 import yaml
 import string
 from calendar import month_abbr as months
-from six import string_types
-from six.moves.urllib.parse import urlparse  # pylint: disable=E0611
-import six
-from six.moves import range
-from six.moves import zip
-from six.moves import map
+from salt.ext.six import string_types
+from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=E0611
+import salt.ext.six as six
+from salt.ext.six.moves import range
+from salt.ext.six.moves import zip
+from salt.ext.six.moves import map
 
 # Try to load pwd, fallback to getpass if unsuccessful
 try:

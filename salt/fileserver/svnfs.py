@@ -31,7 +31,7 @@ import logging
 import os
 import shutil
 from datetime import datetime
-from six import text_type as _text_type
+from salt.ext.six import text_type as _text_type
 
 PER_REMOTE_PARAMS = ('mountpoint', 'root', 'trunk', 'branches', 'tags')
 
@@ -47,7 +47,7 @@ except ImportError:
 # Import salt libs
 import salt.utils
 import salt.fileserver
-from six import string_types
+from salt.ext.six import string_types
 from salt.utils.event import tagify
 
 log = logging.getLogger(__name__)
