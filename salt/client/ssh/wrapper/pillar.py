@@ -3,17 +3,25 @@
 Extract the pillar data for this minion
 '''
 from __future__ import absolute_import
+
+# Import python libs
+import collections
+
 # Import salt libs
 import salt.pillar
 import salt.utils
+from salt.defaults import DEFAULT_TARGET_DELIM
 
 
-def get(key, default=''):
+def get(key, default='', merge=False, delimiter=DEFAULT_TARGET_DELIM):
     '''
     .. versionadded:: 0.14
 
     Attempt to retrieve the named value from pillar, if the named value is not
     available return the passed default. The default return is an empty string.
+
+    If the merge parameter is set to ``True``, the default will be recursively
+    merged into the returned pillar data.
 
     The value can also represent a value in a nested dict using a ":" delimiter
     for the dict. This means that if a dict in pillar looks like this::
@@ -25,14 +33,33 @@ def get(key, default=''):
 
         pkg:apache
 
+    merge
+        Specify whether or not the retrieved values should be recursively
+        merged into the passed default.
+
+        .. versionadded:: 2014.7.0
+
+    delimiter
+        Specify an alternate delimiter to use when traversing a nested dict
+
+        .. versionadded:: 2014.7.0
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pillar.get pkg:apache
     '''
-    return salt.utils.traverse_dict_and_list(__pillar__, key, default)
+    if merge:
+        ret = salt.utils.traverse_dict_and_list(__pillar__, key, {}, delimiter)
+        if isinstance(ret, collections.Mapping) and \
+                isinstance(default, collections.Mapping):
+            return salt.utils.dictupdate.update(default, ret)
 
+    return salt.utils.traverse_dict_and_list(__pillar__,
+                                             key,
+                                             default,
+                                             delimiter)
 
 def item(*args):
     '''
