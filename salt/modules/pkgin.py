@@ -469,7 +469,7 @@ def _rehash():
     Use whenever a new command is created during the current
     session.
     '''
-    shell = __salt__['cmd.run']('echo $SHELL', output_loglevel='trace')
+    shell = __salt__['environ.get']('SHELL')
     if shell.split('/')[-1] in ('csh', 'tcsh'):
         __salt__['cmd.run']('rehash', output_loglevel='trace')
 
