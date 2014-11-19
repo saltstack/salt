@@ -60,14 +60,21 @@ Hipchat settings may also be configured as::
 '''
 from __future__ import absolute_import
 
-import salt.returners
-
+# Import Python libs
 import json
 import pprint
 import requests
 import logging
-from urlparse import urljoin as _urljoin
+
+# Import 3rd-party libs
 from requests.exceptions import ConnectionError
+# pylint: disable=import-error
+from salt.ext.six.moves.urllib.parse import urljoin as _urljoin  # pylint: disable=import-error,no-name-in-module
+# pylint: enable=import-error
+
+# Import Salt Libs
+import salt.returners
+
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'hipchat'
