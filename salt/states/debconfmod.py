@@ -100,15 +100,16 @@ def set_file(name, source, template=None, context=None, defaults=None, **kwargs)
     if context is None:
         context = {}
     elif not isinstance(context, dict):
-        return _error(
-            ret, 'Context must be formed as a dict')
+        ret['result'] = False
+        ret['comment'] = 'Context must be formed as a dict'
+        return ret
 
     if defaults is None:
         defaults = {}
     elif not isinstance(defaults, dict):
-        return _error(
-            ret, 'Defaults must be formed as a dict')
-
+        ret['result'] = False
+        ret['comment'] = 'Defaults must be formed as a dict'
+        return ret
 
     if __opts__['test']:
         ret['result'] = None
