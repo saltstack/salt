@@ -41,8 +41,8 @@ parameters are discussed in more detail below.
       # Specify whether to use public or private IP for deploy script.
       #
       # Valid options are:
-      #     private_ips - The salt-master is also hosted with EC2
-      #     public_ips - The salt-master is hosted outside of EC2
+      #     private_ips - The salt-cloud command is run inside the EC2
+      #     public_ips - The salt-cloud command is run outside of EC2
       #
       ssh_interface: public_ips
 
