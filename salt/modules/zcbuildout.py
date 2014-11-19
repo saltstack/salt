@@ -37,7 +37,7 @@ import copy
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext.six import string_types, text_type
 from salt.ext.six.moves import range
-from salt.ext.six.moves.urllib.request import url_open as _url_open
+from salt.ext.six.moves.urllib.request import urlopen as _urlopen
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 # Import salt libs
@@ -526,7 +526,7 @@ def upgrade_bootstrap(directory='.',
                     '{0}.updated_bootstrap'.format(buildout_ver)))
             except (OSError, IOError):
                 LOG.info('Bootstrap updated from repository')
-                data = _url_open(booturl).read()
+                data = _urlopen(booturl).read()
                 updated = True
                 dled = True
         if 'socket.setdefaulttimeout' not in data:

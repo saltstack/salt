@@ -53,7 +53,7 @@ import re
 # pylint: disable=no-name-in-module,import-error
 from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
 from salt.ext.six.moves.urllib.request import (
-        url_open as _url_open,
+        urlopen as _urlopen,
         HTTPBasicAuthHandler as _HTTPBasicAuthHandler,
         HTTPDigestAuthHandler as _HTTPDigestAuthHandler,
         build_opener as _build_opener,
@@ -185,11 +185,11 @@ def _wget(cmd, opts=None, url='http://localhost:8080/manager', timeout=180):
 
     try:
         # Trying tomcat >= 7 url
-        ret['msg'] = _url_open(url, timeout=timeout).read().splitlines()
+        ret['msg'] = _urlopen(url, timeout=timeout).read().splitlines()
     except Exception:
         try:
             # Trying tomcat6 url
-            ret['msg'] = _url_open(url6, timeout=timeout).read().splitlines()
+            ret['msg'] = _urlopen(url6, timeout=timeout).read().splitlines()
         except Exception:
             ret['msg'] = 'Failed to create HTTP request'
 
