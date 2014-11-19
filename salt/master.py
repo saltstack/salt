@@ -143,6 +143,18 @@ class Maintenance(multiprocessing.Process):
         '''
         super(Maintenance, self).__init__()
         self.opts = opts
+        # How often do we perform the maintenance tasks
+        self.loop_interval = int(self.opts['loop_interval'])
+        # Track key rotation intervals
+        self.rotate = int(time.time())
+
+    def _post_fork_init(self):
+        '''
+        Some things need to be init'd after the fork has completed
+        The easiest example is that one of these module types creates a thread
+        in the parent process, then once the fork happens you'll start getting
+        errors like "WARNING: Mixing fork() and threads detected; memory leaked."
+        '''
         # Init fileserver manager
         self.fileserver = salt.fileserver.Fileserver(self.opts)
         # Load Runners
@@ -156,14 +168,11 @@ class Maintenance(multiprocessing.Process):
         self.ckminions = salt.utils.minions.CkMinions(self.opts)
         # Make Event bus for firing
         self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
+
         # Init any values needed by the git ext pillar
         self.pillargitfs = salt.daemons.masterapi.init_git_pillar(self.opts)
         # Set up search object
         self.search = salt.search.Search(self.opts)
-        # How often do we perform the maintenance tasks
-        self.loop_interval = int(self.opts['loop_interval'])
-        # Track key rotation intervals
-        self.rotate = int(time.time())
 
     def run(self):
         '''
@@ -174,6 +183,9 @@ class Maintenance(multiprocessing.Process):
         master is maintained.
         '''
         salt.utils.appendproctitle('Maintenance')
+
+        # init things that need to be done after the process is forked
+        self._post_fork_init()
 
         # Make Start Times
         last = int(time.time())
