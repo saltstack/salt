@@ -16,7 +16,7 @@ import salt.ext.six.moves.configparser  # pylint: disable=E0611
 import urlparse
 from xml.dom import minidom as dom
 try:
-    from shlex import quote as _cmd_quote
+    from shlex import quote as _cmd_quote  # pylint: disable=E0611
 except ImportError:
     from pipes import quote as _cmd_quote
 
