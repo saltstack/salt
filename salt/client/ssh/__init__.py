@@ -551,7 +551,7 @@ class Single(object):
         self.serial = salt.payload.Serial(opts)
         self.wfuncs = salt.loader.ssh_wrapper(opts, None, self.context)
         self.shell = salt.client.ssh.shell.Shell(opts, **args)
-        self.thin = self.thin if self.thin else salt.utils.thin.thin_path(opts['cachedir'])
+        self.thin = thin if thin else salt.utils.thin.thin_path(opts['cachedir'])
 
     def __arg_comps(self):
         '''
