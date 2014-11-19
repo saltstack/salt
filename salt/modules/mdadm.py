@@ -47,7 +47,7 @@ def list_():
     '''
     ret = {}
     for line in (__salt__['cmd.run_stdout']
-                 ('mdadm --detail --scan').splitlines()):
+                    ('mdadm --detail --scan', python_shell=False).splitlines()):
         if ' ' not in line:
             continue
         comps = line.split()
@@ -78,8 +78,8 @@ def detail(device='/dev/md0'):
         msg = "Device {0} doesn't exist!"
         raise CommandExecutionError(msg.format(device))
 
-    cmd = 'mdadm --detail {0}'.format(device)
-    for line in __salt__['cmd.run_stdout'](cmd).splitlines():
+    cmd = ['mdadm', '--detail', device]
+    for line in __salt__['cmd.run_stdout'](cmd, python_shell=False).splitlines():
         if line.startswith(device):
             continue
         if ' ' not in line:
