@@ -74,10 +74,14 @@ import uuid
 import pprint
 import logging
 import yaml
+
+# pylint: disable=import-error,no-name-in-module
 import salt.ext.six as six
 from salt.ext.six.moves import map
 from salt.ext.six.moves import zip
 from salt.ext.six.moves import range
+from salt.ext.six.moves.urllib.parse import urlparse
+# pylint: enable=import-error,no-name-in-module
 
 # Import libs for talking to the EC2 API
 import hmac
@@ -85,7 +89,6 @@ import hashlib
 import binascii
 import datetime
 import urllib
-import urlparse
 import requests
 import base64
 
@@ -312,11 +315,12 @@ def query(params=None, setname=None, requesturl=None, location=None,
 
             requesturl = 'https://{0}/'.format(endpoint)
         else:
-            endpoint = urlparse.urlparse(requesturl).netloc
+            endpoint = urlparse(requesturl).netloc
             if endpoint == '':
-                endpoint_err = 'Could not find a valid endpoint in the requesturl: {0}. Looking for something like https://some.ec2.endpoint/?args'.format(
-                    requesturl
-                )
+                endpoint_err = (
+                        'Could not find a valid endpoint in the '
+                        'requesturl: {0}. Looking for something '
+                        'like https://some.ec2.endpoint/?args').format(requesturl)
                 log.error(endpoint_err)
                 if return_url is True:
                     return {'error': endpoint_err}, requesturl
