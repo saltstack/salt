@@ -206,7 +206,7 @@ def _install(mpt):
     # Exec the chroot command
     cmd = 'if type salt-minion; then exit 0; '
     cmd += 'else sh {0} -c /tmp; fi'.format(salt.syspaths.BOOTSTRAP)
-    return not __salt__['cmd.run_chroot'](mpt, cmd)['retcode']
+    return not __salt__['cmd.run_chroot'](mpt, cmd, python_shell=True)['retcode']
 
 
 def _check_resolv(mpt):
@@ -236,9 +236,11 @@ def _check_install(root):
         sh_ = '/bin/bash'
 
     cmd = ('if ! type salt-minion; then exit 1; fi')
-    cmd = 'chroot {0} {1} -c {2!r}'.format(
+    cmd = 'chroot \'{0}\' {1} -c {2!r}'.format(
         root,
         sh_,
         cmd)
 
-    return not __salt__['cmd.retcode'](cmd, output_loglevel='quiet')
+    return not __salt__['cmd.retcode'](cmd,
+                                       output_loglevel='quiet',
+                                       python_shell=True)
