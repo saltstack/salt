@@ -113,7 +113,7 @@ def delete_vm(options):
         stderr=subprocess.PIPE,
         stream_stds=True
     )
-    proc.poll_and_read_until_finish()
+    proc.poll_and_read_until_finish(interval=0.5)
     proc.communicate()
 
 
@@ -207,7 +207,7 @@ def download_unittest_reports(options):
             stderr=subprocess.PIPE,
             stream_stds=True
         )
-        proc.poll_and_read_until_finish()
+        proc.poll_and_read_until_finish(interval=0.5)
         proc.communicate()
         if proc.returncode != 0:
             print(
@@ -247,7 +247,7 @@ def download_coverage_report(options):
             stderr=subprocess.PIPE,
             stream_stds=True
         )
-        proc.poll_and_read_until_finish()
+        proc.poll_and_read_until_finish(interval=0.5)
         proc.communicate()
         if proc.returncode != 0:
             print(
@@ -303,7 +303,7 @@ def download_remote_logs(options):
             stderr=subprocess.PIPE,
             stream_stds=True
         )
-        proc.poll_and_read_until_finish()
+        proc.poll_and_read_until_finish(interval=0.5)
         proc.communicate()
         if proc.returncode != 0:
             print(
@@ -349,7 +349,7 @@ def download_packages(options):
             stderr=subprocess.PIPE,
             stream_stds=True
         )
-        proc.poll_and_read_until_finish()
+        proc.poll_and_read_until_finish(interval=0.5)
         proc.communicate()
         if proc.returncode != 0:
             print(
@@ -411,7 +411,7 @@ def run(opts):
         stderr=subprocess.PIPE,
         stream_stds=True
     )
-    proc.poll_and_read_until_finish()
+    proc.poll_and_read_until_finish(interval=0.5)
     proc.communicate()
 
     retcode = proc.returncode
