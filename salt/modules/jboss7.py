@@ -1,12 +1,22 @@
 # -*- coding: utf-8 -*-
 '''
-Module for running tasks specific for JBoss AS 7.
+Module for managing JBoss AS 7 through the CLI interface.
 
-All module functions require a jboss_config dict object with the following properties set:
-  cli_path: the path to jboss-cli script, for example: '/opt/jboss/jboss-7.0/bin/jboss-cli.sh'
-  controller: the ip address and port of controller, for example: 10.11.12.13:9999
-  cli_user: username to connect to jboss administration console if necessary
-  cli_password: password to connect to jboss administration console if necessary
+In order to run each function, jboss_config dictionary with the following properties must be passed:
+ * cli_path: the path to jboss-cli script, for example: '/opt/jboss/jboss-7.0/bin/jboss-cli.sh'
+ * controller: the ip addres and port of controller, for example: 10.11.12.13:9999
+ * cli_user: username to connect to jboss administration console if necessary
+ * cli_password: password to connect to jboss administration console if necessary
+
+Example:
+
+.. code-block:: yaml
+
+   jboss_config:
+      cli_path: '/opt/jboss/jboss-7.0/bin/jboss-cli.sh'
+      controller: 10.11.12.13:9999
+      cli_user: 'jbossadm'
+      cli_password: 'jbossadm'
 
 '''
 
@@ -77,13 +87,13 @@ def create_datasource(jboss_config, name, datasource_properties):
            Datasource name
        datasource_properties
            A dictionary of datasource properties to be created:
-               driver-name: mysql
-               connection-url: 'jdbc:mysql://localhost:3306/sampleDatabase'
-               jndi-name: 'java:jboss/datasources/sampleDS'
-               user-name: sampleuser
-               password: secret
-               min-pool-size: 3
-               use-java-context: True
+             - driver-name: mysql
+             - connection-url: 'jdbc:mysql://localhost:3306/sampleDatabase'
+             - jndi-name: 'java:jboss/datasources/sampleDS'
+             - user-name: sampleuser
+             - password: secret
+             - min-pool-size: 3
+             - use-java-context: True
 
        '''
     log.debug("======================== MODULE FUNCTION: jboss7.create_datasource, name=%s", name)
@@ -138,13 +148,13 @@ def update_datasource(jboss_config, name, new_properties):
            Datasource name
        new_properties
            A dictionary of datasource properties to be updated. For example:
-               driver-name: mysql
-               connection-url: 'jdbc:mysql://localhost:3306/sampleDatabase'
-               jndi-name: 'java:jboss/datasources/sampleDS'
-               user-name: sampleuser
-               password: secret
-               min-pool-size: 3
-               use-java-context: True
+             - driver-name: mysql
+             - connection-url: 'jdbc:mysql://localhost:3306/sampleDatabase'
+             - jndi-name: 'java:jboss/datasources/sampleDS'
+             - user-name: sampleuser
+             - password: secret
+             - min-pool-size: 3
+             - use-java-context: True
                
        '''
     log.debug("======================== MODULE FUNCTION: jboss7.update_datasource, name=%s", name)

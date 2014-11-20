@@ -172,12 +172,12 @@ class JBoss7CliTestCase(TestCase):
             }
             '''
 
-        self.assertTrue(jboss7_cli.is_cli_output(text))
+        self.assertTrue(jboss7_cli._is_cli_output(text))
 
     def test_not_matches_cli_output(self):
         text = '''Some error '''
 
-        self.assertFalse(jboss7_cli.is_cli_output(text))
+        self.assertFalse(jboss7_cli._is_cli_output(text))
 
     def test_parse_flat_dictionary(self):
         text = '''{
@@ -185,7 +185,7 @@ class JBoss7CliTestCase(TestCase):
             "key2" => "value2"
             }'''
 
-        result = jboss7_cli.parse(text)
+        result = jboss7_cli._parse(text)
 
         self.assertEqual(len(result), 2)
         self.assertEqual(result['key1'], 'value1')
@@ -200,7 +200,7 @@ class JBoss7CliTestCase(TestCase):
             }
         }'''
 
-        result = jboss7_cli.parse(text)
+        result = jboss7_cli._parse(text)
 
         self.assertEqual(len(result), 2)
         self.assertEqual(result['key1'], 'value1')
@@ -215,7 +215,7 @@ class JBoss7CliTestCase(TestCase):
             "response-headers" => {"process-state" => "reload-required"}
         }'''
 
-        result = jboss7_cli.parse(text)
+        result = jboss7_cli._parse(text)
 
         self.assertTrue(result['result']['jta'])
         self.assertEqual(result['response-headers']['process-state'], 'reload-required')
@@ -233,7 +233,7 @@ class JBoss7CliTestCase(TestCase):
             "response-headers" => {"process-state" => "reload-required"}
         }'''
 
-        result = jboss7_cli.parse(text)
+        result = jboss7_cli._parse(text)
 
         self.assertEqual(result['outcome'], 'success')
         self.assertIsNone(result['result']['allocation-retry'])
@@ -254,7 +254,7 @@ class JBoss7CliTestCase(TestCase):
             "response-headers" => {"process-state" => "reload-required"}
         }'''
 
-        result = jboss7_cli.parse(text)
+        result = jboss7_cli._parse(text)
 
         self.assertEqual(result['outcome'], 'failed')
         self.assertTrue(result['rolled-back'])
@@ -273,7 +273,7 @@ class JBoss7CliTestCase(TestCase):
                    }
                 }'''
 
-        result = jboss7_cli.parse(text)
+        result = jboss7_cli._parse(text)
 
         self.assertEqual(result['outcome'], 'success')
         self.assertEqual(result['result']['binding-type'], 'simple')
@@ -288,7 +288,7 @@ class JBoss7CliTestCase(TestCase):
                 }
             }'''
 
-        result = jboss7_cli.parse(text)
+        result = jboss7_cli._parse(text)
 
         self.assertEqual(result['outcome'], 'success')
         self.assertEqual(result['result']['min-pool-size'], 1233)
@@ -353,7 +353,7 @@ class JBoss7CliTestCase(TestCase):
             "response-headers" => {"process-state" => "reload-required"}
         }'''
 
-        result = jboss7_cli.parse(text)
+        result = jboss7_cli._parse(text)
 
         self.assertEqual(result['outcome'],'success')
         self.assertEqual(result['result']['max-pool-size'], 20)
@@ -386,7 +386,7 @@ class JBoss7CliTestCase(TestCase):
             }
         }
         '''
-        result = jboss7_cli.parse(cli_output)
+        result = jboss7_cli._parse(cli_output)
 
         self.assertEqual(result['outcome'],'success')
         conn_url_attributes = result['result']['attributes']['connection-url']
@@ -426,7 +426,7 @@ class JBoss7CliTestCase(TestCase):
         }
         '''
 
-        result = jboss7_cli.parse(cli_output)
+        result = jboss7_cli._parse(cli_output)
 
         self.assertEqual(result['outcome'], 'success')
         conn_url_attributes = result['result']['attributes']['connection-url']

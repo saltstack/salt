@@ -1,54 +1,64 @@
 # -*- coding: utf-8 -*-
 '''
-This state manages JBoss 7 AS via management interface.
-It uses jboss-cli.sh script from JBoss installation and parses its output to determine execution result.
+Manage JBoss 7 Application Server via CLI interface
 
-In order to run each state, jboss_config dict with the following properties must be passed:
+This state uses jboss-cli.sh script from JBoss installation and parses its output to determine execution result.
 
- jboss:
-  cli_path: '/opt/jboss/jboss-7.0/bin/jboss-cli.sh'
-  controller: 10.11.12.13:9999
-  cli_user: 'jbossadm'
-  cli_password: 'jbossadm'
+In order to run each state, jboss_config dictionary with the following properties must be passed:
 
- If controller doesn't require password, then passing cli_user and cli_password parameters is not obligatory.
+.. code-block:: yaml
+
+   jboss:
+      cli_path: '/opt/jboss/jboss-7.0/bin/jboss-cli.sh'
+      controller: 10.11.12.13:9999
+      cli_user: 'jbossadm'
+      cli_password: 'jbossadm'
+
+If controller doesn't require password, then passing cli_user and cli_password parameters is not obligatory.
 
 Example of application deployment:
 
- application_deployed:
-  jboss7.deployed:
-   - artifact:
-       artifactory_url: http://artifactory.intranet.company.com/artifactory
-       repository: 'ext-release-local'
-       artifact_id: 'webcomponent'
-       group_id: 'com.company.application'
-       packaging: 'war'
-       version: '0.1'
-       target_dir: '/tmp'
-    - jboss_config:
-       cli_path: '/opt/jboss/jboss-7.0/bin/jboss-cli.sh'
-       controller: 10.11.12.13:9999
-       cli_user: 'jbossadm'
-       cli_password: 'jbossadm'
+.. code-block:: yaml
 
- Since same dictionary with configuration will be used in all the states, it is much more convenient to move jboss configuration and other properties
- to pillar. For example, configuration for application deployment could be moved to pillars:
+     application_deployed:
+      jboss7.deployed:
+       - artifact:
+           artifactory_url: http://artifactory.intranet.company.com/artifactory
+           repository: 'ext-release-local'
+           artifact_id: 'webcomponent'
+           group_id: 'com.company.application'
+           packaging: 'war'
+           version: '0.1'
+           target_dir: '/tmp'
+        - jboss_config:
+           cli_path: '/opt/jboss/jboss-7.0/bin/jboss-cli.sh'
+           controller: 10.11.12.13:9999
+           cli_user: 'jbossadm'
+           cli_password: 'jbossadm'
 
- application_deployed:
-  jboss7.deployed:
-   - artifact:
-       artifactory_url: {{ pillar['artifactory']['url'] }}
-       repository: {{ pillar['artifactory']['repository'] }}
-       artifact_id: 'webcomponent'
-       group_id: 'com.company.application'
-       packaging: 'war'
-       version: {{ pillar['webcomponent-artifact']['version'] }}
-       latest_snapshot: {{ pillar['webcomponent-artifact']['latest_snapshot'] }}
-       repository: {{ pillar['webcomponent-artifact']['repository'] }}
-   - jboss_config: {{ pillar['jboss'] }}
+Since same dictionary with configuration will be used in all the states, it is much more convenient to move jboss configuration and other properties
+to pillar. For example, configuration of jboss server, artifactory address and application version could be moved to pillars:
+
+.. code-block:: yaml
+
+     application_deployed:
+      jboss7.deployed:
+       - artifact:
+           artifactory_url: {{ pillar['artifactory']['url'] }}
+           repository: {{ pillar['artifactory']['repository'] }}
+           artifact_id: 'webcomponent'
+           group_id: 'com.company.application'
+           packaging: 'war'
+           version: {{ pillar['webcomponent-artifact']['version'] }}
+           latest_snapshot: {{ pillar['webcomponent-artifact']['latest_snapshot'] }}
+           repository: {{ pillar['webcomponent-artifact']['repository'] }}
+       - jboss_config: {{ pillar['jboss'] }}
 
 
 Configuration in pillars:
+
+.. code-block:: yaml
+
    artifactory:
       url: 'http://artifactory.intranet.company.com/artifactory'
       repository: 'libs-snapshots-local'
@@ -57,6 +67,9 @@ Configuration in pillars:
       repository: 'libs-snapshots-local'
       latest_snapshot: True
       version: -1 #If latest_snapshot then version is ignored
+
+For the sake of brevity, examples for each state assume that jboss_config is moved to pillars.
+
 
 '''
 
@@ -83,22 +96,24 @@ def datasource_exists(name, jboss_config, datasource_properties, recreate=False)
     datasource_properties
         Dict with datasource properties
     recreate : False
-        If set to true and datasource exists it will be removed and created again. However, if there are deployments that depend on the datasource, it will not me possible to remove it.
+        If set to True and datasource exists it will be removed and created again. However, if there are deployments that depend on the datasource, it will not me possible to remove it.
 
-    Example::
+    Example:
 
-    sampleDS:
-      jboss7.datasource_exists:
-       - recreate: False
-       - datasource_properties:
-           driver-name: mysql
-           connection-url: 'jdbc:mysql://localhost:3306/sampleDatabase'
-           jndi-name: 'java:jboss/datasources/sampleDS'
-           user-name: sampleuser
-           password: secret
-           min-pool-size: 3
-           use-java-context: True
-       - jboss_config: {{ pillar['jboss'] }}
+    .. code-block:: yaml
+
+        sampleDS:
+          jboss7.datasource_exists:
+           - recreate: False
+           - datasource_properties:
+               driver-name: mysql
+               connection-url: 'jdbc:mysql://localhost:3306/sampleDatabase'
+               jndi-name: 'java:jboss/datasources/sampleDS'
+               user-name: sampleuser
+               password: secret
+               min-pool-size: 3
+               use-java-context: True
+           - jboss_config: {{ pillar['jboss'] }}
 
     '''
     log.debug(" ======================== STATE: jboss7.datasource_exists (name: %s) ", name)
@@ -222,13 +237,16 @@ def bindings_exist(name, jboss_config, bindings):
     bindings:
         Dict with bindings to set.
 
-    Example::
-        jndi_entries_created:
-          jboss7.bindings_exist:
-           - bindings:
-              'java:global/sampleapp/environment': 'DEV'
-              'java:global/sampleapp/configurationFile': '/var/opt/sampleapp/config.properties'
-           - jboss_config: {{ pillar['jboss'] }}
+    Example:
+
+    .. code-block:: yaml
+
+            jndi_entries_created:
+              jboss7.bindings_exist:
+               - bindings:
+                  'java:global/sampleapp/environment': 'DEV'
+                  'java:global/sampleapp/configurationFile': '/var/opt/sampleapp/config.properties'
+               - jboss_config: {{ pillar['jboss'] }}
 
     '''
     log.debug(" ======================== STATE: jboss7.bindings_exist (name: %s) ", name)
@@ -283,7 +301,7 @@ def deployed(name, jboss_config, artifact=None, salt_source=None):
     jboss_config:
         Dict with connection properties (see state description)
     artifact:
-        If set, the artifact to be deployed will be fetched from artifactory. This is a Dict object with the following properties:
+        If set, the artifact will be fetched from artifactory. This is a Dict object with the following properties:
            - artifactory_url: Full url to artifactory instance, for example: http://artifactory.intranet.company.com/artifactory
            - repository: One of the repositories, for example: libs-snapshots, ext-release-local, etc..
            - artifact_id: Artifact ID of the artifact
@@ -291,6 +309,7 @@ def deployed(name, jboss_config, artifact=None, salt_source=None):
            - packaging: war/jar/ear, etc...
            - version: Artifact version. If latest_snapshot is set to True, the value of this attribute will be ignored, and newest snapshot will be taken instead.
            - latest_snapshot: If set to True and repository is a snapshot repository it will automatically select the newest snapshot.
+           - snapshot_version: Exact version of the snapshot (with timestamp). A snapshot version may have several builds and a way to differentiate is to provide a build timestamp.
            - target_dir: Temporary directory on minion where artifacts will be downloaded
     salt_source:
         If set, the artifact to be deployed will be fetched from salt master. This is a Dict object with the following properties:
@@ -299,52 +318,60 @@ def deployed(name, jboss_config, artifact=None, salt_source=None):
            - undeploy: Regular expression to match against existing deployments. If any deployment matches the regular expression then it will be undeployed.
 
     The deployment consists of the following steps:
-    1) Fetch artifact (salt filesystem, artifact or filesystem on minion)
-    2) Check if same artifact is not deployed yet (perhaps with different version)
-    3) Undeploy the artifact if it is already deployed
-    4) Deploy the new artifact
 
-    Example ::
+    * Fetch artifact (salt filesystem, artifact or filesystem on minion)
+    * Check if same artifact is not deployed yet (perhaps with different version)
+    * Undeploy the artifact if it is already deployed
+    * Deploy the new artifact
+
+    Examples::
 
     Deployment of a file from Salt file system:
 
-    application_deployed:
-      jboss7.deployed:
-       - salt_source:
-            source: salt://application-web-0.39.war
-            target_file: '/tmp/application-web-0.39.war'
-            undeploy: 'application-web-*'
-       - jboss_config: {{ pillar['jboss'] }}
+    .. code-block:: yaml
+
+        application_deployed:
+          jboss7.deployed:
+           - salt_source:
+                source: salt://application-web-0.39.war
+                target_file: '/tmp/application-web-0.39.war'
+                undeploy: 'application-web-.*'
+           - jboss_config: {{ pillar['jboss'] }}
 
     Here, application-web-0.39.war file is downloaded from Salt file system to /tmp/application-web-0.39.war file on minion.
-    Existing deployments are checked if any of them matches 'application-web-*' regular expression, and if so then it
+    Existing deployments are checked if any of them matches 'application-web-.*' regular expression, and if so then it
     is undeployed before deploying the application. This is useful to automate deployment of new application versions.
 
     JBoss state is capable of deploying artifacts directly from Artifactory repository. Here are some examples of deployments:
 
-    1) Deployment of specific version of artifact from Artifactory.
+    1) Deployment of released version of artifact from Artifactory.
 
-        application_deployed:
-          jboss7.deployed:
-           - artifact:
-               artifactory_url: http://artifactory.intranet.company.com/artifactory
-               repository: 'ext-release-local'
-               artifact_id: 'webcomponent'
-               group_id: 'com.company.application'
-               packaging: 'war'
-               version: '0.1'
-               target_dir: '/tmp'
-            - jboss_config: {{ pillar['jboss'] }}
+    .. code-block:: yaml
+
+            application_deployed:
+              jboss7.deployed:
+               - artifact:
+                   artifactory_url: http://artifactory.intranet.company.com/artifactory
+                   repository: 'ext-release-local'
+                   artifact_id: 'webcomponent'
+                   group_id: 'com.company.application'
+                   packaging: 'war'
+                   version: '0.1'
+                   target_dir: '/tmp'
+                - jboss_config: {{ pillar['jboss'] }}
 
     This performs the following operations:
-    - Download artifact from artifactory. For released version the artifact will be downloaded from:
-      '%(artifactory_url)s/%(repository)s/%(group_url)s/%(artifact_id)s/%(version)s/%(artifact_id)s-%(version)s.%(packaging)s'
-      This follows artifactory convention for artifact resolution. By default the artifact will be downloaded to /tmp directory on minion.
-    - Connect to JBoss via controller (defined in jboss_config dict) and check if the artifact is not deployed already. In case of artifactory
-      it will check if any deployment's name starts with artifact_id value. If deployment already exists it will be undeployed
-    - Deploy the downloaded artifact to JBoss via cli interface.
 
-    2) Deployment of SNAPSHOT version of artifact from Artifactory:
+    * Download artifact from artifactory. In the example above the artifact will be fetched from: http://artifactory.intranet.company.com/artifactory/ext-release-local/com/company/application/webcomponent/0.1/webcomponent-0.1.war
+      As a rule, for released versions the artifacts are downloaded from: artifactory_url/repository/group_id_with_slashed_instead_of_dots/artifact_id/version/artifact_id-version.packaging'
+      This follows artifactory convention for artifact resolution. By default the artifact will be downloaded to /tmp directory on minion.
+    * Connect to JBoss via controller (defined in jboss_config dict) and check if the artifact is not deployed already. In case of artifactory
+      it will check if any deployment's name starts with artifact_id value. If deployment already exists it will be undeployed
+    * Deploy the downloaded artifact to JBoss via cli interface.
+
+    2) Deployment of last updated version of given SNAPSHOT version of artifact from Artifactory.
+
+    .. code-block:: yaml
 
         application_deployed:
           jboss7.deployed:
@@ -357,12 +384,44 @@ def deployed(name, jboss_config, artifact=None, salt_source=None):
                version: '0.1-SNAPSHOT'
             - jboss_config: {{ pillar['jboss'] }}
 
-    Note that snapshot deployment is detected by convention - when version ends with "SNAPSHOT" string, then it is treated so.
-    Deploying snapshot version involves an additional step of resolving the exact name of the artifact (including the timestamp), which
-    is not necessary when deploying a release. Remember that in order to perform a snapshot deployment you have to set repository to a
-    snapshot repository.
+    Deploying snapshot version involves an additional step of resolving the exact version of the artifact (including the timestamp), which
+    is not necessary when deploying a release.
+    In the example above first a request will be made to retrieve the update timestamp from:
+    http://artifactory.intranet.company.com/artifactory/ext-snapshot-local/com/company/application/webcomponent/0.1-SNAPSHOT/maven-metadata.xml
+    Then the artifact will be fetched from
+    http://artifactory.intranet.company.com/artifactory/ext-snapshot-local/com/company/application/webcomponent/0.1-SNAPSHOT/webcomponent-RESOLVED_SNAPSHOT_VERSION.war
 
-    3) Deployment of latest snapshot of artifact from Artifactory.
+    .. note:: In order to perform a snapshot deployment you have to:
+
+        * Set repository to a snapshot repository.
+        * Choose a version that ends with "SNAPSHOT" string.
+          Snapshot repositories have a different layout and provide some extra information that is needed for deployment of the last or a specific snapshot.
+
+    3) Deployment of SNAPSHOT version (with exact timestamp) of artifact from Artifactory.
+
+    If you need to deploy an exact version of the snapshot you may provide snapshot_version parameter.
+
+    .. code-block:: yaml
+
+        application_deployed:
+          jboss7.deployed:
+           - artifact:
+               artifactory_url: http://artifactory.intranet.company.com/artifactory
+               repository: 'ext-snapshot-local'
+               artifact_id: 'webcomponent'
+               group_id: 'com.company.application'
+               packaging: 'war'
+               version: '0.1-SNAPSHOT'
+               snapshot_version: '0.1-20141023.131756-19'
+            - jboss_config: {{ pillar['jboss'] }}
+
+
+    In this example the artifact will be retrieved from:
+    http://artifactory.intranet.company.com/artifactory/ext-snapshot-local/com/company/application/webcomponent/0.1-SNAPSHOT/webcomponent-0.1-20141023.131756-19.war
+
+    4) Deployment of latest snapshot of artifact from Artifactory.
+
+    .. code-block:: yaml
 
         application_deployed:
           jboss7.deployed:
@@ -376,8 +435,8 @@ def deployed(name, jboss_config, artifact=None, salt_source=None):
             - jboss_config: {{ pillar['jboss'] }}
 
     Instead of providing an exact version of a snapshot it is sometimes more convenient to get the newest version. If artifact.latest_snapshot
-     is set to True, then the newest snapshot will be downloaded from Artifactory. In this case it is not necessary to specify version.
-     This is particulary useful when integrating with CI tools that will deploy the current snapshot to the Artifactory.
+    is set to True, then the newest snapshot will be downloaded from Artifactory. In this case it is not necessary to specify version.
+    This is particulary useful when integrating with CI tools that will deploy the current snapshot to the Artifactory.
 
     '''
     log.debug(" ======================== STATE: jboss7.deployed (name: %s) ", name)
@@ -584,10 +643,7 @@ def __fetch_from_artifactory(artifact):
 
 def reloaded(name, jboss_config, timeout=60, interval=5):
     '''
-    Reloads configuration of jboss server. This step performs the following operations:
-    - Ensures that server is in running or reload-required state (by reading server-state attribute)
-    - Reloads configuration
-    - Waits for server to reload and be in running state
+    Reloads configuration of jboss server.
 
     jboss_config:
         Dict with connection properties (see state description)
@@ -598,10 +654,19 @@ def reloaded(name, jboss_config, timeout=60, interval=5):
         but be aware that every status check is a call to jboss-cli which is a java process. If interval is smaller than
         process cleanup time it may easily lead to excessive resource consumption.
 
-    Example::
-    configuration_reloaded:
-       jboss7.reloaded:
-        - jboss_config: {{ pillar['jboss'] }}
+    This step performs the following operations:
+
+    * Ensures that server is in running or reload-required state (by reading server-state attribute)
+    * Reloads configuration
+    * Waits for server to reload and be in running state
+
+    Example:
+
+    .. code-block:: yaml
+
+        configuration_reloaded:
+           jboss7.reloaded:
+            - jboss_config: {{ pillar['jboss'] }}
     '''
     log.debug(" ======================== STATE: jboss7.reloaded (name: %s) ", name)
     ret = {'name': name,

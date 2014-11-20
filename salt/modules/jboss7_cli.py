@@ -1,20 +1,14 @@
 # -*- coding: utf-8 -*-
 '''
-Module for interaction with JbossAS7 through CLI.
-
-All module functions require a jboss_config dict object with the following properties set:
-  cli_path: the path to jboss-cli script, for example: '/opt/jboss/jboss-7.0/bin/jboss-cli.sh'
-  controller: the ip addres and port of controller, for example: 10.11.12.13:9999
-  cli_user: username to connect to jboss administration console if necessary
-  cli_password: password to connect to jboss administration console if necessary
+Module for low-level interaction with JbossAS7 through CLI.
 
 This module exposes two ways of interaction with the CLI, either through commands or operations.
-Following JBoss documentation (https://developer.jboss.org/wiki/CommandLineInterface):
-"Operations are considered a low level but comprehensive way to manage the AS controller,
- i.e. if it can't be done with operations it can't be done in any other way.
-Commands, on the other hand, are more user-friendly in syntax,
-although most of them still translate into operation requests and some of them even into a few
-composite operation requests, i.e. commands also simplify some management operations from the user's point of view."
+
+.. note:: Following JBoss documentation (https://developer.jboss.org/wiki/CommandLineInterface):
+    "Operations are considered a low level but comprehensive way to manage the AS controller, i.e. if it can't be done with operations it can't be done in any other way.
+    Commands, on the other hand, are more user-friendly in syntax,
+    although most of them still translate into operation requests and some of them even into a few
+    composite operation requests, i.e. commands also simplify some management operations from the user's point of view."
 
 The difference between calling a command or operation is in handling the result.
 Commands return a zero return code if operation is successful or return non-zero return code and
@@ -23,6 +17,22 @@ print an error to standard output in plain text, in case of an error.
 Operations return a json-like structure, that contain more information about the result.
 In case of a failure, they also return a specific return code. This module parses the output from the operations and
 returns it as a dictionary so that an execution of an operation can then be verified against specific errors.
+
+In order to run each function, jboss_config dictionary with the following properties must be passed:
+ * cli_path: the path to jboss-cli script, for example: '/opt/jboss/jboss-7.0/bin/jboss-cli.sh'
+ * controller: the ip addres and port of controller, for example: 10.11.12.13:9999
+ * cli_user: username to connect to jboss administration console if necessary
+ * cli_password: password to connect to jboss administration console if necessary
+
+Example:
+
+.. code-block:: yaml
+
+   jboss_config:
+      cli_path: '/opt/jboss/jboss-7.0/bin/jboss-cli.sh'
+      controller: 10.11.12.13:9999
+      cli_user: 'jbossadm'
+      cli_password: 'jbossadm'
 
 '''
 
@@ -77,14 +87,14 @@ def run_operation(jboss_config, operation, fail_on_error=True, retries=1):
     cli_command_result = __call_cli(jboss_config, operation, retries)
 
     if cli_command_result['retcode'] == 0:
-        if is_cli_output(cli_command_result['stdout']):
-            cli_result = parse(cli_command_result['stdout'])
+        if _is_cli_output(cli_command_result['stdout']):
+            cli_result = _parse(cli_command_result['stdout'])
             cli_result['success'] = cli_result['outcome'] == 'success'
         else:
             raise CommandExecutionError('Operation has returned unparseable output: %s' % cli_command_result['stdout'])
     else:
-        if is_cli_output(cli_command_result['stdout']):
-            cli_result = parse(cli_command_result['stdout'])
+        if _is_cli_output(cli_command_result['stdout']):
+            cli_result = _parse(cli_command_result['stdout'])
             cli_result['success'] = False
             match = re.search('^(JBAS\d+):', cli_result['failure-description'])
             cli_result['err_code'] = match.group(1)
@@ -189,14 +199,14 @@ def __escape_command(command):
    result = result.replace('"', '\\"')    # replace " -> \"
    return result
 
-def is_cli_output(text):
+def _is_cli_output(text):
     cli_re = re.compile("^\s*{.+}\s*$", re.DOTALL)
     if cli_re.search(text):
         return True
     else:
         return False
 
-def parse(cli_output):
+def _parse(cli_output):
     tokens = __tokenize(cli_output)
     result = __process_tokens(tokens)
 
