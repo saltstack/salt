@@ -13,7 +13,7 @@ import salt.crypt
 import salt.utils.event
 import salt.payload
 import salt.transport
-import six
+import salt.ext.six as six
 
 __proxyenabled__ = ['*']
 

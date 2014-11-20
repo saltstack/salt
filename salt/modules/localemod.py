@@ -10,7 +10,7 @@ import re
 
 # Import salt libs
 import salt.utils
-import six
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 

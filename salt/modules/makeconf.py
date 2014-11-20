@@ -3,8 +3,10 @@
 Support for modifying make.conf under Gentoo
 
 '''
-# Impot python libs
+# Import python libs
 from __future__ import print_function
+
+import salt.utils
 
 
 def __virtual__():
@@ -180,13 +182,14 @@ def get_var(var):
         salt '*' makeconf.get_var 'LINGUAS'
     '''
     makeconf = _get_makeconf()
-    cmd = 'grep "^{0}" {1} | grep -vE "^#"'.format(var, makeconf)
-    out = __salt__['cmd.run'](cmd, ignore_retcode=True).split('=', 1)
-    try:
-        ret = out[1].replace('"', '')
-        return ret
-    except IndexError:
-        return None
+    # Open makeconf
+    with salt.utils.fopen(makeconf) as fn_:
+        conf_file = fn_.readlines()
+    for line in conf_file:
+        if line.startswith(var):
+            ret = line.split('=', 1)[1].replace('"', '')
+            return ret
+    return None
 
 
 def var_contains(var, value):

@@ -91,8 +91,8 @@ from uuid import uuid4 as _uuid
 from salt.utils.odict import OrderedDict
 from salt.utils import warn_until
 from salt.state import HighState
-from six import string_types
-import six
+from salt.ext.six import string_types
+import salt.ext.six as six
 
 
 REQUISITES = set('require watch prereq use require_in watch_in prereq_in use_in onchanges onfail'.split())

@@ -9,7 +9,7 @@ from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils
-from six.moves import map
+from salt.ext.six.moves import map
 
 # Tested on OpenBSD 5.0
 BSD = ('OpenBSD', 'FreeBSD')

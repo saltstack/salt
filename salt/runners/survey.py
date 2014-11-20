@@ -17,7 +17,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import salt.client
-from six.moves import range
+from salt.ext.six.moves import range
 
 
 def hash(*args, **kwargs):

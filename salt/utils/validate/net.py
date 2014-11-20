@@ -9,7 +9,7 @@ import re
 import socket
 
 # Import salt libs
-from six import string_types
+from salt.ext.six import string_types
 
 
 def mac(addr):

@@ -237,8 +237,8 @@ class RAETEvent(object):
         if hasattr(self, 'stack'):
             self.stack.server.close()
 
-    def __del__(self):
-        self.destroy()
+    #def __del__(self):  # Need to manually call destroy when we are done
+        #self.destroy()
 
 
 class RunnerEvent(RAETEvent):
@@ -254,4 +254,4 @@ class RunnerEvent(RAETEvent):
     def fire_progress(self, data, outputter='pprint'):
         progress_event = {'data': data,
                           'outputter': outputter}
-        self.fire_event(progress_event, salt.utils.tagify([self.jid, 'progress'], 'runner'))
+        self.fire_event(progress_event, salt.utils.event.tagify([self.jid, 'progress'], 'runner'))

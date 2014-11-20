@@ -11,7 +11,7 @@ import logging
 
 # Import Salt Libs
 from salt.utils.odict import OrderedDict
-import six
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 

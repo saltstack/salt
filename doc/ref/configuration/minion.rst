@@ -726,7 +726,7 @@ directed to look on the minion by setting this parameter to ``local``.
 .. conf_minion:: use_master_when_local
 
 ``use_master_when_local``
----------------
+-------------------------
 
 Default: ``False``
 

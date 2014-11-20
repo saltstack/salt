@@ -12,9 +12,9 @@ import logging
 # Import salt libs
 import salt.log
 import salt.crypt
+import salt.ext.six as six
+
 from salt.exceptions import SaltReqTimeoutError
-from salt.utils.odict import OrderedDict
-import six
 
 # Import third party libs
 try:
@@ -93,11 +93,7 @@ class Serial(object):
         Run the correct loads serialization format
         '''
         try:
-            # msgpack >= 0.2.0 supports object_pairs_hook parameter to return an OrderedDict
-            if msgpack.version >= (0, 2, 0):
-                return msgpack.loads(msg, use_list=True, object_pairs_hook=OrderedDict)
-            else:
-                return msgpack.loads(msg, use_list=True)
+            return msgpack.loads(msg, use_list=True)
         except Exception as exc:
             log.critical('Could not deserialize msgpack message: {0}'
                          'This often happens when trying to read a file not in binary mode.'

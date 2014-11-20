@@ -68,7 +68,7 @@ import urllib2
 # Import salt libs
 import salt.utils
 from salt._compat import url_open
-from six import string_types
+from salt.ext.six import string_types
 
 
 ########################## PRIVATE METHODS ##############################

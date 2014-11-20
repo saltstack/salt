@@ -113,6 +113,7 @@ If a process is listening on the minion, it may be useful for a user on the
 master to fire an event to it:
 
 .. code-block:: python
+
     # Job on minion
     import salt.utils.event
 

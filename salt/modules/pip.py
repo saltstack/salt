@@ -12,7 +12,7 @@ import shutil
 
 # Import salt libs
 import salt.utils
-from six import string_types
+from salt.ext.six import string_types
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 # It would be cool if we could use __virtual__() in this module, though, since

@@ -41,8 +41,8 @@ import logging
 import re
 import sys
 import shlex
-from six.moves import zip
-from six.moves import range
+from salt.ext.six.moves import zip
+from salt.ext.six.moves import range
 
 # Import salt libs
 import salt.utils

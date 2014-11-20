@@ -14,7 +14,7 @@ import yaml
 import salt.pillar
 import salt.utils
 from salt.defaults import DEFAULT_TARGET_DELIM
-from six import string_types
+from salt.ext.six import string_types
 
 __proxyenabled__ = ['*']
 

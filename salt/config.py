@@ -16,7 +16,7 @@ import time
 import codecs
 # import third party libs
 import yaml
-import six
+import salt.ext.six as six
 try:
     yaml.Loader = yaml.CLoader
     yaml.Dumper = yaml.CDumper
@@ -32,7 +32,7 @@ import salt.utils.validate.path
 import salt.utils.xdg
 import salt.exceptions
 from salt._compat import urlparse
-from six import string_types
+from salt.ext.six import string_types
 
 import sys
 

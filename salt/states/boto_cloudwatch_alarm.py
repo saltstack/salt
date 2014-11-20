@@ -54,7 +54,7 @@ as a passed in dict, or as a string to pull from pillars or minion config:
 '''
 from __future__ import absolute_import
 
-from six import string_types
+from salt.ext.six import string_types
 
 
 def __virtual__():

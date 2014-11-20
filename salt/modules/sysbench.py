@@ -9,7 +9,7 @@ from __future__ import absolute_import
 
 import re
 import salt.utils
-from six.moves import zip
+from salt.ext.six.moves import zip
 
 
 def __virtual__():

@@ -7,7 +7,7 @@ modules.
 '''
 from __future__ import absolute_import
 import salt.loader
-from six import string_types
+from salt.ext.six import string_types
 
 
 def sdb_get(uri, opts):

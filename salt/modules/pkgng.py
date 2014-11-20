@@ -40,7 +40,7 @@ import os
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError, MinionError
-import six
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 

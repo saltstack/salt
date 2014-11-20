@@ -64,8 +64,8 @@ import sys
 # Import salt libs
 import salt.utils
 import salt.output
-import six
-from six import string_types
+import salt.ext.six as six
+from salt.ext.six import string_types
 
 
 def output(data):

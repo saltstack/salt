@@ -41,7 +41,7 @@ from __future__ import absolute_import
 # Import python libs
 import os
 import copy
-import six.moves.http_client  # pylint: disable=E0611
+import salt.ext.six.moves.http_client  # pylint: disable=E0611
 import requests
 import json
 import logging
@@ -87,10 +87,10 @@ DEFAULT_LOCATION = 'us-east-1'
 POLL_ALL_LOCATIONS = True
 
 VALID_RESPONSE_CODES = [
-    six.moves.http_client.OK,
-    six.moves.http_client.ACCEPTED,
-    six.moves.http_client.CREATED,
-    six.moves.http_client.NO_CONTENT
+    salt.ext.six.moves.http_client.OK,
+    salt.ext.six.moves.http_client.ACCEPTED,
+    salt.ext.six.moves.http_client.CREATED,
+    salt.ext.six.moves.http_client.NO_CONTENT
 ]
 
 

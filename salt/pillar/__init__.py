@@ -16,13 +16,13 @@ import salt.fileclient
 import salt.minion
 import salt.crypt
 import salt.transport
-from six import string_types
+from salt.ext.six import string_types
 from salt.template import compile_template
 from salt.utils.dictupdate import update
 from salt.utils.serializers.yamlex import merge_recursive
 from salt.utils.odict import OrderedDict
 from salt.version import __version__
-import six
+import salt.ext.six as six
 
 
 log = logging.getLogger(__name__)
@@ -441,7 +441,7 @@ class Pillar(object):
         Extract the sls pillar files from the matches and render them into the
         pillar
         '''
-        pillar = OrderedDict()
+        pillar = {}
         errors = []
         for saltenv, pstates in matches.items():
             mods = set()
@@ -578,7 +578,7 @@ class Pillar(object):
         top, terrors = self.get_top()
         if ext:
             if self.opts.get('ext_pillar_first', False):
-                self.opts['pillar'] = self.ext_pillar(OrderedDict(), pillar_dirs)
+                self.opts['pillar'] = self.ext_pillar({}, pillar_dirs)
                 matches = self.top_matches(top)
                 pillar, errors = self.render_pillar(matches)
                 pillar = self.merge_sources(pillar, self.opts['pillar'])

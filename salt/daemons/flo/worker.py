@@ -11,7 +11,7 @@ import time
 import os
 import multiprocessing
 import logging
-from six.moves import range
+from salt.ext.six.moves import range
 
 # Import salt libs
 import salt.daemons.masterapi
@@ -25,6 +25,9 @@ from salt.utils import kinds
 import ioflo.base.deeding
 
 log = logging.getLogger(__name__)
+
+# convert to set once list is larger than about 3 because set hashes
+INHIBIT_RETURN = []  # ['_return']  # cmd for which we should not send return
 
 
 class SaltRaetWorkerFork(ioflo.base.deeding.Deed):
@@ -211,10 +214,11 @@ class SaltRaetWorkerRouter(ioflo.base.deeding.Deed):
                     ret['__worker_verify'] = self.worker_verify.value
                 else:
                     r_share = s_share
-                ret['route'] = {
-                        'src': (None, self.lane_stack.value.local.name, None),
-                        'dst': (s_estate, s_yard, r_share)
-                        }
-                self.lane_stack.value.transmit(ret,
-                        self.lane_stack.value.fetchUidByName('manor'))
-                self.lane_stack.value.serviceAll()
+                if cmd not in INHIBIT_RETURN:
+                    ret['route'] = {
+                            'src': (None, self.lane_stack.value.local.name, None),
+                            'dst': (s_estate, s_yard, r_share)
+                            }
+                    self.lane_stack.value.transmit(ret,
+                            self.lane_stack.value.fetchUidByName('manor'))
+                    self.lane_stack.value.serviceAll()

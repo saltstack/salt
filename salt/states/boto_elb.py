@@ -86,7 +86,7 @@ passed in as a dict, or as a string to pull from pillars or minion config:
 from __future__ import absolute_import
 import salt.utils.dictupdate as dictupdate
 from salt.exceptions import SaltInvocationError
-import six
+import salt.ext.six as six
 
 
 def __virtual__():

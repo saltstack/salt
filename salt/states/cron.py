@@ -119,7 +119,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import os
-from six import string_types
+from salt.ext.six import string_types
 
 # Import salt libs
 import salt.utils

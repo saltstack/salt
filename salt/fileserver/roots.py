@@ -15,7 +15,7 @@ import logging
 import salt.fileserver
 import salt.utils
 from salt.utils.event import tagify
-import six
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 

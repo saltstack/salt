@@ -11,7 +11,7 @@ import logging
 
 # Import salt libs
 import salt.utils
-from six import string_types
+from salt.ext.six import string_types
 from salt.utils import which as _which
 from salt.exceptions import CommandNotFoundError, CommandExecutionError
 

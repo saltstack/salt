@@ -148,7 +148,7 @@ These are the available methods:
 '''
 
 from __future__ import absolute_import
-from six.moves import range
+from salt.ext.six.moves import range
 __docformat__ = 'restructuredtext en'
 
 import datetime
@@ -162,7 +162,7 @@ import types
 
 from salt.modules import cmdmod
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from six import string_types
+from salt.ext.six import string_types
 import salt.utils
 import salt.utils.odict
 
@@ -606,11 +606,13 @@ def create_container(image,
         CPU shares (relative weight)
     cpuset
         CPUs in which to allow execution ('0-3' or '0,1')
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' docker.create_container o/ubuntu volumes="['/s','/m:/f']"
+
     '''
     status = base_status.copy()
     client = _get_client()

@@ -26,7 +26,7 @@ except ImportError:
 import salt.output
 import salt.utils
 import logging
-from six import string_types
+from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 

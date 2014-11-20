@@ -18,7 +18,7 @@ import re
 import time
 import yaml
 import uuid
-from six.moves import input
+from salt.ext.six.moves import input
 
 # Import salt libs
 import salt.client.ssh.shell
@@ -38,7 +38,7 @@ import salt.utils.atomicfile
 import salt.utils.thin
 import salt.utils.verify
 import salt.utils.network
-from six import string_types
+from salt.ext.six import string_types
 from salt.utils import is_windows
 
 try:

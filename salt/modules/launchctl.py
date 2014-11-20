@@ -12,7 +12,7 @@ import plistlib
 
 # Import salt libs
 import salt.utils.decorators as decorators
-import six
+import salt.ext.six as six
 
 # Define the module's virtual name
 __virtualname__ = 'service'
