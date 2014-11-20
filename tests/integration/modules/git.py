@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+# Import Python Libs
 import shutil
 import subprocess
 import tempfile
@@ -13,12 +14,19 @@ import integration
 
 
 class GitModuleTest(integration.ModuleCase):
+    '''
+    Integration tests for the git module
+    '''
+
     @classmethod
     def setUpClass(cls):
+        '''
+        Check if git is installed. If it isn't, skip everything in this class.
+        '''
         from salt.utils import which
         git = which('git')
         if not git:
-            self.skipTest('The git binary is not available')
+            cls.skipTest('The git binary is not available')
 
     def setUp(self):
         self.repos = tempfile.mkdtemp(dir=integration.TMP)
@@ -27,7 +35,7 @@ class GitModuleTest(integration.ModuleCase):
 
     def test_config_set_value_has_space_characters(self):
         '''
-        git.config_set
+        Tests the git.config_set function
         '''
         config_key = "user.name"
         config_value = "foo bar"
