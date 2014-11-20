@@ -1381,7 +1381,7 @@ class LocalClient(object):
                                               master_uri=master_uri)
 
         try:
-            payload = sreq.send(payload_kwargs)
+            payload = sreq.send(payload_kwargs, timeout=timeout)
         except SaltReqTimeoutError:
             log.error(
                 'Salt request timed out. If this error persists, '
