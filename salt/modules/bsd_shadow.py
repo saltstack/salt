@@ -9,11 +9,6 @@ try:
 except ImportError:
     pass
 
-# Import 3rd-party libs
-# pylint: disable=import-error
-from salt.ext.six.moves import shlex_quote as _cmd_quote
-# pylint: enable=import-error
-
 # Define the module's virtual name
 __virtualname__ = 'shadow'
 
