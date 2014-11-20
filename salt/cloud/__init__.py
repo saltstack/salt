@@ -277,6 +277,7 @@ class CloudClient(object):
         Query all instance information
         '''
         mapper = salt.cloud.Map(self._opts_defaults())
+        self.opts['selected_query_option'] = 'list_nodes_full'
         return mapper.map_providers_parallel(query_type)
 
     def select_query(self, query_type='list_nodes_select'):
@@ -284,6 +285,7 @@ class CloudClient(object):
         Query select instance information
         '''
         mapper = salt.cloud.Map(self._opts_defaults())
+        self.opts['selected_query_option'] = 'list_nodes_select'
         return mapper.map_providers_parallel(query_type)
 
     def min_query(self, query_type='list_nodes_min'):
@@ -291,6 +293,7 @@ class CloudClient(object):
         Query select instance information
         '''
         mapper = salt.cloud.Map(self._opts_defaults())
+        self.opts['selected_query_option'] = 'list_nodes_min'
         return mapper.map_providers_parallel(query_type)
 
     def profile(self, profile, names, vm_overrides=None, **kwargs):
