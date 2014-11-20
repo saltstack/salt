@@ -8,7 +8,7 @@ Management of Glance images
 
 .. code-block:: yaml
 
-    glance image:
+    glance image present:
       glance.image_present:
         - name: Ubuntu
         - copy_from: 'https://cloud-images.ubuntu.com/trusty/current/trusty-server-cloudimg-amd64-disk1.img'
@@ -19,7 +19,7 @@ Management of Glance images
         - connection_tenant: admin
         - connection_auth_url: 'http://127.0.0.1:5000/v2.0'
 
-    admin:
+    glance image absent:
       glance.image_absent:
         - name: Ubuntu
         - disk_format: qcow2
