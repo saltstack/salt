@@ -1,25 +1,23 @@
 # coding: utf-8
 
-
 # Import salttesting libs
 from salttesting import mock
 from salttesting.unit import skipIf
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../../')
 
-
 from salt.exceptions import EauthAuthenticationError
 from tests.utils import BaseRestCherryPyTest
 
 # Import 3rd-party libs
-# pylint: disable=import-error
+# pylint: disable=import-error,unused-import
 from salt.ext.six.moves.urllib.parse import urlencode  # pylint: disable=no-name-in-module
 try:
     import cherrypy
     HAS_CHERRYPY = True
 except ImportError:
     HAS_CHERRYPY = False
-# pylint: enable=import-error
+# pylint: enable=import-error,unused-import
 
 
 @skipIf(HAS_CHERRYPY is False, 'CherryPy not installed')
