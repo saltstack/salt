@@ -13,13 +13,13 @@ ensure_in_syspath('../../..')
 try:
     import tornado.testing
     import tornado.concurrent
-    from tornado.testing import AsyncHTTPTestCase
+    from tornado.testing import AsyncTestCase
     HAS_TORNADO = True
 except ImportError:
     HAS_TORNADO = False
 
     # Let's create a fake AsyncHTTPTestCase so we can properly skip the test case
-    class AsyncHTTPTestCase(object):
+    class AsyncTestCase(object):
         pass
 # pylint: enable=import-error
 
