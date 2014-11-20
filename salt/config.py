@@ -14,9 +14,9 @@ import logging
 from copy import deepcopy
 import time
 import codecs
+
 # import third party libs
 import yaml
-import salt.ext.six as six
 try:
     yaml.Loader = yaml.CLoader
     yaml.Dumper = yaml.CDumper
@@ -31,8 +31,9 @@ import salt.syspaths
 import salt.utils.validate.path
 import salt.utils.xdg
 import salt.exceptions
-from salt._compat import urlparse
-from salt.ext.six import string_types
+
+from salt.ext.six import string_types, text_type
+from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=import-error,no-name-in-module
 
 import sys
 
@@ -747,7 +748,7 @@ def _read_conf_file(path):
         if 'id' in conf_opts:
             conf_opts['id'] = str(conf_opts['id'])
         for key, value in conf_opts.copy().items():
-            if isinstance(value, six.text_type):
+            if isinstance(value, text_type):
                 # We do not want unicode settings
                 conf_opts[key] = value.encode('utf-8')
         return conf_opts

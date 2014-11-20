@@ -1,18 +1,44 @@
 # coding: utf-8
 
+# Import Python libs
 import json
 import yaml
-import urllib
 
-from salt.netapi.rest_tornado import saltnado
+# Import Salt Testing Libs
+from salttesting.unit import skipIf
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../..')
+import integration  # pylint: disable=import-error
+
+# Import Salt libs
+try:
+    from salt.netapi.rest_tornado import saltnado
+    HAS_TORNADO = True
+except ImportError:
+    HAS_TORNADO = False
 import salt.auth
-import integration
-
-import tornado.testing
-import tornado.concurrent
 
 
-class SaltnadoTestCase(integration.ModuleCase, tornado.testing.AsyncHTTPTestCase):
+# Import 3rd-party libs
+# pylint: disable=import-error
+try:
+    import tornado.testing
+    import tornado.concurrent
+    from tornado.testing import AsyncHTTPTestCase
+    HAS_TORNADO = True
+except ImportError:
+    HAS_TORNADO = False
+
+    # Let's create a fake AsyncHTTPTestCase so we can properly skip the test case
+    class AsyncHTTPTestCase(object):
+        pass
+
+from salt.ext.six.moves.urllib.parse import urlencode  # pylint: disable=no-name-in-module
+# pylint: enable=import-error
+
+
+@skipIf(HAS_TORNADO is False, 'The tornado package needs to be installed')
+class SaltnadoTestCase(integration.ModuleCase, AsyncHTTPTestCase):
     '''
     Mixin to hold some shared things
     '''
@@ -174,7 +200,7 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
         )
         response = self.fetch('/',
                               method='POST',
-                              body=urllib.urlencode(form_lowstate),
+                              body=urlencode(form_lowstate),
                               headers={'Content-Type': self.content_type_map['form']})
         returned_lowstate = json.loads(response.body)['lowstate']
         assert len(returned_lowstate) == 1
@@ -209,7 +235,7 @@ class TestSaltAuthHandler(SaltnadoTestCase):
         '''
         response = self.fetch('/login',
                                method='POST',
-                               body=urllib.urlencode(self.auth_creds),
+                               body=urlencode(self.auth_creds),
                                headers={'Content-Type': self.content_type_map['form']})
 
         response_obj = json.loads(response.body)['return'][0]
@@ -229,7 +255,7 @@ class TestSaltAuthHandler(SaltnadoTestCase):
             bad_creds.append((key, val))
         response = self.fetch('/login',
                                method='POST',
-                               body=urllib.urlencode(bad_creds),
+                               body=urlencode(bad_creds),
                                headers={'Content-Type': self.content_type_map['form']})
 
         assert response.code == 400
@@ -245,7 +271,12 @@ class TestSaltAuthHandler(SaltnadoTestCase):
             bad_creds.append((key, val))
         response = self.fetch('/login',
                                method='POST',
-                               body=urllib.urlencode(bad_creds),
+                               body=urlencode(bad_creds),
                                headers={'Content-Type': self.content_type_map['form']})
 
         assert response.code == 401
+
+
+if __name__ == '__main__':
+    from integration import run_tests  # pylint: disable=import-error
+    run_tests(TestBaseSaltAPIHandler, TestSaltAuthHandler, needs_daemon=False)

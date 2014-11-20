@@ -1,8 +1,11 @@
 # coding: utf-8
-import json
-import urllib
 
+# Import Python libs
+import json
+
+# Import 3rd-party libs
 import yaml
+from salt.ext.six.moves.urllib.parse import urlencode  # pylint: disable=no-name-in-module,import-error
 
 from tests.utils import BaseToolsTest
 
@@ -43,7 +46,7 @@ class TestInFormats(BaseToolsTest):
     def test_urlencoded_ctype(self):
         data = {'valid': 'stuff'}
         request, response = self.request('/', method='POST',
-            body=urllib.urlencode(data), headers=(
+            body=urlencode(data), headers=(
                 ('Content-type', 'application/x-www-form-urlencoded'),
         ))
         self.assertEqual(response.status, '200 OK')

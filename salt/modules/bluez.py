@@ -14,20 +14,22 @@ from __future__ import absolute_import
 # Import python libs
 import logging
 
+# Import 3rd-party libs
+# pylint: disable=import-error
+from salt.ext.six.moves import shlex_quote as _cmd_quote
+# pylint: enable=import-error
+
 # Import salt libs
 import salt.utils.validate.net
 from salt.exceptions import CommandExecutionError
-try:
-    from shlex import quote as _cmd_quote  # pylint: disable=E0611
-except ImportError:
-    from pipes import quote as _cmd_quote
+
 
 log = logging.getLogger(__name__)
 HAS_PYBLUEZ = False
 try:
-    import bluetooth
+    import bluetooth  # pylint: disable=import-error
     HAS_PYBLUEZ = True
-except Exception as exc:
+except ImportError:
     pass
 
 __func_alias__ = {

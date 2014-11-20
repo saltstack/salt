@@ -19,20 +19,17 @@ import copy
 import logging
 import os
 import re
-from distutils.version import LooseVersion as _LooseVersion
-try:
-    from shlex import quote as _cmd_quote  # pylint: disable=E0611
-except ImportError:
-    from pipes import quote as _cmd_quote  # pylint: disable=E0611
+from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=no-name-in-module,import-error
 
+# Import 3rd-party libs
+# pylint: disable=import-error,redefined-builtin
 import salt.ext.six as six
-from distutils.version import LooseVersion as _LooseVersion
-from salt.ext.six.moves import range
+from salt.ext.six import string_types
+from salt.ext.six.moves import shlex_quote as _cmd_quote, range
+# pylint: enable=import-error
 
 # Import salt libs
 import salt.utils
-import salt.ext.six as six
-from salt.ext.six import string_types
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
@@ -722,6 +719,7 @@ def group_install(name,
     elif not isinstance(groups, list):
         raise SaltInvocationError('\'groups\' must be a list')
 
+    # pylint: disable=maybe-no-member
     if isinstance(skip, string_types):
         skip = skip.split(',')
     if not isinstance(skip, (list, tuple)):
@@ -731,6 +729,7 @@ def group_install(name,
         include = include.split(',')
     if not isinstance(include, (list, tuple)):
         raise SaltInvocationError('\'include\' must be a list')
+    # pylint: enable=maybe-no-member
 
     targets = []
     for group in groups:

@@ -74,19 +74,21 @@ import uuid
 import pprint
 import logging
 import yaml
+
+# Import 3rd-party libs
+
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
+import requests
 import salt.ext.six as six
-from salt.ext.six.moves import map
-from salt.ext.six.moves import zip
-from salt.ext.six.moves import range
+from salt.ext.six.moves import map, range, zip
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse, urlencode as _urlencode
+# pylint: enable=import-error,no-name-in-module
 
 # Import libs for talking to the EC2 API
 import hmac
 import hashlib
 import binascii
 import datetime
-import urllib
-import urlparse
-import requests
 import base64
 
 # Import salt libs
@@ -312,11 +314,12 @@ def query(params=None, setname=None, requesturl=None, location=None,
 
             requesturl = 'https://{0}/'.format(endpoint)
         else:
-            endpoint = urlparse.urlparse(requesturl).netloc
+            endpoint = _urlparse(requesturl).netloc
             if endpoint == '':
-                endpoint_err = 'Could not find a valid endpoint in the requesturl: {0}. Looking for something like https://some.ec2.endpoint/?args'.format(
-                    requesturl
-                )
+                endpoint_err = (
+                        'Could not find a valid endpoint in the '
+                        'requesturl: {0}. Looking for something '
+                        'like https://some.ec2.endpoint/?args').format(requesturl)
                 log.error(endpoint_err)
                 if return_url is True:
                     return {'error': endpoint_err}, requesturl
@@ -337,7 +340,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
         params_with_headers['Version'] = ec2_api_version
         keys = sorted(params_with_headers)
         values = list(map(params_with_headers.get, keys))
-        querystring = urllib.urlencode(list(zip(keys, values)))
+        querystring = _urlencode(list(zip(keys, values)))
 
         # AWS signature version 2 requires that spaces be encoded as
         # %20, however urlencode uses '+'. So replace pluses with %20.
@@ -1038,10 +1041,10 @@ def _request_eip(interface):
     '''
     params = {'Action': 'AllocateAddress'}
     params['Domain'] = interface.setdefault('domain', 'vpc')
-    eip = query(params, return_root=True)
-    for e in eip:
-        if 'allocationId' in e:
-            return e['allocationId']
+    eips = query(params, return_root=True)
+    for eip in eips:
+        if 'allocationId' in eip:
+            return eip['allocationId']
     return None
 
 
