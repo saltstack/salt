@@ -154,7 +154,7 @@ def sig4(method, endpoint, params, prov_dict, aws_api_version, location,
             '{0} Credential={1}/{2}, SignedHeaders={3}, Signature={4}'
         ).format(
             algorithm,
-            prov_dict.get('id', None),
+            prov_dict.get('id', ''),
             credential_scope,
             signed_headers,
             signature,
