@@ -28,6 +28,7 @@ Connection module for Amazon IAM
 
 :depends: boto
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import logging
@@ -46,7 +47,7 @@ except ImportError:
     HAS_BOTO = False
 
 # Import salt libs
-from salt._compat import string_types
+from salt.ext.six import string_types
 import salt.utils.odict as odict
 
 

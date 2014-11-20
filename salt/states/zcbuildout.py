@@ -35,12 +35,13 @@ Available Functions
           - onlyif: /bin/test_else_installed
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import sys
 
 # Import salt libs
-from salt._compat import string_types
+from salt.ext.six import string_types
 
 # Define the module's virtual name
 __virtualname__ = 'buildout'

@@ -3,6 +3,10 @@
 Runner to manage Windows software repo
 '''
 
+from __future__ import print_function
+
+from __future__ import absolute_import
+
 # Import python libs
 import os
 
@@ -14,11 +18,10 @@ except ImportError:
     import msgpack_pure as msgpack
 
 # Import salt libs
-import salt.output
 import salt.utils
 import logging
 import salt.minion
-from salt._compat import string_types
+from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 
@@ -50,25 +53,24 @@ def genrepo():
                         # when log.debug works
                         log.debug('Failed to compile'
                                   '{0}: {1}'.format(os.path.join(root, name), exc))
-                        print 'Failed to compile {0}: {1}'.format(os.path.join(root, name), exc)
+                        __progress__('Failed to compile {0}: {1}'.format(os.path.join(root, name), exc))
                 if config:
                     revmap = {}
-                    for pkgname, versions in config.iteritems():
-                        for version, repodata in versions.iteritems():
+                    for pkgname, versions in config.items():
+                        for version, repodata in versions.items():
                             if not isinstance(version, string_types):
                                 config[pkgname][str(version)] = \
                                     config[pkgname].pop(version)
                             if not isinstance(repodata, dict):
                                 log.debug('Failed to compile'
                                           '{0}.'.format(os.path.join(root, name)))
-                                print 'Failed to compile {0}.'.format(os.path.join(root, name))
+                                __progress__('Failed to compile {0}.'.format(os.path.join(root, name)))
                                 continue
                             revmap[repodata['full_name']] = pkgname
                     ret.setdefault('repo', {}).update(config)
                     ret.setdefault('name_map', {}).update(revmap)
     with salt.utils.fopen(os.path.join(repo, winrepo), 'w+b') as repo:
         repo.write(msgpack.dumps(ret))
-    salt.output.display_output(ret, 'pprint', __opts__)
     return ret
 
 
@@ -101,5 +103,4 @@ def update_git_repos():
                                               target=gittarget,
                                               force=True)
         ret[result['name']] = result['result']
-    salt.output.display_output(ret, 'pprint', __opts__)
     return ret

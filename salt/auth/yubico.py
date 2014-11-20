@@ -34,6 +34,10 @@ the API key will be updated on all the YubiCloud servers.
 
 :depends:   - yubico-client Python module
 '''
+
+from __future__ import print_function
+
+from __future__ import absolute_import
 import logging
 
 log = logging.getLogger(__name__)
@@ -53,7 +57,7 @@ def __get_yubico_users(username):
 
     try:
         if __opts__['yubico_users'].get(username, None):
-            (user['id'], user['key']) = __opts__['yubico_users'][username].values()
+            (user['id'], user['key']) = list(__opts__['yubico_users'][username].values())
         else:
             return None
     except KeyError:
@@ -75,7 +79,7 @@ def auth(username, password):
             return True
         else:
             return False
-    except yubico_exceptions.StatusCodeError, e:
+    except yubico_exceptions.StatusCodeError as e:
         log.info('Unable to verify YubiKey `{0}`'.format(e))
         return False
 
@@ -86,6 +90,6 @@ if __name__ == '__main__':
     __opts__ = {'yubico_users': {'damian': {'id': '12345', 'key': 'ABC123'}}}
 
     if auth('damian', 'OPT'):
-        print "Authenticated"
+        print("Authenticated")
     else:
-        print "Failed to authenticate"
+        print("Failed to authenticate")

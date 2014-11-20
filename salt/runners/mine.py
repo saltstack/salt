@@ -2,10 +2,10 @@
 '''
 A runner to access data from the salt mine
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils.minions
-import salt.output
 
 
 def get(tgt, fun, tgt_type='glob', output='yaml'):
@@ -20,5 +20,4 @@ def get(tgt, fun, tgt_type='glob', output='yaml'):
         salt-run mine.get '*' network.interfaces
     '''
     ret = salt.utils.minions.mine_get(tgt, fun, tgt_type, __opts__)
-    salt.output.display_output(ret, output, __opts__)
     return ret

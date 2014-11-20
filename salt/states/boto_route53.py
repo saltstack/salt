@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Manage Route53 records
-======================
 
 .. versionadded:: 2014.7.0
 

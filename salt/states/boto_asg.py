@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Manage Autoscale Groups
-=======================
 
 .. versionadded:: 2014.7.0
 
@@ -25,6 +24,8 @@ in the minion's config file::
 
 It's also possible to specify key, keyid and region via a profile, either
 as a passed in dict, or as a string to pull from pillars or minion config:
+
+.. code-block:: yaml
 
     myprofile:
         keyid: GKTADJGHEIQSXMKKRBJ08H
@@ -100,10 +101,13 @@ as a passed in dict, or as a string to pull from pillars or minion config:
         # If instances exist, we must force the deletion of the asg.
         - force: True
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import hashlib
 import logging
+import salt.ext.six as six
+from salt.ext.six.moves import zip
 
 log = logging.getLogger(__name__)
 
@@ -268,7 +272,7 @@ def present(
             args.update(d)
         if not __opts__['test']:
             lc_ret = __salt__["state.single"]('boto_lc.present', **args)
-            lc_ret = lc_ret.values()[0]
+            lc_ret = next(lc_ret.itervalues())
             if lc_ret["result"] is True and lc_ret["changes"]:
                 if "launch_config" not in ret["changes"]:
                     ret["changes"]["launch_config"] = {}
@@ -334,7 +338,7 @@ def present(
             config["scaling_policies"] = []
         # note: do not loop using "key, value" - this can modify the value of
         # the aws access key
-        for asg_property, value in config.iteritems():
+        for asg_property, value in six.iteritems(config):
             # Only modify values being specified; introspection is difficult
             # otherwise since it's hard to track default values, which will
             # always be returned from AWS.
@@ -401,9 +405,9 @@ def _recursive_compare(v1, v2):
     elif isinstance(v1, dict):
         v1 = dict(v1)
         v2 = dict(v2)
-        if sorted(v1.keys()) != sorted(v2.keys()):
+        if sorted(v1) != sorted(v2):
             return False
-        for k in v1.keys():
+        for k in v1:
             if not _recursive_compare(v1[k], v2[k]):
                 return False
         return True

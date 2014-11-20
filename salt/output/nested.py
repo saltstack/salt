@@ -23,6 +23,7 @@ Example output::
                 - Hello
                 - World
 '''
+from __future__ import absolute_import
 # Import python libs
 from numbers import Number
 import re
@@ -30,7 +31,7 @@ import re
 # Import salt libs
 import salt.utils
 import salt.output
-from salt._compat import string_types
+from salt.ext.six import string_types
 
 
 class NestDisplay(object):

@@ -56,6 +56,7 @@ Multiple environment mode must have this bucket structure:
 
     s3://<bucket name>/<environment>/<files>
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -69,6 +70,8 @@ from copy import deepcopy
 from salt.pillar import Pillar
 import salt.utils
 import salt.utils.s3 as s3
+import salt.ext.six as six
+from salt.ext.six.moves import filter
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -113,8 +116,8 @@ def ext_pillar(minion_id,
     if _s3_sync_on_update:
         # sync the buckets to the local cache
         log.info('Syncing local pillar cache from S3...')
-        for saltenv, env_meta in metadata.iteritems():
-            for bucket, files in _find_files(env_meta).iteritems():
+        for saltenv, env_meta in six.iteritems(metadata):
+            for bucket, files in six.iteritems(_find_files(env_meta)):
                 for file_path in files:
                     cached_file_path = _get_cached_file_name(bucket, saltenv,
                                                              file_path)
@@ -213,13 +216,11 @@ def _refresh_buckets_cache_file(creds, cache_file, multiple_env, environment):
 
     # grab only the files/dirs in the bucket
     def __get_pillar_files_from_s3_meta(s3_meta):
-        return filter(lambda k: 'Key' in k, s3_meta)
+        return [k for k in s3_meta if 'Key' in k]
 
     # pull out the environment dirs (e.g. the root dirs)
     def __get_pillar_environments(files):
-        environments = map(
-            lambda k: (os.path.dirname(k['Key']).split('/', 1))[0], files
-        )
+        environments = [(os.path.dirname(k['Key']).split('/', 1))[0] for k in files]
         return set(environments)
 
     log.debug('Refreshing S3 buckets pillar cache file')
@@ -295,15 +296,14 @@ def _find_files(metadata):
 
     ret = {}
 
-    for bucket, data in metadata.iteritems():
+    for bucket, data in six.iteritems(metadata):
         if bucket not in ret:
             ret[bucket] = []
 
         # grab the paths from the metadata
-        filePaths = map(lambda k: k['Key'], data)
+        filePaths = [k['Key'] for k in data]
         # filter out the dirs
-        ret[bucket] += filter(lambda k: not k.endswith('/'),
-                              filePaths)
+        ret[bucket] += [k for k in filePaths if not k.endswith('/')]
 
     return ret
 
@@ -315,7 +315,7 @@ def _find_file_meta(metadata, bucket, saltenv, path):
 
     env_meta = metadata[saltenv] if saltenv in metadata else {}
     bucket_meta = env_meta[bucket] if bucket in env_meta else {}
-    files_meta = filter((lambda k: 'Key' in k), bucket_meta)
+    files_meta = list(list(filter((lambda k: 'Key' in k), bucket_meta)))
 
     for item_meta in files_meta:
         if 'Key' in item_meta and item_meta['Key'] == path:
@@ -332,7 +332,7 @@ def _get_file_from_s3(creds, metadata, saltenv, bucket, path,
     # check the local cache...
     if os.path.isfile(cached_file_path):
         file_meta = _find_file_meta(metadata, bucket, saltenv, path)
-        file_md5 = filter(str.isalnum, file_meta['ETag']) \
+        file_md5 = list(filter(str.isalnum, file_meta['ETag'])) \
             if file_meta else None
 
         cached_md5 = salt.utils.get_hash(cached_file_path, 'md5')

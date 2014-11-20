@@ -6,6 +6,7 @@ and what hosts are down
 
 # Import python libs
 from __future__ import print_function
+from __future__ import absolute_import
 import os
 import operator
 import re
@@ -17,10 +18,10 @@ import urllib
 # Import salt libs
 import salt.key
 import salt.client
-import salt.output
 import salt.utils.minions
 import salt.wheel
 import salt.version
+import salt.ext.six as six
 
 FINGERPRINT_REGEX = re.compile(r'^([a-f0-9]{2}:){15}([a-f0-9]{2})$')
 
@@ -45,7 +46,7 @@ def status(output=True):
     ret['up'] = sorted(minions)
     ret['down'] = sorted(set(keys['minions']) - set(minions))
     if output:
-        salt.output.display_output(ret, '', __opts__)
+        __progress__(ret)
     return ret
 
 
@@ -94,7 +95,7 @@ def key_regen():
            'will not be able to reconnect and may require manual\n'
            'regeneration via a local call to\n'
            '    salt-call saltutil.regen_keys')
-    print(msg)
+    return msg
 
 
 def down(removekeys=False):
@@ -114,8 +115,6 @@ def down(removekeys=False):
         if removekeys:
             wheel = salt.wheel.Wheel(__opts__)
             wheel.call_func('key.delete', match=minion)
-        else:
-            salt.output.display_output(minion, '', __opts__)
     return ret
 
 
@@ -130,8 +129,6 @@ def up():  # pylint: disable=C0103
         salt-run manage.up
     '''
     ret = status(output=False).get('up', [])
-    for minion in ret:
-        salt.output.display_output(minion, '', __opts__)
     return ret
 
 
@@ -157,7 +154,6 @@ def present(subset=None, show_ipv4=False):
     minions = ckminions.connected_ids(show_ipv4=show_ipv4, subset=subset)
     connected = dict(minions) if show_ipv4 else sorted(minions)
 
-    salt.output.display_output(connected, '', __opts__)
     return connected
 
 
@@ -191,7 +187,6 @@ def not_present(subset=None, show_ipv4=False):
         if minion not in connected:
             not_connected.append(minion)
 
-    salt.output.display_output(not_connected, '', __opts__)
     return connected
 
 
@@ -237,13 +232,13 @@ def safe_accept(target, expr_form='glob'):
 
     if failures:
         print('safe_accept failed on the following minions:')
-        for minion, message in failures.iteritems():
+        for minion, message in six.iteritems(failures):
             print(minion)
             print('-' * len(minion))
             print(message)
             print('')
 
-    print('Accepted {0:d} keys'.format(len(ret)))
+    __progress__('Accepted {0:d} keys'.format(len(ret)))
     return ret, failures
 
 
@@ -289,7 +284,6 @@ def versions():
         else:
             for minion in sorted(version_status[key]):
                 ret.setdefault(labels[key], {})[minion] = version_status[key][minion]
-    salt.output.display_output(ret, '', __opts__)
     return ret
 
 

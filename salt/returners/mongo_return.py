@@ -33,6 +33,7 @@ the default location::
 
     salt '*' test.ping --return mongo_return --return_config alternative
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -40,6 +41,7 @@ import logging
 # import Salt libs
 import salt.utils
 import salt.returners
+import salt.ext.six as six
 
 # Import third party libs
 try:
@@ -67,7 +69,7 @@ def _remove_dots(src):
     Remove dots from the given data structure
     '''
     output = {}
-    for key, val in src.iteritems():
+    for key, val in six.iteritems(src):
         if isinstance(val, dict):
             val = _remove_dots(val)
         output[key.replace('.', '-')] = val

@@ -2,6 +2,7 @@
 '''
 VirtualBox Guest Additions installer
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import contextlib
@@ -119,7 +120,7 @@ def _additions_install_fedora(**kwargs):
 def _additions_install_linux(mount_point, **kwargs):
     reboot = kwargs.pop('reboot', False)
     restart_x11 = kwargs.pop('restart_x11', False)
-    upgrade_os = kwargs.pop('upgrade_os', True)
+    upgrade_os = kwargs.pop('upgrade_os', False)
     if upgrade_os:
         __salt__['pkg.upgrade']()
     # dangerous: do not call variable `os` as it will hide os module
@@ -170,7 +171,7 @@ def additions_install(**kwargs):
 
         salt '*' vbox_guest.additions_install
         salt '*' vbox_guest.additions_install reboot=True
-        salt '*' vbox_guest.additions_install upgrade_os=False
+        salt '*' vbox_guest.additions_install upgrade_os=True
 
     :param reboot: reboot computer to complete installation
     :type reboot: bool

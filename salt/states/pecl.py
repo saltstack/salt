@@ -18,9 +18,10 @@ requisite to a pkg.installed state for the package which provides pecl
         - require:
           - pkg: php-pear
 '''
+from __future__ import absolute_import
 
 # Import salt libs
-from salt._compat import string_types
+from salt.ext.six import string_types
 
 
 def __virtual__():

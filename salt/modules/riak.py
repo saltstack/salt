@@ -6,6 +6,7 @@ Riak Salt Module
 Author: David Boucha <boucha@gmail.com>
 
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils

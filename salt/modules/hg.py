@@ -2,6 +2,7 @@
 '''
 Support for the Mercurial SCM
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 from salt import utils
@@ -156,12 +157,15 @@ def archive(cwd, output, rev='tip', fmt=None, prefix=None, user=None):
     return __salt__['cmd.run'](cmd, cwd=cwd, runas=user, python_shell=False)
 
 
-def pull(cwd, opts=None, user=None):
+def pull(cwd, opts=None, user=None, repository=None):
     '''
     Perform a pull on the given repository
 
     cwd
         The path to the Mercurial repository
+
+    repository : None
+        Perform pull from the repository different from .hg/hgrc:[paths]:default
 
     opts : None
         Any additional options to add to the command line
@@ -181,6 +185,8 @@ def pull(cwd, opts=None, user=None):
     if opts:
         for opt in opts.split():
             cmd.append(opt)
+    if repository is not None:
+        cmd.append(repository)
     return __salt__['cmd.run'](cmd, cwd=cwd, runas=user, python_shell=False)
 
 

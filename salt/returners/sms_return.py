@@ -22,6 +22,7 @@ To use the sms returner, append '--return sms' to the salt command. ex:
     salt '*' test.ping --return sms
 
 '''
+from __future__ import absolute_import
 
 
 import logging
@@ -74,13 +75,13 @@ def returner(ret):
     sid = _options.get('sid', None)
     token = _options.get('token', None)
     sender = _options.get('from', None)
-    reciver = _options.get('to', None)
+    receiver = _options.get('to', None)
 
     if sid is None or token is None:
         log.error('Twilio sid/authentication token missing')
         return None
 
-    if sender is None or reciver is None:
+    if sender is None or receiver is None:
         log.error('Twilio to/from fields are missing')
         return None
 
@@ -90,7 +91,7 @@ def returner(ret):
         message = client.messages.create(
             body='Minion: {0}\nCmd: {1}\nSuccess: {2}\n\nJid: {3}'.format(
                 ret['id'], ret['fun'], ret['success'], ret['jid']
-            ), to=reciver, from_=sender)
+            ), to=receiver, from_=sender)
     except TwilioRestException as e:
         log.error('Twilio [https://www.twilio.com/docs/errors/{0}]'.format(
             e.code))

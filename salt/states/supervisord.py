@@ -13,9 +13,11 @@ Interaction with the Supervisor daemon
         - watch:
           - file: /etc/nginx/sites-enabled/wsgi_server.conf
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
+import salt.ext.six as six
 
 
 log = logging.getLogger(__name__)
@@ -39,7 +41,11 @@ def _check_error(result, success_message):
 
 
 def _is_stopped_state(state):
-    return state in ('STOPPED', 'STOPPING', 'EXITED', 'FATAL')
+    if state in ('STOPPED', 'STOPPING', 'EXITED', 'FATAL', 'BACKOFF'):
+        return True
+    if state in ('STARTING', 'RUNNING'):
+        return False
+    return False
 
 
 def running(name,
@@ -106,7 +112,7 @@ def running(name,
     if __opts__['test']:
         if not to_add:
             # Process/group already present, check if any need to be started
-            to_start = [x for x, y in matches.iteritems() if y is False]
+            to_start = [x for x, y in six.iteritems(matches) if y is False]
             if to_start:
                 ret['result'] = None
                 if name.endswith(':'):
@@ -244,7 +250,7 @@ def running(name,
         )
 
         ret.update(_check_error(result, comment))
-        log.debug(unicode(result))
+        log.debug(six.text_type(result))
 
     if ret['result'] and len(changes):
         ret['changes'][name] = ' '.join(changes)
@@ -327,7 +333,7 @@ def dead(name,
                 bin_env=bin_env
             )}
             ret.update(_check_error(result, comment))
-            log.debug(unicode(result))
+            log.debug(six.text_type(result))
     return ret
 
 
