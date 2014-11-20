@@ -1,10 +1,33 @@
 # coding: utf-8
 import os
 
-from salt.netapi.rest_tornado import saltnado
+# Import Salt Testing Libs
+from salttesting.unit import skipIf
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../../')
+import integration
 
-import tornado.testing
-import tornado.concurrent
+# Import 3rd-party libs
+# pylint: disable=import-error
+try:
+    import tornado.testing
+    import tornado.concurrent
+    from tornado.testing import AsyncHTTPTestCase
+    HAS_TORNADO = True
+except ImportError:
+    HAS_TORNADO = False
+
+    # Let's create a fake AsyncHTTPTestCase so we can properly skip the test case
+    class AsyncHTTPTestCase(object):
+        pass
+# pylint: enable=import-error
+
+try:
+    from salt.netapi.rest_tornado import saltnado
+    HAS_TORNADO = True
+except ImportError:
+    HAS_TORNADO = False
+
 from salttesting import TestCase
 
 from unit.utils.event_test import eventpublisher_process, event, SOCK_DIR
