@@ -47,6 +47,8 @@ Namespaced tag
 
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 import os
 import fnmatch
@@ -57,7 +59,6 @@ import logging
 import time
 import datetime
 import multiprocessing
-from multiprocessing import Process
 from collections import MutableMapping
 
 # Import third party libs
@@ -74,7 +75,7 @@ import salt.loader
 import salt.state
 import salt.utils
 import salt.utils.cache
-from salt._compat import string_types
+from salt.ext.six import string_types
 log = logging.getLogger(__name__)
 
 # The SUB_EVENT set is for functions that require events fired based on
@@ -112,10 +113,21 @@ def get_event(node, sock_dir=None, transport='zeromq', opts=None, listen=True):
         return SaltEvent(node, sock_dir, opts)
     elif transport == 'raet':
         import salt.utils.raetevent
-        return salt.utils.raetevent.SaltEvent(node,
+        return salt.utils.raetevent.RAETEvent(node,
                                               sock_dir=sock_dir,
                                               listen=listen,
                                               opts=opts)
+
+
+def get_runner_event(opts, jid):
+    '''
+    Return an event object suitable for the named transport
+    '''
+    if opts['transport'] == 'zeromq':
+        return RunnerEvent(opts, jid)
+    elif opts['transport'] == 'raet':
+        import salt.utils.raetevent
+        return salt.utils.raetevent.RunnerEvent(opts, jid)
 
 
 def tagify(suffix='', prefix='', base=SALT):
@@ -250,11 +262,7 @@ class SaltEvent(object):
         if serial is None:
             serial = salt.payload.Serial({'serial': 'msgpack'})
 
-        if ord(raw[20]) >= 0x80:  # old style
-            mtag = raw[0:20].rstrip('|')
-            mdata = raw[20:]
-        else:  # new style
-            mtag, sep, mdata = raw.partition(TAGEND)  # split tag from data
+        mtag, sep, mdata = raw.partition(TAGEND)  # split tag from data
 
         data = serial.loads(mdata)
         return mtag, data
@@ -379,8 +387,6 @@ class SaltEvent(object):
         Send a single event into the publisher with payload dict "data" and event
         identifier "tag"
 
-        Supports new style long tags.
-        The 0MQ push timeout on the send is set to timeout in milliseconds
         The default is 1000 ms
         Note the linger timeout must be at least as long as this timeout
         '''
@@ -395,11 +401,7 @@ class SaltEvent(object):
 
         data['_stamp'] = datetime.datetime.now().isoformat()
 
-        tagend = ''
-        if len(tag) <= 20:  # old style compatible tag
-            tag = '{0:|<20}'.format(tag)  # pad with pipes '|' to 20 character length
-        else:  # new style longer than 20 chars
-            tagend = TAGEND
+        tagend = TAGEND
         serialized_data = salt.utils.trim_dict(self.serial.dumps(data),
                 self.opts.get('max_event_size', 1048576),
                 is_msgpacked=True
@@ -500,6 +502,22 @@ class LocalClientEvent(MasterEvent):
     '''
 
 
+class RunnerEvent(MasterEvent):
+    '''
+    This is used to send progress and return events from runners.
+    It extends MasterEvent to include information about how to
+    display events to the user as a runner progresses.
+    '''
+    def __init__(self, opts, jid):
+        super(RunnerEvent, self).__init__(opts['sock_dir'])
+        self.jid = jid
+
+    def fire_progress(self, data, outputter='pprint'):
+        progress_event = {'data': data,
+                          'outputter': outputter}
+        self.fire_event(progress_event, tagify([self.jid, 'progress'], 'runner'))
+
+
 class MinionEvent(SaltEvent):
     '''
     Create a master event management object
@@ -508,7 +526,7 @@ class MinionEvent(SaltEvent):
         super(MinionEvent, self).__init__('minion', sock_dir=opts.get('sock_dir', None), opts=opts)
 
 
-class EventPublisher(Process):
+class EventPublisher(multiprocessing.Process):
     '''
     The interface that takes master events and republishes them out to anyone
     who wants to listen
@@ -539,7 +557,7 @@ class EventPublisher(Process):
         salt.utils.check_ipc_path_max_len(epull_uri)
 
         # Start the master event publisher
-        old_umask = os.umask(0177)
+        old_umask = os.umask(0o177)
         try:
             self.epull_sock.bind(epull_uri)
             self.epub_sock.bind(epub_uri)
@@ -547,7 +565,7 @@ class EventPublisher(Process):
                 os.chmod(
                         os.path.join(self.opts['sock_dir'],
                             'master_event_pub.ipc'),
-                        0666
+                        0o666
                         )
         finally:
             os.umask(old_umask)
@@ -639,7 +657,7 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
                 continue
             if len(ropt) != 1:
                 continue
-            key = ropt.keys()[0]
+            key = next(iter(ropt.keys()))
             val = ropt[key]
             if fnmatch.fnmatch(tag, key):
                 if isinstance(val, string_types):
@@ -677,7 +695,9 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         '''
         salt.utils.appendproctitle(self.__class__.__name__)
         self.event = SaltEvent('master', self.opts['sock_dir'])
-        for data in self.event.iter_events(full=True):
+        events = self.event.iter_events(full=True)
+        self.event.fire_event({}, 'salt/reactor/start')
+        for data in events:
             reactors = self.list_reactors(data['tag'])
             if not reactors:
                 continue
@@ -704,8 +724,8 @@ class ReactWrap(object):
         LowData
         '''
         l_fun = getattr(self, low['state'])
-        f_call = salt.utils.format_call(l_fun, low)
         try:
+            f_call = salt.utils.format_call(l_fun, low)
             ret = l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
         except Exception:
             log.error(

@@ -7,18 +7,20 @@ Control Linux Containers via Salt
 
 # Import python libs
 from __future__ import print_function
+from __future__ import absolute_import
 import time
 import os
 import copy
 import logging
+from salt.ext.six import string_types
 
 # Import Salt libs
 from salt.utils.odict import OrderedDict
 import salt.client
-import salt.output
 import salt.utils.virt
 import salt.utils.cloud
 import salt.key
+import salt.ext.six as six
 
 
 log = logging.getLogger(__name__)
@@ -84,15 +86,14 @@ def find_guest(name, quiet=False):
 
         salt-run lxc.find_guest name
     '''
+    if quiet:
+        log.warn('\'quiet\' argument is being deprecated. Please migrate to --quiet')
     for data in _list_iter():
         host, l = data.items()[0]
         for x in 'running', 'frozen', 'stopped':
             if name in l[x]:
                 if not quiet:
-                    salt.output.display_output(
-                            host,
-                            'lxc_find_host',
-                            __opts__)
+                    __progress__(host, outputter='lxc_find_host')
                 return host
     return None
 
@@ -163,7 +164,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
         A LXC profile (defined in config or pillar).
 
     nic_opts
-        Extra options for network interfaces. E.g:
+        Extra options for network interfaces. E.g.:
 
         ``{"eth0": {"mac": "aa:bb:cc:dd:ee:ff", "ipv4": "10.1.1.1", "ipv6": "2001:db8::ff00:42:8329"}}``
 
@@ -181,13 +182,15 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
         Optional config parameters. By default, the id is set to
         the name of the container.
     '''
+    if quiet:
+        log.warn('\'quiet\' argument is being deprecated. Please migrate to --quiet')
     ret = {'comment': '', 'result': True}
     if host is None:
         # TODO: Support selection of host based on available memory/cpu/etc.
         ret['comment'] = 'A host must be provided'
         ret['result'] = False
         return ret
-    if isinstance(names, basestring):
+    if isinstance(names, string_types):
         names = names.split(',')
     if not isinstance(names, list):
         ret['comment'] = 'Container names are not formed as a list'
@@ -329,7 +332,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
     if not done:
         ret['result'] = False
     if not quiet:
-        salt.output.display_output(ret, '', __opts__)
+        __progress__(ret)
     return ret
 
 
@@ -347,6 +350,8 @@ def cloud_init(names, host=None, quiet=False, **kwargs):
     saltcloud_mode
         init the container with the saltcloud opts format instead
     '''
+    if quiet:
+        log.warn('\'quiet\' argument is being deprecated. Please migrate to --quiet')
     return __salt__['lxc.init'](names=names, host=host,
                                 saltcloud_mode=True, quiet=quiet, **kwargs)
 
@@ -363,7 +368,7 @@ def _list_iter(host=None):
         if not isinstance(container_info, dict):
             continue
         chunk = {}
-        id_ = container_info.keys()[0]
+        id_ = next(six.iterkeys(container_info))
         if host and host != id_:
             continue
         if not isinstance(container_info[id_], dict):
@@ -390,7 +395,7 @@ def list_(host=None, quiet=False):
     for chunk in it:
         ret.update(chunk)
         if not quiet:
-            salt.output.display_output(chunk, 'lxc_list', __opts__)
+            __progress__(chunk, outputter='lxc_list')
     return ret
 
 
@@ -415,7 +420,7 @@ def purge(name, delete_key=True, quiet=False):
         return
 
     if not quiet:
-        salt.output.display_output(data, 'lxc_purge', __opts__)
+        __progress__(data, outputter='lxc_purge')
     return data
 
 
@@ -429,7 +434,7 @@ def start(name, quiet=False):
     '''
     data = _do_names(name, 'start')
     if data and not quiet:
-        salt.output.display_output(data, 'lxc_start', __opts__)
+        __progress__(data, outputter='lxc_start')
     return data
 
 
@@ -443,7 +448,7 @@ def stop(name, quiet=False):
     '''
     data = _do_names(name, 'stop')
     if data and not quiet:
-        salt.output.display_output(data, 'lxc_force_off', __opts__)
+        __progress__(data, outputter='lxc_force_off')
     return data
 
 
@@ -457,7 +462,7 @@ def freeze(name, quiet=False):
     '''
     data = _do_names(name, 'freeze')
     if data and not quiet:
-        salt.output.display_output(data, 'lxc_pause', __opts__)
+        __progress__(data, outputter='lxc_pause')
     return data
 
 
@@ -471,7 +476,7 @@ def unfreeze(name, quiet=False):
     '''
     data = _do_names(name, 'unfreeze')
     if data and not quiet:
-        salt.output.display_output(data, 'lxc_resume', __opts__)
+        __progress__(data, outputter='lxc_resume')
     return data
 
 
@@ -485,5 +490,5 @@ def info(name, quiet=False):
     '''
     data = _do_names(name, 'info')
     if data and not quiet:
-        salt.output.display_output(data, 'lxc_info', __opts__)
+        __progress__(data, outputter='lxc_info')
     return data

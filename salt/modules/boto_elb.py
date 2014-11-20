@@ -33,10 +33,12 @@ Connection module for Amazon ELB
 
 :depends: boto
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import logging
 import json
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -50,7 +52,7 @@ try:
 except ImportError:
     HAS_BOTO = False
 
-from salt._compat import string_types
+from salt.ext.six import string_types
 import salt.utils.odict as odict
 
 
@@ -356,7 +358,7 @@ def detach_subnets(name, subnets, region=None, key=None, keyid=None,
         subnets = json.loads(subnets)
     try:
         conn.detach_lb_from_subnets(name, subnets)
-        msg = 'Detatched ELB {0} from subnets.'.format(name)
+        msg = 'Detached ELB {0} from subnets.'.format(name)
         log.info(msg)
         return True
     except boto.exception.BotoServerError as e:
@@ -513,7 +515,7 @@ def register_instances(name, instances, region=None, key=None, keyid=None,
     '''
     # convert instances to list type, enabling consistent use of instances
     # variable throughout the register_instances method
-    if isinstance(instances, str) or isinstance(instances, unicode):
+    if isinstance(instances, str) or isinstance(instances, six.text_type):
         instances = [instances]
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
@@ -556,7 +558,7 @@ def deregister_instances(name, instances, region=None, key=None, keyid=None,
     '''
     # convert instances to list type, enabling consistent use of instances
     # variable throughout the deregister_instances method
-    if isinstance(instances, str) or isinstance(instances, unicode):
+    if isinstance(instances, str) or isinstance(instances, six.text_type):
         instances = [instances]
     conn = _get_conn(region, key, keyid, profile)
     if not conn:

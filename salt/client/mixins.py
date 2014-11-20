@@ -3,6 +3,7 @@
 A collection of mixins useful for the various *Client interfaces
 '''
 from __future__ import print_function
+from __future__ import absolute_import
 import datetime
 import logging
 import multiprocessing
@@ -25,6 +26,9 @@ class SyncClientMixin(object):
         '''
         Check that the function passed really exists
         '''
+        if not fun:
+            err = 'Must specify a function to run'
+            raise salt.exceptions.CommandExecutionError(err)
         if fun not in self.functions:
             err = 'Function {0!r} is unavailable'.format(fun)
             raise salt.exceptions.CommandExecutionError(err)

@@ -6,13 +6,17 @@ minion modules.
 
 # Import python libs
 from __future__ import print_function
+from __future__ import absolute_import
 import os
 import sys
 import logging
 import datetime
 import traceback
+import multiprocessing
+import time
 
 # Import salt libs
+import salt
 import salt.exitcodes
 import salt.loader
 import salt.minion
@@ -20,18 +24,17 @@ import salt.output
 import salt.payload
 import salt.transport
 import salt.utils.args
-from salt._compat import string_types
+from salt.ext.six import string_types
 from salt.log import LOG_LEVELS
 from salt.utils import print_cli
-
-from salt import daemons
+from salt.utils import kinds
 
 log = logging.getLogger(__name__)
 
 try:
     from raet import raeting, nacling
     from raet.lane.stacking import LaneStack
-    from raet.lane.yarding import RemoteYard
+    from raet.lane.yarding import RemoteYard, Yard
 
 except ImportError:
     # Don't die on missing transport libs since only one transport is required
@@ -94,7 +97,6 @@ class ZeroMQCaller(object):
         '''
         Call the module
         '''
-        # raet channel here
         ret = {}
         fun = self.opts['fun']
         ret['jid'] = '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
@@ -250,18 +252,49 @@ class RAETCaller(ZeroMQCaller):
     '''
     Object to wrap the calling of local salt modules for the salt-call command
     when transport is raet
+
+    There are two operation modes.
+    1) Use a preexisting minion
+    2) Set up a special caller minion if no preexisting minion
+        The special caller minion is a subset whose only function is to perform
+        Salt-calls with raet as the transport
+        The essentials:
+            A RoadStack whose local estate name is of the form "role_kind" where:
+               role is the minion id opts['id']
+               kind is opts['__role'] which should be 'caller' APPL_KIND_NAMES
+               The RoadStack if for communication to/from a master
+
+            A LaneStack with manor yard so that RaetChannels created by the func Jobbers
+            can communicate through this manor yard then through the
+            RoadStack to/from a master
+
+            A Router to route between the stacks (Road and Lane)
+
+            These are all managed via a FloScript named caller.flo
+
     '''
     def __init__(self, opts):
         '''
         Pass in the command line options
         '''
-        stack, estatename, yardname = self._setup_caller_stack(opts)
-        self.stack = stack
+        self.stack = self._setup_caller_stack(opts)
         salt.transport.jobber_stack = self.stack
-        #salt.transport.jobber_estate_name = estatename
-        #salt.transport.jobber_yard_name = yardname
+
+        self.process = None
+        if (opts.get('__role') ==
+                kinds.APPL_KIND_NAMES[kinds.applKinds.caller]):
+            # spin up and fork minion here
+            self.process = multiprocessing.Process(target=self.minion_run,
+                                kwargs={'cleanup_protecteds': [self.stack.ha], })
+            self.process.start()
+            # wait here until '/var/run/salt/minion/alpha_caller.manor.uxd' exists
+            self._wait_caller(opts)
 
         super(RAETCaller, self).__init__(opts)
+
+    def minion_run(self, cleanup_protecteds):
+        minion = salt.Minion()  # daemonizes here
+        minion.call(cleanup_protecteds=cleanup_protecteds)  # caller minion.call_in uses caller.flo
 
     def run(self):
         '''
@@ -276,12 +309,15 @@ class RAETCaller(ZeroMQCaller):
                 print_ret = ret
             else:
                 print_ret = ret.get('return', {})
+            if self.process:
+                self.process.terminate()
             salt.output.display_output(
                     {'local': print_ret},
                     ret.get('out', 'nested'),
                     self.opts)
             if self.opts.get('retcode_passthrough', False):
                 sys.exit(ret['retcode'])
+
         except SaltInvocationError as err:
             raise SystemExit(err)
 
@@ -298,11 +334,12 @@ class RAETCaller(ZeroMQCaller):
             raise ValueError(emsg)
 
         kind = opts.get('__role')  # application kind 'master', 'minion', etc
-        if kind not in daemons.APPL_KINDS:
+        if kind not in kinds.APPL_KINDS:
             emsg = ("Invalid application kind = '{0}' for RAETChannel.".format(kind))
             log.error(emsg + "\n")
             raise ValueError(emsg)
-        if kind == 'minion':
+        if kind in [kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
+                    kinds.APPL_KIND_NAMES[kinds.applKinds.caller], ]:
             lanename = "{0}_{1}".format(role, kind)
         else:
             emsg = ("Unsupported application kind '{0}' for RAETChannel.".format(kind))
@@ -322,10 +359,39 @@ class RAETCaller(ZeroMQCaller):
                                    dirpath=sockdirpath))
         log.debug("Created Caller Jobber Stack {0}\n".format(stack.name))
 
-        # name of Road Estate for this caller
-        estatename = "{0}_{1}".format(role, kind)
-        # name of Yard for this caller
-        yardname = stack.local.name
+        return stack
 
-        # return identifiers needed to route back to this callers master
-        return (stack, estatename, yardname)
+    def _wait_caller(self, opts):
+        '''
+        Returns when RAET Minion Yard is available
+        '''
+        yardname = 'manor'
+        dirpath = opts['sock_dir']
+
+        role = opts.get('id')
+        if not role:
+            emsg = ("Missing role required to setup RAET SaltCaller.")
+            log.error(emsg + "\n")
+            raise ValueError(emsg)
+
+        kind = opts.get('__role')  # application kind 'master', 'minion', etc
+        if kind not in kinds.APPL_KINDS:
+            emsg = ("Invalid application kind = '{0}' for RAET SaltCaller.".format(kind))
+            log.error(emsg + "\n")
+            raise ValueError(emsg)
+
+        if kind in [kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
+                    kinds.APPL_KIND_NAMES[kinds.applKinds.caller], ]:
+            lanename = "{0}_{1}".format(role, kind)
+        else:
+            emsg = ("Unsupported application kind '{0}' for RAET SaltCaller.".format(kind))
+            log.error(emsg + '\n')
+            raise ValueError(emsg)
+
+        ha, dirpath = Yard.computeHa(dirpath, lanename, yardname)
+
+        while not ((os.path.exists(ha) and
+                    not os.path.isfile(ha) and
+                    not os.path.isdir(ha))):
+            time.sleep(0.1)
+        time.sleep(0.5)

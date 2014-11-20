@@ -12,11 +12,12 @@ import logging
 import random
 import string
 import time
+from salt.ext.six.moves import range
 
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt._compat import string_types
+from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 
@@ -55,7 +56,7 @@ def _dscl(cmd, ctype='create'):
 
 def _first_avail_uid():
     uids = set(x.pw_uid for x in pwd.getpwall())
-    for idx in xrange(501, 2 ** 32):
+    for idx in range(501, 2 ** 32):
         if idx not in uids:
             return idx
 
@@ -110,7 +111,7 @@ def add(name,
     # Set random password, since without a password the account will not be
     # available. TODO: add shadow module
     randpass = ''.join(
-        random.SystemRandom().choice(string.letters + string.digits) for x in xrange(20)
+        random.SystemRandom().choice(string.letters + string.digits) for x in range(20)
     )
     _dscl('/Users/{0} {1!r}'.format(name, randpass), ctype='passwd')
 

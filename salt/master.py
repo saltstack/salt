@@ -4,6 +4,8 @@ This module contains all of the routines needed to set up a master server, this
 involves preparing the three listeners and the workers needed by the master.
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 import os
 import re
@@ -48,6 +50,7 @@ from salt.utils.event import tagify
 import binascii
 from salt.utils.master import ConnectedCache
 from salt.utils.cache import CacheCli
+from salt.ext.six.moves import range
 
 # Import halite libs
 try:
@@ -112,6 +115,8 @@ class Scheduler(multiprocessing.Process):
                 time.sleep(self.schedule.loop_interval)
             except KeyboardInterrupt:
                 break
+            except IOError:
+                time.sleep(self.opts['loop_interval'])
 
     def handle_schedule(self):
         '''
@@ -127,7 +132,7 @@ class Scheduler(multiprocessing.Process):
 
 class Maintenance(multiprocessing.Process):
     '''
-    A generalized maintenence process which performances maintenence
+    A generalized maintenance process which performances maintenance
     routines.
     '''
     def __init__(self, opts):
@@ -138,20 +143,36 @@ class Maintenance(multiprocessing.Process):
         '''
         super(Maintenance, self).__init__()
         self.opts = opts
-        # Init fileserver manager
-        self.fileserver = salt.fileserver.Fileserver(self.opts)
-        # Matcher
-        self.ckminions = salt.utils.minions.CkMinions(self.opts)
-        # Make Event bus for firing
-        self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
-        # Init any values needed by the git ext pillar
-        self.pillargitfs = salt.daemons.masterapi.init_git_pillar(self.opts)
-        # Set up search object
-        self.search = salt.search.Search(self.opts)
         # How often do we perform the maintenance tasks
         self.loop_interval = int(self.opts['loop_interval'])
         # Track key rotation intervals
         self.rotate = int(time.time())
+
+    def _post_fork_init(self):
+        '''
+        Some things need to be init'd after the fork has completed
+        The easiest example is that one of these module types creates a thread
+        in the parent process, then once the fork happens you'll start getting
+        errors like "WARNING: Mixing fork() and threads detected; memory leaked."
+        '''
+        # Init fileserver manager
+        self.fileserver = salt.fileserver.Fileserver(self.opts)
+        # Load Runners
+        self.runners = salt.loader.runner(self.opts)
+        # Load Returners
+        self.returners = salt.loader.returners(self.opts, {})
+        # Init Scheduler
+        self.schedule = salt.utils.schedule.Schedule(self.opts,
+                                                     self.runners,
+                                                     returners=self.returners)
+        self.ckminions = salt.utils.minions.CkMinions(self.opts)
+        # Make Event bus for firing
+        self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
+
+        # Init any values needed by the git ext pillar
+        self.pillargitfs = salt.daemons.masterapi.init_git_pillar(self.opts)
+        # Set up search object
+        self.search = salt.search.Search(self.opts)
 
     def run(self):
         '''
@@ -162,6 +183,9 @@ class Maintenance(multiprocessing.Process):
         master is maintained.
         '''
         salt.utils.appendproctitle('Maintenance')
+
+        # init things that need to be done after the process is forked
+        self._post_fork_init()
 
         # Make Start Times
         last = int(time.time())
@@ -176,6 +200,7 @@ class Maintenance(multiprocessing.Process):
                 salt.daemons.masterapi.clean_expired_tokens(self.opts)
             self.handle_search(now, last)
             self.handle_pillargit()
+            self.handle_schedule()
             self.handle_presence(old_present)
             self.handle_key_rotate(now)
             salt.daemons.masterapi.fileserver_update(self.fileserver)
@@ -221,6 +246,21 @@ class Maintenance(multiprocessing.Process):
         except Exception as exc:
             log.error('Exception {0} occurred in file server update '
                       'for git_pillar module.'.format(exc))
+
+    def handle_schedule(self):
+        '''
+        Evaluate the scheduler
+        '''
+        try:
+            self.schedule.eval()
+            # Check if scheduler requires lower loop interval than
+            # the loop_interval setting
+            if self.schedule.loop_interval < self.loop_interval:
+                self.loop_interval = self.schedule.loop_interval
+        except Exception as exc:
+            log.error(
+                'Exception {0} occurred in scheduled job'.format(exc)
+            )
 
     def handle_presence(self, old_present):
         '''
@@ -352,8 +392,6 @@ class Master(SMaster):
         process_manager = salt.utils.process.ProcessManager()
         log.info('Creating master maintenance process')
         process_manager.add_process(Maintenance, args=(self.opts,))
-        log.info('Creating master scheduler process')
-        process_manager.add_process(Scheduler, args=(self.opts,))
         log.info('Creating master publisher process')
         process_manager.add_process(Publisher, args=(self.opts,))
         log.info('Creating master event publisher process')
@@ -362,6 +400,19 @@ class Master(SMaster):
         if self.opts.get('reactor'):
             log.info('Creating master reactor process')
             process_manager.add_process(salt.utils.event.Reactor, args=(self.opts,))
+
+        ext_procs = self.opts.get('ext_processes', [])
+        for proc in ext_procs:
+            log.info('Creating ext_processes process: {0}'.format(proc))
+            try:
+                mod = '.'.join(proc.split('.')[:-1])
+                cls = proc.split('.')[-1]
+                _tmp = __import__(mod, globals(), locals(), [cls], -1)
+                cls = _tmp.__getattribute__(cls)
+                process_manager.add_process(cls, args=(self.opts,))
+            except Exception:
+                log.error(('Error creating ext_processes '
+                           'process: {0}').format(proc))
 
         if HAS_HALITE and 'halite' in self.opts:
             log.info('Creating master halite process')
@@ -462,7 +513,7 @@ class Publisher(multiprocessing.Process):
 
         # Securely create socket
         log.info('Starting the Salt Puller on {0}'.format(pull_uri))
-        old_umask = os.umask(0177)
+        old_umask = os.umask(0o177)
         try:
             pull_sock.bind(pull_uri)
         finally:
@@ -754,7 +805,7 @@ class MWorker(multiprocessing.Process):
             stats = os.stat(dfn)
         except os.error:
             return
-        if stats.st_mode != 0100400:
+        if stats.st_mode != 0o100400:
             # Invalid dfn, return
             return
         if stats.st_mtime > self.k_mtime:
@@ -917,7 +968,8 @@ class AESFuncs(object):
             perms,
             clear_load['fun'],
             clear_load['tgt'],
-            clear_load.get('tgt_type', 'glob'))
+            clear_load.get('tgt_type', 'glob'),
+            publish_validate=True)
 
     def __verify_load(self, load, verify_keys):
         '''
@@ -1180,7 +1232,19 @@ class AESFuncs(object):
         load = self.__verify_load(load, ('id', 'tok'))
         if load is False:
             return {}
+        # Route to master event bus
         self.masterapi._minion_event(load)
+        # Process locally
+        self._handle_minion_event(load)
+
+    def _handle_minion_event(self, load):
+        '''
+        Act on specific events from minions
+        '''
+        if load.get('tag', '') == '_salt_error':
+            log.error('Received minion error from [{minion}]: '
+                      '{data}'.format(minion=load['id'],
+                                      data=load['data']['exception']))
 
     def _return(self, load):
         '''
@@ -1209,7 +1273,6 @@ class AESFuncs(object):
             saveload_fstr = '{0}.save_load'.format(self.opts['master_job_cache'])
             self.mminion.returners[saveload_fstr](load['jid'], load)
         log.info('Got return from {id} for job {jid}'.format(**load))
-        self.event.fire_event(load, load['jid'])  # old dup event
         self.event.fire_event(
             load, tagify([load['jid'], 'ret', load['id']], 'job'))
         self.event.fire_ret_load(load)
@@ -2139,7 +2202,7 @@ class ClearFuncs(object):
             try:
                 name = self.loadauth.load_name(extra)  # The username we are attempting to auth with
                 groups = self.loadauth.get_groups(extra)  # The groups this user belongs to
-                group_perm_keys = filter(lambda(item): item.endswith('%'), self.opts['external_auth'][extra['eauth']])  # The configured auth groups
+                group_perm_keys = [item for item in self.opts['external_auth'][extra['eauth']] if item.endswith('%')]  # The configured auth groups
 
                 # First we need to know if the user is allowed to proceed via any of their group memberships.
                 group_auth_match = False
@@ -2205,7 +2268,7 @@ class ClearFuncs(object):
         # Verify that the caller has root on master
         elif 'user' in clear_load:
             if clear_load['user'].startswith('sudo_'):
-                # If someone can sudo, allow them to act as root
+                # If someone sudos check to make sure there is no ACL's around their username
                 if clear_load.get('key', 'invalid') == self.key.get('root'):
                     clear_load.pop('key')
                 elif clear_load.pop('key') != self.key[self.opts.get('user', 'root')]:
@@ -2213,6 +2276,20 @@ class ClearFuncs(object):
                         'Authentication failure of type "user" occurred.'
                     )
                     return ''
+                if self.opts['sudo_acl'] and self.opts['client_acl']:
+                    good = self.ckminions.auth_check(
+                                self.opts['client_acl'].get(clear_load['user'].split('_', 1)[-1]),
+                                clear_load['fun'],
+                                clear_load['tgt'],
+                                clear_load.get('tgt_type', 'glob'))
+                    if not good:
+                        # Accept find_job so the CLI will function cleanly
+                        if clear_load['fun'] != 'saltutil.find_job':
+                            log.warning(
+                                'Authentication failure of type "user" '
+                                'occurred.'
+                            )
+                            return ''
             elif clear_load['user'] == self.opts.get('user', 'root'):
                 if clear_load.pop('key') != self.key[self.opts.get('user', 'root')]:
                     log.warning(
@@ -2312,7 +2389,6 @@ class ClearFuncs(object):
             }
 
         # Announce the job on the event bus
-        self.event.fire_event(new_job_load, 'new_job')  # old dup event
         self.event.fire_event(new_job_load, tagify([clear_load['jid'], 'new'], 'job'))
 
         if self.opts['ext_job_cache']:

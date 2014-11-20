@@ -3,10 +3,13 @@
 Utilities to enable exception reraising across the master commands
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
-import exceptions
-
+try:
+    import exceptions
+except ImportError:
+    pass
 
 # Import salt libs
 import salt.exceptions
@@ -47,4 +50,4 @@ def fire_exception(exc, opts, job=None, node='minion'):
     if job is None:
         job = {}
     event = salt.utils.event.SaltEvent(node, opts=opts)
-    event.fire_event(pack_exception, '_salt_error')
+    event.fire_event(pack_exception(exc), '_salt_error')

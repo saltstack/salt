@@ -9,6 +9,7 @@ The following packages are required packages for this module:
     bluez-utils >= 5.7
     pybluez >= 0.18
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -16,6 +17,10 @@ import logging
 # Import salt libs
 import salt.utils.validate.net
 from salt.exceptions import CommandExecutionError
+try:
+    from shlex import quote as _cmd_quote  # pylint: disable=E0611
+except ImportError:
+    from pipes import quote as _cmd_quote
 
 log = logging.getLogger(__name__)
 HAS_PYBLUEZ = False
@@ -253,10 +258,10 @@ def pair(address, key):
         )
 
     addy = address_()
-    cmd = 'echo "{0}" | bluez-simple-agent {1} {2}'.format(
-        addy['device'], address, key
+    cmd = 'echo {0} | bluez-simple-agent {1} {2}'.format(
+        _cmd_quote(addy['device']), _cmd_quote(address), _cmd_quote(key)
     )
-    out = __salt__['cmd.run'](cmd).splitlines()
+    out = __salt__['cmd.run'](cmd, python_shell=True).splitlines()
     return out
 
 

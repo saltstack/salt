@@ -315,8 +315,7 @@ different from the base must be specified of the alternates:
             'python': 'dev-python/mysql-python',
         },
     },
-    merge=salt['pillar.get']('mysql:lookup'),
-    base=default) %}
+    merge=salt['pillar.get']('mysql:lookup'), base='default') %}
 
 
 Overriding values in the lookup table
@@ -337,6 +336,39 @@ Pillar would replace the ``config`` value from the call above.
     mysql:
       lookup:
         config: /usr/local/etc/mysql/my.cnf
+
+.. note:: Protecting Expansion of Content with Special Characters
+
+  When templating keep in mind that YAML does have special characters for
+  quoting, flows and other special structure and content.  When a Jinja
+  substitution may have special characters that will be incorrectly parsed by
+  YAML care must be taken.  It is a good policy to use the ``yaml_encode`` or
+  the ``yaml_dquote`` Jinja filters:
+
+  .. code-block:: jinja
+
+      {%- set foo = 7.7 %}
+      {%- set bar = none %}
+      {%- set baz = true %}
+      {%- set zap = 'The word of the day is "salty".' %}
+      {%- set zip = '"The quick brown fox . . ."' %}
+
+      foo: {{ foo|yaml_encode }}
+      bar: {{ bar|yaml_encode }}
+      baz: {{ baz|yaml_encode }}
+      zap: {{ zap|yaml_encode }}
+      zip: {{ zip|yaml_dquote }}
+
+  The above will be rendered as below:
+
+  .. code-block:: yaml
+
+      foo: 7.7
+      bar: null
+      baz: true
+      zap: "The word of the day is \"salty\"."
+      zip: "\"The quick brown fox . . .\""
+
 
 Single-purpose SLS files
 ------------------------

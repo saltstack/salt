@@ -2,6 +2,7 @@
 '''
 The sys module provides information about the available functions on the minion
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import fnmatch
@@ -235,7 +236,7 @@ def returner_doc(*args):
     returners_ = salt.loader.returners(__opts__, [])
     docs = {}
     if not args:
-        for fun in returners_.keys():
+        for fun in returners_:
             docs[fun] = returners_[fun].__doc__
         return _strip_rst(docs)
 
@@ -251,8 +252,9 @@ def returner_doc(*args):
         else:
             target_mod = ''
         if _use_fnmatch:
-            for fun in fnmatch.filter(returners_.keys(), target_mod):
-                docs[fun] = returners_[fun].__doc__
+            for fun in returners_:
+                if fun == module or fun.startswith(target_mod):
+                    docs[fun] = returners_[fun].__doc__
         else:
             for fun in returners_.keys():
                 if fun == module or fun.startswith(target_mod):
@@ -296,7 +298,7 @@ def renderer_doc(*args):
 
     for module in args:
         if '*' in module:
-            for fun in fnmatch.filter(renderers_.keys(), module):
+            for fun in fnmatch.filter(list(renderers_.keys()), module):
                 docs[fun] = renderers_[fun].__doc__
         else:
             for fun in renderers_.keys():
@@ -747,7 +749,7 @@ def list_returner_functions(*args, **kwargs):
     returners_ = salt.loader.returners(__opts__, [])
     if not args:
         # We're being asked for all functions
-        return sorted(returners_.keys())
+        return sorted(returners_)
 
     names = set()
     for module in args:
@@ -760,8 +762,9 @@ def list_returner_functions(*args, **kwargs):
             # sysctl
             module = module + '.' if not module.endswith('.') else module
         if _use_fnmatch:
-            for func in fnmatch.filter(returners_.keys(), target_mod):
-                names.add(func)
+            for func in returners_:
+                if func.startswith(module):
+                    names.add(func)
         else:
             for func in returners_.keys():
                 if func.startswith(module):

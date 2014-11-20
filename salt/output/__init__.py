@@ -6,16 +6,19 @@ for managing outputters.
 
 # Import python libs
 from __future__ import print_function
+from __future__ import absolute_import
 import os
 import sys
 import errno
 import logging
 import traceback
+from salt.ext.six import string_types
 
 # Import salt libs
 import salt.loader
 import salt.utils
 from salt.utils import print_cli
+import salt.ext.six as six
 
 # Are you really sure !!!
 # dealing with unicode is not as simple as setting defaultencoding
@@ -54,7 +57,7 @@ def display_output(data, out=None, opts=None):
         if output_filename:
             with salt.utils.fopen(output_filename, 'a') as ofh:
                 fdata = display_data
-                if isinstance(fdata, unicode):
+                if isinstance(fdata, six.text_type):
                     try:
                         fdata = fdata.encode('utf-8')
                     except (UnicodeDecodeError, UnicodeEncodeError):
@@ -126,7 +129,7 @@ def strip_esc_sequence(txt):
     Replace ESC (ASCII 27/Oct 33) to prevent unsafe strings
     from writing their own terminal manipulation commands
     '''
-    if isinstance(txt, basestring):
+    if isinstance(txt, six.string_types):
         return txt.replace('\033', '?')
     else:
         return txt

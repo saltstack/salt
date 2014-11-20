@@ -3,6 +3,7 @@
 A module written originally by Armin Ronacher to manage file transfers in an
 atomic way
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -11,6 +12,7 @@ import sys
 import errno
 import time
 import random
+import salt.ext.six as six
 
 
 CAN_RENAME_OPEN_FILE = False
@@ -26,10 +28,10 @@ if os.name == 'nt':  # pragma: no cover
         _MoveFileEx = ctypes.windll.kernel32.MoveFileExW  # pylint: disable=C0103
 
         def _rename(src, dst):  # pylint: disable=E0102
-            if not isinstance(src, unicode):
-                src = unicode(src, sys.getfilesystemencoding())
-            if not isinstance(dst, unicode):
-                dst = unicode(dst, sys.getfilesystemencoding())
+            if not isinstance(src, six.text_type):
+                src = six.text_type(src, sys.getfilesystemencoding())
+            if not isinstance(dst, six.text_type):
+                dst = six.text_type(dst, sys.getfilesystemencoding())
             if _rename_atomic(src, dst):
                 return True
             retry = 0

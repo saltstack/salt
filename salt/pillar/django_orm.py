@@ -89,12 +89,14 @@ work since the return from values() changes if a ManyToMany is present.
 Module Documentation
 ====================
 '''
+from __future__ import absolute_import
 
 import logging
 import os
 import sys
 
 import salt.exceptions
+import salt.ext.six as six
 
 HAS_VIRTUALENV = False
 
@@ -195,10 +197,10 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
 
         django_pillar = {}
 
-        for proj_app, models in django_app.iteritems():
+        for proj_app, models in six.iteritems(django_app):
             _, _, app = proj_app.rpartition('.')
             django_pillar[app] = {}
-            for model_name, model_meta in models.iteritems():
+            for model_name, model_meta in six.iteritems(models):
                 model_orm = get_model(app, model_name)
                 if model_orm is None:
                     raise salt.exceptions.SaltException(
@@ -210,7 +212,7 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
                 name_field = model_meta['name']
                 fields = model_meta['fields']
 
-                if 'filter' in model_meta.keys():
+                if 'filter' in model_meta:
                     qs = (model_orm.objects
                         .filter(**model_meta['filter'])
                         .values(*fields))

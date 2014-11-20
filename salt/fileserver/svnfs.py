@@ -22,6 +22,7 @@ This backend assumes a standard svn layout with directories for ``branches``,
     per-remote configuration parameters was added. See the
     :conf_master:`documentation <svnfs_remotes>` for more information.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import copy
@@ -30,7 +31,7 @@ import logging
 import os
 import shutil
 from datetime import datetime
-from salt._compat import text_type as _text_type
+from salt.ext.six import text_type as _text_type
 
 PER_REMOTE_PARAMS = ('mountpoint', 'root', 'trunk', 'branches', 'tags')
 
@@ -46,7 +47,7 @@ except ImportError:
 # Import salt libs
 import salt.utils
 import salt.fileserver
-from salt._compat import string_types
+from salt.ext.six import string_types
 from salt.utils.event import tagify
 
 log = logging.getLogger(__name__)

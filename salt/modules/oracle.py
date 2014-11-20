@@ -27,10 +27,12 @@ Oracle DataBase connection module
         oracle.dbs.<db>.uri: connection credentials in format:
             user/password@host[:port]/sid[ as {sysdba|sysoper}]
 '''
+from __future__ import absolute_import
 
 import os
 import logging
 from salt.utils.decorators import depends
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -70,7 +72,7 @@ def _unicode_output(cursor, name, default_type, size, precision, scale):
     '''
     if default_type in (cx_Oracle.STRING, cx_Oracle.LONG_STRING,
                         cx_Oracle.FIXED_CHAR, cx_Oracle.CLOB):
-        return cursor.var(unicode, size, cursor.arraysize)
+        return cursor.var(six.text_type, size, cursor.arraysize)
 
 
 def _connect(uri):

@@ -19,6 +19,16 @@ major updates in Salt Cloud and the merging of Salt API into the main project.
     When the **salt-master** package is upgraded, these components will be
     removed, and they will need to be manually installed.
 
+.. important::
+
+    Compound/pillar matching have been temporarily disabled for the ``mine``
+    and ``publish`` modules for this release due to the possibility of
+    inferring pillar data using pillar glob matching. A proper fix is now in
+    the 2014.7 branch and scheduled for the  2014.7.1 release, and compound
+    matching and non-globbing pillar matching will be re-enabled at that point.
+
+    Compound and pillar matching for normal salt commands are unaffected.
+
 
 New Transport!
 ==============
@@ -337,7 +347,7 @@ request. As an example, Amazon or GitHub requests are signed this way.
 Generating and Accepting Minion Keys
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The :py:method:`/key <salt.netapi.rest_cherrypy.app.Keys.POST>` convenience URL
+The :py:func:`/key <salt.netapi.rest_cherrypy.app.Keys.POST>` convenience URL
 generates a public and private key for a minion, automatically pre-accepts the
 public key on the Salt Master, and returns both keys as a tarball for download.
 

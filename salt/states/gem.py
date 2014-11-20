@@ -14,6 +14,10 @@ you can specify what ruby version and gemset to target.
         - user: rvm
         - ruby: jruby@jgemset
 '''
+from __future__ import absolute_import
+
+import logging
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -25,6 +29,7 @@ def __virtual__():
 
 def installed(name,          # pylint: disable=C0103
               ruby=None,
+              gem_bin=None,
               user=None,
               version=None,
               rdoc=False,
@@ -38,7 +43,13 @@ def installed(name,          # pylint: disable=C0103
         The name of the gem to install
 
     ruby: None
-        For RVM or rbenv installations: the ruby version and gemset to target.
+        Only for RVM or rbenv installations: the ruby version and gemset to
+        target.
+
+    gem_bin: None
+        Custom ``gem`` command to run instead of the default.
+        Use this to install gems to a non-default ruby install. If you are
+        using rvm or rbenv use the ruby argument instead.
 
     user: None
         The user under which to run the ``gem`` command
@@ -63,7 +74,11 @@ def installed(name,          # pylint: disable=C0103
         Format: http://hostname[:port]
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
-    gems = __salt__['gem.list'](name, ruby, runas=user)
+    if ruby is not None and (__salt__['rvm.is_installed'](runas=user) or __salt__['rbenv.is_installed'](runas=user)):
+        log.warning(
+            'Use of argument ruby found, but neither rvm or rbenv is installed'
+        )
+    gems = __salt__['gem.list'](name, ruby, gem_bin=gem_bin, runas=user)
     if name in gems and version is not None and version in gems[name]:
         ret['result'] = True
         ret['comment'] = 'Gem is already installed.'
@@ -78,6 +93,7 @@ def installed(name,          # pylint: disable=C0103
         return ret
     if __salt__['gem.install'](name,
                                ruby=ruby,
+                               gem_bin=gem_bin,
                                runas=user,
                                version=version,
                                rdoc=rdoc,
@@ -94,15 +110,19 @@ def installed(name,          # pylint: disable=C0103
     return ret
 
 
-def removed(name, ruby=None, user=None):
+def removed(name, ruby=None, user=None, gem_bin=None):
     '''
     Make sure that a gem is not installed.
 
     name
         The name of the gem to uninstall
 
-    ruby: None
-        For RVM or rbenv installations: the ruby version and gemset to target.
+    gem_bin : None
+        Full path to ``gem`` binary to use.
+
+    ruby : None
+        If RVM or rbenv are installed, the ruby version and gemset to use.
+        Ignored if ``gem_bin`` is specified.
 
     user: None
         The user under which to run the ``gem`` command
@@ -111,7 +131,7 @@ def removed(name, ruby=None, user=None):
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
-    if name not in __salt__['gem.list'](name, ruby, runas=user):
+    if name not in __salt__['gem.list'](name, ruby, gem_bin=gem_bin, runas=user):
         ret['result'] = True
         ret['comment'] = 'Gem is not installed.'
         return ret
@@ -119,7 +139,7 @@ def removed(name, ruby=None, user=None):
     if __opts__['test']:
         ret['comment'] = 'The gem {0} would have been removed'.format(name)
         return ret
-    if __salt__['gem.uninstall'](name, ruby, runas=user):
+    if __salt__['gem.uninstall'](name, ruby, gem_bin=gem_bin, runas=user):
         ret['result'] = True
         ret['changes'][name] = 'Removed'
         ret['comment'] = 'Gem was successfully removed.'

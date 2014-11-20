@@ -1,16 +1,24 @@
 # -*- coding: utf-8 -*-
 '''
 Package support for openSUSE via the zypper package manager
+
+:depends: - ``zypp`` Python module.  Install with ``zypper install python-zypp``
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import copy
 import logging
 import re
 import os
-import ConfigParser
+import salt.ext.six as six
+import salt.ext.six.moves.configparser  # pylint: disable=E0611
 import urlparse
 from xml.dom import minidom as dom
+try:
+    from shlex import quote as _cmd_quote  # pylint: disable=E0611
+except ImportError:
+    from pipes import quote as _cmd_quote
 
 # Import salt libs
 import salt.utils
@@ -120,7 +128,11 @@ def latest_version(*names, **kwargs):
     # Split call to zypper into batches of 500 packages
     while restpackages:
         cmd = 'zypper info -t package {0}'.format(' '.join(restpackages[:500]))
-        output = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
+        output = __salt__['cmd.run_stdout'](
+                cmd,
+                output_loglevel='trace',
+                python_shell=True
+                )
         outputs.extend(re.split('Information for package \\S+:\n', output))
         restpackages = restpackages[500:]
     for package in outputs:
@@ -136,7 +148,7 @@ def latest_version(*names, **kwargs):
                 pkginfo[key] = val
 
         # Ignore if the needed keys weren't found in this iteration
-        if not set(('name', 'version', 'status')) <= set(pkginfo.keys()):
+        if not set(('name', 'version', 'status')) <= set(pkginfo):
             continue
 
         status = pkginfo['status'].lower()
@@ -207,9 +219,14 @@ def list_pkgs(versions_as_list=False, **kwargs):
             __salt__['pkg_resource.stringify'](ret)
             return ret
 
-    cmd = 'rpm -qa --queryformat "%{NAME}_|-%{VERSION}_|-%{RELEASE}\\n"'
+    pkg_fmt = '%{NAME}_|-%{VERSION}_|-%{RELEASE}\\n'
+    cmd = 'rpm -qa --queryformat {0}'.format(_cmd_quote(pkg_fmt))
     ret = {}
-    out = __salt__['cmd.run'](cmd, output_loglevel='trace')
+    out = __salt__['cmd.run'](
+            cmd,
+            output_loglevel='trace',
+            python_shell=True
+            )
     for line in out.splitlines():
         name, pkgver, rel = line.split('_|-')
         if rel:
@@ -228,7 +245,7 @@ def _get_configured_repos():
     Get all the info about repositories from the configurations.
     '''
 
-    repos_cfg = ConfigParser.ConfigParser()
+    repos_cfg = salt.ext.six.moves.configparser.ConfigParser()
     repos_cfg.read([REPOS + "/" + fname for fname in os.listdir(REPOS)])
 
     return repos_cfg
@@ -251,7 +268,7 @@ def _get_repo_info(alias, repos_cfg=None):
         return {}
 
 
-def get_repo(repo):
+def get_repo(repo, **kwargs):
     '''
     Display a repo.
 
@@ -364,7 +381,7 @@ def mod_repo(repo, **kwargs):
             # Complete user URL, in case it is not
             new_url = urlparse.urlparse(url)
             if not new_url.path:
-                new_url = urlparse.ParseResult(scheme=new_url.scheme,
+                new_url = urlparse.ParseResult(scheme=new_url.scheme,  # pylint: disable=E1123
                                                netloc=new_url.netloc,
                                                path='/',
                                                params=new_url.params,
@@ -561,7 +578,7 @@ def install(name=None,
     if pkg_type == 'repository':
         targets = []
         problems = []
-        for param, version_num in pkg_params.iteritems():
+        for param, version_num in six.iteritems(pkg_params):
             if version_num is None:
                 targets.append(param)
             else:
@@ -597,13 +614,18 @@ def install(name=None,
     while targets:
         # Quotes needed around package targets because of the possibility of
         # output redirection characters "<" or ">" in zypper command.
+        quoted_targets = [_cmd_quote(target) for target in targets[:500]]
         cmd = (
-            'zypper --non-interactive install --name '
-            '--auto-agree-with-licenses {0}"{1}"'
-            .format(fromrepoopt, '" "'.join(targets[:500]))
-        )
+                'zypper --non-interactive install --name '
+                '--auto-agree-with-licenses {0}{1}'
+                .format(fromrepoopt, ' '.join(quoted_targets))
+                )
         targets = targets[500:]
-        out = __salt__['cmd.run'](cmd, output_loglevel='trace')
+        out = __salt__['cmd.run'](
+                cmd,
+                output_loglevel='trace',
+                python_shell=True
+                )
         for line in out.splitlines():
             match = re.match(
                 "^The selected package '([^']+)'.+has lower version",
@@ -618,7 +640,7 @@ def install(name=None,
             '--auto-agree-with-licenses --force {0}{1}'
             .format(fromrepoopt, ' '.join(downgrades[:500]))
         )
-        __salt__['cmd.run'](cmd, output_loglevel='trace')
+        __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=True)
         downgrades = downgrades[500:]
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -683,7 +705,7 @@ def _uninstall(action='remove', name=None, pkgs=None):
             'zypper --non-interactive remove {0} {1}'
             .format(purge_arg, ' '.join(targets[:500]))
         )
-        __salt__['cmd.run'](cmd, output_loglevel='trace')
+        __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=True)
         targets = targets[500:]
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -771,13 +793,11 @@ def list_locks():
         return False
 
     locks = {}
-    for meta in map(lambda item: item.split("\n"),
-                    open(LOCKS).read().split("\n\n")):
+    for meta in [item.split("\n") for item in open(LOCKS).read().split("\n\n")]:
         lock = {}
         for element in [el for el in meta if el]:
             if ":" in element:
-                lock.update(dict([tuple(map(lambda i: i.strip(),
-                                            element.split(":", 1))), ]))
+                lock.update(dict([tuple([i.strip() for i in element.split(":", 1)]), ]))
         if lock.get('solvable_name'):
             locks[lock.pop('solvable_name')] = lock
 
@@ -819,7 +839,7 @@ def remove_lock(name=None, pkgs=None, **kwargs):
     locks = list_locks()
     packages = []
     try:
-        packages = __salt__['pkg_resource.parse_targets'](name, pkgs)[0].keys()
+        packages = list(__salt__['pkg_resource.parse_targets'](name, pkgs)[0].keys())
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
@@ -854,7 +874,7 @@ def add_lock(name=None, pkgs=None, **kwargs):
     packages = []
     added = []
     try:
-        packages = __salt__['pkg_resource.parse_targets'](name, pkgs)[0].keys()
+        packages = list(__salt__['pkg_resource.parse_targets'](name, pkgs)[0].keys())
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
@@ -1010,3 +1030,67 @@ def search(criteria):
             'summary': solvable.getAttribute("summary")
         }
     return out
+
+
+def _get_first_aggregate_text(node_list):
+    '''
+    Extract text from the first occurred DOM aggregate.
+    '''
+    if not node_list:
+        return ""
+
+    out = []
+    for node in node_list[0].childNodes:
+        if node.nodeType == dom.Document.TEXT_NODE:
+            out.append(node.nodeValue)
+    return "\n".join(out)
+
+
+def _parse_suse_product(path, *info):
+    '''
+    Parse SUSE LLC product.
+    '''
+    doc = dom.parse(path)
+    product = {}
+    for nfo in info:
+        product.update(
+            {nfo: _get_first_aggregate_text(
+                doc.getElementsByTagName(nfo)
+            )}
+        )
+
+    return product
+
+
+def list_products():
+    '''
+    List all installed SUSE products.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_products
+    '''
+    PRODUCTS = "/etc/products.d"
+    if not os.path.exists(PRODUCTS):
+        raise CommandExecutionError("Directory {0} does not exists.".format(PRODUCTS))
+
+    products = {}
+    for fname in os.listdir("/etc/products.d"):
+        pth_name = os.path.join(PRODUCTS, fname)
+        r_pth_name = os.path.realpath(pth_name)
+        products[r_pth_name] = r_pth_name != pth_name and 'baseproduct' or None
+
+    info = ['vendor', 'name', 'version', 'baseversion', 'patchlevel',
+            'predecessor', 'release', 'endoflife', 'arch', 'cpeid',
+            'productline', 'updaterepokey', 'summary', 'shortsummary',
+            'description']
+
+    ret = {}
+    for prod_meta, is_base_product in products.items():
+        product = _parse_suse_product(prod_meta, *info)
+        product['baseproduct'] = is_base_product is not None
+        ret[product.pop('name')] = product
+
+    return ret

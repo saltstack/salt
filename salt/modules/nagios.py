@@ -2,6 +2,7 @@
 '''
 Run nagios plugins/checks from salt and get the return as data.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -63,7 +64,7 @@ def _execute_pillar(pillar_name, run_type):
             #Check if is a dict to get the arguments
             #in command if not set the arguments to empty string
             if isinstance(command, dict):
-                plugin = command.keys()[0]
+                plugin = next(command.iterkeys())
                 args = command[plugin]
             else:
                 plugin = command
@@ -165,7 +166,7 @@ def retcode_pillar(pillar_name):
             #Check if is a dict to get the arguments
             #in command if not set the arguments to empty string
             if isinstance(command, dict):
-                plugin = command.keys()[0]
+                plugin = next(command.iterkeys())
                 args = command[plugin]
             else:
                 plugin = command

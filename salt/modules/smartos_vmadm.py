@@ -2,6 +2,7 @@
 '''
 Module for managing VMs on SmartOS
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import json
@@ -10,6 +11,7 @@ import json
 from salt.exceptions import CommandExecutionError
 import salt.utils
 import salt.utils.decorators as decorators
+import salt.ext.six as six
 
 # Define the module's virtual name
 __virtualname__ = 'virt'
@@ -122,7 +124,7 @@ def init(**kwargs):
         retcode = res['retcode']
         if retcode != 0:
             return CommandExecutionError(_exit_status(retcode))
-        # if succedeed, proceed to the VM creation
+        # if succeeded, proceed to the VM creation
         cmd = 'echo \'{0}\' | {1} create'.format(ret, vmadm)
         res = __salt__['cmd.run_all'](cmd)
         retcode = res['retcode']
@@ -153,7 +155,7 @@ def list_vms():
     retcode = res['retcode']
     if retcode != 0:
         raise CommandExecutionError(_exit_status(retcode))
-    for key, uuid in res.iteritems():
+    for key, uuid in six.iteritems(res):
         if key == "stdout":
             vms.append(uuid)
     return vms
@@ -176,7 +178,7 @@ def list_active_vms():
     retcode = res['retcode']
     if retcode != 0:
         raise CommandExecutionError(_exit_status(retcode))
-    for key, uuid in res.iteritems():
+    for key, uuid in six.iteritems(res):
         if key == "stdout":
             vms.append(uuid)
     return vms
@@ -199,7 +201,7 @@ def list_inactive_vms():
     retcode = res['retcode']
     if retcode != 0:
         raise CommandExecutionError(_exit_status(retcode))
-    for key, uuid in res.iteritems():
+    for key, uuid in six.iteritems(res):
         if key == "stdout":
             vms.append(uuid)
     return vms

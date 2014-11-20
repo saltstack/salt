@@ -3,6 +3,7 @@
 salting.py module of salt specific interfaces to raet
 
 '''
+from __future__ import absolute_import
 # pylint: skip-file
 # pylint: disable=W0611
 
@@ -19,6 +20,9 @@ from raet import raeting, nacling
 from raet.keeping import Keep
 
 from salt.key import RaetKey
+
+from salt.utils import kinds
+
 
 class SaltKeep(Keep):
     '''
@@ -70,18 +74,15 @@ class SaltKeep(Keep):
         '''
         self.saltRaetKey.delete_pki_dir()
 
-    def loadLocalData(self):
+    def loadLocalRoleData(self):
         '''
-        Load and Return the data from the local estate
+        Load and return the role data
         '''
-        data = super(SaltKeep, self).loadLocalData()
-        if not data:
-            return None
-        srkdata = self.saltRaetKey.read_local()
-        if not srkdata:
-            srkdata = dict(sign=None, priv=None)
-        data.update([('sighex', srkdata['sign']),
-                     ('prihex', srkdata['priv'])])
+        keydata = self.saltRaetKey.read_local()
+        if not keydata:
+            keydata = odict([('sign', None), ('priv', None)])
+        data = odict([('sighex', keydata['sign']),
+                     ('prihex', keydata['priv'])])
         return data
 
     def clearLocalRoleData(self):
@@ -96,6 +97,18 @@ class SaltKeep(Keep):
         '''
         self.saltRaetKey.delete_pki_dir()
 
+    def loadLocalData(self):
+        '''
+        Load and Return the data from the local estate
+        '''
+        data = super(SaltKeep, self).loadLocalData()
+        if not data:
+            return None
+        roleData = self.loadLocalRoleData() # if not present defaults None values
+        data.update([('sighex', roleData.get('sighex')),
+                     ('prihex', roleData.get('prihex'))])
+        return data
+
     def loadRemoteData(self, name):
         '''
         Load and Return the data from the remote file
@@ -105,8 +118,7 @@ class SaltKeep(Keep):
             return None
 
         mid = data['role']
-        statae = raeting.ACCEPTANCES.keys()
-        for status in statae:
+        for status in raeting.ACCEPTANCES:
             keydata = self.saltRaetKey.read_remote(mid, status)
             if keydata:
                 break

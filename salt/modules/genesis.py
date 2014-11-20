@@ -4,6 +4,7 @@ Module for managing container and VM images
 
 .. versionadded:: 2014.7.0
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os.path
@@ -128,8 +129,8 @@ def _bootstrap_yum(root, pkg_confs='/etc/yum*'):
         which are required for the install to work.
     '''
     _make_nodes(root)
-    __salt__['cmd.run']('cp /etc/resolv/conf /etc/*release {root}/etc'.format(root=root, confs=pkg_confs))
-    __salt__['cmd.run']('cp -r /etc/*release {root}/etc'.format(root=root, confs=pkg_confs))
+    __salt__['cmd.run']('cp /etc/resolv/conf /etc/*release {root}/etc'.format(root=root))
+    __salt__['cmd.run']('cp -r /etc/*release {root}/etc'.format(root=root))
     __salt__['cmd.run']('cp -r {confs} {root}/etc'.format(root=root, confs=pkg_confs))
     __salt__['cmd.run']('yum install --installroot={0} -y yum centos-release iputils'.format(root))
     __salt__['cmd.run']('rpm --root={0} -Uvh http://download.fedoraproject.org/pub/epel/6/i386/epel-release-6-8.noarch.rpm'.format(root))
@@ -249,7 +250,7 @@ def avail_platforms():
         salt myminion genesis.avail_platforms
     '''
     ret = {}
-    for platform in CMD_MAP.keys():
+    for platform in CMD_MAP:
         ret[platform] = True
         for cmd in CMD_MAP[platform]:
             if not salt.utils.which(cmd):

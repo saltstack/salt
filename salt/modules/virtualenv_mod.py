@@ -2,6 +2,7 @@
 '''
 Create virtualenv environments
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import glob
@@ -13,7 +14,7 @@ import os.path
 # Import salt libs
 import salt.utils
 import salt.exceptions
-from salt._compat import string_types
+from salt.ext.six import string_types
 
 KNOWN_BINARY_NAMES = frozenset(
     ['virtualenv',

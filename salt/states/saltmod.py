@@ -3,28 +3,16 @@
 Control the Salt command interface
 ==================================
 
-The Salt state is used to control the salt command interface. This state is
-intended for use primarily from the state runner from the master.
+This state is intended for use from the Salt Master. It provides access to
+sending commands down to minions as well as access to executing master-side
+modules. These state functions wrap Salt's :ref:`Python API <python-api>`.
 
-The salt.state declaration can call out a highstate or a list of sls:
+.. seealso:: More Orchestrate documentation
 
-.. code-block:: yaml
-
-    webservers:
-      salt.state:
-        - tgt: 'web*'
-        - sls:
-          - apache
-          - django
-          - core
-        - saltenv: prod
-
-    databases:
-      salt.state:
-        - tgt: role:database
-        - tgt_type: grain
-        - highstate: True
+    * :ref:`Full Orchestrate Tutorial <orchestrate-tutorial>`
+    * :py:func:`The Orchestrate runner <salt.runners.state.orchestrate>`
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import fnmatch
@@ -35,7 +23,8 @@ import time
 import salt.syspaths
 import salt.utils
 import salt.utils.event
-import salt._compat
+import salt.ext.six as six
+from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 
@@ -127,6 +116,33 @@ def state(
         WARNING: This flag is potentially dangerous. It is designed
         for use when multiple state runs can safely be run at the same
         Do not use this flag for performance optimization.
+
+    Examples:
+
+    Run a list of sls files via :py:func:`state.sls <salt.state.sls>` on target
+    minions:
+
+    .. code-block:: yaml
+
+        webservers:
+          salt.state:
+            - tgt: 'web*'
+            - sls:
+              - apache
+              - django
+              - core
+            - saltenv: prod
+
+    Run a full :py:func:`state.highstate <salt.state.highstate>` on target
+    mininons.
+
+    .. code-block:: yaml
+
+        databases:
+          salt.state:
+            - tgt: role:database
+            - tgt_type: grain
+            - highstate: True
     '''
     cmd_kw = {'arg': [], 'kwarg': {}, 'ret': ret, 'timeout': timeout}
 
@@ -214,7 +230,7 @@ def state(
 
     if fail_minions is None:
         fail_minions = ()
-    elif isinstance(fail_minions, salt._compat.string_types):
+    elif isinstance(fail_minions, string_types):
         fail_minions = [minion.strip() for minion in fail_minions.split(',')]
     elif not isinstance(fail_minions, list):
         ret.setdefault('warnings', []).append(
@@ -223,7 +239,7 @@ def state(
         )
         fail_minions = ()
 
-    for minion, mdata in cmd_ret.iteritems():
+    for minion, mdata in six.iteritems(cmd_ret):
         if mdata.get('out', '') != 'highstate':
             log.warning("Output from salt state not highstate")
 
@@ -240,7 +256,7 @@ def state(
                 fail.add(minion)
             failures[minion] = m_ret and m_ret or 'Minion did not respond'
             continue
-        for state_item in m_ret.itervalues():
+        for state_item in six.itervalues(m_ret):
             if state_item['changes']:
                 changes[minion] = m_ret
                 break
@@ -260,7 +276,7 @@ def state(
             ret['comment'] += ' No changes made to {0}.'.format(', '.join(no_change))
     if failures:
         ret['comment'] += '\nFailures:\n'
-        for minion, failure in failures.iteritems():
+        for minion, failure in six.iteritems(failures):
             ret['comment'] += '\n'.join(
                     (' ' * 4 + l)
                     for l in salt.output.out_format(
@@ -359,7 +375,7 @@ def function(
 
     if fail_minions is None:
         fail_minions = ()
-    elif isinstance(fail_minions, salt._compat.string_types):
+    elif isinstance(fail_minions, string_types):
         fail_minions = [minion.strip() for minion in fail_minions.split(',')]
     elif not isinstance(fail_minions, list):
         ret.setdefault('warnings', []).append(
@@ -368,7 +384,7 @@ def function(
         )
         fail_minions = ()
 
-    for minion, mdata in cmd_ret.iteritems():
+    for minion, mdata in six.iteritems(cmd_ret):
         m_ret = False
 
         if mdata.get('failed', False):
@@ -395,7 +411,7 @@ def function(
         ret['comment'] += ' Function {0} ran on {1}.'.format(name, ', '.join(changes))
     if failures:
         ret['comment'] += '\nFailures:\n'
-        for minion, failure in failures.iteritems():
+        for minion, failure in six.iteritems(failures):
             ret['comment'] += '\n'.join(
                     (' ' * 4 + l)
                     for l in salt.output.out_format(

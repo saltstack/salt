@@ -13,16 +13,18 @@
     logger instance uses our ``salt.log.setup.SaltLoggingClass``.
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 import os
 import re
 import sys
 import types
 import socket
-import urlparse
 import logging
 import logging.handlers
 import traceback
+from salt.ext.six import string_types, text_type, with_metaclass
 
 # Let's define these custom logging levels before importing the salt.log.mixins
 # since they will be used there
@@ -33,7 +35,7 @@ QUIET = logging.QUIET = 1000
 # Import salt libs
 from salt.log.handlers import TemporaryLoggingHandler, StreamHandler, SysLogHandler, WatchedFileHandler
 from salt.log.mixins import LoggingMixInMeta, NewStyleClassMixIn
-from salt._compat import string_types
+from salt._compat import PY3, urlparse
 
 LOG_LEVELS = {
     'all': logging.NOTSET,
@@ -49,7 +51,7 @@ LOG_LEVELS = {
 
 # Make a list of log level names sorted by log level
 SORTED_LEVEL_NAMES = [
-    l[0] for l in sorted(LOG_LEVELS.iteritems(), key=lambda x: x[1])
+    l[0] for l in sorted(LOG_LEVELS.items(), key=lambda x: x[1])
 ]
 
 # Store an instance of the current logging logger class
@@ -93,17 +95,15 @@ LOGGING_TEMP_HANDLER = StreamHandler(sys.stderr)
 LOGGING_STORE_HANDLER = TemporaryLoggingHandler()
 
 
-class SaltLoggingClass(LOGGING_LOGGER_CLASS, NewStyleClassMixIn):
-    __metaclass__ = LoggingMixInMeta
-
-    def __new__(cls, *args):  # pylint: disable=W0613
+class SaltLoggingClass(with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS, NewStyleClassMixIn)):  # pylint: disable=W0232
+    def __new__(cls, *args):  # pylint: disable=W0613, E1002
         '''
         We override `__new__` in our logging logger class in order to provide
         some additional features like expand the module name padding if length
         is being used, and also some Unicode fixes.
 
         This code overhead will only be executed when the class is
-        instantiated, ie:
+        instantiated, i.e.:
 
             logging.getLogger(__name__)
 
@@ -112,7 +112,7 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, NewStyleClassMixIn):
 
         try:
             max_logger_length = len(max(
-                logging.Logger.manager.loggerDict.keys(), key=len
+                list(logging.Logger.manager.loggerDict.keys()), key=len
             ))
             for handler in logging.root.handlers:
                 if handler in (LOGGING_NULL_HANDLER,
@@ -186,7 +186,9 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, NewStyleClassMixIn):
         )
 
     # pylint: disable=C0103
-    def makeRecord(self, name, level, fn, lno, msg, args, exc_info, func=None, extra=None):
+    # pylint: disable=W0221
+    def makeRecord(self, name, level, fn, lno, msg, args, exc_info,
+                   func=None, extra=None, sinfo=None):
         # Let's remove exc_info_on_loglevel from extra
         exc_info_on_loglevel = extra.pop('exc_info_on_loglevel')
         if not extra:
@@ -194,23 +196,42 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, NewStyleClassMixIn):
             extra = None
 
         # Let's try to make every logging message unicode
-        if isinstance(msg, string_types) and not isinstance(msg, unicode):
-            try:
-                logrecord = LOGGING_LOGGER_CLASS.makeRecord(
-                    self, name, level, fn, lno,
-                    msg.decode('utf-8', 'replace'),
-                    args, exc_info, func, extra
-                )
-            except UnicodeDecodeError:
-                logrecord = LOGGING_LOGGER_CLASS.makeRecord(
-                    self, name, level, fn, lno,
-                    msg.decode('utf-8', 'ignore'),
-                    args, exc_info, func, extra
-                )
+        if isinstance(msg, string_types) and not isinstance(msg, text_type):
+            if PY3:
+                try:
+                    logrecord = LOGGING_LOGGER_CLASS.makeRecord(
+                        self, name, level, fn, lno,
+                        msg.decode('utf-8', 'replace'),
+                        args, exc_info, func, extra, sinfo
+                    )
+                except UnicodeDecodeError:
+                    logrecord = LOGGING_LOGGER_CLASS.makeRecord(
+                        self, name, level, fn, lno,
+                        msg.decode('utf-8', 'ignore'),
+                        args, exc_info, func, extra, sinfo
+                    )
+            else:
+                try:
+                    logrecord = LOGGING_LOGGER_CLASS.makeRecord(
+                        self, name, level, fn, lno,
+                        msg.decode('utf-8', 'replace'),
+                        args, exc_info, func, extra
+                    )
+                except UnicodeDecodeError:
+                    logrecord = LOGGING_LOGGER_CLASS.makeRecord(
+                        self, name, level, fn, lno,
+                        msg.decode('utf-8', 'ignore'),
+                        args, exc_info, func, extra
+                    )
         else:
-            logrecord = LOGGING_LOGGER_CLASS.makeRecord(
-                self, name, level, fn, lno, msg, args, exc_info, func, extra
-            )
+            if PY3:
+                logrecord = LOGGING_LOGGER_CLASS.makeRecord(
+                    self, name, level, fn, lno, msg, args, exc_info, func, extra, sinfo
+                )
+            else:
+                logrecord = LOGGING_LOGGER_CLASS.makeRecord(
+                    self, name, level, fn, lno, msg, args, exc_info, func, extra
+                )
 
         if exc_info_on_loglevel is not None:
             # Let's add some custom attributes to the LogRecord class in order to include the exc_info on a per
@@ -406,7 +427,7 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
 
     level = LOG_LEVELS.get(log_level.lower(), logging.ERROR)
 
-    parsed_log_path = urlparse.urlparse(log_path)
+    parsed_log_path = urlparse(log_path)
 
     root_logger = logging.getLogger()
 
@@ -540,7 +561,7 @@ def setup_extended_logging(opts):
     # log records with them
     additional_handlers = []
 
-    for name, get_handlers_func in providers.iteritems():
+    for name, get_handlers_func in providers.items():
         logging.getLogger(__name__).info(
             'Processing `log_handlers.{0}`'.format(name)
         )

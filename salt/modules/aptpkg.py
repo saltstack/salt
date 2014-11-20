@@ -9,6 +9,7 @@ Support for APT (Advanced Packaging Tool)
 
     For repository management, the ``python-apt`` package must be installed.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import copy
@@ -24,10 +25,12 @@ import yaml
 # Import salt libs
 from salt.modules.cmdmod import _parse_env
 import salt.utils
-from salt._compat import string_types
+from salt.ext.six import string_types
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
+import salt.ext.six as six
+from salt.ext.six.moves import range
 
 
 log = logging.getLogger(__name__)
@@ -232,7 +235,7 @@ def latest_version(*names, **kwargs):
 
     virtpkgs = _get_virtual()
     all_virt = set()
-    for provides in virtpkgs.values():
+    for provides in six.itervalues(virtpkgs):
         all_virt.update(provides)
 
     for name in names:
@@ -457,7 +460,7 @@ def install(name=None,
             refreshdb = False
             for pkg in pkgs:
                 if isinstance(pkg, dict):
-                    _name = pkg.keys()[0]
+                    _name = next(pkg.iterkeys())
                     _latest_version = latest_version(_name, refresh=False, show_installed=True)
                     _version = pkg[_name]
                     # If the versions don't match, refresh is True, otherwise no need to refresh
@@ -500,7 +503,7 @@ def install(name=None,
             # comma-separated list
             pkg_params = {name: kwargs.get('version')}
         targets = []
-        for param, version_num in pkg_params.iteritems():
+        for param, version_num in six.iteritems(pkg_params):
             if version_num is None:
                 targets.append(param)
             else:
@@ -841,7 +844,7 @@ def _clean_pkglist(pkgs):
     markers. If there is a mix of actual package versions and virtual package
     markers, remove the virtual package markers.
     '''
-    for name, versions in pkgs.iteritems():
+    for name, versions in six.iteritems(pkgs):
         stripped = [v for v in versions if v != '1']
         if not stripped:
             pkgs[name] = ['1']
@@ -938,7 +941,7 @@ def list_pkgs(versions_as_list=False,
     if not removed:
         virtpkgs_all = _get_virtual()
         virtpkgs = set()
-        for realpkg, provides in virtpkgs_all.iteritems():
+        for realpkg, provides in six.iteritems(virtpkgs_all):
             # grep-available returns info on all virtual packages. Ignore any
             # virtual packages that do not have the real package installed.
             if realpkg in ret['installed']:
@@ -1095,7 +1098,7 @@ def _consolidate_repo_sources(sources):
         if repo.file != base_file:
             delete_files.add(repo.file)
 
-    sources.list = consolidated.values()
+    sources.list = list(consolidated.values())
     sources.save()
     for file_ in delete_files:
         try:
@@ -1162,9 +1165,13 @@ def get_repo(repo, **kwargs):
                                             ppa_name, dist)
         else:
             if HAS_SOFTWAREPROPERTIES:
-                repo = softwareproperties.ppa.expand_ppa_line(
-                    repo,
-                    __grains__['lsb_distrib_codename'])[0]
+                if hasattr(softwareproperties.ppa, 'PPAShortcutHandler'):
+                    repo = softwareproperties.ppa.PPAShortcutHandler(repo).expand(
+                        __grains__['lsb_distrib_codename'])[0]
+                else:
+                    repo = softwareproperties.ppa.expand_ppa_line(
+                        repo,
+                        __grains__['lsb_distrib_codename'])[0]
             else:
                 repo = LP_SRC_FORMAT.format(owner_name, ppa_name, dist)
 
@@ -1186,7 +1193,7 @@ def get_repo(repo, **kwargs):
                 .format(repo)
             )
 
-        for source in repos.values():
+        for source in six.itervalues(repos):
             for sub in source:
                 if (sub['type'] == repo_type and
                     # strip trailing '/' from repo_uri, it's valid in definition
@@ -1235,7 +1242,10 @@ def del_repo(repo, **kwargs):
             else:
                 repo = LP_SRC_FORMAT.format(owner_name, ppa_name, dist)
         else:
-            repo = softwareproperties.ppa.expand_ppa_line(repo, dist)[0]
+            if hasattr(softwareproperties.ppa, 'PPAShortcutHandler'):
+                repo = softwareproperties.ppa.PPAShortcutHandler(repo).expand(dist)[0]
+            else:
+                repo = softwareproperties.ppa.expand_ppa_line(repo, dist)[0]
 
     sources = sourceslist.SourcesList()
     repos = [s for s in sources.list if not s.invalid]
@@ -1282,7 +1292,7 @@ def del_repo(repo, **kwargs):
             for source in sources:
                 if source.file in deleted_from:
                     deleted_from[source.file] += 1
-            for repo_file, count in deleted_from.iteritems():
+            for repo_file, count in six.iteritems(deleted_from):
                 msg = 'Repo {0!r} has been removed from {1}.\n'
                 if count == 0 and 'sources.list.d/' in repo_file:
                     if os.path.isfile(repo_file):
@@ -1337,10 +1347,10 @@ def mod_repo(repo, saltenv='base', **kwargs):
             # implementation via apt-add-repository.  The code path for
             # secure PPAs should be the same as urllib method
             if HAS_SOFTWAREPROPERTIES and 'ppa_auth' not in kwargs:
-                try:
-                    get_repo(repo)
-                    return {repo: ''}
-                except Exception:
+                repo_info = get_repo(repo)
+                if repo_info:
+                    return {repo: repo_info}
+                else:
                     if float(__grains__['osrelease']) < 12.04:
                         cmd = 'apt-add-repository {0}'.format(repo)
                     else:
@@ -1598,7 +1608,7 @@ def _strip_uri(repo):
     Remove the trailing slash from the URI in a repo definition
     '''
     splits = repo.split()
-    for idx in xrange(len(splits)):
+    for idx in range(len(splits)):
         if any(splits[idx].startswith(x)
                for x in ('http://', 'https://', 'ftp://')):
             splits[idx] = splits[idx].rstrip('/')
@@ -1626,12 +1636,14 @@ def expand_repo_def(repokwargs):
                                             dist)
         else:
             if HAS_SOFTWAREPROPERTIES:
-                repo = softwareproperties.ppa.expand_ppa_line(
-                    repo, dist)[0]
+                if hasattr(softwareproperties.ppa, 'PPAShortcutHandler'):
+                    repo = softwareproperties.ppa.PPAShortcutHandler(repo).expand(dist)[0]
+                else:
+                    repo = softwareproperties.ppa.expand_ppa_line(repo, dist)[0]
             else:
                 repo = LP_SRC_FORMAT.format(owner_name, ppa_name, dist)
 
-        if file not in repokwargs:
+        if 'file' not in repokwargs:
             filename = '/etc/apt/sources.list.d/{0}-{1}-{2}.list'
             repokwargs['file'] = filename.format(owner_name, ppa_name,
                                                  dist)
@@ -1797,10 +1809,10 @@ def set_selections(path=None, selection=None, clear=False, saltenv='base'):
                     raise CommandExecutionError(err)
 
         sel_revmap = {}
-        for _state, _pkgs in get_selections().iteritems():
+        for _state, _pkgs in six.iteritems(get_selections()):
             sel_revmap.update(dict((_pkg, _state) for _pkg in _pkgs))
 
-        for _state, _pkgs in selection.iteritems():
+        for _state, _pkgs in six.iteritems(selection):
             for _pkg in _pkgs:
                 if _state == sel_revmap.get(_pkg):
                     continue
@@ -1894,5 +1906,5 @@ def owner(*paths):
         if 'no path found' in ret[path].lower():
             ret[path] = ''
     if len(ret) == 1:
-        return ret.values()[0]
+        return next(ret.itervalues())
     return ret

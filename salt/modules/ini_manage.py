@@ -12,6 +12,8 @@ Use section as DEFAULT_IMPLICIT if your ini file does not have any section
 '''
 
 # Import Python libs
+from __future__ import print_function
+from __future__ import absolute_import
 import re
 
 __virtualname__ = 'ini'
@@ -297,7 +299,7 @@ class _Ini(object):
             outfile.write(self.current_contents())
 
     def dump(self):
-        print self.current_contents()
+        print(self.current_contents())
 
     def current_contents(self):
         file_contents = ''

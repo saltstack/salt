@@ -218,7 +218,7 @@ class TestSaltEvent(TestCase):
             me1.fire_event({'data': 'foo1'}, 'evt1')
             evt1 = me1.get_event(tag='evt1')
             self.assertGotEvent(evt1, {'data': 'foo1'})
-            # Can't replicate this failure int he wild, need to fix the
+            # Can't replicate this failure in the wild, need to fix the
             # test system bug here
             #evt2 = me2.get_event(tag='evt1')
             #self.assertGotEvent(evt2, {'data': 'foo1'})

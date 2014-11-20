@@ -2,6 +2,7 @@
 '''
 Salt interface to ZFS commands
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import logging
@@ -41,9 +42,10 @@ def _available_commands():
         return False
 
     ret = {}
-    # Note that we append '|| :' as a unix hack to force return code to be 0.
-    res = salt_cmd.run_stdout(
-        '{0} -? || :'.format(zfs_path), output_loglevel='trace'
+    res = salt_cmd.run_stderr(
+        '{0} -?'.format(zfs_path),
+        output_loglevel='trace',
+        ignore_retcode=True
     )
 
     # This bit is dependent on specific output from `zfs -?` - any major changes
@@ -125,7 +127,7 @@ if _check_zfs():
     for available_cmd in available_cmds:
 
         # Set the output from _make_function to be 'available_cmd_'.
-        # ie 'list' becomes 'list_' in local module.
+        # i.e. 'list' becomes 'list_' in local module.
         setattr(
                 sys.modules[__name__],
                 '{0}_'.format(available_cmd),

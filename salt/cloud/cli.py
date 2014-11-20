@@ -13,9 +13,11 @@ Primary interfaces for the salt-cloud system
 
 # Import python libs
 from __future__ import print_function
+from __future__ import absolute_import
 import os
 import sys
 import logging
+from salt.ext.six.moves import input
 
 # Import salt libs
 import salt.config
@@ -28,6 +30,7 @@ from salt.utils.verify import check_user, verify_env, verify_files
 # Import salt.cloud libs
 import salt.cloud
 from salt.exceptions import SaltCloudException, SaltCloudSystemExit
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -162,9 +165,9 @@ class SaltCloud(parsers.SaltCloudParser):
 
             msg = 'The following virtual machines are set to be destroyed:\n'
             names = set()
-            for alias, drivers in matching.iteritems():
+            for alias, drivers in six.iteritems(matching):
                 msg += '  {0}:\n'.format(alias)
-                for driver, vms in drivers.iteritems():
+                for driver, vms in six.iteritems(drivers):
                     msg += '    {0}:\n'.format(driver)
                     for name in vms:
                         msg += '      {0}\n'.format(name)
@@ -264,7 +267,7 @@ class SaltCloud(parsers.SaltCloudParser):
                 if 'errors' in dmap:
                     # display profile errors
                     msg += 'Found the following errors:\n'
-                    for profile_name, error in dmap['errors'].iteritems():
+                    for profile_name, error in six.iteritems(dmap['errors']):
                         msg += '  {0}: {1}\n'.format(profile_name, error)
                     sys.stderr.write(msg)
                     sys.stderr.flush()
@@ -304,7 +307,7 @@ class SaltCloud(parsers.SaltCloudParser):
                         log.info('Complete')
 
                 if dmap.get('existing', None):
-                    for name in dmap['existing'].keys():
+                    for name in dmap['existing']:
                         ret[name] = {'Message': 'Already running'}
 
             except (SaltCloudException, Exception) as exc:
@@ -325,7 +328,7 @@ class SaltCloud(parsers.SaltCloudParser):
         if self.options.assume_yes:
             return True
         print(msg)
-        res = raw_input('Proceed? [N/y] ')
+        res = input('Proceed? [N/y] ')
         if not res.lower().startswith('y'):
             return False
         print('... proceeding')

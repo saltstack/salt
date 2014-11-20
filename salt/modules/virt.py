@@ -8,6 +8,7 @@ Work with virtual machines managed by libvirt
 # of his in the virt func module have been used
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import re
 import sys
@@ -15,6 +16,7 @@ import shutil
 import subprocess
 import string  # pylint: disable=deprecated-module
 import logging
+import salt.ext.six as six
 
 # Import third party libs
 import yaml
@@ -461,7 +463,7 @@ def _nic_profile(profile_name, hypervisor, **kwargs):
     elif isinstance(config_data, list):
         for interface in config_data:
             if isinstance(interface, dict):
-                if len(interface.keys()) == 1:
+                if len(interface) == 1:
                     append_dict_profile_to_interface_list(interface)
                 else:
                     interfaces.append(interface)
@@ -551,7 +553,7 @@ def init(name,
 
         # When using a disk profile extract the sole dict key of the first
         # array element as the filename for disk
-        disk_name = diskp[0].keys()[0]
+        disk_name = next(diskp[0].iterkeys())
         disk_type = diskp[0][disk_name]['format']
         disk_file_name = '{0}.{1}'.format(disk_name, disk_type)
 
@@ -797,7 +799,7 @@ def get_nics(vm_):
                 # driver, source, and match can all have optional attributes
                 if re.match('(driver|source|address)', v_node.tagName):
                     temp = {}
-                    for key in v_node.attributes.keys():
+                    for key in v_node.attributes:
                         temp[key] = v_node.getAttribute(key)
                     nic[str(v_node.tagName)] = temp
                 # virtualport needs to be handled separately, to pick up the
@@ -805,7 +807,7 @@ def get_nics(vm_):
                 if v_node.tagName == 'virtualport':
                     temp = {}
                     temp['type'] = v_node.getAttribute('type')
-                    for key in v_node.attributes.keys():
+                    for key in v_node.attributes:
                         temp[key] = v_node.getAttribute(key)
                     nic['virtualport'] = temp
             if 'mac' not in nic:
@@ -855,7 +857,7 @@ def get_graphics(vm_):
     for node in doc.getElementsByTagName('domain'):
         g_nodes = node.getElementsByTagName('graphics')
         for g_node in g_nodes:
-            for key in g_node.attributes.keys():
+            for key in g_node.attributes:
                 out[key] = g_node.getAttribute(key)
     return out
 
@@ -1685,7 +1687,7 @@ def vm_netstats(vm_=None):
                 'tx_errs': 0,
                 'tx_drop': 0
                }
-        for attrs in nics.values():
+        for attrs in six.itervalues(nics):
             if 'target' in attrs:
                 dev = attrs['target']
                 stats = dom.interfaceStats(dev)

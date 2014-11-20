@@ -4,6 +4,8 @@
 The setup script for salt
 '''
 
+from __future__ import absolute_import
+
 # pylint: disable=C0111,E1101,E1103,F0401,W0611,W0201,W0232,R0201,R0902,R0903
 
 # For Python 2.5.  A no-op on 2.6 and above.
@@ -12,7 +14,10 @@ from __future__ import print_function, with_statement
 import os
 import sys
 import glob
-import urllib2
+try:
+    from urllib2 import urlopen
+except ImportError:
+    from urllib.request import urlopen
 from datetime import datetime
 # pylint: disable=E0611
 import distutils.dist
@@ -270,7 +275,7 @@ class CloudSdist(Sdist):
                         )
                     )
             except ImportError:
-                req = urllib2.urlopen(url)
+                req = urlopen(url)
 
                 if req.getcode() == 200:
                     script_contents = req.read()
@@ -489,101 +494,166 @@ class InstallLib(install_lib):
                     chmod.append(idx)
         for idx in chmod:
             filename = out[idx]
-            os.chmod(filename, 0755)
+            os.chmod(filename, 0o755)
 # <---- Custom Distutils/Setuptools Commands -------------------------------------------------------------------------
 
-if PACKAGED_FOR_SALT_SSH:
-    NAME = 'salt-ssh'
-else:
-    NAME = 'salt'
 
-VER = __version__  # pylint: disable=E0602
-DESC = 'Portable, distributed, remote execution and configuration management system'
-SETUP_KWARGS = {'name': NAME,
-                'version': VER,
-                'description': DESC,
-                'author': 'Thomas S Hatch',
-                'author_email': 'thatch45@gmail.com',
-                'url': 'http://saltstack.org',
-                'cmdclass': {
-                    'test': TestCommand,
-                    'clean': Clean,
-                    'build': Build,
-                    'sdist': Sdist,
-                    'install': Install,
-                    'write-salt-version': WriteSaltVersion,
-                    'write-salt-ssh-packaging-file': WriteSaltSshPackaingFile,
-                },
-                'classifiers': ['Programming Language :: Python',
-                                'Programming Language :: Cython',
-                                'Programming Language :: Python :: 2.6',
-                                'Programming Language :: Python :: 2.7',
-                                'Development Status :: 5 - Production/Stable',
-                                'Environment :: Console',
-                                'Intended Audience :: Developers',
-                                'Intended Audience :: Information Technology',
-                                'Intended Audience :: System Administrators',
-                                ('License :: OSI Approved ::'
-                                 ' Apache Software License'),
-                                'Operating System :: POSIX :: Linux',
-                                'Topic :: System :: Clustering',
-                                'Topic :: System :: Distributed Computing',
-                                ],
-                'packages': ['salt',
-                             'salt.auth',
-                             'salt.cli',
-                             'salt.client',
-                             'salt.client.raet',
-                             'salt.client.ssh',
-                             'salt.client.ssh.wrapper',
-                             'salt.cloud',
-                             'salt.cloud.clouds',
-                             'salt.daemons',
-                             'salt.daemons.flo',
-                             'salt.ext',
-                             'salt.fileserver',
-                             'salt.grains',
-                             'salt.log',
-                             'salt.log.handlers',
-                             'salt.modules',
-                             'salt.netapi',
-                             'salt.netapi.rest_cherrypy',
-                             'salt.netapi.rest_cherrypy.tools',
-                             'salt.netapi.rest_tornado',
-                             'salt.output',
-                             'salt.pillar',
-                             'salt.proxy',
-                             'salt.renderers',
-                             'salt.returners',
-                             'salt.roster',
-                             'salt.runners',
-                             'salt.search',
-                             'salt.states',
-                             'salt.tops',
-                             'salt.templates',
-                             'salt.transport',
-                             'salt.utils',
-                             'salt.utils.decorators',
-                             'salt.utils.openstack',
-                             'salt.utils.openstack.pyrax',
-                             'salt.utils.validate',
-                             'salt.utils.serializers',
-                             'salt.wheel',
-                             ],
-                'package_data': {'salt.templates': [
-                                    'rh_ip/*.jinja',
-                                    'debian_ip/*.jinja',
-                                    'virt/*.jinja',
-                                    'git/*',
-                                    'lxc/*',
-                                    ],
-                                 'salt.daemons.flo': [
-                                    '*.flo'
-                                    ]
-                                },
-                'data_files': [('share/man/man1',
-                                ['doc/man/salt-cp.1',
-                                 'doc/man/salt-call.1',
+# ----- Custom Distribution Class ----------------------------------------------------------------------------------->
+# We use this to override the package name in case --ssh-packaging is passed to
+# setup.py or the special .salt-ssh-package is found
+class SaltDistribution(distutils.dist.Distribution):
+    '''
+    Just so it's completely clear
+
+    Under windows, the following scripts should be installed:
+
+        * salt-call
+        * salt-cp
+        * salt-minion
+        * salt-unity
+
+    When packaged for salt-ssh, the following scripts should be installed:
+        * salt-call
+        * salt-run
+        * salt-ssh
+        * salt-cloud
+
+        Under windows, the following scripts should be omitted from the salt-ssh package:
+            * salt-cloud
+            * salt-run
+
+    Under *nix, all scripts should be installed
+    '''
+    global_options = distutils.dist.Distribution.global_options + [
+        ('ssh-packaging', None, 'Run in SSH packaging mode'),
+        ('salt-transport=', None, 'The transport to prepare salt for. Choices are \'zeromq\' '
+                                  '\'raet\' or \'both\'. Defaults to \'zeromq\'', 'zeromq')
+    ]
+
+    def __init__(self, attrs=None):
+        distutils.dist.Distribution.__init__(self, attrs)
+
+        self.ssh_packaging = PACKAGED_FOR_SALT_SSH
+        self.salt_transport = None
+
+        self.name = 'salt-ssh' if PACKAGED_FOR_SALT_SSH else 'salt'
+        self.version = __version__  # pylint: disable=undefined-variable
+        self.description = 'Portable, distributed, remote execution and configuration management system'
+        self.author = 'Thomas S Hatch'
+        self.author_email = 'thatch45@gmail.com'
+        self.url = 'http://saltstack.org'
+        self.cmdclass.update({'test': TestCommand,
+                              'clean': Clean,
+                              'build': Build,
+                              'sdist': Sdist,
+                              'install': Install,
+                              'write-salt-version': WriteSaltVersion,
+                              'write-salt-ssh-packaging-file': WriteSaltSshPackaingFile})
+        if not IS_WINDOWS_PLATFORM:
+            self.cmdclass.update({'sdist': CloudSdist,
+                                  'install_lib': InstallLib})
+
+        self.license = 'Apache Software License 2.0'
+        self.packages = self.discover_packages()
+        self.zip_safe = False
+
+        if HAS_ESKY:
+            self.setup_esky()
+
+        self.update_metadata()
+
+    def update_metadata(self):
+        for attrname in dir(self):
+            if attrname.startswith('__'):
+                continue
+            attrvalue = getattr(self, attrname, None)
+            if attrvalue == 0:
+                continue
+            if hasattr(self.metadata, 'set_{0}'.format(attrname)):
+                getattr(self.metadata, 'set_{0}'.format(attrname))(attrvalue)
+            elif hasattr(self.metadata, attrname):
+                try:
+                    setattr(self.metadata, attrname, attrvalue)
+                except AttributeError:
+                    pass
+
+    def discover_packages(self):
+        modules = []
+        for root, _, files in os.walk(os.path.join(SETUP_DIRNAME, 'salt')):
+            if '__init__.py' not in files:
+                continue
+            modules.append(os.path.relpath(root, SETUP_DIRNAME).replace(os.sep, '.'))
+        return modules
+
+    # ----- Static Data ---------------------------------------------------------------------------------------------
+    @property
+    def _property_classifiers(self):
+        return ['Programming Language :: Python',
+                'Programming Language :: Cython',
+                'Programming Language :: Python :: 2.6',
+                'Programming Language :: Python :: 2.7',
+                'Development Status :: 5 - Production/Stable',
+                'Environment :: Console',
+                'Intended Audience :: Developers',
+                'Intended Audience :: Information Technology',
+                'Intended Audience :: System Administrators',
+                'License :: OSI Approved :: Apache Software License',
+                'Operating System :: POSIX :: Linux',
+                'Topic :: System :: Clustering',
+                'Topic :: System :: Distributed Computing']
+
+    @property
+    def _property_dependency_links(self):
+        return ['https://github.com/saltstack/salt-testing/tarball/develop#egg=SaltTesting']
+
+    @property
+    def _property_tests_require(self):
+        return ['SaltTesting']
+    # <---- Static Data ----------------------------------------------------------------------------------------------
+
+    # ----- Dynamic Data -------------------------------------------------------------------------------------------->
+    @property
+    def _property_package_data(self):
+        package_data = {'salt.templates': ['rh_ip/*.jinja',
+                                           'debian_ip/*.jinja',
+                                           'virt/*.jinja',
+                                           'git/*',
+                                           'lxc/*',
+                                          ]}
+        if not IS_WINDOWS_PLATFORM:
+            package_data['salt.cloud'] = ['deploy/*.sh']
+
+        if not self.ssh_packaging and not PACKAGED_FOR_SALT_SSH:
+            package_data['salt.daemons.flo'] = ['*.flo']
+        return package_data
+
+    @property
+    def _property_data_files(self):
+        # Data files common to all scenarios
+        data_files = [
+            ('share/man/man1', ['doc/man/salt-call.1']),
+            ('share/man/man7', ['doc/man/salt.7'])
+        ]
+        if self.ssh_packaging or PACKAGED_FOR_SALT_SSH:
+            data_files[0][1].append('doc/man/salt-ssh.1')
+            if IS_WINDOWS_PLATFORM:
+                return data_files
+            data_files[0][1].extend(['doc/man/salt-run.1',
+                                     'doc/man/salt-cloud.1'])
+            return data_files
+
+        if IS_WINDOWS_PLATFORM:
+            data_files[0][1].extend(['doc/man/salt-cp.1',
+                                     'doc/man/salt-minion.1',
+                                     'doc/man/salt-unity.1'])
+            return data_files
+
+        # *nix, so, we need all man pages
+        data_files[0][1].extend(['doc/man/salt-api.1',
+                                 'doc/man/salt-cloud.1',
+                                 'doc/man/salt-cp.1',
+                                 'doc/man/salt-key.1',
+                                 'doc/man/salt-master.1',
                                  'doc/man/salt-minion.1',
                                  'doc/man/salt-run.1',
                                  'doc/man/salt-ssh.1',
@@ -642,40 +712,37 @@ SETUP_KWARGS = {'name': NAME,
                         'scripts/salt-unity'])
         return scripts
 
-    # We don't actually need to set the console_scripts entry point since the
-    # packaged scripts with do the same work
-    #@property
-    #def _property_entry_points(self):
-    #    return {}
-    #    # console scripts common to all scenarios
-    #    scripts = ['salt-call = salt.scripts:salt_call']
-    #    if self.ssh_packaging or PACKAGED_FOR_SALT_SSH:
-    #        scripts.append('salt-ssh = salt.scripts:salt_ssh')
-    #        if IS_WINDOWS_PLATFORM:
-    #            return {'console_scripts': scripts}
-    #        scripts.extend(['salt-cloud = salt.scripts:salt_cloud',
-    #                        'salt-run = salt.scripts:salt_run'])
-    #        return {'console_scripts': scripts}
-    #
-    #    if IS_WINDOWS_PLATFORM:
-    #        scripts.extend(['salt-cp = salt.scripts:salt_cp'
-    #                        'salt-minion = salt.scripts:salt_minion',
-    #                        'salt-unity = salt.scripts:salt_unity'])
-    #        return {'console_scripts': scripts}
-    #
-    #    # *nix, so, we need all scripts
-    #    scripts.extend(['salt = salt.scripts:salt_main',
-    #                    'salt-api = salt.scripts:salt_api',
-    #                    'salt-cloud = salt.scripts:salt_cloud',
-    #                    'salt-cp = salt.scripts:salt_cp',
-    #                    'salt-key = salt.scripts:salt_key',
-    #                    'salt-master = salt.scripts:salt_master',
-    #                    'salt-minion = salt.scripts:salt_minion',
-    #                    'salt-run = salt.scripts:salt_run',
-    #                    'salt-ssh = salt.scripts:salt_ssh',
-    #                    'salt-syndic = salt.scripts:salt_syndic',
-    #                    'salt-unity = salt.scripts:salt_unity'])
-    #    return {'console_scripts': scripts}
+    @property
+    def _property_entry_points(self):
+        # console scripts common to all scenarios
+        scripts = ['salt-call = salt.scripts:salt_call']
+        if self.ssh_packaging or PACKAGED_FOR_SALT_SSH:
+            scripts.append('salt-ssh = salt.scripts:salt_ssh')
+            if IS_WINDOWS_PLATFORM:
+                return {'console_scripts': scripts}
+            scripts.extend(['salt-cloud = salt.scripts:salt_cloud',
+                            'salt-run = salt.scripts:salt_run'])
+            return {'console_scripts': scripts}
+
+        if IS_WINDOWS_PLATFORM:
+            scripts.extend(['salt-cp = salt.scripts:salt_cp'
+                            'salt-minion = salt.scripts:salt_minion',
+                            'salt-unity = salt.scripts:salt_unity'])
+            return {'console_scripts': scripts}
+
+        # *nix, so, we need all scripts
+        scripts.extend(['salt = salt.scripts:salt_main',
+                        'salt-api = salt.scripts:salt_api',
+                        'salt-cloud = salt.scripts:salt_cloud',
+                        'salt-cp = salt.scripts:salt_cp',
+                        'salt-key = salt.scripts:salt_key',
+                        'salt-master = salt.scripts:salt_master',
+                        'salt-minion = salt.scripts:salt_minion',
+                        'salt-run = salt.scripts:salt_run',
+                        'salt-ssh = salt.scripts:salt_ssh',
+                        'salt-syndic = salt.scripts:salt_syndic',
+                        'salt-unity = salt.scripts:salt_unity'])
+        return {'console_scripts': scripts}
     # <---- Dynamic Data ---------------------------------------------------------------------------------------------
 
     # ----- Esky Setup ---------------------------------------------------------------------------------------------->

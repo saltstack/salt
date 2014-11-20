@@ -3,12 +3,13 @@
 Support for getting and setting the environment variables
 of the current salt process.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
 
 # Import salt libs
-from salt._compat import string_types
+from salt.ext.six import string_types
 
 
 def __virtual__():
@@ -89,7 +90,7 @@ def setenv(name,
 
     if clear_all is True:
         # Any keys not in 'environ' dict supplied by user will be unset
-        to_unset = [key for key in os.environ.keys() if key not in environ]
+        to_unset = [key for key in os.environ if key not in environ]
         for key in to_unset:
             if false_unsets is not True:
                 # This key value will change to ''

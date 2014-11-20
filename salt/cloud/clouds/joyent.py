@@ -33,6 +33,7 @@ associated with that vm. An example profile might look like:
 
 :depends: requests
 '''
+from __future__ import absolute_import
 # pylint: disable=E0102
 
 # The import section is mostly libcloud boilerplate
@@ -40,7 +41,7 @@ associated with that vm. An example profile might look like:
 # Import python libs
 import os
 import copy
-import httplib
+import salt.ext.six.moves.http_client  # pylint: disable=E0611
 import requests
 import json
 import logging
@@ -86,10 +87,10 @@ DEFAULT_LOCATION = 'us-east-1'
 POLL_ALL_LOCATIONS = True
 
 VALID_RESPONSE_CODES = [
-    httplib.OK,
-    httplib.ACCEPTED,
-    httplib.CREATED,
-    httplib.NO_CONTENT
+    salt.ext.six.moves.http_client.OK,
+    salt.ext.six.moves.http_client.ACCEPTED,
+    salt.ext.six.moves.http_client.CREATED,
+    salt.ext.six.moves.http_client.NO_CONTENT
 ]
 
 
@@ -126,7 +127,7 @@ def get_image(vm_):
 
     vm_image = config.get_cloud_config_value('image', vm_, __opts__)
 
-    if vm_image and str(vm_image) in images.keys():
+    if vm_image and str(vm_image) in images:
         return images[vm_image]
 
     raise SaltCloudNotFound(
@@ -143,7 +144,7 @@ def get_size(vm_):
     if not vm_size:
         raise SaltCloudNotFound('No size specified for this VM.')
 
-    if vm_size and str(vm_size) in sizes.keys():
+    if vm_size and str(vm_size) in sizes:
         return sizes[vm_size]
 
     raise SaltCloudNotFound(
@@ -639,7 +640,7 @@ def avail_locations(call=None):
         }
 
     # this can be enabled when the bug in the joyent get data centers call is
-    # corrected, currently only the european dc (new api) returns the correct
+    # corrected, currently only the European dc (new api) returns the correct
     # values
     # ret = {}
     # rcode, datacenters = query(
@@ -697,7 +698,7 @@ def get_node(name):
     :return: node object
     '''
     nodes = list_nodes()
-    if name in nodes.keys():
+    if name in nodes:
         return nodes[name]
     return None
 
@@ -717,7 +718,7 @@ def joyent_node_state(id_):
               'deleted': 2,
               'unknown': 4}
 
-    if id_ not in states.keys():
+    if id_ not in states:
         id_ = 'unknown'
 
     return node_state(states[id_])
@@ -747,16 +748,16 @@ def reformat_node(item=None, full=False):
 
     # add any undefined desired keys
     for key in desired_keys:
-        if key not in item.keys():
+        if key not in item:
             item[key] = None
 
     # remove all the extra key value pairs to provide a brief listing
     if not full:
-        for key in item.keys():
+        for key in item.keys():  # iterate over a copy of the keys
             if key not in desired_keys:
                 del item[key]
 
-    if 'state' in item.keys():
+    if 'state' in item:
         item['state'] = joyent_node_state(item['state'])
 
     return item
@@ -779,7 +780,7 @@ def list_nodes(full=False, call=None):
 
     ret = {}
     if POLL_ALL_LOCATIONS:
-        for location in JOYENT_LOCATIONS.keys():
+        for location in JOYENT_LOCATIONS:
             result = query(command='my/machines', location=location,
                             method='GET')
             nodes = result[1]

@@ -10,9 +10,11 @@ Module for running windows updates.
 .. versionadded:: 2014.7.0
 
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import logging
+from salt.ext.six.moves import range
 try:
     import win32com.client
     import pythoncom
@@ -269,7 +271,7 @@ class PyWinUpdater(object):
         '''
         updates = self.GetInstallationResults()
         ret = 'The following are the updates and their return codes.\n'
-        for i in updates.keys():
+        for i in updates:
             ret += '\t{0}\n'.format(updates[i])
         return ret
 
@@ -316,8 +318,8 @@ class PyWinUpdater(object):
     def SetIncludes(self, includes):
         if includes:
             for i in includes:
-                value = i[i.keys()[0]]
-                include = i.keys()[0]
+                value = i[next(i.iterkeys())]
+                include = next(i.iterkeys())
                 self.SetInclude(include, value)
                 log.debug('was asked to set {0} to {1}'.format(include, value))
 

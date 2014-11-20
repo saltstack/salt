@@ -3,6 +3,7 @@
 Use the :doc:`Salt Event System </topics/event/index>` to fire events from the
 master to the minion and vice-versa.
 '''
+from __future__ import absolute_import
 # Import Python libs
 import collections
 import os
@@ -12,6 +13,7 @@ import salt.crypt
 import salt.utils.event
 import salt.payload
 import salt.transport
+import salt.ext.six as six
 
 __proxyenabled__ = ['*']
 
@@ -20,7 +22,7 @@ def _dict_subset(keys, master_dict):
     '''
     Return a dictionary of only the subset of keys/values specified in keys
     '''
-    return dict([(k, v) for k, v in master_dict.iteritems() if k in keys])
+    return dict([(k, v) for k, v in six.iteritems(master_dict) if k in keys])
 
 
 def fire_master(data, tag, preload=None):

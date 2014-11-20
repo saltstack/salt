@@ -25,10 +25,12 @@
 Module for managing XFS file systems.
 '''
 
+from __future__ import absolute_import
 import os
 import re
 import time
 import logging
+from salt.ext.six.moves import range
 
 import salt.utils
 from salt.exceptions import CommandExecutionError
@@ -289,6 +291,13 @@ def _xfs_prune_output(out, uuid):
 def prune_dump(sessionid):
     '''
     Prunes the dump session identified by the given session id.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' xfs.prune_dump b74a3586-e52e-4a4a-8775-c3334fa8ea2c
+
     '''
     out = __salt__['cmd.run_all']("xfsinvutil -s {0} -F".format(sessionid))
     _verify_run(out)
@@ -414,8 +423,7 @@ def mkfs(device, label=None, ssize=None, noforce=None,
     '''
 
     getopts = lambda args: dict(((args and ("=" in args)
-                                  and args or None)) and map(
-                                      lambda kw: kw.split("="), args.split(",")) or [])
+                                  and args or None)) and [kw.split("=") for kw in args.split(",")] or [])
     cmd = ["mkfs.xfs"]
     if label:
         cmd.append("-L")

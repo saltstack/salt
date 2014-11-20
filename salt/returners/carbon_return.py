@@ -43,13 +43,14 @@ the default location::
 
     salt '*' test.ping --return carbon --return_config alternative
 '''
+from __future__ import absolute_import
 
 
 # Import python libs
 from contextlib import contextmanager
 import collections
 import logging
-import cPickle as pickle
+import salt.ext.six.moves.cPickle as pickle  # pylint: disable=E0611
 import socket
 import struct
 import time
@@ -57,6 +58,7 @@ import time
 # Import salt libs
 import salt.utils
 import salt.returners
+from salt.ext.six.moves import map
 
 log = logging.getLogger(__name__)
 

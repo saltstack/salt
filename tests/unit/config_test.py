@@ -159,7 +159,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                 'log_file: {1}\n'.format(root_dir, fpath)
             )
             # Let's set the environment variable, yet, since the configuration
-            # file path is not the default one, ie, the user has passed an
+            # file path is not the default one, i.e., the user has passed an
             # alternative configuration file form the CLI parser, the
             # environment variable will be ignored.
             os.environ['SALT_MASTER_CONFIG'] = env_fpath
@@ -201,7 +201,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                 'log_file: {1}\n'.format(root_dir, fpath)
             )
             # Let's set the environment variable, yet, since the configuration
-            # file path is not the default one, ie, the user has passed an
+            # file path is not the default one, i.e., the user has passed an
             # alternative configuration file form the CLI parser, the
             # environment variable will be ignored.
             os.environ['SALT_MINION_CONFIG'] = env_fpath
@@ -255,7 +255,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                 'log_file: {1}\n'.format(root_dir, fpath)
             )
             # Let's set the environment variable, yet, since the configuration
-            # file path is not the default one, ie, the user has passed an
+            # file path is not the default one, i.e., the user has passed an
             # alternative configuration file form the CLI parser, the
             # environment variable will be ignored.
             os.environ['SALT_MASTER_CONFIG'] = env_fpath
@@ -871,7 +871,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                 'log_file: {1}\n'.format(root_dir, fpath)
             )
             # Let's set the environment variable, yet, since the configuration
-            # file path is not the default one, ie, the user has passed an
+            # file path is not the default one, i.e., the user has passed an
             # alternative configuration file form the CLI parser, the
             # environment variable will be ignored.
             os.environ['SALT_CLOUD_CONFIG'] = env_fpath

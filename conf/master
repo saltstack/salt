@@ -228,6 +228,11 @@
 #  modules:
 #    - cmd
 
+# Enforce client_acl & client_acl_blacklist when users have sudo
+# access to the salt command. 
+#
+#sudo_acl: False
+
 # The external auth system uses the Salt auth modules to authenticate and
 # validate users to access areas of the Salt system.
 #external_auth:

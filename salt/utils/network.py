@@ -2,6 +2,7 @@
 '''
 Define some generic socket functions for network modules
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import socket
@@ -10,6 +11,8 @@ import re
 import logging
 import os
 from string import ascii_letters, digits
+from salt.ext.six.moves import range
+import salt.ext.six as six
 
 # Attempt to import wmi
 try:
@@ -730,7 +733,7 @@ def subnets():
     ifaces = interfaces()
     subnetworks = []
 
-    for ipv4_info in ifaces.values():
+    for ipv4_info in six.itervalues(ifaces):
         for ipv4 in ipv4_info.get('inet', []):
             if ipv4['address'] == '127.0.0.1':
                 continue
@@ -784,11 +787,11 @@ def ip_addrs(interface=None, include_loopback=False):
     if interface is None:
         target_ifaces = ifaces
     else:
-        target_ifaces = dict([(k, v) for k, v in ifaces.iteritems()
+        target_ifaces = dict([(k, v) for k, v in six.iteritems(ifaces)
                               if k == interface])
         if not target_ifaces:
             log.error('Interface {0} not found.'.format(interface))
-    for ipv4_info in target_ifaces.values():
+    for ipv4_info in six.itervalues(target_ifaces):
         for ipv4 in ipv4_info.get('inet', []):
             loopback = in_subnet('127.0.0.0/8', [ipv4.get('address')]) or ipv4.get('label') == 'lo'
             if not loopback or include_loopback:
@@ -812,11 +815,11 @@ def ip_addrs6(interface=None, include_loopback=False):
     if interface is None:
         target_ifaces = ifaces
     else:
-        target_ifaces = dict([(k, v) for k, v in ifaces.iteritems()
+        target_ifaces = dict([(k, v) for k, v in six.iteritems(ifaces)
                               if k == interface])
         if not target_ifaces:
             log.error('Interface {0} not found.'.format(interface))
-    for ipv6_info in target_ifaces.values():
+    for ipv6_info in six.itervalues(target_ifaces):
         for ipv6 in ipv6_info.get('inet6', []):
             if include_loopback or ipv6['address'] != '::1':
                 ret.add(ipv6['address'])
@@ -874,7 +877,7 @@ def local_port_tcp(port):
                 if line.strip().startswith('sl'):
                     continue
                 iret = _parse_tcp_line(line)
-                sl = iter(iret).next()
+                sl = next(iter(iret))
                 if iret[sl]['local_port'] == port:
                     ret.add(iret[sl]['remote_addr'])
         return ret
@@ -894,7 +897,7 @@ def remote_port_tcp(port):
                 if line.strip().startswith('sl'):
                     continue
                 iret = _parse_tcp_line(line)
-                sl = iter(iret).next()
+                sl = next(iter(iret))
                 if iret[sl]['remote_port'] == port:
                     ret.add(iret[sl]['remote_addr'])
         return ret

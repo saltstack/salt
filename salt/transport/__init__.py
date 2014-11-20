@@ -2,6 +2,7 @@
 '''
 Encapsulate the different transports available to Salt.  Currently this is only ZeroMQ.
 '''
+from __future__ import absolute_import
 import time
 import os
 import threading
@@ -13,7 +14,7 @@ import salt.utils
 import logging
 from collections import defaultdict
 
-from salt import daemons
+from salt.utils import kinds
 
 log = logging.getLogger(__name__)
 
@@ -88,12 +89,7 @@ class RAETChannel(Channel):
         self.ttype = 'raet'
         if usage == 'master_call':  # runner.py master_call
             self.dst = (None, None, 'local_cmd')
-        elif usage == 'salt_call':  # salt_call caller
-            #self.dst = (None, None, 'remote_cmd')
-            self.dst = (jobber_estate_name or None,
-                        jobber_yard_name or None,
-                        'call_cmd')
-        else:  # everything else minion to master
+        else:  # everything else minion to master including salt-call
             self.dst = (jobber_estate_name or None,
                         jobber_yard_name or None,
                         'remote_cmd')
@@ -112,7 +108,7 @@ class RAETChannel(Channel):
             raise ValueError(emsg)
 
         kind = self.opts.get('__role')  # application kind 'master', 'minion', etc
-        if kind not in daemons.APPL_KINDS:
+        if kind not in kinds.APPL_KINDS:
             emsg = ("Invalid application kind = '{0}' for RAETChannel.".format(kind))
             log.error(emsg + "\n")
             raise ValueError(emsg)

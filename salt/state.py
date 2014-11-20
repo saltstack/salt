@@ -12,6 +12,8 @@ The data sent to the state calls is as follows:
       }
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 import os
 import sys
@@ -31,10 +33,13 @@ import salt.fileclient
 import salt.utils.event
 import salt.syspaths as syspaths
 from salt.utils import context, immutabletypes
-from salt._compat import string_types
+from salt.ext.six import string_types
 from salt.template import compile_template, compile_template_str
 from salt.exceptions import SaltRenderError, SaltReqTimeoutError, SaltException
 from salt.utils.odict import OrderedDict, DefaultOrderedDict
+
+# Import third party libs
+from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 
@@ -495,7 +500,7 @@ class Compiler(object):
                     for entry in names:
                         live = copy.deepcopy(chunk)
                         if isinstance(entry, dict):
-                            low_name = entry.keys()[0]
+                            low_name = next(iter(entry.keys()))
                             live['name'] = low_name
                             live.update(entry[low_name][0])
                         else:
@@ -531,7 +536,7 @@ class Compiler(object):
                 # Explicitly declared exclude
                 if len(exc) != 1:
                     continue
-                key = exc.keys()[0]
+                key = next(iter(exc.keys()))
                 if key == 'sls':
                     ex_sls.add(exc['sls'])
                 elif key == 'id':
@@ -1098,7 +1103,7 @@ class State(object):
                     for entry in names:
                         live = copy.deepcopy(chunk)
                         if isinstance(entry, dict):
-                            low_name = entry.keys()[0]
+                            low_name = next(iter(entry.keys()))
                             live['name'] = low_name
                             live.update(entry[low_name][0])
                         else:
@@ -1209,7 +1214,7 @@ class State(object):
                 # Explicitly declared exclude
                 if len(exc) != 1:
                     continue
-                key = exc.keys()[0]
+                key = next(iter(exc.keys()))
                 if key == 'sls':
                     ex_sls.add(exc['sls'])
                 elif key == 'id':
@@ -1381,9 +1386,9 @@ class State(object):
                                         if next(iter(arg)) in ignore_args:
                                             continue
                                         # Don't use name or names
-                                        if arg.keys()[0] == 'name':
+                                        if next(iter(arg.keys())) == 'name':
                                             continue
-                                        if arg.keys()[0] == 'names':
+                                        if next(iter(arg.keys())) == 'names':
                                             continue
                                         extend[ext_id][_state].append(arg)
                                     continue
@@ -1407,9 +1412,9 @@ class State(object):
                                         if next(iter(arg)) in ignore_args:
                                             continue
                                         # Don't use name or names
-                                        if arg.keys()[0] == 'name':
+                                        if next(iter(arg.keys())) == 'name':
                                             continue
-                                        if arg.keys()[0] == 'names':
+                                        if next(iter(arg.keys())) == 'names':
                                             continue
                                         extend[id_][state].append(arg)
                                     continue
@@ -1537,8 +1542,8 @@ class State(object):
         except Exception:
             trb = traceback.format_exc()
             # There are a number of possibilities to not have the cdata
-            # populated with what we might have expected, so just be enought
-            # smart to not raise another KeyError as the name is easily
+            # populated with what we might have expected, so just be smart
+            # enough to not raise another KeyError as the name is easily
             # guessable and fallback in all cases to present the real
             # exception to the user
             if len(cdata['args']) > 0:
@@ -2006,7 +2011,7 @@ class State(object):
         # the low data chunks
         if errors:
             return errors
-        ret = dict(disabled.items() + self.call_chunks(chunks).items())
+        ret = dict(list(disabled.items()) + list(self.call_chunks(chunks).items()))
         ret = self.call_listen(chunks, ret)
         return ret
 
@@ -2485,7 +2490,7 @@ class BaseHighState(object):
                         env_key = saltenv
 
                     if env_key not in self.avail:
-                        msg = ('Nonexistant saltenv {0!r} found in include '
+                        msg = ('Nonexistent saltenv {0!r} found in include '
                                'of {1!r} within SLS \'{2}:{3}\''
                                .format(env_key, inc_sls, saltenv, sls))
                         log.error(msg)
@@ -2589,7 +2594,7 @@ class BaseHighState(object):
                     for arg in state[name][s_dec]:
                         if isinstance(arg, dict):
                             if len(arg) > 0:
-                                if arg.keys()[0] == 'order':
+                                if next(iter(arg.keys())) == 'order':
                                     found = True
                     if not found:
                         if not isinstance(state[name][s_dec], list):
@@ -2873,7 +2878,7 @@ class BaseHighState(object):
             return err
         if not high:
             return ret
-        cumask = os.umask(077)
+        cumask = os.umask(0o77)
         try:
             if salt.utils.is_windows():
                 # Make sure cache file isn't read-only

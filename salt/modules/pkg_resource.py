@@ -2,6 +2,7 @@
 '''
 Resources needed by pkg providers
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import fnmatch
@@ -13,7 +14,8 @@ import yaml
 
 # Import salt libs
 import salt.utils
-from salt._compat import string_types
+from salt.ext.six import string_types
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 __SUFFIX_NOT_NEEDED = ('x86_64', 'noarch')
@@ -28,7 +30,7 @@ def _repack_pkgs(pkgs):
     return dict(
         [
             (_normalize_name(str(x)), str(y) if y is not None else y)
-            for x, y in salt.utils.repack_dictlist(pkgs).iteritems()
+            for x, y in six.iteritems(salt.utils.repack_dictlist(pkgs))
         ]
     )
 
@@ -113,7 +115,7 @@ def parse_targets(name=None,
             return None, None
 
         srcinfo = []
-        for pkg_name, pkg_src in sources.iteritems():
+        for pkg_name, pkg_src in six.iteritems(sources):
             if __salt__['config.valid_fileproto'](pkg_src):
                 # Cache package from remote source (salt master, HTTP, FTP)
                 srcinfo.append((pkg_name,
@@ -163,7 +165,7 @@ def version(*names, **kwargs):
         for name in names:
             if '*' in name:
                 pkg_glob = True
-                for match in fnmatch.filter(pkgs.keys(), name):
+                for match in fnmatch.filter(pkgs, name):
                     ret[match] = pkgs.get(match, [])
             else:
                 ret[name] = pkgs.get(name, [])
@@ -173,8 +175,8 @@ def version(*names, **kwargs):
     # return dict
     if len(ret) == 1 and not pkg_glob:
         try:
-            return ret.values()[0]
-        except IndexError:
+            return next(ret.itervalues())
+        except StopIteration:
             return ''
     return ret
 
@@ -210,7 +212,7 @@ def sort_pkglist(pkgs):
     # It doesn't matter that ['4.9','4.10'] would be sorted to ['4.10','4.9'],
     # so long as the sorting is consistent.
     try:
-        for key in pkgs.keys():
+        for key in pkgs:
             # Passing the pkglist to set() also removes duplicate version
             # numbers (if present).
             pkgs[key] = sorted(set(pkgs[key]))
@@ -230,7 +232,7 @@ def stringify(pkgs):
         salt '*' pkg_resource.stringify 'vim: 7.127'
     '''
     try:
-        for key in pkgs.keys():
+        for key in pkgs:
             pkgs[key] = ','.join(pkgs[key])
     except AttributeError as e:
         log.exception(e)

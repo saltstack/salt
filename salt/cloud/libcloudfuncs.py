@@ -3,10 +3,14 @@
 The generic libcloud template used to create the connections and deploy the
 cloud virtual machines
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
 import logging
+from salt.ext.six import string_types
+import salt.ext.six as six
+from salt.ext.six.moves import zip
 
 
 # pylint: disable=W0611
@@ -32,7 +36,6 @@ except ImportError:
 
 
 # Import salt libs
-import salt._compat
 import salt.utils.event
 import salt.client
 
@@ -71,7 +74,7 @@ def check_libcloud_version(reqver=LIBCLOUD_MINIMAL_VERSION, why=None):
 
     if not isinstance(reqver, (list, tuple)):
         raise RuntimeError(
-            '\'reqver\' needs to passed as a tuple or list, ie, (0, 14, 0)'
+            '\'reqver\' needs to passed as a tuple or list, i.e., (0, 14, 0)'
         )
     try:
         import libcloud  # pylint: disable=redefined-outer-name
@@ -138,7 +141,7 @@ def avail_locations(conn=None, call=None):
     locations = conn.list_locations()
     ret = {}
     for img in locations:
-        if isinstance(img.name, salt._compat.string_types):
+        if isinstance(img.name, string_types):
             img_name = img.name.encode('ascii', 'salt-cloud-force-ascii')
         else:
             img_name = str(img.name)
@@ -149,7 +152,7 @@ def avail_locations(conn=None, call=None):
                 continue
 
             attr_value = getattr(img, attr)
-            if isinstance(attr_value, salt._compat.string_types):
+            if isinstance(attr_value, string_types):
                 attr_value = attr_value.encode(
                     'ascii', 'salt-cloud-force-ascii'
                 )
@@ -175,7 +178,7 @@ def avail_images(conn=None, call=None):
     images = conn.list_images()
     ret = {}
     for img in images:
-        if isinstance(img.name, salt._compat.string_types):
+        if isinstance(img.name, string_types):
             img_name = img.name.encode('ascii', 'salt-cloud-force-ascii')
         else:
             img_name = str(img.name)
@@ -185,7 +188,7 @@ def avail_images(conn=None, call=None):
             if attr.startswith('_'):
                 continue
             attr_value = getattr(img, attr)
-            if isinstance(attr_value, salt._compat.string_types):
+            if isinstance(attr_value, string_types):
                 attr_value = attr_value.encode(
                     'ascii', 'salt-cloud-force-ascii'
                 )
@@ -210,7 +213,7 @@ def avail_sizes(conn=None, call=None):
     sizes = conn.list_sizes()
     ret = {}
     for size in sizes:
-        if isinstance(size.name, salt._compat.string_types):
+        if isinstance(size.name, string_types):
             size_name = size.name.encode('ascii', 'salt-cloud-force-ascii')
         else:
             size_name = str(size.name)
@@ -225,7 +228,7 @@ def avail_sizes(conn=None, call=None):
             except Exception:
                 pass
 
-            if isinstance(attr_value, salt._compat.string_types):
+            if isinstance(attr_value, string_types):
                 attr_value = attr_value.encode(
                     'ascii', 'salt-cloud-force-ascii'
                 )
@@ -243,12 +246,12 @@ def get_location(conn, vm_):
     )
 
     for img in locations:
-        if isinstance(img.id, salt._compat.string_types):
+        if isinstance(img.id, string_types):
             img_id = img.id.encode('ascii', 'salt-cloud-force-ascii')
         else:
             img_id = str(img.id)
 
-        if isinstance(img.name, salt._compat.string_types):
+        if isinstance(img.name, string_types):
             img_name = img.name.encode('ascii', 'salt-cloud-force-ascii')
         else:
             img_name = str(img.name)
@@ -274,12 +277,12 @@ def get_image(conn, vm_):
     )
 
     for img in images:
-        if isinstance(img.id, salt._compat.string_types):
+        if isinstance(img.id, string_types):
             img_id = img.id.encode('ascii', 'salt-cloud-force-ascii')
         else:
             img_id = str(img.id)
 
-        if isinstance(img.name, salt._compat.string_types):
+        if isinstance(img.name, string_types):
             img_name = img.name.encode('ascii', 'salt-cloud-force-ascii')
         else:
             img_name = str(img.name)
@@ -456,7 +459,7 @@ def list_nodes_full(conn=None, call=None):
     ret = {}
     for node in nodes:
         pairs = {}
-        for key, value in zip(node.__dict__.keys(), node.__dict__.values()):
+        for key, value in zip(node.__dict__, six.itervalues(node.__dict__)):
             pairs[key] = value
         ret[node.name] = pairs
         del ret[node.name]['driver']

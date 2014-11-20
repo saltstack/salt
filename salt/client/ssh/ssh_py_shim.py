@@ -8,6 +8,8 @@ helper script used by salt.client.ssh.Single.  It is here, in a
 separate file, for convenience of development.
 '''
 
+from __future__ import absolute_import
+
 import hashlib
 import tarfile
 import shutil
@@ -36,7 +38,7 @@ ARGS = None
 def need_deployment():
     if os.path.exists(OPTIONS.saltdir):
         shutil.rmtree(OPTIONS.saltdir)
-    old_umask = os.umask(0077)
+    old_umask = os.umask(0o077)
     os.makedirs(OPTIONS.saltdir)
     os.umask(old_umask)
     # Verify perms on saltdir

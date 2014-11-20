@@ -3,6 +3,7 @@
 Return data to local job cache
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import errno
@@ -211,6 +212,8 @@ def save_load(jid, clear_load):
 
     # Save the invocation information
     try:
+        if not os.path.exists(jid_dir):
+            os.mkdir(jid_dir)
         serial.dump(
             clear_load,
             salt.utils.fopen(os.path.join(jid_dir, LOAD_P), 'w+b')

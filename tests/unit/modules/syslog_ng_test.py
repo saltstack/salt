@@ -250,7 +250,7 @@ class SyslogNGTestCase(TestCase):
                               expected_output=mock_return_value)
 
     def _assert_template(self,
-                         mock_funtion_args,
+                         mock_function_args,
                          mock_return_value,
                          function_to_call,
                          expected_output,
@@ -261,7 +261,7 @@ class SyslogNGTestCase(TestCase):
         installed = True
         if not salt.utils.which("syslog-ng"):
             installed = False
-            if "syslog-ng-ctl" in mock_funtion_args:
+            if "syslog-ng-ctl" in mock_function_args:
                 expected_output = _SYSLOG_NG_CTL_NOT_INSTALLED_RETURN_VALUE
             else:
                 expected_output = _SYSLOG_NG_NOT_INSTALLED_RETURN_VALUE
@@ -276,7 +276,7 @@ class SyslogNGTestCase(TestCase):
                 self.assertTrue(mock_function.called)
                 self.assertEqual(len(mock_function.call_args), 2)
                 mock_param = mock_function.call_args
-                self.assertTrue(mock_param[0][0].endswith(mock_funtion_args))
+                self.assertTrue(mock_param[0][0].endswith(mock_function_args))
 
 
 if __name__ == '__main__':

@@ -3,6 +3,8 @@
 Utility functions for salt.cloud
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 import os
 import sys
@@ -22,6 +24,7 @@ import traceback
 import copy
 import re
 import uuid
+import salt.ext.six as six
 
 
 # Let's import pwd and catch the ImportError. We'll raise it if this is not
@@ -463,7 +466,7 @@ def ssh_usernames(vm_, opts, default_users=None):
         usernames = [usernames]
 
     # get rid of None's or empty names
-    usernames = filter(lambda x: x, usernames)
+    usernames = [x for x in usernames if x]
     # Keep a copy of the usernames the user might have provided
     initial = usernames[:]
 
@@ -586,7 +589,7 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
     ssh_args.extend([
         # Don't add new hosts to the host key database
         '-oStrictHostKeyChecking=no',
-        # Set hosts key database path to /dev/null, ie, non-existing
+        # Set hosts key database path to /dev/null, i.e., non-existing
         '-oUserKnownHostsFile=/dev/null',
         # Don't re-use the SSH connection. Less failures.
         '-oControlPath=none'
@@ -1145,7 +1148,7 @@ def deploy_script(host,
                     )
 
                 # Copy pre-seed minion keys
-                for minion_id, minion_key in preseed_minion_keys.iteritems():
+                for minion_id, minion_key in preseed_minion_keys.items():
                     rpath = os.path.join(
                         preseed_minion_keys_tempdir, minion_id
                     )
@@ -1221,7 +1224,7 @@ def deploy_script(host,
                             )
                         )
                     environ_script_contents = ['#!/bin/sh']
-                    for key, value in script_env.iteritems():
+                    for key, value in script_env.items():
                         environ_script_contents.append(
                             'setenv {0} \'{1}\' >/dev/null 2>&1 || '
                             'export {0}=\'{1}\''.format(key, value)
@@ -1371,7 +1374,7 @@ def fire_event(key, msg, tag, args=None, sock_dir=None, transport='zeromq'):
     try:
         event.fire_event(msg, tag)
     except ValueError:
-        # We're using develop or a 0.17.x version of salt
+        # We're using at least a 0.17.x version of salt
         if isinstance(args, dict):
             args[key] = msg
         else:
@@ -1441,7 +1444,7 @@ def scp_file(dest_path, contents, kwargs):
     ssh_args = [
         # Don't add new hosts to the host key database
         '-oStrictHostKeyChecking=no',
-        # Set hosts key database path to /dev/null, ie, non-existing
+        # Set hosts key database path to /dev/null, i.e., non-existing
         '-oUserKnownHostsFile=/dev/null',
         # Don't re-use the SSH connection. Less failures.
         '-oControlPath=none'
@@ -1482,7 +1485,7 @@ def scp_file(dest_path, contents, kwargs):
             '-oProxyCommand="ssh {0} {1} {2} {3} {4}@{5} -p {6} nc -q0 %h %p"'.format(
                 # Don't add new hosts to the host key database
                 '-oStrictHostKeyChecking=no',
-                # Set hosts key database path to /dev/null, ie, non-existing
+                # Set hosts key database path to /dev/null, i.e., non-existing
                 '-oUserKnownHostsFile=/dev/null',
                 # Don't re-use the SSH connection. Less failures.
                 '-oControlPath=none',
@@ -1559,7 +1562,7 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
     ssh_args = [
         # Don't add new hosts to the host key database
         '-oStrictHostKeyChecking=no',
-        # Set hosts key database path to /dev/null, ie, non-existing
+        # Set hosts key database path to /dev/null, i.e., non-existing
         '-oUserKnownHostsFile=/dev/null',
         # Don't re-use the SSH connection. Less failures.
         '-oControlPath=none'
@@ -1600,7 +1603,7 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
             '-oProxyCommand="ssh {0} {1} {2} {3} {4}@{5} -p {6} nc -q0 %h %p"'.format(
                 # Don't add new hosts to the host key database
                 '-oStrictHostKeyChecking=no',
-                # Set hosts key database path to /dev/null, ie, non-existing
+                # Set hosts key database path to /dev/null, i.e., non-existing
                 '-oUserKnownHostsFile=/dev/null',
                 # Don't re-use the SSH connection. Less failures.
                 '-oControlPath=none',
@@ -1682,7 +1685,7 @@ def root_cmd(command, tty, sudo, allow_failure=False, **kwargs):
     ssh_args.extend([
         # Don't add new hosts to the host key database
         '-oStrictHostKeyChecking={0}'.format(host_key_checking),
-        # Set hosts key database path to /dev/null, ie, non-existing
+        # Set hosts key database path to /dev/null, i.e., non-existing
         '-oUserKnownHostsFile={0}'.format(known_hosts_file),
         # Don't re-use the SSH connection. Less failures.
         '-oControlPath=none'
@@ -1721,7 +1724,7 @@ def root_cmd(command, tty, sudo, allow_failure=False, **kwargs):
             '-oProxyCommand="ssh {0} {1} {2} {3} {4}@{5} -p {6} nc -q0 %h %p"'.format(
                 # Don't add new hosts to the host key database
                 '-oStrictHostKeyChecking=no',
-                # Set hosts key database path to /dev/null, ie, non-existing
+                # Set hosts key database path to /dev/null, i.e., non-existing
                 '-oUserKnownHostsFile=/dev/null',
                 # Don't re-use the SSH connection. Less failures.
                 '-oControlPath=none',
@@ -1861,7 +1864,7 @@ def wait_for_ip(update_callback,
     :param update_kwargs: Keyword arguments to pass to update_callback
     :param timeout: The maximum amount of time(in seconds) to wait for the IP
                     address.
-    :param interval: The looping interval, ie, the amount of time to sleep
+    :param interval: The looping interval, i.e., the amount of time to sleep
                      before the next iteration.
     :param interval_multiplier: Increase the interval by this multiplier after
                                 each request; helps with throttling
@@ -1920,13 +1923,13 @@ def wait_for_ip(update_callback,
 
 def simple_types_filter(data):
     '''
-    Convert the data list, dictionary into simple types, ie, int, float, string,
+    Convert the data list, dictionary into simple types, i.e., int, float, string,
     bool, etc.
     '''
     if data is None:
         return data
 
-    simpletypes_keys = (str, unicode, int, long, float, bool)
+    simpletypes_keys = (str, six.text_type, int, long, float, bool)
     simpletypes_values = tuple(list(simpletypes_keys) + [list, tuple])
 
     if isinstance(data, list):
@@ -1942,7 +1945,7 @@ def simple_types_filter(data):
 
     if isinstance(data, dict):
         simpledict = {}
-        for key, value in data.iteritems():
+        for key, value in data.items():
             if key is not None and not isinstance(key, simpletypes_keys):
                 key = repr(key)
             if value is not None and isinstance(value, (dict, list)):
@@ -1985,6 +1988,66 @@ def list_nodes_select(nodes, selection, call=None):
     return ret
 
 
+def cachedir_index_add(minion_id, profile, driver, provider, base=None):
+    '''
+    Add an entry to the cachedir index. This generally only needs to happen when
+    a new instance is created. This entry should contain:
+
+    .. code-block:: yaml
+
+        - minion_id
+        - profile used to create the instance
+        - provider and driver name
+
+    The intent of this function is to speed up lookups for the cloud roster for
+    salt-ssh. However, other code that makes use of profile information can also
+    make use of this function.
+    '''
+    base = init_cachedir(base)
+    index_file = os.path.join(base, 'index.p')
+
+    if os.path.exists(index_file):
+        with salt.utils.fopen(index_file, 'r') as fh_:
+            index = msgpack.load(fh_)
+    else:
+        index = {}
+
+    prov_comps = provider.split(':')
+
+    index.update({
+        minion_id: {
+            'id': minion_id,
+            'profile': profile,
+            'driver': driver,
+            'provider': prov_comps[0],
+        }
+    })
+
+    with salt.utils.fopen(index_file, 'w') as fh_:
+        msgpack.dump(index, fh_)
+
+
+def cachedir_index_del(minion_id, base=None):
+    '''
+    Delete an entry from the cachedir index. This generally only needs to happen
+    when an instance is deleted.
+    '''
+    base = init_cachedir(base)
+    index_file = os.path.join(base, 'index.p')
+
+    if os.path.exists(index_file):
+        with salt.utils.fopen(index_file, 'r') as fh_:
+            index = msgpack.load(fh_)
+    else:
+        return
+
+    if minion_id in index:
+        del index[minion_id]
+
+    with salt.utils.fopen(index_file, 'w') as fh_:
+        msgpack.dump(index, fh_)
+
+
 def init_cachedir(base=None):
     '''
     Initialize the cachedir needed for Salt Cloud to keep track of minions
@@ -1997,7 +2060,7 @@ def init_cachedir(base=None):
     for dir_ in needed_dirs:
         if not os.path.exists(dir_):
             os.makedirs(dir_)
-        os.chmod(base, 0755)
+        os.chmod(base, 0o755)
 
     return base
 
@@ -2103,13 +2166,58 @@ def delete_minion_cachedir(minion_id, provider, opts, base=None):
     if base is None:
         base = os.path.join(syspaths.CACHE_DIR, 'cloud')
 
-    driver = opts['providers'][provider].keys()[0]
+    driver = next(iter(opts['providers'][provider].keys()))
     fname = '{0}.p'.format(minion_id)
     for cachedir in ('requested', 'active'):
         path = os.path.join(base, cachedir, driver, provider, fname)
         log.debug('path: {0}'.format(path))
         if os.path.exists(path):
             os.remove(path)
+
+
+def list_cache_nodes_full(opts, provider=None, base=None):
+    '''
+    Return a list of minion data from the cloud cache, rather from the cloud
+    providers themselves. This is the cloud cache version of list_nodes_full().
+    '''
+    if opts.get('update_cachedir', False) is False:
+        return
+
+    if base is None:
+        base = os.path.join(syspaths.CACHE_DIR, 'cloud', 'active')
+
+    minions = {}
+    # First, get a list of all drivers in use
+    for driver in os.listdir(base):
+        minions[driver] = {}
+        prov_dir = os.path.join(base, driver)
+        # Then, get a list of all providers per driver
+        for prov in os.listdir(prov_dir):
+            # If a specific provider is requested, filter out everyone else
+            if provider and provider != prov:
+                continue
+            minions[driver][prov] = {}
+            min_dir = os.path.join(prov_dir, prov)
+            # Get a list of all nodes per provider
+            for minion_id in os.listdir(min_dir):
+                # Finally, get a list of full minion data
+                fname = '{0}.p'.format(minion_id)
+                fpath = os.path.join(min_dir, fname)
+                with salt.utils.fopen(fpath, 'r') as fh_:
+                    minions[driver][prov][minion_id] = msgpack.load(fh_)
+
+    return minions
+
+
+def cache_nodes_ip(opts, base=None):
+    '''
+    Retrieve a list of all nodes from Salt Cloud cache, and any associated IP
+    addresses. Returns a dict.
+    '''
+    if base is None:
+        base = os.path.join(syspaths.CACHE_DIR, 'cloud')
+
+    minions = list_cache_nodes_full(opts, base=base)
 
 
 def update_bootstrap(config, url=None):
@@ -2266,7 +2374,7 @@ def cache_node_list(nodes, provider, opts):
         return
 
     base = os.path.join(init_cachedir(), 'active')
-    driver = opts['providers'][provider].keys()[0]
+    driver = next(iter(opts['providers'][provider].keys()))
     prov_dir = os.path.join(base, driver, provider)
     if not os.path.exists(prov_dir):
         os.makedirs(prov_dir)
@@ -2353,6 +2461,8 @@ def diff_node_cache(prov_dir, node, new_data, opts):
     if 'diff_cache_events' not in opts or not opts['diff_cache_events']:
         return
 
+    if node is None:
+        return
     path = os.path.join(prov_dir, node)
     path = '{0}.p'.format(path)
 

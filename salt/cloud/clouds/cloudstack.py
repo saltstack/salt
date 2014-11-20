@@ -23,6 +23,8 @@ Use of this module requires the ``apikey``, ``secretkey``, ``host`` and
 '''
 # pylint: disable=E0102
 
+from __future__ import absolute_import
+
 # Import python libs
 import copy
 import pprint
@@ -45,6 +47,7 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 # Redirect CloudStack functions to this module namespace
+get_node = namespaced_function(get_node, globals())
 get_size = namespaced_function(get_size, globals())
 get_image = namespaced_function(get_image, globals())
 avail_locations = namespaced_function(avail_locations, globals())

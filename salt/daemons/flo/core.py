@@ -4,6 +4,8 @@ The core behaviors used by minion and master
 '''
 # pylint: disable=W0232
 
+from __future__ import absolute_import
+
 # Import python libs
 import os
 import sys
@@ -15,6 +17,8 @@ import traceback
 import itertools
 from collections import deque
 import random
+import salt.ext.six as six
+from salt.ext.six.moves import range
 
 # Import salt libs
 import salt.daemons.masterapi
@@ -28,6 +32,7 @@ from raet.lane.yarding import RemoteYard
 
 from salt import daemons
 from salt.daemons import salting
+from salt.utils import kinds
 
 from salt.exceptions import (
         CommandExecutionError, CommandNotFoundError, SaltInvocationError)
@@ -76,6 +81,7 @@ class SaltRaetCleanup(ioflo.base.deeding.Deed):
         if self.opts.value.get('sock_dir'):
             sockdirpath = os.path.abspath(self.opts.value['sock_dir'])
             console.concise("Cleaning up uxd files in {0}\n".format(sockdirpath))
+            protecteds = self.opts.value.get('raet_cleanup_protecteds', [])
             for name in os.listdir(sockdirpath):
                 path = os.path.join(sockdirpath, name)
                 if os.path.isdir(path):
@@ -84,6 +90,8 @@ class SaltRaetCleanup(ioflo.base.deeding.Deed):
                 if ext != '.uxd':
                     continue
                 if not all(root.partition('.')):
+                    continue
+                if path in protecteds:
                     continue
                 try:
                     os.unlink(path)
@@ -114,8 +122,8 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
                                'mutable': False,
                                'uid': None,
                                'role': 'master',
-                               'sigkey': None,
-                               'prikey': None}},
+                               'sighex': None,
+                               'prihex': None}},
             }
 
     def postinitio(self):
@@ -134,7 +142,7 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
         do salt raet road stack setup at enter
         '''
         kind = self.opts.value['__role']  # application kind
-        if kind not in daemons.APPL_KINDS:
+        if kind not in kinds.APPL_KINDS:
             emsg = ("Invalid application kind = '{0}'.".format(kind))
             log.error(emsg + '\n')
             raise ValueError(emsg)
@@ -145,15 +153,16 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
             raise ValueError(emsg)
 
         name = "{0}_{1}".format(role, kind)
-        sigkey = self.local.data.sigkey
-        prikey = self.local.data.prikey
         main = self.opts.value.get('raet_main', self.local.data.main)
         mutable = self.opts.value.get('raet_mutable', self.local.data.mutable)
         always = self.opts.value.get('open_mode', False)
         mutable = mutable or always  # open_made when True takes precedence
         uid = self.local.data.uid
 
-        ha = (self.opts.value['interface'], self.opts.value['raet_port'])
+        if kind == kinds.APPL_KIND_NAMES[kinds.applKinds.caller]:
+            ha = (self.opts.value['interface'], self.opts.value['raet_alt_port'])
+        else:
+            ha = (self.opts.value['interface'], self.opts.value['raet_port'])
 
         basedirpath = os.path.abspath(os.path.join(self.opts.value['cachedir'], 'raet'))
 
@@ -164,16 +173,20 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
                                 basedirpath=basedirpath,
                                 stackname=name)
 
+        roledata = keep.loadLocalRoleData()
+        sighex = roledata['sighex'] or self.local.data.sighex
+        prihex = roledata['prihex'] or self.local.data.prihex
+
         self.stack.value = RoadStack(store=self.store,
                                      keep=keep,
                                      name=name,
                                      uid=uid,
                                      ha=ha,
                                      role=role,
-                                     sigkey=sigkey,
-                                     prikey=prikey,
+                                     sigkey=sighex,
+                                     prikey=prihex,
                                      main=main,
-                                     kind=daemons.APPL_KINDS[kind],
+                                     kind=kinds.APPL_KINDS[kind],
                                      mutable=mutable,
                                      txMsgs=txMsgs,
                                      rxMsgs=rxMsgs,
@@ -245,7 +258,6 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
                                                  fuid=0,  # vacuous join
                                                  sid=0,  # always 0 for join
                                                  ha=mha))
-            # stack.join(uid=stack.remotes.values()[0].uid, timeout=0.0)
             for remote in stack.remotes.values():
                 stack.join(uid=remote.uid, timeout=0.0)
 
@@ -307,8 +319,9 @@ class SaltRaetRoadStackRejected(ioflo.base.deeding.Deed):
         rejected = False
         if stack and isinstance(stack, RoadStack):
             if stack.remotes:
-                rejected = (stack.remotes.values()[0].acceptance
-                                == raeting.acceptances.rejected)
+                for remote in stack.remotes.values():
+                    rejected = all([remote.acceptance == raeting.acceptances.rejected
+                                    for remote in stack.remotes.values()])
             else:  # no remotes so assume rejected
                 rejected = True
         self.status.update(rejected=rejected)
@@ -518,7 +531,8 @@ class SaltLoadPillar(ioflo.base.deeding.Deed):
                'grains': '.salt.grains',
                'modules': '.salt.loader.modules',
                'pillar_refresh': '.salt.var.pillar_refresh',
-               'road_stack': '.salt.road.manor.stack'}
+               'road_stack': '.salt.road.manor.stack',
+               'master_estate_name': '.salt.track.master_estate_name', }
 
     def action(self):
         '''
@@ -538,14 +552,17 @@ class SaltLoadPillar(ioflo.base.deeding.Deed):
         else:
             master = available_masters[0]
 
+        self.master_estate_name.value = master.name
+
         route = {'src': (self.road_stack.value.local.name, None, None),
-                 'dst': (master.name, None, 'remote_cmd')}
+                 'dst': (next(six.itervalues(self.road_stack.value.remotes)).name, None, 'remote_cmd')}
         load = {'id': self.opts.value['id'],
                 'grains': self.grains.value,
                 'saltenv': self.opts.value['environment'],
                 'ver': '2',
                 'cmd': '_pillar'}
-        self.road_stack.value.transmit({'route': route, 'load': load})
+        self.road_stack.value.transmit({'route': route, 'load': load},
+                                       uid=master.uid)
         self.road_stack.value.serviceAll()
         while True:
             time.sleep(0.1)
@@ -558,7 +575,6 @@ class SaltLoadPillar(ioflo.base.deeding.Deed):
                 self.pillar_refresh.value = False
                 return
             self.road_stack.value.serviceAll()
-        self.pillar_refresh.value = False
 
 
 class SaltSchedule(ioflo.base.deeding.Deed):
@@ -628,14 +644,15 @@ class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
         Run once at enter
         '''
         kind = self.opts.value['__role']
-        if kind not in daemons.APPL_KINDS:
+        if kind not in kinds.APPL_KINDS:
             emsg = ("Invalid application kind = '{0}' for manor lane.".format(kind))
             log.error(emsg + "\n")
             raise ValueError(emsg)
 
-        if kind == 'master':
+        if kind == kinds.APPL_KIND_NAMES[kinds.applKinds.master]:
             lanename = 'master'
-        elif kind == 'minion':
+        elif kind in [kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
+                      kinds.APPL_KIND_NAMES[kinds.applKinds.caller], ]:
             role = self.opts.value.get('id', '')
             if not role:
                 emsg = ("Missing role required to setup manor Lane.")
@@ -709,14 +726,13 @@ class SaltRaetRoadStackService(ioflo.base.deeding.Deed):
 
 class SaltRaetRoadStackServiceRx(ioflo.base.deeding.Deed):
     '''
-    Process the inbound udp traffic
+    Process the inbound Road traffic
     FloScript:
 
-    do rx
+    do salt raet road stack service rx
 
     '''
     Ioinits = {
-               'lane_stack': '.salt.lane.manor.stack',
                'road_stack': '.salt.road.manor.stack',
                }
 
@@ -725,21 +741,19 @@ class SaltRaetRoadStackServiceRx(ioflo.base.deeding.Deed):
         Process inboud queues
         '''
         self.road_stack.value.serviceAllRx()
-        self.lane_stack.value.serviceAllRx()
 
 
 class SaltRaetRoadStackServiceTx(ioflo.base.deeding.Deed):
     '''
-    Process the inbound udp traffic
+    Process the outbound Road traffic
     FloScript:
 
-    do tx
+    do salt raet road stack service tx
 
     '''
     # Yes, this class is identical to RX, this is because we still need to
     # separate out rx and tx in raet itself
     Ioinits = {
-               'lane_stack': '.salt.lane.manor.stack',
                'road_stack': '.salt.road.manor.stack',
                }
 
@@ -747,13 +761,52 @@ class SaltRaetRoadStackServiceTx(ioflo.base.deeding.Deed):
         '''
         Process inbound queues
         '''
-        self.lane_stack.value.serviceAllTx()
         self.road_stack.value.serviceAllTx()
+
+
+class SaltRaetLaneStackServiceRx(ioflo.base.deeding.Deed):
+    '''
+    Process the inbound Lane traffic
+    FloScript:
+
+    do salt raet lane stack service rx
+
+    '''
+    Ioinits = {
+               'lane_stack': '.salt.lane.manor.stack',
+               }
+
+    def action(self):
+        '''
+        Process inboud queues
+        '''
+        self.lane_stack.value.serviceAllRx()
+
+
+class SaltRaetLaneStackServiceTx(ioflo.base.deeding.Deed):
+    '''
+    Process the outbound Lane traffic
+    FloScript:
+
+    do salt raet lane stack service tx
+
+    '''
+    # Yes, this class is identical to RX, this is because we still need to
+    # separate out rx and tx in raet itself
+    Ioinits = {
+               'lane_stack': '.salt.lane.manor.stack',
+               }
+
+    def action(self):
+        '''
+        Process outbound queues
+        '''
+        self.lane_stack.value.serviceAllTx()
 
 
 class SaltRaetRouter(ioflo.base.deeding.Deed):
     '''
-    Routes the communication in and out of uxd connections
+    Routes the communication in and out of Road and Lane connections
 
     This is the initial static salt router, we want to create a dynamic
     router that takes a map that defines where packets are send
@@ -772,7 +825,10 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
                'workers': '.salt.track.workers',
                'worker_verify': '.salt.var.worker_verify',
                'lane_stack': '.salt.lane.manor.stack',
-               'road_stack': '.salt.road.manor.stack'}
+               'road_stack': '.salt.road.manor.stack',
+               'master_estate_name': '.salt.track.master_estate_name',
+               'laters': {'ipath': '.salt.lane.manor.laters',  # requeuing when not yet routable
+                          'ival': deque()}, }
 
     def _process_udp_rxmsg(self, msg, sender):
         '''
@@ -801,7 +857,7 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
             pass
         elif d_estate != self.road_stack.value.local.name:
             log.error(
-                    'Received message for wrong estate: {0}'.format(d_estate))
+                    'Road Router Received message for wrong estate: {0}'.format(d_estate))
             return
 
         if d_yard is not None:
@@ -827,7 +883,10 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
                 self.lane_stack.value.transmit(msg,
                         self.lane_stack.value.fetchUidByName(next(self.workers.value)))
         elif d_share == 'fun':
-            self.fun.value.append(msg)
+            if self.road_stack.value.kind == kinds.applKinds.minion:
+                self.fun.value.append(msg)
+            elif self.road_stack.value.kind == kinds.applKinds.syndic:
+                self.self.publish.value.append(msg)
 
     def _process_uxd_rxmsg(self, msg, sender):
         '''
@@ -841,7 +900,7 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
             s_estate, s_yard, s_share = msg['route']['src']
             d_estate, d_yard, d_share = msg['route']['dst']
         except (ValueError, IndexError):
-            log.error('Received invalid message: {0}'.format(msg))
+            log.error('Lane Router Received invalid message: {0}'.format(msg))
             return
 
         if s_yard is None:
@@ -882,7 +941,7 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
             return
         if d_share is None:
             # No queue destination!
-            log.error('Received message without share: {0}'.format(msg))
+            log.error('Lane Router Received message without share: {0}'.format(msg))
             return
         elif d_share == 'local_cmd':
             self.lane_stack.value.transmit(msg,
@@ -893,36 +952,48 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
         elif d_share == 'event_fire':
             self.event.value.append(msg)
             #log.debug("\n**** Event Fire \n {0}\n".format(msg))
-        elif d_share == 'remote_cmd':  # assume must be minion to master
+        elif d_share == 'remote_cmd':  # assume  minion to master or salt-call
             if not self.road_stack.value.remotes:
-                log.error("Missing joined master. Unable to route "
-                          "remote_cmd '{0}'.".format(msg))
+                log.error("**** Lane Router: Missing joined master. Unable to route "
+                          "remote_cmd. Requeuing".format())
+                self.laters.value.append((msg, sender))
                 return
-            #log.error("**** Missing destination estate for 'remote_cmd'. Unable to route "
-                                    #"remote_cmd '{0}'.".format(msg))
-            #return
-            d_estate = self.road_stack.value.remotes.values()[0].name
+            d_estate = self._get_master_estate_name()
+            if not d_estate:
+                log.error("**** Lane Router: No available destination estate for 'remote_cmd'."
+                          "Unable to route. Requeuing".format())
+                self.laters.value.append((msg, sender))
+                return
             msg['route']['dst'] = (d_estate, d_yard, d_share)
-            log.error("**** Missing destination estate for 'remote_cmd'. "
+            log.debug("**** Lane Router: Missing destination estate for 'remote_cmd'. "
                     "Using default route={0}.".format(msg['route']['dst']))
             self.road_stack.value.message(msg,
                     self.road_stack.value.nameRemotes[d_estate].uid)
-        elif d_share == 'call_cmd':  # salt call return pub to master
-            if not self.road_stack.value.remotes:
-                log.error("Missing joined master. Unable to route "
-                          "call_cmd '{0}'.".format(msg))
-                return
-            #log.error("**** Missing destination estate for 'call_cmd'. Unable to route "
-                                                #"call_cmd '{0}'.".format(msg))
-            #return
 
-            d_estate = self.road_stack.value.remotes.values()[0].name
-            d_share = 'remote_cmd'
-            msg['route']['dst'] = (d_estate, d_yard, d_share)
-            log.error("**** Missing destination estate for 'call_cmd'. "
-                        "Using default route={0}.".format(msg['route']['dst']))
-            self.road_stack.value.message(msg,
-                    self.road_stack.value.nameRemotes[d_estate].uid)
+    def _get_master_estate_name(self):
+        '''
+        Assign and return the name of the estate for the default master or empty if none
+        If the default master is no longer available then selects one of the available
+        masters
+        '''
+        opts = self.opts.value
+        master = self.road_stack.value.nameRemotes.get(self.master_estate_name.value)
+        if not master or not master.alived:  # select a different master
+            available_masters = [remote for remote in
+                                 self.road_stack.value.remotes.values()
+                                                       if remote.alived]
+            if available_masters:
+                random_master = opts.get('random_master')
+                if random_master:
+                    master = available_masters[random.randint(0, len(available_masters) - 1)]
+                else:
+                    master = available_masters[0]
+            else:
+                master = None
+
+        self.master_estate_name.value = master.name if master else ''
+
+        return self.master_estate_name.value
 
     def action(self):
         '''
@@ -931,6 +1002,9 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
         while self.road_stack.value.rxMsgs:
             msg, sender = self.road_stack.value.rxMsgs.popleft()
             self._process_udp_rxmsg(msg=msg, sender=sender)
+        while self.laters.value:  # process requeued LaneMsgs
+            msg, sender = self.laters.value.popleft()
+            self.lane_stack.value.rxMsgs.append((msg, sender))
         while self.lane_stack.value.rxMsgs:
             msg, sender = self.lane_stack.value.rxMsgs.popleft()
             self._process_uxd_rxmsg(msg=msg, sender=sender)
@@ -1012,9 +1086,14 @@ class SaltRaetPublisher(ioflo.base.deeding.Deed):
         '''
         Publish the message out to the targeted minions
         '''
+        stack = self.stack.value
         pub_data = pub_msg['return']
         # only publish to available minions by intersecting sets
-        minions = self.availables.value & set(self.stack.value.nameRemotes.keys())
+
+        minions = (self.availables.value &
+                   set((remote.name for remote in stack.remotes.values()
+                            if remote.kind in [kinds.applKinds.minion,
+                                               kinds.applKinds.syndic])))
         for minion in minions:
             uid = self.stack.value.fetchUidByName(minion)
             if uid:
@@ -1075,7 +1154,7 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
             raise ValueError(emsg)
 
         kind = self.opts['__role']
-        if kind not in daemons.APPL_KINDS:
+        if kind not in kinds.APPL_KINDS:
             emsg = ("Invalid application kind = '{0}' for Jobber lane.".format(kind))
             log.error(emsg + "\n")
             raise ValueError(emsg)

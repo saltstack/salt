@@ -4,6 +4,7 @@ Package support for pkgin based systems, inspired from freebsdpkg module
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import re
 import logging
@@ -376,7 +377,7 @@ def upgrade():
         return {}
 
     old = list_pkgs()
-    call = __salt__['cmd.ret_all']('{0} -y fug'.format(pkgin))
+    call = __salt__['cmd.run_all']('{0} -y fug'.format(pkgin))
     if call['retcode'] != 0:
         ret['result'] = False
         if 'stderr' in call:
@@ -491,7 +492,7 @@ def _rehash():
     Use whenever a new command is created during the current
     session.
     '''
-    shell = __salt__['cmd.run']('echo $SHELL', output_loglevel='trace')
+    shell = __salt__['environ.get']('SHELL')
     if shell.split('/')[-1] in ('csh', 'tcsh'):
         __salt__['cmd.run']('rehash', output_loglevel='trace')
 
@@ -543,7 +544,6 @@ def file_dict(package):
         else:
             continue  # unexpected string
 
-    print files
     return {'errors': errors, 'files': files}
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

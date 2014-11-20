@@ -2,6 +2,7 @@
 '''
 Manage the information in the hosts file
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -9,6 +10,8 @@ import os
 # Import salt libs
 import salt.utils
 import salt.utils.odict as odict
+from salt.ext.six.moves import range
+import salt.ext.six as six
 
 
 # pylint: disable=C0103
@@ -227,7 +230,7 @@ def add_host(ip, alias):
 
 def _write_hosts(hosts):
     lines = []
-    for ip, aliases in hosts.iteritems():
+    for ip, aliases in six.iteritems(hosts):
         if ip:
             if ip.startswith('comment'):
                 line = ''.join(aliases)

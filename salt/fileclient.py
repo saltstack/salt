@@ -2,6 +2,7 @@
 '''
 Classes that manage file clients
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import contextlib
@@ -223,7 +224,9 @@ class Client(object):
             if fn_.strip() and fn_.startswith(path):
                 if salt.utils.check_include_exclude(
                         fn_, include_pat, exclude_pat):
-                    ret.append(self.cache_file('salt://' + fn_, saltenv))
+                    fn_ = self.cache_file('salt://' + fn_, saltenv)
+                    if fn_:
+                        ret.append(fn_)
 
         if include_empty:
             # Break up the path into a list containing the bottom-level
@@ -588,7 +591,12 @@ class Client(object):
         else:
             fixed_url = url
         try:
-            response = requests.get(fixed_url, stream=True)
+            if requests.__version__[0] == '0':
+                # 'stream' was called 'prefetch' before 1.0, with flipped meaning
+                get_kwargs = {'prefetch': False}
+            else:
+                get_kwargs = {'stream': True}
+            response = requests.get(fixed_url, **get_kwargs)
             with salt.utils.fopen(dest, 'wb') as destfp:
                 for chunk in response.iter_content(chunk_size=32*1024):
                     destfp.write(chunk)
@@ -937,7 +945,7 @@ class RemoteClient(Client):
             saltenv = env
 
         # Hash compare local copy with master and skip download
-        # if no diference found.
+        # if no difference found.
         dest2check = dest
         if not dest2check:
             rel_path = self._check_proto(path)

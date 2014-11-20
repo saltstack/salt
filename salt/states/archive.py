@@ -4,6 +4,7 @@ Extract an archive
 
 .. versionadded:: 2014.1.0
 '''
+from __future__ import absolute_import
 
 import logging
 import os
@@ -158,7 +159,7 @@ def extracted(name,
         log.debug('file.managed: {0}'.format(file_result))
         # get value of first key
         try:
-            file_result = file_result[file_result.keys()[0]]
+            file_result = file_result[next(file_result.iterkeys())]
         except AttributeError:
             pass
 

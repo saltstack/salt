@@ -11,6 +11,7 @@ Control the kernel sysctl system.
     sysctl.present:
       - value: 20
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import re
@@ -52,9 +53,15 @@ def present(name, value, config=None):
         else:
             config = '/etc/sysctl.conf'
 
-    current = __salt__['sysctl.show']()
-    configured = __salt__['sysctl.show'](config_file=True)
     if __opts__['test']:
+        current = __salt__['sysctl.show']()
+        configured = __salt__['sysctl.show'](config_file=config)
+        if not configured:
+            ret['result'] = None
+            ret['comment'] = (
+                        'Sysctl option {0} might be changed, we failed to check config file at {1}.\n'
+                        'The file is either unreadable, or missing.').format(name, config)
+            return ret
         if name in current and name not in configured:
             if re.sub(' +|\t+', ' ', current[name]) != re.sub(' +|\t+', ' ', str(value)):
                 ret['result'] = None

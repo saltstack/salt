@@ -11,6 +11,7 @@ Support for Apache
 
 # Python3 generators
 from __future__ import generators, print_function, with_statement
+from __future__ import absolute_import
 
 # Import python libs
 import re
@@ -436,7 +437,7 @@ def config(name, config, edit=True):
     '''
 
     for entry in config:
-        key = entry.keys()[0]
+        key = next(entry.iterkeys())
         configs = _parse_config(entry[key], key)
         if edit:
             with salt.utils.fopen(name, 'w') as configfile:

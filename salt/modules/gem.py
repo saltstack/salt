@@ -2,6 +2,7 @@
 '''
 Manage ruby gems.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import re
@@ -11,13 +12,20 @@ __func_alias__ = {
 }
 
 
-def _gem(command, ruby=None, runas=None):
-    cmdline = 'gem {command}'.format(command=command)
-    if __salt__['rvm.is_installed'](runas=runas):
-        return __salt__['rvm.do'](ruby, cmdline, runas=runas)
+def _gem(command, ruby=None, runas=None, gem_bin=None):
+    cmdline = '{gem} {command}'.format(gem=gem_bin or 'gem', command=command)
 
-    if __salt__['rbenv.is_installed'](runas=runas):
-        return __salt__['rbenv.do'](cmdline, runas=runas)
+    # If a custom gem is given, use that and don't check for rvm/rbenv. User
+    # knows best!
+    if gem_bin is None:
+        if __salt__['rvm.is_installed'](runas=runas):
+            return __salt__['rvm.do'](ruby, cmdline, runas=runas)
+
+        if __salt__['rbenv.is_installed'](runas=runas):
+            if ruby is None:
+                return __salt__['rbenv.do'](cmdline, runas=runas)
+            else:
+                return __salt__['rbenv.do_with_ruby'](ruby, cmdline, runas=runas)
 
     ret = __salt__['cmd.run_all'](
         cmdline,
@@ -32,6 +40,7 @@ def _gem(command, ruby=None, runas=None):
 
 def install(gems,           # pylint: disable=C0103
             ruby=None,
+            gem_bin=None,
             runas=None,
             version=None,
             rdoc=False,
@@ -43,8 +52,11 @@ def install(gems,           # pylint: disable=C0103
 
     gems
         The gems to install
+    gem_bin : None
+        Full path to ``gem`` binary to use.
     ruby : None
         If RVM or rbenv are installed, the ruby version and gemset to use.
+        Ignored if ``gem_bin`` is specified.
     runas : None
         The user to run gem as.
     version : None
@@ -65,6 +77,8 @@ def install(gems,           # pylint: disable=C0103
     .. code-block:: bash
 
         salt '*' gem.install vagrant
+
+        salt '*' gem.install redphone gem_bin=/opt/sensu/embeded/bin/gem
     '''
     options = []
     if version:
@@ -82,17 +96,21 @@ def install(gems,           # pylint: disable=C0103
     return _gem('install {gems} {options}'.format(gems=gems,
                                                   options=cmdline_args),
                 ruby,
+                gem_bin=gem_bin,
                 runas=runas)
 
 
-def uninstall(gems, ruby=None, runas=None):
+def uninstall(gems, ruby=None, runas=None, gem_bin=None):
     '''
     Uninstall one or several gems.
 
     gems
         The gems to uninstall.
+    gem_bin : None
+        Full path to ``gem`` binary to use.
     ruby : None
         If RVM or rbenv are installed, the ruby version and gemset to use.
+        Ignored if ``gem_bin`` is specified.
     runas : None
         The user to run gem as.
 
@@ -102,17 +120,23 @@ def uninstall(gems, ruby=None, runas=None):
 
         salt '*' gem.uninstall vagrant
     '''
-    return _gem('uninstall {gems}'.format(gems=gems), ruby, runas=runas)
+    return _gem('uninstall {gems}'.format(gems=gems),
+                ruby,
+                gem_bin=gem_bin,
+                runas=runas)
 
 
-def update(gems, ruby=None, runas=None):
+def update(gems, ruby=None, runas=None, gem_bin=None):
     '''
     Update one or several gems.
 
     gems
         The gems to update.
+    gem_bin : None
+        Full path to ``gem`` binary to use.
     ruby : None
         If RVM or rbenv are installed, the ruby version and gemset to use.
+        Ignored if ``gem_bin`` is specified.
     runas : None
         The user to run gem as.
 
@@ -122,17 +146,23 @@ def update(gems, ruby=None, runas=None):
 
         salt '*' gem.update vagrant
     '''
-    return _gem('update {gems}'.format(gems=gems), ruby, runas=runas)
+    return _gem('update {gems}'.format(gems=gems),
+                ruby,
+                gem_bin=gem_bin,
+                runas=runas)
 
 
-def update_system(version='', ruby=None, runas=None):
+def update_system(version='', ruby=None, runas=None, gem_bin=None):
     '''
     Update rubygems.
 
     version : (newest)
         The version of rubygems to install.
+    gem_bin : None
+        Full path to ``gem`` binary to use.
     ruby : None
         If RVM or rbenv are installed, the ruby version and gemset to use.
+        Ignored if ``gem_bin`` is specified.
     runas : None
         The user to run gem as.
 
@@ -142,18 +172,23 @@ def update_system(version='', ruby=None, runas=None):
 
         salt '*' gem.update_system
     '''
-    return _gem('update --system {version}'.
-                format(version=version), ruby, runas=runas)
+    return _gem('update --system {version}'.format(version=version),
+                ruby,
+                gem_bin=gem_bin,
+                runas=runas)
 
 
-def list_(prefix='', ruby=None, runas=None):
+def list_(prefix='', ruby=None, runas=None, gem_bin=None):
     '''
     List locally installed gems.
 
     prefix :
         Only list gems when the name matches this prefix.
+    gem_bin : None
+        Full path to ``gem`` binary to use.
     ruby : None
         If RVM or rbenv are installed, the ruby version and gemset to use.
+        Ignored if ``gem_bin`` is specified.
     runas : None
         The user to run gem as.
 
@@ -165,7 +200,9 @@ def list_(prefix='', ruby=None, runas=None):
     '''
     gems = {}
     stdout = _gem('list {prefix}'.format(prefix=prefix),
-                     ruby, runas=runas)
+                  ruby,
+                  gem_bin=gem_bin,
+                  runas=runas)
     lines = []
     if isinstance(stdout, str):
         lines = stdout.splitlines()
@@ -178,14 +215,17 @@ def list_(prefix='', ruby=None, runas=None):
     return gems
 
 
-def sources_add(source_uri, ruby=None, runas=None):
+def sources_add(source_uri, ruby=None, runas=None, gem_bin=None):
     '''
     Add a gem source.
 
     source_uri
         The source URI to add.
+    gem_bin : None
+        Full path to ``gem`` binary to use.
     ruby : None
         If RVM or rbenv are installed, the ruby version and gemset to use.
+        Ignored if ``gem_bin`` is specified.
     runas : None
         The user to run gem as.
 
@@ -195,18 +235,23 @@ def sources_add(source_uri, ruby=None, runas=None):
 
         salt '*' gem.sources_add http://rubygems.org/
     '''
-    return _gem('sources --add {source_uri}'.
-                format(source_uri=source_uri), ruby, runas=runas)
+    return _gem('sources --add {source_uri}'.format(source_uri=source_uri),
+                ruby,
+                gem_bin=gem_bin,
+                runas=runas)
 
 
-def sources_remove(source_uri, ruby=None, runas=None):
+def sources_remove(source_uri, ruby=None, runas=None, gem_bin=None):
     '''
     Remove a gem source.
 
     source_uri
         The source URI to remove.
+    gem_bin : None
+        Full path to ``gem`` binary to use.
     ruby : None
         If RVM or rbenv are installed, the ruby version and gemset to use.
+        Ignored if ``gem_bin`` is specified.
     runas : None
         The user to run gem as.
 
@@ -216,16 +261,21 @@ def sources_remove(source_uri, ruby=None, runas=None):
 
         salt '*' gem.sources_remove http://rubygems.org/
     '''
-    return _gem('sources --remove {source_uri}'.
-                format(source_uri=source_uri), ruby, runas=runas)
+    return _gem('sources --remove {source_uri}'.format(source_uri=source_uri),
+                ruby,
+                gem_bin=gem_bin,
+                runas=runas)
 
 
-def sources_list(ruby=None, runas=None):
+def sources_list(ruby=None, runas=None, gem_bin=None):
     '''
     List the configured gem sources.
 
+    gem_bin : None
+        Full path to ``gem`` binary to use.
     ruby : None
         If RVM or rbenv are installed, the ruby version and gemset to use.
+        Ignored if ``gem_bin`` is specified.
     runas : None
         The user to run gem as.
 
@@ -235,5 +285,5 @@ def sources_list(ruby=None, runas=None):
 
         salt '*' gem.sources_list
     '''
-    ret = _gem('sources', ruby, runas=runas)
+    ret = _gem('sources', ruby, gem_bin=gem_bin, runas=runas)
     return [] if ret is False else ret.splitlines()[2:]

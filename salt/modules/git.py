@@ -2,6 +2,7 @@
 '''
 Support for the Git SCM
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -841,7 +842,7 @@ def config_set(cwd=None, setting_name=None, setting_value=None, user=None, is_gl
 
     _check_git()
 
-    return _git_run('git config {0} {1} {2}'.format(scope, setting_name, setting_value),
+    return _git_run('git config {0} {1} "{2}"'.format(scope, setting_name, setting_value),
                     cwd=cwd, runas=user)
 
 

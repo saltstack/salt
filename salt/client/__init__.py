@@ -20,13 +20,14 @@ The data structure needs to be:
 #
 # Import python libs
 from __future__ import print_function
+from __future__ import absolute_import
 import os
 import time
 import copy
 import logging
 import errno
 from datetime import datetime
-from salt._compat import string_types
+from salt.ext.six import string_types
 
 # Import salt libs
 import salt.config
@@ -42,6 +43,7 @@ import salt.syspaths as syspaths
 from salt.exceptions import (
     EauthAuthenticationError, SaltInvocationError, SaltReqTimeoutError
 )
+import salt.ext.six as six
 
 # Import third party libs
 try:
@@ -768,7 +770,7 @@ class LocalClient(object):
         # get the info from the cache
         ret = self.get_cache_returns(jid)
         if ret != {}:
-            found.update(set(ret.keys()))
+            found.update(set(ret))
             yield ret
 
         # if you have all the returns, stop
@@ -778,7 +780,7 @@ class LocalClient(object):
         # otherwise, get them from the event system
         for event in event_iter:
             if event != {}:
-                found.update(set(event.keys()))
+                found.update(set(event))
                 yield event
             if len(found.intersection(minions)) >= len(minions):
                 raise StopIteration()
@@ -795,11 +797,12 @@ class LocalClient(object):
         '''
         if event is None:
             event = self.event
+        jid_tag = 'salt/job/{0}'.format(jid)
         while True:
             if HAS_ZMQ:
                 try:
                     raw = event.get_event_noblock()
-                    if raw and raw.get('tag', '').startswith(jid):
+                    if raw and raw.get('tag', '').startswith(jid_tag):
                         yield raw
                     else:
                         yield None
@@ -810,7 +813,7 @@ class LocalClient(object):
                         raise
             else:
                 raw = event.get_event_noblock()
-                if raw and raw.get('tag', '').startswith(jid):
+                if raw and raw.get('tag', '').startswith(jid_tag):
                     yield raw
                 else:
                     yield None
@@ -1060,7 +1063,7 @@ class LocalClient(object):
                 ret[minion] = m_data
 
         # if we have all the minion returns, lets just return
-        if len(set(ret.keys()).intersection(minions)) >= len(minions):
+        if len(set(ret).intersection(minions)) >= len(minions):
             return ret
 
         # otherwise lets use the listener we created above to get the rest
@@ -1069,14 +1072,14 @@ class LocalClient(object):
             if event_ret == {}:
                 time.sleep(0.02)
                 continue
-            for minion, m_data in event_ret.iteritems():
+            for minion, m_data in six.iteritems(event_ret):
                 if minion in ret:
                     ret[minion].update(m_data)
                 else:
                     ret[minion] = m_data
 
             # are we done yet?
-            if len(set(ret.keys()).intersection(minions)) >= len(minions):
+            if len(set(ret).intersection(minions)) >= len(minions):
                 return ret
 
         # otherwise we hit the timeout, return what we have
@@ -1143,7 +1146,8 @@ class LocalClient(object):
             time_left = timeout_at - int(time.time())
             # Wait 0 == forever, use a minimum of 1s
             wait = max(1, time_left)
-            raw = self.event.get_event(wait, jid)
+            jid_tag = 'salt/job/{0}'.format(jid)
+            raw = self.event.get_event(wait, jid_tag)
             if raw is not None and 'return' in raw:
                 if 'minions' in raw.get('data', {}):
                     minions.update(raw['data']['minions'])
@@ -1210,7 +1214,7 @@ class LocalClient(object):
                                          expect_minions=(verbose or show_timeout)
                                          ):
             # replace the return structure for missing minions
-            for id_, min_ret in ret.iteritems():
+            for id_, min_ret in six.iteritems(ret):
                 if min_ret.get('failed') is True:
                     if connected_minions is None:
                         connected_minions = salt.utils.minions.CkMinions(self.opts).connected_ids()

@@ -28,6 +28,7 @@ If this driver is still needed, set up the cloud configuration at
       provider: aws
 
 '''
+from __future__ import absolute_import
 # pylint: disable=E0102
 
 # Import python libs
@@ -39,6 +40,7 @@ import logging
 import salt.config as config
 from salt.utils import namespaced_function
 from salt.exceptions import SaltCloudException, SaltCloudSystemExit
+import salt.ext.six as six
 
 # Import libcloudfuncs and libcloud_aws, required to latter patch __opts__
 try:
@@ -84,7 +86,7 @@ def __virtual__():
     if get_configured_provider() is False:
         return False
 
-    for provider, details in __opts__['providers'].iteritems():
+    for provider, details in six.iteritems(__opts__['providers']):
         if 'provider' not in details or details['provider'] != 'aws':
             continue
 
@@ -111,7 +113,7 @@ def __virtual__():
 
     # Let's bring the functions imported from libcloud_aws to the current
     # namespace.
-    keysdiff = set(POST_IMPORT_LOCALS_KEYS.keys()).difference(
+    keysdiff = set(POST_IMPORT_LOCALS_KEYS).difference(
         PRE_IMPORT_LOCALS_KEYS
     )
     for key in keysdiff:

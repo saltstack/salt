@@ -2,10 +2,12 @@
 '''
 Manage Dell DRAC
 '''
+from __future__ import absolute_import
 
 import salt.utils
 
 import logging
+from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 
@@ -261,7 +263,7 @@ def create_user(username, password, permissions, users=None):
         salt dell drac.create_user [USERNAME] [PASSWORD] [PRIVELEGES]
         salt dell drac.create_user diana secret login,test_alerts,clear_logs
 
-    DRAC Priveleges
+    DRAC Privileges
       * login                   : Login to iDRAC
       * drac                    : Configure iDRAC
       * user_management         : Configure Users
@@ -284,7 +286,7 @@ def create_user(username, password, permissions, users=None):
     for i in users.keys():
         _uids.add(users[i]['index'])
 
-    uid = sorted(list(set(xrange(2, 12)) - _uids), reverse=True).pop()
+    uid = sorted(list(set(range(2, 12)) - _uids), reverse=True).pop()
 
     # Create user accountvfirst
     if not __execute_cmd('config -g cfgUserAdmin -o \
@@ -324,7 +326,7 @@ def set_permissions(username, permissions, uid=None):
         salt dell drac.set_permissions [USERNAME] [PRIVELEGES] [USER INDEX - optional]
         salt dell drac.set_permissions diana login,test_alerts,clear_logs 4
 
-    DRAC Priveleges
+    DRAC Privileges
       * login                   : Login to iDRAC
       * drac                    : Configure iDRAC
       * user_management         : Configure Users

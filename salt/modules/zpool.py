@@ -2,6 +2,7 @@
 '''
 Module for running ZFS zpool command
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import os
@@ -327,62 +328,87 @@ def create_file_vdev(size, *vdevs):
     return ret
 
 
-def export(pool_name='', force='false'):
+def export(*pools, **kwargs):
     '''
-    Export a storage pool
+    Export storage pools
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' zpool.export myzpool [force=True|False]
+        salt '*' zpool.export myzpool ... [force=True|False]
+        salt '*' zpool.export myzpool2 myzpool2 ... [force=True|False]
     '''
     ret = {}
-    if not pool_name:
+    pool_list = []
+    if not pools:
         ret['Error'] = 'zpool name parameter is mandatory'
         return ret
-    if exists(pool_name):
-        zpool = _check_zpool()
-        if force is True:
-            cmd = '{0} export -f {1}'.format(zpool, pool_name)
-        else:
-            cmd = '{0} export {1}'.format(zpool, pool_name)
-        __salt__['cmd.run'](cmd)
-        ret[pool_name] = 'Exported'
+
+    for pool in pools:
+        if not exists(pool):
+            ret['Error'] = 'Storage pool {0} does not exist'.format(pool)
+            return ret
+        pool_list.append(pool)
+
+    pools = ' '.join(pool_list)
+    zpool = _check_zpool()
+    force = kwargs.get('force', False)
+    if force is True:
+        cmd = '{0} export -f {1}'.format(zpool, pools)
     else:
-        ret['Error'] = 'Storage pool {0} does not exist'.format(pool_name)
+        cmd = '{0} export {1}'.format(zpool, pools)
+    res = __salt__['cmd.run'](cmd, ignore_retcode=True)
+    if res:
+        ret['Error'] = {}
+        ret['Error']['Message'] = 'Import failed!'
+        ret['Error']['Reason'] = res
+    else:
+        for pool in pool_list:
+            ret[pool] = 'Exported'
     return ret
 
 
-def import_(pool_name='', force='false'):
+def import_(pool_name='', new_name='', **kwargs):
     '''
-    Import a storage pool or list pools available for import
+    Import storage pools or list pools available for import
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' zpool.import
-        salt '*' zpool.import myzpool [force=True|False]
+        salt '*' zpool.import [all=True|False]
+        salt '*' zpool.import myzpool [mynewzpool] [force=True|False]
     '''
     ret = {}
     zpool = _check_zpool()
+    import_all = kwargs.get('all', False)
+    force = kwargs.get('force', False)
+
     if not pool_name:
-        cmd = '{0} import'.format(zpool)
-        res = __salt__['cmd.run'](cmd, ignore_retcode=True)
-        if not res:
-            ret['Error'] = 'No pools available for import'
+        if import_all is True:
+            cmd = '{0} import -a'.format(zpool)
         else:
+            cmd = '{0} import'.format(zpool)
+        res = __salt__['cmd.run'](cmd, ignore_retcode=True)
+        if not res and import_all is False:
+            ret['Error'] = 'No pools available for import'
+        elif import_all is False:
             pool_list = [l for l in res.splitlines()]
             ret['pools'] = pool_list
+        else:
+            ret['pools'] = 'Imported all pools'
         return ret
-    if exists(pool_name):
+
+    if exists(pool_name) and not new_name:
         ret['Error'] = 'Storage pool {0} already exists. Import the pool under a different name instead'.format(pool_name)
+    elif exists(new_name):
+        ret['Error'] = 'Storage pool {0} already exists. Import the pool under a different name instead'.format(new_name)
     else:
         if force is True:
-            cmd = '{0} import -f {1}'.format(zpool, pool_name)
+            cmd = '{0} import -f {1} {2}'.format(zpool, pool_name, new_name)
         else:
-            cmd = '{0} import {1}'.format(zpool, pool_name)
+            cmd = '{0} import {1} {2}'.format(zpool, pool_name, new_name)
         res = __salt__['cmd.run'](cmd, ignore_retcode=True)
         if res:
             ret['Error'] = {}

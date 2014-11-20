@@ -4,6 +4,7 @@ Create ssh executor system
 '''
 # Import python libs
 from __future__ import print_function
+from __future__ import absolute_import
 import copy
 import getpass
 import json
@@ -17,6 +18,7 @@ import re
 import time
 import yaml
 import uuid
+from salt.ext.six.moves import input
 
 # Import salt libs
 import salt.client.ssh.shell
@@ -36,7 +38,7 @@ import salt.utils.atomicfile
 import salt.utils.thin
 import salt.utils.verify
 import salt.utils.network
-from salt._compat import string_types
+from salt.ext.six import string_types
 from salt.utils import is_windows
 
 try:
@@ -247,7 +249,7 @@ class SSH(object):
             # permission denied, attempt to auto deploy ssh key
             print(('Permission denied for host {0}, do you want to deploy '
                    'the salt-ssh key? (password required):').format(host))
-            deploy = raw_input('[Y/n] ')
+            deploy = input('[Y/n] ')
             if deploy.startswith(('n', 'N')):
                 return ret
             target['passwd'] = getpass.getpass(
@@ -441,7 +443,7 @@ class SSH(object):
         sret = {}
         outputter = self.opts.get('output', 'nested')
         for ret in self.handle_ssh():
-            host = ret.keys()[0]
+            host = next(ret.iterkeys())
             self.cache_job(jid, host, ret[host])
             ret = self.key_deploy(host, ret)
             if not isinstance(ret[host], dict):

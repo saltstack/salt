@@ -3,6 +3,7 @@
 Monit service module. This module will create a monit type
 service watcher.
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils

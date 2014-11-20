@@ -2,6 +2,7 @@
 '''
 Manage users with the useradd command
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import re
@@ -15,7 +16,7 @@ import copy
 
 # Import salt libs
 import salt.utils
-from salt._compat import string_types
+from salt.ext.six import string_types
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)

@@ -2,6 +2,7 @@
 '''
 Mac OS X implementations of various commands in the "desktop" interface
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils

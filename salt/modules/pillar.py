@@ -2,6 +2,7 @@
 '''
 Extract the pillar data for this minion
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import collections
@@ -13,7 +14,7 @@ import yaml
 import salt.pillar
 import salt.utils
 from salt.defaults import DEFAULT_TARGET_DELIM
-from salt._compat import string_types
+from salt.ext.six import string_types
 
 __proxyenabled__ = ['*']
 

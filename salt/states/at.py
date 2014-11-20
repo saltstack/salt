@@ -5,9 +5,11 @@ Configuration disposable regularly scheduled tasks for at.
 
 The at state can be add disposable regularly scheduled tasks for your system.
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils
+from salt.ext.six.moves import map
 
 # Tested on OpenBSD 5.0
 BSD = ('OpenBSD', 'FreeBSD')
@@ -160,9 +162,9 @@ def absent(name, jobid=None, **kwargs):
     #    return ret
 
     if kwargs:
-        opts = map(str, [j['job'] for j in __salt__['at.jobcheck'](**kwargs)['jobs']])
+        opts = list(list(map(str, [j['job'] for j in __salt__['at.jobcheck'](**kwargs)['jobs']])))
     else:
-        opts = map(str, [j['job'] for j in __salt__['at.atq']()['jobs']])
+        opts = list(list(map(str, [j['job'] for j in __salt__['at.atq']()['jobs']])))
 
     if not opts:
         ret['result'] = False
@@ -172,7 +174,7 @@ def absent(name, jobid=None, **kwargs):
     __salt__['cmd.run']('{0} -d {1}'.format(binary, ' '.join(opts)))
     fail = []
     for i in opts:
-        if i in map(str, [j['job'] for j in __salt__['at.atq']()['jobs']]):
+        if i in list(list(map(str, [j['job'] for j in __salt__['at.atq']()['jobs']]))):
             fail.append(i)
 
     if fail:

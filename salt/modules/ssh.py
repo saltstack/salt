@@ -7,6 +7,8 @@ Manage client ssh components
     this module should be disabled or removed.
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 import os
 import re
@@ -22,6 +24,7 @@ from salt.exceptions import (
     SaltInvocationError,
     CommandExecutionError,
 )
+from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 
@@ -506,7 +509,7 @@ def set_auth_key_from_file(user,
                 s_keys[key]['comment'],
                 s_keys[key]['options'],
                 config,
-                s_keys.keys()
+                list(s_keys.keys())
             )
         # Due to the ability for a single file to have multiple keys, it's
         # possible for a single call to this function to have both "replace"
@@ -837,7 +840,7 @@ def set_known_host(user=None,
         # set proper ownership/permissions
         if user:
             os.chown(ssh_dir, uinfo['uid'], uinfo['gid'])
-            os.chmod(ssh_dir, 0700)
+            os.chmod(ssh_dir, 0o700)
 
     if key:
         cmd_result = __salt__['ssh.hash_known_hosts'](user=user, config=full)
@@ -853,7 +856,7 @@ def set_known_host(user=None,
 
     if os.geteuid() == 0 and user:
         os.chown(full, uinfo['uid'], uinfo['gid'])
-    os.chmod(full, 0644)
+    os.chmod(full, 0o644)
 
     return {'status': 'updated', 'old': stored_host, 'new': remote_host}
 

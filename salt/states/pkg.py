@@ -33,6 +33,8 @@ This is necessary and can not be replaced by a require clause in the pkg.
       pkg.installed
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 import logging
 import os
@@ -43,7 +45,8 @@ import salt.utils
 from salt.output import nested
 from salt.utils import namespaced_function as _namespaced_function
 from salt.utils.odict import OrderedDict as _OrderedDict
-from salt._compat import string_types
+from salt.ext.six import string_types
+import salt.ext.six as six  # pylint: disable=W0611
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
@@ -147,7 +150,7 @@ def _find_remove_targets(name=None,
     # Check current versions against specified versions
     targets = []
     problems = []
-    for pkgname, pkgver in to_remove.iteritems():
+    for pkgname, pkgver in to_remove.items():
         cver = cur_pkgs.get(pkgname, [])
         # Package not installed, no need to remove
         if not cver:
@@ -309,7 +312,7 @@ def _find_install_targets(name=None,
                     '{0}'.format(', '.join(sorted(problems['no_suggest'])))
                 )
             if problems.get('suggest'):
-                for pkgname, suggestions in problems['suggest'].iteritems():
+                for pkgname, suggestions in problems['suggest'].items():
                     comments.append(
                         'Package {0!r} not found (possible matches: {1})'
                         .format(pkgname, ', '.join(suggestions))
@@ -326,7 +329,7 @@ def _find_install_targets(name=None,
         targets = {}
         to_reinstall = {}
         problems = []
-        for pkgname, pkgver in desired.iteritems():
+        for pkgname, pkgver in desired.items():
             cver = cur_pkgs.get(pkgname, [])
             # Package not yet installed, so add to targets
             if not cver:
@@ -397,7 +400,7 @@ def _verify_install(desired, new_pkgs):
     '''
     ok = []
     failed = []
-    for pkgname, pkgver in desired.iteritems():
+    for pkgname, pkgver in desired.items():
         cver = new_pkgs.get(pkgname)
         if not cver:
             failed.append(pkgname)
@@ -440,13 +443,13 @@ def _get_desired_pkg(name, desired):
 
 def _preflight_check(desired, fromrepo, **kwargs):
     '''
-    Perform platform-specifc checks on desired packages
+    Perform platform-specific checks on desired packages
     '''
     if 'pkg.check_db' not in __salt__:
         return {}
     ret = {'suggest': {}, 'no_suggest': []}
     pkginfo = __salt__['pkg.check_db'](
-        *desired.keys(), fromrepo=fromrepo, **kwargs
+        *list(desired.keys()), fromrepo=fromrepo, **kwargs
     )
     for pkgname in pkginfo:
         if pkginfo[pkgname]['found'] is False:
@@ -870,12 +873,12 @@ def installed(
 
     # Remove any targets not returned by _find_install_targets
     if pkgs:
-        pkgs = [dict([(x, y)]) for x, y in targets.iteritems()]
-        pkgs.extend([dict([(x, y)]) for x, y in to_reinstall.iteritems()])
+        pkgs = [dict([(x, y)]) for x, y in targets.items()]
+        pkgs.extend([dict([(x, y)]) for x, y in to_reinstall.items()])
     elif sources:
         oldsources = sources
-        sources = [x for x in oldsources if x.keys()[0] in targets]
-        sources.extend([x for x in oldsources if x.keys()[0] in to_reinstall])
+        sources = [x for x in oldsources if next(iter(list(x.keys()))) in targets]
+        sources.extend([x for x in oldsources if next(iter(list(x.keys()))) in to_reinstall])
 
     comment = []
     if __opts__['test']:
@@ -979,7 +982,7 @@ def installed(
 
     # Analyze pkg.install results for packages in targets
     if sources:
-        modified = [x for x in changes['installed'].keys() if x in targets]
+        modified = [x for x in changes['installed'] if x in targets]
         not_modified = [x for x in desired if x not in targets and x not in to_reinstall]
         failed = [x for x in targets if x not in modified]
     else:
@@ -1188,7 +1191,7 @@ def latest(
                 'result': False,
                 'comment': 'The "sources" parameter is not supported.'}
     elif pkgs:
-        desired_pkgs = _repack_pkgs(pkgs).keys()
+        desired_pkgs = list(_repack_pkgs(pkgs).keys())
         if not desired_pkgs:
             # Badly-formatted SLS
             return {'name': name,
@@ -1257,7 +1260,7 @@ def latest(
             up_to_date = [x for x in pkgs if x not in targets]
 
         if __opts__['test']:
-            to_be_upgraded = ', '.join(sorted(targets.keys()))
+            to_be_upgraded = ', '.join(sorted(targets))
             comment = 'The following packages are set to be ' \
                       'installed/upgraded: ' \
                       '{0}.'.format(to_be_upgraded)
@@ -1284,7 +1287,7 @@ def latest(
                     'comment': comment}
 
         # Build updated list of pkgs to exclude non-targeted ones
-        targeted_pkgs = targets.keys() if pkgs else None
+        targeted_pkgs = list(targets.keys()) if pkgs else None
 
         try:
             # No need to refresh, if a refresh was necessary it would have been
@@ -1338,10 +1341,10 @@ def latest(
             elif len(targets) > 1:
                 comment = ('The following targeted packages failed to update. '
                            'See debug log for details: ({0}).'
-                           .format(', '.join(sorted(targets.keys()))))
+                           .format(', '.join(sorted(targets))))
             else:
                 comment = 'Package {0} failed to ' \
-                          'update.'.format(targets.keys()[0])
+                          'update.'.format(next(iter(list(targets.keys()))))
             if up_to_date:
                 if len(up_to_date) <= 10:
                     comment += ' The following packages were already ' \
@@ -1544,7 +1547,7 @@ def uptodate(name, refresh=False):
     if isinstance(refresh, bool):
         try:
             packages = __salt__['pkg.list_upgrades'](refresh=refresh)
-        except Exception, e:
+        except Exception as e:
             ret['comment'] = str(e)
             return ret
     else:

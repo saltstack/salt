@@ -3,6 +3,8 @@
 Routines to set up a minion
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 import os
 import imp
@@ -112,7 +114,7 @@ def _create_loader(
     )
 
 
-def minion_mods(opts, context=None, whitelist=None, include_errors=False):
+def minion_mods(opts, context=None, whitelist=None, include_errors=False, initial_load=False):
     '''
     Load execution modules
 
@@ -139,7 +141,8 @@ def minion_mods(opts, context=None, whitelist=None, include_errors=False):
         pack,
         whitelist=whitelist,
         provider_overrides=True,
-        include_errors=include_errors
+        include_errors=include_errors,
+        initial_load=initial_load
     )
     # Enforce dependencies of module functions from "functions"
     Depends.enforce_dependencies(functions)
@@ -212,7 +215,7 @@ def tops(opts):
     '''
     if 'master_tops' not in opts:
         return {}
-    whitelist = opts['master_tops'].keys()
+    whitelist = list(opts['master_tops'].keys())
     load = _create_loader(opts, 'tops', 'top')
     topmodules = load.filter_func('top', whitelist=whitelist)
     return topmodules
@@ -483,7 +486,7 @@ def _generate_module(name):
 
     code = "'''Salt loaded {0} parent module'''".format(name.split('.')[-1])
     module = imp.new_module(name)
-    exec code in module.__dict__
+    exec(code, module.__dict__)
     sys.modules[name] = module
 
 
@@ -570,7 +573,7 @@ class Loader(object):
             if self.opts.get('cython_enable', True) is True:
                 # The module was not found, try to find a cython module
                 try:
-                    import pyximport
+                    import pyximport  # pylint: disable=import-error
                     pyximport.install()
 
                     for mod_dir in self.module_dirs:
@@ -592,6 +595,9 @@ class Loader(object):
         '''
         Load a single module and pack it with the functions passed
         '''
+        if not name:
+            return {}
+
         full = ''
         mod = None
         for mod_dir in self.module_dirs:
@@ -617,7 +623,7 @@ class Loader(object):
         cython_enabled = False
         if self.opts.get('cython_enable', True) is True:
             try:
-                import pyximport
+                import pyximport  # pylint: disable=import-error
                 pyximport.install()
                 cython_enabled = True
             except ImportError:
@@ -725,21 +731,22 @@ class Loader(object):
             mod.__salt__ = functions
         try:
             context = sys.modules[
-                functions[functions.keys()[0]].__module__
+                functions[next(iter(functions.keys()))].__module__
             ].__context__
-        except (AttributeError, IndexError):
+        except (AttributeError, StopIteration):
             context = {}
         mod.__context__ = context
         return funcs
 
     def gen_functions(self, pack=None, virtual_enable=True, whitelist=None,
-                      provider_overrides=False, include_errors=False):
+                      provider_overrides=False, include_errors=False, initial_load=False):
         '''
         Return a dict of functions found in the defined module_dirs
         '''
         funcs = {}
         error_funcs = {}
-        self.load_modules()
+        if not hasattr(self, 'modules'):
+            self.load_modules()
         for mod in self.modules:
             # If this is a proxy minion then MOST modules cannot work.  Therefore, require that
             # any module that does work with salt-proxy-minion define __proxyenabled__ as a list
@@ -848,7 +855,7 @@ class Loader(object):
             funcs['_errors'] = error_funcs
         return funcs
 
-    def load_modules(self):
+    def load_modules(self, initial_load=False):
         '''
         Loads all of the modules from module_dirs and returns a list of them
         '''
@@ -861,7 +868,7 @@ class Loader(object):
         cython_enabled = False
         if self.opts.get('cython_enable', True) is True:
             try:
-                import pyximport
+                import pyximport  # pylint: disable=import-error
                 pyximport.install()
                 cython_enabled = True
             except ImportError:
@@ -894,6 +901,13 @@ class Loader(object):
                         )
                     )
                     continue
+
+                if fn_.endswith(('.pyc', '.pyo')):
+                    non_compiled_filename = '{0}.py'.format(os.path.splitext(fn_)[0])
+                    if os.path.exists(os.path.join(mod_dir, non_compiled_filename)):
+                        # Let's just process the non compiled python modules
+                        continue
+
                 if (fn_.endswith(('.py', '.pyc', '.pyo', '.so'))
                         or (cython_enabled and fn_.endswith('.pyx'))
                         or os.path.isdir(os.path.join(mod_dir, fn_))):
@@ -903,6 +917,20 @@ class Loader(object):
                         _name = fn_[:extpos]
                     else:
                         _name = fn_
+
+                    if _name in names:
+                        # Since we load custom modules first, if this logic is true it means
+                        # that an internal module was shadowed by an external custom module
+                        log.trace(
+                            'The {0!r} module from {1!r} was shadowed by '
+                            'the module in {2!r}'.format(
+                                _name,
+                                mod_dir,
+                                names[_name],
+                            )
+                        )
+                        continue
+
                     names[_name] = os.path.join(mod_dir, fn_)
                 else:
                     log.trace(
@@ -913,7 +941,7 @@ class Loader(object):
                     )
         failed_loads = {}
 
-        def load_names(names, failhard=False):
+        def load_names(names, failhard=False, initial_load=False):
             for name in names:
                 try:
                     if names[name].endswith('.pyx'):
@@ -937,30 +965,31 @@ class Loader(object):
                                 name
                             ), fn_, path, desc
                         )
-                        # reload all submodules if necessary
-                        submodules = [
-                            getattr(mod, sname) for sname in dir(mod) if
-                            isinstance(getattr(mod, sname), mod.__class__)
-                        ]
+                        if not initial_load:
+                            # reload all submodules if necessary
+                            submodules = [
+                                getattr(mod, sname) for sname in dir(mod) if
+                                isinstance(getattr(mod, sname), mod.__class__)
+                            ]
 
-                        # reload only custom "sub"modules i.e is a submodule in
-                        # parent module that are still available on disk (i.e. not
-                        # removed during sync_modules)
-                        for submodule in submodules:
-                            try:
-                                smname = '{0}.{1}.{2}'.format(
-                                    self.loaded_base_name,
-                                    self.tag,
-                                    name
-                                )
-                                smfile = '{0}.py'.format(
-                                    os.path.splitext(submodule.__file__)[0]
-                                )
-                                if submodule.__name__.startswith(smname) and \
-                                        os.path.isfile(smfile):
-                                    reload(submodule)
-                            except AttributeError:
-                                continue
+                            # reload only custom "sub"modules i.e. is a submodule in
+                            # parent module that are still available on disk (i.e. not
+                            # removed during sync_modules)
+                            for submodule in submodules:
+                                try:
+                                    smname = '{0}.{1}.{2}'.format(
+                                        self.loaded_base_name,
+                                        self.tag,
+                                        name
+                                    )
+                                    smfile = '{0}.py'.format(
+                                        os.path.splitext(submodule.__file__)[0]
+                                    )
+                                    if submodule.__name__.startswith(smname) and \
+                                            os.path.isfile(smfile):
+                                        reload(submodule)
+                                except AttributeError:
+                                    continue
                 except ImportError:
                     if failhard:
                         log.debug(
@@ -985,7 +1014,7 @@ class Loader(object):
                     )
                     continue
                 self.modules.append(mod)
-        load_names(names, failhard=False)
+        load_names(names, failhard=False, initial_load=initial_load)
         if failed_loads:
             load_names(failed_loads, failhard=True)
 
@@ -1048,7 +1077,7 @@ class Loader(object):
         Given a loaded module and its default name determine its virtual name
 
         This function returns a tuple. The first value will be either True or
-        False and will indicate if the module should be loaded or not (ie. if
+        False and will indicate if the module should be loaded or not (i.e. if
         it threw and exception while processing its __virtual__ function). The
         second value is the determined virtual name, which may be the same as
         the value provided.
@@ -1289,7 +1318,7 @@ class Loader(object):
             grains_data.update(ret)
         # Write cache if enabled
         if self.opts.get('grains_cache', False):
-            cumask = os.umask(077)
+            cumask = os.umask(0o77)
             try:
                 if salt.utils.is_windows():
                     # Make sure cache file isn't read-only
@@ -1441,7 +1470,7 @@ class LazyFilterLoader(LazyLoader):
             return self._dict[key]
 
         # if we got one, now lets check if we have the function name we want
-        for mod_key, mod_fun in mod_funcs.iteritems():
+        for mod_key, mod_fun in mod_funcs.items():
             # if the name (after '.') is "name", then rename to mod_name: fun
             if mod_key[mod_key.index('.') + 1:] == self.name:
                 self._dict[mod_key[:mod_key.index('.')]] = mod_fun

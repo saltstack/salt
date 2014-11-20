@@ -2,6 +2,7 @@
 '''
 The match module allows for match routines to be run and determine target specs
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import inspect
@@ -12,7 +13,7 @@ import sys
 import salt.minion
 import salt.utils
 from salt.defaults import DEFAULT_TARGET_DELIM
-from salt._compat import string_types
+from salt.ext.six import string_types
 
 __func_alias__ = {
     'list_': 'list'
@@ -315,7 +316,7 @@ def filter_by(lookup, expr_form='compound', minion_id=None):
     expr_funcs = dict(inspect.getmembers(sys.modules[__name__],
         predicate=inspect.isfunction))
 
-    for key in lookup.keys():
+    for key in lookup:
         if minion_id and expr_funcs[expr_form](key, minion_id):
             return lookup[key]
         elif expr_funcs[expr_form](key, minion_id):

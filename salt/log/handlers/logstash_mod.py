@@ -152,6 +152,7 @@
     .. _`high water mark`: http://api.zeromq.org/3-2:zmq-setsockopt
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -161,7 +162,7 @@ import logging.handlers
 import datetime
 
 # Import salt libs
-from salt._compat import string_types
+from salt.ext.six import string_types
 from salt.log.setup import LOG_LEVELS
 from salt.log.mixins import NewStyleClassMixIn
 import salt.utils.network

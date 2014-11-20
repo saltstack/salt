@@ -25,15 +25,17 @@ Mount any type of mountable filesystem with the mounted function:
         - persist: True
         - mkmnt: True
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os.path
 import re
 
 # Import salt libs
-from salt._compat import string_types
+from salt.ext.six import string_types
 
 import logging
+import salt.ext.six as six
 log = logging.getLogger(__name__)
 
 
@@ -125,14 +127,14 @@ def mounted(name,
     # We should normalize names of the /dev/vg-name/lv-name type to the canonical name
     lvs_match = re.match(r'^/dev/(?P<vg_name>[^/]+)/(?P<lv_name>[^/]+$)', device)
     if lvs_match:
-        double_dash_escaped = dict((k, re.sub(r'-', '--', v)) for k, v in lvs_match.groupdict().iteritems())
+        double_dash_escaped = dict((k, re.sub(r'-', '--', v)) for k, v in six.iteritems(lvs_match.groupdict()))
         mapper_device = '/dev/mapper/{vg_name}-{lv_name}'.format(**double_dash_escaped)
         if os.path.exists(mapper_device):
             real_device = mapper_device
 
     # When included in a Salt state file, FUSE
     # devices are prefaced by the filesystem type
-    # and a hash, eg. sshfs#.  In the mount list
+    # and a hash, e.g. sshfs#.  In the mount list
     # only the hostname is included.  So if we detect
     # that the device is a FUSE device then we
     # remove the prefaced string so that the device in

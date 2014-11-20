@@ -5,6 +5,7 @@ Display salt-key output
 
 The ``salt-key`` command makes use of this outputter to format its output.
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils

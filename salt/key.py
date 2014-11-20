@@ -5,6 +5,7 @@ used to manage salt keys directly without interfacing with the CLI.
 '''
 
 # Import python libs
+from __future__ import absolute_import
 from __future__ import print_function
 import os
 import stat
@@ -13,13 +14,14 @@ import fnmatch
 import hashlib
 import json
 import logging
+from salt.ext.six.moves import input
 
 # Import salt libs
 import salt.crypt
 import salt.utils
 import salt.utils.event
 import salt.daemons.masterapi
-from salt import daemons
+from salt.utils import kinds
 from salt.utils.event import tagify
 
 # Import third party libs
@@ -129,7 +131,7 @@ class KeyCLI(object):
                     'key',
                     self.opts)
             try:
-                veri = raw_input('Proceed? [n/Y] ')
+                veri = input('Proceed? [n/Y] ')
             except KeyboardInterrupt:
                 raise SystemExit("\nExiting on CTRL-c")
             if not veri or veri.lower().startswith('y'):
@@ -158,7 +160,7 @@ class KeyCLI(object):
         '''
         Accept all keys
 
-        :param bool include_rejected: Whether or not to accept a matched key that was formely rejected
+        :param bool include_rejected: Whether or not to accept a matched key that was formerly rejected
         '''
         self.accept('*', include_rejected=include_rejected)
 
@@ -193,7 +195,7 @@ class KeyCLI(object):
                     'key',
                     self.opts)
             try:
-                veri = raw_input('Proceed? [N/y] ')
+                veri = input('Proceed? [N/y] ')
             except KeyboardInterrupt:
                 raise SystemExit("\nExiting on CTRL-c")
             if veri.lower().startswith('y'):
@@ -254,7 +256,7 @@ class KeyCLI(object):
                     keys,
                     'key',
                     self.opts)
-            veri = raw_input('Proceed? [n/Y] ')
+            veri = input('Proceed? [n/Y] ')
             if veri.lower().startswith('n'):
                 return
         _print_rejected(
@@ -433,7 +435,7 @@ class Key(object):
     def __init__(self, opts):
         self.opts = opts
         kind = self.opts.get('__role', '')  # application kind
-        if kind not in daemons.APPL_KINDS:
+        if kind not in kinds.APPL_KINDS:
             emsg = ("Invalid application kind = '{0}'.".format(kind))
             log.error(emsg + '\n')
             raise ValueError(emsg)
@@ -897,7 +899,7 @@ class RaetKey(Key):
                     shutil.rmtree(os.path.join(m_cache, minion))
 
         kind = self.opts.get('__role', '')  # application kind
-        if kind not in daemons.APPL_KINDS:
+        if kind not in kinds.APPL_KINDS:
             emsg = ("Invalid application kind = '{0}'.".format(kind))
             log.error(emsg + '\n')
             raise ValueError(emsg)
@@ -978,6 +980,7 @@ class RaetKey(Key):
                 fp_.write(self.serial.dumps(keydata))
                 return 'accepted'
         if os.path.isfile(rej_path):
+            log.debug("Rejection Reason: Keys already rejected.\n")
             return 'rejected'
         elif os.path.isfile(acc_path):
             # The minion id has been accepted, verify the key strings
@@ -986,6 +989,7 @@ class RaetKey(Key):
             if keydata['pub'] == pub and keydata['verify'] == verify:
                 return 'accepted'
             else:
+                log.debug("Rejection Reason: Keys not match prior accepted.\n")
                 return 'rejected'
         elif os.path.isfile(pre_path):
             auto_reject = self.auto_key.check_autoreject(minion_id)
@@ -995,12 +999,14 @@ class RaetKey(Key):
             if keydata['pub'] == pub and keydata['verify'] == verify:
                 if auto_reject:
                     self.reject(minion_id)
+                    log.debug("Rejection Reason: Auto reject pended.\n")
                     return 'rejected'
                 elif auto_sign:
                     self.accept(minion_id)
                     return 'accepted'
                 return 'pending'
             else:
+                log.debug("Rejection Reason: Keys not match prior pended.\n")
                 return 'rejected'
         # This is a new key, evaluate auto accept/reject files and place
         # accordingly
@@ -1014,6 +1020,7 @@ class RaetKey(Key):
             ret = 'accepted'
         elif auto_reject:
             w_path = rej_path
+            log.debug("Rejection Reason: Auto reject new.\n")
             ret = 'rejected'
         else:
             w_path = pre_path

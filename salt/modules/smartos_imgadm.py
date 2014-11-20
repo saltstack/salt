@@ -2,6 +2,7 @@
 '''
 Module for running imgadm command on SmartOS
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import logging

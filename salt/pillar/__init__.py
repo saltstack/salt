@@ -2,6 +2,7 @@
 '''
 Render the pillar data
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -15,12 +16,13 @@ import salt.fileclient
 import salt.minion
 import salt.crypt
 import salt.transport
-from salt._compat import string_types
+from salt.ext.six import string_types
 from salt.template import compile_template
 from salt.utils.dictupdate import update
 from salt.utils.serializers.yamlex import merge_recursive
 from salt.utils.odict import OrderedDict
 from salt.version import __version__
+import salt.ext.six as six
 
 
 log = logging.getLogger(__name__)
@@ -37,13 +39,13 @@ def merge_aggregate(obj_a, obj_b):
 
 def merge_overwrite(obj_a, obj_b):
     for obj in obj_b:
-        if obj in obj_a.keys():
+        if obj in obj_a:
             obj_a[obj] = obj_b[obj]
             return obj_a
     return merge_recurse(obj_a, obj_b)
 
 
-def get_pillar(opts, grains, id_, saltenv=None, ext=None, env=None):
+def get_pillar(opts, grains, id_, saltenv=None, ext=None, env=None, funcs=None):
     '''
     Return the correct pillar driver based on the file_client option
     '''
@@ -59,14 +61,14 @@ def get_pillar(opts, grains, id_, saltenv=None, ext=None, env=None):
     return {
             'remote': RemotePillar,
             'local': Pillar
-            }.get(opts['file_client'], Pillar)(opts, grains, id_, saltenv, ext)
+            }.get(opts['file_client'], Pillar)(opts, grains, id_, saltenv, ext, functions=funcs)
 
 
 class RemotePillar(object):
     '''
     Get the pillar from the master
     '''
-    def __init__(self, opts, grains, id_, saltenv, ext=None):
+    def __init__(self, opts, grains, id_, saltenv, ext=None, functions=None):
         self.opts = opts
         self.opts['environment'] = saltenv
         self.ext = ext
@@ -282,7 +284,7 @@ class Pillar(object):
         '''
         top = collections.defaultdict(OrderedDict)
         orders = collections.defaultdict(OrderedDict)
-        for ctops in tops.values():
+        for ctops in six.itervalues(tops):
             for ctop in ctops:
                 for saltenv, targets in ctop.items():
                     if saltenv == 'include':
@@ -306,7 +308,7 @@ class Pillar(object):
                             if isinstance(comp, string_types):
                                 states[comp] = True
                         top[saltenv][tgt] = matches
-                        top[saltenv][tgt].extend(list(states.keys()))
+                        top[saltenv][tgt].extend(states)
         return self.sort_top_targets(top, orders)
 
     def sort_top_targets(self, top, orders):
@@ -316,7 +318,7 @@ class Pillar(object):
         sorted_top = collections.defaultdict(OrderedDict)
         # pylint: disable=cell-var-from-loop
         for saltenv, targets in top.items():
-            sorted_targets = sorted(targets.keys(),
+            sorted_targets = sorted(targets,
                     key=lambda target: orders[saltenv][target])
             for target in sorted_targets:
                 sorted_top[saltenv][target] = targets[target]
@@ -410,7 +412,7 @@ class Pillar(object):
                     else:
                         for sub_sls in state.pop('include'):
                             if isinstance(sub_sls, dict):
-                                sub_sls, v = sub_sls.iteritems().next()
+                                sub_sls, v = next(sub_sls.iteritems())
                                 defaults = v.get('defaults', {})
                                 key = v.get('key', None)
                             else:

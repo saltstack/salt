@@ -10,6 +10,7 @@ Use of this module requires no configuration in the main cloud configuration
 file. However, profiles must still be configured, as described in the
 :ref:`core config documentation <config_saltify>`.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os

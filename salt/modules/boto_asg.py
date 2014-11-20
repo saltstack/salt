@@ -33,12 +33,14 @@ Connection module for Amazon Autoscale Groups
 
 :depends: boto
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import logging
 import json
 import yaml
 import email.mime.multipart
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -46,6 +48,7 @@ log = logging.getLogger(__name__)
 try:
     import boto
     import boto.ec2
+    import boto.ec2.instance
     import boto.ec2.blockdevicemapping as blockdevicemapping
     import boto.ec2.autoscale as autoscale
     logging.getLogger('boto').setLevel(logging.CRITICAL)
@@ -53,7 +56,7 @@ try:
 except ImportError:
     HAS_BOTO = False
 
-from salt._compat import string_types
+from salt.ext.six import string_types
 import salt.utils.odict as odict
 
 
@@ -240,7 +243,7 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
 
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
-        return False, 'Failed to connect to AWS'
+        return False, "failed to connect to AWS"
     if isinstance(availability_zones, string_types):
         availability_zones = json.loads(availability_zones)
     if isinstance(load_balancers, string_types):
@@ -257,12 +260,12 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
                 key = tag.get('key')
             except KeyError:
                 log.error('Tag missing key.')
-                return False, 'Tag {0} missing key'.format(tag)
+                return False, "Tag {0} missing key".format(tag)
             try:
                 value = tag.get('value')
             except KeyError:
                 log.error('Tag missing value.')
-                return False, 'Tag {0} missing value'.format(tag)
+                return False, "Tag {0} missing value".format(tag)
             propagate_at_launch = tag.get('propagate_at_launch', False)
             _tag = autoscale.Tag(key=key, value=value, resource_id=name,
                                  propagate_at_launch=propagate_at_launch)
@@ -362,7 +365,7 @@ def get_cloud_init_mime(cloud_init):
         cloud_init = json.loads(cloud_init)
     _cloud_init = email.mime.multipart.MIMEMultipart()
     if 'scripts' in cloud_init:
-        for script_name, script in cloud_init['scripts'].iteritems():
+        for script_name, script in six.iteritems(cloud_init['scripts']):
             _script = email.mime.text.MIMEText(script, 'x-shellscript')
             _cloud_init.attach(_script)
     if 'cloud-config' in cloud_init:
@@ -423,9 +426,9 @@ def create_launch_configuration(name, image_id, key_name=None,
         # Boto requires objects for the mappings and the devices.
         _block_device_map = blockdevicemapping.BlockDeviceMapping()
         for block_device_dict in block_device_mappings:
-            for block_device, attributes in block_device_dict.iteritems():
+            for block_device, attributes in six.iteritems(block_device_dict):
                 _block_device = blockdevicemapping.EBSBlockDeviceType()
-                for attribute, value in attributes.iteritems():
+                for attribute, value in six.iteritems(attributes):
                     setattr(_block_device, attribute, value)
                 _block_device_map[block_device] = _block_device
         _bdms = [_block_device_map]
@@ -526,3 +529,71 @@ def _get_conn(region, key, keyid, profile):
                   ' make boto autoscale connection.')
         return None
     return conn
+
+
+def _get_ec2_conn(region, key, keyid, profile):
+    '''
+    Get a boto connection to ec2.   Needed for get_instances
+    '''
+    if profile:
+        if isinstance(profile, string_types):
+            _profile = __salt__['config.option'](profile)
+        elif isinstance(profile, dict):
+            _profile = profile
+        key = _profile.get('key', None)
+        keyid = _profile.get('keyid', None)
+        region = _profile.get('region', None)
+
+    if not region and __salt__['config.option']('secgroup.region'):
+        region = __salt__['config.option']('secgroup.region')
+
+    if not region:
+        region = 'us-east-1'
+
+    if not key and __salt__['config.option']('secgroup.key'):
+        key = __salt__['config.option']('secgroup.key')
+    if not keyid and __salt__['config.option']('secgroup.keyid'):
+        keyid = __salt__['config.option']('secgroup.keyid')
+
+    try:
+        conn = boto.ec2.connect_to_region(region, aws_access_key_id=keyid,
+                                          aws_secret_access_key=key)
+    except boto.exception.NoAuthHandlerFound:
+        log.error('No authentication credentials found when attempting to'
+                  ' make ec2 connection for security groups.')
+        return None
+    return conn
+
+
+def get_instances(name, lifecycle_state="InService", health_status="Healthy", attribute="private_ip_address", region=None, key=None, keyid=None, profile=None):
+    """return attribute of all instances in the named autoscale group.
+
+    CLI example::
+
+        salt-call boto_asg.get_instances my_autoscale_group_name
+
+    """
+    conn = _get_conn(region, key, keyid, profile)
+    ec2_conn = _get_ec2_conn(region, key, keyid, profile)
+    if not conn or not ec2_conn:
+        return False
+    try:
+        asgs = conn.get_all_groups(names=[name])
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        return False
+    if len(asgs) != 1:
+        log.debug("name '{0}' returns multiple ASGs: {1}".format(name, [asg.name for asg in asgs]))
+        return False
+    asg = asgs[0]
+    instance_ids = []
+    # match lifecycle_state and health_status
+    for i in asg.instances:
+        if lifecycle_state is not None and i.lifecycle_state != lifecycle_state:
+            continue
+        if health_status is not None and i.health_status != health_status:
+            continue
+        instance_ids.append(i.instance_id)
+    # get full instance info, so that we can return the attribute
+    instances = ec2_conn.get_only_instances(instance_ids=instance_ids)
+    return [getattr(instance, attribute).encode("ascii") for instance in instances]

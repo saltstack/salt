@@ -48,9 +48,8 @@ calls of the same function with different arguments.
         mine_function: network.ip_addrs
         cidr: 192.168.0.0/16
       loopback_ip_addrs:
-        - mine_function: network.ip_addrs
-        - lo
-        - True
+        mine_function: network.ip_addrs
+        lo: True
 
 Mine Interval
 =============

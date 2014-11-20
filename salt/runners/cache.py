@@ -2,15 +2,15 @@
 '''
 Return cached data from minions
 '''
+from __future__ import absolute_import
 # Import python libs
 import logging
 
 # Import salt libs
 import salt.log
 import salt.utils.master
-import salt.output
 import salt.payload
-from salt._compat import string_types
+from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 
@@ -42,8 +42,10 @@ def grains(tgt=None, expr_form='glob', outputter=None, **kwargs):
                                                      grains_fallback=False,
                                                      opts=__opts__)
     cached_grains = pillar_util.get_minion_grains()
-    salt.output.display_output(cached_grains, outputter, __opts__)
-    return cached_grains
+    if outputter:
+        return {'outputter': outputter, 'data': cached_grains}
+    else:
+        return cached_grains
 
 
 def pillar(tgt=None, expr_form='glob', outputter=None, **kwargs):
@@ -72,8 +74,10 @@ def pillar(tgt=None, expr_form='glob', outputter=None, **kwargs):
                                                      pillar_fallback=False,
                                                      opts=__opts__)
     cached_pillar = pillar_util.get_minion_pillar()
-    salt.output.display_output(cached_pillar, outputter, __opts__)
-    return cached_pillar
+    if outputter:
+        return {'outputter': outputter, 'data': cached_pillar}
+    else:
+        return cached_pillar
 
 
 def mine(tgt=None, expr_form='glob', outputter=None, **kwargs):
@@ -102,7 +106,10 @@ def mine(tgt=None, expr_form='glob', outputter=None, **kwargs):
                                                      pillar_fallback=False,
                                                      opts=__opts__)
     cached_mine = pillar_util.get_cached_mine_data()
-    salt.output.display_output(cached_mine, outputter, __opts__)
+    if outputter:
+        return {'outputter': outputter, 'data': cached_mine}
+    else:
+        return cached_mine
 
 
 def _clear_cache(tgt=None,

@@ -4,6 +4,7 @@ Module for gathering and managing network information
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import datetime
 import hashlib
 import logging
@@ -16,6 +17,7 @@ import salt.utils
 import salt.utils.network
 from salt.exceptions import CommandExecutionError
 import salt.utils.validate.net
+from salt.ext.six.moves import range
 
 
 log = logging.getLogger(__name__)
@@ -157,7 +159,7 @@ def _netinfo_freebsd_netbsd():
     out = __salt__['cmd.run'](
         'sockstat -46 {0} | tail -n+2'.format(
             '-n' if __grains__['kernel'] == 'NetBSD' else ''
-        )
+        ), python_shell=True
     )
     for line in out.splitlines():
         user, cmd, pid, _, proto, local_addr, remote_addr = line.split()
@@ -178,7 +180,7 @@ def _ppid():
     '''
     ret = {}
     cmd = 'ps -ax -o pid,ppid | tail -n+2'
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run'](cmd, python_shell=True)
     for line in out.splitlines():
         pid, ppid = line.split()
         ret[pid] = ppid
@@ -193,7 +195,7 @@ def _netstat_bsd():
     if __grains__['kernel'] == 'NetBSD':
         for addr_family in ('inet', 'inet6'):
             cmd = 'netstat -f {0} -an | tail -n+3'.format(addr_family)
-            out = __salt__['cmd.run'](cmd)
+            out = __salt__['cmd.run'](cmd, python_shell=True)
             for line in out.splitlines():
                 comps = line.split()
                 entry = {
@@ -209,7 +211,7 @@ def _netstat_bsd():
     else:
         # Lookup TCP connections
         cmd = 'netstat -p tcp -an | tail -n+3'
-        out = __salt__['cmd.run'](cmd)
+        out = __salt__['cmd.run'](cmd, python_shell=True)
         for line in out.splitlines():
             comps = line.split()
             ret.append({
@@ -221,7 +223,7 @@ def _netstat_bsd():
                 'state': comps[5]})
         # Lookup UDP connections
         cmd = 'netstat -p udp -an | tail -n+3'
-        out = __salt__['cmd.run'](cmd)
+        out = __salt__['cmd.run'](cmd, python_shell=True)
         for line in out.splitlines():
             comps = line.split()
             ret.append({
@@ -248,12 +250,12 @@ def _netstat_bsd():
         except KeyError:
             continue
         # Get the pid-to-ppid mappings for this connection
-        conn_ppid = dict((x, y) for x, y in ppid.iteritems() if x in ptr)
+        conn_ppid = dict((x, y) for x, y in ppid.items() if x in ptr)
         try:
             # Master pid for this connection will be the pid whose ppid isn't
             # in the subset dict we created above
             master_pid = next(iter(
-                x for x, y in conn_ppid.iteritems() if y not in ptr
+                x for x, y in conn_ppid.items() if y not in ptr
             ))
         except StopIteration:
             continue
@@ -716,8 +718,6 @@ def get_hostname():
         salt '*' network.get_hostname
     '''
 
-    #cmd='hostname  -f'
-    #return __salt__['cmd.run'](cmd)
     from socket import gethostname
     return gethostname()
 
@@ -858,7 +858,7 @@ def connect(host, port=None, **kwargs):
         else:
             s.connect(_address)
             s.shutdown(2)
-    except Exception, e:
+    except Exception as e:
         ret['result'] = False
         try:
             errno, errtxt = e
@@ -962,7 +962,6 @@ def _mod_bufsize_linux(iface, *args, **kwargs):
     if not eargs:
         return ret
     cmd += eargs
-    print cmd
     out = __salt__['cmd.run'](cmd)
     if out:
         ret['comment'] = out
@@ -1012,10 +1011,7 @@ def routes(family=None):
     if not family:
         return routes
     else:
-        ret = []
-        for route in routes:
-            if route['addr_family'] == family:
-                ret.append(route)
+        ret = [route for route in routes if route['addr_family'] == family]
         return ret
 
 

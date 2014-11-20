@@ -40,6 +40,7 @@ CLI Example:
 
     salt '*' test.ping --return etcd
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import json
@@ -88,7 +89,7 @@ def returner(ret):
         ret['jid'],
     )
 
-    for field in ret.keys():
+    for field in ret:
         # Not using os.path.join because we're not dealing with file paths
         dest = '/'.join((
             path,

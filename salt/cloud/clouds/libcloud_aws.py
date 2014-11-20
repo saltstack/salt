@@ -29,6 +29,7 @@ If this driver is still needed, set up the cloud configuration at
       provider: aws
 
 '''
+from __future__ import absolute_import
 # pylint: disable=E0102
 
 # Import python libs
@@ -50,6 +51,7 @@ from salt.exceptions import (
     SaltCloudExecutionTimeout,
     SaltCloudExecutionFailure
 )
+import salt.ext.six as six
 
 try:
     from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
@@ -101,7 +103,7 @@ def __virtual__():
     if get_configured_provider() is False:
         return False
 
-    for provider, details in __opts__['providers'].iteritems():
+    for provider, details in six.iteritems(__opts__['providers']):
         if 'provider' not in details or details['provider'] != 'aws':
             continue
 
@@ -241,7 +243,7 @@ def ssh_username(vm_):
         usernames = [usernames]
 
     # get rid of None's or empty names
-    usernames = filter(lambda x: x, usernames)
+    usernames = [x for x in usernames if x]
     # Keep a copy of the usernames the user might have provided
     initial = usernames[:]
 

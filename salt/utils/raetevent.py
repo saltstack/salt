@@ -4,6 +4,7 @@ Manage events
 
 This module is used to manage events via RAET
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -21,12 +22,12 @@ from raet import raeting, nacling
 from raet.lane.stacking import LaneStack
 from raet.lane.yarding import RemoteYard
 
-from salt import daemons
+from salt.utils import kinds
 
 log = logging.getLogger(__name__)
 
 
-class SaltEvent(object):
+class RAETEvent(object):
     '''
     The base class used to manage salt events
     '''
@@ -34,7 +35,7 @@ class SaltEvent(object):
         '''
         Set up the stack and remote yard
         '''
-        self.node = node  # application kind 'master', 'minion', 'syndic', 'call' etc
+        self.node = node  # application kind see kinds.APPL_KIND_NAMES
         self.sock_dir = sock_dir
         self.listen = listen
         if opts is None:
@@ -45,7 +46,7 @@ class SaltEvent(object):
     def __prep_stack(self):
         kind = self.opts.get('__role', '')  # opts optional for master
         if kind:  # not all uses of Raet SaltEvent has opts defined
-            if kind not in daemons.APPL_KINDS:
+            if kind not in kinds.APPL_KINDS:
                 emsg = ("Invalid application kind = '{0}' for RAET SaltEvent.".format(kind))
                 log.error(emsg + "\n")
                 raise ValueError(emsg)
@@ -55,9 +56,11 @@ class SaltEvent(object):
                 log.error(emsg + '\n')
                 raise ValueError(emsg)
 
-        if self.node == 'master':
+        if self.node == kinds.APPL_KIND_NAMES[kinds.applKinds.master]:  # 'master'
             lanename = 'master'
-        elif self.node in ['minion', 'syndic', 'call']:  # see daemons.APPL_KINDS
+        elif self.node in [kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
+                           kinds.APPL_KIND_NAMES[kinds.applKinds.syndic],
+                           kinds.APPL_KIND_NAMES[kinds.applKinds.caller]]:  # ['minion', 'syndic', 'caller']
             role = self.opts.get('id', '')  # opts required for minion
             if not role:
                 emsg = ("Missing role required to setup RAET SaltEvent.")
@@ -234,5 +237,21 @@ class SaltEvent(object):
         if hasattr(self, 'stack'):
             self.stack.server.close()
 
-    def __del__(self):
-        self.destroy()
+    #def __del__(self):  # Need to manually call destroy when we are done
+        #self.destroy()
+
+
+class RunnerEvent(RAETEvent):
+    '''
+    This is used to send progress and return events from runners.
+    It extends MasterEvent to include information about how to
+    display events to the user as a runner progresses.
+    '''
+    def __init__(self, opts, jid):
+        super(RunnerEvent, self).__init__('master', opts['sock_dir'])
+        self.jid = jid
+
+    def fire_progress(self, data, outputter='pprint'):
+        progress_event = {'data': data,
+                          'outputter': outputter}
+        self.fire_event(progress_event, salt.utils.event.tagify([self.jid, 'progress'], 'runner'))

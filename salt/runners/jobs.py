@@ -3,6 +3,10 @@
 A convenience system to manage jobs, both active and already run
 '''
 
+from __future__ import print_function
+
+from __future__ import absolute_import
+
 # Import python libs
 import fnmatch
 import os
@@ -11,16 +15,15 @@ import os
 import salt.client
 import salt.payload
 import salt.utils
-import salt.output
 import salt.minion
 
-from salt._compat import string_types
+from salt.ext.six import string_types
 
 import logging
 log = logging.getLogger(__name__)
 
 
-def active(outputter=None):
+def active(outputter=None, display_progress=False):
     '''
     Return a report on all actively running jobs from a job id centric
     perspective
@@ -34,7 +37,11 @@ def active(outputter=None):
     ret = {}
     client = salt.client.get_local_client(__opts__['conf_file'])
     active_ = client.cmd('*', 'saltutil.running', timeout=__opts__['timeout'])
+    if display_progress:
+        __progress__('Attempting to contact minions: {0}'.format(list(active_.keys())))
     for minion, data in active_.items():
+        if display_progress:
+            __progress__('Received reply from minion {0}'.format(minion))
         if not isinstance(data, list):
             continue
         for job in data:
@@ -52,11 +59,17 @@ def active(outputter=None):
             if minion not in ret[jid]['Returned']:
                 ret[jid]['Returned'].append(minion)
 
-    salt.output.display_output(ret, outputter, opts=__opts__)
-    return ret
+    if outputter:
+        return {'outputter': outputter, 'data': ret}
+    else:
+        return ret
 
 
-def lookup_jid(jid, ext_source=None, missing=False, outputter=None):
+def lookup_jid(jid,
+               ext_source=None,
+               missing=False,
+               outputter=None,
+               display_progress=False):
     '''
     Return the printout from a previously executed job
 
@@ -70,13 +83,16 @@ def lookup_jid(jid, ext_source=None, missing=False, outputter=None):
     ret = {}
     mminion = salt.minion.MasterMinion(__opts__)
     returner = _get_returner((__opts__['ext_job_cache'], ext_source, __opts__['master_job_cache']))
+    if display_progress:
+        __progress__('Querying returner: {0}'.format(returner))
 
     try:
         data = mminion.returners['{0}.get_jid'.format(returner)](jid)
     except TypeError:
-        print 'Requested returner could not be loaded. No JIDs could be retrieved.'
-        return
+        return 'Requested returner could not be loaded. No JIDs could be retrieved.'
     for minion in data:
+        if display_progress:
+            __progress__(minion)
         if u'return' in data[minion]:
             ret[minion] = data[minion].get(u'return')
         else:
@@ -87,8 +103,10 @@ def lookup_jid(jid, ext_source=None, missing=False, outputter=None):
         for minion_id in exp:
             if minion_id not in data:
                 ret[minion_id] = 'Minion did not return'
-    salt.output.display_output(ret, outputter, opts=__opts__)
-    return ret
+    if outputter:
+        return {'outputter': outputter, 'data': ret}
+    else:
+        return ret
 
 
 def list_job(jid, ext_source=None, outputter=None):
@@ -108,15 +126,18 @@ def list_job(jid, ext_source=None, outputter=None):
     job = mminion.returners['{0}.get_load'.format(returner)](jid)
     ret.update(_format_jid_instance(jid, job))
     ret['Result'] = mminion.returners['{0}.get_jid'.format(returner)](jid)
-    salt.output.display_output(ret, outputter, opts=__opts__)
-    return ret
+    if outputter:
+        return {'outputter': outputter, 'data': ret}
+    else:
+        return ret
 
 
 def list_jobs(ext_source=None,
               outputter=None,
               search_metadata=None,
               search_function=None,
-              search_target=None):
+              search_target=None,
+              display_progress=False):
     '''
     List all detectable jobs and associated functions
 
@@ -127,13 +148,14 @@ def list_jobs(ext_source=None,
         salt-run jobs.list_jobs
     '''
     returner = _get_returner((__opts__['ext_job_cache'], ext_source, __opts__['master_job_cache']))
+    if display_progress:
+        __progress__('Querying returner {0} for jobs.'.format(returner))
     mminion = salt.minion.MasterMinion(__opts__)
 
     try:
         ret = mminion.returners['{0}.get_jids'.format(returner)]()
     except TypeError:
-        print 'Error: Requested returner could not be loaded. No jobs could be retrieved.'
-        return
+        return 'Error: Requested returner could not be loaded. No jobs could be retrieved.'
 
     if search_metadata:
         mret = {}
@@ -176,9 +198,10 @@ def list_jobs(ext_source=None,
                         _mret[item] = ret[item]
         mret = _mret.copy()
 
-    salt.output.display_output(mret, outputter, opts=__opts__)
-
-    return mret
+    if outputter:
+        return {'outputter': outputter, 'data': mret}
+    else:
+        return mret
 
 
 def print_job(jid, ext_source=None, outputter=None):
@@ -204,9 +227,10 @@ def print_job(jid, ext_source=None, outputter=None):
             'Check master log for details.'.format(returner))
         return ret
     ret[jid]['Result'] = mminion.returners['{0}.get_jid'.format(returner)](jid)
-    salt.output.display_output(ret, outputter, opts=__opts__)
-
-    return ret
+    if outputter:
+        return {'outputter': outputter, 'data': ret}
+    else:
+        return ret
 
 
 def _get_returner(returner_types):
@@ -250,7 +274,7 @@ def _format_jid_instance(jid, job):
     return ret
 
 
-def _walk_through(job_dir):
+def _walk_through(job_dir, display_progress=False):
     '''
     Walk through the job dir and return jobs
     '''
@@ -268,4 +292,6 @@ def _walk_through(job_dir):
 
             job = serial.load(salt.utils.fopen(load_path, 'rb'))
             jid = job['jid']
+            if display_progress:
+                __progress__('Found JID {0}'.format(jid))
             yield jid, job, t_path, final

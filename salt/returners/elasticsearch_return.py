@@ -48,6 +48,7 @@ In order to have the returner apply to all minions:
 
     ext_job_cache: elasticsearch
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import datetime

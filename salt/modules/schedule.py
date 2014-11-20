@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
-Module for manging the Salt schedule on a minion
+Module for managing the Salt schedule on a minion
 
 .. versionadded:: 2014.7.0
 
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import difflib
@@ -13,6 +14,7 @@ import yaml
 
 import salt.utils
 import salt.utils.odict
+import salt.ext.six as six
 
 __proxyenabled__ = ['*']
 
@@ -62,7 +64,7 @@ def list_(show_all=False, return_yaml=True):
     if 'schedule' in __pillar__:
         schedule.update(__pillar__['schedule'])
 
-    for job in schedule.keys():
+    for job in schedule.keys():  # iterate over a copy since we will mutate it
         if job == 'enabled':
             continue
 
@@ -72,7 +74,7 @@ def list_(show_all=False, return_yaml=True):
             del schedule[job]
             continue
 
-        for item in schedule[job].keys():
+        for item in schedule[job]:
             if item not in SCHEDULE_CONF:
                 del schedule[job][item]
                 continue
@@ -81,7 +83,7 @@ def list_(show_all=False, return_yaml=True):
             if schedule[job][item] == 'false':
                 schedule[job][item] = False
 
-        if '_seconds' in schedule[job].keys():
+        if '_seconds' in schedule[job]:
             schedule[job]['seconds'] = schedule[job]['_seconds']
             del schedule[job]['_seconds']
 
@@ -114,7 +116,7 @@ def purge(**kwargs):
     if 'schedule' in __pillar__:
         schedule.update(__pillar__['schedule'])
 
-    for name in schedule.keys():
+    for name in schedule:
         if name == 'enabled':
             continue
         if name.startswith('__'):
@@ -691,7 +693,7 @@ def move(name, target, **kwargs):
             ret['comment'] = 'Job: {0} would be moved from schedule.'.format(name)
         else:
             schedule_opts = []
-            for key, value in __opts__['schedule'][name].iteritems():
+            for key, value in six.iteritems(__opts__['schedule'][name]):
                 temp = '{0}={1}'.format(key, value)
                 schedule_opts.append(temp)
             response = __salt__['publish.publish'](target, 'schedule.add', schedule_opts)
@@ -723,7 +725,7 @@ def move(name, target, **kwargs):
             ret['comment'] = 'Job: {0} would be moved from schedule.'.format(name)
         else:
             schedule_opts = []
-            for key, value in __opts__['schedule'][name].iteritems():
+            for key, value in six.iteritems(__opts__['schedule'][name]):
                 temp = '{0}={1}'.format(key, value)
                 schedule_opts.append(temp)
             response = __salt__['publish.publish'](target, 'schedule.add', schedule_opts)
@@ -779,7 +781,7 @@ def copy(name, target, **kwargs):
             ret['comment'] = 'Job: {0} would be copied.'.format(name)
         else:
             schedule_opts = []
-            for key, value in __opts__['schedule'][name].iteritems():
+            for key, value in six.iteritems(__opts__['schedule'][name]):
                 temp = '{0}={1}'.format(key, value)
                 schedule_opts.append(temp)
             response = __salt__['publish.publish'](target, 'schedule.add', schedule_opts)
@@ -810,7 +812,7 @@ def copy(name, target, **kwargs):
             ret['comment'] = 'Job: {0} would be moved from schedule.'.format(name)
         else:
             schedule_opts = []
-            for key, value in __opts__['schedule'][name].iteritems():
+            for key, value in six.iteritems(__opts__['schedule'][name]):
                 temp = '{0}={1}'.format(key, value)
                 schedule_opts.append(temp)
             response = __salt__['publish.publish'](target, 'schedule.add', schedule_opts)

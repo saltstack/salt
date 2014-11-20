@@ -13,9 +13,10 @@ Use this minion to spin up a cloud instance:
       cloud.profile:
         my-ec2-config
 '''
+from __future__ import absolute_import
 
 import pprint
-from salt._compat import string_types
+from salt.ext.six import string_types
 import salt.utils.cloud as suc
 
 
@@ -95,7 +96,7 @@ def present(name, cloud_provider, onlyif=None, unless=None, **kwargs):
                 return _valid(name, comment='unless execution succeeded')
 
     # provider=None not cloud_provider because
-    # need to ensure ALL providers dont have the instance
+    # need to ensure ALL providers don't have the instance
     if __salt__['cloud.has_instance'](name=name, provider=None):
         ret['result'] = True
         ret['comment'] = 'Already present instance {0}'.format(name)
@@ -245,9 +246,8 @@ def profile(name, profile, onlyif=None, unless=None, **kwargs):
             if retcode(unless) == 0:
                 return _valid(name, comment='unless execution succeeded')
     instance = __salt__['cloud.action'](fun='show_instance', names=[name])
-
-    # need to ensure ALL providers dont have the instance
-    if __salt__['cloud.has_instance'](name=name, provider=None):
+    prov = str(next(instance.iterkeys()))
+    if instance and 'Not Actioned' not in prov:
         ret['result'] = True
         ret['comment'] = 'Already present instance {0}'.format(name)
         return ret
@@ -307,7 +307,7 @@ def volume_present(name, provider=None, **kwargs):
 
     volumes = __salt__['cloud.volume_list'](provider=provider)
 
-    if name in volumes.keys():
+    if name in volumes:
         ret['comment'] = 'Volume exists: {0}'.format(name)
         ret['result'] = True
         return ret
@@ -341,7 +341,7 @@ def volume_absent(name, provider=None, **kwargs):
 
     volumes = __salt__['cloud.volume_list'](provider=provider)
 
-    if name not in volumes.keys():
+    if name not in volumes:
         ret['comment'] = 'Volume is absent.'
         ret['result'] = True
         return ret
@@ -383,13 +383,13 @@ def volume_attached(name, server_name, provider=None, **kwargs):
         names=server_name
     )
 
-    if name in volumes.keys() and volumes[name]['attachments']:
+    if name in volumes and volumes[name]['attachments']:
         volume = volumes[name]
         ret['comment'] = ('Volume {name} is already'
                           'attached: {attachments}').format(**volumes[name])
         ret['result'] = True
         return ret
-    elif name not in volumes.keys():
+    elif name not in volumes:
         ret['comment'] = 'Volume {0} does not exist'.format(name)
         ret['result'] = False
         return ret
@@ -441,14 +441,14 @@ def volume_detached(name, server_name=None, provider=None, **kwargs):
     else:
         instance = None
 
-    if name in volumes.keys() and not volumes[name]['attachments']:
+    if name in volumes and not volumes[name]['attachments']:
         volume = volumes[name]
         ret['comment'] = (
             'Volume {name} is not currently attached to anything.'
         ).format(**volumes[name])
         ret['result'] = True
         return ret
-    elif name not in volumes.keys():
+    elif name not in volumes:
         ret['comment'] = 'Volume {0} does not exist'.format(name)
         ret['result'] = True
         return ret

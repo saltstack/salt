@@ -9,6 +9,7 @@ from keyservers.  Sign, encrypt and sign & encrypt text and files.
     required to be installed.
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import distutils.version
@@ -18,7 +19,7 @@ import time
 
 # Import salt libs
 import salt.utils
-from salt._compat import string_types
+from salt.ext.six import string_types
 
 from salt.exceptions import (
     SaltInvocationError
@@ -141,7 +142,7 @@ def search_keys(text, keyserver=None, user=None):
     Search keys from keyserver
 
     text
-        Text to search the keyserver for, eg. email address, keyID or fingerprint.
+        Text to search the keyserver for, e.g. email address, keyID or fingerprint.
 
     keyserver
         Keyserver to use for searching for GPG keys, defaults to pgp.mit.edu
@@ -287,7 +288,7 @@ def create_key(key_type='RSA',
         package.
 
         The create_key process takes awhile so increasing the timeout
-        may be necessary, eg. -t 15.
+        may be necessary, e.g. -t 15.
 
     key_type
         The type of the primary key to generate. It must be capable of signing.
@@ -612,7 +613,7 @@ def export_key(keyids=None, secret=False, user=None):
 
     keyids
         The keyid(s) of the key(s) to be exported.  Can be specified as a comma
-        seperated string or a list.  Anything which GnuPG itself accepts to
+        separated string or a list.  Anything which GnuPG itself accepts to
         identify a key - for example, the keyid or the fingerprint could be used.
 
     secret
@@ -649,7 +650,7 @@ def receive_keys(keyserver=None, keys=None, user=None):
 
     keys
         The keyID(s) to retrieve from the keyserver.  Can be specified as a comma
-        seperated string or a list.
+        separated string or a list.
 
     user
         Which user's keychain to access, defaults to user Salt is running as.  Passing
