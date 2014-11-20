@@ -15,10 +15,12 @@ Module for sending messages to Slack
         slack:
           api_key: peWcBiMOS9HrZG15peWcBiMOS9HrZG15
 '''
+from __future__ import absolute_import
 import requests
 import logging
 from urlparse import urljoin as _urljoin
 from requests.exceptions import ConnectionError
+from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'slack'

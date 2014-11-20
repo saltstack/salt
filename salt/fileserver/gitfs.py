@@ -40,6 +40,7 @@ Walkthrough <tutorial-gitfs>`.
 .. _libgit2: https://libgit2.github.com/
 .. _dulwich: https://www.samba.org/~jelmer/dulwich/
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import copy
@@ -52,7 +53,7 @@ import re
 import shutil
 import subprocess
 from datetime import datetime
-from salt._compat import text_type as _text_type
+from salt.ext.six import text_type as _text_type
 
 VALID_PROVIDERS = ('gitpython', 'pygit2', 'dulwich')
 PER_REMOTE_PARAMS = ('base', 'mountpoint', 'root')
@@ -89,7 +90,7 @@ _INVALID_REPO = (
 # Import salt libs
 import salt.utils
 import salt.fileserver
-from salt._compat import string_types
+from salt.ext.six import string_types
 from salt.exceptions import SaltException
 from salt.utils.event import tagify
 
@@ -1260,7 +1261,7 @@ def serve_file(load, fnd):
         log.debug(
             'Not all of the required keys present in payload. '
             'Missing: {0}'.format(
-                ', '.join(required_load_keys.difference(load.keys()))
+                ', '.join(required_load_keys.difference(load))
             )
         )
         return ret

@@ -20,10 +20,12 @@ Module to provide Postgres compatibility to salt.
 :note: This module uses MD5 hashing which may not be compliant with certain
     security audits.
 '''
+
 # This pylint error is popping up where there are no colons?
 # pylint: disable=E8203
 
 # Import python libs
+from __future__ import absolute_import
 import datetime
 import distutils.version  # pylint: disable=E0611
 import logging
@@ -31,6 +33,7 @@ import StringIO
 import hashlib
 import os
 import tempfile
+from salt.ext.six.moves import zip
 try:
     import pipes
     import csv
@@ -40,7 +43,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
-from salt._compat import string_types
+from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 
@@ -378,7 +381,7 @@ def db_create(name,
         'TABLESPACE': tablespace,
     }
     with_chunks = []
-    for key, value in with_args.iteritems():
+    for key, value in with_args.items():
         if value is not None:
             with_chunks += [key, '=', value]
     # Build a final query
@@ -707,7 +710,7 @@ def _role_cmd_args(name,
         sub_cmd = sub_cmd.replace(' WITH', '')
     if groups:
         for group in groups.split(','):
-            sub_cmd = '{0}; GRANT {1} TO {2}'.format(sub_cmd, group, name)
+            sub_cmd = '{0}; GRANT "{1}" TO "{2}"'.format(sub_cmd, group, name)
     return sub_cmd
 
 
@@ -851,7 +854,7 @@ def _role_update(name,
         log.info('{0} {1!r} could not be found'.format(typ_.capitalize(), name))
         return False
 
-    sub_cmd = 'ALTER ROLE {0} WITH'.format(name)
+    sub_cmd = 'ALTER ROLE "{0}" WITH'.format(name)
     sub_cmd = '{0} {1}'.format(sub_cmd, _role_cmd_args(
         name,
         encrypted=encrypted,
@@ -1538,7 +1541,7 @@ def owner_to(dbname,
 
     sqlfile.write('commit;\n')
     sqlfile.flush()
-    os.chmod(sqlfile.name, 0644)  # ensure psql can read the file
+    os.chmod(sqlfile.name, 0o644)  # ensure psql can read the file
 
     # run the generated sqlfile in the db
     cmdret = _psql_prepare_and_run(['-f', sqlfile.name],
