@@ -87,7 +87,7 @@ def make_pkgng_aware(jname):
                     cdir)
 
     # Added args to file
-    __salt__['file.write']('{0}-make.conf'.format(os.path.join(cdir, janame)), 'WITH_PKGNG=yes')
+    __salt__['file.write']('{0}-make.conf'.format(os.path.join(cdir, jname)), 'WITH_PKGNG=yes')
 
     if os.path.isfile(os.path.join(cdir, jname) + '-make.conf'):
         ret['changes'] = 'Created {0}'.format(
