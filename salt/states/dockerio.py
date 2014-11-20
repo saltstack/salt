@@ -252,7 +252,7 @@ def pulled(name,
         Pull even if the image is already pulled
 
     insecure_registry
-        Set to ``True``to allow connections to non-HTTPS registries. Default ``False``.
+        Set to ``True`` to allow connections to non-HTTPS registries. Default ``False``.
     '''
     inspect_image = __salt__['docker.inspect_image']
     image_infos = inspect_image(name)
@@ -302,7 +302,7 @@ def pushed(name, tag=None, insecure_registry=False):
         Tag of the image [Optional]
 
     insecure_registry
-        Set to ``True``to allow connections to non-HTTPS registries. Default ``False``.
+        Set to ``True`` to allow connections to non-HTTPS registries. Default ``False``.
     '''
 
     if __opts__['test']:
