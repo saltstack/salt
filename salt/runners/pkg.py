@@ -4,9 +4,6 @@ Package helper functions which provide other formatted output of
 salt.modules.pkg
 '''
 
-# Import python libs
-import os
-
 # Import salt libs
 import salt.output
 import salt.minion
@@ -45,7 +42,11 @@ def group_upgrades(jid, outputter='nested', ext_source=None):
         results = data[minion]['return']
         for pkg, pkgver in results.items():
             if pkg not in pkgs.keys():
-                pkgs.update({pkg: {pkgver: {'hosts': []}}})
+                pkgs[pkg] = {pkgver: {'hosts': []}}
+
+            if pkgver not in pkgs[pkg].keys():
+                pkgs[pkg].update({pkgver: {'hosts': []}})
+
             pkgs[pkg][pkgver]['hosts'].append(minion)
 
     if outputter:
