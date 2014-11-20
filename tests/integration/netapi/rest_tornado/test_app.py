@@ -1,17 +1,23 @@
 # coding: utf-8
-import json
-
-from salt.netapi.rest_tornado import saltnado
-
-import tornado.testing
-import tornado.concurrent
-import tornado.web
-import tornado.ioloop
-
-from unit.netapi.rest_tornado.test_handlers import SaltnadoTestCase
 
 import json
 import time
+
+from salttesting.unit import skipIf
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../../')
+
+try:
+    from salt.netapi.rest_tornado import saltnado
+
+    import tornado.testing
+    import tornado.concurrent
+    import tornado.web
+    import tornado.ioloop
+except ImportError:
+    pass
+
+from unit.netapi.rest_tornado.test_handlers import SaltnadoTestCase
 
 
 class TestSaltAPIHandler(SaltnadoTestCase):
@@ -492,3 +498,13 @@ class TestWebhookSaltAPIHandler(SaltnadoTestCase):
                               )
         response_obj = json.loads(response.body)
         assert response_obj['success'] is True
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(TestEventsSaltAPIHandler,
+              TestJobsSaltAPIHandler,
+              TestMinionSaltAPIHandler,
+              TestRunSaltAPIHandler,
+              TestSaltAPIHandler,
+              TestWebhookSaltAPIHandler, needs_daemon=True)
