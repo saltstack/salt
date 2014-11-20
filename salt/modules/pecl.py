@@ -34,7 +34,7 @@ def _pecl(command, defaults=False):
     if salt.utils.is_true(defaults):
         cmdline = "printf '\n' | " + cmdline
 
-    ret = __salt__['cmd.run_all'](cmdline)
+    ret = __salt__['cmd.run_all'](cmdline, python_shell=True)
 
     if ret['retcode'] == 0:
         return ret['stdout']
