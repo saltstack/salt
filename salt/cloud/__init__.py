@@ -273,7 +273,7 @@ class CloudClient(object):
         Query all instance information
         '''
         mapper = salt.cloud.Map(self._opts_defaults())
-        self.opts['selected_query_option'] = 'list_nodes_full'
+        mapper.opts['selected_query_option'] = 'list_nodes_full'
         return mapper.map_providers_parallel(query_type)
 
     def select_query(self, query_type='list_nodes_select'):
@@ -281,7 +281,7 @@ class CloudClient(object):
         Query select instance information
         '''
         mapper = salt.cloud.Map(self._opts_defaults())
-        self.opts['selected_query_option'] = 'list_nodes_select'
+        mapper.opts['selected_query_option'] = 'list_nodes_select'
         return mapper.map_providers_parallel(query_type)
 
     def min_query(self, query_type='list_nodes_min'):
@@ -289,7 +289,7 @@ class CloudClient(object):
         Query select instance information
         '''
         mapper = salt.cloud.Map(self._opts_defaults())
-        self.opts['selected_query_option'] = 'list_nodes_min'
+        mapper.opts['selected_query_option'] = 'list_nodes_min'
         return mapper.map_providers_parallel(query_type)
 
     def profile(self, profile, names, vm_overrides=None, **kwargs):
@@ -634,6 +634,8 @@ class Cloud(object):
                 # If driver has function list_nodes_min, just replace it
                 # with query param to check existing vms on this driver
                 # for minimum information, Otherwise still use query param.
+                import pprint
+                pprint.pprint(opts)
                 if 'selected_query_option' not in opts:
                     if '{0}.list_nodes_min'.format(driver) in self.clouds:
                         this_query = 'list_nodes_min'
