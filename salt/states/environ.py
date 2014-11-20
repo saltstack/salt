@@ -127,22 +127,24 @@ def setenv(name,
             ret['changes'].update({key: val})
 
     if __opts__['test']:
-        ret['result'] = None
         if ret['changes']:
             ret['comment'] = 'Environ values will be changed'
         else:
             ret['comment'] = 'Environ values are already set with the correct values'
         return ret
 
-    environ_ret = __salt__['environ.setenv'](environ,
-                                             false_unsets,
-                                             clear_all,
-                                             update_minion)
-    if not environ_ret:
-        ret['result'] = False
-        ret['comment'] = 'Failed to set environ variables'
-        return ret
-    ret['result'] = True
-    ret['changes'] = environ_ret
-    ret['comment'] = 'Environ values were set'
+    if ret['changes']:
+        environ_ret = __salt__['environ.setenv'](environ,
+                                                 false_unsets,
+                                                 clear_all,
+                                                 update_minion)
+        if not environ_ret:
+            ret['result'] = False
+            ret['comment'] = 'Failed to set environ variables'
+            return ret
+        ret['result'] = True
+        ret['changes'] = environ_ret
+        ret['comment'] = 'Environ values were set'
+    else:
+        ret['comment'] = 'Environ values were already set with the correct values'
     return ret
