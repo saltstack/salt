@@ -8,7 +8,7 @@ import yaml
 from salttesting.unit import skipIf
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../..')
-import integration
+import integration  # pylint: disable=import-error
 
 # Import Salt libs
 try:
@@ -278,5 +278,5 @@ class TestSaltAuthHandler(SaltnadoTestCase):
 
 
 if __name__ == '__main__':
-    from integration import run_tests
+    from integration import run_tests  # pylint: disable=import-error
     run_tests(TestBaseSaltAPIHandler, TestSaltAuthHandler, needs_daemon=False)
