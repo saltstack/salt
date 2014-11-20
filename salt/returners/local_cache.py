@@ -256,7 +256,9 @@ def get_jid(jid):
                     if os.path.isfile(outp):
                         ret[fn_]['out'] = serial.load(
                             salt.utils.fopen(outp, 'rb'))
-                except Exception:
+                except Exception as exc:
+                    if 'Permission denied:' in str(exc):
+                        raise
                     pass
     return ret
 
