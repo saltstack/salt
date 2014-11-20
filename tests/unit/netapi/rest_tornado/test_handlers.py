@@ -4,20 +4,41 @@
 import json
 import yaml
 
-# Import Salt libs
-from salt.netapi.rest_tornado import saltnado
-import salt.auth
+# Import Salt Testing Libs
+from salttesting.unit import skipIf
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../../')
 import integration
+
+# Import Salt libs
+try:
+    from salt.netapi.rest_tornado import saltnado
+    HAS_TORNADO = True
+except ImportError:
+    HAS_TORNADO = False
+import salt.auth
+
 
 # Import 3rd-party libs
 # pylint: disable=import-error
-import tornado.testing
-import tornado.concurrent
+try:
+    import tornado.testing
+    import tornado.concurrent
+    from tornado.testing import AsyncHTTPTestCase
+    HAS_TORNADO = True
+except ImportError:
+    HAS_TORNADO = False
+
+    # Let's create a fake AsyncHTTPTestCase so we can properly skip the test case
+    class AsyncHTTPTestCase(object):
+        pass
+
 from salt.ext.six.moves.urllib.parse import urlencode  # pylint: disable=no-name-in-module
 # pylint: enable=import-error
 
 
-class SaltnadoTestCase(integration.ModuleCase, tornado.testing.AsyncHTTPTestCase):
+@skipIf(HAS_TORNADO is False, 'The tornado package needs to be installed')
+class SaltnadoTestCase(integration.ModuleCase, AsyncHTTPTestCase):
     '''
     Mixin to hold some shared things
     '''
@@ -254,3 +275,8 @@ class TestSaltAuthHandler(SaltnadoTestCase):
                                headers={'Content-Type': self.content_type_map['form']})
 
         assert response.code == 401
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(TestBaseSaltAPIHandler, TestSaltAuthHandler, needs_daemon=False)
