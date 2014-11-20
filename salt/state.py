@@ -57,6 +57,8 @@ STATE_INTERNAL_KEYWORDS = frozenset([
     'prereq',
     'prereq_in',
     'reload_modules',
+    'reload_grains',
+    'reload_pillar',
     'require',
     'require_in',
     'saltenv',
@@ -739,7 +741,18 @@ class State(object):
         possible module type, e.g. a python, pyx, or .so. Always refresh if the
         function is recurse, since that can lay down anything.
         '''
-        if data.get('reload_modules', False) is True:
+        _reload_modules = False
+        if data.get('reload_grains', False):
+            log.debug('Refreshing grains...')
+            self.opts['grains'] = salt.loader.grains(self.opts)
+            _reload_modules = True
+
+        if data.get('reload_pillar', False):
+            log.debug('Refreshing pillar...')
+            self.opts['pillar'] = self._gather_pillar()
+            _reload_modules = True
+
+        if data.get('reload_modules', False) or _reload_modules:
             # User explicitly requests a reload
             self.module_refresh()
             return
