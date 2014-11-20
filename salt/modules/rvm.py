@@ -7,6 +7,10 @@ Manage ruby installations and gemsets with RVM, the Ruby Version Manager.
 import re
 import os
 import logging
+try:
+    from shlex import quote as _cmd_quote  # pylint: disable=E0611
+except ImportError:
+    from pipes import quote as _cmd_quote
 
 log = logging.getLogger(__name__)
 
@@ -22,8 +26,10 @@ __opts__ = {
 
 def _get_rvm_location(runas=None):
     if runas:
-        rvmpath = '~{0}/.rvm/bin/rvm'.format(runas)
-        return os.path.expanduser(rvmpath)
+        runas_home = os.path.expanduser('~{0}'.format(runas))
+        rvmpath = '{0}/.rvm/bin/rvm'.format(runas_home)
+        if os.path.isdir(rvmpath):
+            return rvmpath
     return '/usr/local/rvm/bin/rvm'
 
 
@@ -33,9 +39,9 @@ def _rvm(command, arguments=None, runas=None, cwd=None):
     if not is_installed(runas):
         return False
 
-    cmd = [_get_rvm_location(runas), command]
+    cmd = [_get_rvm_location(runas), _cmd_quote(command)]
     if arguments:
-        cmd.append(arguments)
+        cmd.extend([_cmd_quote(arg) for arg in arguments.split()])
 
     ret = __salt__['cmd.run_all'](' '.join(cmd), runas=runas, cwd=cwd)
 
@@ -80,7 +86,8 @@ def install(runas=None):
         # the RVM installer automatically does a multi-user install when it is
         # invoked with root privileges
         'curl -Ls {installer} | bash -s stable'.format(installer=installer),
-        runas=runas
+        runas=runas,
+        python_shell=True
     )
     if ret['retcode'] > 0:
         log.debug(
