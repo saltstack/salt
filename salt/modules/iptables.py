@@ -449,8 +449,9 @@ def save(filename=None, family='ipv4'):
     parent_dir = os.path.dirname(filename)
     if not os.path.isdir(parent_dir):
         os.makedirs(parent_dir)
-    cmd = '{0}-save > {1}'.format(_iptables_cmd(family), filename)
-    out = __salt__['cmd.run'](cmd)
+    cmd = '{0}-save'.format(_iptables_cmd(family))
+    ipt = __salt__['cmd.run'](cmd)
+    out = __salt__['file.write'](filename, ipt)
     return out
 
 
