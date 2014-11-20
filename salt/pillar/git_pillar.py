@@ -228,7 +228,7 @@ def ext_pillar(minion_id,
     Execute a command and read the output as YAML
     '''
     if pillar_dirs is None:
-        return
+        pillar_dirs = {}
     # split the branch, repo name and optional extra (key=val) parameters.
     options = repo_string.strip().split()
     branch = options[0]
