@@ -56,6 +56,7 @@ help:
 	@echo "  epub       to make an epub"
 	@echo "  latex      to make LaTeX files, you can set PAPER=a4 or PAPER=letter"
 	@echo "  xetexpdf   to make LaTeX files and run them through xelatex"
+	@echo "  cheatsheet to create salt-cheatsheet.pdf"
 	@echo "  latexpdf   to make LaTeX files and run them through pdflatex"
 	@echo "  latexpdfja to make LaTeX files and run them through platex/dvipdfmx"
 	@echo "  text       to make text files"
@@ -152,6 +153,11 @@ xetexpdf: translations
 	perl -pi -e 's!pdflatex!xelatex!' $(BUILDDIR)/latex/Makefile
 	$(MAKE) -C $(BUILDDIR)/latex -i
 	@echo "xelatex finished; the PDF files are in $(BUILDDIR)/latex."
+
+cheatsheet: translations
+	@echo "Running cheatsheet/salt.tex file through xelatex..."
+	cd cheatsheet &&  xelatex salt.tex && cp salt.pdf ../salt-cheatsheet.pdf 
+	@echo "./salt-cheatsheet.pdf created."
 
 text: translations
 	$(SPHINXBUILD) -b text $(ALLSPHINXOPTS) $(BUILDDIR)/text
