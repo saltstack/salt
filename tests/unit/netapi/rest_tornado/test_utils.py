@@ -30,7 +30,7 @@ except ImportError:
     HAS_TORNADO = False
 
 # Import utility lib from tests
-from unit.utils.event_test import eventpublisher_process, event, SOCK_DIR
+from unit.utils.event_test import eventpublisher_process, event, SOCK_DIR  # pylint: disable=import-error
 
 
 @skipIf(HAS_TORNADO is False, 'The tornado package needs to be installed')
@@ -82,6 +82,7 @@ class TestSaltnadoUtils(AsyncTestCase):
         assert futures[0].done() is True
         assert futures[1].done() is False
 
+
 @skipIf(HAS_TORNADO is False, 'The tornado package needs to be installed')
 class TestEventListener(AsyncTestCase):
     def setUp(self):
@@ -110,5 +111,5 @@ class TestEventListener(AsyncTestCase):
 
 
 if __name__ == '__main__':
-    from integration import run_tests
+    from integration import run_tests  # pylint: disable=import-error
     run_tests(TestUtils, needs_daemon=False)

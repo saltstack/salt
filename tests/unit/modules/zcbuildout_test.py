@@ -22,7 +22,7 @@ from salttesting.helpers import (
 ensure_in_syspath('../..')
 
 # Import Salt libs
-import integration
+import integration  # pylint: disable=import-error
 import salt.utils
 from salt.modules import zcbuildout as buildout
 from salt.modules import cmdmod as cmd
@@ -492,7 +492,7 @@ class BuildoutAPITestCase(TestCase):
 
 
 if __name__ == '__main__':
-    from integration import run_tests
+    from integration import run_tests  # pylint: disable=import-error
     run_tests(
         BuildoutAPITestCase,
         BuildoutTestCase,
