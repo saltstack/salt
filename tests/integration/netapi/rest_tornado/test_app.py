@@ -500,7 +500,7 @@ class TestWebhookSaltAPIHandler(SaltnadoTestCase):
 
 
 if __name__ == '__main__':
-    from integration import run_tests
+    from integration import run_tests  # pylint: disable=import-error
     run_tests(TestEventsSaltAPIHandler,
               TestJobsSaltAPIHandler,
               TestMinionSaltAPIHandler,
