@@ -18,7 +18,7 @@ import yaml
 import requests
 import salt.ext.six as six
 
-# pylint: disable=import-error
+# pylint: disable=import-error,no-name-in-module
 try:
     import msgpack
     HAS_MSGPACK = True
@@ -50,7 +50,7 @@ try:
 except ImportError:
     # Older jinja does not need markupsafe
     HAS_MARKUPSAFE = False
-# pylint: enable=import-error
+# pylint: enable=import-error,no-name-in-module
 
 # Import salt libs
 import salt
