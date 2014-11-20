@@ -19,7 +19,7 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt._compat import string_types
 
 try:
-    from shlex import quote as _cmd_quote #pylint: disable=E0611
+    from shlex import quote as _cmd_quote  # pylint: disable=E0611
 except ImportError:
     from pipes import quote as _cmd_quote
 
