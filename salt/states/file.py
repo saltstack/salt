@@ -3326,6 +3326,7 @@ def copy(
         user=None,
         group=None,
         mode=None,
+        subdir=False,
         **kwargs):
     '''
     If the source file exists on the system, copy it to the named file. The
@@ -3364,6 +3365,10 @@ def copy(
         The permissions to set on the copied file, aka 644, '0775', '4664'.
         If ``preserve`` is set to ``True``, then this will be ignored.
         Not supported on Windows
+
+    subdir
+        If the name is a directory then place the file inside the named
+        directory
     '''
     name = os.path.expanduser(name)
     source = os.path.expanduser(source)
@@ -3412,8 +3417,12 @@ def copy(
         if mode is None:
             mode = __salt__['file.get_mode'](source)
 
+    if os.path.isdir(name) and subdir:
+        # If the target is a dir, and overwrite_dir is False, copy into the dir
+        name = os.path.join(name, os.path.basename(source))
+
     if os.path.lexists(source) and os.path.lexists(name):
-        # if this is a file which did not changed, do not update
+        # if this is a file which did not change, do not update
         if force and os.path.isfile(name):
             hash1 = salt.utils.get_hash(name)
             hash2 = salt.utils.get_hash(source)
