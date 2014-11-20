@@ -552,8 +552,8 @@ New Salt-Cloud Providers
 Deprecations
 ============
 
-:mod:`salt.modules.virturalenv_mod`
------------------------------------
+:mod:`salt.modules.virtualenv_mod`
+----------------------------------
 
 - Removed deprecated ``memoize`` function from ``salt/utils/__init__.py`` (deprecated)
 - Removed deprecated ``no_site_packages`` argument from ``create`` function (deprecated)
