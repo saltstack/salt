@@ -3,25 +3,31 @@
 All salt configuration loading and defaults should be in this module
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, generators
 
 # Import python libs
-from __future__ import generators
-import glob
 import os
 import re
-import logging
-from copy import deepcopy
+import sys
+import glob
 import time
 import codecs
+import logging
+from copy import deepcopy
 
-# import third party libs
+# Import third party libs
 import yaml
 try:
     yaml.Loader = yaml.CLoader
     yaml.Dumper = yaml.CDumper
 except Exception:
     pass
+
+# pylint: disable=import-error,no-name-in-module
+import salt.ext.six as six
+from salt.ext.six import string_types, text_type
+from salt.ext.six.moves.urllib.parse import urlparse
+# pylint: enable=import-error,no-name-in-module
 
 # Import salt libs
 import salt.crypt
@@ -31,11 +37,6 @@ import salt.syspaths
 import salt.utils.validate.path
 import salt.utils.xdg
 import salt.exceptions
-
-from salt.ext.six import string_types, text_type
-from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=import-error,no-name-in-module
-
-import sys
 
 log = logging.getLogger(__name__)
 
@@ -658,7 +659,7 @@ def _validate_file_roots(opts):
         log.warning('The file_roots parameter is not properly formatted,'
                     ' using defaults')
         return {'base': _expand_glob_path([salt.syspaths.BASE_FILE_ROOTS_DIR])}
-    for saltenv, dirs in opts['file_roots'].items():
+    for saltenv, dirs in six.iteritems(opts['file_roots']):
         if not isinstance(dirs, (list, tuple)):
             opts['file_roots'][saltenv] = []
         opts['file_roots'][saltenv] = _expand_glob_path(opts['file_roots'][saltenv])
@@ -687,7 +688,7 @@ def _validate_opts(opts):
     errors = []
     err = ('Key {0} with value {1} has an invalid type of {2}, a {3} is '
            'required for this value')
-    for key, val in opts.items():
+    for key, val in six.iteritems(opts):
         if key in VALID_OPTS:
             if isinstance(VALID_OPTS[key](), list):
                 if isinstance(val, VALID_OPTS[key]):
@@ -755,7 +756,7 @@ def _read_conf_file(path):
         # allow using numeric ids: convert int to string
         if 'id' in conf_opts:
             conf_opts['id'] = str(conf_opts['id'])
-        for key, value in conf_opts.copy().items():
+        for key, value in six.iteritems(conf_opts.copy()):
             if isinstance(value, text_type):
                 # We do not want unicode settings
                 conf_opts[key] = value.encode('utf-8')
@@ -1030,7 +1031,7 @@ def apply_sdb(opts, sdb_opts=None):
     if isinstance(sdb_opts, string_types) and sdb_opts.startswith('sdb://'):
         return salt.utils.sdb.sdb_get(sdb_opts, opts)
     elif isinstance(sdb_opts, dict):
-        for key, value in sdb_opts.items():
+        for key, value in six.iteritems(sdb_opts):
             if value is None:
                 continue
             sdb_opts[key] = apply_sdb(opts, value)
@@ -1278,7 +1279,7 @@ def apply_cloud_config(overrides, defaults=None):
         # Reset the providers dictionary
         config['providers'] = {}
         # Populate the providers dictionary
-        for alias, details in providers.items():
+        for alias, details in six.iteritems(providers):
             if isinstance(details, list):
                 for detail in details:
                     if 'provider' not in detail:
@@ -1398,7 +1399,7 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
 
     vms = {}
 
-    for key, val in config.items():
+    for key, val in six.iteritems(config):
         if key in ('conf_file', 'include', 'default_include', 'user'):
             continue
         if not isinstance(val, dict):
@@ -1539,7 +1540,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
         config.update(overrides)
 
     # Is the user still using the old format in the new configuration file?!
-    for name, settings in config.copy().items():
+    for name, settings in six.iteritems(config.copy()):
         if '.' in name:
             log.warn(
                 'Please switch to the new providers configuration syntax'
@@ -1550,13 +1551,13 @@ def apply_cloud_providers_config(overrides, defaults=None):
 
             # old_to_new will migrate the old data into the 'providers' key of
             # the config dictionary. Let's map it correctly
-            for prov_name, prov_settings in config.pop('providers').items():
+            for prov_name, prov_settings in six.iteritems(config.pop('providers')):
                 config[prov_name] = prov_settings
             break
 
     providers = {}
     ext_count = 0
-    for key, val in config.items():
+    for key, val in six.iteritems(config):
         if key in ('conf_file', 'include', 'default_include', 'user'):
             continue
 
@@ -1604,9 +1605,9 @@ def apply_cloud_providers_config(overrides, defaults=None):
     # Is any provider extending data!?
     while True:
         keep_looping = False
-        for provider_alias, entries in providers.copy().items():
+        for provider_alias, entries in six.iteritems(providers.copy()):
 
-            for driver, details in entries.items():
+            for driver, details in six.iteritems(entries):
                 # Set a holder for the defined profiles
                 providers[provider_alias][driver]['profiles'] = {}
 
@@ -1678,7 +1679,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
     while True:
         # Merge provided extends
         keep_looping = False
-        for alias, entries in providers.copy().items():
+        for alias, entries in six.iteritems(providers.copy()):
             for driver, details in entries.items():
 
                 if 'extends' not in details:
@@ -1712,8 +1713,8 @@ def apply_cloud_providers_config(overrides, defaults=None):
 
     # Now clean up any providers entry that was just used to be a data tree to
     # extend from
-    for provider_alias, entries in providers.copy().items():
-        for driver, details in entries.copy().items():
+    for provider_alias, entries in six.iteritems(providers.copy()):
+        for driver, details in six.iteritems(entries.copy()):
             if not driver.startswith('-only-extendable-'):
                 continue
 
