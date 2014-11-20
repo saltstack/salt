@@ -16,6 +16,7 @@ log = logging.getLogger(__name__)
 def get_latest_snapshot(artifactory_url, repository, group_id, artifact_id, packaging, target_dir='/tmp', target_file=None):
     '''
        Gets latest snapshot of the given artifact
+
        artifactory_url
            URL of artifactory instance
        repository
@@ -43,7 +44,8 @@ def get_latest_snapshot(artifactory_url, repository, group_id, artifact_id, pack
 
 def get_snapshot(artifactory_url, repository, group_id, artifact_id, packaging, version, snapshot_version=None, target_dir='/tmp', target_file=None):
     '''
-       Gets latest snapshot of the desired version of the artifact
+       Gets snapshot of the desired version of the artifact
+
        artifactory_url
            URL of artifactory instance
        repository
@@ -73,6 +75,7 @@ def get_snapshot(artifactory_url, repository, group_id, artifact_id, packaging, 
 def get_release(artifactory_url, repository, group_id, artifact_id, packaging, version, target_dir='/tmp', target_file=None):
     '''
        Gets the specified release of the artifact
+
        artifactory_url
            URL of artifactory instance
        repository
