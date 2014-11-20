@@ -13,7 +13,7 @@ import os
 import bz2
 
 # Import 3rd-party libs
-from salt.ext.six.urllib.request import urlopen as _urlopen  # pylint: disable=no-name-in-module,import-error
+from salt.ext.six.moves.urllib.request import urlopen as _urlopen  # pylint: disable=no-name-in-module,import-error
 
 # Import Salt libs
 import salt.utils
