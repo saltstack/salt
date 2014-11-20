@@ -19,7 +19,7 @@ from salttesting.helpers import (
     requires_network,
     skip_if_binaries_missing
 )
-ensure_in_syspath('../../')
+ensure_in_syspath('../..')
 
 # Import Salt libs
 import integration
