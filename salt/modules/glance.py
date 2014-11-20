@@ -92,13 +92,12 @@ def image_create(profile=None, **connection_args):
     fields = dict(
         filter(
             lambda x: x[0] in glanceclient.v1.images.CREATE_PARAMS,
-            kwargs.items()
+            connection_args.items()
         )
     )
 
     image = nt_ks.images.create(**fields)
-    newimage = image_list(str(image.id))
-    return {newimage['name']: newimage}
+    return image_show(id=str(image.id), profile=profile, **connection_args)
 
 
 def image_delete(id=None, name=None, profile=None, **connection_args):  # pylint: disable=C0103
@@ -151,7 +150,7 @@ def image_show(id=None, name=None, profile=None, **connection_args):  # pylint: 
     ret[image.name] = {
             'id': image.id,
             'name': image.name,
-            'checksum': image.checksum,
+            'checksum': getattr(image, 'checksum', 'Creating'),
             'container_format': image.container_format,
             'created_at': image.created_at,
             'deleted': image.deleted,
@@ -184,7 +183,7 @@ def image_list(profile=None, **connection_args):  # pylint: disable=C0103
         ret[image.name] = {
                 'id': image.id,
                 'name': image.name,
-                'checksum': image.checksum,
+                'checksum': getattr(image, 'checksum', 'Creating'),
                 'container_format': image.container_format,
                 'created_at': image.created_at,
                 'deleted': image.deleted,
