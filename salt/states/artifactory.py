@@ -15,12 +15,12 @@ def downloaded(name, artifact, target_dir='/tmp', target_file=None):
 
     artifact:
         Details of the artifact to be downloaded from artifactory.
-        - artifactory_url: URL of the artifactory instance
-        - repository: Repository in artifactory
-        - artifact_id: Artifact ID
-        - group_id: Group ID
-        - packaging: Packaging
-        - version: Version
+            - artifactory_url: URL of the artifactory instance
+            - repository: Repository in artifactory
+            - artifact_id: Artifact ID
+            - group_id: Group ID
+            - packaging: Packaging
+            - version: Version
     target_dir:
         Directory where the artifact should be downloaded. By default it is downloaded to /tmp directory.
     target_file:
@@ -29,29 +29,33 @@ def downloaded(name, artifact, target_dir='/tmp', target_file=None):
     Example::
     Download artifact to a specific file:
 
-    jboss_module_downloaded:
-      artifactory.downloaded:
-       - artifact:
-          artifactory_url: http://artifactory.intranet.company.com/artifactory
-            repository: 'libs-release-local'
-            artifact_id: 'module'
-            group_id: 'com.company.module'
-            packaging: 'jar'
-            version: '1.0'
-       - target_file: /opt/jboss7/modules/com/company/lib/module.jar
+    .. code-block:: yaml
+
+        jboss_module_downloaded:
+          artifactory.downloaded:
+           - artifact:
+                artifactory_url: http://artifactory.intranet.company.com/artifactory
+                repository: 'libs-release-local'
+                artifact_id: 'module'
+                group_id: 'com.company.module'
+                packaging: 'jar'
+                version: '1.0'
+           - target_file: /opt/jboss7/modules/com/company/lib/module.jar
 
     Download artifact to the folder (automatically resolves file name):
 
-    jboss_module_downloaded:
-      artifactory.downloaded:
-       - artifact:
-          artifactory_url: http://artifactory.intranet.company.com/artifactory
-            repository: 'libs-release-local'
-            artifact_id: 'module'
-            group_id: 'com.company.module'
-            packaging: 'jar'
-            version: '1.0'
-       - target_dir: /opt/jboss7/modules/com/company/lib
+    .. code-block:: yaml
+
+        jboss_module_downloaded:
+          artifactory.downloaded:
+           - artifact:
+                artifactory_url: http://artifactory.intranet.company.com/artifactory
+                repository: 'libs-release-local'
+                artifact_id: 'module'
+                group_id: 'com.company.module'
+                packaging: 'jar'
+                version: '1.0'
+           - target_dir: /opt/jboss7/modules/com/company/lib
 
     '''
     log.debug(" ======================== STATE: artifactory.downloaded (name: %s) ", name)
