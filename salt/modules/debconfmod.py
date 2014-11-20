@@ -134,6 +134,42 @@ def set_(package, question, type, value, *extra):
     return True
 
 
+def set_template(path, template, context, defaults, saltenv='base', **kwargs):
+    '''
+    Set answers to debconf questions from a template.
+
+    path
+        location of the file containing the package selections
+
+    template
+        template format
+
+    context
+        variables to add to the template environment
+
+    default
+        default values for the template environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' debconf.set_template salt://pathto/pkg.selections.jinja jinja None None
+
+    '''
+
+    path = __salt__['cp.get_template'](
+        path=path,
+        dest=None,
+        template=template,
+        saltenv=saltenv,
+        context=context,
+        defaults=defaults,
+        **kwargs)
+
+    return set_file(path, saltenv, **kwargs)
+
+
 def set_file(path, saltenv='base', **kwargs):
     '''
     Set answers to debconf questions from a file.
