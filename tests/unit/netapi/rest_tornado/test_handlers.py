@@ -7,7 +7,7 @@ import yaml
 # Import Salt Testing Libs
 from salttesting.unit import skipIf
 from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../../')
+ensure_in_syspath('../../..')
 import integration
 
 # Import Salt libs
