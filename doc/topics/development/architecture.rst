@@ -170,11 +170,11 @@ remotely.
 When starting up, salt minions connect _back_ to a master defined in the minion
 config file. The connect to two ports on the master:
 
-    * TCP:4505
+    * TCP: 4505
         This is the connection to the master Publisher. It is on this port that
         the minion receives jobs from the master.
 
-    * TCP:4506
+    * TCP: 4506
         This is the connection to the master ReqServer. It is on this port that
         the minion sends job results back to the master.
 

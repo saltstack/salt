@@ -101,41 +101,41 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
 
         # send NO accept header, should come back with json
         response = self.fetch('/')
-        assert response.headers['Content-Type'] == self.content_type_map['json']
-        assert type(json.loads(response.body)) == dict
+        self.assertEqual(response.headers['Content-Type'], self.content_type_map['json'])
+        self.assertEqual(type(json.loads(response.body)), dict)
 
         # send application/json
         response = self.fetch('/', headers={'Accept': self.content_type_map['json']})
-        assert response.headers['Content-Type'] == self.content_type_map['json']
-        assert type(json.loads(response.body)) == dict
+        self.assertEqual(response.headers['Content-Type'], self.content_type_map['json'])
+        self.assertEqual(type(json.loads(response.body)), dict)
 
         # send application/x-yaml
         response = self.fetch('/', headers={'Accept': self.content_type_map['yaml']})
-        assert response.headers['Content-Type'] == self.content_type_map['yaml']
-        assert type(yaml.load(response.body)) == dict
+        self.assertEqual(response.headers['Content-Type'], self.content_type_map['yaml'])
+        self.assertEqual(type(yaml.load(response.body)), dict)
 
     def test_token(self):
         '''
         Test that the token is returned correctly
         '''
         token = json.loads(self.fetch('/').body)['token']
-        assert token is None
+        self.assertIs(token, None)
 
         # send a token as a header
         response = self.fetch('/', headers={saltnado.AUTH_TOKEN_HEADER: 'foo'})
         token = json.loads(response.body)['token']
-        assert token == 'foo'
+        self.assertEqual(token, 'foo')
 
         # send a token as a cookie
         response = self.fetch('/', headers={'Cookie': '{0}=foo'.format(saltnado.AUTH_COOKIE_NAME)})
         token = json.loads(response.body)['token']
-        assert token == 'foo'
+        self.assertEqual(token, 'foo')
 
         # send both, make sure its the header
         response = self.fetch('/', headers={saltnado.AUTH_TOKEN_HEADER: 'foo',
                                             'Cookie': '{0}=bar'.format(saltnado.AUTH_COOKIE_NAME)})
         token = json.loads(response.body)['token']
-        assert token == 'foo'
+        self.assertEqual(token, 'foo')
 
     def test_deserialize(self):
         '''
@@ -160,35 +160,35 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
                               body=json.dumps(valid_lowstate),
                               headers={'Content-Type': self.content_type_map['json']})
 
-        assert valid_lowstate == json.loads(response.body)['lowstate']
+        self.assertEqual(valid_lowstate, json.loads(response.body)['lowstate'])
 
         # send yaml as json (should break)
         response = self.fetch('/',
                               method='POST',
                               body=yaml.dump(valid_lowstate),
                               headers={'Content-Type': self.content_type_map['json']})
-        assert response.code == 400
+        self.assertEqual(response.code, 400)
 
         # send as yaml
         response = self.fetch('/',
                               method='POST',
                               body=yaml.dump(valid_lowstate),
                               headers={'Content-Type': self.content_type_map['yaml']})
-        assert valid_lowstate == json.loads(response.body)['lowstate']
+        self.assertEqual(valid_lowstate, json.loads(response.body)['lowstate'])
 
         # send json as yaml (works since yaml is a superset of json)
         response = self.fetch('/',
                               method='POST',
                               body=json.dumps(valid_lowstate),
                               headers={'Content-Type': self.content_type_map['yaml']})
-        assert valid_lowstate == json.loads(response.body)['lowstate']
+        self.assertEqual(valid_lowstate, json.loads(response.body)['lowstate'])
 
         # send json as text/plain
         response = self.fetch('/',
                               method='POST',
                               body=json.dumps(valid_lowstate),
                               headers={'Content-Type': self.content_type_map['text']})
-        assert valid_lowstate == json.loads(response.body)['lowstate']
+        self.assertEqual(valid_lowstate, json.loads(response.body)['lowstate'])
 
         # send form-urlencoded
         form_lowstate = (
@@ -203,13 +203,13 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
                               body=urlencode(form_lowstate),
                               headers={'Content-Type': self.content_type_map['form']})
         returned_lowstate = json.loads(response.body)['lowstate']
-        assert len(returned_lowstate) == 1
+        self.assertEqual(len(returned_lowstate), 1)
         returned_lowstate = returned_lowstate[0]
 
-        assert returned_lowstate['client'] == 'local'
-        assert returned_lowstate['tgt'] == '*'
-        assert returned_lowstate['fun'] == 'test.fib'
-        assert returned_lowstate['arg'] == ['10', 'foo']
+        self.assertEqual(returned_lowstate['client'], 'local')
+        self.assertEqual(returned_lowstate['tgt'], '*')
+        self.assertEqual(returned_lowstate['fun'], 'test.fib')
+        self.assertEqual(returned_lowstate['arg'], ['10', 'foo'])
 
 
 class TestSaltAuthHandler(SaltnadoTestCase):
@@ -227,7 +227,7 @@ class TestSaltAuthHandler(SaltnadoTestCase):
         We don't allow gets, so assert we get 401s
         '''
         response = self.fetch('/login')
-        assert response.code == 401
+        self.assertEqual(response.code, 401)
 
     def test_login(self):
         '''
@@ -239,10 +239,10 @@ class TestSaltAuthHandler(SaltnadoTestCase):
                                headers={'Content-Type': self.content_type_map['form']})
 
         response_obj = json.loads(response.body)['return'][0]
-        assert response_obj['perms'] == self.opts['external_auth']['auto'][self.auth_creds_dict['username']]
-        assert 'token' in response_obj  # TODO: verify that its valid?
-        assert response_obj['user'] == self.auth_creds_dict['username']
-        assert response_obj['eauth'] == self.auth_creds_dict['eauth']
+        self.assertEqual(response_obj['perms'], self.opts['external_auth']['auto'][self.auth_creds_dict['username']])
+        self.assertIn('token', response_obj)  # TODO: verify that its valid?
+        self.assertEqual(response_obj['user'], self.auth_creds_dict['username'])
+        self.assertEqual(response_obj['eauth'], self.auth_creds_dict['eauth'])
 
     def test_login_missing_password(self):
         '''
@@ -258,7 +258,7 @@ class TestSaltAuthHandler(SaltnadoTestCase):
                                body=urlencode(bad_creds),
                                headers={'Content-Type': self.content_type_map['form']})
 
-        assert response.code == 400
+        self.assertEqual(response.code, 400)
 
     def test_login_bad_creds(self):
         '''
@@ -274,7 +274,7 @@ class TestSaltAuthHandler(SaltnadoTestCase):
                                body=urlencode(bad_creds),
                                headers={'Content-Type': self.content_type_map['form']})
 
-        assert response.code == 401
+        self.assertEqual(response.code, 401)
 
 
 if __name__ == '__main__':
