@@ -68,6 +68,8 @@ VERIFY_TRUST_LEVELS = {
 }
 
 HAS_LIBS = False
+GPG_1_3_1 = False
+
 try:
     import gnupg
     HAS_LIBS = True
@@ -88,6 +90,10 @@ def __virtual__():
     Makes sure that python-gnupg and gpg are available.
     '''
     if _check_gpg() and HAS_LIBS:
+        gnupg_version = distutils.version.LooseVersion(gnupg.__version__)
+        if gnupg_version >= '1.3.1':
+            global GPG_1_3_1
+            GPG_1_3_1 = True
         return __virtualname__
     return False
 
@@ -108,8 +114,7 @@ def _create_gpg(user=None):
         else:
             raise SaltInvocationError('User does not exist')
 
-    gnupg_version = distutils.version.LooseVersion(gnupg.__version__)
-    if gnupg_version >= '1.3.1':
+    if GPG_1_3_1:
         gpg = gnupg.GPG(homedir='{0}'.format(homeDir))
     else:
         gpg = gnupg.GPG(gnupghome='{0}'.format(homeDir))
@@ -162,27 +167,29 @@ def search_keys(text, keyserver=None, user=None):
         salt '*' gpg.search_keys user@example.com keyserver=keyserver.ubuntu.com user=username
 
     '''
+    if GPG_1_3_1:
+        raise SaltInvocationError('The search_keys function is not support with this version of python-gnupg.')
+    else:
+        if not keyserver:
+            keyserver = 'pgp.mit.edu'
 
-    if not keyserver:
-        keyserver = 'pgp.mit.edu'
-
-    _keys = []
-    for _key in _search_keys(text, keyserver, user):
-        tmp = {}
-        tmp['keyid'] = _key['keyid']
-        tmp['uids'] = _key['uids']
-        if 'expires' in _key:
-            if _key['expires']:
-                tmp['expires'] = time.strftime('%Y-%m-%d',
-                                               time.localtime(float(_key['expires'])))
-        if 'date' in _key:
-            if _key['date']:
-                tmp['created'] = time.strftime('%Y-%m-%d',
-                                               time.localtime(float(_key['date'])))
-        if 'length' in _key:
-            tmp['keyLength'] = _key['length']
-        _keys.append(tmp)
-    return _keys
+        _keys = []
+        for _key in _search_keys(text, keyserver, user):
+            tmp = {}
+            tmp['keyid'] = _key['keyid']
+            tmp['uids'] = _key['uids']
+            if 'expires' in _key:
+                if _key['expires']:
+                    tmp['expires'] = time.strftime('%Y-%m-%d',
+                                                   time.localtime(float(_key['expires'])))
+            if 'date' in _key:
+                if _key['date']:
+                    tmp['created'] = time.strftime('%Y-%m-%d',
+                                                   time.localtime(float(_key['date'])))
+            if 'length' in _key:
+                tmp['keyLength'] = _key['length']
+            _keys.append(tmp)
+        return _keys
 
 
 def list_keys(user=None):
@@ -200,6 +207,7 @@ def list_keys(user=None):
         salt '*' gpg.list_keys
 
     '''
+    log.debug('GPG_1_3_1 {0}'.format(GPG_1_3_1))
     _keys = []
     for _key in _list_keys(user):
         tmp = {}
@@ -358,7 +366,7 @@ def create_key(key_type='RSA',
         create_params['expire_date'] = expire_date
 
     if use_passphrase:
-        gpg_passphrase = __salt__['pillar.get']('gpg_passphrase')
+        gpg_passphrase = __salt__['pillar.item']('gpg_passphrase')
         if not gpg_passphrase:
             ret['res'] = False
             ret['message'] = "gpg_passphrase not available in pillar."
@@ -590,19 +598,34 @@ def import_key(user=None,
 
     gpg = _create_gpg(user)
 
-    if text:
-        imported_data = gpg.import_keys(text)
-    elif filename:
-        with salt.utils.flopen(filename, 'rb') as _fp:
-            lines = _fp.readlines()
-            text = ''.join(lines)
-            imported_data = gpg.import_keys(text)
-    else:
+    if not text and not filename:
         raise SaltInvocationError('filename or text must be passed.')
 
+    if filename:
+        try:
+            with salt.utils.flopen(filename, 'rb') as _fp:
+                lines = _fp.readlines()
+                text = ''.join(lines)
+        except IOError:
+            raise SaltInvocationError('filename does not exist.')
+
+    imported_data = gpg.import_keys(text)
+    log.debug('imported_data {0}'.format(imported_data.__dict__.keys()))
+    log.debug('imported_data {0}'.format(imported_data.counts))
+
     if imported_data.counts:
-        ret['message'] = 'Successfully imported key.'
+        if imported_data.counts['imported'] or imported_data.counts['imported_rsa']:
+            ret['message'] = 'Successfully imported key(s).'
+        elif imported_data.counts['unchanged']:
+            ret['message'] = 'Key(s) already exist in keychain.'
+        elif imported_data.counts['not_imported']:
+            ret['res'] = False
+            ret['message'] = 'Unable to import key.'
+        elif not imported_data.counts['count']:
+            ret['res'] = False
+            ret['message'] = 'Unable to import key.'
     else:
+        ret['res'] = False
         ret['message'] = 'Unable to import key.'
     return ret
 
@@ -827,7 +850,7 @@ def sign(user=None,
     '''
     gpg = _create_gpg(user)
     if use_passphrase:
-        gpg_passphrase = __salt__['pillar.get']('gpg_passphrase')
+        gpg_passphrase = __salt__['pillar.item']('gpg_passphrase')
         if not gpg_passphrase:
             raise SaltInvocationError('gpg_passphrase not available in pillar.')
     else:
@@ -950,25 +973,49 @@ def encrypt(user=None,
         salt '*' gpg.encrypt filename='/path/to/important.file' use_pasphrase=True
 
     '''
+    ret = {
+        'res': True,
+        'comment': ''
+    }
     gpg = _create_gpg(user)
+
     if use_passphrase:
-        gpg_passphrase = __salt__['pillar.get']('gpg_passphrase')
+        gpg_passphrase = __salt__['pillar.item']('gpg_passphrase')
         if not gpg_passphrase:
             raise SaltInvocationError('gpg_passphrase not available in pillar.')
+        gpg_passphrase = gpg_passphrase['gpg_passphrase']
     else:
         gpg_passphrase = None
 
     if text:
-        encrypted_data = gpg.encrypt(text, recipients, passphrase=gpg_passphrase)
+        result = gpg.encrypt(text, recipients, passphrase=gpg_passphrase)
     elif filename:
-        with salt.utils.flopen(filename, 'rb') as _fp:
-            if output:
-                encrypted_data = gpg.encrypt_file(_fp, recipients, passphrase=gpg_passphrase, output=output, sign=sign)
-            else:
-                encrypted_data = gpg.encrypt_file(_fp, recipients, passphrase=gpg_passphrase, sign=sign)
+        if GPG_1_3_1:
+            # This version does not allows us to encrypt using the
+            # file stream # have to read in the contents and encrypt.
+            with salt.utils.flopen(filename, 'rb') as _fp:
+                _contents = _fp.read()
+            result = gpg.encrypt(_contents, recipients, passphrase=gpg_passphrase, output=output)
+        else:
+            # This version allows to encrypt using the stream
+            with salt.utils.flopen(filename, 'rb') as _fp:
+                if output:
+                    result = gpg.encrypt_file(_fp, recipients, passphrase=gpg_passphrase, output=output, sign=sign)
+                else:
+                    result = gpg.encrypt_file(_fp, recipients, passphrase=gpg_passphrase, sign=sign)
     else:
         raise SaltInvocationError('filename or text must be passed.')
-    return encrypted_data.data
+
+    if result.ok:
+        if output:
+            ret['comment'] = 'Encrypted data has been written to {0}'.format(output)
+        else:
+            ret['comment'] = result.data
+    else:
+        ret['res'] = False
+        ret['comment'] = '{0}.\nPlease check the salt-minion log.'.format(result.status)
+        log.error(result.stderr)
+    return ret
 
 
 def decrypt(user=None,
@@ -1005,22 +1052,37 @@ def decrypt(user=None,
 
 
     '''
+    ret = {
+        'res': True,
+        'comment': ''
+    }
     gpg = _create_gpg(user)
     if use_passphrase:
-        gpg_passphrase = __salt__['pillar.get']('gpg_passphrase')
+        gpg_passphrase = __salt__['pillar.item']('gpg_passphrase')
         if not gpg_passphrase:
             raise SaltInvocationError('gpg_passphrase not available in pillar.')
+        gpg_passphrase = gpg_passphrase['gpg_passphrase']
     else:
         gpg_passphrase = None
 
     if text:
-        signed_data = gpg.decrypt(text, passphrase=gpg_passphrase)
+        result = gpg.decrypt(text, passphrase=gpg_passphrase)
     elif filename:
         with salt.utils.flopen(filename, 'rb') as _fp:
             if output:
-                signed_data = gpg.decrypt_file(_fp, passphrase=gpg_passphrase, output=output)
+                result = gpg.decrypt_file(_fp, passphrase=gpg_passphrase, output=output)
             else:
-                signed_data = gpg.decrypt_file(_fp, passphrase=gpg_passphrase)
+                result = gpg.decrypt_file(_fp, passphrase=gpg_passphrase)
     else:
         raise SaltInvocationError('filename or text must be passed.')
-    return signed_data.data
+
+    if result.ok:
+        if output:
+            ret['comment'] = 'Decrypted data has been written to {0}'.format(output)
+        else:
+            ret['comment'] = result.data
+    else:
+        ret['res'] = False
+        ret['comment'] = '{0}.\nPlease check the salt-minion log.'.format(result.status)
+        log.error(result.stderr)
+    return ret
