@@ -5,16 +5,14 @@ used to manage salt keys directly without interfacing with the CLI.
 '''
 
 # Import python libs
-from __future__ import absolute_import
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 import os
+import json
 import stat
 import shutil
 import fnmatch
 import hashlib
-import json
 import logging
-from salt.ext.six.moves import input
 
 # Import salt libs
 import salt.crypt
@@ -25,6 +23,10 @@ from salt.utils import kinds
 from salt.utils.event import tagify
 
 # Import third party libs
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
+import salt.ext.six as six
+from salt.ext.six.moves import input
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
 try:
     import msgpack
 except ImportError:
@@ -486,7 +488,7 @@ class Key(object):
             return
         keys = self.list_keys()
         minions = []
-        for key, val in keys.items():
+        for key, val in six.iteritems(keys):
             minions.extend(val)
         if self.opts.get('preserve_minion_cache', False):
             for minion in os.listdir(m_cache):
@@ -520,7 +522,7 @@ class Key(object):
         ret = {}
         if ',' in match and isinstance(match, str):
             match = match.split(',')
-        for status, keys in matches.items():
+        for status, keys in six.iteritems(matches):
             for key in salt.utils.isorted(keys):
                 if isinstance(match, list):
                     for match_item in match:
@@ -542,7 +544,7 @@ class Key(object):
         '''
         ret = {}
         cur_keys = self.list_keys()
-        for status, keys in match_dict.items():
+        for status, keys in six.iteritems(match_dict):
             for key in salt.utils.isorted(keys):
                 for keydir in ('minions', 'minions_pre', 'minions_rejected', 'minions_denied'):
                     if fnmatch.filter(cur_keys.get(keydir, []), key):
@@ -632,7 +634,7 @@ class Key(object):
         Return the specified public key or keys based on a glob
         '''
         ret = {}
-        for status, keys in self.name_match(match).items():
+        for status, keys in six.iteritems(self.name_match(match)):
             ret[status] = {}
             for key in salt.utils.isorted(keys):
                 path = os.path.join(self.opts['pki_dir'], status, key)
@@ -645,7 +647,7 @@ class Key(object):
         Return all managed key strings
         '''
         ret = {}
-        for status, keys in self.list_keys().items():
+        for status, keys in six.iteritems(self.list_keys()):
             ret[status] = {}
             for key in salt.utils.isorted(keys):
                 path = os.path.join(self.opts['pki_dir'], status, key)
@@ -727,7 +729,7 @@ class Key(object):
             matches = match_dict
         else:
             matches = {}
-        for status, keys in matches.items():
+        for status, keys in six.iteritems(matches):
             for key in keys:
                 try:
                     os.remove(os.path.join(self.opts['pki_dir'], status, key))
@@ -749,7 +751,7 @@ class Key(object):
         '''
         Delete all keys
         '''
-        for status, keys in self.list_keys().items():
+        for status, keys in six.iteritems(self.list_keys()):
             for key in keys:
                 try:
                     os.remove(os.path.join(self.opts['pki_dir'], status, key))
@@ -839,7 +841,7 @@ class Key(object):
         '''
         matches = self.name_match(match, True)
         ret = {}
-        for status, keys in matches.items():
+        for status, keys in six.iteritems(matches):
             ret[status] = {}
             for key in keys:
                 if status == 'local':
@@ -854,7 +856,7 @@ class Key(object):
         Return fingerprins for all keys
         '''
         ret = {}
-        for status, keys in self.list_keys().items():
+        for status, keys in six.iteritems(self.list_keys()):
             ret[status] = {}
             for key in keys:
                 if status == 'local':
@@ -889,7 +891,7 @@ class RaetKey(Key):
         '''
         keys = self.list_keys()
         minions = []
-        for key, val in keys.items():
+        for key, val in six.iteritems(keys):
             minions.extend(val)
 
         m_cache = os.path.join(self.opts['cachedir'], 'minions')
@@ -1059,7 +1061,7 @@ class RaetKey(Key):
         Return the specified public key or keys based on a glob
         '''
         ret = {}
-        for status, keys in self.name_match(match).items():
+        for status, keys in six.iteritems(self.name_match(match)):
             ret[status] = {}
             for key in salt.utils.isorted(keys):
                 ret[status][key] = self._get_key_str(key, status)
@@ -1070,7 +1072,7 @@ class RaetKey(Key):
         Return all managed key strings
         '''
         ret = {}
-        for status, keys in self.list_keys().items():
+        for status, keys in six.iteritems(self.list_keys()):
             ret[status] = {}
             for key in salt.utils.isorted(keys):
                 ret[status][key] = self._get_key_str(key, status)
@@ -1142,7 +1144,7 @@ class RaetKey(Key):
             matches = match_dict
         else:
             matches = {}
-        for status, keys in matches.items():
+        for status, keys in six.iteritems(matches):
             for key in keys:
                 try:
                     os.remove(os.path.join(self.opts['pki_dir'], status, key))
@@ -1158,7 +1160,7 @@ class RaetKey(Key):
         '''
         Delete all keys
         '''
-        for status, keys in self.list_keys().items():
+        for status, keys in six.iteritems(self.list_keys()):
             for key in keys:
                 try:
                     os.remove(os.path.join(self.opts['pki_dir'], status, key))
@@ -1230,7 +1232,7 @@ class RaetKey(Key):
         '''
         matches = self.name_match(match, True)
         ret = {}
-        for status, keys in matches.items():
+        for status, keys in six.iteritems(matches):
             ret[status] = {}
             for key in keys:
                 if status == 'local':
@@ -1245,7 +1247,7 @@ class RaetKey(Key):
         Return fingerprints for all keys
         '''
         ret = {}
-        for status, keys in self.list_keys().items():
+        for status, keys in six.iteritems(self.list_keys()):
             ret[status] = {}
             for key in keys:
                 if status == 'local':
@@ -1260,7 +1262,7 @@ class RaetKey(Key):
         Return a dict of all remote key data
         '''
         data = {}
-        for status, mids in self.list_keys().items():
+        for status, mids in six.iteritems(self.list_keys()):
             for mid in mids:
                 keydata = self.read_remote(mid, status)
                 if keydata:
@@ -1320,5 +1322,4 @@ class RaetKey(Key):
         '''
         path = self.opts['pki_dir']
         if os.path.exists(path):
-            #os.rmdir(path)
             shutil.rmtree(path)
