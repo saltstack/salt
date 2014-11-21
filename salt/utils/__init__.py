@@ -33,6 +33,7 @@ import time
 import types
 import warnings
 import yaml
+import locale
 from calendar import month_abbr as months
 from string import maketrans
 
@@ -2448,17 +2449,32 @@ def rand_string(size=32):
     return key.encode('base64').replace('\n', '')
 
 
+@real_memoize
+def get_encodings():
+    '''
+    return a list of string encodings to try
+    '''
+    encodings = []
+    locales = locale.getdefaultlocale()
+    for loc in locales:
+        if loc:
+            encodings.append(loc)
+    encodings.append(sys.getdefaultencoding())
+    encodings.extend(['utf-8', 'latin-1'])
+    return encodings
+
+
 def sdecode(string):
     '''
     Since we don't know where a string is coming from and that string will
     need to be safely decoded, this function will attempt to decode the string
     until if has a working string that does not stack trace
     '''
-    encodings = ['utf-8', 'latin-1']
+    encodings = get_encodings()
     for encoding in encodings:
         try:
             decoded = string.decode(encoding)
-            u' ' + decoded
+            u' ' + decoded  # Make sure unicide string ops work
             return decoded
         except UnicodeDecodeError:
             continue
