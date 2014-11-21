@@ -4,7 +4,6 @@ Module for fetching artifacts from Artifactory
 '''
 
 # Import python libs
-import urllib
 import urllib2
 import os
 import xml.etree.ElementTree as ET
@@ -277,12 +276,14 @@ def __save_artifact(artifact_url, target_file):
 
     log.debug('Downloading: {url} -> {target_file}'.format(url=artifact_url, target_file=target_file))
     try:
-        urllib.urlretrieve(url=artifact_url, filename=target_file)
+        f = urllib2.urlopen(artifact_url)
+        with open(target_file, "wb") as local_file:
+            local_file.write(f.read())
         result['status'] = True
         result['comment'] = __append_comment(('Artifact downloaded from URL: {0}'.format(artifact_url)), result['comment'])
         result['changes']['downloaded_file'] = target_file
         result['target_file'] = target_file
-    except HTTPError as e:
+    except (HTTPError, urllib2.URLError) as e:
         result['status'] = False
         result['comment'] = __get_error_comment(e, artifact_url)
 
