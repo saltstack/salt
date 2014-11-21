@@ -23,4 +23,4 @@ def output(data):
     '''
     Rather basic....
     '''
-    return salt.utils.sdecode(data)
+    return salt.utils.sdecode(str(data))
