@@ -1858,14 +1858,21 @@ class State(object):
                 # determine what the requisite failures where, and return
                 # a nice error message
                 comment_dict = {}
+                # look at all requisite types for a failure
                 for req_type, req_lows in reqs.iteritems():
                     for req_low in req_lows:
                         req_tag = _gen_tag(req_low)
                         req_ret = self.pre.get(req_tag, running.get(req_tag))
+                        # if there is no run output for the requisite it
+                        # can't be the failure
                         if req_ret is None:
                             continue
+                        # If the result was False (not None) it was a failure
                         if req_ret['result'] is False:
-                            comment_dict[req_low['__id__']] = req_ret['comment']
+                            # use SLS.ID for the key-- so its easier to find
+                            key = '{sls}.{_id}'.format(sls=req_low['__sls__'],
+                                                       _id=req_low['__id__'])
+                            comment_dict[key] = req_ret['comment']
 
                 running[tag] = {'changes': {},
                                 'result': False,
