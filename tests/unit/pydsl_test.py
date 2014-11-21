@@ -23,6 +23,10 @@ import salt.utils
 from salt.state import HighState
 from salt.utils.pydsl import PyDslError
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
+
 REQUISITES = ['require', 'require_in', 'use', 'use_in', 'watch', 'watch_in']
 
 OPTS = salt.config.minion_config(None)
@@ -81,11 +85,11 @@ class PyDSLRendererTestCase(TestCase):
         # 2 rather than 1 because pydsl adds an extra no-op state
         # declaration.
 
-        s_iter = result.itervalues()
+        s_iter = six.itervalues(result)
         try:
-            s = s_iter.next()['file']
+            s = next(s_iter)['file']
         except KeyError:
-            s = s_iter.next()['file']
+            s = next(s_iter)['file']
         self.assertEqual(s[0], 'managed')
         self.assertEqual(s[1]['name'], 'myfile.txt')
         self.assertEqual(s[2]['source'], 'salt://path/to/file')
@@ -168,14 +172,14 @@ class PyDSLRendererTestCase(TestCase):
             state('G').cmd.wait('echo this is state G', cwd='/') \
                           .watch(state('C').cmd)
         '''))
-        ret = (result[k] for k in result.keys() if 'do_something' in k).next()
+        ret = next(result[k] for k in six.iterkeys(result) if 'do_something' in k)
         changes = ret['changes']
         self.assertEqual(
             changes,
             dict(a=1, b=2, args=(3,), kws=dict(x=1, y=2), some_var=12345)
         )
 
-        ret = (result[k] for k in result.keys() if '-G_' in k).next()
+        ret = next(result[k] for k in six.iterkeys(result) if '-G_' in k)
         self.assertEqual(ret['changes']['stdout'], 'this is state G')
 
     def test_multiple_state_func_in_state_mod(self):
