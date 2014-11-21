@@ -34,6 +34,7 @@ except ImportError:
     class AsyncHTTPTestCase(object):
         pass
 
+import salt.ext.six as six
 from salt.ext.six.moves.urllib.parse import urlencode  # pylint: disable=no-name-in-module
 # pylint: enable=import-error
 
@@ -250,7 +251,7 @@ class TestSaltAuthHandler(SaltnadoTestCase):
         Test logins with bad/missing passwords
         '''
         bad_creds = []
-        for key, val in self.auth_creds_dict.iteritems():
+        for key, val in six.iteritems(self.auth_creds_dict):
             if key == 'password':
                 continue
             bad_creds.append((key, val))
@@ -266,7 +267,7 @@ class TestSaltAuthHandler(SaltnadoTestCase):
         Test logins with bad/missing passwords
         '''
         bad_creds = []
-        for key, val in self.auth_creds_dict.iteritems():
+        for key, val in six.iteritems(self.auth_creds_dict):
             if key == 'username':
                 val = val + 'foo'
             bad_creds.append((key, val))
