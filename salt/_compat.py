@@ -2,9 +2,10 @@
 '''
 Salt compatibility code
 '''
-# pylint: disable=import-error,unused-import
+# pylint: disable=import-error,unused-import,invalid-name
 
 # Import python libs
+from __future__ import absolute_import
 import sys
 import types
 
@@ -12,10 +13,6 @@ import types
 from salt.ext.six import binary_type, string_types, text_type
 from salt.ext.six.moves import cStringIO, StringIO
 
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
 try:
     # Python >2.5
     import xml.etree.cElementTree as ElementTree
@@ -41,9 +38,9 @@ PY3 = sys.version_info[0] == 3
 
 if PY3:
     import builtins
-    exceptions = builtins  # pylint: disable=E0602
+    exceptions = builtins
 else:
-    import exceptions  # pylint: disable=W0403
+    import exceptions  # pylint: disable=incompatible-py3-code
 
 
 def text_(s, encoding='latin-1', errors='strict'):
