@@ -420,6 +420,9 @@ def _grant_to_tokens(grant):
             except IndexError:
                 break
 
+        elif phrase == 'tables':
+            database += token
+
         elif phrase == 'user':
             if dict_mode:
                 break
