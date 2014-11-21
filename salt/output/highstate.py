@@ -199,7 +199,7 @@ def _format_host(host, data):
                 state_lines.insert(
                     3, u'    {tcolor}    Name: {comps[2]}{colors[ENDC]}')
             try:
-                comment = ret['comment'].decode(sys.getfilesystemencoding())
+                comment = salt.utils.sdecode(ret['comment'])
                 comment = comment.strip().replace(
                         u'\n',
                         u'\n' + u' ' * 14)
