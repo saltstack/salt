@@ -4,6 +4,7 @@ Simple script to dump the contents of msgpack files to the terminal
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import sys
 import pprint

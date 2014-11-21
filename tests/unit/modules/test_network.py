@@ -1,7 +1,13 @@
 # coding: utf-8
-import salt.loader
 
-from tests.integration import ModuleCase
+# Import Python libs
+from __future__ import absolute_import
+
+# Import Salt Testing libs
+from salttesting.case import ModuleCase
+
+# Import Salt libs
+import salt.loader
 
 
 class NetworkUtilsTestCase(ModuleCase):
