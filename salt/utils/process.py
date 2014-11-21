@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import absolute_import
-
 # Import python libs
-import logging
+from __future__ import absolute_import
 import os
-import time
 import sys
-import multiprocessing
+import time
 import signal
+import logging
+import multiprocessing
 
 import threading
 import Queue
@@ -16,10 +15,13 @@ import Queue
 # Import salt libs
 import salt.defaults.exitcodes
 import salt.utils
+
+# Import 3rd-party libs
 import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
+# pylint: disable=import-error
 HAS_PSUTIL = False
 try:
     import psutil
@@ -32,6 +34,7 @@ try:
     HAS_PYTHON_SYSTEMD = True
 except ImportError:
     HAS_PYTHON_SYSTEMD = False
+# pylint: enable=import-error
 
 
 def set_pidfile(pidfile, user):
@@ -220,25 +223,25 @@ class ProcessManager(object):
             kwargs = {}
 
         if type(multiprocessing.Process) == type(tgt) and issubclass(tgt, multiprocessing.Process):
-            p = tgt(*args, **kwargs)
+            process = tgt(*args, **kwargs)
         else:
-            p = multiprocessing.Process(target=tgt, args=args, kwargs=kwargs)
+            process = multiprocessing.Process(target=tgt, args=args, kwargs=kwargs)
 
-        p.start()
-        log.debug("Started '{0}' with pid {1}".format(tgt.__name__, p.pid))
-        self._process_map[p.pid] = {'tgt': tgt,
-                                    'args': args,
-                                    'kwargs': kwargs,
-                                    'Process': p}
+        process.start()
+        log.debug("Started '{0}' with pid {1}".format(tgt.__name__, process.pid))
+        self._process_map[process.pid] = {'tgt': tgt,
+                                          'args': args,
+                                          'kwargs': kwargs,
+                                          'Process': process}
 
     def restart_process(self, pid):
         '''
         Create new process (assuming this one is dead), then remove the old one
         '''
-        log.info(('Process {0} ({1}) died with exit status {2},'
-                  ' restarting...').format(self._process_map[pid]['tgt'],
-                                           pid,
-                                           self._process_map[pid]['Process'].exitcode))
+        log.info('Process {0} ({1}) died with exit status {2},'
+                 ' restarting...'.format(self._process_map[pid]['tgt'],
+                                         pid,
+                                         self._process_map[pid]['Process'].exitcode))
         # don't block, the process is already dead
         self._process_map[pid]['Process'].join(1)
 
