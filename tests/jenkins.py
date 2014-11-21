@@ -169,6 +169,7 @@ def echo_parseable_environment(options):
             'SALT_PR_GIT_URL={0}'.format(pr_details['head']['repo']['clone_url']),
             'SALT_PR_GIT_BRANCH={0}'.format(pr_details['head']['ref']),
             'SALT_PR_GIT_COMMIT={0}'.format(pr_details['head']['sha'])
+            'SALT_PR_GIT_BASE_BRANCH={0}'.format(pr_details['base']['ref']),
         ])
 
     sys.stdout.write('\n\n{0}\n\n'.format('\n'.join(output)))
