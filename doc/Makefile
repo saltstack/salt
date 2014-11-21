@@ -7,10 +7,16 @@ SPHINXBUILD   = sphinx-build
 PAPER         =
 BUILDDIR      = _build
 SPHINXLANG    =
+XELATEX       = xelatex
 
 # User-friendly check for sphinx-build
 ifeq ($(shell which $(SPHINXBUILD) >/dev/null 2>&1; echo $$?), 1)
 $(error The '$(SPHINXBUILD)' command was not found. Make sure you have Sphinx installed, then set the SPHINXBUILD environment variable to point to the full path of the '$(SPHINXBUILD)' executable. Alternatively you can add the directory with the executable to your PATH. If you don't have Sphinx installed, grab it from http://sphinx-doc.org/)
+endif
+
+# User-friendly check for xelatex
+ifeq ($(shell which $(XELATEX) >/dev/null 2>&1; echo $$?), 1)
+$(error The '$(XELATEX)' command was not found.)
 endif
 
 # ----- Translations Support ------------------------------------------------>
@@ -49,6 +55,7 @@ help:
 	@echo "  devhelp    to make HTML files and a Devhelp project"
 	@echo "  epub       to make an epub"
 	@echo "  latex      to make LaTeX files, you can set PAPER=a4 or PAPER=letter"
+	@echo "  xetexpdf   to make LaTeX files and run them through xelatex"
 	@echo "  latexpdf   to make LaTeX files and run them through pdflatex"
 	@echo "  latexpdfja to make LaTeX files and run them through platex/dvipdfmx"
 	@echo "  text       to make text files"
@@ -142,7 +149,8 @@ latexpdfja: translations
 xetexpdf: translations
 	$(SPHINXBUILD) -b latex $(ALLSPHINXOPTS) $(BUILDDIR)/latex
 	@echo "Running LaTeX files through xelatex..."
-	cd $(BUILDDIR)/latex; xelatex *.tex && xelatex *.tex && xelatex *.tex; cd -
+	perl -pi -e 's!pdflatex!xelatex!' $(BUILDDIR)/latex/Makefile
+	$(MAKE) -C $(BUILDDIR)/latex -i
 	@echo "xelatex finished; the PDF files are in $(BUILDDIR)/latex."
 
 text: translations
@@ -207,7 +215,6 @@ pseudoxml: translations
 
 
 translations:
-	
 	@if [ "$(SPHINXLANG)" = "en" ] || [ "x$(SPHINXLANG)" = "x" ]; then \
 		echo "No need to update translations. Skipping..."; \
 	elif [ ! -d locale/$(SPHINXLANG) ]; then \
