@@ -374,6 +374,10 @@ class SaltfileMixIn(object):
                             option.dest,
                             cli_config[option.dest])
 
+        # Any left over value in the saltfile can now be safely added
+        for key in cli_config:
+            setattr(self.options, key, cli_config[key])
+
 
 class HardCrashMixin(object):
     __metaclass__ = MixInMeta
