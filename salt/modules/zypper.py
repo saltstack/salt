@@ -15,12 +15,11 @@ import os
 # Import 3rd-party libs
 # pylint: disable=import-error,redefined-builtin,no-name-in-module
 import salt.ext.six as six
-from salt.ext.six.moves import shlex_quote as _cmd_quote, configparser
+from salt.ext.six.moves import configparser
 from salt.ext.six.moves.urllib.parse import urlparse
 # pylint: enable=import-error,redefined-builtin,no-name-in-module
 
 from xml.dom import minidom as dom
-from contextlib import contextmanager as _contextmanager
 
 # Import salt libs
 import salt.utils
