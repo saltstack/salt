@@ -1855,9 +1855,21 @@ class State(object):
                 running[tag]['__sls__'] = low['__sls__']
             # otherwise the failure was due to a requisite down the chain
             else:
+                # determine what the requisite failures where, and return
+                # a nice error message
+                comment_dict = {}
+                for req_type, req_lows in reqs.iteritems():
+                    for req_low in req_lows:
+                        req_tag = _gen_tag(req_low)
+                        req_ret = self.pre.get(req_tag, running.get(req_tag))
+                        if req_ret is None:
+                            continue
+                        if req_ret['result'] is False:
+                            comment_dict[req_low['__id__']] = req_ret['comment']
+
                 running[tag] = {'changes': {},
                                 'result': False,
-                                'comment': 'One or more requisite failed',
+                                'comment': 'One or more requisite failed: {0}'.format(comment_dict),
                                 '__run_num__': self.__run_num,
                                 '__sls__': low['__sls__']}
             self.__run_num += 1
