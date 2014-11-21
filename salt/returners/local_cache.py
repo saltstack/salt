@@ -259,7 +259,6 @@ def get_jid(jid):
                 except Exception as exc:
                     if 'Permission denied:' in str(exc):
                         raise
-                    pass
     return ret
 
 
