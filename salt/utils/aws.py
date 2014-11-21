@@ -32,7 +32,7 @@ from salt.ext.six.moves.urllib.parse import urlencode, urlparse
 
 LOG = logging.getLogger(__name__)
 DEFAULT_LOCATION = 'us-east-1'
-DEFAULT_AWS_API_VERSION = '2013-10-15'
+DEFAULT_AWS_API_VERSION = '2014-05-01'
 AWS_RETRY_CODES = [
     'RequestLimitExceeded',
     'InsufficientInstanceCapacity',
