@@ -4,12 +4,11 @@ Execute salt convenience routines
 '''
 
 # Import python libs
-from __future__ import print_function
-from __future__ import absolute_import
-import collections
-import logging
-import time
+from __future__ import absolute_import, print_function
 import sys
+import time
+import logging
+import collections
 import multiprocessing
 
 # Import salt libs
@@ -23,6 +22,8 @@ from salt.client import mixins
 from salt.output import display_output
 from salt.utils.error import raise_error
 from salt.utils.event import tagify
+
+# Import 3rd-party libs
 import salt.ext.six as six
 
 log = logging.getLogger(__name__)
@@ -157,7 +158,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
             progress = salt.utils.event.get_runner_event(opts, data['jid']).fire_progress
         else:
             progress = _progress_print
-        for func_name, func in instance.functions.items():
+        for func in six.itervalues(instance.functions):
             if func.__module__ in done:
                 continue
             mod = sys.modules[func.__module__]
