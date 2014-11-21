@@ -1241,7 +1241,7 @@ def import_image(src, repo, tag=None):
     try:
         ret = client.import_image(src, repository=repo, tag=tag)
         if ret:
-            image_logs, _info = _parse_image_multilogs_string(ret, repo)
+            image_logs, _info = _parse_image_multilogs_string(ret)
             _create_image_assemble_error_status(status, ret, image_logs)
             if status['status'] is not False:
                 infos = _get_image_infos(image_logs[0]['status'])
@@ -1494,7 +1494,7 @@ def inspect_image(image):
     return status
 
 
-def _parse_image_multilogs_string(ret, repo):
+def _parse_image_multilogs_string(ret):
     '''
     Parse image log strings into grokable data
     '''
@@ -1593,7 +1593,7 @@ def pull(repo, tag=None):
     try:
         ret = client.pull(repo, tag=tag)
         if ret:
-            image_logs, infos = _parse_image_multilogs_string(ret, repo)
+            image_logs, infos = _parse_image_multilogs_string(ret)
             if infos and infos.get('Id', None):
                 repotag = repo
                 if tag:
@@ -1681,7 +1681,7 @@ def push(repo, tag=None, quiet=False):
     try:
         ret = client.push(repo, tag=tag)
         if ret:
-            image_logs, infos = _parse_image_multilogs_string(ret, repo_name)
+            image_logs, infos = _parse_image_multilogs_string(ret)
             if image_logs:
                 repotag = repo_name
                 if tag:
