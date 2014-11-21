@@ -146,7 +146,7 @@ def datasource_exists(name, jboss_config, datasource_properties, recreate=False)
                 ret['comment'] = 'Could not create datasource. Stdout: '+create_result['stdout']
                 return ret
 
-            read_result  = __salt__['jboss7.read_datasource'](jboss_config=jboss_config, name=name)
+            read_result = __salt__['jboss7.read_datasource'](jboss_config=jboss_config, name=name)
             if read_result['success']:
                 ds_new_properties = read_result['result']
             else:
@@ -184,17 +184,17 @@ def datasource_exists(name, jboss_config, datasource_properties, recreate=False)
         diff = dictdiffer.diff(ds_new_properties, ds_current_properties)
 
         added = diff.added()
-        if(len(added) > 0):
+        if len(added) > 0:
             has_changed = True
             ret['changes']['added'] = __format_ds_changes(added, ds_current_properties, ds_new_properties)
 
         removed = diff.removed()
-        if(len(removed) > 0):
-           has_changed = True
-           ret['changes']['removed'] = __format_ds_changes(removed, ds_current_properties, ds_new_properties)
+        if len(removed) > 0:
+            has_changed = True
+            ret['changes']['removed'] = __format_ds_changes(removed, ds_current_properties, ds_new_properties)
 
         changed = diff.changed()
-        if(len(changed) > 0):
+        if len(changed) > 0:
             has_changed = True
             ret['changes']['changed'] = __format_ds_changes(changed, ds_current_properties, ds_new_properties)
 
@@ -210,11 +210,11 @@ def __format_ds_changes(keys, old_dict, new_dict):
     for key in keys:
         log.debug("key=%s", str(key))
         if key in old_dict and key in new_dict:
-            changes+=key+':'+__get_ds_value(old_dict,key)+'->'+__get_ds_value(new_dict,key)+'\n'
+            changes += key+':'+__get_ds_value(old_dict, key)+'->'+__get_ds_value(new_dict, key)+'\n'
         elif key in old_dict:
-            changes+=key+'\n'
+            changes += key+'\n'
         elif key in new_dict:
-            changes+=key+':'+__get_ds_value(new_dict,key)+'\n'
+            changes += key+':'+__get_ds_value(new_dict, key)+'\n'
     return changes
 
 def __get_ds_value(dict, key):
@@ -268,7 +268,7 @@ def bindings_exist(name, jboss_config, bindings):
                     has_changed = True
                     __log_binding_change(ret['changes'], 'changed', key, value, current_value)
                 else:
-                    raise CommandExecutionError( update_result['failure-description'])
+                    raise CommandExecutionError(update_result['failure-description'])
         else:
             if query_result['err_code'] == 'JBAS014807': #ok, resource not exists:
                 create_result = __salt__['jboss7.create_simple_binding'](binding_name=key, value=value, jboss_config=jboss_config)
@@ -288,9 +288,9 @@ def __log_binding_change(changes, type, key, new, old=None):
     if not type in changes:
         changes[type] = ''
     if old is None:
-        changes[type]+=key + ':' + new + '\n'
+        changes[type] += key + ':' + new + '\n'
     else:
-        changes[type]+=key + ':' + old + '->' + new + '\n'
+        changes[type] += key + ':' + old + '->' + new + '\n'
 
 
 
@@ -472,11 +472,11 @@ def deployed(name, jboss_config, artifact=None, salt_source=None):
     deploy_result = __salt__['jboss7.deploy'](jboss_config=jboss_config, source_file=resolved_source)
     log.debug('deploy_result=%s', str(deploy_result))
     if deploy_result['success']:
-        comment =  __append_comment(new_comment='Deployment completed.', current_comment=comment)
+        comment = __append_comment(new_comment='Deployment completed.', current_comment=comment)
         ret['comment'] = comment
         ret['changes']['deployed'] = resolved_source
     else:
-        comment =  __append_comment(new_comment=('''Deployment failed\nreturn code=%(retcode)d\nstdout='%(stdout)s'\nstderr='%(stderr)s''' % deploy_result), current_comment=comment)
+        comment = __append_comment(new_comment='''Deployment failed\nreturn code={retcode}\nstdout='{stdout}'\nstderr='{stderr}'''.format(**deploy_result), current_comment=comment)
         return _error(ret, comment)
 
     return ret
@@ -487,7 +487,7 @@ def __validate_arguments(jboss_config, artifact, salt_source):
         result = False
         comment = __append_comment('No salt_source or artifact defined', comment)
     if artifact:
-        result, comment = __check_dict_contains(artifact, 'artifact', ['artifactory_url', 'repository', 'artifact_id', 'group_id', 'packaging'],  comment, result)
+        result, comment = __check_dict_contains(artifact, 'artifact', ['artifactory_url', 'repository', 'artifact_id', 'group_id', 'packaging'], comment, result)
         if 'latest_snapshot' in artifact and isinstance(artifact['latest_snapshot'], str):
             if artifact['latest_snapshot'] == 'True':
                 artifact['latest_snapshot'] = True
@@ -495,7 +495,7 @@ def __validate_arguments(jboss_config, artifact, salt_source):
                 artifact['latest_snapshot'] = False
             else:
                 result = False
-                comment = __append_comment('Cannot convert jboss_config.latest_snapshot=%s to boolean' % artifact['latest_snapshot'], comment)
+                comment = __append_comment('Cannot convert jboss_config.latest_snapshot={0} to boolean'.format(artifact['latest_snapshot']), comment)
         if not 'version' in artifact and (not 'latest_snapshot' in artifact or artifact['latest_snapshot'] == False):
             result = False
             comment = __append_comment('No version or latest_snapshot=True in artifact')
@@ -514,9 +514,9 @@ def __find_deployment(jboss_config, artifact=None, salt_source=None):
             if deployment.startswith(artifact['artifact_id']):
                 if result is not None:
                     success = False
-                    comment = "More than one deployment's name starts with %s. \n" \
+                    comment = "More than one deployment's name starts with {0}. \n" \
                               "For deployments from artifactory existing deployments on JBoss are searched to find one that starts with artifact_id.\n"\
-                              "Existing deployments: %s" % (artifact['artifact_id'], ",".join(deployments))
+                              "Existing deployments: {1}".format(artifact['artifact_id'], ",".join(deployments))
                 else:
                     result = deployment
     elif salt_source is not None and salt_source['undeploy']:
@@ -525,9 +525,9 @@ def __find_deployment(jboss_config, artifact=None, salt_source=None):
             if deployment_re.match(deployment):
                 if result is not None:
                     success = False
-                    comment = "More than one deployment matches regular expression: %s. \n" \
+                    comment = "More than one deployment matches regular expression: {0}. \n" \
                               "For deployments from Salt file system deployments on JBoss are searched to find one that matches regular expression in 'undeploy' parameter.\n" \
-                              "Existing deployments: %s" % (salt_source['undeploy'], ",".join(deployments))
+                              "Existing deployments: {1}".format(salt_source['undeploy'], ",".join(deployments))
                 else:
                     result = deployment
 
@@ -540,12 +540,12 @@ def __get_artifact(artifact, salt_source):
 
     if artifact is None and salt_source is None:
         log.debug('artifact == None and salt_source == None')
-        comment  = 'No salt_source or artifact defined'
+        comment = 'No salt_source or artifact defined'
     elif isinstance(artifact, dict):
         log.debug('artifact from artifactory')
         try:
             fetch_result = __fetch_from_artifactory(artifact)
-            log.debug('fetch_result=%s',str(fetch_result))
+            log.debug('fetch_result={0}'.format(fetch_result))
         except Exception as e:
             log.debug(traceback.format_exc())
             return None, e.message
@@ -554,7 +554,7 @@ def __get_artifact(artifact, salt_source):
             resolved_source = fetch_result['target_file']
             comment = fetch_result['comment']
         else:
-            comment = 'Cannot fetch artifact (artifactory comment:%s) ' %  fetch_result['comment']
+            comment = 'Cannot fetch artifact (artifactory comment:{0}) '.format(fetch_result['comment'])
     elif isinstance(salt_source, dict):
         log.debug('file from salt master')
 
@@ -601,9 +601,9 @@ def __get_artifact(artifact, salt_source):
 
 
 def __fetch_from_artifactory(artifact):
-    target_dir='/tmp'
+    target_dir = '/tmp'
     if 'temp_dir' in artifact:
-        target_dir=artifact['temp_dir']
+        target_dir = artifact['temp_dir']
 
     if 'latest_snapshot' in artifact and artifact['latest_snapshot']:
         fetch_result = __salt__['artifactory.get_latest_snapshot'](artifactory_url=artifact['artifactory_url'],
@@ -675,7 +675,7 @@ def reloaded(name, jboss_config, timeout=60, interval=5):
            'comment': ''}
 
     status = __salt__['jboss7.status'](jboss_config)
-    if status['success'] == False or status['result'] not in ('running','reload-required'):
+    if status['success'] == False or status['result'] not in ('running', 'reload-required'):
         ret['result'] = False
         ret['comment'] = "Cannot reload server configuration, it should be up and in 'running' or 'reload-required' state."
         return ret
@@ -697,11 +697,11 @@ def reloaded(name, jboss_config, timeout=60, interval=5):
             ret['changes']['reloaded'] = 'configuration'
         else:
             ret['result'] = False
-            ret['comment'] = 'Could not reload the configuration. Timeout (%(timeout)d s) exceeded. ' %  timeout
+            ret['comment'] = 'Could not reload the configuration. Timeout ({0} s) exceeded. '.format(timeout)
             if not status['success']:
                 ret['comment'] = __append_comment('Could not connect to JBoss controller.', ret['comment'])
             else:
-                ret['comment'] = __append_comment( ('Server is in %s state' % status['result'] ), ret['comment'])
+                ret['comment'] = __append_comment(('Server is in {0} state'.format(status['result'])), ret['comment'])
     else:
         ret['result'] = False
         ret['comment'] = 'Could not reload the configuration, stdout:'+result['stdout']
@@ -713,7 +713,7 @@ def __check_dict_contains(dict, dict_name, keys, comment='', result=True):
     for key in keys:
         if key not in dict.keys():
             result = False
-            comment = __append_comment("Missing %s in %s" % (key, dict_name), comment)
+            comment = __append_comment("Missing {0} in {1}".format(key, dict_name), comment)
     return result, comment
 
 def __append_comment(new_comment, current_comment=''):
