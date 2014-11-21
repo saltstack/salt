@@ -37,6 +37,34 @@ STATIC = (
 )
 
 
+def get_progress(opts, out, progress):
+    '''
+    Get the progress bar from the given outputter
+    '''
+    #FIXME
+    import salt.output.progress
+    return salt.output.progress.progress_iter(progress)
+    outputters = salt.loader.outputters(opts)
+    return outputters[out].progress_iter()
+
+
+def update_progress(opts, progress, progress_iter, out):
+    '''
+    Update the progress iterator for the given outputter
+    '''
+    # Look up the outputter
+    progress_outputter = salt.loader.outputters(opts)[out]
+    progress_outputter(progress, progress_iter)
+
+
+def progress_end(progress_iter):
+    try:
+        progress_iter.stop()
+    except Exception:
+        pass
+    return None
+
+
 def display_output(data, out=None, opts=None):
     '''
     Print the passed data using the desired output
@@ -90,6 +118,8 @@ def get_printout(out, opts=None, **kwargs):
 
     if out is None:
         out = 'nested'
+    if opts.get('progress', False):
+        out = 'progress'
 
     opts.update(kwargs)
     if 'color' not in opts:

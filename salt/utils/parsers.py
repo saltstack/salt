@@ -1456,6 +1456,12 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'all return.')
         )
         self.add_option(
+            '-p', '--progress',
+            default=False,
+            action='store_true',
+            help=('Display a progress graph')
+        )
+        self.add_option(
             '--async',
             default=False,
             dest='async',
