@@ -2473,7 +2473,8 @@ def sdecode(string):
     for encoding in encodings:
         try:
             decoded = string.decode(encoding)
-            u' ' + decoded  # Make sure unicide string ops work
+            u' ' + decoded  # Make sure unicode string ops work
             return decoded
         except UnicodeDecodeError:
             continue
+    return string
