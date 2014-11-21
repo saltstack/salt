@@ -19,6 +19,9 @@ import salt.loader
 import inspect
 import yaml
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
 
 class LoaderGlobalsTest(integration.ModuleCase):
     '''
@@ -35,7 +38,7 @@ class LoaderGlobalsTest(integration.ModuleCase):
         '''
         # find the globals
         global_vars = []
-        for val in mod_dict.itervalues():
+        for val in six.itervalues(mod_dict):
             # only find salty globals
             if val.__module__.startswith('salt.loaded') and hasattr(val, '__globals__'):
                 global_vars.append(val.__globals__)
@@ -45,7 +48,7 @@ class LoaderGlobalsTest(integration.ModuleCase):
 
         # get the names of the globals you should have
         func_name = inspect.stack()[1][3]
-        names = yaml.load(getattr(self, func_name).__doc__).values()[0]
+        names = yaml.load(next(six.itervalues(getattr(self, func_name).__doc__)))
 
         # Now, test each module!
         for item in global_vars:
