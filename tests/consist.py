@@ -1,14 +1,18 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import print_function
-import yaml
+# Import Python libs
+from __future__ import absolute_import, print_function
 import subprocess
 import hashlib
 import pprint
 import optparse
 
+# Import Salt libs
 from salt.utils import get_colors
 
+# Import 3rd-party libs
+import yaml
+import salt.ext.six as six
 
 colors = get_colors()
 
@@ -42,7 +46,7 @@ def run(command):
     subprocess.call(cmd, shell=True)
     data = yaml.load(open('high'))
     hashes = set()
-    for key, val in data.items():
+    for key, val in six.iteritems(data):
         has = hashlib.md5(str(val)).hexdigest()
         if has not in hashes:
             print('{0}:'.format(has))
