@@ -28,6 +28,9 @@ ensure_in_syspath('../../')
 import integration
 import salt.utils
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
 
 class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
     '''
@@ -234,7 +237,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             show_diff=False
         )
 
-        changes = ret.values()[0]['changes']
+        changes = next(six.itervalues(ret))['changes']
         self.assertEqual('<show_diff=False>', changes['diff'])
 
     def test_directory(self):
@@ -342,7 +345,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                              clean=True,
                              exclude_pat='E@^straydir(|/keepfile)$')
 
-        comment = ret.values()[0]['comment']
+        comment = next(six.itervalues(ret))['comment']
         try:
             self.assertSaltNoneReturn(ret)
             self.assertTrue(os.path.exists(strayfile))
@@ -941,7 +944,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
         try:
             ret = self.run_function('state.sls', mods='issue-8343')
-            for name, step in ret.items():
+            for name, step in six.iteritems(ret):
                 self.assertSaltTrueReturn({name: step})
             with salt.utils.fopen(testcase_filedest) as fp_:
                 contents = fp_.read().split('\n')
@@ -1008,7 +1011,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
         try:
             ret = self.run_function('state.sls', mods='issue-11003')
-            for name, step in ret.items():
+            for name, step in six.iteritems(ret):
                 self.assertSaltTrueReturn({name: step})
             with salt.utils.fopen(testcase_filedest) as fp_:
                 contents = fp_.read().split('\n')
@@ -1152,7 +1155,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 }
             }
             result = {}
-            for name, step in ret.items():
+            for name, step in six.iteritems(ret):
                 self.assertSaltTrueReturn({name: step})
                 result.update({
                  name: {
