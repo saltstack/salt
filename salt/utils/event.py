@@ -301,7 +301,8 @@ class SaltEvent(object):
             if not ret['tag'].startswith(tag):  # tag not match
                 if any(ret['tag'].startswith(ptag) for ptag in pending_tags):
                     self.pending_events.append(ret)
-                wait = timeout_at - time.time()
+                if wait:  # only update the wait timeout if we had one
+                    wait = timeout_at - time.time()
                 continue
 
             log.trace('get_event() received = {0}'.format(ret))
