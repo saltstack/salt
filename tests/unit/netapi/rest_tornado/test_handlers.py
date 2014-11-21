@@ -214,7 +214,7 @@ class TestSaltAuthHandler(SaltnadoTestCase):
 
         response_obj = json.loads(response.body)['return'][0]
         self.assertEqual(response_obj['perms'], self.opts['external_auth']['auto'][self.auth_creds_dict['username']])
-        self.assertIn('token',response_obj)  # TODO: verify that its valid?
+        self.assertIn('token', response_obj)  # TODO: verify that its valid?
         self.assertEqual(response_obj['user'], self.auth_creds_dict['username'])
         self.assertEqual(response_obj['eauth'], self.auth_creds_dict['eauth'])
 
