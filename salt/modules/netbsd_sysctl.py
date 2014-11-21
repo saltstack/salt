@@ -21,7 +21,7 @@ def __virtual__():
     return __virtualname__ if __grains__['os'] == 'NetBSD' else False
 
 
-def show():
+def show(config_file=False):
     '''
     Return a list of sysctl parameters for this minion
 
