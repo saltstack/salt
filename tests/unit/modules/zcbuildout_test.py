@@ -9,6 +9,7 @@ import shutil
 
 # Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
+import salt.ext.six as six
 from salt.ext.six.moves.urllib.error import URLError
 from salt.ext.six.moves.urllib.request import urlopen
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
@@ -67,7 +68,7 @@ class Base(TestCase):
             os.makedirs(integration.TMP)
         cls.rdir = tempfile.mkdtemp(dir=integration.TMP)
         cls.tdir = os.path.join(cls.rdir, 'test')
-        for idx, url in buildout._URL_VERSIONS.iteritems():
+        for idx, url in six.iteritems(buildout._URL_VERSIONS):
             log.debug('Downloading bootstrap from {0}'.format(url))
             dest = os.path.join(
                 cls.rdir, '{0}_bootstrap.py'.format(idx)
@@ -473,7 +474,7 @@ class BuildoutAPITestCase(TestCase):
         uretm = buildout._merge_statuses([ret1, uret1, ret2, uret2])
         for ret in ret1, uret1, ret2, uret2:
             out = ret['out']
-            if not isinstance(ret['out'], unicode):
+            if not isinstance(ret['out'], six.text_type):
                 out = ret['out'].decode('utf-8')
 
         for out in ['àé', 'ççàé']:
