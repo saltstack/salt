@@ -15,6 +15,7 @@ from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../../')
 
+import salt.ext.six as six
 try:
     import tornado
     HAS_TORNADO = True
@@ -286,7 +287,7 @@ class TestMinionSaltAPIHandler(SaltnadoTestCase):
         # one per minion
         self.assertEqual(len(response_obj['return'][0]), 2)
         # check a single grain
-        for minion_id, grains in response_obj['return'][0].iteritems():
+        for minion_id, grains in six.iteritems(response_obj['return'][0]):
             self.assertEqual(minion_id, grains['id'])
 
     def test_get(self):
@@ -379,7 +380,7 @@ class TestJobsSaltAPIHandler(SaltnadoTestCase):
                                )
         response = self.wait(timeout=10)
         response_obj = json.loads(response.body)['return'][0]
-        for jid, ret in response_obj.iteritems():
+        for jid, ret in six.iteritems(response_obj):
             self.assertIn('Function', ret)
             self.assertIn('Target', ret)
             self.assertIn('Target-type', ret)
@@ -388,7 +389,7 @@ class TestJobsSaltAPIHandler(SaltnadoTestCase):
             self.assertIn('Arguments', ret)
 
         # test with a specific JID passed in
-        jid = response_obj.iterkeys().next()
+        jid = next(six.iterkeys(response_obj))
         self.http_client.fetch(self.get_url('/jobs/{0}'.format(jid)),
                                self.stop,
                                method='GET',
