@@ -63,7 +63,7 @@ def run_command(jboss_config, command, fail_on_error=True):
         cli_command_result['success'] = True
     else:
         if fail_on_error:
-            raise CommandExecutionError('''Command execution failed, return code=%(retcode)s, stdout='%(stdout)s', stderr='%(stderr)s' ''' % cli_command_result)
+            raise CommandExecutionError('''Command execution failed, return code={retcode}, stdout='{stdout}', stderr='{stderr}' '''.format(**cli_command_result))
         else:
             cli_command_result['success'] = False
 
@@ -91,16 +91,16 @@ def run_operation(jboss_config, operation, fail_on_error=True, retries=1):
             cli_result = _parse(cli_command_result['stdout'])
             cli_result['success'] = cli_result['outcome'] == 'success'
         else:
-            raise CommandExecutionError('Operation has returned unparseable output: %s' % cli_command_result['stdout'])
+            raise CommandExecutionError('Operation has returned unparseable output: {0}'.format(cli_command_result['stdout']))
     else:
         if _is_cli_output(cli_command_result['stdout']):
             cli_result = _parse(cli_command_result['stdout'])
             cli_result['success'] = False
-            match = re.search('^(JBAS\d+):', cli_result['failure-description'])
+            match = re.search(r'^(JBAS\d+):', cli_result['failure-description'])
             cli_result['err_code'] = match.group(1)
         else:
             if fail_on_error:
-                raise CommandExecutionError('''Command execution failed, return code=%(retcode)s, stdout='%(stdout)s', stderr='%(stderr)s' ''' % cli_command_result)
+                raise CommandExecutionError('''Command execution failed, return code={retcode}, stdout='{stdout}', stderr='{stderr}' '''.format(**cli_command_result))
             else:
                 cli_result = {
                     'success': False,
@@ -117,27 +117,27 @@ def __call_cli(jboss_config, command, retries=1):
     command_segments = [
         jboss_config['cli_path'],
         '--connect',
-        '--controller="%s"' % jboss_config['controller']
+        '--controller="{0}"'.format(jboss_config['controller'])
     ]
     if 'cli_user' in jboss_config.keys():
-        command_segments.append('--user="%s"' % jboss_config['cli_user'])
+        command_segments.append('--user="{0}"'.format(jboss_config['cli_user']))
     if 'cli_password' in jboss_config.keys():
-        command_segments.append('--password="%s"' % jboss_config['cli_password'])
-    command_segments.append('--command="%s"' % __escape_command(command))
+        command_segments.append('--password="{0}"'.format(jboss_config['cli_password']))
+    command_segments.append('--command="{0}"'.format(__escape_command(command)))
     cli_script = ' '.join(command_segments)
 
     cli_command_result = __salt__['cmd.run_all'](cli_script)
-    log.debug('cli_command_result=%s',str(cli_command_result))
+    log.debug('cli_command_result=%s', str(cli_command_result))
 
-    log.debug('========= STDOUT:\n%s', cli_command_result['stdout']);
-    log.debug('========= STDERR:\n%s', cli_command_result['stderr']);
-    log.debug('========= RETCODE: %d', cli_command_result['retcode']);
+    log.debug('========= STDOUT:\n%s', cli_command_result['stdout'])
+    log.debug('========= STDERR:\n%s', cli_command_result['stderr'])
+    log.debug('========= RETCODE: %d', cli_command_result['retcode'])
 
     if cli_command_result['retcode'] == 127:
-        raise CommandExecutionError('Could not execute jboss-cli.sh script. Have you specified server_dir variable correctly?\nCurrent CLI path: %(cli_path)s. ' % { 'cli_path': jboss_config['cli_path']} )
+        raise CommandExecutionError('Could not execute jboss-cli.sh script. Have you specified server_dir variable correctly?\nCurrent CLI path: {cli_path}. '.format(cli_path=jboss_config['cli_path']))
 
     if cli_command_result['retcode'] == 1 and 'Unable to authenticate against controller' in cli_command_result['stderr']:
-        raise CommandExecutionError('Could not authenticate against controller, please check username and password for the management console. Err code: %(retcode)d, stdout: %(stdout)s, stderr: %(stderr)s' % cli_command_result )
+        raise CommandExecutionError('Could not authenticate against controller, please check username and password for the management console. Err code: {retcode}, stdout: {stdout}, stderr: {stderr}'.format(**cli_command_result))
 
     # It may happen that eventhough server is up it may not respond to the call
     if cli_command_result['retcode'] == 1 and 'JBAS012144' in cli_command_result['stderr'] and retries > 0: # Cannot connect to cli
@@ -148,59 +148,60 @@ def __call_cli(jboss_config, command, retries=1):
     return cli_command_result
 
 
-'''
- This function escapes the command so that can be passed in the command line to JBoss CLI.
- Escaping commands passed to jboss is extremely confusing.
- If you want to save a binding that contains a single backslash character read the following explanation.
 
- A sample value, let's say "a\b" (with single backslash), that is saved in the config.xml file:
- <bindings>
-   <simple name="java:/app/binding1" value="a\b"/>
- </bindings>
-
- Eventhough it is just a single "\" if you want to read it from command line you will get:
-
- /opt/jboss/jboss-eap-6.0.1/bin/jboss-cli.sh --connect --controller=ip_addr:9999 --user=user --password=pass --command="/subsystem=naming/binding=\"java:/app/binding1\":read-resource"
- {
-    "outcome" => "success",
-    "result" => {
-        "binding-type" => "simple",
-        "value" => "a\\b"
-    }
- }
-
- So, now you have two backslashes in the output, even though in the configuration file you have one.
- Now, if you want to update this property, the easiest thing to do is to create a file with appropriate command:
- /tmp/update-binding.cli:
- ----
- /subsystem=naming/binding="java:/app/binding1":write-attribute(name=value, value="a\\\\b")
- ----
- And run cli command:
- ${JBOSS_HOME}/bin/jboss-cli.sh --connect --controller=ip_addr:9999 --user=user --password=pass --file="/tmp/update-binding.cli"
-
- As you can see, here you need 4 backslashes to save it as one to the configuration file. Run it and go to the configuration file to check.
- (You may need to reload jboss afterwards:  ${JBOSS_HOME}/bin/jboss-cli.sh --connect --controller=ip_addr:9999 --user=user --password=pass --command=":reload" )
-
- But if you want to run the same update operation directly from command line, prepare yourself for more escaping:
- ${JBOSS_HOME}/bin/jboss-cli.sh --connect --controller=ip_addr:9999 --user=user --password=pass --command="/subsystem=naming/binding=\"java:/app/binding1\":write-attribute(name=value, value=\"a\\\\\\\\b\")"
-
- So, here you need 8 backslashes to force JBoss to save it as one.
- To sum up this behavior:
- (1) 1 backslash in configuration file
- (2) 2 backslashes when reading
- (3) 4 backslashes when writing from file
- (4) 8 backslashes when writing from command line
- ... are all the same thing:)
-
-Remember that the command that comes in is already (3) format. Now we need to escape it further to be able to pass it to command line.
-'''
 def __escape_command(command):
-   result = command.replace('\\', '\\\\') # replace \ -> \\
-   result = result.replace('"', '\\"')    # replace " -> \"
-   return result
+    '''
+    This function escapes the command so that can be passed in the command line to JBoss CLI.
+    Escaping commands passed to jboss is extremely confusing.
+    If you want to save a binding that contains a single backslash character read the following explanation.
+
+    A sample value, let's say "a\b" (with single backslash), that is saved in the config.xml file:
+    <bindings>
+      <simple name="java:/app/binding1" value="a\b"/>
+    </bindings>
+
+    Eventhough it is just a single "\" if you want to read it from command line you will get:
+
+    /opt/jboss/jboss-eap-6.0.1/bin/jboss-cli.sh --connect --controller=ip_addr:9999 --user=user --password=pass --command="/subsystem=naming/binding=\"java:/app/binding1\":read-resource"
+    {
+       "outcome" => "success",
+       "result" => {
+           "binding-type" => "simple",
+           "value" => "a\\b"
+       }
+    }
+
+    So, now you have two backslashes in the output, even though in the configuration file you have one.
+    Now, if you want to update this property, the easiest thing to do is to create a file with appropriate command:
+    /tmp/update-binding.cli:
+    ----
+    /subsystem=naming/binding="java:/app/binding1":write-attribute(name=value, value="a\\\\b")
+    ----
+    And run cli command:
+    ${JBOSS_HOME}/bin/jboss-cli.sh --connect --controller=ip_addr:9999 --user=user --password=pass --file="/tmp/update-binding.cli"
+
+    As you can see, here you need 4 backslashes to save it as one to the configuration file. Run it and go to the configuration file to check.
+    (You may need to reload jboss afterwards:  ${JBOSS_HOME}/bin/jboss-cli.sh --connect --controller=ip_addr:9999 --user=user --password=pass --command=":reload" )
+
+    But if you want to run the same update operation directly from command line, prepare yourself for more escaping:
+    ${JBOSS_HOME}/bin/jboss-cli.sh --connect --controller=ip_addr:9999 --user=user --password=pass --command="/subsystem=naming/binding=\"java:/app/binding1\":write-attribute(name=value, value=\"a\\\\\\\\b\")"
+
+    So, here you need 8 backslashes to force JBoss to save it as one.
+    To sum up this behavior:
+    (1) 1 backslash in configuration file
+    (2) 2 backslashes when reading
+    (3) 4 backslashes when writing from file
+    (4) 8 backslashes when writing from command line
+    ... are all the same thing:)
+
+    Remember that the command that comes in is already (3) format. Now we need to escape it further to be able to pass it to command line.
+    '''
+    result = command.replace('\\', '\\\\') # replace \ -> \\
+    result = result.replace('"', '\\"')    # replace " -> \"
+    return result
 
 def _is_cli_output(text):
-    cli_re = re.compile("^\s*{.+}\s*$", re.DOTALL)
+    cli_re = re.compile(r"^\s*{.+}\s*$", re.DOTALL)
     if cli_re.search(text):
         return True
     else:
@@ -228,7 +229,7 @@ def __process_tokens_internal(tokens, start_at=0):
     current_key = None
     while token_no < len(tokens):
         token = tokens[token_no]
-        log.debug("PROCESSING TOKEN %d: %s", token_no, token )
+        log.debug("PROCESSING TOKEN %d: %s", token_no, token)
         if __is_quoted_string(token):
             log.debug("    TYPE: QUOTED STRING ")
             if current_key is None:
@@ -277,7 +278,7 @@ def __process_tokens_internal(tokens, start_at=0):
             log.debug("    TYPE: ASSIGNMENT")
             is_assignment = True
         else:
-            raise CommandExecutionError('Unknown token!','Token:'+token)
+            raise CommandExecutionError('Unknown token!', 'Token:'+token)
 
         token_no = token_no + 1
 
@@ -328,7 +329,7 @@ def __is_quoted_string(token):
 
 def __get_quoted_string(token):
     result = token[1:-1]  #  remove quotes
-    result = result.replace('\\\\','\\') # unescape the output, by default all the string are escaped in the output
+    result = result.replace('\\\\', '\\') # unescape the output, by default all the string are escaped in the output
     return result
 
 def __is_assignment(token):

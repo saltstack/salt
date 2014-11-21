@@ -49,12 +49,12 @@ def stop_server(jboss_config):
        '''
     log.debug("======================== MODULE FUNCTION: jboss7.stop_server")
     operation = ':shutdown'
-    shutdown_result = __salt__['jboss7_cli.run_operation'](jboss_config, operation, fail_on_error = False)
+    shutdown_result = __salt__['jboss7_cli.run_operation'](jboss_config, operation, fail_on_error=False)
     # JBoss seems to occasionaly close the channel immediately when :shutdown is sent
-    if shutdown_result['success'] or ( shutdown_result['success'] == False and 'Operation failed: Channel closed' in shutdown_result['stdout']):
+    if shutdown_result['success'] or (shutdown_result['success'] == False and 'Operation failed: Channel closed' in shutdown_result['stdout']):
         return shutdown_result
     else:
-        raise Exception('''Cannot handle error, return code=%(retcode)s, stdout='%(stdout)s', stderr='%(stderr)s' ''' % shutdown_result)
+        raise Exception('''Cannot handle error, return code={retcode}, stdout='{stdout}', stderr='{stderr}' '''.format(**shutdown_result))
 
 
 def reload(jboss_config):
@@ -67,14 +67,14 @@ def reload(jboss_config):
        '''
     log.debug("======================== MODULE FUNCTION: jboss7.reload")
     operation = ':reload'
-    reload_result = __salt__['jboss7_cli.run_operation'](jboss_config, operation, fail_on_error = False)
+    reload_result = __salt__['jboss7_cli.run_operation'](jboss_config, operation, fail_on_error=False)
     # JBoss seems to occasionaly close the channel immediately when :reload is sent
-    if reload_result['success'] or ( reload_result['success'] == False and
+    if reload_result['success'] or (reload_result['success'] == False and
                                          ('Operation failed: Channel closed' in reload_result['stdout'] or
                                           'Communication error: java.util.concurrent.ExecutionException: Operation failed' in reload_result['stdout'])):
         return reload_result
     else:
-        raise Exception('''Cannot handle error, return code=%(retcode)s, stdout='%(stdout)s', stderr='%(stderr)s' ''' % reload_result)
+        raise Exception('''Cannot handle error, return code={retcode}, stdout='{stdout}', stderr='{stderr}' '''.format(**reload_result))
 
 
 def create_datasource(jboss_config, name, datasource_properties):
@@ -99,23 +99,23 @@ def create_datasource(jboss_config, name, datasource_properties):
     log.debug("======================== MODULE FUNCTION: jboss7.create_datasource, name=%s", name)
     ds_resource_description = __get_datasource_resource_description(jboss_config, name)
 
-    operation = '/subsystem=datasources/data-source="%(name)s":add(%(properties)s)' %{
-                'name': name,
-                'properties': __get_properties_assignment_string(datasource_properties, ds_resource_description)
-    }
+    operation = '/subsystem=datasources/data-source="{name}":add({properties})'.format(
+                name=name,
+                properties=__get_properties_assignment_string(datasource_properties, ds_resource_description)
+    )
 
     return __salt__['jboss7_cli.run_operation'](jboss_config, operation, fail_on_error=False)
 
 def __get_properties_assignment_string(datasource_properties, ds_resource_description):
     assignment_strings = []
     ds_attributes = ds_resource_description['attributes']
-    for key,val in datasource_properties.iteritems():
-        assignment_strings.append(__get_single_assignment_string(key,val, ds_attributes) )
+    for key, val in datasource_properties.iteritems():
+        assignment_strings.append(__get_single_assignment_string(key, val, ds_attributes))
 
     return ','.join(assignment_strings)
 
-def __get_single_assignment_string(key,val,ds_attributes):
-    return '%s=%s' % (key, __format_value(key, val, ds_attributes))
+def __get_single_assignment_string(key, val, ds_attributes):
+    return '{0}={1}'.format(key, __format_value(key, val, ds_attributes))
 
 def __format_value(key, value, ds_attributes):
     type = ds_attributes[key]['type']
@@ -128,34 +128,33 @@ def __format_value(key, value, ds_attributes):
             else:
                 return 'false'
         else:
-            raise Exception("Don't know how to convert %s to BOOLEAN type" % value)
+            raise Exception("Don't know how to convert {0} to BOOLEAN type".format(value))
 
     elif type == 'INT':
         return str(value)
     elif type == 'STRING':
-        return '"%s"' % value
+        return '"{0}"'.format(value)
     else:
-        raise Exception("Don't know how to format value %s of type %s" % (value, type))
+        raise Exception("Don't know how to format value {0} of type {1}".format(value, type))
 
 def update_datasource(jboss_config, name, new_properties):
     '''
-       Update an existing datasource in running jboss instance. 
-       If the property doesn't exist if will be created, if it does, it will be updated with the new value
+    Update an existing datasource in running jboss instance.
+    If the property doesn't exist if will be created, if it does, it will be updated with the new value
 
-       jboss_config
-           Configuration dictionary with properties specified above.
-       name
-           Datasource name
-       new_properties
-           A dictionary of datasource properties to be updated. For example:
-             - driver-name: mysql
-             - connection-url: 'jdbc:mysql://localhost:3306/sampleDatabase'
-             - jndi-name: 'java:jboss/datasources/sampleDS'
-             - user-name: sampleuser
-             - password: secret
-             - min-pool-size: 3
-             - use-java-context: True
-               
+    jboss_config
+        Configuration dictionary with properties specified above.
+    name
+        Datasource name
+    new_properties
+        A dictionary of datasource properties to be updated. For example:
+          - driver-name: mysql
+          - connection-url: 'jdbc:mysql://localhost:3306/sampleDatabase'
+          - jndi-name: 'java:jboss/datasources/sampleDS'
+          - user-name: sampleuser
+          - password: secret
+          - min-pool-size: 3
+          - use-java-context: True
        '''
     log.debug("======================== MODULE FUNCTION: jboss7.update_datasource, name=%s", name)
     ds_result = __read_datasource(jboss_config, name)
@@ -167,20 +166,20 @@ def update_datasource(jboss_config, name, new_properties):
         'success': True,
         'comment': ''
     }
-    if(len(changed_properties) > 0):
+    if len(changed_properties) > 0:
         ds_resource_description = __get_datasource_resource_description(jboss_config, name)
         ds_attributes = ds_resource_description['attributes']
         for key in changed_properties:
             update_result = __update_datasource_property(jboss_config, name, key, new_properties[key], ds_attributes)
             if not update_result['success']:
                 ret['result'] = False
-                ret['comment'] = ret['comment'] + ('Could not update datasource property %s with value %s,\n stdout: %s\n' % (key, new_properties[key], update_result['stdout']))
+                ret['comment'] = ret['comment'] + ('Could not update datasource property {0} with value {1},\n stdout: {2}\n'.format(key, new_properties[key], update_result['stdout']))
 
     return ret
 
 def __get_datasource_resource_description(jboss_config, name):
     log.debug("======================== MODULE FUNCTION: jboss7.__get_datasource_resource_description, name=%s", name)
-    operation = '/subsystem=datasources/data-source="%(name)s":read-resource-description' % { 'name': name }
+    operation = '/subsystem=datasources/data-source="{name}":read-resource-description'.format(name=name)
     operation_result = __salt__['jboss7_cli.run_operation'](jboss_config, operation)
     if operation_result['outcome']:
         return operation_result['result']
@@ -210,10 +209,10 @@ def create_simple_binding(jboss_config, binding_name, value):
            Binding value
        '''
     log.debug("======================== MODULE FUNCTION: jboss7.create_simple_binding, binding_name=%s, value=%s", binding_name, value)
-    operation = '/subsystem=naming/binding="%(binding_name)s":add(binding-type=simple, value="%(value)s")' % {
-          'binding_name': binding_name,
-          'value': __escape_binding_value(value)
-    }
+    operation = '/subsystem=naming/binding="{binding_name}":add(binding-type=simple, value="{value}")'.format(
+          binding_name=binding_name,
+          value=__escape_binding_value(value)
+    )
     return __salt__['jboss7_cli.run_operation'](jboss_config, operation)
 
 def update_simple_binding(jboss_config, binding_name, value):
@@ -228,10 +227,10 @@ def update_simple_binding(jboss_config, binding_name, value):
            New binding value
        '''
     log.debug("======================== MODULE FUNCTION: jboss7.update_simple_binding, binding_name=%s, value=%s", binding_name, value)
-    operation = '/subsystem=naming/binding="%(binding_name)s":write-attribute(name=value, value="%(value)s")' % {
-        'binding_name': binding_name,
-        'value': __escape_binding_value(value)
-    }
+    operation = '/subsystem=naming/binding="{binding_name}":write-attribute(name=value, value="{value}")'.format(
+        binding_name=binding_name,
+        value=__escape_binding_value(value)
+    )
     return __salt__['jboss7_cli.run_operation'](jboss_config, operation)
 
 def read_simple_binding(jboss_config, binding_name):
@@ -247,23 +246,21 @@ def read_simple_binding(jboss_config, binding_name):
     return __read_simple_binding(jboss_config, binding_name)
 
 def __read_simple_binding(jboss_config, binding_name):
-    operation = '/subsystem=naming/binding="%(binding_name)s":read-resource' % {
-        'binding_name': binding_name
-    }
+    operation = '/subsystem=naming/binding="{binding_name}":read-resource'.format(binding_name=binding_name)
     return __salt__['jboss7_cli.run_operation'](jboss_config, operation)
 
 def __update_datasource_property(jboss_config, datasource_name, name, value, ds_attributes):
     log.debug("======================== MODULE FUNCTION: jboss7.__update_datasource_property, datasource_name=%s, name=%s, value=%s", datasource_name, name, value)
-    operation = '/subsystem=datasources/data-source="%(datasource_name)s":write-attribute(name="%(name)s",value=%(value)s)' % {
-                  'datasource_name': datasource_name,
-                  'name': name,
-                  'value': __format_value(name, value, ds_attributes)
-              }
+    operation = '/subsystem=datasources/data-source="{datasource_name}":write-attribute(name="{name}",value={value})'.format(
+                  datasource_name=datasource_name,
+                  name=name,
+                  value=__format_value(name, value, ds_attributes)
+            )
     return __salt__['jboss7_cli.run_operation'](jboss_config, operation, fail_on_error=False)
 
 
 def __read_datasource(jboss_config, name):
-    operation = '/subsystem=datasources/data-source="%(name)s":read-resource' % { 'name': name }
+    operation = '/subsystem=datasources/data-source="{name}":read-resource'.format(name=name)
     operation_result = __salt__['jboss7_cli.run_operation'](jboss_config, operation)
 
     return operation_result
@@ -283,7 +280,7 @@ def remove_datasource(jboss_config, name):
            Datasource name
        '''
     log.debug("======================== MODULE FUNCTION: jboss7.remove_datasource, name=%s", name)
-    operation = '/subsystem=datasources/data-source=%(name)s:remove' % { 'name': name  }
+    operation = '/subsystem=datasources/data-source={name}:remove'.format(name=name)
     return __salt__['jboss7_cli.run_operation'](jboss_config, operation, fail_on_error=False)
 
 
@@ -297,7 +294,7 @@ def deploy(jboss_config, source_file):
            Source file to deploy from
        '''
     log.debug("======================== MODULE FUNCTION: jboss7.deploy, source_file=%s", source_file)
-    command = 'deploy %(source_file)s --force ' % { 'source_file': source_file }
+    command = 'deploy {source_file} --force '.format(source_file=source_file)
     return __salt__['jboss7_cli.run_command'](jboss_config, command, fail_on_error=False)
 
 def list_deployments(jboss_config):
@@ -326,5 +323,5 @@ def undeploy(jboss_config, deployment):
            Deployment name to undeploy
        '''
     log.debug("======================== MODULE FUNCTION: jboss7.undeploy, deployment=%s", deployment)
-    command = 'undeploy %(deployment)s ' % { 'deployment': deployment }
+    command = 'undeploy {deployment} '.format(deployment=deployment)
     return __salt__['jboss7_cli.run_command'](jboss_config, command)

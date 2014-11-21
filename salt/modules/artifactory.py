@@ -33,7 +33,7 @@ def get_latest_snapshot(artifactory_url, repository, group_id, artifact_id, pack
            Target file to download artifact to (by default it is target_dir/artifact_id-snapshot_version.packaging)
        '''
     log.debug("======================== MODULE FUNCTION: artifactory.get_latest_snapshot, artifactory_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, target_dir=%s)",
-                    artifactory_url, repository, group_id, artifact_id, packaging, target_dir )
+                    artifactory_url, repository, group_id, artifact_id, packaging, target_dir)
     artifact_metadata = _get_artifact_metadata(artifactory_url=artifactory_url, repository=repository, group_id=group_id, artifact_id=artifact_id)
     version = artifact_metadata['latest_version']
 
@@ -110,37 +110,35 @@ def _get_snapshot_url(artifactory_url, repository, group_id, artifact_id, versio
     if snapshot_version is None:
         snapshot_version_metadata = _get_snapshot_version_metadata(artifactory_url=artifactory_url, repository=repository, group_id=group_id, artifact_id=artifact_id, version=version)
         if packaging not in snapshot_version_metadata['snapshot_versions']:
-            error_message = '''Cannot find requested packaging '%(packaging)s' in the snapshot version metadata.
-                      artifactory_url: %(artifactory_url)s
-                      repository: %(repository)s
-                      group_id: %(group_id)s
-                      artifact_id: %(artifact_id)s
-                      packaging: %(packaging)s
-                      version: %(version)s''' % {
-                        'artifactory_url': artifactory_url,
-                        'repository': repository,
-                        'group_id': group_id,
-                        'artifact_id': artifact_id,
-                        'packaging': packaging,
-                        'version':version
-                      }
+            error_message = '''Cannot find requested packaging '{packaging}' in the snapshot version metadata.
+                      artifactory_url: {artifactory_url}
+                      repository: {repository}
+                      group_id: {group_id}
+                      artifact_id: {artifact_id}
+                      packaging: {packaging}
+                      version: {version}'''.format(
+                        artifactory_url=artifactory_url,
+                        repository=repository,
+                        group_id=group_id,
+                        artifact_id=artifact_id,
+                        packaging=packaging,
+                        version=version)
             raise ArtifactoryError(error_message)
         snapshot_version = snapshot_version_metadata['snapshot_versions'][packaging]
 
     group_url = __get_group_id_subpath(group_id)
 
-    file_name = '%(artifact_id)s-%(snapshot_version)s.%(packaging)s' % {
-        'artifact_id': artifact_id,
-        'snapshot_version': snapshot_version,
-        'packaging': packaging
-    }
-    snapshot_url = '%(artifactory_url)s/%(repository)s/%(group_url)s/%(artifact_id)s/%(version)s/%(file_name)s' % {
-                        'artifactory_url': artifactory_url,
-                        'repository': repository,
-                        'group_url': group_url,
-                        'artifact_id': artifact_id,
-                        'version':version,
-                        'file_name': file_name}
+    file_name = '{artifact_id}-{snapshot_version}.{packaging}'.format(
+        artifact_id=artifact_id,
+        snapshot_version=snapshot_version,
+        packaging=packaging)
+    snapshot_url = '{artifactory_url}/{repository}/{group_url}/{artifact_id}/{version}/{file_name}'.format(
+                        artifactory_url=artifactory_url,
+                        repository=repository,
+                        group_url=group_url,
+                        artifact_id=artifact_id,
+                        version=version,
+                        file_name=file_name)
     log.debug('snapshot_url=%s', snapshot_url)
 
     return snapshot_url, file_name
@@ -151,20 +149,18 @@ def _get_snapshot_url(artifactory_url, repository, group_id, artifact_id, versio
 def _get_release_url(repository, group_id, artifact_id, packaging, version, artifactory_url):
     group_url = __get_group_id_subpath(group_id)
     # for released versions the suffix for the file is same as version
-    file_name = '%(artifact_id)s-%(version)s.%(packaging)s' % {
-        'artifact_id': artifact_id,
-        'version': version,
-        'packaging': packaging
-    }
+    file_name = '{artifact_id}-{version}.{packaging}'.format(
+        artifact_id=artifact_id,
+        version=version,
+        packaging=packaging)
 
-    release_url = '%(artifactory_url)s/%(repository)s/%(group_url)s/%(artifact_id)s/%(version)s/%(file_name)s' % {
-                        'artifactory_url': artifactory_url,
-                        'repository': repository,
-                        'group_url': group_url,
-                        'artifact_id': artifact_id,
-                        'version': version,
-                        'file_name': file_name
-    }
+    release_url = '{artifactory_url}/{repository}/{group_url}/{artifact_id}/{version}/{file_name}'.format(
+                        artifactory_url=artifactory_url,
+                        repository=repository,
+                        group_url=group_url,
+                        artifact_id=artifact_id,
+                        version=version,
+                        file_name=file_name)
     log.debug('release_url=%s', release_url)
     return release_url, file_name
 
@@ -172,11 +168,11 @@ def _get_release_url(repository, group_id, artifact_id, packaging, version, arti
 def _get_artifact_metadata_url(artifactory_url, repository, group_id, artifact_id):
     group_url = __get_group_id_subpath(group_id)
     # for released versions the suffix for the file is same as version
-    artifact_metadata_url = '%(artifactory_url)s/%(repository)s/%(group_url)s/%(artifact_id)s/maven-metadata.xml' % {
-                                 'artifactory_url': artifactory_url,
-                                 'repository': repository,
-                                 'group_url': group_url,
-                                 'artifact_id': artifact_id}
+    artifact_metadata_url = '{artifactory_url}/{repository}/{group_url}/{artifact_id}/maven-metadata.xml'.format(
+                                 artifactory_url=artifactory_url,
+                                 repository=repository,
+                                 group_url=group_url,
+                                 artifact_id=artifact_id)
     log.debug('artifact_metadata_url=%s', artifact_metadata_url)
     return artifact_metadata_url
 
@@ -185,7 +181,7 @@ def _get_artifact_metadata_xml(artifactory_url, repository, group_id, artifact_i
     try:
         artifact_metadata_xml = urllib2.urlopen(artifact_metadata_url).read()
     except HTTPError as e:
-        raise Exception("Could not fetch data from url: %(url)s, HTTPError: %(message)s" % { 'url': artifact_metadata_url, 'message': e.message } )
+        raise Exception("Could not fetch data from url: {url}, HTTPError: {message}".format(url=artifact_metadata_url, message=e.message))
 
     log.debug('artifact_metadata_xml=%s', artifact_metadata_xml)
     return artifact_metadata_xml
@@ -205,12 +201,12 @@ def _get_artifact_metadata(artifactory_url, repository, group_id, artifact_id):
 def _get_snapshot_version_metadata_url(artifactory_url, repository, group_id, artifact_id, version):
     group_url = __get_group_id_subpath(group_id)
     # for released versions the suffix for the file is same as version
-    snapshot_version_metadata_url = '%(artifactory_url)s/%(repository)s/%(group_url)s/%(artifact_id)s/%(version)s/maven-metadata.xml' % {
-                                         'artifactory_url': artifactory_url,
-                                         'repository': repository,
-                                         'group_url': group_url,
-                                         'artifact_id': artifact_id,
-                                         'version': version}
+    snapshot_version_metadata_url = '{artifactory_url}/{repository}/{group_url}/{artifact_id}/{version}/maven-metadata.xml'.format(
+                                         artifactory_url=artifactory_url,
+                                         repository=repository,
+                                         group_url=group_url,
+                                         artifact_id=artifact_id,
+                                         version=version)
     log.debug('snapshot_version_metadata_url=%s', snapshot_version_metadata_url)
     return snapshot_version_metadata_url
 
@@ -219,7 +215,7 @@ def _get_snapshot_version_metadata_xml(artifactory_url, repository, group_id, ar
     try:
         snapshot_version_metadata_xml = urllib2.urlopen(snapshot_version_metadata_url).read()
     except HTTPError as e:
-        raise Exception("Could not fetch data from url: %(url)s, HTTPError: %(message)s" % { 'url': snapshot_version_metadata_url, 'message': e.message } )
+        raise Exception("Could not fetch data from url: {url}, HTTPError: {message}".format(url=snapshot_version_metadata_url, message=e.message))
     log.debug('snapshot_version_metadata_xml=%s', snapshot_version_metadata_xml)
     return snapshot_version_metadata_xml
 
@@ -267,26 +263,25 @@ def __save_artifact(artifact_url, target_file):
             if artifact_sum == file_sum:
                 result['status'] = True
                 result['target_file'] = target_file
-                result['comment'] = 'File %s already exists, checksum matches with Artifactory.\n' \
-                                    'Checksum URL: %s' % (target_file, checksum_url)
+                result['comment'] = 'File {0} already exists, checksum matches with Artifactory.\n' \
+                                    'Checksum URL: {1}'.format(target_file, checksum_url)
                 return result
             else:
-                result['comment'] = 'File %s already exists, checksum does not match with Artifactory!\n'\
-                                    'Checksum URL: %s' % (target_file, checksum_url)
+                result['comment'] = 'File {0} already exists, checksum does not match with Artifactory!\n'\
+                                    'Checksum URL: {1}'.format(target_file, checksum_url)
 
         else:
             result['status'] = False
             result['comment'] = checksum_comment
             return result
 
-    log.debug('Downloading: %(url)s -> %(target_file)s' % { 'url': artifact_url, 'target_file': target_file })
+    log.debug('Downloading: {url} -> {target_file}'.format(url=artifact_url, target_file=target_file))
     try:
         urllib.urlretrieve(url=artifact_url, filename=target_file)
         result['status'] = True
-        result['comment'] = __append_comment( ('Artifact downloaded from URL: %s' % artifact_url), result['comment'])
+        result['comment'] = __append_comment(('Artifact downloaded from URL: {0}'.format(artifact_url)), result['comment'])
         result['changes']['downloaded_file'] = target_file
         result['target_file'] = target_file
-
     except HTTPError as e:
         result['status'] = False
         result['comment'] = __get_error_comment(e, artifact_url)
@@ -294,11 +289,11 @@ def __save_artifact(artifact_url, target_file):
     return result
 
 def __get_group_id_subpath(group_id):
-    group_url = group_id.replace('.','/')
+    group_url = group_id.replace('.', '/')
     return group_url
 
 def __download(request_url):
-    log.debug('Downloading content from %s' , request_url )
+    log.debug('Downloading content from {0}'.format(request_url))
 
     success = False
     content = None
@@ -316,10 +311,10 @@ def __get_error_comment(http_error, request_url):
     if http_error.code == 404:
         comment = 'HTTP Error 404. Request URL: ' + request_url
     elif http_error.code == 409:
-        comment = 'HTTP Error 409: Conflict. Requested URL: %s. \n' \
-                  'This error may be caused by reading snapshot artifact from non-snapshot repository.' % request_url
+        comment = 'HTTP Error 409: Conflict. Requested URL: {0}. \n' \
+                  'This error may be caused by reading snapshot artifact from non-snapshot repository.'.format(request_url)
     else:
-        comment = 'HTTP Error %(err_code)d. Request URL: %(url)s' % {'err_code': http_error.code, 'url': request_url}
+        comment = 'HTTP Error {err_code}. Request URL: {url}'.format(err_code=http_error.code, url=request_url)
 
     return comment
 
@@ -329,17 +324,7 @@ def __append_comment(new_comment, current_comment=''):
 class ArtifactoryError(Exception):
 
     def __init__(self, value):
+        super(ArtifactoryError, self).__init__()
         self.value = value
     def __str__(self):
         return repr(self.value)
-
-
-
-
-    
-    
-
-    
-
-    
-    
