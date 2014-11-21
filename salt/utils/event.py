@@ -51,17 +51,18 @@ from __future__ import absolute_import
 
 # Import python libs
 import os
-import fnmatch
 import glob
-import hashlib
-import errno
-import logging
 import time
+import errno
+import fnmatch
+import hashlib
+import logging
 import datetime
 import multiprocessing
 from collections import MutableMapping
 
 # Import third party libs
+import salt.ext.six as six
 try:
     import zmq
 except ImportError:
@@ -75,9 +76,8 @@ import salt.loader
 import salt.state
 import salt.utils
 import salt.utils.cache
-from salt.ext.six import string_types
 import salt.utils.process
-from salt._compat import string_types
+
 log = logging.getLogger(__name__)
 
 # The SUB_EVENT set is for functions that require events fired based on
@@ -434,7 +434,7 @@ class SaltEvent(object):
         # that poller gets garbage collected. The Poller itself, its
         # registered sockets and the Context
         if isinstance(self.poller.sockets, dict):
-            for socket in self.poller.sockets.keys():
+            for socket in six.iterkeys(self.poller.sockets):
                 if socket.closed is False:
                     socket.setsockopt(zmq.LINGER, linger)
                     socket.close()
@@ -464,7 +464,7 @@ class SaltEvent(object):
             # Minion fired a bad retcode, fire an event
             if load['fun'] in SUB_EVENT:
                 try:
-                    for tag, data in load.get('return', {}).items():
+                    for tag, data in six.iteritems(load.get('return', {})):
                         data['retcode'] = load['retcode']
                         tags = tag.split('_|-')
                         if data.get('result') is False:
@@ -647,7 +647,7 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         '''
         log.debug('Gathering reactors for tag {0}'.format(tag))
         reactors = []
-        if isinstance(self.opts['reactor'], string_types):
+        if isinstance(self.opts['reactor'], six.string_types):
             try:
                 with salt.utils.fopen(self.opts['reactor']) as fp_:
                     react_map = yaml.safe_load(fp_.read())
@@ -670,10 +670,10 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
                 continue
             if len(ropt) != 1:
                 continue
-            key = next(iter(ropt.keys()))
+            key = next(six.iterkeys(ropt))
             val = ropt[key]
             if fnmatch.fnmatch(tag, key):
-                if isinstance(val, string_types):
+                if isinstance(val, six.string_types):
                     reactors.append(val)
                 elif isinstance(val, list):
                     reactors.extend(val)
