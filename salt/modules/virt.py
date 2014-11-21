@@ -16,14 +16,15 @@ import shutil
 import subprocess
 import string  # pylint: disable=deprecated-module
 import logging
-import salt.ext.six as six
 
 # Import third party libs
 import yaml
 import jinja2
 import jinja2.exceptions
+import salt.ext.six as six
+from salt.ext.six.moves import StringIO as _StringIO  # pylint: disable=import-error
 try:
-    import libvirt
+    import libvirt  # pylint: disable=import-error
     from xml.dom import minidom
     HAS_ALL_IMPORTS = True
 except ImportError:
@@ -34,7 +35,6 @@ import salt.utils
 import salt.utils.files
 import salt.utils.templates
 import salt.utils.validate.net
-from salt._compat import StringIO as _StringIO
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -1589,7 +1589,7 @@ def is_hyper():
         salt '*' virt.is_hyper
     '''
     try:
-        import libvirt
+        import libvirt  # pylint: disable=import-error
     except ImportError:
         # not a usable hypervisor without libvirt module
         return False

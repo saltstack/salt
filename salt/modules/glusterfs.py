@@ -8,14 +8,11 @@ from __future__ import absolute_import
 import logging
 
 # Import 3rd-party libs
-# pylint: disable=import-error
-from salt.ext.six.moves import shlex_quote as _cmd_quote
-# pylint: enable=import-error
+from salt.ext.six.moves import range, shlex_quote as _cmd_quote  # pylint: disable=import-error,redefined-builtin
 
 # Import salt libs
 import salt.utils
 import salt.utils.cloud as suc
-from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 

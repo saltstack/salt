@@ -55,15 +55,22 @@ Hipchat settings may also be configured as::
 '''
 from __future__ import absolute_import
 
+# Import Python libs
+import pprint
+import logging
+
+# Import 3rd-party libs
+import requests
+from requests.exceptions import ConnectionError
+# pylint: disable=import-error
+from salt.ext.six.moves.urllib.parse import urljoin as _urljoin  # pylint: disable=import-error,no-name-in-module
+# pylint: enable=import-error
+
+# Import Salt Libs
 import salt.returners
 
-import pprint
-import requests
-import logging
-from urlparse import urljoin as _urljoin
-from requests.exceptions import ConnectionError
-
 log = logging.getLogger(__name__)
+
 __virtualname__ = 'slack'
 
 
