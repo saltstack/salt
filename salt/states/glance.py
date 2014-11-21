@@ -140,6 +140,6 @@ def image_absent(name, profile=None, **connection_args):
 
 def _get_non_null_args(**kwargs):
     '''
-    Return thos kwargs which are not null
+    Return those kwargs which are not null
     '''
-    return {key: value for key,value in kwargs.iteritems() if kwargs[key]}
+    return {key: kwargs[key] for key in kwargs if kwargs[key]}
