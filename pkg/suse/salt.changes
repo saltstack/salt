@@ -1,4 +1,80 @@
 -------------------------------------------------------------------
+Mon Nov  3 21:35:31 UTC 2014 - aboe76@gmail.com
+
+- Updated to Major Release 2014.7.0
+- added python-zipp as depency
+- added recommend python-pygit2, this is the preferred gitfs backend of saltstack
+- added zsh-completion package
+- More information at: http://docs.saltstack.com/en/latest/topics/releases/2014.7.0.html
+- SALT SSH ENHANCEMENTS:
+  + Support for Fileserver Backends
+  + Support for Saltfile
+  + Ext Pillar
+  + No more sshpass needed
+  + Pure Python Shim
+  + Custom Module Delivery
+  + CP module Support
+  + More Thin Directory Options
+ - Salt State System enhancements:
+   + New Imperative State Keyword "Listen"
+   + New Mod Aggregate Runtime Manipulator
+   + New Requisites: onchanges and onfail
+   + New Global onlyif and unless
+   + Use names to expand and override values
+ - Salt Major Features:
+   + Improved Scheduler Additions
+   + Red Hat 7 Support
+   + Fileserver Backends in Salt-call
+   + Amazon Execution Modules in salt-cloud
+   + LXC Runner Enhancements
+   + Next Gen Docker Management
+   + Peer System Performance Improvements
+   + SDB Encryption at rest for configs
+   + GPG Renderer encrypted pillar at rest
+   + OpenStack Expansions
+   + Queues System external queue systems into Salt events
+   + Multi Master Failover Additions
+   + Chef Execution Module
+ - salt-api Project Merge
+   + Synchronous and Asynchronous Execution of Runner and Wheel Modules
+   + rest_cherrypy Additions
+   + Web Hooks
+ - Fileserver Backend Enhancements:
+   + New gitfs Features
+   + Pygit2 and Dulwich support
+   	+ Mountpoints support
+   + New hgfs Features
+   	+ mountpoints support
+   + New svnfs Features:
+    + mountpoints 
+   + minionfs Featuressupport
+    + mountpoints
+ - New Salt Modules:
+   + Oracle
+   + Random
+   + Redis
+   + Amazon Simple Queue Service
+   + Block Device Management
+   + CoreOS etcd
+   + Genesis
+   + InfluxDB
+   + Server Density
+   + Twilio Notifications
+   + Varnish
+   + ZNC IRC Bouncer
+   + SMTP
+ - NEW RUNNERS:
+   + Map/Reduce Style
+   + Queue
+ - NEW EXTERNAL PILLARS:
+   + CoreOS etcd
+ - NEW SALT-CLOUD PROVIDERS:
+   + Aliyun ECS Cloud
+   + LXC Containers
+   + Proxmox (OpenVZ containers & KVM)
+- DEPRECATIONS:
+ + Salt.modules.virtualenv_mod
+-------------------------------------------------------------------
 Thu Oct 16 19:26:57 UTC 2014 - aboe76@gmail.com
 
 - Updated to 2014.1.13 a bugfix release on 2014.1.12

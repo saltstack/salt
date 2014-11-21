@@ -19,15 +19,26 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       provider: parallels
 
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import copy
 import time
 import pprint
-import urllib
-import urllib2
 import logging
+
+# Import 3rd-party libs
+# pylint: disable=import-error,no-name-in-module
+from salt.ext.six.moves.urllib.error import URLError
+from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
+from salt.ext.six.moves.urllib.request import (
+        HTTPBasicAuthHandler as _HTTPBasicAuthHandler,
+        Request as _Request,
+        urlopen as _urlopen,
+        build_opener as _build_opener,
+        install_opener as _install_opener
+)
+# pylint: enable=import-error,no-name-in-module
 
 # Import salt libs
 import salt.utils
@@ -467,7 +478,7 @@ def query(action=None, command=None, args=None, method='GET', data=None):
     path = config.get_cloud_config_value(
         'url', get_configured_provider(), __opts__, search_global=False
     )
-    auth_handler = urllib2.HTTPBasicAuthHandler()
+    auth_handler = _HTTPBasicAuthHandler()
     auth_handler.add_password(
         realm='Parallels Instance Manager',
         uri=path,
@@ -479,8 +490,8 @@ def query(action=None, command=None, args=None, method='GET', data=None):
             search_global=False
         )
     )
-    opener = urllib2.build_opener(auth_handler)
-    urllib2.install_opener(opener)
+    opener = _build_opener(auth_handler)
+    _install_opener(opener)
 
     if action:
         path += action
@@ -498,10 +509,10 @@ def query(action=None, command=None, args=None, method='GET', data=None):
         }
 
     if args:
-        params = urllib.urlencode(args)
-        req = urllib2.Request(url='{0}?{1}'.format(path, params), **kwargs)
+        params = _urlencode(args)
+        req = _Request(url='{0}?{1}'.format(path, params), **kwargs)
     else:
-        req = urllib2.Request(url=path, **kwargs)
+        req = _Request(url=path, **kwargs)
 
     req.get_method = lambda: method
 
@@ -510,7 +521,7 @@ def query(action=None, command=None, args=None, method='GET', data=None):
         log.debug(data)
 
     try:
-        result = urllib2.urlopen(req)
+        result = _urlopen(req)
         log.debug(
             'PARALLELS Response Status Code: {0}'.format(
                 result.getcode()
@@ -524,7 +535,7 @@ def query(action=None, command=None, args=None, method='GET', data=None):
             return items
 
         return {}
-    except urllib2.URLError as exc:
+    except URLError as exc:
         log.error(
             'PARALLELS Response Status Code: {0} {1}'.format(
                 exc.code,

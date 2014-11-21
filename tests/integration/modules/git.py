@@ -1,24 +1,20 @@
 # -*- coding: utf-8 -*-
 
+# Import Python Libs
 import shutil
 import subprocess
 import tempfile
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
+from salttesting.helpers import ensure_in_syspath, skip_if_binaries_missing
+ensure_in_syspath('../..')
 
 # Import salt libs
 import integration
 
 
+@skip_if_binaries_missing('git')
 class GitModuleTest(integration.ModuleCase):
-    @classmethod
-    def setUpClass(cls):
-        from salt.utils import which
-        git = which('git')
-        if not git:
-            self.skipTest('The git binary is not available')
 
     def setUp(self):
         self.repos = tempfile.mkdtemp(dir=integration.TMP)
@@ -27,7 +23,7 @@ class GitModuleTest(integration.ModuleCase):
 
     def test_config_set_value_has_space_characters(self):
         '''
-        git.config_set
+        Tests the git.config_set function
         '''
         config_key = "user.name"
         config_value = "foo bar"
