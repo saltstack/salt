@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
-# Import python libs
+# Import Python libs
+from __future__ import absolute_import
 import os
 import os.path
 import tempfile
@@ -10,7 +11,6 @@ from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../')
-ensure_in_syspath('../../')
 
 # Import Salt libs
 import integration

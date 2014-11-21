@@ -1,6 +1,5 @@
-# -*- coding: utf-8 -*-
-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 '''
 This script is used to test Salt from a Jenkins server, specifically
 jenkins.saltstack.com.
@@ -9,7 +8,7 @@ This script is intended to be shell-centric!!
 '''
 
 # Import python libs
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 import glob
 import os
 import re

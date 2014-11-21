@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # import Python Libs
+from __future__ import absolute_import
 from collections import OrderedDict
 
 # Import Salt Libs

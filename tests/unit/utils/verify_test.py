@@ -4,6 +4,7 @@ Test the verification routines
 '''
 
 # Import Python libs
+from __future__ import absolute_import
 import getpass
 import os
 import sys

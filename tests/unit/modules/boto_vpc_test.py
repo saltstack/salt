@@ -1,7 +1,22 @@
 # -*- coding: utf-8 -*-
 
+# Import Python libs
+from __future__ import absolute_import
+from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
+
+# Import Salt Testing libs
+from salttesting.unit import skipIf, TestCase
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch
+from salttesting.helpers import ensure_in_syspath
+
+ensure_in_syspath('../../')
+
+# Import Salt libs
+from salt.modules import boto_vpc
+from salt.exceptions import SaltInvocationError, CommandExecutionError
+from salt.modules.boto_vpc import _maybe_set_name_tag, _maybe_set_tags
+
 # import Third Party Libs
-from salttesting.mock import patch
 # pylint: disable=import-error,no-name-in-module
 try:
     import boto
@@ -30,22 +45,7 @@ except ImportError:
             pass
 
         return stub_function
-
-# Import Python libs
-from distutils.version import LooseVersion  # pylint: disable=no-name-in-module
 # pylint: enable=import-error
-
-# Import Salt Libs
-from salt.modules import boto_vpc
-from salt.exceptions import SaltInvocationError, CommandExecutionError
-from salt.modules.boto_vpc import _maybe_set_name_tag, _maybe_set_tags
-
-# Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # the boto_vpc module relies on the connect_to_region() method
 # which was added in boto 2.8.0

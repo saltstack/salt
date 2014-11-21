@@ -3,6 +3,10 @@
 '''
 tests for pkg state
 '''
+# Import python libs
+from __future__ import absolute_import
+import os
+import time
 
 # Import Salt Testing libs
 from salttesting import skipIf
@@ -13,10 +17,6 @@ from salttesting.helpers import (
     requires_salt_modules
 )
 ensure_in_syspath('../../')
-
-# Import python libs
-import os
-import time
 
 # Import salt libs
 import integration

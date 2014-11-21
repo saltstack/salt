@@ -3,6 +3,8 @@
 Test module for syslog_ng state
 '''
 
+# Import python libs
+from __future__ import absolute_import
 import yaml
 import re
 import tempfile

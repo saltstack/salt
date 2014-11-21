@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 
+# Import Python libs
+from __future__ import absolute_import
+import os
+import shutil
+
 # Import Salt Testing libs
 from salttesting.helpers import (ensure_in_syspath, destructiveTest)
 ensure_in_syspath('../../')
@@ -8,10 +13,6 @@ ensure_in_syspath('../../')
 import integration
 import salt.utils
 from salttesting import skipIf
-
-# Import Python libs
-import os
-import shutil
 
 
 class DiskModuleVirtualizationTest(integration.ModuleCase):

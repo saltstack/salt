@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
+from __future__ import absolute_import
 import os
 import os.path
 import tempfile
 from cStringIO import StringIO
-
 
 # Import Salt Testing libs
 from salttesting import TestCase

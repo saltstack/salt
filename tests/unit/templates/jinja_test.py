@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-import copy
+from __future__ import absolute_import
 import os
+import copy
 import tempfile
 import json
 import datetime
