@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import print_function
-import yaml
 import subprocess
 import hashlib
 import pprint
 import optparse
+
+# Import 3rd-party libs
+import yaml
+import salt.ext.six as six
 
 BLACK = '\033[0;30m'
 DARK_GRAY = '\033[1;30m'
@@ -57,7 +60,7 @@ def run(command):
     subprocess.call(cmd, shell=True)
     data = yaml.load(open('high'))
     hashes = set()
-    for key, val in data.items():
+    for key, val in six.iteritems(data):
         has = hashlib.md5(str(val)).hexdigest()
         if has not in hashes:
             print('{0}:'.format(has))
