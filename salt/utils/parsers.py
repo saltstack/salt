@@ -2175,6 +2175,12 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                  'faster communication should be, default is %default'
         )
         self.add_option(
+            '--extra-filerefs',
+            dest='extra_filerefs',
+            default=None,
+            help='Pass in extra files to include in the state tarball'
+        )
+        self.add_option(
             '-v', '--verbose',
             default=False,
             action='store_true',
