@@ -27,7 +27,6 @@ import shutil
 import socket
 import stat
 import string
-import subprocess
 import sys
 import tempfile
 import time
@@ -2447,3 +2446,19 @@ def chugid_and_umask(runas, umask):
 def rand_string(size=32):
     key = os.urandom(size)
     return key.encode('base64').replace('\n', '')
+
+
+def sdecode(string):
+    '''
+    Since we don't know where a string is coming from and that string will
+    need to be safely decoded, this function will attempt to decode the string
+    until if has a working string that does not stack trace
+    '''
+    encodings = ['utf-8', 'latin-1']
+    for encoding in encodings:
+        try:
+            decoded = string.decode(encoding)
+            u' ' + decoded
+            return decoded
+        except UnicodeDecodeError:
+            continue
