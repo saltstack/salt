@@ -27,6 +27,9 @@ import integration
 from salt.utils.process import clean_proc
 from salt.utils import event
 
+# Import 3rd-+arty libs
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+
 SOCK_DIR = os.path.join(integration.TMP, 'test-socks')
 
 NO_LONG_IPC = False
@@ -278,7 +281,7 @@ class TestSaltEvent(TestCase):
         with eventpublisher_process():
             me = event.MasterEvent(SOCK_DIR)
             me.subscribe()
-            for i in xrange(500):
+            for i in range(500):
                 me.fire_event({'data': '{0}'.format(i)}, 'testevents')
                 evt = me.get_event(tag='testevents')
                 self.assertGotEvent(evt, {'data': '{0}'.format(i)}, 'Event {0}'.format(i))
@@ -289,9 +292,9 @@ class TestSaltEvent(TestCase):
             me = event.MasterEvent(SOCK_DIR)
             me.subscribe()
             # Must not exceed zmq HWM
-            for i in xrange(500):
+            for i in range(500):
                 me.fire_event({'data': '{0}'.format(i)}, 'testevents')
-            for i in xrange(500):
+            for i in range(500):
                 evt = me.get_event(tag='testevents')
                 self.assertGotEvent(evt, {'data': '{0}'.format(i)}, 'Event {0}'.format(i))
 
