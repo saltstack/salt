@@ -189,9 +189,8 @@ The following example (in JSON format) causes Salt to execute two commands::
 # We need a custom pylintrc here...
 # pylint: disable=W0212,E1101,C0103,R0201,W0221,W0613
 
-from __future__ import absolute_import
-
 # Import Python libs
+from __future__ import absolute_import
 import collections
 import itertools
 import functools
@@ -203,9 +202,13 @@ import time
 from multiprocessing import Process, Pipe
 
 # Import third-party libs
+# pylint: disable=import-error
 import cherrypy
 from cherrypy.lib import cpstats
 import yaml
+import salt.ext.six as six
+# pylint: disable=import-error
+
 
 # Import Salt libs
 import salt
@@ -2056,7 +2059,7 @@ class API(object):
 
         CherryPy uses class attributes to resolve URLs.
         '''
-        for url, cls in self.url_map.items():
+        for url, cls in six.iteritems(self.url_map):
             setattr(self, url, cls())
 
     def _update_url_map(self):
