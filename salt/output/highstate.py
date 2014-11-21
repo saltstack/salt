@@ -58,7 +58,6 @@ Example output::
 
 # Import python libs
 import pprint
-import sys
 
 # Import salt libs
 import salt.utils
