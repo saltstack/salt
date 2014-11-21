@@ -5,15 +5,14 @@ minion modules.
 '''
 
 # Import python libs
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import os
 import sys
+import time
 import logging
 import datetime
 import traceback
 import multiprocessing
-import time
 
 # Import salt libs
 import salt
@@ -24,12 +23,9 @@ import salt.payload
 import salt.transport
 import salt.utils.args
 import salt.defaults.exitcodes
-from salt.ext.six import string_types
 from salt.log import LOG_LEVELS
 from salt.utils import print_cli
 from salt.utils import kinds
-
-log = logging.getLogger(__name__)
 
 try:
     from raet import raeting, nacling
@@ -40,6 +36,9 @@ except ImportError:
     # Don't die on missing transport libs since only one transport is required
     pass
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
 # Custom exceptions
 from salt.exceptions import (
     SaltClientError,
@@ -47,6 +46,8 @@ from salt.exceptions import (
     CommandExecutionError,
     SaltInvocationError,
 )
+
+log = logging.getLogger(__name__)
 
 
 class Caller(object):
@@ -167,7 +168,7 @@ class ZeroMQCaller(object):
             pass
         if hasattr(self.minion.functions[fun], '__outputter__'):
             oput = self.minion.functions[fun].__outputter__
-            if isinstance(oput, string_types):
+            if isinstance(oput, six.string_types):
                 ret['out'] = oput
         is_local = self.opts['local'] or self.opts.get(
             'file_client', False) == 'local'
@@ -202,7 +203,7 @@ class ZeroMQCaller(object):
         '''
         channel = salt.transport.Channel.factory(self.opts, usage='salt_call')
         load = {'cmd': '_return', 'id': self.opts['id']}
-        for key, value in ret.items():
+        for key, value in six.iteritems(ret):
             load[key] = value
         channel.send(load)
 
@@ -211,7 +212,7 @@ class ZeroMQCaller(object):
         Pick up the documentation for all of the modules and print it out.
         '''
         docs = {}
-        for name, func in self.minion.functions.items():
+        for name, func in six.iteritems(self.minion.functions):
             if name not in docs:
                 if func.__doc__:
                     docs[name] = func.__doc__
