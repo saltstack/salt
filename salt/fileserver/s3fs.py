@@ -69,7 +69,6 @@ import datetime
 import os
 import time
 import pickle
-import urllib
 import logging
 
 # Import salt libs
@@ -77,8 +76,13 @@ import salt.fileserver as fs
 import salt.modules
 import salt.utils
 import salt.utils.s3 as s3
+
+# Import 3rd-party libs
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
 from salt.ext.six.moves import filter
+from salt.ext.six.moves.urllib.parse import quote as _quote
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -572,7 +576,7 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
                         bucket=bucket_name,
                         service_url=service_url,
                         verify_ssl=verify_ssl,
-                        path=urllib.quote(path),
+                        path=_quote(path),
                         local_file=cached_file_path
                     )
                     if ret is not None:
@@ -600,7 +604,7 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
         bucket=bucket_name,
         service_url=service_url,
         verify_ssl=verify_ssl,
-        path=urllib.quote(path),
+        path=_quote(path),
         local_file=cached_file_path
     )
 

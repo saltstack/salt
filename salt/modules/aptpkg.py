@@ -16,29 +16,30 @@ import copy
 import os
 import re
 import logging
-import urllib2
 import json
 
 # Import third party libs
 import yaml
+# pylint: disable=no-name-in-module,import-error,redefined-builtin
+import salt.ext.six as six
+from salt.ext.six.moves import range
+from salt.ext.six.moves.urllib.error import HTTPError
+from salt.ext.six.moves.urllib.request import Request as _Request, urlopen as _urlopen
+# pylint: enable=no-name-in-module,import-error,redefined-builtin
 
 # Import salt libs
 from salt.modules.cmdmod import _parse_env
 import salt.utils
-from salt.ext.six import string_types
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
-import salt.ext.six as six
-from salt.ext.six.moves import range
-
 
 log = logging.getLogger(__name__)
 
-
+# pylint: disable=import-error
 try:
-    import apt.cache    # pylint: disable=E0611
-    import apt.debfile  # pylint: disable=E0611
+    import apt.cache
+    import apt.debfile
     from aptsources import sourceslist
     HAS_APT = True
 except ImportError:
@@ -49,6 +50,7 @@ try:
     HAS_SOFTWAREPROPERTIES = True
 except ImportError:
     HAS_SOFTWAREPROPERTIES = False
+# pylint: disable=import-error
 
 # Source format for urllib fallback on PPA handling
 LP_SRC_FORMAT = 'deb http://ppa.launchpad.net/{0}/{1}/ubuntu {2} main'
@@ -102,8 +104,8 @@ def _get_ppa_info_from_launchpad(owner_name, ppa_name):
 
     lp_url = 'https://launchpad.net/api/1.0/~{0}/+archive/{1}'.format(
         owner_name, ppa_name)
-    request = urllib2.Request(lp_url, headers={'Accept': 'application/json'})
-    lp_page = urllib2.urlopen(request)
+    request = _Request(lp_url, headers={'Accept': 'application/json'})
+    lp_page = _urlopen(request)
     return json.load(lp_page)
 
 
@@ -1398,7 +1400,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
                             raise CommandExecutionError(
                                 error_str.format(owner_name, ppa_name)
                             )
-                except urllib2.HTTPError as exc:
+                except HTTPError as exc:
                     raise CommandExecutionError(
                         'Launchpad does not know about {0}/{1}: {2}'.format(
                             owner_name, ppa_name, exc)
@@ -1671,7 +1673,7 @@ def _parse_selections(dpkgselection):
     pkg.get_selections and pkg.set_selections work with.
     '''
     ret = {}
-    if isinstance(dpkgselection, string_types):
+    if isinstance(dpkgselection, six.string_types):
         dpkgselection = dpkgselection.split('\n')
     for line in dpkgselection:
         if line:
@@ -1776,7 +1778,7 @@ def set_selections(path=None, selection=None, clear=False, saltenv='base'):
                'specified together')
         raise SaltInvocationError(err)
 
-    if isinstance(selection, string_types):
+    if isinstance(selection, six.string_types):
         try:
             selection = yaml.safe_load(selection)
         except (yaml.parser.ParserError, yaml.scanner.ScannerError) as exc:

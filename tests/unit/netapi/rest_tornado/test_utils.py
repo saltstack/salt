@@ -1,15 +1,39 @@
 # coding: utf-8
+
 import os
 
-from salt.netapi.rest_tornado import saltnado
+# Import Salt Testing Libs
+from salttesting.unit import skipIf
+from salttesting.case import TestCase
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../..')
 
-import tornado.testing
-import tornado.concurrent
-from salttesting import TestCase
+# Import 3rd-party libs
+# pylint: disable=import-error
+try:
+    import tornado.testing
+    import tornado.concurrent
+    from tornado.testing import AsyncTestCase
+    HAS_TORNADO = True
+except ImportError:
+    HAS_TORNADO = False
 
-from unit.utils.event_test import eventpublisher_process, event, SOCK_DIR
+    # Let's create a fake AsyncHTTPTestCase so we can properly skip the test case
+    class AsyncTestCase(object):
+        pass
+# pylint: enable=import-error
+
+try:
+    from salt.netapi.rest_tornado import saltnado
+    HAS_TORNADO = True
+except ImportError:
+    HAS_TORNADO = False
+
+# Import utility lib from tests
+from unit.utils.event_test import eventpublisher_process, event, SOCK_DIR  # pylint: disable=import-error
 
 
+@skipIf(HAS_TORNADO is False, 'The tornado package needs to be installed')
 class TestUtils(TestCase):
     def test_batching(self):
         assert 1 == saltnado.get_batch_size('1', 10)
@@ -20,7 +44,8 @@ class TestUtils(TestCase):
         assert 11 == saltnado.get_batch_size('110%', 10)
 
 
-class TestSaltnadoUtils(tornado.testing.AsyncTestCase):
+@skipIf(HAS_TORNADO is False, 'The tornado package needs to be installed')
+class TestSaltnadoUtils(AsyncTestCase):
     def test_any_future(self):
         '''
         Test that the Any Future does what we think it does
@@ -58,7 +83,8 @@ class TestSaltnadoUtils(tornado.testing.AsyncTestCase):
         assert futures[1].done() is False
 
 
-class TestEventListener(tornado.testing.AsyncTestCase):
+@skipIf(HAS_TORNADO is False, 'The tornado package needs to be installed')
+class TestEventListener(AsyncTestCase):
     def setUp(self):
         if not os.path.exists(SOCK_DIR):
             os.makedirs(SOCK_DIR)
@@ -85,5 +111,5 @@ class TestEventListener(tornado.testing.AsyncTestCase):
 
 
 if __name__ == '__main__':
-    from integration import run_tests
+    from integration import run_tests  # pylint: disable=import-error
     run_tests(TestUtils, needs_daemon=False)

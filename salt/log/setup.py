@@ -24,7 +24,9 @@ import socket
 import logging
 import logging.handlers
 import traceback
+from salt.ext.six import PY3
 from salt.ext.six import string_types, text_type, with_metaclass
+from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=import-error,no-name-in-module
 
 # Let's define these custom logging levels before importing the salt.log.mixins
 # since they will be used there
@@ -35,7 +37,6 @@ QUIET = logging.QUIET = 1000
 # Import salt libs
 from salt.log.handlers import TemporaryLoggingHandler, StreamHandler, SysLogHandler, WatchedFileHandler
 from salt.log.mixins import LoggingMixInMeta, NewStyleClassMixIn
-from salt._compat import PY3, urlparse
 
 LOG_LEVELS = {
     'all': logging.NOTSET,

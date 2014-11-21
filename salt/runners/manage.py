@@ -5,15 +5,16 @@ and what hosts are down
 '''
 
 # Import python libs
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import os
 import operator
 import re
 import subprocess
 import tempfile
 import time
-import urllib
+
+# Import 3rd-party libs
+from salt.ext.six.moves.urllib.request import urlopen as _urlopen  # pylint: disable=no-name-in-module,import-error
 
 # Import salt libs
 import salt.key
@@ -370,7 +371,7 @@ def bootstrap_psexec(hosts='', master=None, version=None, arch='win32',
 
     if not installer_url:
         base_url = 'http://docs.saltstack.com/downloads/'
-        source = urllib.urlopen(base_url).read()
+        source = _urlopen(base_url).read()
         salty_rx = re.compile('>(Salt-Minion-(.+?)-(.+)-Setup.exe)</a></td><td align="right">(.*?)\\s*<')
         source_list = sorted([[path, ver, plat, time.strptime(date, "%d-%b-%Y %H:%M")]
                               for path, ver, plat, date in salty_rx.findall(source)],

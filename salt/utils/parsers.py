@@ -21,6 +21,9 @@ import optparse
 import traceback
 from functools import partial
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
 # Import salt libs
 import salt.config as config
 import salt.exitcodes
@@ -34,7 +37,6 @@ import salt.utils.xdg
 from salt.utils import kinds
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.validate.path import is_writeable
-from salt._compat import MAX_SIZE
 
 
 def _sorted(mixins_or_funcs):
@@ -207,7 +209,7 @@ class MergeConfigMixIn(object):
     This mix-in should run last.
     '''
     __metaclass__ = MixInMeta
-    _mixin_prio_ = MAX_SIZE
+    _mixin_prio_ = six.MAXSIZE
 
     def _mixin_setup(self):
         if not hasattr(self, 'setup_config') and not hasattr(self, 'config'):

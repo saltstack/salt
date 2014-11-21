@@ -15,12 +15,18 @@ Module for sending messages to Slack
         slack:
           api_key: peWcBiMOS9HrZG15peWcBiMOS9HrZG15
 '''
+
+# Import Python libs
 from __future__ import absolute_import
-import requests
 import logging
-from urlparse import urljoin as _urljoin
+
+# Import 3rd-party libs
+import requests
 from requests.exceptions import ConnectionError
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
+from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
 from salt.ext.six.moves import range
+# pylint: enable=import-error,no-name-in-module
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'slack'
