@@ -7,12 +7,14 @@ from __future__ import absolute_import
 # Import python libs
 import re
 
-# Import salt libs
-from salt.ext.six import string_types, integer_types
+# Import 3rd-party libs
 import salt.ext.six as six
 
-#KWARG_REGEX = re.compile(r'^([^\d\W][\w.-]*)=(?!=)(.*)$', re.UNICODE)  # python 3
-KWARG_REGEX = re.compile(r'^([^\d\W][\w.-]*)=(?!=)(.*)$')
+
+if six.PY3:
+    KWARG_REGEX = re.compile(r'^([^\d\W][\w.-]*)=(?!=)(.*)$', re.UNICODE)
+else:
+    KWARG_REGEX = re.compile(r'^([^\d\W][\w.-]*)=(?!=)(.*)$')
 
 
 def condition_input(args, kwargs):
@@ -21,7 +23,7 @@ def condition_input(args, kwargs):
     '''
     ret = []
     for arg in args:
-        if isinstance(arg, long):
+        if isinstance(arg, six.integer_types):
             ret.append(str(arg))
         else:
             ret.append(arg)
@@ -43,7 +45,7 @@ def parse_input(args, condition=True):
     _args = []
     _kwargs = {}
     for arg in args:
-        if isinstance(arg, string_types) and r'\n' not in arg and '\n' not in arg:
+        if isinstance(arg, six.string_types) and r'\n' not in arg and '\n' not in arg:
             arg_name, arg_value = parse_kwarg(arg)
             if arg_name:
                 _kwargs[arg_name] = yamlify_arg(arg_value)
@@ -85,7 +87,7 @@ def yamlify_arg(arg):
     '''
     yaml.safe_load the arg
     '''
-    if not isinstance(arg, string_types):
+    if not isinstance(arg, six.string_types):
         return arg
 
     if arg.strip() == '':
@@ -115,14 +117,14 @@ def yamlify_arg(arg):
 
         if isinstance(arg, dict):
             # dicts must be wrapped in curly braces
-            if (isinstance(original_arg, string_types) and
+            if (isinstance(original_arg, six.string_types) and
                     not original_arg.startswith('{')):
                 return original_arg
             else:
                 return arg
 
         elif arg is None \
-                or isinstance(arg, (list, float, integer_types, string_types)):
+                or isinstance(arg, (list, float, six.integer_types, six.string_types)):
             # yaml.safe_load will load '|' as '', don't let it do that.
             if arg == '' and original_arg in ('|',):
                 return original_arg
