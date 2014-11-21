@@ -1411,7 +1411,7 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
         vms[key] = val
 
     # Is any VM profile extending data!?
-    for profile, details in vms.copy().items():
+    for profile, details in six.iteritems(vms.copy()):
         if 'extends' not in details:
             if ':' in details['provider']:
                 alias, driver = details['provider'].split(':')
@@ -1680,7 +1680,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
         # Merge provided extends
         keep_looping = False
         for alias, entries in six.iteritems(providers.copy()):
-            for driver, details in entries.items():
+            for driver, details in six.iteritems(entries):
 
                 if 'extends' not in details:
                     # Extends resolved or non existing, continue!
@@ -1836,8 +1836,8 @@ def is_provider_configured(opts, provider, required_keys=()):
         # return it!
         return opts['providers'][alias][driver]
 
-    for alias, drivers in opts['providers'].items():
-        for driver, provider_details in drivers.items():
+    for alias, drivers in six.iteritems(opts['providers']):
+        for driver, provider_details in six.iteritems(drivers):
             if driver != provider:
                 continue
 
