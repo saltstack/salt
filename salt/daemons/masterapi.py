@@ -42,6 +42,9 @@ from salt.pillar import git_pillar
 from salt.utils.event import tagify
 from salt.exceptions import SaltMasterError
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
 log = logging.getLogger(__name__)
 
 # Things to do in lower layers:
@@ -735,7 +738,7 @@ class RemoteFuncs(object):
             self.mminion.returners[fstr](load['jid'], load['load'])
 
         # Format individual return loads
-        for key, item in load['return'].items():
+        for key, item in six.iteritems(load['return']):
             ret = {'jid': load['jid'],
                    'id': key,
                    'return': item}
@@ -923,7 +926,7 @@ class RemoteFuncs(object):
                 ret[minion['id']] = minion['return']
                 if 'jid' in minion:
                     ret['__jid__'] = minion['jid']
-        for key, val in self.local.get_cache_returns(ret['__jid__']).items():
+        for key, val in six.iteritems(self.local.get_cache_returns(ret['__jid__'])):
             if key not in ret:
                 ret[key] = val
         if load.get('form', '') != 'full':
