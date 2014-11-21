@@ -2473,7 +2473,8 @@ def sdecode(string):
     for encoding in encodings:
         try:
             decoded = string.decode(encoding)
-            u' ' + decoded  # Make sure unicode string ops work
+            # Make sure unicode string ops work
+            u' ' + decoded  # pylint: disable=W0104
             return decoded
         except UnicodeDecodeError:
             continue
