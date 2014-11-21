@@ -43,6 +43,7 @@ from ioflo.base.consoling import getConsole
 console = getConsole()
 
 # Import Third Party Libs
+# pylint: disable=import-error
 HAS_PSUTIL = False
 try:
     import psutil
@@ -56,10 +57,10 @@ try:
     HAS_RESOURCE = True
 except ImportError:
     pass
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
+# pylint: disable=no-name-in-module,redefined-builtin
 import salt.ext.six as six
 from salt.ext.six.moves import range
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
+# pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -983,7 +984,7 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
         master = self.road_stack.value.nameRemotes.get(self.master_estate_name.value)
         if not master or not master.alived:  # select a different master
             available_masters = [remote for remote in
-                                 self.road_stack.value.remotes.values()
+                                 six.itervalues(self.road_stack.value.remotes)
                                                        if remote.alived]
             if available_masters:
                 random_master = opts.get('random_master')
