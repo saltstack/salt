@@ -22,6 +22,9 @@ ensure_in_syspath('../../')
 import integration
 import salt.utils
 
+# Import 3rd-party libs
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+
 _PKG_TARGETS = {
     'Arch': ['python2-django', 'libpng'],
     'Debian': ['python-plist', 'apg'],
@@ -98,7 +101,7 @@ class PkgTest(integration.ModuleCase,
         self.assertTrue(pkg_targets)
 
         if os_family == 'Arch':
-            for idx in xrange(13):
+            for idx in range(13):
                 if idx == 12:
                     raise Exception('Package database locked after 60 seconds, '
                                     'bailing out')
@@ -167,7 +170,7 @@ class PkgTest(integration.ModuleCase,
         self.assertTrue(pkg_targets)
 
         if os_family == 'Arch':
-            for idx in xrange(13):
+            for idx in range(13):
                 if idx == 12:
                     raise Exception('Package database locked after 60 seconds, '
                                     'bailing out')
@@ -236,7 +239,7 @@ class PkgTest(integration.ModuleCase,
         # RHEL-based). Don't actually perform this test on other platforms.
         if target:
             if grains.get('os_family', '') == 'Arch':
-                for idx in xrange(13):
+                for idx in range(13):
                     if idx == 12:
                         raise Exception('Package database locked after 60 seconds, '
                                         'bailing out')
