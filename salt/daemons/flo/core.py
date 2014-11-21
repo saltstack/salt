@@ -11,14 +11,12 @@ import os
 import sys
 import time
 import types
-import logging
-import multiprocessing
-import traceback
-import itertools
-from collections import deque
 import random
-import salt.ext.six as six
-from salt.ext.six.moves import range
+import logging
+import itertools
+import traceback
+import multiprocessing
+from collections import deque
 
 # Import salt libs
 import salt.daemons.masterapi
@@ -58,6 +56,11 @@ try:
     HAS_RESOURCE = True
 except ImportError:
     pass
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
+import salt.ext.six as six
+from salt.ext.six.moves import range
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
+
 log = logging.getLogger(__name__)
 
 
@@ -194,7 +197,7 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
                                      offset=0.5)
 
         if self.opts.value.get('raet_clear_remotes'):
-            for remote in self.stack.value.remotes.values():
+            for remote in six.itervalues(self.stack.value.remotes):
                 self.stack.value.removeRemote(remote, clear=True)
             self.stack.puid = self.stack.value.Uid  # reset puid
 
@@ -247,7 +250,7 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
                        not stack.remotes)
 
             if refresh:
-                for remote in stack.remotes.values():
+                for remote in six.itervalues(stack.remotes):
                     stack.removeRemote(remote, clear=True)
 
                 stack.puid = stack.Uid  # reset puid so reuse same uid each time
@@ -258,7 +261,7 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
                                                  fuid=0,  # vacuous join
                                                  sid=0,  # always 0 for join
                                                  ha=mha))
-            for remote in stack.remotes.values():
+            for remote in six.itervalues(stack.remotes):
                 stack.join(uid=remote.uid, timeout=0.0)
 
 
@@ -288,8 +291,8 @@ class SaltRaetRoadStackJoined(ioflo.base.deeding.Deed):
         joined = False
         if stack and isinstance(stack, RoadStack):
             if stack.remotes:
-                for remote in stack.remotes.values():
-                    joined = any([remote.joined for remote in stack.remotes.values()])
+                for remote in six.itervalues(stack.remotes):
+                    joined = any([remote.joined for remote in six.itervalues(stack.remotes)])
         self.status.update(joined=joined)
 
 
@@ -319,9 +322,9 @@ class SaltRaetRoadStackRejected(ioflo.base.deeding.Deed):
         rejected = False
         if stack and isinstance(stack, RoadStack):
             if stack.remotes:
-                for remote in stack.remotes.values():
+                for remote in six.itervalues(stack.remotes):
                     rejected = all([remote.acceptance == raeting.acceptances.rejected
-                                    for remote in stack.remotes.values()])
+                                    for remote in six.itervalues(stack.remotes)])
             else:  # no remotes so assume rejected
                 rejected = True
         self.status.update(rejected=rejected)
@@ -376,8 +379,8 @@ class SaltRaetRoadStackAllowed(ioflo.base.deeding.Deed):
         allowed = False
         if stack and isinstance(stack, RoadStack):
             if stack.remotes:
-                for remote in stack.remotes.values():
-                    allowed = any([remote.allowed for remote in stack.remotes.values()])
+                for remote in six.itervalues(stack.remotes):
+                    allowed = any([remote.allowed for remote in six.itervalues(stack.remotes)])
         self.status.update(allowed=allowed)
 
 
@@ -539,10 +542,10 @@ class SaltLoadPillar(ioflo.base.deeding.Deed):
         Initial pillar
         '''
         # default master is the first remote that is allowed
-        available_masters = [remote for remote in self.road_stack.value.remotes.values()
+        available_masters = [remote for remote in six.itervalues(self.road_stack.value.remotes)
                                                if remote.allowed]
         while not available_masters:
-            available_masters = [remote for remote in self.road_stack.value.remotes.values()
+            available_masters = [remote for remote in six.itervalues(self.road_stack.value.remotes)
                                                            if remote.allowed]
             time.sleep(0.1)
 
@@ -1091,7 +1094,7 @@ class SaltRaetPublisher(ioflo.base.deeding.Deed):
         # only publish to available minions by intersecting sets
 
         minions = (self.availables.value &
-                   set((remote.name for remote in stack.remotes.values()
+                   set((remote.name for remote in six.itervalues(stack.remotes)
                             if remote.kind in [kinds.applKinds.minion,
                                                kinds.applKinds.syndic])))
         for minion in minions:
