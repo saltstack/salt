@@ -19,8 +19,7 @@ try:
     from raet import raeting, nacling
     from raet.lane.stacking import LaneStack
     from raet.lane.yarding import RemoteYard
-
-except ImportError:
+except (ImportError, OSError):
     # Don't die on missing transport libs since only one transport is required
     pass
 
