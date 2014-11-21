@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
-
 '''
 Tests for the MySQL states
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import logging
-
 
 # Import Salt Testing libs
 from salttesting import skipIf

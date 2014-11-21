@@ -8,6 +8,7 @@
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import time
 import threading
 from Queue import Queue, Empty

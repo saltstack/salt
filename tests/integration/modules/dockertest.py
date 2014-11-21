@@ -6,6 +6,7 @@ Tests for integration with Docker's Python library
 __author__ = 'cro'
 
 # Import python libs
+from __future__ import absolute_import
 import string
 import os
 

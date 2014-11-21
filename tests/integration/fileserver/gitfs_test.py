@@ -2,6 +2,13 @@
 '''
     :codeauthor: :email:`Mike Place <mp@saltstack.com>`
 '''
+# Import Python libs
+from __future__ import absolute_import
+import copy
+import os
+import logging
+import pwd
+import shutil
 
 # Import Salt Testing libs
 from salttesting import skipIf
@@ -9,13 +16,6 @@ from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import patch, NO_MOCK, NO_MOCK_REASON
 
 ensure_in_syspath('../..')
-
-# Import Python libs
-import copy
-import os
-import logging
-import pwd
-import shutil
 
 # Import salt libs
 import integration

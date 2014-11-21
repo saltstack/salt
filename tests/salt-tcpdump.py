@@ -33,7 +33,7 @@ tcpdump "tcp[tcpflags] & tcp-syn != 0" and port 4505 and "tcp[tcpflags] & tcp-ac
 For Port 4506
 tcpdump "tcp[tcpflags] & tcp-syn != 0" and port 4506 and "tcp[tcpflags] & tcp-ack == 0"
 '''
-
+from __future__ import absolute_import
 import socket
 from struct import unpack
 import pcapy

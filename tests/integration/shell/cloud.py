@@ -8,6 +8,8 @@
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
 '''
 
+# Import Python libs
+from __future__ import absolute_import
 
 # Import salt testing libs
 from salttesting.unit import skipIf

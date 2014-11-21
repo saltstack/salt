@@ -3,15 +3,21 @@
     tests.unit.file_test
     ~~~~~~~~~~~~~~~~~~~~
 '''
+# Import pytohn libs
+from __future__ import absolute_import
 import copy
 import os
 import shutil
 import tempfile
-import salt.utils
-from salt.utils import files as util_files
+
+# Import Salt Testing libs
 from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
+
+# Import Salt libs
+import salt.utils
+from salt.utils import files as util_files
 
 
 class FilesTestCase(TestCase):

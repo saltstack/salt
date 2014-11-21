@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 
-import salt.utils.decorators
+# Import Python libs
+from __future__ import absolute_import
 import time
+
+# Import Salt libs
+import salt.utils.decorators
 
 
 def _fallbackfunc():

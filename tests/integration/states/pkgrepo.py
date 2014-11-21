@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
-
 '''
 tests for pkgrepo states
 '''
+
+# Import Python libs
+from __future__ import absolute_import
 
 # Import Salt Testing libs
 from salttesting import skipIf

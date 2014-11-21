@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+# Import python libs
+from __future__ import absolute_import
+
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON

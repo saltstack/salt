@@ -3,6 +3,9 @@
     :codeauthor: :email:`Nicole Thomas <nicole@saltstack.com>`
 '''
 
+# Import python libs
+from __future__ import absolute_import
+
 # Import Salt Libs
 from salt.cli.batch import Batch
 

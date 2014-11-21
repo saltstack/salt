@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # import Python Libs
+from __future__ import absolute_import
 import random
 import string
 from copy import deepcopy

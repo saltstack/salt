@@ -7,7 +7,7 @@
 # This script is designed for speed, therefore it does not use mock and does not
 # run tests. It *will* install the build deps on the machine running the script.
 #
-
+from __future__ import absolute_import
 import errno
 import glob
 import logging

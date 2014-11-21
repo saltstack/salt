@@ -22,6 +22,7 @@ completion behavior can be customized via the ~/.inputrc file.
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import atexit
 import os
 import readline

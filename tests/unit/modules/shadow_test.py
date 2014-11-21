@@ -3,6 +3,9 @@
     :codeauthor: :email:`Erik Johnson <erik@saltstack.com>`
 '''
 
+# Import Pytohn libs
+from __future__ import absolute_import
+
 # Import Salt Testing libs
 from salt.utils import is_linux
 from salttesting import TestCase, skipIf

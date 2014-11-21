@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # import Python Libs
+from __future__ import absolute_import
 from copy import deepcopy
 
 # import Python Third Party Libs

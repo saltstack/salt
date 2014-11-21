@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python Libs
+from __future__ import absolute_import
 import shutil
 import subprocess
 import tempfile
