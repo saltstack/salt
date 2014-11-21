@@ -43,8 +43,7 @@ from ioflo.base.consoling import getConsole
 console = getConsole()
 
 # Import Third Party Libs
-import salt.ext.six as six
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+# pylint: disable=import-error
 HAS_PSUTIL = False
 try:
     import psutil
@@ -58,10 +57,10 @@ try:
     HAS_RESOURCE = True
 except ImportError:
     pass
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
+# pylint: disable=no-name-in-module,redefined-builtin
 import salt.ext.six as six
 from salt.ext.six.moves import range
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
+# pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -1303,6 +1302,54 @@ class SaltRaetRouterMinion(SaltRaetRouter):
                       "Using default route={0}.".format(msg['route']['dst']))
             self.road_stack.value.message(msg,
                                           self.road_stack.value.nameRemotes[d_estate].uid)
+
+    def _get_master_estate_name(self):
+        '''
+        Assign and return the name of the estate for the default master or empty if none
+        If the default master is no longer available then selects one of the available
+        masters
+        '''
+        opts = self.opts.value
+        master = self.road_stack.value.nameRemotes.get(self.master_estate_name.value)
+        if not master or not master.alived:  # select a different master
+            available_masters = [remote for remote in
+                                 six.itervalues(self.road_stack.value.remotes)
+                                                       if remote.alived]
+            if available_masters:
+                random_master = opts.get('random_master')
+                if random_master:
+                    master = available_masters[random.randint(0, len(available_masters) - 1)]
+                else:
+                    master = available_masters[0]
+            else:
+                master = None
+
+        self.master_estate_name.value = master.name if master else ''
+
+        return self.master_estate_name.value
+
+    def _availablize(self, minions):
+        '''
+        Return set that is intersection of associated minion estates for
+        roles in minions and the set of available minion estates.
+        '''
+        suffix = '_{0}'.format(kinds.APPL_KIND_NAMES[kinds.applKinds.minion])
+        return list(set(minions) &
+                    set((name.rstrip(suffix) for name in self.availables.value)))
+
+    def action(self):
+        '''
+        Process the messages!
+        '''
+        while self.road_stack.value.rxMsgs:
+            msg, sender = self.road_stack.value.rxMsgs.popleft()
+            self._process_udp_rxmsg(msg=msg, sender=sender)
+        while self.laters.value:  # process requeued LaneMsgs
+            msg, sender = self.laters.value.popleft()
+            self.lane_stack.value.rxMsgs.append((msg, sender))
+        while self.lane_stack.value.rxMsgs:
+            msg, sender = self.lane_stack.value.rxMsgs.popleft()
+            self._process_uxd_rxmsg(msg=msg, sender=sender)
 
 
 class SaltRaetEventer(ioflo.base.deeding.Deed):
