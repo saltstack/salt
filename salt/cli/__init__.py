@@ -4,8 +4,7 @@ The management of salt command line utilities are stored in here
 '''
 
 # Import python libs
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import logging
 import os
 import sys
@@ -31,6 +30,8 @@ from salt.exceptions import (
     SaltClientError,
     EauthAuthenticationError,
 )
+
+# Import 3rd-party libs
 import salt.ext.six as six
 
 log = logging.getLogger(__name__)
@@ -286,7 +287,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         ret = {}
         out = ''
         retcode = 0
-        for key, data in full_ret.items():
+        for key, data in six.iteritems(full_ret):
             ret[key] = data['ret']
             if 'out' in data:
                 out = data['out']
