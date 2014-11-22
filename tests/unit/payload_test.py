@@ -9,6 +9,9 @@
 
 # Import Salt libs
 from __future__ import absolute_import
+import time
+import errno
+import threading
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
@@ -24,10 +27,7 @@ import salt.exceptions
 # Import 3rd-party libs
 import msgpack
 import zmq
-
-import errno
-import threading
-import time
+import salt.ext.six as six
 
 import logging
 
@@ -43,7 +43,7 @@ class PayloadTestCase(TestCase):
                 'Found an ordered dictionary'
             )
         if isinstance(data, dict):
-            for value in data.values():
+            for value in six.itervalues(data):
                 self.assertNoOrderedDict(value)
         elif isinstance(data, (list, tuple)):
             for chunk in data:
