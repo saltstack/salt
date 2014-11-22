@@ -191,7 +191,8 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                         for progress in cmd_func(**kwargs):
                             out = 'progress'
                             self._progress_ret(progress, out)
-                            ret.update(progress)
+                            if 'return_count' not in progress:
+                                ret.update(progress)
                         self._progress_end(out)
                         self._print_returns_summary(ret)
                     elif self.config['fun'] == 'sys.doc':
