@@ -1070,12 +1070,12 @@ def _request_eip(interface):
     '''
     params = {'Action': 'AllocateAddress'}
     params['Domain'] = interface.setdefault('domain', 'vpc')
-    eip = aws.query(params,
-                    return_root=True,
-                    location=get_location(),
-                    provider=get_provider(),
-                    opts=__opts__,
-                    sigver='4')
+    eips = aws.query(params,
+                     return_root=True,
+                     location=get_location(),
+                     provider=get_provider(),
+                     opts=__opts__,
+                     sigver='4')
     for eip in eips:
         if 'allocationId' in eip:
             return eip['allocationId']
@@ -1749,7 +1749,7 @@ def query_instance(vm_=None, call=None):
                                      provider=provider,
                                      opts=__opts__,
                                      return_url=True,
-                                     sigver='4')
+                                     sigver='4')  # pylint: disable W0632
         log.debug('The query returned: {0}'.format(data))
 
         if isinstance(data, dict) and 'error' in data:
@@ -3228,7 +3228,7 @@ def _toggle_delvol(name=None, instance_id=None, device=None, volume_id=None,
                                      location=get_location(),
                                      provider=get_provider(),
                                      opts=__opts__,
-                                     sigver='4')
+                                     sigver='4')  # pylint: disable W0632
 
     blockmap = data[0]['instancesSet']['item']['blockDeviceMapping']
 
