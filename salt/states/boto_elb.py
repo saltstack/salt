@@ -31,7 +31,7 @@ as a passed in dict, or as a string to pull from pillars or minion config:
     myprofile:
         keyid: GKTADJGHEIQSXMKKRBJ08H
         key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-            region: us-east-1
+        region: us-east-1
 
 .. code-block:: yaml
 
@@ -39,6 +39,10 @@ as a passed in dict, or as a string to pull from pillars or minion config:
         boto_elb.present:
             - name: myelb
             - region: us-east-1
+            - availability_zones:
+                - us-east-1a
+                - us-east-1c
+                - us-east-1d
             - keyid: GKTADJGHEIQSXMKKRBJ08H
             - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
             - listeners:
