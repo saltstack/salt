@@ -10,13 +10,13 @@ import logging
 import multiprocessing
 
 import threading
-import Queue
 
 # Import salt libs
 import salt.utils
 
 # Import 3rd-party libs
 import salt.ext.six as six
+from salt.ext.six.moves import queue, range  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -150,12 +150,12 @@ class ThreadPool(object):
         self.num_threads = num_threads
 
         # create a task queue of queue_size
-        self._job_queue = Queue.Queue(queue_size)
+        self._job_queue = queue.Queue(queue_size)
 
         self._workers = []
 
         # create worker threads
-        for idx in xrange(num_threads):
+        for _ in range(num_threads):
             thread = threading.Thread(target=self._thread_target)
             thread.daemon = True
             thread.start()
@@ -172,7 +172,7 @@ class ThreadPool(object):
         try:
             self._job_queue.put((func, args, kwargs), False)
             return True
-        except Queue.Full:
+        except queue.Full:
             return False
 
     def _thread_target(self):
@@ -180,7 +180,7 @@ class ThreadPool(object):
             # 1s timeout so that if the parent dies this thread will die after 1s
             try:
                 func, args, kwargs = self._job_queue.get(timeout=1)
-            except Queue.Empty:
+            except queue.Empty:
                 continue
             try:
                 func(*args, **kwargs)
@@ -303,13 +303,13 @@ class ProcessManager(object):
             else:
                 return
 
-        for pid, p_map in self._process_map.items():
+        for p_map in six.itervalues(self._process_map):
             p_map['Process'].terminate()
 
         end_time = time.time() + self.wait_for_kill  # when to die
 
         while self._process_map and time.time() < end_time:
-            for pid, p_map in self._process_map.items():
+            for pid, p_map in six.iteritems(self._process_map):
                 p_map['Process'].join(0)
 
                 # This is a race condition if a signal was passed to all children
