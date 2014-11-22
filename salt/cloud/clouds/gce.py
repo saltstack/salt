@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=C0302
 '''
 Copyright 2013 Google Inc. All Rights Reserved.
 
@@ -58,9 +57,7 @@ Setting up Service Account Authentication:
 :depends: libcloud >= 0.14.1
 :depends: pycrypto >= 2.1
 '''
-# custom UA
-_UA_PRODUCT = 'salt-cloud'
-_UA_VERSION = '0.2.0'
+# pylint: disable=invalid-name,function-redefined
 
 # Import python libs
 from __future__ import absolute_import
@@ -72,7 +69,10 @@ import pprint
 import logging
 from ast import literal_eval
 
+# Import 3rd-party libs
+import salt.ext.six as six
 # The import section is mostly libcloud boilerplate
+# pylint: disable=import-error
 try:
     from libcloud.compute.types import Provider
     from libcloud.compute.providers import get_driver
@@ -85,6 +85,7 @@ try:
     HAS_LIBCLOUD = True
 except ImportError:
     HAS_LIBCLOUD = False
+# pylint: enable=import-error
 
 # Import salt libs
 from salt.utils import namespaced_function
@@ -92,16 +93,18 @@ from salt.utils import namespaced_function
 # Import saltcloud libs
 import salt.utils.cloud
 import salt.config as config
-from salt.cloud.libcloudfuncs import *  # pylint: disable=W0401,W0614
+from salt.cloud.libcloudfuncs import *  # pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
 from salt.exceptions import (
     SaltCloudException,
     SaltCloudSystemExit,
 )
 
-
-# pylint: disable=C0103,E0602,E0102
 # Get logging started
 log = logging.getLogger(__name__)
+
+# custom UA
+_UA_PRODUCT = 'salt-cloud'
+_UA_VERSION = '0.2.0'
 
 # Redirect GCE functions to this module namespace
 avail_locations = namespaced_function(avail_locations, globals())
@@ -125,7 +128,7 @@ def __virtual__():
     if get_configured_provider() is False:
         return False
 
-    for provider, details in __opts__['providers'].iteritems():
+    for provider, details in six.iteritems(__opts__['providers']):
         if 'provider' not in details or details['provider'] != 'gce':
             continue
 
@@ -399,7 +402,7 @@ def __get_metadata(vm_):
     else:
         metadata['salt-cloud-profile'] = vm_['profile']
         items = []
-        for k, v in metadata.items():
+        for k, v in six.iteritems(metadata):
             items.append({'key': k, 'value': v})
         metadata = {'items': items}
     return metadata
@@ -1785,7 +1788,7 @@ def destroy(vm_name, call=None):
         )
 
     if __opts__.get('update_cachedir', False) is True:
-        salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
+        salt.utils.cloud.delete_minion_cachedir(vm_name, __active_provider_name__.split(':')[0], __opts__)
 
     return inst_deleted
 
