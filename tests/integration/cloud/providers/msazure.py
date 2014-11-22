@@ -20,11 +20,14 @@ import integration
 from salt.config import cloud_providers_config
 
 # Import Third-Party Libs
+# pylint: disable=import-error
+from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 try:
-    import azure  # pylint: disable=W0611
+    import azure  # pylint: disable=unused-import
     HAS_AZURE = True
 except ImportError:
     HAS_AZURE = False
+# pylint: enable=import-error
 
 
 def __random_name(size=6):
