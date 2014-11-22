@@ -166,7 +166,7 @@ def create(name, availability_zones, listeners=None, subnets=None,
             return False
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        msg = 'Failed to create ELB {0}'.format(name)
+        msg = 'Failed to create ELB {0}: {1}'.format(name, e.message)
         log.error(msg)
         return False
 
@@ -231,7 +231,7 @@ def create_listeners(name, listeners=None, region=None, key=None, keyid=None,
         return True
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        msg = 'Failed to create ELB listeners on {0}'.format(name)
+        msg = 'Failed to create ELB listeners on {0}: {1}'.format(name, e.message)
         log.error(msg)
         return False
 
@@ -257,7 +257,7 @@ def delete_listeners(name, ports, region=None, key=None, keyid=None,
         return True
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        msg = 'Failed to delete ELB listeners on {0}'.format(name)
+        msg = 'Failed to delete ELB listeners on {0}: {1}'.format(name, e.message)
         log.error(msg)
         return False
 
@@ -283,7 +283,7 @@ def enable_availability_zones(name, availability_zones, region=None, key=None,
         return True
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        msg = 'Failed to enable availability_zones on ELB {0}'.format(name)
+        msg = 'Failed to enable availability_zones on ELB {0}: {1}'.format(name, e.message)
         log.error(msg)
         return False
 
@@ -309,7 +309,7 @@ def disable_availability_zones(name, availability_zones, region=None, key=None,
         return True
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        msg = 'Failed to disable availability_zones on ELB {0}'.format(name)
+        msg = 'Failed to disable availability_zones on ELB {0}: {1}'.format(name, e.message)
         log.error(msg)
         return False
 
@@ -335,7 +335,7 @@ def attach_subnets(name, subnets, region=None, key=None, keyid=None,
         return True
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        msg = 'Failed to attach ELB {0} on subnets.'.format(name)
+        msg = 'Failed to attach ELB {0} on subnets: {1}'.format(name, e.message)
         log.error(msg)
         return False
 
@@ -361,7 +361,7 @@ def detach_subnets(name, subnets, region=None, key=None, keyid=None,
         return True
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        msg = 'Failed to detach ELB {0} from subnets.'.format(name)
+        msg = 'Failed to detach ELB {0} from subnets: {1}'.format(name, e.message)
         log.error(msg)
         return False
 
@@ -392,7 +392,7 @@ def get_attributes(name, region=None, key=None, keyid=None, profile=None):
         return ret
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        log.error('ELB {0} does not exist.'.format(name))
+        log.error('ELB {0} does not exist: {1}'.format(name, e.message))
         return {}
 
 
@@ -468,7 +468,7 @@ def get_health_check(name, region=None, key=None, keyid=None, profile=None):
         return ret
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        log.error('ELB {0} does not exist.'.format(name))
+        log.error('ELB {0} does not exist: {1}'.format(name, e.message))
         return {}
 
 
@@ -490,7 +490,7 @@ def set_health_check(name, health_check, region=None, key=None, keyid=None,
         log.info('Configured health check on ELB {0}'.format(name))
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        log.info('Failed to configure health check on ELB {0}'.format(name))
+        log.info('Failed to configure health check on ELB {0}: {1}'.format(name, e.message))
         return False
     return True
 
