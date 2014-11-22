@@ -18,9 +18,9 @@ requisite to a pkg.installed state for the package which provides pip
         - require:
           - pkg: python-pip
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import logging
 
 # Import salt libs
@@ -29,6 +29,8 @@ from salt.version import SaltStackVersion as _SaltStackVersion
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 # Import 3rd-party libs
+import salt.ext.six as six
+# pylint: disable=import-error
 try:
     import pip
     HAS_PIP = True
@@ -45,6 +47,7 @@ if HAS_PIP is True:
         del pip
         if 'pip' in sys.modules:
             del sys.modules['pip']
+# pylint: enable=import-error
 
 logger = logging.getLogger(__name__)
 
@@ -602,7 +605,7 @@ def installed(name,
                 ret['changes']['{0}==???'.format(name)] = 'Installed'
                 return ret
 
-            version = next(pkg_list.itervalues())
+            version = next(six.itervalues(pkg_list))
             pkg_name = next(iter(pkg_list))
             ret['changes']['{0}=={1}'.format(pkg_name, version)] = 'Installed'
             ret['comment'] = 'Package was successfully installed'
@@ -740,8 +743,8 @@ def uptodate(name,
     try:
         packages = __salt__['pip.list_upgrades'](bin_env=bin_env, user=user,
                                                  runas=runas, cwd=cwd)
-    except Exception as e:
-        ret['comment'] = str(e)
+    except Exception as exc:
+        ret['comment'] = str(exc)
         return ret
 
     if not packages:
