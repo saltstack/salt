@@ -214,7 +214,7 @@ class SupervisordModuleTest(integration.ModuleCase):
         ret = self.run_function(
             'supervisord.status', [], conf_file=self.supervisor_conf,
             bin_env=self.venv_dir)
-        self.assertEqual(ret.keys(), ['sleep_service', 'sleep_service2'])
+        self.assertEqual(list(ret.keys()), ['sleep_service', 'sleep_service2'])
 
     def test_status_one(self):
         '''
