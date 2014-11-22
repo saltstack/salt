@@ -16,8 +16,9 @@ from salt.modules import boto_vpc
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.modules.boto_vpc import _maybe_set_name_tag, _maybe_set_tags
 
-# import Third Party Libs
-# pylint: disable=import-error,no-name-in-module
+# Import 3rd-party libs
+import salt.ext.six as six
+# pylint: disable=import-error
 try:
     import boto
     from boto.exception import BotoServerError
@@ -439,7 +440,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase):
 
         describe_vpc = boto_vpc.describe(vpc_id=vpc.id, **conn_parameters)
 
-        vpc_properties = dict(cidr_block=unicode(cidr_block),
+        vpc_properties = dict(cidr_block=six.text_type(cidr_block),
                               is_default=None,
                               state=u'available',
                               tags={'Name': 'test', 'test': 'testvalue'},
