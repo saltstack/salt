@@ -18,6 +18,9 @@ from salt.modules import ps
 HAS_PSUTIL = ps.__virtual__()
 HAS_PSUTIL_VERSION = False
 
+# Import 3rd-party libs
+# pylint: disable=import-error,unused-import
+from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 if HAS_PSUTIL:
     import psutil
 
@@ -62,6 +65,7 @@ try:
     HAS_UTMP = True
 except ImportError:
     HAS_UTMP = False
+# pylint: disable=import-error,unused-import
 
 
 def _get_proc_name(proc):
@@ -178,5 +182,4 @@ class PsTestCase(TestCase):
 
 if __name__ == '__main__':
     from integration import run_tests
-
     run_tests(PsTestCase, needs_daemon=False)
