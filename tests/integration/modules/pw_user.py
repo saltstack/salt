@@ -19,6 +19,9 @@ ensure_in_syspath('../../')
 # Import salt libs
 import integration
 
+# Import 3rd-party libs
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+
 
 class PwUserModuleTest(integration.ModuleCase):
 
