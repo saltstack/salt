@@ -101,13 +101,15 @@ as a passed in dict, or as a string to pull from pillars or minion config:
         # If instances exist, we must force the deletion of the asg.
         - force: True
 '''
-from __future__ import absolute_import
 
 # Import Python libs
+from __future__ import absolute_import
 import hashlib
 import logging
+
+# Import 3rd-party libs
 import salt.ext.six as six
-from salt.ext.six.moves import zip
+from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -268,11 +270,11 @@ def present(
                 )
                 launch_config[sg_index]['security_groups'] = _group_ids
 
-        for d in launch_config:
-            args.update(d)
+        for cfg in launch_config:
+            args.update(cfg)
         if not __opts__['test']:
             lc_ret = __salt__["state.single"]('boto_lc.present', **args)
-            lc_ret = next(lc_ret.itervalues())
+            lc_ret = next(six.itervalues(lc_ret))
             if lc_ret["result"] is True and lc_ret["changes"]:
                 if "launch_config" not in ret["changes"]:
                     ret["changes"]["launch_config"] = {}
