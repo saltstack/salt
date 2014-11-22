@@ -2469,6 +2469,8 @@ def sdecode(string):
     need to be safely decoded, this function will attempt to decode the string
     until if has a working string that does not stack trace
     '''
+    if not isinstance(string, str):
+        return string
     encodings = get_encodings()
     for encoding in encodings:
         try:
