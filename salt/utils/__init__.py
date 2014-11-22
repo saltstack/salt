@@ -107,6 +107,7 @@ from salt.defaults import DEFAULT_TARGET_DELIM
 import salt.log
 import salt.payload
 import salt.version
+import salt.defaults.exitcodes
 from salt.utils.decorators import memoize as real_memoize
 from salt.exceptions import (
     CommandExecutionError, SaltClientError,
@@ -284,7 +285,7 @@ def daemonize(redirect_out=True):
         log.error(
             'fork #1 failed: {0} ({1})'.format(exc.errno, exc.strerror)
         )
-        sys.exit(salt.exitcodes.EX_GENERIC)
+        sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
     # decouple from parent environment
     os.chdir('/')
@@ -303,7 +304,7 @@ def daemonize(redirect_out=True):
                 exc.errno, exc.strerror
             )
         )
-        sys.exit(salt.exitcodes.EX_GENERIC)
+        sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
     # A normal daemonization redirects the process output to /dev/null.
     # Unfortunately when a python multiprocess is called the output is

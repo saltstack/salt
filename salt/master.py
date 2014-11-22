@@ -26,7 +26,6 @@ from M2Crypto import RSA
 import salt.crypt
 import salt.utils
 import salt.client
-import salt.exitcodes
 import salt.payload
 import salt.pillar
 import salt.state
@@ -38,6 +37,7 @@ import salt.search
 import salt.key
 import salt.fileserver
 import salt.daemons.masterapi
+import salt.defaults.exitcodes
 import salt.utils.atomicfile
 import salt.utils.event
 import salt.utils.verify
@@ -373,7 +373,7 @@ class Master(SMaster):
             for error in errors:
                 log.error(error)
             log.error('Master failed pre flight checks, exiting\n')
-            sys.exit(salt.exitcodes.EX_GENERIC)
+            sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
     def start(self):
         '''

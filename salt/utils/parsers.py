@@ -26,7 +26,7 @@ import salt.ext.six as six
 
 # Import salt libs
 import salt.config as config
-import salt.exitcodes
+import salt.defaults.exitcodes
 import salt.loader as loader
 import salt.log.setup as log
 import salt.syspaths as syspaths
@@ -1597,7 +1597,7 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                 # passed in. Regardless, we're in an unknown state here.
                 sys.stdout.write('Invalid options passed. Please try -h for '
                                  'help.')  # Try to warn if we can.
-                sys.exit(salt.exitcodes.EX_GENERIC)
+                sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
         if self.options.doc:
             # Include the target
