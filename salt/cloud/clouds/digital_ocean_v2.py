@@ -18,9 +18,9 @@ cloud configuration at ``/etc/salt/cloud.providers`` or
 
 :depends: requests
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import copy
 import time
@@ -39,6 +39,9 @@ from salt.exceptions import (
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout
 )
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -83,7 +86,7 @@ def avail_locations(call=None):
     ret = {}
     for region in items['regions']:
         ret[region['name']] = {}
-        for item in region.keys():
+        for item in six.iterkeys(region):
             ret[region['name']][item] = str(region[item])
 
     return ret
@@ -108,7 +111,7 @@ def avail_images(call=None):
 
         for image in items['images']:
             ret[image['id']] = {}
-            for item in image.keys():
+            for item in six.iterkeys(image):
                 ret[image['id']][item] = str(image[item])
 
         page += 1
@@ -131,7 +134,7 @@ def avail_sizes(call=None):
     ret = {}
     for size in items['sizes']:
         ret[size['slug']] = {}
-        for item in size.keys():
+        for item in six.iterkeys(size):
             ret[size['slug']][item] = str(size[item])
 
     return ret
@@ -174,7 +177,7 @@ def list_nodes_full(call=None, forOutput=True):
     ret = {}
     for node in items['droplets']:
         ret[node['name']] = {}
-        for item in node.keys():
+        for item in six.iterkeys(node):
             value = node[item]
             if value is not None and forOutput:
                 value = str(value)
@@ -648,7 +651,7 @@ def list_keypairs(call=None):
     ret = {}
     for keypair in items['ssh_keys']:
         ret[keypair['name']] = {}
-        for item in keypair.keys():
+        for item in six.iterkeys(keypair):
             ret[keypair['name']][item] = str(keypair[item])
 
     return ret
