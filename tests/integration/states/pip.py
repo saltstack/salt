@@ -28,6 +28,9 @@ import integration
 import salt.utils
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
 
 @skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
 class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
@@ -96,7 +99,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
             # We cannot use assertInSaltComment here because we need to skip
             # some of the state return parts
-            for key in ret.keys():
+            for key in six.iterkeys(ret):
                 self.assertTrue(ret[key]['result'])
                 if ret[key]['comment'] == 'Created new virtualenv':
                     continue
