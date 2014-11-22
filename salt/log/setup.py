@@ -13,9 +13,8 @@
     logger instance uses our ``salt.log.setup.SaltLoggingClass``.
 '''
 
-from __future__ import absolute_import
-
 # Import python libs
+from __future__ import absolute_import
 import os
 import re
 import sys
@@ -24,8 +23,9 @@ import socket
 import logging
 import logging.handlers
 import traceback
-from salt.ext.six import PY3
-from salt.ext.six import string_types, text_type, with_metaclass
+
+# Import 3rd-party libs
+import salt.ext.six as six
 from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=import-error,no-name-in-module
 
 # Let's define these custom logging levels before importing the salt.log.mixins
@@ -52,7 +52,7 @@ LOG_LEVELS = {
 
 # Make a list of log level names sorted by log level
 SORTED_LEVEL_NAMES = [
-    l[0] for l in sorted(LOG_LEVELS.items(), key=lambda x: x[1])
+    l[0] for l in six.iteritems(sorted(LOG_LEVELS), key=lambda x: x[1])
 ]
 
 # Store an instance of the current logging logger class
@@ -96,7 +96,7 @@ LOGGING_TEMP_HANDLER = StreamHandler(sys.stderr)
 LOGGING_STORE_HANDLER = TemporaryLoggingHandler()
 
 
-class SaltLoggingClass(with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS, NewStyleClassMixIn)):  # pylint: disable=W0232
+class SaltLoggingClass(six.with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS, NewStyleClassMixIn)):
     def __new__(cls, *args):  # pylint: disable=W0613, E1002
         '''
         We override `__new__` in our logging logger class in order to provide
@@ -170,7 +170,7 @@ class SaltLoggingClass(with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS, Ne
                 'Please only use one of \'exc_info\' and \'exc_info_on_loglevel\', not both'
             )
         if exc_info_on_loglevel is not None:
-            if isinstance(exc_info_on_loglevel, string_types):
+            if isinstance(exc_info_on_loglevel, six.string_types):
                 exc_info_on_loglevel = LOG_LEVELS.get(exc_info_on_loglevel, logging.ERROR)
             elif not isinstance(exc_info_on_loglevel, int):
                 raise RuntimeError(
@@ -197,8 +197,8 @@ class SaltLoggingClass(with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS, Ne
             extra = None
 
         # Let's try to make every logging message unicode
-        if isinstance(msg, string_types) and not isinstance(msg, text_type):
-            if PY3:
+        if isinstance(msg, six.string_types) and not isinstance(msg, six.text_type):
+            if six.PY3:
                 try:
                     logrecord = LOGGING_LOGGER_CLASS.makeRecord(
                         self, name, level, fn, lno,
@@ -225,7 +225,7 @@ class SaltLoggingClass(with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS, Ne
                         args, exc_info, func, extra
                     )
         else:
-            if PY3:
+            if six.PY3:
                 logrecord = LOGGING_LOGGER_CLASS.makeRecord(
                     self, name, level, fn, lno, msg, args, exc_info, func, extra, sinfo
                 )
@@ -562,7 +562,7 @@ def setup_extended_logging(opts):
     # log records with them
     additional_handlers = []
 
-    for name, get_handlers_func in providers.items():
+    for name, get_handlers_func in six.iteritems(providers):
         logging.getLogger(__name__).info(
             'Processing `log_handlers.{0}`'.format(name)
         )
