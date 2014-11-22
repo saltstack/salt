@@ -48,7 +48,7 @@ class LoaderGlobalsTest(integration.ModuleCase):
 
         # get the names of the globals you should have
         func_name = inspect.stack()[1][3]
-        names = yaml.load(next(six.itervalues(getattr(self, func_name).__doc__)))
+        names = next(six.itervalues(yaml.load(getattr(self, func_name).__doc__)))
 
         # Now, test each module!
         for item in global_vars:
