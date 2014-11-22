@@ -15,9 +15,7 @@ def __virtual__():
 def output(ret, bar):
     if 'return_count' in ret:
         bar.update(ret['return_count'])
-        return ''
-    else:
-        return ''
+    return ''
 
 
 def progress_iter(progress):
