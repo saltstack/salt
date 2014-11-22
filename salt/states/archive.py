@@ -4,12 +4,16 @@ Extract an archive
 
 .. versionadded:: 2014.1.0
 '''
-from __future__ import absolute_import
 
-import logging
+# Import Python libs
+from __future__ import absolute_import
 import os
+import logging
 import tarfile
 from contextlib import closing
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -161,7 +165,7 @@ def extracted(name,
         log.debug('file.managed: {0}'.format(file_result))
         # get value of first key
         try:
-            file_result = file_result[next(file_result.iterkeys())]
+            file_result = file_result[next(six.iterkeys(file_result))]
         except AttributeError:
             pass
 
