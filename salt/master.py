@@ -4,9 +4,8 @@ This module contains all of the routines needed to set up a master server, this
 involves preparing the three listeners and the workers needed by the master.
 '''
 
-from __future__ import absolute_import
-
 # Import python libs
+from __future__ import absolute_import
 import os
 import re
 import sys
@@ -23,7 +22,7 @@ import multiprocessing
 import zmq
 from M2Crypto import RSA
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
-import salt.exit.six as six
+import salt.ext.six as six
 from salt.ext.six.moves import range
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
