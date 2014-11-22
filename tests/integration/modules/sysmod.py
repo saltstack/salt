@@ -11,6 +11,9 @@ ensure_in_syspath('../../')
 # Import salt libs
 import integration
 
+# Import 3rd-party libs
+import salt.ext.six import six
+
 
 class SysModuleTest(integration.ModuleCase):
     '''
@@ -71,7 +74,7 @@ class SysModuleTest(integration.ModuleCase):
                 continue
             if fun in allow_failure:
                 continue
-            if not isinstance(docs[fun], basestring):
+            if not isinstance(docs[fun], six.string_types):
                 nodoc.add(fun)
             elif not re.search(r'([E|e]xample(?:s)?)+(?:.*)::?', docs[fun]):
                 noexample.add(fun)
