@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath
@@ -41,7 +41,7 @@ class PublishModuleTest(integration.ModuleCase,
         )
         for name in check_true:
             if name not in ret:
-                print name
+                print(name)
             self.assertTrue(name in ret)
 
         self.assertEqual(ret['cheese'], 'spam')
@@ -82,7 +82,7 @@ class PublishModuleTest(integration.ModuleCase,
         )
         for name in check_true:
             if name not in ret:
-                print name
+                print(name)
             self.assertTrue(name in ret)
 
         self.assertEqual(ret['cheese'], 'spam')
