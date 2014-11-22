@@ -17,6 +17,7 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+import salt.utils
 
 
 class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
@@ -158,8 +159,10 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             os.mkdir(name)
         try:
             fname = os.path.join(name, 'stoptheprocess')
-            with file(fname, 'a'):
-                pass
+
+            with salt.utils.fopen(fname, 'a') as fh_:
+                fh_.write()
+
             ret = self.run_state(
                 'git.present',
                 name=name,
