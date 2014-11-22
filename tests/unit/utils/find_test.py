@@ -18,6 +18,9 @@ import integration
 import salt.utils
 import salt.utils.find
 
+# Import 3rd-party libs
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+
 
 class TestFind(TestCase):
 
