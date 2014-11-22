@@ -39,10 +39,11 @@ import salt.runner
 
 # Import 3rd party libs
 import jinja2
+from salt.ext.six.moves import builtins  # pylint: disable=import-error
 
 
 # pylint: disable=W0611
-# These are imported to be available in the spawmed shell
+# These are imported to be available in the spawned shell
 
 
 import yaml
@@ -114,12 +115,7 @@ def main():
         Use Salt's outputters to print values to the shell
         '''
         if value is not None:
-            try:
-                import __builtin__
-                __builtin__._ = value
-            except ImportError:
-                __builtins__._ = value
-
+            builtins._ = value
             salt.output.display_output(value, '', salt_vars['__opts__'])
 
     sys.displayhook = salt_outputter
