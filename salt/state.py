@@ -1878,7 +1878,7 @@ class State(object):
                 # a nice error message
                 comment_dict = {}
                 # look at all requisite types for a failure
-                for req_type, req_lows in reqs.iteritems():
+                for req_type, req_lows in six.iteritems(reqs):
                     for req_low in req_lows:
                         req_tag = _gen_tag(req_low)
                         req_ret = self.pre.get(req_tag, running.get(req_tag))
