@@ -33,9 +33,9 @@ This is necessary and can not be replaced by a require clause in the pkg.
       pkg.installed
 '''
 
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import logging
 import os
 import re
@@ -45,13 +45,15 @@ import salt.utils
 from salt.output import nested
 from salt.utils import namespaced_function as _namespaced_function
 from salt.utils.odict import OrderedDict as _OrderedDict
-from salt.ext.six import string_types
-import salt.ext.six as six  # pylint: disable=W0611
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
 from salt.modules.pkg_resource import _repack_pkgs
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
+# pylint: disable=invalid-name
 _repack_pkgs = _namespaced_function(_repack_pkgs, globals())
 
 if salt.utils.is_windows():
@@ -67,13 +69,14 @@ if salt.utils.is_windows():
         _namespaced_function(_reverse_cmp_pkg_versions, globals())
     # The following imports are used by the namespaced win_pkg funcs
     # and need to be included in their globals.
-    # pylint: disable=W0611
+    # pylint: disable=import-error,unused-import
     try:
         import msgpack
     except ImportError:
         import msgpack_pure as msgpack
-    from distutils.version import LooseVersion  # pylint: disable=E0611,F0401
-    # pylint: enable=W0611
+    from distutils.version import LooseVersion  # pylint: disable=no-name-in-module
+    # pylint: enable=import-error,unused-import
+# pylint: enable=invalid-name
 
 log = logging.getLogger(__name__)
 
@@ -150,7 +153,7 @@ def _find_remove_targets(name=None,
     # Check current versions against specified versions
     targets = []
     problems = []
-    for pkgname, pkgver in to_remove.items():
+    for pkgname, pkgver in six.iteritems(to_remove):
         cver = cur_pkgs.get(pkgname, [])
         # Package not installed, no need to remove
         if not cver:
@@ -312,7 +315,7 @@ def _find_install_targets(name=None,
                     '{0}'.format(', '.join(sorted(problems['no_suggest'])))
                 )
             if problems.get('suggest'):
-                for pkgname, suggestions in problems['suggest'].items():
+                for pkgname, suggestions in six.iteritems(problems['suggest']):
                     comments.append(
                         'Package {0!r} not found (possible matches: {1})'
                         .format(pkgname, ', '.join(suggestions))
@@ -329,7 +332,7 @@ def _find_install_targets(name=None,
         targets = {}
         to_reinstall = {}
         problems = []
-        for pkgname, pkgver in desired.items():
+        for pkgname, pkgver in six.iteritems(desired):
             cver = cur_pkgs.get(pkgname, [])
             # Package not yet installed, so add to targets
             if not cver:
@@ -400,7 +403,7 @@ def _verify_install(desired, new_pkgs):
     '''
     ok = []
     failed = []
-    for pkgname, pkgver in desired.items():
+    for pkgname, pkgver in six.iteritems(desired):
         cver = new_pkgs.get(pkgname)
         if not cver:
             failed.append(pkgname)
@@ -815,7 +818,7 @@ def installed(
                 'result': False,
                 'comment': 'pkg.verify not implemented'}
 
-    if not isinstance(version, string_types) and version is not None:
+    if not isinstance(version, six.string_types) and version is not None:
         version = str(version)
 
     if version is not None and version == 'latest':
@@ -893,8 +896,8 @@ def installed(
 
     # Remove any targets not returned by _find_install_targets
     if pkgs:
-        pkgs = [dict([(x, y)]) for x, y in targets.items()]
-        pkgs.extend([dict([(x, y)]) for x, y in to_reinstall.items()])
+        pkgs = [dict([(x, y)]) for x, y in six.iteritems(targets)]
+        pkgs.extend([dict([(x, y)]) for x, y in six.iteritems(to_reinstall)])
     elif sources:
         oldsources = sources
         sources = [x for x in oldsources if next(iter(list(x.keys()))) in targets]
@@ -960,7 +963,7 @@ def installed(
 
         if isinstance(pkg_ret, dict):
             changes['installed'].update(pkg_ret)
-        elif isinstance(pkg_ret, string_types):
+        elif isinstance(pkg_ret, six.string_types):
             comment.append(pkg_ret)
 
         if 'pkg.hold' in __salt__:
@@ -1254,9 +1257,9 @@ def latest(
         os.remove(rtag)
 
     # Repack the cur/avail data if only a single package is being checked
-    if isinstance(cur, string_types):
+    if isinstance(cur, six.string_types):
         cur = {desired_pkgs[0]: cur}
-    if isinstance(avail, string_types):
+    if isinstance(avail, six.string_types):
         avail = {desired_pkgs[0]: avail}
 
     targets = {}
@@ -1579,8 +1582,8 @@ def uptodate(name, refresh=False):
     if isinstance(refresh, bool):
         try:
             packages = __salt__['pkg.list_upgrades'](refresh=refresh)
-        except Exception as e:
-            ret['comment'] = str(e)
+        except Exception as exc:
+            ret['comment'] = str(exc)
             return ret
     else:
         ret['comment'] = 'refresh must be a boolean.'
