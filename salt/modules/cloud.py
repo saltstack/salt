@@ -116,7 +116,7 @@ def full_query(query_type='list_nodes_full'):
 
         salt '*' cloud.full_query
     '''
-    return query(query_type='list_nodes_full')
+    return query(query_type=query_type)
 
 
 def select_query(query_type='list_nodes_select'):
@@ -129,7 +129,7 @@ def select_query(query_type='list_nodes_select'):
 
         salt '*' cloud.select_query
     '''
-    return query(query_type='list_nodes_select')
+    return query(query_type=query_type)
 
 
 def profile_(profile, names, vm_overrides=None, **kwargs):
