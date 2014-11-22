@@ -7,9 +7,9 @@ Install Salt on an LXC Container
 
 Please read :ref:`core config documentation <config_lxc>`.
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import json
 import os
 import logging
@@ -29,6 +29,9 @@ import salt.client
 import salt.runner
 import salt.syspaths
 
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -271,8 +274,8 @@ def list_nodes(conn=None, call=None):
         return
     lxclist = _salt('lxc.list', extra=True)
     nodes = {}
-    for state, lxcs in lxclist.items():
-        for lxcc, linfos in lxcs.items():
+    for state, lxcs in six.iteritems(lxclist):
+        for lxcc, linfos in six.iteritems(lxcs):
             info = {
                 'id': lxcc,
                 'image': None,
