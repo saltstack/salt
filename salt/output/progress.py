@@ -19,7 +19,7 @@ def output(ret, bar):
 
 
 def progress_iter(progress):
-    widgets = [progressbar.Percentage(), ' ', progressbar.Bar(), ' ', progressbar.Timer(), ' Returns: ', progressbar.Counter()]
+    widgets = [progressbar.Percentage(), ' ', progressbar.Bar(), ' ', progressbar.Timer(), ' Returns: [', progressbar.Counter(), '/{0}]'.format(progress['minion_count'])]
     bar = progressbar.ProgressBar(widgets=widgets, maxval=progress['minion_count'])
     bar.start()
     return bar
