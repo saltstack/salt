@@ -1233,7 +1233,7 @@ class Minion(MinionBase):
         else:
             load = {'cmd': ret_cmd,
                     'id': self.opts['id']}
-            for key, value in six.iteritems(list(ret)):
+            for key, value in six.iteritems(ret):
                 load[key] = value
 
         if 'out' in ret:
