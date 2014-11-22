@@ -145,7 +145,7 @@ def echo_parseable_environment(options):
             )
 
         headers = {}
-        url = 'https://api.github.com/repos/saltstack/salt/pulls/{0}'.format(values)
+        url = 'https://api.github.com/repos/saltstack/salt/pulls/{0}'.format(options.pull_request)
 
         github_access_token_path = os.path.join(
             os.environ.get('JENKINS_HOME', os.path.expanduser('~')),
@@ -168,7 +168,7 @@ def echo_parseable_environment(options):
         output.extend([
             'SALT_PR_GIT_URL={0}'.format(pr_details['head']['repo']['clone_url']),
             'SALT_PR_GIT_BRANCH={0}'.format(pr_details['head']['ref']),
-            'SALT_PR_GIT_COMMIT={0}'.format(pr_details['head']['sha'])
+            'SALT_PR_GIT_COMMIT={0}'.format(pr_details['head']['sha']),
             'SALT_PR_GIT_BASE_BRANCH={0}'.format(pr_details['base']['ref']),
         ])
 
