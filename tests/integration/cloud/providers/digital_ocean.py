@@ -17,6 +17,9 @@ ensure_in_syspath('../../../')
 import integration
 from salt.config import cloud_providers_config
 
+# Import 3rd-party libs
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+
 
 def __random_name(size=6):
     '''
