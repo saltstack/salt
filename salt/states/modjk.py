@@ -2,10 +2,13 @@
 '''
 State to control Apache modjk
 '''
-from __future__ import absolute_import
 
 # Python Libs
+from __future__ import absolute_import
 import logging
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -51,7 +54,7 @@ def _bulk_state(saltfunc, lbn, workers, profile):
         return ret
 
     errors = []
-    for worker, ok in cmdret.items():
+    for worker, ok in six.iteritems(cmdret):
         if not ok:
             errors.append(worker)
 
