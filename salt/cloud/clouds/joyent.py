@@ -44,15 +44,12 @@ included:
 
       api_host_suffix: .api.myhostname.com
 '''
-from __future__ import absolute_import
-# pylint: disable=E0102
-
-# The import section is mostly libcloud boilerplate
+# pylint: disable=invalid-name,function-redefined
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import copy
-import salt.ext.six.moves.http_client  # pylint: disable=E0611
 import json
 import logging
 import base64
@@ -61,7 +58,7 @@ import inspect
 import yaml
 
 # Import generic libcloud functions
-from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
+from salt.cloud.libcloudfuncs import *  # pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
 
 # Import salt.cloud libs
 import salt.utils.http
@@ -74,6 +71,10 @@ from salt.exceptions import (
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout
 )
+
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import http_client  # pylint: disable=import-error,no-name-in-module
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -98,10 +99,10 @@ DEFAULT_LOCATION = 'us-east-1'
 POLL_ALL_LOCATIONS = True
 
 VALID_RESPONSE_CODES = [
-    salt.ext.six.moves.http_client.OK,
-    salt.ext.six.moves.http_client.ACCEPTED,
-    salt.ext.six.moves.http_client.CREATED,
-    salt.ext.six.moves.http_client.NO_CONTENT
+    http_client.OK,
+    http_client.ACCEPTED,
+    http_client.CREATED,
+    http_client.NO_CONTENT
 ]
 
 
@@ -196,7 +197,7 @@ def create(vm_):
         )
     )
 
-    ## added . for fqdn hostnames
+    # added . for fqdn hostnames
     salt.utils.cloud.check_name(vm_['name'], 'a-zA-Z0-9-.')
     kwargs = {
         'name': vm_['name'],
@@ -755,7 +756,7 @@ def reformat_node(item=None, full=False):
 
     # remove all the extra key value pairs to provide a brief listing
     if not full:
-        for key in item.keys():  # iterate over a copy of the keys
+        for key in six.iterkeys(item):  # iterate over a copy of the keys
             if key not in desired_keys:
                 del item[key]
 
