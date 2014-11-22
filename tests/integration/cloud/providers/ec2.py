@@ -18,6 +18,9 @@ from salttesting.helpers import ensure_in_syspath, expensiveTest
 
 ensure_in_syspath('../../../')
 
+# Import Third-Party Libs
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+
 
 def __random_name(size=6):
     '''
