@@ -520,11 +520,6 @@ class RunnerEvent(MasterEvent):
                           'outputter': outputter}
         self.fire_event(progress_event, tagify([self.jid, 'progress'], 'runner'))
 
-    def __del__(self):
-        # The runners should be cleaning up their own sockets. This is a no-op if run here
-        # and causes AttributeErrors.
-        pass
-
 
 class MinionEvent(SaltEvent):
     '''
