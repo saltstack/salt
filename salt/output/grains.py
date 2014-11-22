@@ -20,10 +20,14 @@ Example output::
           World
       bar: baz
 '''
+
+# Import python libs
 from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils
+
+# Import 3rd-party libs
 import salt.ext.six as six
 
 
@@ -37,7 +41,7 @@ def output(grains):
         encoding = 'utf-8'  # let's hope for the best
 
     ret = u''
-    for id_, minion in grains.items():
+    for id_, minion in six.iteritems(grains):
         ret += u'{0}{1}{2}:\n'.format(colors['GREEN'], id_.decode(encoding), colors['ENDC'])
         for key in sorted(minion):
             ret += u'  {0}{1}{2}:'.format(colors['CYAN'], key.decode(encoding), colors['ENDC'])
