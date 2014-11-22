@@ -83,10 +83,8 @@ the following:
     user:  user name
 '''
 
-from __future__ import absolute_import
-
 # Import python libs
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 import logging
 import os
 import re
@@ -599,7 +597,7 @@ class Finder(object):
         if 'test' in options:
             self.test = options['test']
             del options['test']
-        for key, value in options.items():
+        for key, value in six.iteritems(options):
             if key.startswith('_'):
                 # this is a passthrough object, continue
                 continue
