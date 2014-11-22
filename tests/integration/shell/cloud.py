@@ -9,7 +9,7 @@
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 # Import salt testing libs
 from salttesting.unit import skipIf
@@ -20,11 +20,14 @@ ensure_in_syspath('../')
 import integration
 
 # Import 3rd-party libs
+# pylint: disable=import-error
+from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 try:
-    import libcloud  # pylint: disable=W0611
+    import libcloud  # pylint: disable=unused-import
     HAS_LIBCLOUD = True
 except ImportError:
     HAS_LIBCLOUD = False
+# pylint: enable=import-error
 
 
 @skipIf(HAS_LIBCLOUD is False, 'salt-cloud requires >= libcloud 0.11.4')
@@ -86,7 +89,7 @@ class SaltCloudCliTest(integration.ShellCase,
                         output[1]
                     )
                 except AssertionError:
-                    print output
+                    print(output)
                     raise
             # Remove the first option from the list
             test_options.pop(0)
