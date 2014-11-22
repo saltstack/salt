@@ -1,5 +1,15 @@
 # -*- coding: utf-8 -*-
-import progressbar
+
+
+try:
+    import progressbar
+    HAS_PROGRESSBAR = True
+except ImportError:
+    HAS_PROGRESSBAR = False
+
+
+def __virtual__():
+    return True if HAS_PROGRESSBAR else False
 
 
 def output(ret, bar):
