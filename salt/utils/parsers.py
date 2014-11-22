@@ -699,7 +699,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
             log_format=log_file_fmt,
             date_format=log_file_datefmt
         )
-        for name, level in self.config['log_granular_levels'].items():
+        for name, level in six.iteritems(self.config['log_granular_levels']):
             log.set_logger_level(name, level)
 
     def __setup_extended_logging(self, *args):
@@ -753,7 +753,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
         log.setup_console_logger(
             self.config['log_level'], log_format=logfmt, date_format=datefmt
         )
-        for name, level in self.config['log_granular_levels'].items():
+        for name, level in six.iteritems(self.config['log_granular_levels']):
             log.set_logger_level(name, level)
 
 
@@ -889,10 +889,10 @@ class TargetOptionsMixIn(six.with_metaclass(MixInMeta, object)):
                 setattr(self, funcname, partial(process, option))
 
     def _mixin_after_parsed(self):
-        group_options_selected = filter(
-            lambda option: getattr(self.options, option.dest) is True,
-            self.target_options_group.option_list
-        )
+        group_options_selected = [
+            option for option in self.target_options_group.option_list if
+            getattr(self.options, option.dest) is True
+        ]
         if len(group_options_selected) > 1:
             self.error(
                 'The options {0} are mutually exclusive. Please only choose '
@@ -1056,6 +1056,11 @@ class OutputOptionsMixIn(six.with_metaclass(MixInMeta, object)):
             ),
             self.output_options_group.option_list
         )
+        group_options_selected = [
+                option for option in self.output_options_group.option_list if
+                getattr(self.options, option.dest) and
+                (option.dest.endswith('_out') or option.dest == 'output')
+        ]
         if len(group_options_selected) > 1:
             self.error(
                 'The options {0} are mutually exclusive. Please only choose '
@@ -1261,11 +1266,11 @@ class CloudQueriesMixIn(six.with_metaclass(MixInMeta, object)):
                 setattr(self, funcname, partial(process, option))
 
     def _mixin_after_parsed(self):
-        group_options_selected = filter(
-            lambda option: getattr(self.options, option.dest) is not False
-            and getattr(self.options, option.dest) is not None,
-            self.cloud_queries_group.option_list
-        )
+        group_options_selected = [
+                option for option in self.cloud_queries_group.option_list if
+                getattr(self.options, option.dest) is not False and
+                getattr(self.options, option.dest) is not None
+        ]
         if len(group_options_selected) > 1:
             self.error(
                 'The options {0} are mutually exclusive. Please only choose '
@@ -1313,10 +1318,10 @@ class CloudProvidersListsMixIn(six.with_metaclass(MixInMeta, object)):
         self.add_option_group(group)
 
     def _mixin_after_parsed(self):
-        list_options_selected = filter(
-            lambda option: getattr(self.options, option.dest) is not None,
-            self.providers_listings_group.option_list
-        )
+        list_options_selected = [
+                option for option in self.providers_listings_group.option_list if
+                getattr(self.options, option.dest) is not None
+        ]
         if len(list_options_selected) > 1:
             self.error(
                 'The options {0} are mutually exclusive. Please only choose '
