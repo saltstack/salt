@@ -52,7 +52,11 @@ def update_progress(opts, progress, progress_iter, out):
     Update the progress iterator for the given outputter
     '''
     # Look up the outputter
-    progress_outputter = salt.loader.outputters(opts)[out]
+    try:
+        progress_outputter = salt.loader.outputters(opts)[out]
+    except KeyError:  # Outputter is not loaded
+        log.warning('Progress outputter not available.')
+        return False
     progress_outputter(progress, progress_iter)
 
 
