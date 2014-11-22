@@ -49,6 +49,9 @@ Module for handling openstack keystone calls.
         salt '*' keystone.tenant_list profile=openstack1
 '''
 
+# Import Python libs
+from __future__ import absolute_import
+
 # Import third party libs
 HAS_KEYSTONE = False
 try:
