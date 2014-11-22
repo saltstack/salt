@@ -50,12 +50,15 @@ import logging
 import os
 import re
 import shutil
+import stat
 import subprocess
 from datetime import datetime
 from salt._compat import text_type as _text_type
+from salt._compat import StringIO
 
 VALID_PROVIDERS = ('gitpython', 'pygit2', 'dulwich')
 PER_REMOTE_PARAMS = ('base', 'mountpoint', 'root')
+SYMLINK_RECURSE_DEPTH = 100
 
 # Auth support (auth params can be global or per-remote, too)
 AUTH_PROVIDERS = ('pygit2',)
@@ -418,7 +421,7 @@ def _get_tree_dulwich(repo, tgt_env):
                 return repo['repo'].get_object(commit.tree)
 
     # Branch or tag not matched, check if 'tgt_env' is a commit. This is more
-    # difficult with Dulwich because of its inability to deal with tgt_envened
+    # difficult with Dulwich because of its inability to deal with shortened
     # SHA-1 hashes.
     if not _env_is_exposed(tgt_env):
         return None
@@ -1169,14 +1172,39 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
         if repo['root']:
             repo_path = os.path.join(repo['root'], repo_path)
 
+        blob = None
+        depth = 0
         if provider == 'gitpython':
             tree = _get_tree_gitpython(repo, tgt_env)
             if not tree:
                 # Branch/tag/SHA not found in repo, try the next
                 continue
-            try:
-                blob = tree / repo_path
-            except KeyError:
+            while True:
+                depth += 1
+                if depth > SYMLINK_RECURSE_DEPTH:
+                    break
+                try:
+                    file_blob = tree / repo_path
+                    if stat.S_ISLNK(file_blob.mode):
+                        # Path is a symlink. The blob data corresponding to
+                        # this path's object ID will be the target of the
+                        # symlink. Follow the symlink and set repo_path to the
+                        # location indicated in the blob data.
+                        stream = StringIO()
+                        file_blob.stream_data(stream)
+                        stream.seek(0)
+                        link_tgt = stream.read()
+                        stream.close()
+                        repo_path = os.path.normpath(
+                            os.path.join(os.path.dirname(repo_path), link_tgt)
+                        )
+                    else:
+                        blob = file_blob
+                        break
+                except KeyError:
+                    # File not found or repo_path points to a directory
+                    break
+            if blob is None:
                 continue
             blob_hexsha = blob.hexsha
 
@@ -1185,25 +1213,57 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
             if not tree:
                 # Branch/tag/SHA not found in repo, try the next
                 continue
-            try:
-                oid = tree[repo_path].oid
-                blob = repo['repo'][oid]
-            except KeyError:
+            while True:
+                depth += 1
+                if depth > SYMLINK_RECURSE_DEPTH:
+                    break
+                try:
+                    if stat.S_ISLNK(tree[repo_path].filemode):
+                        # Path is a symlink. The blob data corresponding to this
+                        # path's object ID will be the target of the symlink. Follow
+                        # the symlink and set repo_path to the location indicated
+                        # in the blob data.
+                        link_tgt = repo['repo'][tree[repo_path].oid].data
+                        repo_path = os.path.normpath(
+                            os.path.join(os.path.dirname(repo_path), link_tgt)
+                        )
+                    else:
+                        oid = tree[repo_path].oid
+                        blob = repo['repo'][oid]
+                except KeyError:
+                    break
+            if blob is None:
                 continue
             blob_hexsha = blob.hex
 
         elif provider == 'dulwich':
-            prefix_dirs, _, filename = repo_path.rpartition(os.path.sep)
-            tree = _get_tree_dulwich(repo, tgt_env)
-            tree = _dulwich_walk_tree(repo['repo'], tree, prefix_dirs)
-            if not isinstance(tree, dulwich.objects.Tree):
-                # Branch/tag/SHA not found in repo, try the next
-                continue
-            try:
-                # Referencing the path in the tree returns a tuple, the
-                # second element of which is the object ID of the blob
-                blob = repo['repo'].get_object(tree[filename][1])
-            except KeyError:
+            while True:
+                depth += 1
+                if depth > SYMLINK_RECURSE_DEPTH:
+                    break
+                prefix_dirs, _, filename = repo_path.rpartition(os.path.sep)
+                tree = _get_tree_dulwich(repo, tgt_env)
+                tree = _dulwich_walk_tree(repo['repo'], tree, prefix_dirs)
+                if not isinstance(tree, dulwich.objects.Tree):
+                    # Branch/tag/SHA not found in repo
+                    break
+                try:
+                    mode, oid = tree[filename]
+                    if stat.S_ISLNK(mode):
+                        # Path is a symlink. The blob data corresponding to
+                        # this path's object ID will be the target of the
+                        # symlink. Follow the symlink and set repo_path to the
+                        # location indicated in the blob data.
+                        link_tgt = repo['repo'].get_object(oid).as_raw_string()
+                        repo_path = os.path.normpath(
+                            os.path.join(os.path.dirname(repo_path), link_tgt)
+                        )
+                    else:
+                        blob = repo['repo'].get_object(oid)
+                        break
+                except KeyError:
+                    break
+            if blob is None:
                 continue
             blob_hexsha = blob.sha().hexdigest()
 
