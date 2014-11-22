@@ -20,11 +20,14 @@ import integration
 from salt.config import cloud_providers_config
 
 # Import Third-Party Libs
+# pylint: disable=import-error
+from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 try:
-    import libcloud  # pylint: disable=W0611
+    import libcloud  # pylint: disable=unused-import
     HAS_LIBCLOUD = True
 except ImportError:
     HAS_LIBCLOUD = False
+# pylint: enable=import-error
 
 
 def __random_name(size=6):
