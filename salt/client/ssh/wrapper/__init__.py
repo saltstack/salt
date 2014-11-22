@@ -5,9 +5,9 @@ how executions are run in the salt-ssh system, this allows for state routines
 to be easily rewritten to execute in a way that makes them do the same tasks
 as ZeroMQ salt, but via ssh.
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import json
 import copy
 
@@ -15,6 +15,9 @@ import copy
 import salt.loader
 import salt.utils
 import salt.client.ssh
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 class FunctionWrapper(object):
@@ -78,7 +81,7 @@ class FunctionWrapper(object):
             '''
             argv = [cmd]
             argv.extend([str(arg) for arg in args])
-            argv.extend(['{0}={1}'.format(key, val) for key, val in kwargs.items()])
+            argv.extend(['{0}={1}'.format(key, val) for key, val in six.iteritems(kwargs)])
             single = salt.client.ssh.Single(
                     self.opts,
                     argv,
