@@ -18,15 +18,17 @@
 Module for managing BTRFS file systems.
 '''
 
+# Import Python libs
+from __future__ import absolute_import
 import os
 import re
 import logging
 import uuid
 
+# Import Salt libs
 import salt.utils
-from salt.exceptions import CommandExecutionError
-
 import salt.modules.fsutils
+from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
