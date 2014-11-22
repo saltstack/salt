@@ -19,6 +19,9 @@
 
         http://stackoverflow.com/questions/6190331/
 '''
+
+# Import python libs
+from __future__ import absolute_import
 from collections import Callable
 
 try:
@@ -27,7 +30,7 @@ except ImportError:
     try:
         from ordereddict import OrderedDict
     except ImportError:
-        ## {{{ http://code.activestate.com/recipes/576693/ (r9)
+        # {{{ http://code.activestate.com/recipes/576693/ (r9)
         # Backport of OrderedDict() class that runs on Python 2.4, 2.5, 2.6, 2.7 and pypy.
         # Passes Python2.7's test suite and incorporates all the latest updates.
 

@@ -4,6 +4,7 @@ Manage the password database on BSD systems
 '''
 
 # Import python libs
+from __future__ import absolute_import
 try:
     import pwd
 except ImportError:

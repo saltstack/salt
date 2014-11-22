@@ -2,10 +2,16 @@
 '''
 Nova class
 '''
-from __future__ import with_statement
+
+# Import Python libs
+from __future__ import absolute_import, with_statement
+import time
+import inspect
+import logging
 
 # Import third party libs
 HAS_NOVA = False
+# pylint: disable=import-error
 try:
     from novaclient.v1_1 import client
     from novaclient.shell import OpenStackComputeShell
@@ -17,11 +23,7 @@ try:
     HAS_NOVA = True
 except ImportError:
     pass
-
-# Import python libs
-import inspect
-import time
-import logging
+# pylint: enable=import-error
 
 # Import salt libs
 import salt.utils

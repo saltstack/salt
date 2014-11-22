@@ -8,7 +8,12 @@ Manage the registry on Windows
 # TODO: Figure out the exceptions _winreg can raise and properly  catch
 #       them instead of a bare except that catches any exception at all
 
+# Import python libs
+from __future__ import absolute_import
+import logging
+
 # Import third party libs
+# pylint: disable=import-error
 try:
     import _winreg
     HAS_WINDOWS_MODULES = True
@@ -18,9 +23,7 @@ except ImportError:
         HAS_WINDOWS_MODULES = True
     except ImportError:
         HAS_WINDOWS_MODULES = False
-
-# Import python libs
-import logging
+# pylint: enable=import-error
 
 # Import salt libs
 import salt.utils

@@ -4,6 +4,7 @@ Manage users on Mac OS 10.7+
 '''
 
 # Import python libs
+from __future__ import absolute_import
 try:
     import pwd
 except ImportError:
@@ -12,7 +13,9 @@ import logging
 import random
 import string
 import time
-from salt.ext.six.moves import range
+
+# Import 3rdp-party libs
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 # Import salt libs
 import salt.utils

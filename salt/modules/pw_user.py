@@ -4,16 +4,19 @@ Manage users with the useradd command
 '''
 
 # Import python libs
+from __future__ import absolute_import
+import copy
+import logging
 try:
     import pwd
 except ImportError:
     pass
-import logging
-import copy
+
+# Import 3rd party libs
+import salt.ext.six as six
 
 # Import salt libs
 import salt.utils
-from salt.ext.six import string_types
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -85,7 +88,7 @@ def add(name,
     if kwargs:
         log.warning('Invalid kwargs passed to user.add')
 
-    if isinstance(groups, string_types):
+    if isinstance(groups, six.string_types):
         groups = groups.split(',')
     cmd = 'pw useradd '
     if uid:
@@ -254,7 +257,7 @@ def chgroups(name, groups, append=False):
 
         salt '*' user.chgroups foo wheel,root True
     '''
-    if isinstance(groups, string_types):
+    if isinstance(groups, six.string_types):
         groups = groups.split(',')
     ugrps = set(list_groups(name))
     if ugrps == set(groups):

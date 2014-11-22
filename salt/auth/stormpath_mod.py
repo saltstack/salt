@@ -17,8 +17,13 @@ Module to provide authentication using Stormpath as the backend.
     Ensure that your apiKey.properties is readable by the user the Salt Master
     is running as, but not readable by other system users.
 '''
+
+# Import Python libs
+from __future__ import absolute_import
+
+# Import 3rd-party libs
 try:
-    from stormpath import Client
+    from stormpath import Client  # pylint: disable=import-error
     HAS_STORMPATH = True
 except ImportError:
     HAS_STORMPATH = False

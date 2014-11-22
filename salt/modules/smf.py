@@ -4,6 +4,9 @@ Service support for Solaris 10 and 11, should work with other systems
 that use SMF also. (e.g. SmartOS)
 '''
 
+# Import Python libs
+from __future__ import absolute_import
+
 __func_alias__ = {
     'reload_': 'reload'
 }

@@ -4,6 +4,7 @@ Manage groups on Linux, OpenBSD and NetBSD
 '''
 
 # Import python libs
+from __future__ import absolute_import
 try:
     import grp
 except ImportError:

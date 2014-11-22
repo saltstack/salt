@@ -21,6 +21,10 @@ Module to provide InfluxDB compatibility to Salt
     This data can also be passed into pillar. Options passed into opts will
     overwrite options passed into pillar.
 '''
+
+# Import Python libs
+from __future__ import absolute_import
+
 try:
     import influxdb
     HAS_INFLUXDB = True

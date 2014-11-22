@@ -7,6 +7,7 @@ Run-time utilities
 '''
 
 # Import Python libs
+from __future__ import absolute_import
 import re
 import logging
 

@@ -38,6 +38,9 @@ Module for handling openstack glance calls.
         salt '*' glance.image_list profile=openstack1
 '''
 
+# Import Python libs
+from __future__ import absolute_import
+
 # Import third party libs
 HAS_GLANCE = False
 try:

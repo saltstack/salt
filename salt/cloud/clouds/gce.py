@@ -62,6 +62,16 @@ Setting up Service Account Authentication:
 _UA_PRODUCT = 'salt-cloud'
 _UA_VERSION = '0.2.0'
 
+# Import python libs
+from __future__ import absolute_import
+import os
+import re
+import copy
+import stat
+import pprint
+import logging
+from ast import literal_eval
+
 # The import section is mostly libcloud boilerplate
 try:
     from libcloud.compute.types import Provider
@@ -75,15 +85,6 @@ try:
     HAS_LIBCLOUD = True
 except ImportError:
     HAS_LIBCLOUD = False
-
-# Import python libs
-import re
-import copy
-import pprint
-import logging
-import os
-import stat
-from ast import literal_eval
 
 # Import salt libs
 from salt.utils import namespaced_function

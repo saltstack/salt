@@ -23,6 +23,9 @@ Ensure a Linux ACL does not exist
         - perms: rwx
 '''
 
+# Import Python libs
+from __future__ import absolute_import
+
 # Import salt libs
 import salt.utils
 
