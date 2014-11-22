@@ -3,8 +3,7 @@
 Create ssh executor system
 '''
 # Import python libs
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import copy
 import getpass
 import json
@@ -18,7 +17,6 @@ import re
 import time
 import yaml
 import uuid
-from salt.ext.six.moves import input
 
 # Import salt libs
 import salt.client.ssh.shell
@@ -38,8 +36,12 @@ import salt.utils.atomicfile
 import salt.utils.thin
 import salt.utils.verify
 import salt.utils.network
-from salt.ext.six import string_types
 from salt.utils import is_windows
+
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six import string_types
+from salt.ext.six.moves import input  # pylint: disable=import-error,redefined-builtin
 
 try:
     import zmq
@@ -48,7 +50,7 @@ except ImportError:
     HAS_ZMQ = False
 
 # The directory where salt thin is deployed
-DEFAULT_THIN_DIR = '/tmp/.%%USER%%_%%FQDNUUID%%__salt'
+DEFAULT_THIN_DIR = '/tmp/.%%USER%%_%%FQDNUUID%%_salt'
 
 # RSTR is just a delimiter to distinguish the beginning of salt STDOUT
 # and STDERR.  There is no special meaning.  Messages prior to RSTR in
@@ -447,7 +449,7 @@ class SSH(object):
         sret = {}
         outputter = self.opts.get('output', 'nested')
         for ret in self.handle_ssh():
-            host = next(ret.iterkeys())
+            host = next(six.iterkeys(ret))
             self.cache_job(jid, host, ret[host])
             ret = self.key_deploy(host, ret)
             if not isinstance(ret[host], dict):
@@ -662,7 +664,7 @@ class Single(object):
         if self.opts.get('refresh_cache'):
             refresh = True
         conf_grains = {}
-        #Save conf file grains before they get clobbered
+        # Save conf file grains before they get clobbered
         if 'ssh_grains' in self.opts:
             conf_grains = self.opts['ssh_grains']
         if not data_cache:
@@ -688,7 +690,7 @@ class Single(object):
             opts_pkg['id'] = self.id
 
             if '_error' in opts_pkg:
-                #Refresh failed
+                # Refresh failed
                 ret = json.dumps({'local': opts_pkg})
                 return ret
 
