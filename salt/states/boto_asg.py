@@ -188,14 +188,18 @@ Overriding the alarm values on the resource:
               attributes:
                 threshold: 50.0
 '''
-from __future__ import absolute_import
 
 # Import Python libs
+from __future__ import absolute_import
 import hashlib
 import logging
-import salt.ext.six as six
-from salt.ext.six.moves import zip
+
+# Import Salt libs
 import salt.utils.dictupdate as dictupdate
+
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -368,11 +372,11 @@ def present(
                 )
                 launch_config[sg_index]['security_groups'] = _group_ids
 
-        for d in launch_config:
-            args.update(d)
+        for cfg in launch_config:
+            args.update(cfg)
         if not __opts__['test']:
             lc_ret = __salt__["state.single"]('boto_lc.present', **args)
-            lc_ret = next(lc_ret.itervalues())
+            lc_ret = next(six.itervalues(lc_ret))
             if lc_ret["result"] is True and lc_ret["changes"]:
                 if "launch_config" not in ret["changes"]:
                     ret["changes"]["launch_config"] = {}
