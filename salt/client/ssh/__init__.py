@@ -40,7 +40,6 @@ from salt.utils import is_windows
 
 # Import 3rd-party libs
 import salt.ext.six as six
-from salt.ext.six import string_types
 from salt.ext.six.moves import input  # pylint: disable=import-error,redefined-builtin
 
 try:
@@ -526,7 +525,7 @@ class Single(object):
         self.context = {'master_opts': self.opts,
                         'fileclient': self.fsclient}
 
-        if isinstance(argv, string_types):
+        if isinstance(argv, six.string_types):
             self.argv = [argv]
         else:
             self.argv = argv
