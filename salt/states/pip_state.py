@@ -18,9 +18,9 @@ requisite to a pkg.installed state for the package which provides pip
         - require:
           - pkg: python-pip
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import logging
 
 # Import salt libs
@@ -29,6 +29,8 @@ from salt.version import SaltStackVersion as _SaltStackVersion
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 # Import 3rd-party libs
+import salt.ext.six as six
+# pylint: disable=import-error
 try:
     import pip
     HAS_PIP = True
@@ -45,6 +47,7 @@ if HAS_PIP is True:
         del pip
         if 'pip' in sys.modules:
             del sys.modules['pip']
+# pylint: enable=import-error
 
 logger = logging.getLogger(__name__)
 
@@ -678,12 +681,11 @@ def installed(name,
                     # If we didnt find the package in the system after
                     # installing it report it
                     if not pipsearch:
-                        msg = (
+                        pkg_404_comms.append(
                             'There was no error installing package \'{0}\' '
                             'although it does not show when calling '
                             '\'pip.freeze\'.'.format(pkg)
                         )
-                        pkg_404_comms.append(msg)
                     else:
                         pkg_name = _find_key(prefix, pipsearch)
                         ver = pipsearch[pkg_name]
