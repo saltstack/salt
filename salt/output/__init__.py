@@ -41,11 +41,10 @@ def get_progress(opts, out, progress):
     '''
     Get the progress bar from the given outputter
     '''
-    #FIXME
-    import salt.output.progress
-    return salt.output.progress.progress_iter(progress)
-    outputters = salt.loader.outputters(opts)
-    return outputters[out].progress_iter()
+    return salt.loader.raw_mod(opts,
+                                out,
+                                'rawmodule',
+                                mod='output')['{0}.progress_iter'.format(out)](progress)
 
 
 def update_progress(opts, progress, progress_iter, out):
