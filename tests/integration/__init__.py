@@ -28,9 +28,6 @@ try:
 except ImportError:
     pass
 
-# Import 3rd-party libs
-import salt.ext.six as six
-
 STATE_FUNCTION_RUNNING_RE = re.compile(
     r'''The function (?:"|')(?P<state_func>.*)(?:"|') is running as PID '''
     r'(?P<pid>[\d]+) and was started at (?P<date>.*) with jid (?P<jid>[\d]+)'
@@ -68,11 +65,12 @@ from salt.utils.immutabletypes import freeze
 try:
     import salt.master
 except ImportError:
-    # Not required fro raet tests
+    # Not required for raet tests
     pass
 
 # Import 3rd-party libs
 import yaml
+import salt.ext.six as six
 
 if os.uname()[0] == 'Darwin':
     SYS_TMP_DIR = '/tmp'
