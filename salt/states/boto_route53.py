@@ -31,7 +31,7 @@ as a passed in dict, or as a string to pull from pillars or minion config:
     myprofile:
         keyid: GKTADJGHEIQSXMKKRBJ08H
         key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-            region: us-east-1
+        region: us-east-1
 
 .. code-block:: yaml
 
