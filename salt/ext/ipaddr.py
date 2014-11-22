@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/python
+# -*- coding: utf-8 -*-
 #
 # Copyright 2007 Google Inc.
 #  Licensed to PSF under a Contributor Agreement.
@@ -28,8 +28,9 @@ and networks.
 from __future__ import absolute_import
 import struct
 
-# Import salt libs
-from salt.ext.six.moves import range
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 __version__ = 'trunk'
 
@@ -1204,7 +1205,7 @@ class IPv4Address(_BaseV4, _BaseIP):
         _BaseV4.__init__(self, address)
 
         # Efficient constructor from integer.
-        if isinstance(address, (int, long)):
+        if isinstance(address, six.integer_types):
             self._ip = address
             if address < 0 or address > self._ALL_ONES:
                 raise AddressValueError(address)
@@ -1286,7 +1287,7 @@ class IPv4Network(_BaseV4, _BaseNet):
         _BaseV4.__init__(self, address)
 
         # Constructing from an integer or packed bytes.
-        if isinstance(address, (int, long, Bytes)):
+        if isinstance(address, tuple(list(six.integer_types) + [Bytes])):
             self.ip = IPv4Address(address)
             self._ip = self.ip._ip
             self._prefixlen = self._max_prefixlen
@@ -1780,7 +1781,7 @@ class IPv6Address(_BaseV6, _BaseIP):
         _BaseV6.__init__(self, address)
 
         # Efficient constructor from integer.
-        if isinstance(address, (int, long)):
+        if isinstance(address, six.integer_types):
             self._ip = address
             if address < 0 or address > self._ALL_ONES:
                 raise AddressValueError(address)
@@ -1854,7 +1855,7 @@ class IPv6Network(_BaseV6, _BaseNet):
         _BaseV6.__init__(self, address)
 
         # Constructing from an integer or packed bytes.
-        if isinstance(address, (int, long, Bytes)):
+        if isinstance(address, tuple(list(six.integer_types) + [Bytes])):
             self.ip = IPv6Address(address)
             self._ip = self.ip._ip
             self._prefixlen = self._max_prefixlen
