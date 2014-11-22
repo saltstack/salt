@@ -2,9 +2,9 @@
 '''
 File server pluggable modules and generic backend functions
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import errno
 import fnmatch
 import logging
@@ -15,6 +15,8 @@ import time
 # Import salt libs
 import salt.loader
 import salt.utils
+
+# Import 3rd-party libs
 import salt.ext.six as six
 
 log = logging.getLogger(__name__)
@@ -532,7 +534,7 @@ class Fileserver(object):
         prefix = load.get('prefix', '').strip('/')
         if prefix != '':
             ret = dict([
-                (x, y) for x, y in ret.items() if x.startswith(prefix)
+                (x, y) for x, y in six.iteritems(ret) if x.startswith(prefix)
             ])
         return ret
 
