@@ -15,6 +15,9 @@ ensure_in_syspath('../')
 import salt.loader
 import salt.config
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
 
 REQUISITES = ['require', 'require_in', 'use', 'use_in', 'watch', 'watch_in']
 
@@ -211,7 +214,7 @@ B:
 
         reqs = result['test.goalstate::goal']['stateconf.set'][0]['require']
         self.assertEqual(
-            set([i.itervalues().next() for i in reqs]), set('ABCDE')
+            set([next(six.itervalues(i)) for i in reqs]), set('ABCDE')
         )
 
     def test_implicit_require_with_goal_state(self):
@@ -265,7 +268,7 @@ G:
         goal_args = result['test::goal']['stateconf.set']
         self.assertEqual(len(goal_args), 1)
         self.assertEqual(
-            [i.itervalues().next() for i in goal_args[0]['require']],
+            [next(six.itervalues(i)) for i in goal_args[0]['require']],
             list('ABCDEFG')
         )
 
