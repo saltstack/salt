@@ -14,6 +14,9 @@ ensure_in_syspath('../../')
 # Import salt libs
 import integration
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
 
 @skip_if_not_root
 @skip_if_binaries_missing('lxc-start', message='LXC is not installed or minimal version not met')
@@ -41,7 +44,7 @@ class LXCModuleTest(integration.ModuleCase):
         Clean up any LXCs created.
         '''
         r = self.run_function('lxc.list')
-        for k, v in r.items():
+        for k, v in six.iteritems(r):
             for x in v:
                 if x.startswith(self.prefix):
                     self.run_function('lxc.destroy', [x])
