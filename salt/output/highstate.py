@@ -57,16 +57,17 @@ Example output:
     ------------
     Total:     0
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import pprint
 
 # Import salt libs
 import salt.utils
 import salt.output
+
+# Import 3rd-party libs
 import salt.ext.six as six
-from salt.ext.six import string_types
 
 
 def output(data):
@@ -112,7 +113,7 @@ def _format_host(host, data):
         if not __opts__.get('state_verbose', False):
             data = _strip_clean(data)
         # Verify that the needed data is present
-        for tname, info in data.items():
+        for tname, info in six.iteritems(data):
             if isinstance(info, dict) and '__run_num__' not in info:
                 err = (u'The State execution failed to record the order '
                        'in which all states were executed. The state '
@@ -164,13 +165,13 @@ def _format_host(host, data):
                 exclude = clikwargs.get(
                     'exclude', __opts__.get('state_output_exclude', [])
                 )
-                if isinstance(exclude, string_types):
+                if isinstance(exclude, six.string_types):
                     exclude = str(exclude).split(',')
 
                 terse = clikwargs.get(
                     'terse', __opts__.get('state_output_terse', [])
                 )
-                if isinstance(terse, string_types):
+                if isinstance(terse, six.string_types):
                     terse = str(terse).split(',')
 
                 if str(ret['result']) in terse:
