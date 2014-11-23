@@ -42,6 +42,8 @@ Module for handling openstack glance calls.
 from __future__ import absolute_import
 
 # Import third party libs
+import salt.ext.six as six
+# pylint: disable=import-error
 HAS_GLANCE = False
 try:
     from glanceclient import client
@@ -92,12 +94,7 @@ def image_create(profile=None, **kwargs):
     For all possible values, run ``glance help image-create`` on the minion.
     '''
     nt_ks = _auth(profile)
-    fields = dict(
-        filter(
-            lambda x: x[0] in glanceclient.v1.images.CREATE_PARAMS,
-            kwargs.items()
-        )
-    )
+    fields = [(k, v) for (k, v) in six.iteritems(kwargs) if k in glanceclient.v1.images.CREATE_PARAMS]
 
     image = nt_ks.images.create(**fields)
     newimage = image_list(str(image.id))
@@ -226,11 +223,11 @@ def _item_list(profile=None):
         #    }
     return ret
 
-#The following is a list of functions that need to be incorporated in the
-#glance module. This list should be updated as functions are added.
+# The following is a list of functions that need to be incorporated in the
+# glance module. This list should be updated as functions are added.
 
-#image-download      Download a specific image.
-#image-update        Update a specific image.
-#member-create       Share a specific image with a tenant.
-#member-delete       Remove a shared image from a tenant.
-#member-list         Describe sharing permissions by image or tenant.
+# image-download      Download a specific image.
+# image-update        Update a specific image.
+# member-create       Share a specific image with a tenant.
+# member-delete       Remove a shared image from a tenant.
+# member-list         Describe sharing permissions by image or tenant.
