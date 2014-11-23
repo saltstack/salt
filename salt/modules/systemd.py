@@ -7,6 +7,8 @@ from __future__ import absolute_import
 import logging
 import os
 import re
+
+# Import 3rd-party libs
 import salt.ext.six as six
 
 log = logging.getLogger(__name__)
@@ -199,7 +201,7 @@ def get_all():
 
         salt '*' service.get_all
     '''
-    return sorted(set(_get_all_units().keys() + _get_all_unit_files().keys()))
+    return sorted(set(list(_get_all_units().keys()) + list(_get_all_unit_files().keys())))
 
 
 def available(name):
