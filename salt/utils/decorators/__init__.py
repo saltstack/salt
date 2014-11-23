@@ -3,9 +3,8 @@
 Helpful decorators module writing
 '''
 
-from __future__ import absolute_import
-
 # Import python libs
+from __future__ import absolute_import
 import inspect
 import logging
 from functools import wraps
@@ -14,6 +13,9 @@ from collections import defaultdict
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandNotFoundError
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -74,7 +76,7 @@ class Depends(object):
         It will modify the "functions" dict and remove/replace modules that
         are missing dependencies.
         '''
-        for dependency, dependent_set in cls.dependency_dict.items():
+        for dependency, dependent_set in six.iteritems(cls.dependency_dict):
             # check if dependency is loaded
             for module, func, fallback_function in dependent_set:
                 # check if you have the dependency
@@ -183,7 +185,7 @@ def identical_signature_wrapper(original_function, wrapped_function):
         '<string>',
         'exec'
     )
-    exec(function_def, context)
+    six.exec_(function_def, context)
     return wraps(original_function)(context[original_function.__name__])
 
 
