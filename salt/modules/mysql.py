@@ -33,21 +33,22 @@ Module to provide MySQL compatibility to salt.
     </ref/states/all/salt.states.mysql_user>`. Additionally, it is now possible
     to setup a user with no password.
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import time
 import logging
 import re
 import sys
 import shlex
-from salt.ext.six.moves import zip
-from salt.ext.six.moves import range
 
 # Import salt libs
 import salt.utils
 
 # Import third party libs
+import salt.ext.six as six
+# pylint: disable=import-error
+from salt.ext.six.moves import range, zip  # pylint: disable=no-name-in-module,redefined-builtin
 try:
     import MySQLdb
     import MySQLdb.cursors
@@ -56,6 +57,7 @@ try:
     HAS_MYSQLDB = True
 except ImportError:
     HAS_MYSQLDB = False
+# pylint: enable=import-error
 
 log = logging.getLogger(__name__)
 
@@ -347,21 +349,21 @@ def _grant_to_tokens(grant):
     # the shell escape is \` but mysql escape is ``. Spaces should not be
     # exploded as users or db names could contain spaces.
     # Examples of splitting:
-    #"GRANT SELECT, LOCK TABLES, UPDATE, CREATE ON `test ``(:=saltdb)`.*
-    #                                  TO 'foo'@'localhost' WITH GRANT OPTION"
-    #['GRANT', 'SELECT', ',', 'LOCK', 'TABLES', ',', 'UPDATE', ',', 'CREATE',
-    # 'ON', '`test `', '`(:=saltdb)`', '.', '*', 'TO', "'foo'", '@',
-    #"'localhost'", 'WITH', 'GRANT', 'OPTION']
+    # "GRANT SELECT, LOCK TABLES, UPDATE, CREATE ON `test ``(:=saltdb)`.*
+    #                                   TO 'foo'@'localhost' WITH GRANT OPTION"
+    # ['GRANT', 'SELECT', ',', 'LOCK', 'TABLES', ',', 'UPDATE', ',', 'CREATE',
+    #  'ON', '`test `', '`(:=saltdb)`', '.', '*', 'TO', "'foo'", '@',
+    # "'localhost'", 'WITH', 'GRANT', 'OPTION']
     #
-    #'GRANT SELECT, INSERT, UPDATE, CREATE ON `te s.t\'"sa;ltdb`.`tbl ``\'"xx`
-    #                                  TO \'foo \' bar\'@\'localhost\''
-    #['GRANT', 'SELECT', ',', 'INSERT', ',', 'UPDATE', ',', 'CREATE', 'ON',
-    # '`te s.t\'"sa;ltdb`', '.', '`tbl `', '`\'"xx`', 'TO', "'foo '", "bar'",
-    # '@', "'localhost'"]
+    # 'GRANT SELECT, INSERT, UPDATE, CREATE ON `te s.t\'"sa;ltdb`.`tbl ``\'"xx`
+    #                                   TO \'foo \' bar\'@\'localhost\''
+    # ['GRANT', 'SELECT', ',', 'INSERT', ',', 'UPDATE', ',', 'CREATE', 'ON',
+    #  '`te s.t\'"sa;ltdb`', '.', '`tbl `', '`\'"xx`', 'TO', "'foo '", "bar'",
+    #  '@', "'localhost'"]
     #
-    #"GRANT USAGE ON *.* TO 'user \";--,?:&/\\'@'localhost'"
-    #['GRANT', 'USAGE', 'ON', '*', '.', '*', 'TO', '\'user ";--,?:&/\\\'',
-    # '@', "'localhost'"]
+    # "GRANT USAGE ON *.* TO 'user \";--,?:&/\\'@'localhost'"
+    # ['GRANT', 'USAGE', 'ON', '*', '.', '*', 'TO', '\'user ";--,?:&/\\\'',
+    #  '@', "'localhost'"]
     lex = shlex.shlex(grant_sql)
     lex.quotes = '\'`'
     lex.whitespace_split = False
@@ -778,7 +780,7 @@ def free_slave(**connection_args):
         return 'failed'
 
 
-#Database related actions
+# Database related actions
 def db_list(**connection_args):
     '''
     Return a list of databases of a MySQL server using the output
@@ -1327,7 +1329,7 @@ def user_remove(user,
     args['user'] = user
     args['host'] = host
     try:
-        result = _execute(cur, qry, args)
+        _execute(cur, qry, args)
     except MySQLdb.OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
@@ -1466,8 +1468,7 @@ def __ssl_option_sanitize(ssl_option):
 
     # Like most other "salt dsl" YAML structures, ssl_option is a list of single-element dicts
     for opt in ssl_option:
-        key = next(opt.iterkeys())
-        value = opt[key]
+        key = next(six.iterkeys(opt))
 
         normal_key = key.strip().upper()
 
