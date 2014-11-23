@@ -99,7 +99,8 @@
 
     Document is defacto an aggregate mapping.
 '''
-# pylint: disable=invalid-name,no-member
+# pylint: disable=invalid-name,no-member,missing-docstring,no-self-use
+# pylint: disable=too-few-public-methods,too-many-public-methods
 
 # Import python libs
 from __future__ import absolute_import
@@ -390,11 +391,8 @@ except AttributeError:
     Dumper.add_multi_representer(six.text_type, Dumper.represent_str)
 Dumper.add_multi_representer(bool, Dumper.represent_bool)
 Dumper.add_multi_representer(int, Dumper.represent_int)
-try:
-    Dumper.add_multi_representer(long, Dumper.represent_long)
-except NameError:
-    # Python 3 yaml does not have representation
-    pass
+if six.PY2:
+    Dumper.add_multi_representer(long, Dumper.represent_long)  # pylint: disable=incompatible-py3-code
 Dumper.add_multi_representer(float, Dumper.represent_float)
 Dumper.add_multi_representer(list, Dumper.represent_list)
 Dumper.add_multi_representer(tuple, Dumper.represent_list)
