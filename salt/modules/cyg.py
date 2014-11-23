@@ -13,6 +13,7 @@ import os
 import bz2
 
 # Import 3rd-party libs
+import salt.ext.six as six
 from salt.ext.six.moves.urllib.request import urlopen as _urlopen  # pylint: disable=no-name-in-module,import-error
 
 # Import Salt libs
@@ -138,7 +139,7 @@ def _run_silent_cygwin(cyg_arch='x86_64',
 
     if mirrors is None:
         mirrors = {DEFAULT_MIRROR: DEFAULT_MIRROR_KEY}
-    for mirror, key in mirrors.items():
+    for mirror, key in six.iteritems(mirrors):
         options.append('--site {0}'.format(mirror))
         if key:
             options.append('--pubkey {0}'.format(key))
