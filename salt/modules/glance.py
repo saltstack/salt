@@ -60,11 +60,11 @@ def __virtual__():
 __opts__ = {}
 
 
-def _auth(profile=None):
+def _auth(profile=None, **connection_args):
     '''
     Set up keystone credentials
     '''
-    kstone = __salt__['keystone.auth'](profile)
+    kstone = __salt__['keystone.auth'](profile, **connection_args)
     token = kstone.auth_token
     endpoint = kstone.service_catalog.url_for(
         service_type='image',
@@ -74,7 +74,7 @@ def _auth(profile=None):
     return client.Client('1', endpoint, token=token)
 
 
-def image_create(profile=None, **kwargs):
+def image_create(profile=None, **connection_args):
     '''
     Create an image (glance image-create)
 
@@ -88,20 +88,19 @@ def image_create(profile=None, **kwargs):
 
     For all possible values, run ``glance help image-create`` on the minion.
     '''
-    nt_ks = _auth(profile)
+    nt_ks = _auth(profile, **connection_args)
     fields = dict(
         filter(
             lambda x: x[0] in glanceclient.v1.images.CREATE_PARAMS,
-            kwargs.items()
+            connection_args.items()
         )
     )
 
     image = nt_ks.images.create(**fields)
-    newimage = image_list(str(image.id))
-    return {newimage['name']: newimage}
+    return image_show(id=str(image.id), profile=profile, **connection_args)
 
 
-def image_delete(id=None, name=None, profile=None):  # pylint: disable=C0103
+def image_delete(id=None, name=None, profile=None, **connection_args):  # pylint: disable=C0103
     '''
     Delete an image (glance image-delete)
 
@@ -113,7 +112,7 @@ def image_delete(id=None, name=None, profile=None):  # pylint: disable=C0103
         salt '*' glance.image_delete id=c2eb2eb0-53e1-4a80-b990-8ec887eae7df
         salt '*' glance.image_delete name=f16-jeos
     '''
-    nt_ks = _auth(profile)
+    nt_ks = _auth(profile, **connection_args)
     if name:
         for image in nt_ks.images.list():
             if image.name == name:
@@ -128,7 +127,7 @@ def image_delete(id=None, name=None, profile=None):  # pylint: disable=C0103
     return ret
 
 
-def image_show(id=None, name=None, profile=None):  # pylint: disable=C0103
+def image_show(id=None, name=None, profile=None, **connection_args):  # pylint: disable=C0103
     '''
     Return details about a specific image (glance image-show)
 
@@ -138,20 +137,20 @@ def image_show(id=None, name=None, profile=None):  # pylint: disable=C0103
 
         salt '*' glance.image_get
     '''
-    nt_ks = _auth(profile)
+    nt_ks = _auth(profile, **connection_args)
     ret = {}
     if name:
         for image in nt_ks.images.list():
             if image.name == name:
                 id = image.id  # pylint: disable=C0103
-                continue
+                break
     if not id:
         return {'Error': 'Unable to resolve image id'}
     image = nt_ks.images.get(id)
     ret[image.name] = {
             'id': image.id,
             'name': image.name,
-            'checksum': image.checksum,
+            'checksum': getattr(image, 'checksum', 'Creating'),
             'container_format': image.container_format,
             'created_at': image.created_at,
             'deleted': image.deleted,
@@ -168,7 +167,7 @@ def image_show(id=None, name=None, profile=None):  # pylint: disable=C0103
     return ret
 
 
-def image_list(id=None, profile=None):  # pylint: disable=C0103
+def image_list(profile=None, **connection_args):  # pylint: disable=C0103
     '''
     Return a list of available images (glance image-list)
 
@@ -178,13 +177,13 @@ def image_list(id=None, profile=None):  # pylint: disable=C0103
 
         salt '*' glance.image_list
     '''
-    nt_ks = _auth(profile)
+    nt_ks = _auth(profile, **connection_args)
     ret = {}
     for image in nt_ks.images.list():
         ret[image.name] = {
                 'id': image.id,
                 'name': image.name,
-                'checksum': image.checksum,
+                'checksum': getattr(image, 'checksum', 'Creating'),
                 'container_format': image.container_format,
                 'created_at': image.created_at,
                 'deleted': image.deleted,
@@ -198,12 +197,10 @@ def image_list(id=None, profile=None):  # pylint: disable=C0103
                 'status': image.status,
                 'updated_at': image.updated_at,
             }
-        if id == image.id:
-            return ret[image.name]
     return ret
 
 
-def _item_list(profile=None):
+def _item_list(profile=None, **connection_args):
     '''
     Template for writing list functions
     Return a list of available items (glance items-list)
@@ -214,7 +211,7 @@ def _item_list(profile=None):
 
         salt '*' glance.item_list
     '''
-    nt_ks = _auth(profile)
+    nt_ks = _auth(profile, **connection_args)
     ret = []
     for item in nt_ks.items.list():
         ret.append(item.__dict__)
