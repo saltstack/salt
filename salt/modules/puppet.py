@@ -2,17 +2,20 @@
 '''
 Execute puppet routines
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import logging
 import os
-import yaml
 import datetime
 
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError
+
+# Import 3rd-party libs
+import yaml
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -102,7 +105,7 @@ class _Puppet(object):
             [' --{0}'.format(k) for k in self.args]  # single spaces
         )
         args += ''.join([
-            ' --{0} {1}'.format(k, v) for k, v in self.kwargs.items()]
+            ' --{0} {1}'.format(k, v) for k, v in six.iteritems(self.kwargs)]
         )
 
         return '{0} {1}'.format(cmd, args)
