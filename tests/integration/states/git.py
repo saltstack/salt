@@ -161,7 +161,7 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             fname = os.path.join(name, 'stoptheprocess')
 
             with salt.utils.fopen(fname, 'a') as fh_:
-                fh_.write()
+                fh_.write('')
 
             ret = self.run_state(
                 'git.present',
