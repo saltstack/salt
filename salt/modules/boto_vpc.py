@@ -34,16 +34,20 @@ Connection module for Amazon VPC
 :depends: boto
 
 '''
-from __future__ import absolute_import
 
 # Import Python libs
+from __future__ import absolute_import
 import logging
 from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
+
+# Import Salt libs
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 log = logging.getLogger(__name__)
 
 # Import third party libs
+import salt.ext.six as six
+# pylint: disable=import-error
 try:
     # pylint: disable=import-error
     import boto
@@ -53,8 +57,7 @@ try:
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
-
-from salt.ext.six import string_types
+# pylint: disable=import-error
 
 
 def __virtual__():
@@ -105,8 +108,8 @@ def get_subnet_association(subnets, region=None, key=None, keyid=None,
     try:
         # subnet_ids=subnets can accept either a string or a list
         subnets = conn.get_all_subnets(subnet_ids=subnets)
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
+    except boto.exception.BotoServerError as exc:
+        log.debug(exc)
         return False
     # using a set to store vpc_ids - the use of set prevents duplicate
     # vpc_id values
@@ -151,7 +154,7 @@ def _find_vpc(vpc_id=None, name=None, cidr=None, tags=None, conn=None):
             filter_parameters['filters']['tag:Name'] = name
 
         if tags:
-            for tag_name, tag_value in tags.items():
+            for tag_name, tag_value in six.iteritems(tags):
                 filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
 
         vpcs = conn.get_all_vpcs(**filter_parameters)
@@ -161,8 +164,8 @@ def _find_vpc(vpc_id=None, name=None, cidr=None, tags=None, conn=None):
             return [vpc.id for vpc in vpcs]
         else:
             return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
         return False
 
 
@@ -253,8 +256,8 @@ def create(cidr_block, instance_tenancy=None, vpc_name=None, tags=None, region=N
             return vpc.id
         else:
             log.warning('VPC was not created')
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
         return False
 
 
@@ -285,8 +288,8 @@ def delete(vpc_id, region=None, key=None, keyid=None, profile=None):
             log.warning('VPC {0} was not deleted.'.format(vpc_id))
 
             return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
         return False
 
 
@@ -324,8 +327,8 @@ def create_subnet(vpc_id, cidr_block, availability_zone=None, subnet_name=None, 
             return vpc_subnet.id
         else:
             log.warning('A VPC subnet was not created.')
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
         return False
 
 
@@ -356,8 +359,8 @@ def delete_subnet(subnet_id, region=None, key=None, keyid=None, profile=None):
             log.debug('Subnet {0} was not deleted.'.format(subnet_id))
 
             return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
         return False
 
 
@@ -391,7 +394,7 @@ def subnet_exists(subnet_id=None, name=None, tags=None, region=None, key=None, k
             filter_parameters['filters']['tag:Name'] = name
 
         if tags:
-            for tag_name, tag_value in tags.items():
+            for tag_name, tag_value in six.iteritems(tags):
                 filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
 
         subnets = conn.get_all_subnets(**filter_parameters)
@@ -404,8 +407,8 @@ def subnet_exists(subnet_id=None, name=None, tags=None, region=None, key=None, k
             log.warning('Subnet {0} does not exist.'.format(subnet_id))
 
             return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
         return False
 
 
@@ -440,8 +443,8 @@ def create_customer_gateway(vpn_connection_type, ip_address, bgp_asn, customer_g
         else:
             log.warning('A customer gateway was not created')
             return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
         return False
 
 
@@ -472,8 +475,8 @@ def delete_customer_gateway(customer_gateway_id, region=None, key=None, keyid=No
             log.warning('Customer gateway {0} was not deleted.'.format(customer_gateway_id))
 
             return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
         return False
 
 
@@ -503,8 +506,8 @@ def customer_gateway_exists(customer_gateway_id, region=None, key=None, keyid=No
             log.warning('Customer gateway {0} does not exist.'.format(customer_gateway_id))
 
             return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
         return False
 
 
@@ -541,8 +544,8 @@ def create_dhcp_options(domain_name=None, domain_name_servers=None, ntp_servers=
         else:
             log.warning('DHCP options with id {0} were not created'.format(dhcp_options.id))
             return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
         return False
 
 
@@ -570,8 +573,8 @@ def associate_dhcp_options_to_vpc(dhcp_options_id, vpc_id, region=None, key=None
         else:
             log.warning('DHCP options with id {0} were not associated with VPC {1}'.format(dhcp_options_id, vpc_id))
             return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
         return False
 
 
@@ -600,8 +603,8 @@ def associate_new_dhcp_options_to_vpc(vpc_id, domain_name=None, domain_name_serv
         conn.associate_dhcp_options(dhcp_options.id, vpc_id)
         log.info('DHCP options with id {0} were created and associated with VPC {1}'.format(dhcp_options.id, vpc_id))
         return dhcp_options.id
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
         return False
 
 
@@ -635,7 +638,7 @@ def dhcp_options_exists(dhcp_options_id=None, name=None, tags=None, region=None,
             filter_parameters['filters']['tag:Name'] = name
 
         if tags:
-            for tag_name, tag_value in tags.items():
+            for tag_name, tag_value in six.iteritems(tags):
                 filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
 
         dhcp_options = conn.get_all_dhcp_options(**filter_parameters)
@@ -648,8 +651,8 @@ def dhcp_options_exists(dhcp_options_id=None, name=None, tags=None, region=None,
             log.warning('DHCP options {0} does not exist.'.format(dhcp_options_id))
 
             return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
         return False
 
 
@@ -680,8 +683,8 @@ def create_network_acl(vpc_id, network_acl_name=None, tags=None, region=None, ke
         else:
             log.warning('Network ACL was not created')
             return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
         return False
 
 
@@ -709,8 +712,8 @@ def delete_network_acl(network_acl_id, region=None, key=None, keyid=None, profil
         else:
             log.warning('Network ACL with id {0} was not deleted'.format(network_acl_id))
             return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
         return False
 
 
@@ -743,7 +746,7 @@ def network_acl_exists(network_acl_id=None, name=None, tags=None, region=None, k
             filter_parameters['filters']['tag:Name'] = name
 
         if tags:
-            for tag_name, tag_value in tags.items():
+            for tag_name, tag_value in six.iteritems(tags):
                 filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
 
         network_acls = conn.get_all_network_acls(**filter_parameters)
@@ -754,8 +757,8 @@ def network_acl_exists(network_acl_id=None, name=None, tags=None, region=None, k
         else:
             log.warning('Network ACL with id {0} does not exists.'.format(network_acl_id))
             return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
         return False
 
 
@@ -784,8 +787,8 @@ def associate_network_acl_to_subnet(network_acl_id, subnet_id, region=None, key=
         else:
             log.warning('Network ACL with id {0} was not associated with subnet {1}'.format(network_acl_id, subnet_id))
             return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
         return False
 
 
@@ -824,8 +827,8 @@ def associate_new_network_acl_to_subnet(vpc_id, subnet_id, network_acl_name=None
         else:
             log.warning('Network ACL with id {0} was not associated with subnet {1}'.format(network_acl.id, subnet_id))
             return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
         return False
 
 
@@ -846,8 +849,8 @@ def disassociate_network_acl(subnet_id, vpc_id=None, region=None, key=None, keyi
 
     try:
         return conn.disassociate_network_acl(subnet_id, vpc_id=vpc_id)
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
         return False
 
 
@@ -879,8 +882,8 @@ def create_network_acl_entry(network_acl_id, rule_number, protocol, rule_action,
         else:
             log.warning('Network ACL entry was not created')
             return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
         return False
 
 
@@ -913,8 +916,8 @@ def replace_network_acl_entry(network_acl_id, rule_number, protocol, rule_action
         else:
             log.warning('Network ACL entry was not replaced')
             return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
         return False
 
 
@@ -941,8 +944,8 @@ def delete_network_acl_entry(network_acl_id, rule_number, egress=None, region=No
         else:
             log.warning('Network ACL was not deleted')
             return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
         return False
 
 
@@ -971,8 +974,8 @@ def create_route_table(vpc_id, route_table_name=None, tags=None, region=None, ke
         else:
             log.warning('Route table ACL was not created')
             return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
         return False
 
 
@@ -998,8 +1001,8 @@ def delete_route_table(route_table_id, region=None, key=None, keyid=None, profil
         else:
             log.warning('Route table with id {0} was not deleted'.format(route_table_id))
             return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
         return False
 
 
@@ -1031,7 +1034,7 @@ def route_table_exists(route_table_id=None, name=None, tags=None, region=None, k
             filter_parameters['filters']['tag:Name'] = name
 
         if tags:
-            for tag_name, tag_value in tags.items():
+            for tag_name, tag_value in six.iteritems(tags):
                 filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
 
         route_tables = conn.get_all_route_tables(**filter_parameters)
@@ -1043,8 +1046,8 @@ def route_table_exists(route_table_id=None, name=None, tags=None, region=None, k
             log.warning('Route table {0} does not exist.'.format(route_table_id))
 
             return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
         return False
 
 
@@ -1068,8 +1071,8 @@ def associate_route_table(route_table_id, subnet_id, region=None, key=None, keyi
         log.info('Route table {0} was associated with subnet {1}'.format(route_table_id, subnet_id))
 
         return association_id
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
         return False
 
 
@@ -1100,8 +1103,8 @@ def disassociate_route_table(association_id, region=None, key=None, keyid=None, 
             log.warning('Route table with association id {0} has not been disassociated.'.format(association_id))
 
             return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
         return False
 
 
@@ -1125,8 +1128,8 @@ def replace_route_table_association(association_id, route_table_id, region=None,
         log.info('Route table {0} was reassociated with association id {1}'.format(route_table_id, association_id))
 
         return association_id
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
         return False
 
 
@@ -1157,8 +1160,8 @@ def create_route(route_table_id, destination_cidr_block, gateway_id=None, instan
             log.warning('Route with cider block {0} on route table {1} was not created'.format(route_table_id,
                                                                                                destination_cidr_block))
             return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
         return False
 
 
@@ -1187,8 +1190,8 @@ def delete_route(route_table_id, destination_cidr_block, region=None, key=None, 
             log.warning('Route with cider block {0} on route table {1} was not deleted'.format(route_table_id,
                                                                                                destination_cidr_block))
             return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
         return False
 
 
@@ -1219,8 +1222,8 @@ def replace_route(route_table_id, destination_cidr_block, gateway_id=None, insta
             log.warning('Route with cider block {0} on route table {1} was not replaced'.format(route_table_id,
                                                                                                 destination_cidr_block))
             return False
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
         return False
 
 
@@ -1229,7 +1232,7 @@ def _get_conn(region, key, keyid, profile):
     Get a boto connection to vpc.
     '''
     if profile:
-        if isinstance(profile, string_types):
+        if isinstance(profile, six.string_types):
             _profile = __salt__['config.option'](profile)
         elif isinstance(profile, dict):
             _profile = profile
@@ -1292,12 +1295,12 @@ def describe(vpc_id=None, region=None, key=None, keyid=None, profile=None):
         if vpcs:
             vpc = vpcs[0]  # Found!
             log.debug('Found VPC: {0}'.format(vpc.id))
-            for k in _ret.keys():
+            for k in six.iterkeys(_ret):
                 _ret[k] = getattr(vpc, k)
             return _ret
 
-    except boto.exception.BotoServerError as e:
-        log.error(e)
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
         return False
 
 
