@@ -2,9 +2,9 @@
 '''
 The function cache system allows for data to be stored on the master so it can be easily read by other minions
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import copy
 import logging
 import time
@@ -14,6 +14,9 @@ import salt.crypt
 import salt.payload
 import salt.utils.network
 import salt.utils.event
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 MINE_INTERNAL_KEYWORDS = frozenset([
     '__pub_user',
@@ -311,12 +314,12 @@ def get_docker(interfaces=None, cidrs=None):
     proxy_lists = {}
 
     # Process docker info
-    for host, containers in docker_hosts.items():
+    for containers in six.itervalues(docker_hosts):
         host_ips = []
 
         # Prepare host_ips list
         if not interfaces:
-            for iface, info in containers['host']['interfaces'].items():
+            for info in six.itervalues(containers['host']['interfaces']):
                 if 'inet' in info:
                     for ip_ in info['inet']:
                         host_ips.append(ip_['address'])
