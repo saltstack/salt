@@ -9,9 +9,9 @@ from keyservers.  Sign, encrypt and sign & encrypt text and files.
     required to be installed.
 
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import distutils.version  # pylint: disable=import-error,no-name-in-module
 import logging
 import os
@@ -21,11 +21,10 @@ import time
 # Import salt libs
 import salt.utils
 import salt.syspaths
-from salt.ext.six import string_types
+from salt.exceptions import SaltInvocationError
 
-from salt.exceptions import (
-    SaltInvocationError
-)
+# Import 3rd-party libs
+import salt.ext.six as six
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -612,7 +611,7 @@ def import_key(user=None,
             raise SaltInvocationError('filename does not exist.')
 
     imported_data = gpg.import_keys(text)
-    log.debug('imported_data {0}'.format(imported_data.__dict__.keys()))
+    log.debug('imported_data {0}'.format(list(imported_data.__dict__.keys())))
     log.debug('imported_data {0}'.format(imported_data.counts))
 
     if imported_data.counts:
@@ -661,7 +660,7 @@ def export_key(keyids=None, secret=False, user=None):
     '''
     gpg = _create_gpg(user)
 
-    if isinstance(keyids, string_types):
+    if isinstance(keyids, six.string_types):
         keyids = keyids.split(',')
     return gpg.export_keys(keyids, secret)
 
@@ -702,7 +701,7 @@ def receive_keys(keyserver=None, keys=None, user=None):
     if not keyserver:
         keyserver = 'pgp.mit.edu'
 
-    if isinstance(keys, string_types):
+    if isinstance(keys, six.string_types):
         keys = keys.split(',')
 
     recv_data = gpg.recv_keys(keyserver, *keys)
