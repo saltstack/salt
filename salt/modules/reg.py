@@ -13,17 +13,11 @@ from __future__ import absolute_import
 import logging
 
 # Import third party libs
-# pylint: disable=import-error
 try:
-    import _winreg
+    from salt.ext.six.moves import winreg as _winreg  # pylint: disable=import-error,no-name-in-module
     HAS_WINDOWS_MODULES = True
 except ImportError:
-    try:
-        import winreg as _winreg
-        HAS_WINDOWS_MODULES = True
-    except ImportError:
-        HAS_WINDOWS_MODULES = False
-# pylint: enable=import-error
+    HAS_WINDOWS_MODULES = False
 
 # Import salt libs
 import salt.utils
