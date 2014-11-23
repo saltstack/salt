@@ -99,7 +99,7 @@ class OptionParserMeta(MixInMeta):
         return instance
 
 
-class OptionParser(optparse.OptionParser):
+class OptionParser(optparse.OptionParser, object):
     VERSION = version.__saltstack_version__.formatted_version
 
     usage = '%prog'
@@ -1049,17 +1049,10 @@ class OutputOptionsMixIn(six.with_metaclass(MixInMeta, object)):
                     )
 
     def _mixin_after_parsed(self):
-        group_options_selected = filter(
-            lambda option: (
-                getattr(self.options, option.dest) and
-                (option.dest.endswith('_out') or option.dest == 'output')
-            ),
-            self.output_options_group.option_list
-        )
         group_options_selected = [
-                option for option in self.output_options_group.option_list if
+                option for option in self.output_options_group.option_list if (
                 getattr(self.options, option.dest) and
-                (option.dest.endswith('_out') or option.dest == 'output')
+                (option.dest.endswith('_out') or option.dest == 'output'))
         ]
         if len(group_options_selected) > 1:
             self.error(
