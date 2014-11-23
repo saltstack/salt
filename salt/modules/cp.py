@@ -2,9 +2,9 @@
 '''
 Minion side functions for salt-cp
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import logging
 import fnmatch
@@ -16,6 +16,9 @@ import salt.utils
 import salt.crypt
 import salt.transport
 from salt.exceptions import CommandExecutionError
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -37,7 +40,7 @@ def recv(files, dest):
     It does not work via the CLI.
     '''
     ret = {}
-    for path, data in files.items():
+    for path, data in six.iteritems(files):
         if os.path.basename(path) == os.path.basename(dest) \
                 and not os.path.isdir(dest):
             final = dest
