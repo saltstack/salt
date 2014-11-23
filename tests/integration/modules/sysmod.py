@@ -12,7 +12,7 @@ ensure_in_syspath('../../')
 import integration
 
 # Import 3rd-party libs
-import salt.ext.six import six
+import salt.ext.six as six
 
 
 class SysModuleTest(integration.ModuleCase):
