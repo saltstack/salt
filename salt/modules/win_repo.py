@@ -11,12 +11,14 @@ Place all Windows package files in the 'win_repo' directory.
 '''
 
 # Import python libs
-from __future__ import absolute_import
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 import os
+import logging
 
 # Import third party libs
 import yaml
+import salt.ext.six as six
+# pylint: disable=import-error
 try:
     import msgpack
 except ImportError:
@@ -25,8 +27,6 @@ except ImportError:
 # Import salt libs
 import salt.output
 import salt.utils
-import logging
-from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 
@@ -73,9 +73,9 @@ def genrepo():
                         print('Failed to compile {0}: {1}'.format(os.path.join(root, name), exc))
                 if config:
                     revmap = {}
-                    for pkgname, versions in config.items():
-                        for version, repodata in versions.items():
-                            if not isinstance(version, string_types):
+                    for pkgname, versions in six.iteritems(config):
+                        for version, repodata in six.iteritems(versions):
+                            if not isinstance(version, six.string_types):
                                 config[pkgname][str(version)] = \
                                     config[pkgname].pop(version)
                             revmap[repodata['full_name']] = pkgname
