@@ -604,7 +604,8 @@ def autoremove(list_only=False):
         ret = []
         out = __salt__['cmd.run'](
             ['apt-get', '--assume-no', 'autoremove'],
-            python_shell=False
+            python_shell=False,
+            ignore_retcode=True
         )
         found = False
         for line in out.splitlines():
