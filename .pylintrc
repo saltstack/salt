@@ -30,12 +30,14 @@ persistent=yes
 load-plugins=saltpylint.pep8,
   saltpylint.pep263,
   saltpylint.strings,
-  saltpylint.fileperms
-  saltpylint.py3modernize
+  saltpylint.fileperms,
+  saltpylint.py3modernize,
+  salttesting.pylintplugins.smartup
 
 # Fileperms Lint Plugin Settings
 fileperms-default=0644
 fileperms-ignore-paths=tests/runtests.py,tests/jenkins*.py,tests/saltsh.py,tests/buildpackage.py
+
 
 [MESSAGES CONTROL]
 
