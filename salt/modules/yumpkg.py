@@ -24,8 +24,8 @@ from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=n
 # Import 3rd-party libs
 # pylint: disable=import-error,redefined-builtin
 import salt.ext.six as six
-from salt.ext.six import string_types
-from salt.ext.six.moves import shlex_quote as _cmd_quote, range
+from salt.ext.six.moves import shlex_quote as _cmd_quote
+from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 # pylint: enable=import-error
 
 # Import salt libs
@@ -721,7 +721,7 @@ def group_install(name,
         which can be passed to pkg.install may also be included here, and it
         will be passed along wholesale.
     '''
-    groups = name.split(',') if isinstance(name, string_types) else name
+    groups = name.split(',') if isinstance(name, six.string_types) else name
 
     if not groups:
         raise SaltInvocationError('no groups specified')
@@ -729,12 +729,12 @@ def group_install(name,
         raise SaltInvocationError('\'groups\' must be a list')
 
     # pylint: disable=maybe-no-member
-    if isinstance(skip, string_types):
+    if isinstance(skip, six.string_types):
         skip = skip.split(',')
     if not isinstance(skip, (list, tuple)):
         raise SaltInvocationError('\'skip\' must be a list')
 
-    if isinstance(include, string_types):
+    if isinstance(include, six.string_types):
         include = include.split(',')
     if not isinstance(include, (list, tuple)):
         raise SaltInvocationError('\'include\' must be a list')
@@ -1200,7 +1200,7 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
         targets.extend(pkgs)
     elif sources:
         for source in sources:
-            targets.append(next(iter(source)))
+            targets.append(next(six.iterkeys(source)))
     else:
         ret = check_db(name)
         if not ret[name]['found']:
@@ -1213,7 +1213,7 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
     ret = {}
     for target in targets:
         if isinstance(target, dict):
-            target = next(iter(target))
+            target = next(six.iterkeys(target))
 
         ret[target] = {'name': target,
                        'changes': {},
@@ -1296,7 +1296,7 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
     ret = {}
     for target in targets:
         if isinstance(target, dict):
-            target = next(iter(target))
+            target = next(six.iterkeys(target))
 
         ret[target] = {'name': target,
                        'changes': {},
@@ -1540,7 +1540,7 @@ def list_repos(basedir='/etc/yum.repos.d'):
         if not repofile.endswith('.repo'):
             continue
         filerepos = _parse_repo_file(repopath)[1]
-        for reponame in filerepos.keys():
+        for reponame in six.iterkeys(filerepos):
             repo = filerepos[reponame]
             repo['file'] = repopath
             repos[reponame] = repo
@@ -1562,7 +1562,7 @@ def get_repo(repo, basedir='/etc/yum.repos.d', **kwargs):  # pylint: disable=W06
 
     # Find out what file the repo lives in
     repofile = ''
-    for arepo in repos.keys():
+    for arepo in six.iterkeys(repos):
         if arepo == repo:
             repofile = repos[arepo]['file']
 
@@ -1601,7 +1601,7 @@ def del_repo(repo, basedir='/etc/yum.repos.d', **kwargs):  # pylint: disable=W06
 
     # See if the repo is the only one in the file
     onlyrepo = True
-    for arepo in repos.keys():
+    for arepo in six.iterkeys(repos):
         if arepo == repo:
             continue
         if repos[arepo]['file'] == repofile:
@@ -1616,7 +1616,7 @@ def del_repo(repo, basedir='/etc/yum.repos.d', **kwargs):  # pylint: disable=W06
     # There must be other repos in this file, write the file with them
     header, filerepos = _parse_repo_file(repofile)
     content = header
-    for stanza in filerepos.keys():
+    for stanza in six.iterkeys(filerepos):
         if stanza == repo:
             continue
         comments = ''
@@ -1724,32 +1724,32 @@ def mod_repo(repo, basedir=None, **kwargs):
     # Error out if they tried to delete baseurl or mirrorlist improperly
     if 'baseurl' in todelete:
         if 'mirrorlist' not in repo_opts and 'mirrorlist' \
-                not in filerepos[repo].keys():
+                not in filerepos[repo]:
             raise SaltInvocationError(
                 'Cannot delete baseurl without specifying mirrorlist'
             )
     if 'mirrorlist' in todelete:
         if 'baseurl' not in repo_opts and 'baseurl' \
-                not in filerepos[repo].keys():
+                not in filerepos[repo]:
             raise SaltInvocationError(
                 'Cannot delete mirrorlist without specifying baseurl'
             )
 
     # Delete anything in the todelete list
     for key in todelete:
-        if key in filerepos[repo].keys():
+        if key in six.iterkeys(filerepos[repo].copy()):
             del filerepos[repo][key]
 
     # Old file or new, write out the repos(s)
     filerepos[repo].update(repo_opts)
     content = header
-    for stanza in filerepos.keys():
+    for stanza in six.iterkeys(filerepos):
         comments = ''
-        if 'comments' in filerepos[stanza].keys():
+        if 'comments' in six.iterkeys(filerepos[stanza]):
             comments = '\n'.join(filerepos[stanza]['comments'])
             del filerepos[stanza]['comments']
         content += '\n[{0}]'.format(stanza)
-        for line in filerepos[stanza].keys():
+        for line in six.iterkeys(filerepos[stanza]):
             content += '\n{0}={1}'.format(line, filerepos[stanza][line])
         content += '\n{0}\n'.format(comments)
 
@@ -1883,5 +1883,5 @@ def owner(*paths):
         if 'not owned' in ret[path].lower():
             ret[path] = ''
     if len(ret) == 1:
-        return next(ret.itervalues())
+        return next(six.itervalues(ret))
     return ret
