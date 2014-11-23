@@ -65,17 +65,16 @@ def image_present(name,
         return ret
     existing_image = __salt__['glance.image_show'](
         name=name, profile=profile, **connection_args)
-    non_null_arguments = _get_non_null_args(
-                                name=name,
-                                disk_format=disk_format,
-                                container_format=container_format,
-                                min_disk=min_disk,
-                                min_ram=min_ram,
-                                is_public=is_public,
-                                protected=protected,
-                                checksum=checksum,
-                                copy_from=copy_from,
-                                store=store)
+    non_null_arguments = _get_non_null_args(name=name,
+                                            disk_format=disk_format,
+                                            container_format=container_format,
+                                            min_disk=min_disk,
+                                            min_ram=min_ram,
+                                            is_public=is_public,
+                                            protected=protected,
+                                            checksum=checksum,
+                                            copy_from=copy_from,
+                                            store=store)
     LOG.debug('running state glance.image_present with arguments {0}'.format(
         str(non_null_arguments)))
     if 'Error' in existing_image:
@@ -88,8 +87,8 @@ def image_present(name,
         else:
             ret['comment'] = 'Image "{0}" created'.format(name)
         return ret
-    #iterate over all given arguments
-    #if anything is different delete and recreate
+    # iterate over all given arguments
+    # if anything is different delete and recreate
     for key in non_null_arguments:
         if key == 'copy_from':
             continue
