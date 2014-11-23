@@ -657,7 +657,7 @@ def reload_():
         with salt.utils.fopen(sfn, 'rb') as fp_:
             try:
                 schedule = yaml.safe_load(fp_.read())
-            except Exception as exc:
+            except yaml.YAMLError as exc:
                 ret['comment'].append('Unable to read existing schedule file: {0}'.format(exc))
 
         if 'schedule' in schedule and schedule['schedule']:
