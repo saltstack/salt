@@ -3,20 +3,23 @@
 Module for returning various status data about a minion.
 These data can be useful for compiling into stats later.
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import re
 import fnmatch
 
-from salt.ext.six.moves import range
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 # Import salt libs
-import salt.utils
-from salt.utils.network import remote_port_tcp as _remote_port_tcp
-import salt.utils.event
 import salt.config
+import salt.utils
+import salt.utils.event
+from salt.utils.network import remote_port_tcp as _remote_port_tcp
 
 
 __opts__ = {}
@@ -106,7 +109,7 @@ def custom():
     '''
     ret = {}
     conf = __salt__['config.dot_vals']('status')
-    for key, val in conf.items():
+    for key, val in six.iteritems(conf):
         func = '{0}()'.format(key.split('.')[1])
         vals = eval(func)  # pylint: disable=W0123
 
@@ -372,7 +375,7 @@ def nproc():
     data = __salt__['cmd.run']('nproc')
     try:
         ret = int(data.strip())
-    except Exception:
+    except ValueError:
         return 0
     return ret
 
@@ -435,7 +438,7 @@ def netdev():
         comps = line.split()
         # Fix lines like eth0:9999..'
         comps[0] = line.split(':')[0].strip()
-        #Support lines both like eth0:999 and eth0: 9999
+        # Support lines both like eth0:999 and eth0: 9999
         comps.insert(1, line.split(':')[1].strip().split()[0])
         ret[comps[0]] = {'iface': comps[0],
                          'rx_bytes': _number(comps[1]),
