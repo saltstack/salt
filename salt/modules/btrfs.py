@@ -30,6 +30,9 @@ import salt.utils
 import salt.modules.fsutils
 from salt.exceptions import CommandExecutionError
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
 log = logging.getLogger(__name__)
 
 
@@ -152,7 +155,7 @@ def defragment(path):
             result.append(_defragment_mountpoint(mount_point['mount_point']))
     else:
         is_mountpoint = False
-        for mountpoints in mounts.values():
+        for mountpoints in six.itervalues(mounts):
             for mpnt in mountpoints:
                 if path == mpnt['mount_point']:
                     is_mountpoint = True
@@ -521,7 +524,7 @@ def _restripe(mountpoint, direction, *devices, **kwargs):
             "Mountpount expected, while device \"{0}\" specified".format(mountpoint))
 
     mounted = False
-    for device, mntpoints in salt.modules.fsutils._get_mounts("btrfs").items():
+    for device, mntpoints in six.iteritems(salt.modules.fsutils._get_mounts("btrfs")):
         for mntdata in mntpoints:
             if mntdata['mount_point'] == mountpoint:
                 mounted = True
@@ -536,7 +539,7 @@ def _restripe(mountpoint, direction, *devices, **kwargs):
 
     available_devices = __salt__['btrfs.devices']()
     for device in devices:
-        if device not in available_devices.keys():
+        if device not in six.iterkeys(available_devices):
             raise CommandExecutionError("Device \"{0}\" is not recognized".format(device))
 
     cmd = ['btrfs device {0}'.format(direction)]
@@ -665,7 +668,7 @@ def properties(obj, type=None, set=None):
 
     if not set:
         ret = {}
-        for prop, descr in _parse_proplist(out['stdout']).items():
+        for prop, descr in six.iteritems(_parse_proplist(out['stdout'])):
             ret[prop] = {'description': descr}
             value = __salt__['cmd.run_all'](
                 "btrfs property get {0} {1}".format(obj, prop))['stdout']
