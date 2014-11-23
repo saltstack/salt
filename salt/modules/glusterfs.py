@@ -8,11 +8,10 @@ from __future__ import absolute_import
 import logging
 
 # Import 3rd-party libs
-from salt.ext.six.moves import range, shlex_quote as _cmd_quote  # pylint: disable=import-error,redefined-builtin
-try:
-    from shlex import quote as _cmd_quote  # pylint: disable=E0611
-except ImportError:
-    from pipes import quote as _cmd_quote
+# pylint: disable=import-error,redefined-builtin
+from salt.ext.six.moves import range
+from salt.ext.six.moves import shlex_quote as _cmd_quote
+# pylint: enable=import-error,redefined-builtin
 
 # Import salt libs
 import salt.utils
