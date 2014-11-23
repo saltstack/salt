@@ -5,13 +5,16 @@ Wrapper around Server Density API
 
 .. versionadded:: 2014.7.0
 '''
-from __future__ import absolute_import
 
-import requests
+# Import Python libs
+from __future__ import absolute_import
 import json
 import logging
 
-from salt.ext.six.moves import map
+# Import 3rd-party libs
+import requests
+import salt.ext.six as six
+from salt.ext.six.moves import map  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 from salt.exceptions import CommandExecutionError
 
@@ -146,8 +149,8 @@ def ls(**params):
         endpoint = 'resources'
 
     # Convert all ints to strings:
-    for k, v in params.items():
-        params[k] = str(v)
+    for key, val in six.iteritems(params):
+        params[key] = str(val)
 
     api_response = requests.get(
         'https://api.serverdensity.io/inventory/{0}'.format(endpoint),
