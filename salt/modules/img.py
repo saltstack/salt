@@ -2,13 +2,13 @@
 '''
 Virtual machine image management tools
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import logging
 
 # Import 3rd-party libs
-#from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=import-error,no-name-in-module
+import salt.ext.six as six
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ def mount_image(location):
         mnt = __salt__['qemu_nbd.init'](location)
         if not mnt:
             return ''
-        first = next(mnt.iterkeys())
+        first = next(six.iterkeys(mnt))
         __context__['img.mnt_{0}'.format(first)] = mnt
         return first
     return ''
