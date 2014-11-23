@@ -4,9 +4,9 @@ Package support for openSUSE via the zypper package manager
 
 :depends: - ``zypp`` Python module.  Install with ``zypper install python-zypp``
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import copy
 import logging
 import re
@@ -254,17 +254,17 @@ def _get_repo_info(alias, repos_cfg=None):
     try:
         meta = dict((repos_cfg or _get_configured_repos()).items(alias))
         meta['alias'] = alias
-        for k, v in meta.items():
-            if v in ['0', '1']:
-                meta[k] = int(meta[k]) == 1
-            elif v == 'NONE':
-                meta[k] = None
+        for key, val in six.iteritems(meta):
+            if val in ['0', '1']:
+                meta[key] = int(meta[key]) == 1
+            elif val == 'NONE':
+                meta[key] = None
         return meta
-    except Exception:
+    except ValueError:
         return {}
 
 
-def get_repo(repo, **kwargs):
+def get_repo(repo, **kwargs):  # pylint: disable=unused-argument
     '''
     Display a repo.
 
@@ -582,9 +582,9 @@ def install(name=None,
             else:
                 match = re.match('^([<>])?(=)?([^<>=]+)$', version_num)
                 if match:
-                    gt_lt, eq, verstr = match.groups()
+                    gt_lt, equal, verstr = match.groups()
                     prefix = gt_lt or ''
-                    prefix += eq or ''
+                    prefix += equal or ''
                     # If no prefix characters were supplied, use '='
                     prefix = prefix or '='
                     targets.append('{0}{1}{2}'.format(param, prefix, verstr))
@@ -709,7 +709,7 @@ def _uninstall(action='remove', name=None, pkgs=None):
     return salt.utils.compare_dicts(old, new)
 
 
-def remove(name=None, pkgs=None, **kwargs):
+def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
     '''
     Remove packages with ``zypper -n remove``
 
@@ -739,7 +739,7 @@ def remove(name=None, pkgs=None, **kwargs):
     return _uninstall(action='remove', name=name, pkgs=pkgs)
 
 
-def purge(name=None, pkgs=None, **kwargs):
+def purge(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
     '''
     Recursively remove a package and all dependencies which were installed
     with it, this will call a ``zypper -n remove -u``
@@ -821,7 +821,7 @@ def clean_locks():
     return True
 
 
-def remove_lock(name=None, pkgs=None, **kwargs):
+def remove_lock(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
     '''
     Remove specified package lock.
 
@@ -856,7 +856,7 @@ def remove_lock(name=None, pkgs=None, **kwargs):
     return {'removed': len(removed), 'not_found': missing}
 
 
-def add_lock(name=None, pkgs=None, **kwargs):
+def add_lock(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
     '''
     Add a package lock. Specify packages to lock by exact name.
 
@@ -1070,13 +1070,13 @@ def list_products():
 
         salt '*' pkg.list_products
     '''
-    PRODUCTS = '/etc/products.d'
-    if not os.path.exists(PRODUCTS):
-        raise CommandExecutionError('Directory {0} does not exists.'.format(PRODUCTS))
+    products = '/etc/products.d'
+    if not os.path.exists(products):
+        raise CommandExecutionError('Directory {0} does not exists.'.format(products))
 
     products = {}
     for fname in os.listdir('/etc/products.d'):
-        pth_name = os.path.join(PRODUCTS, fname)
+        pth_name = os.path.join(products, fname)
         r_pth_name = os.path.realpath(pth_name)
         products[r_pth_name] = r_pth_name != pth_name and 'baseproduct' or None
 
@@ -1086,7 +1086,7 @@ def list_products():
             'description']
 
     ret = {}
-    for prod_meta, is_base_product in products.items():
+    for prod_meta, is_base_product in six.iteritems(products):
         product = _parse_suse_product(prod_meta, *info)
         product['baseproduct'] = is_base_product is not None
         ret[product.pop('name')] = product
