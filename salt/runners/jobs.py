@@ -3,12 +3,10 @@
 A convenience system to manage jobs, both active and already run
 '''
 
-from __future__ import print_function
-
-from __future__ import absolute_import
-
 # Import python libs
+from __future__ import absolute_import, print_function
 import fnmatch
+import logging
 import os
 
 # Import salt libs
@@ -18,9 +16,9 @@ import salt.utils
 import salt.utils.jid
 import salt.minion
 
-from salt.ext.six import string_types
+# Import 3rd-party libs
+import salt.ext.six as six
 
-import logging
 log = logging.getLogger(__name__)
 
 
@@ -39,8 +37,10 @@ def active(outputter=None, display_progress=False):
     client = salt.client.get_local_client(__opts__['conf_file'])
     active_ = client.cmd('*', 'saltutil.running', timeout=__opts__['timeout'])
     if display_progress:
-        __jid_event__.fire_event({'message': 'Attempting to contact minions: {0}'.format(active_.keys())}, 'progress')
-    for minion, data in active_.items():
+        __jid_event__.fire_event({
+            'message': 'Attempting to contact minions: {0}'.format(list(active_.keys()))
+            }, 'progress')
+    for minion, data in six.iteritems(active_):
         if display_progress:
             __jid_event__.fire_event({'message': 'Received reply from minion {0}'.format(minion)}, 'progress')
         if not isinstance(data, list):
@@ -201,7 +201,7 @@ def list_jobs(ext_source=None,
                     for key in search_target:
                         if fnmatch.fnmatch(ret[item]['Target'], key):
                             _mret[item] = ret[item]
-                elif isinstance(search_target, string_types):
+                elif isinstance(search_target, six.string_types):
                     if fnmatch.fnmatch(ret[item]['Target'], search_target):
                         _mret[item] = ret[item]
         mret = _mret.copy()
@@ -214,7 +214,7 @@ def list_jobs(ext_source=None,
                     for key in search_function:
                         if fnmatch.fnmatch(ret[item]['Function'], key):
                             _mret[item] = ret[item]
-                elif isinstance(search_function, string_types):
+                elif isinstance(search_function, six.string_types):
                     if fnmatch.fnmatch(ret[item]['Function'], search_function):
                         _mret[item] = ret[item]
         mret = _mret.copy()
