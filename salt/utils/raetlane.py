@@ -31,9 +31,9 @@ The module attributes:
 
 Example usage:
 
-import raetlanestack
+import raetlane
 
-raetlanestack.prep()
+raetlane.prep()
 
 track = nacling.uuid(18)
 src = (None, 'localyardname', track)
@@ -41,10 +41,10 @@ dst = ('remotestackname', 'remoteyardname', 'remotesharename')
 route = {'src': src, 'dst': dst}
 msg = {'route': route, 'body': {}}
 
-raetlanestack.transmit(msg)
-raetlanestack.service()
+raetlane.transmit(msg)
+raetlane.service()
 
-msg = raetlanestack.wait(share=track, timeout=5.0)
+msg = raetlane.wait(share=track, timeout=5.0)
 if not msg:
    raise ValueError("Timed out out waiting for response")
 
