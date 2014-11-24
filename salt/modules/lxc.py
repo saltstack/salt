@@ -2349,12 +2349,16 @@ def write_conf(conf_file, conf):
     return {}
 
 
-def edit_conf(conf_file, out_format='simple', **kwargs):
+def edit_conf(conf_file, out_format='simple', read_only=False, **kwargs):
     '''
     Edit an LXC configuration file. If a setting is already present inside the
     file, its value will be replaced. If it does not exist, it will be appended
     to the end of the file. Comments and blank lines will be kept in-tact if
     they already exist in the file.
+
+    read_only:
+        return only the edited configuration without applying it
+        to the underlying lxc configuration file
 
     After the file is edited, its contents will be returned. By default, it
     will be returned in ``simple`` format, meaning an unordered dict (which
@@ -2392,6 +2396,7 @@ def edit_conf(conf_file, out_format='simple', **kwargs):
         if kwarg.startswith('__'):
             continue
         data.append({kwarg: kwargs[kwarg]})
-
+    if read_only:
+        return data
     write_conf(conf_file, data)
     return read_conf(conf_file, out_format)
