@@ -649,7 +649,7 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
         )
 
 
-def wait_for_winexesvc(host, port, username, password, timeout=900, gateway=None):
+def wait_for_winexesvc(host, port, username, password, timeout=900):
     '''
     Wait until winexe connection can be established.
     '''
