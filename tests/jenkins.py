@@ -19,7 +19,6 @@ import time
 import shutil
 import optparse
 import subprocess
-import argparse
 
 # Import Salt libs
 try:
