@@ -3,9 +3,7 @@
 Execute overstate functions
 '''
 # Import pytohn libs
-from __future__ import print_function
-from __future__ import absolute_import
-
+from __future__ import absolute_import, print_function
 import fnmatch
 import json
 import logging
@@ -16,6 +14,9 @@ import salt.overstate
 import salt.syspaths
 import salt.utils.event
 from salt.exceptions import SaltInvocationError
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 LOGGER = logging.getLogger(__name__)
 
@@ -57,7 +58,7 @@ def over(saltenv='base', os_fn=None):
         if isinstance(stage, dict):
             # This is highstate data
             __jid_event__.fire_event({'message': 'Stage execution results:'}, 'progress')
-            for key, val in stage.items():
+            for key, val in six.iteritems(stage):
                 if '_|-' in key:
                     __jid_event__.fire_event({'data': {'error': {key: val}}, 'outputter': 'highstate'}, 'progress')
                 else:
