@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
+import salt.utils
 import salt.utils.minions
 
 log = logging.getLevelName(__name__)
@@ -26,6 +27,8 @@ def get(tgt, fun, tgt_type='glob', output=None):
     '''
     if output is not None:
         # Remove this logging warning in Beryllium
-        log.warn('Runners now support --out. Please use --out instead.')
+        salt.utils.warn_until(
+                'Beryllium',
+                'Runners now supports --out. Please use --out instead.')
     ret = salt.utils.minions.mine_get(tgt, fun, tgt_type, __opts__)
     return ret
