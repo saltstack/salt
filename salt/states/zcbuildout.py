@@ -134,8 +134,7 @@ def installed(name,
               verbose=False,
               unless=None,
               onlyif=None,
-              use_vt=False,
-              loglevel='debug'):
+              use_vt=False):
     '''
     Install buildout in a specific directory
 
@@ -202,10 +201,6 @@ def installed(name,
 
     use_vt
         Use the new salt VT to stream output [experimental]
-
-    loglevel
-        loglevel for buildout commands
-
     '''
     ret = {}
 
