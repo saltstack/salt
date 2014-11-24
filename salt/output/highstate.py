@@ -59,7 +59,6 @@ from __future__ import absolute_import
 
 # Import python libs
 import pprint
-import sys
 
 # Import salt libs
 import salt.utils
@@ -208,7 +207,7 @@ def _format_host(host, data):
                 # but try to continue on errors
                 pass
             try:
-                comment = ret['comment'].decode(sys.getfilesystemencoding())
+                comment = salt.utils.sdecode(ret['comment'])
                 comment = comment.strip().replace(
                         u'\n',
                         u'\n' + u' ' * 14)
