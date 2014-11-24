@@ -142,4 +142,4 @@ def _get_non_null_args(**kwargs):
     '''
     Return those kwargs which are not null
     '''
-    return {key: kwargs[key] for key in kwargs if kwargs[key]}
+    return {key: kwargs[key] for key in kwargs if kwargs[key]} # pylint: disable=E0001
