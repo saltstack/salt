@@ -9,7 +9,7 @@
 # Import Python libs
 from __future__ import absolute_import
 import logging
-import logging
+from copy import copy
 
 # Import Salt Libs
 from salt.log import setup_console_logger
