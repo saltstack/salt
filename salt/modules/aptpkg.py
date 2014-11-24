@@ -10,6 +10,10 @@ import re
 import logging
 import urllib2
 import json
+try:
+    from shlex import quote as _cmd_quote  # pylint: disable=E0611
+except ImportError:
+    from pipes import quote as _cmd_quote
 
 # Import third party libs
 import yaml
@@ -660,10 +664,13 @@ def list_pkgs(versions_as_list=False,
         return ret
 
     ret = {'installed': {}, 'removed': {}, 'purge_desired': {}}
-    cmd = 'dpkg-query --showformat=\'${Status} ${Package} ' \
-          '${Version} ${Architecture}\n\' -W'
+    cmd = ('dpkg-query', '--showformat',
+           '${Status} ${Package} ${Version} ${Architecture}\n', '-W')
 
-    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run_stdout'](
+            cmd,
+            output_loglevel='debug',
+            python_shell=False)
     # Typical lines of output:
     # install ok installed zsh 4.3.17-1ubuntu1 amd64
     # deinstall ok config-files mc 3:4.8.1-2ubuntu1 amd64
@@ -800,7 +807,7 @@ def version_cmp(pkg1, pkg2):
     try:
         for oper, ret in (('lt', -1), ('eq', 0), ('gt', 1)):
             cmd = 'dpkg --compare-versions {0!r} {1} ' \
-                  '{2!r}'.format(pkg1, oper, pkg2)
+                  '{2!r}'.format(_cmd_quote(pkg1), oper, _cmd_quote(pkg2))
             retcode = __salt__['cmd.retcode'](
                 cmd, output_loglevel='debug', ignore_retcode=True
             )
@@ -1100,9 +1107,9 @@ def mod_repo(repo, saltenv='base', **kwargs):
                     return {repo: ''}
                 except Exception:
                     if float(__grains__['osrelease']) < 12.04:
-                        cmd = 'apt-add-repository {0}'.format(repo)
+                        cmd = 'apt-add-repository {0}'.format(_cmd_quote(repo))
                     else:
-                        cmd = 'apt-add-repository -y {0}'.format(repo)
+                        cmd = 'apt-add-repository -y {0}'.format(_cmd_quote(repo))
                     out = __salt__['cmd.run_stdout'](
                         cmd, output_loglevel='debug', **kwargs
                     )
@@ -1214,18 +1221,17 @@ def mod_repo(repo, saltenv='base', **kwargs):
         if not keyid or not ks:
             error_str = 'both keyserver and keyid options required.'
             raise NameError(error_str)
-        cmd = 'apt-key export {0}'.format(keyid)
-        output = __salt__['cmd.run_stdout'](
-            cmd, output_loglevel='debug', **kwargs
-        )
+        cmd = 'apt-key export {0}'.format(_cmd_quote(keyid))
+        output = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug', **kwargs)
         imported = output.startswith('-----BEGIN PGP')
         if ks:
             if not imported:
                 cmd = ('apt-key adv --keyserver {0} --logger-fd 1 '
                        '--recv-keys {1}')
-                ret = __salt__['cmd.run_all'](
-                    cmd.format(ks, keyid), output_loglevel='debug', **kwargs
-                )
+                ret = __salt__['cmd.run_all'](cmd.format(_cmd_quote(keyserver),
+                                                         _cmd_quote(keyid)),
+                                              output_loglevel='debug',
+                                              **kwargs)
                 if ret['retcode'] != 0:
                     raise CommandExecutionError(
                         'Error: key retrieval failed: {0}'
@@ -1235,10 +1241,8 @@ def mod_repo(repo, saltenv='base', **kwargs):
     elif 'key_url' in kwargs:
         key_url = kwargs['key_url']
         fn_ = __salt__['cp.cache_file'](key_url, saltenv)
-        cmd = 'apt-key add {0}'.format(fn_)
-        out = __salt__['cmd.run_stdout'](
-            cmd, output_loglevel='debug', **kwargs
-        )
+        cmd = 'apt-key add {0}'.format(_cmd_quote(fn_))
+        out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug', **kwargs)
         if not out.upper().startswith('OK'):
             raise CommandExecutionError(
                 'Error: key retrieval failed: {0}'.format(cmd.format(key_url))
@@ -1468,7 +1472,7 @@ def get_selections(pattern=None, state=None):
     ret = {}
     cmd = 'dpkg --get-selections'
     if pattern:
-        cmd += ' {0!r}'.format(pattern)
+        cmd += ' {0!r}'.format(_cmd_quote(pattern))
     else:
         cmd += ' "*"'
     stdout = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
@@ -1573,14 +1577,12 @@ def set_selections(path=None, selection=None, clear=False, saltenv='base'):
             for _pkg in _pkgs:
                 if _state == sel_revmap.get(_pkg):
                     continue
-                cmd = 'echo {0} {1} | dpkg --set-selections'.format(
-                    _pkg,
-                    _state
-                    )
+                cmd = 'dpkg --set-selections'
+                cmd_in = '{0} {1}'.format(_pkg, _state)
                 if not __opts__['test']:
-                    result = __salt__['cmd.run_all'](
-                        cmd, output_loglevel='debug'
-                    )
+                    result = __salt__['cmd.run_all'](cmd,
+                                                     stdin=cmd_in,
+                                                     output_loglevel='debug')
                     if result['retcode'] != 0:
                         log.error(
                             'failed to set state {0} for package '
