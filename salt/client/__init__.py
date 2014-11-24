@@ -74,7 +74,6 @@ def get_local_client(
     if mopts:
         opts = mopts
     else:
-        import salt.config
         opts = salt.config.client_config(c_path)
     if opts['transport'] == 'raet':
         import salt.client.raet
