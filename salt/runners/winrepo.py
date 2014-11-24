@@ -3,25 +3,22 @@
 Runner to manage Windows software repo
 '''
 
-from __future__ import print_function
-
-from __future__ import absolute_import
-
 # Import python libs
+from __future__ import absolute_import, print_function
 import os
 
 # Import third party libs
+import salt.ext.six as six
 import yaml
 try:
     import msgpack
 except ImportError:
-    import msgpack_pure as msgpack
+    import msgpack_pure as msgpack  # pylint: disable=import-error
 
 # Import salt libs
 import salt.utils
 import logging
 import salt.minion
-from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 
@@ -56,9 +53,9 @@ def genrepo():
                         __jid_event__.fire_event({'error': 'Failed to compile {0}: {1}'.format(os.path.join(root, name), exc)}, 'progress')
                 if config:
                     revmap = {}
-                    for pkgname, versions in config.items():
-                        for version, repodata in versions.items():
-                            if not isinstance(version, string_types):
+                    for pkgname, versions in six.iteritems(config):
+                        for version, repodata in six.iteritems(versions):
+                            if not isinstance(version, six.string_types):
                                 config[pkgname][str(version)] = \
                                     config[pkgname].pop(version)
                             if not isinstance(repodata, dict):
