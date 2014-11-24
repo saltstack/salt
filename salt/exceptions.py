@@ -6,7 +6,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import copy
-import salt.exitcodes
+import salt.defaults.exitcodes
 
 
 class SaltException(Exception):
@@ -193,7 +193,7 @@ class SaltCloudSystemExit(SaltCloudException):
     '''
     This exception is raised when the execution should be stopped.
     '''
-    def __init__(self, message, exit_code=salt.exitcodes.EX_GENERIC):
+    def __init__(self, message, exit_code=salt.defaults.exitcodes.EX_GENERIC):
         SaltCloudException.__init__(self, message)
         self.message = message
         self.exit_code = exit_code

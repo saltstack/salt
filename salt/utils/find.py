@@ -109,6 +109,7 @@ import salt.ext.six as six
 
 # Import salt libs
 import salt.utils
+import salt.defaults.exitcodes
 from salt.utils.filebuffer import BufferedReader
 
 # Set up logger
@@ -685,7 +686,7 @@ def _main():
         finder = Finder(criteria)
     except ValueError as ex:
         sys.stderr.write('error: {0}\n'.format(ex))
-        sys.exit(salt.exitcodes.EX_GENERIC)
+        sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
     for result in finder.find(path):
         print(result)

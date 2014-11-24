@@ -17,13 +17,13 @@ import time
 
 # Import salt libs
 import salt
-import salt.exitcodes
 import salt.loader
 import salt.minion
 import salt.output
 import salt.payload
 import salt.transport
 import salt.utils.args
+import salt.defaults.exitcodes
 from salt.ext.six import string_types
 from salt.log import LOG_LEVELS
 from salt.utils import print_cli
@@ -143,7 +143,7 @@ class ZeroMQCaller(object):
                     self.opts['log_level'].lower(), logging.ERROR)
                 if active_level <= logging.DEBUG:
                     sys.stderr.write(trace)
-                sys.exit(salt.exitcodes.EX_GENERIC)
+                sys.exit(salt.defaults.exitcodes.EX_GENERIC)
             try:
                 ret['retcode'] = sys.modules[
                     func.__module__].__context__.get('retcode', 0)
@@ -156,11 +156,11 @@ class ZeroMQCaller(object):
             if active_level <= logging.DEBUG:
                 sys.stderr.write(traceback.format_exc())
             sys.stderr.write(msg.format(fun, str(exc)))
-            sys.exit(salt.exitcodes.EX_GENERIC)
+            sys.exit(salt.defaults.exitcodes.EX_GENERIC)
         except CommandNotFoundError as exc:
             msg = 'Command required for \'{0}\' not found: {1}\n'
             sys.stderr.write(msg.format(fun, str(exc)))
-            sys.exit(salt.exitcodes.EX_GENERIC)
+            sys.exit(salt.defaults.exitcodes.EX_GENERIC)
         try:
             os.remove(proc_fn)
         except (IOError, OSError):
