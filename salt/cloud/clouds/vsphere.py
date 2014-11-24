@@ -9,7 +9,8 @@ The vSphere cloud module is used to control access to VMWare vSphere.
 
 :depends:   - PySphere Python module
 
-Note: Ensure python pysphere module is installed by running following onliner check, 0 should be the output.
+Note: Ensure python pysphere module is installed by running following one-liner
+check. The output should be 0.
 
 .. code-block:: bash
 
