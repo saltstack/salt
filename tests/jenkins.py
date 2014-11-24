@@ -19,6 +19,7 @@ import time
 import shutil
 import optparse
 import subprocess
+import argparse
 
 # Import Salt libs
 try:
@@ -117,7 +118,7 @@ def delete_vm(options):
     proc.communicate()
 
 
-def echo_parseable_environment(options):
+def echo_parseable_environment(options, parser):
     '''
     Echo NAME=VAL parseable output
     '''
@@ -365,6 +366,10 @@ def run(opts):
     '''
     RUN!
     '''
+
+    parser = argparse.ArgumentParser(
+        description='Jenkins execution helper'
+    )
     vm_name = os.environ.get(
         'JENKINS_SALTCLOUD_VM_NAME',
         generate_vm_name(opts)
@@ -959,7 +964,7 @@ def parse():
         parser.exit('--provider or --pull-request is required')
 
     if options.echo_parseable_environment:
-        echo_parseable_environment(options)
+        echo_parseable_environment(options, parser)
         parser.exit(0)
 
     if not options.test_git_commit and not options.pull_request:
