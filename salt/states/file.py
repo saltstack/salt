@@ -1194,6 +1194,10 @@ def managed(name,
         If the command exits with a nonzero exit code, the command will not be
         run.
     '''
+    # contents must be a string
+    if contents:
+        contents = str(contents)
+
     # Make sure that leading zeros stripped by YAML loader are added back
     mode = __salt__['config.manage_mode'](mode)
 
