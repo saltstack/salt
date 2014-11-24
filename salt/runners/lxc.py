@@ -13,7 +13,7 @@ import copy
 import logging
 
 # Import Salt libs
-from salt.utils.odict import OrderedDict
+from salt.utils.odict import _OrderedDict
 import salt.client
 import salt.output
 import salt.utils.virt
@@ -258,12 +258,12 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
              name,
              client.cmd_iter(host, 'lxc.init', args, kwarg=kw, timeout=600)))
     done = ret.setdefault('done', [])
-    errors = ret.setdefault('errors', OrderedDict())
+    errors = ret.setdefault('errors', _OrderedDict())
 
     for ix, acmd in enumerate(cmds):
         hst, container_name, cmd = acmd
         containers = ret.setdefault(hst, [])
-        herrs = errors.setdefault(hst, OrderedDict())
+        herrs = errors.setdefault(hst, _OrderedDict())
         serrs = herrs.setdefault(container_name, [])
         sub_ret = next(cmd)
         error = None
