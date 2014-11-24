@@ -823,7 +823,7 @@ def deploy_windows(host,
         # Shell out to smbclient to create C:\salt\conf\pki\minion
         win_cmd('smbclient {0}/c$ -c "mkdir salt; mkdir salt\\conf; mkdir salt\\conf\\pki; mkdir salt\\conf\\pki\\minion; exit;"'.format(creds))
         # Shell out to smbclient to copy over minion keys
-        ## minion_pub, minion_pem
+        # minion_pub, minion_pem
         kwargs = {'hostname': host,
                   'creds': creds}
 
@@ -834,9 +834,9 @@ def deploy_windows(host,
             smb_file('salt\\conf\\pki\\minion\\minion.pem', minion_pem, kwargs)
 
         # Shell out to smbclient to copy over win_installer
-        ## win_installer refers to a file such as:
-        ## /root/Salt-Minion-0.17.0-win32-Setup.exe
-        ## ..which exists on the same machine as salt-cloud
+        # win_installer refers to a file such as:
+        # /root/Salt-Minion-0.17.0-win32-Setup.exe
+        # ..which exists on the same machine as salt-cloud
         comps = win_installer.split('/')
         local_path = '/'.join(comps[:-1])
         installer = comps[-1]
@@ -844,8 +844,8 @@ def deploy_windows(host,
             creds, local_path, installer
         ))
         # Shell out to winexe to execute win_installer
-        ## We don't actually need to set the master and the minion here since
-        ## the minion config file will be set next via smb_file
+        # We don't actually need to set the master and the minion here since
+        # the minion config file will be set next via smb_file
         win_cmd('winexe {0} "c:\\salttemp\\{1} /S /master={2} /minion-name={3}"'.format(
             creds, installer, master, name
         ))
@@ -882,7 +882,7 @@ def deploy_windows(host,
                 kwargs
             )
         # Shell out to smbclient to delete C:\salttmp\ and installer file
-        ## Unless keep_tmp is True
+        # Unless keep_tmp is True
         if not keep_tmp:
             win_cmd('smbclient {0}/c$ -c "del salttemp\\{1}; prompt; exit;"'.format(
                 creds,
@@ -2233,7 +2233,7 @@ def update_bootstrap(config, url=None):
 
 
     '''
-    default_url = config.get('bootstrap_script__url',
+    default_url = config.get('bootstrap_script_url',
                              'https://bootstrap.saltstack.com')
     if not url:
         url = default_url
