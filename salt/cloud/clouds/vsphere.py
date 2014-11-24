@@ -94,6 +94,9 @@ def __virtual__():
     '''
     Set up the libcloud functions and check for vSphere configurations.
     '''
+    if not HAS_LIBS:
+        return False
+
     if get_configured_provider() is False:
         return False
 
