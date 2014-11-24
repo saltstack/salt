@@ -40,7 +40,7 @@ def _rbenv_exec(command, args='', env=None, runas=None, ret=None):
         try:
             var, val = token.split('=')
             environ[var] = val
-        except:
+        except Exception:
             pass  # if token != var=val, it's not a proper env anyway
     environ['RBENV_ROOT'] = path
 
