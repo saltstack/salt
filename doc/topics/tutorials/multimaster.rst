@@ -66,6 +66,17 @@ Now the minion can be safely restarted.
 Now the minions will check into the original master and also check into the new
 redundant master. Both masters are first-class and have rights to the minions.
 
+.. note::
+
+    Minions can automatically detect failed masters and attempt to reconnect
+    to reconnect to them quickly. To enable this functionality, set
+    `master_alive_interval` in the minion config and specify a number of
+    seconds to poll the masters for connection status.
+    
+    If this option is not set, minions will still reconnect to failed masters
+    but the first command sent after a master comes back up may be lost while
+    the minion authenticates.
+
 Sharing Files Between Masters
 -----------------------------
 

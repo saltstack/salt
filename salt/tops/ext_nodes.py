@@ -25,7 +25,6 @@ does.
 
 See (admittedly degenerate and probably not complete) example:
 
-
 .. code-block:: yaml
 
     classes:
@@ -41,7 +40,12 @@ The above essentially is the same as a top.sls containing the following:
         - basepackages
         - database
 
+    base:
+      '*':
+        - basepackages
+        - database
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging

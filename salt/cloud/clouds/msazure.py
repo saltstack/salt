@@ -24,6 +24,8 @@ http://www.windowsazure.com/en-us/develop/python/how-to-guides/service-managemen
 '''
 # pylint: disable=E0102
 
+from __future__ import absolute_import
+
 # Import python libs
 import time
 import copy
@@ -590,7 +592,8 @@ def create(vm_):
             'script_env': config.get_cloud_config_value(
                 'script_env', vm_, __opts__
             ),
-            'minion_conf': salt.utils.cloud.minion_config(__opts__, vm_)
+            'minion_conf': salt.utils.cloud.minion_config(__opts__, vm_),
+            'has_ssh_agent': False
         }
 
         # Deploy salt-master files, if necessary

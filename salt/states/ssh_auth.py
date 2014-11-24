@@ -48,6 +48,7 @@ to use a YAML 'explicit key', as demonstrated in the second example below.
           - option3="value3" ssh-dss AAAAB3NzaC1kcQ9J5bYTEyY== other@testdomain
           - AAAAB3NzaC1kcQ9fJFF435bYTEyY== newcomment
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import re
@@ -160,25 +161,7 @@ def present(
            'result': True,
            'comment': ''}
 
-    if __opts__['test']:
-        ret['result'], ret['comment'] = _present_test(
-                user,
-                name,
-                enc,
-                comment,
-                options or [],
-                source,
-                config,
-                )
-        return ret
-
-    if source != '':
-        data = __salt__['ssh.set_auth_key_from_file'](
-                user,
-                source,
-                config,
-                saltenv=__env__)
-    else:
+    if source == '':
         # check if this is of form {options} {enc} {key} {comment}
         sshre = re.compile(r'^(.*?)\s?((?:ssh\-|ecds)[\w-]+\s.+)$')
         fullkey = sshre.search(name)
@@ -199,6 +182,25 @@ def present(
             if len(comps) == 3:
                 comment = comps[2]
 
+    if __opts__['test']:
+        ret['result'], ret['comment'] = _present_test(
+                user,
+                name,
+                enc,
+                comment,
+                options or [],
+                source,
+                config,
+                )
+        return ret
+
+    if source != '':
+        data = __salt__['ssh.set_auth_key_from_file'](
+                user,
+                source,
+                config,
+                saltenv=__env__)
+    else:
         data = __salt__['ssh.set_auth_key'](
                 user,
                 name,

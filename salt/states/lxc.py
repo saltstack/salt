@@ -3,6 +3,8 @@
 lxc / Spin up and control LXC containers
 =========================================
 '''
+
+from __future__ import absolute_import
 __docformat__ = 'restructuredtext en'
 import traceback
 

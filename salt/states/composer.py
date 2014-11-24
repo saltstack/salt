@@ -37,9 +37,9 @@ the location of composer in the state.
         - php: /usr/local/bin/php
         - no_dev: true
 '''
+from __future__ import absolute_import
 
 # Import salt libs
-import salt.utils
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 
@@ -53,7 +53,6 @@ def __virtual__():
 def installed(name,
               composer=None,
               php=None,
-              runas=None,
               user=None,
               prefer_source=None,
               prefer_dist=None,
@@ -77,11 +76,6 @@ def installed(name,
     php
         Location of the php executable to use with composer.
         (i.e. /usr/bin/php)
-
-    runas
-        Which system user to run composer as.
-
-        .. deprecated:: 2014.1.4
 
     user
         Which system user to run composer as.
@@ -113,30 +107,6 @@ def installed(name,
         $COMPOSER_HOME environment variable
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
-
-    salt.utils.warn_until(
-        'Lithium',
-        'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 2014.1.4.',
-        _dont_call_warnings=True
-    )
-    if runas:
-        # Warn users about the deprecation
-        ret.setdefault('warnings', []).append(
-            'The \'runas\' argument is being deprecated in favor of \'user\', '
-            'please update your state files.'
-        )
-    if user is not None and runas is not None:
-        # user wins over runas but let warn about the deprecation.
-        ret.setdefault('warnings', []).append(
-            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
-            '\'runas\' is being ignored in favor of \'user\'.'
-        )
-        runas = None
-    elif runas is not None:
-        # Support old runas usage
-        user = runas
-        runas = None
 
     try:
         call = __salt__['composer.install'](

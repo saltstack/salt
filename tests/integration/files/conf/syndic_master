@@ -10,3 +10,4 @@ sock_dir: .salt-unix-syndic
 open_mode: True
 order_masters: True
 fileserver_list_cache_time: 0
+pillar_opts: True

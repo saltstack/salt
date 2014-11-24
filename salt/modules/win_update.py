@@ -10,9 +10,11 @@ Module for running windows updates.
 .. versionadded:: 2014.7.0
 
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import logging
+from salt.ext.six.moves import range
 try:
     import win32com.client
     import pythoncom
@@ -269,7 +271,7 @@ class PyWinUpdater(object):
         '''
         updates = self.GetInstallationResults()
         ret = 'The following are the updates and their return codes.\n'
-        for i in updates.keys():
+        for i in updates:
             ret += '\t{0}\n'.format(updates[i])
         return ret
 
@@ -316,8 +318,8 @@ class PyWinUpdater(object):
     def SetIncludes(self, includes):
         if includes:
             for i in includes:
-                value = i[i.keys()[0]]
-                include = i.keys()[0]
+                value = i[next(i.iterkeys())]
+                include = next(i.iterkeys())
                 self.SetInclude(include, value)
                 log.debug('was asked to set {0} to {1}'.format(include, value))
 
@@ -478,7 +480,7 @@ def list_updates(verbose=False, includes=None, retries=5, categories=None):
 
     '''
 
-    log.debug('categories to search for are: '.format(str(categories)))
+    log.debug('categories to search for are: {0}'.format(str(categories)))
     quidditch = PyWinUpdater()
     if categories:
         quidditch.SetCategories(categories)
@@ -533,7 +535,7 @@ def download_updates(includes=None, retries=5, categories=None):
 
     '''
 
-    log.debug('categories to search for are: '.format(str(categories)))
+    log.debug('categories to search for are: {0}'.format(str(categories)))
     quidditch = PyWinUpdater(skipDownloaded=True)
     quidditch.SetCategories(categories)
     quidditch.SetIncludes(includes)
@@ -560,8 +562,13 @@ def install_updates(includes=None, retries=5, categories=None):
     Downloads and installs all available updates, skipping those that require
     user interaction.
 
-    various aspects of the updates can be included or excluded. this feature is
-    still in development.
+    Add ``cached`` to only install those updates which have already been downloaded.
+
+    you can set the maximum number of retries to ``n`` in the search process by
+    adding: ``retries=n``
+
+    various aspects of the updates can be included or excluded. This function is
+    still under development.
 
     retries
         Number of retries to make before giving up. This is total, not per
@@ -594,7 +601,7 @@ def install_updates(includes=None, retries=5, categories=None):
 
     '''
 
-    log.debug('categories to search for are: '.format(str(categories)))
+    log.debug('categories to search for are: {0}'.format(str(categories)))
     quidditch = PyWinUpdater()
     quidditch.SetCategories(categories)
     quidditch.SetIncludes(includes)

@@ -1,5 +1,6 @@
-# Salt Master Worker Floscript, this controls a single worker proc,
-# many are started based on the value in worker_threads
+# Salt Master Worker Floscript.
+#
+# This controlls a single worker proc, many are started based on the value in worker_threads
 
 house worker
 

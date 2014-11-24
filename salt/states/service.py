@@ -93,7 +93,7 @@ def _enable(name, started, result=True, **kwargs):
             return ret
 
     # Service can be enabled
-    if __salt__['service.enabled'](name):
+    if __salt__['service.enabled'](name, **kwargs):
         # Service is enabled
         if started is True:
             ret['changes'][name] = True

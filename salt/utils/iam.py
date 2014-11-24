@@ -4,6 +4,7 @@ Connection library for Amazon IAM
 
 :depends: requests
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import json
@@ -11,6 +12,8 @@ import logging
 import time
 import requests
 import pprint
+from salt.ext.six.moves import range
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -44,7 +47,7 @@ def _convert_key_to_str(key):
     '''
     Stolen completely from boto.providers
     '''
-    if isinstance(key, unicode):
+    if isinstance(key, six.text_type):
         # the secret key must be bytes and not unicode to work
         #  properly with hmac.new (see http://bugs.python.org/issue5285)
         return str(key)

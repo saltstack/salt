@@ -4,6 +4,7 @@ Connection library for GitHub
 
 :depends: requests
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import json
@@ -35,14 +36,14 @@ def get_user_pubkeys(users):
             'user3',
         ]
     '''
-    if type(users) is not list:
+    if not isinstance(users, list):
         return {'Error': 'A list of users is expected'}
 
     ret = {}
     for user in users:
         key_ids = []
-        if type(user) is dict:
-            tmp_user = user.keys()[0]
+        if isinstance(user, dict):
+            tmp_user = next(user.iterkeys())
             key_ids = user[tmp_user]
             user = tmp_user
 

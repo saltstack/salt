@@ -2,6 +2,7 @@
 '''
 Modules used to control the master itself
 '''
+from __future__ import absolute_import
 #import python libs
 import collections
 import os
@@ -10,7 +11,6 @@ import time
 # Import salt libs
 from salt import syspaths
 import salt.config
-import salt.exceptions
 import salt.loader
 import salt.payload
 import salt.utils

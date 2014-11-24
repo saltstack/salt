@@ -2,6 +2,7 @@
 '''
 Module for viewing and modifying sysctl parameters
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -21,7 +22,7 @@ def __virtual__():
     return __virtualname__ if __grains__['os'] == 'MacOS' else False
 
 
-def show():
+def show(config_file=False):
     '''
     Return a list of sysctl parameters for this minion
 

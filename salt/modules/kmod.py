@@ -2,6 +2,7 @@
 '''
 Module to manage Linux kernel modules
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os

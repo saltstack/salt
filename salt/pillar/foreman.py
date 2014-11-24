@@ -30,10 +30,15 @@ The following options are optional:
   foreman.cafile: /etc/ssl/certs/mycert.ca.pem # default is None
   foreman.lookup_parameters: True # default is True
 
+An alternative would be to use the Foreman modules integrating Salt features
+in the Smart Proxy and the webinterface.
+
+Further information can be found on `Github <https://github.com/theforeman/foreman_salt>`_.
 
 Module Documentation
 ====================
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging

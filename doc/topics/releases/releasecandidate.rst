@@ -5,7 +5,7 @@ Installing/Testing a Salt Release Candidate
 It's time for a new feature release of Salt!  Follow the instructions below to
 install the latest release candidate of Salt, and try :doc:`all the shiny new
 features </topics/releases/2014.7.0>`!  Be sure to report any bugs you find on
-`Github <saltstack/salt>`_.
+`Github <http://www.github.com/saltstack/salt>`_
 
 Installing Using Bootstrap
 ==========================
@@ -16,7 +16,7 @@ The easiest way to install a release candidate of Salt is using
 .. code-block:: bash
 
     curl -o install_salt.sh -L https://bootstrap.saltstack.com
-    sudo sh install_salt.sh git v2014.7.0rc3
+    sudo sh install_salt.sh git v2014.7.0rc4
 
 If you want to also install a master using `Salt Bootstrap`_, use the ``-M``
 flag:
@@ -24,7 +24,7 @@ flag:
 .. code-block:: bash
 
     curl -o install_salt.sh -L https://bootstrap.saltstack.com
-    sudo sh install_salt.sh -M git v2014.7.0rc3
+    sudo sh install_salt.sh -M git v2014.7.0rc4
 
 If you want to install only a master and not a minion using `Salt Bootstrap`_,
 use the ``-M`` and ``-N`` flags:
@@ -32,7 +32,7 @@ use the ``-M`` and ``-N`` flags:
 .. code-block:: bash
 
     curl -o install_salt.sh -L https://bootstrap.saltstack.com
-    sudo sh install_salt.sh -M -N git v2014.7.0rc3
+    sudo sh install_salt.sh -M -N git v2014.7.0rc4
 
 
 Installation from Source Tarball
@@ -44,9 +44,9 @@ installation docs <_installation>`.  Then install salt using the following:
 
 .. code-block:: bash
 
-    curl -O https://pypi.python.org/packages/source/s/salt/salt-2014.7.0rc3.tar.gz
-    tar -xzvf salt-2014.7.0rc3.tar.gz
-    cd salt-2014.7.0rc3
+    curl -O https://pypi.python.org/packages/source/s/salt/salt-2014.7.0rc4.tar.gz
+    tar -xzvf salt-2014.7.0rc4.tar.gz
+    cd salt-2014.7.0rc4
     sudo python setup.py install
 
 

@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Manage SQS Queues
-=================
 
 .. versionadded:: 2014.7.0
 
@@ -58,6 +57,8 @@ passed in as a dict, or as a string to pull from pillars or minion config:
                 keyid: GKTADJGHEIQSXMKKRBJ08H
                 key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 '''
+from __future__ import absolute_import
+import salt.ext.six as six
 
 
 def __virtual__():
@@ -121,11 +122,11 @@ def present(
     _attributes = __salt__['boto_sqs.get_attributes'](name, region, key, keyid,
                                                       profile)
     if attributes:
-        for attr, val in attributes.iteritems():
+        for attr, val in six.iteritems(attributes):
             _val = _attributes.get(attr, None)
             if str(_val) != str(val):
                 attrs_to_set[attr] = val
-    attr_names = ','.join(attrs_to_set.keys())
+    attr_names = ','.join(attrs_to_set)
     if attrs_to_set:
         if __opts__['test']:
             ret['comment'] = 'Attribute(s) {0} to be set on {1}.'.format(
@@ -138,7 +139,7 @@ def present(
             ret['changes']['new']['attributes_set'] = []
         else:
             ret['changes']['new'] = {'attributes_set': []}
-        for attr, val in attrs_to_set.iteritems():
+        for attr, val in six.iteritems(attrs_to_set):
             set_attr = __salt__['boto_sqs.set_attributes'](name, {attr: val},
                                                            region, key, keyid,
                                                            profile)

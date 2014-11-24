@@ -55,6 +55,26 @@ Management of the Salt scheduler
     schedule the command: state.sls httpd test=True to run every 5 minutes.  Requires
     that python-croniter is installed.
 
+    job1:
+      schedule.present:
+        - function: state.sls
+        - args:
+          - httpd
+        - kwargs:
+          test: True
+        - when:
+            - Monday 5:00pm
+            - Tuesday 3:00pm
+            - Wednesday 5:00pm
+            - Thursday 3:00pm
+            - Friday 5:00pm
+        - returner: xmpp
+        - return_config: xmpp_state_run
+
+    This will schedule the command: state.sls httpd test=True at 5pm on Monday,
+    Wednesday and Friday, and 3pm on Tuesday and Thursday.  Using the xmpp returner
+    to return the results of the scheduled job, with the alternative configuration
+    options found in the xmpp_state_run section.
 
 '''
 
@@ -116,6 +136,12 @@ def present(name,
         This will schedule the command within the range specified.
         The range parameter must be a dictionary with the date strings
         using the dateutil format.
+
+    returner
+        The returner to use to return the results of the scheduled job.
+
+    return_config
+        The alternative configuration to use for returner configuration options.
 
     '''
 

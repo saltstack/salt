@@ -15,6 +15,21 @@ The following fields can be set in the minion conf file::
     smtp.gpgowner (optional)
     smtp.fields (optional)
 
+Alternative configuration values can be used by prefacing the configuration.
+Any values not found in the alternative configuration will be pulled from
+the default location::
+
+    alternative.smtp.from
+    alternative.smtp.to
+    alternative.smtp.host
+    alternative.smtp.port
+    alternative.smtp.username
+    alternative.smtp.password
+    alternative.smtp.tls
+    alternative.smtp.subject
+    alternative.smtp.gpgowner
+    alternative.smtp.fields
+
 There are a few things to keep in mind:
 
 * If a username is used, a password is also required. It is recommended (but
@@ -42,7 +57,12 @@ There are a few things to keep in mind:
 
     salt '*' test.ping --return smtp
 
+  To use the alternative configuration, append '--return_config alternative' to the salt command. ex:
+
+    salt '*' test.ping --return smtp --return_config alternative
+
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -53,6 +73,7 @@ from email.utils import formatdate
 
 # Import Salt libs
 import salt.utils
+import salt.returners
 
 try:
     import gnupg
@@ -70,40 +91,50 @@ def __virtual__():
     return __virtualname__
 
 
+def _get_options(ret=None):
+    '''
+    Get the SMTP options from salt.
+    '''
+    attrs = {'from': 'from',
+             'to': 'to',
+             'host': 'host',
+             'username': 'username',
+             'password': 'password',
+             'subject': 'subject',
+             'gpgowner': 'gpgowner',
+             'fields': 'fields',
+             'tls': 'tls'}
+
+    _options = salt.returners.get_returner_options(__virtualname__,
+                                                   ret,
+                                                   attrs,
+                                                   __salt__=__salt__,
+                                                   __opts__=__opts__)
+    return _options
+
+
 def returner(ret):
     '''
     Send an email with the data
     '''
 
-    if 'config.option' in __salt__:
-        from_addr = __salt__['config.option']('smtp.from')
-        to_addrs = __salt__['config.option']('smtp.to')
-        host = __salt__['config.option']('smtp.host')
-        port = __salt__['config.option']('smtp.port')
-        user = __salt__['config.option']('smtp.username')
-        passwd = __salt__['config.option']('smtp.password')
-        subject = __salt__['config.option']('smtp.subject')
-        gpgowner = __salt__['config.option']('smtp.gpgowner')
-        fields = __salt__['config.option']('smtp.fields').split(',')
-        smtp_tls = __salt__['config.option']('smtp.tls')
-    else:
-        cfg = __opts__
-        from_addr = cfg.get('smtp.from', None)
-        to_addrs = cfg.get('smtp.to', None)
-        host = cfg.get('smtp.host', None)
-        port = cfg.get('smtp.port', None)
-        user = cfg.get('smtp.username', None)
-        passwd = cfg.get('smtp.password', None)
-        subject = cfg.get('smtp.subject', None)
-        gpgowner = cfg.get('smtp.gpgowner', None)
-        fields = cfg.get('smtp.fields', '').split(',')
-        smtp_tls = cfg('smtp.tls', False)
+    _options = _get_options(ret)
+    from_addr = _options.get('from')
+    to_addrs = _options.get('to')
+    host = _options.get('host')
+    port = _options.get('port')
+    user = _options.get('username')
+    passwd = _options.get('password')
+    subject = _options.get('subject')
+    gpgowner = _options.get('gpgowner')
+    fields = _options.get('fields').split(',') if 'fields' in _options else []
+    smtp_tls = _options.get('tls')
 
     if not port:
         port = 25
     log.debug('SMTP port has been set to {0}'.format(port))
     for field in fields:
-        if field in ret.keys():
+        if field in ret:
             subject += ' {0}'.format(ret[field])
     log.debug("smtp_return: Subject is '{0}'".format(subject))
 

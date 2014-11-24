@@ -2,6 +2,7 @@
 '''
 Extract the pillar data for this minion
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import collections
@@ -12,12 +13,13 @@ import yaml
 # Import salt libs
 import salt.pillar
 import salt.utils
-from salt._compat import string_types
+from salt.defaults import DEFAULT_TARGET_DELIM
+from salt.ext.six import string_types
 
 __proxyenabled__ = ['*']
 
 
-def get(key, default='', merge=False, delimiter=':'):
+def get(key, default='', merge=False, delimiter=DEFAULT_TARGET_DELIM):
     '''
     .. versionadded:: 0.14
 
@@ -100,7 +102,7 @@ def item(*args):
     '''
     .. versionadded:: 0.16.2
 
-    Return one ore more pillar entries
+    Return one or more pillar entries
 
     CLI Examples:
 

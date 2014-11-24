@@ -115,12 +115,13 @@ from ``*`` to a randomized numeric value. However, if that field in the cron
 entry on the minion already contains a numeric value, then using the ``random``
 keyword will not modify it.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
+from salt.ext.six import string_types
 
 # Import salt libs
-import salt._compat
 import salt.utils
 from salt.modules.cron import (
     _needs_change,
@@ -438,7 +439,7 @@ def file(name,
     # declaration for this state will be a source URI.
     source = name
 
-    if isinstance(env, salt._compat.string_types):
+    if isinstance(env, string_types):
         msg = (
             'Passing a salt environment should be done using \'saltenv\' not '
             '\'env\'. This warning will go away in Salt Boron and this '

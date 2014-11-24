@@ -138,14 +138,11 @@
 
 # Number of consecutive SaltReqTimeoutError that are acceptable when trying to
 # authenticate.
-#auth_tries: 1
+#auth_tries: 7
 
-# If authentication fails due to SaltReqTimeoutError, continue without stopping the
-# minion.
-#auth_safemode: True
-
-# If the minion hits an error that is recoverable, restart the minion.
-#restart_on_error: False
+# If authentication fails due to SaltReqTimeoutError during a ping_interval,
+# cause sub minion process to restart.
+#auth_safemode: False
 
 # Ping Master to ensure connection is alive (minutes).
 #ping_interval: 0
@@ -247,11 +244,6 @@
 # is not enabled.
 # grains_cache_expiration: 300
 
-# When healing, a dns_check is run. This is to make sure that the originally
-# resolved dns has not changed. If this is something that does not happen in
-# your environment, set this value to False.
-#dns_check: True
-
 # Windows platforms lack posix IPC and must rely on slower TCP based inter-
 # process communications. Set ipc_mode to 'tcp' on such systems
 #ipc_mode: ipc
@@ -264,6 +256,12 @@
 # memory. This value tunes the maximum size of a message allowed onto the
 # minion event bus. The value is expressed in bytes.
 #max_event_size: 1048576
+
+# To detect failed master(s) and fire events on connect/disconnect, set
+# master_alive_interval to the number of seconds to poll the masters for
+# connection events.
+#
+#master_alive_interval: 30
 
 # The minion can include configuration from other files. To enable this,
 # pass a list of paths to this option. The paths can be either relative or

@@ -12,7 +12,7 @@ Security disclosure policy
 
 .. code-block:: text
 
-    -----BEGIN PGP PUBLIC KEY BLOCK----
+    -----BEGIN PGP PUBLIC KEY BLOCK-----
     Version: GnuPG/MacGPG2 v2.0.22 (Darwin)
 
     mQINBFO15mMBEADa3CfQwk5ED9wAQ8fFDku277CegG3U1hVGdcxqKNvucblwoKCb

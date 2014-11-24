@@ -1,7 +1,7 @@
 base_ec2:
   provider: my-ec2-config
   image: ami-e565ba8c
-  size: Micro Instance
+  size: t1.micro
   script: python-bootstrap
   minion:
       cheese: edam

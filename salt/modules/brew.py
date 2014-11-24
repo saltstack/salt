@@ -2,6 +2,7 @@
 '''
 Homebrew for Mac OS X
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import copy
@@ -32,10 +33,10 @@ def _list_taps():
     List currently installed brew taps
     '''
     cmd = 'brew tap'
-    return __salt__['cmd.run'](cmd, output_loglevel='trace').splitlines()
+    return _call_brew(cmd)['stdout'].splitlines()
 
 
-def _tap(tap, runas=None):
+def _tap(tap):
     '''
     Add unofficial Github repos to the list of formulas that brew tracks,
     updates, and installs from.
@@ -44,7 +45,7 @@ def _tap(tap, runas=None):
         return True
 
     cmd = 'brew tap {0}'.format(tap)
-    if __salt__['cmd.retcode'](cmd, runas=runas):
+    if _call_brew(cmd)['retcode']:
         log.error('Failed to tap "{0}"'.format(tap))
         return False
 
@@ -58,6 +59,14 @@ def _homebrew_bin():
     ret = __salt__['cmd.run']('brew --prefix', output_loglevel='trace')
     ret += '/bin/brew'
     return ret
+
+
+def _call_brew(cmd):
+    '''
+    Calls the brew command with the user user account of brew
+    '''
+    user = __salt__['file.get_user'](_homebrew_bin())
+    return __salt__['cmd.run_all'](cmd, runas=user, output_loglevel='trace')
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
@@ -88,7 +97,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
     cmd = 'brew list --versions'
     ret = {}
-    out = __salt__['cmd.run'](cmd, output_loglevel='trace')
+    out = _call_brew(cmd)['stdout']
     for line in out.splitlines():
         try:
             name_and_versions = line.split(' ')
@@ -193,7 +202,7 @@ def remove(name=None, pkgs=None, **kwargs):
     if not targets:
         return {}
     cmd = 'brew uninstall {0}'.format(' '.join(targets))
-    __salt__['cmd.run'](cmd, output_loglevel='trace')
+    _call_brew(cmd)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)
@@ -210,9 +219,7 @@ def refresh_db():
         salt '*' pkg.refresh_db
     '''
     cmd = 'brew update'
-    user = __salt__['file.get_user'](_homebrew_bin())
-
-    if __salt__['cmd.retcode'](cmd, runas=user):
+    if _call_brew(cmd)['retcode']:
         log.error('Failed to update')
         return False
 
@@ -293,7 +300,6 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
 
     formulas = ' '.join(pkg_params)
     old = list_pkgs()
-    user = __salt__['file.get_user'](_homebrew_bin())
 
     # Ensure we've tapped the repo if necessary
     if taps:
@@ -303,27 +309,21 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
             taps = [taps]
 
         for tap in taps:
-            if user != __opts__['user']:
-                _tap(tap, runas=user)
-            else:
-                _tap(tap)
+            _tap(tap)
 
     if options:
         cmd = 'brew install {0} {1}'.format(formulas, ' '.join(options))
     else:
         cmd = 'brew install {0}'.format(formulas)
 
-    __salt__['cmd.run'](
-        cmd,
-        runas=user if user != __opts__['user'] else None,
-        output_loglevel='trace'
-    )
+    _call_brew(cmd)
+
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)
 
 
-def list_upgrades():
+def list_upgrades(refresh=True):
     '''
     Check whether or not an upgrade is available for all packages
 
@@ -333,9 +333,23 @@ def list_upgrades():
 
         salt '*' pkg.list_upgrades
     '''
-    cmd = 'brew outdated'
+    if refresh:
+        refresh_db()
 
-    return __salt__['cmd.run'](cmd, output_loglevel='trace').splitlines()
+    cmd = 'brew outdated'
+    call = _call_brew(cmd)
+    if call['retcode'] != 0:
+        comment = ''
+        if 'stderr' in call:
+            comment += call['stderr']
+        if 'stdout' in call:
+            comment += call['stdout']
+        raise CommandExecutionError(
+            '{0}'.format(comment)
+        )
+    else:
+        out = call['stdout']
+    return out.splitlines()
 
 
 def upgrade_available(pkg):
@@ -369,19 +383,27 @@ def upgrade(refresh=True):
 
         salt '*' pkg.upgrade
     '''
+    ret = {'changes': {},
+           'result': True,
+           'comment': '',
+           }
+
     old = list_pkgs()
 
     if salt.utils.is_true(refresh):
         refresh_db()
 
     cmd = 'brew upgrade'
-    user = __salt__['file.get_user'](_homebrew_bin())
-    __salt__['cmd.run'](
-        cmd,
-        runas=user if user != __opts__['user'] else __opts__['user'],
-        output_loglevel='trace'
-    )
+    call = _call_brew(cmd)
 
-    __context__.pop('pkg.list_pkgs', None)
-    new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    if call['retcode'] != 0:
+        ret['result'] = False
+        if 'stderr' in call:
+            ret['comment'] += call['stderr']
+        if 'stdout' in call:
+            ret['comment'] += call['stdout']
+    else:
+        __context__.pop('pkg.list_pkgs', None)
+        new = list_pkgs()
+        ret['changes'] = salt.utils.compare_dicts(old, new)
+    return ret

@@ -28,7 +28,8 @@ from salt.utils.jinja import SaltCacheLoader as JinjaSaltCacheLoader
 from salt.utils.jinja import SerializerExtension as JinjaSerializerExtension
 from salt.utils.odict import OrderedDict
 from salt import __path__ as saltpath
-from salt._compat import string_types
+from salt.ext.six import string_types
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -214,7 +215,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     loader = None
     newline = False
 
-    if tmplstr and not isinstance(tmplstr, unicode):
+    if tmplstr and not isinstance(tmplstr, six.text_type):
         # http://jinja.pocoo.org/docs/api/#unicode
         tmplstr = tmplstr.decode(SLS_ENCODING)
 
@@ -223,7 +224,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
 
     if not saltenv:
         if tmplpath:
-            # ie, the template is from a file outside the state tree
+            # i.e., the template is from a file outside the state tree
             #
             # XXX: FileSystemLoader is not being properly instantiated here is
             # it? At least it ain't according to:
@@ -263,22 +264,25 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
 
     jinja_env.filters['strftime'] = salt.utils.date_format
     jinja_env.filters['sequence'] = ensure_sequence_filter
+    jinja_env.filters['yaml_dquote'] = salt.utils.yaml_dquote
+    jinja_env.filters['yaml_squote'] = salt.utils.yaml_squote
+    jinja_env.filters['yaml_encode'] = salt.utils.yaml_encode
 
     jinja_env.globals['odict'] = OrderedDict
     jinja_env.globals['show_full_context'] = show_full_context
 
     unicode_context = {}
-    for key, value in context.iteritems():
+    for key, value in six.iteritems(context):
         if not isinstance(value, string_types):
             unicode_context[key] = value
             continue
 
         # Let's try UTF-8 and fail if this still fails, that's why this is not
         # wrapped in a try/except
-        if isinstance(value, unicode):
+        if isinstance(value, six.text_type):
             unicode_context[key] = value
         else:
-            unicode_context[key] = unicode(value, 'utf-8')
+            unicode_context[key] = six.text_type(value, 'utf-8')
 
     try:
         template = jinja_env.from_string(tmplstr)
@@ -342,7 +346,7 @@ def render_mako_tmpl(tmplstr, context, tmplpath=None):
     lookup = None
     if not saltenv:
         if tmplpath:
-            # ie, the template is from a file outside the state tree
+            # i.e., the template is from a file outside the state tree
             from mako.lookup import TemplateLookup
             lookup = TemplateLookup(directories=[os.path.dirname(tmplpath)])
     else:
@@ -363,6 +367,45 @@ def render_wempy_tmpl(tmplstr, context, tmplpath=None):
     return Template(tmplstr).render(**context)
 
 
+def render_genshi_tmpl(tmplstr, context, tmplpath=None):
+    '''
+    Render a Genshi template. A method should be passed in as part of the
+    context. If no method is passed in, xml is assumed. Valid methods are:
+
+    .. code-block:
+
+        - xml
+        - xhtml
+        - html
+        - text
+        - newtext
+        - oldtext
+
+    Note that the ``text`` method will call ``NewTextTemplate``. If ``oldtext``
+    is desired, it must be called explicitly
+    '''
+    method = context.get('method', 'xml')
+    if method == 'text' or method == 'newtext':
+        from genshi.template import NewTextTemplate
+        tmpl = NewTextTemplate(tmplstr)
+    elif method == 'oldtext':
+        from genshi.template import OldTextTemplate
+        tmpl = OldTextTemplate(tmplstr)
+    else:
+        from genshi.template import MarkupTemplate
+        tmpl = MarkupTemplate(tmplstr)
+
+    return tmpl.generate(**context).render(method)
+
+
+def render_cheetah_tmpl(tmplstr, context, tmplpath=None):
+    '''
+    Render a Cheetah template.
+    '''
+    from Cheetah.Template import Template
+    return str(Template(tmplstr, searchList=[context]))
+
+
 def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
     '''
     Render a template from a python source file
@@ -379,6 +422,14 @@ def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
             os.path.basename(sfn).split('.')[0],
             sfn
             )
+    # File templates need these set as __var__
+    if '__env__' not in kwargs and 'saltenv' in kwargs:
+        setattr(mod, '__env__', kwargs['saltenv'])
+        builtins = ['salt', 'grains', 'pillar', 'opts']
+        for builtin in builtins:
+            arg = '__{0}__'.format(builtin)
+            setattr(mod, arg, kwargs[builtin])
+
     for kwarg in kwargs:
         setattr(mod, kwarg, kwargs[kwarg])
 
@@ -401,10 +452,14 @@ def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
 JINJA = wrap_tmpl_func(render_jinja_tmpl)
 MAKO = wrap_tmpl_func(render_mako_tmpl)
 WEMPY = wrap_tmpl_func(render_wempy_tmpl)
+GENSHI = wrap_tmpl_func(render_genshi_tmpl)
+CHEETAH = wrap_tmpl_func(render_cheetah_tmpl)
 
 TEMPLATE_REGISTRY = {
     'jinja': JINJA,
     'mako': MAKO,
     'py': py,
     'wempy': WEMPY,
+    'genshi': GENSHI,
+    'cheetah': CHEETAH,
 }

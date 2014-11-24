@@ -4,9 +4,11 @@ A module to wrap (non-Windows) archive calls
 
 .. versionadded:: 2014.1.0
 '''
+from __future__ import absolute_import
+
+from salt.ext.six import string_types
 
 # Import salt libs
-import salt._compat
 from salt.utils import \
     which as _which, which_bin as _which_bin, is_windows as _is_windows
 import salt.utils.decorators as decorators
@@ -83,7 +85,7 @@ def tar(options, tarfile, sources=None, dest=None, cwd=None, template=None):
         salt '*' archive.tar xf foo.tar dest=/target/directory
 
     '''
-    if isinstance(sources, salt._compat.string_types):
+    if isinstance(sources, string_types):
         sources = [s.strip() for s in sources.split(',')]
 
     if dest:
@@ -167,7 +169,7 @@ def zip_(zipfile, sources, template=None):
         salt '*' archive.zip template=jinja /tmp/zipfile.zip /tmp/sourcefile1,/tmp/{{grains.id}}.txt
 
     '''
-    if isinstance(sources, salt._compat.string_types):
+    if isinstance(sources, string_types):
         sources = [s.strip() for s in sources.split(',')]
     cmd = 'zip {0} {1}'.format(zipfile, ' '.join(sources))
     return __salt__['cmd.run'](cmd, template=template).splitlines()
@@ -197,7 +199,7 @@ def unzip(zipfile, dest, excludes=None, template=None, options=None):
         salt '*' archive.unzip template=jinja /tmp/zipfile.zip /tmp/{{grains.id}}/ excludes=file_1,file_2
 
     '''
-    if isinstance(excludes, salt._compat.string_types):
+    if isinstance(excludes, string_types):
         excludes = [entry.strip() for entry in excludes.split(',')]
 
     if options:
@@ -233,7 +235,7 @@ def rar(rarfile, sources, template=None):
 
 
     '''
-    if isinstance(sources, salt._compat.string_types):
+    if isinstance(sources, string_types):
         sources = [s.strip() for s in sources.split(',')]
     cmd = 'rar a -idp {0} {1}'.format(rarfile, ' '.join(sources))
     return __salt__['cmd.run'](cmd, template=template).splitlines()
@@ -261,7 +263,7 @@ def unrar(rarfile, dest, excludes=None, template=None):
         salt '*' archive.unrar template=jinja /tmp/rarfile.rar /tmp/{{grains.id}}/ excludes=file_1,file_2
 
     '''
-    if isinstance(excludes, salt._compat.string_types):
+    if isinstance(excludes, string_types):
         excludes = [entry.strip() for entry in excludes.split(',')]
 
     cmd = [_which_bin(('unrar', 'rar')), 'x', '-idp', rarfile]

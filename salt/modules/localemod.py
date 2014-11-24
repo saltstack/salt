@@ -2,6 +2,7 @@
 '''
 Module for managing locales on POSIX-like systems.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -9,6 +10,7 @@ import re
 
 # Import salt libs
 import salt.utils
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -62,7 +64,7 @@ def _localectl_set(locale=''):
     locale_params = _parse_localectl()
     locale_params['LANG'] = str(locale)
     args = ' '.join(['{0}="{1}"'.format(k, v)
-                     for k, v in locale_params.iteritems()])
+                     for k, v in six.iteritems(locale_params)])
     cmd = 'localectl set-locale {0}'.format(args)
     return __salt__['cmd.retcode'](cmd) == 0
 
@@ -190,9 +192,19 @@ def gen_locale(locale):
             '{0} '.format(locale),
             append_if_not_found=True
         )
-
-    __salt__['cmd.run'](
-        'locale-gen {0}'.format(locale)
-    )
+        __salt__['cmd.run'](
+            'locale-gen {0}'.format(locale)
+        )
+    elif __grains__.get('os') == 'Ubuntu':
+        __salt__['file.touch'](
+            '/var/lib/locales/supported.d/{0}'.format(locale.split('_')[0])
+        )
+        __salt__['file.append'](
+            '/var/lib/locales/supported.d/{0}'.format(locale.split('_')[0]),
+            '{0} {1}'.format(locale, locale.split('.')[1])
+        )
+        __salt__['cmd.run'](
+            'locale-gen'
+        )
 
     return True

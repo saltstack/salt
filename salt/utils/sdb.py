@@ -1,15 +1,19 @@
 # -*- coding: utf-8 -*-
 '''
 Basic functions for accessing the SDB interface
+
+For configuration options, see the docs for specific sdb
+modules.
 '''
+from __future__ import absolute_import
 import salt.loader
-from salt._compat import string_types
+from salt.ext.six import string_types
 
 
 def sdb_get(uri, opts):
     '''
-    Get a value from a db, using a uri in the form of sdb://<profile>/<key>. If
-    the uri provided does not start with sdb://, then it will be returned as-is.
+    Get a value from a db, using a uri in the form of ``sdb://<profile>/<key>``. If
+    the uri provided does not start with ``sdb://``, then it will be returned as-is.
     '''
     if not isinstance(uri, string_types):
         return uri
@@ -35,8 +39,9 @@ def sdb_get(uri, opts):
 
 def sdb_set(uri, value, opts):
     '''
-    Get a value from a db, using a uri in the form of sdb://<profile>/<key>. If
-    the uri provided does not start with sdb://, then it will be returned as-is.
+    Set a value in a db, using a uri in the form of ``sdb://<profile>/<key>``.
+    If the uri provided does not start with ``sdb://`` or the value is not
+    succesfully set, return ``False``.
     '''
     if not isinstance(uri, string_types):
         return uri

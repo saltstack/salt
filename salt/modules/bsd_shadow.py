@@ -50,19 +50,73 @@ def info(name):
             'name': '',
             'passwd': ''}
 
-    # Get password aging info on FreeBSD
-    # TODO: Implement this for NetBSD, OpenBSD
+    cmd = ""
     if __salt__['cmd.has_exec']('pw'):
-        cmd = 'pw user show {0} | cut -f6,7 -d:'.format(name)
+        cmd = 'pw user show {0}'.format(name)
+    elif __grains__['kernel'] in ('NetBSD', 'OpenBSD'):
+        cmd = 'grep "^{0}:" /etc/master.passwd'.format(name)
+
+    if cmd:
+        cmd += '| cut -f6,7 -d:'
         try:
-            change, expire = __salt__['cmd.run_all'](cmd)['stdout'].split(':')
+            change, expire = __salt__['cmd.run_all'](cmd, python_shell=True)['stdout'].split(':')
         except ValueError:
             pass
         else:
-            ret['change'] = change
-            ret['expire'] = expire
+            ret['change'] = int(change)
+            ret['expire'] = int(expire)
 
     return ret
+
+
+def set_change(name, change):
+    '''
+    Sets the time at which the password expires (in seconds since the EPOCH).
+    See man usermod on NetBSD and OpenBSD or man pw on FreeBSD.
+    "0" means the password never expires.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' shadow.set_change username 1419980400
+    '''
+    pre_info = info(name)
+    if change == pre_info['change']:
+        return True
+    if __grains__['kernel'] == 'FreeBSD':
+        cmd = 'pw user mod {0} -f {1}'.format(name, change)
+    else:
+        cmd = 'usermod -f {0} {1}'.format(change, name)
+    __salt__['cmd.run'](cmd)
+    post_info = info(name)
+    if post_info['change'] != pre_info['change']:
+        return post_info['change'] == change
+
+
+def set_expire(name, expire):
+    '''
+    Sets the time at which the account expires (in seconds since the EPOCH).
+    See man usermod on NetBSD and OpenBSD or man pw on FreeBSD.
+    "0" means the account never expires.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' shadow.set_expire username 1419980400
+    '''
+    pre_info = info(name)
+    if expire == pre_info['expire']:
+        return True
+    if __grains__['kernel'] == 'FreeBSD':
+        cmd = 'pw user mod {0} -e {1}'.format(name, expire)
+    else:
+        cmd = 'usermod -e {0} {1}'.format(expire, name)
+    __salt__['cmd.run'](cmd)
+    post_info = info(name)
+    if post_info['expire'] != pre_info['expire']:
+        return post_info['expire'] == expire
 
 
 def set_password(name, password):

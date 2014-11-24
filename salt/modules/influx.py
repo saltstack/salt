@@ -300,11 +300,12 @@ def user_create(name, passwd, database=None, user=None, password=None,
     """
     if user_exists(name, database, user, password, host, port):
         if database:
-            log.info('User {0!r} already exists for DB {0!r}'.format(
+            log.info('User {0!r} already exists for DB {1!r}'.format(
                 name, database))
         else:
             log.info('Cluster admin {0!r} already exists'.format(name))
         return False
+
     client = _client(user=user, password=password, host=host, port=port)
     if database:
         client.switch_db(database)
@@ -351,7 +352,7 @@ def user_chpass(name, passwd, database=None, user=None, password=None,
     """
     if not user_exists(name, database, user, password, host, port):
         if database:
-            log.info('User {0!r} does not exist for DB {0!r}'.format(
+            log.info('User {0!r} does not exist for DB {1!r}'.format(
                 name, database))
         else:
             log.info('Cluster admin {0!r} does not exist'.format(name))
@@ -402,7 +403,7 @@ def user_remove(name, database=None, user=None, password=None, host=None,
     """
     if not user_exists(name, database, user, password, host, port):
         if database:
-            log.info('User {0!r} does not exist for DB {0!r}'.format(
+            log.info('User {0!r} does not exist for DB {1!r}'.format(
                 name, database))
         else:
             log.info('Cluster admin {0!r} does not exist'.format(name))

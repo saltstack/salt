@@ -89,7 +89,7 @@ def sanatize_novaclient(kwargs):
         'auth_token', 'cacert', 'tenant_id'
     )
     ret = {}
-    for var in kwargs.keys():
+    for var in kwargs:
         if var in variables:
             ret[var] = kwargs[var]
 
@@ -219,8 +219,8 @@ class SaltNova(OpenStackComputeShell):
         Make output look like libcloud output for consistency
         '''
         server_info = self.server_show(uuid)
-        server = server_info.values()[0]
-        server_name = server_info.keys()[0]
+        server = server_info.itervalues().next()
+        server_name = server_info.iterkeys().next()
         if not hasattr(self, 'password'):
             self.password = None
         ret = NovaServer(server_name, server, self.password)
@@ -819,7 +819,7 @@ class SaltNova(OpenStackComputeShell):
             'priority', 'project_id', 'vlan_start', 'vpn_start'
         ]
 
-        for variable in kwargs.keys():
+        for variable in kwargs.keys():  # iterate over a copy, we might delete some
             if variable not in params:
                 del kwargs[variable]
         return kwargs

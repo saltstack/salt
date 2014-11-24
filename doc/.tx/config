@@ -4844,3 +4844,27 @@ source_file = _build/locale/topics/releases/2014.1.11.pot
 source_lang = en
 source_name = topics/releases/2014.1.11.rst
 
+[salt.ref--cli--salt-unity]
+file_filter = locale/<lang>/LC_MESSAGES/ref/cli/salt-unity.po
+source_file = _build/locale/ref/cli/salt-unity.pot
+source_lang = en
+source_name = ref/cli/salt-unity.rst
+
+[salt.topics--development--architecture]
+file_filter = locale/<lang>/LC_MESSAGES/topics/development/architecture.po
+source_file = _build/locale/topics/development/architecture.pot
+source_lang = en
+source_name = topics/development/architecture.rst
+
+[salt.topics--releases--2014_1_12]
+file_filter = locale/<lang>/LC_MESSAGES/topics/releases/2014.1.12.po
+source_file = _build/locale/topics/releases/2014.1.12.pot
+source_lang = en
+source_name = topics/releases/2014.1.12.rst
+
+[salt.topics--releases--2014_1_13]
+file_filter = locale/<lang>/LC_MESSAGES/topics/releases/2014.1.13.po
+source_file = _build/locale/topics/releases/2014.1.13.pot
+source_lang = en
+source_name = topics/releases/2014.1.13.rst
+

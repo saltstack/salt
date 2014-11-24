@@ -181,7 +181,7 @@ Once the minion starts, you may see an error like the following:
 
     zmq.core.error.ZMQError: ipc path "/path/to/your/virtualenv/var/run/salt/minion/minion_event_7824dcbcfd7a8f6755939af70b96249f_pub.ipc" is longer than 107 characters (sizeof(sockaddr_un.sun_path)).
 
-This means the the path to the socket the minion is using is too long. This is
+This means that the path to the socket the minion is using is too long. This is
 a system limitation, so the only workaround is to reduce the length of this
 path. This can be done in a couple different ways:
 
@@ -226,12 +226,14 @@ Editing and previewing the documentation
 ----------------------------------------
 
 You need ``sphinx-build`` command to build the docs. In Debian/Ubuntu this is
-provided in the ``python-sphinx`` package. Sphinx can also be installed
-to a virtualenv using pip:
+provided in the ``python-sphinx`` package. ``six`` is also needed to build the
+docs and is available on Debian/Ubuntu systems as ``python-six``. Sphinx and
+six can also be installed to a virtualenv using pip:
 
 .. code-block:: bash
 
     pip install Sphinx
+    pip install six
 
 Change to salt documentation directory, then:
 

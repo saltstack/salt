@@ -18,6 +18,7 @@ requisite to a pkg.installed state for the package which provides pip
         - require:
           - pkg: python-pip
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -129,7 +130,9 @@ def installed(name,
               allow_all_external=False,
               allow_external=None,
               allow_unverified=None,
-              process_dependency_links=False):
+              process_dependency_links=False,
+              env_vars=None,
+              use_vt=False):
     '''
     Make sure the package is installed
 
@@ -265,6 +268,14 @@ def installed(name,
         Absolute path to a virtual environment directory or absolute path to
         a pip executable. The example below assumes a virtual environment
         has been created at ``/foo/.virtualenvs/bar``.
+
+    env_vars
+        Add or modify environment variables. Useful for tweaking build steps,
+        such as specifying INCLUDE or LIBRARY paths in Makefiles, build scripts or
+        compiler calls.
+
+    use_vt
+        Use VT terminal emulation (see ouptut while installing)
 
     Example:
 
@@ -549,7 +560,9 @@ def installed(name,
         allow_external=allow_external,
         allow_unverified=allow_unverified,
         process_dependency_links=process_dependency_links,
-        saltenv=__env__
+        saltenv=__env__,
+        env_vars=env_vars,
+        use_vt=use_vt
     )
 
     if pip_install_call and (pip_install_call.get('retcode', 1) == 0):
@@ -589,7 +602,7 @@ def installed(name,
                 ret['changes']['{0}==???'.format(name)] = 'Installed'
                 return ret
 
-            version = list(pkg_list.values())[0]
+            version = next(pkg_list.itervalues())
             pkg_name = next(iter(pkg_list))
             ret['changes']['{0}=={1}'.format(pkg_name, version)] = 'Installed'
             ret['comment'] = 'Package was successfully installed'
@@ -629,7 +642,8 @@ def removed(name,
             timeout=None,
             user=None,
             runas=None,
-            cwd=None):
+            cwd=None,
+            use_vt=False):
     '''
     Make sure that a package is not installed.
 
@@ -639,6 +653,8 @@ def removed(name,
         The user under which to run pip
     bin_env : None
         the pip executable or virtualenenv to use
+    use_vt
+        Use VT terminal emulation (see ouptut while installing)
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
@@ -686,11 +702,66 @@ def removed(name,
                                  proxy=proxy,
                                  timeout=timeout,
                                  user=user,
-                                 cwd=cwd):
+                                 cwd=cwd,
+                                 use_vt=use_vt):
         ret['result'] = True
         ret['changes'][name] = 'Removed'
         ret['comment'] = 'Package was successfully removed.'
     else:
         ret['result'] = False
         ret['comment'] = 'Could not remove package.'
+    return ret
+
+
+def uptodate(name,
+             bin_env=None,
+             user=None,
+             runas=None,
+             cwd=None,
+             use_vt=False):
+    '''
+    Verify that the system is completely up to date.
+
+    name
+        The name has no functional value and is only used as a tracking
+        reference
+    user
+        The user under which to run pip
+    bin_env
+        the pip executable or virtualenenv to use
+    use_vt
+        Use VT terminal emulation (see ouptut while installing)
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': 'Failed to update.'}
+
+    try:
+        packages = __salt__['pip.list_upgrades'](bin_env=bin_env, user=user,
+                                                 runas=runas, cwd=cwd)
+    except Exception as e:
+        ret['comment'] = str(e)
+        return ret
+
+    if not packages:
+        ret['comment'] = 'System is already up-to-date.'
+        ret['result'] = True
+        return ret
+    elif __opts__['test']:
+        ret['comment'] = 'System update will be performed'
+        ret['result'] = None
+        return ret
+
+    updated = __salt__['pip.upgrade'](bin_env=bin_env, user=user, runas=runas, cwd=cwd, use_vt=use_vt)
+
+    if updated.get('result') is False:
+        ret.update(updated)
+    elif updated:
+        ret['changes'] = updated
+        ret['comment'] = 'Upgrade successful.'
+        ret['result'] = True
+    else:
+        ret['comment'] = 'Upgrade failed.'
+
     return ret

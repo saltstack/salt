@@ -6,6 +6,7 @@ See http://code.google.com/p/psutil.
 :depends:   - psutil Python module, version 0.3.0 or later
             - python-utmp package (optional)
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import time
@@ -163,6 +164,32 @@ def get_pid_list():
         salt '*' ps.get_pid_list
     '''
     return psutil.get_pid_list()
+
+
+def proc_info(pid, attrs=None):
+    '''
+    Return a dictionary of information for a process id (PID).
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ps.proc_info 2322
+        salt '*' ps.proc_info 2322 attrs='["pid", "name"]'
+
+    pid
+        PID of process to query.
+
+    attrs
+        Optional list of desired process attributes.  The list of possible
+        attributes can be found here:
+        http://pythonhosted.org/psutil/#psutil.Process
+    '''
+    try:
+        proc = psutil.Process(pid)
+        return proc.as_dict(attrs)
+    except (psutil.NoSuchProcess, psutil.AccessDenied, AttributeError) as exc:
+        raise CommandExecutionError(exc)
 
 
 def kill_pid(pid, signal=15):

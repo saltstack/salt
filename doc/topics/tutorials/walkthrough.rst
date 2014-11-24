@@ -272,7 +272,7 @@ targeted minions:
 
 .. code-block:: bash
 
-    salt '*' disk.percent
+    salt '*' disk.usage
 
 
 Getting to Know the Functions

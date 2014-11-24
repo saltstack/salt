@@ -2,14 +2,16 @@
 '''
 Salt module to manage RAID arrays with mdadm
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
 import logging
+import re
 
 # Import salt libs
 import salt.utils
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Set up logger
 log = logging.getLogger(__name__)
@@ -47,7 +49,7 @@ def list_():
     '''
     ret = {}
     for line in (__salt__['cmd.run_stdout']
-                 ('mdadm --detail --scan').splitlines()):
+                    ('mdadm --detail --scan', python_shell=False).splitlines()):
         if ' ' not in line:
             continue
         comps = line.split()
@@ -78,8 +80,8 @@ def detail(device='/dev/md0'):
         msg = "Device {0} doesn't exist!"
         raise CommandExecutionError(msg.format(device))
 
-    cmd = 'mdadm --detail {0}'.format(device)
-    for line in __salt__['cmd.run_stdout'](cmd).splitlines():
+    cmd = ['mdadm', '--detail', device]
+    for line in __salt__['cmd.run_stdout'](cmd, python_shell=False).splitlines():
         if line.startswith(device):
             continue
         if ' ' not in line:
@@ -143,6 +145,24 @@ def destroy(device):
         return False
 
 
+def stop():
+    '''
+    Shut down all arrays that can be shut down (i.e. are not currently in use).
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' raid.stop
+    '''
+    cmd = 'mdadm --stop --scan'
+
+    if __salt__['cmd.retcode'](cmd):
+        return True
+
+    return False
+
+
 def create(name,
            level,
            devices,
@@ -177,6 +197,9 @@ def create(name,
 
     devices
         A list of devices used to build the array.
+
+    metadata
+        Version of metadata to use when creating the array.
 
     kwargs
         Optional arguments to be passed to mdadm.
@@ -236,24 +259,29 @@ def save_config():
         salt '*' raid.save_config
 
     '''
-    scan = __salt__['cmd.run']('mdadm --detail --scan').split()
+    scan = __salt__['cmd.run']('mdadm --detail --scan', python_shell=False).split()
     # Issue with mdadm and ubuntu
     # REF: http://askubuntu.com/questions/209702/why-is-my-raid-dev-md1-showing-up-as-dev-md126-is-mdadm-conf-being-ignored
     if __grains__['os'] == 'Ubuntu':
         buggy_ubuntu_tags = ['name', 'metadata']
-        for bad_tag in buggy_ubuntu_tags:
-            for i, elem in enumerate(scan):
-                if not elem.find(bad_tag):
-                    del scan[i]
+        for i, elem in enumerate(scan):
+            for bad_tag in buggy_ubuntu_tags:
+                pattern = r'\s{0}=\S+'.format(re.escape(bad_tag))
+                pattern = re.compile(pattern, flags=re.I)
+                scan[i] = re.sub(pattern, '', scan[i])
 
-    scan = ' '.join(scan)
     if __grains__.get('os_family') == 'Debian':
         cfg_file = '/etc/mdadm/mdadm.conf'
     else:
         cfg_file = '/etc/mdadm.conf'
 
-    if not __salt__['file.search'](cfg_file, scan):
-        __salt__['file.append'](cfg_file, scan)
+    try:
+        vol_d = dict([(line.split()[1], line) for line in scan])
+        for vol in vol_d:
+            pattern = r'^ARRAY\s+{0}'.format(re.escape(vol))
+            __salt__['file.replace'](cfg_file, pattern, vol_d[vol], append_if_not_found=True)
+    except SaltInvocationError:  # File is missing
+        __salt__['file.write'](cfg_file, args=scan)
 
     return __salt__['cmd.run']('update-initramfs -u')
 

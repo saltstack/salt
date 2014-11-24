@@ -15,6 +15,7 @@ Module for Sending Messages via SMTP
 
         my-smtp-login:
             smtp.server: smtp.domain.com
+            smtp.tls: True
             smtp.sender: admin@domain.com
             smtp.username: myuser
             smtp.password: verybadpass
@@ -26,17 +27,21 @@ Module for Sending Messages via SMTP
 
         my-smtp-login:
             smtp.server: smtp.domain.com
+            smtp.tls: True
             smtp.sender: admin@domain.com
             smtp.username: myuser
             smtp.password: verybadpass
 
         another-smtp-login:
             smtp.server: smtp.domain.com
+            smtp.tls: True
             smtp.sender: admin@domain.com
             smtp.username: myuser
             smtp.password: verybadpass
 
 '''
+
+from __future__ import absolute_import
 import logging
 import socket
 
@@ -86,6 +91,7 @@ def send_msg(recipient,
     if profile:
         creds = __salt__['config.option'](profile)
         server = creds.get('smtp.server')
+        use_ssl = creds.get('smtp.tls')
         sender = creds.get('smtp.sender')
         username = creds.get('smtp.username')
         password = creds.get('smtp.password')
@@ -101,7 +107,7 @@ def send_msg(recipient,
         else:
             smtpconn = smtplib.SMTP(server)
 
-    except socket.gaierror, _error:
+    except socket.gaierror as _error:
         log.debug("Exception: {0}" . format(_error))
         return False
 
@@ -126,7 +132,7 @@ def send_msg(recipient,
     if username and password:
         try:
             smtpconn.login(username, password)
-        except smtplib.SMTPAuthenticationError, _error:
+        except smtplib.SMTPAuthenticationError as _error:
             log.debug("SMTP Authentication Failure")
             return False
 

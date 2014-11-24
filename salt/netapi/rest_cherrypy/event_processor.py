@@ -1,6 +1,8 @@
 # encoding: utf-8
+from __future__ import absolute_import
 import json
 import logging
+import salt.ext.six as six
 
 import salt.netapi
 
@@ -31,7 +33,7 @@ class SaltInfo(object):
         '''
         minions = []
 
-        for minion, minion_info in self.minions.iteritems():
+        for minion, minion_info in six.iteritems(self.minions):
             curr_minion = {}
             curr_minion.update(minion_info)
             curr_minion.update({'id': minion})
@@ -82,7 +84,7 @@ class SaltInfo(object):
         minion.update({'success': event_info['success']})
 
         job_complete = all([minion['success'] for mid, minion
-                            in job['minions'].iteritems()])
+                            in six.iteritems(job['minions'])])
 
         if job_complete:
             job['state'] = 'complete'

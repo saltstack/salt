@@ -220,7 +220,7 @@ Example state module
 
     import salt.exceptions
 
-    def enforce_custom_thing(name, foo, baz=True):
+    def enforce_custom_thing(name, foo, bar=True):
         '''
         Enforce the state of a custom thing
 
@@ -239,9 +239,9 @@ Example state module
 
         # Start with basic error-checking. Do all the passed parameters make sense
         # and agree with each-other?
-        if baz == True and foo.startswith('Foo'):
+        if bar == True and foo.startswith('Foo'):
             raise salt.exceptions.SaltInvocationError(
-                'Argument "foo" cannot start with "Foo" if argument "baz" is True.')
+                'Argument "foo" cannot start with "Foo" if argument "bar" is True.')
 
         # Check the current state of the system. Does anything need to change?
         current_state = __salt__['my_custom_module.current_state'](name)

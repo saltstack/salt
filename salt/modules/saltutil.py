@@ -6,6 +6,7 @@ minion.
 
 :depends:   - esky Python module for update functionality
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -16,7 +17,19 @@ import fnmatch
 import time
 import sys
 import copy
-from urllib2 import URLError
+
+# Import 3rd-party libs
+# pylint: disable=import-error
+try:
+    import esky
+    from esky import EskyVersionError
+    HAS_ESKY = True
+except ImportError:
+    HAS_ESKY = False
+# pylint: disable=no-name-in-module
+from salt.ext.six import string_types
+from salt.ext.six.moves.urllib.error import URLError
+# pylint: enable=import-error,no-name-in-module
 
 # Import salt libs
 import salt
@@ -32,17 +45,8 @@ import salt.wheel
 from salt.exceptions import (
     SaltReqTimeoutError, SaltRenderError, CommandExecutionError
 )
-from salt._compat import string_types
 
 __proxyenabled__ = ['*']
-
-# Import third party libs
-try:
-    import esky
-    from esky import EskyVersionError
-    HAS_ESKY = True
-except ImportError:
-    HAS_ESKY = False
 
 log = logging.getLogger(__name__)
 
@@ -58,7 +62,7 @@ def _get_top_file_envs():
             st_ = salt.state.HighState(__opts__)
             top = st_.get_top()
             if top:
-                envs = st_.top_matches(top).keys() or 'base'
+                envs = list(st_.top_matches(top).keys()) or 'base'
             else:
                 envs = 'base'
         except SaltRenderError as exc:
@@ -373,6 +377,9 @@ def sync_all(saltenv=None, refresh=True):
     Sync down all of the dynamic modules from the file server for a specific
     environment
 
+    refresh : True
+        Also refresh the execution modules available to the minion.
+
     CLI Example:
 
     .. code-block:: bash
@@ -403,7 +410,14 @@ def refresh_pillar():
 
         salt '*' saltutil.refresh_pillar
     '''
-    return __salt__['event.fire']({}, 'pillar_refresh')
+    try:
+        ret = __salt__['event.fire']({}, 'pillar_refresh')
+    except KeyError:
+        log.error('Event module not available. Module refresh failed.')
+        ret = False  # Effectively a no-op, since we can't really return without an event system
+    return ret
+
+pillar_refresh = refresh_pillar
 
 
 def refresh_modules():
@@ -416,7 +430,12 @@ def refresh_modules():
 
         salt '*' saltutil.refresh_modules
     '''
-    return __salt__['event.fire']({}, 'module_refresh')
+    try:
+        ret = __salt__['event.fire']({}, 'module_refresh')
+    except KeyError:
+        log.error('Event module not available. Module refresh failed.')
+        ret = False  # Effectively a no-op, since we can't really return without an event system
+    return ret
 
 
 def is_running(fun):
@@ -704,7 +723,7 @@ def cmd_iter(tgt,
 
     .. code-block:: bash
 
-        salt '*' saltutil.cmd
+        salt '*' saltutil.cmd_iter
     '''
     if ssh:
         client = salt.client.SSHClient(__opts__['conf_file'])

@@ -38,7 +38,7 @@ def installed(name, recurse=False, force=False):
     if name not in __salt__['win_servermanager.list_installed']():
         ret['changes'] = {'feature': '{0} will be installed recurse={1}'.format(name, recurse)}
     elif force and recurse:
-        ret['changes'] = {'feature': 'already installed but might install sub-features'.format(name)}
+        ret['changes'] = {'feature': '{0} already installed but might install sub-features'.format(name)}
     else:
         ret['comment'] = 'The feature {0} is already installed'.format(name)
         return ret

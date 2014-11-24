@@ -187,7 +187,7 @@ This function is only necessary for libcloud-based modules, and does not need
 to exist otherwise.
 
 The get_image() Function
--------------------------
+------------------------
 This function is only necessary for libcloud-based modules, and does not need
 to exist otherwise.
 

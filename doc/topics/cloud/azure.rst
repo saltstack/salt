@@ -39,8 +39,6 @@ Set up the provider config at ``/etc/salt/cloud.providers.d/azure.conf``:
       minion:
         master: saltmaster.example.com
 
-      provider: azure
-
       # Optional
       management_host: management.core.windows.net
 

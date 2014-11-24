@@ -289,6 +289,7 @@ in which each job's information is keyed by salt's ``jid``.
 Setup
 =====
 '''
+from __future__ import absolute_import
 
 import tornado.websocket
 from . import event_processor
@@ -328,7 +329,7 @@ class AllEventsHandler(tornado.websocket.WebSocketHandler):  # pylint: disable=W
     def on_message(self, message):
         """Listens for a "websocket client ready" message.
         Once that message is received an asynchronous job
-        is stated that yeilds messages to the client.
+        is stated that yields messages to the client.
         These messages make up salt's
         "real time" event stream.
         """
@@ -368,7 +369,7 @@ class FormattedEventsHandler(AllEventsHandler):  # pylint: disable=W0232
     def on_message(self, message):
         """Listens for a "websocket client ready" message.
         Once that message is received an asynchronous job
-        is stated that yeilds messages to the client.
+        is stated that yields messages to the client.
         These messages make up salt's
         "real time" event stream.
         """

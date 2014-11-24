@@ -2,6 +2,7 @@
 '''
 Service support for RHEL-based systems, including support for both upstart and sysvinit
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import glob
@@ -465,7 +466,7 @@ def disable(name, **kwargs):
         return _sysv_disable(name)
 
 
-def enabled(name):
+def enabled(name, **kwargs):
     '''
     Check to see if the named service is enabled to start on boot
 

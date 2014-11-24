@@ -22,6 +22,7 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+import salt.utils
 
 
 class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
@@ -297,6 +298,38 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             if os.path.isdir(config_dir):
                 shutil.rmtree(config_dir)
 
+    def test_issue_15074_output_file_append(self):
+        output_file_append = os.path.join(integration.TMP, 'issue-15074')
+        try:
+            # Let's create an initial output file with some data
+            ret = self.run_script(
+                'salt-call',
+                '-c {0} --output-file={1} -g'.format(
+                    self.get_config_dir(),
+                    output_file_append
+                ),
+                catch_stderr=True,
+                with_retcode=True
+            )
+
+            with salt.utils.fopen(output_file_append) as ofa:
+                output = ofa.read()
+
+            self.run_script(
+                'salt-call',
+                '-c {0} --output-file={1} --output-file-append -g'.format(
+                    self.get_config_dir(),
+                    output_file_append
+                ),
+                catch_stderr=True,
+                with_retcode=True
+            )
+            with salt.utils.fopen(output_file_append) as ofa:
+                self.assertEqual(ofa.read(), output + output)
+        finally:
+            if os.path.exists(output_file_append):
+                os.unlink(output_file_append)
+
     def test_issue_14979_output_file_permissions(self):
         output_file = os.path.join(integration.TMP, 'issue-14979')
         current_umask = os.umask(0077)
@@ -318,7 +351,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
             self.run_script(
                 'salt-call',
-                '-c {0} --output-file={1} -g'.format(
+                '-c {0} --output-file={1} --output-file-append -g'.format(
                     self.get_config_dir(),
                     output_file
                 ),
@@ -327,7 +360,27 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             )
             stat2 = os.stat(output_file)
             self.assertEqual(stat1.st_mode, stat2.st_mode)
-            # self.assertEqual(stat1.st_ctime, stat2.st_ctime)
+            # Data was appeneded to file
+            self.assertTrue(stat1.st_size < stat2.st_size)
+
+            # Let's remove the output file
+            os.unlink(output_file)
+
+            # Not appending data
+            self.run_script(
+                'salt-call',
+                '-c {0} --output-file={1} -g'.format(
+                    self.get_config_dir(),
+                    output_file
+                ),
+                catch_stderr=True,
+                with_retcode=True
+            )
+            stat3 = os.stat(output_file)
+            # Mode must have changed since we're creating a new log file
+            self.assertNotEqual(stat1.st_mode, stat3.st_mode)
+            # Data was appended to file
+            self.assertEqual(stat1.st_size, stat3.st_size)
         finally:
             if os.path.exists(output_file):
                 os.unlink(output_file)

@@ -5,6 +5,7 @@ used to manage salt keys directly without interfacing with the CLI.
 '''
 
 # Import python libs
+from __future__ import absolute_import
 from __future__ import print_function
 import os
 import stat
@@ -13,12 +14,14 @@ import fnmatch
 import hashlib
 import json
 import logging
+from salt.ext.six.moves import input
 
 # Import salt libs
 import salt.crypt
 import salt.utils
 import salt.utils.event
 import salt.daemons.masterapi
+from salt.utils import kinds
 from salt.utils.event import tagify
 
 # Import third party libs
@@ -41,6 +44,7 @@ class KeyCLI(object):
             self.acc = 'minions'
             self.pend = 'minions_pre'
             self.rej = 'minions_rejected'
+            self.den = 'minions_denied'
         else:
             self.key = RaetKey(opts)
             self.acc = 'accepted'
@@ -69,6 +73,12 @@ class KeyCLI(object):
         elif status.startswith('rej'):
             salt.output.display_output(
                 {'minions_rejected': keys[self.rej]},
+                'key',
+                self.opts
+            )
+        elif status.startswith('den'):
+            salt.output.display_output(
+                {'minions_denied': keys[self.den]},
                 'key',
                 self.opts
             )
@@ -121,7 +131,7 @@ class KeyCLI(object):
                     'key',
                     self.opts)
             try:
-                veri = raw_input('Proceed? [n/Y] ')
+                veri = input('Proceed? [n/Y] ')
             except KeyboardInterrupt:
                 raise SystemExit("\nExiting on CTRL-c")
             if not veri or veri.lower().startswith('y'):
@@ -150,7 +160,7 @@ class KeyCLI(object):
         '''
         Accept all keys
 
-        :param bool include_rejected: Whether or not to accept a matched key that was formely rejected
+        :param bool include_rejected: Whether or not to accept a matched key that was formerly rejected
         '''
         self.accept('*', include_rejected=include_rejected)
 
@@ -185,7 +195,7 @@ class KeyCLI(object):
                     'key',
                     self.opts)
             try:
-                veri = raw_input('Proceed? [N/y] ')
+                veri = input('Proceed? [N/y] ')
             except KeyboardInterrupt:
                 raise SystemExit("\nExiting on CTRL-c")
             if veri.lower().startswith('y'):
@@ -246,7 +256,7 @@ class KeyCLI(object):
                     keys,
                     'key',
                     self.opts)
-            veri = raw_input('Proceed? [n/Y] ')
+            veri = input('Proceed? [n/Y] ')
             if veri.lower().startswith('n'):
                 return
         _print_rejected(
@@ -424,9 +434,9 @@ class Key(object):
     '''
     def __init__(self, opts):
         self.opts = opts
-        kind = self.opts.get('__role', '')
-        if not kind:
-            emsg = "Missing application kind via opts['__role']"
+        kind = self.opts.get('__role', '')  # application kind
+        if kind not in kinds.APPL_KINDS:
+            emsg = ("Invalid application kind = '{0}'.".format(kind))
             log.error(emsg + '\n')
             raise ValueError(emsg)
         self.event = salt.utils.event.get_event(
@@ -444,7 +454,10 @@ class Key(object):
         minions_pre = os.path.join(self.opts['pki_dir'], 'minions_pre')
         minions_rejected = os.path.join(self.opts['pki_dir'],
                                         'minions_rejected')
-        return minions_accepted, minions_pre, minions_rejected
+
+        minions_denied = os.path.join(self.opts['pki_dir'],
+                                        'minions_denied')
+        return minions_accepted, minions_pre, minions_rejected, minions_denied
 
     def gen_keys(self):
         '''
@@ -505,12 +518,21 @@ class Key(object):
         else:
             matches = self.list_keys()
         ret = {}
+        if ',' in match and isinstance(match, str):
+            match = match.split(',')
         for status, keys in matches.items():
             for key in salt.utils.isorted(keys):
-                if fnmatch.fnmatch(key, match):
-                    if status not in ret:
-                        ret[status] = []
-                    ret[status].append(key)
+                if isinstance(match, list):
+                    for match_item in match:
+                        if fnmatch.fnmatch(key, match_item):
+                            if status not in ret:
+                                ret[status] = []
+                            ret[status].append(key)
+                else:
+                    if fnmatch.fnmatch(key, match):
+                        if status not in ret:
+                            ret[status] = []
+                        ret[status].append(key)
         return ret
 
     def dict_match(self, match_dict):
@@ -522,7 +544,7 @@ class Key(object):
         cur_keys = self.list_keys()
         for status, keys in match_dict.items():
             for key in salt.utils.isorted(keys):
-                for keydir in ('minions', 'minions_pre', 'minions_rejected'):
+                for keydir in ('minions', 'minions_pre', 'minions_rejected', 'minions_denied'):
                     if fnmatch.filter(cur_keys.get(keydir, []), key):
                         ret.setdefault(keydir, []).append(key)
         return ret
@@ -543,9 +565,20 @@ class Key(object):
         '''
         Return a dict of managed keys and what the key status are
         '''
-        acc, pre, rej = self._check_minions_directories()
+
+        key_dirs = []
+
+        # We have to differentiate between RaetKey._check_minions_directories
+        # and Zeromq-Keys. Raet-Keys only have three states while ZeroMQ-keys
+        # havd an additional 'denied' state.
+        if self.opts['transport'] == 'zeromq':
+            key_dirs = self._check_minions_directories()
+        else:
+            key_dirs = self._check_minions_directories()
+
         ret = {}
-        for dir_ in acc, pre, rej:
+
+        for dir_ in key_dirs:
             ret[os.path.basename(dir_)] = []
             try:
                 for fn_ in salt.utils.isorted(os.listdir(dir_)):
@@ -568,7 +601,7 @@ class Key(object):
         '''
         Return a dict of managed keys under a named status
         '''
-        acc, pre, rej = self._check_minions_directories()
+        acc, pre, rej, den = self._check_minions_directories()
         ret = {}
         if match.startswith('acc'):
             ret[os.path.basename(acc)] = []
@@ -585,6 +618,11 @@ class Key(object):
             for fn_ in salt.utils.isorted(os.listdir(rej)):
                 if os.path.isfile(os.path.join(rej, fn_)):
                     ret[os.path.basename(rej)].append(fn_)
+        elif match.startswith('den'):
+            ret[os.path.basename(den)] = []
+            for fn_ in salt.utils.isorted(os.listdir(den)):
+                if os.path.isfile(os.path.join(den, fn_)):
+                    ret[os.path.basename(den)].append(fn_)
         elif match.startswith('all'):
             return self.all_keys()
         return ret
@@ -860,9 +898,21 @@ class RaetKey(Key):
                 if minion not in minions:
                     shutil.rmtree(os.path.join(m_cache, minion))
 
+        kind = self.opts.get('__role', '')  # application kind
+        if kind not in kinds.APPL_KINDS:
+            emsg = ("Invalid application kind = '{0}'.".format(kind))
+            log.error(emsg + '\n')
+            raise ValueError(emsg)
+        role = self.opts.get('id', '')
+        if not role:
+            emsg = ("Invalid id.")
+            log.error(emsg + "\n")
+            raise ValueError(emsg)
+
+        name = "{0}_{1}".format(role, kind)
         road_cache = os.path.join(self.opts['cachedir'],
                                   'raet',
-                                  self.opts.get('id', 'master'),
+                                  name,
                                   'remote')
         if os.path.isdir(road_cache):
             for road in os.listdir(road_cache):
@@ -916,7 +966,7 @@ class RaetKey(Key):
         If the key has been accepted return "accepted"
         if the key should be rejected, return "rejected"
         '''
-        acc, pre, rej = self._check_minions_directories()
+        acc, pre, rej = self._check_minions_directories()  # pylint: disable=W0632
         acc_path = os.path.join(acc, minion_id)
         pre_path = os.path.join(pre, minion_id)
         rej_path = os.path.join(rej, minion_id)
@@ -930,6 +980,7 @@ class RaetKey(Key):
                 fp_.write(self.serial.dumps(keydata))
                 return 'accepted'
         if os.path.isfile(rej_path):
+            log.debug("Rejection Reason: Keys already rejected.\n")
             return 'rejected'
         elif os.path.isfile(acc_path):
             # The minion id has been accepted, verify the key strings
@@ -938,6 +989,7 @@ class RaetKey(Key):
             if keydata['pub'] == pub and keydata['verify'] == verify:
                 return 'accepted'
             else:
+                log.debug("Rejection Reason: Keys not match prior accepted.\n")
                 return 'rejected'
         elif os.path.isfile(pre_path):
             auto_reject = self.auto_key.check_autoreject(minion_id)
@@ -947,12 +999,14 @@ class RaetKey(Key):
             if keydata['pub'] == pub and keydata['verify'] == verify:
                 if auto_reject:
                     self.reject(minion_id)
+                    log.debug("Rejection Reason: Auto reject pended.\n")
                     return 'rejected'
                 elif auto_sign:
                     self.accept(minion_id)
                     return 'accepted'
                 return 'pending'
             else:
+                log.debug("Rejection Reason: Keys not match prior pended.\n")
                 return 'rejected'
         # This is a new key, evaluate auto accept/reject files and place
         # accordingly
@@ -966,6 +1020,7 @@ class RaetKey(Key):
             ret = 'accepted'
         elif auto_reject:
             w_path = rej_path
+            log.debug("Rejection Reason: Auto reject new.\n")
             ret = 'rejected'
         else:
             w_path = pre_path

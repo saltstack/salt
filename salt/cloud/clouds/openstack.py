@@ -55,6 +55,8 @@ Set up in the cloud configuration at ``/etc/salt/cloud.providers`` or
       base_url: http://192.168.1.101:3000/v2/12345
       provider: openstack
       userdata_file: /tmp/userdata.txt
+      # config_drive is required for userdata at rackspace
+      config_drive: True
 
 For in-house Openstack Essex installation, libcloud needs the service_type :
 
@@ -116,6 +118,7 @@ Alternatively, one could use the private IP to connect by specifying:
 
 
 '''
+from __future__ import absolute_import
 
 # The import section is mostly libcloud boilerplate
 
@@ -187,6 +190,7 @@ list_nodes_full = namespaced_function(list_nodes_full, globals())
 list_nodes_select = namespaced_function(list_nodes_select, globals())
 show_instance = namespaced_function(show_instance, globals())
 get_node = namespaced_function(get_node, globals())
+get_salt_interface = namespaced_function(get_salt_interface, globals())
 
 
 # Only load in this module is the OPENSTACK configurations are in place
@@ -531,6 +535,10 @@ def request_instance(vm_=None, call=None):
         with salt.utils.fopen(userdata_file, 'r') as fp:
             kwargs['ex_userdata'] = fp.read()
 
+    kwargs['ex_config_drive'] = config.get_cloud_config_value(
+        'config_drive', vm_, __opts__, search_global=False
+    )
+
     salt.utils.cloud.fire_event(
         'event',
         'requesting instance',
@@ -770,9 +778,17 @@ def create(vm_):
         ip_address = preferred_ip(vm_, data.public_ips)
     log.debug('Using IP address {0}'.format(ip_address))
 
+    if get_salt_interface(vm_) == 'private_ips':
+        salt_ip_address = preferred_ip(vm_, data.private_ips)
+        log.info('Salt interface set to: {0}'.format(salt_ip_address))
+    else:
+        salt_ip_address = preferred_ip(vm_, data.public_ips)
+        log.debug('Salt interface set to: {0}'.format(salt_ip_address))
+
     if not ip_address:
         raise SaltCloudSystemExit('A valid IP address was not found')
 
+    vm_['salt_host'] = salt_ip_address
     vm_['ssh_host'] = ip_address
     ret = salt.utils.cloud.bootstrap(vm_, __opts__)
     ret.update(data.__dict__)

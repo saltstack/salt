@@ -13,7 +13,8 @@ import copy
 
 # Import salt libs
 import salt.utils
-from salt._compat import string_types
+from salt.ext.six import string_types
+from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -426,3 +427,27 @@ def list_users():
         salt '*' user.list_users
     '''
     return sorted([user.pw_name for user in pwd.getpwall()])
+
+
+def rename(name, new_name):
+    '''
+    Change the username for a named user
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' user.rename name new_name
+    '''
+    current_info = info(name)
+    if not current_info:
+        raise CommandExecutionError('User {0!r} does not exist'.format(name))
+    new_info = info(new_name)
+    if new_info:
+        raise CommandExecutionError('User {0!r} already exists'.format(new_name))
+    cmd = 'pw usermod -l {0} -n {1}'.format(new_name, name)
+    __salt__['cmd.run'](cmd)
+    post_info = info(new_name)
+    if post_info['name'] != current_info['name']:
+        return post_info['name'] == new_name
+    return False

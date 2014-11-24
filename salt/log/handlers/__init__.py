@@ -7,6 +7,7 @@
 
     Custom logging handlers to be used in salt.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import sys
@@ -16,7 +17,6 @@ import threading
 import logging.handlers
 
 # Import salt libs
-from salt._compat import Queue
 from salt.log.mixins import NewStyleClassMixIn, ExcInfoOnLogLevelFormatMixIn
 
 log = logging.getLogger(__name__)

@@ -22,6 +22,7 @@ import subprocess
 import multiprocessing
 from hashlib import md5
 from datetime import datetime, timedelta
+from six import string_types
 try:
     import pwd
 except ImportError:
@@ -50,7 +51,6 @@ ensure_in_syspath(CODE_DIR, SALT_LIBS)
 
 # Import Salt libs
 import salt
-import salt._compat
 import salt.config
 import salt.minion
 import salt.runner
@@ -416,6 +416,7 @@ class TestDaemon(object):
         roster_path = os.path.join(FILES, 'conf/_ssh/roster')
         shutil.copy(roster_path, TMP_CONF_DIR)
         with open(os.path.join(TMP_CONF_DIR, 'roster'), 'a') as roster:
+            roster.write('  user: {0}\n'.format(pwd.getpwuid(os.getuid()).pw_name))
             roster.write('  priv: {0}/{1}'.format(TMP_CONF_DIR, 'key_test'))
 
     @property
@@ -565,6 +566,7 @@ class TestDaemon(object):
         verify_env([os.path.join(master_opts['pki_dir'], 'minions'),
                     os.path.join(master_opts['pki_dir'], 'minions_pre'),
                     os.path.join(master_opts['pki_dir'], 'minions_rejected'),
+                    os.path.join(master_opts['pki_dir'], 'minions_denied'),
                     os.path.join(master_opts['cachedir'], 'jobs'),
                     os.path.join(master_opts['cachedir'], 'raet'),
                     os.path.join(master_opts['root_dir'], 'cache', 'tokens'),
@@ -883,7 +885,7 @@ class TestDaemon(object):
         jid_info = self.client.run_job(
             list(targets), 'saltutil.sync_{0}'.format(modules_kind),
             expr_form='list',
-            timeout=9999999999999999,
+            timeout=999999999999999,
         )
 
         if self.wait_for_jid(targets, jid_info['jid'], timeout) is False:
@@ -903,7 +905,7 @@ class TestDaemon(object):
                         syncing.remove(name)
                         continue
 
-                    if isinstance(output['ret'], salt._compat.string_types):
+                    if isinstance(output['ret'], string_types):
                         # An errors has occurred
                         print(
                             ' {RED_BOLD}*{ENDC} {0} Failed to sync {2}: '
@@ -1084,7 +1086,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
             jids = []
             # These are usually errors
             for item in ret[:]:
-                if not isinstance(item, salt._compat.string_types):
+                if not isinstance(item, string_types):
                     # We don't know how to handle this
                     continue
                 match = STATE_FUNCTION_RUNNING_RE.match(item)
@@ -1152,7 +1154,7 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
         '''
         Execute salt-ssh
         '''
-        arg_str = '-c {0} -i --priv {1} --roster-file {2} localhost {3} --out=json'.format(self.get_config_dir(), os.path.join(TMP_CONF_DIR, 'key_test'), os.path.join(TMP_CONF_DIR, 'roster'), arg_str)
+        arg_str = '-c {0} -i --priv {1} --roster-file {2} --out=json localhost {3}'.format(self.get_config_dir(), os.path.join(TMP_CONF_DIR, 'key_test'), os.path.join(TMP_CONF_DIR, 'roster'), arg_str)
         return self.run_script('salt-ssh', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, raw=True)
 
     def run_run(self, arg_str, with_retcode=False, catch_stderr=False):
@@ -1225,13 +1227,22 @@ class ShellCaseCommonTestsMixIn(CheckShellBinaryNameAndVersionMixIn):
 
         # Let's get the output of git describe
         process = subprocess.Popen(
-            [git, 'describe', '--tags', '--match', 'v[0-9]*'],
+            [git, 'describe', '--tags', '--first-parent', '--match', 'v[0-9]*'],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             close_fds=True,
             cwd=CODE_DIR
         )
         out, err = process.communicate()
+        if process.returncode != 0:
+            process = subprocess.Popen(
+                [git, 'describe', '--tags', '--match', 'v[0-9]*'],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                close_fds=True,
+                cwd=CODE_DIR
+            )
+            out, err = process.communicate()
         if not out:
             self.skipTest(
                 'Failed to get the output of \'git describe\'. '

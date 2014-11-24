@@ -9,7 +9,7 @@ configuration file:
 
 .. code-block:: yaml
 
-    my_etd_config:
+    my_etcd_config:
       etcd.host: 127.0.0.1
       etcd.port: 4001
 
@@ -40,6 +40,7 @@ CLI Example:
 
     salt '*' test.ping --return etcd
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import json
@@ -88,7 +89,7 @@ def returner(ret):
         ret['jid'],
     )
 
-    for field in ret.keys():
+    for field in ret:
         # Not using os.path.join because we're not dealing with file paths
         dest = '/'.join((
             path,

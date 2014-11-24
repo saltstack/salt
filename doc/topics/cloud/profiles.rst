@@ -68,14 +68,14 @@ Larger Example
     rhel_ec2:
         provider: ec2
         image: ami-e565ba8c
-        size: Micro Instance
+        size: t1.micro
         minion:
             cheese: edam
 
     ubuntu_ec2:
         provider: ec2
         image: ami-7e2da54e
-        size: Micro Instance
+        size: t1.micro
         minion:
             cheese: edam
 

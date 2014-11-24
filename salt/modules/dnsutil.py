@@ -2,6 +2,7 @@
 '''
 Compendium of generic DNS utilities
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils
@@ -9,6 +10,7 @@ import socket
 
 # Import python libs
 import logging
+import time
 
 log = logging.getLogger(__name__)
 
@@ -154,7 +156,7 @@ def parse_zone(zonefile=None, zone=None):
                 line = multi.replace('(', '').replace(')', '')
             else:
                 continue
-        if 'ORIGIN' in zonedict.keys():
+        if 'ORIGIN' in zonedict:
             comps = line.replace('@', zonedict['ORIGIN']).split()
         else:
             comps = line.split()
@@ -178,7 +180,7 @@ def parse_zone(zonefile=None, zone=None):
         if comps[2] == 'NS':
             zonedict.setdefault('NS', []).append(comps[3])
         elif comps[2] == 'MX':
-            if 'MX' not in zonedict.keys():
+            if 'MX' not in zonedict:
                 zonedict.setdefault('MX', []).append({'priority': comps[3],
                                                       'host': comps[4]})
         else:
@@ -186,28 +188,28 @@ def parse_zone(zonefile=None, zone=None):
     return zonedict
 
 
-def _to_seconds(time):
+def _to_seconds(timestr):
     '''
     Converts a time value to seconds.
 
     As per RFC1035 (page 45), max time is 1 week, so anything longer (or
     unreadable) will be set to one week (604800 seconds).
     '''
-    time = time.upper()
-    if 'H' in time:
-        time = int(time.replace('H', '')) * 3600
-    elif 'D' in time:
-        time = int(time.replace('D', '')) * 86400
-    elif 'W' in time:
-        time = 604800
+    timestr = timestr.upper()
+    if 'H' in timestr:
+        seconds = int(timestr.replace('H', '')) * 3600
+    elif 'D' in timestr:
+        seconds = int(timestr.replace('D', '')) * 86400
+    elif 'W' in timestr:
+        seconds = 604800
     else:
         try:
-            time = int(time)
-        except Exception:
-            time = 604800
-    if time > 604800:
-        time = 604800
-    return time
+            seconds = int(timestr)
+        except ValueError:
+            seconds = 604800
+    if seconds > 604800:
+        seconds = 604800
+    return seconds
 
 
 def _has_dig():
@@ -320,3 +322,44 @@ def MX(domain, resolve=False, nameserver=None):
         return __salt__['dig.MX'](domain, resolve, nameserver)
 
     return 'This function requires dig, which is not currently available'
+
+
+def serial(zone='', update=False):
+    '''
+    Return, store and update a dns serial for your zone files.
+
+    zone: a keywork for a specific zone
+
+    update: store an updated version of the serial in a grain
+
+    If ``update`` is False, the function will retrieve an existing serial or
+    return the current date if no serial is stored. Nothing will be stored
+
+    If ``update`` is True, the function will set the serial to the current date
+    if none exist or if the existing serial is for a previous date. If a serial
+    for greater than the current date is already stored, the function will
+    increment it.
+
+    This module stores the serial in a grain, you can explicitely set the
+    stored value as a grain named ``dnsserial_<zone_name>``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt ns1 dnsutil.serial example.com
+    '''
+    grains = {}
+    key = 'dnsserial'
+    if zone:
+        key += '_{0}'.format(zone)
+    stored = __salt__['grains.get'](key=key)
+    present = time.strftime('%Y%m%d01')
+    if not update:
+        return stored or present
+    if stored and stored >= present:
+        current = str(int(stored) + 1)
+    else:
+        current = present
+    __salt__['grains.setval'](key=key, val=current)
+    return current

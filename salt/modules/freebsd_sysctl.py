@@ -2,6 +2,7 @@
 '''
 Module for viewing and modifying sysctl parameters
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils
@@ -25,7 +26,7 @@ def _formatfor(name, value, config, tail=''):
         return '{0}={1}{2}'.format(name, value, tail)
 
 
-def show():
+def show(config_file=False):
     '''
     Return a list of sysctl parameters for this minion
 

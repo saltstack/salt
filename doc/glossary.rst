@@ -10,7 +10,7 @@ Glossary
     Bootstrap
         A stand-alone Salt project which can download and install a Salt master
         and/or a Salt minion onto a host. *See also*: `salt-bootstrap
-        <https://github.com/saltstack/salt-bootstrap>`.
+        <https://github.com/saltstack/salt-bootstrap>`_.
 
     Compound Matcher
         A combination of many target definitions that can be combined with

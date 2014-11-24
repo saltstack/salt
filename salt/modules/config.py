@@ -2,16 +2,20 @@
 '''
 Return config information
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import re
 import os
+from salt.ext.six import string_types
 
 # Import salt libs
 import salt.utils
-import salt._compat
 import salt.syspaths as syspaths
 import salt.utils.sdb as sdb
+
+import logging
+log = logging.getLogger(__name__)
 
 __proxyenabled__ = ['*']
 
@@ -83,7 +87,7 @@ def manage_mode(mode):
     '''
     if mode is None:
         return None
-    if not isinstance(mode, salt._compat.string_types):
+    if not isinstance(mode, string_types):
         # Make it a string in case it's not
         mode = str(mode)
     # Strip any quotes and initial 0, though zero-pad it up to 4
@@ -283,7 +287,8 @@ def dot_vals(value):
 
 def gather_bootstrap_script(bootstrap=None):
     '''
-    Download the salt-bootstrap script, and return its location
+    Download the salt-bootstrap script, and return the first location
+    downloaded to.
 
     CLI Example:
 

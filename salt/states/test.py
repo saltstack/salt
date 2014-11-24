@@ -32,6 +32,7 @@ Provide test case states that enable easy testing of things to do with
         - comment: bar.baz
 
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import logging

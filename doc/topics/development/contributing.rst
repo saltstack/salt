@@ -16,7 +16,7 @@ Sending a GitHub pull request
 
 Sending pull requests on GitHub is the preferred method for receiving
 contributions. The workflow advice below mirrors `GitHub's own guide <GitHub
-Fork a Repo Guide>`_ and is well worth reading.
+Fork a Repo Guide_>`_ and is well worth reading.
 
 #.  Fork the `saltstack/salt`_ repository on GitHub.
 #.  Make a local clone of your fork.
@@ -44,7 +44,7 @@ Fork a Repo Guide>`_ and is well worth reading.
         git commit -m "Fixed X in file1 and file2"
 
     If you get stuck `there are many introductory Git resources on
-    help.github.com <Git resources>`_.
+    help.github.com <Git resources_>`_.
 
 #.  Push your locally-committed changes to your GitHub fork.
 
@@ -122,7 +122,7 @@ branch up-to-date.
 .. note:: Closing GitHub issues from commits
 
     This "merge-forward" strategy requires that `the magic keywords to close a
-    GitHub issue <Closing issues via commit message>`_ appear in the commit
+    GitHub issue <Closing issues via commit message_>`_ appear in the commit
     message text directly. Only including the text in a pull request will not
     close the issue.
 

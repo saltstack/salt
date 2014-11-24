@@ -24,6 +24,7 @@ class KeyWheelModuleTest(integration.TestCase, integration.AdaptedConfigurationT
             ],
             'minions_rejected': [],
             'minions_pre': [],
+            'minions_denied': [],
             'minions': ['minion', 'sub_minion'],
         })
 

@@ -149,7 +149,7 @@ def absent(name, protocol=None, service_address=None, server_address=None):
             ret['changes'][name] = 'Absent'
             return ret
         else:
-            ret['comment'] = 'LVS Server {0} in service {1}(2) removed failed({3})'.format(name, service_address, protocol, server_delete)
+            ret['comment'] = 'LVS Server {0} in service {1}({2}) removed failed({3})'.format(name, service_address, protocol, server_delete)
             ret['result'] = False
             return ret
     else:

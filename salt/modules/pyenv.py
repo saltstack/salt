@@ -4,11 +4,18 @@ Manage python installations with pyenv.
 
 .. versionadded:: v2014.04
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
 import re
 import logging
+
+try:
+    from shlex import quote as _cmd_quote  # pylint: disable=E0611
+except ImportError:
+    from pipes import quote as _cmd_quote
+
 
 # Set up logger
 log = logging.getLogger(__name__)
@@ -79,7 +86,7 @@ def _update_pyenv(path, runas=None):
         return False
 
     return 0 == __salt__['cmd.retcode'](
-        'cd {0} && git pull'.format(path), runas=runas)
+        'cd {0} && git pull'.format(_cmd_quote(path)), runas=runas)
 
 
 def _update_python_build(path, runas=None):
@@ -88,7 +95,7 @@ def _update_python_build(path, runas=None):
         return False
 
     return 0 == __salt__['cmd.retcode'](
-        'cd {0} && git pull'.format(path), runas=runas)
+        'cd {0} && git pull'.format(_cmd_quote(path)), runas=runas)
 
 
 def install(runas=None, path=None):
@@ -279,9 +286,14 @@ def do(cmdline=None, runas=None):
         salt '*' pyenv.do 'gem list bundler' deploy
     '''
     path = _pyenv_path(runas)
+    cmd_split = cmdline.split()
+    quoted_line = ''
+    for cmd in cmd_split:
+        quoted_line = quoted_line + ' ' + _cmd_quote(cmd)
     result = __salt__['cmd.run_all'](
-        'env PATH={0}/shims:$PATH {1}'.format(path, cmdline),
-        runas=runas
+        'env PATH={0}/shims:$PATH {1}'.format(_cmd_quote(path), quoted_line),
+        runas=runas,
+        python_shell=True
     )
 
     if result['retcode'] == 0:

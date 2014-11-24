@@ -3,7 +3,8 @@
     salt.utils.serializers.yamlex
     ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    YAMLEX is a format that allows to make things like sls file more intuitive.
+    YAMLEX is a format that allows for things like sls files to be
+    more intuitive.
 
     It's an extension of YAML that implements all the salt magic:
     - it implies omap for any dict like.
@@ -82,7 +83,7 @@
 
     !reset
 
-         this tag allows to flush the computing value.
+         this tag flushes the computing value.
 
         .. code-block:: yaml
 
@@ -112,6 +113,7 @@ from yaml.scanner import ScannerError
 from salt.utils.serializers import DeserializationError, SerializationError
 from salt.utils.aggregation import aggregate, Map, Sequence
 from salt.utils.odict import OrderedDict
+from salt.ext.six import text_type, binary_type
 
 __all__ = ['deserialize', 'serialize', 'available']
 
@@ -376,11 +378,18 @@ class Dumper(BaseDumper):  # pylint: disable=W0232
         return self.represent_mapping('tag:yaml.org,2002:map', data.items())
 
 Dumper.add_multi_representer(type(None), Dumper.represent_none)
-Dumper.add_multi_representer(str, Dumper.represent_str)
-Dumper.add_multi_representer(unicode, Dumper.represent_unicode)
+Dumper.add_multi_representer(binary_type, Dumper.represent_str)
+try:
+    Dumper.add_multi_representer(text_type, Dumper.represent_unicode)
+except AttributeError:
+    Dumper.add_multi_representer(text_type, Dumper.represent_str)
 Dumper.add_multi_representer(bool, Dumper.represent_bool)
 Dumper.add_multi_representer(int, Dumper.represent_int)
-Dumper.add_multi_representer(long, Dumper.represent_long)
+try:
+    Dumper.add_multi_representer(long, Dumper.represent_long)
+except NameError:
+    # Python 3 yaml does not have representation
+    pass
 Dumper.add_multi_representer(float, Dumper.represent_float)
 Dumper.add_multi_representer(list, Dumper.represent_list)
 Dumper.add_multi_representer(tuple, Dumper.represent_list)

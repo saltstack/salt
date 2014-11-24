@@ -25,25 +25,31 @@ Mount any type of mountable filesystem with the mounted function:
         - persist: True
         - mkmnt: True
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os.path
 import re
 
 # Import salt libs
-from salt._compat import string_types
+from salt.ext.six import string_types
+
+import logging
+import salt.ext.six as six
+log = logging.getLogger(__name__)
 
 
 def mounted(name,
             device,
             fstype,
             mkmnt=False,
-            opts=None,
+            opts='defaults',
             dump=0,
             pass_num=0,
             config='/etc/fstab',
             persist=True,
-            mount=True):
+            mount=True,
+            user=None):
     '''
     Verify that a device is mounted
 
@@ -79,18 +85,24 @@ def mounted(name,
 
     mount
         Set if the mount should be mounted immediately, Default is ``True``
+
+    user
+        The user to own the mount; this defaults to the user salt is
+        running as on the minion
     '''
     ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': ''}
 
+    # Defaults is not a valid option on Mac OS
+    if __grains__['os'] in ['MacOS', 'Darwin'] and opts == 'defaults':
+        opts = 'noowners'
+
     # Make sure that opts is correct, it can be a list or a comma delimited
     # string
     if isinstance(opts, string_types):
         opts = opts.split(',')
-    elif opts is None:
-        opts = ['defaults']
 
     # remove possible trailing slash
     if not name == '/':
@@ -115,14 +127,14 @@ def mounted(name,
     # We should normalize names of the /dev/vg-name/lv-name type to the canonical name
     lvs_match = re.match(r'^/dev/(?P<vg_name>[^/]+)/(?P<lv_name>[^/]+$)', device)
     if lvs_match:
-        double_dash_escaped = dict((k, re.sub(r'-', '--', v)) for k, v in lvs_match.groupdict().iteritems())
+        double_dash_escaped = dict((k, re.sub(r'-', '--', v)) for k, v in six.iteritems(lvs_match.groupdict()))
         mapper_device = '/dev/mapper/{vg_name}-{lv_name}'.format(**double_dash_escaped)
         if os.path.exists(mapper_device):
             real_device = mapper_device
 
     # When included in a Salt state file, FUSE
     # devices are prefaced by the filesystem type
-    # and a hash, eg. sshfs#.  In the mount list
+    # and a hash, e.g. sshfs#.  In the mount list
     # only the hostname is included.  So if we detect
     # that the device is a FUSE device then we
     # remove the prefaced string so that the device in
@@ -156,8 +168,8 @@ def mounted(name,
                             return ret
                         else:
                             ret['changes']['umount'] = "Forced remount because " \
-                                                        + "options changed"
-                            remount_result = __salt__['mount.remount'](real_name, device, mkmnt=mkmnt, fstype=fstype, opts=opts)
+                                                       + "options changed"
+                            remount_result = __salt__['mount.remount'](real_name, device, mkmnt=mkmnt, fstype=fstype, opts=opts, user=user)
                             ret['result'] = remount_result
                             return ret
             if real_device not in device_list:
@@ -173,7 +185,7 @@ def mounted(name,
                     if real_device != device:
                         ret['changes']['umount'] += " (" + real_device + ")"
                     ret['changes']['umount'] += ", current: " + ', '.join(device_list)
-                    out = __salt__['mount.umount'](real_name)
+                    out = __salt__['mount.umount'](real_name, user=user)
                     active = __salt__['mount.active']()
                     if real_name in active:
                         ret['comment'] = "Unable to unmount"
@@ -187,10 +199,21 @@ def mounted(name,
             # The mount is not present! Mount it
             if __opts__['test']:
                 ret['result'] = None
-                ret['comment'] = '{0} would be mounted'.format(name)
+                if os.path.exists(name):
+                    ret['comment'] = '{0} would be mounted'.format(name)
+                else:
+                    ret['comment'] = '{0} will be created and mounted'.format(name)
                 return ret
 
-            out = __salt__['mount.mount'](name, device, mkmnt, fstype, opts)
+            if not os.path.exists(name):
+                if mkmnt:
+                    __salt__['file.mkdir'](name, user=user)
+                else:
+                    ret['result'] = False
+                    ret['comment'] = 'Mount directory is not present'
+                    return ret
+
+            out = __salt__['mount.mount'](name, device, mkmnt, fstype, opts, user=user)
             active = __salt__['mount.active']()
             if isinstance(out, string_types):
                 # Failed to (re)mount, the state has failed!
@@ -205,15 +228,27 @@ def mounted(name,
             ret['comment'] = '{0} not mounted'.format(name)
 
     if persist:
+        # Override default for Mac OS
+        if __grains__['os'] in ['MacOS', 'Darwin'] and config == '/etc/fstab':
+            config = "/etc/auto_salt"
+
         if __opts__['test']:
-            out = __salt__['mount.set_fstab'](name,
+            if __grains__['os'] in ['MacOS', 'Darwin']:
+                out = __salt__['mount.set_automaster'](name,
                                               device,
                                               fstype,
                                               opts,
-                                              dump,
-                                              pass_num,
                                               config,
                                               test=True)
+            else:
+                out = __salt__['mount.set_fstab'](name,
+                                                  device,
+                                                  fstype,
+                                                  opts,
+                                                  dump,
+                                                  pass_num,
+                                                  config,
+                                                  test=True)
             if out != 'present':
                 ret['result'] = None
                 if out == 'new':
@@ -242,13 +277,20 @@ def mounted(name,
                 return ret
 
         else:
-            out = __salt__['mount.set_fstab'](name,
+            if __grains__['os'] in ['MacOS', 'Darwin']:
+                out = __salt__['mount.set_automaster'](name,
                                               device,
                                               fstype,
                                               opts,
-                                              dump,
-                                              pass_num,
                                               config)
+            else:
+                out = __salt__['mount.set_fstab'](name,
+                                                  device,
+                                                  fstype,
+                                                  opts,
+                                                  dump,
+                                                  pass_num,
+                                                  config)
 
         if out == 'present':
             ret['comment'] += '. Entry already exists in the fstab.'
@@ -346,8 +388,10 @@ def swap(name, persist=True, config='/etc/fstab'):
 
 
 def unmounted(name,
+              device,
               config='/etc/fstab',
-              persist=False):
+              persist=False,
+              user=None):
     '''
     .. versionadded:: 0.17.0
 
@@ -356,11 +400,20 @@ def unmounted(name,
     name
         The path to the location where the device is to be unmounted from
 
+    .. versionadded:: Lithium
+
+    device
+        The device to be unmounted.
+
     config
         Set an alternative location for the fstab, Default is ``/etc/fstab``
 
     persist
         Set if the mount should be purged from the fstab, Default is ``False``
+
+    user
+        The user to own the mount; this defaults to the user salt is
+        running as on the minion
     '''
     ret = {'name': name,
            'changes': {},
@@ -379,7 +432,10 @@ def unmounted(name,
             ret['comment'] = ('Mount point {0} is mounted but should not '
                               'be').format(name)
             return ret
-        out = __salt__['mount.umount'](name)
+        if device:
+            out = __salt__['mount.umount'](name, device, user=user)
+        else:
+            out = __salt__['mount.umount'](name, user=user)
         if isinstance(out, string_types):
             # Failed to umount, the state has failed!
             ret['comment'] = out
@@ -393,10 +449,20 @@ def unmounted(name,
             ret['result'] = True
 
     if persist:
-        fstab_data = __salt__['mount.fstab'](config)
+        # Override default for Mac OS
+        if __grains__['os'] in ['MacOS', 'Darwin'] and config == '/etc/fstab':
+            config = "/etc/auto_salt"
+            fstab_data = __salt__['mount.automaster'](config)
+        else:
+            fstab_data = __salt__['mount.fstab'](config)
+
         if name not in fstab_data:
             ret['comment'] += '. fstab entry not found'
         else:
+            if device:
+                if fstab_data[name]['device'] != device:
+                    ret['comment'] += '. fstab entry for device {0} not found'.format(device)
+                    return ret
             if __opts__['test']:
                 ret['result'] = None
                 ret['comment'] = ('Mount point {0} is unmounted but needs to '
@@ -404,7 +470,10 @@ def unmounted(name,
                                   'persistent').format(name, config)
                 return ret
             else:
-                out = __salt__['mount.rm_fstab'](name, config)
+                if __grains__['os'] in ['MacOS', 'Darwin']:
+                    out = __salt__['mount.rm_automaster'](name, device, config)
+                else:
+                    out = __salt__['mount.rm_fstab'](name, device, config)
                 if out is not True:
                     ret['result'] = False
                     ret['comment'] += '. Failed to persist purge'
@@ -415,7 +484,7 @@ def unmounted(name,
     return ret
 
 
-def mod_watch(name, **kwargs):
+def mod_watch(name, user=None, **kwargs):
     '''
     The mounted watcher, called to invoke the watch command.
 
@@ -429,7 +498,7 @@ def mod_watch(name, **kwargs):
            'comment': ''}
 
     if kwargs['sfun'] == 'mounted':
-        out = __salt__['mount.remount'](name, kwargs['device'], False, kwargs['fstype'], kwargs['opts'])
+        out = __salt__['mount.remount'](name, kwargs['device'], False, kwargs['fstype'], kwargs['opts'], user=user)
         if out:
             ret['comment'] = '{0} remounted'.format(name)
         else:

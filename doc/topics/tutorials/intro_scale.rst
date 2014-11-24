@@ -1,6 +1,6 @@
-===================================
+===================
 Using salt at scale
-===================================
+===================
 
 The focus of this tutorial will be building a Salt infrastructure for handling
 large numbers of minions. This will include tuning, topology, and best practices.
@@ -8,7 +8,8 @@ large numbers of minions. This will include tuning, topology, and best practices
 For how to install the saltmaster please
 go here: `Installing saltstack <http://docs.saltstack.com/topics/installation/index.html>`_
 
-    Note
+.. note::
+
     This tutorial is intended for large installations, although these same settings
     won't hurt, it may not be worth the complexity to smaller installations.
 
@@ -51,7 +52,7 @@ to the open return port 4506 if necessary. On an idle master, there will only
 be connections on port 4505.
 
 Too many minions authing
--------------------------------
+------------------------
 When the minion service is first started up, it will connect to its master's publisher
 on port 4505. If too many minions are started at once, this can cause a "thundering herd".
 This can be avoided by not starting too many minions at once.
@@ -65,7 +66,7 @@ subsequent retry until reaching `acceptance_wait_time_max`.
 
 
 Too many minions re-authing
--------------------------------
+---------------------------
 This is most likely to happen in the testing phase, when all minion keys have
 already been accepted, the framework is being tested and parameters change
 frequently in the masters configuration file.
@@ -88,7 +89,7 @@ it takes until all minions are reachable via salt commands.
 
 
 Too many minions re-connecting
--------------------------------
+------------------------------
 By default the zmq socket will re-connect every 100ms which for some larger
 installations may be too quick. This will control how quickly the TCP session is
 re-established, but has no bearing on the auth load.
@@ -133,16 +134,18 @@ be doubled after each attempt to reconnect (ZeroMQ default behavior).
 
 Lets say the generated random value is 11 seconds (or 11000ms).
 
-reconnect 1: wait 11 seconds
-reconnect 2: wait 22 seconds
-reconnect 3: wait 33 seconds
-reconnect 4: wait 44 seconds
-reconnect 5: wait 55 seconds
-reconnect 6: wait time is bigger than 60 seconds (recon_default + recon_max)
-reconnect 7: wait 11 seconds
-reconnect 8: wait 22 seconds
-reconnect 9: wait 33 seconds
-reconnect x: etc.
+.. code-block:: bash
+
+    reconnect 1: wait 11 seconds
+    reconnect 2: wait 22 seconds
+    reconnect 3: wait 33 seconds
+    reconnect 4: wait 44 seconds
+    reconnect 5: wait 55 seconds
+    reconnect 6: wait time is bigger than 60 seconds (recon_default + recon_max)
+    reconnect 7: wait 11 seconds
+    reconnect 8: wait 22 seconds
+    reconnect 9: wait 33 seconds
+    reconnect x: etc.
 
 With a thousand minions this will mean
 

@@ -5,6 +5,7 @@ Execute batch runs
 
 # Import python libs
 from __future__ import print_function
+from __future__ import absolute_import
 import math
 import time
 import copy
@@ -13,6 +14,7 @@ import copy
 import salt.client
 import salt.output
 from salt.utils import print_cli
+from salt.ext.six.moves import range
 
 
 class Batch(object):
@@ -33,7 +35,7 @@ class Batch(object):
         args = [self.opts['tgt'],
                 'test.ping',
                 [],
-                5,
+                self.opts['timeout'],
                 ]
 
         selected_target_option = self.opts.get('selected_target_option', None)
@@ -156,7 +158,7 @@ class Batch(object):
                         # add all minions that belong to this iterator and
                         # that have not responded to parts{} with an empty response
                         for minion in minion_tracker[queue]['minions']:
-                            if minion not in parts.keys():
+                            if minion not in parts:
                                 parts[minion] = {}
                                 parts[minion]['ret'] = {}
 
@@ -180,7 +182,7 @@ class Batch(object):
                             self.opts)
 
             # remove inactive iterators from the iters list
-            for queue in minion_tracker.keys():
+            for queue in minion_tracker:
                 # only remove inactive queues
                 if not minion_tracker[queue]['active'] and queue in iters:
                     iters.remove(queue)

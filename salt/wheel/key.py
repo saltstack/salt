@@ -2,6 +2,7 @@
 '''
 Wheel system wrapper for key system
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -40,6 +41,14 @@ def accept(match):
     return skey.accept(match)
 
 
+def accept_dict(match):
+    '''
+    Accept keys based on a dict of keys
+    '''
+    skey = salt.key.Key(__opts__)
+    return skey.accept(match_dict=match)
+
+
 def delete(match):
     '''
     Delete keys based on a glob match
@@ -48,12 +57,28 @@ def delete(match):
     return skey.delete_key(match)
 
 
+def delete_dict(match):
+    '''
+    Delete keys based on a dict of keys
+    '''
+    skey = salt.key.Key(__opts__)
+    return skey.delete_key(match_dict=match)
+
+
 def reject(match):
     '''
-    Delete keys based on a glob match
+    Reject keys based on a glob match
     '''
     skey = salt.key.Key(__opts__)
     return skey.reject(match)
+
+
+def reject_dict(match):
+    '''
+    Reject keys based on a dict of keys
+    '''
+    skey = salt.key.Key(__opts__)
+    return skey.reject(match_dict=match)
 
 
 def key_str(match):

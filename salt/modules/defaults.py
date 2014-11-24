@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import absolute_import
 import inspect
 import json
 import os
@@ -6,6 +7,7 @@ import yaml
 
 import salt.fileclient
 import salt.utils
+import salt.ext.six as six
 
 __virtualname__ = 'defaults'
 
@@ -92,7 +94,7 @@ def get(key, default=''):
         frame_args = inspect.getargvalues(frame[0]).locals
 
         for _sls in (
-            None if not type(frame_args.get('context')) is dict else frame_args.get('context').get('__sls__'),
+            None if not isinstance(frame_args.get('context'), dict) else frame_args.get('context').get('__sls__'),
             frame_args.get('mods', [None])[0],
             frame_args.get('sls')
         ):
@@ -126,7 +128,7 @@ def get(key, default=''):
     if value is None:
         value = default
 
-    if isinstance(value, unicode):
+    if isinstance(value, six.text_type):
         value = str(value)
 
     return value

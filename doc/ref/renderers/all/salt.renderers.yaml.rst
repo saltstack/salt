@@ -42,12 +42,6 @@ In Python, the above maps to:
 
     {'my_key': 'my_value'}
 
-In Python, the above maps to:
-
-.. code-block:: python
-
-    {'my_key': 'my_value'}
-
 Dictionaries can be nested:
 
 .. code-block:: yaml

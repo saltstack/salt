@@ -5,11 +5,11 @@ A module for shelling out
 Keep in mind that this module is insecure, in that it can give whomever has
 access to the master root execution access to all salt minions.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import time
 import functools
-import json
 import glob
 import logging
 import os
@@ -23,9 +23,11 @@ from salt.utils import vt
 import salt.utils
 import salt.utils.timed_subprocess
 import salt.grains.extra
-from salt._compat import string_types
+from salt.ext.six import string_types
 from salt.exceptions import CommandExecutionError, TimedProcTimeoutError
 from salt.log import LOG_LEVELS
+import salt.ext.six as six
+from salt.ext.six.moves import range
 
 # Only available on POSIX systems, nonfatal on windows
 try:
@@ -233,7 +235,7 @@ def _run(cmd,
 
     env = _parse_env(env)
 
-    for bad_env_key in (x for x, y in env.iteritems() if y is None):
+    for bad_env_key in (x for x, y in six.iteritems(env) if y is None):
         log.error('Environment variable {0!r} passed without a value. '
                   'Setting value to an empty string'.format(bad_env_key))
         env[bad_env_key] = ''
@@ -254,8 +256,10 @@ def _run(cmd,
         try:
             # Getting the environment for the runas user
             # There must be a better way to do this.
-            py_code = 'import os, json;' \
-                      'print(json.dumps(os.environ.__dict__))'
+            py_code = (
+                'import os, itertools; '
+                'print \"\\0\".join(itertools.chain(*os.environ.items()))'
+            )
             if __grains__['os'] in ['MacOS', 'Darwin']:
                 env_cmd = ('sudo', '-i', '-u', runas, '--',
                            sys.executable)
@@ -264,21 +268,20 @@ def _run(cmd,
                            "{0} -c {1}".format(shell, sys.executable))
             else:
                 env_cmd = ('su', '-s', shell, '-', runas, '-c', sys.executable)
-            env_json = subprocess.Popen(
+            env_encoded = subprocess.Popen(
                 env_cmd,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE
             ).communicate(py_code)[0]
-            env_json = (filter(lambda x: x.startswith('{') and x.endswith('}'),
-                               env_json.splitlines()) or ['{}']).pop()
-            env_runas = json.loads(env_json).get('data', {})
+            import itertools
+            env_runas = dict(itertools.izip(*[iter(env_encoded.split(b'\0'))]*2))
             env_runas.update(env)
             env = env_runas
             # Encode unicode kwargs to filesystem encoding to avoid a
             # UnicodeEncodeError when the subprocess is invoked.
             fse = sys.getfilesystemencoding()
-            for key, val in env.iteritems():
-                if isinstance(val, unicode):
+            for key, val in six.iteritems(env):
+                if isinstance(val, six.text_type):
                     env[key] = val.encode(fse)
         except ValueError:
             raise CommandExecutionError(
@@ -402,16 +405,14 @@ def _run(cmd,
                                log_stderr=True,
                                cwd=cwd,
                                preexec_fn=kwargs.get('preexec_fn', None),
-                               env=env,
+                               env=run_env,
                                log_stdin_level=output_loglevel,
                                log_stdout_level=output_loglevel,
                                log_stderr_level=output_loglevel,
                                stream_stdout=True,
                                stream_stderr=True)
-            # consume output
-            finished = False
             ret['pid'] = proc.pid
-            while not finished:
+            while proc.has_unread_data:
                 try:
                     try:
                         time.sleep(0.5)
@@ -427,8 +428,6 @@ def _run(cmd,
                             stderr += cstderr
                         else:
                             cstderr = ''
-                        if not cstdout and not cstderr and not proc.isalive():
-                            finished = True
                         if timeout and (time.time() > will_timeout):
                             ret['stderr'] = (
                                 'SALT: Timeout after {0}s\n{1}').format(
@@ -448,7 +447,9 @@ def _run(cmd,
                 # only set stdout on success as we already mangled in other
                 # cases
                 ret['stdout'] = stdout
-                if finished:
+                if not proc.isalive():
+                    # Process terminated, i.e., not canceled by the user or by
+                    # the timeout
                     ret['stderr'] = stderr
                     ret['retcode'] = proc.exitstatus
                 ret['pid'] = proc.pid
@@ -1010,7 +1011,7 @@ def script(source,
            shell=DEFAULT_SHELL,
            python_shell=True,
            env=None,
-           template='jinja',
+           template=None,
            umask=None,
            output_loglevel='debug',
            quiet=False,
@@ -1231,9 +1232,8 @@ def exec_code(lang, code, cwd=None):
     codefile = salt.utils.mkstemp()
     with salt.utils.fopen(codefile, 'w+t') as fp_:
         fp_.write(code)
-
-    cmd = '{0} {1}'.format(lang, codefile)
-    ret = run(cmd, cwd=cwd)
+    cmd = [lang, codefile]
+    ret = run(cmd, cwd=cwd, python_shell=False)
     os.remove(codefile)
     return ret
 

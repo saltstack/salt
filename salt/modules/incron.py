@@ -2,6 +2,7 @@
 '''
 Work with incron
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -9,6 +10,7 @@ import os
 
 # Import salt libs
 import salt.utils
+from salt.ext.six.moves import range
 
 # Set up logging
 log = logging.getLogger(__name__)

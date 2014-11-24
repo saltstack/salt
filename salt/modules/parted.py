@@ -15,6 +15,7 @@ In light of parted not directly supporting partition IDs, some of this module
 has been written to utilize sfdisk instead. For further information, please
 reference the man page for ``sfdisk(8)``.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -58,9 +59,13 @@ def __virtual__():
     return __virtualname__
 
 
-def probe(device=''):
+def probe(*devices, **kwargs):
     '''
-    Ask the kernel to update its local partition data
+    Ask the kernel to update its local partition data. When no args are
+    specified all block devices are tried.
+
+    Caution: Generally only works on devices with no mounted partitions and
+    may take a long time to return if specified devices are in use.
 
     CLI Examples:
 
@@ -68,14 +73,15 @@ def probe(device=''):
 
         salt '*' partition.probe
         salt '*' partition.probe /dev/sda
+        salt '*' partition.probe /dev/sda /dev/sdb
     '''
-    if device:
-        dev = device.replace('/dev/', '')
-        if dev not in os.listdir('/dev'):
-            raise CommandExecutionError(
-                'Invalid device passed to partition.probe'
-            )
-    cmd = 'partprobe {0}'.format(device)
+    salt.utils.kwargs_warn_until(kwargs, 'Beryllium')
+    if 'device' in kwargs:
+        devices = tuple([kwargs['device']] + list(devices))
+        del kwargs['device']
+    if kwargs:
+        raise TypeError("probe() takes no keyword arguments")
+    cmd = 'partprobe -- {0}'.format(" ".join(devices))
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
 
@@ -92,6 +98,11 @@ def part_list(device, unit=None):
         salt '*' partition.part_list /dev/sda unit=s
         salt '*' partition.part_list /dev/sda unit=kB
     '''
+    salt.utils.warn_until(
+        'Beryllium',
+        '''The \'part_list\' function has been deprecated in favor of
+        \'list_\'. Please update your code and configs to reflect this.''')
+
     return list_(device, unit)
 
 
@@ -421,7 +432,7 @@ def mkpart(device, part_type, fs_type=None, start=None, end=None):
             'Invalid part_type passed to partition.mkpart'
         )
 
-    if fs_type not in set(['ext2', 'fat32', 'fat16', 'linux-swap', 'reiserfs',
+    if fs_type and fs_type not in set(['ext2', 'fat32', 'fat16', 'linux-swap', 'reiserfs',
                           'hfs', 'hfs+', 'hfsx', 'NTFS', 'ufs', 'xfs']):
         raise CommandExecutionError(
             'Invalid fs_type passed to partition.mkpart'

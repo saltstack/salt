@@ -3,6 +3,7 @@
 A collection of mixins useful for the various *Client interfaces
 '''
 from __future__ import print_function
+from __future__ import absolute_import
 import datetime
 import logging
 import multiprocessing
@@ -25,6 +26,9 @@ class SyncClientMixin(object):
         '''
         Check that the function passed really exists
         '''
+        if not fun:
+            err = 'Must specify a function to run'
+            raise salt.exceptions.CommandExecutionError(err)
         if fun not in self.functions:
             err = 'Function {0!r} is unavailable'.format(fun)
             raise salt.exceptions.CommandExecutionError(err)
@@ -62,7 +66,7 @@ class AsyncClientMixin(object):
     client = None
     tag_prefix = None
 
-    def _proc_function(self, fun, low, user, tag, jid, fire_event=True):
+    def _proc_function(self, fun, low, user, tag, jid):
         '''
         Run this method in a multiprocess target to execute the function in a
         multiprocess and fire the return data on the event bus
@@ -72,14 +76,13 @@ class AsyncClientMixin(object):
                 'jid': jid,
                 'user': user,
                 }
-        if fire_event:
-            event = salt.utils.event.get_event(
-                    'master',
-                    self.opts['sock_dir'],
-                    self.opts['transport'],
-                    opts=self.opts,
-                    listen=False)
-            event.fire_event(data, tagify('new', base=tag))
+        event = salt.utils.event.get_event(
+                'master',
+                self.opts['sock_dir'],
+                self.opts['transport'],
+                opts=self.opts,
+                listen=False)
+        event.fire_event(data, tagify('new', base=tag))
 
         try:
             data['return'] = self.low(fun, low)
@@ -94,13 +97,12 @@ class AsyncClientMixin(object):
             data['success'] = False
         data['user'] = user
 
-        if fire_event:
-            event.fire_event(data, tagify('ret', base=tag))
-            # if we fired an event, make sure to delete the event object.
-            # This will ensure that we call destroy, which will do the 0MQ linger
-            del event
+        event.fire_event(data, tagify('ret', base=tag))
+        # if we fired an event, make sure to delete the event object.
+        # This will ensure that we call destroy, which will do the 0MQ linger
+        del event
 
-    def async(self, fun, low, user='UNKNOWN', fire_event=True):
+    def async(self, fun, low, user='UNKNOWN'):
         '''
         Execute the function in a multiprocess and return the event tag to use
         to watch for the return
@@ -110,7 +112,6 @@ class AsyncClientMixin(object):
 
         proc = multiprocessing.Process(
                 target=self._proc_function,
-                args=(fun, low, user, tag, jid),
-                kwargs={'fire_event': fire_event})
+                args=(fun, low, user, tag, jid))
         proc.start()
         return {'tag': tag, 'jid': jid}

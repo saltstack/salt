@@ -6,7 +6,10 @@ import os
 import urlparse
 
 # Import third party libs
-from mako.lookup import TemplateCollection, TemplateLookup
+# pylint: disable=import-error,no-name-in-module
+from salt.ext.six.moves.urllib.parse import urlparse
+# pylint: enable=import-error,no-name-in-module
+from mako.lookup import TemplateCollection, TemplateLookup  # pylint: disable=import-error
 
 # Import salt libs
 import salt.fileclient
@@ -57,7 +60,7 @@ class SaltMakoTemplateLookup(TemplateCollection):
         self.cache = {}
 
     def adjust_uri(self, uri, filename):
-        scheme = urlparse.urlparse(uri).scheme
+        scheme = urlparse(uri).scheme
         if scheme in ('salt', 'file'):
             return uri
         elif scheme:

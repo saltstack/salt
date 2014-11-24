@@ -5,9 +5,11 @@ The management of salt command line utilities are stored in here
 
 # Import python libs
 from __future__ import print_function
+from __future__ import absolute_import
 import logging
 import os
 import sys
+from glob import glob
 
 # Import salt libs
 import salt.cli.caller
@@ -20,6 +22,7 @@ import salt.output
 import salt.runner
 import salt.auth
 import salt.key
+from salt.config import _expand_glob_path
 
 from salt.utils import parsers, print_cli
 from salt.utils.verify import check_user, verify_env, verify_files
@@ -28,6 +31,7 @@ from salt.exceptions import (
     SaltClientError,
     EauthAuthenticationError,
 )
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -127,6 +131,8 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 except IOError:
                     kwargs['token'] = self.config['token']
 
+            kwargs['delimiter'] = self.options.delimiter
+
             if self.selected_target_option:
                 kwargs['expr_form'] = self.selected_target_option
             else:
@@ -134,6 +140,12 @@ class SaltCMD(parsers.SaltCMDOptionParser):
 
             if getattr(self.options, 'return'):
                 kwargs['ret'] = getattr(self.options, 'return')
+
+            if getattr(self.options, 'return_config'):
+                kwargs['ret_config'] = getattr(self.options, 'return_config')
+
+            if getattr(self.options, 'metadata'):
+                kwargs['metadata'] = getattr(self.options, 'metadata')
 
             # If using eauth and a token hasn't already been loaded into
             # kwargs, prompt the user to enter auth credentials
@@ -390,12 +402,12 @@ class SaltCall(parsers.SaltCallOptionParser):
         if self.options.file_root:
             # check if the argument is pointing to a file on disk
             file_root = os.path.abspath(self.options.file_root)
-            self.config['file_roots'] = {'base': [file_root]}
+            self.config['file_roots'] = {'base': _expand_glob_path([file_root])}
 
         if self.options.pillar_root:
             # check if the argument is pointing to a file on disk
             pillar_root = os.path.abspath(self.options.pillar_root)
-            self.config['pillar_roots'] = {'base': [pillar_root]}
+            self.config['pillar_roots'] = {'base': _expand_glob_path([pillar_root])}
 
         if self.options.local:
             self.config['file_client'] = 'local'
@@ -405,7 +417,6 @@ class SaltCall(parsers.SaltCallOptionParser):
         # Setup file logging!
         self.setup_logfile_logger()
 
-        #caller = salt.cli.caller.Caller(self.config)
         caller = salt.cli.caller.Caller.factory(self.config)
 
         if self.options.doc:
@@ -452,7 +463,7 @@ class SaltRun(parsers.SaltRunOptionParser):
 
         runner = salt.runner.Runner(self.config)
         if self.options.doc:
-            runner._print_docs()
+            runner.print_docs()
             self.exit(os.EX_OK)
 
         # Run this here so SystemExit isn't raised anywhere else when
@@ -475,13 +486,13 @@ class SaltSSH(parsers.SaltSSHOptionParser):
         ssh.run()
 
 
-class SaltAPI(parsers.OptionParser, parsers.ConfigDirMixIn,
+class SaltAPI(six.with_metaclass(parsers.OptionParserMeta,  # pylint: disable=W0232
+        parsers.OptionParser, parsers.ConfigDirMixIn,
         parsers.LogLevelMixIn, parsers.PidfileMixin, parsers.DaemonMixIn,
-        parsers.MergeConfigMixIn):
+        parsers.MergeConfigMixIn)):
     '''
     The cli parser object used to fire up the salt api system.
     '''
-    __metaclass__ = parsers.OptionParserMeta
 
     VERSION = salt.version.__version__
 

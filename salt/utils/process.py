@@ -1,15 +1,21 @@
 # -*- coding: utf-8 -*-
+
+from __future__ import absolute_import
+
 # Import python libs
 import logging
 import os
-import signal
 import time
 import sys
 import multiprocessing
 import signal
 
+import threading
+import Queue
+
 # Import salt libs
 import salt.utils
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -119,6 +125,66 @@ def os_is_running(pid):
             return False
 
 
+class ThreadPool(object):
+    '''
+    This is a very VERY basic threadpool implementation
+    This was made instead of using multiprocessing ThreadPool because
+    we want to set max queue size and we want to daemonize threads (neither
+    is exposed in the stdlib version).
+
+    Since there isn't much use for this class as of right now this implementation
+    Only supports daemonized threads and will *not* return results
+
+    TODO: if this is found to be more generally useful it would be nice to pull
+    in the majority of code from upstream or from http://bit.ly/1wTeJtM
+    '''
+    def __init__(self,
+                 num_threads=None,
+                 queue_size=0):
+        # if no count passed, default to number of CPUs
+        if num_threads is None:
+            num_threads = multiprocessing.cpu_count()
+        self.num_threads = num_threads
+
+        # create a task queue of queue_size
+        self._job_queue = Queue.Queue(queue_size)
+
+        self._workers = []
+
+        # create worker threads
+        for idx in xrange(num_threads):
+            thread = threading.Thread(target=self._thread_target)
+            thread.daemon = True
+            thread.start()
+            self._workers.append(thread)
+
+    # intentionally not called "apply_async"  since we aren't keeping track of
+    # the return at all, if we want to make this API compatible with multiprocessing
+    # threadpool we can in the future, and we won't have to worry about name collision
+    def fire_async(self, func, args=None, kwargs=None):
+        if args is None:
+            args = []
+        if kwargs is None:
+            kwargs = {}
+        try:
+            self._job_queue.put((func, args, kwargs), False)
+            return True
+        except Queue.Full:
+            return False
+
+    def _thread_target(self):
+        while True:
+            # 1s timeout so that if the parent dies this thread will die after 1s
+            try:
+                func, args, kwargs = self._job_queue.get(timeout=1)
+            except Queue.Empty:
+                continue
+            try:
+                func(*args, **kwargs)
+            except Exception:
+                pass
+
+
 class ProcessManager(object):
     '''
     A class which will manage processes that should be running
@@ -132,6 +198,10 @@ class ProcessManager(object):
             self.name = self.__class__.__name__
 
         self.wait_for_kill = wait_for_kill
+
+        # store some pointers for the SIGTERM handler
+        self._pid = os.getpid()
+        self._sigterm_handler = signal.getsignal(signal.SIGTERM)
 
     def add_process(self, tgt, args=None, kwargs=None):
         '''
@@ -168,6 +238,7 @@ class ProcessManager(object):
                   ' restarting...').format(self._process_map[pid]['tgt'],
                                            pid,
                                            self._process_map[pid]['Process'].exitcode))
+        # don't block, the process is already dead
         self._process_map[pid]['Process'].join(1)
 
         self.add_process(self._process_map[pid]['tgt'],
@@ -181,6 +252,7 @@ class ProcessManager(object):
         Load and start all available api modules
         '''
         salt.utils.appendproctitle(self.name)
+
         # make sure to kill the subprocesses if the parent is killed
         signal.signal(signal.SIGTERM, self.kill_children)
 
@@ -193,23 +265,24 @@ class ProcessManager(object):
 
         while True:
             try:
+                # in case someone died while we were waiting...
+                self.check_children()
+
                 pid, exit_status = os.wait()
                 if pid not in self._process_map:
                     log.debug(('Process of pid {0} died, not a known'
                                ' process, will not restart').format(pid))
                     continue
                 self.restart_process(pid)
+            # OSError is raised if a signal handler is called (SIGTERM) during os.wait
             except OSError:
                 break
-
-            # in case someone died while we were waiting...
-            self.check_children()
 
     def check_children(self):
         '''
         Check the children once
         '''
-        for pid, mapping in self._process_map.iteritems():
+        for pid, mapping in six.iteritems(self._process_map):
             if not mapping['Process'].is_alive():
                 self.restart_process(pid)
 
@@ -217,10 +290,19 @@ class ProcessManager(object):
         '''
         Kill all of the children
         '''
+        # check that this is the correct process, children inherit this
+        # handler, if we are in a child lets just run the original handler
+        if os.getpid() != self._pid:
+            if callable(self._sigterm_handler):
+                return self._sigterm_handler(*args)
+            elif self._sigterm_handler is not None:
+                return signal.default_int_handler(signal.SIGTERM)(*args)
+            else:
+                return
+
         for pid, p_map in self._process_map.items():
             p_map['Process'].terminate()
 
-        #
         end_time = time.time() + self.wait_for_kill  # when to die
 
         while self._process_map and time.time() < end_time:

@@ -4,6 +4,8 @@ The crypt module manages all of the cryptography functions for minions and
 masters, encrypting and decrypting payloads, preparing messages, and
 authenticating peers
 '''
+from __future__ import absolute_import
+from __future__ import print_function
 
 # Import python libs
 import os
@@ -15,6 +17,7 @@ import hashlib
 import logging
 import traceback
 import binascii
+from salt.ext.six.moves import zip
 
 # Import third party libs
 try:
@@ -111,6 +114,10 @@ def gen_keys(keydir, keyname, keysize, user=None):
     pub = '{0}.pub'.format(base)
 
     gen = RSA.gen_key(keysize, 65537, callback=lambda x, y, z: None)
+    if os.path.isfile(priv):
+        # Between first checking and the generation another process has made
+        # a key! Use the winner's key
+        return priv
     cumask = os.umask(191)
     gen.save_key(priv, None)
     os.umask(cumask)
@@ -625,6 +632,17 @@ class Auth(object):
 
         '''
         auth = {}
+
+        auth_timeout = self.opts.get('auth_timeout', None)
+        if auth_timeout is not None:
+            timeout = auth_timeout
+        auth_safemode = self.opts.get('auth_safemode', None)
+        if auth_safemode is not None:
+            safe = auth_safemode
+        auth_tries = self.opts.get('auth_tries', None)
+        if auth_tries is not None:
+            tries = auth_tries
+
         m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
 
         sreq = salt.payload.SREQ(
@@ -820,11 +838,7 @@ class SAuth(Auth):
             acceptance_wait_time_max = acceptance_wait_time
 
         while True:
-            creds = self.sign_in(
-                self.opts.get('auth_timeout', 60),
-                self.opts.get('auth_safemode', self.opts.get('_safe_auth', True)),
-                self.opts.get('auth_tries', 1)
-            )
+            creds = self.sign_in()
             if creds == 'retry':
                 if self.opts.get('caller'):
                     print('Minion failed to authenticate with the master, '

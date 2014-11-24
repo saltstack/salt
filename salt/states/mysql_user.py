@@ -18,7 +18,7 @@ Management of MySQL users
     Authentication overrides have been added.
 
 The MySQL authentication information specified in the minion config file can be
-overidden in states using the following arguments: ``connection_host``,
+overridden in states using the following arguments: ``connection_host``,
 ``connection_port``, ``connection_user``, ``connection_pass``,
 ``connection_db``, ``connection_unix_socket``, ``connection_default_file`` and
 ``connection_charset``.
@@ -35,6 +35,7 @@ overidden in states using the following arguments: ``connection_host``,
         - saltenv:
           - LC_ALL: "en_US.utf8"
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import sys

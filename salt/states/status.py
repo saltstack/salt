@@ -7,6 +7,7 @@ Maps to the `status` execution module.
 
 __monitor__ = [
         'loadavg',
+        'process',
         ]
 
 
@@ -47,5 +48,33 @@ def loadavg(name, maximum=None, minimum=None):
                     maximum, cap)
             return ret
     ret['comment'] = 'Load avg in acceptable range'
+    ret['result'] = True
+    return ret
+
+
+def process(name):
+    '''
+    Return whether the specified signature is found in the process tree. This
+    differs slightly from the services states, in that it may refer to a
+    process that is not managed via the init system.
+    '''
+    # Monitoring state, no changes will be made so no test interface needed
+    ret = {'name': name,
+           'result': False,
+           'comment': '',
+           'changes': {},
+           'data': {}}  # Data field for monitoring state
+
+    data = __salt__['status.pid'](name)
+    if name not in data:
+        ret['result'] = False
+        ret['comment'] += 'Process signature "{0}" not found '.format(
+            name
+        )
+        return ret
+    ret['data'] = data
+    ret['comment'] += 'Process signature "{0}" was found '.format(
+        name
+    )
     ret['result'] = True
     return ret

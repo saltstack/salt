@@ -2,6 +2,7 @@
 '''
 A collection of hashing and encoding functions
 '''
+from __future__ import absolute_import
 import base64
 import hashlib
 import hmac
@@ -32,8 +33,7 @@ def base64_decodestring(instr):
 
     .. code-block:: bash
 
-        salt '*' hashutil.base64_decodestring 'Z2V0IHNhbHRlZA==\n'
-
+        salt '*' hashutil.base64_decodestring 'Z2V0IHNhbHRlZA==\\n'
     '''
     return base64.decodestring(instr)
 

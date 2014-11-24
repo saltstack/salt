@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Manage groups on Linux and OpenBSD
+Manage groups on Linux, OpenBSD and NetBSD
 '''
 
 # Import python libs
@@ -35,7 +35,7 @@ def add(name, gid=None, system=False):
     cmd = 'groupadd '
     if gid:
         cmd += '-g {0} '.format(gid)
-    if system:
+    if system and __grains__['kernel'] != 'OpenBSD':
         cmd += '-r '
     cmd += name
 
@@ -141,8 +141,13 @@ def adduser(name, username):
     Verifies if a valid username 'bar' as a member of an existing group 'foo',
     if not then adds it.
     '''
-    retcode = __salt__['cmd.retcode']('gpasswd --add {0} {1}'.format(username,
-                                                                     name))
+    if __grains__['kernel'] == 'Linux':
+        retcode = __salt__['cmd.retcode']('gpasswd --add {0} {1}'.format(
+            username, name))
+    else:
+        retcode = __salt__['cmd.retcode']('usermod -G {0} {1}'.format(
+            name, username))
+
     return not retcode
 
 
@@ -162,9 +167,17 @@ def deluser(name, username):
     grp_info = __salt__['group.info'](name)
     try:
         if username in grp_info['members']:
-            print username
-            retcode = __salt__['cmd.retcode']('gpasswd --del {0} {1}'.format(
-                username, name))
+            if __grains__['kernel'] == 'Linux':
+                retcode = __salt__['cmd.retcode']('gpasswd --del {0} {1}'
+                    .format(username, name))
+            elif __grains__['kernel'] == 'OpenBSD':
+                cmd = 'usermod -S '
+                out = __salt__['cmd.run_stdout']('id -Gn {0}'.format(username))
+                for group in out.split(" "):
+                    if group != format(name):
+                        cmd += '{0},'.format(group)
+                retcode = __salt__['cmd.retcode']('{0} {1}'.format(
+                    cmd, username))
             return not retcode
         else:
             return True
@@ -183,6 +196,24 @@ def members(name, members_list):
     Replaces a membership list for a local group 'foo'.
         foo:x:1234:user1,user2,user3,...
     '''
-    retcode = __salt__['cmd.retcode']('gpasswd --members {0} {1}'.format(
-        members_list, name))
+    if __grains__['kernel'] == 'Linux':
+        retcode = __salt__['cmd.retcode']('gpasswd --members {0} {1}'.format(
+            members_list, name))
+    elif __grains__['kernel'] == 'OpenBSD':
+        retcode = 1
+        grp_info = __salt__['group.info'](name)
+        if grp_info and name in grp_info['name']:
+            __salt__['cmd.run']('groupdel {0}'.format(name))
+            __salt__['cmd.run']('groupadd -g {0} {1}'.format(
+                grp_info['gid'], name))
+            for user in members_list.split(","):
+                if user:
+                    retcode = __salt__['cmd.retcode'](
+                        'usermod -G {0} {1}'.format(name, user))
+                    if not retcode == 0:
+                        break
+                # provided list is '': users previously deleted from group
+                else:
+                    retcode = 0
+
     return not retcode

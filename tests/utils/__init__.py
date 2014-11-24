@@ -1,7 +1,8 @@
-# coding: utf-8
+# -*- coding: utf-8 -*-
 
 try:
     import cherrypy
+
     HAS_CHERRYPY = True
 except ImportError:
     HAS_CHERRYPY = False
@@ -12,10 +13,13 @@ import salt.config
 from ..integration import TMP_CONF_DIR
 
 if HAS_CHERRYPY:
-    from . cptestcase import BaseCherryPyTestCase
+    from .cptestcase import BaseCherryPyTestCase
     from salt.netapi.rest_cherrypy import app
 else:
-    from salttesting.unit import TestCase, skipIf
+    from salttesting.unit import (
+        TestCase,
+        skipIf,
+    )
 
     @skipIf(HAS_CHERRYPY is False, 'The CherryPy python package needs to be installed')
     class BaseCherryPyTestCase(TestCase):

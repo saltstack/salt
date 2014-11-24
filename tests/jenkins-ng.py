@@ -244,7 +244,7 @@ def sync_minion(options):
             stderr=subprocess.PIPE,
             stream_stds=True
         )
-        proc.poll_and_read_until_finish()
+        proc.poll_and_read_until_finish(interval=0.5)
         proc.communicate()
 
         if proc.returncode != 0:
@@ -320,7 +320,7 @@ def delete_vm(options):
         stderr=subprocess.PIPE,
         stream_stds=True
     )
-    proc.poll_and_read_until_finish()
+    proc.poll_and_read_until_finish(interval=0.5)
     proc.communicate()
 
 
@@ -371,7 +371,7 @@ def download_unittest_reports(options):
             stderr=subprocess.PIPE,
             stream_stds=True
         )
-        proc.poll_and_read_until_finish()
+        proc.poll_and_read_until_finish(0.5)
         proc.communicate()
         if proc.returncode != 0:
             print(
@@ -425,7 +425,7 @@ def download_coverage_report(options):
             stderr=subprocess.PIPE,
             stream_stds=True
         )
-        proc.poll_and_read_until_finish()
+        proc.poll_and_read_until_finish(interval=0.5)
         proc.communicate()
         if proc.returncode != 0:
             print(
@@ -504,7 +504,7 @@ def download_remote_logs(options):
             stderr=subprocess.PIPE,
             stream_stds=True
         )
-        proc.poll_and_read_until_finish()
+        proc.poll_and_read_until_finish(interval=0.5)
         proc.communicate()
         if proc.returncode != 0:
             print(
@@ -572,7 +572,7 @@ def prepare_ssh_access(options):
         stderr=subprocess.PIPE,
         stream_stds=True
     )
-    proc.poll_and_read_until_finish()
+    proc.poll_and_read_until_finish(interval=0.5)
     proc.communicate()
     if proc.returncode != 0:
         print(
@@ -592,7 +592,7 @@ def build_scp_command(options, *arguments):
         os.path.join(options.workspace, 'jenkins_ssh_key_test'),
         # Don't add new hosts to the host key database
         '-oStrictHostKeyChecking=no',
-        # Set hosts key database path to /dev/null, ie, non-existing
+        # Set hosts key database path to /dev/null, i.e., non-existing
         '-oUserKnownHostsFile=/dev/null',
         # Don't re-use the SSH connection. Less failures.
         '-oControlPath=none',
@@ -894,7 +894,7 @@ def main():
         stderr=subprocess.PIPE,
         stream_stds=True
     )
-    proc.poll_and_read_until_finish()
+    proc.poll_and_read_until_finish(interval=0.5)
     proc.communicate()
 
     retcode = proc.returncode
@@ -1017,7 +1017,7 @@ def main():
         stderr=subprocess.PIPE,
         stream_stds=True
     )
-    proc.poll_and_read_until_finish()
+    proc.poll_and_read_until_finish(interval=0.5)
     proc.communicate()
     if proc.returncode != 0:
         print('Failed to execute the preparation SLS file. Exit code: {0}'.format(proc.returncode))
@@ -1060,7 +1060,7 @@ def main():
             stderr=subprocess.PIPE,
             stream_stds=True
         )
-        proc.poll_and_read_until_finish()
+        proc.poll_and_read_until_finish(interval=0.5)
         proc.communicate()
         if proc.returncode != 0:
             print('Failed to execute the 2nd preparation SLS file. Exit code: {0}'.format(proc.returncode))

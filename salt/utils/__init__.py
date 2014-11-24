@@ -15,6 +15,7 @@ import errno
 import fnmatch
 import hashlib
 import imp
+import io
 import inspect
 import json
 import logging
@@ -26,16 +27,21 @@ import shlex
 import shutil
 import socket
 import stat
-import string
-import subprocess
 import sys
 import tempfile
 import time
 import types
 import warnings
 import yaml
+import string
+import locale
 from calendar import month_abbr as months
-from string import maketrans
+from salt.ext.six import string_types
+from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=E0611
+import salt.ext.six as six
+from salt.ext.six.moves import range
+from salt.ext.six.moves import zip
+from salt.ext.six.moves import map
 
 # Try to load pwd, fallback to getpass if unsuccessful
 try:
@@ -97,11 +103,10 @@ except ImportError:
     HAS_SETPROCTITLE = False
 
 # Import salt libs
-import salt._compat
+from salt.defaults import DEFAULT_TARGET_DELIM
 import salt.log
 import salt.payload
 import salt.version
-from salt._compat import string_types
 from salt.utils.decorators import memoize as real_memoize
 from salt.exceptions import (
     CommandExecutionError, SaltClientError,
@@ -251,7 +256,7 @@ def get_context(template, line, num_lines=5, marker=None):
 
     # warning: jinja content may contain unicode strings
     # instead of utf-8.
-    buf = [i.encode('UTF-8') if isinstance(i, unicode) else i for i in buf]
+    buf = [i.encode('UTF-8') if isinstance(i, six.text_type) else i for i in buf]
 
     return '---\n{0}\n---'.format('\n'.join(buf))
 
@@ -797,13 +802,6 @@ def build_whitespace_split_regex(text):
     return r'(?m)^{0}$'.format(regex)
 
 
-def build_whitepace_splited_regex(text):
-    warnings.warn('The build_whitepace_splited_regex function is deprecated,'
-                  ' please use build_whitespace_split_regex instead.',
-                  DeprecationWarning)
-    build_whitespace_split_regex(text)
-
-
 def format_call(fun,
                 data,
                 initial_ret=None,
@@ -829,14 +827,14 @@ def format_call(fun,
 
     aspec = get_function_argspec(fun)
 
-    args, kwargs = arg_lookup(fun).values()
+    args, kwargs = iter(arg_lookup(fun).values())
 
     # Since we WILL be changing the data dictionary, let's change a copy of it
     data = data.copy()
 
     missing_args = []
 
-    for key in kwargs.keys():
+    for key in kwargs:
         try:
             kwargs[key] = data.pop(key)
         except KeyError:
@@ -867,7 +865,7 @@ def format_call(fun,
     if aspec.keywords:
         # The function accepts **kwargs, any non expected extra keyword
         # arguments will made available.
-        for key, value in data.iteritems():
+        for key, value in data.items():
             if key in expected_extra_kws:
                 continue
             ret['kwargs'][key] = value
@@ -879,7 +877,7 @@ def format_call(fun,
     # Did not return yet? Lets gather any remaining and unexpected keyword
     # arguments
     extra = {}
-    for key, value in data.iteritems():
+    for key, value in data.items():
         if key in expected_extra_kws:
             continue
         extra[key] = copy.deepcopy(value)
@@ -899,7 +897,7 @@ def format_call(fun,
         # Found unexpected keyword arguments, raise an error to the user
         if len(extra) == 1:
             msg = '{0[0]!r} is an invalid keyword argument for {1!r}'.format(
-                extra.keys(),
+                list(extra.keys()),
                 ret.get(
                     # In case this is being called for a state module
                     'full',
@@ -910,7 +908,7 @@ def format_call(fun,
         else:
             msg = '{0} and {1!r} are invalid keyword arguments for {2}'.format(
                 ', '.join(['{0!r}'.format(e) for e in extra][:-1]),
-                extra.keys()[-1],
+                list(extra.keys())[-1],
                 ret.get(
                     # In case this is being called for a state module
                     'full',
@@ -1153,7 +1151,11 @@ def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
     return ret
 
 
-def subdict_match(data, expr, delim=':', regex_match=False):
+def subdict_match(data,
+                  expr,
+                  delimiter=DEFAULT_TARGET_DELIM,
+                  regex_match=False,
+                  exact_match=False):
     '''
     Check for a match in a dictionary using a delimiter character to denote
     levels of subdicts, and also allowing the delimiter character to be
@@ -1161,23 +1163,25 @@ def subdict_match(data, expr, delim=':', regex_match=False):
     data['foo']['bar'] == 'baz'. The former would take priority over the
     latter.
     '''
-    def _match(target, pattern, regex_match=False):
+    def _match(target, pattern, regex_match=False, exact_match=False):
         if regex_match:
             try:
                 return re.match(pattern.lower(), str(target).lower())
             except Exception:
                 log.error('Invalid regex {0!r} in match'.format(pattern))
                 return False
+        elif exact_match:
+            return str(target).lower() == pattern.lower()
         else:
             return fnmatch.fnmatch(str(target).lower(), pattern.lower())
 
-    for idx in range(1, expr.count(delim) + 1):
-        splits = expr.split(delim)
-        key = delim.join(splits[:idx])
-        matchstr = delim.join(splits[idx:])
+    for idx in range(1, expr.count(delimiter) + 1):
+        splits = expr.split(delimiter)
+        key = delimiter.join(splits[:idx])
+        matchstr = delimiter.join(splits[idx:])
         log.debug('Attempting to match {0!r} in {1!r} using delimiter '
-                  '{2!r}'.format(matchstr, key, delim))
-        match = traverse_dict_and_list(data, key, {}, delim=delim)
+                  '{2!r}'.format(matchstr, key, delimiter))
+        match = traverse_dict_and_list(data, key, {}, delimiter=delimiter)
         if match == {}:
             continue
         if isinstance(match, dict):
@@ -1191,25 +1195,34 @@ def subdict_match(data, expr, delim=':', regex_match=False):
                 if isinstance(member, dict):
                     if matchstr.startswith('*:'):
                         matchstr = matchstr[2:]
-                    if subdict_match(member, matchstr, regex_match=regex_match):
+                    if subdict_match(member,
+                                     matchstr,
+                                     regex_match=regex_match,
+                                     exact_match=exact_match):
                         return True
-                if _match(member, matchstr, regex_match=regex_match):
+                if _match(member,
+                          matchstr,
+                          regex_match=regex_match,
+                          exact_match=exact_match):
                     return True
             continue
-        if _match(match, matchstr, regex_match=regex_match):
+        if _match(match,
+                  matchstr,
+                  regex_match=regex_match,
+                  exact_match=exact_match):
             return True
     return False
 
 
-def traverse_dict(data, key, default, delim=':'):
+def traverse_dict(data, key, default, delimiter=DEFAULT_TARGET_DELIM):
     '''
-    Traverse a dict using a colon-delimited (or otherwise delimited, using
-    the "delim" param) target string. The target 'foo:bar:baz' will return
-    data['foo']['bar']['baz'] if this value exists, and will otherwise
-    return the dict in the default argument.
+    Traverse a dict using a colon-delimited (or otherwise delimited, using the
+    'delimiter' param) target string. The target 'foo:bar:baz' will return
+    data['foo']['bar']['baz'] if this value exists, and will otherwise return
+    the dict in the default argument.
     '''
     try:
-        for each in key.split(delim):
+        for each in key.split(delimiter):
             data = data[each]
     except (KeyError, IndexError, TypeError):
         # Encountered a non-indexable value in the middle of traversing
@@ -1217,10 +1230,10 @@ def traverse_dict(data, key, default, delim=':'):
     return data
 
 
-def traverse_dict_and_list(data, key, default, delim=':'):
+def traverse_dict_and_list(data, key, default, delimiter=DEFAULT_TARGET_DELIM):
     '''
     Traverse a dict or list using a colon-delimited (or otherwise delimited,
-    using the "delim" param) target string. The target 'foo:bar:0' will
+    using the 'delimiter' param) target string. The target 'foo:bar:0' will
     return data['foo']['bar'][0] if this value exists, and will otherwise
     return the dict in the default argument.
     Function will automatically determine the target type.
@@ -1228,7 +1241,7 @@ def traverse_dict_and_list(data, key, default, delim=':'):
     {'foo':{'bar':['baz']}} , if data like {'foo':{'bar':{'0':'baz'}}}
     then return data['foo']['bar']['0']
     '''
-    for each in key.split(delim):
+    for each in key.split(delimiter):
         if isinstance(data, list):
             try:
                 idx = int(each)
@@ -1282,7 +1295,7 @@ def clean_kwargs(**kwargs):
     passing the kwargs forward wholesale.
     '''
     ret = {}
-    for key, val in kwargs.items():
+    for key, val in list(kwargs.items()):
         if not key.startswith('__pub'):
             ret[key] = val
     return ret
@@ -1302,10 +1315,10 @@ def sanitize_win_path_string(winpath):
     '''
     intab = '<>:|?*'
     outtab = '_' * len(intab)
-    trantab = maketrans(intab, outtab)
+    trantab = string.maketrans(intab, outtab)
     if isinstance(winpath, str):
         winpath = winpath.translate(trantab)
-    elif isinstance(winpath, unicode):
+    elif isinstance(winpath, six.text_type):
         winpath = winpath.translate(dict((ord(c), u'_') for c in intab))
     return winpath
 
@@ -1448,7 +1461,7 @@ def check_state_result(running):
         return False
 
     ret = True
-    for state_result in running.itervalues():
+    for state_result in running.values():
         if not isinstance(state_result, dict):
             # return false when hosts return a list instead of a dict
             ret = False
@@ -1475,7 +1488,7 @@ def test_mode(**kwargs):
     "Test" in any variation on capitalization (i.e. "TEST", "Test", "TeSt",
     etc) contains a True value (as determined by salt.utils.is_true).
     '''
-    for arg, value in kwargs.iteritems():
+    for arg, value in kwargs.items():
         try:
             if arg.lower() == 'test' and is_true(value):
                 return True
@@ -1562,7 +1575,7 @@ def valid_url(url, protos):
     '''
     Return true if the passed URL is in the list of accepted protos
     '''
-    if salt._compat.urlparse(url).scheme in protos:
+    if urlparse(url).scheme in protos:
         return True
     return False
 
@@ -1679,7 +1692,7 @@ def safe_walk(top, topdown=True, onerror=None, followlinks=True, _seen=None):
         yield top, dirs, nondirs
 
 
-def get_hash(path, form='md5', chunk_size=4096):
+def get_hash(path, form='md5', chunk_size=65536):
     '''
     Get the hash sum of a file
 
@@ -1744,7 +1757,7 @@ def date_cast(date):
 
     # fuzzy date
     try:
-        if isinstance(date, salt._compat.string_types):
+        if isinstance(date, string_types):
             try:
                 if HAS_TIMELIB:
                     return timelib.strtodatetime(date)
@@ -1793,6 +1806,49 @@ def date_format(date=None, format="%Y-%m-%d"):
     return date_cast(date).strftime(format)
 
 
+def yaml_dquote(text):
+    """Make text into a double-quoted YAML string with correct escaping
+    for special characters.  Includes the opening and closing double
+    quote characters.
+    """
+    with io.StringIO() as ostream:
+        yemitter = yaml.emitter.Emitter(ostream)
+        yemitter.write_double_quoted(six.text_type(text))
+        return ostream.getvalue()
+
+
+def yaml_squote(text):
+    """Make text into a single-quoted YAML string with correct escaping
+    for special characters.  Includes the opening and closing single
+    quote characters.
+    """
+    with io.StringIO() as ostream:
+        yemitter = yaml.emitter.Emitter(ostream)
+        yemitter.write_single_quoted(six.text_type(text))
+        return ostream.getvalue()
+
+
+def yaml_encode(data):
+    """A simple YAML encode that can take a single-element datatype and return
+    a string representation.
+    """
+    yrepr = yaml.representer.SafeRepresenter()
+    ynode = yrepr.represent_data(data)
+    if not isinstance(ynode, yaml.ScalarNode):
+        raise TypeError(
+            "yaml_encode() only works with YAML scalar data;"
+            " failed for {0}".format(type(data))
+        )
+
+    tag = ynode.tag.rsplit(':', 1)[-1]
+    ret = ynode.value
+
+    if tag == "str":
+        ret = yaml_dquote(ynode.value)
+
+    return ret
+
+
 def warn_until(version,
                message,
                category=DeprecationWarning,
@@ -1822,7 +1878,7 @@ def warn_until(version,
                                 checks to raise a ``RuntimeError``.
     '''
     if not isinstance(version, (tuple,
-                                salt._compat.string_types,
+                                string_types,
                                 salt.version.SaltStackVersion)):
         raise RuntimeError(
             'The \'version\' argument should be passed as a tuple, string or '
@@ -1830,7 +1886,7 @@ def warn_until(version,
         )
     elif isinstance(version, tuple):
         version = salt.version.SaltStackVersion(*version)
-    elif isinstance(version, salt._compat.string_types):
+    elif isinstance(version, string_types):
         version = salt.version.SaltStackVersion.from_name(version)
 
     if stacklevel is None:
@@ -1857,11 +1913,26 @@ def warn_until(version,
         )
 
     if _dont_call_warnings is False:
+        def _formatwarning(message,
+                           category,
+                           filename,
+                           lineno,
+                           line=None):  # pylint: disable=W0613
+            '''
+            Replacement for warnings.formatwarning that disables the echoing of
+            the 'line' parameter.
+            '''
+            return '{0}:{1}: {2}: {3}'.format(
+                filename, lineno, category.__name__, message
+            )
+        saved = warnings.formatwarning
+        warnings.formatwarning = _formatwarning
         warnings.warn(
             message.format(version=version.formatted_version),
             category,
             stacklevel=stacklevel
         )
+        warnings.formatwarning = saved
 
 
 def kwargs_warn_until(kwargs,
@@ -1899,7 +1970,7 @@ def kwargs_warn_until(kwargs,
                                 checks to raise a ``RuntimeError``.
     '''
     if not isinstance(version, (tuple,
-                                salt._compat.string_types,
+                                string_types,
                                 salt.version.SaltStackVersion)):
         raise RuntimeError(
             'The \'version\' argument should be passed as a tuple, string or '
@@ -1907,7 +1978,7 @@ def kwargs_warn_until(kwargs,
         )
     elif isinstance(version, tuple):
         version = salt.version.SaltStackVersion(*version)
-    elif isinstance(version, salt._compat.string_types):
+    elif isinstance(version, string_types):
         version = salt.version.SaltStackVersion.from_name(version)
 
     if stacklevel is None:
@@ -1964,7 +2035,7 @@ def compare_versions(ver1='', oper='==', ver2='', cmp_func=None):
     '''
     cmp_map = {'<': (-1,), '<=': (-1, 0), '==': (0,),
                '>=': (0, 1), '>': (1,)}
-    if oper not in ['!='] + cmp_map.keys():
+    if oper not in ['!='] and oper not in cmp_map:
         log.error('Invalid operator "{0}" for version '
                   'comparison'.format(oper))
         return False
@@ -1988,7 +2059,7 @@ def compare_dicts(old=None, new=None):
     dict describing the changes that were made.
     '''
     ret = {}
-    for key in set((new or {}).keys()).union((old or {}).keys()):
+    for key in set((new or {})).union((old or {})):
         if key not in old:
             # New key
             ret[key] = {'old': '',
@@ -2013,14 +2084,18 @@ def argspec_report(functions, module=''):
     # TODO: cp.get_file will also match cp.get_file_str. this is the
     # same logic as sys.doc, and it is not working as expected, see
     # issue #3614
-    if module:
+    _use_fnmatch = False
+    if '*' in module:
+        target_mod = module
+        _use_fnmatch = True
+    elif module:
         # allow both "sys" and "sys." to match sys, without also matching
         # sysctl
         target_module = module + '.' if not module.endswith('.') else module
     else:
         target_module = ''
-    for fun in functions:
-        if fun == module or fun.startswith(target_module):
+    if _use_fnmatch:
+        for fun in fnmatch.filter(functions, target_mod):
             try:
                 aspec = get_function_argspec(functions[fun])
             except TypeError:
@@ -2035,6 +2110,23 @@ def argspec_report(functions, module=''):
             ret[fun]['varargs'] = True if varargs else None
             ret[fun]['kwargs'] = True if kwargs else None
 
+    else:
+        for fun in functions:
+            if fun == module or fun.startswith(target_module):
+                try:
+                    aspec = get_function_argspec(functions[fun])
+                except TypeError:
+                    # this happens if not callable
+                    continue
+
+                args, varargs, kwargs, defaults = aspec
+
+                ret[fun] = {}
+                ret[fun]['args'] = args if args else None
+                ret[fun]['defaults'] = defaults if defaults else None
+                ret[fun]['varargs'] = True if varargs else None
+                ret[fun]['kwargs'] = True if kwargs else None
+
     return ret
 
 
@@ -2044,7 +2136,7 @@ def decode_list(data):
     '''
     rv = []
     for item in data:
-        if isinstance(item, unicode):
+        if isinstance(item, six.text_type):
             item = item.encode('utf-8')
         elif isinstance(item, list):
             item = decode_list(item)
@@ -2059,10 +2151,10 @@ def decode_dict(data):
     JSON decodes as unicode, Jinja needs bytes...
     '''
     rv = {}
-    for key, value in data.iteritems():
-        if isinstance(key, unicode):
+    for key, value in data.items():
+        if isinstance(key, six.text_type):
             key = key.encode('utf-8')
-        if isinstance(value, unicode):
+        if isinstance(value, six.text_type):
             value = value.encode('utf-8')
         elif isinstance(value, list):
             value = decode_list(value)
@@ -2109,13 +2201,13 @@ def is_bin_str(data):
     '''
     Detects if the passed string of data is bin or text
     '''
-    text_characters = ''.join(map(chr, range(32, 127)) + list('\n\r\t\b'))
-    _null_trans = string.maketrans('', '')
     if '\0' in data:
         return True
     if not data:
         return False
 
+    text_characters = ''.join(list(map(chr, list(range(32, 127)))) + list('\n\r\t\b'))
+    _null_trans = string.maketrans('', '')
     # Get the non-text characters (maps a character to itself then
     # use the 'remove' option to get rid of the text characters.)
     text = data.translate(_null_trans, text_characters)
@@ -2219,7 +2311,7 @@ def get_group_dict(user=None, include_default=True):
     '''
     Returns a dict of all of the system groups as keys, and group ids
     as values, of which the user is a member.
-    E.g: {'staff': 501, 'sudo': 27}
+    E.g.: {'staff': 501, 'sudo': 27}
     '''
     if HAS_GRP is False or HAS_PWD is False:
         # We don't work on platforms that don't have grp and pwd
@@ -2241,7 +2333,7 @@ def get_gid_list(user=None, include_default=True):
         # We don't work on platforms that don't have grp and pwd
         # Just return an empty list
         return []
-    gid_list = [gid for (group, gid) in salt.utils.get_group_dict(user, include_default=include_default).items()]
+    gid_list = [gid for (group, gid) in list(salt.utils.get_group_dict(user, include_default=include_default).items())]
     return sorted(set(gid_list))
 
 
@@ -2333,7 +2425,7 @@ def import_json():
     for fast_json in ('ujson', 'yajl', 'json'):
         try:
             mod = __import__(fast_json)
-            log.info('loaded {0} json lib'.format(fast_json))
+            log.trace('loaded {0} json lib'.format(fast_json))
             return mod
         except ImportError:
             continue
@@ -2367,8 +2459,8 @@ def chugid(runas):
     # this does not appear to be strictly true.
     group_list = get_group_dict(runas, include_default=True)
     if sys.platform == 'darwin':
-        group_list = [a for a in group_list
-                      if not a.startswith('_')]
+        group_list = dict((k, v) for k, v in group_list.items()
+                          if not k.startswith('_'))
     for group_name in group_list:
         gid = group_list[group_name]
         if (gid not in supgroups_seen
@@ -2421,3 +2513,35 @@ def chugid_and_umask(runas, umask):
 def rand_string(size=32):
     key = os.urandom(size)
     return key.encode('base64').replace('\n', '')
+
+
+@real_memoize
+def get_encodings():
+    '''
+    return a list of string encodings to try
+    '''
+    encodings = []
+    loc = locale.getdefaultlocale()[-1]
+    if loc:
+        encodings.append(loc)
+    encodings.append(sys.getdefaultencoding())
+    encodings.extend(['utf-8', 'latin-1'])
+    return encodings
+
+
+def sdecode(string):
+    '''
+    Since we don't know where a string is coming from and that string will
+    need to be safely decoded, this function will attempt to decode the string
+    until if has a working string that does not stack trace
+    '''
+    encodings = get_encodings()
+    for encoding in encodings:
+        try:
+            decoded = string.decode(encoding)
+            # Make sure unicode string ops work
+            u' ' + decoded  # pylint: disable=W0104
+            return decoded
+        except UnicodeDecodeError:
+            continue
+    return string

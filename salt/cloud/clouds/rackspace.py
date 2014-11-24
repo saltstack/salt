@@ -31,6 +31,7 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       # The Rackspace user's apikey
       apikey: 901d3f579h23c8v73q9
 '''
+from __future__ import absolute_import
 
 # The import section is mostly libcloud boilerplate
 
@@ -81,6 +82,7 @@ list_nodes = namespaced_function(list_nodes, globals())
 list_nodes_full = namespaced_function(list_nodes_full, globals())
 list_nodes_select = namespaced_function(list_nodes_select, globals())
 show_instance = namespaced_function(show_instance, globals())
+get_salt_interface = namespaced_function(get_salt_interface, globals())
 
 
 # Only load in this module is the RACKSPACE configurations are in place
@@ -119,31 +121,11 @@ def get_conn():
         search_global=False,
         default=False
     )
-    compute_region = config.get_cloud_config_value(
-        'compute_region',
-        get_configured_provider(),
-        __opts__,
-        search_global=False,
-        default='DFW'
-    ).upper()
     if force_first_gen:
         log.info('Rackspace driver will only have access to first-gen images')
-        driver = get_driver(Provider.RACKSPACE)
+        driver = get_driver(Provider.RACKSPACE_FIRST_GEN)
     else:
-        computed_provider = 'RACKSPACE_NOVA_{0}'.format(compute_region)
-        try:
-            driver = get_driver(getattr(Provider, computed_provider))
-        except AttributeError:
-            log.info(
-                'Rackspace driver will only have access to first-gen images '
-                'since it was unable to load the driver as {0}'.format(
-                    computed_provider
-                )
-            )
-            driver = get_driver(Provider.RACKSPACE)
-        except Exception:
-            # http://goo.gl/qFgY42
-            driver = get_driver(Provider.RACKSPACE)
+        driver = get_driver(Provider.RACKSPACE)
 
     return driver(
         config.get_cloud_config_value(
@@ -157,7 +139,14 @@ def get_conn():
             get_configured_provider(),
             __opts__,
             search_global=False
-        )
+        ),
+        region=config.get_cloud_config_value(
+            'compute_region',
+            get_configured_provider(),
+            __opts__,
+            search_global=False,
+            default='dfw'
+        ).lower()
     )
 
 
@@ -331,6 +320,13 @@ def create(vm_):
         ip_address = preferred_ip(vm_, data.public_ips)
     log.debug('Using IP address {0}'.format(ip_address))
 
+    if get_salt_interface(vm_) == 'private_ips':
+        salt_ip_address = preferred_ip(vm_, data.private_ips)
+        log.info('Salt interface set to: {0}'.format(salt_ip_address))
+    else:
+        salt_ip_address = preferred_ip(vm_, data.public_ips)
+        log.debug('Salt interface set to: {0}'.format(salt_ip_address))
+
     if not ip_address:
         raise SaltCloudSystemExit(
             'No IP addresses could be found.'
@@ -346,6 +342,7 @@ def create(vm_):
         deploy_kwargs = {
             'opts': __opts__,
             'host': ip_address,
+            'salt_host': salt_ip_address,
             'username': ssh_username,
             'password': data.extra['password'],
             'script': deploy_script.script,
@@ -408,9 +405,11 @@ def create(vm_):
             deploy_kwargs['username'] = config.get_cloud_config_value(
                 'win_username', vm_, __opts__, default='Administrator'
             )
-            deploy_kwargs['password'] = config.get_cloud_config_value(
+            win_pass = config.get_cloud_config_value(
                 'win_password', vm_, __opts__, default=''
             )
+            if win_pass:
+                deploy_kwargs['password'] = win_pass
 
         # Store what was used to the deploy the VM
         event_kwargs = copy.deepcopy(deploy_kwargs)

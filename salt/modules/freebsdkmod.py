@@ -2,6 +2,7 @@
 '''
 Module to manage FreeBSD kernel modules
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -56,7 +57,7 @@ def available():
         salt '*' kmod.available
     '''
     ret = []
-    for path in __salt__['cmd.run']('ls /boot/kernel | grep .ko$').splitlines():
+    for path in __salt__['file.find']('/boot/kernel', name='*.ko$'):
         bpath = os.path.basename(path)
         comps = bpath.split('.')
         if 'ko' in comps:

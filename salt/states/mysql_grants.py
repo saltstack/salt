@@ -41,6 +41,7 @@ specification as defined in the MySQL documentation:
        - database: somedb.sometable
        - user: joe
 '''
+from __future__ import absolute_import
 
 import sys
 
@@ -82,7 +83,7 @@ def present(name,
         The grant priv_type (i.e. select,insert,update OR all privileges)
 
     database
-        The database priv_level (ie. db.tbl OR db.*)
+        The database priv_level (i.e. db.tbl OR db.*)
 
     user
         The user to apply the grant to
@@ -240,8 +241,8 @@ def absent(name,
 
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = 'MySQL grant {0} is set to be revoked'
-            ret['comment'] = ret['comment'].format(name)
+            ret['comment'] = 'MySQL grant {0} is set to be ' \
+                             'revoked'.format(name)
             return ret
         if __salt__['mysql.grant_revoke'](
                 grant,
@@ -250,9 +251,8 @@ def absent(name,
                 host,
                 grant_option,
                 **connection_args):
-            ret['comment'] = 'Grant {0} on {1} for {2}@{3} has been revoked'
-            ret['comment'] = ret['comment'].format(grant, database, user,
-                                                   host)
+            ret['comment'] = 'Grant {0} on {1} for {2}@{3} has been ' \
+                             'revoked'.format(grant, database, user, host)
             ret['changes'][name] = 'Absent'
             return ret
         else:

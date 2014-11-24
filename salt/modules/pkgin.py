@@ -4,6 +4,7 @@ Package support for pkgin based systems, inspired from freebsdpkg module
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import re
 import logging
@@ -196,7 +197,16 @@ def refresh_db():
     pkgin = _check_pkgin()
 
     if pkgin:
-        __salt__['cmd.run']('{0} up'.format(pkgin), output_loglevel='trace')
+        call = __salt__['cmd.run_all']('{0} up'.format(pkgin), output_loglevel='trace')
+
+        if call['retcode'] != 0:
+            comment = ''
+            if 'stderr' in call:
+                comment += call['stderr']
+
+            raise CommandExecutionError(
+                '{0}'.format(comment)
+            )
 
     return {}
 
@@ -356,6 +366,10 @@ def upgrade():
 
         salt '*' pkg.upgrade
     '''
+    ret = {'changes': {},
+           'result': True,
+           'comment': '',
+           }
 
     pkgin = _check_pkgin()
     if not pkgin:
@@ -363,9 +377,18 @@ def upgrade():
         return {}
 
     old = list_pkgs()
-    __salt__['cmd.retcode']('{0} -y fug'.format(pkgin))
-    new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    call = __salt__['cmd.run_all']('{0} -y fug'.format(pkgin))
+    if call['retcode'] != 0:
+        ret['result'] = False
+        if 'stderr' in call:
+            ret['comment'] += call['stderr']
+        if 'stdout' in call:
+            ret['comment'] += call['stdout']
+    else:
+        __context__.pop('pkg.list_pkgs', None)
+        new = list_pkgs()
+        ret['changes'] = salt.utils.compare_dicts(old, new)
+    return ret
 
 
 def remove(name=None, pkgs=None, **kwargs):
@@ -469,7 +492,7 @@ def _rehash():
     Use whenever a new command is created during the current
     session.
     '''
-    shell = __salt__['cmd.run']('echo $SHELL', output_loglevel='trace')
+    shell = __salt__['environ.get']('SHELL')
     if shell.split('/')[-1] in ('csh', 'tcsh'):
         __salt__['cmd.run']('rehash', output_loglevel='trace')
 
@@ -521,7 +544,6 @@ def file_dict(package):
         else:
             continue  # unexpected string
 
-    print files
     return {'errors': errors, 'files': files}
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

@@ -1,23 +1,66 @@
 # -*- coding: utf-8 -*-
 '''
 Simple returner for CouchDB. Optional configuration
-settings are listed below, along with sane defaults.
+settings are listed below, along with sane defaults:
 
-couchdb.db:     'salt'
-couchdb.url:        'http://salt:5984/'
+.. code-block:: yaml
 
-  To use the couchdb returner, append '--return couchdb' to the salt command. ex:
+    couchdb.db: 'salt'
+    couchdb.url: 'http://salt:5984/'
+
+Alternative configuration values can be used by prefacing the configuration.
+Any values not found in the alternative configuration will be pulled from
+the default location:
+
+.. code-block:: yaml
+
+    alternative.couchdb.db: 'salt'
+    alternative.couchdb.url: 'http://salt:5984/'
+
+To use the couchdb returner, append ``--return couchdb`` to the salt command. Example:
+
+.. code-block:: bash
 
     salt '*' test.ping --return couchdb
+
+To use the alternative configuration, append ``--return_config alternative`` to the salt command. Example:
+
+.. code-block:: bash
+
+    salt '*' test.ping --return couchdb --return_config alternative
+
+On concurrent database access
+==============================
+
+As this returner creates a couchdb document whith the salt job id as document id
+and as only one document with a given id can exist in a given couchdb database,
+it is advised for most setups that every minion be configured to write to it own
+database (the value of ``couchdb.db`` may be suffixed with the minion id),
+otherwise multi-minion targetting can lead to losing output:
+
+* the first returning minion is able to create a document in the database
+* other minions fail with ``{'error': 'HTTP Error 409: Conflict'}``
 '''
+
 # Import Python libs
+from __future__ import absolute_import
 import logging
 import time
-import urllib2
 import json
+
+# Import 3rd-party libs
+# pylint: disable=no-name-in-module,import-error
+from salt.ext.six.moves.urllib.error import HTTPError
+from salt.ext.six.moves.urllib.request import (
+        Request as _Request,
+        HTTPHandler as _HTTPHandler,
+        build_opener as _build_opener,
+)
+# pylint: enable=no-name-in-module,import-error
 
 # Import Salt libs
 import salt.utils
+import salt.returners
 
 log = logging.getLogger(__name__)
 
@@ -29,18 +72,20 @@ def __virtual__():
     return __virtualname__
 
 
-def _get_options():
+def _get_options(ret=None):
     '''
-    Get the couchdb options from salt. Apply defaults
-    if required.
+    Get the couchdb options from salt.
     '''
-    if 'config.option' in __salt__:
-        server_url = __salt__['config.option']('couchdb.url')
-        db_name = __salt__['config.option']('couchdb.db')
-    else:
-        cfg = __opts__
-        server_url = cfg.get('couchdb.url', None)
-        db_name = cfg.get('couchdb.db', None)
+    attrs = {'url': 'server_url',
+             'db': 'db_name'}
+
+    _options = salt.returners.get_returner_options(__virtualname__,
+                                                   ret,
+                                                   attrs,
+                                                   __salt__=__salt__,
+                                                   __opts__=__opts__)
+    server_url = _options.get('server_url')
+    db_name = _options.get('db_name')
 
     if not server_url:
         log.debug("Using default url.")
@@ -53,37 +98,37 @@ def _get_options():
     return {"url": server_url, "db": db_name}
 
 
-def _generate_doc(ret, options):
+def _generate_doc(ret):
     '''
     Create a object that will be saved into the database based on
     options.
     '''
 
     # Create a copy of the object that we will return.
-    r = ret
+    retc = ret.copy()
 
     # Set the ID of the document to be the JID.
-    r["_id"] = ret["jid"]
+    retc["_id"] = ret["jid"]
 
     # Add a timestamp field to the document
-    r["timestamp"] = time.time()
+    retc["timestamp"] = time.time()
 
-    return r
+    return retc
 
 
 def _request(method, url, content_type=None, _data=None):
     '''
     Makes a HTTP request. Returns the JSON parse, or an obj with an error.
     '''
-    opener = urllib2.build_opener(urllib2.HTTPHandler)
-    request = urllib2.Request(url, data=_data)
+    opener = _build_opener(_HTTPHandler)
+    request = _Request(url, data=_data)
     if content_type:
         request.add_header('Content-Type', content_type)
     request.get_method = lambda: method
     try:
         handler = opener.open(request)
-    except urllib2.HTTPError as e:
-        return {'error': '{0}'.format(e)}
+    except HTTPError as exc:
+        return {'error': '{0}'.format(exc)}
     return json.loads(handler.read())
 
 
@@ -92,7 +137,7 @@ def returner(ret):
     Take in the return and shove it into the couchdb database.
     '''
 
-    options = _get_options()
+    options = _get_options(ret)
 
     # Check to see if the database exists.
     _response = _request("GET", options['url'] + "_all_dbs")
@@ -103,13 +148,15 @@ def returner(ret):
 
         # Confirm that the response back was simple 'ok': true.
         if 'ok' not in _response or _response['ok'] is not True:
-            return log.error('Unable to create database "{0}"'
+            log.error('Unable to create database "{0}"'
                              .format(options['db']))
+            log.error('Nothing logged! Lost data.')
+            return
         log.info('Created database "{0}"'.format(options['db']))
 
     # Call _generate_doc to get a dict object of the document we're going to
     # shove into the database.
-    doc = _generate_doc(ret, options)
+    doc = _generate_doc(ret)
 
     # Make the actual HTTP PUT request to create the doc.
     _response = _request("PUT",
@@ -117,16 +164,17 @@ def returner(ret):
                          'application/json',
                          json.dumps(doc))
 
-    # Santiy check regarding the response..
+    # Sanity check regarding the response..
     if 'ok' not in _response or _response['ok'] is not True:
         log.error('Unable to create document: "{0}"'.format(_response))
+        log.error('Nothing logged! Lost data.')
 
 
 def get_jid(jid):
     '''
     Get the document with a given JID.
     '''
-    options = _get_options()
+    options = _get_options(ret=None)
     _response = _request("GET", options['url'] + options['db'] + '/' + jid)
     if 'error' in _response:
         log.error('Unable to get JID "{0}" : "{1}"'.format(jid, _response))
@@ -138,7 +186,7 @@ def get_jids():
     '''
     List all the jobs that we have..
     '''
-    options = _get_options()
+    options = _get_options(ret=None)
     _response = _request("GET", options['url'] + options['db'] + "/_all_docs")
 
     # Make sure the 'total_rows' is returned.. if not error out.
@@ -157,7 +205,7 @@ def get_jids():
         # See if the identifier is an int..
         try:
             int(row['id'])
-        except Exception:
+        except ValueError:
             continue
 
         # Check the correct number of digits by simply casting to str and
@@ -175,7 +223,7 @@ def get_fun(fun):
     '''
 
     # Get the options..
-    options = _get_options()
+    options = _get_options(ret=None)
 
     # Define a simple return object.
     _ret = {}
@@ -217,7 +265,7 @@ def get_minions():
     '''
     Return a list of minion identifiers from a request of the view.
     '''
-    options = _get_options()
+    options = _get_options(ret=None)
 
     # Make sure the views are valid, which includes the minions..
     if not ensure_views():
@@ -248,7 +296,7 @@ def ensure_views():
     '''
 
     # Get the options so we have the URL and DB..
-    options = _get_options()
+    options = _get_options(ret=None)
 
     # Make a request to check if the design document exists.
     _response = _request("GET",
@@ -294,7 +342,7 @@ def set_salt_view():
     document. Uses get_valid_salt_views and some hardcoded values.
     '''
 
-    options = _get_options()
+    options = _get_options(ret=None)
 
     # Create the new object that we will shove in as the design doc.
     new_doc = {}

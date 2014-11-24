@@ -2,6 +2,8 @@
 '''
 Create ssh executor system
 '''
+
+from __future__ import absolute_import
 # Import python libs
 import os
 import copy
@@ -18,7 +20,7 @@ import salt.state
 import salt.loader
 import salt.minion
 import salt.log
-from salt._compat import string_types
+from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 
@@ -111,7 +113,7 @@ def sls(mods, saltenv='base', test=None, exclude=None, env=None, **kwargs):
     stdout, stderr, _ = single.cmd_block()
     try:
         return json.loads(stdout, object_hook=salt.utils.decode_dict)
-    except Exception, e:
+    except Exception as e:
         log.error("JSON Render failed for: {0}\n{1}".format(stdout, stderr))
         log.error(str(e))
     try:
@@ -282,7 +284,7 @@ def highstate(test=None, **kwargs):
     stdout, stderr, _ = single.cmd_block()
     try:
         stdout = json.loads(stdout, object_hook=salt.utils.decode_dict)
-    except Exception, e:
+    except Exception as e:
         log.error('JSON Render failed for: {0}\n{1}'.format(stdout, stderr))
         log.error(str(e))
     try:

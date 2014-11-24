@@ -5,9 +5,13 @@ Wrapper around Server Density API
 
 .. versionadded:: 2014.7.0
 '''
+from __future__ import absolute_import
+
 import requests
 import json
 import logging
+
+from salt.ext.six.moves import map
 
 from salt.exceptions import CommandExecutionError
 
@@ -43,7 +47,7 @@ def _clean_salt_variables(params, variable_prefix="__"):
     '''
     Pops out variables from params which starts with `variable_prefix`.
     '''
-    map(params.pop, [k for k in params if k.startswith(variable_prefix)])
+    list(list(map(params.pop, [k for k in params if k.startswith(variable_prefix)])))
     return params
 
 
@@ -220,7 +224,7 @@ def install_agent(agent_key):
     account_url = get_sd_auth('account_url')
 
     __salt__['cmd.run'](
-        cmd='curl https://www.serverdensity.com/downloads/agent-install.sh > install.sh',
+        cmd='curl https://www.serverdensity.com/downloads/agent-install.sh -o install.sh',
         cwd=work_dir
     )
     __salt__['cmd.run'](cmd='chmod +x install.sh', cwd=work_dir)

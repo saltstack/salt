@@ -2,12 +2,14 @@
 '''
 Functions used for CLI argument handling
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import re
 
 # Import salt libs
-from salt._compat import string_types, integer_types
+from salt.ext.six import string_types, integer_types
+import salt.ext.six as six
 
 #KWARG_REGEX = re.compile(r'^([^\d\W][\w.-]*)=(?!=)(.*)$', re.UNICODE)  # python 3
 KWARG_REGEX = re.compile(r'^([^\d\W][\w.-]*)=(?!=)(.*)$')
@@ -25,7 +27,7 @@ def condition_input(args, kwargs):
             ret.append(arg)
     if isinstance(kwargs, dict) and kwargs:
         kw_ = {'__kwarg__': True}
-        for key, val in kwargs.iteritems():
+        for key, val in six.iteritems(kwargs):
             kw_[key] = val
         return ret + [kw_]
     return ret

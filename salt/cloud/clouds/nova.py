@@ -82,8 +82,15 @@ accept them
       os_auth_plugin: rackspace
       tenant: <userid>
       provider: nova
+      networks:
+        - net-id: 47a38ff2-fe21-4800-8604-42bd1848e743
+        - net-id: 00000000-0000-0000-0000-000000000000
+        - net-id: 11111111-1111-1111-1111-111111111111
 
+Note: You must include the default net-ids when setting networks or the server
+will be created without the rest of the interfaces
 '''
+from __future__ import absolute_import
 # pylint: disable=E0102
 
 # The import section is mostly libcloud boilerplate
@@ -96,6 +103,7 @@ import pprint
 
 # Import generic libcloud functions
 from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
+import salt.ext.six as six
 try:
     from salt.utils.openstack import nova
     HAS_NOVA = True
@@ -136,6 +144,9 @@ except ImportError:
 # Get logging started
 log = logging.getLogger(__name__)
 request_log = logging.getLogger('requests')
+
+# namespace libcloudfuncs
+get_salt_interface = namespaced_function(get_salt_interface, globals())
 
 
 # Some of the libcloud functions need to be in the same namespace as the
@@ -216,7 +227,7 @@ def get_image(conn, vm_):
         'ascii', 'salt-cloud-force-ascii'
     )
 
-    for img in image_list.keys():
+    for img in image_list:
         if vm_image in (image_list[img]['id'], img):
             return image_list[img]['id']
 
@@ -452,7 +463,7 @@ def request_instance(vm_=None, call=None):
         group_list = []
 
         for vmg in vm_groups:
-            if vmg in [name for name, details in avail_groups.iteritems()]:
+            if vmg in [name for name, details in six.iteritems(avail_groups)]:
                 group_list.append(vmg)
             else:
                 raise SaltCloudNotFound(
@@ -467,8 +478,8 @@ def request_instance(vm_=None, call=None):
     if avz is not None:
         kwargs['availability_zone'] = avz
 
-    networks = config.get_cloud_config_value(
-        'networks', vm_, __opts__, search_global=False
+    kwargs['nics'] = config.get_cloud_config_value(
+        'networks', vm_, __opts__, search_global=False, default=None
     )
 
     files = config.get_cloud_config_value(
@@ -490,6 +501,10 @@ def request_instance(vm_=None, call=None):
     if userdata_file is not None:
         with salt.utils.fopen(userdata_file, 'r') as fp:
             kwargs['userdata'] = fp.read()
+
+    kwargs['config_drive'] = config.get_cloud_config_value(
+        'config_drive', vm_, __opts__, search_global=False
+    )
 
     salt.utils.cloud.fire_event(
         'event',
@@ -699,10 +714,21 @@ def create(vm_):
         ip_address = preferred_ip(vm_, data.public_ips)
     log.debug('Using IP address {0}'.format(ip_address))
 
+    if get_salt_interface(vm_) == 'private_ips':
+        salt_ip_address = preferred_ip(vm_, data.private_ips)
+        log.info('Salt interface set to: {0}'.format(salt_ip_address))
+    elif rackconnect(vm_) is True and get_salt_interface(vm_) != 'private_ips':
+        salt_ip_address = data.public_ips
+    else:
+        salt_ip_address = preferred_ip(vm_, data.public_ips)
+        log.debug('Salt interface set to: {0}'.format(salt_ip_address))
+
     if not ip_address:
         raise SaltCloudSystemExit('A valid IP address was not found')
 
     vm_['ssh_host'] = ip_address
+    vm_['salt_host'] = salt_ip_address
+
     ret = salt.utils.cloud.bootstrap(vm_, __opts__)
 
     ret.update(data.__dict__)
@@ -763,7 +789,7 @@ def list_nodes(call=None, **kwargs):
 
     if not server_list:
         return {}
-    for server in server_list.keys():
+    for server in server_list:
         server_tmp = conn.server_show(server_list[server]['id'])[server]
         ret[server] = {
             'id': server_tmp['id'],
@@ -795,7 +821,7 @@ def list_nodes_full(call=None, **kwargs):
 
     if not server_list:
         return {}
-    for server in server_list.keys():
+    for server in server_list:
         try:
             ret[server] = conn.server_show_libcloud(
                 server_list[server]['id']

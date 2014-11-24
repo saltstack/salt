@@ -5,7 +5,7 @@
 arch_ec2:
   provider: my-ec2-config
   image: ami-337d5b76
-  size: Micro Instance
+  size: t1.micro
   ssh_username: root
   location: us-west-1
   minion:
@@ -15,7 +15,7 @@ arch_ec2:
 arch_cloud-init_ec2:
   provider: my-ec2-config
   image: ami-6a5f7c2f
-  size: Micro Instance
+  size: t1.micro
   ssh_username: root
   location: us-west-1
   minion:
@@ -27,19 +27,19 @@ arch_cloud-init_ec2:
 centos_6:
   provider: my-ec2-config
   image: ami-f61630b3
-  size: Micro Instance
+  size: t1.micro
   ssh_username: root
   location: us-west-1
   minion:
     grains:
       cloud: ec2-us-west-1
 
-# official Debain, available at no-charge from ec2 marketplace:
+# official Debian, available at no-charge from ec2 marketplace:
 # http://wiki.debian.org/Cloud/AmazonEC2Image
 debian_squeeze_ec2:
   provider: my-ec2-config
   image: ami-2c735269
-  size: Micro Instance
+  size: t1.micro
   ssh_username: admin
   location: us-west-1
   minion:
@@ -51,7 +51,7 @@ debian_squeeze_ec2:
 fedora_17_ec2:
   provider: my-ec2-config
   image: ami-877e24c2
-  size: Micro Instance
+  size: t1.micro
   ssh_username: ec2-user
   location: us-west-1
   minion:
@@ -61,7 +61,7 @@ fedora_17_ec2:
 fedora_18_ec2:
   provider: my-ec2-config
   image: ami-0899b94d
-  size: Micro Instance
+  size: t1.micro
   ssh_username: ec2-user
   location: us-west-1
   minion:
@@ -71,11 +71,11 @@ fedora_18_ec2:
 # FreeBSD 9.1
 # http://www.daemonology.net/freebsd-on-ec2/
 
-# this micro instance does not auto-populate SSH keys see above link
+# this t1.micro instance does not auto-populate SSH keys see above link
 freebsd_91_ec2:
   provider: my-ec2-config
   image: ami-4c8baa09
-  size: Micro Instance
+  size: t1.micro
   ssh_username: ec2-user
   location: us-west-1
   minion:
@@ -87,7 +87,7 @@ freebsd_91_ec2:
 ubuntu_lucid_ec2:
   provider: my-ec2-config
   image: ami-e63013a3
-  size: Micro Instance
+  size: t1.micro
   ssh_username: ubuntu
   location: us-west-1
   minion:
@@ -97,7 +97,7 @@ ubuntu_lucid_ec2:
 ubuntu_precise_ec2:
   provider: my-ec2-config
   image: ami-3ed8fb7b 
-  size: Micro Instance
+  size: t1.micro
   ssh_username: ubuntu
   location: us-west-1
   minion:

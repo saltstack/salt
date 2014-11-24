@@ -2,6 +2,7 @@
 '''
 The service module for FreeBSD
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -209,7 +210,7 @@ def disable(name, **kwargs):
     return _switch(name, False, **kwargs)
 
 
-def enabled(name):
+def enabled(name, **kwargs):
     '''
     Return True if the named service is enabled, false otherwise
 
