@@ -27,7 +27,7 @@ import copy
 import logging
 import errno
 from datetime import datetime
-from six import string_types
+from salt.ext.six import string_types
 
 # Import salt libs
 import salt.config
@@ -43,7 +43,7 @@ import salt.syspaths as syspaths
 from salt.exceptions import (
     EauthAuthenticationError, SaltInvocationError, SaltReqTimeoutError
 )
-import six
+import salt.ext.six as six
 
 # Import third party libs
 try:
@@ -1389,7 +1389,7 @@ class LocalClient(object):
                                               master_uri=master_uri)
 
         try:
-            payload = sreq.send(payload_kwargs)
+            payload = sreq.send(payload_kwargs, timeout=timeout)
         except SaltReqTimeoutError:
             log.error(
                 'Salt request timed out. If this error persists, '

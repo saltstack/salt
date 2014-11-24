@@ -55,6 +55,8 @@ Set up in the cloud configuration at ``/etc/salt/cloud.providers`` or
       base_url: http://192.168.1.101:3000/v2/12345
       provider: openstack
       userdata_file: /tmp/userdata.txt
+      # config_drive is required for userdata at rackspace
+      config_drive: True
 
 For in-house Openstack Essex installation, libcloud needs the service_type :
 
@@ -532,6 +534,10 @@ def request_instance(vm_=None, call=None):
     if userdata_file is not None:
         with salt.utils.fopen(userdata_file, 'r') as fp:
             kwargs['ex_userdata'] = fp.read()
+
+    kwargs['ex_config_drive'] = config.get_cloud_config_value(
+        'config_drive', vm_, __opts__, search_global=False
+    )
 
     salt.utils.cloud.fire_event(
         'event',

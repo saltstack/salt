@@ -3,31 +3,19 @@
 Set up the version of Salt
 '''
 
-from __future__ import absolute_import
-
 # Import python libs
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 import re
 import sys
 
-# do not use six as versions is imported 
-# in setup.py and  so you must not rely
-# on extra dependency !
-# Without that, zc.buildout install wont work
-# from six import string_types
-string_types = (str,)
-if sys.version_info[0] < 3:
-    from itertools import imap as map
+# Don't rely on external packages in this module since it's used at install time
+if sys.version_info[0] == 3:
+    MAX_SIZE = sys.maxsize
+    string_types = (str,)
+else:
+    MAX_SIZE = sys.maxint
     string_types = (basestring,)
-
-# Import salt libs
-try:
-    from salt._compat import MAX_SIZE
-except ImportError:
-    if sys.version_info[0] == 3:
-        MAX_SIZE = sys.maxsize
-    else:
-        MAX_SIZE = sys.maxint
+    from itertools import imap as map
 
 # ----- ATTENTION --------------------------------------------------------------------------------------------------->
 #

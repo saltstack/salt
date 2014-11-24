@@ -7,7 +7,7 @@ import yaml
 
 import salt.fileclient
 import salt.utils
-import six
+import salt.ext.six as six
 
 __virtualname__ = 'defaults'
 

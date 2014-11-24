@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Module for getting information about syslog-ng
-===============================================
 
 :maintainer:    Tibor Benke <btibi@sch.bme.hu>
 :maturity:      new
@@ -36,7 +35,7 @@ import os
 import os.path
 import salt.utils
 from salt.exceptions import CommandExecutionError
-from six.moves import range
+from salt.ext.six.moves import range
 
 
 __SYSLOG_NG_BINARY_PATH = None

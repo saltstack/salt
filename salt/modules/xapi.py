@@ -22,8 +22,8 @@ from __future__ import absolute_import
 import sys
 import contextlib
 import os
-from six.moves import range
-from six.moves import map
+from salt.ext.six.moves import range
+from salt.ext.six.moves import map
 
 try:
     import importlib

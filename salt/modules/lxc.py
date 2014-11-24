@@ -23,8 +23,8 @@ import time
 import shutil
 import re
 import random
-import six
-from six.moves.urllib.parse import urlparse  # pylint: disable=E0611
+import salt.ext.six as six
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=E0611
 
 # Import salt libs
 import salt
@@ -650,7 +650,7 @@ def get_base(**kwargs):
     cntrs = ls_()
     if kwargs.get('image'):
         image = kwargs.get('image')
-        proto = urlparse(image).scheme
+        proto = _urlparse(image).scheme
         img_tar = __salt__['cp.cache_file'](image)
         img_name = os.path.basename(img_tar)
         hash_ = salt.utils.get_hash(

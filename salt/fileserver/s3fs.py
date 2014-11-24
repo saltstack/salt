@@ -69,7 +69,6 @@ import datetime
 import os
 import time
 import pickle
-import urllib
 import logging
 
 # Import salt libs
@@ -77,8 +76,13 @@ import salt.fileserver as fs
 import salt.modules
 import salt.utils
 import salt.utils.s3 as s3
-import six
-from six.moves import filter
+
+# Import 3rd-party libs
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
+import salt.ext.six as six
+from salt.ext.six.moves import filter
+from salt.ext.six.moves.urllib.parse import quote as _quote
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -572,25 +576,26 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
                         bucket=bucket_name,
                         service_url=service_url,
                         verify_ssl=verify_ssl,
-                        path=urllib.quote(path),
+                        path=_quote(path),
                         local_file=cached_file_path
                     )
-                    for header in ret['headers']:
-                        name, value = header.split(':', 1)
-                        name = name.strip()
-                        value = value.strip()
-                        if name == 'Last-Modified':
-                            s3_file_mtime = datetime.datetime.strptime(
-                                value, '%a, %d %b %Y %H:%M:%S %Z')
-                        elif name == 'Content-Length':
-                            s3_file_size = int(value)
-                    if (cached_file_size == s3_file_size and
-                            cached_file_mtime > s3_file_mtime):
-                        log.info(
-                            '{0} - {1} : {2} skipped download since cached file size '
-                            'equal to and mtime after s3 values'.format(
-                                bucket_name, saltenv, path))
-                        return
+                    if ret is not None:
+                        for header in ret['headers']:
+                            name, value = header.split(':', 1)
+                            name = name.strip()
+                            value = value.strip()
+                            if name == 'Last-Modified':
+                                s3_file_mtime = datetime.datetime.strptime(
+                                    value, '%a, %d %b %Y %H:%M:%S %Z')
+                            elif name == 'Content-Length':
+                                s3_file_size = int(value)
+                        if (cached_file_size == s3_file_size and
+                                cached_file_mtime > s3_file_mtime):
+                            log.info(
+                                '{0} - {1} : {2} skipped download since cached file size '
+                                'equal to and mtime after s3 values'.format(
+                                    bucket_name, saltenv, path))
+                            return
 
     # ... or get the file from S3
     s3.query(
@@ -599,7 +604,7 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
         bucket=bucket_name,
         service_url=service_url,
         verify_ssl=verify_ssl,
-        path=urllib.quote(path),
+        path=_quote(path),
         local_file=cached_file_path
     )
 

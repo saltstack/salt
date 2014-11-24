@@ -12,13 +12,13 @@ import sys
 import errno
 import logging
 import traceback
-from six import string_types
+from salt.ext.six import string_types
 
 # Import salt libs
 import salt.loader
 import salt.utils
 from salt.utils import print_cli
-import six
+import salt.ext.six as six
 
 # Are you really sure !!!
 # dealing with unicode is not as simple as setting defaultencoding

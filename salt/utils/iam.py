@@ -12,8 +12,8 @@ import logging
 import time
 import requests
 import pprint
-from six.moves import range
-import six
+from salt.ext.six.moves import range
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 

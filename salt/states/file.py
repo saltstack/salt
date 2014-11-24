@@ -250,9 +250,9 @@ import salt.utils.templates
 from salt.exceptions import CommandExecutionError
 from salt.utils.serializers import yaml as yaml_serializer
 from salt.utils.serializers import json as json_serializer
-from six.moves import map
-import six
-from six import string_types, integer_types
+from salt.ext.six.moves import map
+import salt.ext.six as six
+from salt.ext.six import string_types, integer_types
 
 log = logging.getLogger(__name__)
 
@@ -616,7 +616,7 @@ def _unify_sources_and_hashes(source=None, source_hash=None,
         return (True, '', [(source, source_hash)])
 
     # Make a nice neat list of tuples exactly len(sources) long..
-    return (True, '', map(None, sources, source_hashes[:len(sources)]))
+    return True, '', list(map(None, sources, source_hashes[:len(sources)]))
 
 
 def _get_template_texts(source_list=None,
@@ -1335,7 +1335,8 @@ def managed(name,
 
     try:
         if __opts__['test']:
-            ret['result'], ret['comment'] = __salt__['file.check_managed'](
+            ret['result'] = None
+            ret['changes'] = __salt__['file.check_managed_changes'](
                 name,
                 source,
                 source_hash,
@@ -1349,6 +1350,12 @@ def managed(name,
                 contents,
                 **kwargs
             )
+
+            if ret['changes']:
+                ret['comment'] = 'The file {0} is set to be changed'.format(name)
+            else:
+                ret['comment'] = 'The file {0} is in the correct state'.format(name)
+
             return ret
 
         # If the source is a list then find which file exists
@@ -2285,7 +2292,7 @@ def replace(name,
             not_found_content=None,
             backup='.bak',
             show_changes=True):
-    '''
+    r'''
     Maintain an edit in a file
 
     .. versionadded:: 0.17.0
@@ -2293,6 +2300,17 @@ def replace(name,
     Params are identical to the remote execution function :mod:`file.replace
     <salt.modules.file.replace>`.
 
+    For complex regex patterns it can be useful to avoid the need for complex
+    quoting and escape sequences by making use of YAML's multiline string
+    syntax.
+
+    .. code-block:: yaml
+
+        complex_search_and_replace:
+          file.replace:
+            # <...snip...>
+            - pattern: |
+                CentOS \(2.6.32[^\n]+\n\s+root[^\n]+\n\)+
     '''
     name = os.path.expanduser(name)
 
@@ -3308,6 +3326,7 @@ def copy(
         user=None,
         group=None,
         mode=None,
+        subdir=False,
         **kwargs):
     '''
     If the source file exists on the system, copy it to the named file. The
@@ -3346,6 +3365,10 @@ def copy(
         The permissions to set on the copied file, aka 644, '0775', '4664'.
         If ``preserve`` is set to ``True``, then this will be ignored.
         Not supported on Windows
+
+    subdir
+        If the name is a directory then place the file inside the named
+        directory
     '''
     name = os.path.expanduser(name)
     source = os.path.expanduser(source)
@@ -3394,8 +3417,12 @@ def copy(
         if mode is None:
             mode = __salt__['file.get_mode'](source)
 
+    if os.path.isdir(name) and subdir:
+        # If the target is a dir, and overwrite_dir is False, copy into the dir
+        name = os.path.join(name, os.path.basename(source))
+
     if os.path.lexists(source) and os.path.lexists(name):
-        # if this is a file which did not changed, do not update
+        # if this is a file which did not change, do not update
         if force and os.path.isfile(name):
             hash1 = salt.utils.get_hash(name)
             hash2 = salt.utils.get_hash(source)

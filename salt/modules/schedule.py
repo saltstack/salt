@@ -14,7 +14,7 @@ import yaml
 
 import salt.utils
 import salt.utils.odict
-import six
+import salt.ext.six as six
 
 __proxyenabled__ = ['*']
 
@@ -64,7 +64,7 @@ def list_(show_all=False, return_yaml=True):
     if 'schedule' in __pillar__:
         schedule.update(__pillar__['schedule'])
 
-    for job in schedule:
+    for job in schedule.keys():  # iterate over a copy since we will mutate it
         if job == 'enabled':
             continue
 

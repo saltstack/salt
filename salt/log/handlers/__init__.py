@@ -17,7 +17,6 @@ import threading
 import logging.handlers
 
 # Import salt libs
-from salt._compat import Queue
 from salt.log.mixins import NewStyleClassMixIn, ExcInfoOnLogLevelFormatMixIn
 
 log = logging.getLogger(__name__)

@@ -31,7 +31,7 @@ import re
 # Import salt libs
 import salt.utils
 import salt.output
-from six import string_types
+from salt.ext.six import string_types
 
 
 class NestDisplay(object):
@@ -56,7 +56,7 @@ class NestDisplay(object):
                 indent, color, prefix, msg, endc, suffix)
         except UnicodeDecodeError:
             return u'{0}{1}{2}{3}{4}{5}\n'.format(
-                indent, color, prefix, msg.decode(encoding), endc, suffix)
+                indent, color, prefix, salt.utils.sdecode(msg), endc, suffix)
 
     def display(self, ret, indent, prefix, out):
         '''

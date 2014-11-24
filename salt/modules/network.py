@@ -17,7 +17,7 @@ import salt.utils
 import salt.utils.network
 from salt.exceptions import CommandExecutionError
 import salt.utils.validate.net
-from six.moves import range
+from salt.ext.six.moves import range
 
 
 log = logging.getLogger(__name__)
@@ -159,7 +159,7 @@ def _netinfo_freebsd_netbsd():
     out = __salt__['cmd.run'](
         'sockstat -46 {0} | tail -n+2'.format(
             '-n' if __grains__['kernel'] == 'NetBSD' else ''
-        )
+        ), python_shell=True
     )
     for line in out.splitlines():
         user, cmd, pid, _, proto, local_addr, remote_addr = line.split()
@@ -180,7 +180,7 @@ def _ppid():
     '''
     ret = {}
     cmd = 'ps -ax -o pid,ppid | tail -n+2'
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run'](cmd, python_shell=True)
     for line in out.splitlines():
         pid, ppid = line.split()
         ret[pid] = ppid
@@ -195,7 +195,7 @@ def _netstat_bsd():
     if __grains__['kernel'] == 'NetBSD':
         for addr_family in ('inet', 'inet6'):
             cmd = 'netstat -f {0} -an | tail -n+3'.format(addr_family)
-            out = __salt__['cmd.run'](cmd)
+            out = __salt__['cmd.run'](cmd, python_shell=True)
             for line in out.splitlines():
                 comps = line.split()
                 entry = {
@@ -211,7 +211,7 @@ def _netstat_bsd():
     else:
         # Lookup TCP connections
         cmd = 'netstat -p tcp -an | tail -n+3'
-        out = __salt__['cmd.run'](cmd)
+        out = __salt__['cmd.run'](cmd, python_shell=True)
         for line in out.splitlines():
             comps = line.split()
             ret.append({
@@ -223,7 +223,7 @@ def _netstat_bsd():
                 'state': comps[5]})
         # Lookup UDP connections
         cmd = 'netstat -p udp -an | tail -n+3'
-        out = __salt__['cmd.run'](cmd)
+        out = __salt__['cmd.run'](cmd, python_shell=True)
         for line in out.splitlines():
             comps = line.split()
             ret.append({
@@ -718,8 +718,6 @@ def get_hostname():
         salt '*' network.get_hostname
     '''
 
-    #cmd='hostname  -f'
-    #return __salt__['cmd.run'](cmd)
     from socket import gethostname
     return gethostname()
 
@@ -1000,20 +998,20 @@ def routes(family=None):
         raise CommandExecutionError('Invalid address family {0}'.format(family))
 
     if __grains__['kernel'] == 'Linux':
-        routes = _netstat_route_linux()
+        routes_ = _netstat_route_linux()
     elif __grains__['os'] in ['FreeBSD', 'MacOS', 'Darwin']:
-        routes = _netstat_route_freebsd()
+        routes_ = _netstat_route_freebsd()
     elif __grains__['os'] in ['NetBSD']:
-        routes = _netstat_route_netbsd()
+        routes_ = _netstat_route_netbsd()
     elif __grains__['os'] in ['OpenBSD']:
-        routes = _netstat_route_openbsd()
+        routes_ = _netstat_route_openbsd()
     else:
         raise CommandExecutionError('Not yet supported on this platform')
 
     if not family:
-        return routes
+        return routes_
     else:
-        ret = [route for route in routes if route['addr_family'] == family]
+        ret = [route for route in routes_ if route['addr_family'] == family]
         return ret
 
 

@@ -24,19 +24,22 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 
 :depends: requests
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import time
 import json
 import pprint
-import requests
 import logging
 import hmac
-import urllib
 import uuid
 import sys
 import base64
 from hashlib import sha1
+
+# Import 3rd-party libs
+import requests
+from salt.ext.six.moves.urllib.parse import quote as _quote  # pylint: disable=import-error,no-name-in-module
 
 # Import salt cloud libs
 import salt.utils.cloud
@@ -663,13 +666,13 @@ def _compute_signature(parameters, access_key_secret):
             s = line.decode().encode('utf8')
         else:
             s = line.decode(sys.stdin.encoding).encode('utf8')
-        res = urllib.quote(s, '')
+        res = _quote(s, '')
         res = res.replace('+', '%20')
         res = res.replace('*', '%2A')
         res = res.replace('%7E', '~')
         return res
 
-    sortedParameters = sorted(parameters.items(), key=lambda items: items[0])
+    sortedParameters = sorted(list(parameters.items()), key=lambda items: items[0])
 
     canonicalizedQueryString = ''
     for (k, v) in sortedParameters:

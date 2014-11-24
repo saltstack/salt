@@ -21,7 +21,7 @@ import salt.utils.dictupdate
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
 from functools import reduce
-from six.moves import range
+from salt.ext.six.moves import range
 
 __proxyenabled__ = ['*']
 
@@ -414,13 +414,16 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default', bas
     :param default: default lookup_dict's key used if the grain does not exists
         or if the grain value has no match on lookup_dict.  If unspecified
         the value is "default".
+
+        .. versionadded:: 2014.1.0
+
     :param base: A lookup_dict key to use for a base dictionary.  The
         grain-selected ``lookup_dict`` is merged over this and then finally
         the ``merge`` dictionary is merged.  This allows common values for
         each case to be collected in the base and overridden by the grain
         selection dictionary and the merge dictionary.  Default is unset.
 
-         .. versionadded:: 2014.1.0
+        .. versionadded:: Lithium
 
     CLI Example:
 

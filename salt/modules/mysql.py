@@ -41,8 +41,8 @@ import logging
 import re
 import sys
 import shlex
-from six.moves import zip
-from six.moves import range
+from salt.ext.six.moves import zip
+from salt.ext.six.moves import range
 
 # Import salt libs
 import salt.utils
@@ -419,6 +419,9 @@ def _grant_to_tokens(grant):
                     phrase = 'tables'
             except IndexError:
                 break
+
+        elif phrase == 'tables':
+            database += token
 
         elif phrase == 'user':
             if dict_mode:

@@ -17,7 +17,7 @@ import re
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError, MinionError
-import six
+import salt.ext.six as six
 
 # Import third party libs
 HAS_PORTAGE = False

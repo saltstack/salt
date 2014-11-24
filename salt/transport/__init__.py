@@ -22,8 +22,7 @@ try:
     from raet import raeting, nacling
     from raet.lane.stacking import LaneStack
     from raet.lane.yarding import RemoteYard
-
-except ImportError:
+except (ImportError, OSError):
     # Don't die on missing transport libs since only one transport is required
     pass
 
@@ -216,7 +215,7 @@ class ZeroMQChannel(Channel):
                 if master_type == 'failover':
                     # remove all cached sreqs to the old master to prevent
                     # zeromq from reconnecting to old masters automagically
-                    for check_key in self.sreq_cache:
+                    for check_key in self.sreq_cache.keys():
                         if self.opts['master_uri'] != check_key[0]:
                             del self.sreq_cache[check_key]
                             log.debug('Removed obsolete sreq-object from '

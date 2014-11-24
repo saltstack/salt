@@ -41,12 +41,22 @@ otherwise multi-minion targetting can lead to losing output:
 * the first returning minion is able to create a document in the database
 * other minions fail with ``{'error': 'HTTP Error 409: Conflict'}``
 '''
-from __future__ import absolute_import
+
 # Import Python libs
+from __future__ import absolute_import
 import logging
 import time
-import urllib2
 import json
+
+# Import 3rd-party libs
+# pylint: disable=no-name-in-module,import-error
+from salt.ext.six.moves.urllib.error import HTTPError
+from salt.ext.six.moves.urllib.request import (
+        Request as _Request,
+        HTTPHandler as _HTTPHandler,
+        build_opener as _build_opener,
+)
+# pylint: enable=no-name-in-module,import-error
 
 # Import Salt libs
 import salt.utils
@@ -88,37 +98,37 @@ def _get_options(ret=None):
     return {"url": server_url, "db": db_name}
 
 
-def _generate_doc(ret, options):
+def _generate_doc(ret):
     '''
     Create a object that will be saved into the database based on
     options.
     '''
 
     # Create a copy of the object that we will return.
-    r = ret.copy()
+    retc = ret.copy()
 
     # Set the ID of the document to be the JID.
-    r["_id"] = ret["jid"]
+    retc["_id"] = ret["jid"]
 
     # Add a timestamp field to the document
-    r["timestamp"] = time.time()
+    retc["timestamp"] = time.time()
 
-    return r
+    return retc
 
 
 def _request(method, url, content_type=None, _data=None):
     '''
     Makes a HTTP request. Returns the JSON parse, or an obj with an error.
     '''
-    opener = urllib2.build_opener(urllib2.HTTPHandler)
-    request = urllib2.Request(url, data=_data)
+    opener = _build_opener(_HTTPHandler)
+    request = _Request(url, data=_data)
     if content_type:
         request.add_header('Content-Type', content_type)
     request.get_method = lambda: method
     try:
         handler = opener.open(request)
-    except urllib2.HTTPError as e:
-        return {'error': '{0}'.format(e)}
+    except HTTPError as exc:
+        return {'error': '{0}'.format(exc)}
     return json.loads(handler.read())
 
 
@@ -146,7 +156,7 @@ def returner(ret):
 
     # Call _generate_doc to get a dict object of the document we're going to
     # shove into the database.
-    doc = _generate_doc(ret, options)
+    doc = _generate_doc(ret)
 
     # Make the actual HTTP PUT request to create the doc.
     _response = _request("PUT",
@@ -195,7 +205,7 @@ def get_jids():
         # See if the identifier is an int..
         try:
             int(row['id'])
-        except Exception:
+        except ValueError:
             continue
 
         # Check the correct number of digits by simply casting to str and

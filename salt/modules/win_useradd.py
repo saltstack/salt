@@ -8,7 +8,7 @@ from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils
-from six import string_types
+from salt.ext.six import string_types
 from salt.exceptions import CommandExecutionError
 import logging
 

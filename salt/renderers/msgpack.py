@@ -5,7 +5,7 @@ from __future__ import absolute_import
 import msgpack
 
 # Import salt libs
-from six import string_types
+from salt.ext.six import string_types
 
 
 def render(msgpack_data, saltenv='base', sls='', **kws):

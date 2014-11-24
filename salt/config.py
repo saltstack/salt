@@ -14,9 +14,9 @@ import logging
 from copy import deepcopy
 import time
 import codecs
+
 # import third party libs
 import yaml
-import six
 try:
     yaml.Loader = yaml.CLoader
     yaml.Dumper = yaml.CDumper
@@ -31,8 +31,9 @@ import salt.syspaths
 import salt.utils.validate.path
 import salt.utils.xdg
 import salt.exceptions
-from salt._compat import urlparse
-from six import string_types
+
+from salt.ext.six import string_types, text_type
+from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=import-error,no-name-in-module
 
 import sys
 
@@ -194,6 +195,7 @@ VALID_OPTS = {
     'runner_dirs': list,
     'client_acl': dict,
     'client_acl_blacklist': dict,
+    'sudo_acl': bool,
     'external_auth': dict,
     'token_expire': int,
     'file_recv': bool,
@@ -216,6 +218,8 @@ VALID_OPTS = {
     'publish_session': int,
     'reactor': list,
     'reactor_refresh_interval': int,
+    'reactor_worker_threads': int,
+    'reactor_worker_hwm': int,
     'serial': str,
     'search': str,
     'search_index_interval': int,
@@ -491,6 +495,7 @@ DEFAULT_MASTER_OPTS = {
     'outputter_dirs': [],
     'client_acl': {},
     'client_acl_blacklist': {},
+    'sudo_acl': False,
     'external_auth': {},
     'token_expire': 43200,
     'extension_modules': os.path.join(salt.syspaths.CACHE_DIR, 'extmods'),
@@ -534,6 +539,8 @@ DEFAULT_MASTER_OPTS = {
     'range_server': 'range:80',
     'reactor': [],
     'reactor_refresh_interval': 60,
+    'reactor_worker_threads': 10,
+    'reactor_worker_hwm': 10000,
     'serial': 'msgpack',
     'state_verbose': True,
     'state_output': 'full',
@@ -745,7 +752,7 @@ def _read_conf_file(path):
         if 'id' in conf_opts:
             conf_opts['id'] = str(conf_opts['id'])
         for key, value in conf_opts.copy().items():
-            if isinstance(value, six.text_type):
+            if isinstance(value, text_type):
                 # We do not want unicode settings
                 conf_opts[key] = value.encode('utf-8')
         return conf_opts
@@ -1895,7 +1902,7 @@ def get_id(opts, minion_id=False):
     if opts.get('minion_id_caching', True):
         try:
             with salt.utils.fopen(id_cache) as idf:
-                name = idf.read().strip()
+                name = idf.readline().strip()
                 if name.startswith(codecs.BOM):  # Remove BOM if exists
                     name = name.replace(codecs.BOM, '', 1)
             if name:

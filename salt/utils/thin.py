@@ -2,9 +2,10 @@
 '''
 Generate the salt thin tarball from the installed python files
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
+
 import os
 import shutil
 import tarfile
@@ -15,38 +16,36 @@ import tempfile
 import jinja2
 import yaml
 import requests
+import salt.ext.six as six
+
+# pylint: disable=import-error,no-name-in-module
 try:
     import msgpack
     HAS_MSGPACK = True
 except ImportError:
     HAS_MSGPACK = False
 try:
+    import certifi
+    HAS_CERTIFI = True
+except ImportError:
+    HAS_CERTIFI = False
+try:
     import urllib3
     HAS_URLLIB3 = True
 except ImportError:
     # Import the bundled package
     try:
-        from requests.packages import urllib3  # pylint: disable=E0611
+        from requests.packages import urllib3
         HAS_URLLIB3 = True
     except ImportError:
         HAS_URLLIB3 = False
-try:
-    import six
-    HAS_SIX = True
-except ImportError:
-    # Import the bundled package
-    try:
-        from requests.packages.urllib3.packages import six  # pylint: disable=E0611
-        HAS_SIX = True
-    except ImportError:
-        HAS_SIX = False
 try:
     import chardet
     HAS_CHARDET = True
 except ImportError:
     # Import the bundled package
     try:
-        from requests.packages.urllib3.packages import chardet  # pylint: disable=E0611
+        from requests.packages.urllib3.packages import chardet
         HAS_CHARDET = True
     except ImportError:
         HAS_CHARDET = False
@@ -56,6 +55,7 @@ try:
 except ImportError:
     # Older jinja does not need markupsafe
     HAS_MARKUPSAFE = False
+# pylint: enable=import-error,no-name-in-module
 
 # Import salt libs
 import salt
@@ -66,6 +66,13 @@ from salt.scripts import salt_call
 if __name__ == '__main__':
     salt_call()
 '''
+
+
+def thin_path(cachedir):
+    '''
+    Return the path to the thin tarball
+    '''
+    return os.path.join(cachedir, 'thin', 'thin.tgz')
 
 
 def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods=''):
@@ -93,7 +100,10 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods=''):
         fp_.write(SALTCALL)
     if os.path.isfile(thintar):
         if overwrite or not os.path.isfile(thinver):
-            os.remove(thintar)
+            try:
+                os.remove(thintar)
+            except OSError:
+                pass
         elif open(thinver).read() == salt.__version__:
             return thintar
     tops = [
@@ -108,11 +118,13 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods=''):
     if HAS_URLLIB3:
         tops.append(os.path.dirname(urllib3.__file__))
 
-    if HAS_SIX:
-        tops.append(six.__file__.replace('.pyc', '.py'))
+    tops.append(six.__file__.replace('.pyc', '.py'))
 
     if HAS_CHARDET:
         tops.append(os.path.dirname(chardet.__file__))
+
+    if HAS_CERTIFI:
+        tops.append(os.path.dirname(certifi.__file__))
 
     for mod in [m for m in extra_mods.split(',') if m]:
         if mod not in locals() and mod not in globals():

@@ -50,7 +50,7 @@ from salt.utils.event import tagify
 import binascii
 from salt.utils.master import ConnectedCache
 from salt.utils.cache import CacheCli
-from six.moves import range
+from salt.ext.six.moves import range
 
 # Import halite libs
 try:
@@ -143,6 +143,18 @@ class Maintenance(multiprocessing.Process):
         '''
         super(Maintenance, self).__init__()
         self.opts = opts
+        # How often do we perform the maintenance tasks
+        self.loop_interval = int(self.opts['loop_interval'])
+        # Track key rotation intervals
+        self.rotate = int(time.time())
+
+    def _post_fork_init(self):
+        '''
+        Some things need to be init'd after the fork has completed
+        The easiest example is that one of these module types creates a thread
+        in the parent process, then once the fork happens you'll start getting
+        errors like "WARNING: Mixing fork() and threads detected; memory leaked."
+        '''
         # Init fileserver manager
         self.fileserver = salt.fileserver.Fileserver(self.opts)
         # Load Runners
@@ -156,14 +168,11 @@ class Maintenance(multiprocessing.Process):
         self.ckminions = salt.utils.minions.CkMinions(self.opts)
         # Make Event bus for firing
         self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
+
         # Init any values needed by the git ext pillar
         self.pillargitfs = salt.daemons.masterapi.init_git_pillar(self.opts)
         # Set up search object
         self.search = salt.search.Search(self.opts)
-        # How often do we perform the maintenance tasks
-        self.loop_interval = int(self.opts['loop_interval'])
-        # Track key rotation intervals
-        self.rotate = int(time.time())
 
     def run(self):
         '''
@@ -174,6 +183,9 @@ class Maintenance(multiprocessing.Process):
         master is maintained.
         '''
         salt.utils.appendproctitle('Maintenance')
+
+        # init things that need to be done after the process is forked
+        self._post_fork_init()
 
         # Make Start Times
         last = int(time.time())
@@ -2256,7 +2268,7 @@ class ClearFuncs(object):
         # Verify that the caller has root on master
         elif 'user' in clear_load:
             if clear_load['user'].startswith('sudo_'):
-                # If someone can sudo, allow them to act as root
+                # If someone sudos check to make sure there is no ACL's around their username
                 if clear_load.get('key', 'invalid') == self.key.get('root'):
                     clear_load.pop('key')
                 elif clear_load.pop('key') != self.key[self.opts.get('user', 'root')]:
@@ -2264,6 +2276,20 @@ class ClearFuncs(object):
                         'Authentication failure of type "user" occurred.'
                     )
                     return ''
+                if self.opts['sudo_acl'] and self.opts['client_acl']:
+                    good = self.ckminions.auth_check(
+                                self.opts['client_acl'].get(clear_load['user'].split('_', 1)[-1]),
+                                clear_load['fun'],
+                                clear_load['tgt'],
+                                clear_load.get('tgt_type', 'glob'))
+                    if not good:
+                        # Accept find_job so the CLI will function cleanly
+                        if clear_load['fun'] != 'saltutil.find_job':
+                            log.warning(
+                                'Authentication failure of type "user" '
+                                'occurred.'
+                            )
+                            return ''
             elif clear_load['user'] == self.opts.get('user', 'root'):
                 if clear_load.pop('key') != self.key[self.opts.get('user', 'root')]:
                     log.warning(

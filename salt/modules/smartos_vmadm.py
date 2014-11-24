@@ -11,7 +11,12 @@ import json
 from salt.exceptions import CommandExecutionError
 import salt.utils
 import salt.utils.decorators as decorators
-import six
+import salt.ext.six as six
+try:
+    from shlex import quote as _cmd_quote  # pylint: disable=E0611
+except ImportError:
+    from pipes import quote as _cmd_quote
+
 
 # Define the module's virtual name
 __virtualname__ = 'virt'
@@ -119,14 +124,14 @@ def init(**kwargs):
     if all(key in kwargs for key in check_zone_args):
         ret = _gen_zone_json(**kwargs)
         # validation first
-        cmd = 'echo \'{0}\' | {1} validate create'.format(ret, vmadm)
-        res = __salt__['cmd.run_all'](cmd)
+        cmd = 'echo {0} | {1} validate create'.format(_cmd_quote(ret), _cmd_quote(vmadm))
+        res = __salt__['cmd.run_all'](cmd, python_shell=True)
         retcode = res['retcode']
         if retcode != 0:
             return CommandExecutionError(_exit_status(retcode))
-        # if succeeded, proceed to the VM creation
-        cmd = 'echo \'{0}\' | {1} create'.format(ret, vmadm)
-        res = __salt__['cmd.run_all'](cmd)
+        # if succedeed, proceed to the VM creation
+        cmd = 'echo {0} | {1} create'.format(_cmd_quote(ret), _cmd_quote(vmadm))
+        res = __salt__['cmd.run_all'](cmd, python_shell=True)
         retcode = res['retcode']
         if retcode != 0:
             return CommandExecutionError(_exit_status(retcode))

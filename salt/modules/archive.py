@@ -6,7 +6,7 @@ A module to wrap (non-Windows) archive calls
 '''
 from __future__ import absolute_import
 
-from six import string_types
+from salt.ext.six import string_types
 
 # Import salt libs
 from salt.utils import \

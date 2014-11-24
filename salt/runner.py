@@ -23,7 +23,7 @@ from salt.client import mixins
 from salt.output import display_output
 from salt.utils.error import raise_error
 from salt.utils.event import tagify
-import six
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -153,7 +153,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         # - the progress event system with the correct jid
         # - Provide JID if the runner wants to access it directly
         done = {}
-        progress = salt.utils.event.RunnerEvent(opts, data['jid']).fire_progress
+        progress = salt.utils.event.get_runner_event(opts, data['jid']).fire_progress
         for func_name, func in instance.functions.items():
             if func.__module__ in done:
                 continue
