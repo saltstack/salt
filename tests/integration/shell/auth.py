@@ -11,6 +11,7 @@ import pwd
 import random
 
 # Import Salt Testing libs
+from salttesting.unit import skipIf
 from salttesting.helpers import (
     ensure_in_syspath,
     destructiveTest)
@@ -19,7 +20,8 @@ ensure_in_syspath('../../')
 # Import salt libs
 import integration
 
-from salttesting import skipIf
+# Import 3rd-party libs
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 
 class AuthTest(integration.ShellCase):
