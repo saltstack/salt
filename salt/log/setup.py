@@ -31,7 +31,7 @@ GARBAGE = logging.GARBAGE = 1
 QUIET = logging.QUIET = 1000
 
 # Import salt libs
-from salt.log.handlers import TemporaryLoggingHandler
+from salt.log.handlers import TemporaryLoggingHandler, StreamHandler, SysLogHandler, WatchedFileHandler
 from salt.log.mixins import LoggingMixInMeta, NewStyleClassMixIn
 from salt._compat import string_types
 
@@ -87,7 +87,7 @@ def is_extended_logging_configured():
 LOGGING_NULL_HANDLER = TemporaryLoggingHandler(logging.WARNING)
 
 # Store a reference to the temporary console logger
-LOGGING_TEMP_HANDLER = logging.StreamHandler(sys.stderr)
+LOGGING_TEMP_HANDLER = StreamHandler(sys.stderr)
 
 # Store a reference to the "storing" logging handler
 LOGGING_STORE_HANDLER = TemporaryLoggingHandler()
@@ -161,26 +161,67 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, NewStyleClassMixIn):
             pass
         return instance
 
+    def _log(self, level, msg, args, exc_info=None, extra=None,  # pylint: disable=arguments-differ
+             exc_info_on_loglevel=None):
+        # If both exc_info and exc_info_on_loglevel are both passed, let's fail.
+        if exc_info and exc_info_on_loglevel:
+            raise RuntimeError(
+                'Please only use one of \'exc_info\' and \'exc_info_on_loglevel\', not both'
+            )
+        if exc_info_on_loglevel is not None:
+            if isinstance(exc_info_on_loglevel, string_types):
+                exc_info_on_loglevel = LOG_LEVELS.get(exc_info_on_loglevel, logging.ERROR)
+            elif not isinstance(exc_info_on_loglevel, int):
+                raise RuntimeError(
+                    'The value of \'exc_info_on_loglevel\' needs to be a logging level or '
+                    'a logging level name, not {0!r}'.format(exc_info_on_loglevel)
+                )
+        if extra is None:
+            extra = {'exc_info_on_loglevel': exc_info_on_loglevel}
+        else:
+            extra['exc_info_on_loglevel'] = exc_info_on_loglevel
+
+        LOGGING_LOGGER_CLASS._log(
+            self, level, msg, args, exc_info=exc_info, extra=extra
+        )
+
     # pylint: disable=C0103
-    def makeRecord(self, name, level, fn, lno, msg, args, exc_info, func=None,
-                   extra=None):
+    def makeRecord(self, name, level, fn, lno, msg, args, exc_info, func=None, extra=None):
+        # Let's remove exc_info_on_loglevel from extra
+        exc_info_on_loglevel = extra.pop('exc_info_on_loglevel')
+        if not extra:
+            # If nothing else is in extra, make it None
+            extra = None
+
         # Let's try to make every logging message unicode
         if isinstance(msg, string_types) and not isinstance(msg, unicode):
             try:
-                return LOGGING_LOGGER_CLASS.makeRecord(
+                logrecord = LOGGING_LOGGER_CLASS.makeRecord(
                     self, name, level, fn, lno,
                     msg.decode('utf-8', 'replace'),
                     args, exc_info, func, extra
                 )
             except UnicodeDecodeError:
-                return LOGGING_LOGGER_CLASS.makeRecord(
+                logrecord = LOGGING_LOGGER_CLASS.makeRecord(
                     self, name, level, fn, lno,
                     msg.decode('utf-8', 'ignore'),
                     args, exc_info, func, extra
                 )
-        return LOGGING_LOGGER_CLASS.makeRecord(
-            self, name, level, fn, lno, msg, args, exc_info, func, extra
-        )
+        else:
+            logrecord = LOGGING_LOGGER_CLASS.makeRecord(
+                self, name, level, fn, lno, msg, args, exc_info, func, extra
+            )
+
+        if exc_info_on_loglevel is not None:
+            # Let's add some custom attributes to the LogRecord class in order to include the exc_info on a per
+            # handler basis. This will allow showing tracebacks on logfiles but not on console if the logfile
+            # handler is enabled for the log level "exc_info_on_loglevel" and console handler is not.
+            logrecord.exc_info_on_loglevel_instance = sys.exc_info()
+            logrecord.exc_info_on_loglevel_formatted = None
+
+        logrecord.exc_info_on_loglevel = exc_info_on_loglevel
+        return logrecord
+
     # pylint: enable=C0103
 
 
@@ -301,7 +342,7 @@ def setup_console_logger(log_level='error', log_format=None, date_format=None):
             # There's already a logging handler outputting to sys.stderr
             break
     else:
-        handler = logging.StreamHandler(sys.stderr)
+        handler = StreamHandler(sys.stderr)
     handler.setLevel(level)
 
     # Set the default console formatter config
@@ -371,7 +412,7 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
 
     if parsed_log_path.scheme in ('tcp', 'udp', 'file'):
         syslog_opts = {
-            'facility': logging.handlers.SysLogHandler.LOG_USER,
+            'facility': SysLogHandler.LOG_USER,
             'socktype': socket.SOCK_DGRAM
         }
 
@@ -403,7 +444,7 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
             facility_name = 'LOG_USER'      # Syslog default
 
         facility = getattr(
-            logging.handlers.SysLogHandler, facility_name, None
+            SysLogHandler, facility_name, None
         )
         if facility is None:
             # This python syslog version does not know about the user provided
@@ -436,7 +477,7 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
 
         try:
             # Et voilá! Finally our syslog handler instance
-            handler = logging.handlers.SysLogHandler(**syslog_opts)
+            handler = SysLogHandler(**syslog_opts)
         except socket.error as err:
             logging.getLogger(__name__).error(
                 'Failed to setup the Syslog logging handler: {0}'.format(
@@ -450,9 +491,7 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
             # Since salt uses YAML and YAML uses either UTF-8 or UTF-16, if a
             # user is not using plain ASCII, their system should be ready to
             # handle UTF-8.
-            handler = getattr(
-                logging.handlers, 'WatchedFileHandler', logging.FileHandler
-            )(log_path, mode='a', encoding='utf-8', delay=0)
+            handler = WatchedFileHandler(log_path, mode='a', encoding='utf-8', delay=0)
         except (IOError, OSError):
             logging.getLogger(__name__).warning(
                 'Failed to open log file, do you have permission to write to '

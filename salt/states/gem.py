@@ -32,7 +32,8 @@ def installed(name,          # pylint: disable=C0103
               user=None,
               version=None,
               rdoc=False,
-              ri=False):     # pylint: disable=C0103
+              ri=False,
+              proxy=None):     # pylint: disable=C0103
     '''
     Make sure that a gem is installed.
 
@@ -61,6 +62,10 @@ def installed(name,          # pylint: disable=C0103
 
     ri : False
         Generate RI documentation for the gem(s).
+
+    proxy : None
+        Use the specified HTTP proxy server for all outgoing traffic.
+        Format: http://hostname[:port]
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
@@ -106,7 +111,8 @@ def installed(name,          # pylint: disable=C0103
                                runas=user,
                                version=version,
                                rdoc=rdoc,
-                               ri=ri):
+                               ri=ri,
+                               proxy=proxy):
         ret['result'] = True
         ret['changes'][name] = 'Installed'
         ret['comment'] = 'Gem was successfully installed'

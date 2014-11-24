@@ -5,16 +5,15 @@ Test the lxc module
 '''
 
 # Import Salt Testing libs
-from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath
+from salttesting.helpers import ensure_in_syspath, skip_if_not_root, skip_if_binaries_missing
 ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
-import salt.utils
 
 
-@skipIf(salt.utils.which('lxc') is None, 'Skipping - lxc must be installed.')
+@skip_if_not_root
+@skip_if_binaries_missing('lxc-start', message='LXC is not installed or minimal version not met')
 class LXCModuleTest(integration.ModuleCase):
     '''
     Test the lxc module

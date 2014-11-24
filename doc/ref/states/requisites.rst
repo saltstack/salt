@@ -202,18 +202,18 @@ a state that has not yet been executed. The state containing the ``prereq``
 requisite is defined as the pre-requiring state. The state specified in the
 ``prereq`` statement is defined as the pre-required state.
 
-When ``prereq`` is called, the pre-required state reports if it expects to
-have any changes. It does this by running the pre-required single state as a
-test-run by enabling ``test=True``. This test-run will return a dictionary
-containing a key named "changes". (See the ``watch`` section above for
-examples of "changes" dictionaries.)
+When a ``prereq`` requisite is evaluated, the pre-required state reports if it
+expects to have any changes. It does this by running the pre-required single
+state as a test-run by enabling ``test=True``. This test-run will return a
+dictionary containing a key named "changes". (See the ``watch`` section above
+for examples of "changes" dictionaries.)
 
 If the "changes" key contains a populated dictionary, it means that the
 pre-required state expects changes to occur when the state is actually
-executed, as opposed to the test-run. The pre-required state will now
-actually run. If the pre-required state executes successfully, the
-pre-requiring state will then execute. If the pre-required state fails, the
-pre-requiring state will not execute.
+executed, as opposed to the test-run. The pre-requiring state will now
+actually run. If the pre-requiring state executes successfully, the
+pre-required state will then execute. If the pre-requiring state fails, the
+pre-required state will not execute.
 
 If the "changes" key contains an empty dictionary, this means that changes are
 not expected by the pre-required state. Neither the pre-required state nor the
@@ -415,31 +415,38 @@ even more stateful.  The check_cmds option helps ensure that the result of a
 state is evaluated correctly.
 
 Unless
-~~~~~~
+------
 
 .. versionadded:: 2014.7.0
 
-Use unless to only run if any of the specified commands return False.
+The ``unless`` requisite specifies that a state should only run when any of
+the specified commands return ``False``. The ``unless`` requisite operates
+as NOR and is useful in giving more granular control over when a state should
+execute.
 
 .. code-block:: yaml
 
     vim:
       pkg.installed:
         - unless:
-            - rpm -q vim-enhanced
-            - ls /usr/bin/vim
+          - rpm -q vim-enhanced
+          - ls /usr/bin/vim
 
-This state will not run if the vim-enhanced package is already installed, or if
-/usr/bin/vim exists.  It gives more granular control over when a state should be
-run.
+In the example above, the state will only run if either the vim-enhanced
+package is not installed (returns ``False``) or if /usr/bin/vim does not
+exist (returns ``False``). The state will run if both commands return
+``False``.
+
+However, the state will not run if both commands return ``True``.
 
 Onlyif
-~~~~~~
+------
 
 .. versionadded:: 2014.7.0
 
-Onlyif is the opposite of Unless.  If all of the commands in onlyif return True,
-then the state is run.
+``onlyif`` is the opposite of ``unless``. If all of the commands in ``onlyif``
+return ``True``, then the state is run. If any of the specified commands
+return ``False``, the state will not run.
 
 .. code-block:: yaml
 
@@ -460,11 +467,11 @@ then the state is run.
         - watch:
           - cmd: stop-volume
 
-This will ensure that the stop_volume and delete modules are only run if the
-gluster commands return back a 0 ret value.
+The above example ensures that the stop_volume and delete modules only run
+if the gluster commands return a 0 ret value.
 
-Check_Cmd
-~~~~~~~~~
+check_cmd
+---------
 
 .. versionadded:: 2014.7.0
 

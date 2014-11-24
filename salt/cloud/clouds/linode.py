@@ -7,6 +7,8 @@ The Linode cloud module is used to control access to the Linode VPS system
 
 Use of this module only requires the ``apikey`` parameter.
 
+:depends: libcloud >= 0.13.2
+
 Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 ``/etc/salt/cloud.providers.d/linode.conf``:
 
@@ -197,10 +199,10 @@ def create(vm_):
             'Error creating {0} on LINODE\n\n'
             'The following exception was thrown by libcloud when trying to '
             'run the initial deployment: \n{1}'.format(
-                vm_['name'], exc.message
+                vm_['name'], str(exc)
             ),
             # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 

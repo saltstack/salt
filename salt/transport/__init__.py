@@ -19,8 +19,7 @@ try:
     from raet import raeting, nacling
     from raet.lane.stacking import LaneStack
     from raet.lane.yarding import RemoteYard
-
-except ImportError:
+except (ImportError, OSError):
     # Don't die on missing transport libs since only one transport is required
     pass
 
@@ -58,11 +57,28 @@ class RAETChannel(Channel):
     Build the communication framework to communicate over the local process
     uxd socket and send messages forwarded to the master. then wait for the
     relative return message.
+
+    Two use cases:
+        mininion to master communication, normal use case
+           Minion is communicating via yard through minion Road to master
+           The destination route needs the estate name of the associated master
+        master call via runner, special use case
+           In the special case the master call external process is communicating
+           via a yard with the master manor yard
+           The destination route estate is None to indicate local estate
+
+        The difference between the two is how the destination route
+        is assigned.
     '''
-    def __init__(self, opts, **kwargs):
+    def __init__(self, opts, usage=None, **kwargs):
         self.opts = opts
         self.ttype = 'raet'
-        self.dst = ('master', None, 'remote_cmd')
+        if usage == 'master_call':
+            self.dst = (None, None, 'local_cmd')  # runner.py master_call
+        elif usage == 'salt_call':
+            self.dst = (None, None, 'remote_cmd')  # salt_call caller
+        else:  # everything else
+            self.dst = (None, None, 'remote_cmd')  # normal use case minion to master
         self.stack = None
 
     def _setup_stack(self):
@@ -71,18 +87,37 @@ class RAETChannel(Channel):
         not already setup such as in salt-call to communicate to-from the minion
 
         '''
-        import wingdbstub
-        mid = self.opts['id']
-        yid = nacling.uuid(size=18)
-        name = 'channel' + yid
+        kind = self.opts.get('__role', '')  # application kind 'master', 'minion', etc
+        if not kind:
+            emsg = ("Missing opts['__role']. required to setup RAETChannel.")
+            log.error(emsg + "\n")
+            raise ValueError(emsg)
+        if kind == 'master':
+            lanename = 'master'
+        elif kind == 'minion':
+            role = self.opts.get('id', '')
+            if not role:
+                emsg = ("Missing opts['id']. required to setup RAETChannel.")
+                log.error(emsg + "\n")
+                raise ValueError(emsg)
+            lanename = role  # add kind later
+        else:
+            emsg = ("Unsupported application kind '{0}' for RAETChannel "
+                                "Raet.".format(self.node))
+            log.error(emsg + '\n')
+            raise ValueError(emsg)
+
+        mid = self.opts.get('id', 'master')
+        uid = nacling.uuid(size=18)
+        name = 'channel' + uid
         stack = LaneStack(name=name,
-                          lanename=mid,
+                          lanename=lanename,
                           sockdirpath=self.opts['sock_dir'])
 
         stack.Pk = raeting.packKinds.pack
         stack.addRemote(RemoteYard(stack=stack,
                                    name='manor',
-                                   lanename=mid,
+                                   lanename=lanename,
                                    dirpath=self.opts['sock_dir']))
         log.debug("Created Channel Jobber Stack {0}\n".format(stack.name))
         return stack
@@ -97,7 +132,7 @@ class RAETChannel(Channel):
                 self.stack = jobber_stack
             else:
                 self.stack = jobber_stack = self._setup_stack()
-        log.debug("Using Jobber Stack at = {0}\n".format(self.stack.local.ha))
+        log.debug("Using Jobber Stack at = {0}\n".format(self.stack.ha))
 
     def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
         '''
@@ -114,9 +149,8 @@ class RAETChannel(Channel):
         self.__prep_stack()
         tried = 1
         start = time.time()
-        mid = self.opts.get('id', 'master')
         track = nacling.uuid(18)
-        src = (mid, self.stack.local.name, track)
+        src = (None, self.stack.local.name, track)
         self.route = {'src': src, 'dst': self.dst}
         msg = {'route': self.route, 'load': load}
         self.stack.transmit(msg, self.stack.nameRemotes['manor'].uid)
@@ -130,8 +164,9 @@ class RAETChannel(Channel):
                 break
             if time.time() - start > timeout:
                 if tried >= tries:
-                    raise ValueError
-                self.stack.transmit(msg, self.stack.nameRemotes['manor'].uid)
+                    raise ValueError("Message send timed out after '{0} * {1}'"
+                             " secs on route = {1}".format(tries, timeout, self.route))
+                #self.stack.transmit(msg, self.stack.nameRemotes['manor'].uid)
                 tried += 1
             time.sleep(0.01)
         return jobber_rxMsgs.pop(track).get('return', {})
@@ -166,6 +201,7 @@ class ZeroMQChannel(Channel):
             if master_type == 'failover':
                 # remove all cached sreqs to the old master to prevent
                 # zeromq from reconnecting to old masters automagically
+                # iterate over a copy since we will mutate the dict
                 for check_key in self.sreq_cache.keys():
                     if self.opts['master_uri'] != check_key[0]:
                         del self.sreq_cache[check_key]

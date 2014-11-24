@@ -68,8 +68,7 @@ class DarwinSysctlTestCase(TestCase):
         '''
         Tests adding of config file failure
         '''
-        mock = mock_open()
-        with patch('salt.utils.fopen', mock_open(read_data=mock)) as m_open:
+        with patch('salt.utils.fopen', mock_open()) as m_open:
             helper_open = m_open()
             helper_open.write.assertRaises(CommandExecutionError,
                                            darwin_sysctl.persist,
@@ -81,8 +80,7 @@ class DarwinSysctlTestCase(TestCase):
         '''
         Tests successful add of config file when previously not one
         '''
-        mock = mock_open()
-        with patch('salt.utils.fopen', mock_open(read_data=mock)) as m_open:
+        with patch('salt.utils.fopen', mock_open()) as m_open:
             darwin_sysctl.persist('net.inet.icmp.icmplim', 50)
             helper_open = m_open()
             helper_open.write.assert_called_once_with(

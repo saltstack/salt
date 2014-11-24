@@ -17,7 +17,7 @@ import multiprocessing
 from itertools import groupby
 
 # Import salt.cloud libs
-from salt.cloud.exceptions import (
+from salt.exceptions import (
     SaltCloudNotFound,
     SaltCloudException,
     SaltCloudSystemExit,
@@ -184,7 +184,7 @@ class CloudClient(object):
                 self.opts['providers'].update({name: {driver: provider}})
             for name, profile in pillars.pop('profiles', {}).items():
                 provider = profile['provider'].split(':')[0]
-                driver = self.opts['providers'][provider].keys()[0]
+                driver = self.opts['providers'][provider].iterkeys().next()
                 profile['provider'] = '{0}:{1}'.format(provider, driver)
                 profile['profile'] = name
                 self.opts['profiles'].update({name: profile})
@@ -221,7 +221,7 @@ class CloudClient(object):
             # also filter them to speedup methods like
             # __filter_non_working_providers
             providers = [a.get('provider', '').split(':')[0]
-                         for a in opts['profiles'].values()
+                         for a in opts['profiles'].itervalues()
                          if a.get('provider', '')]
             if providers:
                 _providers = opts.get('providers', {})
@@ -299,6 +299,31 @@ class CloudClient(object):
 
             vm_overrides is a special dict that will be per node options
             overrides
+
+        Example:
+
+        .. code-block:: python
+
+            >>> client= salt.cloud.CloudClient(path='/etc/salt/cloud')
+            >>> client.profile('do_512_git', names=['minion01',])
+            {'minion01': {u'backups_active': 'False',
+                    u'created_at': '2014-09-04T18:10:15Z',
+                    u'droplet': {u'event_id': 31000502,
+                                 u'id': 2530006,
+                                 u'image_id': 5140006,
+                                 u'name': u'minion01',
+                                 u'size_id': 66},
+                    u'id': '2530006',
+                    u'image_id': '5140006',
+                    u'ip_address': '107.XXX.XXX.XXX',
+                    u'locked': 'True',
+                    u'name': 'minion01',
+                    u'private_ip_address': None,
+                    u'region_id': '4',
+                    u'size_id': '66',
+                    u'status': 'new'}}
+
+
         '''
         if not vm_overrides:
             vm_overrides = {}
@@ -339,15 +364,17 @@ class CloudClient(object):
 
         Example:
 
-        client.create(names=['myinstance'], provider='my-ec2-config',
-            kwargs={'image': 'ami-1624987f', 'size': 'Micro Instance',
-                    'ssh_username': 'ec2-user', 'securitygroup': 'default',
-                    'delvol_on_destroy': True})
+        .. code-block:: python
+
+            client.create(names=['myinstance'], provider='my-ec2-config',
+                kwargs={'image': 'ami-1624987f', 'size': 'Micro Instance',
+                        'ssh_username': 'ec2-user', 'securitygroup': 'default',
+                        'delvol_on_destroy': True})
         '''
         mapper = salt.cloud.Map(self._opts_defaults())
         providers = mapper.map_providers_parallel()
         if provider in providers:
-            provider += ':{0}'.format(providers[provider].keys()[0])
+            provider += ':{0}'.format(providers[provider].iterkeys().next())
         else:
             return False
         if isinstance(names, str):
@@ -380,7 +407,7 @@ class CloudClient(object):
         mapper = salt.cloud.Map(self._opts_defaults())
         providers = mapper.map_providers_parallel()
         if provider in providers:
-            provider += ':{0}'.format(providers[provider].keys()[0])
+            provider += ':{0}'.format(providers[provider].iterkeys().next())
         else:
             return False
         if isinstance(names, str):
@@ -544,7 +571,7 @@ class Cloud(object):
                         'running nodes: {1}'.format(fun, err),
                         # Show the traceback if the debug logging level is
                         # enabled
-                        exc_info=log.isEnabledFor(logging.DEBUG)
+                        exc_info_on_loglevel=logging.DEBUG
                     )
                     # Failed to communicate with the provider, don't list any
                     # nodes
@@ -741,7 +768,7 @@ class Cloud(object):
                         fun, err
                     ),
                     # Show the traceback if the debug logging level is enabled
-                    exc_info=log.isEnabledFor(logging.DEBUG)
+                    exc_info_on_loglevel=logging.DEBUG
                 )
         return data
 
@@ -784,7 +811,7 @@ class Cloud(object):
                         fun, err
                     ),
                     # Show the traceback if the debug logging level is enabled
-                    exc_info=log.isEnabledFor(logging.DEBUG)
+                    exc_info_on_loglevel=logging.DEBUG
                 )
         return data
 
@@ -827,7 +854,7 @@ class Cloud(object):
                         fun, err
                     ),
                     # Show the traceback if the debug logging level is enabled
-                    exc_info=log.isEnabledFor(logging.DEBUG)
+                    exc_info_on_loglevel=logging.DEBUG
                 )
         return data
 
@@ -1301,7 +1328,7 @@ class Cloud(object):
             except (SaltCloudSystemExit, SaltCloudConfigError) as exc:
                 if len(names) == 1:
                     raise
-                ret[name] = {'Error': exc.message}
+                ret[name] = {'Error': str(exc)}
 
         return ret
 
@@ -1413,7 +1440,7 @@ class Cloud(object):
         Remove any mis-configured cloud providers from the available listing
         '''
         for alias, drivers in self.opts['providers'].copy().iteritems():
-            for driver in drivers.copy().keys():
+            for driver in drivers.copy():
                 fun = '{0}.get_configured_provider'.format(driver)
                 if fun not in self.clouds:
                     # Mis-configured provider that got removed?
@@ -1467,7 +1494,7 @@ class Map(Cloud):
         interpolated_map = {}
 
         for profile, mapped_vms in rendered_map.items():
-            names = set(mapped_vms.keys())
+            names = set(mapped_vms)
             if profile not in self.opts['profiles']:
                 if 'Errors' not in interpolated_map:
                     interpolated_map['Errors'] = {}
@@ -1568,6 +1595,8 @@ class Map(Cloud):
         try:
             with open(self.opts['map'], 'rb') as fp_:
                 if MAKO_AVAILABLE:
+                    log.warn('DEPRECATED: Mako will no longer be the default '
+                        'renderer for Salt Cloud maps in the Lithium release')
                     map_ = self._mako_read(fp_)
                 else:
                     map_ = yaml.safe_load(fp_.read())
@@ -1576,7 +1605,7 @@ class Map(Cloud):
                 'Rendering map {0} failed, render error:\n{1}'.format(
                     self.opts['map'], exc
                 ),
-                exc_info=log.isEnabledFor(logging.DEBUG)
+                exc_info_on_loglevel=logging.DEBUG
             )
             return {}
 
@@ -1634,7 +1663,7 @@ class Map(Cloud):
 
     def _has_loop(self, dmap, seen=None, val=None):
         if seen is None:
-            for values in dmap['create'].values():
+            for values in dmap['create'].itervalues():
                 seen = []
                 try:
                     machines = values['requires']
@@ -2017,7 +2046,7 @@ class Map(Cloud):
                         name, exc
                     ),
                     # Show the traceback if the debug logging level is enabled
-                    exc_info=log.isEnabledFor(logging.DEBUG)
+                    exc_info_on_loglevel=logging.DEBUG
                 )
                 output[name] = {'Error': str(exc)}
 
@@ -2037,7 +2066,7 @@ class Map(Cloud):
             if self.opts['start_action']:
                 actionlist = []
                 grp = -1
-                for key, val in groupby(dmap['create'].values(),
+                for key, val in groupby(dmap['create'].itervalues(),
                                         lambda x: x['level']):
                     actionlist.append([])
                     grp += 1
@@ -2057,7 +2086,7 @@ class Map(Cloud):
                         timeout=self.opts['timeout'] * 60, expr_form='list'
                     ))
                 for obj in output_multip:
-                    obj.values()[0]['ret'] = out[obj.keys()[0]]
+                    obj.itervalues().next()['ret'] = out[obj.iterkeys().next()]
                     output.update(obj)
             else:
                 for obj in output_multip:
@@ -2092,7 +2121,7 @@ def create_multiprocessing(parallel_data, queue=None):
                 parallel_data, exc
             ),
             # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return {parallel_data['name']: {'Error': str(exc)}}
 
@@ -2129,7 +2158,7 @@ def destroy_multiprocessing(parallel_data, queue=None):
                 parallel_data['name'], exc
             ),
             # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return {parallel_data['name']: {'Error': str(exc)}}
 
@@ -2172,13 +2201,13 @@ def run_parallel_map_providers_query(data, queue=None):
             'nodes: {1}'.format(data['fun'], err),
             # Show the traceback if the debug logging level is
             # enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         # Failed to communicate with the provider, don't list any nodes
         return (data['alias'], data['driver'], ())
 
 
-# for pickle and multiprocessing, we cant use directly decorators
+# for pickle and multiprocessing, we can't use directly decorators
 def _run_parallel_map_providers_query(*args, **kw):
     return communicator(run_parallel_map_providers_query)(*args[0], **kw)
 

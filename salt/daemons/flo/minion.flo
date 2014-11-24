@@ -2,20 +2,16 @@
 
 house minion
 
-init name in .raet.udp.stack.local from value in .salt.etc.id
-
-init .salt.uxd.stack.local to yid 0 name "minion" lanename "minion"
-
 framer minionudpstack be active first setup
     frame setup
         enter
             do salt raet cleanup
-            do salt raet road stack setup per inode ".raet.udp.stack"
-            do salt manor lane setup
+            do salt raet road stack setup per inode ".salt.road.manor"
+            do salt raet manor lane setup
         go loadmodules
 
     frame loadmodules
-        do load modules at enter
+        do salt load modules at enter
         go start
 
     frame start
@@ -25,10 +21,11 @@ framer minionudpstack be active first setup
         bid start functionmanager
         bid start manager
         bid start outbound
+        bid start scheduler
 
         exit
-            do salt raet road stack closer per inode ".raet.udp.stack."
-            do salt raet lane stack closer per inode ".salt.uxd.stack."
+            do salt raet road stack closer per inode ".salt.road.manor."
+            do salt raet lane stack closer per inode ".salt.lane.manor."
 
 framer inbound be inactive first start
     frame start
@@ -38,13 +35,13 @@ framer bootstrap be inactive first join
     frame join
         print Joining...
         enter
-            do salt raet road stack joiner per inode ".raet.udp.stack."
+            do salt raet road stack joiner per inode ".salt.road.manor."
         recur
-            do salt raet road stack joined per inode ".raet.udp.stack."
-            do salt raet road stack rejected per inode ".raet.udp.stack."
+            do salt raet road stack joined per inode ".salt.road.manor."
+            do salt raet road stack rejected per inode ".salt.road.manor."
 
-        go next if joined in .raet.udp.stack.status
-        go abort if rejected in .raet.udp.stack.status
+        go next if joined in .salt.road.manor.status
+        go abort if rejected in .salt.road.manor.status
         #go abort if elapsed >= 10
 
     frame joined
@@ -54,11 +51,11 @@ framer bootstrap be inactive first join
     frame allow
         print Allowing...
         enter
-            do salt raet road stack allower per inode ".raet.udp.stack."
+            do salt raet road stack allower per inode ".salt.road.manor."
         recur
-            do salt raet road stack allowed per inode ".raet.udp.stack."
+            do salt raet road stack allowed per inode ".salt.road.manor."
 
-        go next if allowed in .raet.udp.stack.status
+        go next if allowed in .salt.road.manor.status
         #go abort if elapsed >= 5
 
     frame allowed
@@ -67,17 +64,17 @@ framer bootstrap be inactive first join
 
     frame pillar
         enter
-            do load pillar
+            do salt load pillar
         go loading
 
     frame loading
         enter
-            do load modules
+            do salt load modules
         go router
 
     frame router
         bid start manager #start alive presence from minion side
-        do router
+        do salt raet router
         go pillar if .salt.var.pillar_refresh
         go loading if .salt.var.module_refresh
 
@@ -86,20 +83,20 @@ framer bootstrap be inactive first join
 
 framer eventing be inactive first event
     frame event
-        do eventer
+        do salt raet eventer
 
 framer functionmanager be inactive first checkexec
     frame checkexec
-        do nix executor
+        do salt raet nix jobber
 
 framer manager be inactive first start at 10.0
     frame start
-         do salt raet road stack manager per inode ".raet.udp.stack"
+         do salt raet road stack manager per inode ".salt.road.manor"
 
 framer outbound be inactive first start
     frame start
         do salt raet road stack service tx
 
-#framer scheduler be inactive first start
-#    frame start
-#        do schedule
+framer scheduler be inactive first start
+    frame start
+        do salt schedule

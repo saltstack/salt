@@ -3,7 +3,7 @@
 Manage ini files
 ================
 
-:maintainer: <ageeleshwar.kandavelu@csscorp.com>
+:maintainer: <akilesh1597@gmail.com>
 :maturity: new
 :depends: re
 :platform: all
@@ -206,8 +206,8 @@ class _DictDiffer(object):
     def __init__(self, current_dict, past_dict):
         self.current_dict = current_dict
         self.past_dict = past_dict
-        self.set_current = set(current_dict.keys())
-        self.set_past = set(past_dict.keys())
+        self.set_current = set(current_dict)
+        self.set_past = set(past_dict)
         self.intersect = self.set_current.intersection(self.set_past)
 
     def added(self):

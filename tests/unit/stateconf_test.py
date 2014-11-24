@@ -268,6 +268,17 @@ G:
             list('ABCDEFG')
         )
 
+    def test_slsdir(self):
+        result = render_sls('''
+formula/woot.sls:
+  cmd.run:
+    - name: echo {{ slspath }}
+    - cwd: /
+''', sls='formula.woot', argline='yaml . jinja')
+
+        r = result['formula/woot.sls']['cmd.run'][0]['name']
+        self.assertEqual(r, 'echo formula/woot')
+
 
 if __name__ == '__main__':
     from integration import run_tests

@@ -10,7 +10,7 @@ framer jobcleaner be active first setup
         go modules
     frame modules
         enter
-            do load modules
+            do salt load modules
         go fsclean
     frame fsclean
         enter
@@ -25,4 +25,4 @@ framer backends be active first start
 
 framer scheduler be active first start
     frame start
-        do schedule
+        do salt schedule

@@ -34,7 +34,7 @@ import time
 
 # Import salt cloud libs
 import salt.config as config
-from salt.cloud.exceptions import SaltCloudSystemExit
+from salt.exceptions import SaltCloudSystemExit
 from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
 from salt.utils import namespaced_function
 
@@ -489,10 +489,10 @@ def create(vm_):
             'Error creating {0} on SoftLayer\n\n'
             'The following exception was thrown by libcloud when trying to '
             'run the initial deployment: \n{1}'.format(
-                vm_['name'], exc.message
+                vm_['name'], str(exc)
             ),
             # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -696,7 +696,7 @@ def list_nodes_full(mask='mask[id, hostname, primaryIpAddress, \
 
     ret = {}
     conn = get_conn(service='Account')
-    response = conn.getBareMetalInstances(mask=mask)
+    response = conn.getHardware(mask=mask)
 
     for node in response:
         ret[node['hostname']] = node
@@ -721,7 +721,7 @@ def list_nodes(call=None):
                 nodes['error']['Errors']['Error']['Message']
             )
         )
-    for node in nodes.keys():
+    for node in nodes:
         ret[node] = {
             'id': nodes[node]['hostname'],
             'ram': nodes[node]['memoryCount'],

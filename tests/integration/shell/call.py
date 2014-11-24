@@ -48,6 +48,27 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
         self.assertEqual(''.join(expect), ''.join(out).rsplit(",", 1)[0])
 
+    def test_json_out_indent(self):
+        out = self.run_call('test.ping -l quiet --out=json --out-indent=-1')
+        expect = ['{"local": true}']
+        self.assertEqual(expect, out)
+
+        out = self.run_call('test.ping -l quiet --out=json --out-indent=0')
+        expect = ['{', '"local": true', '}']
+        self.assertEqual(expect, out)
+
+        out = self.run_call('test.ping -l quiet --out=json --out-indent=1')
+        expect = ['{', ' "local": true', '}']
+        self.assertEqual(expect, out)
+
+    def test_local_sls_call(self):
+        fileroot = os.path.join(integration.FILES, 'file', 'base')
+        out = self.run_call('--file-root {0} --local state.sls saltcalllocal'.format(fileroot))
+        self.assertIn('Name: test.echo', ''.join(out))
+        self.assertIn('Result: True', ''.join(out))
+        self.assertIn('hello', ''.join(out))
+        self.assertIn('Succeeded: 1', ''.join(out))
+
     @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
     def test_user_delete_kw_output(self):
         ret = self.run_call('-l quiet -d user.delete')
@@ -275,6 +296,43 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             os.chdir(old_cwd)
             if os.path.isdir(config_dir):
                 shutil.rmtree(config_dir)
+
+    def test_issue_14979_output_file_permissions(self):
+        output_file = os.path.join(integration.TMP, 'issue-14979')
+        current_umask = os.umask(0077)
+        try:
+            # Let's create an initial output file with some data
+            self.run_script(
+                'salt-call',
+                '-c {0} --output-file={1} -g'.format(
+                    self.get_config_dir(),
+                    output_file
+                ),
+                catch_stderr=True,
+                with_retcode=True
+            )
+            stat1 = os.stat(output_file)
+
+            # Let's change umask
+            os.umask(0777)
+
+            self.run_script(
+                'salt-call',
+                '-c {0} --output-file={1} -g'.format(
+                    self.get_config_dir(),
+                    output_file
+                ),
+                catch_stderr=True,
+                with_retcode=True
+            )
+            stat2 = os.stat(output_file)
+            self.assertEqual(stat1.st_mode, stat2.st_mode)
+            # self.assertEqual(stat1.st_ctime, stat2.st_ctime)
+        finally:
+            if os.path.exists(output_file):
+                os.unlink(output_file)
+            # Restore umask
+            os.umask(current_umask)
 
 
 if __name__ == '__main__':

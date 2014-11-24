@@ -404,7 +404,7 @@ def rand_str(size=9999999999):
         salt '*' test.rand_str
     '''
     hasher = getattr(hashlib, __opts__.get('hash_type', 'md5'))
-    return hasher(str(random.randint(0, size))).hexdigest()
+    return hasher(str(random.SystemRandom().randint(0, size))).hexdigest()
 
 
 def exception(message='Test Exception'):

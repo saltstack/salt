@@ -99,11 +99,11 @@ def present(name,
         If ``True``, then ``password`` and ``password_hash`` can be omitted to
         permit a passwordless login.
 
-    unix_socket
-        If ``True`` and allow_passwordless is ``True`` then will be used unix_socket auth plugin.
+        .. versionadded:: 0.16.2
 
-    .. note::
-        The ``allow_passwordless`` option will be available in version 0.16.2.
+    unix_socket
+        If ``True`` and allow_passwordless is ``True``, the unix_socket auth
+        plugin will be used.
     '''
     ret = {'name': name,
            'changes': {},

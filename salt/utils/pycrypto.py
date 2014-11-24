@@ -35,7 +35,7 @@ def secure_password(length=20):
         if HAS_RANDOM:
             pw += re.sub(r'\W', '', Crypto.Random.get_random_bytes(1))
         else:
-            pw += random.choice(string.ascii_letters + string.digits)
+            pw += random.SystemRandom().choice(string.ascii_letters + string.digits)
     return pw
 
 

@@ -66,10 +66,10 @@ def execution():
 
     docs = {}
     for ret in client.cmd_iter('*', 'sys.doc', timeout=__opts__['timeout']):
-        for v in ret.values():
+        for v in ret.itervalues():
             docs.update(v)
 
-    i = itertools.chain.from_iterable([i.items() for i in docs.values()])
+    i = itertools.chain.from_iterable([i.items() for i in docs.itervalues()])
     ret = dict(list(i))
 
     salt.output.display_output(ret, '', __opts__)

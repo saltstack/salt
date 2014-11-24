@@ -428,7 +428,7 @@ def config(name, config, edit=True):
     '''
 
     for entry in config:
-        key = entry.keys()[0]
+        key = entry.iterkeys().next()
         configs = _parse_config(entry[key], key)
         if edit:
             with salt.utils.fopen(name, 'w') as configfile:

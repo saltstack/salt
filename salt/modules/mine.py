@@ -128,6 +128,9 @@ def send(func, *args, **kwargs):
             # Safe error, arg may be in kwargs
             pass
     f_call = salt.utils.format_call(__salt__[func], func_data)
+    for arg in args:
+        if arg not in f_call['args']:
+            f_call['args'].append(arg)
     try:
         if 'kwargs' in f_call:
             data[func] = __salt__[func](*f_call['args'], **f_call['kwargs'])
@@ -171,6 +174,10 @@ def get(tgt, fun, expr_form='glob'):
         grain
         grain_pcre
         compound
+        pillar
+
+    Note that all pillar matches, whether using the compound matching system or
+    the pillar matching system, will be exact matches, with globbing disabled.
 
     CLI Example:
 
@@ -180,9 +187,6 @@ def get(tgt, fun, expr_form='glob'):
         salt '*' mine.get 'os:Fedora' network.interfaces grain
         salt '*' mine.get 'os:Fedora and S@192.168.5.0/24' network.ipaddrs compound
     '''
-    if expr_form.lower == 'pillar':
-        log.error('Pillar matching not supported on mine.get')
-        return ''
     if __opts__['file_client'] == 'local':
         ret = {}
         is_target = {'glob': __salt__['match.glob'],
@@ -190,8 +194,9 @@ def get(tgt, fun, expr_form='glob'):
                      'list': __salt__['match.list'],
                      'grain': __salt__['match.grain'],
                      'grain_pcre': __salt__['match.grain_pcre'],
-                     'compound': __salt__['match.compound'],
                      'ipcidr': __salt__['match.ipcidr'],
+                     'compound': __salt__['match.compound'],
+                     'pillar': __salt__['match.pillar'],
                      }[expr_form](tgt)
         if is_target:
             data = __salt__['data.getval']('mine_cache')

@@ -112,6 +112,44 @@ def latest(name,
     unless
         A command to run as a check, only run the named command if the command
         passed to the ``unless`` option returns false
+
+    .. note::
+
+        Clashing ID declarations can be avoided when including different
+        branches from the same git repository in the same sls file by using the
+        ``name`` declaration.  The example below checks out the ``gh-pages``
+        and ``gh-pages-prod`` branches from the same repository into separate
+        directories.  The example also sets up the ``ssh_known_hosts`` ssh key
+        required to perform the git checkout.
+
+    .. code-block:: yaml
+
+        gitlab.example.com:
+          ssh_known_hosts:
+            - present
+            - user: root
+            - enc: ecdsa
+            - fingerprint: 4e:94:b0:54:c1:5b:29:a2:70:0e:e1:a3:51:ee:ee:e3
+
+        git-website-staging:
+          git.latest:
+            - name: git@gitlab.example.com:user/website.git
+            - rev: gh-pages
+            - target: /usr/share/nginx/staging
+            - identity: /root/.ssh/website_id_rsa
+            - require:
+                - pkg: git
+                - ssh_known_hosts: gitlab.example.com
+
+        git-website-prod:
+          git.latest:
+            - name: git@gitlab.example.com:user/website.git
+            - rev: gh-pages-prod
+            - target: /usr/share/nginx/prod
+            - identity: /root/.ssh/website_id_rsa
+            - require:
+                - pkg: git
+                - ssh_known_hosts: gitlab.example.com
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
@@ -148,6 +186,8 @@ def latest(name,
         runas = None
 
     run_check_cmd_kwargs = {'runas': user}
+    if 'shell' in __grains__:
+        run_check_cmd_kwargs['shell'] = __grains__['shell']
 
     # check if git.latest should be applied
     cret = mod_run_check(
@@ -542,11 +582,13 @@ def mod_run_check(cmd_kwargs, onlyif, unless):
     if onlyif:
         if __salt__['cmd.retcode'](onlyif, **cmd_kwargs) != 0:
             return {'comment': 'onlyif execution failed',
+                    'skip_watch': True,
                     'result': True}
 
     if unless:
         if __salt__['cmd.retcode'](unless, **cmd_kwargs) == 0:
             return {'comment': 'unless execution succeeded',
+                    'skip_watch': True,
                     'result': True}
 
     # No reason to stop, return True

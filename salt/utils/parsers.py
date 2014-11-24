@@ -31,9 +31,6 @@ import salt.utils.args
 import salt.utils.xdg
 from salt.utils.validate.path import is_writeable
 
-if not utils.is_windows():
-    import salt.cloud.exceptions
-
 
 def _sorted(mixins_or_funcs):
     return sorted(
@@ -139,7 +136,7 @@ class OptionParser(optparse.OptionParser):
 
         # Gather and run the process_<option> functions in the proper order
         process_option_funcs = []
-        for option_key in options.__dict__.keys():
+        for option_key in options.__dict__:
             process_option_func = getattr(
                 self, 'process_{0}'.format(option_key), None
             )
@@ -296,6 +293,8 @@ class SaltfileMixIn(object):
             saltfile = os.path.join(os.getcwd(), 'Saltfile')
             if os.path.isfile(saltfile):
                 self.options.saltfile = saltfile
+        else:
+            saltfile = self.options.saltfile
 
         if not self.options.saltfile:
             # There's still no valid Saltfile? No need to continue...
@@ -348,7 +347,7 @@ class SaltfileMixIn(object):
                 # one from Saltfile, if any
                 continue
 
-            # We reched this far! Set the Saltfile value on the option
+            # We reached this far! Set the Saltfile value on the option
             setattr(self.options, option.dest, cli_config[option.dest])
 
         # Let's also search for options referred in any option groups
@@ -374,6 +373,10 @@ class SaltfileMixIn(object):
                     setattr(self.options,
                             option.dest,
                             cli_config[option.dest])
+
+        # Any left over value in the saltfile can now be safely added
+        for key in cli_config:
+            setattr(self.options, key, cli_config[key])
 
 
 class HardCrashMixin(object):
@@ -661,7 +664,7 @@ class LogLevelMixIn(object):
             if self.config['user'] != current_user:
                 # Yep, not the same user!
                 # Is the current user in ACL?
-                if current_user in self.config.get('client_acl', {}).keys():
+                if current_user in self.config.get('client_acl', {}):
                     # Yep, the user is in ACL!
                     # Let's write the logfile to its home directory instead.
                     xdg_dir = salt.utils.xdg.xdg_config_dir()
@@ -1017,7 +1020,10 @@ class OutputOptionsMixIn(object):
         if self.options.output_file is not None:
             if os.path.isfile(self.options.output_file):
                 try:
-                    os.remove(self.options.output_file)
+                    with utils.fopen(self.options.output_file, 'w') as ofh:
+                        # Make this a zero length filename instead of removing
+                        # it. This way we keep the file permissions.
+                        ofh.write('')
                 except (IOError, OSError) as exc:
                     self.error(
                         '{0}: Access denied: {1}'.format(
@@ -1773,6 +1779,15 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help='Answer Yes to all questions presented, defaults to False'
         )
 
+        self.add_option(
+            '--rotate-aes-key',
+            default=True,
+            help=('Setting this to False prevents the master from refreshing '
+                  'the key session when keys are deleted or rejected, this '
+                  'lowers the security of the key deletion/rejection operation. '
+                  'Default is True.')
+        )
+
         key_options_group = optparse.OptionGroup(
             self, 'Key Generation Options'
         )
@@ -1978,6 +1993,15 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'retcode')
         )
         self.add_option(
+            '--metadata',
+            default=False,
+            dest='metadata',
+            action='store_true',
+            help=('Print out the execution metadata as well as the return. '
+                  'This will print out the outputter data, the return code, '
+                  'etc.')
+        )
+        self.add_option(
             '--id',
             default='',
             dest='id',
@@ -2116,7 +2140,7 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         self.add_option(
             '--roster',
             dest='roster',
-            default='',
+            default='flat',
             help=('Define which roster system to use, this defines if a '
                   'database backend, scanner, or custom roster system is '
                   'used. Default is the flat file roster.')
@@ -2151,11 +2175,37 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                  'faster communication should be, default is %default'
         )
         self.add_option(
+            '--extra-filerefs',
+            dest='extra_filerefs',
+            default=None,
+            help='Pass in extra files to include in the state tarball'
+        )
+        self.add_option(
             '-v', '--verbose',
             default=False,
             action='store_true',
             help=('Turn on command verbosity, display jid')
         )
+        self.add_option(
+            '-s', '--static',
+            default=False,
+            action='store_true',
+            help=('Return the data from minions as a group after they '
+                  'all return.')
+        )
+        self.add_option(
+            '-w', '--wipe',
+            default=False,
+            action='store_true',
+            dest='wipe_ssh',
+            help='Remove the deployment of the salt files when done executing.',
+        )
+        self.add_option(
+            '-W', '--rand-thin-dir',
+            default=False,
+            action='store_true',
+            help=('Select a random temp dir to deploy on the remote system. '
+                  'The dir will be cleaned after the execution.'))
 
         auth_group = optparse.OptionGroup(
             self, 'Authentication Options',
@@ -2215,6 +2265,9 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             self.config['tgt'] = self.args[0]
 
         self.config['argv'] = self.args[1:]
+        if not self.config['argv'] or not self.config['tgt']:
+            self.print_help()
+            self.exit(os.EX_USAGE)
 
         if self.options.ssh_askpass:
             self.options.ssh_passwd = getpass.getpass('Password: ')
@@ -2273,5 +2326,5 @@ class SaltCloudParser(OptionParser,
     def setup_config(self):
         try:
             return config.cloud_config(self.get_config_file_path())
-        except salt.cloud.exceptions.SaltCloudConfigError as exc:
+        except salt.exceptions.SaltCloudConfigError as exc:
             self.error(exc)

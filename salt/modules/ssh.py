@@ -448,8 +448,7 @@ def set_auth_key_from_file(user,
 
     .. code-block:: bash
 
-        salt '*' ssh.set_auth_key_from_file <user>\
-                salt://ssh_keys/<user>.id_rsa.pub
+        salt '*' ssh.set_auth_key_from_file <user> salt://ssh_keys/<user>.id_rsa.pub
     '''
     if env is not None:
         salt.utils.warn_until(
@@ -754,8 +753,7 @@ def set_known_host(user=None,
 
     .. code-block:: bash
 
-        salt '*' ssh.set_known_host <user> fingerprint='xx:xx:..:xx' \
-                 enc='ssh-rsa' config='.ssh/known_hosts'
+        salt '*' ssh.set_known_host <user> fingerprint='xx:xx:..:xx' enc='ssh-rsa' config='.ssh/known_hosts'
     '''
     if not hostname:
         return {'status': 'error',
@@ -852,16 +850,9 @@ def user_keys(user=None, pubfile=None, prvfile=None):
     .. code-block:: bash
 
         salt '*' ssh.user_keys
-
         salt '*' ssh.user_keys user=user1
-
-        salt '*' ssh.user_keys user=user1 \
-                pubfile=/home/user1/.ssh/id_rsa.pub
-                prvfile=/home/user1/.ssh/id_rsa
-
-        salt '*' ssh.user_keys user="['user1','user2'] \
-                pubfile=id_rsa.pub prvfile=id_rsa
-
+        salt '*' ssh.user_keys user=user1 pubfile=/home/user1/.ssh/id_rsa.pub prvfile=/home/user1/.ssh/id_rsa
+        salt '*' ssh.user_keys user="['user1','user2'] pubfile=id_rsa.pub prvfile=id_rsa
     '''
     if not user:
         user = __salt__['user.list_users']()

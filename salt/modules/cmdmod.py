@@ -141,6 +141,16 @@ def _check_loglevel(level='info', quiet=False):
     return LOG_LEVELS[level]
 
 
+def _parse_env(env):
+    if not env:
+        env = {}
+    if isinstance(env, list):
+        env = salt.utils.repack_dictlist(env)
+    if not isinstance(env, dict):
+        env = {}
+    return env
+
+
 def _run(cmd,
          cwd=None,
          stdin=None,
@@ -172,7 +182,7 @@ def _run(cmd,
             'instead.'
         )
 
-    if not _is_valid_shell(shell):
+    if _is_valid_shell(shell) is False:
         log.warning(
             'Attempt to run a shell command with what may be an invalid shell! '
             'Check to ensure that the shell <{0}> is valid for this user.'
@@ -221,10 +231,7 @@ def _run(cmd,
 
     ret = {}
 
-    if not env:
-        env = {}
-    if isinstance(env, list):
-        env = salt.utils.repack_dictlist(env)
+    env = _parse_env(env)
 
     for bad_env_key in (x for x, y in env.iteritems() if y is None):
         log.error('Environment variable {0!r} passed without a value. '
@@ -250,17 +257,15 @@ def _run(cmd,
             py_code = 'import os, json;' \
                       'print(json.dumps(os.environ.__dict__))'
             if __grains__['os'] in ['MacOS', 'Darwin']:
-                env_cmd = ('sudo -i -u {1} -- "{2}"'
-                           ).format(shell, runas, sys.executable)
+                env_cmd = ('sudo', '-i', '-u', runas, '--',
+                           sys.executable)
             elif __grains__['os'] in ['FreeBSD']:
-                env_cmd = ('su - {1} -c "{0} -c \'{2}\'"'
-                           ).format(shell, runas, sys.executable)
+                env_cmd = ('su', '-', runas, '-c',
+                           "{0} -c {1}".format(shell, sys.executable))
             else:
-                env_cmd = ('su -s {0} - {1} -c "{2}"'
-                           ).format(shell, runas, sys.executable)
+                env_cmd = ('su', '-s', shell, '-', runas, '-c', sys.executable)
             env_json = subprocess.Popen(
                 env_cmd,
-                shell=python_shell,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE
             ).communicate(py_code)[0]
@@ -269,6 +274,12 @@ def _run(cmd,
             env_runas = json.loads(env_json).get('data', {})
             env_runas.update(env)
             env = env_runas
+            # Encode unicode kwargs to filesystem encoding to avoid a
+            # UnicodeEncodeError when the subprocess is invoked.
+            fse = sys.getfilesystemencoding()
+            for key, val in env.iteritems():
+                if isinstance(val, unicode):
+                    env[key] = val.encode(fse)
         except ValueError:
             raise CommandExecutionError(
                 'Environment could not be retrieved for User {0!r}'.format(
@@ -390,9 +401,8 @@ def _run(cmd,
                                log_stdout=True,
                                log_stderr=True,
                                cwd=cwd,
-                               user=runas,
-                               umask=umask,
-                               env=env,
+                               preexec_fn=kwargs.get('preexec_fn', None),
+                               env=run_env,
                                log_stdin_level=output_loglevel,
                                log_stdout_level=output_loglevel,
                                log_stderr_level=output_loglevel,
@@ -432,10 +442,10 @@ def _run(cmd,
                 except vt.TerminalException as exc:
                     log.error(
                         'VT: {0}'.format(exc),
-                        exc_info=log.isEnabledFor(logging.DEBUG))
+                        exc_info_on_loglevel=logging.DEBUG)
                     ret = {'retcode': 1, 'pid': '2'}
                     break
-                # only set stdout on sucess as we already mangled in other
+                # only set stdout on success as we already mangled in other
                 # cases
                 ret['stdout'] = stdout
                 if finished:
@@ -1245,17 +1255,15 @@ def tty(device, echo=None):
         teletype = '/dev/{0}'.format(device.replace('pts', 'pts/'))
     else:
         return {'Error': 'The specified device is not a valid TTY'}
-
-    ret = subprocess.call(['echo', echo, '>', teletype], shell=False, stdout=open(os.devnull, 'wb'))
-    if ret == 0:
+    try:
+        with salt.utils.fopen(teletype, 'wb') as tty_device:
+            tty_device.write(echo)
         return {
             'Success': 'Message was successfully echoed to {0}'.format(teletype)
         }
-    else:
+    except IOError:
         return {
-            'Error': 'Echoing to {0} returned error code {1}'.format(
-                teletype,
-                ret['retcode'])
+            'Error': 'Echoing to {0} returned error'.format(teletype)
         }
 
 

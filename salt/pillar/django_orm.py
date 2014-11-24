@@ -114,16 +114,16 @@ def __virtual__():
     return True
 
 
-def ext_pillar(minion_id,
-               pillar,
+def ext_pillar(minion_id,  # pylint: disable=W0613
+               pillar,  # pylint: disable=W0613
                pillar_name,
                project_path,
                settings_module,
                django_app,
                env=None,
                env_file=None,
-               *args,
-               **kwargs):
+               *args,  # pylint: disable=W0613
+               **kwargs):  # pylint: disable=W0613
     '''
     Connect to a Django database through the ORM and retrieve model fields
 
@@ -210,7 +210,7 @@ def ext_pillar(minion_id,
                 name_field = model_meta['name']
                 fields = model_meta['fields']
 
-                if 'filter' in model_meta.keys():
+                if 'filter' in model_meta:
                     qs = (model_orm.objects
                         .filter(**model_meta['filter'])
                         .values(*fields))
@@ -235,9 +235,9 @@ def ext_pillar(minion_id,
 
         return {pillar_name: django_pillar}
     except ImportError as e:
-        log.error('Failed to import library: {0}'.format(e.message))
+        log.error('Failed to import library: {0}'.format(str(e)))
         return {}
     except Exception as e:
-        log.error('Failed on Error: {0}'.format(e.message))
+        log.error('Failed on Error: {0}'.format(str(e)))
         log.debug('django_orm traceback', exc_info=True)
         return {}

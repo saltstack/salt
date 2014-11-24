@@ -551,11 +551,11 @@ For in-house OpenStack Essex installation, libcloud needs the service_type :
 
 
 
-Digital Ocean
+DigitalOcean
 -------------
 
-Using Salt for Digital Ocean requires a client_key and an api_key. These can be
-found in the Digital Ocean web interface, in the "My Settings" section, under
+Using Salt for DigitalOcean requires a client_key and an api_key. These can be
+found in the DigitalOcean web interface, in the "My Settings" section, under
 the API Access tab.
 
 * Using the old format:

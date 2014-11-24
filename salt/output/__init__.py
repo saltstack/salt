@@ -17,6 +17,12 @@ import salt.loader
 import salt.utils
 from salt.utils import print_cli
 
+# Are you really sure !!!
+# dealing with unicode is not as simple as setting defaultencoding
+# which can break other python modules imported by salt in bad ways...
+# reloading sys is not either a good idea...
+# reload(sys)
+# sys.setdefaultencoding('utf-8')
 
 log = logging.getLogger(__name__)
 
@@ -32,6 +38,8 @@ def display_output(data, out=None, opts=None):
     '''
     Print the passed data using the desired output
     '''
+    if opts is None:
+        opts = {}
     try:
         display_data = get_printout(out, opts)(data).rstrip()
     except (KeyError, AttributeError):
@@ -42,9 +50,18 @@ def display_output(data, out=None, opts=None):
     output_filename = opts.get('output_file', None)
     log.trace('data = {0}'.format(data))
     try:
-        if output_filename is not None:
+        # output filename can be either '' or None
+        if output_filename:
             with salt.utils.fopen(output_filename, 'a') as ofh:
-                ofh.write(display_data)
+                fdata = display_data
+                if isinstance(fdata, unicode):
+                    try:
+                        fdata = fdata.encode('utf-8')
+                    except (UnicodeDecodeError, UnicodeEncodeError):
+                        # try to let the stream write
+                        # even if we didn't encode it
+                        pass
+                ofh.write(fdata)
                 ofh.write('\n')
             return
         if display_data:

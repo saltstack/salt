@@ -730,7 +730,7 @@ def subnets():
     ifaces = interfaces()
     subnetworks = []
 
-    for ipv4_info in ifaces.values():
+    for ipv4_info in ifaces.itervalues():
         for ipv4 in ipv4_info.get('inet', []):
             if ipv4['address'] == '127.0.0.1':
                 continue
@@ -788,7 +788,7 @@ def ip_addrs(interface=None, include_loopback=False):
                               if k == interface])
         if not target_ifaces:
             log.error('Interface {0} not found.'.format(interface))
-    for ipv4_info in target_ifaces.values():
+    for ipv4_info in target_ifaces.itervalues():
         for ipv4 in ipv4_info.get('inet', []):
             loopback = in_subnet('127.0.0.0/8', [ipv4.get('address')]) or ipv4.get('label') == 'lo'
             if not loopback or include_loopback:
@@ -816,7 +816,7 @@ def ip_addrs6(interface=None, include_loopback=False):
                               if k == interface])
         if not target_ifaces:
             log.error('Interface {0} not found.'.format(interface))
-    for ipv6_info in target_ifaces.values():
+    for ipv6_info in target_ifaces.itervalues():
         for ipv6 in ipv6_info.get('inet6', []):
             if include_loopback or ipv6['address'] != '::1':
                 ret.add(ipv6['address'])
@@ -920,6 +920,44 @@ def _parse_tcp_line(line):
     return ret
 
 
+def _sunos_remotes_on(port, which_end):
+    '''
+    SunOS specific helper function.
+    Returns set of ipv4 host addresses of remote established connections
+    on local or remote tcp port.
+
+    Parses output of shell 'netstat' to get connections
+
+    [root@salt-master ~]# netstat -f inet -n
+    TCP: IPv4
+       Local Address        Remote Address    Swind Send-Q Rwind Recv-Q    State
+       -------------------- -------------------- ----- ------ ----- ------ -----------
+       10.0.0.101.4505      10.0.0.1.45329       1064800      0 1055864      0 ESTABLISHED
+       10.0.0.101.4505      10.0.0.100.50798     1064800      0 1055864      0 ESTABLISHED
+    '''
+    remotes = set()
+    try:
+        data = subprocess.check_output(['netstat', '-f', 'inet', '-n'])
+    except subprocess.CalledProcessError:
+        log.error('Failed netstat')
+        raise
+
+    lines = data.split('\n')
+    for line in lines:
+        if 'ESTABLISHED' not in line:
+            continue
+        chunks = line.split()
+        local_host, local_port = chunks[0].rsplit('.', 1)
+        remote_host, remote_port = chunks[1].rsplit('.', 1)
+
+        if which_end == 'remote_port' and int(remote_port) != port:
+            continue
+        if which_end == 'local_port' and int(local_port) != port:
+            continue
+        remotes.add(remote_host)
+    return remotes
+
+
 def remotes_on_local_tcp_port(port):
     '''
     Returns set of ipv4 host addresses of remote established connections
@@ -936,6 +974,9 @@ def remotes_on_local_tcp_port(port):
     '''
     port = int(port)
     remotes = set()
+
+    if salt.utils.is_sunos():
+        return _sunos_remotes_on(port, 'local_port')
 
     try:
         data = subprocess.check_output(['lsof', '-i4TCP:{0:d}'.format(port), '-n'])
@@ -982,6 +1023,9 @@ def remotes_on_remote_tcp_port(port):
     '''
     port = int(port)
     remotes = set()
+
+    if salt.utils.is_sunos():
+        return _sunos_remotes_on(port, 'remote_port')
 
     try:
         data = subprocess.check_output(['lsof', '-i4TCP:{0:d}'.format(port), '-n'])

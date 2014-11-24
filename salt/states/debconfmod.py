@@ -3,6 +3,8 @@
 Management of debconf selections
 ================================
 
+:depends:   - debconf-utils package
+
 The debconfmod state module manages the enforcement of debconf selections,
 this state can set those selections prior to package installation.
 

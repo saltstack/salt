@@ -48,6 +48,9 @@ def _jid_dir(jid):
 
 
 def _walk_through(job_dir):
+    '''
+    Walk though the jid dir and look for jobs
+    '''
     serial = salt.payload.Serial(__opts__)
 
     for top in os.listdir(job_dir):
@@ -65,6 +68,9 @@ def _walk_through(job_dir):
 
 
 def _format_job_instance(job):
+    '''
+    Format the job instance correctly
+    '''
     return {'Function': job.get('fun', 'unknown-function'),
             'Arguments': list(job.get('arg', [])),
             # unlikely but safeguard from invalid returns
@@ -74,19 +80,25 @@ def _format_job_instance(job):
 
 
 def _format_jid_instance(jid, job):
+    '''
+    Format the jid correctly
+    '''
     ret = _format_job_instance(job)
     ret.update({'StartTime': salt.utils.jid_to_time(jid)})
     return ret
 
 
 #TODO: add to returner docs-- this is a new one
-def prep_jid(nocache=False):
+def prep_jid(nocache=False, passed_jid=None):
     '''
     Return a job id and prepare the job id directory
     This is the function responsible for making sure jids don't collide (unless its passed a jid)
     So do what you have to do to make sure that stays the case
     '''
-    jid = salt.utils.gen_jid()
+    if passed_jid is None:  # this can be a None of an empty string
+        jid = salt.utils.gen_jid()
+    else:
+        jid = passed_jid
 
     jid_dir_ = _jid_dir(jid)
 
@@ -96,7 +108,8 @@ def prep_jid(nocache=False):
         os.makedirs(jid_dir_)
     except OSError:
         # TODO: some sort of sleep or something? Spinning is generally bad practice
-        return prep_jid(nocache=nocache)
+        if passed_jid is None:
+            return prep_jid(nocache=nocache)
 
     with salt.utils.fopen(os.path.join(jid_dir_, 'jid'), 'w+') as fn_:
         fn_.write(jid)
@@ -125,8 +138,8 @@ def returner(load):
 
     try:
         os.mkdir(hn_dir)
-    except OSError as e:
-        if e.errno == errno.EEXIST:
+    except OSError as err:
+        if err.errno == errno.EEXIST:
             # Minion has already returned this jid and it should be dropped
             log.error(
                 'An extra return was detected from minion {0}, please verify '
@@ -135,7 +148,7 @@ def returner(load):
                 )
             )
             return False
-        elif e.errno == errno.ENOENT:
+        elif err.errno == errno.ENOENT:
             log.error(
                 'An inconsistency occurred, a job was received with a job id '
                 'that is not present in the local cache: {jid}'.format(**load)
@@ -243,8 +256,9 @@ def get_jid(jid):
                     if os.path.isfile(outp):
                         ret[fn_]['out'] = serial.load(
                             salt.utils.fopen(outp, 'rb'))
-                except Exception:
-                    pass
+                except Exception as exc:
+                    if 'Permission denied:' in str(exc):
+                        raise
     return ret
 
 
@@ -253,7 +267,7 @@ def get_jids():
     Return a list of all job ids
     '''
     ret = {}
-    for jid, job, t_path, final in _walk_through(_job_dir()):
+    for jid, job, _, _ in _walk_through(_job_dir()):
         ret[jid] = _format_jid_instance(jid, job)
     return ret
 
@@ -294,7 +308,7 @@ def clean_old_jobs():
                                                         int(jid[6:8]),
                                                         int(jid[8:10]),
                                                         int(jid[10:12]))
-                        except ValueError as e:
+                        except ValueError:
                             # Invalid jid, scrub the dir
                             shutil.rmtree(f_path)
                         difference = cur - jidtime

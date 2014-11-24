@@ -52,7 +52,7 @@ def _changes(name,
             change['gid'] = gid
 
     if members:
-        #-- if new memeber list if different than the current
+        #-- if new member list if different than the current
         if set(lgrp['members']) ^ set(members):
             change['members'] = members
 

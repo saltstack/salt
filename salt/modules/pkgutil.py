@@ -30,7 +30,7 @@ def refresh_db():
 
         salt '*' pkgutil.refresh_db
     '''
-    return __salt__['cmd.retcode']('/opt/csw/bin/pkgutil -U > /dev/null 2>&1') == 0
+    return __salt__['cmd.retcode']('/opt/csw/bin/pkgutil -U') == 0
 
 
 def upgrade_available(name):
@@ -44,7 +44,7 @@ def upgrade_available(name):
         salt '*' pkgutil.upgrade_available CSWpython
     '''
     version_num = None
-    cmd = '/opt/csw/bin/pkgutil -c --parse --single {0} 2>/dev/null'.format(
+    cmd = '/opt/csw/bin/pkgutil -c --parse --single {0}'.format(
         name)
     out = __salt__['cmd.run_stdout'](cmd)
     if out:
@@ -82,7 +82,7 @@ def list_upgrades(refresh=True):
     return upgrades
 
 
-def upgrade(refresh=True, **kwargs):
+def upgrade(refresh=True):
     '''
     Upgrade all of the packages to the latest available version.
 

@@ -11,7 +11,7 @@ def base64_encodestring(instr):
     '''
     Encode a string as base64
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 
@@ -26,13 +26,14 @@ def base64_decodestring(instr):
     '''
     Decode a base64-encoded string
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' hashutil.base64_decodestring 'Z2V0IHNhbHRlZA==\n'
+
     '''
     return base64.decodestring(instr)
 
@@ -41,7 +42,7 @@ def md5_digest(instr):
     '''
     Generate an md5 hash of a given string
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 
@@ -56,7 +57,7 @@ def sha256_digest(instr):
     '''
     Generate an sha256 hash of a given string
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 
@@ -71,7 +72,7 @@ def sha512_digest(instr):
     '''
     Generate an sha512 hash of a given string
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 
@@ -86,7 +87,7 @@ def hmac_signature(string, shared_secret, challenge_hmac):
     '''
     Verify a challenging hmac signature against a string / shared-secret
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Returns a boolean if the verification succeeded or failed.
 

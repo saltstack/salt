@@ -25,12 +25,12 @@ Installation Prerequisites
   path that is running salt. Its version should support `Docker Remote API
   v1.12 <http://docs.docker.io/en/latest/reference/api/docker_remote_api_v1.12>`_.
 
-  Currently, ``docker-py 0.3.2`` is known to support `Docker Remote API v1.12
+  Currently, ``docker-py 0.5.0`` is known to support `Docker Remote API v1.12
   <http://docs.docker.io/en/latest/reference/api/docker_remote_api_v1.12>`_
 
   .. code-block:: bash
 
-      pip install docker-py==0.3.2
+      pip install docker-py==0.5.0
 
 Prerequisite Pillar Configuration for Authentication
 ----------------------------------------------------
@@ -355,7 +355,8 @@ def get_containers(all=True,
                    since=None,
                    before=None,
                    limit=-1,
-                   host=False):
+                   host=False,
+                   inspect=False):
     '''
     Get a list of mappings representing all containers
 
@@ -368,27 +369,49 @@ def get_containers(all=True,
     host
         include the Docker host's ipv4 and ipv6 address in return, Default is ``False``
 
+    inspect
+        Get more granular information about each container by running a docker inspect
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' docker.get_containers
         salt '*' docker.get_containers host=True
+        salt '*' docker.get_containers host=True inspect=True
     '''
+
     client = _get_client()
     status = base_status.copy()
+
     if host:
         status['host'] = {}
         status['host']['interfaces'] = __salt__['network.interfaces']()
-    ret = client.containers(all=all,
-                            trunc=trunc,
-                            since=since,
-                            before=before,
-                            limit=limit)
+
+    containers = ret = client.containers(all=all,
+                                         trunc=trunc,
+                                         since=since,
+                                         before=before,
+                                         limit=limit)
+
+    # Optionally for each container get more granular information from them
+    # by inspecting the container
+    if inspect:
+        ret = []
+        for container in containers:
+            container_id = container.get('Id')
+            if container_id:
+                inspect = _get_container_infos(container_id)
+                container['detail'] = {}
+                for key, value in inspect.iteritems():
+                    container['detail'][key] = value
+            ret.append(container)
+
     if ret:
         _valid(status, comment='All containers in out', out=ret)
     else:
         _invalid(status)
+
     return status
 
 
@@ -831,7 +854,10 @@ def start(container,
           privileged=False,
           dns=None,
           volumes_from=None,
-          network_mode=None):
+          network_mode=None,
+          restart_policy=None,
+          cap_add=None,
+          cap_drop=None):
     '''
     Start the specified container
 
@@ -875,7 +901,10 @@ def start(container,
                          privileged=privileged,
                          dns=dns,
                          volumes_from=volumes_from,
-                         network_mode=network_mode)
+                         network_mode=network_mode,
+                         restart_policy=restart_policy,
+                         cap_add=cap_add,
+                         cap_drop=cap_drop)
 
             if is_running(dcontainer):
                 _valid(status,
@@ -1212,7 +1241,7 @@ def import_image(src, repo, tag=None):
     try:
         ret = client.import_image(src, repository=repo, tag=tag)
         if ret:
-            image_logs, _info = _parse_image_multilogs_string(ret, repo)
+            image_logs, _info = _parse_image_multilogs_string(ret)
             _create_image_assemble_error_status(status, ret, image_logs)
             if status['status'] is not False:
                 infos = _get_image_infos(image_logs[0]['status'])
@@ -1465,7 +1494,7 @@ def inspect_image(image):
     return status
 
 
-def _parse_image_multilogs_string(ret, repo):
+def _parse_image_multilogs_string(ret):
     '''
     Parse image log strings into grokable data
     '''
@@ -1487,12 +1516,20 @@ def _parse_image_multilogs_string(ret, repo):
                 image_logs.append(buf)
                 buf = ''
         image_logs.reverse()
+
+        # Valid statest when pulling an image from the docker registry
+        valid_states = [
+            'Download complete',
+            'Already exists',
+        ]
+
         # search last layer grabbed
         for l in image_logs:
             if isinstance(l, dict):
-                if l.get('status') == 'Download complete' and l.get('id'):
-                    infos = _get_image_infos(repo)
+                if l.get('status') in valid_states and l.get('id'):
+                    infos = _get_image_infos(l['id'])
                     break
+
     return image_logs, infos
 
 
@@ -1556,7 +1593,7 @@ def pull(repo, tag=None):
     try:
         ret = client.pull(repo, tag=tag)
         if ret:
-            image_logs, infos = _parse_image_multilogs_string(ret, repo)
+            image_logs, infos = _parse_image_multilogs_string(ret)
             if infos and infos.get('Id', None):
                 repotag = repo
                 if tag:
@@ -1618,13 +1655,16 @@ def _push_assemble_error_status(status, ret, logs):
     return status
 
 
-def push(repo, quiet=False):
+def push(repo, tag=None, quiet=False):
     '''
-    Pushes an image from any registry. See documentation at top of this page to
+    Pushes an image to any registry. See documentation at top of this page to
     configure authenticated access
 
     repo
         name of repository
+
+    tag
+        specific tag to push (Optional)
 
     quiet
         set as ``True`` to quiet output, Default is ``False``
@@ -1633,16 +1673,19 @@ def push(repo, quiet=False):
 
     .. code-block:: bash
 
-        salt '*' docker.push <repository> [quiet=True|False]
+        salt '*' docker.push <repository> [tag] [quiet=True|False]
     '''
     client = _get_client()
     status = base_status.copy()
     registry, repo_name = docker.auth.resolve_repository_name(repo)
     try:
-        ret = client.push(repo)
+        ret = client.push(repo, tag=tag)
         if ret:
-            image_logs, infos = _parse_image_multilogs_string(ret, repo_name)
+            image_logs, infos = _parse_image_multilogs_string(ret)
             if image_logs:
+                repotag = repo_name
+                if tag:
+                    repotag = '{0}:{1}'.format(repo, tag)
                 if not quiet:
                     status['out'] = image_logs
                 else:
@@ -1656,7 +1699,7 @@ def push(repo, quiet=False):
                     status['status'] = True
                     status['id'] = _get_image_infos(repo)['Id']
                     status['comment'] = 'Image {0}({1}) was pushed'.format(
-                        repo, status['id'])
+                        repotag, status['id'])
                 else:
                     _push_assemble_error_status(status, ret, image_logs)
             else:

@@ -93,7 +93,7 @@ class LoadAuth(object):
         if f_time > self.max_fail:
             self.max_fail = f_time
         deviation = self.max_fail / 4
-        r_time = random.uniform(
+        r_time = random.SystemRandom().uniform(
                 self.max_fail - deviation,
                 self.max_fail + deviation
                 )
@@ -322,8 +322,7 @@ class Resolver(object):
         elif self.opts['transport'] == 'raet':
             sreq = salt.transport.Channel.factory(
                     self.opts)
-            sreq.route['dst'] = (None, None, 'local_cmd')
-            sreq.route['src'] = (None, sreq.stack.local.name, None)
+            sreq.dst = (None, None, 'local_cmd')
             tdata = sreq.send(load)
             return tdata
 

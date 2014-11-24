@@ -424,7 +424,10 @@ def file(name,
 
     cron_path = salt.utils.mkstemp()
     with salt.utils.fopen(cron_path, 'w+') as fp_:
-        fp_.write(__salt__['cron.raw_cron'](user))
+        raw_cron = __salt__['cron.raw_cron'](user)
+        if not raw_cron.endswith('\n'):
+            raw_cron = "{0}\n".format(raw_cron)
+        fp_.write(raw_cron)
 
     ret = {'changes': {},
            'comment': '',

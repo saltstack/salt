@@ -6,7 +6,6 @@ from __future__ import print_function
 import datetime
 import logging
 import multiprocessing
-import time
 
 import salt.utils
 import salt.utils.event
@@ -69,15 +68,16 @@ class AsyncClientMixin(object):
         multiprocess and fire the return data on the event bus
         '''
         salt.utils.daemonize()
-        event = salt.utils.event.get_event(
-                'master',
-                self.opts['sock_dir'],
-                self.opts['transport'],
-                listen=False)
         data = {'fun': '{0}.{1}'.format(self.client, fun),
                 'jid': jid,
                 'user': user,
                 }
+        event = salt.utils.event.get_event(
+                'master',
+                self.opts['sock_dir'],
+                self.opts['transport'],
+                opts=self.opts,
+                listen=False)
         event.fire_event(data, tagify('new', base=tag))
 
         try:
@@ -92,9 +92,11 @@ class AsyncClientMixin(object):
                             )
             data['success'] = False
         data['user'] = user
+
         event.fire_event(data, tagify('ret', base=tag))
-        # this is a workaround because process reaping is defeating 0MQ linger
-        time.sleep(2.0)  # delay so 0MQ event gets out before runner process reaped
+        # if we fired an event, make sure to delete the event object.
+        # This will ensure that we call destroy, which will do the 0MQ linger
+        del event
 
     def async(self, fun, low, user='UNKNOWN'):
         '''

@@ -16,7 +16,9 @@ import yaml
 log = logging.getLogger(__name__)
 
 
-def ext_pillar(minion_id, pillar, command):
+def ext_pillar(minion_id,
+               pillar,  # pylint: disable=W0613
+               command):
     '''
     Execute an unmodified puppet_node_classifier and read the output as YAML
     '''

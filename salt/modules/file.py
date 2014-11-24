@@ -457,7 +457,7 @@ def chgrp(path, group):
     return chown(path, user, group)
 
 
-def get_sum(path, form='md5'):
+def get_sum(path, form='sha256'):
     '''
     Return the sum for the given file, default is md5, sha1, sha224, sha256,
     sha384, sha512 are supported
@@ -479,7 +479,7 @@ def get_sum(path, form='md5'):
     return salt.utils.get_hash(path, form, 4096)
 
 
-def get_hash(path, form='md5', chunk_size=4096):
+def get_hash(path, form='sha256', chunk_size=4096):
     '''
     Get the hash sum of a file
 
@@ -1146,7 +1146,7 @@ def replace(path,
                     found = True
 
                 # Identity check each potential change until one change is made
-                if has_changes is False and result is not line:
+                if has_changes is False and result != line:
                     has_changes = True
 
                 if show_changes:
@@ -1162,7 +1162,7 @@ def replace(path,
         if None == not_found_content:
             not_found_content = repl
         if prepend_if_not_found:
-            new_file.insert(not_found_content + '\n')
+            new_file.insert(0, not_found_content + '\n')
         else:
             # append_if_not_found
             # Make sure we have a newline at the end of the file
@@ -1582,7 +1582,7 @@ def append(path, *args, **kwargs):
     path
         path to file
 
-    *args
+    args
         strings to append to file
 
     CLI Example:
@@ -1646,7 +1646,7 @@ def prepend(path, *args, **kwargs):
     path
         path to file
 
-    *args
+    args
         strings to prepend to the file
 
     CLI Example:
@@ -1701,7 +1701,7 @@ def write(path, *args, **kwargs):
     path
         path to file
 
-    *args
+    args
         strings to write to the file
 
     CLI Example:
@@ -1787,7 +1787,7 @@ def seek_read(path, size, offset):
     '''
     .. versionadded:: 2014.1.0
 
-    Seek to a position on a file and write to it
+    Seek to a position on a file and read it
 
     path
         path to file
@@ -1920,7 +1920,9 @@ def symlink(src, path):
 
         salt '*' file.symlink /path/to/file /path/to/link
     '''
-    if not os.path.isabs(src):
+    path = os.path.expanduser(path)
+
+    if not os.path.isabs(path):
         raise SaltInvocationError('File path must be absolute.')
 
     try:
@@ -2058,7 +2060,7 @@ def access(path, mode):
 
     if mode in modes:
         return os.access(path, modes[mode])
-    elif mode in modes.values():
+    elif mode in modes.itervalues():
         return os.access(path, mode)
     else:
         raise SaltInvocationError('Invalid mode specified.')
@@ -2516,7 +2518,7 @@ def get_managed(
         if data['result']:
             sfn = data['data']
             hsum = get_hash(sfn)
-            source_sum = {'hash_type': 'md5',
+            source_sum = {'hash_type': 'sha256',
                           'hsum': hsum}
         else:
             __clean_tmp(sfn)
@@ -2558,7 +2560,7 @@ def get_managed(
     return sfn, source_sum, ''
 
 
-def extract_hash(hash_fn, hash_type='md5', file_name=''):
+def extract_hash(hash_fn, hash_type='sha256', file_name=''):
     '''
     This routine is called from the :mod:`file.managed
     <salt.states.file.managed>` state to pull a hash from a remote file.
@@ -2793,6 +2795,59 @@ def check_managed(
     return True, 'The file {0} is in the correct state'.format(name)
 
 
+def check_managed_changes(
+        name,
+        source,
+        source_hash,
+        user,
+        group,
+        mode,
+        template,
+        context,
+        defaults,
+        saltenv,
+        contents=None,
+        **kwargs):
+    '''
+    Return a dictionary of what changes need to be made for a file
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.check_managed_changes /etc/httpd/conf.d/httpd.conf salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' root, root, '755' jinja True None None base
+    '''
+    # If the source is a list then find which file exists
+    source, source_hash = source_list(source,           # pylint: disable=W0633
+                                      source_hash,
+                                      saltenv)
+
+    sfn = ''
+    source_sum = None
+
+    if contents is None:
+        # Gather the source file from the server
+        sfn, source_sum, comments = get_managed(
+            name,
+            template,
+            source,
+            source_hash,
+            user,
+            group,
+            mode,
+            saltenv,
+            context,
+            defaults,
+            **kwargs)
+        if comments:
+            __clean_tmp(sfn)
+            return False, comments
+    changes = check_file_meta(name, sfn, source, source_sum, user,
+                              group, mode, saltenv, template, contents)
+    __clean_tmp(sfn)
+    return changes
+
+
 def check_file_meta(
         name,
         sfn,
@@ -2961,7 +3016,7 @@ def manage_file(name,
         transfer the file to the minion again.
 
         This file is then grabbed and if it has template set, it renders the file to be placed
-        into the correct place on the system using salt.utils.copyfile()
+        into the correct place on the system using salt.files.utils.copyfile()
 
     source
         file reference on the master
@@ -3056,12 +3111,14 @@ def manage_file(name,
                             salt.utils.fopen(real_name, 'rb')) as (src, name_):
                         slines = src.readlines()
                         nlines = name_.readlines()
-                    ret['changes']['diff'] = \
-                        ''.join(difflib.unified_diff(nlines, slines))
+
+                    sndiff = ''.join(difflib.unified_diff(nlines, slines))
+                    if sndiff:
+                        ret['changes']['diff'] = sndiff
 
             # Pre requisites are met, and the file needs to be replaced, do it
             try:
-                salt.utils.copyfile(sfn,
+                salt.utils.files.copyfile(sfn,
                                     real_name,
                                     __salt__['config.backup_mode'](backup),
                                     __opts__['cachedir'])
@@ -3099,7 +3156,7 @@ def manage_file(name,
 
                 # Pre requisites are met, the file needs to be replaced, do it
                 try:
-                    salt.utils.copyfile(tmp,
+                    salt.utils.files.copyfile(tmp,
                                         real_name,
                                         __salt__['config.backup_mode'](backup),
                                         __opts__['cachedir'])
@@ -3130,7 +3187,7 @@ def manage_file(name,
                     return ret
 
             try:
-                salt.utils.copyfile(sfn,
+                salt.utils.files.copyfile(sfn,
                                     name,
                                     __salt__['config.backup_mode'](backup),
                                     __opts__['cachedir'])
@@ -3149,7 +3206,8 @@ def manage_file(name,
 
         elif not ret['changes'] and ret['result']:
             ret['comment'] = 'File {0} is in the correct state'.format(name)
-        __clean_tmp(sfn)
+        if sfn:
+            __clean_tmp(sfn)
         return ret
     else:
         # Only set the diff if the file contents is managed
@@ -3250,14 +3308,14 @@ def manage_file(name,
             with salt.utils.fopen(tmp, 'w') as tmp_:
                 tmp_.write(str(contents))
             # Copy into place
-            salt.utils.copyfile(tmp,
+            salt.utils.files.copyfile(tmp,
                                 name,
                                 __salt__['config.backup_mode'](backup),
                                 __opts__['cachedir'])
             __clean_tmp(tmp)
         # Now copy the file contents if there is a source file
         elif sfn:
-            salt.utils.copyfile(sfn,
+            salt.utils.files.copyfile(sfn,
                                 name,
                                 __salt__['config.backup_mode'](backup),
                                 __opts__['cachedir'])
@@ -3280,7 +3338,8 @@ def manage_file(name,
             ret['comment'] = 'File ' + name + ' not updated'
         elif not ret['changes'] and ret['result']:
             ret['comment'] = 'File ' + name + ' is in the correct state'
-        __clean_tmp(sfn)
+        if sfn:
+            __clean_tmp(sfn)
         return ret
 
 
@@ -3316,7 +3375,7 @@ def makedirs_(path,
     .. note::
 
         The path must end with a trailing slash otherwise the directory/directories
-        will be created upto the parent directory. For example if path is
+        will be created up to the parent directory. For example if path is
         ``/opt/code``, then it would be treated as ``/opt/`` but if the path
         ends with a trailing slash like ``/opt/code/``, then it would be
         treated as ``/opt/code/``.
@@ -3681,8 +3740,13 @@ def list_backups(path, limit=None):
 
     bkroot = _get_bkroot()
     parent_dir, basename = os.path.split(path)
+    if salt.utils.is_windows():
+        # ':' is an illegal filesystem path character on Windows
+        src_dir = parent_dir.replace(':', '_')
+    else:
+        src_dir = parent_dir[1:]
     # Figure out full path of location of backup file in minion cache
-    bkdir = os.path.join(bkroot, parent_dir[1:])
+    bkdir = os.path.join(bkroot, src_dir)
 
     if not os.path.isdir(bkdir):
         return {}
@@ -3690,15 +3754,23 @@ def list_backups(path, limit=None):
     files = {}
     for fn in [x for x in os.listdir(bkdir)
                if os.path.isfile(os.path.join(bkdir, x))]:
-        strpfmt = '{0}_%a_%b_%d_%H:%M:%S_%f_%Y'.format(basename)
+        if salt.utils.is_windows():
+            # ':' is an illegal filesystem path character on Windows
+            strpfmt = '{0}_%a_%b_%d_%H-%M-%S_%f_%Y'.format(basename)
+        else:
+            strpfmt = '{0}_%a_%b_%d_%H:%M:%S_%f_%Y'.format(basename)
         try:
             timestamp = datetime.datetime.strptime(fn, strpfmt)
         except ValueError:
             # File didn't match the strp format string, so it's not a backup
             # for this file. Move on to the next one.
             continue
+        if salt.utils.is_windows():
+            str_format = '%a %b %d %Y %H-%M-%S.%f'
+        else:
+            str_format = '%a %b %d %Y %H:%M:%S.%f'
         files.setdefault(timestamp, {})['Backup Time'] = \
-            timestamp.strftime('%a %b %d %Y %H:%M:%S.%f')
+            timestamp.strftime(str_format)
         location = os.path.join(bkdir, fn)
         files[timestamp]['Size'] = os.stat(location).st_size
         files[timestamp]['Location'] = location
@@ -3760,12 +3832,13 @@ def restore_backup(path, backup_id):
                          '{1}'.format(backup['Location'], path)
 
     # Try to set proper ownership
-    try:
-        fstat = os.stat(path)
-    except (OSError, IOError):
-        ret['comment'] += ', but was unable to set ownership'
-    else:
-        os.chown(path, fstat.st_uid, fstat.st_gid)
+    if not salt.utils.is_windows():
+        try:
+            fstat = os.stat(path)
+        except (OSError, IOError):
+            ret['comment'] += ', but was unable to set ownership'
+        else:
+            os.chown(path, fstat.st_uid, fstat.st_gid)
 
     return ret
 
@@ -3889,7 +3962,7 @@ def open_files(by_pid=False):
 
     # Then we look at the open files for each PID
     files = {}
-    for pid in pids.keys():
+    for pid in pids:
         ppath = '/proc/{0}'.format(pid)
         try:
             tids = os.listdir('{0}/task'.format(ppath))

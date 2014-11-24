@@ -10,10 +10,14 @@ couchdb.url:        'http://salt:5984/'
 
     salt '*' test.ping --return couchdb
 '''
+# Import Python libs
 import logging
 import time
 import urllib2
 import json
+
+# Import Salt libs
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -30,12 +34,18 @@ def _get_options():
     Get the couchdb options from salt. Apply defaults
     if required.
     '''
-    server_url = __salt__['config.option']('couchdb.url')
+    if 'config.option' in __salt__:
+        server_url = __salt__['config.option']('couchdb.url')
+        db_name = __salt__['config.option']('couchdb.db')
+    else:
+        cfg = __opts__
+        server_url = cfg.get('couchdb.url', None)
+        db_name = cfg.get('couchdb.db', None)
+
     if not server_url:
         log.debug("Using default url.")
         server_url = "http://salt:5984/"
 
-    db_name = __salt__['config.option']('couchdb.db')
     if not db_name:
         log.debug("Using default database.")
         db_name = "salt"
@@ -300,3 +310,10 @@ def set_salt_view():
                     .format(_response['error']))
         return False
     return True
+
+
+def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
+    '''
+    Do any work necessary to prepare a JID, including sending a custom id
+    '''
+    return passed_jid if passed_jid is not None else salt.utils.gen_jid()

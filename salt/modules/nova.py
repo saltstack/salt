@@ -41,7 +41,11 @@ Module for handling OpenStack Nova calls
 import logging
 
 # Import salt libs
-import salt.utils.openstack.nova as suon
+try:
+    import salt.utils.openstack.nova as suon
+    HAS_NOVA = True
+except NameError as exc:
+    HAS_NOVA = False
 
 
 # Get logging started
@@ -58,7 +62,7 @@ def __virtual__():
     Only load this module if nova
     is installed on this minion.
     '''
-    return suon.check_nova()
+    return HAS_NOVA
 
 
 __opts__ = {}

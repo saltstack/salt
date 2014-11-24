@@ -106,7 +106,7 @@ def read(path, saltenv='base', env=None):
     ret = []
     files = find(path, saltenv)
     for fn_ in files:
-        full = fn_.keys()[0]
+        full = fn_.iterkeys().next()
         form = fn_[full]
         if form == 'txt':
             with salt.utils.fopen(full, 'rb') as fp_:

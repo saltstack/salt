@@ -24,7 +24,6 @@ from salt._compat import string_types
 from salt.log import LOG_LEVELS
 from salt.utils import print_cli
 
-import logging
 log = logging.getLogger(__name__)
 
 try:
@@ -192,7 +191,7 @@ class ZeroMQCaller(object):
         '''
         Return the data up to the master
         '''
-        channel = salt.transport.Channel.factory(self.opts)
+        channel = salt.transport.Channel.factory(self.opts, usage='salt_call')
         load = {'cmd': '_return', 'id': self.opts['id']}
         for key, value in ret.items():
             load[key] = value
@@ -224,9 +223,15 @@ class ZeroMQCaller(object):
         '''
         try:
             ret = self.call()
+            out = ret.get('out', 'nested')
+            if self.opts['metadata']:
+                print_ret = ret
+                out = 'nested'
+            else:
+                print_ret = ret.get('return', {})
             salt.output.display_output(
-                    {'local': ret.get('return', {})},
-                    ret.get('out', 'nested'),
+                    {'local': print_ret},
+                    out,
                     self.opts)
             if self.opts.get('retcode_passthrough', False):
                 sys.exit(ret['retcode'])
@@ -257,8 +262,12 @@ class RAETCaller(ZeroMQCaller):
             self.stack.server.close()
             salt.transport.jobber_stack = None
 
+            if self.opts['metadata']:
+                print_ret = ret
+            else:
+                print_ret = ret.get('return', {})
             salt.output.display_output(
-                    {'local': ret.get('return', {})},
+                    {'local': print_ret},
                     ret.get('out', 'nested'),
                     self.opts)
             if self.opts.get('retcode_passthrough', False):
@@ -274,8 +283,8 @@ class RAETCaller(ZeroMQCaller):
         '''
         mid = opts['id']
         sockdirpath = opts['sock_dir']
-        yid = nacling.uuid(size=18)
-        name = 'caller' + yid
+        uid = nacling.uuid(size=18)
+        name = 'caller' + uid
         stack = LaneStack(name=name,
                           lanename=mid,
                           sockdirpath=sockdirpath)

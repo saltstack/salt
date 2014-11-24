@@ -18,6 +18,11 @@ import salt.utils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt._compat import string_types
 
+try:
+    from shlex import quote as _cmd_quote  # pylint: disable=E0611
+except ImportError:
+    from pipes import quote as _cmd_quote
+
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
@@ -25,17 +30,11 @@ __virtualname__ = 'user'
 
 
 def __virtual__():
-    if __grains__.get('kernel') != 'Darwin':
+    if (__grains__.get('kernel') != 'Darwin' or
+            __grains__['osrelease_info'] < (10, 7)):
         return False
-    return __virtualname__ if _osmajor() >= 10.7 else False
-
-
-def _osmajor():
-    if '_osmajor' not in __context__:
-        __context__['_osmajor'] = float(
-            '.'.join(str(__grains__['osrelease']).split('.')[0:2])
-        )
-    return __context__['_osmajor']
+    else:
+        return __virtualname__
 
 
 def _flush_dscl_cache():
@@ -49,13 +48,15 @@ def _dscl(cmd, ctype='create'):
     '''
     Run a dscl -create command
     '''
-    if _osmajor() < 10.8:
+    if __grains__['osrelease_info'] < (10, 8):
         source, noderoot = '.', ''
     else:
         source, noderoot = 'localhost', '/Local/Default'
+
+    # Note, it's OK that cmd is not quoted here, we clean it up below
     return __salt__['cmd.run_all'](
         'dscl {0} -{1} {2}{3}'.format(source, ctype, noderoot, cmd),
-        output_loglevel='quiet' if ctype == 'passwd' else False
+        output_loglevel='quiet' if ctype == 'passwd' else 'warning'
     )
 
 
@@ -107,18 +108,23 @@ def add(name,
     if not isinstance(gid, int):
         raise SaltInvocationError('gid must be an integer')
 
-    _dscl('/Users/{0} UniqueID {1!r}'.format(name, uid))
-    _dscl('/Users/{0} PrimaryGroupID {1!r}'.format(name, gid))
-    _dscl('/Users/{0} UserShell {1!r}'.format(name, shell))
-    _dscl('/Users/{0} NFSHomeDirectory {1!r}'.format(name, home))
-    _dscl('/Users/{0} RealName {1!r}'.format(name, fullname))
+    _dscl('/Users/{0} UniqueID {1!r}'.format(_cmd_quote(name), _cmd_quote(uid)))
+    _dscl('/Users/{0} PrimaryGroupID {1!r}'.format(_cmd_quote(name),
+                                                   _cmd_quote(gid)))
+    _dscl('/Users/{0} UserShell {1!r}'.format(_cmd_quote(name),
+                                              _cmd_quote(shell)))
+    _dscl('/Users/{0} NFSHomeDirectory {1!r}'.format(_cmd_quote(name),
+                                                     _cmd_quote(home)))
+    _dscl('/Users/{0} RealName {1!r}'.format(_cmd_quote(name),
+                                             _cmd_quote(fullname)))
 
     # Set random password, since without a password the account will not be
     # available. TODO: add shadow module
     randpass = ''.join(
-        random.choice(string.letters + string.digits) for x in xrange(20)
+        random.SystemRandom().choice(string.letters + string.digits) for x in xrange(20)
     )
-    _dscl('/Users/{0} {1!r}'.format(name, randpass), ctype='passwd')
+    _dscl('/Users/{0} {1!r}'.format(_cmd_quote(name),
+                                    _cmd_quote(randpass)), ctype='passwd')
 
     # dscl buffers changes, sleep before setting group membership
     time.sleep(1)
@@ -147,7 +153,7 @@ def delete(name, *args):
     # group membership is managed separately from users and an entry for the
     # user will persist even after the user is removed.
     chgroups(name, ())
-    return _dscl('/Users/{0}'.format(name), ctype='delete')['retcode'] == 0
+    return _dscl('/Users/{0}'.format(_cmd_quote(name)), ctype='delete')['retcode'] == 0
 
 
 def getent(refresh=False):
@@ -188,7 +194,9 @@ def chuid(name, uid):
     if uid == pre_info['uid']:
         return True
     _dscl(
-        '/Users/{0} UniqueID {1!r} {2!r}'.format(name, pre_info['uid'], uid),
+        '/Users/{0} UniqueID {1!r} {2!r}'.format(_cmd_quote(name),
+                                                 _cmd_quote(pre_info['uid']),
+                                                 uid),
         ctype='change'
     )
     # dscl buffers changes, sleep 1 second before checking if new value
@@ -216,8 +224,8 @@ def chgid(name, gid):
         return True
     _dscl(
         '/Users/{0} PrimaryGroupID {1!r} {2!r}'.format(
-            name, pre_info['gid'], gid
-        ),
+            _cmd_quote(name), _cmd_quote(pre_info['gid']),
+            _cmd_quote(gid)),
         ctype='change'
     )
     # dscl buffers changes, sleep 1 second before checking if new value
@@ -243,8 +251,9 @@ def chshell(name, shell):
         return True
     _dscl(
         '/Users/{0} UserShell {1!r} {2!r}'.format(
-            name, pre_info['shell'], shell
-        ),
+            _cmd_quote(name),
+            _cmd_quote(pre_info['shell']),
+            _cmd_quote(shell)),
         ctype='change'
     )
     # dscl buffers changes, sleep 1 second before checking if new value
@@ -270,8 +279,9 @@ def chhome(name, home):
         return True
     _dscl(
         '/Users/{0} NFSHomeDirectory {1!r} {2!r}'.format(
-            name, pre_info['home'], home
-        ),
+            _cmd_quote(name),
+            _cmd_quote(pre_info['home']),
+           _cmd_quote(home)),
         ctype='change'
     )
     # dscl buffers changes, sleep 1 second before checking if new value
@@ -297,7 +307,8 @@ def chfullname(name, fullname):
     if fullname == pre_info['fullname']:
         return True
     _dscl(
-        '/Users/{0} RealName {1!r}'.format(name, fullname),
+        '/Users/{0} RealName {1!r}'.format(_cmd_quote(name),
+                                           _cmd_quote(fullname)),
         # use a "create" command, because a "change" command would fail if
         # current fullname is an empty string. The "create" will just overwrite
         # this field.
@@ -352,14 +363,16 @@ def chgroups(name, groups, append=False):
     # Add groups from which user is missing
     for group in desired - ugrps:
         _dscl(
-            '/Groups/{0} GroupMembership {1}'.format(group, name),
+            '/Groups/{0} GroupMembership {1}'.format(_cmd_quote(group),
+                                                     _cmd_quote(name)),
             ctype='append'
         )
     if not append:
         # Remove from extra groups
         for group in ugrps - desired:
             _dscl(
-                '/Groups/{0} GroupMembership {1}'.format(group, name),
+                '/Groups/{0} GroupMembership {1}'.format(_cmd_quote(group),
+                                                         _cmd_quote(name)),
                 ctype='delete'
             )
     time.sleep(1)

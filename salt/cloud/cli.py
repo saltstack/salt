@@ -27,7 +27,7 @@ from salt.utils.verify import check_user, verify_env, verify_files
 
 # Import salt.cloud libs
 import salt.cloud
-from salt.cloud.exceptions import SaltCloudException, SaltCloudSystemExit
+from salt.exceptions import SaltCloudException, SaltCloudSystemExit
 
 log = logging.getLogger(__name__)
 
@@ -296,7 +296,7 @@ class SaltCloud(parsers.SaltCloudParser):
                         log.info('Complete')
 
                 if dmap.get('existing', None):
-                    for name in dmap['existing'].keys():
+                    for name in dmap['existing']:
                         ret[name] = {'Message': 'Already running'}
 
             except (SaltCloudException, Exception) as exc:
@@ -334,13 +334,13 @@ class SaltCloud(parsers.SaltCloudParser):
                 self.exit(
                     exc.exit_code,
                     '{0}\n'.format(
-                        msg.format(exc.message.rstrip())
+                        msg.format(str(exc).rstrip())
                     )
                 )
             # It's not a system exit but it's an error we can
             # handle
             self.error(
-                msg.format(exc.message)
+                msg.format(str(exc))
             )
         # This is a generic exception, log it, include traceback if
         # debug logging is enabled and exit.
@@ -348,6 +348,6 @@ class SaltCloud(parsers.SaltCloudParser):
             msg.format(exc),
             # Show the traceback if the debug logging level is
             # enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         self.exit(salt.exitcodes.EX_GENERIC)

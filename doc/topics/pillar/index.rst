@@ -127,13 +127,12 @@ And the actual pillar file at '/srv/salt/common_pillar.sls':
 .. code-block:: yaml
 
     foo: bar
-    boo: baz 
+    boo: baz
 
 Pillar namespace flattened
 ==========================
 
-The separate pillar files all share the same namespace. Given 
-a ``top.sls`` of:
+The separate pillar files all share the same namespace. Given a ``top.sls`` of:
 
 .. code-block:: yaml
 
@@ -163,14 +162,65 @@ hierarchy. For example your ``package.sls`` file could look like:
     packages:
       bind: bind9
 
+Pillar Namespace Merges
+=======================
+
+With some care, the pillar namespace can merge content from multiple pillar
+files under a single key, so long as conflicts are avoided as described above.
+
+For example, if the above example were modified as follows, the values are
+merged below a single key:
+
+.. code-block:: yaml
+
+    base:
+      '*':
+        - packages
+        - services
+
+And a ``packages.sls`` file like:
+
+.. code-block:: yaml
+
+    bind:
+      package-name: bind9
+      version: 9.9.5
+
+And a ``services.sls`` file like:
+
+.. code-block:: yaml
+
+    bind:
+      port: 53
+      listen-on: any
+
+The resulting pillar will be as follows:
+
+.. code-block:: bash
+
+    $ salt-call pillar.get bind
+    local:
+        ----------
+        listen-on:
+            any
+        package-name:
+            bind9
+        port:
+            53
+        version:
+            9.9.5
+
+.. note::
+       Remember: conflicting keys will be overwritten in a non-deterministic manner!
+
 Including Other Pillars
 =======================
 
 .. versionadded:: 0.16.0
 
-Pillar SLS files may include other pillar files, similar to State files.
-Two syntaxes are available for this purpose. The simple form simply includes
-the additional pillar as if it were part of the same file:
+Pillar SLS files may include other pillar files, similar to State files. Two
+syntaxes are available for this purpose. The simple form simply includes the
+additional pillar as if it were part of the same file:
 
 .. code-block:: yaml
 
@@ -292,6 +342,23 @@ is being traversed. The below example would match minions with a pillar named
 .. code-block:: bash
 
     salt -I 'foo:bar:baz*' test.ping
+
+
+Set Pillar Data at the Command Line
+===================================
+
+Pillar data can be set at the command line like the following example:
+
+.. code-block:: bash
+
+    salt '*' state.highstate pillar='{"cheese": "spam"}'
+
+This will create a dict with a key of 'cheese' and a value of 'spam'. A list
+can be created like this:
+
+.. code-block:: bash
+
+    salt '*' state.highstate pillar='["cheese", "milk", "bread"]'
 
 
 Master Config In Pillar

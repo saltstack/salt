@@ -47,7 +47,7 @@ def list_():
     '''
     ret = {}
     for line in (__salt__['cmd.run_stdout']
-                 ('mdadm --detail --scan').splitlines()):
+                    ('mdadm --detail --scan', python_shell=False).splitlines()):
         if ' ' not in line:
             continue
         comps = line.split()
@@ -78,8 +78,8 @@ def detail(device='/dev/md0'):
         msg = "Device {0} doesn't exist!"
         raise CommandExecutionError(msg.format(device))
 
-    cmd = 'mdadm --detail {0}'.format(device)
-    for line in __salt__['cmd.run_stdout'](cmd).splitlines():
+    cmd = ['mdadm', '--detail', device]
+    for line in __salt__['cmd.run_stdout'](cmd, python_shell=False).splitlines():
         if line.startswith(device):
             continue
         if ' ' not in line:
@@ -146,6 +146,7 @@ def destroy(device):
 def create(name,
            level,
            devices,
+           metadata='default',
            test_mode=False,
            **kwargs):
     '''
@@ -198,24 +199,24 @@ def create(name,
 
     For more info, read the ``mdadm(8)`` manpage
     '''
-    opts = ''
+    opts = []
     for key in kwargs:
         if not key.startswith('__'):
-            if kwargs[key] is True:
-                opts += '--{0} '.format(key)
-            else:
-                opts += '--{0}={1} '.format(key, kwargs[key])
+            opts.append('--{0}'.format(key))
+            if kwargs[key] is not True:
+                opts.append(kwargs[key])
 
-    cmd = "mdadm -C {0} -v {1}-l {2} -n {3} {4}".format(name,
-            opts,
-            level,
-            len(devices),
-            ' '.join(devices))
+    cmd = ['mdadm',
+           '-C', name,
+           '-v'] + opts + [
+           '-l', level,
+           '-e', metadata,
+           '-n', len(devices)] + devices
 
     if test_mode is True:
         return cmd
     elif test_mode is False:
-        return __salt__['cmd.run'](cmd)
+        return __salt__['cmd.run'](cmd, python_shell=False)
 
 
 def save_config():
@@ -235,7 +236,7 @@ def save_config():
         salt '*' raid.save_config
 
     '''
-    scan = __salt__['cmd.run']('mdadm --detail --scan').split()
+    scan = __salt__['cmd.run']('mdadm --detail --scan', python_shell=False).split()
     # Issue with mdadm and ubuntu
     # REF: http://askubuntu.com/questions/209702/why-is-my-raid-dev-md1-showing-up-as-dev-md126-is-mdadm-conf-being-ignored
     if __grains__['os'] == 'Ubuntu':
@@ -255,3 +256,57 @@ def save_config():
         __salt__['file.append'](cfg_file, scan)
 
     return __salt__['cmd.run']('update-initramfs -u')
+
+
+def assemble(name,
+             devices,
+             test_mode=False,
+             **kwargs):
+    '''
+    Assemble a RAID device.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' raid.assemble /dev/md0 ['/dev/xvdd', '/dev/xvde']
+
+    .. note::
+
+        Adding ``test_mode=True`` as an argument will print out the mdadm
+        command that would have been run.
+
+    name
+        The name of the array to assemble.
+
+    devices
+        The list of devices comprising the array to assemble.
+
+    kwargs
+        Optional arguments to be passed to mdadm.
+
+    returns
+        test_mode=True:
+            Prints out the full command.
+        test_mode=False (Default):
+            Executes command on the host(s) and prints out the mdadm output.
+
+    For more info, read the ``mdadm`` manpage.
+    '''
+    opts = []
+    for key in kwargs:
+        if not key.startswith('__'):
+            opts.append('--{0}'.format(key))
+            if kwargs[key] is not True:
+                opts.append(kwargs[key])
+
+    # Devices may have been written with a blob:
+    if type(devices) is str:
+        devices = devices.split(',')
+
+    cmd = ['mdadm', '-A', name, '-v', opts] + devices
+
+    if test_mode is True:
+        return cmd
+    elif test_mode is False:
+        return __salt__['cmd.run'](cmd, python_shell=False)

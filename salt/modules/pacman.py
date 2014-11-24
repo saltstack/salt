@@ -129,7 +129,7 @@ def list_upgrades(refresh=False):
         r'"^\s|^:"'
     ).format(' '.join(options))
 
-    out = __salt__['cmd.run'](cmd, output_loglevel='trace')
+    out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=True)
     for line in out.splitlines():
         comps = line.split(' ')
         if len(comps) < 2:
@@ -553,5 +553,5 @@ def owner(*paths):
     for path in paths:
         ret[path] = __salt__['cmd.run_stdout'](cmd.format(path))
     if len(ret) == 1:
-        return ret.values()[0]
+        return ret.itervalues().next()
     return ret

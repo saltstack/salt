@@ -454,7 +454,7 @@ def _rehash():
     Recomputes internal hash table for the PATH variable. Use whenever a new
     command is created during the current session.
     '''
-    shell = __salt__['cmd.run']('echo $SHELL', output_loglevel='trace')
+    shell = __salt__['environ.get']('SHELL', output_loglevel='trace')
     if shell.split('/')[-1] in ('csh', 'tcsh'):
         __salt__['cmd.run']('rehash', output_loglevel='trace')
 
@@ -475,7 +475,7 @@ def file_list(*packages):
     '''
     ret = file_dict(*packages)
     files = []
-    for pkg_files in ret['files'].values():
+    for pkg_files in ret['files'].itervalues():
         files.extend(pkg_files)
     ret['files'] = files
     return ret

@@ -89,7 +89,7 @@ from salt._compat import ElementTree as ET
 # Import salt.cloud libs
 import salt.utils.cloud
 import salt.config as config
-from salt.cloud.exceptions import (
+from salt.exceptions import (
     SaltCloudException,
     SaltCloudSystemExit,
     SaltCloudConfigError,
@@ -211,7 +211,7 @@ def _xml_to_dict(xmltree):
         if '}' in name:
             comps = name.split('}')
             name = comps[1]
-        if name not in xmldict.keys():
+        if name not in xmldict:
             if sys.version_info < (2, 7):
                 children_len = len(item.getchildren())
             else:
@@ -314,9 +314,13 @@ def query(params=None, setname=None, requesturl=None, location=None,
         params_with_headers['SignatureMethod'] = 'HmacSHA256'
         params_with_headers['Timestamp'] = '{0}'.format(timestamp)
         params_with_headers['Version'] = ec2_api_version
-        keys = sorted(params_with_headers.keys())
+        keys = sorted(params_with_headers)
         values = map(params_with_headers.get, keys)
         querystring = urllib.urlencode(list(zip(keys, values)))
+
+        # AWS signature version 2 requires that spaces be encoded as
+        # %20, however urlencode uses '+'. So replace pluses with %20.
+        querystring = querystring.replace('+', '%20')
 
         uri = '{0}\n{1}\n/\n{2}'.format(method.encode('utf-8'),
                                         endpoint.encode('utf-8'),
@@ -909,7 +913,7 @@ def get_availability_zone(vm_):
     zones = list_availability_zones()
 
     # Validate user-specified AZ
-    if avz not in zones.keys():
+    if avz not in zones:
         raise SaltCloudException(
             'The specified availability zone isn\'t valid in this region: '
             '{0}\n'.format(
@@ -1443,7 +1447,7 @@ def request_instance(vm_=None, call=None):
                 'Error getting root device name for image id {0} for '
                 'VM {1}: \n{2}'.format(image_id, vm_['name'], exc),
                 # Show the traceback if the debug logging level is enabled
-                exc_info=log.isEnabledFor(logging.DEBUG)
+                exc_info_on_loglevel=logging.DEBUG
             )
             raise
 
@@ -1518,7 +1522,7 @@ def request_instance(vm_=None, call=None):
                 vm_['name'], exc
             ),
             # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         raise
 
@@ -1608,7 +1612,7 @@ def request_instance(vm_=None, call=None):
             except SaltCloudSystemExit:
                 pass
             finally:
-                raise SaltCloudSystemExit(exc.message)
+                raise SaltCloudSystemExit(str(exc))
 
     return data, vm_
 
@@ -1712,7 +1716,7 @@ def query_instance(vm_=None, call=None):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(exc.message)
+            raise SaltCloudSystemExit(str(exc))
 
     if 'reactor' in vm_ and vm_['reactor'] is True:
         salt.utils.cloud.fire_event(
@@ -1789,7 +1793,7 @@ def wait_for_instance(
                                         gateway=ssh_gateway_config
                                         ):
         # If a known_hosts_file is configured, this instance will not be
-        # accessable until it has a host key. Since this is provided on
+        # accessible until it has a host key. Since this is provided on
         # supported instances by cloud-init, and viewable to us only from the
         # console output (which may take several minutes to become available,
         # we have some more waiting to do here.
@@ -1938,10 +1942,10 @@ def create(vm_=None, call=None):
         for instance in data:
             vm_['instance_id_list'].append(instance['instanceId'])
 
-    vm_['instance_id'] = vm_['instance_id_list'].pop()
-    if len(vm_['instance_id_list']) > 0:
-        # Multiple instances were spun up, get one now, and queue the rest
-        queue_instances(vm_['instance_id_list'])
+        vm_['instance_id'] = vm_['instance_id_list'].pop()
+        if len(vm_['instance_id_list']) > 0:
+            # Multiple instances were spun up, get one now, and queue the rest
+            queue_instances(vm_['instance_id_list'])
 
     # Wait for vital information, such as IP addresses, to be available
     # for the new instance
@@ -1959,7 +1963,7 @@ def create(vm_=None, call=None):
             '\'tag\' should be a dict.'
         )
 
-    for value in tags.values():
+    for value in tags.itervalues():
         if not isinstance(value, str):
             raise SaltCloudConfigError(
                 '\'tag\' values must be strings. Try quoting the values. '
@@ -2015,7 +2019,7 @@ def create(vm_=None, call=None):
         vm_, data, ip_address, display_ssh_output
     )
 
-    # The instance is booted and accessable, let's Salt it!
+    # The instance is booted and accessible, let's Salt it!
     ret = salt.utils.cloud.bootstrap(vm_, __opts__)
 
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
@@ -2089,7 +2093,7 @@ def queue_instances(instances):
         salt.utils.cloud.cache_node(node, __active_provider_name__, __opts__)
 
 
-def create_attach_volumes(name, kwargs, call=None):
+def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
     '''
     Create and attach volumes to created node
     '''
@@ -2100,7 +2104,7 @@ def create_attach_volumes(name, kwargs, call=None):
         )
 
     if 'instance_id' not in kwargs:
-        kwargs['instance_id'] = _get_node(name)['instanceId']
+        kwargs['instance_id'] = _get_node(name)[name]['instanceId']
 
     if type(kwargs['volumes']) is str:
         volumes = yaml.safe_load(kwargs['volumes'])
@@ -2129,7 +2133,7 @@ def create_attach_volumes(name, kwargs, call=None):
                 volume_dict['iops'] = volume['iops']
 
         if 'volume_id' not in volume_dict:
-            created_volume = create_volume(volume_dict, call='function')
+            created_volume = create_volume(volume_dict, call='function', wait_to_finish=wait_to_finish)
             created = True
             for item in created_volume:
                 if 'volumeId' in item:
@@ -2176,7 +2180,7 @@ def stop(name, call=None):
 
     log.info('Stopping node {0}'.format(name))
 
-    instance_id = _get_node(name)['instanceId']
+    instance_id = _get_node(name)[name]['instanceId']
 
     params = {'Action': 'StopInstances',
               'InstanceId.1': instance_id}
@@ -2196,7 +2200,7 @@ def start(name, call=None):
 
     log.info('Starting node {0}'.format(name))
 
-    instance_id = _get_node(name)['instanceId']
+    instance_id = _get_node(name)[name]['instanceId']
 
     params = {'Action': 'StartInstances',
               'InstanceId.1': instance_id}
@@ -2363,7 +2367,7 @@ def del_tags(name=None,
         del kwargs['resource_id']
 
     if not instance_id:
-        instance_id = _get_node(name)['instanceId']
+        instance_id = _get_node(name)[name]['instanceId']
 
     params = {'Action': 'DeleteTags',
               'ResourceId.1': instance_id}
@@ -2500,7 +2504,7 @@ def reboot(name, call=None):
 
         salt-cloud -a reboot mymachine
     '''
-    instance_id = _get_node(name)['instanceId']
+    instance_id = _get_node(name)[name]['instanceId']
     params = {'Action': 'RebootInstances',
               'InstanceId.1': instance_id}
     result = query(params)
@@ -2604,7 +2608,7 @@ def list_nodes_full(location=None, call=None):
     if not location:
         ret = {}
         locations = set(
-            get_location(vm_) for vm_ in __opts__['profiles'].values()
+            get_location(vm_) for vm_ in __opts__['profiles'].itervalues()
             if _vm_provider_driver(vm_)
         )
         for loc in locations:
@@ -3449,7 +3453,7 @@ def get_console_output(
         )
 
     if not instance_id:
-        instance_id = _get_node(name)['instanceId']
+        instance_id = _get_node(name)[name]['instanceId']
 
     if kwargs is None:
         kwargs = {}
@@ -3465,9 +3469,9 @@ def get_console_output(
     ret = {}
     data = query(params, return_root=True)
     for item in data:
-        if item.keys()[0] == 'output':
-            ret['output_decoded'] = binascii.a2b_base64(item.values()[0])
+        if item.iterkeys().next() == 'output':
+            ret['output_decoded'] = binascii.a2b_base64(item.itervalues().next())
         else:
-            ret[item.keys()[0]] = item.values()[0]
+            ret[item.iterkeys().next()] = item.itervalues().next()
 
     return ret

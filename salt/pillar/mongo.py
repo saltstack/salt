@@ -84,7 +84,7 @@ log = logging.getLogger(__name__)
 
 
 def ext_pillar(minion_id,
-               pillar,
+               pillar,  # pylint: disable=W0613
                collection='pillar',
                id_field='_id',
                re_pattern=None,

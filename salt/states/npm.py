@@ -37,7 +37,8 @@ def installed(name,
               runas=None,
               user=None,
               force_reinstall=False,
-              registry=None):
+              registry=None,
+              env=None):
     '''
     Verify that the given package is installed and is at the correct version
     (if specified).
@@ -60,7 +61,7 @@ def installed(name,
         A list of packages to install with a single npm invocation; specifying
         this argument will ignore the ``name`` argument
 
-        .. versionadded:: 2014.7
+        .. versionadded:: 2014.7.0
 
     dir
         The target directory in which to install the package, or None for
@@ -78,6 +79,13 @@ def installed(name,
 
     registry
         The NPM registry from which to install the package
+
+        .. versionadded:: 2014.7.0
+
+    env
+        A list of environment variables to be set prior to execution. The
+        format is the same as the :py:func:`cmd.run <salt.states.cmd.run>`.
+        state function.
 
         .. versionadded:: 2014.7.0
 
@@ -116,7 +124,7 @@ def installed(name,
         pkg_list = [name]
 
     try:
-        installed_pkgs = __salt__['npm.list'](dir=dir)
+        installed_pkgs = __salt__['npm.list'](dir=dir, runas=runas, env=env)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = False
         ret['comment'] = 'Error looking up {0!r}: {1}'.format(name, err)
@@ -127,17 +135,33 @@ def installed(name,
 
     pkgs_satisfied = []
     pkgs_to_install = []
-    for pkg_name in pkg_list:
-        prefix = pkg_name.split('@')[0].strip()
+    for pkg in pkg_list:
+        pkg_name, _, pkg_ver = pkg.partition('@')
+        pkg_name = pkg_name.strip().lower()
 
-        if prefix.lower() in installed_pkgs:
-            if force_reinstall is False:
-                pkgs_satisfied.append('{1}@{2}'.format(
-                        pkg_name,
-                        prefix,
-                        installed_pkgs[prefix.lower()]['version']))
-        else:
-            pkgs_to_install.append(pkg_name)
+        if force_reinstall is True:
+            pkgs_to_install.append(pkg)
+            continue
+
+        if pkg_name not in installed_pkgs:
+            pkgs_to_install.append(pkg)
+            continue
+
+        if pkg_name in installed_pkgs:
+            installed_name_ver = '{0}@{1}'.format(pkg_name,
+                    installed_pkgs[pkg_name]['version'])
+
+            # If given an explicit version check the installed version matches.
+            if pkg_ver:
+                if installed_pkgs[pkg_name].get('version') != pkg_ver:
+                    pkgs_to_install.append(pkg)
+                else:
+                    pkgs_satisfied.append(installed_name_ver)
+
+                continue
+            else:
+                pkgs_satisfied.append(installed_name_ver)
+                continue
 
     if __opts__['test']:
         ret['result'] = None
@@ -167,6 +191,7 @@ def installed(name,
             'dir': dir,
             'runas': user,
             'registry': registry,
+            'env': env,
         }
 
         if pkgs is not None:
@@ -184,7 +209,7 @@ def installed(name,
     if call and (isinstance(call, list) or isinstance(call, dict)):
         ret['result'] = True
         ret['changes'] = {'old': [], 'new': pkgs_to_install}
-        ret['comment'] = 'Package(s) {0!r} were successfully installed'.format(
+        ret['comment'] = 'Package(s) {0!r} successfully installed'.format(
                 ', '.join(pkgs_to_install))
     else:
         ret['result'] = False

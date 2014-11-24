@@ -35,7 +35,7 @@ from salt._compat import ElementTree as ET
 # Import salt cloud libs
 import salt.utils.cloud
 import salt.config as config
-from salt.cloud.exceptions import (
+from salt.exceptions import (
     SaltCloudNotFound,
     SaltCloudSystemExit,
     SaltCloudExecutionFailure,
@@ -286,10 +286,10 @@ def create(vm_):
             'Error creating {0} on PARALLELS\n\n'
             'The following exception was thrown when trying to '
             'run the initial deployment: \n{1}'.format(
-                vm_['name'], exc.message
+                vm_['name'], str(exc)
             ),
             # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -324,7 +324,7 @@ def create(vm_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(exc.message)
+            raise SaltCloudSystemExit(str(exc))
 
     comps = data['network']['public-ip']['address'].split('/')
     public_ip = comps[0]

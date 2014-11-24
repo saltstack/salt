@@ -70,6 +70,7 @@ def parse_targets(name=None,
                   pkgs=None,
                   sources=None,
                   saltenv='base',
+                  normalize=True,
                   **kwargs):
     '''
     Parses the input to pkg.install and returns back the package(s) to be
@@ -128,9 +129,12 @@ def parse_targets(name=None,
         return [x[2] for x in srcinfo], 'file'
 
     elif name:
-        _normalize_name = \
-            __salt__.get('pkg.normalize_name', lambda pkgname: pkgname)
-        packed = dict([(_normalize_name(x), None) for x in name.split(',')])
+        if normalize:
+            _normalize_name = \
+                __salt__.get('pkg.normalize_name', lambda pkgname: pkgname)
+            packed = dict([(_normalize_name(x), None) for x in name.split(',')])
+        else:
+            packed = dict([(x, None) for x in name.split(',')])
         return packed, 'repository'
 
     else:
@@ -159,7 +163,7 @@ def version(*names, **kwargs):
         for name in names:
             if '*' in name:
                 pkg_glob = True
-                for match in fnmatch.filter(pkgs.keys(), name):
+                for match in fnmatch.filter(pkgs, name):
                     ret[match] = pkgs.get(match, [])
             else:
                 ret[name] = pkgs.get(name, [])
@@ -169,8 +173,8 @@ def version(*names, **kwargs):
     # return dict
     if len(ret) == 1 and not pkg_glob:
         try:
-            return ret.values()[0]
-        except IndexError:
+            return ret.itervalues().next()
+        except StopIteration:
             return ''
     return ret
 
@@ -206,7 +210,7 @@ def sort_pkglist(pkgs):
     # It doesn't matter that ['4.9','4.10'] would be sorted to ['4.10','4.9'],
     # so long as the sorting is consistent.
     try:
-        for key in pkgs.keys():
+        for key in pkgs:
             # Passing the pkglist to set() also removes duplicate version
             # numbers (if present).
             pkgs[key] = sorted(set(pkgs[key]))
@@ -226,7 +230,7 @@ def stringify(pkgs):
         salt '*' pkg_resource.stringify 'vim: 7.127'
     '''
     try:
-        for key in pkgs.keys():
+        for key in pkgs:
             pkgs[key] = ','.join(pkgs[key])
     except AttributeError as e:
         log.exception(e)

@@ -6,7 +6,6 @@ Wheel system wrapper for key system
 # Import python libs
 import os
 import hashlib
-import random
 
 # Import salt libs
 import salt.key
@@ -79,7 +78,7 @@ def gen(id_=None, keysize=2048):
     returned as a dict containing pub and priv keys
     '''
     if id_ is None:
-        id_ = hashlib.sha512(str(random.randint(0, 99999999))).hexdigest()
+        id_ = hashlib.sha512(os.urandom(32)).hexdigest()
     ret = {'priv': '',
            'pub': ''}
     priv = salt.crypt.gen_keys(__opts__['pki_dir'], id_, keysize)

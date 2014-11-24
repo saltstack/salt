@@ -85,7 +85,7 @@ def db_list(user=None, password=None, host=None, port=None):
         return conn.database_names()
     except pymongo.errors.PyMongoError as err:
         log.error(err)
-        return err.message
+        return str(err)
 
 
 def db_exists(name, user=None, password=None, host=None, port=None):
@@ -126,10 +126,10 @@ def db_remove(name, user=None, password=None, host=None, port=None):
     except pymongo.errors.PyMongoError as err:
         log.error(
             'Removing database {0} failed with error: {1}'.format(
-                name, err.message
+                name, str(err)
             )
         )
-        return err.message
+        return str(err)
 
     return True
 
@@ -164,10 +164,10 @@ def user_list(user=None, password=None, host=None, port=None, database='admin'):
     except pymongo.errors.PyMongoError as err:
         log.error(
             'Listing users failed with error: {0}'.format(
-                err.message
+                str(err)
             )
         )
-        return err.message
+        return str(err)
 
 
 def user_exists(name, user=None, password=None, host=None, port=None,
@@ -211,10 +211,10 @@ def user_create(name, passwd, user=None, password=None, host=None, port=None,
     except pymongo.errors.PyMongoError as err:
         log.error(
             'Creating database {0} failed with error: {1}'.format(
-                name, err.message
+                name, str(err)
             )
         )
-        return err.message
+        return str(err)
     return True
 
 
@@ -240,9 +240,9 @@ def user_remove(name, user=None, password=None, host=None, port=None,
     except pymongo.errors.PyMongoError as err:
         log.error(
             'Creating database {0} failed with error: {1}'.format(
-                name, err.message
+                name, str(err)
             )
         )
-        return err.message
+        return str(err)
 
     return True

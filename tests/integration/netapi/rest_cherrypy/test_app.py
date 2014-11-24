@@ -1,6 +1,14 @@
 # coding: utf-8
-import mock
+
+# Import python libs
 import urllib
+
+# Import salttesting libs
+from salttesting import mock
+from salttesting.unit import skipIf
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../../')
+
 
 from salt.exceptions import EauthAuthenticationError
 from tests.utils import BaseRestCherryPyTest
@@ -13,6 +21,7 @@ except ImportError:
     HAS_CHERRYPY = False
 
 
+@skipIf(HAS_CHERRYPY is False, 'CherryPy not installed')
 class TestAuth(BaseRestCherryPyTest):
     def test_get_root_noauth(self):
         '''
@@ -75,6 +84,7 @@ class TestLogin(BaseRestCherryPyTest):
                 'content-type': 'application/x-www-form-urlencoded'
         })
         self.assertEqual(response.status, '200 OK')
+        return response
 
     def test_bad_login(self):
         '''
@@ -89,6 +99,18 @@ class TestLogin(BaseRestCherryPyTest):
                 'content-type': 'application/x-www-form-urlencoded'
         })
         self.assertEqual(response.status, '401 Unauthorized')
+
+    def test_logout(self):
+        ret = self.test_good_login()
+        token = ret.headers['X-Auth-Token']
+
+        body = urllib.urlencode({})
+        request, response = self.request('/logout', method='POST', body=body,
+            headers={
+                'content-type': 'application/x-www-form-urlencoded',
+                'X-Auth-Token': token,
+        })
+        self.assertEqual(response.status, '200 OK')
 
 
 class TestRun(BaseRestCherryPyTest):

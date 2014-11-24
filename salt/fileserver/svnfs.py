@@ -30,6 +30,7 @@ import logging
 import os
 import shutil
 from datetime import datetime
+from salt._compat import text_type as _text_type
 
 PER_REMOTE_PARAMS = ('mountpoint', 'root', 'trunk', 'branches', 'tags')
 
@@ -90,7 +91,7 @@ def _rev(repo):
         log.error(
             'Error retrieving revision ID for svnfs remote {0} '
             '(cachedir: {1}): {2}'
-            .format(repo['uri'], repo['repo'], exc)
+            .format(repo['url'], repo['repo'], exc)
         )
     else:
         return repo_info['revision'].number
@@ -107,19 +108,23 @@ def init():
 
     per_remote_defaults = {}
     for param in PER_REMOTE_PARAMS:
-        per_remote_defaults[param] = __opts__['svnfs_{0}'.format(param)]
+        per_remote_defaults[param] = \
+            _text_type(__opts__['svnfs_{0}'.format(param)])
 
     for remote in __opts__['svnfs_remotes']:
         repo_conf = copy.deepcopy(per_remote_defaults)
         if isinstance(remote, dict):
-            repo_uri = next(iter(remote))
-            per_remote_conf = salt.utils.repack_dictlist(remote[repo_uri])
+            repo_url = next(iter(remote))
+            per_remote_conf = dict(
+                [(key, _text_type(val)) for key, val in
+                 salt.utils.repack_dictlist(remote[repo_url]).items()]
+            )
             if not per_remote_conf:
                 log.error(
                     'Invalid per-remote configuration for remote {0}. If no '
                     'per-remote parameters are being specified, there may be '
                     'a trailing colon after the URI, which should be removed. '
-                    'Check the master configuration file.'.format(repo_uri)
+                    'Check the master configuration file.'.format(repo_url)
                 )
 
             for param in (x for x in per_remote_conf
@@ -128,18 +133,18 @@ def init():
                     'Invalid configuration parameter {0!r} for remote {1}. '
                     'Valid parameters are: {2}. See the documentation for '
                     'further information.'.format(
-                        param, repo_uri, ', '.join(PER_REMOTE_PARAMS)
+                        param, repo_url, ', '.join(PER_REMOTE_PARAMS)
                     )
                 )
                 per_remote_conf.pop(param)
             repo_conf.update(per_remote_conf)
         else:
-            repo_uri = remote
+            repo_url = remote
 
-        if not isinstance(repo_uri, string_types):
+        if not isinstance(repo_url, string_types):
             log.error(
                 'Invalid gitfs remote {0}. Remotes must be strings, you may '
-                'need to enclose the URI in quotes'.format(repo_uri)
+                'need to enclose the URI in quotes'.format(repo_url)
             )
             continue
 
@@ -152,7 +157,7 @@ def init():
             pass
 
         hash_type = getattr(hashlib, __opts__.get('hash_type', 'md5'))
-        repo_hash = hash_type(repo_uri).hexdigest()
+        repo_hash = hash_type(repo_url).hexdigest()
         rp_ = os.path.join(bp_, repo_hash)
         if not os.path.isdir(rp_):
             os.makedirs(rp_)
@@ -160,13 +165,13 @@ def init():
         if not os.listdir(rp_):
             # Only attempt a new checkout if the directory is empty.
             try:
-                CLIENT.checkout(repo_uri, rp_)
+                CLIENT.checkout(repo_url, rp_)
                 repos.append(rp_)
                 new_remote = True
             except pysvn._pysvn.ClientError as exc:
                 log.error(
                     'Failed to initialize svnfs remote {0!r}: {1}'
-                    .format(repo_uri, exc)
+                    .format(repo_url, exc)
                 )
                 continue
         else:
@@ -179,13 +184,13 @@ def init():
                     'Cache path {0} (corresponding remote: {1}) exists but is '
                     'not a valid subversion checkout. You will need to '
                     'manually delete this directory on the master to continue '
-                    'to use this svnfs remote.'.format(rp_, repo_uri)
+                    'to use this svnfs remote.'.format(rp_, repo_url)
                 )
                 continue
 
         repo_conf.update({
             'repo': rp_,
-            'uri': repo_uri,
+            'url': repo_url,
             'hash': repo_hash,
             'cachedir': rp_
         })
@@ -200,7 +205,7 @@ def init():
                 for repo_conf in repos:
                     fp_.write(
                         '{0} = {1}\n'.format(
-                            repo_conf['hash'], repo_conf['uri']
+                            repo_conf['hash'], repo_conf['url']
                         )
                     )
         except OSError:
@@ -253,7 +258,7 @@ def update():
         except pysvn._pysvn.ClientError as exc:
             log.error(
                 'Error updating svnfs remote {0} (cachedir: {1}): {2}'
-                .format(repo['uri'], repo['cachedir'], exc)
+                .format(repo['url'], repo['cachedir'], exc)
             )
         try:
             os.remove(lk_fn)
@@ -284,6 +289,7 @@ def update():
                 'master',
                 __opts__['sock_dir'],
                 __opts__['transport'],
+                opts=__opts__,
                 listen=False)
         event.fire_event(data, tagify(['svnfs', 'update'], prefix='fileserver'))
     try:
@@ -327,7 +333,7 @@ def envs(ignore_cache=False):
             log.error(
                 'svnfs trunk path {0!r} does not exist in repo {1}, no base '
                 'environment will be provided by this remote'
-                .format(repo['trunk'], repo['uri'])
+                .format(repo['trunk'], repo['url'])
             )
 
         branches = os.path.join(repo['repo'], repo['branches'])
@@ -336,7 +342,7 @@ def envs(ignore_cache=False):
         else:
             log.error(
                 'svnfs branches path {0!r} does not exist in repo {1}'
-                .format(repo['branches'], repo['uri'])
+                .format(repo['branches'], repo['url'])
             )
 
         tags = os.path.join(repo['repo'], repo['tags'])
@@ -345,7 +351,7 @@ def envs(ignore_cache=False):
         else:
             log.error(
                 'svnfs tags path {0!r} does not exist in repo {1}'
-                .format(repo['tags'], repo['uri'])
+                .format(repo['tags'], repo['url'])
             )
     return [x for x in sorted(ret) if _env_is_exposed(x)]
 

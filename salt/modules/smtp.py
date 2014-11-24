@@ -30,7 +30,7 @@ Module for Sending Messages via SMTP
             smtp.username: myuser
             smtp.password: verybadpass
 
-        my-smtp-login:
+        another-smtp-login:
             smtp.server: smtp.domain.com
             smtp.sender: admin@domain.com
             smtp.username: myuser

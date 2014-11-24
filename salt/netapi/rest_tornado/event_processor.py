@@ -69,7 +69,7 @@ class SaltInfo(object):
         minion = self.minions[mid]
 
         minion.update({'grains': event_info['return']})
-        logger.debug("In process minion grains update with minions={0}".format(self.minions.keys()))
+        logger.debug("In process minion grains update with minions={0}".format(self.minions))
         self.publish_minions()
 
     def process_ret_job_event(self, event_data):
@@ -157,7 +157,7 @@ class SaltInfo(object):
         if set(salt_data['data'].get('lost', [])):
             dropped_minions = set(salt_data['data'].get('lost', []))
         else:
-            dropped_minions = set(self.minions.keys()) - set(salt_data['data'].get('present', []))
+            dropped_minions = set(self.minions) - set(salt_data['data'].get('present', []))
 
         for minion in dropped_minions:
             changed = True
@@ -169,9 +169,9 @@ class SaltInfo(object):
             logger.debug('got new minions')
             new_minions = set(salt_data['data'].get('new', []))
             changed = True
-        elif set(salt_data['data'].get('present', [])) - set(self.minions.keys()):
+        elif set(salt_data['data'].get('present', [])) - set(self.minions):
             logger.debug('detected new minions')
-            new_minions = set(salt_data['data'].get('present', [])) - set(self.minions.keys())
+            new_minions = set(salt_data['data'].get('present', [])) - set(self.minions)
             changed = True
         else:
             new_minions = []

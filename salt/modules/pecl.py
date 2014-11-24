@@ -7,6 +7,11 @@ Manage PHP pecl extensions.
 import re
 import logging
 
+try:
+    from shlex import quote as _cmd_quote  # pylint: disable=E0611
+except ImportError:
+    from pipes import quote as _cmd_quote
+
 # Import salt libs
 import salt.utils
 
@@ -29,7 +34,7 @@ def _pecl(command, defaults=False):
     if salt.utils.is_true(defaults):
         cmdline = "printf '\n' | " + cmdline
 
-    ret = __salt__['cmd.run_all'](cmdline)
+    ret = __salt__['cmd.run_all'](cmdline, python_shell=True)
 
     if ret['retcode'] == 0:
         return ret['stdout']
@@ -40,6 +45,8 @@ def _pecl(command, defaults=False):
 
 def install(pecls, defaults=False, force=False, preferred_state='stable'):
     '''
+    .. versionadded:: 0.17.0
+
     Installs one or several pecl extensions.
 
     pecls
@@ -53,21 +60,18 @@ def install(pecls, defaults=False, force=False, preferred_state='stable'):
     force
         Whether to force the installed version or not
 
-    .. note::
-        The ``defaults`` option will be available in version 0.17.0.
-
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pecl.install fuse
     '''
-    preferred_state = '-d preferred_state={0}'.format(preferred_state)
+    preferred_state = '-d preferred_state={0}'.format(_cmd_quote(preferred_state))
     if force:
-        return _pecl('{0} install -f {1}'.format(preferred_state, pecls),
+        return _pecl('{0} install -f {1}'.format(preferred_state, _cmd_quote(pecls)),
                      defaults=defaults)
     else:
-        _pecl('{0} install {1}'.format(preferred_state, pecls),
+        _pecl('{0} install {1}'.format(preferred_state, _cmd_quote(pecls)),
               defaults=defaults)
         if not isinstance(pecls, list):
             pecls = [pecls]
@@ -103,7 +107,7 @@ def uninstall(pecls):
 
         salt '*' pecl.uninstall fuse
     '''
-    return _pecl('uninstall {0}'.format(pecls))
+    return _pecl('uninstall {0}'.format(_cmd_quote(pecls)))
 
 
 def update(pecls):
@@ -119,7 +123,7 @@ def update(pecls):
 
         salt '*' pecl.update fuse
     '''
-    return _pecl('install -U {0}'.format(pecls))
+    return _pecl('install -U {0}'.format(_cmd_quote(pecls)))
 
 
 def list_(channel=None):
@@ -135,7 +139,7 @@ def list_(channel=None):
     pecls = {}
     command = 'list'
     if channel:
-        command = '{0} -c {1}'.format(command, channel)
+        command = '{0} -c {1}'.format(command, _cmd_quote(channel))
     lines = _pecl(command).splitlines()
     lines.pop(0)
     # Only one line if no package installed:

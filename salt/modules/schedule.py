@@ -59,7 +59,7 @@ def list_(show_all=False, return_yaml=True):
     if 'schedule' in __pillar__:
         schedule.update(__pillar__['schedule'])
 
-    for job in schedule.keys():
+    for job in schedule.keys():  # iterate over a copy since we will mutate it
         if job == 'enabled':
             continue
 
@@ -69,7 +69,7 @@ def list_(show_all=False, return_yaml=True):
             del schedule[job]
             continue
 
-        for item in schedule[job].keys():
+        for item in schedule[job]:
             if item not in SCHEDULE_CONF:
                 del schedule[job][item]
                 continue
@@ -78,7 +78,7 @@ def list_(show_all=False, return_yaml=True):
             if schedule[job][item] == 'false':
                 schedule[job][item] = False
 
-        if '_seconds' in schedule[job].keys():
+        if '_seconds' in schedule[job]:
             schedule[job]['seconds'] = schedule[job]['_seconds']
             del schedule[job]['_seconds']
 
@@ -111,7 +111,7 @@ def purge(**kwargs):
     if 'schedule' in __pillar__:
         schedule.update(__pillar__['schedule'])
 
-    for name in schedule.keys():
+    for name in schedule:
         if name == 'enabled':
             continue
         if name.startswith('__'):

@@ -1,16 +1,19 @@
 # encoding: utf-8
 '''
-A REST API for Salt
+A non-blocking REST API for Salt
 ===================
 
 .. py:currentmodule:: salt.netapi.rest_tornado.saltnado
 
 :depends:   - tornado Python module
 
+:configuration: All authentication is done through Salt's :ref:`external auth
+    <acl-eauth>` system which requires additional configuration not described
+    here.
 
 
 In order to run rest_tornado with the salt-master
-add the following to your salt master config file.
+add the following to the Salt master config file.
 
 .. code-block:: yaml
 
@@ -25,23 +28,121 @@ add the following to your salt master config file.
         disable_ssl: False
 
 
-Notes
-=====
+.. _rest_tornado-auth:
 
-.. code-block:: bash
+Authentication
+--------------
 
-    curl localhost:8888/login -d client=local -d username=username -d password=password -d eauth=pam
+Authentication is performed by passing a session token with each request.
+Tokens are generated via the :py:class:`SaltAuthHandler` URL.
 
-    # for testing
-    curl -H 'X-Auth-Token: 89010c15bcbc8e4fc4ce4605b6699165' localhost:8888 -d client=local -d tgt='*' -d fun='test.ping'
+The token may be sent in one of two ways:
 
-    # not working.... but in siege 3.0.1 and posts..
-    siege -c 1 -n 1 "http://127.0.0.1:8888 POST client=local&tgt=*&fun=test.ping"
+* Include a custom header named :mailheader:`X-Auth-Token`.
+* Sent via a cookie. This option is a convenience for HTTP clients that
+  automatically handle cookie support (such as browsers).
 
-    # this works
-    ab - c 50 -n 100 -p body -T 'application/x-www-form-urlencoded' http://localhost:8888/
+.. seealso:: You can bypass the session handling via the :py:class:`RunSaltAPIHandler` URL.
 
-    {"return": [{"perms": ["*.*"], "start": 1396151398.373983, "token": "cb86b805e8915c84bceb0d466026caab", "expire": 1396194598.373983, "user": "jacksontj", "eauth": "pam"}]}[jacksontj@Thomas-PC netapi]$
+Usage
+-----
+
+Commands are sent to a running Salt master via this module by sending HTTP
+requests to the URLs detailed below.
+
+.. admonition:: Content negotiation
+
+    This REST interface is flexible in what data formats it will accept as well
+    as what formats it will return (e.g., JSON, YAML, x-www-form-urlencoded).
+
+    * Specify the format of data in the request body by including the
+      :mailheader:`Content-Type` header.
+    * Specify the desired data format for the response body with the
+      :mailheader:`Accept` header.
+
+Data sent in :http:method:`post` and :http:method:`put` requests  must be in
+the format of a list of lowstate dictionaries. This allows multiple commands to
+be executed in a single HTTP request.
+
+.. glossary::
+
+    lowstate
+        A dictionary containing various keys that instruct Salt which command
+        to run, where that command lives, any parameters for that command, any
+        authentication credentials, what returner to use, etc.
+
+        Salt uses the lowstate data format internally in many places to pass
+        command data between functions. Salt also uses lowstate for the
+        :ref:`LocalClient() <python-api>` Python API interface.
+
+The following example (in JSON format) causes Salt to execute two commands::
+
+    [{
+        "client": "local",
+        "tgt": "*",
+        "fun": "test.fib",
+        "arg": ["10"]
+    },
+    {
+        "client": "runner",
+        "fun": "jobs.lookup_jid",
+        "jid": "20130603122505459265"
+    }]
+
+Multiple commands in a Salt API request will be executed in serial and makes
+no gaurantees that all commands will run. Meaning that if test.fib (from the
+example above) had an exception, the API would still execute "jobs.lookup_jid".
+
+Responses to these lowstates are an in-order list of dicts containing the
+return data, a yaml response could look like::
+
+    - ms-1: true
+      ms-2: true
+    - ms-1: foo
+      ms-2: bar
+
+In the event of an exception while executing a command the return for that lowstate
+will be a string, for example if no minions matched the first lowstate we would get
+a return like::
+
+    - No minions matched the target. No command was sent, no jid was assigned.
+    - ms-1: true
+      ms-2: true
+
+.. admonition:: x-www-form-urlencoded
+
+    Sending JSON or YAML in the request body is simple and most flexible,
+    however sending data in urlencoded format is also supported with the
+    caveats below. It is the default format for HTML forms, many JavaScript
+    libraries, and the :command:`curl` command.
+
+    For example, the equivalent to running ``salt '*' test.ping`` is sending
+    ``fun=test.ping&arg&client=local&tgt=*`` in the HTTP request body.
+
+    Caveats:
+
+    * Only a single command may be sent per HTTP request.
+    * Repeating the ``arg`` parameter multiple times will cause those
+      parameters to be combined into a single list.
+
+      Note, some popular frameworks and languages (notably jQuery, PHP, and
+      Ruby on Rails) will automatically append empty brackets onto repeated
+      parameters. E.g., ``arg=one``, ``arg=two`` will be sent as ``arg[]=one``,
+      ``arg[]=two``. This is not supported; send JSON or YAML instead.
+
+
+.. |req_token| replace:: a session token from :py:class:`~SaltAuthHandler`.
+.. |req_accept| replace:: the desired response format.
+.. |req_ct| replace:: the format of the request body.
+
+.. |res_ct| replace:: the format of the response body; depends on the
+    :mailheader:`Accept` request header.
+
+.. |200| replace:: success
+.. |400| replace:: bad request
+.. |401| replace:: authentication required
+.. |406| replace:: requested Content-Type not available
+.. |500| replace:: internal server error
 '''
 # pylint: disable=W0232
 
@@ -49,8 +150,6 @@ import logging
 from copy import copy
 
 import time
-import os
-import sys
 
 import tornado.httpserver
 import tornado.ioloop
@@ -62,10 +161,13 @@ from tornado.concurrent import Future
 from collections import defaultdict
 
 import math
-import functools
 import yaml
-import zmq
 import fnmatch
+
+from zmq.eventloop import ioloop, zmqstream
+
+# instantiate the zmq IOLoop (specialized poller)
+ioloop.install()
 
 # salt imports
 import salt.netapi
@@ -75,8 +177,7 @@ from salt.utils.event import tagify
 import salt.client
 import salt.runner
 import salt.auth
-from salt import syspaths
-
+from salt.exceptions import EauthAuthenticationError
 
 json = salt.utils.import_json()
 logger = logging.getLogger()
@@ -102,14 +203,11 @@ class SaltClientsMixIn(object):
         if not hasattr(self, '__saltclients'):
             # TODO: refreshing clients using cachedict
             self.__saltclients = {
-                'local': salt.client.get_local_client().run_job,
+                'local': salt.client.get_local_client(mopts=self.application.opts).run_job,
                 # not the actual client we'll use.. but its what we'll use to get args
-                'local_batch': salt.client.get_local_client().cmd_batch,
-                'local_async': salt.client.get_local_client().run_job,
-                'runner': salt.runner.RunnerClient(
-                    salt.config.master_config(
-                        os.path.join(syspaths.CONFIG_DIR, 'master')
-                    )).async,
+                'local_batch': salt.client.get_local_client(mopts=self.application.opts).cmd_batch,
+                'local_async': salt.client.get_local_client(mopts=self.application.opts).run_job,
+                'runner': salt.runner.RunnerClient(opts=self.application.opts).async,
                 }
         return self.__saltclients
 
@@ -132,7 +230,9 @@ class Any(Future):
             future.add_done_callback(self.done_callback)
 
     def done_callback(self, future):
-        self.set_result(future)
+        # Any is completed once one is done, we don't set for the rest
+        if not self.done():
+            self.set_result(future)
 
 
 class EventListener(object):
@@ -148,13 +248,20 @@ class EventListener(object):
         self.event = salt.utils.event.get_event(
             'master',
             opts['sock_dir'],
-            opts['transport'])
+            opts['transport'],
+            opts=opts)
+
+        self.event.subscribe()  # start listening for events immediately
 
         # tag -> list of futures
         self.tag_map = defaultdict(list)
 
         # request_obj -> list of (tag, future)
         self.request_map = defaultdict(list)
+
+        self.stream = zmqstream.ZMQStream(self.event.sub,
+                                          io_loop=tornado.ioloop.IOLoop.current())
+        self.stream.on_recv(self._handle_event_socket_recv)
 
     def clean_timeout_futures(self, request):
         '''
@@ -166,9 +273,11 @@ class EventListener(object):
             # TODO: log, this shouldn't happen...
             if tag not in self.tag_map:
                 continue
-            # mark the future done
-            future.set_exception(TimeoutException())
-            self.tag_map[tag].remove(future)
+            # if the future isn't complete, mark it as a timeout
+            if not future.done():
+                future.set_exception(TimeoutException())
+                # if we marked it as a timeout, we need to remove it from tag_map
+                self.tag_map[tag].remove(future)
 
             # if that was the last of them, remove the key all together
             if len(self.tag_map[tag]) == 0:
@@ -186,7 +295,7 @@ class EventListener(object):
         if callback is not None:
             def handle_future(future):
                 response = future.result()
-                self.io_loop.add_callback(callback, response)
+                tornado.ioloop.IOLoop.current().add_callback(callback, response)
             future.add_done_callback(handle_future)
         # add this tag and future to the callbacks
         self.tag_map[tag].append(future)
@@ -194,41 +303,28 @@ class EventListener(object):
 
         return future
 
-    def iter_events(self):
+    def _handle_event_socket_recv(self, raw):
         '''
-        Iterate over all events that could happen
+        Callback for events on the event sub socket
         '''
-        try:
-            data = self.event.get_event_noblock()
-            # see if we have any futures that need this info:
-            for tag_prefix, futures in self.tag_map.items():
-                if data['tag'].startswith(tag_prefix):
-                    for future in futures:
-                        if future.done():
-                            continue
-                        future.set_result(data)
-                    del self.tag_map[tag_prefix]
-
-            # call yourself back!
-            tornado.ioloop.IOLoop.instance().add_callback(self.iter_events)
-
-        except zmq.ZMQError as e:
-            # TODO: not sure what other errors we can get...
-            if e.errno != zmq.EAGAIN:
-                raise Exception()
-            # add callback in the future (to avoid spinning)
-            # TODO: configurable timeout
-            tornado.ioloop.IOLoop.instance().add_timeout(time.time() + 0.1, self.iter_events)
-        except:
-            logging.critical('Uncaught exception in the event_listener: {0}'.format(sys.exc_info()))
-            # TODO: configurable timeout
-            tornado.ioloop.IOLoop.instance().add_timeout(time.time() + 0.1, self.iter_events)
+        mtag, data = self.event.unpack(raw[0], self.event.serial)
+        # see if we have any futures that need this info:
+        for tag_prefix, futures in self.tag_map.items():
+            if mtag.startswith(tag_prefix):
+                for future in futures:
+                    if future.done():
+                        continue
+                    future.set_result({'data': data, 'tag': mtag})
+                    self.tag_map[tag_prefix].remove(future)
 
 
 # TODO: move to a utils function within salt-- the batching stuff is a bit tied together
 def get_batch_size(batch, num_minions):
     '''
     Return the batch size that you should have
+        batch: string
+        num_minions: int
+
     '''
     # figure out how many we can keep in flight
     partition = lambda x: float(x) / 100.0 * num_minions
@@ -249,9 +345,18 @@ def get_batch_size(batch, num_minions):
 class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):
     ct_out_map = (
         ('application/json', json.dumps),
-        ('application/x-yaml', functools.partial(
-            yaml.safe_dump, default_flow_style=False)),
+        ('application/x-yaml', yaml.safe_dump),
     )
+
+    def min_syndic_wait_done(self):
+        '''
+        Ensure that the request has been open for a minimum of syndic_wait time
+        '''
+        if not self.application.opts['order_masters']:
+            return True
+        elif time.time() > self.start + self.application.opts['syndic_wait']:
+            return True
+        return False
 
     def _verify_client(self, client):
         '''
@@ -259,7 +364,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):
         '''
         if client not in self.saltclients:
             self.set_status(400)
-            self.write('We don\'t serve your kind here')
+            self.write("We don't serve your kind here")
             self.finish()
 
     @property
@@ -288,7 +393,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):
         # verify the content type
         found = False
         for content_type, dumper in self.ct_out_map:
-            if fnmatch.fnmatch(content_type, self.request.headers['Accept']):
+            if fnmatch.fnmatch(content_type, self.request.headers.get('Accept', '*/*')):
                 found = True
                 break
 
@@ -353,25 +458,25 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):
         ct_in_map = {
             'application/x-www-form-urlencoded': self._form_loader,
             'application/json': json.loads,
-            'application/x-yaml': functools.partial(
-                yaml.safe_load, default_flow_style=False),
-            'text/yaml': functools.partial(
-                yaml.safe_load, default_flow_style=False),
+            'application/x-yaml': yaml.safe_load,
+            'text/yaml': yaml.safe_load,
             # because people are terrible and dont mean what they say
             'text/plain': json.loads
         }
 
         try:
-            if self.request.headers['Content-Type'] not in ct_in_map:
-                self.send_error(406)
             return ct_in_map[self.request.headers['Content-Type']](data)
         except KeyError:
-            return []
+            self.send_error(406)
+        except ValueError:
+            self.send_error(400)
 
     def _get_lowstate(self):
         '''
         Format the incoming data into a lowstate object
         '''
+        if not self.request.body:
+            return
         data = self.deserialize(self.request.body)
         self.raw_data = copy(data)
 
@@ -386,11 +491,38 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):
 
 class SaltAuthHandler(BaseSaltAPIHandler):
     '''
-    Handler for login resquests
+    Handler for login requests
     '''
     def get(self):
         '''
-        We don't allow gets on the login path, so lets send back a nice message
+        All logins are done over post, this is a parked enpoint
+
+        .. http:get:: /login
+
+            :status 401: |401|
+            :status 406: |406|
+
+        **Example request:**
+
+        .. code-block:: bash
+
+            curl -i localhost:8000/login
+
+        .. code-block:: http
+
+            GET /login HTTP/1.1
+            Host: localhost:8000
+            Accept: application/json
+
+        **Example response:**
+
+        .. code-block:: http
+
+            HTTP/1.1 401 Unauthorized
+            Content-Type: application/json
+            Content-Length: 58
+
+            {"status": "401 Unauthorized", "return": "Please log in"}
         '''
         self.set_status(401)
         self.set_header('WWW-Authenticate', 'Session')
@@ -404,14 +536,77 @@ class SaltAuthHandler(BaseSaltAPIHandler):
     # TODO: make async? Underlying library isn't... and we ARE making disk calls :(
     def post(self):
         '''
-        Authenticate against Salt's eauth system
-        {"return": {"start": 1395507384.320007, "token": "6ff4cd2b770ada48713afc629cd3178c", "expire": 1395550584.320007, "name": "jacksontj", "eauth": "pam"}}
-        {"return": [{"perms": ["*.*"], "start": 1395507675.396021, "token": "dea8274dc359fee86357d9d0263ec93c0498888e", "expire": 1395550875.396021, "user": "jacksontj", "eauth": "pam"}]}
+        :ref:`Authenticate  <rest_tornado-auth>` against Salt's eauth system
+
+        .. http:post:: /login
+
+            :reqheader X-Auth-Token: |req_token|
+            :reqheader Accept: |req_accept|
+            :reqheader Content-Type: |req_ct|
+
+            :form eauth: the eauth backend configured for the user
+            :form username: username
+            :form password: password
+
+            :status 200: |200|
+            :status 400: |400|
+            :status 401: |401|
+            :status 406: |406|
+            :status 500: |500|
+
+        **Example request:**
+
+        .. code-block:: bash
+
+            curl -si localhost:8000/login \\
+                    -H "Accept: application/json" \\
+                    -d username='saltuser' \\
+                    -d password='saltpass' \\
+                    -d eauth='pam'
+
+        .. code-block:: http
+
+            POST / HTTP/1.1
+            Host: localhost:8000
+            Content-Length: 42
+            Content-Type: application/x-www-form-urlencoded
+            Accept: application/json
+
+            username=saltuser&password=saltpass&eauth=pam
+
+        **Example response:**
+
+        .. code-block:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+            Content-Length: 206
+            X-Auth-Token: 6d1b722e
+            Set-Cookie: session_id=6d1b722e; expires=Sat, 17 Nov 2012 03:23:52 GMT; Path=/
+
+            {"return": {
+                "token": "6d1b722e",
+                "start": 1363805943.776223,
+                "expire": 1363849143.776224,
+                "user": "saltuser",
+                "eauth": "pam",
+                "perms": [
+                    "grains.*",
+                    "status.*",
+                    "sys.*",
+                    "test.*"
+                ]
+            }}
         '''
-        creds = {'username': self.get_arguments('username')[0],
-                 'password': self.get_arguments('password')[0],
-                 'eauth': self.get_arguments('eauth')[0],
-                 }
+        try:
+            creds = {'username': self.get_arguments('username')[0],
+                     'password': self.get_arguments('password')[0],
+                     'eauth': self.get_arguments('eauth')[0],
+                     }
+        # if any of the args are missing, its a bad request
+        except IndexError:
+            self.send_error(400)
+            return
 
         token = self.application.auth.mk_token(creds)
         if 'token' not in token:
@@ -424,12 +619,19 @@ class SaltAuthHandler(BaseSaltAPIHandler):
         # Grab eauth config for the current backend for the current user
         try:
             perms = self.application.opts['external_auth'][token['eauth']][token['name']]
+
+        # If we can't find the creds, then they aren't authorized
+        except KeyError:
+            self.send_error(401)
+            return
+
         except (AttributeError, IndexError):
             logging.debug("Configuration for external_auth malformed for "
                           "eauth '{0}', and user '{1}'."
                           .format(token.get('eauth'), token.get('name')), exc_info=True)
             # TODO better error -- 'Configuration for external_auth could not be read.'
             self.send_error(500)
+            return
 
         ret = {'return': [{
             'token': token['token'],
@@ -450,7 +652,37 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
     '''
     def get(self):
         '''
-        return data about what clients you have
+        An enpoint to determine salt-api capabilities
+
+        .. http:get:: /
+
+            :reqheader Accept: |req_accept|
+
+            :status 200: |200|
+            :status 401: |401|
+            :status 406: |406|
+
+        **Example request:**
+
+        .. code-block:: bash
+
+            curl -i localhost:8000
+
+        .. code-block:: http
+
+            GET / HTTP/1.1
+            Host: localhost:8000
+            Accept: application/json
+
+        **Example response:**
+
+        .. code-block:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+            Content-Legnth: 83
+
+            {"clients": ["local", "local_batch", "local_async","runner"], "return": "Welcome"}
         '''
         ret = {"clients": self.saltclients.keys(),
                "return": "Welcome"}
@@ -460,260 +692,659 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
     @tornado.web.asynchronous
     def post(self):
         '''
-        This function takes in all the args for dispatching requests
-            **Example request**::
+        Send one or more Salt commands (lowstates) in the request body
 
-            % curl -si https://localhost:8000 \\
+        .. http:post:: /
+
+            :reqheader X-Auth-Token: |req_token|
+            :reqheader Accept: |req_accept|
+            :reqheader Content-Type: |req_ct|
+
+            :resheader Content-Type: |res_ct|
+
+            :status 200: |200|
+            :status 401: |401|
+            :status 406: |406|
+
+            :term:`lowstate` data describing Salt commands must be sent in the
+            request body.
+
+        **Example request:**
+
+        .. code-block:: bash
+
+            curl -si https://localhost:8000 \\
                     -H "Accept: application/x-yaml" \\
                     -H "X-Auth-Token: d40d1e1e" \\
                     -d client=local \\
                     -d tgt='*' \\
-                    -d fun='test.sleep' \\
-                    -d arg=1
+                    -d fun='test.ping' \\
+                    -d arg
+
+        .. code-block:: http
+
+            POST / HTTP/1.1
+            Host: localhost:8000
+            Accept: application/x-yaml
+            X-Auth-Token: d40d1e1e
+            Content-Length: 36
+            Content-Type: application/x-www-form-urlencoded
+
+            fun=test.ping&arg&client=local&tgt=*
+
+        **Example response:**
+        Responses are an in-order list of the lowstate's return data. In the
+        event of an exception running a command the return will be a string
+        instead of a mapping.
+
+        .. code-block:: http
+
+            HTTP/1.1 200 OK
+            Content-Length: 200
+            Allow: GET, HEAD, POST
+            Content-Type: application/x-yaml
+
+            return:
+            - ms-0: true
+                ms-1: true
+                ms-2: true
+                ms-3: true
+                ms-4: true
+
+        .. admonition:: multiple commands
+            Note that if multiple :term:`lowstate` structures are sent, the Salt
+            API will execute them in serial, and will not stop execution upon failure
+            of a previous job. If you need to have commands executed in order and
+            stop on failure please use compount-command-execution.
+
         '''
         # if you aren't authenticated, redirect to login
         if not self._verify_auth():
             self.redirect('/login')
             return
 
-        client = self.get_arguments('client')[0]
-        self._verify_client(client)
-        self.disbatch(client)
-
-    def disbatch(self, client):
-        '''
-        Disbatch a lowstate job to the appropriate client
-        '''
-        self.client = client
-
-        for low in self.lowstate:
-            if not self._verify_auth() or 'eauth' in low:
-                # TODO: better error?
-                self.set_status(401)
-                self.finish()
-                return
-        # disbatch to the correct handler
-        try:
-            getattr(self, '_disbatch_{0}'.format(self.client))()
-        except AttributeError:
-            # TODO set the right status... this means we didn't implement it...
-            self.set_status(500)
-            self.finish()
+        self.disbatch()
 
     @tornado.gen.coroutine
-    def _disbatch_local_batch(self):
+    def disbatch(self):
         '''
-        Disbatch local client batched commands
-        '''
-        self.ret = []
+        Disbatch all lowstates to the appropriate clients
 
-        for chunk in self.lowstate:
-            f_call = salt.utils.format_call(self.saltclients['local_batch'], chunk)
-
-            timeout = float(chunk.get('timeout', self.application.opts['timeout']))
-            # set the timeout
-            timeout_obj = tornado.ioloop.IOLoop.instance().add_timeout(time.time() + timeout, self.timeout_futures)
-
-            # ping all the minions (to see who we have to talk to)
-            # TODO: actually ping them all? this just gets the pub data
-            minions = self.saltclients['local'](chunk['tgt'],
-                                                'test.ping',
-                                                [],
-                                                expr_form=f_call['kwargs']['expr_form'])['minions']
-
-            chunk_ret = {}
-            maxflight = get_batch_size(f_call['kwargs']['batch'], len(minions))
-            inflight_futures = []
-            # do this batch
-            while len(minions) > 0:
-                # if you have more to go, lets disbatch jobs
-                while len(inflight_futures) < maxflight:
-                    minion_id = minions.pop(0)
-                    f_call['args'][0] = minion_id
-                    # TODO: list??
-                    f_call['kwargs']['expr_form'] = 'glob'
-                    pub_data = self.saltclients['local'](*f_call.get('args', ()), **f_call.get('kwargs', {}))
-                    tag = tagify([pub_data['jid'], 'ret', minion_id], 'job')
-                    future = self.application.event_listener.get_event(self, tag=tag)
-                    inflight_futures.append(future)
-
-                # wait until someone is done
-                finished_future = yield Any(inflight_futures)
-                try:
-                    event = finished_future.result()
-                except TimeoutException:
-                    break
-                chunk_ret[event['data']['id']] = event['data']['return']
-                inflight_futures.remove(finished_future)
-
-            self.ret.append(chunk_ret)
-
-            # if we finish in time, cancel the timeout
-            tornado.ioloop.IOLoop.instance().remove_timeout(timeout_obj)
-
-        self.write(self.serialize({'return': self.ret}))
-        self.finish()
-
-    @tornado.gen.coroutine
-    def _disbatch_local(self):
-        '''
-        Disbatch local client commands
-        '''
-        self.ret = []
-
-        for chunk in self.lowstate:
-            timeout = float(chunk.get('timeout', self.application.opts['timeout']))
-            # set the timeout
-            tornado.ioloop.IOLoop.instance().add_timeout(time.time() + timeout, self.timeout_futures)
-            timeout_obj = tornado.ioloop.IOLoop.instance().add_timeout(time.time() + timeout, self.timeout_futures)
-
-            # TODO: not sure why.... we already verify auth, probably for ACLs
-            # require token or eauth
-            chunk['token'] = self.token
-
-            chunk_ret = {}
-
-            f_call = salt.utils.format_call(self.saltclients[self.client], chunk)
-            # fire a job off
-            pub_data = self.saltclients[self.client](*f_call.get('args', ()), **f_call.get('kwargs', {}))
-
-            # get the tag that we are looking for
-            tag = tagify([pub_data['jid'], 'ret'], 'job')
-
-            minions_remaining = pub_data['minions']
-
-            # while we are waiting on all the mininons
-            while len(minions_remaining) > 0:
-                try:
-                    event = yield self.application.event_listener.get_event(self, tag=tag)
-                    chunk_ret[event['data']['id']] = event['data']['return']
-                    minions_remaining.remove(event['data']['id'])
-                # if you hit a timeout, just stop waiting ;)
-                except TimeoutException:
-                    break
-            self.ret.append(chunk_ret)
-
-            # if we finish in time, cancel the timeout
-            tornado.ioloop.IOLoop.instance().remove_timeout(timeout_obj)
-
-        self.write(self.serialize({'return': self.ret}))
-        self.finish()
-
-    def _disbatch_local_async(self):
-        '''
-        Disbatch local client_async commands
+        Auth must have been verified before this point
         '''
         ret = []
-        for chunk in self.lowstate:
-            f_call = salt.utils.format_call(self.saltclients[self.client], chunk)
-            # fire a job off
-            pub_data = self.saltclients[self.client](*f_call.get('args', ()), **f_call.get('kwargs', {}))
-            ret.append(pub_data)
+
+        # check clients before going, we want to throw 400 if one is bad
+        for low in self.lowstate:
+            client = low.get('client')
+            self._verify_client(client)
+
+        for low in self.lowstate:
+            # make sure that the chunk has a token, if not we can't do auth per-request
+            # Note: this means that you can send different tokens per lowstate
+            # as long as the base token (to auth with the API) is valid
+            if 'token' not in low:
+                low['token'] = self.token
+            # disbatch to the correct handler
+            try:
+                chunk_ret = yield getattr(self, '_disbatch_{0}'.format(low['client']))(low)
+                ret.append(chunk_ret)
+            except Exception as ex:
+                # TODO: log?
+                ret.append('Unexpected exception while handling request: {0}'.format(ex))
 
         self.write(self.serialize({'return': ret}))
         self.finish()
 
     @tornado.gen.coroutine
-    def _disbatch_runner(self):
+    def _disbatch_local_batch(self, chunk):
+        '''
+        Disbatch local client batched commands
+        '''
+        f_call = salt.utils.format_call(self.saltclients['local_batch'], chunk)
+
+        # ping all the minions (to see who we have to talk to)
+        # Don't catch any exception, since we won't know what to do, we'll
+        # let the upper level deal with this one
+        ping_ret = yield self._disbatch_local({'tgt': chunk['tgt'],
+                                               'fun': 'test.ping',
+                                               'expr_form': f_call['kwargs']['expr_form']})
+
+        chunk_ret = {}
+
+        if not isinstance(ping_ret, dict):
+            raise tornado.gen.Return(chunk_ret)
+        minions = ping_ret.keys()
+
+        maxflight = get_batch_size(f_call['kwargs']['batch'], len(minions))
+        inflight_futures = []
+
+        # override the expr_form
+        f_call['kwargs']['expr_form'] = 'list'
+        # do this batch
+        while len(minions) > 0 or len(inflight_futures) > 0:
+            # if you have more to go, lets disbatch jobs
+            while len(inflight_futures) < maxflight and len(minions) > 0:
+                minion_id = minions.pop(0)
+                f_call['args'][0] = [minion_id]  # set the tgt to the minion
+                pub_data = self.saltclients['local'](*f_call.get('args', ()),
+                                                     **f_call.get('kwargs', {}))
+                # if the job didn't publish, lets not wait around for nothing
+                # we'll just skip
+                # TODO: set header??, some special return?, Or just ignore it (like we do in CLI)
+                if 'jid' not in pub_data:
+                    continue
+                tag = tagify([pub_data['jid'], 'ret', minion_id], 'job')
+                future = self.application.event_listener.get_event(self, tag=tag)
+                inflight_futures.append(future)
+
+            # if we have nothing to wait for, don't wait
+            if len(inflight_futures) == 0:
+                continue
+
+            # wait until someone is done
+            finished_future = yield Any(inflight_futures)
+            try:
+                event = finished_future.result()
+            except TimeoutException:
+                break
+            chunk_ret[event['data']['id']] = event['data']['return']
+            inflight_futures.remove(finished_future)
+
+        raise tornado.gen.Return(chunk_ret)
+
+    @tornado.gen.coroutine
+    def _disbatch_local(self, chunk):
+        '''
+        Disbatch local client commands
+        '''
+        chunk_ret = {}
+
+        f_call = salt.utils.format_call(self.saltclients['local'], chunk)
+        # fire a job off
+        try:
+            ping_pub_data = self.saltclients['local'](chunk['tgt'],
+                                                      'test.ping',
+                                                      [],
+                                                      expr_form=f_call['kwargs']['expr_form'])
+            pub_data = self.saltclients['local'](*f_call.get('args', ()), **f_call.get('kwargs', {}))
+        except EauthAuthenticationError:
+            raise tornado.gen.Return('Not authorized to run this job')
+
+        # if the job didn't publish, lets not wait around for nothing
+        # TODO: set header??
+        if 'jid' not in pub_data:
+            raise tornado.gen.Return('No minions matched the target. No command was sent, no jid was assigned.')
+
+        # get the tag that we are looking for
+        ping_tag = tagify([ping_pub_data['jid'], 'ret'], 'job')
+        ret_tag = tagify([pub_data['jid'], 'ret'], 'job')
+
+        # seed minions_remaining with the pub_data
+        minions_remaining = pub_data['minions']
+
+        ret_event = self.application.event_listener.get_event(self, tag=ret_tag)
+        ping_event = self.application.event_listener.get_event(self, tag=ping_tag)
+
+        # while we are waiting on all the mininons
+        while len(minions_remaining) > 0 or not self.min_syndic_wait_done():
+            event_future = yield Any([ret_event, ping_event])
+            try:
+                event = event_future.result()
+            # if you hit a timeout, just stop waiting ;)
+            except TimeoutException:
+                break
+            # If someone returned from the ping, and they are new-- add to minions_remaining
+            if event_future == ping_event:
+                ping_id = event['data']['id']
+                if ping_id not in chunk_ret and ping_id not in minions_remaining:
+                    minions_remaining.append(ping_id)
+                ping_event = self.application.event_listener.get_event(self, tag=ping_tag)
+            # if it is a ret future, its just a regular return
+            else:
+                chunk_ret[event['data']['id']] = event['data']['return']
+                # its possible to get a return that wasn't in the minion_remaining list
+                try:
+                    minions_remaining.remove(event['data']['id'])
+                except ValueError:
+                    pass
+                ret_event = self.application.event_listener.get_event(self, tag=ret_tag)
+
+        raise tornado.gen.Return(chunk_ret)
+
+    @tornado.gen.coroutine
+    def _disbatch_local_async(self, chunk):
+        '''
+        Disbatch local client_async commands
+        '''
+        f_call = salt.utils.format_call(self.saltclients['local_async'], chunk)
+        # fire a job off
+        pub_data = self.saltclients['local_async'](*f_call.get('args', ()), **f_call.get('kwargs', {}))
+
+        raise tornado.gen.Return(pub_data)
+
+    @tornado.gen.coroutine
+    def _disbatch_runner(self, chunk):
         '''
         Disbatch runner client commands
         '''
-        self.ret = []
-        for chunk in self.lowstate:
-            timeout = float(chunk.get('timeout', self.application.opts['timeout']))
-            # set the timeout
-            tornado.ioloop.IOLoop.instance().add_timeout(time.time() + timeout, self.timeout_futures)
-            timeout_obj = tornado.ioloop.IOLoop.instance().add_timeout(time.time() + timeout, self.timeout_futures)
+        f_call = {'args': [chunk['fun'], chunk]}
+        pub_data = self.saltclients['runner'](chunk['fun'], chunk)
+        tag = pub_data['tag'] + '/ret'
+        try:
+            event = yield self.application.event_listener.get_event(self, tag=tag)
 
-            f_call = {'args': [chunk['fun'], chunk]}
-            pub_data = self.saltclients[self.client](chunk['fun'], chunk)
-            tag = pub_data['tag'] + '/ret'
-            try:
-                event = yield self.application.event_listener.get_event(self, tag=tag)
-                # only return the return data
-                self.ret.append(event['data']['return'])
-
-                # if we finish in time, cancel the timeout
-                tornado.ioloop.IOLoop.instance().remove_timeout(timeout_obj)
-            except TimeoutException:
-                break
-
-        self.write(self.serialize({'return': self.ret}))
-        self.finish()
+            # only return the return data
+            raise tornado.gen.Return(event['data']['return'])
+        except TimeoutException:
+            raise tornado.gen.Return('Timeout waiting for runner to execute')
 
 
 class MinionSaltAPIHandler(SaltAPIHandler):
     '''
-    Handler for /minion requests
+    A convenience endpoint for minion related functions
     '''
     @tornado.web.asynchronous
-    def get(self, mid):  # pylint: disable=W0221
+    def get(self, mid=None):  # pylint: disable=W0221
+        '''
+        A convenience URL for getting lists of minions or getting minion
+        details
+
+        .. http:get:: /minions/(mid)
+
+            :reqheader X-Auth-Token: |req_token|
+            :reqheader Accept: |req_accept|
+
+            :status 200: |200|
+            :status 401: |401|
+            :status 406: |406|
+
+        **Example request:**
+
+        .. code-block:: bash
+
+            curl -i localhost:8000/minions/ms-3
+
+        .. code-block:: http
+
+            GET /minions/ms-3 HTTP/1.1
+            Host: localhost:8000
+            Accept: application/x-yaml
+
+        **Example response:**
+
+        .. code-block:: http
+
+            HTTP/1.1 200 OK
+            Content-Length: 129005
+            Content-Type: application/x-yaml
+
+            return:
+            - ms-3:
+                grains.items:
+                    ...
+        '''
         # if you aren't authenticated, redirect to login
         if not self._verify_auth():
             self.redirect('/login')
             return
 
-        #'client': 'local', 'tgt': mid or '*', 'fun': 'grains.items',
         self.lowstate = [{
-            'client': 'local', 'tgt': mid or '*', 'fun': 'grains.items',
+            'client': 'local',
+            'tgt': mid or '*',
+            'fun': 'grains.items',
         }]
-        self.disbatch('local')
+        self.disbatch()
 
     @tornado.web.asynchronous
     def post(self):
         '''
-        local_async post endpoint
+        Start an execution command and immediately return the job id
+
+        .. http:post:: /minions
+
+            :reqheader X-Auth-Token: |req_token|
+            :reqheader Accept: |req_accept|
+            :reqheader Content-Type: |req_ct|
+
+            :resheader Content-Type: |res_ct|
+
+            :status 200: |200|
+            :status 401: |401|
+            :status 406: |406|
+
+            :term:`lowstate` data describing Salt commands must be sent in the
+            request body. The ``client`` option will be set to
+            :py:meth:`~salt.client.LocalClient.local_async`.
+
+        **Example request:**
+
+        .. code-block:: bash
+
+            curl -sSi localhost:8000/minions \\
+                -H "Accept: application/x-yaml" \\
+                -d tgt='*' \\
+                -d fun='status.diskusage'
+
+        .. code-block:: http
+
+            POST /minions HTTP/1.1
+            Host: localhost:8000
+            Accept: application/x-yaml
+            Content-Length: 26
+            Content-Type: application/x-www-form-urlencoded
+
+            tgt=*&fun=status.diskusage
+
+        **Example response:**
+
+        .. code-block:: http
+
+            HTTP/1.1 202 Accepted
+            Content-Length: 86
+            Content-Type: application/x-yaml
+
+            return:
+            - jid: '20130603122505459265'
+              minions: [ms-4, ms-3, ms-2, ms-1, ms-0]
         '''
         # if you aren't authenticated, redirect to login
         if not self._verify_auth():
             self.redirect('/login')
             return
 
-        self.disbatch('local_async')
+        # verify that all lowstates are the correct client type
+        for low in self.lowstate:
+            # if you didn't specify, its fine
+            if 'client' not in low:
+                low['client'] = 'local_async'
+                continue
+            # if you specified something else, we don't do that
+            if low.get('client') != 'local_async':
+                self.set_status(400)
+                self.write('We don\'t serve your kind here')
+                self.finish()
+                return
+
+        self.disbatch()
 
 
 class JobsSaltAPIHandler(SaltAPIHandler):
     '''
-    Handler for /minion requests
+    A convenience endpoint for job cache data
     '''
     @tornado.web.asynchronous
     def get(self, jid=None):  # pylint: disable=W0221
+        '''
+        A convenience URL for getting lists of previously run jobs or getting
+        the return from a single job
+
+        .. http:get:: /jobs/(jid)
+
+            List jobs or show a single job from the job cache.
+
+            :status 200: |200|
+            :status 401: |401|
+            :status 406: |406|
+
+        **Example request:**
+
+        .. code-block:: bash
+
+            curl -i localhost:8000/jobs
+
+        .. code-block:: http
+
+            GET /jobs HTTP/1.1
+            Host: localhost:8000
+            Accept: application/x-yaml
+
+        **Example response:**
+
+        .. code-block:: http
+
+            HTTP/1.1 200 OK
+            Content-Length: 165
+            Content-Type: application/x-yaml
+
+            return:
+            - '20121130104633606931':
+                Arguments:
+                - '3'
+                Function: test.fib
+                Start Time: 2012, Nov 30 10:46:33.606931
+                Target: jerry
+                Target-type: glob
+
+        **Example request:**
+
+        .. code-block:: bash
+
+            curl -i localhost:8000/jobs/20121130104633606931
+
+        .. code-block:: http
+
+            GET /jobs/20121130104633606931 HTTP/1.1
+            Host: localhost:8000
+            Accept: application/x-yaml
+
+        **Example response:**
+
+        .. code-block:: http
+
+            HTTP/1.1 200 OK
+            Content-Length: 73
+            Content-Type: application/x-yaml
+
+            info:
+            - Arguments:
+                - '3'
+                Function: test.fib
+                Minions:
+                - jerry
+                Start Time: 2012, Nov 30 10:46:33.606931
+                Target: '*'
+                Target-type: glob
+                User: saltdev
+                jid: '20121130104633606931'
+            return:
+            - jerry:
+                - - 0
+                - 1
+                - 1
+                - 2
+                - 6.9141387939453125e-06
+        '''
         # if you aren't authenticated, redirect to login
         if not self._verify_auth():
             self.redirect('/login')
             return
 
-        self.lowstate = [{
-            'fun': 'jobs.lookup_jid' if jid else 'jobs.list_jobs',
-            'jid': jid,
-        }]
-
         if jid:
-            self.lowstate.append({
+            self.lowstate = [{
                 'fun': 'jobs.list_job',
                 'jid': jid,
-            })
+                'client': 'runner',
+            }]
+        else:
+            self.lowstate = [{
+                'fun': 'jobs.list_jobs',
+                'client': 'runner',
+            }]
 
-        self.disbatch('runner')
+        self.disbatch()
 
 
 class RunSaltAPIHandler(SaltAPIHandler):
     '''
-    Handler for /run requests
+    Endpoint to run commands without normal session handling
     '''
     @tornado.web.asynchronous
     def post(self):
-        client = self.get_arguments('client')[0]
-        self._verify_client(client)
-        self.disbatch(client)
+        '''
+        Run commands bypassing the :ref:`normal session handling
+        <rest_cherrypy-auth>`
+
+        .. http:post:: /run
+
+            This entry point is primarily for "one-off" commands. Each request
+            must pass full Salt authentication credentials. Otherwise this URL
+            is identical to the :py:meth:`root URL (/) <LowDataAdapter.POST>`.
+
+            :term:`lowstate` data describing Salt commands must be sent in the
+            request body.
+
+            :status 200: |200|
+            :status 401: |401|
+            :status 406: |406|
+
+        **Example request:**
+
+        .. code-block:: bash
+
+            curl -sS localhost:8000/run \\
+                -H 'Accept: application/x-yaml' \\
+                -d client='local' \\
+                -d tgt='*' \\
+                -d fun='test.ping' \\
+                -d username='saltdev' \\
+                -d password='saltdev' \\
+                -d eauth='pam'
+
+        .. code-block:: http
+
+            POST /run HTTP/1.1
+            Host: localhost:8000
+            Accept: application/x-yaml
+            Content-Length: 75
+            Content-Type: application/x-www-form-urlencoded
+
+            client=local&tgt=*&fun=test.ping&username=saltdev&password=saltdev&eauth=pam
+
+        **Example response:**
+
+        .. code-block:: http
+
+            HTTP/1.1 200 OK
+            Content-Length: 73
+            Content-Type: application/x-yaml
+
+            return:
+            - ms-0: true
+                ms-1: true
+                ms-2: true
+                ms-3: true
+                ms-4: true
+        '''
+        self.disbatch()
 
 
 class EventsSaltAPIHandler(SaltAPIHandler):
     '''
-    Handler for /events requests
+    Expose the Salt event bus
+
+    The event bus on the Salt master exposes a large variety of things, notably
+    when executions are started on the master and also when minions ultimately
+    return their results. This URL provides a real-time window into a running
+    Salt infrastructure.
+
+    .. seealso:: :ref:`events`
     '''
     @tornado.gen.coroutine
     def get(self):
+        r'''
+        An HTTP stream of the Salt master event bus
+
+        This stream is formatted per the Server Sent Events (SSE) spec. Each
+        event is formatted as JSON.
+
+        .. http:get:: /events
+
+            :status 200: |200|
+            :status 401: |401|
+            :status 406: |406|
+
+        **Example request:**
+
+        .. code-block:: bash
+
+            curl -NsS localhost:8000/events
+
+        .. code-block:: http
+
+            GET /events HTTP/1.1
+            Host: localhost:8000
+
+        **Example response:**
+
+        .. code-block:: http
+
+            HTTP/1.1 200 OK
+            Connection: keep-alive
+            Cache-Control: no-cache
+            Content-Type: text/event-stream;charset=utf-8
+
+            retry: 400
+            data: {'tag': '', 'data': {'minions': ['ms-4', 'ms-3', 'ms-2', 'ms-1', 'ms-0']}}
+
+            data: {'tag': '20130802115730568475', 'data': {'jid': '20130802115730568475', 'return': True, 'retcode': 0, 'success': True, 'cmd': '_return', 'fun': 'test.ping', 'id': 'ms-1'}}
+
+        The event stream can be easily consumed via JavaScript:
+
+        .. code-block:: javascript
+
+            # Note, you must be authenticated!
+            var source = new EventSource('/events');
+            source.onopen = function() { console.debug('opening') };
+            source.onerror = function(e) { console.debug('error!', e) };
+            source.onmessage = function(e) { console.debug(e.data) };
+
+        Or using CORS:
+
+        .. code-block:: javascript
+
+            var source = new EventSource('/events', {withCredentials: true});
+
+        Some browser clients lack CORS support for the ``EventSource()`` API. Such
+        clients may instead pass the :mailheader:`X-Auth-Token` value as an URL
+        parameter:
+
+        .. code-block:: bash
+
+            curl -NsS localhost:8000/events/6d1b722e
+
+        It is also possible to consume the stream via the shell.
+
+        Records are separated by blank lines; the ``data:`` and ``tag:``
+        prefixes will need to be removed manually before attempting to
+        unserialize the JSON.
+
+        curl's ``-N`` flag turns off input buffering which is required to
+        process the stream incrementally.
+
+        Here is a basic example of printing each event as it comes in:
+
+        .. code-block:: bash
+
+            curl -NsS localhost:8000/events |\
+                    while IFS= read -r line ; do
+                        echo $line
+                    done
+
+        Here is an example of using awk to filter events based on tag:
+
+        .. code-block:: bash
+
+            curl -NsS localhost:8000/events |\
+                    awk '
+                        BEGIN { RS=""; FS="\\n" }
+                        $1 ~ /^tag: salt\/job\/[0-9]+\/new$/ { print $0 }
+                    '
+            tag: salt/job/20140112010149808995/new
+            data: {"tag": "salt/job/20140112010149808995/new", "data": {"tgt_type": "glob", "jid": "20140112010149808995", "tgt": "jerry", "_stamp": "2014-01-12_01:01:49.809617", "user": "shouse", "arg": [], "fun": "test.ping", "minions": ["jerry"]}}
+            tag: 20140112010149808995
+            data: {"tag": "20140112010149808995", "data": {"fun_args": [], "jid": "20140112010149808995", "return": true, "retcode": 0, "success": true, "cmd": "_return", "_stamp": "2014-01-12_01:01:49.819316", "fun": "test.ping", "id": "jerry"}}
+        '''
         # if you aren't authenticated, redirect to login
         if not self._verify_auth():
             self.redirect('/login')
@@ -740,9 +1371,127 @@ class EventsSaltAPIHandler(SaltAPIHandler):
 
 class WebhookSaltAPIHandler(SaltAPIHandler):
     '''
-    Handler for /run requests
+    A generic web hook entry point that fires an event on Salt's event bus
+
+    External services can POST data to this URL to trigger an event in Salt.
+    For example, Amazon SNS, Jenkins-CI or Travis-CI, or GitHub web hooks.
+
+    .. note:: Be mindful of security
+
+        Salt's Reactor can run any code. A Reactor SLS that responds to a hook
+        event is responsible for validating that the event came from a trusted
+        source and contains valid data.
+
+        **This is a generic interface and securing it is up to you!**
+
+        This URL requires authentication however not all external services can
+        be configured to authenticate. For this reason authentication can be
+        selectively disabled for this URL. Follow best practices -- always use
+        SSL, pass a secret key, configure the firewall to only allow traffic
+        from a known source, etc.
+
+    The event data is taken from the request body. The
+    :mailheader:`Content-Type` header is respected for the payload.
+
+    The event tag is prefixed with ``salt/netapi/hook`` and the URL path is
+    appended to the end. For example, a ``POST`` request sent to
+    ``/hook/mycompany/myapp/mydata`` will produce a Salt event with the tag
+    ``salt/netapi/hook/mycompany/myapp/mydata``.
+
+    The following is an example ``.travis.yml`` file to send notifications to
+    Salt of successful test runs:
+
+    .. code-block:: yaml
+
+        language: python
+        script: python -m unittest tests
+        after_success:
+            - 'curl -sS http://saltapi-url.example.com:8000/hook/travis/build/success -d branch="${TRAVIS_BRANCH}" -d commit="${TRAVIS_COMMIT}"'
+
+    .. seealso:: :ref:`events`, :ref:`reactor`
     '''
     def post(self, tag_suffix=None):  # pylint: disable=W0221
+        '''
+        Fire an event in Salt with a custom event tag and data
+
+        .. http:post:: /hook
+
+            :status 200: |200|
+            :status 401: |401|
+            :status 406: |406|
+            :status 413: request body is too large
+
+        **Example request:**
+
+        .. code-block:: bash
+
+            curl -sS localhost:8000/hook -d foo='Foo!' -d bar='Bar!'
+
+        .. code-block:: http
+
+            POST /hook HTTP/1.1
+            Host: localhost:8000
+            Content-Length: 16
+            Content-Type: application/x-www-form-urlencoded
+
+            foo=Foo&bar=Bar!
+
+        **Example response**:
+
+        .. code-block:: http
+
+            HTTP/1.1 200 OK
+            Content-Length: 14
+            Content-Type: application/json
+
+            {"success": true}
+
+        As a practical example, an internal continuous-integration build
+        server could send an HTTP POST request to the URL
+        ``http://localhost:8000/hook/mycompany/build/success`` which contains
+        the result of a build and the SHA of the version that was built as
+        JSON. That would then produce the following event in Salt that could be
+        used to kick off a deployment via Salt's Reactor::
+
+            Event fired at Fri Feb 14 17:40:11 2014
+            *************************
+            Tag: salt/netapi/hook/mycompany/build/success
+            Data:
+            {'_stamp': '2014-02-14_17:40:11.440996',
+                'headers': {
+                    'X-My-Secret-Key': 'F0fAgoQjIT@W',
+                    'Content-Length': '37',
+                    'Content-Type': 'application/json',
+                    'Host': 'localhost:8000',
+                    'Remote-Addr': '127.0.0.1'},
+                'post': {'revision': 'aa22a3c4b2e7', 'result': True}}
+
+        Salt's Reactor could listen for the event:
+
+        .. code-block:: yaml
+
+            reactor:
+              - 'salt/netapi/hook/mycompany/build/*':
+                - /srv/reactor/react_ci_builds.sls
+
+        And finally deploy the new build:
+
+        .. code-block:: yaml
+
+            {% set secret_key = data.get('headers', {}).get('X-My-Secret-Key') %}
+            {% set build = data.get('post', {}) %}
+
+            {% if secret_key == 'F0fAgoQjIT@W' and build.result == True %}
+            deploy_my_app:
+              cmd.state.sls:
+                - tgt: 'application*'
+                - arg:
+                  - myapp.deploy
+                - kwarg:
+                    pillar:
+                      revision: {{ revision }}
+            {% endif %}
+        '''
         if not self._verify_auth():
             self.redirect('/login')
             return
@@ -756,7 +1505,8 @@ class WebhookSaltAPIHandler(SaltAPIHandler):
         self.event = salt.utils.event.get_event(
             'master',
             self.application.opts['sock_dir'],
-            self.application.opts['transport'])
+            self.application.opts['transport'],
+            opts=self.application.opts)
 
         ret = self.event.fire_event({
             'post': self.raw_data,

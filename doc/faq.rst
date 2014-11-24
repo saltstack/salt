@@ -7,9 +7,9 @@ Is Salt open-core?
 ------------------
 
 No. Salt is 100% committed to being open-source, including all of our APIs and
-the new `'Halite' web interface`_ which was introduced in version 0.17.0. It
-is developed under the `Apache 2.0 license`_, allowing it to be used in both
-open and proprietary projects.
+the `'Halite' web interface`_ which was introduced in version 0.17.0. It is
+developed under the `Apache 2.0 license`_, allowing it to be used in both open
+and proprietary projects.
 
 .. _`'Halite' web interface`: https://github.com/saltstack/halite
 .. _`Apache 2.0 license`: http://www.apache.org/licenses/LICENSE-2.0.html
@@ -197,7 +197,8 @@ meantime a good way is to use the system scheduler with a short interval. The
 following example is a state that will always execute at the very end of a
 state run.
 
-For Unix machines:
+Linux/Unix
+**********
 
 .. code-block:: yaml
 
@@ -207,7 +208,34 @@ For Unix machines:
         - name: echo service salt-minion restart | at now + 1 minute
         - order: last
 
-For Windows machines:
+To ensure that **at** is installed and **atd** is running, the following states
+can be used (be sure to double-check the package name and service name for the
+distro the minion is running, in case they differ from the example below.
+
+.. code-block:: yaml
+
+    at:
+      pkg:
+        - installed
+      service:
+        - running
+        - name: atd
+        - enable: True
+
+An alternatvie to using the :program:`atd` daemon is to fork and disown the
+process.
+
+.. code-block:: yaml
+
+    restart_minion:
+      cmd.run:
+        - name: |
+            nohup /bin/sh -c 'sleep 10 && salt-call --local service.restart salt-minion'
+        - python_shell: True
+        - order: last
+
+Windows
+*******
 
 .. code-block:: yaml
 

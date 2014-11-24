@@ -9,6 +9,11 @@ try:
 except ImportError:
     pass
 
+try:
+    from shlex import quote as _cmd_quote  # pylint: disable=E0611
+except ImportError:
+    from pipes import quote as _cmd_quote
+
 # Define the module's virtual name
 __virtualname__ = 'shadow'
 
@@ -53,9 +58,9 @@ def info(name):
     # Get password aging info on FreeBSD
     # TODO: Implement this for NetBSD, OpenBSD
     if __salt__['cmd.has_exec']('pw'):
-        cmd = 'pw user show {0} | cut -f6,7 -d:'.format(name)
+        cmd = 'pw user show {0} | cut -f6,7 -d:'.format(_cmd_quote(name))
         try:
-            change, expire = __salt__['cmd.run_all'](cmd)['stdout'].split(':')
+            change, expire = __salt__['cmd.run_all'](cmd, python_shell=True)['stdout'].split(':')
         except ValueError:
             pass
         else:

@@ -180,6 +180,7 @@ def process_queue(queue, quantity=1, backend='sqlite'):
                 'master',
                 __opts__['sock_dir'],
                 __opts__['transport'],
+                opts=__opts__,
                 listen=False)
     try:
         items = pop(queue=queue, quantity=quantity, backend=backend)

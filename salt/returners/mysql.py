@@ -69,6 +69,10 @@ import sys
 import json
 import logging
 
+# Import salt libs
+import salt.returners
+import salt.utils
+
 # Import third party libs
 try:
     import MySQLdb
@@ -96,7 +100,11 @@ def _get_options():
                 'port': 3306}
     _options = {}
     for attr in defaults:
-        _attr = __salt__['config.option']('mysql.{0}'.format(attr))
+        if 'config.option' in __salt__:
+            _attr = __salt__['config.option']('mysql.{0}'.format(attr))
+        else:
+            cfg = __opts__
+            _attr = cfg.get('mysql.{0}'.format(attr), None)
         if not _attr:
             log.debug('Using default for MySQL {0}'.format(attr))
             _options[attr] = defaults[attr]
@@ -115,13 +123,17 @@ def _get_serv(commit=False):
     Return a mysql cursor
     '''
     _options = _get_options()
-    conn = MySQLdb.connect(host=_options['host'], user=_options['user'], passwd=_options['pass'], db=_options['db'], port=_options['port'])
+    conn = MySQLdb.connect(host=_options['host'],
+                           user=_options['user'],
+                           passwd=_options['pass'],
+                           db=_options['db'],
+                           port=_options['port'])
     cursor = conn.cursor()
     try:
         yield cursor
     except MySQLdb.DatabaseError as err:
-        error, = err.args
-        sys.stderr.write(error.message)
+        error = err.args
+        sys.stderr.write(str(error))
         cursor.execute("ROLLBACK")
         raise err
     else:
@@ -143,8 +155,10 @@ def returner(ret):
                 VALUES (%s, %s, %s, %s, %s, %s)'''
 
         cur.execute(sql, (ret['fun'], ret['jid'],
-                            json.dumps(ret['return']), ret['id'],
-                            ret['success'], json.dumps(ret)))
+                          json.dumps(ret['return']),
+                          ret['id'],
+                          ret['success'],
+                          json.dumps(ret)))
 
 
 def save_load(jid, load):
@@ -166,13 +180,11 @@ def get_load(jid):
     '''
     with _get_serv(commit=True) as cur:
 
-        sql = '''SELECT load FROM `jids`
-                WHERE `jid` = '%s';'''
-
+        sql = '''SELECT `load` FROM `jids` WHERE `jid` = %s;'''
         cur.execute(sql, (jid,))
         data = cur.fetchone()
         if data:
-            return json.loads(data)
+            return json.loads(data[0])
         return {}
 
 
@@ -213,7 +225,7 @@ def get_fun(fun):
 
         ret = {}
         if data:
-            for minion, jid, full_ret in data:
+            for minion, _, full_ret in data:
                 ret[minion] = json.loads(full_ret)
         return ret
 
@@ -250,3 +262,10 @@ def get_minions():
         for minion in data:
             ret.append(minion[0])
         return ret
+
+
+def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
+    '''
+    Do any work necessary to prepare a JID, including sending a custom id
+    '''
+    return passed_jid if passed_jid is not None else salt.utils.gen_jid()

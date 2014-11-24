@@ -58,6 +58,17 @@ def wrap_tmpl_func(render_str):
         assert 'opts' in context
         assert 'saltenv' in context
 
+        if 'sls' in context:
+            slspath = context['sls'].replace('.', '/')
+            if tmplpath is not None:
+                context['tplpath'] = tmplpath
+                if not tmplpath.lower().replace('\\', '/').endswith('/init.sls'):
+                    slspath = os.path.dirname(slspath)
+            context['slsdotpath'] = slspath.replace('/', '.')
+            context['slscolonpath'] = slspath.replace('/', ':')
+            context['sls_path'] = slspath.replace('/', '_')
+            context['slspath'] = slspath
+
         if isinstance(tmplsrc, string_types):
             if from_str:
                 tmplstr = tmplsrc
@@ -78,7 +89,7 @@ def wrap_tmpl_func(render_str):
                         'Exception occurred while reading file '
                         '{0}: {1}'.format(tmplsrc, exc),
                         # Show full traceback if debug logging is enabled
-                        exc_info=log.isEnabledFor(logging.DEBUG)
+                        exc_info_on_loglevel=logging.DEBUG
                     )
                     raise exc
         else:  # assume tmplsrc is file-like.
@@ -221,7 +232,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             loader = jinja2.FileSystemLoader(
                 context, os.path.dirname(tmplpath))
     else:
-        loader = JinjaSaltCacheLoader(opts, saltenv)
+        loader = JinjaSaltCacheLoader(opts, saltenv, pillar_rend=context.get('_pillar_rend', False))
 
     env_args = {'extensions': [], 'loader': loader}
 

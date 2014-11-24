@@ -280,6 +280,9 @@ def _connect(**kwargs):
     # Ensure MySQldb knows the format we use for queries with arguments
     MySQLdb.paramstyle = 'pyformat'
 
+    if connargs.get('passwd', True) is None:  # If present but set to None. (Extreme edge case.)
+        log.warning('MySQL password of None found. Attempting passwordless login.')
+        connargs.pop('passwd')
     try:
         dbc = MySQLdb.connect(**connargs)
     except MySQLdb.OperationalError as exc:
@@ -413,6 +416,9 @@ def _grant_to_tokens(grant):
                     phrase = 'tables'
             except IndexError:
                 break
+
+        elif phrase == 'tables':
+            database += token
 
         elif phrase == 'user':
             if dict_mode:
@@ -568,7 +574,7 @@ def query(database, query, **connection_args):
     # into Python objects. It leaves them as strings.
     orig_conv = MySQLdb.converters.conversions
     conv_iter = iter(orig_conv)
-    conv = dict(zip(conv_iter, [str] * len(orig_conv.keys())))
+    conv = dict(zip(conv_iter, [str] * len(orig_conv)))
     # some converters are lists, do not break theses
     conv[FIELD_TYPE.BLOB] = [
         (FLAG.BINARY, str),
@@ -1458,7 +1464,7 @@ def __ssl_option_sanitize(ssl_option):
 
     # Like most other "salt dsl" YAML structures, ssl_option is a list of single-element dicts
     for opt in ssl_option:
-        key = opt.keys()[0]
+        key = opt.iterkeys().next()
         value = opt[key]
 
         normal_key = key.strip().upper()

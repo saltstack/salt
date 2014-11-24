@@ -178,7 +178,7 @@ def returner_doc(*args):
     returners_ = salt.loader.returners(__opts__, [])
     docs = {}
     if not args:
-        for fun in returners_.keys():
+        for fun in returners_:
             docs[fun] = returners_[fun].__doc__
         return _strip_rst(docs)
 
@@ -189,7 +189,7 @@ def returner_doc(*args):
             target_mod = module + '.' if not module.endswith('.') else module
         else:
             target_mod = ''
-        for fun in returners_.keys():
+        for fun in returners_:
             if fun == module or fun.startswith(target_mod):
                 docs[fun] = returners_[fun].__doc__
     return _strip_rst(docs)
@@ -405,7 +405,7 @@ def list_returners():
     '''
     returners_ = salt.loader.returners(__opts__, [])
     returners = set()
-    for func in returners_.keys():
+    for func in returners_:
         comps = func.split('.')
         if len(comps) < 2:
             continue
@@ -434,7 +434,7 @@ def list_returner_functions(*args, **kwargs):
     returners_ = salt.loader.returners(__opts__, [])
     if not args:
         # We're being asked for all functions
-        return sorted(returners_.keys())
+        return sorted(returners_)
 
     names = set()
     for module in args:
@@ -442,7 +442,7 @@ def list_returner_functions(*args, **kwargs):
             # allow both "sys" and "sys." to match sys, without also matching
             # sysctl
             module = module + '.' if not module.endswith('.') else module
-        for func in returners_.keys():
+        for func in returners_:
             if func.startswith(module):
                 names.add(func)
     return sorted(names)

@@ -41,7 +41,8 @@ def __virtual__():
 
 def change(name, context=None, changes=None, lens=None, **kwargs):
     '''
-    .. versionadded:: 2014.1.6
+    .. versionadded:: 2014.7.0
+
     This state replaces :py:func:`~salt.states.augeas.setvalue`.
 
     Issue changes to Augeas, optionally for a specific context, with a
@@ -205,7 +206,7 @@ def change(name, context=None, changes=None, lens=None, **kwargs):
 
 def setvalue(name, prefix=None, changes=None, **kwargs):
     '''
-    .. deprecated:: 2014.1.6
+    .. deprecated:: 2014.7.0
        Use :py:func:`~salt.states.augeas.change` instead.
 
     Set a value for a specific augeas path

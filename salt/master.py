@@ -9,7 +9,6 @@ import os
 import re
 import time
 import errno
-import signal
 import shutil
 import logging
 import hashlib
@@ -42,8 +41,8 @@ import salt.utils.event
 import salt.utils.verify
 import salt.utils.minions
 import salt.utils.gzip_util
+import salt.utils.process
 from salt.utils.debug import enable_sigusr1_handler, enable_sigusr2_handler, inspect_stack
-from salt.exceptions import MasterExit
 from salt.utils.event import tagify
 import binascii
 
@@ -54,50 +53,19 @@ try:
 except ImportError:
     HAS_HALITE = False
 
-try:
-    import systemd.daemon
-    HAS_PYTHON_SYSTEMD = True
-except ImportError:
-    HAS_PYTHON_SYSTEMD = False
-
 
 log = logging.getLogger(__name__)
 
 
-def clean_proc(proc, wait_for_kill=10):
-    '''
-    Generic method for cleaning up multiprocessing procs
-    '''
-    # NoneType and other fun stuff need not apply
-    if not proc:
-        return
-    try:
-        waited = 0
-        while proc.is_alive():
-            proc.terminate()
-            waited += 1
-            time.sleep(0.1)
-            if proc.is_alive() and (waited >= wait_for_kill):
-                log.error(
-                    'Process did not die with terminate(): {0}'.format(
-                        proc.pid
-                    )
-                )
-                os.kill(proc.pid, signal.SIGKILL)
-    except (AssertionError, AttributeError):
-        # Catch AssertionError when the proc is evaluated inside the child
-        # Catch AttributeError when the process dies between proc.is_alive()
-        # and proc.terminate() and turns into a NoneType
-        pass
-
-
 class SMaster(object):
     '''
-    Create a simple salt-master, this will generate the top level master
+    Create a simple salt-master, this will generate the top-level master
     '''
     def __init__(self, opts):
         '''
         Create a salt master server instance
+
+        :param dict opts: The salt options dictionary
         '''
         self.opts = opts
         self.master_key = salt.crypt.MasterKeys(self.opts)
@@ -125,15 +93,25 @@ class Master(SMaster):
     def __init__(self, opts):
         '''
         Create a salt master server instance
+
+        :param dict: The salt options
         '''
         # Warn if ZMQ < 3.2
-        if not(hasattr(zmq, 'zmq_version_info')) or \
-                zmq.zmq_version_info() < (3, 2):
-            # PyZMQ 2.1.9 does not have zmq_version_info
-            log.warning('You have a version of ZMQ less than ZMQ 3.2! There '
-                        'are known connection keep-alive issues with ZMQ < '
-                        '3.2 which may result in loss of contact with '
-                        'minions. Please upgrade your ZMQ!')
+        try:
+            zmq_version_info = zmq.zmq_version_info()
+        except AttributeError:
+            # PyZMQ <= 2.1.9 does not have zmq_version_info, fall back to
+            # using zmq.zmq_version() and build a version info tuple.
+            zmq_version_info = tuple(
+                [int(x) for x in zmq.zmq_version().split('.')]
+            )
+        if zmq_version_info < (3, 2):
+            log.warning(
+                'You have a version of ZMQ less than ZMQ 3.2! There are '
+                'known connection keep-alive issues with ZMQ < 3.2 which '
+                'may result in loss of contact with minions. Please '
+                'upgrade your ZMQ!'
+            )
         SMaster.__init__(self, opts)
 
     def _clear_old_jobs(self):
@@ -142,6 +120,9 @@ class Master(SMaster):
         controller for the Salt master. This is where any data that needs to
         be cleanly maintained from the master is maintained.
         '''
+        # TODO: move to a separate class, with a better name
+        salt.utils.appendproctitle('_clear_old_jobs')
+
         # Set up search object
         search = salt.search.Search(self.opts)
         # Make Start Times
@@ -175,8 +156,13 @@ class Master(SMaster):
                 if now - rotate >= self.opts['publish_session']:
                     salt.crypt.dropfile(
                         self.opts['cachedir'],
-                        self.opts['user'])
+                        self.opts['user'],
+                        self.opts['sock_dir'])
                     rotate = now
+                    if self.opts.get('ping_on_rotate'):
+                        # Ping all minions to get them to pick up the new key
+                        log.debug('Pinging all connected minions due to AES key rotation')
+                        salt.utils.master.ping_all_connected_minions(self.opts)
             if self.opts.get('search'):
                 if now - last >= self.opts['search_index_interval']:
                     search.index()
@@ -268,8 +254,8 @@ class Master(SMaster):
 
     def _pre_flight(self):
         '''
-        Run pre flight checks, if anything in this method fails then the master
-        should not start up
+        Run pre flight checks. If anything in this method fails then the master
+        should not start up.
         '''
         errors = []
         fileserver = salt.fileserver.Fileserver(self.opts)
@@ -299,48 +285,39 @@ class Master(SMaster):
         enable_sigusr2_handler()
 
         self.__set_max_open_files()
-        clear_old_jobs_proc = multiprocessing.Process(
-            target=self._clear_old_jobs)
-        clear_old_jobs_proc.start()
-        reqserv = ReqServer(
-            self.opts,
-            self.crypticle,
-            self.key,
-            self.master_key)
-        reqserv.start_publisher()
-        reqserv.start_event_publisher()
-        reqserv.start_reactor()
-        reqserv.start_halite()
 
-        def sigterm_clean(signum, frame):
-            '''
-            Cleaner method for stopping multiprocessing processes when a
-            SIGTERM is encountered.  This is required when running a salt
-            master under a process minder like daemontools
-            '''
-            log.warn(
-                'Caught signal {0}, stopping the Salt Master'.format(
-                    signum
-                )
-            )
-            clean_proc(clear_old_jobs_proc)
-            clean_proc(reqserv.publisher)
-            clean_proc(reqserv.eventpublisher)
-            if hasattr(reqserv, 'halite'):
-                clean_proc(reqserv.halite)
-            if hasattr(reqserv, 'reactor'):
-                clean_proc(reqserv.reactor)
-            for proc in reqserv.work_procs:
-                clean_proc(proc)
-            raise MasterExit
+        process_manager = salt.utils.process.ProcessManager()
 
-        signal.signal(signal.SIGTERM, sigterm_clean)
+        process_manager.add_process(self._clear_old_jobs)
 
-        try:
+        process_manager.add_process(Publisher, args=(self.opts,))
+        process_manager.add_process(salt.utils.event.EventPublisher, args=(self.opts,))
+
+        if self.opts.get('reactor'):
+            process_manager.add_process(salt.utils.event.Reactor, args=(self.opts,))
+
+        if HAS_HALITE and 'halite' in self.opts:
+            log.info('Halite: Starting up ...')
+            process_manager.add_process(Halite, args=(self.opts['halite'],))
+        elif 'halite' in self.opts:
+            log.info('Halite: Not configured, skipping.')
+        else:
+            log.debug('Halite: Unavailable.')
+
+        def run_reqserver():
+            reqserv = ReqServer(
+                self.opts,
+                self.crypticle,
+                self.key,
+                self.master_key)
             reqserv.run()
+        process_manager.add_process(run_reqserver)
+        try:
+            process_manager.run()
         except KeyboardInterrupt:
             # Shut the master down gracefully on SIGINT
             log.warn('Stopping the Salt Master')
+            process_manager.kill_children()
             raise SystemExit('\nExiting on Ctrl-c')
 
 
@@ -349,6 +326,11 @@ class Halite(multiprocessing.Process):
     Manage the Halite server
     '''
     def __init__(self, hopts):
+        '''
+        Create a halite instance
+
+        :param dict hopts: The halite options
+        '''
         super(Halite, self).__init__()
         self.hopts = hopts
 
@@ -366,6 +348,11 @@ class Publisher(multiprocessing.Process):
     commands.
     '''
     def __init__(self, opts):
+        '''
+        Create a publisher instance
+
+        :param dict opts: The salt options
+        '''
         super(Publisher, self).__init__()
         self.opts = opts
 
@@ -454,8 +441,25 @@ class ReqServer(object):
     interface.
     '''
     def __init__(self, opts, crypticle, key, mkey):
+        '''
+        Create a request server
+
+        :param dict opts: The salt options dictionary
+        :crypticle salt.crypt.Crypticle crypticle: Encryption crypticle
+        :key dict: The user starting the server and the AES key
+        :mkey dict: The user starting the server and the RSA key
+
+        :rtype: ReqServer
+        :returns: Request server
+        '''
         self.opts = opts
         self.master_key = mkey
+        # Prepare the AES key
+        self.key = key
+        self.crypticle = crypticle
+
+    def zmq_device(self):
+        salt.utils.appendproctitle('MWorkerQueue')
         self.context = zmq.Context(self.opts['worker_threads'])
         # Prepare the zeromq sockets
         self.uri = 'tcp://{interface}:{ret_port}'.format(**self.opts)
@@ -463,13 +467,30 @@ class ReqServer(object):
         if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
             # IPv6 sockets work for both IPv6 and IPv4 addresses
             self.clients.setsockopt(zmq.IPV4ONLY, 0)
+        try:
+            self.clients.setsockopt(zmq.HWM, self.opts['rep_hwm'])
+        # in zmq >= 3.0, there are separate send and receive HWM settings
+        except AttributeError:
+            self.clients.setsockopt(zmq.SNDHWM, self.opts['rep_hwm'])
+            self.clients.setsockopt(zmq.RCVHWM, self.opts['rep_hwm'])
+
         self.workers = self.context.socket(zmq.DEALER)
         self.w_uri = 'ipc://{0}'.format(
             os.path.join(self.opts['sock_dir'], 'workers.ipc')
         )
-        # Prepare the AES key
-        self.key = key
-        self.crypticle = crypticle
+
+        log.info('Setting up the master communication server')
+        self.clients.bind(self.uri)
+
+        self.workers.bind(self.w_uri)
+
+        while True:
+            try:
+                zmq.device(zmq.QUEUE, self.clients, self.workers)
+            except zmq.ZMQError as exc:
+                if exc.errno == errno.EINTR:
+                    continue
+                raise exc
 
     def __bind(self):
         '''
@@ -481,75 +502,20 @@ class ReqServer(object):
                 os.remove(dfn)
             except os.error:
                 pass
-        log.info('Setting up the master communication server')
-        self.clients.bind(self.uri)
-        self.work_procs = []
+        self.process_manager = salt.utils.process.ProcessManager(name='ReqServer_ProcessManager')
 
         for ind in range(int(self.opts['worker_threads'])):
-            self.work_procs.append(MWorker(self.opts,
-                                           self.master_key,
-                                           self.key,
-                                           self.crypticle,
-                                           )
-                                   )
+            self.process_manager.add_process(MWorker,
+                                             args=(self.opts,
+                                                   self.master_key,
+                                                   self.key,
+                                                   self.crypticle,
+                                                   ),
+                                             )
+        self.process_manager.add_process(self.zmq_device)
 
-        for ind, proc in enumerate(self.work_procs):
-            log.info('Starting Salt worker process {0}'.format(ind))
-            proc.start()
-
-        self.workers.bind(self.w_uri)
-
-        try:
-            if HAS_PYTHON_SYSTEMD and systemd.daemon.booted():
-                systemd.daemon.notify('READY=1')
-        except SystemError:
-            # Daemon wasn't started by systemd
-            pass
-
-        while True:
-            try:
-                zmq.device(zmq.QUEUE, self.clients, self.workers)
-            except zmq.ZMQError as exc:
-                if exc.errno == errno.EINTR:
-                    continue
-                raise exc
-
-    def start_publisher(self):
-        '''
-        Start the salt publisher interface
-        '''
-        # Start the publisher
-        self.publisher = Publisher(self.opts)
-        self.publisher.start()
-
-    def start_event_publisher(self):
-        '''
-        Start the salt publisher interface
-        '''
-        # Start the publisher
-        self.eventpublisher = salt.utils.event.EventPublisher(self.opts)
-        self.eventpublisher.start()
-
-    def start_reactor(self):
-        '''
-        Start the reactor, but only if the reactor interface is configured
-        '''
-        if self.opts.get('reactor'):
-            self.reactor = salt.utils.event.Reactor(self.opts)
-            self.reactor.start()
-
-    def start_halite(self):
-        '''
-        If halite is configured and installed, fire it up!
-        '''
-        if HAS_HALITE and 'halite' in self.opts:
-            log.info('Halite: Starting up ...')
-            self.halite = Halite(self.opts['halite'])
-            self.halite.start()
-        elif 'halite' in self.opts:
-            log.info('Halite: Not configured, skipping.')
-        else:
-            log.debug('Halite: Unavailable.')
+        # start zmq device
+        self.process_manager.run()
 
     def run(self):
         '''
@@ -558,18 +524,16 @@ class ReqServer(object):
         self.__bind()
 
     def destroy(self):
-        if self.clients.closed is False:
+        if hasattr(self, 'clients') and self.clients.closed is False:
             self.clients.setsockopt(zmq.LINGER, 1)
             self.clients.close()
-        if self.workers.closed is False:
+        if hasattr(self, 'workers') and self.workers.closed is False:
             self.workers.setsockopt(zmq.LINGER, 1)
             self.workers.close()
-        if self.context.closed is False:
+        if hasattr(self, 'context') and self.context.closed is False:
             self.context.term()
         # Also stop the workers
-        for worker in self.work_procs:
-            if worker.is_alive() is True:
-                worker.terminate()
+        self.process_manager.kill_children()
 
     def __del__(self):
         self.destroy()
@@ -585,6 +549,17 @@ class MWorker(multiprocessing.Process):
                  mkey,
                  key,
                  crypticle):
+        '''
+        Create a salt master worker process
+
+        :param dict opts: The salt options
+        :param dict mkey: The user running the salt master and the AES key
+        :param dict key: The user running the salt master and the RSA key
+        :param salt.crypt.Crypticle crypticle: Encryption crypticle
+
+        :rtype: MWorker
+        :return: Master worker
+        '''
         multiprocessing.Process.__init__(self)
         self.opts = opts
         self.serial = salt.payload.Serial(opts)
@@ -638,6 +613,22 @@ class MWorker(multiprocessing.Process):
         '''
         The _handle_payload method is the key method used to figure out what
         needs to be done with communication to the server
+
+        Example cleartext payload generated for 'salt myminion test.ping':
+
+        {'enc': 'clear',
+         'load': {'arg': [],
+                  'cmd': 'publish',
+                  'fun': 'test.ping',
+                  'jid': '',
+                  'key': 'alsdkjfa.,maljf-==adflkjadflkjalkjadfadflkajdflkj',
+                  'kwargs': {'show_jid': False, 'show_timeout': False},
+                  'ret': '',
+                  'tgt': 'myminion',
+                  'tgt_type': 'glob',
+                  'user': 'root'}}
+
+        :param dict payload: The payload route to the appropriate handler
         '''
         try:
             key = payload['enc']
@@ -650,7 +641,11 @@ class MWorker(multiprocessing.Process):
 
     def _handle_clear(self, load):
         '''
-        Take care of a cleartext command
+        Process a cleartext command
+
+        :param dict load: Cleartext payload
+        :return: The result of passing the load to a function in ClearFuncs corresponding to
+                 the command specified in the load's 'cmd' key.
         '''
         log.info('Clear payload received with command {cmd}'.format(**load))
         if load['cmd'].startswith('__'):
@@ -660,6 +655,8 @@ class MWorker(multiprocessing.Process):
     def _handle_pub(self, load):
         '''
         Handle a command sent via a public key pair
+
+        :param dict load: Minion payload
         '''
         if load['cmd'].startswith('__'):
             return False
@@ -667,7 +664,11 @@ class MWorker(multiprocessing.Process):
 
     def _handle_aes(self, load):
         '''
-        Handle a command sent via an AES key
+        Process a command sent via an AES key
+
+        :param str load: Encrypted payload
+        :return: The result of passing the load to a function in AESFuncs corresponding to
+                 the command specified in the load's 'cmd' key.
         '''
         try:
             data = self.crypticle.loads(load)
@@ -728,6 +729,15 @@ class AESFuncs(object):
     # The AES Functions:
     #
     def __init__(self, opts, crypticle):
+        '''
+        Create a new AESFuncs
+
+        :param dict opts: The salt options
+        :param salt.crypt.Crypticle crypticle: Encryption crypticle
+
+        :rtype: AESFuncs
+        :returns: Instance for handling AES operations
+        '''
         self.opts = opts
         self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
         self.serial = salt.payload.Serial(opts)
@@ -760,6 +770,12 @@ class AESFuncs(object):
         '''
         Take a minion id and a string signed with the minion private key
         The string needs to verify as 'salt' with the minion public key
+
+        :param str id_: A minion ID
+        :param str token: A string signed with the minion private key
+
+        :rtype: bool
+        :return: Boolean indicating whether or not the token can be verified.
         '''
         if not salt.utils.verify.valid_id(self.opts, id_):
             return False
@@ -791,6 +807,11 @@ class AESFuncs(object):
     def __verify_minion_publish(self, clear_load):
         '''
         Verify that the passed information authorized a minion to execute
+
+        :param dict clear_load: A publication load from a minion
+
+        :rtype: bool
+        :return: A boolean indicating if the minion is allowed to publish the command in the load
         '''
         # Verify that the load is valid
         if 'peer' not in self.opts:
@@ -833,14 +854,19 @@ class AESFuncs(object):
             perms,
             clear_load['fun'],
             clear_load['tgt'],
-            clear_load.get('tgt_type', 'glob'))
+            clear_load.get('tgt_type', 'glob'),
+            publish_validate=True)
 
     def __verify_load(self, load, verify_keys):
         '''
         A utility function to perform common verification steps.
 
-        verify_keys: A list of strings that should be present in a
-        given load.
+        :param dict load: A payload received from a minion
+        :param list verify_keys: A list of strings that should be present in a given load
+
+        :rtype: bool
+        :rtype: dict
+        :return: The original load (except for the token) if the load can be verified. False if the load is invalid.
         '''
         if any(key not in load for key in verify_keys):
             return False
@@ -870,6 +896,9 @@ class AESFuncs(object):
         '''
         Return the results from an external node classifier if one is
         specified
+
+        :param dict load: A payload received from a minion
+        :return: The results from an external node classifier
         '''
         load = self.__verify_load(load, ('id', 'tok'))
         if load is False:
@@ -879,6 +908,11 @@ class AESFuncs(object):
     def _master_opts(self, load):
         '''
         Return the master options to the minion
+
+        :param dict load: A payload received from a minion
+
+        :rtype: dict
+        :return: The master options
         '''
         mopts = {}
         file_roots = {}
@@ -895,6 +929,7 @@ class AESFuncs(object):
         mopts['nodegroups'] = self.opts['nodegroups']
         mopts['state_auto_order'] = self.opts['state_auto_order']
         mopts['state_events'] = self.opts['state_events']
+        mopts['state_aggregate'] = self.opts['state_aggregate']
         mopts['jinja_lstrip_blocks'] = self.opts['jinja_lstrip_blocks']
         mopts['jinja_trim_blocks'] = self.opts['jinja_trim_blocks']
         return mopts
@@ -902,6 +937,11 @@ class AESFuncs(object):
     def _mine_get(self, load):
         '''
         Gathers the data from the specified minions' mine
+
+        :param dict load: A payload received from a minion
+
+        :rtype: dict
+        :return: Mine data from the specified minions
         '''
         load = self.__verify_load(load, ('id', 'tgt', 'fun', 'tok'))
         if load is False:
@@ -911,7 +951,12 @@ class AESFuncs(object):
 
     def _mine(self, load):
         '''
-        Return the mine data
+        Store the mine data
+
+        :param dict load: A payload received from a minion
+
+        :rtype: bool
+        :return: True if the data has been stored in the mine
         '''
         load = self.__verify_load(load, ('id', 'data', 'tok'))
         if load is False:
@@ -921,6 +966,11 @@ class AESFuncs(object):
     def _mine_delete(self, load):
         '''
         Allow the minion to delete a specific function from its own mine
+
+        :param dict load: A payload received from a minion
+
+        :rtype: bool
+        :return: Boolean indicating whether or not the given function was deleted from the mine
         '''
         load = self.__verify_load(load, ('id', 'fun', 'tok'))
         if load is False:
@@ -931,6 +981,8 @@ class AESFuncs(object):
     def _mine_flush(self, load):
         '''
         Allow the minion to delete all of its own mine contents
+
+        :param dict load: A payload received from a minion
         '''
         load = self.__verify_load(load, ('id', 'tok'))
         if load is False:
@@ -952,7 +1004,7 @@ class AESFuncs(object):
             return False
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
-        file_recv_max_size = 1024*1024 * self.opts.get('file_recv_max_size', 100)
+        file_recv_max_size = 1024*1024 * self.opts['file_recv_max_size']
 
         if 'loc' in load and load['loc'] < 0:
             log.error('Invalid file pointer: load[loc] < 0')
@@ -984,12 +1036,18 @@ class AESFuncs(object):
             )
             return {}
         load.pop('tok')
+        # Normalize Windows paths
+        normpath = load['path']
+        if ':' in normpath:
+            # make sure double backslashes are normalized
+            normpath = normpath.replace('\\', '/')
+            normpath = os.path.normpath(normpath)
         cpath = os.path.join(
             self.opts['cachedir'],
             'minions',
             load['id'],
             'files',
-            load['path'])
+            normpath)
         cdir = os.path.dirname(cpath)
         if not os.path.isdir(cdir):
             try:
@@ -1009,6 +1067,11 @@ class AESFuncs(object):
     def _pillar(self, load):
         '''
         Return the pillar data for the minion
+
+        :param dict load: Minion payload
+
+        :rtype: dict
+        :return: The pillar data for the minion
         '''
         if any(key not in load for key in ('id', 'grains')):
             return False
@@ -1016,7 +1079,7 @@ class AESFuncs(object):
             return False
         load['grains']['id'] = load['id']
         mods = set()
-        for func in self.mminion.functions.values():
+        for func in self.mminion.functions.itervalues():
             mods.add(func.__module__)
         for mod in mods:
             sys.modules[mod].__grains__ = load['grains']
@@ -1049,6 +1112,8 @@ class AESFuncs(object):
         '''
         Receive an event from the minion and fire it on the master event
         interface
+
+        :param dict load: The minion payload
         '''
         load = self.__verify_load(load, ('id', 'tok'))
         if load is False:
@@ -1057,7 +1122,13 @@ class AESFuncs(object):
 
     def _return(self, load):
         '''
-        Handle the return data sent from the minions
+        Handle the return data sent from the minions.
+
+        Takes the return, verifies it and fires it on the master event bus.
+        Typically, this event is consumed by the Salt CLI waiting on the other
+        end of the event bus but could be heard by any listener on the bus.
+
+        :param dict load: The minion payload
         '''
         # If the return data is invalid, just ignore it
         if any(key not in load for key in ('return', 'jid', 'id')):
@@ -1093,6 +1164,8 @@ class AESFuncs(object):
         '''
         Receive a syndic minion return and format it to look like returns from
         individual minions.
+
+        :param dict load: The minion payload
         '''
         # Verify the load
         if any(key not in load for key in ('return', 'jid', 'id')):
@@ -1114,6 +1187,11 @@ class AESFuncs(object):
     def minion_runner(self, clear_load):
         '''
         Execute a runner from a minion, return the runner's function data
+
+        :param dict clear_load: The minion payload
+
+        :rtype: dict
+        :return: The runner function data
         '''
         load = self.__verify_load(clear_load, ('fun', 'arg', 'id', 'tok'))
         if load is False:
@@ -1125,6 +1203,11 @@ class AESFuncs(object):
         '''
         Request the return data from a specific jid, only allowed
         if the requesting minion also initialted the execution.
+
+        :param dict load: The minion payload
+
+        :rtype: dict
+        :return: Return data corresponding to a given JID
         '''
         load = self.__verify_load(load, ('jid', 'id', 'tok'))
         if load is False:
@@ -1147,18 +1230,30 @@ class AESFuncs(object):
         Publish a command initiated from a minion, this method executes minion
         restrictions so that the minion publication will only work if it is
         enabled in the config.
+
         The configuration on the master allows minions to be matched to
         salt functions, so the minions can only publish allowed salt functions
+
         The config will look like this:
-        peer:
-            .*:
-                - .*
-        This configuration will enable all minions to execute all commands.
-        peer:
-            foo.example.com:
-                - test.*
-        This configuration will only allow the minion foo.example.com to
-        execute commands from the test module
+
+        .. code-block:: bash
+
+            peer:
+                .*:
+                    - .*
+
+        This configuration will enable all minions to execute all commands:
+
+        .. code-block:: bash
+
+            peer:
+                foo.example.com:
+                    - test.*
+
+        The above configuration will only allow the minion foo.example.com to
+        execute commands from the test module.
+
+        :param dict clear_load: The minion pay
         '''
         if not self.__verify_minion_publish(clear_load):
             return {}
@@ -1170,18 +1265,30 @@ class AESFuncs(object):
         Publish a command initiated from a minion, this method executes minion
         restrictions so that the minion publication will only work if it is
         enabled in the config.
+
         The configuration on the master allows minions to be matched to
         salt functions, so the minions can only publish allowed salt functions
+
         The config will look like this:
-        peer:
-            .*:
-                - .*
+
+        .. code-block:: bash
+
+            peer:
+                .*:
+                    - .*
+
         This configuration will enable all minions to execute all commands.
         peer:
+
+        .. code-block:: bash
+
             foo.example.com:
                 - test.*
-        This configuration will only allow the minion foo.example.com to
-        execute commands from the test module
+
+        The above configuration will only allow the minion foo.example.com to
+        execute commands from the test module.
+
+        :param dict clear_load: The minion payload
         '''
         if not self.__verify_minion_publish(clear_load):
             return {}
@@ -1191,6 +1298,14 @@ class AESFuncs(object):
     def revoke_auth(self, load):
         '''
         Allow a minion to request revocation of its own key
+
+        :param dict load: The minion payload
+
+        :rtype: dict
+        :return: If the load is invalid, it may be returned. No key operation is performed.
+
+        :rtype: bool
+        :return: True if key was revoked, False if not
         '''
         load = self.__verify_load(load, ('id', 'tok'))
         if load is False:
@@ -1201,6 +1316,9 @@ class AESFuncs(object):
     def run_func(self, func, load):
         '''
         Wrapper for running functions executed with AES encryption
+
+        :param function func: The function to run
+        :return: The result of the master function that was called
         '''
         # Don't honor private functions
         if func.startswith('__'):
@@ -1317,10 +1435,9 @@ class ClearFuncs(object):
                     'load': {'ret': False}}
         log.info('Authentication request from {id}'.format(**load))
 
-        minions = salt.utils.minions.CkMinions(self.opts).connected_ids()
-
         # 0 is default which should be 'unlimited'
         if self.opts['max_minions'] > 0:
+            minions = salt.utils.minions.CkMinions(self.opts).connected_ids()
             if not len(minions) < self.opts['max_minions']:
                 # we reject new minions, minions that are already
                 # connected must be allowed for the mine, highstate, etc.
@@ -1361,7 +1478,8 @@ class ClearFuncs(object):
             pass
         elif os.path.isfile(pubfn_rejected):
             # The key has been rejected, don't place it in pending
-            log.info('Public key rejected for {id}'.format(**load))
+            log.info('Public key rejected for {0}. Key is present in '
+                     'rejection key dir.'.format(load['id']))
             eload = {'result': False,
                      'id': load['id'],
                      'pub': load['pub']}
@@ -1619,13 +1737,11 @@ class ClearFuncs(object):
                 log.warning(msg)
                 return dict(error=dict(name='TokenAuthenticationError',
                                        message=msg))
-            if token['name'] not in self.opts['external_auth'][token['eauth']]:
-                msg = 'Authentication failure of type "token" occurred.'
-                log.warning(msg)
-                return dict(error=dict(name='TokenAuthenticationError',
-                                       message=msg))
+
             good = self.ckminions.runner_check(
-                self.opts['external_auth'][token['eauth']][token['name']] if token['name'] in self.opts['external_auth'][token['eauth']] else self.opts['external_auth'][token['eauth']]['*'],
+                self.opts['external_auth'][token['eauth']][token['name']]
+                if token['name'] in self.opts['external_auth'][token['eauth']]
+                else self.opts['external_auth'][token['eauth']]['*'],
                 clear_load['fun'])
             if not good:
                 msg = ('Authentication failure of type "token" occurred for '
@@ -1646,7 +1762,7 @@ class ClearFuncs(object):
                           'introspecting {0}: {1}'.format(fun, exc))
                 return dict(error=dict(name=exc.__class__.__name__,
                                        args=exc.args,
-                                       message=exc.message))
+                                       message=str(exc)))
 
         if 'eauth' not in clear_load:
             msg = ('Authentication failure of type "eauth" occurred for '
@@ -1677,7 +1793,9 @@ class ClearFuncs(object):
                 return dict(error=dict(name='EauthAuthenticationError',
                                        message=msg))
             good = self.ckminions.runner_check(
-                self.opts['external_auth'][clear_load['eauth']][name] if name in self.opts['external_auth'][clear_load['eauth']] else self.opts['external_auth'][clear_load['eauth']]['*'],
+                self.opts['external_auth'][clear_load['eauth']][name]
+                if name in self.opts['external_auth'][clear_load['eauth']]
+                else self.opts['external_auth'][clear_load['eauth']]['*'],
                 clear_load['fun'])
             if not good:
                 msg = ('Authentication failure of type "eauth" occurred for '
@@ -1697,7 +1815,7 @@ class ClearFuncs(object):
                           'introspecting {0}: {1}'.format(fun, exc))
                 return dict(error=dict(name=exc.__class__.__name__,
                                        args=exc.args,
-                                       message=exc.message))
+                                       message=str(exc)))
 
         except Exception as exc:
             log.error(
@@ -1705,7 +1823,7 @@ class ClearFuncs(object):
             )
             return dict(error=dict(name=exc.__class__.__name__,
                                    args=exc.args,
-                                   message=exc.message))
+                                   message=str(exc)))
 
     def wheel(self, clear_load):
         '''
@@ -1727,11 +1845,6 @@ class ClearFuncs(object):
                 return dict(error=dict(name='TokenAuthenticationError',
                                        message=msg))
             if token['eauth'] not in self.opts['external_auth']:
-                msg = 'Authentication failure of type "token" occurred.'
-                log.warning(msg)
-                return dict(error=dict(name='TokenAuthenticationError',
-                                       message=msg))
-            if token['name'] not in self.opts['external_auth'][token['eauth']]:
                 msg = 'Authentication failure of type "token" occurred.'
                 log.warning(msg)
                 return dict(error=dict(name='TokenAuthenticationError',
@@ -1809,7 +1922,7 @@ class ClearFuncs(object):
             good = self.ckminions.wheel_check(
                 self.opts['external_auth'][clear_load['eauth']][name]
                 if name in self.opts['external_auth'][clear_load['eauth']]
-                else self.opts['external_auth'][token['eauth']]['*'],
+                else self.opts['external_auth'][clear_load['eauth']]['*'],
                 clear_load['fun'])
             if not good:
                 msg = ('Authentication failure of type "eauth" occurred for '
@@ -1851,7 +1964,7 @@ class ClearFuncs(object):
             )
             return dict(error=dict(name=exc.__class__.__name__,
                                    args=exc.args,
-                                   message=exc.message))
+                                   message=str(exc)))
 
     def mk_token(self, clear_load):
         '''
@@ -2125,9 +2238,11 @@ class ClearFuncs(object):
                     }
                 }
         # Retrieve the jid
-        if not clear_load['jid']:
-            fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
-            clear_load['jid'] = self.mminion.returners[fstr](nocache=extra.get('nocache', False))
+        fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
+        clear_load['jid'] = self.mminion.returners[fstr](nocache=extra.get('nocache', False),
+                                                         # the jid in clear_load can be None, '', or something else.
+                                                         # this is an attempt to clean up the value before passing to plugins
+                                                         passed_jid=clear_load['jid'] if clear_load.get('jid') else None)
         self.event.fire_event({'minions': minions}, clear_load['jid'])
 
         new_job_load = {
@@ -2195,6 +2310,11 @@ class ClearFuncs(object):
             'jid': clear_load['jid'],
             'ret': clear_load['ret'],
         }
+        # if you specified a master id, lets put that in the load
+        if 'master_id' in self.opts:
+            load['master_id'] = self.opts['master_id']
+        elif 'master_id' in extra:
+            load['master_id'] = extra['master_id']
 
         if 'id' in extra:
             load['id'] = extra['id']

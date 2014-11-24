@@ -137,6 +137,10 @@ class Serial(object):
                     return obj
                 return obj
             return msgpack.dumps(odict_encoder(msg))
+        except SystemError as exc:
+            log.critical('Unable to serialize message! Consider upgrading msgpack. '
+                         'Message which failed was {failed_message} '
+                         'with exception {exception_message}').format(msg, exc)
 
     def dump(self, msg, fn_):
         '''
@@ -171,9 +175,12 @@ class SREQ(object):
                     zmq.RECONNECT_IVL_MAX, 5000
                 )
 
-            if self.master.startswith('tcp://[') and hasattr(zmq, 'IPV4ONLY'):
-                # IPv6 sockets work for both IPv6 and IPv4 addresses
-                self._socket.setsockopt(zmq.IPV4ONLY, 0)
+            if self.master.startswith('tcp://['):
+                # Hint PF type if bracket enclosed IPv6 address
+                if hasattr(zmq, 'IPV6'):
+                    self._socket.setsockopt(zmq.IPV6, 1)
+                elif hasattr(zmq, 'IPV4ONLY'):
+                    self._socket.setsockopt(zmq.IPV4ONLY, 0)
             self._socket.linger = self.linger
             if self.id_:
                 self._socket.setsockopt(zmq.IDENTITY, self.id_)

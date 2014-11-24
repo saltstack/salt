@@ -108,7 +108,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
         string_to_sign = '{0}\n'.format(method)
 
         new_headers = []
-        for header in sorted(headers.keys()):
+        for header in sorted(headers):
             if header.lower().startswith('x-amz'):
                 log.debug(header.lower())
                 new_headers.append('{0}:{1}'.format(header.lower(),
@@ -216,6 +216,8 @@ def query(key, keyid, method='GET', params=None, headers=None,
         if return_url is True:
             return ret, requesturl
     else:
+        if method == 'GET' or method == 'HEAD':
+            return
         ret = {'headers': []}
         for header in result.headers:
             ret['headers'].append(header.strip())

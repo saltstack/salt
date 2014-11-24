@@ -82,7 +82,7 @@ def _find_utmp():
             result[os.stat(utmp).st_mtime] = utmp
         except Exception:
             pass
-    return result[sorted(result.keys()).pop()]
+    return result[sorted(result).pop()]
 
 
 def _default_runlevel():

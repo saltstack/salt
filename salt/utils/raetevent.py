@@ -32,7 +32,7 @@ class SaltEvent(object):
         '''
         Set up the stack and remote yard
         '''
-        self.node = node
+        self.node = node  # application kind 'master', 'minion', 'syndic', 'call' etc
         self.sock_dir = sock_dir
         self.listen = listen
         if opts is None:
@@ -41,20 +41,46 @@ class SaltEvent(object):
         self.__prep_stack()
 
     def __prep_stack(self):
-        self.yid = nacling.uuid(size=18)
-        name = 'event' + self.yid
+        if self.node == 'master':
+            lanename = 'master'
+            if self.opts:
+                kind = self.opts.get('__role', '')  # opts optional for master
+                if kind and kind != self.node:
+                    emsg = ("Mismatch between node '{0}' and kind '{1}' in setup "
+                            "of SaltEvent on Raet.".format(self.node, kind))
+                    log.error(emsg + '\n')
+                    raise ValueError(emsg)
+        elif self.node == 'minion':
+            role = self.opts.get('id', '')  # opts required for minion
+            if not role:
+                emsg = ("Missing opts['id'] required by SaltEvent on Raet with "
+                       "node kind {0}.".format(self.node))
+                log.error(emsg + '\n')
+                raise ValueError(emsg)
+            kind = self.opts.get('__role', '')
+            if kind != self.node:
+                emsg = ("Mismatch between node '{0}' and kind '{1}' in setup "
+                       "of SaltEvent on Raet.".format(self.node, kind))
+                log.error(emsg + '\n')
+                raise ValueError(emsg)
+            lanename = role  # add '_minion'
+        else:
+            emsg = ("Unsupported application node kind '{0}' for SaltEvent "
+                    "Raet.".format(self.node))
+            log.error(emsg + '\n')
+            raise ValueError(emsg)
+
+        name = 'event' + nacling.uuid(size=18)
         cachedir = self.opts.get('cachedir', os.path.join(syspaths.CACHE_DIR, self.node))
         self.connected = False
         self.stack = LaneStack(
                 name=name,
-                yid=self.yid,
-                lanename=self.node,
+                lanename=lanename,
                 sockdirpath=self.sock_dir)
         self.stack.Pk = raeting.packKinds.pack
         self.router_yard = RemoteYard(
                 stack=self.stack,
-                lanename=self.node,
-                yid=0,
+                lanename=lanename,
                 name='manor',
                 dirpath=self.sock_dir)
         self.stack.addRemote(self.router_yard)
@@ -80,9 +106,7 @@ class SaltEvent(object):
             try:
                 route = {'dst': (None, self.router_yard.name, 'event_req'),
                          'src': (None, self.stack.local.name, None)}
-                msg = {
-                        'route': route,
-                        'load': {'yid': self.yid, 'dirpath': self.sock_dir}}
+                msg = {'route': route}
                 self.stack.transmit(msg, self.router_yard.uid)
                 self.stack.serviceAll()
                 self.connected = True
@@ -116,33 +140,32 @@ class SaltEvent(object):
             self.stack.serviceAll()
             if self.stack.rxMsgs:
                 msg, sender = self.stack.rxMsgs.popleft()
-                event = msg.get('event', {})
-                if 'tag' not in event and 'data' not in event:
+                if 'tag' not in msg and 'data' not in msg:
                     # Invalid event, how did this get here?
                     continue
-                if not event['tag'].startswith(tag):
+                if not msg['tag'].startswith(tag):
                     # Not what we are looking for, throw it away
                     continue
                 if full:
-                    return event
+                    return msg
                 else:
-                    return event['data']
+                    return msg['data']
             if start + wait < time.time():
                 return None
             time.sleep(0.01)
 
     def get_event_noblock(self):
         '''
-        Get the raw event without blocking or any other niceties
+        Get the raw event msg without blocking or any other niceties
         '''
         self.connect_pub()
         self.stack.serviceAll()
         if self.stack.rxMsgs:
-            event, sender = self.stack.rxMsgs.popleft()
-            if 'tag' not in event and 'data' not in event:
+            msg, sender = self.stack.rxMsgs.popleft()
+            if 'tag' not in msg and 'data' not in msg:
                 # Invalid event, how did this get here?
                 return None
-            return event
+            return msg
 
     def iter_events(self, tag='', full=False):
         '''
@@ -169,7 +192,7 @@ class SaltEvent(object):
         route = {'dst': (None, self.router_yard.name, 'event_fire'),
                  'src': (None, self.stack.local.name, None)}
         msg = {'route': route, 'tag': tag, 'data': data}
-        self.stack.transmit(msg)
+        self.stack.transmit(msg, self.router_yard.uid)
         self.stack.serviceAll()
 
     def fire_ret_load(self, load):

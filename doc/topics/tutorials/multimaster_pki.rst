@@ -109,7 +109,7 @@ When that is done, enable the signature checking in the minions configuration
 
 .. code-block:: yaml
 
-    verify_master_pub_sig: True
+    verify_master_pubkey_sign: True
 
 and restart the minion. For the first try, the minion should be run in manual
 debug mode.
@@ -202,6 +202,7 @@ For the minion to be able to detect if its still connected to its current
 master enable the check for it
 
 .. code-block:: yaml
+
     master_alive_interval: <seconds>
 
 If the loss of the connection is detected, the minion will temporarily
@@ -311,6 +312,7 @@ That signature can be created with
 This will create a default signature file in the master pki-directory
 
 .. code-block:: bash
+
     /etc/salt/pki/master/master_pubkey_signature
 
 It is a simple text-file with the binary-signature converted to base64.
@@ -367,7 +369,7 @@ another key-pair has to be added to the setup. Its default name is:
 The combination of the master.* and master_sign.* key-pairs give the
 possibility of generating signatures. The signature of a given message
 is unique and can be verified, if the public-key of the signing-key-pair
-is available to the recepient (the minion).
+is available to the recipient (the minion).
 
 The signature of the masters public-key in master.pub is computed with
 

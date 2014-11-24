@@ -311,3 +311,32 @@ strings to force YAML to serialize them as strings:
     datetime.datetime(2014, 1, 20, 14, 23, 23)
     >>> yaml.safe_load('"2014-01-20 14:23:23"')
     '2014-01-20 14:23:23'
+
+Additionally, numbers formatted like ``XXXX-XX-XX`` will also be converted (or
+YAML will attempt to convert them, and error out if it doesn't think the date
+is a real one).  Thus, for example, if a minion were to have an ID of
+``4017-16-20`` the minion would not start because YAML would complain that the
+date was out of range.  The workaround is the same, surround the offending
+string with quotes:
+
+.. code-block:: python
+
+    >>> import yaml
+    >>> yaml.safe_load('4017-16-20')
+    Traceback (most recent call last):
+      File "<stdin>", line 1, in <module>
+      File "/usr/local/lib/python2.7/site-packages/yaml/__init__.py", line 93, in safe_load
+        return load(stream, SafeLoader)
+      File "/usr/local/lib/python2.7/site-packages/yaml/__init__.py", line 71, in load
+        return loader.get_single_data()
+      File "/usr/local/lib/python2.7/site-packages/yaml/constructor.py", line 39, in get_single_data
+        return self.construct_document(node)
+      File "/usr/local/lib/python2.7/site-packages/yaml/constructor.py", line 43, in construct_document
+        data = self.construct_object(node)
+      File "/usr/local/lib/python2.7/site-packages/yaml/constructor.py", line 88, in construct_object
+        data = constructor(self, node)
+      File "/usr/local/lib/python2.7/site-packages/yaml/constructor.py", line 312, in construct_yaml_timestamp
+        return datetime.date(year, month, day)
+    ValueError: month must be in 1..12
+    >>> yaml.safe_load('"4017-16-20"')
+    '4017-16-20'

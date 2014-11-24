@@ -101,7 +101,11 @@ as a passed in dict, or as a string to pull from pillars or minion config:
         - force: True
 '''
 
+# Import Python libs
 import hashlib
+import logging
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -220,11 +224,19 @@ def present(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
     '''
-    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    if vpc_zone_identifier:
+        vpc_id = __salt__['boto_vpc.get_subnet_association'](vpc_zone_identifier, region, key, keyid, profile)
+        log.debug('Auto Scaling Group {0} is associated with VPC ID {1}'
+                  .format(name, vpc_id))
+    else:
+        vpc_id = None
+        log.debug('Auto Scaling Group {0} has no VPC Association'
+                  .format(name))
     # if launch_config is defined, manage the launch config first.
     # hash the launch_config dict to create a unique name suffix and then
     # ensure it is present
-    if launch_config and not __opts__['test']:
+    if launch_config:
         launch_config_name = launch_config_name + "-" + hashlib.md5(str(launch_config)).hexdigest()
         args = {
             'name':  launch_config_name,
@@ -233,14 +245,34 @@ def present(
             'keyid': keyid,
             'profile': profile
         }
+
+        if vpc_id:
+            log.debug('Auto Scaling Group {0} is a associated with a vpc')
+            # locate the security groups attribute of a launch config
+            sg_index = None
+            for index, item in enumerate(launch_config):
+                if 'security_groups' in item:
+                    sg_index = index
+                    break
+            # if security groups exist within launch_config then convert
+            # to group ids
+            if sg_index:
+                log.debug('security group associations found in launch config')
+                _group_ids = __salt__['boto_secgroup.convert_to_group_ids'](
+                    launch_config[sg_index]['security_groups'], vpc_id, region,
+                    key, keyid, profile
+                )
+                launch_config[sg_index]['security_groups'] = _group_ids
+
         for d in launch_config:
             args.update(d)
-        lc_ret = __salt__["state.single"]('boto_lc.present', **args)
-        lc_ret = lc_ret.values()[0]
-        if lc_ret["result"] is True:
-            if "launch_config" not in ret["changes"]:
-                ret["changes"]["launch_config"] = {}
-            ret["changes"]["launch_config"] = lc_ret["changes"]
+        if not __opts__['test']:
+            lc_ret = __salt__["state.single"]('boto_lc.present', **args)
+            lc_ret = lc_ret.itervalues().next()
+            if lc_ret["result"] is True and lc_ret["changes"]:
+                if "launch_config" not in ret["changes"]:
+                    ret["changes"]["launch_config"] = {}
+                ret["changes"]["launch_config"] = lc_ret["changes"]
 
     asg = __salt__['boto_asg.get_config'](name, region, key, keyid, profile)
     if asg is None:
@@ -250,6 +282,7 @@ def present(
         if __opts__['test']:
             msg = 'Autoscale group set to be created.'
             ret['comment'] = msg
+            ret['result'] = None
             return ret
         created = __salt__['boto_asg.create'](name, launch_config_name,
                                               availability_zones, min_size,
@@ -264,7 +297,6 @@ def present(
                                               scaling_policies, region,
                                               key, keyid, profile)
         if created:
-            ret['result'] = True
             ret['changes']['old'] = None
             asg = __salt__['boto_asg.get_config'](name, region, key, keyid,
                                                   profile)
@@ -300,21 +332,26 @@ def present(
         # ensure that we delete scaling_policies if none are specified
         if scaling_policies is None:
             config["scaling_policies"] = []
-        for key, value in config.iteritems():
+        # note: do not loop using "key, value" - this can modify the value of
+        # the aws access key
+        for asg_property, value in config.iteritems():
             # Only modify values being specified; introspection is difficult
             # otherwise since it's hard to track default values, which will
             # always be returned from AWS.
             if value is None:
                 continue
-            if key in asg:
-                _value = asg[key]
+            if asg_property in asg:
+                _value = asg[asg_property]
                 if not _recursive_compare(value, _value):
+                    log_msg = '{0} asg_property differs from {1}'
+                    log.debug(log_msg.format(value, _value))
                     need_update = True
                     break
         if need_update:
             if __opts__['test']:
                 msg = 'Autoscale group set to be updated.'
                 ret['comment'] = msg
+                ret['result'] = None
                 return ret
             updated = __salt__['boto_asg.update'](name, launch_config_name,
                                                   availability_zones, min_size,
@@ -337,7 +374,6 @@ def present(
                         ret["changes"]["launch_config"] = {}
                     ret["changes"]["launch_config"]["deleted"] = asg["launch_config_name"]
             if updated:
-                ret['result'] = True
                 ret['changes']['old'] = asg
                 asg = __salt__['boto_asg.get_config'](name, region, key, keyid,
                                                       profile)
@@ -365,9 +401,9 @@ def _recursive_compare(v1, v2):
     elif isinstance(v1, dict):
         v1 = dict(v1)
         v2 = dict(v2)
-        if sorted(v1.keys()) != sorted(v2.keys()):
+        if sorted(v1) != sorted(v2):
             return False
-        for k in v1.keys():
+        for k in v1:
             if not _recursive_compare(v1[k], v2[k]):
                 return False
         return True
@@ -404,20 +440,19 @@ def absent(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
     '''
-    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     asg = __salt__['boto_asg.get_config'](name, region, key, keyid, profile)
     if asg is None:
         ret['result'] = False
         ret['comment'] = 'Failed to check autoscale group existence.'
     elif asg:
         if __opts__['test']:
-            ret['result'] = None
             ret['comment'] = 'Autoscale group set to be deleted.'
+            ret['result'] = None
             return ret
         deleted = __salt__['boto_asg.delete'](name, force, region, key, keyid,
                                               profile)
         if deleted:
-            ret['result'] = True
             ret['changes']['old'] = asg
             ret['changes']['new'] = None
             ret['comment'] = 'Deleted autoscale group.'

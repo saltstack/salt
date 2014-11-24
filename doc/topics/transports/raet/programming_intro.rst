@@ -11,7 +11,7 @@ presents and queueing api, all messages in RAET are made available to via
 queues. This is the single most differentiating factor with RAET vs other
 networking libraries, instead of making a socket, a stack is created.
 Instead of calling send() or recv(), messages are placed on the stack to be
-sent and messages that are recived appear on the stack.
+sent and messages that are received appear on the stack.
 
 Different kinds of stacks are also available, currently two stacks exist,
 the UDP stack, and the UXD stack. The UDP stack is used to communicate over

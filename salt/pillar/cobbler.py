@@ -40,7 +40,10 @@ __opts__ = {'cobbler.url': 'http://localhost/cobbler_api',
 log = logging.getLogger(__name__)
 
 
-def ext_pillar(minion_id, pillar, key=None, only=()):
+def ext_pillar(minion_id,
+               pillar,  # pylint: disable=W0613
+               key=None,
+               only=()):
     '''
     Read pillar data from Cobbler via its API.
     '''
@@ -52,7 +55,7 @@ def ext_pillar(minion_id, pillar, key=None, only=()):
     try:
         server = xmlrpclib.Server(url, allow_none=True)
         if user:
-            server = xmlrpclib.Server(server, server.login(user, password))
+            server.login(user, password)
         result = server.get_blended_data(None, minion_id)
     except Exception:
         log.exception(

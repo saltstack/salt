@@ -24,7 +24,11 @@ The tags list (optional) specifies grains items that will be used as sentry tags
 in the sentry ui.
 '''
 
+# Import Python libs
 import logging
+
+# Import Salt libs
+import salt.utils
 
 try:
     from raven import Client
@@ -50,6 +54,9 @@ def returner(ret):
     messages will be reported at info level.
     '''
     def connect_sentry(message, result):
+        '''
+        Connect to the Sentry server
+        '''
         pillar_data = __salt__['pillar.raw']()
         grains = __salt__['grains.items']()
         sentry_data = {
@@ -102,3 +109,10 @@ def returner(ret):
             'Can\'t run connect_sentry: {0}'.format(err),
             exc_info=True
         )
+
+
+def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
+    '''
+    Do any work necessary to prepare a JID, including sending a custom id
+    '''
+    return passed_jid if passed_jid is not None else salt.utils.gen_jid()

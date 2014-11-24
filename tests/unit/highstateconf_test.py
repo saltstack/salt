@@ -18,6 +18,7 @@ OPTS['file_client'] = 'local'
 OPTS['file_roots'] = dict(base=['/tmp'])
 OPTS['test'] = False
 OPTS['grains'] = salt.loader.grains(OPTS)
+OPTS['cachedir'] = 'cachedir'
 
 
 class HighStateTestCase(TestCase):

@@ -413,3 +413,16 @@ def list_groups(name):
         salt '*' user.list_groups foo
     '''
     return salt.utils.get_group_list(name)
+
+
+def list_users():
+    '''
+    Return a list of all users
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' user.list_users
+    '''
+    return sorted([user.pw_name for user in pwd.getpwall()])

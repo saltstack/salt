@@ -269,7 +269,7 @@ class PyWinUpdater(object):
         '''
         updates = self.GetInstallationResults()
         ret = 'The following are the updates and their return codes.\n'
-        for i in updates.keys():
+        for i in updates:
             ret += '\t{0}\n'.format(updates[i])
         return ret
 
@@ -316,8 +316,8 @@ class PyWinUpdater(object):
     def SetIncludes(self, includes):
         if includes:
             for i in includes:
-                value = i[i.keys()[0]]
-                include = i.keys()[0]
+                value = i[i.iterkeys().next()]
+                include = i.iterkeys().next()
                 self.SetInclude(include, value)
                 log.debug('was asked to set {0} to {1}'.format(include, value))
 
@@ -444,31 +444,38 @@ def list_updates(verbose=False, includes=None, retries=5, categories=None):
     Returns a summary of available updates, grouped into their non-mutually
     exclusive categories.
 
-    To list the actual updates by name, add 'verbose' to the call.
+    verbose
+        Print results in greater detail
 
-    you can set the maximum number of retries to n in the search process by
-    adding: retries=n
+    retries
+        Number of retries to make before giving up. This is total, not per
+        step.
 
-    various aspects of the updates can be included or excluded. this feature is
-    still in development.
+    categories
+        Specify the categories to list. Must be passed as a list.
 
-    You can also specify by category of update similarly to how you do includes:
-    categories=['Windows 7', 'Security Updates']
-    Some known categories:
-            Updates
-            Windows 7
-            Critical Updates
-            Security Updates
-            Update Rollups
+        .. code-block:: bash
 
-    CLI Example:
-    Normal Usage:
+            salt '*' win_update.list_updates categories="['Updates']"
+
+        Categories include the following:
+
+        * Updates
+        * Windows 7
+        * Critical Updates
+        * Security Updates
+        * Update Rollups
+
+    CLI Examples:
+
     .. code-block:: bash
+
+        # Normal Usage
         salt '*' win_update.list_updates
 
-    Find all critical updates list in detail:
-    .. code-block:: bash
-        salt '*' win_update.list_updates categories=['Critical Updates'] verbose
+        # List all critical updates list in verbose detail
+        salt '*' win_update.list_updates categories=['Critical Updates'] verbose=True
+
     '''
 
     log.debug('categories to search for are: '.format(str(categories)))
@@ -489,31 +496,41 @@ def list_updates(verbose=False, includes=None, retries=5, categories=None):
 
 def download_updates(includes=None, retries=5, categories=None):
     '''
-    Downloads all available updates, skipping those that require user interaction.
+    Downloads all available updates, skipping those that require user
+    interaction.
 
-    you can set the maximum number of retries to n in the search process by
-    adding: retries=n
+    Various aspects of the updates can be included or excluded. this feature is
+    still in development.
 
-    various aspects of the updates can be included or excluded. this feature is
-    still indevelopment.
+    retries
+        Number of retries to make before giving up. This is total, not per
+        step.
 
-    You can also specify by category of update similarly to how you do includes:
-    categories=['Windows 7', 'Security Updates']
-    Some known categories:
-            Updates
-            Windows 7
-            Critical Updates
-            Security Updates
-            Update Rollups
+    categories
+        Specify the categories to update. Must be passed as a list.
 
-    CLI Example:
-    Normal Usage:
+        .. code-block:: bash
+
+            salt '*' win_update.download_updates categories="['Updates']"
+
+        Categories include the following:
+
+        * Updates
+        * Windows 7
+        * Critical Updates
+        * Security Updates
+        * Update Rollups
+
+    CLI Examples:
+
     .. code-block:: bash
+
+        # Normal Usage
         salt '*' win_update.download_updates
 
-    Find all critical updates list in detail:
-    .. code-block:: bash
-        salt '*' win_update.download_updates categories=['Critical Updates'] verbose
+        # Download critical updates only
+        salt '*' win_update.download_updates categories="['Critical Updates']"
+
     '''
 
     log.debug('categories to search for are: '.format(str(categories)))
@@ -538,35 +555,43 @@ def download_updates(includes=None, retries=5, categories=None):
     return 'Windows is up to date. \n{0}'.format(comment)
 
 
-def install_updates(cached=None, includes=None, retries=5, categories=None):
+def install_updates(includes=None, retries=5, categories=None):
     '''
-    Downloads and installs all available updates, skipping those that require user interaction.
-
-    Add 'cached' to only install those updates which have already been downloaded.
-
-    you can set the maximum number of retries to n in the search process by
-    adding: retries=n
+    Downloads and installs all available updates, skipping those that require
+    user interaction.
 
     various aspects of the updates can be included or excluded. this feature is
     still in development.
 
-    You can also specify by category of update similarly to how you do includes:
-    categories=['Windows 7', 'Security Updates']
-    Some known categories:
-            Updates
-            Windows 7
-            Critical Updates
-            Security Updates
-            Update Rollups
+    retries
+        Number of retries to make before giving up. This is total, not per
+        step.
 
-    CLI Example:
-    Normal Usage:
+    categories
+        Specify the categories to install. Must be passed as a list.
+
+        .. code-block:: bash
+
+            salt '*' win_update.install_updates categories="['Updates']"
+
+        Categories include the following:
+
+        * Updates
+        * Windows 7
+        * Critical Updates
+        * Security Updates
+        * Update Rollups
+
+    CLI Examples:
+
     .. code-block:: bash
+
+        # Normal Usage
         salt '*' win_update.install_updates
 
-    Find all critical updates list in detail:
-    .. code-block:: bash
-        salt '*' win_update.install_updates categories=['Critical Updates'] verbose
+        # Install all critical updates
+        salt '*' win_update.install_updates categories="['Critical Updates']"
+
     '''
 
     log.debug('categories to search for are: '.format(str(categories)))

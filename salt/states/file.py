@@ -463,8 +463,8 @@ def _check_directory(name,
     if changes:
         comments = ['The following files will be changed:\n']
         for fn_ in changes:
-            key, val = changes[fn_].keys()[0], changes[fn_].values()[0]
-            comments.append('{0}: {1} - {2}\n'.format(fn_, key, val))
+            for key, val in changes[fn_].items():
+                comments.append('{0}: {1} - {2}\n'.format(fn_, key, val))
         return None, ''.join(comments)
     return True, 'The directory {0} is in the correct state'.format(name)
 
@@ -1008,6 +1008,18 @@ def managed(name,
         If the file is hosted on a HTTP or FTP server then the source_hash
         argument is also required
 
+        A list of sources can also be passed in to provide a default source and
+        a set of fallbacks. The first source in the list that is found to exist
+        will be used and subsequent entries in the list will be ignored.
+
+        .. code-block:: yaml
+
+            file_override_example:
+              file.managed:
+                - source:
+                  - salt://file_that_does_not_exist
+                  - salt://file_that_exists
+
     source_hash
         This can be one of the following:
             1. a source hash string
@@ -1178,8 +1190,9 @@ def managed(name,
     check_cmd
         .. versionadded:: 2014.7.0
 
-        Do run the state only if the check_cmd succeeds
-
+        The specified command will be run with the managed file as an argument.
+        If the command exits with a nonzero exit code, the command will not be
+        run.
     '''
     # Make sure that leading zeros stripped by YAML loader are added back
     mode = __salt__['config.manage_mode'](mode)
@@ -1280,7 +1293,8 @@ def managed(name,
 
     try:
         if __opts__['test']:
-            ret['result'], ret['comment'] = __salt__['file.check_managed'](
+            ret['result'] = None
+            ret['changes'] = __salt__['file.check_managed_changes'](
                 name,
                 source,
                 source_hash,
@@ -1294,6 +1308,12 @@ def managed(name,
                 contents,
                 **kwargs
             )
+
+            if ret['changes']:
+                ret['comment'] = 'The file {0} is set to be changed'.format(name)
+            else:
+                ret['comment'] = 'The file {0} is in the correct state'.format(name)
+
             return ret
 
         # If the source is a list then find which file exists
@@ -1368,9 +1388,11 @@ def managed(name,
                    'name': name,
                    'result': True}
 
-            cret = mod_run_check_cmd(
-                check_cmd, tmp_filename
-            )
+            check_cmd_opts = {}
+            if 'shell' in __grains__:
+                check_cmd_opts['shell'] = __grains__['shell']
+
+            cret = mod_run_check_cmd(check_cmd, tmp_filename, **check_cmd_opts)
             if isinstance(cret, dict):
                 ret.update(cret)
                 return ret
@@ -1489,7 +1511,7 @@ def directory(name,
         .. versionadded:: 2014.1.4
 
     force
-        If the name of the directory exists and is not a direcotry and
+        If the name of the directory exists and is not a directory and
         force is set to False, the state will fail. If force is set to
         True, the file in the way of the directory will be deleted to
         make room for the directory, unless backupname is set,
@@ -2131,7 +2153,7 @@ def recurse(name,
             # Check for symlinks that happen to point to an empty dir.
             if keep_symlinks:
                 islink = False
-                for link in symlinks.keys():
+                for link in symlinks:
                     if mdir.startswith(link, 0):
                         log.debug('** skipping empty dir ** {0}, it intersects'
                                   ' a symlink'.format(mdir))
@@ -2184,13 +2206,25 @@ def replace(name,
             not_found_content=None,
             backup='.bak',
             show_changes=True):
-    '''
+    r'''
     Maintain an edit in a file
 
     .. versionadded:: 0.17.0
 
-    Params are identical to :py:func:`~salt.modules.file.replace`.
+    Params are identical to the remote execution function :mod:`file.replace
+    <salt.modules.file.replace>`.
 
+    For complex regex patterns it can be useful to avoid the need for complex
+    quoting and escape sequences by making use of YAML's multiline string
+    syntax.
+
+    .. code-block:: yaml
+
+        complex_search_and_replace:
+          file.replace:
+            # <...snip...>
+            - pattern: |
+                CentOS \(2.6.32[^\n]+\n\s+root[^\n]+\n\)+
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
@@ -2373,7 +2407,7 @@ def sed(name,
         negate_match=False):
     '''
     .. deprecated:: 0.17.0
-       Use :py:func:`~salt.states.file.replace` instead.
+       Use the :mod:`file.replace <salt.states.file.replace>` state instead.
 
     Maintain a simple edit to a file
 
@@ -2915,6 +2949,7 @@ def append(name,
                 )
         else:
             ret['comment'] = 'File {0} is in correct state'.format(name)
+            ret['result'] = True
         return ret
 
     with salt.utils.fopen(name, 'rb') as fp_:
@@ -3071,7 +3106,6 @@ def prepend(name,
 
     if __opts__['test']:
         nlines = test_lines + slines
-        ret['result'] = None
         if slines != nlines:
             if not salt.utils.istextfile(name):
                 ret['changes']['diff'] = 'Replace binary file'
@@ -3080,8 +3114,10 @@ def prepend(name,
                 ret['changes']['diff'] = (
                     ''.join(difflib.unified_diff(slines, nlines))
                 )
+            ret['result'] = None
         else:
             ret['comment'] = 'File {0} is in correct state'.format(name)
+            ret['result'] = True
         return ret
 
     __salt__['file.prepend'](name, *preface)
@@ -3521,6 +3557,10 @@ def accumulated(name, filename, text, **kwargs):
         'result': True,
         'comment': ''
     }
+    if text is None:
+        ret['result'] = False
+        ret['comment'] = 'No text supplied for accumulator'
+        return ret
     require_in = __low__.get('require_in', [])
     watch_in = __low__.get('watch_in', [])
     deps = require_in + watch_in
@@ -3541,7 +3581,7 @@ def accumulated(name, filename, text, **kwargs):
     if name not in _ACCUMULATORS_DEPS[filename]:
         _ACCUMULATORS_DEPS[filename][name] = []
     for accumulator in deps:
-        _ACCUMULATORS_DEPS[filename][name].extend(accumulator.values())
+        _ACCUMULATORS_DEPS[filename][name].extend(accumulator.itervalues())
     if name not in _ACCUMULATORS[filename]:
         _ACCUMULATORS[filename][name] = []
     for chunk in text:
@@ -3987,7 +4027,7 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
     return ret
 
 
-def mod_run_check_cmd(cmd, filename):
+def mod_run_check_cmd(cmd, filename, **check_cmd_opts):
     '''
     Execute the check_cmd logic
     Return a result dict if:
@@ -3997,9 +4037,10 @@ def mod_run_check_cmd(cmd, filename):
 
     log.debug('running our check_cmd')
     _cmd = '{0} {1}'.format(cmd, filename)
-    if __salt__['cmd.retcode'](_cmd) != 0:
+    if __salt__['cmd.retcode'](_cmd, **check_cmd_opts) != 0:
         return {'comment': 'check_cmd execution failed',
-                'result': True}
+                'skip_watch': True,
+                'result': False}
 
     # No reason to stop, return True
     return True

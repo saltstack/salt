@@ -102,7 +102,7 @@ def verify(*package, **kwargs):
         fname = line[13:]
         if line[11:12] in ftypes:
             fdict['type'] = ftypes[line[11:12]]
-        if 'type' not in fdict.keys() or fdict['type'] not in ignore_types:
+        if 'type' not in fdict or fdict['type'] not in ignore_types:
             if line[0:1] == 'S':
                 fdict['mismatch'].append('size')
             if line[1:2] == 'M':
@@ -177,7 +177,7 @@ def file_dict(*packages):
             continue
         comps = line.split()
         pkgs[comps[0]] = {'version': comps[1]}
-    for pkg in pkgs.keys():
+    for pkg in pkgs:
         files = []
         cmd = 'rpm -ql {0}'.format(pkg)
         out = __salt__['cmd.run'](cmd, output_loglevel='trace')

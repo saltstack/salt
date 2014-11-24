@@ -51,6 +51,11 @@ minion is configured to not gather this data from the master.
 Now the salt minion will not look for a master and will assume that the local
 system has all of the file and pillar resources.
 
+.. note::
+
+    When running Salt in masterless mode, do not run the salt-minion daemon.
+    Otherwise, it will attempt to connect to a master and fail. The salt-call
+    command stands on its own and does not need the salt-minion daemon.
 
 Create State Tree
 =================

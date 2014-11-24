@@ -61,7 +61,8 @@ class APIClient(object):
         self.event = salt.utils.event.get_event(
                 'master',
                 self.opts['sock_dir'],
-                self.opts['transport'])
+                self.opts['transport'],
+                opts=self.opts)
 
     def run(self, cmd):
         '''
@@ -223,7 +224,7 @@ class APIClient(object):
             client = parts[0]
             module = '.'.join(parts[1:])  # strip prefix
             if client == 'wheel':
-                functions = self.wheelClient.w_funcs
+                functions = self.wheelClient.functions
             elif client == 'runner':
                 functions = self.runnerClient.functions
             result = {'master': salt.utils.argspec_report(functions, module)}

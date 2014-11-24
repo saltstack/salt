@@ -321,7 +321,7 @@ def delval(key, destructive=False):
 
     Delete a grain from the grains config file
 
-    :param Destructive: Delete the key, too. Defaults to False.
+    :param destructive: Delete the key, too. Defaults to False.
 
     CLI Example:
 
@@ -486,7 +486,7 @@ def get_or_set_hash(name,
     ret = get(name, None)
 
     if ret is None:
-        val = ''.join([random.choice(chars) for _ in range(length)])
+        val = ''.join([random.SystemRandom().choice(chars) for _ in range(length)])
 
         if ':' in name:
             name, rest = name.split(':', 1)

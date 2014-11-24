@@ -12,6 +12,7 @@ import logging
 # pylint: disable=W0611
 # Import libcloud
 try:
+    import libcloud
     from libcloud.compute.types import Provider
     from libcloud.compute.providers import get_driver
     from libcloud.compute.deployment import (
@@ -20,8 +21,13 @@ try:
         SSHKeyDeployment
     )
     HAS_LIBCLOUD = True
+    LIBCLOUD_VERSION_INFO = tuple([
+        int(part) for part in libcloud.__version__.replace('-', '.').split('.')[:3]
+    ])
+
 except ImportError:
     HAS_LIBCLOUD = False
+    LIBCLOUD_VERSION_INFO = (1000,)
 # pylint: enable=W0611
 
 
@@ -34,7 +40,7 @@ import salt.client
 import salt.utils
 import salt.utils.cloud
 import salt.config as config
-from salt.cloud.exceptions import SaltCloudNotFound, SaltCloudSystemExit
+from salt.exceptions import SaltCloudNotFound, SaltCloudSystemExit
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -48,7 +54,11 @@ def node_state(id_):
               1: 'REBOOTING',
               2: 'TERMINATED',
               3: 'PENDING',
-              4: 'UNKNOWN'}
+              4: 'UNKNOWN',
+              5: 'STOPPED',
+              6: 'SUSPENDED',
+              7: 'ERROR',
+              8: 'PAUSED'}
     return states[id_]
 
 
@@ -64,7 +74,7 @@ def check_libcloud_version(reqver=LIBCLOUD_MINIMAL_VERSION, why=None):
             '\'reqver\' needs to passed as a tuple or list, ie, (0, 14, 0)'
         )
     try:
-        import libcloud
+        import libcloud  # pylint: disable=redefined-outer-name
     except ImportError:
         raise ImportError(
             'salt-cloud requires >= libcloud {0} which is not installed'.format(
@@ -72,14 +82,7 @@ def check_libcloud_version(reqver=LIBCLOUD_MINIMAL_VERSION, why=None):
             )
         )
 
-    ver = libcloud.__version__
-    ver = ver.replace('-', '.')
-    comps = ver.split('.')
-    version = []
-    for number in comps[:3]:
-        version.append(int(number))
-
-    if tuple(version) >= reqver:
+    if LIBCLOUD_VERSION_INFO >= reqver:
         return libcloud.__version__
 
     errormsg = 'Your version of libcloud is {0}. '.format(libcloud.__version__)
@@ -453,7 +456,7 @@ def list_nodes_full(conn=None, call=None):
     ret = {}
     for node in nodes:
         pairs = {}
-        for key, value in zip(node.__dict__.keys(), node.__dict__.values()):
+        for key, value in zip(node.__dict__, node.__dict__.itervalues()):
             pairs[key] = value
         ret[node.name] = pairs
         del ret[node.name]['driver']

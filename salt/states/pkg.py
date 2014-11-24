@@ -42,7 +42,7 @@ import re
 import salt.utils
 from salt.output import nested
 from salt.utils import namespaced_function as _namespaced_function
-from salt.utils.odict import OrderedDict
+from salt.utils.odict import OrderedDict as _OrderedDict
 from salt._compat import string_types
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
@@ -123,6 +123,7 @@ def _find_install_targets(name=None,
                           sources=None,
                           skip_suggestions=False,
                           pkg_verify=False,
+                          normalize=True,
                           **kwargs):
     '''
     Inspect the arguments to pkg.installed and discover what packages need to
@@ -139,7 +140,7 @@ def _find_install_targets(name=None,
     # Get the ignore_types list if any from the pkg_verify argument
     if type(pkg_verify) is list and any(x.get('ignore_types') is not None
                                         for x in pkg_verify
-                                        if type(x) is OrderedDict
+                                        if type(x) is _OrderedDict
                                         and 'ignore_types' in x):
         ignore_types = next(x.get('ignore_types')
                             for x in pkg_verify
@@ -174,8 +175,13 @@ def _find_install_targets(name=None,
                                    'repository.'.format(name)}
             if version is None:
                 version = _get_latest_pkg_version(pkginfo)
-        _normalize_name = __salt__.get('pkg.normalize_name', lambda pkgname: pkgname)
-        desired = {_normalize_name(name): version}
+
+        if normalize:
+            _normalize_name = __salt__.get('pkg.normalize_name', lambda pkgname: pkgname)
+            desired = {_normalize_name(name): version}
+        else:
+            desired = {name: version}
+
         to_unpurge = _find_unpurge_targets(desired)
 
         cver = cur_pkgs.get(name, [])
@@ -389,6 +395,7 @@ def installed(
         sources=None,
         allow_updates=False,
         pkg_verify=False,
+        normalize=True,
         **kwargs):
     '''
     Ensure that the package is installed, and that it is the correct version
@@ -566,7 +573,24 @@ def installed(
             - pkg_verify:
               - ignore_types: [config,doc]
 
-    Multiple Package Installation Options: (not supported in Windows or pkgng)
+    normalize
+        Normalize the package name by removing the architecture.  Default is True.
+        This is useful for poorly created packages which might include the
+        architecture as an actual part of the name such as kernel modules
+        which match a specific kernel version.
+
+        .. versionadded:: 2014.7.0
+
+    Example:
+
+    .. code-block:: yaml
+
+        gpfs.gplbin-2.6.32-279.31.1.el6.x86_64:
+          pkg.installed:
+            - normalize: False
+
+    **Multiple Package Installation Options: (not supported in Windows or
+    pkgng)**
 
     pkgs
         A list of packages to install from a software repository. All packages
@@ -683,6 +707,7 @@ def installed(
                                    fromrepo=fromrepo,
                                    skip_suggestions=skip_suggestions,
                                    pkg_verify=pkg_verify,
+                                   normalize=normalize,
                                    **kwargs)
 
     try:
@@ -706,7 +731,7 @@ def installed(
                     return {'name': name,
                             'changes': {},
                             'result': False,
-                            'comment': exc.message}
+                            'comment': str(exc)}
 
                 if 'result' in hold_ret and not hold_ret['result']:
                     return {'name': name,
@@ -753,8 +778,8 @@ def installed(
         pkgs.extend([dict([(x, y)]) for x, y in to_reinstall.iteritems()])
     elif sources:
         oldsources = sources
-        sources = [x for x in oldsources if x.keys()[0] in targets]
-        sources.extend([x for x in oldsources if x.keys()[0] in to_reinstall])
+        sources = [x for x in oldsources if x.iterkeys().next() in targets]
+        sources.extend([x for x in oldsources if x.iterkeys().next() in to_reinstall])
 
     comment = []
     if __opts__['test']:
@@ -802,6 +827,7 @@ def installed(
                                             pkgs=pkgs,
                                             sources=sources,
                                             reinstall=reinstall,
+                                            normalize=normalize,
                                             **kwargs)
 
             if os.path.isfile(rtag) and refresh:
@@ -830,7 +856,7 @@ def installed(
                             name=name, pkgs=pkgs, sources=sources
                         )
                 except (CommandExecutionError, SaltInvocationError) as exc:
-                    comment.append(exc.message)
+                    comment.append(str(exc))
                     return {'name': name,
                             'changes': changes,
                             'result': False,
@@ -857,7 +883,7 @@ def installed(
 
     # Analyze pkg.install results for packages in targets
     if sources:
-        modified = [x for x in changes['installed'].keys() if x in targets]
+        modified = [x for x in changes['installed'] if x in targets]
         not_modified = [x for x in desired if x not in targets and x not in to_reinstall]
         failed = [x for x in targets if x not in modified]
     else:
@@ -905,7 +931,7 @@ def installed(
                 changes[change_name]['old'] += '\n'
             changes[change_name]['old'] += '{0}'.format(i['changes']['old'])
 
-    # Any requested packages that were not targetted for install or reinstall
+    # Any requested packages that were not targeted for install or reinstall
     if not_modified:
         if sources:
             summary = ', '.join(not_modified)
@@ -948,7 +974,7 @@ def installed(
     # Get the ignore_types list if any from the pkg_verify argument
     if type(pkg_verify) is list and any(x.get('ignore_types') is not None
                                         for x in pkg_verify
-                                        if type(x) is OrderedDict
+                                        if type(x) is _OrderedDict
                                         and 'ignore_types' in x):
         ignore_types = next(x.get('ignore_types')
                             for x in pkg_verify
@@ -1113,7 +1139,7 @@ def latest(
             up_to_date = [x for x in pkgs if x not in targets]
 
         if __opts__['test']:
-            to_be_upgraded = ', '.join(sorted(targets.keys()))
+            to_be_upgraded = ', '.join(sorted(targets))
             comment = 'The following packages are set to be ' \
                       'installed/upgraded: ' \
                       '{0}.'.format(to_be_upgraded)
@@ -1187,10 +1213,10 @@ def latest(
             elif len(targets) > 1:
                 comment = ('The following targeted packages failed to update. '
                            'See debug log for details: ({0}).'
-                           .format(', '.join(sorted(targets.keys()))))
+                           .format(', '.join(sorted(targets))))
             else:
                 comment = 'Package {0} failed to ' \
-                          'update.'.format(targets.keys()[0])
+                          'update.'.format(targets.iterkeys().next())
             if up_to_date:
                 if len(up_to_date) <= 10:
                     comment += ' The following packages were already ' \

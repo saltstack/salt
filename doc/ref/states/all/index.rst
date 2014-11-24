@@ -21,6 +21,7 @@ Full list of builtin state modules
     aws_sqs
     blockdev
     boto_asg
+    boto_cloudwatch_alarm
     boto_elasticache
     boto_elb
     boto_iam_role

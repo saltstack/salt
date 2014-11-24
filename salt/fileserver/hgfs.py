@@ -35,6 +35,7 @@ import logging
 import os
 import shutil
 from datetime import datetime
+from salt._compat import text_type as _text_type
 
 VALID_BRANCH_METHODS = ('branches', 'bookmarks', 'mixed')
 PER_REMOTE_PARAMS = ('base', 'branch_method', 'mountpoint', 'root')
@@ -170,19 +171,23 @@ def init():
 
     per_remote_defaults = {}
     for param in PER_REMOTE_PARAMS:
-        per_remote_defaults[param] = __opts__['hgfs_{0}'.format(param)]
+        per_remote_defaults[param] = \
+            _text_type(__opts__['hgfs_{0}'.format(param)])
 
     for remote in __opts__['hgfs_remotes']:
         repo_conf = copy.deepcopy(per_remote_defaults)
         if isinstance(remote, dict):
-            repo_uri = next(iter(remote))
-            per_remote_conf = salt.utils.repack_dictlist(remote[repo_uri])
+            repo_url = next(iter(remote))
+            per_remote_conf = dict(
+                [(key, _text_type(val)) for key, val in
+                 salt.utils.repack_dictlist(remote[repo_url]).items()]
+            )
             if not per_remote_conf:
                 log.error(
                     'Invalid per-remote configuration for remote {0}. If no '
                     'per-remote parameters are being specified, there may be '
                     'a trailing colon after the URI, which should be removed. '
-                    'Check the master configuration file.'.format(repo_uri)
+                    'Check the master configuration file.'.format(repo_url)
                 )
 
             branch_method = \
@@ -192,7 +197,7 @@ def init():
                 log.error(
                     'Invalid branch_method {0!r} for remote {1}. Valid '
                     'branch methods are: {2}. This remote will be ignored.'
-                    .format(branch_method, repo_uri,
+                    .format(branch_method, repo_url,
                             ', '.join(VALID_BRANCH_METHODS))
                 )
                 continue
@@ -203,18 +208,18 @@ def init():
                     'Invalid configuration parameter {0!r} for remote {1}. '
                     'Valid parameters are: {2}. See the documentation for '
                     'further information.'.format(
-                        param, repo_uri, ', '.join(PER_REMOTE_PARAMS)
+                        param, repo_url, ', '.join(PER_REMOTE_PARAMS)
                     )
                 )
                 per_remote_conf.pop(param)
             repo_conf.update(per_remote_conf)
         else:
-            repo_uri = remote
+            repo_url = remote
 
-        if not isinstance(repo_uri, string_types):
+        if not isinstance(repo_url, string_types):
             log.error(
                 'Invalid gitfs remote {0}. Remotes must be strings, you may '
-                'need to enclose the URI in quotes'.format(repo_uri)
+                'need to enclose the URI in quotes'.format(repo_url)
             )
             continue
 
@@ -227,7 +232,7 @@ def init():
             pass
 
         hash_type = getattr(hashlib, __opts__.get('hash_type', 'md5'))
-        repo_hash = hash_type(repo_uri).hexdigest()
+        repo_hash = hash_type(repo_url).hexdigest()
         rp_ = os.path.join(bp_, repo_hash)
         if not os.path.isdir(rp_):
             os.makedirs(rp_)
@@ -243,7 +248,7 @@ def init():
                 'Cache path {0} (corresponding remote: {1}) exists but is not '
                 'a valid mercurial repository. You will need to manually '
                 'delete this directory on the master to continue to use this '
-                'hgfs remote.'.format(rp_, repo_uri)
+                'hgfs remote.'.format(rp_, repo_url)
             )
             continue
 
@@ -253,11 +258,11 @@ def init():
             hgconfpath = os.path.join(rp_, '.hg', 'hgrc')
             with salt.utils.fopen(hgconfpath, 'w+') as hgconfig:
                 hgconfig.write('[paths]\n')
-                hgconfig.write('default = {0}\n'.format(repo_uri))
+                hgconfig.write('default = {0}\n'.format(repo_url))
 
         repo_conf.update({
             'repo': repo,
-            'uri': repo_uri,
+            'url': repo_url,
             'hash': repo_hash,
             'cachedir': rp_
         })
@@ -271,7 +276,7 @@ def init():
                 timestamp = datetime.now().strftime('%d %b %Y %H:%M:%S.%f')
                 fp_.write('# hgfs_remote map as of {0}\n'.format(timestamp))
                 for repo in repos:
-                    fp_.write('{0} = {1}\n'.format(repo['hash'], repo['uri']))
+                    fp_.write('{0} = {1}\n'.format(repo['hash'], repo['url']))
         except OSError:
             pass
         else:
@@ -323,8 +328,8 @@ def update():
         except Exception as exc:
             log.error(
                 'Exception {0} caught while updating hgfs remote {1}'
-                .format(exc, repo['uri']),
-                exc_info=log.isEnabledFor(logging.DEBUG)
+                .format(exc, repo['url']),
+                exc_info_on_loglevel=logging.DEBUG
             )
         else:
             newtip = repo['repo'].tip()
@@ -353,6 +358,7 @@ def update():
                 'master',
                 __opts__['sock_dir'],
                 __opts__['transport'],
+                opts=__opts__,
                 listen=False)
         event.fire_event(data, tagify(['hgfs', 'update'], prefix='fileserver'))
     try:
@@ -549,9 +555,7 @@ def file_hash(load, fnd):
                             '{0}.hash.{1}'.format(relpath,
                                                   __opts__['hash_type']))
     if not os.path.isfile(hashdest):
-        with salt.utils.fopen(path, 'rb') as fp_:
-            ret['hsum'] = getattr(hashlib, __opts__['hash_type'])(
-                fp_.read()).hexdigest()
+        ret['hsum'] = salt.utils.get_hash(path, __opts__['hash_type'])
         with salt.utils.fopen(hashdest, 'w+') as fp_:
             fp_.write(ret['hsum'])
         return ret

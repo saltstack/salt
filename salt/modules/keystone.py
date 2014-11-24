@@ -591,7 +591,7 @@ def tenant_list(profile=None, **connection_args):
     return ret
 
 
-def tenant_update(tenant_id=None, name=None, email=None,
+def tenant_update(tenant_id=None, name=None, description=None,
                   enabled=None, profile=None, **connection_args):
     '''
     Update a tenant's information (keystone tenant-update)
@@ -617,11 +617,11 @@ def tenant_update(tenant_id=None, name=None, email=None,
     tenant = kstone.tenants.get(tenant_id)
     if not name:
         name = tenant.name
-    if not email:
-        email = tenant.email
+    if not description:
+        description = tenant.description
     if enabled is None:
         enabled = tenant.enabled
-    kstone.tenants.update(tenant_id, name, email, enabled)
+    kstone.tenants.update(tenant_id, name, description, enabled)
 
 
 def token_get(profile=None, **connection_args):
@@ -831,9 +831,9 @@ def user_password_update(user_id=None, name=None, password=None,
 
     .. code-block:: bash
 
-        salt '*' keystone.user_delete c965f79c4f864eaaa9c3b41904e67082 password=12345
-        salt '*' keystone.user_delete user_id=c965f79c4f864eaaa9c3b41904e67082 password=12345
-        salt '*' keystone.user_delete name=nova password=12345
+        salt '*' keystone.user_password_update c965f79c4f864eaaa9c3b41904e67082 password=12345
+        salt '*' keystone.user_password_update user_id=c965f79c4f864eaaa9c3b41904e67082 password=12345
+        salt '*' keystone.user_password_update name=nova password=12345
     '''
     kstone = auth(profile, **connection_args)
     if name:
@@ -872,7 +872,7 @@ def user_role_add(user_id=None, user=None, tenant_id=None,
                            **connection_args)[user]['id']
     else:
         user = user_get(user_id, profile=profile,
-                        **connection_args).keys()[0]['name']
+                        **connection_args).iterkeys().next()['name']
     if not user_id:
         return {'Error': 'Unable to resolve user id'}
 
@@ -881,7 +881,7 @@ def user_role_add(user_id=None, user=None, tenant_id=None,
                                **connection_args)[tenant]['id']
     else:
         tenant = tenant_get(tenant_id, profile=profile,
-                            **connection_args).keys()[0]['name']
+                            **connection_args).iterkeys().next()['name']
     if not tenant_id:
         return {'Error': 'Unable to resolve tenant id'}
 
@@ -890,7 +890,7 @@ def user_role_add(user_id=None, user=None, tenant_id=None,
                            **connection_args)[role]['id']
     else:
         role = role_get(role_id, profile=profile,
-                        **connection_args).keys()[0]['name']
+                        **connection_args).iterkeys().next()['name']
     if not role_id:
         return {'Error': 'Unable to resolve role id'}
 
@@ -921,7 +921,7 @@ def user_role_remove(user_id=None, user=None, tenant_id=None,
                            **connection_args)[user]['id']
     else:
         user = user_get(user_id, profile=profile,
-                        **connection_args).keys()[0]['name']
+                        **connection_args).iterkeys().next()['name']
     if not user_id:
         return {'Error': 'Unable to resolve user id'}
 
@@ -930,7 +930,7 @@ def user_role_remove(user_id=None, user=None, tenant_id=None,
                                **connection_args)[tenant]['id']
     else:
         tenant = tenant_get(tenant_id, profile=profile,
-                            **connection_args).keys()[0]['name']
+                            **connection_args).iterkeys().next()['name']
     if not tenant_id:
         return {'Error': 'Unable to resolve tenant id'}
 
@@ -938,7 +938,7 @@ def user_role_remove(user_id=None, user=None, tenant_id=None,
         role_id = role_get(name=role, profile=profile,
                            **connection_args)[role]['id']
     else:
-        role = role_get(role_id).keys()[0]['name']
+        role = role_get(role_id).iterkeys().next()['name']
     if not role_id:
         return {'Error': 'Unable to resolve role id'}
 

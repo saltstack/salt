@@ -22,6 +22,9 @@ Required python modules: pycassa
 # Import python libs
 import logging
 
+# Import salt libs
+import salt.utils
+
 # Import third party libs
 try:
     import pycassa
@@ -69,3 +72,10 @@ def returner(ret):
 
     log.debug(columns)
     ccf.insert(ret['jid'], columns)
+
+
+def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
+    '''
+    Do any work necessary to prepare a JID, including sending a custom id
+    '''
+    return passed_jid if passed_jid is not None else salt.utils.gen_jid()

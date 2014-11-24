@@ -101,6 +101,9 @@ correctly.  Replace with equivalent SQL for other ODBC-compliant servers::
 # Import python libs
 import json
 
+# Import Salt libs
+import salt.utils
+
 # FIXME We'll need to handle this differently for Windows.
 # Import third party libs
 try:
@@ -121,13 +124,23 @@ def _get_conn():
     '''
     Return a MSSQL connection.
     '''
-    return pyodbc.connect('DSN={0};UID={1};PWD={2}'.format(
-            __salt__['config.option']('returner.odbc.dsn'),
-            __salt__['config.option']('returner.odbc.user'),
-            __salt__['config.option']('returner.odbc.passwd')))
+    if 'config.option' in __salt__:
+        return pyodbc.connect('DSN={0};UID={1};PWD={2}'.format(
+                __salt__['config.option']('returner.odbc.dsn'),
+                __salt__['config.option']('returner.odbc.user'),
+                __salt__['config.option']('returner.odbc.passwd')))
+    else:
+        cfg = __opts__
+        return pyodbc.connect('DSN={0};UID={1};PWD={2}'.format(
+                cfg.get('returner.odbc.dsn', None),
+                cfg.get('returner.odbc.user', None),
+                cfg.get('returner.odbc.passwd', None)))
 
 
 def _close_conn(conn):
+    '''
+    Close the MySQL connection
+    '''
     conn.commit()
     conn.close()
 
@@ -218,7 +231,7 @@ def get_fun(fun):
 
     ret = {}
     if data:
-        for minion, jid, retval in data:
+        for minion, _, retval in data:
             ret[minion] = json.loads(retval)
     _close_conn(conn)
     return ret
@@ -256,3 +269,10 @@ def get_minions():
         ret.append(minion[0])
     _close_conn(conn)
     return ret
+
+
+def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
+    '''
+    Do any work necessary to prepare a JID, including sending a custom id
+    '''
+    return passed_jid if passed_jid is not None else salt.utils.gen_jid()

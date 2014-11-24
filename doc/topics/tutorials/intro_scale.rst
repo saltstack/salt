@@ -146,7 +146,7 @@ reconnect x: etc.
 
 With a thousand minions this will mean
 
-.. code-block:: math
+.. code-block:: text
 
     1000/60 = ~16
 
@@ -156,7 +156,8 @@ time and that more minions might raise the problem again.
 
 
 Too many minions returning at once
--------------------------------
+----------------------------------
+
 This can also happen during the testing phase, if all minions are addressed at
 once with
 
@@ -165,7 +166,7 @@ once with
     $ salt * test.ping
 
 it may cause thousands of minions trying to return their data to the salt-master
-open port 4506. Also causing a flood of syn-flood if the master cant handle that many
+open port 4506. Also causing a flood of syn-flood if the master can't handle that many
 returns at once.
 
 This can be easily avoided with salts batch mode:
@@ -179,13 +180,15 @@ minions.
 
 
 Too few resources
-=====================
+=================
+
 The masters resources always have to match the environment. There is no way
 to give good advise without knowing the environment the master is supposed to
 run in.  But here are some general tuning tips for different situations:
 
 The master is CPU bound
--------------------------------
+-----------------------
+
 Salt uses RSA-Key-Pairs on the masters and minions end. Both generate 4096
 bit key-pairs on first start. While the key-size for the master is currently
 not configurable, the minions keysize can be configured with different
@@ -204,7 +207,8 @@ Downsizing the salt-masters key is not that important, because the minions
 do not encrypt as many messages as the master does.
 
 The master is disk IO bound
--------------------------
+---------------------------
+
 By default, the master saves every minion's return for every job in its
 job-cache. The cache can then be used later, to lookup results for previous
 jobs. The default directory for this is:
@@ -224,7 +228,7 @@ the retention time defined by
 
     keep_jobs: 24
 
-.. code-block:: math
+.. code-block:: text
 
     250 jobs/day * 2000 minions returns = 500.000 files a day
 
@@ -236,7 +240,8 @@ If no job history is needed, the job cache can be disabled:
 
 
 If the job cache is necessary there are (currently) 2 options:
+
 - ext_job_cache: this will have the minions store their return data directly
-    into a returner (not sent through the master)
+  into a returner (not sent through the master)
 - master_job_cache (New in `2014.7.0`): this will make the master store the job
-    data using a returner (instead of the local job cache on disk).
+  data using a returner (instead of the local job cache on disk).

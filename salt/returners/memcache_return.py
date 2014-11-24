@@ -15,6 +15,7 @@ python2-memcache uses 'localhost' and '11211' as syntax on connection.
 # Import python libs
 import json
 import logging
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -39,14 +40,19 @@ def _get_serv():
     '''
     Return a memcache server object
     '''
-    host = __salt__['config.option']('memcache.host')
-    port = __salt__['config.option']('memcache.port')
+    if 'config.option' in __salt__:
+        host = __salt__['config.option']('memcache.host')
+        port = __salt__['config.option']('memcache.port')
+    else:
+        cfg = __opts__
+        host = cfg.get('memcache.host', None)
+        port = cfg.get('memcache.port', None)
     log.debug('memcache server: {0}:{1}'.format(host, port))
     if not host or not port:
         log.error('Host or port not defined in salt config')
         return
     #Combine host and port to conform syntax of python memcache client
-    memcacheoptions = (host, port)
+    memcacheoptions = (host, str(port))
 
     return memcache.Client([':'.join(memcacheoptions)], debug=0)
     ## TODO: make memcacheoptions cluster aware
@@ -54,6 +60,13 @@ def _get_serv():
     # 1. Strings of the form C{"host:port"}, which implies a default weight of 1
     # 2. Tuples of the form C{("host:port", weight)}, where C{weight} is
     #    an integer weight value.
+
+
+def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
+    '''
+    Do any work necessary to prepare a JID, including sending a custom id
+    '''
+    return passed_jid if passed_jid is not None else salt.utils.gen_jid()
 
 
 def returner(ret):

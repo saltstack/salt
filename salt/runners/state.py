@@ -24,6 +24,13 @@ def over(saltenv='base', os_fn=None):
     '''
     .. versionadded:: 0.11.0
 
+    .. warning::
+
+        ``state.over`` is deprecated in favor of ``state.orchestrate``, and
+        will be removed in the Salt feature release codenamed Boron.
+        (Three feature releases after the 2014.7.0 release, which is codenamed
+        Helium)
+
     Execute an overstate sequence to orchestrate the executing of states
     over a group of systems
 
@@ -33,6 +40,12 @@ def over(saltenv='base', os_fn=None):
 
         salt-run state.over base /path/to/myoverstate.sls
     '''
+    salt.utils.warn_until(
+            'Boron',
+            'The state.over runner is on a deprecation path and will be '
+            'removed in Salt Boron. Please migrate to state.orchestrate.'
+            )
+
     stage_num = 0
     try:
         overstate = salt.overstate.OverState(__opts__, saltenv, os_fn)
@@ -72,6 +85,11 @@ def orchestrate(mods, saltenv='base', test=None, exclude=None, pillar=None):
 
     Execute a state run from the master, used as a powerful orchestration
     system.
+
+    .. seealso:: More Orchestrate documentation
+
+        * :ref:`Full Orchestrate Tutorial <orchestrate-tutorial>`
+        * :py:mod:`Docs for the master-side state module <salt.states.saltmod>`
 
     CLI Examples:
 
@@ -180,7 +198,8 @@ def event(tagmatch='*', count=-1, quiet=False, sock_dir=None, pretty=False):
         # Usage: ./eventlisten.sh '*' test.sleep 10
 
         # Mimic fnmatch from the Python stdlib.
-        fnmatch () { case "$2" in $1) return 0 ;; *) return 1 ;; esac ; }
+        fnmatch() { case "$2" in $1) return 0 ;; *) return 1 ;; esac ; }
+        count() { printf '%s\n' "$#" ; }
 
         listen() {
             events='events'
@@ -192,14 +211,31 @@ def event(tagmatch='*', count=-1, quiet=False, sock_dir=None, pretty=False):
             salt-run state.event count=-1 >&3 &
             events_pid=$!
 
+            (
+                timeout=$(( 60 * 60 ))
+                sleep $timeout
+                kill -s USR2 $$
+            ) &
+            timeout_pid=$!
+
+            # Give the runner a few to connect to the event bus.
+            printf 'Subscribing to the Salt event bus...\n'
+            sleep 4
+
             trap '
                 excode=$?; trap - EXIT;
                 exec 3>&-
+                kill '"${timeout_pid}"'
                 kill '"${events_pid}"'
                 rm '"${events}"'
                 exit
                 echo $excode
             ' INT TERM EXIT
+
+            trap '
+                printf '\''Timeout reached; exiting.\n'\''
+                exit 4
+            ' USR2
 
             # Run the command and get the JID.
             jid=$(salt --async "$@")
@@ -209,11 +245,13 @@ def event(tagmatch='*', count=-1, quiet=False, sock_dir=None, pretty=False):
             start_tag="salt/job/${jid}/new"
             ret_tag="salt/job/${jid}/ret/*"
 
+            # ``read`` will block when no events are going through the bus.
             printf 'Waiting for tag %s\n' "$ret_tag"
             while read -r tag data; do
                 if fnmatch "$start_tag" "$tag"; then
                     minions=$(printf '%s\n' "${data}" | jq -r '.["minions"][]')
-                    printf 'Waiting for minions: %s\n' "${minions}" | xargs
+                    num_minions=$(count $minions)
+                    printf 'Waiting for %s minions.\n' "$num_minions"
                     continue
                 fi
 
@@ -224,10 +262,12 @@ def event(tagmatch='*', count=-1, quiet=False, sock_dir=None, pretty=False):
                     printf '%s\n' "$data" | jq .
 
                     minions="$(printf '%s\n' "$minions" | sed -e '/'"$mid"'/d')"
-                    if (( ${#minions} )); then
-                        printf 'Remaining minions: %s\n' "$minions" | xargs
-                    else
+                    num_minions=$(count $minions)
+                    if [ $((num_minions)) -eq 0 ]; then
+                        printf 'All minions returned.\n'
                         break
+                    else
+                        printf 'Remaining minions: %s\n' "$num_minions"
                     fi
                 else
                     printf 'Skipping tag: %s\n' "$tag"
@@ -241,7 +281,8 @@ def event(tagmatch='*', count=-1, quiet=False, sock_dir=None, pretty=False):
     sevent = salt.utils.event.get_event(
             'master',
             sock_dir or __opts__['sock_dir'],
-            __opts__['transport'])
+            __opts__['transport'],
+            opts=__opts__)
 
     while True:
         ret = sevent.get_event(full=True)

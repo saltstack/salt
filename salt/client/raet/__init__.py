@@ -51,17 +51,22 @@ class LocalClient(salt.client.LocalClient):
                 jid=jid,
                 timeout=timeout,
                 **kwargs)
-        yid = nacling.uuid(size=18)
+        kind = self.opts['__role']
+        if kind == 'master':
+            lanename = 'master'  # self.opts.value.get('id', self.main.data.lanename)
+        else:  # workers currently are only supported for masters
+            emsg = ("Invalid application kind '{0}' for client.".format(kind))
+            log.error(emsg + '\n')
+            raise ValueError(emsg)
+        name = 'client' + nacling.uuid(size=18)
         stack = LaneStack(
-                name=('client' + yid),
-                yid=yid,
-                lanename='master',
+                name=name,
+                lanename=lanename,
                 sockdirpath=self.opts['sock_dir'])
         stack.Pk = raeting.packKinds.pack
         router_yard = RemoteYard(
                 stack=stack,
-                lanename='master',
-                yid=0,
+                lanename=lanename,
                 name='manor',
                 dirpath=self.opts['sock_dir'])
         stack.addRemote(router_yard)

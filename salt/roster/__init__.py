@@ -17,12 +17,8 @@ log = logging.getLogger(__name__)
 def get_roster_file(options):
     if options.get('roster_file'):
         template = options.get('roster_file')
-    elif os.path.isfile(options['conf_file']) or not os.path.exists(options['conf_file']):
-        template = os.path.join(
-                os.path.dirname(options['conf_file']),
-                'roster')
     else:
-        template = os.path.join(options['conf_file'], 'roster')
+        template = os.path.join(options['config_dir'], 'roster')
 
     if not os.path.isfile(template):
         raise IOError('No roster file found')
@@ -35,9 +31,14 @@ class Roster(object):
     Used to manage a roster of minions allowing the master to become outwardly
     minion aware
     '''
-    def __init__(self, opts, backends=None):
+    def __init__(self, opts, backends='flat'):
         self.opts = opts
-        self.backends = backends
+        if isinstance(backends, list):
+            self.backends = backends
+        else:
+            self.backends = backends.split(',')
+        if not backends:
+            self.backends = ['flat']
         self.rosters = salt.loader.roster(opts)
 
     def _gen_back(self):
@@ -51,8 +52,6 @@ class Roster(object):
                 if fun in self.rosters:
                     back.add(backend)
             return back
-        for roster in self.rosters:
-            back.add(roster.split('.')[0])
         return sorted(back)
 
     def targets(self, tgt, tgt_type):
@@ -73,6 +72,10 @@ class Roster(object):
                 pass
 
         if not targets:
-            raise salt.exceptions.SaltSystemExit('Unable to render any roster.')
+            raise salt.exceptions.SaltSystemExit(
+                    'No hosts found with target {0} of type {1}'.format(
+                        tgt,
+                        tgt_type)
+                    )
 
         return targets

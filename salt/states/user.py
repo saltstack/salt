@@ -292,10 +292,10 @@ def present(name,
         Date that account expires, represented in days since epoch (January 1,
         1970).
     '''
-    fullname = str(fullname) if fullname is not None else fullname
-    roomnumber = str(roomnumber) if roomnumber is not None else roomnumber
-    workphone = str(workphone) if workphone is not None else workphone
-    homephone = str(homephone) if homephone is not None else homephone
+    fullname = salt.utils.sdecode(fullname) if fullname is not None else fullname
+    roomnumber = salt.utils.sdecode(roomnumber) if roomnumber is not None else roomnumber
+    workphone = salt.utils.sdecode(workphone) if workphone is not None else workphone
+    homephone = salt.utils.sdecode(homephone) if homephone is not None else homephone
 
     ret = {'name': name,
            'changes': {},

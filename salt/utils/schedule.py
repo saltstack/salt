@@ -46,7 +46,7 @@ This will schedule the command: state.sls httpd test=True every 3600 seconds
 This will schedule the command: state.sls httpd test=True every 3600 seconds
 (every hour) splaying the time between 10 and 15 seconds
 
-    ... versionadded:: 2014.7.0
+    .. versionadded:: 2014.7.0
 
 Frequency of jobs can also be specified using date strings supported by
 the python dateutil library.
@@ -225,10 +225,10 @@ class Schedule(object):
         # eval() already does for us and raises errors accordingly
         if not type(data) is dict:
             raise ValueError('Scheduled jobs have to be of type dict.')
-        if not len(data.keys()) == 1:
+        if not len(data) == 1:
             raise ValueError('You can only schedule one new job at a time.')
 
-        new_job = data.keys()[0]
+        new_job = data.iterkeys().next()
 
         if new_job in self.opts['schedule']:
             log.info('Updating job settings for scheduled '
@@ -429,8 +429,7 @@ class Schedule(object):
                     elif isinstance(returner, list):
                         rets.extend(returner)
                 # simple de-duplication with order retained
-                rets = OrderedDict.fromkeys(rets).keys()
-                for returner in rets:
+                for returner in OrderedDict.fromkeys(rets):
                     ret_str = '{0}.returner'.format(returner)
                     if ret_str in self.returners:
                         ret['success'] = True
@@ -624,7 +623,7 @@ class Schedule(object):
                         if data['_when_run']:
                             data['_when_run'] = False
                             run = True
-                if 'cron' in data:
+                elif 'cron' in data:
                     if seconds == 1:
                         run = True
                 else:
@@ -644,7 +643,7 @@ class Schedule(object):
                         if data['_when_run']:
                             data['_when_run'] = False
                             run = True
-                if 'cron' in data:
+                elif 'cron' in data:
                     if seconds == 1:
                         run = True
                 else:

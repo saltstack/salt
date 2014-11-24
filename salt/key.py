@@ -12,7 +12,7 @@ import shutil
 import fnmatch
 import hashlib
 import json
-import msgpack
+import logging
 
 # Import salt libs
 import salt.crypt
@@ -20,6 +20,14 @@ import salt.utils
 import salt.utils.event
 import salt.daemons.masterapi
 from salt.utils.event import tagify
+
+# Import third party libs
+try:
+    import msgpack
+except ImportError:
+    pass
+
+log = logging.getLogger(__name__)
 
 
 class KeyCLI(object):
@@ -42,6 +50,8 @@ class KeyCLI(object):
     def list_status(self, status):
         '''
         Print out the keys under a named status
+
+        :param str status: A string indicating which set of keys to return
         '''
         keys = self.key.list_keys()
         if status.startswith('acc'):
@@ -77,6 +87,9 @@ class KeyCLI(object):
     def accept(self, match, include_rejected=False):
         '''
         Accept the keys matched
+
+        :param str match: A string to match against. i.e. 'web*'
+        :param bool include_rejected: Whether or not to accept a matched key that was formerly rejected
         '''
         def _print_accepted(matches, after_match):
             if 'minions' in after_match:
@@ -136,12 +149,16 @@ class KeyCLI(object):
     def accept_all(self, include_rejected=False):
         '''
         Accept all keys
+
+        :param bool include_rejected: Whether or not to accept a matched key that was formely rejected
         '''
         self.accept('*', include_rejected=include_rejected)
 
     def delete(self, match):
         '''
         Delete the matched keys
+
+        :param str match: A string to match against. i.e. 'web*'
         '''
         def _print_deleted(matches, after_match):
             deleted = []
@@ -196,6 +213,9 @@ class KeyCLI(object):
     def reject(self, match, include_accepted=False):
         '''
         Reject the matched keys
+
+        :param str match: A string to match against. i.e. 'web*'
+        :param bool include_accepted: Whether or not to accept a matched key that was formerly accepted
         '''
         def _print_rejected(matches, after_match):
             if self.rej in after_match:
@@ -240,12 +260,16 @@ class KeyCLI(object):
     def reject_all(self, include_accepted=False):
         '''
         Reject all keys
+
+        :param bool include_accepted: Whether or not to accept a matched key that was formerly accepted
         '''
         self.reject('*', include_accepted=include_accepted)
 
     def print_key(self, match):
         '''
         Print out a single key
+
+        :param str match: A string to match against. i.e. 'web*'
         '''
         matches = self.key.key_str(match)
         salt.output.display_output(
@@ -262,6 +286,8 @@ class KeyCLI(object):
     def finger(self, match):
         '''
         Print out the fingerprints for the matched keys
+
+        :param str match: A string to match against. i.e. 'web*'
         '''
         matches = self.key.finger(match)
         salt.output.display_output(
@@ -398,10 +424,16 @@ class Key(object):
     '''
     def __init__(self, opts):
         self.opts = opts
+        kind = self.opts.get('__role', '')
+        if not kind:
+            emsg = "Missing application kind via opts['__role']"
+            log.error(emsg + '\n')
+            raise ValueError(emsg)
         self.event = salt.utils.event.get_event(
-                'master',
+                kind,
                 opts['sock_dir'],
                 opts['transport'],
+                opts=opts,
                 listen=False)
 
     def _check_minions_directories(self):
@@ -416,7 +448,7 @@ class Key(object):
 
     def gen_keys(self):
         '''
-        Generate minion keys
+        Generate minion RSA public keypair
         '''
         salt.crypt.gen_keys(
                 self.opts['gen_keys_dir'],
@@ -443,13 +475,17 @@ class Key(object):
         minions = []
         for key, val in keys.items():
             minions.extend(val)
-        for minion in os.listdir(m_cache):
-            if minion not in minions:
-                shutil.rmtree(os.path.join(m_cache, minion))
+        if self.opts.get('preserve_minion_cache', False):
+            for minion in os.listdir(m_cache):
+                if minion not in minions:
+                    shutil.rmtree(os.path.join(m_cache, minion))
 
     def check_master(self):
         '''
         Log if the master is not running
+
+        :rtype: bool
+        :return: Whether or not the master is running
         '''
         if not os.path.exists(
                 os.path.join(
@@ -511,9 +547,13 @@ class Key(object):
         ret = {}
         for dir_ in acc, pre, rej:
             ret[os.path.basename(dir_)] = []
-            for fn_ in salt.utils.isorted(os.listdir(dir_)):
-                if os.path.isfile(os.path.join(dir_, fn_)):
-                    ret[os.path.basename(dir_)].append(fn_)
+            try:
+                for fn_ in salt.utils.isorted(os.listdir(dir_)):
+                    if os.path.isfile(os.path.join(dir_, fn_)):
+                        ret[os.path.basename(dir_)].append(fn_)
+            except (OSError, IOError):
+                # key dir kind is not created yet, just skip
+                continue
         return ret
 
     def all_keys(self):
@@ -660,7 +700,8 @@ class Key(object):
                 except (OSError, IOError):
                     pass
         self.check_minion_cache()
-        salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
+        if self.opts.get('rotate_aes_key'):
+            salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'], self.opts['sock_dir'])
         return (
             self.name_match(match) if match is not None
             else self.dict_match(matches)
@@ -681,7 +722,8 @@ class Key(object):
                 except (OSError, IOError):
                     pass
         self.check_minion_cache()
-        salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
+        if self.opts.get('rotate_aes_key'):
+            salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'], self.opts['sock_dir'])
         return self.list_keys()
 
     def reject(self, match=None, match_dict=None, include_accepted=False):
@@ -718,7 +760,8 @@ class Key(object):
                 except (IOError, OSError):
                     pass
         self.check_minion_cache()
-        salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
+        if self.opts.get('rotate_aes_key'):
+            salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'], self.opts['sock_dir'])
         return (
             self.name_match(match) if match is not None
             else self.dict_match(matches)
@@ -748,7 +791,8 @@ class Key(object):
             except (IOError, OSError):
                 pass
         self.check_minion_cache()
-        salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
+        if self.opts.get('rotate_aes_key'):
+            salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'], self.opts['sock_dir'])
         return self.list_keys()
 
     def finger(self, match):
@@ -851,7 +895,7 @@ class RaetKey(Key):
     def check_master(self):
         '''
         Log if the master is not running
-        NOT YET IMPLIMENTED
+        NOT YET IMPLEMENTED
         '''
         return True
 
@@ -1206,3 +1250,20 @@ class RaetKey(Key):
             fp_.write(self.serial.dumps(keydata))
             os.chmod(path, stat.S_IRUSR)
         os.umask(c_umask)
+
+    def delete_local(self):
+        '''
+        Delete the local private key file
+        '''
+        path = os.path.join(self.opts['pki_dir'], 'local.key')
+        if os.path.isfile(path):
+            os.remove(path)
+
+    def delete_pki_dir(self):
+        '''
+        Delete the private key directory
+        '''
+        path = self.opts['pki_dir']
+        if os.path.exists(path):
+            #os.rmdir(path)
+            shutil.rmtree(path)

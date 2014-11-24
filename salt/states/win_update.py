@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Management of the windows update agent.
-=======================================
+Management of the windows update agent
+======================================
 
 .. versionadded:: 2014.7.0
 
@@ -17,6 +17,7 @@ and download but not install standard updates.
 Example:
 
 .. code-block:: yaml
+
     updates:
         win_update.installed:
             - categories:
@@ -29,31 +30,27 @@ Example:
 You can also specify a number of features about the update to have a
 fine grain approach to specific types of updates. These are the following
 features/states of updates available for configuring:
-    'UI' - User interaction required, skipped by default
-    'downloaded' - Already downloaded, skipped by default (downloading)
-    'present' - Present on computer, included by default (installing)
-    'installed' - Already installed, skipped by default
-    'reboot' - Reboot required, included by default
-    'hidden' - skip those updates that have been hidden.
 
-    'software' - Software updates, included by default
-    'driver' - driver updates, skipped by default
+* **UI** - User interaction required, skipped by default
+* **downloaded** - Already downloaded, skipped by default (downloading)
+* **present** - Present on computer, included by default (installing)
+* **installed** - Already installed, skipped by default
+* **reboot** - Reboot required, included by default
+* **hidden** - skip those updates that have been hidden.
+* **software** - Software updates, included by default
+* **driver** - driver updates, skipped by default
 
 This example installs all driver updates that don't require a reboot:
 Example:
 
 .. code-block:: yaml
+
     gryffindor:
         win_update.install:
             - includes:
                 - driver: True
                 - software: False
                 - reboot: False
-
-
-tl;dr: want to just have your computers update? add this your sls:
-updates:
-    win_update.installed
 
 '''
 
@@ -292,8 +289,8 @@ class PyWinUpdater(object):
     def SetIncludes(self, includes):
         if includes:
             for i in includes:
-                value = i[i.keys()[0]]
-                include = i.keys()[0]
+                value = i[i.iterkeys().next()]
+                include = i.iterkeys().next()
                 self.SetInclude(include, value)
                 log.debug('was asked to set {0} to {1}'.format(include, value))
 
@@ -392,34 +389,38 @@ def installed(name, categories=None, includes=None, retries=10):
     '''
     Install specified windows updates.
 
-    name:
-        if categories is left empty, it will be assumed that you are passing the category option
-        through the name. These are seperate because you can only have one name, but can have
-        multiple categories.
+    name
+        If ``categories`` is left empty, it will be assumed that you are
+        passing the category option through the name. These are separate
+        because you can only have one name, but can have multiple categories.
 
-    categories:
-        the list of categories to be downloaded. These are simply strings in the update's
-        information, so there is no enumeration of the categories available. some known categories:
-            Updates
-            Windows 7
-            Critical Updates
-            Security Updates
-            Update Rollups
+    categories
+        The list of categories to be downloaded. These are simply strings in
+        the update's information, so there is no enumeration of the categories
+        available. Known categories include:
 
-    includes:
-        a list of features of the updates to cull by. availble features:
-            'UI' - User interaction required, skipped by default
-            'downloaded' - Already downloaded, skipped by default (downloading)
-            'present' - Present on computer, included by default (installing)
-            'installed' - Already installed, skipped by default
-            'reboot' - Reboot required, included by default
-            'hidden' - skip those updates that have been hidden.
+        * Updates
+        * Windows 7
+        * Critical Updates
+        * Security Updates
+        * Update Rollups
 
-            'software' - Software updates, included by default
-            'driver' - driver updates, skipped by default
+    includes
+        A list of features of the updates to cull by. Available features
+        include:
+
+        * **UI** - User interaction required, skipped by default
+        * **downloaded** - Already downloaded, skipped by default (downloading)
+        * **present** - Present on computer, included by default (installing)
+        * **installed** - Already installed, skipped by default
+        * **reboot** - Reboot required, included by default
+        * **hidden** - Kkip those updates that have been hidden.
+        * **software** - Software updates, included by default
+        * **driver** - Driver updates, skipped by default
 
     retries
-        number of retries to make in before giving up. This is total, not per step.
+        Number of retries to make before giving up. This is total, not per
+        step.
     '''
     ret = {'name': name,
            'result': True,
@@ -464,34 +465,38 @@ def downloaded(name, categories=None, includes=None, retries=10):
     '''
     Cache updates for later install.
 
-    name:
-        if categories is left empty, it will be assumed that you are passing the category option
-        through the name. These are seperate because you can only have one name, but can have
-        multiple categories.
+    name
+        If ``categories`` is left empty, it will be assumed that you are
+        passing the category option through the name. These are separate
+        because you can only have one name, but can have multiple categories.
 
-    categories:
-        the list of categories to be downloaded. These are simply strings in the update's
-        information, so there is no enumeration of the categories available. some known categories:
-            Updates
-            Windows 7
-            Critical Updates
-            Security Updates
-            Update Rollups
+    categories
+        The list of categories to be downloaded. These are simply strings in
+        the update's information, so there is no enumeration of the categories
+        available. Known categories include:
 
-    includes:
-        a list of features of the updates to cull by. availble features:
-            'UI' - User interaction required, skipped by default
-            'downloaded' - Already downloaded, skipped by default (downloading)
-            'present' - Present on computer, included by default (installing)
-            'installed' - Already installed, skipped by default
-            'reboot' - Reboot required, included by default
-            'hidden' - skip those updates that have been hidden.
+        * Updates
+        * Windows 7
+        * Critical Updates
+        * Security Updates
+        * Update Rollups
 
-            'software' - Software updates, included by default
-            'driver' - driver updates, skipped by default
+    includes
+        A list of features of the updates to cull by. Available features
+        include:
+
+        * **UI** - User interaction required, skipped by default
+        * **downloaded** - Already downloaded, skipped by default (downloading)
+        * **present** - Present on computer, included by default (installing)
+        * **installed** - Already installed, skipped by default
+        * **reboot** - Reboot required, included by default
+        * **hidden** - Kkip those updates that have been hidden.
+        * **software** - Software updates, included by default
+        * **driver** - Driver updates, skipped by default
 
     retries
-        number of retries to make in before giving up. This is total, not per step.
+        Number of retries to make before giving up. This is total, not per
+        step.
     '''
     ret = {'name': name,
            'result': True,

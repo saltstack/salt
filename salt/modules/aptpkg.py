@@ -4,8 +4,10 @@ Support for APT (Advanced Packaging Tool)
 
 .. note::
 
-    The ``python-apt`` package is required to be installed.
+    For virtual package support, either the ``python-apt`` or ``dctrl-tools``
+    package must be installed.
 
+    For repository management, the ``python-apt`` package must be installed.
 '''
 
 # Import python libs
@@ -20,6 +22,7 @@ import json
 import yaml
 
 # Import salt libs
+from salt.modules.cmdmod import _parse_env
 import salt.utils
 from salt._compat import string_types
 from salt.exceptions import (
@@ -51,6 +54,12 @@ LP_PVT_SRC_FORMAT = 'deb https://{0}private-ppa.launchpad.net/{1}/{2}/ubuntu' \
 
 _MODIFY_OK = frozenset(['uri', 'comps', 'architectures', 'disabled',
                         'file', 'dist'])
+DPKG_ENV_VARS = {
+    'APT_LISTBUGS_FRONTEND': 'none',
+    'APT_LISTCHANGES_FRONTEND': 'none',
+    'DEBIAN_FRONTEND': 'noninteractive',
+    'UCF_FORCE_CONFFOLD': '1',
+}
 
 # Define the module's virtual name
 __virtualname__ = 'pkg'
@@ -72,14 +81,8 @@ def __init__():
     non-interactive.
     '''
     if __virtual__():
-        env_vars = {
-            'APT_LISTBUGS_FRONTEND': 'none',
-            'APT_LISTCHANGES_FRONTEND': 'none',
-            'DEBIAN_FRONTEND': 'noninteractive',
-            'UCF_FORCE_CONFFOLD': '1',
-        }
         # Export these puppies so they persist
-        os.environ.update(env_vars)
+        os.environ.update(DPKG_ENV_VARS)
 
 
 def _get_ppa_info_from_launchpad(owner_name, ppa_name):
@@ -121,21 +124,52 @@ def _get_repo(**kwargs):
     return ''
 
 
+def _check_apt():
+    '''
+    Abort if python-apt is not installed
+    '''
+    if not HAS_APT:
+        raise CommandExecutionError(
+            'Error: \'python-apt\' package not installed'
+        )
+
+
+def _has_dctrl_tools():
+    '''
+    Return a boolean depending on whether or not dctrl-tools was installed.
+    '''
+    try:
+        return __context__['pkg._has_dctrl_tools']
+    except KeyError:
+        __context__['pkg._has_dctrl_tools'] = \
+            __salt__['cmd.has_exec']('grep-available')
+        return __context__['pkg._has_dctrl_tools']
+
+
 def _get_virtual():
     '''
     Return a dict of virtual package information
     '''
-    if 'pkg._get_virtual' not in __context__:
+    try:
+        return __context__['pkg._get_virtual']
+    except KeyError:
         __context__['pkg._get_virtual'] = {}
-        apt_cache = apt.cache.Cache()
-        pkgs = getattr(apt_cache._cache, 'packages', [])
-        for pkg in pkgs:
-            for item in getattr(pkg, 'provides_list', []):
-                realpkg = item[2].parent_pkg.name
-                if realpkg not in __context__['pkg._get_virtual']:
-                    __context__['pkg._get_virtual'][realpkg] = []
-                __context__['pkg._get_virtual'][realpkg].append(pkg.name)
-    return __context__['pkg._get_virtual']
+        if HAS_APT:
+            apt_cache = apt.cache.Cache()
+            pkgs = getattr(apt_cache._cache, 'packages', [])
+            for pkg in pkgs:
+                for item in getattr(pkg, 'provides_list', []):
+                    realpkg = item[2].parent_pkg.name
+                    if realpkg not in __context__['pkg._get_virtual']:
+                        __context__['pkg._get_virtual'][realpkg] = []
+                    __context__['pkg._get_virtual'][realpkg].append(pkg.name)
+        elif _has_dctrl_tools():
+            cmd = 'grep-available -F Provides -s Package,Provides -e "^.+$"'
+            out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
+            virtpkg_re = re.compile(r'Package: (\S+)\nProvides: ([\S, ]+)')
+            for realpkg, provides in virtpkg_re.findall(out):
+                __context__['pkg._get_virtual'][realpkg] = provides.split(', ')
+        return __context__['pkg._get_virtual']
 
 
 def _warn_software_properties(repo):
@@ -196,14 +230,9 @@ def latest_version(*names, **kwargs):
     if refresh:
         refresh_db()
 
-    if not HAS_APT:
-        raise CommandExecutionError(
-            'Error: \'python-apt\' package not installed'
-        )
-
     virtpkgs = _get_virtual()
     all_virt = set()
-    for provides in virtpkgs.values():
+    for provides in virtpkgs.itervalues():
         all_virt.update(provides)
 
     for name in names:
@@ -412,7 +441,7 @@ def install(name=None,
             refreshdb = False
             for pkg in pkgs:
                 if isinstance(pkg, dict):
-                    _name = pkg.keys()[0]
+                    _name = pkg.iterkeys().next()
                     _latest_version = latest_version(_name, refresh=False, show_installed=True)
                     _version = pkg[_name]
                     # If the versions don't match, refresh is True, otherwise no need to refresh
@@ -484,7 +513,9 @@ def install(name=None,
     if refreshdb:
         refresh_db()
 
-    __salt__['cmd.run'](cmd, env=kwargs.get('env'), python_shell=False)
+    env = _parse_env(kwargs.get('env'))
+    env.update(DPKG_ENV_VARS.copy())
+    __salt__['cmd.run'](cmd, python_shell=False, env=env)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)
@@ -559,8 +590,7 @@ def remove(name=None, pkgs=None, **kwargs):
 
 def purge(name=None, pkgs=None, **kwargs):
     '''
-    Remove packages via ``apt-get purge`` along with all configuration files
-    and unused dependencies.
+    Remove packages via ``apt-get purge`` along with all configuration files.
 
     name
         The name of the package to be deleted.
@@ -588,7 +618,7 @@ def purge(name=None, pkgs=None, **kwargs):
     return _uninstall(action='purge', name=name, pkgs=pkgs, **kwargs)
 
 
-def upgrade(refresh=True, dist_upgrade=True, **kwargs):  # pylint: disable=W0613
+def upgrade(refresh=True, dist_upgrade=True):
     '''
     Upgrades all packages via ``apt-get dist-upgrade``
 
@@ -609,6 +639,11 @@ def upgrade(refresh=True, dist_upgrade=True, **kwargs):  # pylint: disable=W0613
 
         salt '*' pkg.upgrade
     '''
+    ret = {'changes': {},
+           'result': True,
+           'comment': '',
+           }
+
     if salt.utils.is_true(refresh):
         refresh_db()
 
@@ -619,10 +654,19 @@ def upgrade(refresh=True, dist_upgrade=True, **kwargs):  # pylint: disable=W0613
     else:
         cmd = ['apt-get', '-q', '-y', '-o', 'DPkg::Options::=--force-confold',
                '-o', 'DPkg::Options::=--force-confdef', 'upgrade']
-    __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace')
-    __context__.pop('pkg.list_pkgs', None)
-    new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    call = __salt__['cmd.run_all'](cmd, python_shell=False, output_loglevel='trace',
+                                   env=DPKG_ENV_VARS.copy())
+    if call['retcode'] != 0:
+        ret['result'] = False
+        if 'stderr' in call:
+            ret['comment'] += call['stderr']
+        if 'stdout' in call:
+            ret['comment'] += call['stdout']
+    else:
+        __context__.pop('pkg.list_pkgs', None)
+        new = list_pkgs()
+        ret['changes'] = salt.utils.compare_dicts(old, new)
+    return ret
 
 
 def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
@@ -811,10 +855,10 @@ def list_pkgs(versions_as_list=False,
             Packages in this state now correctly show up in the output of this
             function.
 
-    External dependencies::
+    .. note:: External dependencies
 
-        Virtual package resolution requires dctrl-tools. Without dctrl-tools
-        virtual packages will be reported as not installed.
+        Virtual package resolution requires the ``dctrl-tools`` package to be
+        installed. Virtual packages will show a version of ``1``.
 
     CLI Example:
 
@@ -872,11 +916,6 @@ def list_pkgs(versions_as_list=False,
                                                  name,
                                                  version_num)
 
-    if not HAS_APT:
-        raise CommandExecutionError(
-            'Error: \'python-apt\' package not installed'
-        )
-
     # Check for virtual packages. We need dctrl-tools for this.
     if not removed:
         virtpkgs_all = _get_virtual()
@@ -922,7 +961,7 @@ def _get_upgradable():
     # Conf libxfont1 (1:1.4.5-1 Debian:testing [i386])
     rexp = re.compile('(?m)^Conf '
                       '([^ ]+) '          # Package name
-                      r'\(([^ ]+)')        # Version
+                      r'\(([^ ]+)')       # Version
     keys = ['name', 'version']
     _get = lambda l, k: l[keys.index(k)]
 
@@ -1047,11 +1086,7 @@ def list_repos():
        salt '*' pkg.list_repos
        salt '*' pkg.list_repos disabled=True
     '''
-    if not HAS_APT:
-        raise CommandExecutionError(
-            'Error: \'python-apt\' package not installed'
-        )
-
+    _check_apt()
     repos = {}
     sources = sourceslist.SourcesList()
     for source in sources.list:
@@ -1082,11 +1117,7 @@ def get_repo(repo, **kwargs):
 
         salt '*' pkg.get_repo "myrepo definition"
     '''
-    if not HAS_APT:
-        raise CommandExecutionError(
-            'Error: \'python-apt\' package not installed'
-        )
-
+    _check_apt()
     ppa_auth = kwargs.get('ppa_auth', None)
     # we have to be clever about this since the repo definition formats
     # are a bit more "loose" than in some other distributions
@@ -1101,9 +1132,13 @@ def get_repo(repo, **kwargs):
                                             ppa_name, dist)
         else:
             if HAS_SOFTWAREPROPERTIES:
-                repo = softwareproperties.ppa.expand_ppa_line(
-                    repo,
-                    __grains__['lsb_distrib_codename'])[0]
+                if hasattr(softwareproperties.ppa, 'PPAShortcutHandler'):
+                    repo = softwareproperties.ppa.PPAShortcutHandler(repo).expand(
+                        __grains__['lsb_distrib_codename'])[0]
+                else:
+                    repo = softwareproperties.ppa.expand_ppa_line(
+                        repo,
+                        __grains__['lsb_distrib_codename'])[0]
             else:
                 repo = LP_SRC_FORMAT.format(owner_name, ppa_name, dist)
 
@@ -1125,7 +1160,7 @@ def get_repo(repo, **kwargs):
                 .format(repo)
             )
 
-        for source in repos.values():
+        for source in repos.itervalues():
             for sub in source:
                 if (sub['type'] == repo_type and
                     # strip trailing '/' from repo_uri, it's valid in definition
@@ -1137,8 +1172,7 @@ def get_repo(repo, **kwargs):
                     for comp in repo_comps:
                         if comp in sub.get('comps', []):
                             return sub
-
-    raise CommandExecutionError('repo {0!r} was not found'.format(repo))
+    return {}
 
 
 def del_repo(repo, **kwargs):
@@ -1158,11 +1192,7 @@ def del_repo(repo, **kwargs):
 
         salt '*' pkg.del_repo "myrepo definition"
     '''
-    if not HAS_APT:
-        raise CommandExecutionError(
-            'Error: \'python-apt\' package not installed'
-        )
-
+    _check_apt()
     is_ppa = False
     if repo.startswith('ppa:') and __grains__['os'] == 'Ubuntu':
         # This is a PPA definition meaning special handling is needed
@@ -1179,7 +1209,10 @@ def del_repo(repo, **kwargs):
             else:
                 repo = LP_SRC_FORMAT.format(owner_name, ppa_name, dist)
         else:
-            repo = softwareproperties.ppa.expand_ppa_line(repo, dist)[0]
+            if hasattr(softwareproperties.ppa, 'PPAShortcutHandler'):
+                repo = softwareproperties.ppa.PPAShortcutHandler(repo).expand(dist)[0]
+            else:
+                repo = softwareproperties.ppa.expand_ppa_line(repo, dist)[0]
 
     sources = sourceslist.SourcesList()
     repos = [s for s in sources.list if not s.invalid]
@@ -1272,11 +1305,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
         salt '*' pkg.mod_repo 'myrepo definition' uri=http://new/uri
         salt '*' pkg.mod_repo 'myrepo definition' comps=main,universe
     '''
-    if not HAS_APT:
-        raise CommandExecutionError(
-            'Error: \'python-apt\' package not installed'
-        )
-
+    _check_apt()
     # to ensure no one sets some key values that _shouldn't_ be changed on the
     # object itself, this is just a white-list of "ok" to set properties
     if repo.startswith('ppa:'):
@@ -1285,10 +1314,10 @@ def mod_repo(repo, saltenv='base', **kwargs):
             # implementation via apt-add-repository.  The code path for
             # secure PPAs should be the same as urllib method
             if HAS_SOFTWAREPROPERTIES and 'ppa_auth' not in kwargs:
-                try:
-                    get_repo(repo)
-                    return {repo: ''}
-                except Exception:
+                repo_info = get_repo(repo)
+                if repo_info:
+                    return {repo: repo_info}
+                else:
                     if float(__grains__['osrelease']) < 12.04:
                         cmd = 'apt-add-repository {0}'.format(repo)
                     else:
@@ -1467,7 +1496,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
     if not mod_source:
         mod_source = sourceslist.SourceEntry(repo)
         if 'comments' in kwargs:
-            mod_source.comment = kwargs['comments'][0]
+            mod_source.comment = " ".join(str(c) for c in kwargs['comments'])
         sources.list.append(mod_source)
 
     # if all comps aren't part of the disable
@@ -1561,15 +1590,10 @@ def expand_repo_def(repokwargs):
 
     There is no use to calling this function via the CLI.
     '''
+    _check_apt()
+
     sanitized = {}
-
-    if not HAS_APT:
-        raise CommandExecutionError(
-            'Error: \'python-apt\' package not installed'
-        )
-
     repo = _strip_uri(repokwargs['repo'])
-
     if repo.startswith('ppa:') and __grains__['os'] == 'Ubuntu':
         dist = __grains__['lsb_distrib_codename']
         owner_name, ppa_name = repo[4:].split('/', 1)
@@ -1579,8 +1603,10 @@ def expand_repo_def(repokwargs):
                                             dist)
         else:
             if HAS_SOFTWAREPROPERTIES:
-                repo = softwareproperties.ppa.expand_ppa_line(
-                    repo, dist)[0]
+                if hasattr(softwareproperties.ppa, 'PPAShortcutHandler'):
+                    repo = softwareproperties.ppa.PPAShortcutHandler(repo).expand(dist)[0]
+                else:
+                    repo = softwareproperties.ppa.expand_ppa_line(repo, dist)[0]
             else:
                 repo = LP_SRC_FORMAT.format(owner_name, ppa_name, dist)
 
@@ -1847,5 +1873,5 @@ def owner(*paths):
         if 'no path found' in ret[path].lower():
             ret[path] = ''
     if len(ret) == 1:
-        return ret.values()[0]
+        return ret.itervalues().next()
     return ret

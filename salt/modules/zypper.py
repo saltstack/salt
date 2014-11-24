@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
 Package support for openSUSE via the zypper package manager
+
+:depends: - ``zypp`` Python module.  Install with ``zypper install python-zypp``
 '''
 
 # Import python libs
@@ -57,8 +59,9 @@ def list_upgrades(refresh=True):
         refresh_db()
     ret = {}
     out = __salt__['cmd.run_stdout'](
-        'zypper list-updates', output_loglevel='trace'
-    )
+        'zypper list-updates',
+        output_loglevel='trace'
+        )
     for line in out.splitlines():
         if not line:
             continue
@@ -127,7 +130,7 @@ def latest_version(*names, **kwargs):
                 pkginfo[key] = val
 
         # Ignore if the needed keys weren't found in this iteration
-        if not set(('name', 'version', 'status')) <= set(pkginfo.keys()):
+        if not set(('name', 'version', 'status')) <= set(pkginfo):
             continue
 
         status = pkginfo['status'].lower()
@@ -198,9 +201,13 @@ def list_pkgs(versions_as_list=False, **kwargs):
             __salt__['pkg_resource.stringify'](ret)
             return ret
 
-    cmd = 'rpm -qa --queryformat "%{NAME}_|-%{VERSION}_|-%{RELEASE}\\n"'
+    cmd = ('rpm', '-qa', '--queryformat', '%{NAME}_|-%{VERSION}_|-%{RELEASE}\\n')
     ret = {}
-    out = __salt__['cmd.run'](cmd, output_loglevel='trace')
+    out = __salt__['cmd.run'](
+            cmd,
+            output_loglevel='trace',
+            python_shell=False
+            )
     for line in out.splitlines():
         name, pkgver, rel = line.split('_|-')
         if rel:
@@ -269,7 +276,7 @@ class _RepoInfo(object):
 
     @autorefresh.setter
     def autorefresh(self, value):
-        self.zypp.setAlias(value)
+        self.zypp.setAutorefresh(value)
 
     @property
     def enabled(self):
@@ -378,7 +385,7 @@ class _RepoInfo(object):
 
     @property
     def url(self):
-        return [url.asCompleteString() for url in self.zypp.baseUrls()]
+        return self.zypp.url().asCompleteString()
 
     @url.setter
     def url(self, value):
@@ -420,7 +427,10 @@ def get_repo(repo, **kwargs):
 
         salt '*' pkg.get_repo alias
     '''
-    r = _RepoInfo(_get_zypp_repo(repo))
+    try:
+        r = _RepoInfo(_get_zypp_repo(repo))
+    except CommandExecutionError:
+        return {}
     return r.options
 
 
@@ -524,7 +534,10 @@ def refresh_db():
     '''
     cmd = 'zypper refresh'
     ret = {}
-    out = __salt__['cmd.run'](cmd, output_loglevel='trace')
+    out = __salt__['cmd.run'](
+            cmd,
+            output_loglevel='trace'
+            )
     for line in out.splitlines():
         if not line:
             continue
@@ -660,22 +673,23 @@ def install(name=None,
     old = list_pkgs()
     downgrades = []
     if fromrepo:
-        fromrepoopt = "--force --force-resolution --from {0} ".format(fromrepo)
+        fromrepoopt = ('--force', '--force-resolution', '--from', fromrepo)
         log.info('Targeting repo {0!r}'.format(fromrepo))
-    else:
-        fromrepoopt = ""
     # Split the targets into batches of 500 packages each, so that
     # the maximal length of the command line is not broken
     while targets:
-        # Quotes needed around package targets because of the possibility of
-        # output redirection characters "<" or ">" in zypper command.
-        cmd = (
-            'zypper --non-interactive install --name '
-            '--auto-agree-with-licenses {0}"{1}"'
-            .format(fromrepoopt, '" "'.join(targets[:500]))
-        )
+        cmd = ['zypper', '--non-interactive', 'install', '--name',
+                '--auto-agree-with-licenses']
+        if fromrepo:
+            cmd.extend(fromrepoopt)
+        cmd.extend(targets[:500])
         targets = targets[500:]
-        out = __salt__['cmd.run'](cmd, output_loglevel='trace')
+
+        out = __salt__['cmd.run'](
+                cmd,
+                output_loglevel='trace',
+                python_shell=False
+                )
         for line in out.splitlines():
             match = re.match(
                 "^The selected package '([^']+)'.+has lower version",
@@ -685,13 +699,14 @@ def install(name=None,
                 downgrades.append(match.group(1))
 
     while downgrades:
-        cmd = (
-            'zypper --non-interactive install --name '
-            '--auto-agree-with-licenses --force {0}{1}'
-            .format(fromrepoopt, ' '.join(downgrades[:500]))
-        )
-        __salt__['cmd.run'](cmd, output_loglevel='trace')
+        cmd = ['zypper', '--non-interactive', 'install', '--name',
+            '--auto-agree-with-licenses', '--force']
+        if fromrepo:
+            cmd.extend(fromrepoopt)
+        cmd.extend(downgrades[:500])
         downgrades = downgrades[500:]
+
+        __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)

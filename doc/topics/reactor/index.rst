@@ -38,19 +38,25 @@ Mapping Events to Reactor SLS Files
 Reactor SLS files and event tags are associated in the master config file.
 By default this is /etc/salt/master, or /etc/salt/master.d/reactor.conf.
 
+.. versionadded:: 2014.7.0
+    Added Reactor support for ``salt://`` file paths.
+
 In the master config section 'reactor:' is a list of event tags to be matched
 and each event tag has a list of reactor SLS files to be run.
 
 .. code-block:: yaml
 
-    reactor:                           # Master config section "reactor"
+    reactor:                            # Master config section "reactor"
 
-      - 'salt/minion/*/start':                # Match tag "salt/minion/*/start"
-        - /srv/reactor/start.sls       # Things to do when a minion starts
-        - /srv/reactor/monitor.sls     # Other things to do
+      - 'salt/minion/*/start':          # Match tag "salt/minion/*/start"
+        - /srv/reactor/start.sls        # Things to do when a minion starts
+        - /srv/reactor/monitor.sls      # Other things to do
 
-      - 'salt/cloud/*/destroyed':     # Globs can be used to matching tags
-        - /srv/reactor/decommision.sls # Things to do when a server is removed
+      - 'salt/cloud/*/destroyed':       # Globs can be used to matching tags
+        - /srv/reactor/destroy/*.sls    # Globs can be used to match file names
+
+      - 'myco/custom/event/tag':        # React to custom event tags
+        - salt://reactor/mycustom.sls   # Put reactor files under file_roots
 
 
 Reactor sls files are similar to state and pillar sls files.  They are
@@ -67,7 +73,7 @@ Here is a simple reactor sls:
 
     {% if data['id'] == 'mysql1' %}
     highstate_run:
-      cmd.state.highstate:
+      local.state.highstate:
         - tgt: mysql1
     {% endif %}
 
@@ -169,14 +175,28 @@ Understanding the Structure of Reactor Formulas
 ===============================================
 
 While the reactor system uses the same data structure as the state system, this
-data does not translate the same way to operations. In state files formula
-information is mapped to the state functions, but in the reactor system
-information is mapped to a number of available subsystems on the master. These
-systems are the :strong:`LocalClient` and the :strong:`Runners`. The
-:strong:`state declaration` field takes a reference to the function to call in
-each interface. So to trigger a salt-run call the :strong:`state declaration`
-field will start with :strong:`runner`, followed by the runner function to
-call. This means that a call to what would be on the command line
+data does not translate the same way to function calls.
+
+.. versionchanged:: 2014.7.0
+    The ``cmd`` prefix was renamed to ``local`` for consistency with other
+    parts of Salt. A backward-compatible alias was added for ``cmd``.
+
+In state files the minion generates the data structure locally and uses that to
+call local state functions. In the reactor system the master generates a data
+structure that is used to call methods on one of Salt's client interfaces
+described in :ref:`the Python API documentation <client-apis>`.
+
+* :py:class:`~salt.client.LocalClient` is used to call Execution modules
+  remotely on minions. (The :command:`salt` CLI program uses this also.)
+* :py:class:`~salt.runner.RunnerClient` calls Runner modules locally on the
+  master.
+* :py:class:`~salt.wheel.WheelClient` calls Wheel modules locally on the
+  master.
+
+The :strong:`state declaration` field takes a reference to the function to call
+in each interface. So to trigger a salt-run call the :strong:`state
+declaration` field will start with :strong:`runner`, followed by the runner
+function to call. This means that a call to what would be on the command line
 :strong:`salt-run manage.up` will be :strong:`runner.manage.up`. An example of
 this in a reactor formula would look like this:
 
@@ -197,14 +217,14 @@ Executing remote commands maps to the :strong:`LocalClient` interface which is
 used by the :strong:`salt` command. This interface more specifically maps to
 the :strong:`cmd_async` method inside of the :strong:`LocalClient` class. This
 means that the arguments passed are being passed to the :strong:`cmd_async`
-method, not the remote method. A field starts with :strong:`cmd` to use the
+method, not the remote method. A field starts with :strong:`local` to use the
 :strong:`LocalClient` subsystem. The result is, to execute a remote command, 
 a reactor formula would look like this:
 
 .. code-block:: yaml
 
     clean_tmp:
-      cmd.cmd.run:
+      local.cmd.run:
         - tgt: '*'
         - arg:
           - rm -rf /tmp/*
@@ -222,7 +242,7 @@ Use the ``expr_form`` argument to specify a matcher:
 .. code-block:: yaml
 
     clean_tmp:
-      cmd.cmd.run:
+      local.cmd.run:
         - tgt: 'os:Ubuntu'
         - expr_form: grain
         - arg:
@@ -230,7 +250,7 @@ Use the ``expr_form`` argument to specify a matcher:
 
 
     clean_tmp:
-      cmd.cmd.run:
+      local.cmd.run:
         - tgt: 'G@roles:hbase_master'
         - expr_form: compound
         - arg:
@@ -261,7 +281,7 @@ Pillar.
 
     {% if data['act'] == 'accept' and data['id'].startswith('web') %}
     add_new_minion_to_pool:
-      cmd.state.sls:
+      local.state.sls:
         - tgt: 'haproxy*'
         - arg:
           - haproxy.refresh_pool
@@ -343,7 +363,7 @@ authentication every ten seconds by default.
       wheel.key.delete:
         - match: {{ data['id'] }}
     minion_rejoin:
-      cmd.cmd.run:
+      local.cmd.run:
         - tgt: salt-master.domain.tld
         - arg:
           - ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no "{{ data['id'] }}" 'sleep 10 && /etc/init.d/salt-minion restart'
@@ -365,7 +385,7 @@ Ink servers in the master configuration.
 
     {# When an Ink server connects, run state.highstate. #}
     highstate_run:
-      cmd.state.highstate:
+      local.state.highstate:
         - tgt: {{ data['id'] }}
 
 .. _minion-start-reactor:
@@ -386,7 +406,7 @@ contents:
 .. code-block:: yaml
 
     sync_grains:
-      cmd.saltutil.sync_grains:
+      local.saltutil.sync_grains:
         - tgt: {{ data['id'] }}
 
 And in the master config file, add the following reactor configuration:
@@ -401,6 +421,6 @@ This will cause the master to instruct each minion to sync its custom grains
 when it starts, making these grains available when the initial highstate is
 executed.
 
-Other types can be synced by replacing ``cmd.saltutil.sync_grains`` with
-``cmd.saltutil.sync_modules``, ``cmd.saltutil.sync_all``, or whatever else
+Other types can be synced by replacing ``local.saltutil.sync_grains`` with
+``local.saltutil.sync_modules``, ``local.saltutil.sync_all``, or whatever else
 suits the intended use case.

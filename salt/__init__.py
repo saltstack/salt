@@ -25,6 +25,13 @@ warnings.filterwarnings(
     DeprecationWarning
 )
 
+# Filter the backports package UserWarning about being re-imported
+warnings.filterwarnings(
+    'ignore',
+    '^Module backports was already imported from (.*), but (.*) is being added to sys.path$',
+    UserWarning
+)
+
 # Import salt libs
 # We import log ASAP because we NEED to make sure that any logger instance salt
 # instantiates is using salt.log.setup.SaltLoggingClass
@@ -434,7 +441,11 @@ class Syndic(parsers.SyndicOptionParser):
         # Late import so logging works correctly
         import salt.minion
         self.daemonize_if_required()
-        self.syndic = salt.minion.Syndic(self.config)
+        # if its a multisyndic, do so
+        if isinstance(self.config.get('master'), list):
+            self.syndic = salt.minion.MultiSyndic(self.config)
+        else:
+            self.syndic = salt.minion.Syndic(self.config)
         self.set_pidfile()
 
     def start(self):

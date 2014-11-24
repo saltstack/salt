@@ -58,7 +58,7 @@ def recv(files, dest):
 
 def _mk_client():
     '''
-    Create a file client and add it to the context
+    Create a file client and add it to the context.
     '''
     if 'cp.fileclient' not in __context__:
         __context__['cp.fileclient'] = \
@@ -66,6 +66,11 @@ def _mk_client():
 
 
 def _render_filenames(path, dest, saltenv, template):
+    '''
+    Process markup in the :param:`path` and :param:`dest` variables (NOT the
+    files under the paths they ultimately point to) according to the markup
+    format provided by :param:`template`.
+    '''
     if not template:
         return (path, dest)
 
@@ -84,6 +89,10 @@ def _render_filenames(path, dest, saltenv, template):
     kwargs['saltenv'] = saltenv
 
     def _render(contents):
+        '''
+        Render :param:`contents` into a literal pathname by writing it to a
+        temp file, rendering that file, and returning the result.
+        '''
         # write out path to temp file
         tmp_path_fn = salt.utils.mkstemp()
         with salt.utils.fopen(tmp_path_fn, 'w+') as fp_:
@@ -655,17 +664,17 @@ def push(path):
             'path': path.lstrip(os.sep),
             'tok': auth.gen_token('salt')}
     sreq = salt.transport.Channel.factory(__opts__)
-    # sreq = salt.payload.SREQ(__opts__['master_uri'])
     with salt.utils.fopen(path, 'rb') as fp_:
         while True:
             load['loc'] = fp_.tell()
             load['data'] = fp_.read(__opts__['file_buffer_size'])
             if not load['data']:
                 return True
-
-            # ret = sreq.send('aes', auth.crypticle.dumps(load))
             ret = sreq.send(load)
             if not ret:
+                log.error('cp.push Failed transfer failed. Ensure master has '
+                '\'file_recv\' set to \'True\' and that the file is not '
+                'larger than the \'file_recv_size_max\' setting on the master.')
                 return ret
 
 

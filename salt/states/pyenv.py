@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Managing python installations with pyenv
-======================================
+========================================
 
 This module is used to install and manage python installations with pyenv.
 Different versions of python can be installed, and uninstalled. pyenv will

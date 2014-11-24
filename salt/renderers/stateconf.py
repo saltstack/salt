@@ -220,7 +220,7 @@ def render(input, saltenv='base', sls='', argline='', **kws):
             tmplctx = STATE_CONF.copy()
             if tmplctx:
                 prefix = sls + '::'
-                for k in tmplctx.keys():
+                for k in tmplctx.keys():  # iterate over a copy of keys
                     if k.startswith(prefix):
                         tmplctx[k[len(prefix):]] = tmplctx[k]
                         del tmplctx[k]
@@ -367,7 +367,7 @@ def rename_state_ids(data, sls, is_extend=False):
             if sid.startswith('.'):
                 req[sname] = _local_to_abs_sid(sid, sls)
 
-    for sid in data.keys():
+    for sid in data:
         if sid.startswith('.'):
             newsid = _local_to_abs_sid(sid, sls)
             if newsid in data:

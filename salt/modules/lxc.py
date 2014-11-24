@@ -116,9 +116,24 @@ def cloud_init_interface(name, vm_=None, **kwargs):
         netmask for the primary nic (24)
         = ``vm_.get('netmask', '24')``
     bridge
-        bridge^for the primary nic (lxcbr0)
+        bridge for the primary nic (lxcbr0)
     gateway
         network gateway for the container
+    additional_ips
+        additionnal ips which will be wired on the main bridge (br0)
+        which is connected to internet.
+        Be aware that you may use manual virtual mac addresses
+        providen by you provider (online, ovh, etc).
+        This is a list of mappings {ip: '', mac: '',netmask:''}
+        Set gateway to None and an interface with a gateway
+        to escape from another interface that eth0.
+        eg::
+
+              - {'mac': '00:16:3e:01:29:40',
+                 'gateway': None, (default)
+                 'link': 'br0', (default)
+                 'netmask': '', (default)
+                 'ip': '22.1.4.25'}
     unconditional_install
         given to lxc.bootstrap (see relative doc)
     force_install
@@ -214,6 +229,23 @@ def cloud_init_interface(name, vm_=None, **kwargs):
             eth0['hwaddr'] = mac
         if bridge:
             eth0['link'] = bridge
+    for ix, iopts in enumerate(vm_.get("additional_ips", [])):
+        ifh = "eth{0}".format(ix+1)
+        ethx = nic_opts.setdefault(ifh, {})
+        gw = iopts.get('gateway', None)
+        if gw:
+            ethx['gateway'] = gw
+            vm_['gateway'] = gateway = None
+        ethx['link'] = iopts.get('link', 'br0')
+        ethx['ipv4'] = iopts['ip']
+        nm = iopts.get('netmask', '')
+        if nm:
+            ethx['ipv4'] += '/{0}'.format(nm)
+        for i in ['mac', 'hwaddr']:
+            if i in iopts:
+                ethx['hwaddr'] = iopts[i]
+        if 'hwaddr' not in ethx:
+            raise ValueError('No mac for {0}'.format(ifh))
     gateway = vm_.get('gateway', 'auto')
     #
     lxc_init_interface = {}
@@ -351,10 +383,17 @@ def _get_network_conf(conf_tuples=None, **kwargs):
 
     if nic:
         nicp = __salt__['config.get']('lxc.nic', {}).get(
-            nic, DEFAULT_NIC_PROFILE
-        )
-        nic_opts = kwargs.pop('nic_opts', None)
-        for dev, args in nicp.items():
+            nic, DEFAULT_NIC_PROFILE)
+        nic_opts = kwargs.pop('nic_opts', {})
+        if nic_opts:
+            for dev, args in nic_opts.items():
+                ethx = nicp.setdefault(dev, {})
+                ethx = salt.utils.dictupdate.update(ethx, args)
+        ifs = [a for a in nicp]
+        ifs.sort()
+        gateway_set = False
+        for dev in ifs:
+            args = nicp[dev]
             ret.append({'lxc.network.type': args.pop('type', '')})
             ret.append({'lxc.network.name': dev})
             ret.append({'lxc.network.flags': args.pop('flags', 'up')})
@@ -377,34 +416,49 @@ def _get_network_conf(conf_tuples=None, **kwargs):
                 if k == 'link' and bridge:
                     v = bridge
                 v = opts.get(k, v)
+                if k in ['gateway', 'mac']:
+                    continue
                 ret.append({'lxc.network.{0}'.format(k): v})
-        # gateway (in automode) must be appended following network conf !
-        if gateway is not None:
+            # gateway (in automode) must be appended following network conf !
+            if not gateway:
+                gateway = args.get('gateway', None)
+            if gateway is not None and not gateway_set:
+                ret.append({'lxc.network.ipv4.gateway': gateway})
+                # only one network gateway ;)
+                gateway_set = True
+        # normally, this wont happen
+        # set the gateway if specified even if we did
+        # not managed the network underlying
+        if gateway is not None and not gateway_set:
             ret.append({'lxc.network.ipv4.gateway': gateway})
+            # only one network gateway ;)
+            gateway_set = True
 
     old = _get_veths(conf_tuples)
     new = _get_veths(ret)
     # verify that we did not loose the mac settings
     for iface in [a for a in new]:
+        ndata = new[iface]
+        nmac = ndata.get('lxc.network.hwaddr', '')
+        ntype = ndata.get('lxc.network.type', '')
+        omac, otype = '', ''
         if iface in old:
-            ndata = new[iface]
             odata = old[iface]
             omac = odata.get('lxc.network.hwaddr', '')
-            nmac = ndata.get('lxc.network.hwaddr', '')
             otype = odata.get('lxc.network.type', '')
-            ntype = ndata.get('lxc.network.type', '')
-            # default for network type is setted here
-            # attention not to change the network type
-            # without a good and explicit reason to.
-            if otype and not ntype:
-                ntype = otype
-            if not ntype:
-                ntype = 'veth'
-            new[iface]['lxc.network.type'] = ntype
-            if omac and not nmac:
-                new[iface]['lxc.network.hwaddr'] = omac
+        # default for network type is setted here
+        # attention not to change the network type
+        # without a good and explicit reason to.
+        if otype and not ntype:
+            ntype = otype
+        if not ntype:
+            ntype = 'veth'
+        new[iface]['lxc.network.type'] = ntype
+        if omac and not nmac:
+            new[iface]['lxc.network.hwaddr'] = omac
+
     ret = []
-    for v in new.values():
+    for v in new.itervalues():
         for row in v:
             ret.append({row: v[row]})
     return ret
@@ -548,7 +602,7 @@ class _LXCConfig(object):
         if self.path:
             content = self.as_string()
             # 2 step rendering to be sure not to open/wipe the config
-            # before as_string suceeds.
+            # before as_string succeeds.
             with open(self.path, 'w') as fic:
                 fic.write(content)
                 fic.flush()
@@ -1012,12 +1066,16 @@ def cloud_init(name, vm_=None, **kwargs):
     '''
     Thin wrapper to lxc.init to be used from the saltcloud lxc driver
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' lxc.cloud_init foo
+
     name
-        Name of the container
-        may be None and then guessed from saltcloud mapping
+        Name of the container. May be ``None`` and then guessed from saltcloud
+        mapping.
+
     ``vm_``
         saltcloud mapping defaults for the vm
     '''
@@ -1662,10 +1720,10 @@ def info(name):
         ret['memory_limit'] = limit
         ret['memory_free'] = free
         ret['size'] = __salt__['cmd.run'](
-            ('lxc-attach -n \'{0}\' -- env -i '
-             'df /|tail -n1|awk \'{{print $2}}\'').format(name))
+            ('lxc-attach --clear-env -n {0} -- '
+             'df /|tail -n1|awk \'{{print $2}}\'').format(pipes.quote(name)))
         ipaddr = __salt__['cmd.run'](
-            'lxc-attach -n \'{0}\' -- env -i ip addr show'.format(name))
+            'lxc-attach --clear-env -n {0} -- ip addr show'.format(pipes.quote(name)))
         for line in ipaddr.splitlines():
             if 'inet' in line:
                 line = line.split()
@@ -1716,9 +1774,9 @@ def set_pass(name, users, password):
     if users:
         try:
             cmd = (
-                "lxc-attach -n \"{0}\" -- "
+                "lxc-attach --clear-env -n {0} -- "
                 " /bin/sh -c \""
-                "").format(name)
+                "").format(pipes.quote(name))
             for i in users:
                 cmd += "echo {0}:{1}|chpasswd && ".format(
                     pipes.quote(i),
@@ -1858,23 +1916,23 @@ def set_dns(name, dnsservers=None, searchdomains=None):
     dns.extend(['search {0}'.format(d) for d in searchdomains])
     dns = "\n".join(dns)
     has_resolvconf = not int(
-        __salt__['cmd.run'](('lxc-attach -n \'{0}\' -- '
+        __salt__['cmd.run'](('lxc-attach --clear-env -n {0} -- '
                              '/usr/bin/test -e /etc/resolvconf/resolv.conf.d/base;'
-                             'echo ${{?}}').format(name)))
+                             'echo ${{?}}').format(pipes.quote(name))))
     if has_resolvconf:
         cret = __salt__['cmd.run_all']((
-            'lxc-attach -n \'{0}\' -- '
+            'lxc-attach --clear-env -n {0} -- '
             'rm /etc/resolvconf/resolv.conf.d/base &&'
-            'echo \'{1}\'|lxc-attach -n \'{0}\' -- '
+            'echo {1}|lxc-attach --clear-env -n {0} -- '
             'tee /etc/resolvconf/resolv.conf.d/base'
-        ).format(name, dns))
+        ).format(pipes.quote(name), pipes.quote(dns)))
         if not cret['retcode']:
             ret['result'] = True
     cret = __salt__['cmd.run_all']((
-        'lxc-attach -n \'{0}\' -- rm /etc/resolv.conf &&'
-        'echo \'{1}\'|lxc-attach -n \'{0}\' -- '
+        'lxc-attach --clear-env -n {0} -- rm /etc/resolv.conf &&'
+        'echo {1}|lxc-attach --clear-env -n {0} -- '
         'tee /etc/resolv.conf'
-    ).format(name, dns))
+    ).format(pipes.quote(name), pipes.quote(dns)))
     if not cret['retcode']:
         ret['result'] = True
     return ret
@@ -2013,7 +2071,7 @@ def bootstrap(name, config=None, approve_key=True,
             __salt__['lxc.stop'](name)
         elif prior_state == 'frozen':
             __salt__['lxc.freeze'](name)
-        # mark seeded upon sucessful install
+        # mark seeded upon successful install
         if res:
             __salt__['lxc.run_cmd'](
                 name, 'sh -c \'touch "{0}";\''.format(SEED_MARKER))
@@ -2031,7 +2089,7 @@ def attachable(name):
 
         salt 'minion' lxc.attachable ubuntu
     '''
-    cmd = 'lxc-attach -n {0} -- /usr/bin/env'.format(name)
+    cmd = 'lxc-attach -n {0} -- /usr/bin/env'.format(pipes.quote(name))
     data = __salt__['cmd.run_all'](cmd)
     if not data['retcode']:
         return True
@@ -2042,7 +2100,7 @@ def attachable(name):
 
 def run_cmd(name, cmd, no_start=False, preserve_state=True,
             stdout=True, stderr=False, use_vt=False,
-            keep_env='http_proxy,https_proxy'):
+            keep_env='http_proxy,https_proxy,no_proxy'):
     '''
     Run a command inside the container.
 
@@ -2092,12 +2150,11 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
     if attachable(name):
         if isinstance(keep_env, basestring):
             keep_env = keep_env.split(',')
-        if keep_env:
-            env = ' '.join('{0}=${0}'.format(x) for x in keep_env)
-        else:
-            env = ''
+        env = ' '.join('--set-var {0}={1}'.format(
+                       x, pipes.quote(os.environ[x]))
+                       for x in keep_env if x in os.environ)
+        cmd = 'lxc-attach --clear-env {0} -n {1} -- {2}'.format(env, pipes.quote(name), cmd)
 
-        cmd = 'lxc-attach -n \'{0}\' -- env -i {1} {2}'.format(name, env, cmd)
         if not use_vt:
             res = __salt__['cmd.run_all'](cmd)
         else:
@@ -2201,8 +2258,8 @@ def cp(name, src, dest):
     csrcmd5 = __salt__['cmd.run_all'](cmd)
     srcmd5 = csrcmd5['stdout'].split()[0]
 
-    cmd = 'lxc-attach -n {0} -- env -i md5sum {1} 2> /dev/null'.format(
-        name, dest)
+    cmd = 'lxc-attach --clear-env -n {0} -- md5sum {1} 2> /dev/null'.format(
+        pipes.quote(name), dest)
     cdestmd5 = __salt__['cmd.run_all'](cmd)
     if not cdestmd5['retcode']:
         try:
@@ -2218,8 +2275,8 @@ def cp(name, src, dest):
         'stderr': '',
     }
     if srcmd5 != destmd5:
-        cmd = 'cat {0} | lxc-attach -n {1} -- env -i tee {2} > /dev/null'.format(
-            src, name, dest)
+        cmd = 'cat {0} | lxc-attach --clear-env -n {1} -- tee {2} > /dev/null'.format(
+            pipes.quote(src), pipes.quote(name), pipes.quote(dest))
         log.info(cmd)
         ret = __salt__['cmd.run_all'](cmd)
     return ret
@@ -2307,7 +2364,7 @@ def write_conf(conf_file, conf):
             if type(line) is str:
                 fp_.write(line)
             elif type(line) is dict:
-                key = line.keys()[0]
+                key = line.iterkeys().next()
                 out_line = None
                 if type(line[key]) is str:
                     out_line = ' = '.join((key, line[key]))
@@ -2353,7 +2410,7 @@ def edit_conf(conf_file, out_format='simple', **kwargs):
             data.append(line)
             continue
         else:
-            key = line.keys()[0]
+            key = line.iterkeys().next()
             if key not in kwargs:
                 data.append(line)
                 continue

@@ -46,14 +46,6 @@ class MacUserTestCase(TestCase):
                      'groups': ['TEST_GROUP'], 'home': '/Users/foo',
                      'fullname': 'TEST USER', 'uid': 4376}
 
-    def test_osmajor(self):
-        '''
-        Tests version of OS X
-        '''
-        with patch.dict(mac_user.__grains__, {'kernel': 'Darwin',
-                                              'osrelease': '10.9.1'}):
-            self.assertEqual(mac_user._osmajor(), 10.9)
-
     @skipIf(True, 'Waiting on some clarifications from bug report #10594')
     def test_flush_dscl_cache(self):
         # TODO: Implement tests after clarifications come in
@@ -68,8 +60,9 @@ class MacUserTestCase(TestCase):
                                            'stderr': '',
                                            'stdout': ''})
         with patch.dict(mac_user.__salt__, {'cmd.run_all': mac_mock}):
-            with patch.dict(mac_user.__grains__, {'kernel': 'Darwin',
-                                                  'osrelease': '10.9.1'}):
+            with patch.dict(mac_user.__grains__,
+                            {'kernel': 'Darwin', 'osrelease': '10.9.1',
+                             'osrelease_info': (10, 9, 1)}):
                 self.assertEqual(mac_user._dscl('username'), {'pid': 4948,
                                                               'retcode': 0,
                                                               'stderr': '',

@@ -5,13 +5,25 @@ Generate the salt thin tarball from the installed python files
 
 # Import python libs
 import os
+import shutil
 import tarfile
+import zipfile
+import tempfile
 
 # Import third party libs
 import jinja2
 import yaml
-import msgpack
 import requests
+try:
+    import msgpack
+    HAS_MSGPACK = True
+except ImportError:
+    HAS_MSGPACK = False
+try:
+    import certifi
+    HAS_CERTIFI = True
+except ImportError:
+    HAS_CERTIFI = False
 try:
     import urllib3
     HAS_URLLIB3 = True
@@ -60,6 +72,13 @@ if __name__ == '__main__':
 '''
 
 
+def thin_path(cachedir):
+    '''
+    Return the path to the thin tarball
+    '''
+    return os.path.join(cachedir, 'thin', 'thin.tgz')
+
+
 def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods=''):
     '''
     Generate the salt-thin tarball and print the location of the tarball
@@ -85,16 +104,20 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods=''):
         fp_.write(SALTCALL)
     if os.path.isfile(thintar):
         if overwrite or not os.path.isfile(thinver):
-            os.remove(thintar)
+            try:
+                os.remove(thintar)
+            except OSError:
+                pass
         elif open(thinver).read() == salt.__version__:
             return thintar
     tops = [
             os.path.dirname(salt.__file__),
             os.path.dirname(jinja2.__file__),
             os.path.dirname(yaml.__file__),
-            os.path.dirname(msgpack.__file__),
             os.path.dirname(requests.__file__)
             ]
+    if HAS_MSGPACK:
+        tops.append(os.path.dirname(msgpack.__file__))
 
     if HAS_URLLIB3:
         tops.append(os.path.dirname(urllib3.__file__))
@@ -104,6 +127,9 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods=''):
 
     if HAS_CHARDET:
         tops.append(os.path.dirname(chardet.__file__))
+
+    if HAS_CERTIFI:
+        tops.append(os.path.dirname(certifi.__file__))
 
     for mod in [m for m in extra_mods.split(',') if m]:
         if mod not in locals() and mod not in globals():
@@ -132,9 +158,19 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods=''):
         tops.append(os.path.dirname(markupsafe.__file__))
     tfp = tarfile.open(thintar, 'w:gz', dereference=True)
     start_dir = os.getcwd()
+    tempdir = None
     for top in tops:
         base = os.path.basename(top)
-        os.chdir(os.path.dirname(top))
+        top_dirname = os.path.dirname(top)
+        if os.path.isdir(top_dirname):
+            os.chdir(top_dirname)
+        else:
+            # This is likely a compressed python .egg
+            tempdir = tempfile.mkdtemp()
+            egg = zipfile.ZipFile(top_dirname)
+            egg.extractall(tempdir)
+            top = os.path.join(tempdir, base)
+            os.chdir(tempdir)
         if not os.path.isdir(top):
             # top is a single file module
             tfp.add(base)
@@ -143,6 +179,9 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods=''):
             for name in files:
                 if not name.endswith(('.pyc', '.pyo')):
                     tfp.add(os.path.join(root, name))
+        if tempdir is not None:
+            shutil.rmtree(tempdir)
+            tempdir = None
     os.chdir(thindir)
     tfp.add('salt-call')
     with open(thinver, 'w+') as fp_:

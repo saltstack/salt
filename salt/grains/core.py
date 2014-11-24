@@ -56,6 +56,8 @@ if salt.utils.is_windows():
             'will be missing'
         )
 
+_INTERFACES = {}
+
 
 def _windows_cpudata():
     '''
@@ -149,6 +151,7 @@ def _linux_gpu_data():
 
     # dominant gpu vendors to search for (MUST be lowercase for matching below)
     known_vendors = ['nvidia', 'amd', 'ati', 'intel']
+    gpu_classes = ('vga compatible controller', '3d controller')
 
     devs = []
     try:
@@ -163,9 +166,8 @@ def _linux_gpu_data():
         for line in lspci_list:
             # check for record-separating empty lines
             if line == '':
-                if cur_dev.get('Class', '') == 'VGA compatible controller':
+                if cur_dev.get('Class', '').lower() in gpu_classes:
                     devs.append(cur_dev)
-                # XXX; may also need to search for "3D controller"
                 cur_dev = {}
                 continue
             if re.match(r'^\w+:\s+.*', line):
@@ -413,7 +415,26 @@ def _virtual(osdata):
     #   virtual
     #   virtual_subtype
     grains = {'virtual': 'physical'}
-    for command in ('dmidecode', 'lspci', 'dmesg'):
+
+    # Skip the below loop on platforms which have none of the desired cmds
+    # This is a temporary measure until we can write proper virtual hardware
+    # detection.
+    skip_cmds = ('AIX',)
+
+    # Check if enable_lspci is True or False
+    if __opts__.get('enable_lspci', True) is False:
+        _cmds = ('dmidecode', 'dmesg')
+    elif osdata['kernel'] in skip_cmds:
+        _cmds = ()
+    else:
+        # /proc/bus/pci does not exists, lspci will fail
+        if not os.path.exists('/proc/bus/pci'):
+            _cmds = ('dmidecode', 'dmesg')
+        else:
+            _cmds = ('dmidecode', 'lspci', 'dmesg')
+
+    failed_commands = set()
+    for command in _cmds:
         args = []
         if osdata['kernel'] == 'Darwin':
             command = 'system_profiler'
@@ -432,11 +453,7 @@ def _virtual(osdata):
             if salt.log.is_logging_configured():
                 if salt.utils.is_windows():
                     continue
-                log.warn(
-                    'Although {0!r} was found in path, the current user '
-                    'cannot execute it. Grains output might not be '
-                    'accurate.'.format(command)
-                )
+                failed_commands.add(command)
             continue
 
         output = ret['stdout']
@@ -499,12 +516,14 @@ def _virtual(osdata):
             # Break out of the loop so the next log message is not issued
             break
     else:
-        log.warn(
-            'The tools \'dmidecode\', \'lspci\' and \'dmesg\' failed to '
-            'execute because they do not exist on the system of the user '
-            'running this instance or the user does not have the necessary '
-            'permissions to execute them. Grains output might not be accurate.'
-        )
+        if osdata['kernel'] in skip_cmds:
+            log.warn(
+                'The tools \'dmidecode\', \'lspci\' and \'dmesg\' failed to '
+                'execute because they do not exist on the system of the user '
+                'running this instance or the user does not have the '
+                'necessary permissions to execute them. Grains output might '
+                'not be accurate.'
+            )
 
     choices = ('Linux', 'OpenBSD', 'HP-UX')
     isdir = os.path.isdir
@@ -527,6 +546,9 @@ def _virtual(osdata):
                 grains['virtual'] = 'openvzhn'
             elif os.path.isfile('/proc/vz/veinfo'):
                 grains['virtual'] = 'openvzve'
+                # a posteriori, it's expected for these to have failed:
+                failed_commands.discard('lspci')
+                failed_commands.discard('dmidecode')
         # Provide additional detection for OpenVZ
         if os.path.isfile('/proc/self/status'):
             with salt.utils.fopen('/proc/self/status') as status_file:
@@ -585,6 +607,8 @@ def _virtual(osdata):
             if maker.startswith('Xen'):
                 grains['virtual_subtype'] = '{0} {1}'.format(maker, product)
                 grains['virtual'] = 'xen'
+            if maker.startswith('Microsoft') and product.startswith('Virtual'):
+                grains['virtual'] = 'VirtualPC'
         if sysctl:
             model = __salt__['cmd.run']('{0} hw.model'.format(sysctl))
             jail = __salt__['cmd.run'](
@@ -623,6 +647,12 @@ def _virtual(osdata):
                 if os.path.isfile('/var/run/xenconsoled.pid'):
                     grains['virtual_subtype'] = 'Xen Dom0'
 
+    for command in failed_commands:
+        log.warn(
+            'Although {0!r} was found in path, the current user '
+            'cannot execute it. Grains output might not be '
+            'accurate.'.format(command)
+        )
     return grains
 
 
@@ -796,6 +826,17 @@ def _linux_bin_exists(binary):
     return __salt__['cmd.retcode'](
         'which {0}'.format(binary)
     ) == 0
+
+
+def _get_interfaces():
+    '''
+    Provide a dict of the connected interfaces and their ip addresses
+    '''
+
+    global _INTERFACES
+    if not _INTERFACES:
+        _INTERFACES = salt.utils.network.interfaces()
+    return _INTERFACES
 
 
 def os_data():
@@ -1018,6 +1059,8 @@ def os_data():
     # architecture.
     if grains.get('os_family') == 'Debian':
         osarch = __salt__['cmd.run']('dpkg --print-architecture').strip()
+    elif grains.get('os') == 'Fedora':
+        osarch = __salt__['cmd.run']('rpm --eval %{_host_cpu}').strip()
     else:
         osarch = grains['cpuarch']
     grains['osarch'] = osarch
@@ -1033,7 +1076,7 @@ def os_data():
 
     # Load additional OS family grains
     if grains['os_family'] == "RedHat":
-        grains['osmajorrelease'] = grains['osrelease'].split('.', 1)
+        grains['osmajorrelease'] = grains['osrelease'].split('.', 1)[0]
 
         grains['osfinger'] = '{os}-{ver}'.format(
             os=grains['osfullname'],
@@ -1061,20 +1104,21 @@ def locale_info():
         defaultencoding
     '''
     grains = {}
+    grains['locale_info'] = {}
 
     if 'proxyminion' in __opts__:
         return grains
 
     try:
         (
-            grains['defaultlanguage'],
-            grains['defaultencoding']
+            grains['locale_info']['defaultlanguage'],
+            grains['locale_info']['defaultencoding']
         ) = locale.getdefaultlocale()
     except Exception:
         # locale.getdefaultlocale can ValueError!! Catch anything else it
         # might do, per #2205
-        grains['defaultlanguage'] = 'unknown'
-        grains['defaultencoding'] = 'unknown'
+        grains['locale_info']['defaultlanguage'] = 'unknown'
+        grains['locale_info']['defaultencoding'] = 'unknown'
     return grains
 
 
@@ -1179,7 +1223,7 @@ def ip_interfaces():
         return {}
 
     ret = {}
-    ifaces = salt.utils.network.interfaces()
+    ifaces = _get_interfaces()
     for face in ifaces:
         iface_ips = []
         for inet in ifaces[face].get('inet', []):
@@ -1192,6 +1236,54 @@ def ip_interfaces():
     return {'ip_interfaces': ret}
 
 
+def ip4_interfaces():
+    '''
+    Provide a dict of the connected interfaces and their ip4 addresses
+    '''
+    # Provides:
+    #   ip_interfaces
+
+    if 'proxyminion' in __opts__:
+        return {}
+
+    ret = {}
+    ifaces = _get_interfaces()
+    for face in ifaces:
+        iface_ips = []
+        for inet in ifaces[face].get('inet', []):
+            if 'address' in inet:
+                iface_ips.append(inet['address'])
+        for secondary in ifaces[face].get('secondary', []):
+            if 'address' in secondary:
+                iface_ips.append(secondary['address'])
+        ret[face] = iface_ips
+    return {'ip4_interfaces': ret}
+
+
+def ip6_interfaces():
+    '''
+    Provide a dict of the connected interfaces and their ip6 addresses
+    '''
+    # Provides:
+    #   ip_interfaces
+
+    if 'proxyminion' in __opts__:
+        return {}
+
+    ret = {}
+    ifaces = _get_interfaces()
+    for face in ifaces:
+        iface_ips = []
+        for inet in ifaces[face].get('inet6', []):
+            if 'address' in inet:
+                iface_ips.append(inet['address'])
+        for secondary in ifaces[face].get('secondary', []):
+            if 'address' in secondary:
+                iface_ips.append(secondary['address'])
+        ret[face] = iface_ips
+    return {'ip6_interfaces': ret}
+
+
 def hwaddr_interfaces():
     '''
     Provide a dict of the connected interfaces and their
@@ -1200,7 +1292,7 @@ def hwaddr_interfaces():
     # Provides:
     #   hwaddr_interfaces
     ret = {}
-    ifaces = salt.utils.network.interfaces()
+    ifaces = _get_interfaces()
     for face in ifaces:
         if 'hwaddr' in ifaces[face]:
             ret[face] = ifaces[face]['hwaddr']

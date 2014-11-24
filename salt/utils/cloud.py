@@ -47,7 +47,7 @@ from salt.utils.validate.path import is_writeable
 
 # Import salt cloud libs
 import salt.cloud
-from salt.cloud.exceptions import (
+from salt.exceptions import (
     SaltCloudConfigError,
     SaltCloudException,
     SaltCloudSystemExit,
@@ -360,6 +360,9 @@ def bootstrap(vm_, opts):
         'known_hosts_file': salt.config.get_cloud_config_value(
             'known_hosts_file', vm_, opts, default='/dev/null'
         ),
+        'file_map': salt.config.get_cloud_config_value(
+            'file_map', vm_, opts, default=None
+        ),
     }
     # forward any info about possible ssh gateway to deploy script
     # as some providers need also a 'gateway' configuration
@@ -419,8 +422,10 @@ def bootstrap(vm_, opts):
     else:
         deployed = deploy_script(**deploy_kwargs)
 
-    if deployed:
-        ret['deployed'] = deployed
+    if deployed is not False:
+        ret['deployed'] = True
+        if deployed is not True:
+            ret.update(deployed)
         log.info('Salt installed on {0}'.format(vm_['name']))
         return ret
 
@@ -725,7 +730,7 @@ def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
                 log.debug('Using {0} as the key_filename'.format(key_filename))
             elif password:
                 kwargs['password'] = password
-                log.debug('Using password authentication'.format(password))
+                log.debug('Using password authentication')
 
             trycount += 1
             log.debug(
@@ -794,7 +799,6 @@ def deploy_windows(host,
                              username=username, password=password,
                              timeout=port_timeout * 60):
         log.debug('SMB port {0} on {1} is available'.format(port, host))
-        newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
         log.debug(
             'Logging into {0}:{1} as {2}'.format(
                 host, port, username
@@ -931,6 +935,7 @@ def deploy_script(host,
                   deploy_command='/tmp/.saltcloud/deploy.sh',
                   opts=None,
                   tmp_dir='/tmp/.saltcloud',
+                  file_map=None,
                   **kwargs):
     '''
     Copy a deploy script to a remote server, execute it, and remove it
@@ -965,9 +970,6 @@ def deploy_script(host,
                            display_ssh_output=display_ssh_output,
                            gateway=gateway, known_hosts_file=known_hosts_file):
 
-            def remote_exists(path):
-                return not root_cmd('test -e \\"{0}\\"'.format(path),
-                                    tty, sudo, **kwargs)
             log.debug(
                 'Logging into {0}:{1} as {2}'.format(
                     host, port, username
@@ -993,7 +995,8 @@ def deploy_script(host,
                 log.debug('Using {0} as the password'.format(password))
                 kwargs['password'] = password
 
-            if not remote_exists(tmp_dir):
+            if root_cmd('test -e \\"{0}\\"'.format(tmp_dir), tty, sudo,
+                        allow_failure=True, **kwargs):
                 ret = root_cmd(('sh -c "( mkdir -p \\"{0}\\" &&'
                                 ' chmod 700 \\"{0}\\" )"').format(tmp_dir),
                                tty, sudo, **kwargs)
@@ -1015,16 +1018,44 @@ def deploy_script(host,
                                 'Cant set {0} ownership on {1}'.format(
                                     username, tmp_dir))
 
+            if not isinstance(file_map, dict):
+                file_map = {}
+
+            # Copy an arbitrary group of files to the target system
+            remote_dirs = []
+            file_map_success = []
+            file_map_fail = []
+            for map_item in file_map:
+                local_file = map_item
+                remote_file = file_map[map_item]
+                if not os.path.exists(map_item):
+                    log.error(
+                        'The local file "{0}" does not exist, and will not be '
+                        'copied to "{1}" on the target system'.format(
+                            local_file, remote_file
+                        )
+                    )
+                    file_map_fail.append({local_file: remote_file})
+                    continue
+                remote_dir = os.path.dirname(remote_file)
+                if remote_dir not in remote_dirs:
+                    root_cmd('mkdir -p {0}'.format(remote_dir), tty, sudo, **kwargs)
+                    remote_dirs.append(remote_dir)
+                sftp_file(
+                    remote_file, kwargs=kwargs, local_file=local_file
+                )
+                file_map_success.append({local_file: remote_file})
+
             # Minion configuration
             if minion_pem:
-                scp_file('{0}/minion.pem'.format(tmp_dir), minion_pem, kwargs)
+                sftp_file('{0}/minion.pem'.format(tmp_dir), minion_pem, kwargs)
                 ret = root_cmd('chmod 600 {0}/minion.pem'.format(tmp_dir),
                                tty, sudo, **kwargs)
                 if ret:
                     raise SaltCloudSystemExit(
                         'Cant set perms on {0}/minion.pem'.format(tmp_dir))
             if minion_pub:
-                scp_file('{0}/minion.pub'.format(tmp_dir), minion_pub, kwargs)
+                sftp_file('{0}/minion.pub'.format(tmp_dir), minion_pub, kwargs)
 
             if minion_conf:
                 if not isinstance(minion_conf, dict):
@@ -1037,12 +1068,12 @@ def deploy_script(host,
                     )
                 minion_grains = minion_conf.pop('grains', {})
                 if minion_grains:
-                    scp_file(
+                    sftp_file(
                         '{0}/grains'.format(tmp_dir),
                         salt_config_to_yaml(minion_grains),
                         kwargs
                     )
-                scp_file(
+                sftp_file(
                     '{0}/minion'.format(tmp_dir),
                     salt_config_to_yaml(minion_conf),
                     kwargs
@@ -1050,7 +1081,7 @@ def deploy_script(host,
 
             # Master configuration
             if master_pem:
-                scp_file('{0}/master.pem'.format(tmp_dir), master_pem, kwargs)
+                sftp_file('{0}/master.pem'.format(tmp_dir), master_pem, kwargs)
                 ret = root_cmd('chmod 600 {0}/master.pem'.format(tmp_dir),
                                tty, sudo, **kwargs)
                 if ret:
@@ -1058,7 +1089,7 @@ def deploy_script(host,
                         'Cant set perms on {0}/master.pem'.format(tmp_dir))
 
             if master_pub:
-                scp_file('{0}/master.pub'.format(tmp_dir), master_pub, kwargs)
+                sftp_file('{0}/master.pub'.format(tmp_dir), master_pub, kwargs)
 
             if master_conf:
                 if not isinstance(master_conf, dict):
@@ -1070,7 +1101,7 @@ def deploy_script(host,
                         'Loading from YAML ...'
                     )
 
-                scp_file(
+                sftp_file(
                     '{0}/master'.format(tmp_dir),
                     salt_config_to_yaml(master_conf),
                     kwargs
@@ -1109,7 +1140,7 @@ def deploy_script(host,
                     rpath = os.path.join(
                         preseed_minion_keys_tempdir, minion_id
                     )
-                    scp_file(rpath, minion_key, kwargs)
+                    sftp_file(rpath, minion_key, kwargs)
 
                 if kwargs['username'] != 'root':
                     root_cmd(
@@ -1127,7 +1158,7 @@ def deploy_script(host,
             if script:
                 # got strange escaping issues with sudoer, going onto a
                 # subshell fixes that
-                scp_file('{0}/deploy.sh'.format(tmp_dir), script, kwargs)
+                sftp_file('{0}/deploy.sh'.format(tmp_dir), script, kwargs)
                 ret = root_cmd(
                     ('sh -c "( chmod +x \\"{0}/deploy.sh\\" )";'
                      'exit $?').format(tmp_dir),
@@ -1189,7 +1220,7 @@ def deploy_script(host,
                     environ_script_contents.append(deploy_command)
 
                     # Upload our environ setter wrapper
-                    scp_file(
+                    sftp_file(
                         '{0}/environ-deploy-wrapper.sh'.format(tmp_dir),
                         '\n'.join(environ_script_contents),
                         kwargs
@@ -1310,6 +1341,11 @@ def deploy_script(host,
                 },
                 transport=opts.get('transport', 'zeromq')
             )
+            if file_map_fail or file_map_success:
+                return {
+                    'File Upload Success': file_map_success,
+                    'File Upload Failure': file_map_fail,
+                }
             return True
     return False
 
@@ -1338,9 +1374,9 @@ def fire_event(key, msg, tag, args=None, sock_dir=None, transport='zeromq'):
     time.sleep(0.025)
 
 
-def _exec_ssh_cmd(cmd,
-                  error_msg='A wrong password has been issued while establishing ssh session',
-                  **kwargs):
+def _exec_ssh_cmd(cmd, error_msg=None, allow_failure=False, **kwargs):
+    if error_msg is None:
+        error_msg = 'A wrong password has been issued while establishing ssh session'
     password_retries = kwargs.get('password_retries', 3)
     try:
         stdout, stderr = None, None
@@ -1350,9 +1386,10 @@ def _exec_ssh_cmd(cmd,
             log_stdout=True,
             log_stderr=True,
             stream_stdout=kwargs.get('display_ssh_output', True),
-            stream_stderr=kwargs.get('display_ssh_output', True))
+            stream_stderr=kwargs.get('display_ssh_output', True)
+        )
         sent_password = 0
-        while proc.isalive():
+        while True:
             stdout, stderr = proc.recv()
             if stdout and SSH_PASSWORD_PROMP_RE.search(stdout):
                 if (
@@ -1363,8 +1400,17 @@ def _exec_ssh_cmd(cmd,
                     proc.sendline(kwargs['password'])
                 else:
                     raise SaltCloudPasswordError(error_msg)
+            if not proc.isalive():
+                break
             # 0.0125 is really too fast on some systems
             time.sleep(0.5)
+        if proc.exitstatus != 0:
+            if allow_failure is False:
+                raise SaltCloudSystemExit(
+                    'Command {0!r} failed. Exit code: {1}'.format(
+                        cmd, proc.exitstatus
+                    )
+                )
         return proc.exitstatus
     except vt.TerminalException as err:
         trace = traceback.format_exc()
@@ -1408,7 +1454,7 @@ def scp_file(dest_path, contents, kwargs):
         ])
 
     if 'port' in kwargs:
-        ssh_args.extend(['-P {0}'.format(kwargs['port'])])
+        ssh_args.append('-oPort={0}'.format(kwargs['port']))
 
     if 'ssh_gateway' in kwargs:
         ssh_gateway = kwargs['ssh_gateway']
@@ -1424,28 +1470,33 @@ def scp_file(dest_path, contents, kwargs):
         if 'ssh_gateway_user' in kwargs:
             ssh_gateway_user = kwargs['ssh_gateway_user']
 
-        ssh_args.extend([
+        ssh_args.append(
             # Setup ProxyCommand
             '-oProxyCommand="ssh {0} {1} {2} {3} {4}@{5} -p {6} nc -q0 %h %p"'.format(
-            # Don't add new hosts to the host key database
-            '-oStrictHostKeyChecking=no',
-            # Set hosts key database path to /dev/null, ie, non-existing
-            '-oUserKnownHostsFile=/dev/null',
-            # Don't re-use the SSH connection. Less failures.
-            '-oControlPath=none',
+                # Don't add new hosts to the host key database
+                '-oStrictHostKeyChecking=no',
+                # Set hosts key database path to /dev/null, ie, non-existing
+                '-oUserKnownHostsFile=/dev/null',
+                # Don't re-use the SSH connection. Less failures.
+                '-oControlPath=none',
                 ssh_gateway_key,
                 ssh_gateway_user,
                 ssh_gateway,
                 ssh_gateway_port
             )
-        ])
+        )
 
-    cmd = 'scp {0} {1} {2[username]}@{2[hostname]}:{3}'.format(
-        ' '.join(ssh_args), tmppath, kwargs, dest_path
+    cmd = (
+        'scp {0} {1} {2[username]}@{2[hostname]}:{3} || '
+        'echo "put {1} {3}" | sftp {0} {2[username]}@{2[hostname]} || '
+        'rsync -avz -e "ssh {0}" {1} {2[username]}@{2[hostname]}:{3}'.format(
+            ' '.join(ssh_args), tmppath, kwargs, dest_path
+        )
     )
     log.debug('SCP command: {0!r}'.format(cmd))
     retcode = _exec_ssh_cmd(cmd,
                             error_msg='Failed to upload file {0!r}: {1}\n{2}',
+                            password_retries=3,
                             **kwargs)
     return retcode
 
@@ -1474,6 +1525,89 @@ def smb_file(dest_path, contents, kwargs):
     )
     log.debug('SCP command: {0!r}'.format(cmd))
     win_cmd(cmd)
+
+
+def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
+    '''
+    Use sftp to upload a file to a server
+    '''
+    if kwargs is None:
+        kwargs = {}
+
+    if contents is not None:
+        tmpfh, tmppath = tempfile.mkstemp()
+        with salt.utils.fopen(tmppath, 'w') as tmpfile:
+            tmpfile.write(contents)
+
+    if local_file is not None:
+        tmppath = local_file
+
+    log.debug('Uploading {0} to {1} (sfcp)'.format(dest_path, kwargs.get('hostname')))
+
+    ssh_args = [
+        # Don't add new hosts to the host key database
+        '-oStrictHostKeyChecking=no',
+        # Set hosts key database path to /dev/null, ie, non-existing
+        '-oUserKnownHostsFile=/dev/null',
+        # Don't re-use the SSH connection. Less failures.
+        '-oControlPath=none'
+    ]
+    if 'key_filename' in kwargs:
+        # There should never be both a password and an ssh key passed in, so
+        ssh_args.extend([
+            # tell SSH to skip password authentication
+            '-oPasswordAuthentication=no',
+            '-oChallengeResponseAuthentication=no',
+            # Make sure public key authentication is enabled
+            '-oPubkeyAuthentication=yes',
+            # No Keyboard interaction!
+            '-oKbdInteractiveAuthentication=no',
+            # Also, specify the location of the key file
+            '-oIdentityFile={0}'.format(kwargs['key_filename'])
+        ])
+
+    if 'port' in kwargs:
+        ssh_args.append('-oPort={0}'.format(kwargs['port']))
+
+    if 'ssh_gateway' in kwargs:
+        ssh_gateway = kwargs['ssh_gateway']
+        ssh_gateway_port = 22
+        ssh_gateway_key = ''
+        ssh_gateway_user = 'root'
+        if ':' in ssh_gateway:
+            ssh_gateway, ssh_gateway_port = ssh_gateway.split(':')
+        if 'ssh_gateway_port' in kwargs:
+            ssh_gateway_port = kwargs['ssh_gateway_port']
+        if 'ssh_gateway_key' in kwargs:
+            ssh_gateway_key = '-i {0}'.format(kwargs['ssh_gateway_key'])
+        if 'ssh_gateway_user' in kwargs:
+            ssh_gateway_user = kwargs['ssh_gateway_user']
+
+        ssh_args.append(
+            # Setup ProxyCommand
+            '-oProxyCommand="ssh {0} {1} {2} {3} {4}@{5} -p {6} nc -q0 %h %p"'.format(
+                # Don't add new hosts to the host key database
+                '-oStrictHostKeyChecking=no',
+                # Set hosts key database path to /dev/null, ie, non-existing
+                '-oUserKnownHostsFile=/dev/null',
+                # Don't re-use the SSH connection. Less failures.
+                '-oControlPath=none',
+                ssh_gateway_key,
+                ssh_gateway_user,
+                ssh_gateway,
+                ssh_gateway_port
+            )
+        )
+
+    cmd = 'echo "put {0} {1}" | sftp {2} {3[username]}@{3[hostname]}'.format(
+        tmppath, dest_path, ' '.join(ssh_args), kwargs
+    )
+    log.debug('SFTP command: {0!r}'.format(cmd))
+    retcode = _exec_ssh_cmd(cmd,
+                            error_msg='Failed to upload file {0!r}: {1}\n{2}',
+                            password_retries=3,
+                            **kwargs)
+    return retcode
 
 
 def win_cmd(command, **kwargs):
@@ -1507,7 +1641,7 @@ def win_cmd(command, **kwargs):
     return 1
 
 
-def root_cmd(command, tty, sudo, **kwargs):
+def root_cmd(command, tty, sudo, allow_failure=False, **kwargs):
     '''
     Wrapper for commands to be run as root
     '''
@@ -1598,7 +1732,7 @@ def root_cmd(command, tty, sudo, **kwargs):
         ' '.join(ssh_args), kwargs, pipes.quote(command)
     )
     log.debug('SSH command: {0!r}'.format(cmd))
-    retcode = _exec_ssh_cmd(cmd, **kwargs)
+    retcode = _exec_ssh_cmd(cmd, allow_failure=allow_failure, **kwargs)
     return retcode
 
 
@@ -1943,7 +2077,7 @@ def delete_minion_cachedir(minion_id, provider, opts, base=None):
     if base is None:
         base = os.path.join(syspaths.CACHE_DIR, 'cloud')
 
-    driver = opts['providers'][provider].keys()[0]
+    driver = opts['providers'][provider].iterkeys().next()
     fname = '{0}.p'.format(minion_id)
     for cachedir in ('requested', 'active'):
         path = os.path.join(base, cachedir, driver, provider, fname)
@@ -2106,7 +2240,7 @@ def cache_node_list(nodes, provider, opts):
         return
 
     base = os.path.join(init_cachedir(), 'active')
-    driver = opts['providers'][provider].keys()[0]
+    driver = opts['providers'][provider].iterkeys().next()
     prov_dir = os.path.join(base, driver, provider)
     if not os.path.exists(prov_dir):
         os.makedirs(prov_dir)
@@ -2211,7 +2345,7 @@ def diff_node_cache(prov_dir, node, new_data, opts):
     with salt.utils.fopen(path, 'r') as fh_:
         try:
             cache_data = msgpack.load(fh_)
-        except ValueError as exc:
+        except ValueError:
             log.warning('Cache for {0} was corrupt: Deleting'.format(node))
             cache_data = {}
 

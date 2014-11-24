@@ -7,6 +7,8 @@ The Rackspace cloud module. This module uses the preferred means to set up a
 libcloud based cloud module and should be used as the general template for
 setting up additional libcloud based modules.
 
+:depends: libcloud >= 0.13.2
+
 Please note that the `rackspace` driver is only intended for 1st gen instances,
 aka, "the old cloud" at Rackspace. It is required for 1st gen instances, but
 will *not* work with OpenStack-based instances. Unless you explicitly have a
@@ -55,7 +57,7 @@ import salt.utils
 import salt.utils.cloud
 import salt.config as config
 from salt.utils import namespaced_function
-from salt.cloud.exceptions import (
+from salt.exceptions import (
     SaltCloudSystemExit,
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout
@@ -240,7 +242,7 @@ def create(vm_):
                 vm_['name'], exc
             ),
             # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -261,7 +263,7 @@ def create(vm_):
                     err
                 ),
                 # Show the traceback if the debug logging level is enabled
-                exc_info=log.isEnabledFor(logging.DEBUG)
+                exc_info_on_loglevel=logging.DEBUG
             )
             # Trigger a failure in the wait for IP function
             return False
@@ -320,7 +322,7 @@ def create(vm_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(exc.message)
+            raise SaltCloudSystemExit(str(exc))
 
     log.debug('VM is now running')
     if ssh_interface(vm_) == 'private_ips':

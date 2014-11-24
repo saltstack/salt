@@ -5,11 +5,18 @@ Windows Service module.
 
 # Import python libs
 import salt.utils
+from subprocess import list2cmdline
+import time
+import logging
+
+log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'service'
 
 BUFFSIZE = 5000
+SERVICE_STOP_DELAY_SECONDS = 15
+SERVICE_STOP_POLL_MAX_ATTEMPTS = 5
 
 
 def __virtual__():
@@ -61,7 +68,7 @@ def get_enabled():
                     continue
                 services.append(comps[1].strip())
         for service in services:
-            cmd2 = 'sc qc "{0}" {1}'.format(service, BUFFSIZE)
+            cmd2 = list2cmdline(['sc', 'qc', service, BUFFSIZE])
             lines = __salt__['cmd.run'](cmd2).splitlines()
             for line in lines:
                 if 'AUTO_START' in line:
@@ -95,7 +102,7 @@ def get_disabled():
                     continue
                 services.append(comps[1].strip())
         for service in services:
-            cmd2 = 'sc qc "{0}" {1}'.format(service, BUFFSIZE)
+            cmd2 = list2cmdline(['sc', 'qc', service, BUFFSIZE])
             lines = __salt__['cmd.run'](cmd2).splitlines()
             for line in lines:
                 if 'DEMAND_START' in line:
@@ -205,7 +212,7 @@ def start(name):
 
         salt '*' service.start <service name>
     '''
-    cmd = 'net start "{0}"'.format(name)
+    cmd = list2cmdline(['net', 'start', name])
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -219,8 +226,25 @@ def stop(name):
 
         salt '*' service.stop <service name>
     '''
-    cmd = 'net stop "{0}"'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    # net stop issues a stop command and waits briefly (~30s), but will give
+    # up if the service takes too long to stop with a misleading
+    # "service could not be stopped" message and RC 0.
+
+    cmd = list2cmdline(['net', 'stop', name])
+    res = __salt__['cmd.run'](cmd)
+    if 'service was stopped' in res:
+        return True
+
+    # we requested a stop, but the service is still thinking about it.
+    # poll for the real status
+    for attempt in range(SERVICE_STOP_POLL_MAX_ATTEMPTS):
+        if not status(name):
+            return True
+        log.debug('Waiting for %s to stop', name)
+        time.sleep(SERVICE_STOP_DELAY_SECONDS)
+
+    log.warning('Giving up on waiting for service `%s` to stop', name)
+    return False
 
 
 def restart(name):
@@ -236,8 +260,7 @@ def restart(name):
     if has_powershell():
         cmd = 'Restart-Service {0}'.format(name)
         return not __salt__['cmd.retcode'](cmd, shell='powershell')
-    stop(name)
-    return start(name)
+    return stop(name) and start(name)
 
 
 def status(name, sig=None):
@@ -252,7 +275,7 @@ def status(name, sig=None):
 
         salt '*' service.status <service name> [service signature]
     '''
-    cmd = 'sc query "{0}" {1}'.format(name, BUFFSIZE)
+    cmd = list2cmdline(['sc', 'query', name, BUFFSIZE])
     statuses = __salt__['cmd.run'](cmd).splitlines()
     for line in statuses:
         if 'RUNNING' in line:
@@ -272,7 +295,7 @@ def getsid(name):
 
         salt '*' service.getsid <service name>
     '''
-    cmd = 'sc showsid "{0}"'.format(name)
+    cmd = list2cmdline(['sc', 'showsid', name])
     lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         if 'SERVICE SID:' in line:
@@ -293,7 +316,7 @@ def enable(name, **kwargs):
 
         salt '*' service.enable <service name>
     '''
-    cmd = 'sc config "{0}" start= auto'.format(name)
+    cmd = list2cmdline(['sc', 'config', name, 'start=', 'auto'])
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -307,7 +330,7 @@ def disable(name, **kwargs):
 
         salt '*' service.disable <service name>
     '''
-    cmd = 'sc config "{0}" start= demand'.format(name)
+    cmd = list2cmdline(['sc', 'config', name, 'start=', 'demand'])
     return not __salt__['cmd.retcode'](cmd)
 
 

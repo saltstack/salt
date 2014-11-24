@@ -13,6 +13,7 @@ import copy
 import json
 import time
 import errno
+import signal
 import shutil
 import pprint
 import logging
@@ -59,6 +60,7 @@ import salt.utils
 import salt.utils.process
 from salt.utils import fopen, get_colors
 from salt.utils.verify import verify_env
+from salt.utils.immutabletypes import freeze
 
 try:
     import salt.master
@@ -84,6 +86,8 @@ TMP_STATE_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-state-tree')
 TMP_PRODENV_STATE_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-prodenv-state-tree')
 TMP_CONF_DIR = os.path.join(TMP, 'config')
 CONF_DIR = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf')
+
+RUNTIME_CONFIGS = {}
 
 log = logging.getLogger(__name__)
 
@@ -397,8 +401,10 @@ class TestDaemon(object):
             ssh_config.write('HostKey {0}\n'.format(server_dsa_priv_key_file))
             ssh_config.write('HostKey {0}\n'.format(server_ecdsa_priv_key_file))
             ssh_config.write('HostKey {0}\n'.format(server_ed25519_priv_key_file))
+
+        self.sshd_pidfile = os.path.join(TMP_CONF_DIR, 'sshd.pid')
         self.sshd_process = subprocess.Popen(
-            [sshd, '-f', 'sshd_config'],
+            [sshd, '-f', 'sshd_config', '-oPidFile={0}'.format(self.sshd_pidfile)],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             close_fds=True,
@@ -410,6 +416,7 @@ class TestDaemon(object):
         roster_path = os.path.join(FILES, 'conf/_ssh/roster')
         shutil.copy(roster_path, TMP_CONF_DIR)
         with open(os.path.join(TMP_CONF_DIR, 'roster'), 'a') as roster:
+            roster.write('  user: {0}\n'.format(pwd.getpwuid(os.getuid()).pw_name))
             roster.write('  priv: {0}/{1}'.format(TMP_CONF_DIR, 'key_test'))
 
     @property
@@ -422,9 +429,11 @@ class TestDaemon(object):
         to be deferred to a latter stage. If created it on `__enter__` like it
         previously was, it would not receive the master events.
         '''
-        return salt.client.get_local_client(
-            mopts=self.master_opts
-        )
+        if 'runtime_client' not in RUNTIME_CONFIGS:
+            RUNTIME_CONFIGS['runtime_client'] = salt.client.get_local_client(
+                mopts=self.master_opts
+            )
+        return RUNTIME_CONFIGS['runtime_client']
 
     @classmethod
     def transplant_configs(cls, transport='zeromq'):
@@ -435,6 +444,10 @@ class TestDaemon(object):
         running_tests_user = pwd.getpwuid(os.getuid()).pw_name
         master_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'master'))
         master_opts['user'] = running_tests_user
+        tests_know_hosts_file = os.path.join(TMP_CONF_DIR, 'salt_ssh_known_hosts')
+        with salt.utils.fopen(tests_know_hosts_file, 'w') as known_hosts:
+            known_hosts.write('')
+        master_opts['known_hosts_file'] = tests_know_hosts_file
 
         minion_config_path = os.path.join(CONF_DIR, 'minion')
         minion_opts = salt.config._read_conf_file(minion_config_path)
@@ -544,16 +557,24 @@ class TestDaemon(object):
         sub_minion_opts = salt.config.minion_config(os.path.join(TMP_CONF_DIR, 'sub_minion'))
         syndic_master_opts = salt.config.master_config(os.path.join(TMP_CONF_DIR, 'syndic_master'))
 
+        RUNTIME_CONFIGS['master'] = freeze(master_opts)
+        RUNTIME_CONFIGS['minion'] = freeze(minion_opts)
+        RUNTIME_CONFIGS['syndic'] = freeze(syndic_opts)
+        RUNTIME_CONFIGS['sub_minion'] = freeze(sub_minion_opts)
+        RUNTIME_CONFIGS['syndic_master'] = freeze(syndic_master_opts)
+
         verify_env([os.path.join(master_opts['pki_dir'], 'minions'),
                     os.path.join(master_opts['pki_dir'], 'minions_pre'),
                     os.path.join(master_opts['pki_dir'], 'minions_rejected'),
                     os.path.join(master_opts['cachedir'], 'jobs'),
                     os.path.join(master_opts['cachedir'], 'raet'),
+                    os.path.join(master_opts['root_dir'], 'cache', 'tokens'),
                     os.path.join(syndic_master_opts['pki_dir'], 'minions'),
                     os.path.join(syndic_master_opts['pki_dir'], 'minions_pre'),
                     os.path.join(syndic_master_opts['pki_dir'], 'minions_rejected'),
                     os.path.join(syndic_master_opts['cachedir'], 'jobs'),
                     os.path.join(syndic_master_opts['cachedir'], 'raet'),
+                    os.path.join(syndic_master_opts['root_dir'], 'cache', 'tokens'),
                     os.path.join(master_opts['pki_dir'], 'accepted'),
                     os.path.join(master_opts['pki_dir'], 'rejected'),
                     os.path.join(master_opts['pki_dir'], 'pending'),
@@ -702,8 +723,14 @@ class TestDaemon(object):
         if hasattr(self, 'sshd_process'):
             try:
                 self.sshd_process.kill()
-            except OSError:
-                pass
+            except OSError as exc:
+                if exc.errno != 3:
+                    raise
+            try:
+                os.kill(int(open(self.sshd_pidfile).read()), signal.SIGKILL)
+            except OSError as exc:
+                if exc.errno != 3:
+                    raise
 
     def _exit_mockbin(self):
         path = os.environ.get('PATH', '')
@@ -857,7 +884,7 @@ class TestDaemon(object):
         jid_info = self.client.run_job(
             list(targets), 'saltutil.sync_{0}'.format(modules_kind),
             expr_form='list',
-            timeout=9999999999999999,
+            timeout=999999999999999,
         )
 
         if self.wait_for_jid(targets, jid_info['jid'], timeout) is False:
@@ -917,6 +944,42 @@ class AdaptedConfigurationTestCaseMixIn(object):
 
     __slots__ = ()
 
+    def get_config(self, config_for, from_scratch=False):
+        if from_scratch:
+            if config_for in ('master', 'syndic_master'):
+                return salt.config.master_config(self.get_config_file_path(config_for))
+            elif config_for in ('minion', 'sub_minion'):
+                return salt.config.minion_config(self.get_config_file_path(config_for))
+            elif config_for in ('syndic',):
+                return salt.config.syndic_config(
+                    self.get_config_file_path(config_for),
+                    self.get_config_file_path('minion')
+                )
+            elif config_for == 'client_config':
+                return salt.config.client_config(self.get_config_file_path('master'))
+
+        if config_for not in RUNTIME_CONFIGS:
+            if config_for in ('master', 'syndic_master'):
+                RUNTIME_CONFIGS[config_for] = freeze(
+                    salt.config.master_config(self.get_config_file_path(config_for))
+                )
+            elif config_for in ('minion', 'sub_minion'):
+                RUNTIME_CONFIGS[config_for] = freeze(
+                    salt.config.minion_config(self.get_config_file_path(config_for))
+                )
+            elif config_for in ('syndic',):
+                RUNTIME_CONFIGS[config_for] = freeze(
+                    salt.config.syndic_config(
+                        self.get_config_file_path(config_for),
+                        self.get_config_file_path('minion')
+                    )
+                )
+            elif config_for == 'client_config':
+                RUNTIME_CONFIGS[config_for] = freeze(
+                    salt.config.client_config(self.get_config_file_path('master'))
+                )
+        return RUNTIME_CONFIGS[config_for]
+
     def get_config_dir(self):
         return TMP_CONF_DIR
 
@@ -928,9 +991,7 @@ class AdaptedConfigurationTestCaseMixIn(object):
         '''
         Return the options used for the minion
         '''
-        return salt.config.master_config(
-            self.get_config_file_path('master')
-        )
+        return self.get_config('master')
 
 
 class SaltClientTestCaseMixIn(AdaptedConfigurationTestCaseMixIn):
@@ -940,9 +1001,11 @@ class SaltClientTestCaseMixIn(AdaptedConfigurationTestCaseMixIn):
 
     @property
     def client(self):
-        return salt.client.get_local_client(
-            self.get_config_file_path(self._salt_client_config_file_name_)
-        )
+        if 'runtime_client' not in RUNTIME_CONFIGS:
+            RUNTIME_CONFIGS['runtime_client'] = salt.client.get_local_client(
+                mopts=self.get_config(self._salt_client_config_file_name_, from_scratch=True)
+            )
+        return RUNTIME_CONFIGS['runtime_client']
 
 
 class ModuleCase(TestCase, SaltClientTestCaseMixIn):
@@ -987,7 +1050,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
 
         # Try to match stalled state functions
         orig[minion_tgt] = self._check_state_return(
-            orig[minion_tgt], func=function
+            orig[minion_tgt]
         )
 
         return orig[minion_tgt]
@@ -1004,20 +1067,16 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
         '''
         Return the options used for the minion
         '''
-        return salt.config.minion_config(
-            self.get_config_file_path('minion')
-        )
+        return self.get_config('minion')
 
     @property
     def sub_minion_opts(self):
         '''
         Return the options used for the minion
         '''
-        return salt.config.minion_config(
-            self.get_config_file_path('sub_minion')
-        )
+        return self.get_config('sub_minion')
 
-    def _check_state_return(self, ret, func='state.single'):
+    def _check_state_return(self, ret):
         if isinstance(ret, dict):
             # This is the supposed return format for state calls
             return ret
@@ -1094,7 +1153,7 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
         '''
         Execute salt-ssh
         '''
-        arg_str = '-c {0} -i --priv {1} --roster-file {2} localhost {3} --out=json'.format(self.get_config_dir(), os.path.join(TMP_CONF_DIR, 'key_test'), os.path.join(TMP_CONF_DIR, 'roster'), arg_str)
+        arg_str = '-c {0} -i --priv {1} --roster-file {2} --out=json localhost {3}'.format(self.get_config_dir(), os.path.join(TMP_CONF_DIR, 'key_test'), os.path.join(TMP_CONF_DIR, 'roster'), arg_str)
         return self.run_script('salt-ssh', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, raw=True)
 
     def run_run(self, arg_str, with_retcode=False, catch_stderr=False):
@@ -1113,9 +1172,8 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
         ret['out'] = self.run_run(
             '{0} {1} {2}'.format(options, fun, ' '.join(arg)), catch_stderr=kwargs.get('catch_stderr', None)
         )
-        opts = salt.config.master_config(
-            self.get_config_file_path('master')
-        )
+        opts = {}
+        opts.update(self.get_config('master'))
         opts.update({'doc': False, 'fun': fun, 'arg': arg})
         with RedirectStdStreams():
             runner = salt.runner.Runner(opts)
@@ -1376,21 +1434,3 @@ class SaltReturnAssertsMixIn(object):
         return self.assertNotEqual(
             self.__getWithinSaltReturn(ret, keys), comparison
         )
-
-
-class ClientCase(AdaptedConfigurationTestCaseMixIn, TestCase):
-    '''
-    A base class containing relevant options for starting the various Salt
-    Python API entrypoints
-    '''
-    def get_opts(self):
-        return salt.config.client_config(self.get_config_file_path('master'))
-
-    def mkdir_p(self, path):
-        try:
-            os.makedirs(path)
-        except OSError as exc:  # Python >2.5
-            if exc.errno == errno.EEXIST and os.path.isdir(path):
-                pass
-            else:
-                raise

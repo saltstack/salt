@@ -6,9 +6,7 @@ Linode is a public cloud provider with a focus on Linux instances.
 
 Dependencies
 ============
-The Linode driver for Salt Cloud requires Libcloud 0.13.2 or higher to be
-installed.
-
+* Libcloud >= 0.13.2
 
 Configuration
 =============

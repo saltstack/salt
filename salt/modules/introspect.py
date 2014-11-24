@@ -56,7 +56,7 @@ def running_service_owners(
         for service in execs:
             if path == execs[service]:
                 pkg = __salt__['pkg.owner'](path)
-                ret[service] = pkg.values()[0]
+                ret[service] = pkg.itervalues().next()
 
     return ret
 
@@ -94,7 +94,7 @@ def enabled_service_owners():
             continue
         start_cmd = data['ExecStart']['path']
         pkg = __salt__['pkg.owner'](start_cmd)
-        ret[service] = pkg.values()[0]
+        ret[service] = pkg.itervalues().next()
 
     return ret
 
@@ -131,7 +131,7 @@ def service_highstate(requires=True):
         if requires:
             exists = False
             for item in ret[service]['service']:
-                if type(item) is dict and item.keys()[0] == 'require':
+                if type(item) is dict and item.iterkeys().next() == 'require':
                     exists = True
             if not exists:
                 ret[service]['service'].append(

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Archive states.
+Extract an archive
 
 .. versionadded:: 2014.1.0
 '''
@@ -11,6 +11,17 @@ import tarfile
 from contextlib import closing
 
 log = logging.getLogger(__name__)
+
+__virtualname__ = 'archive'
+
+
+def __virtual__():
+    '''
+    Only load if the npm module is available in __salt__
+    '''
+    return __virtualname__ \
+        if [x for x in __salt__ if x.startswith('archive.')] \
+        else False
 
 
 def extracted(name,
@@ -75,8 +86,9 @@ def extracted(name,
         previously extracted.
 
     tar_options
-        Only used for tar format, it need to be the tar argument specific to
-        this archive, such as 'J' for LZMA.
+        Required if used with ``archive_format: tar``, otherwise optional.
+        It needs to be the tar argument specific to the archive being extracted,
+        such as 'J' for LZMA or 'v' to verbosely list files processed.
         Using this option means that the tar executable on the target will
         be used, which is less platform independent.
         Main operators like -x, --extract, --get, -c, etc. and -f/--file are
@@ -92,8 +104,8 @@ def extracted(name,
 
     if archive_format not in valid_archives:
         ret['result'] = False
-        ret['comment'] = '{0} is not supported, valids: {1}'.format(
-            name, ','.join(valid_archives))
+        ret['comment'] = '{0} is not supported, valid formats are: {1}'.format(
+            archive_format, ','.join(valid_archives))
         return ret
 
     if if_missing is None:
@@ -108,6 +120,8 @@ def extracted(name,
 
     log.debug('Input seem valid so far')
     filename = os.path.join(__opts__['cachedir'],
+                            'files',
+                            __env__,
                             '{0}.{1}'.format(if_missing.replace('/', '_'),
                                              archive_format))
     if not os.path.exists(filename):
@@ -130,13 +144,27 @@ def extracted(name,
                 ]
             }
         }
-        file_result = __salt__['state.high'](data)
+        file_result = __salt__['state.single']('file.managed',
+                                               filename,
+                                               source=source,
+                                               source_hash=source_hash,
+                                               makedirs=True,
+                                               saltenv=__env__)
         log.debug('file.managed: {0}'.format(file_result))
         # get value of first key
-        file_result = file_result[file_result.keys()[0]]
-        if not file_result['result']:
-            log.debug('failed to download {0}'.format(source))
-            return file_result
+        try:
+            file_result = file_result[file_result.iterkeys().next()]
+        except AttributeError:
+            pass
+
+        try:
+            if not file_result['result']:
+                log.debug('failed to download {0}'.format(source))
+                return file_result
+        except TypeError:
+            if not file_result:
+                log.debug('failed to download {0}'.format(source))
+                return file_result
     else:
         log.debug('Archive file {0} is already in cache'.format(name))
 
@@ -160,7 +188,7 @@ def extracted(name,
         else:
             log.debug('Untar {0} in {1}'.format(filename, name))
 
-            results = __salt__['cmd.run_all']('tar {0} -f {1!r}'.format(
+            results = __salt__['cmd.run_all']('tar x{0} -f {1!r}'.format(
                 tar_options, filename), cwd=name)
             if results['retcode'] != 0:
                 ret['result'] = False

@@ -34,6 +34,7 @@ def __virtual__():
 
 
 def add(name,
+        password=None,
         # Disable pylint checking on the next options. They exist to match the
         # user modules of other distributions.
         # pylint: disable=W0613
@@ -60,7 +61,10 @@ def add(name,
 
         salt '*' user.add name password
     '''
-    ret = __salt__['cmd.run_all']('net user {0} /add'.format(name))
+    if password:
+        ret = __salt__['cmd.run_all']('net user {0} {1} /add /y'.format(name, password))
+    else:
+        ret = __salt__['cmd.run_all']('net user {0} /add'.format(name))
     if groups:
         chgroups(name, groups)
     if fullname:
@@ -319,10 +323,10 @@ def _get_userprofile_from_registry(user, sid):
     we can get it from the registry
     '''
     profile_dir = __salt__['reg.read_key'](
-        'HKEY_LOCAL_MACHINE', 'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\{0}'.format(sid),
+        'HKEY_LOCAL_MACHINE', u'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\{0}'.format(sid),
         'ProfileImagePath'
     )
-    log.debug('user {0} with sid={2} profile is located at "{1}"'.format(user, profile_dir, sid))
+    log.debug(u'user {0} with sid={2} profile is located at "{1}"'.format(user, profile_dir, sid))
     return profile_dir
 
 

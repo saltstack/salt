@@ -14,12 +14,6 @@ import logging
 import salt
 import salt.exceptions
 import salt.cli
-try:
-    import salt.cloud.cli
-    HAS_SALTCLOUD = True
-except ImportError:
-    # No salt cloud on Windows
-    HAS_SALTCLOUD = False
 
 
 log = logging.getLogger(__name__)
@@ -196,6 +190,12 @@ def salt_cloud():
     '''
     The main function for salt-cloud
     '''
+    try:
+        import salt.cloud.cli
+        HAS_SALTCLOUD = True
+    except ImportError:
+        # No salt cloud on Windows
+        HAS_SALTCLOUD = False
     if '' in sys.path:
         sys.path.remove('')
 

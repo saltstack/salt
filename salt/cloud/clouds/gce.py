@@ -136,6 +136,7 @@ except ImportError:
     HAS_LIBCLOUD = False
 
 # Import python libs
+import re
 import copy
 import pprint
 import logging
@@ -150,7 +151,7 @@ from salt.utils import namespaced_function
 import salt.utils.cloud
 import salt.config as config
 from salt.cloud.libcloudfuncs import *  # pylint: disable=W0401,W0614
-from salt.cloud.exceptions import (
+from salt.exceptions import (
     SaltCloudException,
     SaltCloudSystemExit,
 )
@@ -167,6 +168,8 @@ destroy = namespaced_function(destroy, globals())
 list_nodes = namespaced_function(list_nodes, globals())
 list_nodes_full = namespaced_function(list_nodes_full, globals())
 list_nodes_select = namespaced_function(list_nodes_select, globals())
+
+GCE_VM_NAME_REGEX = re.compile(r'(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?)')
 
 
 # Only load in this module if the GCE configurations are in place
@@ -188,7 +191,7 @@ def __virtual__():
         if not os.path.exists(pathname):
             raise SaltCloudException(
                 'The GCE service account private key {0!r} used in '
-                'the {0!r} provider configuration does not exist\n'.format(
+                'the {1!r} provider configuration does not exist\n'.format(
                     details['service_account_private_key'], provider
                 )
             )
@@ -198,7 +201,7 @@ def __virtual__():
         if keymode not in ('0400', '0600'):
             raise SaltCloudException(
                 'The GCE service account private key {0!r} used in '
-                'the {0!r} provider configuration needs to be set to '
+                'the {1!r} provider configuration needs to be set to '
                 'mode 0400 or 0600\n'.format(
                     details['service_account_private_key'], provider
                 )
@@ -629,7 +632,7 @@ def delete_network(kwargs=None, call=None):
             'Nework {0} could not be found.\n'
             'The following exception was thrown by libcloud:\n{1}'.format(
                 name, exc),
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -784,7 +787,7 @@ def delete_fwrule(kwargs=None, call=None):
             'Rule {0} could not be found.\n'
             'The following exception was thrown by libcloud:\n{1}'.format(
                 name, exc),
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -941,7 +944,7 @@ def delete_hc(kwargs=None, call=None):
             'Health check {0} could not be found.\n'
             'The following exception was thrown by libcloud:\n{1}'.format(
                 name, exc),
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -1101,7 +1104,7 @@ def delete_lb(kwargs=None, call=None):
             'Load balancer {0} could not be found.\n'
             'The following exception was thrown by libcloud:\n{1}'.format(
                 name, exc),
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -1301,7 +1304,7 @@ def delete_snapshot(kwargs=None, call=None):
             'Snapshot {0} could not be found.\n'
             'The following exception was thrown by libcloud:\n{1}'.format(
                 name, exc),
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -1361,7 +1364,7 @@ def delete_disk(kwargs=None, call=None):
             'Disk {0} is in use and must be detached before deleting.\n'
             'The following exception was thrown by libcloud:\n{1}'.format(
                 disk.name, exc),
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -1495,7 +1498,7 @@ def create_snapshot(kwargs=None, call=None):
             'Disk {0} could not be found.\n'
             'The following exception was thrown by libcloud:\n{1}'.format(
                 disk_name, exc),
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -1751,7 +1754,7 @@ def destroy(vm_name, call=None):
             'run the initial deployment: \n{1}'.format(
                 vm_name, exc
             ),
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         raise SaltCloudSystemExit(
             'Could not find instance {0}.'.format(vm_name)
@@ -1789,7 +1792,7 @@ def destroy(vm_name, call=None):
             'run the initial deployment: \n{1}'.format(
                 vm_name, exc
             ),
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         raise SaltCloudSystemExit(
             'Could not destroy instance {0}.'.format(vm_name)
@@ -1826,7 +1829,7 @@ def destroy(vm_name, call=None):
                 'to run the initial deployment: \n{1}'.format(
                     vm_name, exc
                 ),
-                exc_info=log.isEnabledFor(logging.DEBUG)
+                exc_info_on_loglevel=logging.DEBUG
             )
         salt.utils.cloud.fire_event(
             'event',
@@ -1851,6 +1854,13 @@ def create(vm_=None, call=None):
             'You cannot create an instance with -a or -f.'
         )
 
+    if not GCE_VM_NAME_REGEX.match(vm_['name']):
+        raise SaltCloudSystemExit(
+            'The allowed VM names must match the following regular expression: {0}'.format(
+                GCE_VM_NAME_REGEX.pattern
+            )
+        )
+
     conn = get_conn()
 
     kwargs = {
@@ -1866,8 +1876,24 @@ def create(vm_=None, call=None):
             )
     }
 
+    if LIBCLOUD_VERSION_INFO > (0, 15, 1):
+        # This only exists in current trunk of libcloud and should be in next
+        # release
+        kwargs.update({
+            'ex_disk_type': config.get_cloud_config_value(
+                'ex_disk_type', vm_, __opts__, default='pd-standard'),
+            'ex_disk_auto_delete': config.get_cloud_config_value(
+                'ex_disk_auto_delete', vm_, __opts__, default=True)
+        })
+        if kwargs.get('ex_disk_type') not in ('pd-standard', 'pd-ssd'):
+            raise SaltCloudSystemExit(
+                'The value of \'ex_disk_type\' needs to be one of: '
+                '\'pd-standard\', \'pd-ssd\''
+            )
+
     if 'external_ip' in kwargs and kwargs['external_ip'] == "None":
         kwargs['external_ip'] = None
+
     log.info('Creating GCE instance {0} in {1}'.format(vm_['name'],
         kwargs['location'].name)
     )
@@ -1894,11 +1920,15 @@ def create(vm_=None, call=None):
             'run the initial deployment: \n{1}'.format(
                 vm_['name'], exc
             ),
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
-    node_dict = show_instance(node_data['name'], 'action')
+    try:
+        node_dict = show_instance(node_data['name'], 'action')
+    except TypeError:
+        # node_data is a libcloud Node which is unsubscriptable
+        node_dict = show_instance(node_data.name, 'action')
 
     if config.get_cloud_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)

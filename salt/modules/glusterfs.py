@@ -5,6 +5,10 @@ Manage a glusterfs pool
 
 # Import python libs
 import logging
+try:
+    from shlex import quote as _cmd_quote  # pylint: disable=E0611
+except ImportError:
+    from pipes import quote as _cmd_quote
 
 # Import salt libs
 import salt.utils
@@ -33,7 +37,7 @@ def list_peers():
         salt '*' glusterfs.list_peers
     '''
     get_peer_list = 'gluster peer status | awk \'/Hostname/ {print $2}\''
-    result = __salt__['cmd.run'](get_peer_list)
+    result = __salt__['cmd.run'](get_peer_list, python_shell=True)
     if 'No peers present' in result:
         return None
     else:
@@ -279,8 +283,8 @@ def stop_volume(name):
     '''
     vol_status = status(name)
     if isinstance(vol_status, dict):
-        cmd = 'yes | gluster volume stop {0}'.format(name)
-        result = __salt__['cmd.run'](cmd)
+        cmd = 'yes | gluster volume stop {0}'.format(_cmd_quote(name))
+        result = __salt__['cmd.run'](cmd, python_shell=True)
         if result.splitlines()[0].endswith('success'):
             return 'Volume {0} stopped'.format(name)
         else:
@@ -301,7 +305,7 @@ def delete(target, stop=True):
     if target not in list_volumes():
         return 'Volume does not exist'
 
-    cmd = 'yes | gluster volume delete {0}'.format(target)
+    cmd = 'yes | gluster volume delete {0}'.format(_cmd_quote(target))
 
     # Stop volume if requested to and it is running
     if stop is True and isinstance(status(target), dict):
@@ -313,7 +317,7 @@ def delete(target, stop=True):
         if isinstance(status(target), dict):
             return 'Error: Volume must be stopped before deletion'
 
-    result = __salt__['cmd.run'](cmd)
+    result = __salt__['cmd.run'](cmd, python_shell=True)
     if result.splitlines()[0].endswith('success'):
         if stopped:
             return 'Volume {0} stopped and deleted'.format(target)

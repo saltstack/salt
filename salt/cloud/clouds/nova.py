@@ -96,7 +96,12 @@ import pprint
 
 # Import generic libcloud functions
 from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
-from salt.utils.openstack import nova
+try:
+    from salt.utils.openstack import nova
+    HAS_NOVA = True
+except NameError as exc:
+    HAS_NOVA = False
+
 import salt.utils.cloud
 
 # Import nova libs
@@ -113,7 +118,7 @@ import salt.client
 import salt.utils.pycrypto as sup
 import salt.config as config
 from salt.utils import namespaced_function
-from salt.cloud.exceptions import (
+from salt.exceptions import (
     SaltCloudConfigError,
     SaltCloudNotFound,
     SaltCloudSystemExit,
@@ -146,7 +151,7 @@ def __virtual__():
     Check for Nova configurations
     '''
     request_log.setLevel(getattr(logging, __opts__.get('requests_log_level', 'warning').upper()))
-    return nova.HAS_NOVA
+    return HAS_NOVA
 
 
 def get_configured_provider():
@@ -211,7 +216,7 @@ def get_image(conn, vm_):
         'ascii', 'salt-cloud-force-ascii'
     )
 
-    for img in image_list.keys():
+    for img in image_list:
         if vm_image in (image_list[img]['id'], img):
             return image_list[img]['id']
 
@@ -222,7 +227,7 @@ def get_image(conn, vm_):
         raise SaltCloudNotFound(
             'The specified image, {0!r}, could not be found: {1}'.format(
                 vm_image,
-                exc.message
+                str(exc)
             )
         )
 
@@ -412,9 +417,7 @@ def request_instance(vm_=None, call=None):
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
     salt.utils.cloud.check_name(vm_['name'], 'a-zA-Z0-9._-')
     conn = get_conn()
-    kwargs = {
-        'name': vm_['name']
-    }
+    kwargs = vm_.copy()
 
     try:
         kwargs['image_id'] = get_image(conn, vm_)
@@ -487,6 +490,10 @@ def request_instance(vm_=None, call=None):
     if userdata_file is not None:
         with salt.utils.fopen(userdata_file, 'r') as fp:
             kwargs['userdata'] = fp.read()
+
+    kwargs['config_drive'] = config.get_cloud_config_value(
+        'config_drive', vm_, __opts__, search_global=False
+    )
 
     salt.utils.cloud.fire_event(
         'event',
@@ -590,7 +597,7 @@ def create(vm_):
                     err
                 ),
                 # Show the traceback if the debug logging level is enabled
-                exc_info=log.isEnabledFor(logging.DEBUG)
+                exc_info_on_loglevel=logging.DEBUG
             )
             # Trigger a failure in the wait for IP function
             return False
@@ -684,7 +691,7 @@ def create(vm_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(exc.message)
+            raise SaltCloudSystemExit(str(exc))
 
     log.debug('VM is now running')
 
@@ -760,7 +767,7 @@ def list_nodes(call=None, **kwargs):
 
     if not server_list:
         return {}
-    for server in server_list.keys():
+    for server in server_list:
         server_tmp = conn.server_show(server_list[server]['id'])[server]
         ret[server] = {
             'id': server_tmp['id'],
@@ -792,7 +799,7 @@ def list_nodes_full(call=None, **kwargs):
 
     if not server_list:
         return {}
-    for server in server_list.keys():
+    for server in server_list:
         try:
             ret[server] = conn.server_show_libcloud(
                 server_list[server]['id']

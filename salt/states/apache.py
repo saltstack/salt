@@ -66,6 +66,10 @@ def configfile(name, config):
         return ret
     elif __opts__['test']:
         ret['comment'] = 'Configuration will update.'
+        ret['changes'] = {
+            'old': current_configs,
+            'new': configs
+        }
         ret['result'] = None
         return ret
 

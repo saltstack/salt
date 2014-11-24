@@ -38,7 +38,7 @@ import logging
 # Import salt.cloud libs
 import salt.config as config
 from salt.utils import namespaced_function
-from salt.cloud.exceptions import SaltCloudException, SaltCloudSystemExit
+from salt.exceptions import SaltCloudException, SaltCloudSystemExit
 
 # Import libcloudfuncs and libcloud_aws, required to latter patch __opts__
 try:
@@ -111,7 +111,7 @@ def __virtual__():
 
     # Let's bring the functions imported from libcloud_aws to the current
     # namespace.
-    keysdiff = set(POST_IMPORT_LOCALS_KEYS.keys()).difference(
+    keysdiff = set(POST_IMPORT_LOCALS_KEYS).difference(
         PRE_IMPORT_LOCALS_KEYS
     )
     for key in keysdiff:

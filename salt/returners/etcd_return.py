@@ -52,6 +52,8 @@ try:
 except ImportError:
     HAS_LIBS = False
 
+import salt.utils
+
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
@@ -86,7 +88,7 @@ def returner(ret):
         ret['jid'],
     )
 
-    for field in ret.keys():
+    for field in ret:
         # Not using os.path.join because we're not dealing with file paths
         dest = '/'.join((
             path,
@@ -164,3 +166,10 @@ def get_minions():
         comps = str(item.key).split('/')
         ret.append(comps[-1])
     return ret
+
+
+def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
+    '''
+    Do any work necessary to prepare a JID, including sending a custom id
+    '''
+    return passed_jid if passed_jid is not None else salt.utils.gen_jid()

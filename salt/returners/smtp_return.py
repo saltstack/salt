@@ -51,6 +51,9 @@ import logging
 import smtplib
 from email.utils import formatdate
 
+# Import Salt libs
+import salt.utils
+
 try:
     import gnupg
     HAS_GNUPG = True
@@ -72,29 +75,43 @@ def returner(ret):
     Send an email with the data
     '''
 
-    from_addr = __salt__['config.option']('smtp.from')
-    to_addrs = __salt__['config.option']('smtp.to')
-    host = __salt__['config.option']('smtp.host')
-    port = __salt__['config.option']('smtp.port')
+    if 'config.option' in __salt__:
+        from_addr = __salt__['config.option']('smtp.from')
+        to_addrs = __salt__['config.option']('smtp.to')
+        host = __salt__['config.option']('smtp.host')
+        port = __salt__['config.option']('smtp.port')
+        user = __salt__['config.option']('smtp.username')
+        passwd = __salt__['config.option']('smtp.password')
+        subject = __salt__['config.option']('smtp.subject')
+        gpgowner = __salt__['config.option']('smtp.gpgowner')
+        fields = __salt__['config.option']('smtp.fields').split(',')
+        smtp_tls = __salt__['config.option']('smtp.tls')
+    else:
+        cfg = __opts__
+        from_addr = cfg.get('smtp.from', None)
+        to_addrs = cfg.get('smtp.to', None)
+        host = cfg.get('smtp.host', None)
+        port = cfg.get('smtp.port', None)
+        user = cfg.get('smtp.username', None)
+        passwd = cfg.get('smtp.password', None)
+        subject = cfg.get('smtp.subject', None)
+        gpgowner = cfg.get('smtp.gpgowner', None)
+        fields = cfg.get('smtp.fields', '').split(',')
+        smtp_tls = cfg('smtp.tls', False)
+
     if not port:
         port = 25
     log.debug('SMTP port has been set to {0}'.format(port))
-    user = __salt__['config.option']('smtp.username')
-    passwd = __salt__['config.option']('smtp.password')
-    subject = __salt__['config.option']('smtp.subject')
-    gpgowner = __salt__['config.option']('smtp.gpgowner')
-
-    fields = __salt__['config.option']('smtp.fields').split(',')
     for field in fields:
-        if field in ret.keys():
+        if field in ret:
             subject += ' {0}'.format(ret[field])
     log.debug("smtp_return: Subject is '{0}'".format(subject))
 
     content = ('id: {0}\r\n'
-            'function: {1}\r\n'
-            'function args: {2}\r\n'
-            'jid: {3}\r\n'
-            'return: {4}\r\n').format(
+               'function: {1}\r\n'
+               'function args: {2}\r\n'
+               'jid: {3}\r\n'
+               'return: {4}\r\n').format(
                     ret.get('id'),
                     ret.get('fun'),
                     ret.get('fun_args'),
@@ -109,7 +126,8 @@ def returner(ret):
             content = str(encrypted_data)
         else:
             log.error('smtp_return: Encryption failed, only an error message will be sent')
-            content = 'Encryption failed, the return data was not sent.\r\n\r\n{0}\r\n{1}'.format(encrypted_data.status, encrypted_data.stderr)
+            content = 'Encryption failed, the return data was not sent.\r\n\r\n{0}\r\n{1}'.format(
+                    encrypted_data.status, encrypted_data.stderr)
 
     message = ('From: {0}\r\n'
                'To: {1}\r\n'
@@ -124,7 +142,7 @@ def returner(ret):
 
     log.debug('smtp_return: Connecting to the server...')
     server = smtplib.SMTP(host, int(port))
-    if __salt__['config.option']('smtp.tls') is True:
+    if smtp_tls is True:
         server.starttls()
         log.debug('smtp_return: TLS enabled')
     if user and passwd:
@@ -133,3 +151,10 @@ def returner(ret):
     server.sendmail(from_addr, to_addrs, message)
     log.debug('smtp_return: Message sent.')
     server.quit()
+
+
+def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
+    '''
+    Do any work necessary to prepare a JID, including sending a custom id
+    '''
+    return passed_jid if passed_jid is not None else salt.utils.gen_jid()

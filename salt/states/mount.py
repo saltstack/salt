@@ -120,6 +120,18 @@ def mounted(name,
         if os.path.exists(mapper_device):
             real_device = mapper_device
 
+    # When included in a Salt state file, FUSE
+    # devices are prefaced by the filesystem type
+    # and a hash, eg. sshfs#.  In the mount list
+    # only the hostname is included.  So if we detect
+    # that the device is a FUSE device then we
+    # remove the prefaced string so that the device in
+    # state matches the device in the mount list.
+    fuse_match = re.match(r'^\w+\#(?P<device_name>.+)', device)
+    if fuse_match:
+        if 'device_name' in fuse_match.groupdict():
+            real_device = fuse_match.group('device_name')
+
     device_list = []
     if real_name in active:
         if mount:
@@ -132,8 +144,12 @@ def mounted(name,
             if uuid_device and uuid_device not in device_list:
                 device_list.append(uuid_device)
             if opts:
+                mount_invisible_options = ['defaults', 'comment', 'nobootwait', 'reconnect', 'delay_connect']
                 for opt in opts:
-                    if opt not in active[real_name]['opts']:
+                    comment_option = opt.split('=')[0]
+                    if comment_option == 'comment':
+                        opt = comment_option
+                    if opt not in active[real_name]['opts'] and opt not in mount_invisible_options:
                         if __opts__['test']:
                             ret['result'] = None
                             ret['comment'] = "Remount would be forced because options changed"
@@ -146,17 +162,23 @@ def mounted(name,
                             return ret
             if real_device not in device_list:
                 # name matches but device doesn't - need to umount
-                ret['changes']['umount'] = "Forced unmount because devices " \
-                                           + "don't match. Wanted: " + device
-                if real_device != device:
-                    ret['changes']['umount'] += " (" + real_device + ")"
-                ret['changes']['umount'] += ", current: " + ', '.join(device_list)
-                out = __salt__['mount.umount'](real_name)
-                active = __salt__['mount.active']()
-                if real_name in active:
-                    ret['comment'] = "Unable to unmount"
+                if __opts__['test']:
                     ret['result'] = None
-                    return ret
+                    ret['comment'] = "An umount would have been forced " \
+                                     + "because devices do not match.  Watched: " \
+                                     + device
+                else:
+                    ret['changes']['umount'] = "Forced unmount because devices " \
+                                               + "don't match. Wanted: " + device
+                    if real_device != device:
+                        ret['changes']['umount'] += " (" + real_device + ")"
+                    ret['changes']['umount'] += ", current: " + ', '.join(device_list)
+                    out = __salt__['mount.umount'](real_name)
+                    active = __salt__['mount.active']()
+                    if real_name in active:
+                        ret['comment'] = "Unable to unmount"
+                        ret['result'] = None
+                        return ret
             else:
                 ret['comment'] = 'Target was already mounted'
     # using a duplicate check so I can catch the results of a umount

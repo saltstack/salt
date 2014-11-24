@@ -236,7 +236,13 @@ class PkgTest(integration.ModuleCase,
         # RHEL-based). Don't actually perform this test on other platforms.
         if target:
             if grains.get('os_family', '') == 'Arch':
-                self._wait_for_pkgdb_unlock()
+                for idx in xrange(13):
+                    if idx == 12:
+                        raise Exception('Package database locked after 60 seconds, '
+                                        'bailing out')
+                    if not os.path.isfile('/var/lib/pacman/db.lck'):
+                        break
+                    time.sleep(5)
 
             # CentOS 5 has .i386 arch designation for 32-bit pkgs
             if os_name == 'CentOS' \

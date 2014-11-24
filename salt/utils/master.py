@@ -382,3 +382,9 @@ class MasterPillarUtil(object):
         except (OSError, IOError):
             return True
         return True
+
+
+def ping_all_connected_minions(opts):
+    client = salt.client.LocalClient()
+    ckminions = salt.utils.minions.CkMinions(opts)
+    client.cmd(list(ckminions.connected_ids()), 'test.ping', expr_form='list')

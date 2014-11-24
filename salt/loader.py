@@ -43,7 +43,9 @@ LIBCLOUD_FUNCS_NOT_SUPPORTED = (
     'saltify.avail_sizes',
     'saltify.avail_images',
     'saltify.avail_locations',
-    'rackspace.reboot'
+    'rackspace.reboot',
+    'openstack.list_locations',
+    'rackspace.list_locations'
 )
 
 
@@ -291,10 +293,12 @@ def log_handlers(opts):
     return load.filter_func('setup_handlers')
 
 
-def ssh_wrapper(opts, functions=None):
+def ssh_wrapper(opts, functions=None, context=None):
     '''
     Returns the custom logging handler modules
     '''
+    if context is None:
+        context = {}
     if functions is None:
         functions = {}
     load = _create_loader(
@@ -305,8 +309,10 @@ def ssh_wrapper(opts, functions=None):
             'client',
             'ssh'))
     )
-    pack = {'name': '__salt__',
-            'value': functions}
+    pack = [{'name': '__salt__',
+             'value': functions},
+            {'name': '__context__',
+             'value': context}]
     return load.gen_functions(pack)
 
 
@@ -553,7 +559,7 @@ class Loader(object):
             if self.opts.get('cython_enable', True) is True:
                 # The module was not found, try to find a cython module
                 try:
-                    import pyximport
+                    import pyximport  # pylint: disable=import-error
                     pyximport.install()
 
                     for mod_dir in self.module_dirs:
@@ -600,7 +606,7 @@ class Loader(object):
         cython_enabled = False
         if self.opts.get('cython_enable', True) is True:
             try:
-                import pyximport
+                import pyximport  # pylint: disable=import-error
                 pyximport.install()
                 cython_enabled = True
             except ImportError:
@@ -696,9 +702,9 @@ class Loader(object):
             mod.__salt__ = functions
         try:
             context = sys.modules[
-                functions[functions.keys()[0]].__module__
+                functions[functions.iterkeys().next()].__module__
             ].__context__
-        except (AttributeError, IndexError):
+        except (AttributeError, StopIteration):
             context = {}
         mod.__context__ = context
         return funcs
@@ -823,7 +829,7 @@ class Loader(object):
         cython_enabled = False
         if self.opts.get('cython_enable', True) is True:
             try:
-                import pyximport
+                import pyximport  # pylint: disable=import-error
                 pyximport.install()
                 cython_enabled = True
             except ImportError:
@@ -856,6 +862,13 @@ class Loader(object):
                         )
                     )
                     continue
+
+                if fn_.endswith(('.pyc', '.pyo')):
+                    non_compiled_filename = '{0}.py'.format(os.path.splitext(fn_)[0])
+                    if os.path.exists(os.path.join(mod_dir, non_compiled_filename)):
+                        # Let's just process the non compiled python modules
+                        continue
+
                 if (fn_.endswith(('.py', '.pyc', '.pyo', '.so'))
                         or (cython_enabled and fn_.endswith('.pyx'))
                         or os.path.isdir(os.path.join(mod_dir, fn_))):
@@ -865,6 +878,20 @@ class Loader(object):
                         _name = fn_[:extpos]
                     else:
                         _name = fn_
+
+                    if _name in names:
+                        # Since we load custom modules first, if this logic is true it means
+                        # that an internal module was shadowed by an external custom module
+                        log.trace(
+                            'The {0!r} module from {1!r} was shadowed by '
+                            'the module in {2!r}'.format(
+                                _name,
+                                mod_dir,
+                                names[_name],
+                            )
+                        )
+                        continue
+
                     names[_name] = os.path.join(mod_dir, fn_)
                 else:
                     log.trace(
@@ -1035,6 +1062,8 @@ class Loader(object):
                     log.warning(msg)
                 else:
                     virtual = mod.__virtual__()
+                # Get the module's virtual name
+                virtualname = getattr(mod, '__virtualname__', virtual)
                 if not virtual:
                     # if __virtual__() evaluates to False then the module
                     # wasn't meant for this platform or it's not supposed to
@@ -1093,9 +1122,6 @@ class Loader(object):
                             )
                         )
 
-                    # Get the module's virtual name
-                    virtualname = getattr(mod, '__virtualname__', virtual)
-
                     if virtualname != virtual:
                         # The __virtualname__ attribute does not match what's
                         # being returned by the __virtual__() function. This
@@ -1112,6 +1138,11 @@ class Loader(object):
                         )
 
                     module_name = virtualname
+
+                # If the __virtual__ function returns True and __virtualname__ is set then use it
+                elif virtual is True and virtualname != module_name:
+                    if virtualname is not True:
+                        module_name = virtualname
 
         except KeyError:
             # Key errors come out of the virtual function when passing
@@ -1206,7 +1237,14 @@ class Loader(object):
         grains_data = {}
         funcs = self.gen_functions()
         for key, fun in funcs.items():
-            if key[key.index('.') + 1:] == 'core':
+            if not key.startswith('core.'):
+                continue
+            ret = fun()
+            if not isinstance(ret, dict):
+                continue
+            grains_data.update(ret)
+        for key, fun in funcs.items():
+            if key.startswith('core.'):
                 continue
             try:
                 ret = fun()
@@ -1219,13 +1257,6 @@ class Loader(object):
                     exc_info=True
                 )
                 continue
-            if not isinstance(ret, dict):
-                continue
-            grains_data.update(ret)
-        for key, fun in funcs.items():
-            if key[key.index('.') + 1:] != 'core':
-                continue
-            ret = fun()
             if not isinstance(ret, dict):
                 continue
             grains_data.update(ret)

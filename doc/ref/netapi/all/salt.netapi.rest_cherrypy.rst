@@ -6,8 +6,6 @@ rest_cherrypy
 
 .. automodule:: salt.netapi.rest_cherrypy.wsgi
 
-.. ............................................................................
-
 REST URI Reference
 ==================
 
@@ -58,17 +56,23 @@ REST URI Reference
 .. autoclass:: Events
     :members: GET
 
-``/ws``
--------
-
-.. autoclass:: WebsocketEndpoint
-    :members: GET
-
 ``/hook``
 ---------
 
 .. autoclass:: Webhook
     :members: POST
+
+``/key``
+---------
+
+.. autoclass:: Keys
+    :members: GET, POST
+
+``/ws``
+-------
+
+.. autoclass:: WebsocketEndpoint
+    :members: GET
 
 ``/stats``
 ----------

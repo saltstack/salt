@@ -17,11 +17,25 @@ Authentication events
         ``reject``.
     :var pub: The minion public key.
 
+Start events
+============
+
 .. salt:event:: salt/minion/<MID>/start
 
     Fired every time a minion connects to the Salt master.
 
     :var id: The minion ID.
+
+Key events
+==========
+
+.. salt:event:: salt/key
+
+    Fired when accepting and rejecting minions keys on the Salt master.
+
+    :var id: The minion ID.
+    :var act: The new status of the minion key: ``accept``, ``pend``,
+        ``reject``.
 
 Job events
 ==========
@@ -75,6 +89,15 @@ Presence events
 
 Cloud Events
 ============
+
+Unlike other Master events, ``salt-cloud`` events are not fired on behalf of a
+Salt Minion. Instead, ``salt-cloud`` events are fired on behalf of a VM. This
+is because the minion-to-be may not yet exist to fire events to or also may have
+been destroyed.
+
+This behavior is reflected by the ``name`` variable in the event data for
+``salt-cloud`` events as compared to the ``id`` variable for Salt
+Minion-triggered events.
 
 .. salt:event:: salt/cloud/<VM NAME>/creating
 

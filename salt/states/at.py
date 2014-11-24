@@ -48,7 +48,7 @@ def present(name, timespec, tag=None, runas=None, user=None, job=None):
         rose:
           at.present:
             - job: 'echo "I love saltstack" > love'
-            - timespec: '9:9 11/09/13'
+            - timespec: '9:09 11/09/13'
             - tag: love
             - user: jam
 

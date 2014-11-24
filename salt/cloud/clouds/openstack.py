@@ -6,6 +6,8 @@ OpenStack Cloud Module
 OpenStack is an open source project that is in use by a number a cloud
 providers, each of which have their own ways of using it.
 
+:depends: libcloud >- 0.13.2
+
 OpenStack provides a number of ways to authenticate. This module uses password-
 based authentication, using auth v2.0. It is likely to start supporting other
 methods of authentication provided by OpenStack in the future.
@@ -53,6 +55,8 @@ Set up in the cloud configuration at ``/etc/salt/cloud.providers`` or
       base_url: http://192.168.1.101:3000/v2/12345
       provider: openstack
       userdata_file: /tmp/userdata.txt
+      # config_drive is required for userdata at rackspace
+      config_drive: True
 
 For in-house Openstack Essex installation, libcloud needs the service_type :
 
@@ -150,7 +154,7 @@ import salt.utils.cloud
 import salt.utils.pycrypto as sup
 import salt.config as config
 from salt.utils import namespaced_function
-from salt.cloud.exceptions import (
+from salt.exceptions import (
     SaltCloudConfigError,
     SaltCloudNotFound,
     SaltCloudSystemExit,
@@ -529,6 +533,10 @@ def request_instance(vm_=None, call=None):
         with salt.utils.fopen(userdata_file, 'r') as fp:
             kwargs['ex_userdata'] = fp.read()
 
+    kwargs['ex_config_drive'] = config.get_cloud_config_value(
+        'config_drive', vm_, __opts__, search_global=False
+    )
+
     salt.utils.cloud.fire_event(
         'event',
         'requesting instance',
@@ -644,7 +652,7 @@ def create(vm_):
                     err
                 ),
                 # Show the traceback if the debug logging level is enabled
-                exc_info=log.isEnabledFor(logging.DEBUG)
+                exc_info_on_loglevel=logging.DEBUG
             )
             # Trigger a failure in the wait for IP function
             return False
@@ -756,7 +764,7 @@ def create(vm_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(exc.message)
+            raise SaltCloudSystemExit(str(exc))
 
     log.debug('VM is now running')
 

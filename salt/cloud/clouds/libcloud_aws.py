@@ -43,7 +43,7 @@ import salt.utils.cloud
 import salt.config as config
 from salt.utils import namespaced_function
 
-from salt.cloud.exceptions import (
+from salt.exceptions import (
     SaltCloudException,
     SaltCloudSystemExit,
     SaltCloudConfigError,
@@ -369,7 +369,7 @@ def create(vm_):
                 vm_['name'], exc
             ),
             # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -404,7 +404,7 @@ def create(vm_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(exc.message)
+            raise SaltCloudSystemExit(str(exc))
 
     if tags:
         set_tags(vm_['name'], tags, call='action')
@@ -744,7 +744,7 @@ def rename(name, kwargs, call=None):
                 name, kwargs['newname'], exc
             ),
             # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
     return kwargs['newname']
 
@@ -774,7 +774,7 @@ def destroy(name):
         result = libcloudfuncs_destroy(newname, get_conn())
         ret.update({'Destroyed': result})
     except Exception as exc:
-        if not exc.message.startswith('OperationNotPermitted'):
+        if not str(exc).startswith('OperationNotPermitted'):
             log.exception(exc)
             raise exc
 

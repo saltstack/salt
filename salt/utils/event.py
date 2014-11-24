@@ -57,7 +57,6 @@ import logging
 import time
 import datetime
 import multiprocessing
-from multiprocessing import Process
 from collections import MutableMapping
 
 # Import third party libs
@@ -74,6 +73,7 @@ import salt.loader
 import salt.state
 import salt.utils
 import salt.utils.cache
+import salt.utils.process
 from salt._compat import string_types
 log = logging.getLogger(__name__)
 
@@ -253,7 +253,7 @@ class SaltEvent(object):
             mtag = raw[0:20].rstrip('|')
             mdata = raw[20:]
         else:  # new style
-            mtag, sep, mdata = raw.partition(TAGEND)  # split tag from data
+            mtag, _, mdata = raw.partition(TAGEND)  # split tag from data
 
         data = serial.loads(mdata)
         return mtag, data
@@ -290,7 +290,8 @@ class SaltEvent(object):
                 continue
 
             try:
-                ret = self.get_event_noblock()
+                ret = self.get_event_block()  # Please do not use non-blocking mode here.
+                                              # Reliability is more important than pure speed on the event bus.
             except zmq.ZMQError as ex:
                 if ex.errno == errno.EAGAIN or ex.errno == errno.EINTR:
                     continue
@@ -300,7 +301,8 @@ class SaltEvent(object):
             if not ret['tag'].startswith(tag):  # tag not match
                 if any(ret['tag'].startswith(ptag) for ptag in pending_tags):
                     self.pending_events.append(ret)
-                wait = timeout_at - time.time()
+                if wait:  # only update the wait timeout if we had one
+                    wait = timeout_at - time.time()
                 continue
 
             log.trace('get_event() received = {0}'.format(ret))
@@ -311,7 +313,7 @@ class SaltEvent(object):
     def get_event(self, wait=5, tag='', full=False, use_pending=False, pending_tags=None):
         '''
         Get a single publication.
-        IF no publication available THEN block for upto wait seconds
+        IF no publication available THEN block for up to wait seconds
         AND either return publication OR None IF no publication available.
 
         IF wait is 0 then block forever.
@@ -349,7 +351,17 @@ class SaltEvent(object):
     def get_event_noblock(self):
         '''Get the raw event without blocking or any other niceties
         '''
+        if not self.cpub:
+            self.connect_pub()
         raw = self.sub.recv(zmq.NOBLOCK)
+        mtag, data = self.unpack(raw, self.serial)
+        return {'data': data, 'tag': mtag}
+
+    def get_event_block(self):
+        '''Get the raw event in a blocking fashion
+           Slower, but decreases the possibility of dropped events
+        '''
+        raw = self.sub.recv()
         mtag, data = self.unpack(raw, self.serial)
         return {'data': data, 'tag': mtag}
 
@@ -480,7 +492,6 @@ class MasterEvent(SaltEvent):
     '''
     def __init__(self, sock_dir):
         super(MasterEvent, self).__init__('master', sock_dir)
-        self.connect_pub()
 
 
 class LocalClientEvent(MasterEvent):
@@ -498,7 +509,7 @@ class MinionEvent(SaltEvent):
         super(MinionEvent, self).__init__('minion', sock_dir=opts.get('sock_dir', None), opts=opts)
 
 
-class EventPublisher(Process):
+class EventPublisher(multiprocessing.Process):
     '''
     The interface that takes master events and republishes them out to anyone
     who wants to listen
@@ -575,12 +586,20 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         salt.state.Compiler.__init__(self, opts)
         self.wrap = ReactWrap(self.opts)
 
+        local_minion_opts = self.opts.copy()
+        local_minion_opts['file_client'] = 'local'
+        self.minion = salt.minion.MasterMinion(local_minion_opts)
+
     def render_reaction(self, glob_ref, tag, data):
         '''
         Execute the render system against a single reaction file and return
         the data structure
         '''
         react = {}
+
+        if glob_ref.startswith('salt://'):
+            glob_ref = self.minion.functions['cp.cache_file'](glob_ref)
+
         for fn_ in glob.glob(glob_ref):
             try:
                 react.update(self.render_template(
@@ -621,7 +640,7 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
                 continue
             if len(ropt) != 1:
                 continue
-            key = ropt.keys()[0]
+            key = ropt.iterkeys().next()
             val = ropt[key]
             if fnmatch.fnmatch(tag, key):
                 if isinstance(val, string_types):
@@ -680,46 +699,51 @@ class ReactWrap(object):
         if ReactWrap.client_cache is None:
             ReactWrap.client_cache = salt.utils.cache.CacheDict(opts['reactor_refresh_interval'])
 
+        self.pool = salt.utils.process. ThreadPool(
+                        self.opts['reactor_worker_threads'],  # number of workers for runner/wheel
+                        queue_size=self.opts['reactor_worker_hwm']  # queue size for those workers
+                    )
+
     def run(self, low):
         '''
         Execute the specified function in the specified state by passing the
         LowData
         '''
         l_fun = getattr(self, low['state'])
-        f_call = salt.utils.format_call(l_fun, low)
         try:
-            ret = l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
+            f_call = salt.utils.format_call(l_fun, low)
+            l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
         except Exception:
             log.error(
                     'Failed to execute {0}: {1}\n'.format(low['state'], l_fun),
                     exc_info=True
                     )
-            return False
-        return ret
 
-    def cmd(self, *args, **kwargs):
+    def local(self, *args, **kwargs):
         '''
         Wrap LocalClient for running :ref:`execution modules <all-salt.modules>`
         '''
         if 'local' not in self.client_cache:
             self.client_cache['local'] = salt.client.LocalClient(self.opts['conf_file'])
-        return self.client_cache['local'].cmd_async(*args, **kwargs)
+        self.client_cache['local'].cmd_async(*args, **kwargs)
 
-    def runner(self, fun, **kwargs):
+    cmd = local
+
+    def runner(self, _, **kwargs):
         '''
         Wrap RunnerClient for executing :ref:`runner modules <all-salt.runners>`
         '''
         if 'runner' not in self.client_cache:
             self.client_cache['runner'] = salt.runner.RunnerClient(self.opts)
-        return self.client_cache['runner'].async(fun, kwargs)
+        self.pool.fire_async(self.client_cache['runner'].low, kwargs)
 
-    def wheel(self, fun, **kwargs):
+    def wheel(self, _, **kwargs):
         '''
         Wrap Wheel to enable executing :ref:`wheel modules <all-salt.wheel>`
         '''
         if 'wheel' not in self.client_cache:
             self.client_cache['wheel'] = salt.wheel.Wheel(self.opts)
-        return self.client_cache['wheel'].call_func(fun, **kwargs)
+        self.pool.fire_async(self.client_cache['wheel'].low, kwargs)
 
 
 class StateFire(object):

@@ -1,8 +1,5 @@
 # coding: utf-8
 
-# Import Python libs
-import os
-
 # Import Salt Testing libs
 import integration
 
@@ -10,7 +7,7 @@ import integration
 import salt.runner
 
 
-class RunnerModuleTest(integration.ClientCase):
+class RunnerModuleTest(integration.TestCase, integration.AdaptedConfigurationTestCaseMixIn):
     eauth_creds = {
         'username': 'saltdev_auto',
         'password': 'saltdev',
@@ -21,7 +18,7 @@ class RunnerModuleTest(integration.ClientCase):
         '''
         Configure an eauth user to test with
         '''
-        self.runner = salt.runner.RunnerClient(self.get_opts())
+        self.runner = salt.runner.RunnerClient(self.get_config('client_config'))
 
     def test_eauth(self):
         '''
@@ -47,10 +44,7 @@ class RunnerModuleTest(integration.ClientCase):
         '''
         import salt.auth
 
-        opts = self.get_opts()
-        self.mkdir_p(os.path.join(opts['root_dir'], 'cache', 'tokens'))
-
-        auth = salt.auth.LoadAuth(opts)
+        auth = salt.auth.LoadAuth(self.get_config('client_config'))
         token = auth.mk_token(self.eauth_creds)
 
         self.runner.master_call(**{
@@ -76,6 +70,29 @@ class RunnerModuleTest(integration.ClientCase):
         low.update(self.eauth_creds)
 
         self.runner.cmd_async(low)
+
+    def test_cmd_sync_w_arg(self):
+        low = {
+            'fun': 'test.arg',
+            'foo': 'Foo!',
+            'bar': 'Bar!',
+        }
+        low.update(self.eauth_creds)
+
+        ret = self.runner.cmd_sync(low)
+        self.assertEqual(ret['kwargs']['foo'], 'Foo!')
+        self.assertEqual(ret['kwargs']['bar'], 'Bar!')
+
+    def test_wildcard_auth(self):
+        low = {
+            'username': 'the_s0und_of_t3ch',
+            'password': 'willrockyou',
+            'eauth': 'auto',
+            'fun': 'test.arg',
+            'foo': 'Foo!',
+            'bar': 'Bar!',
+        }
+        self.runner.cmd_sync(low)
 
 
 if __name__ == '__main__':

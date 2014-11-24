@@ -5,17 +5,23 @@ Salt interface to LDAP commands
 :depends:   - ldap Python module
 :configuration: In order to connect to LDAP, certain configuration is required
     in the minion config on the LDAP server. The minimum configuration items
-    that must be set are::
+    that must be set are:
+
+    .. code-block:: yaml
 
         ldap.basedn: dc=acme,dc=com (example values, adjust to suit)
 
-    If your LDAP server requires authentication then you must also set::
+    If your LDAP server requires authentication then you must also set:
+
+    .. code-block:: yaml
 
         ldap.anonymous: False
         ldap.binddn: admin
         ldap.bindpw: password
 
-    In addition, the following optional values may be set::
+    In addition, the following optional values may be set:
+
+    .. code-block:: yaml
 
         ldap.server: localhost (default=localhost, see warning below)
         ldap.port: 389 (default=389, standard port)

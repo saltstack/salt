@@ -15,6 +15,7 @@ import datetime
 import tempfile
 
 # Import salt libs
+import salt.config
 import salt.utils
 import salt.state
 import salt.payload
@@ -26,6 +27,8 @@ __proxyenabled__ = ['*']
 
 __outputter__ = {
     'sls': 'highstate',
+    'sls_id': 'highstate',
+    'pkg': 'highstate',
     'top': 'highstate',
     'single': 'highstate',
     'highstate': 'highstate',
@@ -138,6 +141,16 @@ def _check_queue(queue, kwargs):
             return conflict
 
 
+def _get_opts(localconfig=None):
+    '''
+    Return a copy of the opts for use, optionally load a local config on top
+    '''
+    opts = copy.deepcopy(__opts__)
+    if localconfig:
+        opts = salt.config.minion_config(localconfig, defaults=opts)
+    return opts
+
+
 def low(data, queue=False, **kwargs):
     '''
     Execute a single low data call
@@ -187,7 +200,10 @@ def high(data, queue=False, **kwargs):
 
 def template(tem, queue=False, **kwargs):
     '''
-    Execute the information stored in a template file on the minion
+    Execute the information stored in a template file on the minion.
+
+    This function does not ask a master for a SLS file to render but
+    instead directly processes the file at the provided path on the minion.
 
     CLI Example:
 
@@ -198,8 +214,14 @@ def template(tem, queue=False, **kwargs):
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
-    st_ = salt.state.State(__opts__)
-    ret = st_.call_template(tem)
+    st_ = salt.state.HighState(__opts__)
+    if not tem.endswith('.sls'):
+        tem = '{sls}.sls'.format(sls=tem)
+    high, errors = st_.render_state(tem, None, '', None, local=True)
+    if errors:
+        __context__['retcode'] = 1
+        return errors
+    ret = st_.state.call_high(high)
     _set_retcode(ret)
     return ret
 
@@ -223,11 +245,31 @@ def template_str(tem, queue=False, **kwargs):
     return ret
 
 
-def highstate(test=None, queue=False, **kwargs):
+def highstate(test=None,
+              queue=False,
+              **kwargs):
     '''
     Retrieve the state data from the salt master for this minion and execute it
 
-    Custom Pillar data can be passed with the ``pillar`` kwarg.
+    test
+        Notify states to execute in test-only (dry-run) mode.
+
+        Sets the ``test`` variable in the minion ``opts`` for the duration of
+        the state run.
+    pillar
+        Custom Pillar data can be passed with the ``pillar`` kwarg. Values
+        passed here will override hard-coded Pillar values.
+    queue : ``False``
+        Instead of failing immediately when another state run is in progress,
+        queue the new state run to begin running once the other has finished.
+
+        This option starts a new thread for each queued state run so use this
+        option sparingly.
+    localconfig:
+        Instead of using running minion opts, load ``localconfig`` and merge that
+        with the running minion opts. This functionality is intended for using
+        "roots" of salt directories (with their own minion config, pillars,
+        file_roots) to run highstate out of.
 
     CLI Example:
 
@@ -245,7 +287,8 @@ def highstate(test=None, queue=False, **kwargs):
     if conflict is not None:
         return conflict
     orig_test = __opts__.get('test', None)
-    opts = copy.deepcopy(__opts__)
+
+    opts = _get_opts(kwargs.get('localconfig'))
 
     if test is None:
         if salt.utils.test_mode(test=test, **kwargs):
@@ -316,19 +359,38 @@ def sls(mods,
         exclude=None,
         queue=False,
         env=None,
-        concurrent=False,
         **kwargs):
     '''
-    Execute a set list of state modules from an environment. The default
-    environment is ``base``, use ``saltenv`` (``env`` in Salt 0.17.x and older)
-    to specify a different environment
+    Execute a set list of state files from an environment.
 
-    Custom Pillar data can be passed with the ``pillar`` kwarg.
+    test
+        Notify states to execute in test-only (dry-run) mode.
 
+        Sets the ``test`` variable in the minion ``opts`` for the duration of
+        the state run.
+    pillar
+        Custom Pillar data can be passed with the ``pillar`` kwarg. Values
+        passed here will override hard-coded Pillar values.
+    queue : ``False``
+        Instead of failing immediately when another state run is in progress,
+        queue the new state run to begin running once the other has finished.
+
+        This option starts a new thread for each queued state run so use this
+        option sparingly.
+    saltenv : base
+        Specify a ``file_roots`` environment.
+
+        .. versionchanged:: 0.17.0
+            Argument name changed from ``env`` to ``saltenv``.
     concurrent:
         WARNING: This flag is potentially dangerous. It is designed
         for use when multiple state runs can safely be run at the same
         Do not use this flag for performance optimization.
+    localconfig:
+        Instead of using running minion opts, load ``localconfig`` and merge that
+        with the running minion opts. This functionality is intended for using
+        "roots" of salt directories (with their own minion config, pillars,
+        file_roots) to run highstate out of.
 
     CLI Example:
 
@@ -339,6 +401,7 @@ def sls(mods,
 
         salt '*' state.sls myslsfile pillar="{foo: 'Foo!', bar: 'Bar!'}"
     '''
+    concurrent = kwargs.get('concurrent', False)
     if env is not None:
         salt.utils.warn_until(
             'Boron',
@@ -361,7 +424,7 @@ def sls(mods,
         err += __pillar__['_errors']
         return err
     orig_test = __opts__.get('test', None)
-    opts = copy.deepcopy(__opts__)
+    opts = _get_opts(kwargs.get('localconfig'))
 
     if salt.utils.test_mode(test=test, **kwargs):
         opts['test'] = True
@@ -443,7 +506,10 @@ def sls(mods,
     return ret
 
 
-def top(topfn, test=None, queue=False, **kwargs):
+def top(topfn,
+        test=None,
+        queue=False,
+        **kwargs):
     '''
     Execute a specific top file instead of the default
 
@@ -464,7 +530,7 @@ def top(topfn, test=None, queue=False, **kwargs):
         err += __pillar__['_errors']
         return err
     orig_test = __opts__.get('test', None)
-    opts = copy.deepcopy(__opts__)
+    opts = _get_opts(kwargs.get('localconfig'))
     if salt.utils.test_mode(test=test, **kwargs):
         opts['test'] = True
     else:
@@ -552,7 +618,7 @@ def show_lowstate(queue=False, **kwargs):
 def sls_id(
         id_,
         mods,
-        saltenv,
+        saltenv='base',
         test=None,
         queue=False,
         **kwargs):
@@ -571,17 +637,17 @@ def sls_id(
     if conflict is not None:
         return conflict
     orig_test = __opts__.get('test', None)
-    opts = copy.deepcopy(__opts__)
+    opts = _get_opts(kwargs.get('localconfig'))
     if salt.utils.test_mode(test=test, **kwargs):
         opts['test'] = True
     else:
         opts['test'] = __opts__.get('test', None)
     st_ = salt.state.HighState(opts)
     if isinstance(mods, string_types):
-        mods = mods.split(',')
+        split_mods = mods.split(',')
     st_.push_active()
     try:
-        high_, errors = st_.render_highstate({saltenv: mods})
+        high_, errors = st_.render_highstate({saltenv: split_mods})
     finally:
         st_.pop_active()
     errors += st_.state.verify_high(high_)
@@ -589,12 +655,18 @@ def sls_id(
         __context__['retcode'] = 1
         return errors
     chunks = st_.state.compile_high_data(high_)
+    ret = {}
     for chunk in chunks:
         if chunk.get('__id__', '') == id_:
-            ret = st_.state.call_chunk(chunk, {}, chunks)
+            ret.update(st_.state.call_chunk(chunk, {}, chunks))
     # Work around Windows multiprocessing bug, set __opts__['test'] back to
     # value from before this function was run.
     __opts__['test'] = orig_test
+    if not ret:
+        raise SaltInvocationError(
+            'No matches for ID \'{0}\' found in SLS \'{1}\' within saltenv '
+            '\'{2}\''.format(id_, mods, saltenv)
+        )
     return ret
 
 
@@ -627,7 +699,7 @@ def show_low_sls(mods,
     if conflict is not None:
         return conflict
     orig_test = __opts__.get('test', None)
-    opts = copy.deepcopy(__opts__)
+    opts = _get_opts(kwargs.get('localconfig'))
     if salt.utils.test_mode(test=test, **kwargs):
         opts['test'] = True
     else:
@@ -680,7 +752,7 @@ def show_sls(mods, saltenv='base', test=None, queue=False, env=None, **kwargs):
     if conflict is not None:
         return conflict
     orig_test = __opts__.get('test', None)
-    opts = copy.deepcopy(__opts__)
+    opts = _get_opts(kwargs.get('localconfig'))
 
     if salt.utils.test_mode(test=test, **kwargs):
         opts['test'] = True
@@ -764,7 +836,7 @@ def single(fun, name, test=None, queue=False, **kwargs):
                    '__id__': name,
                    'name': name})
     orig_test = __opts__.get('test', None)
-    opts = copy.deepcopy(__opts__)
+    opts = _get_opts(kwargs.get('localconfig'))
     if salt.utils.test_mode(test=test, **kwargs):
         opts['test'] = True
     else:
@@ -848,13 +920,17 @@ def pkg(pkg_path, pkg_sum, hash_type, test=False, **kwargs):
     lowstate_json = os.path.join(root, 'lowstate.json')
     with salt.utils.fopen(lowstate_json, 'r') as fp_:
         lowstate = json.load(fp_, object_hook=salt.utils.decode_dict)
+    # Check for errors in the lowstate
+    for chunk in lowstate:
+        if not isinstance(chunk, dict):
+            return lowstate
     pillar_json = os.path.join(root, 'pillar.json')
     if os.path.isfile(pillar_json):
         with salt.utils.fopen(pillar_json, 'r') as fp_:
             pillar = json.load(fp_)
     else:
         pillar = None
-    popts = copy.deepcopy(__opts__)
+    popts = _get_opts(kwargs.get('localconfig'))
     popts['fileclient'] = 'local'
     popts['file_roots'] = {}
     if salt.utils.test_mode(test=test, **kwargs):
@@ -868,8 +944,6 @@ def pkg(pkg_path, pkg_sum, hash_type, test=False, **kwargs):
             continue
         popts['file_roots'][fn_] = [full]
     st_ = salt.state.State(popts, pillar=pillar)
-    st_.functions['saltutil.sync_all'](envs)
-    st_.module_refresh()
     ret = st_.call_chunks(lowstate)
     try:
         shutil.rmtree(root)

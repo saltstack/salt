@@ -3,7 +3,7 @@
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
 
-ensure_in_syspath('../')
+ensure_in_syspath('../..')
 
 import salt.state
 from salt.config import minion_config

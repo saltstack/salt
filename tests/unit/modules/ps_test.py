@@ -13,6 +13,7 @@ ensure_in_syspath('../../')
 from salt.modules import ps
 
 HAS_PSUTIL = ps.__virtual__()
+HAS_PSUTIL_VERSION = False
 
 if HAS_PSUTIL:
     import psutil
@@ -35,6 +36,9 @@ if HAS_PSUTIL:
         1000, 2000, 500, 600, 2000, 3000)
     STUB_USER = psutil._compat.namedtuple('user', 'name, terminal, host, started')('bdobbs', 'ttys000', 'localhost',
                                                                                    0.0)
+    if psutil.version_info >= (0, 6, 0):
+        HAS_PSUTIL_VERSION = True
+
 else:
     (STUB_CPU_TIMES,
      STUB_VIRT_MEM,
@@ -62,7 +66,7 @@ def _get_proc_name(proc):
 
 
 def _get_proc_pid(proc):
-    return proc.pid() if PSUTIL2 else proc.pid
+    return proc.pid
 
 
 @skipIf(not HAS_PSUTIL, "psutils are required for this test case")
@@ -104,11 +108,13 @@ class PsTestCase(TestCase):
     def test_cpu_times(self):
         self.assertDictEqual({'idle': 4, 'nice': 2, 'system': 3, 'user': 1}, ps.cpu_times())
 
+    @skipIf(HAS_PSUTIL_VERSION is False, 'psutil 0.6.0 or greater is required for this test')
     @patch('psutil.virtual_memory', new=MagicMock(return_value=STUB_VIRT_MEM))
     def test_virtual_memory(self):
         self.assertDictEqual({'used': 500, 'total': 1000, 'available': 500, 'percent': 50, 'free': 500},
                              ps.virtual_memory())
 
+    @skipIf(HAS_PSUTIL_VERSION is False, 'psutil 0.6.0 or greater is required for this test')
     @patch('psutil.swap_memory', new=MagicMock(return_value=STUB_SWAP_MEM))
     def test_swap_memory(self):
         self.assertDictEqual({'used': 500, 'total': 1000, 'percent': 50, 'free': 500, 'sin': 0, 'sout': 0},

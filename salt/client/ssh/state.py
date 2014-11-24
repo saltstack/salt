@@ -57,8 +57,8 @@ class SSHHighState(salt.state.BaseHighState):
     '''
     stack = []
 
-    def __init__(self, opts, pillar=None, wrapper=None):
-        self.client = salt.fileclient.LocalClient(opts)
+    def __init__(self, opts, pillar=None, wrapper=None, fsclient=None):
+        self.client = fsclient
         salt.state.BaseHighState.__init__(self, opts)
         self.state = SSHState(opts, pillar, wrapper)
         self.matcher = salt.minion.Matcher(self.opts)
@@ -96,7 +96,6 @@ def lowstate_file_refs(chunks, extras=''):
             for env in refs:
                 for x in extra_refs:
                     refs[env].append([x])
-
     return refs
 
 
@@ -117,14 +116,13 @@ def salt_refs(data):
     return ret
 
 
-def prep_trans_tar(opts, chunks, file_refs, pillar=None):
+def prep_trans_tar(file_client, chunks, file_refs, pillar=None):
     '''
     Generate the execution package from the saltenv file refs and a low state
     data structure
     '''
     gendir = tempfile.mkdtemp()
     trans_tar = salt.utils.mkstemp()
-    file_client = salt.fileclient.LocalClient(opts)
     lowfn = os.path.join(gendir, 'lowstate.json')
     pillarfn = os.path.join(gendir, 'pillar.json')
     sync_refs = [
@@ -160,10 +158,13 @@ def prep_trans_tar(opts, chunks, file_refs, pillar=None):
                 files = file_client.cache_dir(name, saltenv)
                 if files:
                     for filename in files:
+                        fn = filename[filename.find(short) + len(short):]
+                        if fn.startswith('/'):
+                            fn.strip('/')
                         tgt = os.path.join(
                                 env_root,
                                 short,
-                                filename[filename.find(short) + len(short) + 1:],
+                                fn,
                                 )
                         tgt_dir = os.path.dirname(tgt)
                         if not os.path.isdir(tgt_dir):

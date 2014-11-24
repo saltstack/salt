@@ -40,6 +40,9 @@ import socket
 import struct
 import time
 
+# Import salt libs
+import salt.utils
+
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
@@ -67,8 +70,8 @@ def _carbon(host, port):
                                     socket.IPPROTO_TCP)
 
         carbon_sock.connect((host, port))
-    except socket.error as e:
-        log.error('Error connecting to {0}:{1}, {2}'.format(host, port, e))
+    except socket.error as err:
+        log.error('Error connecting to {0}:{1}, {2}'.format(host, port, err))
         raise
     else:
         log.debug('Connected to carbon')
@@ -152,13 +155,20 @@ def returner(ret):
 
     '''
 
-    cfg = __salt__['config.option']
-    c_cfg = cfg('carbon', {})
+    if 'config.option' in __salt__:
+        cfg = __salt__['config.option']
+        c_cfg = cfg('carbon', {})
 
-    host = c_cfg.get('host', cfg('carbon.host', None))
-    port = c_cfg.get('port', cfg('carbon.port', None))
-    skip = c_cfg.get('skip_on_error', cfg('carbon.skip_on_error', False))
-    mode = c_cfg.get('mode', cfg('carbon.mode', 'text')).lower()
+        host = c_cfg.get('host', cfg('carbon.host', None))
+        port = c_cfg.get('port', cfg('carbon.port', None))
+        skip = c_cfg.get('skip_on_error', cfg('carbon.skip_on_error', False))
+        mode = c_cfg.get('mode', cfg('carbon.mode', 'text')).lower()
+    else:
+        cfg = __opts__
+        host = cfg.get('cabon.host', None)
+        port = cfg.get('cabon.port', None)
+        skip = cfg.get('carbon.skip_on_error', False)
+        mode = cfg.get('carbon.mode', 'text').lower()
 
     log.debug('Carbon minion configured with host: {0}:{1}'.format(host, port))
     log.debug('Using carbon protocol: {0}'.format(mode))
@@ -196,3 +206,10 @@ def returner(ret):
 
             log.debug('Sent {0} bytes to carbon'.format(sent_bytes))
             total_sent_bytes += sent_bytes
+
+
+def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
+    '''
+    Do any work necessary to prepare a JID, including sending a custom id
+    '''
+    return passed_jid if passed_jid is not None else salt.utils.gen_jid()

@@ -87,10 +87,7 @@ def make_pkgng_aware(jname):
                     cdir)
 
     # Added args to file
-    cmd = 'echo "WITH_PKGNG=yes" > {0}-make.conf'.format(
-            os.path.join(cdir, jname))
-
-    __salt__['cmd.run'](cmd)
+    __salt__['file.write']('{0}-make.conf'.format(os.path.join(cdir, jname)), 'WITH_PKGNG=yes')
 
     if os.path.isfile(os.path.join(cdir, jname) + '-make.conf'):
         ret['changes'] = 'Created {0}'.format(
@@ -252,8 +249,7 @@ def delete_jail(name):
         except (IOError, OSError):
             return ('Deleted jail "{0}" but was unable to remove jail make '
                     'file').format(name)
-        cmd = 'rm -f {0}'.format(make_file)
-        __salt__['cmd.run'](cmd)
+        __salt__['file.remove'](make_file)
 
     return 'Deleted jail {0}'.format(name)
 

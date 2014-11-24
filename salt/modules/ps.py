@@ -12,7 +12,7 @@ import time
 import datetime
 
 # Import salt libs
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 # Import third party libs
 try:
@@ -91,7 +91,7 @@ def _get_proc_pid(proc):
 
     It's backward compatible with < 2.0 versions of psutil.
     '''
-    return proc.pid() if PSUTIL2 else proc.pid
+    return proc.pid
 
 
 def top(num_processes=5, interval=3):
@@ -347,12 +347,19 @@ def virtual_memory():
 
     Return a dict that describes statistics about system memory usage.
 
+    .. note::
+
+        This function is only available in psutil version 0.6.0 and above.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' ps.virtual_memory
     '''
+    if psutil.version_info < (0, 6, 0):
+        msg = 'virtual_memory is only available in psutil 0.6.0 or greater'
+        raise CommandExecutionError(msg)
     return dict(psutil.virtual_memory()._asdict())
 
 
@@ -362,12 +369,19 @@ def swap_memory():
 
     Return a dict that describes swap memory statistics.
 
+    .. note::
+
+        This function is only available in psutil version 0.6.0 and above.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' ps.swap_memory
     '''
+    if psutil.version_info < (0, 6, 0):
+        msg = 'swap_memory is only available in psutil 0.6.0 or greater'
+        raise CommandExecutionError(msg)
     return dict(psutil.swap_memory()._asdict())
 
 

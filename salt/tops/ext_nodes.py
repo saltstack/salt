@@ -26,19 +26,20 @@ does.
 See (admittedly degenerate and probably not complete) example:
 
 
-```
-classes:
-  - basepackages
-  - database
-```
+.. code-block:: yaml
 
-The above essentially is the same as a top.sls containing
+    classes:
+      - basepackages
+      - database
 
-```
-base:
-  '*':
-    - basepackages
-    - database
+The above essentially is the same as a top.sls containing the following:
+
+.. code-block:: yaml
+
+    base:
+      '*':
+        - basepackages
+        - database
 
 '''
 

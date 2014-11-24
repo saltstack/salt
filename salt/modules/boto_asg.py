@@ -120,6 +120,11 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
                     _tag['propagate_at_launch'] = tag.propagate_at_launch
                     _tags.append(_tag)
                 ret['tags'] = _tags
+            # Boto accepts a string or list as input for vpc_zone_identifier,
+            # but always returns a comma separated list. We require lists in
+            # states.
+            elif attr == 'vpc_zone_identifier':
+                ret[attr] = getattr(asg, attr).split(',')
             # convert SuspendedProcess objects to names
             elif attr == 'suspended_processes':
                 suspended_processes = getattr(asg, attr)
@@ -362,7 +367,7 @@ def get_cloud_init_mime(cloud_init):
             _cloud_init.attach(_script)
     if 'cloud-config' in cloud_init:
         cloud_config = cloud_init['cloud-config']
-        _cloud_config = email.mime.text.MIMEText(yaml.dump(cloud_config),
+        _cloud_config = email.mime.text.MIMEText(yaml.dump(dict(cloud_config)),
                                                  'cloud-config')
         _cloud_init.attach(_cloud_config)
     return _cloud_init.as_string()
@@ -387,7 +392,7 @@ def launch_configuration_exists(name, region=None, key=None, keyid=None,
         return False
 
 
-def create_launch_configuration(name, image_id=None, key_name=None,
+def create_launch_configuration(name, image_id, key_name=None,
                                 security_groups=None, user_data=None,
                                 instance_type='m1.small', kernel_id=None,
                                 ramdisk_id=None, block_device_mappings=None,

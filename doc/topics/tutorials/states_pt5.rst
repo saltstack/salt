@@ -9,24 +9,158 @@ States Tutorial, Part 5 - Orchestration with Salt
   :doc:`Part 1 <states_pt1>` if you are not familiar with how to use states.
 
 
-Orchestration can be accomplished in two distinct ways:
+Orchestration is accomplished in salt primarily through the :ref:`Orchestrate
+Runner <orchestrate-runner>`. Added in version 0.17.0, this Salt :doc:`Runner
+</ref/runners/index>` can use the full suite of :doc:`requisites
+</ref/states/requisites>` available in states, and can also execute
+states/functions using salt-ssh. This runner replaces the :ref:`OverState
+<states-overstate>`.
 
-1. The :ref:`OverState System <states-overstate>`. Added in version 0.11.0,
-   this Salt :doc:`Runner </ref/runners/index>` allows for SLS files to be
-   organized into stages, and to require that one or more stages successfully
-   execute before another stage will run.
 
-2. The :ref:`Orchestrate Runner <orchestrate-runner>`. Added in version 0.17.0,
-   this Salt :doc:`Runner </ref/runners/index>` can use the full suite of
-   :doc:`requisites </ref/states/requisites>` available in states, and can also
-   execute states/functions using salt-ssh. This runner was designed with the
-   eventual goal of replacing the :ref:`OverState <states-overstate>`. 
+.. _orchestrate-runner:
+
+The Orchestrate Runner
+----------------------
+
+.. versionadded:: 0.17.0
+
+As noted above in the introduction, the Orchestrate Runner (originally called
+the state.sls runner) offers all the functionality of the OverState, but with a
+couple advantages:
+
+* All :doc:`requisites </ref/states/requisites>` available in states can be
+  used.
+* The states/functions can be executed using salt-ssh.
+
+The Orchestrate Runner was added with the intent to eventually deprecate the
+OverState system, however the OverState will still be maintained for the
+foreseeable future.
+
+Configuration Syntax
+~~~~~~~~~~~~~~~~~~~~
+
+The configuration differs slightly from that of the OverState, and more closely
+resembles the configuration schema used for states.
+
+To execute a state, use :mod:`salt.state <salt.states.saltmod.state>`:
+
+.. code-block:: yaml
+
+    install_nginx:
+      salt.state:
+        - tgt: 'web*'
+        - sls:
+          - nginx
+
+To execute a function, use :mod:`salt.function <salt.states.saltmod.function>`:
+
+.. code-block:: yaml
+
+    cmd.run:
+      salt.function:
+        - tgt: '*'
+        - arg:
+          - rm -rf /tmp/foo
+
+
+Triggering a Highstate
+~~~~~~~~~~~~~~~~~~~~~~
+
+Whereas with the OverState, a Highstate is run by simply omitting an ``sls`` or
+``function`` argument, with the Orchestrate Runner the Highstate must
+explicitly be requested by using ``highstate: True``:
+
+.. code-block:: yaml
+
+    webserver_setup:
+      salt.state:
+        - tgt: 'web*'
+        - highstate: True
+
+Executing the Orchestrate Runner
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The Orchestrate Runner can be executed using the ``state.orchestrate`` runner
+function. ``state.orch`` also works, for those that would like to type less.
+
+Assuming that your ``base`` environment is located at ``/srv/salt``, and you
+have placed a configuration file in ``/srv/salt/orchestration/webserver.sls``,
+then the following could both be used:
+
+.. code-block:: bash
+
+    salt-run state.orchestrate orchestration.webserver
+    salt-run state.orch orchestration.webserver
+
+.. versionchanged:: 2014.1.1
+
+    The runner function was renamed to ``state.orchestrate``. In versions
+    0.17.0 through 2014.1.0, ``state.sls`` must be used. This was renamed to
+    avoid confusion with the :mod:`state.sls <salt.modules.state.sls>`
+    execution function.
+
+    .. code-block:: bash
+
+        salt-run state.sls orchestration.webserver
+
+
+More Complex Orchestration
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Many states/functions can be configured in a single file, which when combined
+with the full suite of :doc:`requisites </ref/states/requisites>`, can be used
+to easily configure complex orchestration tasks. Additionally, the
+states/functions will be executed in the order in which they are defined,
+unless prevented from doing so by any :doc:`requisites
+</ref/states/requisites>`, as is the default in SLS files since 0.17.0.
+
+.. code-block:: yaml
+
+    cmd.run:
+      salt.function:
+        - tgt: 10.0.0.0/24
+        - tgt_type: ipcidr
+        - arg:
+          - bootstrap
+
+    storage_setup:
+      salt.state:
+        - tgt: 'role:storage'
+        - tgt_type: grain
+        - sls: ceph
+        - require:
+          - salt: webserver_setup
+
+    webserver_setup:
+      salt.state:
+        - tgt: 'web*'
+        - highstate: True
+
+Given the above setup, the orchestration will be carried out as follows:
+
+1. The shell command ``bootstrap`` will be executed on all minions in the
+   10.0.0.0/24 subnet.
+
+2. A Highstate will be run on all minions whose ID starts with "web", since
+   the ``storage_setup`` state requires it.
+
+3. Finally, the ``ceph`` SLS target will be executed on all minions which have
+   a grain called ``role`` with a value of ``storage``.
+
+
+
 
 
 .. _states-overstate:
 
 The OverState System
 --------------------
+
+.. warning::
+
+    The OverState runner is deprecated, and will be removed in the feature
+    release of Salt codenamed Boron. (Three feature releases after 2014.7.0,
+    which is codenamed Helium)
 
 Often, servers need to be set up and configured in a specific order, and systems
 should only be set up if systems earlier in the sequence have been set up
@@ -145,132 +279,3 @@ the stages defined in ``/root/other-overstate.sls``.
     Remember, salt-run is always executed on the master.
 
 
-.. _orchestrate-runner:
-
-The Orchestrate Runner
-----------------------
-
-.. versionadded:: 0.17.0
-
-As noted above in the introduction, the Orchestrate Runner (originally called
-the state.sls runner) offers all the functionality of the OverState, but with a
-couple advantages:
-
-* All :doc:`requisites </ref/states/requisites>` available in states can be
-  used.
-* The states/functions can be executed using salt-ssh.
-
-The Orchestrate Runner was added with the intent to eventually deprecate the
-OverState system, however the OverState will still be maintained for the
-foreseeable future.
-
-Configuration Syntax
-~~~~~~~~~~~~~~~~~~~~
-
-The configuration differs slightly from that of the OverState, and more closely
-resembles the configuration schema used for states.
-
-To execute a state, use :mod:`salt.state <salt.states.saltmod.state>`:
-
-.. code-block:: yaml
-
-    install_nginx:
-      salt.state:
-        - tgt: 'web*'
-        - sls:
-          - nginx
-
-To execute a function, use :mod:`salt.function <salt.states.saltmod.function>`:
-
-.. code-block:: yaml
-
-    cmd.run:
-      salt.function:
-        - tgt: '*'
-        - arg:
-          - rm -rf /tmp/foo
-
-
-Triggering a Highstate
-~~~~~~~~~~~~~~~~~~~~~~
-
-Wheras with the OverState, a Highstate is run by simply omitting an ``sls`` or
-``function`` argument, with the Orchestrate Runner the Highstate must
-explicitly be requested by using ``highstate: True``:
-
-.. code-block:: yaml
-
-    webserver_setup:
-      salt.state:
-        - tgt: 'web*'
-        - highstate: True
-
-Executing the Orchestrate Runner
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The Orchestrate Runner can be executed using the ``state.orchestrate`` runner
-function. ``state.orch`` also works, for those that would like to type less.
-
-Assuming that your ``base`` environment is located at ``/srv/salt``, and you
-have placed a configuration file in ``/srv/salt/orchestration/webserver.sls``,
-then the following could both be used:
-
-.. code-block:: bash
-
-    salt-run state.orchestrate orchestration.webserver
-    salt-run state.orch orchestration.webserver
-
-.. versionchanged:: 2014.1.1
-
-    The runner function was renamed to ``state.orchestrate``. In versions
-    0.17.0 through 2014.1.0, ``state.sls`` must be used. This was renamed to
-    avoid confusion with the :mod:`state.sls <salt.modules.state.sls>`
-    execution function.
-
-    .. code-block:: bash
-
-        salt-run state.sls orchestration.webserver
-
-
-More Complex Orchestration
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Many states/functions can be configured in a single file, which when combined
-with the full suite of :doc:`requisites </ref/states/requisites>`, can be used
-to easily configure complex orchestration tasks. Additionally, the
-states/functions will be executed in the order in which they are defined,
-unless prevented from doing so by any :doc:`requisites
-</ref/states/requisites>`, as is the default in SLS files since 0.17.0.
-
-.. code-block:: yaml
-
-    cmd.run:
-      salt.function:
-        - tgt: 10.0.0.0/24
-        - tgt_type: ipcidr
-        - arg:
-          - bootstrap
-
-    storage_setup:
-      salt.state:
-        - tgt: 'role:storage'
-        - tgt_type: grain
-        - sls: ceph
-        - require:
-          - salt: webserver_setup
-
-    webserver_setup:
-      salt.state:
-        - tgt: 'web*'
-        - highstate: True
-
-Given the above setup, the orchestration will be carried out as follows:
-
-1. The shell command ``bootstrap`` will be executed on all minions in the
-   10.0.0.0/24 subnet.
-
-2. A Highstate will be run on all minions whose ID starts with "web", since
-   the ``storage_setup`` state requires it.
-
-3. Finally, the ``ceph`` SLS target will be executed on all minions which have
-   a grain called ``role`` with a value of ``storage``.
