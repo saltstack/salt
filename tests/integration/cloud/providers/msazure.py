@@ -16,7 +16,7 @@ from salttesting.helpers import ensure_in_syspath, expensiveTest
 ensure_in_syspath('../../../')
 
 # Import Salt Libs
-import integration
+import integration  # pylint: disable=import-error
 from salt.config import cloud_providers_config
 
 # Import Third-Party Libs
@@ -140,5 +140,5 @@ class AzureTest(integration.ShellCase):
 
 
 if __name__ == '__main__':
-    from integration import run_tests
+    from integration import run_tests  # pylint: disable=import-error
     run_tests(AzureTest)

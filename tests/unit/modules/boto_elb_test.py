@@ -191,5 +191,5 @@ class BotoElbTestCase(TestCase):
         self.assertEqual(actual_instances, expected_instances)
 
 if __name__ == '__main__':
-    from integration import run_tests
+    from integration import run_tests  # pylint: disable=import-error
     run_tests(BotoElbTestCase, needs_daemon=False)
