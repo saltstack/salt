@@ -366,10 +366,6 @@ def run(opts):
     '''
     RUN!
     '''
-
-    parser = argparse.ArgumentParser(
-        description='Jenkins execution helper'
-    )
     vm_name = os.environ.get(
         'JENKINS_SALTCLOUD_VM_NAME',
         generate_vm_name(opts)
