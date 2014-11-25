@@ -192,6 +192,20 @@ def create(pool_name, *vdevs, **kwargs):
         salt '*' zpool.create myzpool raidz1 /path/to/vdev1 /path/to/vdev2 raidz2 /path/to/vdev3 /path/to/vdev4 /path/to/vdev5 [...] [force=True|False]
         salt '*' zpool.create myzpool mirror /path/to/vdev1 [...] mirror /path/to/vdev2 /path/to/vdev3 [...] [force=True|False]
         salt '*' zpool.create myhybridzpool mirror /tmp/file1 [...] log mirror /path/to/vdev1 [...] cache /path/to/vdev2 [...] [force=True|False]
+
+    .. note::
+
+        Zpool properties can be specified at the time of creation of the pool by
+        passing an additional argument called "properties" and specifying the properties
+        with their respective values in the form of a python dictionary::
+
+            properties="{'property1': 'value1', 'property2': 'value2'}"
+
+        Example:
+
+        .. code-block:: bash
+
+            salt '*' zpool.create myzpool /path/to/vdev1 [...] properties="{'property1': 'value1', 'property2': 'value2'}"
     '''
     ret = {}
     dlist = []
@@ -199,6 +213,10 @@ def create(pool_name, *vdevs, **kwargs):
     # Check if the pool_name is already being used
     if exists(pool_name):
         ret['Error'] = 'Storage Pool `{0}` already exists'.format(pool_name)
+        return ret
+
+    if not vdevs:
+        ret['Error'] = 'Missing vdev specification. Please specify vdevs.'
         return ret
 
     # make sure files are present on filesystem
@@ -218,10 +236,21 @@ def create(pool_name, *vdevs, **kwargs):
     devs = ' '.join(dlist)
     zpool = _check_zpool()
     force = kwargs.get('force', False)
-    if force is True:
-        cmd = '{0} create -f {1} {2}'.format(zpool, pool_name, devs)
-    else:
-        cmd = '{0} create {1} {2}'.format(zpool, pool_name, devs)
+    properties = kwargs.get('properties', None)
+    cmd = '{0} create'.format(zpool)
+
+    if force:
+        cmd = '{0} -f'.format(cmd)
+
+    # if zpool properties specified, then
+    # create "-o property=value" pairs
+    if properties:
+        optlist = []
+        for property in properties:
+            optlist.append('-o {0}={1}'.format(property, properties[property]))
+        opts = ' '.join(optlist)
+        cmd = '{0} {1}'.format(cmd, opts)
+    cmd = '{0} {1} {2}'.format(cmd, pool_name, devs)
 
     # Create storage pool
     res = __salt__['cmd.run'](cmd)
