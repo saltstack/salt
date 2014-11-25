@@ -3,24 +3,21 @@
 This module contains the function calls to execute command line scripts
 '''
 
-from __future__ import absolute_import
-
 # Import python libs
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 import os
 import sys
-import traceback
-import logging
-import multiprocessing
-import threading
 import time
+import logging
+import threading
+import traceback
+import multiprocessing
 from random import randint
 
 # Import salt libs
 import salt
-from salt.exceptions import SaltSystemExit, SaltClientError, SaltReqTimeoutError
 import salt.cli
-
+from salt.exceptions import SaltSystemExit, SaltClientError, SaltReqTimeoutError
 
 log = logging.getLogger(__name__)
 
