@@ -12,6 +12,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
+
 def get_latest_snapshot(artifactory_url, repository, group_id, artifact_id, packaging, target_dir='/tmp', target_file=None):
     '''
        Gets latest snapshot of the given artifact
@@ -40,6 +41,7 @@ def get_latest_snapshot(artifactory_url, repository, group_id, artifact_id, pack
     target_file = __resolve_target_file(file_name, target_dir, target_file)
 
     return __save_artifact(snapshot_url, target_file)
+
 
 def get_snapshot(artifactory_url, repository, group_id, artifact_id, packaging, version, snapshot_version=None, target_dir='/tmp', target_file=None):
     '''
@@ -100,10 +102,12 @@ def get_release(artifactory_url, repository, group_id, artifact_id, packaging, v
 
     return __save_artifact(release_url, target_file)
 
+
 def __resolve_target_file(file_name, target_dir, target_file=None):
     if target_file is None:
         target_file = os.path.join(target_dir, file_name)
     return target_file
+
 
 def _get_snapshot_url(artifactory_url, repository, group_id, artifact_id, version, packaging, snapshot_version=None):
     if snapshot_version is None:
@@ -143,8 +147,6 @@ def _get_snapshot_url(artifactory_url, repository, group_id, artifact_id, versio
     return snapshot_url, file_name
 
 
-
-
 def _get_release_url(repository, group_id, artifact_id, packaging, version, artifactory_url):
     group_url = __get_group_id_subpath(group_id)
     # for released versions the suffix for the file is same as version
@@ -175,6 +177,7 @@ def _get_artifact_metadata_url(artifactory_url, repository, group_id, artifact_i
     log.debug('artifact_metadata_url=%s', artifact_metadata_url)
     return artifact_metadata_url
 
+
 def _get_artifact_metadata_xml(artifactory_url, repository, group_id, artifact_id):
     artifact_metadata_url = _get_artifact_metadata_url(artifactory_url=artifactory_url, repository=repository, group_id=group_id, artifact_id=artifact_id)
     try:
@@ -184,6 +187,7 @@ def _get_artifact_metadata_xml(artifactory_url, repository, group_id, artifact_i
 
     log.debug('artifact_metadata_xml=%s', artifact_metadata_xml)
     return artifact_metadata_xml
+
 
 def _get_artifact_metadata(artifactory_url, repository, group_id, artifact_id):
     metadata_xml = _get_artifact_metadata_xml(artifactory_url=artifactory_url, repository=repository, group_id=group_id, artifact_id=artifact_id)
@@ -289,9 +293,11 @@ def __save_artifact(artifact_url, target_file):
 
     return result
 
+
 def __get_group_id_subpath(group_id):
     group_url = group_id.replace('.', '/')
     return group_url
+
 
 def __download(request_url):
     log.debug('Downloading content from {0}'.format(request_url))
@@ -308,6 +314,7 @@ def __download(request_url):
 
     return success, content, comment
 
+
 def __get_error_comment(http_error, request_url):
     if http_error.code == 404:
         comment = 'HTTP Error 404. Request URL: ' + request_url
@@ -319,13 +326,16 @@ def __get_error_comment(http_error, request_url):
 
     return comment
 
+
 def __append_comment(new_comment, current_comment=''):
     return current_comment+'\n'+new_comment
+
 
 class ArtifactoryError(Exception):
 
     def __init__(self, value):
         super(ArtifactoryError, self).__init__()
         self.value = value
+
     def __str__(self):
         return repr(self.value)
