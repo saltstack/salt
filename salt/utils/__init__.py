@@ -2530,21 +2530,21 @@ def get_encodings():
     return encodings
 
 
-def sdecode(string):
+def sdecode(string_):
     '''
     Since we don't know where a string is coming from and that string will
     need to be safely decoded, this function will attempt to decode the string
     until if has a working string that does not stack trace
     '''
-    if not isinstance(string, str):
-        return string
+    if not isinstance(string_, str):
+        return string_
     encodings = get_encodings()
     for encoding in encodings:
         try:
-            decoded = string.decode(encoding)
+            decoded = string_.decode(encoding)
             # Make sure unicode string ops work
             u' ' + decoded  # pylint: disable=W0104
             return decoded
         except UnicodeDecodeError:
             continue
-    return string
+    return string_
