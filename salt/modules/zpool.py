@@ -199,13 +199,13 @@ def create(pool_name, *vdevs, **kwargs):
         passing an additional argument called "properties" and specifying the properties
         with their respective values in the form of a python dictionary::
 
-            properties={'property1': 'value1', 'property2': 'value2'}
+            properties="{'property1': 'value1', 'property2': 'value2'}"
 
         Example:
 
         .. code-block:: bash
 
-            salt '*' zpool.create myzpool /path/to/vdev1 [...] properties={'property1': 'value1', 'property2': 'value2'}]
+            salt '*' zpool.create myzpool /path/to/vdev1 [...] properties="{'property1': 'value1', 'property2': 'value2'}"
     '''
     ret = {}
     dlist = []
