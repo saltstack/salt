@@ -360,6 +360,7 @@ def function(
     cmd_kw['expr_form'] = tgt_type
     cmd_kw['ssh'] = ssh
     cmd_kw['expect_minions'] = expect_minions
+    cmd_kw['_cmd_meta'] = True
     fun = name
     if __opts__['test'] is True:
         ret['comment'] = (
@@ -386,7 +387,9 @@ def function(
 
     for minion, mdata in six.iteritems(cmd_ret):
         m_ret = False
-
+        if mdata.get('retcode'):
+            ret['result'] = False
+            fail.add(minion)
         if mdata.get('failed', False):
             m_func = False
         else:
