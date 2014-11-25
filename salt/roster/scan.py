@@ -52,7 +52,7 @@ class RosterMatcher(object):
             for port in ports:
                 try:
                     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    sock.settimeout(__opts__['ssh_scan_timeout'])
+                    sock.settimeout(float(__opts__['ssh_scan_timeout']))
                     sock.connect((addr, port))
                     sock.shutdown(socket.SHUT_RDWR)
                     sock.close()
