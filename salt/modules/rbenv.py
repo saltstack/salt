@@ -9,6 +9,11 @@ Manage ruby installations with rbenv.
 import os
 import re
 import logging
+try:
+    from shlex import quote as _cmd_quote  # pylint: disable=E0611
+except ImportError:
+    from pipes import quote as _cmd_quote
+from shlex import split as _cmd_split
 
 # Set up logger
 log = logging.getLogger(__name__)
@@ -30,15 +35,21 @@ def _rbenv_exec(command, args='', env=None, runas=None, ret=None):
     binary = _rbenv_bin(runas)
     path = _rbenv_path(runas)
 
-    if env:
-        env = ' {0}'.format(env)
-    env = env or ''
+    environ = {}
+    for token in _cmd_split(env):
+        try:
+            var, val = token.split('=')
+            environ[var] = val
+        except Exception:
+            pass  # if token != var=val, it's not a proper env anyway
+    environ['RBENV_ROOT'] = path
 
-    binary = 'env RBENV_ROOT={0}{1} {2}'.format(path, env, binary)
+    args = ' '.join([_cmd_quote(arg) for arg in _cmd_split(args)])
 
     result = __salt__['cmd.run_all'](
-        '{0} {1} {2}'.format(binary, command, args),
-        runas=runas
+        '{0} {1} {2}'.format(binary, _cmd_quote(command), args),
+        runas=runas,
+        env=environ
     )
 
     if isinstance(ret, dict):
@@ -61,7 +72,8 @@ def _rbenv_path(runas=None):
     if runas in (None, 'root'):
         path = __salt__['config.option']('rbenv.root') or '/usr/local/rbenv'
     else:
-        path = __salt__['config.option']('rbenv.root') or '~{0}/.rbenv'.format(runas)
+        path = _cmd_quote(__salt__['config.option']('rbenv.root')
+                          or '~{0}/.rbenv'.format(runas))
 
     return os.path.expanduser(path)
 
@@ -71,7 +83,8 @@ def _install_rbenv(path, runas=None):
         return True
 
     return 0 == __salt__['cmd.retcode'](
-        'git clone https://github.com/sstephenson/rbenv.git {0}'.format(path), runas=runas)
+        'git clone https://github.com/sstephenson/rbenv.git {0}'
+        .format(_cmd_quote(path)), runas=runas)
 
 
 def _install_ruby_build(path, runas=None):
@@ -80,7 +93,8 @@ def _install_ruby_build(path, runas=None):
         return True
 
     return 0 == __salt__['cmd.retcode'](
-        'git clone https://github.com/sstephenson/ruby-build.git {0}'.format(path), runas=runas)
+        'git clone https://github.com/sstephenson/ruby-build.git {0}'
+        .format(_cmd_quote(path)), runas=runas)
 
 
 def _update_rbenv(path, runas=None):
@@ -88,7 +102,7 @@ def _update_rbenv(path, runas=None):
         return False
 
     return 0 == __salt__['cmd.retcode'](
-        'cd {0} && git pull'.format(path), runas=runas)
+        'git pull', runas=runas, cwd=path)
 
 
 def _update_ruby_build(path, runas=None):
@@ -97,7 +111,7 @@ def _update_ruby_build(path, runas=None):
         return False
 
     return 0 == __salt__['cmd.retcode'](
-        'cd {0} && git pull'.format(path), runas=runas)
+        'git pull', runas=runas, cwd=path)
 
 
 def install(runas=None, path=None):
@@ -298,9 +312,12 @@ def do(cmdline=None, runas=None):
         salt '*' rbenv.do 'gem list bundler' deploy
     '''
     path = _rbenv_path(runas)
+    environ = {'PATH': '{0}/shims:{1}'.format(path, os.environ['PATH'])}
+    cmdline = ' '.join([_cmd_quote(cmd) for cmd in _cmd_split(cmdline)])
     result = __salt__['cmd.run_all'](
-        'env PATH={0}/shims:$PATH {1}'.format(path, cmdline),
-        runas=runas
+        cmdline,
+        runas=runas,
+        env=environ
     )
 
     if result['retcode'] == 0:
