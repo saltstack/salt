@@ -2385,6 +2385,24 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         )
         self.add_option_group(auth_group)
 
+        scan_group = optparse.OptionGroup(
+            self, 'Authentication Options',
+            'Parameters affecting authentication'
+        )
+        scan_group.add_option(
+            '--scan-ports',
+            default='22',
+            dest='ssh_scan_ports',
+            help='Comma-separated list of ports to scan in the scan roster.',
+        )
+        scan_group.add_option(
+            '--scan-timeout',
+            default=0.01,
+            dest='ssh_scan_timeout',
+            help='Scanning socket timeout for the scan roster.',
+        )
+        self.add_option_group(scan_group)
+
     def _mixin_after_parsed(self):
         if not self.args:
             self.print_help()
