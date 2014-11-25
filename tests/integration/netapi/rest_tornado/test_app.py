@@ -1,19 +1,34 @@
-# coding: utf-8
-import json
+# -*- coding: utf-8 -*-
 
-from salt.netapi.rest_tornado import saltnado
-
-import tornado.testing
-import tornado.concurrent
-import tornado.web
-import tornado.ioloop
-
-from unit.netapi.rest_tornado.test_handlers import SaltnadoTestCase
-
+# Import Python Libs
 import json
 import time
 
+# Import Salt Libs
+from salt.netapi.rest_tornado import saltnado
+from unit.netapi.rest_tornado.test_handlers import SaltnadoTestCase
 
+# Import Salt Testing Libs
+from salttesting import skipIf
+from salttesting.helpers import ensure_in_syspath
+
+ensure_in_syspath('../../../')
+
+try:
+    import tornado
+    HAS_TORNADO = True
+except ImportError:
+    HAS_TORNADO = False
+
+try:
+    from zmq.eventloop.ioloop import ZMQIOLoop
+    HAS_ZMQ_IOLOOP = True
+except ImportError:
+    HAS_ZMQ_IOLOOP = False
+
+
+@skipIf(HAS_TORNADO is False, 'Tornado must be installed to run these tests')
+@skipIf(HAS_ZMQ_IOLOOP is False, 'PyZMQ version must be >= 14.0.1 to run these tests.')
 class TestSaltAPIHandler(SaltnadoTestCase):
     def get_app(self):
         application = tornado.web.Application([('/', saltnado.SaltAPIHandler)], debug=True)
@@ -245,6 +260,8 @@ class TestSaltAPIHandler(SaltnadoTestCase):
         self.assertEqual(response_obj['return'], [['minion', 'sub_minion']])
 
 
+@skipIf(HAS_TORNADO is False, 'Tornado must be installed to run these tests')
+@skipIf(HAS_ZMQ_IOLOOP is False, 'PyZMQ version must be >= 14.0.1 to run these tests.')
 class TestMinionSaltAPIHandler(SaltnadoTestCase):
     def get_app(self):
         application = tornado.web.Application([(r"/minions/(.*)", saltnado.MinionSaltAPIHandler),
@@ -336,6 +353,8 @@ class TestMinionSaltAPIHandler(SaltnadoTestCase):
         self.assertEqual(response.code, 400)
 
 
+@skipIf(HAS_TORNADO is False, 'Tornado must be installed to run these tests')
+@skipIf(HAS_ZMQ_IOLOOP is False, 'PyZMQ version must be >= 14.0.1 to run these tests.')
 class TestJobsSaltAPIHandler(SaltnadoTestCase):
     def get_app(self):
         application = tornado.web.Application([(r"/jobs/(.*)", saltnado.JobsSaltAPIHandler),
@@ -389,6 +408,8 @@ class TestJobsSaltAPIHandler(SaltnadoTestCase):
 
 # TODO: run all the same tests from the root handler, but for now since they are
 # the same code, we'll just sanity check
+@skipIf(HAS_TORNADO is False, 'Tornado must be installed to run these tests')
+@skipIf(HAS_ZMQ_IOLOOP is False, 'PyZMQ version must be >= 14.0.1 to run these tests.')
 class TestRunSaltAPIHandler(SaltnadoTestCase):
     def get_app(self):
         application = tornado.web.Application([("/run", saltnado.RunSaltAPIHandler),
@@ -415,6 +436,8 @@ class TestRunSaltAPIHandler(SaltnadoTestCase):
         self.assertEqual(response_obj['return'], [{'minion': True, 'sub_minion': True}])
 
 
+@skipIf(HAS_TORNADO is False, 'Tornado must be installed to run these tests')
+@skipIf(HAS_ZMQ_IOLOOP is False, 'PyZMQ version must be >= 14.0.1 to run these tests.')
 class TestEventsSaltAPIHandler(SaltnadoTestCase):
     def get_app(self):
         application = tornado.web.Application([(r"/events", saltnado.EventsSaltAPIHandler),
@@ -450,7 +473,7 @@ class TestEventsSaltAPIHandler(SaltnadoTestCase):
         else:
             # wait so that we can ensure that the next future is ready to go
             # to make sure we don't explode if the next one is ready
-            tornado.ioloop.IOLoop.current().add_timeout(time.time() + 0.5, self._stop)
+            ZMQIOLoop.current().add_timeout(time.time() + 0.5, self._stop)
 
         event = event.strip()
         # if we got a retry, just continue
@@ -460,6 +483,8 @@ class TestEventsSaltAPIHandler(SaltnadoTestCase):
             self.assertTrue(data.startswith('data: '))
 
 
+@skipIf(HAS_TORNADO is False, 'Tornado must be installed to run these tests')
+@skipIf(HAS_ZMQ_IOLOOP is False, 'PyZMQ version must be >= 14.0.1 to run these tests.')
 class TestWebhookSaltAPIHandler(SaltnadoTestCase):
     def get_app(self):
         application = tornado.web.Application([(r"/hook(/.*)?", saltnado.WebhookSaltAPIHandler),
