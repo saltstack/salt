@@ -97,7 +97,7 @@ def zpool_list():
     '''
     .. deprecated:: 2014.7.0
        Use :py:func:`~salt.modules.zpool.list` instead.
-    
+
     Return a list of all pools in the system with health status and space usage
 
     CLI Example:
