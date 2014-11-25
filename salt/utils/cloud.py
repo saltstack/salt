@@ -67,6 +67,7 @@ from salt.exceptions import (
 
 # Import third party libs
 import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from jinja2 import Template
 import yaml
 
@@ -737,7 +738,7 @@ def validate_windows_cred(host, username='Administrator', password=None, retries
     '''
     Check if the windows credentials are valid
     '''
-    for i in xrange(retries):
+    for _ in range(retries):
         retcode = win_cmd('winexe -U {0}%{1} //{2} "hostname"'.format(
             username, password, host
         ))
