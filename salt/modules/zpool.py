@@ -77,8 +77,27 @@ def iostat(name=''):
     return ret
 
 
+def list():
+    '''
+    Return a list of all pools in the system with health status and space usage
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zpool.list
+    '''
+    zpool = _check_zpool()
+    res = __salt__['cmd.run']('{0} list'.format(zpool))
+    pool_list = [l for l in res.splitlines()]
+    return {'pools': pool_list}
+
+
 def zpool_list():
     '''
+    .. deprecated:: 2014.7.0
+       Use :py:func:`~salt.modules.zpool.list` instead.
+
     Return a list of all pools in the system with health status and space usage
 
     CLI Example:
@@ -87,10 +106,13 @@ def zpool_list():
 
         salt '*' zpool.zpool_list
     '''
-    zpool = _check_zpool()
-    res = __salt__['cmd.run']('{0} list'.format(zpool))
-    pool_list = [l for l in res.splitlines()]
-    return {'pools': pool_list}
+    salt.utils.warn_until(
+            'Boron',
+            'The \'zpool_list()\' module function is being deprecated and is '
+            'being renamed to \'list()\'. This function \'zpool_list()\' will be removed in '
+            'Salt Boron.'
+        )
+    return list()
 
 
 def exists(pool_name):
