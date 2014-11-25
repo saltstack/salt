@@ -200,6 +200,7 @@ def _get_artifact_metadata(artifactory_url, repository, group_id, artifact_id):
         'latest_version': latest_version
     }
 
+
 # functions for handling snapshots
 def _get_snapshot_version_metadata_url(artifactory_url, repository, group_id, artifact_id, version):
     group_url = __get_group_id_subpath(group_id)
@@ -212,6 +213,7 @@ def _get_snapshot_version_metadata_url(artifactory_url, repository, group_id, ar
                                          version=version)
     log.debug('snapshot_version_metadata_url=%s', snapshot_version_metadata_url)
     return snapshot_version_metadata_url
+
 
 def _get_snapshot_version_metadata_xml(artifactory_url, repository, group_id, artifact_id, version):
     snapshot_version_metadata_url = _get_snapshot_version_metadata_url(artifactory_url=artifactory_url, repository=repository, group_id=group_id, artifact_id=artifact_id, version=version)
@@ -243,14 +245,12 @@ def _get_snapshot_version_metadata(artifactory_url, repository, group_id, artifa
     }
 
 
-
-
 def __save_artifact(artifact_url, target_file):
     log.debug("__save_artifact(%s, %s)", artifact_url, target_file)
     result = {
         'status': False,
         'changes': {},
-        'comment':''
+        'comment': ''
     }
 
     if os.path.isfile(target_file):
