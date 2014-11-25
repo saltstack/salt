@@ -705,7 +705,8 @@ def validate_windows_cred(host, username='Administrator', password=None, retries
         retcode = win_cmd('winexe -U {0}%{1} //{2} "hostname"'.format(
             username, password, host
         ))
-        if retcode == 0: break
+        if retcode == 0:
+            break
         time.sleep(1)
     return retcode == 0
 
