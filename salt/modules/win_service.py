@@ -59,7 +59,7 @@ def get_enabled():
     else:
         ret = set()
         services = []
-        cmd = 'sc query type= service state= all bufsize= {0}'.format(BUFFSIZE)
+        cmd = list2cmdline(['sc', 'query', 'type=', 'service', 'state=', 'all', 'bufsize=', str(BUFFSIZE)])
         lines = __salt__['cmd.run'](cmd).splitlines()
         for line in lines:
             if 'SERVICE_NAME:' in line:
@@ -68,7 +68,7 @@ def get_enabled():
                     continue
                 services.append(comps[1].strip())
         for service in services:
-            cmd2 = list2cmdline(['sc', 'qc', service, BUFFSIZE])
+            cmd2 = list2cmdline(['sc', 'qc', service, str(BUFFSIZE)])
             lines = __salt__['cmd.run'](cmd2).splitlines()
             for line in lines:
                 if 'AUTO_START' in line:
@@ -93,7 +93,7 @@ def get_disabled():
     else:
         ret = set()
         services = []
-        cmd = 'sc query type= service state= all bufsize= {0}'.format(BUFFSIZE)
+        cmd = list2cmdline(['sc', 'query', 'type=', 'service', 'state=', 'all', 'bufsize=', str(BUFFSIZE)])
         lines = __salt__['cmd.run'](cmd).splitlines()
         for line in lines:
             if 'SERVICE_NAME:' in line:
@@ -177,7 +177,7 @@ def get_service_name(*args):
     ret = {}
     services = []
     display_names = []
-    cmd = 'sc query type= service state= all bufsize= {0}'.format(BUFFSIZE)
+    cmd = list2cmdline(['sc', 'query', 'type=', 'service', 'state=', 'all', 'bufsize=', str(BUFFSIZE)])
     lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         if 'SERVICE_NAME:' in line:
@@ -275,7 +275,7 @@ def status(name, sig=None):
 
         salt '*' service.status <service name> [service signature]
     '''
-    cmd = list2cmdline(['sc', 'query', name, BUFFSIZE])
+    cmd = list2cmdline(['sc', 'query', name])
     statuses = __salt__['cmd.run'](cmd).splitlines()
     for line in statuses:
         if 'RUNNING' in line:
