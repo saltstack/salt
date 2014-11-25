@@ -4325,7 +4325,10 @@ def diskusage(path):
 
     total_size = 0
     seen = set()
-
+    if os.path.isfile(path):
+        ret = stat.st_size
+        return ret
+    
     for dirpath, dirnames, filenames in os.walk(path):
         for f in filenames:
             fp = os.path.join(dirpath, f)
