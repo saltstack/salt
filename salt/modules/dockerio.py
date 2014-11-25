@@ -1815,6 +1815,12 @@ def load(imagepath):
 
     imagepath
         imagepath to docker tar file
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' docker.load /path/to/image
     '''
 
     status = base_status.copy()
@@ -1851,6 +1857,12 @@ def save(image, filename):
 
     filename
         The filename of the saved docker image
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' docker.save arch_image /path/to/save/image
     '''
     status = base_status.copy()
     ok = False
