@@ -53,6 +53,7 @@ MOCK_MODULES = [
     'yaml.nodes',
     'yaml.scanner',
     'zmq',
+    'zmq.eventloop',
 
     # third-party libs for cloud modules
     'libcloud',
