@@ -192,6 +192,20 @@ def create(pool_name, *vdevs, **kwargs):
         salt '*' zpool.create myzpool raidz1 /path/to/vdev1 /path/to/vdev2 raidz2 /path/to/vdev3 /path/to/vdev4 /path/to/vdev5 [...] [force=True|False]
         salt '*' zpool.create myzpool mirror /path/to/vdev1 [...] mirror /path/to/vdev2 /path/to/vdev3 [...] [force=True|False]
         salt '*' zpool.create myhybridzpool mirror /tmp/file1 [...] log mirror /path/to/vdev1 [...] cache /path/to/vdev2 [...] [force=True|False]
+
+    .. note::
+
+        Zpool properties can be specified at the time of creation of the pool by
+        passing an additional argument called "properties" and specifying the properties
+        with their respective values in the form of a python dictionary::
+
+            properties={'property1': 'value1', 'property2': 'value2'}
+
+        Example:
+
+        .. code-block:: bash
+
+            salt '*' zpool.create myzpool /path/to/vdev1 [...] properties={'property1': 'value1', 'property2': 'value2'}]
     '''
     ret = {}
     dlist = []
