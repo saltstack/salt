@@ -144,6 +144,10 @@ def run_tests(*test_cases, **kwargs):
                     return SaltTestcaseParser.run_testcase(self, testcase)
             return SaltTestcaseParser.run_testcase(self, testcase)
 
+        def exit(self, status=0, msg=None):
+            TestDaemon.cleanup_runtime_config_instane()
+            TestcaseParser.exit(self, status, msg)
+
     parser = TestcaseParser()
     parser.parse_args()
     for case in test_cases:
@@ -612,6 +616,14 @@ class TestDaemon(object):
         cls.syndic_opts = syndic_opts
         cls.syndic_master_opts = syndic_master_opts
         # <---- Verify Environment -----------------------------------------------------------------------------------
+
+    @classmethod
+    def cleanup_runtime_config_instane(cls):
+        # Explicit and forced cleanup
+        for key in RUNTIME_CONFIGS.keys():
+            instance = RUNTIME_CONFIGS.pop(key)
+            del instance
+        del RUNTIME_CONFIGS
 
     def __exit__(self, type, value, traceback):
         '''
@@ -1161,7 +1173,7 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
         '''
         Execute salt-run
         '''
-        arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
+        arg_str = '-c {0} {1} --async'.format(self.get_config_dir(), arg_str)
         return self.run_script('salt-run', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
 
     def run_run_plus(self, fun, options='', *arg, **kwargs):

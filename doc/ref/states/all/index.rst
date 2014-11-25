@@ -56,6 +56,7 @@ Full list of builtin state modules
     ini_manage
     ipset
     iptables
+    jboss7
     keyboard
     keystone
     kmod
