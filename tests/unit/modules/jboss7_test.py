@@ -172,8 +172,8 @@ class JBoss7TestCase(TestCase):
         def cli_command_response(jboss_config, cli_command):
             if cli_command == '/subsystem=datasources/data-source="appDS":read-resource':
                 return {
-                    'outcome' : 'success',
-                    'result' : {
+                    'outcome': 'success',
+                    'result': {
                         'driver-name': 'mysql',
                         'connection-url': 'jdbc:mysql://localhost:3306/app',
                         'jndi-name': 'java:jboss/datasources/appDS',
@@ -216,8 +216,8 @@ class JBoss7TestCase(TestCase):
 
             elif cli_command == '/subsystem=datasources/data-source="appDS":read-resource':
                 return {
-                    'outcome' : 'success',
-                    'result' : {
+                    'outcome': 'success',
+                    'result': {
                         'driver-name': 'mysql',
                         'connection-url': 'jdbc:mysql://localhost:3306/app',
                         'jndi-name': 'java:jboss/datasources/appDS',
