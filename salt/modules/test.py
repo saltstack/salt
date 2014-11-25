@@ -31,6 +31,7 @@ def echo(text):
 
         salt '*' test.echo 'foo bar baz quo qux'
     '''
+    import pudb; pu.db
     return text
 
 

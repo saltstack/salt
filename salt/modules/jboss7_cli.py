@@ -57,6 +57,12 @@ def run_command(jboss_config, command, fail_on_error=True):
     fail_on_error (default=True)
            Is true, raise CommandExecutionException exception if execution fails.
            If false, 'success' property of the returned dictionary is set to False
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' jboss7_cli.run_command '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}' my_command
     '''
     cli_command_result = __call_cli(jboss_config, command)
 
@@ -85,6 +91,12 @@ def run_operation(jboss_config, operation, fail_on_error=True, retries=1):
            If false, 'success' property of the returned dictionary is set to False
     retries:
            Number of retries in case of "JBAS012144: Could not connect to remote" error.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' jboss7_cli.run_operation '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}' my_operation
     '''
     cli_command_result = __call_cli(jboss_config, operation, retries)
 
