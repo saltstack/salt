@@ -117,7 +117,7 @@ def delete_vm(options):
     proc.communicate()
 
 
-def echo_parseable_environment(options):
+def echo_parseable_environment(options, parser):
     '''
     Echo NAME=VAL parseable output
     '''
@@ -959,7 +959,7 @@ def parse():
         parser.exit('--provider or --pull-request is required')
 
     if options.echo_parseable_environment:
-        echo_parseable_environment(options)
+        echo_parseable_environment(options, parser)
         parser.exit(0)
 
     if not options.test_git_commit and not options.pull_request:

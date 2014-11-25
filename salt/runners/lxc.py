@@ -15,7 +15,7 @@ import logging
 from salt.ext.six import string_types
 
 # Import Salt libs
-from salt.utils.odict import _OrderedDict
+from salt.utils.odict import OrderedDict as _OrderedDict
 import salt.client
 import salt.utils.virt
 import salt.utils.cloud
