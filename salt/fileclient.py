@@ -26,17 +26,12 @@ import salt.fileserver
 import salt.utils
 import salt.utils.templates
 import salt.utils.gzip_util
+from salt.utils.openstack.swift import SaltSwift
 
 # pylint: disable=no-name-in-module,import-error
 import salt.ext.six.moves.BaseHTTPServer as BaseHTTPServer
 from salt.ext.six.moves.urllib.error import HTTPError, URLError
 from salt.ext.six.moves.urllib.parse import urlparse, urlunparse
-from salt.ext.six.moves.urllib.request import (
-        HTTPPasswordMgrWithDefaultRealm as url_passwd_mgr,
-        HTTPBasicAuthHandler as url_auth_handler,
-        build_opener as url_build_opener,
-        install_opener as url_install_opener
-)
 # pylint: enable=no-name-in-module,import-error
 
 log = logging.getLogger(__name__)
