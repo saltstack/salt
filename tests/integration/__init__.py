@@ -144,6 +144,10 @@ def run_tests(*test_cases, **kwargs):
                     return SaltTestcaseParser.run_testcase(self, testcase)
             return SaltTestcaseParser.run_testcase(self, testcase)
 
+        def exit(self, status=0, msg=None):
+            TestDaemon.cleanup_runtime_config_instane()
+            TestcaseParser.exit(self, status, msg)
+
     parser = TestcaseParser()
     parser.parse_args()
     for case in test_cases:
@@ -613,6 +617,14 @@ class TestDaemon(object):
         cls.syndic_master_opts = syndic_master_opts
         # <---- Verify Environment -----------------------------------------------------------------------------------
 
+    @classmethod
+    def cleanup_runtime_config_instane(cls):
+        # Explicit and forced cleanup
+        for key in RUNTIME_CONFIGS.keys():
+            instance = RUNTIME_CONFIGS.pop(key)
+            del instance
+        del RUNTIME_CONFIGS
+
     def __exit__(self, type, value, traceback):
         '''
         Kill the minion and master processes
@@ -885,7 +897,7 @@ class TestDaemon(object):
         jid_info = self.client.run_job(
             list(targets), 'saltutil.sync_{0}'.format(modules_kind),
             expr_form='list',
-            timeout=9999999999999999,
+            timeout=999999999999999,
         )
 
         if self.wait_for_jid(targets, jid_info['jid'], timeout) is False:
