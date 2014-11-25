@@ -45,6 +45,7 @@ from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
+
 def run_command(jboss_config, command, fail_on_error=True):
     '''
     Execute a command against jboss instance through the CLI interface.
@@ -68,6 +69,7 @@ def run_command(jboss_config, command, fail_on_error=True):
             cli_command_result['success'] = False
 
     return cli_command_result
+
 
 def run_operation(jboss_config, operation, fail_on_error=True, retries=1):
     '''
@@ -108,8 +110,6 @@ def run_operation(jboss_config, operation, fail_on_error=True, retries=1):
                     'stderr': cli_command_result['stderr'],
                     'retcode': cli_command_result['retcode']
                 }
-
-
     return cli_result
 
 
@@ -140,13 +140,12 @@ def __call_cli(jboss_config, command, retries=1):
         raise CommandExecutionError('Could not authenticate against controller, please check username and password for the management console. Err code: {retcode}, stdout: {stdout}, stderr: {stderr}'.format(**cli_command_result))
 
     # It may happen that eventhough server is up it may not respond to the call
-    if cli_command_result['retcode'] == 1 and 'JBAS012144' in cli_command_result['stderr'] and retries > 0: # Cannot connect to cli
+    if cli_command_result['retcode'] == 1 and 'JBAS012144' in cli_command_result['stderr'] and retries > 0:  # Cannot connect to cli
         log.debug('Command failed, retrying... (%d tries left)', retries)
         time.sleep(3)
         return __call_cli(jboss_config, command, retries - 1)
 
     return cli_command_result
-
 
 
 def __escape_command(command):
@@ -196,9 +195,10 @@ def __escape_command(command):
 
     Remember that the command that comes in is already (3) format. Now we need to escape it further to be able to pass it to command line.
     '''
-    result = command.replace('\\', '\\\\') # replace \ -> \\
-    result = result.replace('"', '\\"')    # replace " -> \"
+    result = command.replace('\\', '\\\\')  # replace \ -> \\
+    result = result.replace('"', '\\"')     # replace " -> \"
     return result
+
 
 def _is_cli_output(text):
     cli_re = re.compile(r"^\s*{.+}\s*$", re.DOTALL)
@@ -206,6 +206,7 @@ def _is_cli_output(text):
         return True
     else:
         return False
+
 
 def _parse(cli_output):
     tokens = __tokenize(cli_output)
@@ -219,8 +220,9 @@ def __process_tokens(tokens):
     result, token_no = __process_tokens_internal(tokens)
     return result
 
+
 def __process_tokens_internal(tokens, start_at=0):
-    if __is_dict_start(tokens[start_at]) and start_at == 0: # the top object
+    if __is_dict_start(tokens[start_at]) and start_at == 0:  # the top object
         return __process_tokens_internal(tokens, start_at=1)
 
     log.debug("__process_tokens, start_at="+str(start_at))
@@ -291,46 +293,60 @@ def __tokenize(cli_output):
     log.debug("tokens=%s", str(tokens))
     return tokens
 
+
 def __is_dict_start(token):
     return token == '{'
+
 
 def __is_dict_end(token):
     return token == '}'
 
+
 def __is_boolean(token):
     return token == 'true' or token == 'false'
+
 
 def __get_boolean(token):
     return token == 'true'
 
+
 def __is_int(token):
     return token.isdigit()
+
 
 def __get_int(token):
     return int(token)
 
+
 def __is_long(token):
     return token[0:-1].isdigit() and token[-1] == 'L'
+
 
 def __get_long(token):
     return long(token[0:-1])
 
+
 def __is_datatype(token):
     return token in ("INT", "BOOLEAN", "STRING", "OBJECT")
+
 
 def __get_datatype(token):
     return token
 
+
 def __is_undefined(token):
     return token == 'undefined'
+
 
 def __is_quoted_string(token):
     return token[0] == '"' and token[-1] == '"'
 
+
 def __get_quoted_string(token):
-    result = token[1:-1]  #  remove quotes
-    result = result.replace('\\\\', '\\') # unescape the output, by default all the string are escaped in the output
+    result = token[1:-1]  # remove quotes
+    result = result.replace('\\\\', '\\')  # unescape the output, by default all the string are escaped in the output
     return result
+
 
 def __is_assignment(token):
     return '=>'

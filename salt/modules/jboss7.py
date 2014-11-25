@@ -27,6 +27,7 @@ from salt.utils import dictdiffer
 
 log = logging.getLogger(__name__)
 
+
 def status(jboss_config, timeout=5):
     '''
        Get status of running jboss instance.
@@ -38,6 +39,7 @@ def status(jboss_config, timeout=5):
     log.debug("======================== MODULE FUNCTION: jboss7.status")
     operation = ':read-attribute(name=server-state)'
     return __salt__['jboss7_cli.run_operation'](jboss_config, operation, fail_on_error=False, retries=0)
+
 
 def stop_server(jboss_config):
     '''
@@ -51,7 +53,7 @@ def stop_server(jboss_config):
     operation = ':shutdown'
     shutdown_result = __salt__['jboss7_cli.run_operation'](jboss_config, operation, fail_on_error=False)
     # JBoss seems to occasionaly close the channel immediately when :shutdown is sent
-    if shutdown_result['success'] or (shutdown_result['success'] == False and 'Operation failed: Channel closed' in shutdown_result['stdout']):
+    if shutdown_result['success'] or (not shutdown_result['success'] and 'Operation failed: Channel closed' in shutdown_result['stdout']):
         return shutdown_result
     else:
         raise Exception('''Cannot handle error, return code={retcode}, stdout='{stdout}', stderr='{stderr}' '''.format(**shutdown_result))
@@ -69,7 +71,7 @@ def reload(jboss_config):
     operation = ':reload'
     reload_result = __salt__['jboss7_cli.run_operation'](jboss_config, operation, fail_on_error=False)
     # JBoss seems to occasionaly close the channel immediately when :reload is sent
-    if reload_result['success'] or (reload_result['success'] == False and
+    if reload_result['success'] or (not reload_result['success'] and
                                          ('Operation failed: Channel closed' in reload_result['stdout'] or
                                           'Communication error: java.util.concurrent.ExecutionException: Operation failed' in reload_result['stdout'])):
         return reload_result
@@ -106,6 +108,7 @@ def create_datasource(jboss_config, name, datasource_properties):
 
     return __salt__['jboss7_cli.run_operation'](jboss_config, operation, fail_on_error=False)
 
+
 def __get_properties_assignment_string(datasource_properties, ds_resource_description):
     assignment_strings = []
     ds_attributes = ds_resource_description['attributes']
@@ -114,8 +117,10 @@ def __get_properties_assignment_string(datasource_properties, ds_resource_descri
 
     return ','.join(assignment_strings)
 
+
 def __get_single_assignment_string(key, val, ds_attributes):
     return '{0}={1}'.format(key, __format_value(key, val, ds_attributes))
+
 
 def __format_value(key, value, ds_attributes):
     type = ds_attributes[key]['type']
@@ -136,6 +141,7 @@ def __format_value(key, value, ds_attributes):
         return '"{0}"'.format(value)
     else:
         raise Exception("Don't know how to format value {0} of type {1}".format(value, type))
+
 
 def update_datasource(jboss_config, name, new_properties):
     '''
@@ -177,6 +183,7 @@ def update_datasource(jboss_config, name, new_properties):
 
     return ret
 
+
 def __get_datasource_resource_description(jboss_config, name):
     log.debug("======================== MODULE FUNCTION: jboss7.__get_datasource_resource_description, name=%s", name)
     operation = '/subsystem=datasources/data-source="{name}":read-resource-description'.format(name=name)
@@ -197,6 +204,7 @@ def read_datasource(jboss_config, name):
     log.debug("======================== MODULE FUNCTION: jboss7.read_datasource, name=%s", name)
     return __read_datasource(jboss_config, name)
 
+
 def create_simple_binding(jboss_config, binding_name, value):
     '''
        Create a simple jndi binding in the running jboss instance
@@ -214,6 +222,7 @@ def create_simple_binding(jboss_config, binding_name, value):
           value=__escape_binding_value(value)
     )
     return __salt__['jboss7_cli.run_operation'](jboss_config, operation)
+
 
 def update_simple_binding(jboss_config, binding_name, value):
     '''
@@ -233,6 +242,7 @@ def update_simple_binding(jboss_config, binding_name, value):
     )
     return __salt__['jboss7_cli.run_operation'](jboss_config, operation)
 
+
 def read_simple_binding(jboss_config, binding_name):
     '''
        Read jndi binding in the running jboss instance
@@ -245,9 +255,11 @@ def read_simple_binding(jboss_config, binding_name):
     log.debug("======================== MODULE FUNCTION: jboss7.read_simple_binding, %s", binding_name)
     return __read_simple_binding(jboss_config, binding_name)
 
+
 def __read_simple_binding(jboss_config, binding_name):
     operation = '/subsystem=naming/binding="{binding_name}":read-resource'.format(binding_name=binding_name)
     return __salt__['jboss7_cli.run_operation'](jboss_config, operation)
+
 
 def __update_datasource_property(jboss_config, datasource_name, name, value, ds_attributes):
     log.debug("======================== MODULE FUNCTION: jboss7.__update_datasource_property, datasource_name=%s, name=%s, value=%s", datasource_name, name, value)
@@ -265,10 +277,12 @@ def __read_datasource(jboss_config, name):
 
     return operation_result
 
+
 def __escape_binding_value(binding_name):
-    result = binding_name.replace('\\', '\\\\\\\\') # replace \ -> \\\\
+    result = binding_name.replace('\\', '\\\\\\\\')  # replace \ -> \\\\
 
     return result
+
 
 def remove_datasource(jboss_config, name):
     '''
@@ -297,6 +311,7 @@ def deploy(jboss_config, source_file):
     command = 'deploy {source_file} --force '.format(source_file=source_file)
     return __salt__['jboss7_cli.run_command'](jboss_config, command, fail_on_error=False)
 
+
 def list_deployments(jboss_config):
     '''
        List all deployments on the jboss instance
@@ -312,6 +327,7 @@ def list_deployments(jboss_config):
         deployments = re.split('\\s*', command_result['stdout'])
     log.debug('deployments=%s', str(deployments))
     return deployments
+
 
 def undeploy(jboss_config, deployment):
     '''
