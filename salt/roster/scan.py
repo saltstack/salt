@@ -35,6 +35,10 @@ class RosterMatcher(object):
         '''
         addrs = ()
         ret = {}
+        ports = __opts__['ssh_scan_ports']
+        if not isinstance(ports, list):
+            # Comma-separate list of integers
+            ports = list(map(int, str(ports).split(',')))
         try:
             salt.ext.ipaddr.IPAddress(self.tgt)
             addrs = [self.tgt]
@@ -45,13 +49,14 @@ class RosterMatcher(object):
                 pass
         for addr in addrs:
             addr = str(addr)
-            try:
-                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                sock.settimeout(0.01)
-                sock.connect((addr, 22))
-                sock.shutdown(socket.SHUT_RDWR)
-                sock.close()
-                ret[addr] = {'host': addr}
-            except socket.error:
-                pass
+            for port in ports:
+                try:
+                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    sock.settimeout(__opts__['ssh_scan_timeout'])
+                    sock.connect((addr, port))
+                    sock.shutdown(socket.SHUT_RDWR)
+                    sock.close()
+                    ret[addr] = {'host': addr, 'port': port }
+                except socket.error:
+                    pass
         return ret
