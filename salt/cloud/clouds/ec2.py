@@ -1744,12 +1744,12 @@ def query_instance(vm_=None, call=None):
 
     attempts = 5
     while attempts > 0:
-        data, requesturl = aws.query(params,
+        data, requesturl = aws.query(params,  # pylint: disable=W0632
                                      location=location,
                                      provider=provider,
                                      opts=__opts__,
                                      return_url=True,
-                                     sigver='4')  # pylint: disable=W0632
+                                     sigver='4')
         log.debug('The query returned: {0}'.format(data))
 
         if isinstance(data, dict) and 'error' in data:
@@ -3223,12 +3223,12 @@ def _toggle_delvol(name=None, instance_id=None, device=None, volume_id=None,
     else:
         params = {'Action': 'DescribeInstances',
                   'InstanceId.1': instance_id}
-        data, requesturl = aws.query(params,
+        data, requesturl = aws.query(params,  # pylint: disable=W0632
                                      return_url=True,
                                      location=get_location(),
                                      provider=get_provider(),
                                      opts=__opts__,
-                                     sigver='4')  # pylint: disable=W0632
+                                     sigver='4')
 
     blockmap = data[0]['instancesSet']['item']['blockDeviceMapping']
 
