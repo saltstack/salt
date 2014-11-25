@@ -65,7 +65,6 @@ class CMDMODTestCase(TestCase):
             self.assertEqual(cmdmod._check_loglevel(quiet=True), None)
 
 
-
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(CMDMODTestCase, needs_daemon=False)
