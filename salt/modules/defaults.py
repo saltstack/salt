@@ -35,7 +35,7 @@ def _get_files(pillar_name):
     return __context__['cp.fileclient'].cache_files(paths)
 
 
-def _load(pillar_name, defaults_path):
+def _load(defaults_path):
     '''
     Given a pillar_name and the template cache location, attempt to load
     the defaults.json from the cache location. If it does not exist, try
@@ -116,7 +116,7 @@ def get(key, default=''):
 
     _get_files(pillar_name)
 
-    defaults = _load(pillar_name, defaults_path)
+    defaults = _load(defaults_path)
 
     value = __salt__['pillar.get']('{0}:{1}'.format(pillar_name, key), None)
 
