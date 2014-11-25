@@ -47,7 +47,7 @@ __func_alias__ = {
     'ls_': 'ls'
 }
 
-DEFAULT_NIC_PROFILE = {'eth0': {'link': 'br0', 'type': 'veth', 'flags': 'up'}}
+DEFAULT_NIC_PROFILE = {'eth0': {}}
 SEED_MARKER = '/lxc.initial_seed'
 PATH = 'PATH=/bin:/usr/bin:/sbin:/usr/sbin:/opt/bin:' \
        '/usr/local/bin:/usr/local/sbin'
@@ -291,6 +291,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
         for i in ('mac', 'hwaddr'):
             if i in iopts:
                 ethx['hwaddr'] = iopts[i]
+                ethx['mac'] = iopts[i]
         if 'hwaddr' not in ethx:
             raise ValueError('No mac for {0}'.format(ifh))
     gateway = vm_.get('gateway', 'auto')
@@ -298,7 +299,6 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     lxc_init_interface = {}
     lxc_init_interface['name'] = name
     lxc_init_interface['config'] = config
-    lxc_init_interface['memory'] = 0  # nolimit
     lxc_init_interface['pub_key'] = pub_key
     lxc_init_interface['priv_key'] = priv_key
     lxc_init_interface['bridge'] = bridge
@@ -322,6 +322,11 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     lxc_init_interface['autostart'] = autostart
     lxc_init_interface['users'] = users
     lxc_init_interface['password'] = password
+    lxc_init_interface['network_profile'] = {}
+    lxc_init_interface['memory'] = vm_.get('memory', 0)  # nolimit
+    for i in ['cpu', 'cpuset', 'cpushare']:
+        if vm_.get(i, None):
+            lxc_init_interface[i] = vm_[i]
     return lxc_init_interface
 
 
@@ -453,17 +458,18 @@ def _rand_cpu_str(cpu):
 def _network_conf(conf_tuples=None, **kwargs):
     nic = kwargs.pop('network_profile', None)
     ret = []
-    if not nic:
+    nic_opts = kwargs.pop('nic_opts', {})
+    if not conf_tuples:
+        conf_tuples = []
+    old = _get_veths(conf_tuples)
+    if not nic and not nic_opts and not old:
         return ret
     kwargs = copy.deepcopy(kwargs)
     gateway = kwargs.pop('gateway', None)
     bridge = kwargs.get('bridge', None)
-    if not conf_tuples:
-        conf_tuples = []
 
-    if nic:
+    if isinstance(nic, dict):
         nicp = get_network_profile(nic)
-        nic_opts = kwargs.pop('nic_opts', {})
         if nic_opts:
             for dev, args in nic_opts.items():
                 ethx = nicp.setdefault(dev, {})
@@ -472,33 +478,76 @@ def _network_conf(conf_tuples=None, **kwargs):
                 except AttributeError:
                     raise SaltInvocationError('Invalid nic_opts configuration')
         ifs = [a for a in nicp]
+        ifs += [a for a in old if a not in nicp]
         ifs.sort()
         gateway_set = False
         for dev in ifs:
-            args = nicp[dev]
-            ret.append({'lxc.network.type': args.pop('type', '')})
-            ret.append({'lxc.network.name': dev})
-            ret.append({'lxc.network.flags': args.pop('flags', 'up')})
-            opts = nic_opts.get(dev) if nic_opts else {}
+            args = nicp.get(dev, {})
+            opts = nic_opts.get(dev, {}) if nic_opts else {}
+            old_if = old.get(dev, {})
+            flags = opts.get('flags', '')
             mac = opts.get('mac', '')
-            if opts:
-                ipv4 = opts.get('ipv4')
-                ipv6 = opts.get('ipv6')
-            else:
-                ipv4, ipv6 = None, None
-                if not mac:
-                    mac = salt.utils.gen_mac()
-            if mac:
-                ret.append({'lxc.network.hwaddr': mac})
-            if ipv4:
-                ret.append({'lxc.network.ipv4': ipv4})
-            if ipv6:
-                ret.append({'lxc.network.ipv6': ipv6})
+            type_ = opts.get('type', args.get('type', ''))
+            link = opts.get('link', args.get('link', ''))
+            ipv4 = opts.get('ipv4')
+            ipv6 = opts.get('ipv6')
+            infos = salt.utils.odict.OrderedDict([
+                ('lxc.network.type', {
+                    'test': not type_,
+                    'value': type_,
+                    'old': old_if.get('lxc.network.type'),
+                    'default': 'veth'}),
+                ('lxc.network.name', {
+                    'test': False,
+                    'value': dev,
+                    'old': dev,
+                    'default': dev}),
+                ('lxc.network.flags', {
+                    'test': not flags,
+                    'value': flags,
+                    'old': old_if.get('lxc.network.flags'),
+                    'default': 'up'}),
+                ('lxc.network.link', {
+                    'test': not link,
+                    'value': link,
+                    'old': old_if.get('lxc.network.link'),
+                    'default': 'br0'}),
+                ('lxc.network.hwaddr', {
+                    'test': not mac,
+                    'value': mac,
+                    'old': old_if.get('lxc.network.hwaddr'),
+                    'default': salt.utils.gen_mac()}),
+                ('lxc.network.ipv4', {
+                    'test': not ipv4,
+                    'value': ipv4,
+                    'old': old_if.get('lxc.network.ipv4', ''),
+                    'default': None}),
+                ('lxc.network.ipv6', {
+                    'test': not ipv6,
+                    'value': ipv6,
+                    'old': old_if.get('lxc.network.ipv6', ''),
+                    'default': None})])
+            # for each parameter, if not explicitly set, the
+            # config value present in the LXC configuration should
+            # take precendence over the profile configuration
+            for info in list(infos.keys()):
+                bundle = infos[info]
+                if bundle['test']:
+                    if bundle['old']:
+                        bundle['value'] = bundle['old']
+                    elif bundle['default']:
+                        bundle['value'] = bundle['default']
+            for info, data in infos.items():
+                if data['value']:
+                    ret.append({info: data['value']})
             for key, val in args.items():
                 if key == 'link' and bridge:
                     val = bridge
                 val = opts.get(key, val)
-                if key in ('gateway', 'mac'):
+                if key in (
+                    'type', 'flags', 'name',
+                    'gateway', 'mac', 'link', 'ipv4', 'ipv6'
+                ):
                     continue
                 ret.append({'lxc.network.{0}'.format(key): val})
             # gateway (in automode) must be appended following network conf !
@@ -516,7 +565,6 @@ def _network_conf(conf_tuples=None, **kwargs):
             # only one network gateway ;)
             gateway_set = True
 
-    old = _get_veths(conf_tuples)
     new = _get_veths(ret)
     # verify that we did not loose the mac settings
     for iface in [a for a in new]:
@@ -541,8 +589,10 @@ def _network_conf(conf_tuples=None, **kwargs):
 
     ret = []
     for val in new.values():
+        iface = salt.utils.odict.OrderedDict()
         for row in val:
-            ret.append({row: val[row]})
+            iface[row] = val[row]
+        ret.append(iface)
     return ret
 
 
@@ -563,6 +613,8 @@ def _get_memory(memory):
 def _get_autostart(autostart):
     if autostart is None:
         autostart = True
+    if autostart == 'keep':
+        return None
     if autostart:
         autostart = '1'
     else:
@@ -574,33 +626,37 @@ def _get_lxc_default_data(**kwargs):
     kwargs = copy.deepcopy(kwargs)
     ret = {}
     autostart = _get_autostart(kwargs.pop('autostart', None))
-    ret['lxc.start.auto'] = autostart
+    if autostart is not None:
+        ret['lxc.start.auto'] = autostart
     memory = _get_memory(kwargs.pop('memory', None))
-    if memory:
+    if memory is not None:
         ret['lxc.cgroup.memory.limit_in_bytes'] = memory
     cpuset = kwargs.pop('cpuset', None)
-    if cpuset:
+    if cpuset is not None:
         ret['lxc.cgroup.cpuset.cpus'] = cpuset
     cpushare = kwargs.pop('cpushare', None)
     cpu = kwargs.pop('cpu', None)
-    if cpushare:
+    if cpushare is not None:
         ret['lxc.cgroup.cpu.shares'] = cpushare
-    if cpu and not cpuset:
+    if cpu and (cpuset is not None):
         ret['lxc.cgroup.cpuset.cpus'] = _rand_cpu_str(cpu)
     return ret
 
 
-def _config_list(conf_tuples=None, **kwargs):
+def _config_list(conf_tuples=None, only_net=False, **kwargs):
     '''
     Return a list of dicts from the salt level configurations
+    from what needs to be changed in the existing lxc configuration
+    of a container.
     '''
     if not conf_tuples:
         conf_tuples = []
     kwargs = copy.deepcopy(kwargs)
     ret = []
-    default_data = _get_lxc_default_data(**kwargs)
-    for k, val in default_data.items():
-        ret.append({k: val})
+    if not only_net:
+        default_data = _get_lxc_default_data(**kwargs)
+        for k, val in default_data.items():
+            ret.append({k: val})
     net_datas = _network_conf(conf_tuples=conf_tuples, **kwargs)
     ret.extend(net_datas)
     return ret
@@ -731,7 +787,7 @@ def _get_base(**kwargs):
             return profile_match
         return kw_overrides_match
 
-    cntrs = ls()
+    cntrs = ls_()
     image = select('image')
     vgname = select('vgname')
     template = select('template')
@@ -816,7 +872,7 @@ def init(name,
         A tar archive to use as the rootfs for the container. Conflicts with
         the ``template`` argument.
 
-    cpus
+    cpu
         Select a random number of cpu cores and assign it to the cpuset, if the
         cpuset option is set then this option will be ignored
     cpuset
@@ -1014,13 +1070,14 @@ def init(name,
         old_chunks = []
         if os.path.exists(path):
             old_chunks = read_conf(path)
-        for comp in _config_list(conf_tuples=old_chunks,
-                                 cpu=cpu,
-                                 network_profile=network_profile,
-                                 nic_opts=nic_opts, bridge=bridge,
-                                 cpuset=cpuset, cpushare=cpushare,
-                                 memory=memory):
-            edit_conf(path, **comp)
+        new_cfg = _config_list(conf_tuples=old_chunks,
+                               cpu=cpu,
+                               network_profile=network_profile,
+                               nic_opts=nic_opts, bridge=bridge,
+                               cpuset=cpuset, cpushare=cpushare,
+                               memory=memory)
+        if new_cfg:
+            edit_conf(path, lxc_config=new_cfg)
         chunks = read_conf(path)
         if old_chunks != chunks:
             to_reboot = True
@@ -1577,7 +1634,7 @@ def list_(extra=False, limit=None):
         salt '*' lxc.list extra=True
         salt '*' lxc.list limit=running
     '''
-    ctnrs = ls()
+    ctnrs = ls_()
 
     if extra:
         stopped = {}
@@ -1870,7 +1927,7 @@ def exists(name):
 
         salt '*' lxc.exists name
     '''
-    return name in ls()
+    return name in ls_()
 
 
 def state(name):
@@ -3111,18 +3168,22 @@ def cp(name, source, dest, makedirs=False):
     return True
 
 
-def read_conf(conf_file, out_format='simple'):
+def read_conf(conf_file, out_format='comented'):
     '''
     Read in an LXC configuration file. By default returns a simple, unsorted
     dict, but can also return a more detailed structure including blank lines
     and comments.
+
+        out_format:
+            set to 'simple' if you need the old and unsupported behavior.
+            This wont support the multiple lxc values (eg: multiple network nics)
 
     CLI Examples:
 
     .. code-block:: bash
 
         salt 'minion' lxc.read_conf /etc/lxc/mycontainer.conf
-        salt 'minion' lxc.read_conf /etc/lxc/mycontainer.conf out_format=commented
+        salt 'minion' lxc.read_conf /etc/lxc/mycontainer.conf out_format=simple
     '''
     ret_commented = []
     ret_simple = {}
@@ -3189,31 +3250,54 @@ def write_conf(conf_file, conf):
     if type(conf) is not list:
         raise SaltInvocationError('Configuration must be passed as a list')
 
-    with salt.utils.fopen(conf_file, 'w') as fp_:
-        for line in conf:
-            if isinstance(line, str):
-                fp_.write(line)
-            elif isinstance(line, dict):
-                key = next(iter(list(line.keys())))
+    # construct the content prior to write to the file
+    # to avoid half written configs
+    content = ''
+    for line in conf:
+        if isinstance(line, str):
+            content += line
+        elif isinstance(line, dict):
+            for key in list(line.keys()):
                 out_line = None
-                if isinstance(line[key], str):
-                    out_line = ' = '.join((key, line[key]))
+                val = line[key]
+                if isinstance(val, (str, int, float)):
+                    out_line = ' = '.join((key, "{0}".format(val)))
                 elif isinstance(line[key], dict):
-                    out_line = ' = '.join((key, line[key]['value']))
+                    out_line = ' = '.join((key, val['value']))
                     if 'comment' in line[key]:
-                        out_line = ' # '.join((out_line, line[key]['comment']))
+                        out_line = ' # '.join((out_line,
+                                               val['comment']))
                 if out_line:
-                    fp_.write(out_line)
-                    fp_.write('\n')
+                    content += out_line
+                    content += '\n'
+    with salt.utils.fopen(conf_file, 'w') as fp_:
+        fp_.write(content)
     return {}
 
 
-def edit_conf(conf_file, out_format='simple', **kwargs):
+def edit_conf(conf_file,
+              out_format='commented',
+              read_only=False,
+              lxc_config=None,
+              **kwargs):
     '''
     Edit an LXC configuration file. If a setting is already present inside the
     file, its value will be replaced. If it does not exist, it will be appended
     to the end of the file. Comments and blank lines will be kept in-tact if
     they already exist in the file.
+
+    out_format:
+        Set to simple if you need backward compatbility (multiple items for a
+        simple key is not supported)
+    read_only:
+        return only the edited configuration without applying it
+        to the underlying lxc configuration file
+    lxc_config:
+        List of dict containning lxc configuration items
+        For network configuration, you also need to add the device it belongs
+        to, otherwise it will default to eth0.
+        Also, any change to a network parameter will result in the whole
+        network reconfiguration to avoid mismatchs, be aware of that !
 
     After the file is edited, its contents will be returned. By default, it
     will be returned in ``simple`` format, meaning an unordered dict (which
@@ -3226,31 +3310,211 @@ def edit_conf(conf_file, out_format='simple', **kwargs):
     .. code-block:: bash
 
         salt 'minion' lxc.edit_conf /etc/lxc/mycontainer.conf \\
-            out_format=commented lxc.network.type=veth
+            out_format=commented lxc.cgroup.memory.limit_in_bytes=123456789
+        salt 'minion' lxc.edit_conf /etc/lxc/mycontainer.conf \\
+            out_format=commented \\
+            lxc_config="[{'lxc.network.name': 'eth0', \\
+                          'lxc.network.ipv4': '1.2.3.4'},
+                         {'lxc.network.name': 'eth2', \\
+                          'lxc.network.ipv4': '1.2.3.5',\\
+                          'lxc.network.gateway': '1.2.3.1'}]"
     '''
     data = []
 
     try:
-        conf = read_conf(conf_file, out_format='commented')
+        conf = read_conf(conf_file)
     except Exception:
         conf = []
+
+    if not lxc_config:
+        lxc_config = []
+    lxc_config = copy.deepcopy(lxc_config)
+
+    # search if we want to access net config
+    # in that case, we will replace all the net configuration
+    net_config = []
+    for lxc_kws in lxc_config + [kwargs]:
+        net_params = {}
+        for kwarg in [a for a in lxc_kws]:
+            if kwarg.startswith('__'):
+                continue
+            if kwarg.startswith('lxc.network.'):
+                net_params[kwarg] = lxc_kws[kwarg]
+                lxc_kws.pop(kwarg, None)
+        if net_params:
+            net_config.append(net_params)
+    nic_opts = salt.utils.odict.OrderedDict()
+    for params in net_config:
+        dev = params.get('lxc.network.name', 'eth0')
+        dev_opts = nic_opts.setdefault(dev, salt.utils.odict.OrderedDict())
+        for param in params:
+            opt = param.replace('lxc.network.', '')
+            opt = {'hwaddr': 'mac'}.get(opt, opt)
+            dev_opts[opt] = params[param]
+
+    net_changes = []
+    if nic_opts:
+        net_changes = _config_list(conf, only_net=True,
+                                   **{'network_profile': {},
+                                      'nic_opts': nic_opts})
+        if net_changes:
+            lxc_config.extend(net_changes)
 
     for line in conf:
         if not isinstance(line, dict):
             data.append(line)
             continue
         else:
-            key = next(iter(list(line.keys())))
-            if key not in kwargs:
-                data.append(line)
-                continue
-            data.append({key: kwargs[key]})
-            del kwargs[key]
+            for key in list(line.keys()):
+                val = line[key]
+                if net_changes and key.startswith('lxc.network.'):
+                    continue
+                found = False
+                for ix in range(len(lxc_config)):
+                    kw = lxc_config[ix]
+                    if key in kw:
+                        found = True
+                        data.append({key: kw[key]})
+                        del kw[key]
+                if not found:
+                    data.append({key: val})
 
-    for kwarg in kwargs:
-        if kwarg.startswith('__'):
-            continue
-        data.append({kwarg: kwargs[kwarg]})
-
+    for lxc_kws in lxc_config:
+        for kwarg in lxc_kws:
+            data.append({kwarg: lxc_kws[kwarg]})
+    if read_only:
+        return data
     write_conf(conf_file, data)
     return read_conf(conf_file, out_format)
+
+
+def reboot(name):
+    '''
+    Reboot a container.
+    '''
+    ret = {'result': True,
+           'changes': {},
+           'comment': '{0} rebooted'.format(name)}
+    does_exist = exists(name)
+    if does_exist and (state(name) == 'running'):
+        try:
+            stop(name)
+        except (SaltInvocationError, CommandExecutionError) as exc:
+            ret['comment'] = 'Unable to stop container: {0}'.format(exc)
+            ret['result'] = False
+            return ret
+    if does_exist and (state(name) != 'running'):
+        try:
+            start(name)
+        except (SaltInvocationError, CommandExecutionError) as exc:
+            ret['comment'] = 'Unable to stop container: {0}'.format(exc)
+            ret['result'] = False
+            return ret
+    ret['changes'][name] = 'rebooted'
+    return ret
+
+
+def reconfigure(name,
+                cpu=None,
+                cpuset=None,
+                cpushare=None,
+                memory=None,
+                profile=None,
+                network_profile=None,
+                nic_opts=None,
+                bridge=None,
+                gateway=None,
+                autostart=None,
+                **kwargs):
+    '''
+    Reconfigure a container.
+
+    This only applies to a few property
+
+    name
+        Name of the container.
+    cpu
+        Select a random number of cpu cores and assign it to the cpuset, if the
+        cpuset option is set then this option will be ignored
+    cpuset
+        Explicitly define the cpus this container will be bound to
+    cpushare
+        cgroups cpu shares.
+    autostart
+        autostart container on reboot
+    memory
+        cgroups memory limit, in MB.
+        (0 for nolimit, None for old default 1024MB)
+    gateway
+        the ipv4 gateway to use
+        the default does nothing more than lxcutils does
+    bridge
+        the bridge to use
+        the default does nothing more than lxcutils does
+    nic
+        Network interfaces profile (defined in config or pillar).
+
+    nic_opts
+        Extra options for network interfaces, will override
+
+        ``{"eth0": {"mac": "aa:bb:cc:dd:ee:ff", "ipv4": "10.1.1.1", "ipv6": "2001:db8::ff00:42:8329"}}``
+
+        or
+
+        ``{"eth0": {"mac": "aa:bb:cc:dd:ee:ff", "ipv4": "10.1.1.1/24", "ipv6": "2001:db8::ff00:42:8329"}}``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-call -lall mc_lxc_fork.reconfigure foobar nic_opts="{'eth1': {'mac': '00:16:3e:dd:ee:44'}}" memory=4
+
+    '''
+    changes = {}
+    ret = {'name': name,
+           'comment': 'config for {0} up to date'.format(name),
+           'result': True,
+           'changes': changes}
+    profile = get_container_profile(copy.deepcopy(profile))
+    kw_overrides = copy.deepcopy(kwargs)
+
+    def select(key, default=None):
+        kw_overrides_match = kw_overrides.pop(key, _marker)
+        profile_match = profile.pop(key, default)
+        # let kwarg overrides be the preferred choice
+        if kw_overrides_match is _marker:
+            return profile_match
+        return kw_overrides_match
+    if nic_opts is not None and not network_profile:
+        network_profile = {}
+
+    if autostart is not None:
+        autostart = select('autostart', autostart)
+    else:
+        autostart = 'keep'
+    path = os.path.join('/var/lib/lxc/{0}/config'.format(name))
+    if os.path.exists(path):
+        old_chunks = read_conf(path)
+        make_kw = salt.utils.odict.OrderedDict([
+            ('autostart', autostart),
+            ('cpu', cpu),
+            ('cpuset', cpuset),
+            ('cpushare', cpushare),
+            ('network_profile', network_profile),
+            ('nic_opts', nic_opts),
+            ('bridge', bridge),
+            ('memory', memory)])
+        kw = salt.utils.odict.OrderedDict()
+        for key, val in make_kw.items():
+            if val is not None:
+                kw[key] = val
+        new_cfg = _config_list(conf_tuples=old_chunks, **kw)
+        if new_cfg:
+            edit_conf(path, lxc_config=new_cfg)
+        chunks = read_conf(path)
+        if (old_chunks != chunks):
+            ret['comment'] = '{0} lxc config updated'.format(name)
+            if state(name) == 'running':
+                cret = reboot(name)
+                ret['result'] = cret['result']
+    return ret
