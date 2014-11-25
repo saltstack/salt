@@ -100,6 +100,70 @@ def _ip_sort(ip):
     return '{0}___{1}'.format(idx, ip)
 
 
+def get_container_profile(name=None, **kwargs):
+    '''
+    .. versionadded:: 2014.7.1
+
+    Gather a pre-configured set of container configuration parameters. If no
+    arguments are passed, an empty profile is returned.
+
+    Profiles can be defined in the minion or master config files, or in pillar
+    or grains, and are loaded using :mod:`config.get
+    <salt.modules.config.get>`. The key under which LXC profiles must be
+    configured is ``lxc.container_profile.profile_name``. An example container
+    profile would be as follows:
+
+    .. code-block:: yaml
+
+        lxc.container_profile:
+          ubuntu:
+            template: ubuntu
+            backing: lvm
+            vgname: lxc
+            size: 1G
+
+    Parameters set in a profile can be overridden by passing additional
+    container creation arguments (such as the ones passed to :mod:`lxc.create
+    <salt.modules.lxc.create>`) to this function.
+
+    A profile can be defined either as the name of the profile, or a dictionary
+    of variable names and values. See the :ref:`LXC Tutorial
+    <tutorial-lxc-profiles>` for more information on how to use LXC profiles.
+
+    CLI Example::
+
+    .. code-block:: bash
+
+        salt-call lxc.get_container_profile centos
+        salt-call lxc.get_container_profile ubuntu template=ubuntu backing=overlayfs
+    '''
+    if isinstance(name, dict):
+        profilename = name.pop('name', None)
+        return get_container_profile(profilename, **name)
+
+    if name is None:
+        profile_match = {}
+    else:
+        profile_match = \
+            __salt__['config.get'](
+                'lxc.container_profile.{0}'.format(name), {}
+            )
+    if not isinstance(profile_match, dict):
+        raise CommandExecutionError('Container profile must be a dictionary')
+
+    # Overlay the kwargs to override matched profile data
+    overrides = copy.deepcopy(kwargs)
+    for key in overrides.keys():
+        if key.startswith('__'):
+            # Remove pub data from kwargs
+            overrides.pop(key)
+    profile_match = salt.utils.dictupdate.update(
+        copy.deepcopy(profile_match),
+        overrides
+    )
+    return profile_match
+
+
 def cloud_init_interface(name, vm_=None, **kwargs):
     '''
     Interface between salt.cloud.lxc driver and lxc.init
@@ -201,7 +265,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
         vm_ = {}
     vm_ = copy.deepcopy(vm_)
     vm_ = salt.utils.dictupdate.update(vm_, kwargs)
-    profile = _lxc_profile(vm_.get('profile', {}))
+    profile = get_container_profile(name, **vm_.get('profile', {}))
     if name is None:
         name = vm_['name']
     from_container = vm_.get('from_container', None)
@@ -328,70 +392,6 @@ def cloud_init_interface(name, vm_=None, **kwargs):
         if vm_.get(i, None):
             lxc_init_interface[i] = vm_[i]
     return lxc_init_interface
-
-
-def get_container_profile(name=None, **kwargs):
-    '''
-    .. versionadded:: 2014.7.1
-
-    Gather a pre-configured set of container configuration parameters. If no
-    arguments are passed, an empty profile is returned.
-
-    Profiles can be defined in the minion or master config files, or in pillar
-    or grains, and are loaded using :mod:`config.get
-    <salt.modules.config.get>`. The key under which LXC profiles must be
-    configured is ``lxc.container_profile.profile_name``. An example container
-    profile would be as follows:
-
-    .. code-block:: yaml
-
-        lxc.container_profile:
-          ubuntu:
-            template: ubuntu
-            backing: lvm
-            vgname: lxc
-            size: 1G
-
-    Parameters set in a profile can be overridden by passing additional
-    container creation arguments (such as the ones passed to :mod:`lxc.create
-    <salt.modules.lxc.create>`) to this function.
-
-    A profile can be defined either as the name of the profile, or a dictionary
-    of variable names and values. See the :ref:`LXC Tutorial
-    <tutorial-lxc-profiles>` for more information on how to use LXC profiles.
-
-    CLI Example::
-
-    .. code-block:: bash
-
-        salt-call lxc.get_container_profile centos
-        salt-call lxc.get_container_profile ubuntu template=ubuntu backing=overlayfs
-    '''
-    if isinstance(name, dict):
-        profilename = name.pop('name', None)
-        return get_container_profile(profilename, **name)
-
-    if name is None:
-        profile_match = {}
-    else:
-        profile_match = \
-            __salt__['config.get'](
-                'lxc.container_profile.{0}'.format(name), {}
-            )
-    if not isinstance(profile_match, dict):
-        raise CommandExecutionError('Container profile must be a dictionary')
-
-    # Overlay the kwargs to override matched profile data
-    overrides = copy.deepcopy(kwargs)
-    for key in overrides.keys():
-        if key.startswith('__'):
-            # Remove pub data from kwargs
-            overrides.pop(key)
-    profile_match = salt.utils.dictupdate.update(
-        copy.deepcopy(profile_match),
-        overrides
-    )
-    return profile_match
 
 
 def get_network_profile(name=None):
