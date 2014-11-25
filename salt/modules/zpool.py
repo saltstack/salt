@@ -201,6 +201,10 @@ def create(pool_name, *vdevs, **kwargs):
         ret['Error'] = 'Storage Pool `{0}` already exists'.format(pool_name)
         return ret
 
+    if not vdevs:
+        ret['Error'] = 'Missing vdev specification. Please specify vdevs.'
+        return ret
+
     # make sure files are present on filesystem
     for vdev in vdevs:
         if vdev not in ['mirror', 'log', 'cache', 'raidz1', 'raidz2', 'raidz3']:
@@ -218,10 +222,21 @@ def create(pool_name, *vdevs, **kwargs):
     devs = ' '.join(dlist)
     zpool = _check_zpool()
     force = kwargs.get('force', False)
-    if force is True:
-        cmd = '{0} create -f {1} {2}'.format(zpool, pool_name, devs)
-    else:
-        cmd = '{0} create {1} {2}'.format(zpool, pool_name, devs)
+    properties = kwargs.get('properties', None)
+    cmd = '{0} create'.format(zpool)
+
+    if force:
+        cmd = '{0} -f'.format(cmd)
+
+    # if zpool properties specified, then
+    # create "-o property=value" pairs
+    if properties:
+        optlist=[]
+        for property in properties:
+            optlist.append('-o {0}={1}'.format(property, properties[property]))
+        opts = ' '.join(optlist)
+        cmd = '{0} {1}'.format(cmd, opts)
+    cmd = '{0} {1} {2}'.format(cmd, pool_name, devs)
 
     # Create storage pool
     res = __salt__['cmd.run'](cmd)
