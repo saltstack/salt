@@ -245,7 +245,7 @@ def create(pool_name, *vdevs, **kwargs):
     # if zpool properties specified, then
     # create "-o property=value" pairs
     if properties:
-        optlist=[]
+        optlist = []
         for property in properties:
             optlist.append('-o {0}={1}'.format(property, properties[property]))
         opts = ' '.join(optlist)
