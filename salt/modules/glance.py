@@ -31,8 +31,8 @@ Module for handling openstack glance calls.
           keystone.tenant_id: f80919baedab48ec8931f200c65a50df
           keystone.auth_url: 'http://127.0.0.2:5000/v2.0/'
 
-    With this configuration in place, any of the keystone functions can make use
-    of a configuration profile by declaring it explicitly.
+    With this configuration in place, any of the keystone functions can make
+    use of a configuration profile by declaring it explicitly.
     For example::
 
         salt '*' glance.image_list profile=openstack1
@@ -60,11 +60,11 @@ def __virtual__():
 __opts__ = {}
 
 
-def _auth(profile=None):
+def _auth(profile=None, **connection_args):
     '''
     Set up keystone credentials
     '''
-    kstone = __salt__['keystone.auth'](profile)
+    kstone = __salt__['keystone.auth'](profile, **connection_args)
     token = kstone.auth_token
     endpoint = kstone.service_catalog.url_for(
         service_type='image',
@@ -74,7 +74,7 @@ def _auth(profile=None):
     return client.Client('1', endpoint, token=token)
 
 
-def image_create(profile=None, **kwargs):
+def image_create(profile=None, **connection_args):
     '''
     Create an image (glance image-create)
 
@@ -84,24 +84,24 @@ def image_create(profile=None, **kwargs):
 
         salt '*' glance.image_create name=f16-jeos is_public=true \\
                  disk_format=qcow2 container_format=ovf \\
-                 copy_from=http://berrange.fedorapeople.org/images/2012-02-29/f16-x86_64-openstack-sda.qcow2
+                 copy_from=http://berrange.fedorapeople.org/images/ \\
+                 2012-02-29/f16-x86_64-openstack-sda.qcow2
 
     For all possible values, run ``glance help image-create`` on the minion.
     '''
-    nt_ks = _auth(profile)
+    nt_ks = _auth(profile, **connection_args)
     fields = dict(
         filter(
             lambda x: x[0] in glanceclient.v1.images.CREATE_PARAMS,
-            kwargs.items()
+            connection_args.items()
         )
     )
 
     image = nt_ks.images.create(**fields)
-    newimage = image_list(str(image.id))
-    return {newimage['name']: newimage}
+    return image_show(id=str(image.id), profile=profile, **connection_args)
 
 
-def image_delete(id=None, name=None, profile=None):  # pylint: disable=C0103
+def image_delete(id=None, name=None, profile=None, **connection_args):  # pylint: disable=C0103
     '''
     Delete an image (glance image-delete)
 
@@ -113,7 +113,7 @@ def image_delete(id=None, name=None, profile=None):  # pylint: disable=C0103
         salt '*' glance.image_delete id=c2eb2eb0-53e1-4a80-b990-8ec887eae7df
         salt '*' glance.image_delete name=f16-jeos
     '''
-    nt_ks = _auth(profile)
+    nt_ks = _auth(profile, **connection_args)
     if name:
         for image in nt_ks.images.list():
             if image.name == name:
@@ -128,7 +128,7 @@ def image_delete(id=None, name=None, profile=None):  # pylint: disable=C0103
     return ret
 
 
-def image_show(id=None, name=None, profile=None):  # pylint: disable=C0103
+def image_show(id=None, name=None, profile=None, **connection_args):  # pylint: disable=C0103
     '''
     Return details about a specific image (glance image-show)
 
@@ -138,37 +138,35 @@ def image_show(id=None, name=None, profile=None):  # pylint: disable=C0103
 
         salt '*' glance.image_get
     '''
-    nt_ks = _auth(profile)
+    nt_ks = _auth(profile, **connection_args)
     ret = {}
     if name:
         for image in nt_ks.images.list():
             if image.name == name:
                 id = image.id  # pylint: disable=C0103
-                continue
+                break
     if not id:
         return {'Error': 'Unable to resolve image id'}
     image = nt_ks.images.get(id)
-    ret[image.name] = {
-            'id': image.id,
-            'name': image.name,
-            'checksum': image.checksum,
-            'container_format': image.container_format,
-            'created_at': image.created_at,
-            'deleted': image.deleted,
-            'disk_format': image.disk_format,
-            'is_public': image.is_public,
-            'min_disk': image.min_disk,
-            'min_ram': image.min_ram,
-            'owner': image.owner,
-            'protected': image.protected,
-            'size': image.size,
-            'status': image.status,
-            'updated_at': image.updated_at,
-            }
+    ret[image.name] = {'id': image.id,
+                       'name': image.name,
+                       'checksum': getattr(image, 'checksum', 'Creating'),
+                       'container_format': image.container_format,
+                       'created_at': image.created_at,
+                       'deleted': image.deleted,
+                       'disk_format': image.disk_format,
+                       'is_public': image.is_public,
+                       'min_disk': image.min_disk,
+                       'min_ram': image.min_ram,
+                       'owner': image.owner,
+                       'protected': image.protected,
+                       'size': image.size,
+                       'status': image.status,
+                       'updated_at': image.updated_at}
     return ret
 
 
-def image_list(id=None, profile=None):  # pylint: disable=C0103
+def image_list(profile=None, **connection_args):  # pylint: disable=C0103
     '''
     Return a list of available images (glance image-list)
 
@@ -178,32 +176,28 @@ def image_list(id=None, profile=None):  # pylint: disable=C0103
 
         salt '*' glance.image_list
     '''
-    nt_ks = _auth(profile)
+    nt_ks = _auth(profile, **connection_args)
     ret = {}
     for image in nt_ks.images.list():
-        ret[image.name] = {
-                'id': image.id,
-                'name': image.name,
-                'checksum': image.checksum,
-                'container_format': image.container_format,
-                'created_at': image.created_at,
-                'deleted': image.deleted,
-                'disk_format': image.disk_format,
-                'is_public': image.is_public,
-                'min_disk': image.min_disk,
-                'min_ram': image.min_ram,
-                'owner': image.owner,
-                'protected': image.protected,
-                'size': image.size,
-                'status': image.status,
-                'updated_at': image.updated_at,
-            }
-        if id == image.id:
-            return ret[image.name]
+        ret[image.name] = {'id': image.id,
+                           'name': image.name,
+                           'checksum': getattr(image, 'checksum', 'Creating'),
+                           'container_format': image.container_format,
+                           'created_at': image.created_at,
+                           'deleted': image.deleted,
+                           'disk_format': image.disk_format,
+                           'is_public': image.is_public,
+                           'min_disk': image.min_disk,
+                           'min_ram': image.min_ram,
+                           'owner': image.owner,
+                           'protected': image.protected,
+                           'size': image.size,
+                           'status': image.status,
+                           'updated_at': image.updated_at}
     return ret
 
 
-def _item_list(profile=None):
+def _item_list(profile=None, **connection_args):
     '''
     Template for writing list functions
     Return a list of available items (glance items-list)
@@ -214,20 +208,20 @@ def _item_list(profile=None):
 
         salt '*' glance.item_list
     '''
-    nt_ks = _auth(profile)
+    nt_ks = _auth(profile, **connection_args)
     ret = []
     for item in nt_ks.items.list():
         ret.append(item.__dict__)
-        #ret[item.name] = {
+        # ret[item.name] = {
         #        'name': item.name,
         #    }
     return ret
 
-#The following is a list of functions that need to be incorporated in the
-#glance module. This list should be updated as functions are added.
+# The following is a list of functions that need to be incorporated in the
+# glance module. This list should be updated as functions are added.
 
-#image-download      Download a specific image.
-#image-update        Update a specific image.
-#member-create       Share a specific image with a tenant.
-#member-delete       Remove a shared image from a tenant.
-#member-list         Describe sharing permissions by image or tenant.
+# image-download      Download a specific image.
+# image-update        Update a specific image.
+# member-create       Share a specific image with a tenant.
+# member-delete       Remove a shared image from a tenant.
+# member-list         Describe sharing permissions by image or tenant.
