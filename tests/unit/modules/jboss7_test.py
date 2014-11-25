@@ -98,7 +98,7 @@ class JBoss7TestCase(TestCase):
                 return {'outcome': 'success',
                         'result': {
                             'attributes': {
-                                'use-ccm': {'type' : 'BOOLEAN'}
+                                'use-ccm': {'type': 'BOOLEAN'}
                             }
                         }
                 }
@@ -136,7 +136,7 @@ class JBoss7TestCase(TestCase):
                 return {'outcome': 'success',
                         'result': {
                             'attributes': {
-                                'min-pool-size': {'type' : 'INT'}
+                                'min-pool-size': {'type': 'INT'}
                             }
                         }
                 }
@@ -155,7 +155,7 @@ class JBoss7TestCase(TestCase):
                 return {'outcome': 'success',
                         'result': {
                             'attributes': {
-                                'min-pool-size': {'type' : 'INT'}
+                                'min-pool-size': {'type': 'INT'}
                             }
                         }
                 }
@@ -174,11 +174,11 @@ class JBoss7TestCase(TestCase):
                 return {
                     'outcome' : 'success',
                     'result' : {
-                        'driver-name' : 'mysql',
-                        'connection-url' : 'jdbc:mysql://localhost:3306/app',
-                        'jndi-name' : 'java:jboss/datasources/appDS',
-                        'user-name' : 'app',
-                        'password' : 'app_password'
+                        'driver-name': 'mysql',
+                        'connection-url': 'jdbc:mysql://localhost:3306/app',
+                        'jndi-name': 'java:jboss/datasources/appDS',
+                        'user-name': 'app',
+                        'password': 'app_password'
                     }
                 }
 
@@ -197,7 +197,7 @@ class JBoss7TestCase(TestCase):
         datasource_properties = {'driver-name': 'mysql',
                                  'connection-url': 'jdbc:mysql://localhost:3306/app',
                                  'jndi-name': 'java:jboss/datasources/appDS',
-                                 'user-name' : 'newuser',
+                                 'user-name': 'newuser',
                                  'password': 'app_password'}
 
         def cli_command_response(jboss_config, cli_command, fail_on_error=False):
@@ -205,11 +205,11 @@ class JBoss7TestCase(TestCase):
                 return {'outcome': 'success',
                         'result': {
                             'attributes': {
-                                'driver-name': {'type' : 'STRING'},
-                                'connection-url': {'type' : 'STRING'},
-                                'jndi-name': {'type' : 'STRING'},
-                                'user-name': {'type' : 'STRING'},
-                                'password': {'type' : 'STRING'}
+                                'driver-name': {'type': 'STRING'},
+                                'connection-url': {'type': 'STRING'},
+                                'jndi-name': {'type': 'STRING'},
+                                'user-name': {'type': 'STRING'},
+                                'password': {'type': 'STRING'}
                             }
                         }
                 }
@@ -218,17 +218,17 @@ class JBoss7TestCase(TestCase):
                 return {
                     'outcome' : 'success',
                     'result' : {
-                        'driver-name' : 'mysql',
-                        'connection-url' : 'jdbc:mysql://localhost:3306/app',
-                        'jndi-name' : 'java:jboss/datasources/appDS',
-                        'user-name' : 'app',
-                        'password' : 'app_password'
+                        'driver-name': 'mysql',
+                        'connection-url': 'jdbc:mysql://localhost:3306/app',
+                        'jndi-name': 'java:jboss/datasources/appDS',
+                        'user-name': 'app',
+                        'password': 'app_password'
                     }
                 }
 
             elif cli_command == '/subsystem=datasources/data-source="appDS":write-attribute(name="user-name",value="newuser")':
                 return {
-                    'outcome' : 'success',
+                    'outcome': 'success',
                     'success': True
 
                 }
@@ -237,4 +237,3 @@ class JBoss7TestCase(TestCase):
         jboss7.update_datasource(self.jboss_config, 'appDS', datasource_properties)
 
         __salt__['jboss7_cli.run_operation'].assert_any_call(self.jboss_config, '/subsystem=datasources/data-source="appDS":write-attribute(name="user-name",value="newuser")', fail_on_error=False)
-

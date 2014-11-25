@@ -47,7 +47,7 @@ class JBoss7StateTestCase(TestCase):
 
         def read_func(jboss_config, name):
             if ds_status['created']:
-                return {'success': True, 'result':datasource_properties}
+                return {'success': True, 'result': datasource_properties}
             else:
                 return {'success': False, 'err_code': 'JBAS014807'}
 
@@ -73,7 +73,7 @@ class JBoss7StateTestCase(TestCase):
             if ds_status['updated']:
                 return {'success': True, 'result': {'connection-url': 'jdbc:/new-connection-url'}}
             else:
-                return {'success': True, 'result':{'connection-url': 'jdbc:/old-connection-url'}}
+                return {'success': True, 'result': {'connection-url': 'jdbc:/old-connection-url'}}
 
         def update_func(jboss_config, name, new_properties):
             ds_status['updated'] = True
@@ -125,9 +125,10 @@ class JBoss7StateTestCase(TestCase):
     def test_should_create_binding_if_not_exists(self):
         # given
         binding_status = {'created': False}
+
         def read_func(jboss_config, binding_name):
             if binding_status['created']:
-                return {'success': True, 'result': {'value' : 'DEV'}}
+                return {'success': True, 'result': {'value': 'DEV'}}
             else:
                 return {'success': False, 'err_code': 'JBAS014807'}
 
@@ -150,11 +151,12 @@ class JBoss7StateTestCase(TestCase):
     def test_should_update_bindings_if_exists_and_different(self):
         # given
         binding_status = {'updated': False}
+
         def read_func(jboss_config, binding_name):
             if binding_status['updated']:
-                return {'success': True, 'result': {'value' : 'DEV2'}}
+                return {'success': True, 'result': {'value': 'DEV2'}}
             else:
-                return {'success': True, 'result':{'value' : 'DEV'}}
+                return {'success': True, 'result': {'value': 'DEV'}}
 
         def update_func(jboss_config, binding_name, value):
             binding_status['updated'] = True
@@ -174,7 +176,7 @@ class JBoss7StateTestCase(TestCase):
 
     def test_should_not_update_bindings_if_same(self):
         # given
-        __salt__['jboss7.read_simple_binding'].return_value = {'success': True, 'result': {'value' : 'DEV2'}}
+        __salt__['jboss7.read_simple_binding'].return_value = {'success': True, 'result': {'value': 'DEV2'}}
 
         # when
         result = jboss7.bindings_exist(name='bindings', jboss_config={}, bindings={'env': 'DEV2'})
@@ -204,7 +206,7 @@ class JBoss7StateTestCase(TestCase):
 
     def test_should_raise_exception_if_cannot_update_binding(self):
         def read_func(jboss_config, binding_name):
-            return {'success': True, 'result': {'value' : 'DEV'}}
+            return {'success': True, 'result': {'value': 'DEV'}}
 
         def update_func(jboss_config, binding_name, value):
             return {'success': False, 'failure-description': 'Incorrect binding name.'}

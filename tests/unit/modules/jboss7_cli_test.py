@@ -14,6 +14,7 @@ except NameError:
     # if executed separately we need to export __salt__ dictionary ourselves
     __builtin__.__salt__ = {}
 
+
 class CmdMock(object):
     commands = []
     command_response_func = None     # if you want to test complete response object (with retcode, stdout and stderr)
@@ -21,14 +22,14 @@ class CmdMock(object):
 
     default_response = {'retcode': 0, 'stdout': ''' {
         "outcome" => "success"
-    }''', 'stderr':''}
+    }''', 'stderr': ''}
 
     def __init__(self, command_response_func=None):
         self.command_response_func = command_response_func
 
     def run_all(self, command):
         self.commands.append(command)
-        if not self.command_response_func is None:
+        if self.command_response_func is not None:
             return self.command_response_func(command)
 
         cli_command = self.__get_cli_command(command)
@@ -38,7 +39,7 @@ class CmdMock(object):
     @staticmethod
     def __get_cli_command(command):
         command_re = re.compile(r'--command=\"\s*(.+?)\s*\"$', re.DOTALL)
-        m = command_re.search(command) #--command has to be the last argument
+        m = command_re.search(command)  # --command has to be the last argument
         if m:
             cli_command = m.group(1)
             return cli_command
@@ -71,7 +72,7 @@ class JBoss7CliTestCase(TestCase):
         'instance_name': 'Instance1',
         'cli_user': 'jbossadm',
         'cli_password': 'jbossadm',
-        'status_url' : 'http://sampleapp.company.com:8080/'
+        'status_url': 'http://sampleapp.company.com:8080/'
     }
 
     def setUp(self):
@@ -89,7 +90,6 @@ class JBoss7CliTestCase(TestCase):
 
         self.assertEqual(self.cmd.get_last_command(), '/opt/jboss/jboss-eap-6.0.1/bin/jboss-cli.sh --connect --controller="123.234.345.456:9999" --user="jbossadm" --password="jbossadm" --command="some cli operation"')
 
-
     def test_controller_without_authentication(self):
         jboss_config = {
             'cli_path': '/opt/jboss/jboss-eap-6.0.1/bin/jboss-cli.sh',
@@ -99,13 +99,11 @@ class JBoss7CliTestCase(TestCase):
 
         self.assertEqual(self.cmd.get_last_command(), '/opt/jboss/jboss-eap-6.0.1/bin/jboss-cli.sh --connect --controller="123.234.345.456:9999" --command="some cli operation"')
 
-
     def test_operation_execution(self):
         operation = r'sample_operation'
         jboss7_cli.run_operation(self.jboss_config, operation)
 
         self.assertEqual(self.cmd.get_last_command(), r'/opt/jboss/jboss-eap-6.0.1/bin/jboss-cli.sh --connect --controller="123.234.345.456:9999" --user="jbossadm" --password="jbossadm" --command="sample_operation"')
-
 
     def test_handling_jboss_error(self):
         def command_response(command):
@@ -181,7 +179,6 @@ class JBoss7CliTestCase(TestCase):
         self.assertEqual(len(result), 2)
         self.assertEqual(result['key1'], 'value1')
         self.assertEqual(result['key2'], 'value2')
-
 
     def test_parse_nested_dictionary(self):
         text = '''{
@@ -352,7 +349,6 @@ class JBoss7CliTestCase(TestCase):
         self.assertIsNone(result['result']['url-delimiter'])
         self.assertFalse(result['result']['validate-on-match'])
 
-
     def test_datasource_resource_one_attribute_description(self):
         cli_output = '''{
             "outcome" => "success",
@@ -390,7 +386,6 @@ class JBoss7CliTestCase(TestCase):
         self.assertEqual(conn_url_attributes['access-type'], 'read-write')
         self.assertEqual(conn_url_attributes['storage'], 'configuration')
         self.assertEqual(conn_url_attributes['restart-required'], 'no-services')
-
 
     def test_datasource_complete_resource_description(self):
         cli_output = '''{
@@ -431,15 +426,8 @@ class JBoss7CliTestCase(TestCase):
         self.assertEqual(conn_url_attributes['storage'], 'configuration')
         self.assertEqual(conn_url_attributes['restart-required'], 'no-services')
 
-
-
     def test_escaping_operation_with_backslashes_and_quotes(self):
         operation = r'/subsystem=naming/binding="java:/sampleapp/web-module/ldap/username":add(binding-type=simple, value="DOMAIN\\\\user")'
         jboss7_cli.run_operation(self.jboss_config, operation)
 
         self.assertEqual(self.cmd.get_last_command(), r'/opt/jboss/jboss-eap-6.0.1/bin/jboss-cli.sh --connect --controller="123.234.345.456:9999" --user="jbossadm" --password="jbossadm" --command="/subsystem=naming/binding=\"java:/sampleapp/web-module/ldap/username\":add(binding-type=simple, value=\"DOMAIN\\\\\\\\user\")"')
-
-
-
-
-
