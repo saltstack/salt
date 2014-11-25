@@ -998,20 +998,20 @@ def routes(family=None):
         raise CommandExecutionError('Invalid address family {0}'.format(family))
 
     if __grains__['kernel'] == 'Linux':
-        routes = _netstat_route_linux()
+        routes_ = _netstat_route_linux()
     elif __grains__['os'] in ['FreeBSD', 'MacOS', 'Darwin']:
-        routes = _netstat_route_freebsd()
+        routes_ = _netstat_route_freebsd()
     elif __grains__['os'] in ['NetBSD']:
-        routes = _netstat_route_netbsd()
+        routes_ = _netstat_route_netbsd()
     elif __grains__['os'] in ['OpenBSD']:
-        routes = _netstat_route_openbsd()
+        routes_ = _netstat_route_openbsd()
     else:
         raise CommandExecutionError('Not yet supported on this platform')
 
     if not family:
-        return routes
+        return routes_
     else:
-        ret = [route for route in routes if route['addr_family'] == family]
+        ret = [route for route in routes_ if route['addr_family'] == family]
         return ret
 
 

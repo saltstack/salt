@@ -310,7 +310,7 @@ the :command:`salt-api` script and init scripts remain intact.
 ``salt-api`` has always provided Yet Another Pluggable Interface to Salt (TM)
 in the form of "netapi" modules. These are modules that bind to a port and
 start a service. Like many of Salt's other module types, netapi modules often
-have library and configuration dependencies. See the documentaiton for each
+have library and configuration dependencies. See the documentation for each
 module for instructions.
 
 .. seealso:: :ref:`The full list of netapi modules. <all-netapi-modules>`
@@ -552,8 +552,8 @@ New Salt-Cloud Providers
 Deprecations
 ============
 
-:mod:`salt.modules.virturalenv_mod`
------------------------------------
+:mod:`salt.modules.virtualenv_mod`
+----------------------------------
 
 - Removed deprecated ``memoize`` function from ``salt/utils/__init__.py`` (deprecated)
 - Removed deprecated ``no_site_packages`` argument from ``create`` function (deprecated)

@@ -408,7 +408,7 @@ IPV4_ATTR_MAP = {
     'broadcast': __ipv4_quad,
     'metric':  __int,
     'gateway':  __ipv4_quad,  # supports a colon-delimited list
-    'pointtopoint':  __ipv4_quad,
+    'pointopoint':  __ipv4_quad,
     'hwaddress':  __mac,
     'mtu':  __int,
     'scope': __within(['global', 'link', 'host'], dtype=str),

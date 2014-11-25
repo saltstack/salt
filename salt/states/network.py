@@ -215,7 +215,6 @@ def managed(name, type, enabled=True, **kwargs):
     # to enhance the user experience. This does not look like
     # it will cause a problem. Just giving a heads up in case
     # it does create a problem.
-
     ret = {
         'name': name,
         'changes': {},
@@ -297,7 +296,16 @@ def managed(name, type, enabled=True, **kwargs):
     # Bring up/shutdown interface
     try:
         # Get Interface current status
-        interface_status = salt.utils.network.interfaces()[name].get('up')
+        interfaces = salt.utils.network.interfaces()
+        interface_status = False
+        if name in interfaces:
+            interface_status = interfaces[name].get('up')
+        else:
+            for iface in interfaces:
+                if 'secondary' in interfaces[iface]:
+                    for second in interfaces[iface]['secondary']:
+                        if second.get('label', '') == 'name':
+                            interface_status = True
         if enabled:
             if interface_status:
                 if ret['changes']:

@@ -151,7 +151,7 @@ xetexpdf: translations
 	$(SPHINXBUILD) -b latex $(ALLSPHINXOPTS) $(BUILDDIR)/latex
 	@echo "Running LaTeX files through xelatex..."
 	perl -pi -e 's!pdflatex!xelatex!' $(BUILDDIR)/latex/Makefile
-	$(MAKE) -C $(BUILDDIR)/latex LATEXOPTS="-interaction=nonstopmode"
+	$(MAKE) -C $(BUILDDIR)/latex -i LATEXOPTS="-interaction=nonstopmode"
 	@echo "xelatex finished; the PDF files are in $(BUILDDIR)/latex."
 
 cheatsheet: translations

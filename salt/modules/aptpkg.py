@@ -581,6 +581,54 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
         return ret['installed']
 
 
+def autoremove(list_only=False):
+    '''
+    .. versionadded:: Lithium
+
+    Remove packages not required by another package using ``apt-get
+    autoremove``.
+
+    list_only : False
+        Only retrieve the list of packages to be auto-removed, do not actually
+        perform the auto-removal.
+
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.autoremove
+        salt '*' pkg.autoremove list_only=True
+    '''
+    if list_only:
+        ret = []
+        out = __salt__['cmd.run'](
+            ['apt-get', '--assume-no', 'autoremove'],
+            python_shell=False,
+            ignore_retcode=True
+        )
+        found = False
+        for line in out.splitlines():
+            if found is True:
+                if line.startswith(' '):
+                    ret.extend(line.split())
+                else:
+                    found = False
+            elif 'The following packages will be REMOVED:' in line:
+                found = True
+        ret.sort()
+        return ret
+    else:
+        old = list_pkgs()
+        __salt__['cmd.run'](
+            ['apt-get', '--assume-yes', 'autoremove'],
+            python_shell=False
+        )
+        __context__.pop('pkg.list_pkgs', None)
+        new = list_pkgs()
+        return salt.utils.compare_dicts(old, new)
+
+
 def remove(name=None, pkgs=None, **kwargs):
     '''
     Remove packages using ``apt-get remove``.

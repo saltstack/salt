@@ -149,7 +149,7 @@ def minion_mods(opts, context=None, whitelist=None, include_errors=False, initia
     return functions
 
 
-def raw_mod(opts, name, functions):
+def raw_mod(opts, name, functions, mod='modules'):
     '''
     Returns a single module loaded raw and bypassing the __virtual__ function
 
@@ -162,7 +162,7 @@ def raw_mod(opts, name, functions):
         testmod = salt.loader.raw_mod(__opts__, 'test', None)
         testmod['test.ping']()
     '''
-    load = _create_loader(opts, 'modules', 'rawmodule')
+    load = _create_loader(opts, mod, 'rawmodule')
     return load.gen_module(name, functions)
 
 
