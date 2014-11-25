@@ -30,10 +30,16 @@ log = logging.getLogger(__name__)
 
 def status(jboss_config, timeout=5):
     '''
-       Get status of running jboss instance.
+    Get status of running jboss instance.
 
-       jboss_config
-           Configuration dictionary with properties specified above.
+    jboss_config
+        Configuration dictionary with properties specified above.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' jboss7.status '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}'
 
        '''
     log.debug("======================== MODULE FUNCTION: jboss7.status")
@@ -43,10 +49,16 @@ def status(jboss_config, timeout=5):
 
 def stop_server(jboss_config):
     '''
-       Stop running jboss instance
+    Stop running jboss instance
 
-       jboss_config
-           Configuration dictionary with properties specified above.
+    jboss_config
+        Configuration dictionary with properties specified above.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' jboss7.stop_server '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}'
 
        '''
     log.debug("======================== MODULE FUNCTION: jboss7.stop_server")
@@ -61,10 +73,16 @@ def stop_server(jboss_config):
 
 def reload(jboss_config):
     '''
-       Reload running jboss instance
+    Reload running jboss instance
 
-       jboss_config
-           Configuration dictionary with properties specified above.
+    jboss_config
+        Configuration dictionary with properties specified above.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' jboss7.reload '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}'
 
        '''
     log.debug("======================== MODULE FUNCTION: jboss7.reload")
@@ -81,23 +99,28 @@ def reload(jboss_config):
 
 def create_datasource(jboss_config, name, datasource_properties):
     '''
-       Create datasource in running jboss instance
+    Create datasource in running jboss instance
 
-       jboss_config
-           Configuration dictionary with properties specified above.
-       name
-           Datasource name
-       datasource_properties
-           A dictionary of datasource properties to be created:
-             - driver-name: mysql
-             - connection-url: 'jdbc:mysql://localhost:3306/sampleDatabase'
-             - jndi-name: 'java:jboss/datasources/sampleDS'
-             - user-name: sampleuser
-             - password: secret
-             - min-pool-size: 3
-             - use-java-context: True
+    jboss_config
+        Configuration dictionary with properties specified above.
+    name
+        Datasource name
+    datasource_properties
+        A dictionary of datasource properties to be created:
+          - driver-name: mysql
+          - connection-url: 'jdbc:mysql://localhost:3306/sampleDatabase'
+          - jndi-name: 'java:jboss/datasources/sampleDS'
+          - user-name: sampleuser
+          - password: secret
+          - min-pool-size: 3
+          - use-java-context: True
 
-       '''
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' jboss7.create_datasource '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}' 'my_datasource' '{"driver-name": "mysql", "connection-url": "jdbc:mysql://localhost:3306/sampleDatabase", "jndi-name": "java:jboss/datasources/sampleDS", "user-name": "sampleuser", "password": "secret", "min-pool-size": 3, "use-java-context": True}'
+    '''
     log.debug("======================== MODULE FUNCTION: jboss7.create_datasource, name=%s", name)
     ds_resource_description = __get_datasource_resource_description(jboss_config, name)
 
@@ -161,7 +184,14 @@ def update_datasource(jboss_config, name, new_properties):
           - password: secret
           - min-pool-size: 3
           - use-java-context: True
-       '''
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' jboss7.update_datasource '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}' 'my_datasource' '{"driver-name": "mysql", "connection-url": "jdbc:mysql://localhost:3306/sampleDatabase", "jndi-name": "java:jboss/datasources/sampleDS", "user-name": "sampleuser", "password": "secret", "min-pool-size": 3, "use-java-context": True}'
+
+    '''
     log.debug("======================== MODULE FUNCTION: jboss7.update_datasource, name=%s", name)
     ds_result = __read_datasource(jboss_config, name)
     current_properties = ds_result['result']
@@ -194,12 +224,18 @@ def __get_datasource_resource_description(jboss_config, name):
 
 def read_datasource(jboss_config, name):
     '''
-       Read datasource properties in the running jboss instance.
+    Read datasource properties in the running jboss instance.
 
-       jboss_config
-           Configuration dictionary with properties specified above.
-       name
-           Datasource name
+    jboss_config
+        Configuration dictionary with properties specified above.
+    name
+        Datasource name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' jboss7.read_datasource '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}'
        '''
     log.debug("======================== MODULE FUNCTION: jboss7.read_datasource, name=%s", name)
     return __read_datasource(jboss_config, name)
@@ -207,14 +243,20 @@ def read_datasource(jboss_config, name):
 
 def create_simple_binding(jboss_config, binding_name, value):
     '''
-       Create a simple jndi binding in the running jboss instance
+    Create a simple jndi binding in the running jboss instance
 
-       jboss_config
-           Configuration dictionary with properties specified above.
-       binding_name
-           Binding name to be created
-       value
-           Binding value
+    jboss_config
+        Configuration dictionary with properties specified above.
+    binding_name
+        Binding name to be created
+    value
+        Binding value
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' jboss7.create_simple_binding '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}' my_binding_name my_binding_value
        '''
     log.debug("======================== MODULE FUNCTION: jboss7.create_simple_binding, binding_name=%s, value=%s", binding_name, value)
     operation = '/subsystem=naming/binding="{binding_name}":add(binding-type=simple, value="{value}")'.format(
@@ -226,14 +268,20 @@ def create_simple_binding(jboss_config, binding_name, value):
 
 def update_simple_binding(jboss_config, binding_name, value):
     '''
-       Update the simple jndi binding in the running jboss instance
+    Update the simple jndi binding in the running jboss instance
 
-       jboss_config
-           Configuration dictionary with properties specified above.
-       binding_name
-           Binding name to be updated
-       value
-           New binding value
+    jboss_config
+        Configuration dictionary with properties specified above.
+    binding_name
+        Binding name to be updated
+    value
+        New binding value
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' jboss7.update_simple_binding '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}' my_binding_name my_binding_value
        '''
     log.debug("======================== MODULE FUNCTION: jboss7.update_simple_binding, binding_name=%s, value=%s", binding_name, value)
     operation = '/subsystem=naming/binding="{binding_name}":write-attribute(name=value, value="{value}")'.format(
@@ -245,12 +293,18 @@ def update_simple_binding(jboss_config, binding_name, value):
 
 def read_simple_binding(jboss_config, binding_name):
     '''
-       Read jndi binding in the running jboss instance
+    Read jndi binding in the running jboss instance
 
-       jboss_config
-           Configuration dictionary with properties specified above.
-       binding_name
-           Binding name to be created
+    jboss_config
+        Configuration dictionary with properties specified above.
+    binding_name
+        Binding name to be created
+
+    CLI Example:
+
+        .. code-block:: bash
+
+        salt '*' jboss7.read_simple_binding '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}' my_binding_name
        '''
     log.debug("======================== MODULE FUNCTION: jboss7.read_simple_binding, %s", binding_name)
     return __read_simple_binding(jboss_config, binding_name)
@@ -286,12 +340,18 @@ def __escape_binding_value(binding_name):
 
 def remove_datasource(jboss_config, name):
     '''
-       Remove an existing datasource from the running jboss instance.
+    Remove an existing datasource from the running jboss instance.
 
-       jboss_config
-           Configuration dictionary with properties specified above.
-       name
-           Datasource name
+    jboss_config
+        Configuration dictionary with properties specified above.
+    name
+        Datasource name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' jboss7.remove_datasource '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}' my_datasource_name
        '''
     log.debug("======================== MODULE FUNCTION: jboss7.remove_datasource, name=%s", name)
     operation = '/subsystem=datasources/data-source={name}:remove'.format(name=name)
@@ -300,12 +360,18 @@ def remove_datasource(jboss_config, name):
 
 def deploy(jboss_config, source_file):
     '''
-       Deploy the application on the jboss instance from the local file system where minion is running.
+    Deploy the application on the jboss instance from the local file system where minion is running.
 
-       jboss_config
-           Configuration dictionary with properties specified above.
-       source_file
-           Source file to deploy from
+    jboss_config
+        Configuration dictionary with properties specified above.
+    source_file
+        Source file to deploy from
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' jboss7.deploy '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}' /opt/deploy_files/my_deploy
        '''
     log.debug("======================== MODULE FUNCTION: jboss7.deploy, source_file=%s", source_file)
     command = 'deploy {source_file} --force '.format(source_file=source_file)
@@ -314,10 +380,16 @@ def deploy(jboss_config, source_file):
 
 def list_deployments(jboss_config):
     '''
-       List all deployments on the jboss instance
+    List all deployments on the jboss instance
 
-       jboss_config
-           Configuration dictionary with properties specified above.
+    jboss_config
+        Configuration dictionary with properties specified above.
+
+     CLI Example:
+
+     .. code-block:: bash
+
+         salt '*' jboss7.list_deployments '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}'
 
        '''
     log.debug("======================== MODULE FUNCTION: jboss7.list_deployments")
@@ -331,12 +403,18 @@ def list_deployments(jboss_config):
 
 def undeploy(jboss_config, deployment):
     '''
-       Undeploy the application from jboss instance
+    Undeploy the application from jboss instance
 
-       jboss_config
-           Configuration dictionary with properties specified above.
-       deployment
-           Deployment name to undeploy
+    jboss_config
+        Configuration dictionary with properties specified above.
+    deployment
+        Deployment name to undeploy
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' jboss7.undeploy '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}' my_deployment
        '''
     log.debug("======================== MODULE FUNCTION: jboss7.undeploy, deployment=%s", deployment)
     command = 'undeploy {deployment} '.format(deployment=deployment)
