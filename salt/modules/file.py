@@ -4310,3 +4310,37 @@ def move(src, dst):
         )
 
     return ret
+
+def diskusage(path):
+    '''
+    Recursivly calculate diskusage of path and return it
+    in bytes
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.diskusage /path/to/check
+    '''
+
+    total_size = 0
+    seen = set()
+
+    for dirpath, dirnames, filenames in os.walk(path):
+        for f in filenames:
+            fp = os.path.join(dirpath, f)
+
+            try:
+                stat = os.stat(fp)
+            except OSError:
+                continue
+
+            if stat.st_ino in seen:
+                continue
+
+            seen.add(stat.st_ino)
+
+            total_size += stat.st_size
+
+    ret = total_size
+    return ret
