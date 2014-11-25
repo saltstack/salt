@@ -136,7 +136,7 @@ def datasource_exists(name, jboss_config, datasource_properties, recreate=False)
                 ret['comment'] = 'Could not remove datasource. Stdout: '+remove_result['stdout']
                 return ret
 
-            has_changed = True # if we are here, we have already made a change
+            has_changed = True  # if we are here, we have already made a change
 
             create_result = __salt__['jboss7.create_datasource'](jboss_config=jboss_config, name=name, datasource_properties=datasource_properties)
             if create_result['success']:
@@ -166,7 +166,7 @@ def datasource_exists(name, jboss_config, datasource_properties, recreate=False)
             read_result = __salt__['jboss7.read_datasource'](jboss_config=jboss_config, name=name)
             ds_new_properties = read_result['result']
     else:
-        if ds_result['err_code'] == 'JBAS014807': #ok, resource not exists:
+        if ds_result['err_code'] == 'JBAS014807':  #ok, resource not exists:
             create_result = __salt__['jboss7.create_datasource'](jboss_config=jboss_config, name=name, datasource_properties=datasource_properties)
             if create_result['success']:
                 read_result = __salt__['jboss7.read_datasource'](jboss_config=jboss_config, name=name)
@@ -217,6 +217,7 @@ def __format_ds_changes(keys, old_dict, new_dict):
             changes += key+':'+__get_ds_value(new_dict, key)+'\n'
     return changes
 
+
 def __get_ds_value(dict, key):
     log.debug("__get_value(dict,%s)", key)
     if key == "password":
@@ -225,6 +226,7 @@ def __get_ds_value(dict, key):
         return 'undefined'
     else:
         return str(dict[key])
+
 
 def bindings_exist(name, jboss_config, bindings):
     '''
@@ -270,7 +272,7 @@ def bindings_exist(name, jboss_config, bindings):
                 else:
                     raise CommandExecutionError(update_result['failure-description'])
         else:
-            if query_result['err_code'] == 'JBAS014807': #ok, resource not exists:
+            if query_result['err_code'] == 'JBAS014807':  # ok, resource not exists:
                 create_result = __salt__['jboss7.create_simple_binding'](binding_name=key, value=value, jboss_config=jboss_config)
                 if create_result['success']:
                     has_changed = True
@@ -284,14 +286,14 @@ def bindings_exist(name, jboss_config, bindings):
         ret['comment'] = 'Bindings changed.'
     return ret
 
+
 def __log_binding_change(changes, type, key, new, old=None):
-    if not type in changes:
+    if type not in changes:
         changes[type] = ''
     if old is None:
         changes[type] += key + ':' + new + '\n'
     else:
         changes[type] += key + ':' + old + '->' + new + '\n'
-
 
 
 def deployed(name, jboss_config, artifact=None, salt_source=None):
@@ -481,6 +483,7 @@ def deployed(name, jboss_config, artifact=None, salt_source=None):
 
     return ret
 
+
 def __validate_arguments(jboss_config, artifact, salt_source):
     result, comment = __check_dict_contains(jboss_config, 'jboss_config', ['cli_path', 'controller'])
     if artifact is None and salt_source is None:
@@ -496,13 +499,14 @@ def __validate_arguments(jboss_config, artifact, salt_source):
             else:
                 result = False
                 comment = __append_comment('Cannot convert jboss_config.latest_snapshot={0} to boolean'.format(artifact['latest_snapshot']), comment)
-        if not 'version' in artifact and (not 'latest_snapshot' in artifact or artifact['latest_snapshot'] == False):
+        if 'version' not in artifact and ('latest_snapshot' not in artifact or not artifact['latest_snapshot']):
             result = False
             comment = __append_comment('No version or latest_snapshot=True in artifact')
     if salt_source:
         result, comment = __check_dict_contains(salt_source, 'salt_source', ['source', 'target_file'], comment, result)
 
     return result, comment
+
 
 def __find_deployment(jboss_config, artifact=None, salt_source=None):
     result = None
@@ -675,7 +679,7 @@ def reloaded(name, jboss_config, timeout=60, interval=5):
            'comment': ''}
 
     status = __salt__['jboss7.status'](jboss_config)
-    if status['success'] == False or status['result'] not in ('running', 'reload-required'):
+    if not status['success'] or status['result'] not in ('running', 'reload-required'):
         ret['result'] = False
         ret['comment'] = "Cannot reload server configuration, it should be up and in 'running' or 'reload-required' state."
         return ret
@@ -686,7 +690,7 @@ def reloaded(name, jboss_config, timeout=60, interval=5):
                     'Communication error: java.util.concurrent.ExecutionException: Operation failed' in result['stdout']:
         wait_time = 0
         status = None
-        while (status is None or status['success'] == False or status['result'] != 'running') and wait_time < timeout:
+        while (status is None or not status['success'] or status['result'] != 'running') and wait_time < timeout:
             time.sleep(interval)
             wait_time += interval
             status = __salt__['jboss7.status'](jboss_config)
@@ -716,8 +720,10 @@ def __check_dict_contains(dict, dict_name, keys, comment='', result=True):
             comment = __append_comment("Missing {0} in {1}".format(key, dict_name), comment)
     return result, comment
 
+
 def __append_comment(new_comment, current_comment=''):
     return current_comment+'\n'+new_comment
+
 
 def _error(ret, err_msg):
     ret['result'] = False

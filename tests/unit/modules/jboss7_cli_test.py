@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import re
 import __builtin__
 
@@ -13,15 +14,16 @@ except NameError:
     # if executed separately we need to export __salt__ dictionary ourselves
     __builtin__.__salt__ = {}
 
-class CmdMock:
+class CmdMock(object):
     commands = []
-    cli_commands = []
     command_response_func = None     # if you want to test complete response object (with retcode, stdout and stderr)
-    default_response =  { 'retcode': 0 ,'stdout': ''' {
+    cli_commands = []
+
+    default_response = {'retcode': 0, 'stdout': ''' {
         "outcome" => "success"
     }''', 'stderr':''}
 
-    def __init__(self,  command_response_func=None):
+    def __init__(self, command_response_func=None):
         self.command_response_func = command_response_func
 
     def run_all(self, command):
@@ -31,21 +33,11 @@ class CmdMock:
 
         cli_command = self.__get_cli_command(command)
         self.cli_commands.append(cli_command)
-        if not self.cli_command_response_func is None:
-            response = self.cli_command_response_func(cli_command)
-            if response is None:
-                return self.default_response
-            else:
-                return {
-                    'retcode': 0 ,
-                    'stdout': response,
-                    'stderr':''}
-        else:
-            return self.default_response
+        return self.default_response
 
     @staticmethod
     def __get_cli_command(command):
-        command_re = re.compile('--command=\"\s*(.+?)\s*\"$', re.DOTALL)
+        command_re = re.compile(r'--command=\"\s*(.+?)\s*\"$', re.DOTALL)
         m = command_re.search(command) #--command has to be the last argument
         if m:
             cli_command = m.group(1)
@@ -68,7 +60,6 @@ class CmdMock:
         self.commands = []
         self.command_response_func = None
         self.cli_commands = []
-        self.cli_command_response_func = None
 
 
 class JBoss7CliTestCase(TestCase):
@@ -86,7 +77,7 @@ class JBoss7CliTestCase(TestCase):
     def setUp(self):
         self.cmd.clear()
         if 'cmd.run_all' in __salt__:
-            self.org_cmd_run_all =  __salt__['cmd.run_all']
+            self.org_cmd_run_all = __salt__['cmd.run_all']
         __salt__['cmd.run_all'] = self.cmd.run_all
 
     def tearDown(self):
@@ -118,30 +109,30 @@ class JBoss7CliTestCase(TestCase):
 
     def test_handling_jboss_error(self):
         def command_response(command):
-            return { 'retcode': 1,
-                     'stdout': r'''{
-                        "outcome" => "failed",
-                        "failure-description" => "JBAS014807: Management resource '[
-                        (\"subsystem\" => \"datasources\"),
-                        (\"data-source\" => \"non-existing\")
+            return {'retcode': 1,
+                    'stdout': r'''{
+                       "outcome" => "failed",
+                       "failure-description" => "JBAS014807: Management resource '[
+                       (\"subsystem\" => \"datasources\"),
+                       (\"data-source\" => \"non-existing\")
                     ]' not found",
                         "rolled-back" => true,
                         "response-headers" => {"process-state" => "reload-required"}
                     }
                     ''',
-                     'stderr': 'some err'}
+                    'stderr': 'some err'}
         self.cmd.command_response_func = command_response
 
-        result =  jboss7_cli.run_operation(self.jboss_config, 'some cli command')
+        result = jboss7_cli.run_operation(self.jboss_config, 'some cli command')
 
         self.assertFalse(result['success'])
-        self.assertEqual(result['err_code'],'JBAS014807')
+        self.assertEqual(result['err_code'], 'JBAS014807')
 
     def test_handling_cmd_not_exists(self):
         def command_response(command):
-            return { 'retcode': 127,
-                     'stdout': '''Command not exists''',
-                     'stderr': 'some err'}
+            return {'retcode': 127,
+                    'stdout': '''Command not exists''',
+                    'stderr': 'some err'}
         self.cmd.command_response_func = command_response
 
         try:
@@ -153,9 +144,9 @@ class JBoss7CliTestCase(TestCase):
 
     def test_handling_other_cmd_error(self):
         def command_response(command):
-            return { 'retcode': 1,
-                     'stdout': '''Command not exists''',
-                     'stderr': 'some err'}
+            return {'retcode': 1,
+                    'stdout': '''Command not exists''',
+                    'stderr': 'some err'}
         self.cmd.command_response_func = command_response
 
         try:
@@ -244,7 +235,7 @@ class JBoss7CliTestCase(TestCase):
         self.assertEqual(result['response-headers']['process-state'], 'reload-required')
 
     def test_multiline_strings_with_escaped_quotes(self):
-        text=r'''{
+        text = r'''{
             "outcome" => "failed",
             "failure-description" => "JBAS014807: Management resource '[
             (\"subsystem\" => \"datasources\"),
@@ -265,7 +256,7 @@ class JBoss7CliTestCase(TestCase):
         ]' not found''')
 
     def test_handling_double_backslash_in_return_values(self):
-        text=r'''{
+        text = r'''{
                  "outcome" => "success",
                  "result" => {
                     "binding-type" => "simple",
@@ -280,7 +271,7 @@ class JBoss7CliTestCase(TestCase):
         self.assertEqual(result['result']['value'], r'DOMAIN\user')
 
     def test_numbers_without_quotes(self):
-        text=r'''{
+        text = r'''{
                 "outcome" => "success",
                 "result" => {
                     "min-pool-size" => 1233,
@@ -295,7 +286,7 @@ class JBoss7CliTestCase(TestCase):
         self.assertIsNone(result['result']['new-connection-sql'])
 
     def test_all_datasource_properties(self):
-        text=r'''{
+        text = r'''{
             "outcome" => "success",
             "result" => {
                 "allocation-retry" => undefined,
@@ -355,7 +346,7 @@ class JBoss7CliTestCase(TestCase):
 
         result = jboss7_cli._parse(text)
 
-        self.assertEqual(result['outcome'],'success')
+        self.assertEqual(result['outcome'], 'success')
         self.assertEqual(result['result']['max-pool-size'], 20)
         self.assertIsNone(result['result']['new-connection-sql'])
         self.assertIsNone(result['result']['url-delimiter'])
@@ -363,7 +354,7 @@ class JBoss7CliTestCase(TestCase):
 
 
     def test_datasource_resource_one_attribute_description(self):
-        cli_output='''{
+        cli_output = '''{
             "outcome" => "success",
             "result" => {
                 "description" => "A JDBC data-source configuration",
@@ -388,17 +379,17 @@ class JBoss7CliTestCase(TestCase):
         '''
         result = jboss7_cli._parse(cli_output)
 
-        self.assertEqual(result['outcome'],'success')
+        self.assertEqual(result['outcome'], 'success')
         conn_url_attributes = result['result']['attributes']['connection-url']
-        self.assertEqual(conn_url_attributes['type'] , 'STRING')
-        self.assertEqual(conn_url_attributes['description'] , 'The JDBC driver connection URL')
+        self.assertEqual(conn_url_attributes['type'], 'STRING')
+        self.assertEqual(conn_url_attributes['description'], 'The JDBC driver connection URL')
         self.assertTrue(conn_url_attributes['expressions-allowed'])
         self.assertFalse(conn_url_attributes['nillable'])
-        self.assertEqual(conn_url_attributes['min-length'] , 1)
-        self.assertEqual(conn_url_attributes['max-length'] , 2147483647)
-        self.assertEqual(conn_url_attributes['access-type'] , 'read-write')
-        self.assertEqual(conn_url_attributes['storage'] , 'configuration')
-        self.assertEqual(conn_url_attributes['restart-required'] , 'no-services')
+        self.assertEqual(conn_url_attributes['min-length'], 1)
+        self.assertEqual(conn_url_attributes['max-length'], 2147483647)
+        self.assertEqual(conn_url_attributes['access-type'], 'read-write')
+        self.assertEqual(conn_url_attributes['storage'], 'configuration')
+        self.assertEqual(conn_url_attributes['restart-required'], 'no-services')
 
 
     def test_datasource_complete_resource_description(self):
@@ -431,7 +422,7 @@ class JBoss7CliTestCase(TestCase):
         self.assertEqual(result['outcome'], 'success')
         conn_url_attributes = result['result']['attributes']['connection-url']
         self.assertEqual(conn_url_attributes['type'], 'STRING')
-        self.assertEqual(conn_url_attributes['description'],'The JDBC driver connection URL')
+        self.assertEqual(conn_url_attributes['description'], 'The JDBC driver connection URL')
         self.assertTrue(conn_url_attributes['expressions-allowed'])
         self.assertFalse(conn_url_attributes['nillable'])
         self.assertEqual(conn_url_attributes['min-length'], 1)

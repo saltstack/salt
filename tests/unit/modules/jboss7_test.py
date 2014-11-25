@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import __builtin__
 from salt.utils.odict import OrderedDict
 
@@ -13,19 +14,19 @@ except NameError:
     # if executed separately we need to export __salt__ dictionary ourselves
     __builtin__.__salt__ = {}
 
+
 class JBoss7TestCase(TestCase):
     jboss_config = {}
     org_run_operation = None
 
     def setUp(self):
         if 'jboss7_cli.run_operation' in __salt__:
-            self.org_run_operation =  __salt__['jboss7_cli.run_operation']
+            self.org_run_operation = __salt__['jboss7_cli.run_operation']
         __salt__['jboss7_cli.run_operation'] = MagicMock()
 
     def tearDown(self):
         if self.org_run_operation is not None:
             __salt__['jboss7_cli.run_operation'] = self.org_run_operation
-
 
     def test_create_simple_binding(self):
         jboss7.create_simple_binding(self.jboss_config, 'java:global/env', 'DEV')
@@ -47,37 +48,35 @@ class JBoss7TestCase(TestCase):
 
         __salt__['jboss7_cli.run_operation'].assert_called_with(self.jboss_config, r'/subsystem=naming/binding="java:global/env":write-attribute(name=value, value="INT\\\\2")')
 
-
     def test_read_binding(self):
         def cli_command_response(jboss_config, cli_command):
             if cli_command == '/subsystem=naming/binding="java:global/env":read-resource':
-                return { 'outcome': 'success',
+                return {'outcome': 'success',
                          'result': {
                              'binding-type': 'simple',
                              'value': 'DEV'
-                         }
+                        }
                 }
 
         __salt__['jboss7_cli.run_operation'].side_effect = cli_command_response
 
         result = jboss7.read_simple_binding(self.jboss_config, 'java:global/env')
-        self.assertEqual(result['outcome'],'success')
-        self.assertEqual(result['result']['value'],'DEV')
-
+        self.assertEqual(result['outcome'], 'success')
+        self.assertEqual(result['result']['value'], 'DEV')
 
     def test_create_datasource_all_properties_included(self):
         def cli_command_response(jboss_config, cli_command, fail_on_error=False):
             if cli_command == '/subsystem=datasources/data-source="appDS":read-resource-description':
-                return { 'outcome': 'success',
-                         'result': {
-                             'attributes': {
-                                 'driver-name': { 'type' : 'STRING' },
-                                 'connection-url': { 'type' : 'STRING' },
-                                 'jndi-name': { 'type' : 'STRING' },
-                                 'user-name': { 'type' : 'STRING' },
-                                 'password': { 'type' : 'STRING' }
-                             }
-                         }
+                return {'outcome': 'success',
+                        'result': {
+                            'attributes': {
+                                'driver-name': {'type': 'STRING'},
+                                'connection-url': {'type': 'STRING'},
+                                'jndi-name': {'type': 'STRING'},
+                                'user-name': {'type': 'STRING'},
+                                'password': {'type': 'STRING'}
+                            }
+                        }
                 }
 
         __salt__['jboss7_cli.run_operation'].side_effect = cli_command_response
@@ -93,16 +92,15 @@ class JBoss7TestCase(TestCase):
 
         __salt__['jboss7_cli.run_operation'].assert_called_with(self.jboss_config, '/subsystem=datasources/data-source="appDS":add(driver-name="mysql",connection-url="jdbc:mysql://localhost:3306/app",jndi-name="java:jboss/datasources/appDS",user-name="app",password="app_password")', fail_on_error=False)
 
-
     def test_create_datasource_format_boolean_value_when_string(self):
         def cli_command_response(jboss_config, cli_command, fail_on_error=False):
             if cli_command == '/subsystem=datasources/data-source="appDS":read-resource-description':
-                return { 'outcome': 'success',
-                         'result': {
-                             'attributes': {
-                                 'use-ccm': { 'type' : 'BOOLEAN' }
-                             }
-                         }
+                return {'outcome': 'success',
+                        'result': {
+                            'attributes': {
+                                'use-ccm': {'type' : 'BOOLEAN'}
+                            }
+                        }
                 }
 
         __salt__['jboss7_cli.run_operation'].side_effect = cli_command_response
@@ -116,12 +114,12 @@ class JBoss7TestCase(TestCase):
     def test_create_datasource_format_boolean_value_when_boolean(self):
         def cli_command_response(jboss_config, cli_command, fail_on_error=False):
             if cli_command == '/subsystem=datasources/data-source="appDS":read-resource-description':
-                return { 'outcome': 'success',
-                         'result': {
-                             'attributes': {
-                                 'use-ccm': { 'type' : 'BOOLEAN' }
-                             }
-                         }
+                return {'outcome': 'success',
+                        'result': {
+                            'attributes': {
+                                'use-ccm': {'type': 'BOOLEAN'}
+                            }
+                        }
                 }
 
         __salt__['jboss7_cli.run_operation'].side_effect = cli_command_response
@@ -132,16 +130,15 @@ class JBoss7TestCase(TestCase):
 
         __salt__['jboss7_cli.run_operation'].assert_called_with(self.jboss_config, '/subsystem=datasources/data-source="appDS":add(use-ccm=true)', fail_on_error=False)
 
-
     def test_create_datasource_format_int_value_when_int(self):
         def cli_command_response(jboss_config, cli_command, fail_on_error=False):
             if cli_command == '/subsystem=datasources/data-source="appDS":read-resource-description':
-                return { 'outcome': 'success',
-                         'result': {
-                             'attributes': {
-                                 'min-pool-size': { 'type' : 'INT' }
-                             }
-                         }
+                return {'outcome': 'success',
+                        'result': {
+                            'attributes': {
+                                'min-pool-size': {'type' : 'INT'}
+                            }
+                        }
                 }
 
         __salt__['jboss7_cli.run_operation'].side_effect = cli_command_response
@@ -155,12 +152,12 @@ class JBoss7TestCase(TestCase):
     def test_create_datasource_format_int_value_when_string(self):
         def cli_command_response(jboss_config, cli_command, fail_on_error=False):
             if cli_command == '/subsystem=datasources/data-source="appDS":read-resource-description':
-                return { 'outcome': 'success',
-                         'result': {
-                             'attributes': {
-                                 'min-pool-size': { 'type' : 'INT' }
-                             }
-                         }
+                return {'outcome': 'success',
+                        'result': {
+                            'attributes': {
+                                'min-pool-size': {'type' : 'INT'}
+                            }
+                        }
                 }
 
         __salt__['jboss7_cli.run_operation'].side_effect = cli_command_response
@@ -170,8 +167,6 @@ class JBoss7TestCase(TestCase):
         jboss7.create_datasource(self.jboss_config, 'appDS', datasource_properties)
 
         __salt__['jboss7_cli.run_operation'].assert_called_with(self.jboss_config, '/subsystem=datasources/data-source="appDS":add(min-pool-size=15)', fail_on_error=False)
-
-
 
     def test_read_datasource(self):
         def cli_command_response(jboss_config, cli_command):
@@ -199,24 +194,24 @@ class JBoss7TestCase(TestCase):
         self.assertEqual(ds_properties['password'], 'app_password')
 
     def test_update_datasource(self):
-        datasource_properties = { 'driver-name': 'mysql',
-                                  'connection-url': 'jdbc:mysql://localhost:3306/app',
-                                  'jndi-name': 'java:jboss/datasources/appDS',
-                                  'user-name' : 'newuser',
-                                  'password': 'app_password' }
+        datasource_properties = {'driver-name': 'mysql',
+                                 'connection-url': 'jdbc:mysql://localhost:3306/app',
+                                 'jndi-name': 'java:jboss/datasources/appDS',
+                                 'user-name' : 'newuser',
+                                 'password': 'app_password'}
 
         def cli_command_response(jboss_config, cli_command, fail_on_error=False):
             if cli_command == '/subsystem=datasources/data-source="appDS":read-resource-description':
-                return { 'outcome': 'success',
-                         'result': {
-                             'attributes': {
-                                 'driver-name': { 'type' : 'STRING' },
-                                 'connection-url': { 'type' : 'STRING' },
-                                 'jndi-name': { 'type' : 'STRING' },
-                                 'user-name': { 'type' : 'STRING' },
-                                 'password': { 'type' : 'STRING' }
-                             }
-                         }
+                return {'outcome': 'success',
+                        'result': {
+                            'attributes': {
+                                'driver-name': {'type' : 'STRING'},
+                                'connection-url': {'type' : 'STRING'},
+                                'jndi-name': {'type' : 'STRING'},
+                                'user-name': {'type' : 'STRING'},
+                                'password': {'type' : 'STRING'}
+                            }
+                        }
                 }
 
             elif cli_command == '/subsystem=datasources/data-source="appDS":read-resource':
@@ -241,5 +236,5 @@ class JBoss7TestCase(TestCase):
 
         jboss7.update_datasource(self.jboss_config, 'appDS', datasource_properties)
 
-        __salt__['jboss7_cli.run_operation'].assert_any_call(self.jboss_config,'/subsystem=datasources/data-source="appDS":write-attribute(name="user-name",value="newuser")', fail_on_error=False )
+        __salt__['jboss7_cli.run_operation'].assert_any_call(self.jboss_config, '/subsystem=datasources/data-source="appDS":write-attribute(name="user-name",value="newuser")', fail_on_error=False)
 

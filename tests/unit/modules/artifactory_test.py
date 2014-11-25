@@ -1,10 +1,13 @@
+# -*- coding: utf-8 -*-
 from salt.modules import artifactory
 from salttesting import TestCase
 from salttesting.mock import MagicMock
 
+
 class ArtifactoryTestCase(TestCase):
 
     org_module_functions = {}
+
     def __save_module_functions(self):
         for name, val in artifactory.__dict__.iteritems():
             if callable(val):
@@ -42,7 +45,6 @@ class ArtifactoryTestCase(TestCase):
                                             artifact_id='web')
         self.assertEqual(metadata['latest_version'], '1.1_RC11')
 
-
     def test_snapshot_version_get_metadata(self):
         artifactory._get_snapshot_version_metadata_xml = MagicMock(return_value='''<?xml version="1.0" encoding="UTF-8"?>
             <metadata>
@@ -77,7 +79,6 @@ class ArtifactoryTestCase(TestCase):
                                                              version='1.1_RC8-SNAPSHOT')
         self.assertEqual(metadata['snapshot_versions']['war'], '1.1_RC8-20140418.150212-1')
 
-
     def test_artifact_metadata_url(self):
         metadata_url = artifactory._get_artifact_metadata_url(artifactory_url='http://artifactory.company.com/artifactory',
                                                              repository='libs-releases',
@@ -95,7 +96,6 @@ class ArtifactoryTestCase(TestCase):
 
         self.assertEqual(metadata_url, "http://artifactory.company.com/artifactory/libs-snapshots/com/company/sampleapp/web-module/web/1.0_RC10-SNAPSHOT/maven-metadata.xml")
 
-
     def test_construct_url_for_released_version(self):
         artifact_url, file_name = artifactory._get_release_url(repository='libs-releases',
                                       group_id='com.company.sampleapp.web-module',
@@ -106,7 +106,6 @@ class ArtifactoryTestCase(TestCase):
 
         self.assertEqual(artifact_url, "http://artifactory.company.com/artifactory/libs-releases/com/company/sampleapp/web-module/web/1.0_RC20/web-1.0_RC20.war")
         self.assertEqual(file_name, "web-1.0_RC20.war")
-
 
     def test_construct_url_for_snapshot_version(self):
         prev_artifactory_get_snapshot_version_metadata = artifactory._get_snapshot_version_metadata

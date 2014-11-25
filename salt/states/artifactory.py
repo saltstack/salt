@@ -7,6 +7,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
+
 def downloaded(name, artifact, target_dir='/tmp', target_file=None):
     '''
     Ensures that the artifact from artifactory exists at given location. If it doesn't exist, then
@@ -76,7 +77,6 @@ def downloaded(name, artifact, target_dir='/tmp', target_file=None):
         return ret
     except Exception as e:
         return None, e.message
-
 
 
 def __fetch_from_artifactory(artifact, target_dir, target_file):
