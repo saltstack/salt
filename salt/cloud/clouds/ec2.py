@@ -1541,14 +1541,16 @@ def request_instance(vm_=None, call=None):
 
         # pull the root device name from the result and use it when
         # launching the new VM
-        if rd_data[0]['blockDeviceMapping'] is None:
-            # Some ami instances do not have a root volume. Ignore such cases
-            rd_name = None
-        elif isinstance(rd_data[0]['blockDeviceMapping']['item'], list):
-            rd_name = rd_data[0]['blockDeviceMapping']['item'][0]['deviceName']
-        else:
-            rd_name = rd_data[0]['blockDeviceMapping']['item']['deviceName']
-        log.info('Found root device name: {0}'.format(rd_name))
+        rd_name = None
+        if 'blockDeviceMapping' in rd_data[0]:
+            if rd_data[0]['blockDeviceMapping'] is None:
+                # Some ami instances do not have a root volume. Ignore such cases
+                rd_name = None
+            elif isinstance(rd_data[0]['blockDeviceMapping']['item'], list):
+                rd_name = rd_data[0]['blockDeviceMapping']['item'][0]['deviceName']
+            else:
+                rd_name = rd_data[0]['blockDeviceMapping']['item']['deviceName']
+            log.info('Found root device name: {0}'.format(rd_name))
 
         if rd_name is not None:
             if ex_blockdevicemappings:
