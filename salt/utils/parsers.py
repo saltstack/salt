@@ -2386,8 +2386,8 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         self.add_option_group(auth_group)
 
         scan_group = optparse.OptionGroup(
-            self, 'Authentication Options',
-            'Parameters affecting authentication'
+            self, 'Scan Roster Options'
+            'Parameters affecting scan roster'
         )
         scan_group.add_option(
             '--scan-ports',
