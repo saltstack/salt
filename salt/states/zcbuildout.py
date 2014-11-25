@@ -256,7 +256,8 @@ def installed(name,
         verbose=verbose,
         onlyif=onlyif,
         unless=unless,
-        use_vt=use_vt
+        use_vt=use_vt,
+        loglevel=loglevel
     )
     ret.update(_ret_status(func(**kwargs), name, quiet=quiet))
     return ret
