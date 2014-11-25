@@ -46,8 +46,7 @@ class NestDisplay(object):
                 msg,
                 prefix='',
                 suffix='',
-                endc=None,
-                encoding='utf-8'):
+                endc=None):
         if endc is None:
             endc = self.colors['ENDC']
         try:
