@@ -44,7 +44,8 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
 
     def __init__(self, opts):
         self.opts = opts
-        self.functions = salt.loader.runner(opts)
+        self.functions = salt.loader.runner(opts)  # Must be self.functions for mixin to work correctly :-/
+        self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
 
     def cmd(self, fun, arg, pub_data=None, kwarg=None):
         '''
@@ -188,18 +189,13 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
                 'eauth': 'pam',
             })
         '''
-        sevent = salt.utils.event.get_event('master',
-                                            self.opts['sock_dir'],
-                                            self.opts['transport'],
-                                            opts=self.opts)
-
         reformatted_low = self._reformat_low(low)
         job = self.master_call(**reformatted_low)
         ret_tag = tagify('ret', base=job['tag'])
 
         timelimit = time.time() + (timeout or 300)
         while True:
-            ret = sevent.get_event(full=True)
+            ret = self.event.get_event(full=True)
             if ret is None:
                 if time.time() > timelimit:
                     raise salt.exceptions.SaltClientTimeout(
