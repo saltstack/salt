@@ -439,6 +439,21 @@ exist (returns ``False``). The state will run if both commands return
 
 However, the state will not run if both commands return ``True``.
 
+Unless requisites are resolved for each name to which they are associated.
+
+For example:
+
+.. code-block:: yaml
+
+    deploy_app:
+      cmd.run:
+        - first_deploy_cmd
+        - second_deploy_cmd
+      - unless: some_check
+
+In the above case, ``some_check`` will be run prior to _each_ name -- once for
+``first_deploy_cmd`` and a second time for ``second_deploy_cmd``.
+
 Onlyif
 ------
 
