@@ -273,11 +273,11 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
         with salt.utils.fopen(self.get_config_file_path('minion'), 'r') as fh_:
             minion_config = yaml.load(fh_.read())
-        minion_config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
-        with salt.utils.fopen(os.path.join(config_dir, 'minion'), 'w') as fh_:
-            fh_.write(
-                yaml.dump(minion_config, default_flow_style=False)
-            )
+            minion_config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
+            with salt.utils.fopen(os.path.join(config_dir, 'minion'), 'w') as fh_:
+                fh_.write(
+                    yaml.dump(minion_config, default_flow_style=False)
+                )
         ret = self.run_script(
             'salt-call',
             '--config-dir {0} cmd.run "echo foo"'.format(
