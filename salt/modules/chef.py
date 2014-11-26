@@ -181,7 +181,7 @@ def _exec_cmd(*args, **kwargs):
     result = __salt__['cmd.run_all']('script -q -c "{0}" {1}'.format(cmd_exec, filename))
 
     # Read the output from the script command, stripping the first line
-    with open(filename, 'r') as outfile:
+    with salt.utils.fopen(filename, 'r') as outfile:
         stdout = outfile.readlines()
     result['stdout'] = ''.join(stdout[1:])
     os.remove(filename)
