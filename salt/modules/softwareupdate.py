@@ -342,8 +342,9 @@ def list_downloads():
     ret = []
     for update in _get_upgradable():
         for f in dist_files:
-            if update.rsplit('-', 1)[0] in open(f).read():
-                ret.append(update)
+            with salt.utils.fopen(f) as fhr:
+                if update.rsplit('-', 1)[0] in fhr.read():
+                    ret.append(update)
 
     return ret
 
