@@ -665,7 +665,6 @@ def has_method(obj, method_name):
 def key_list(items=None):
     '''
     convert list to dictionary using the key as the identifier
-    :param key: identifier - must exist in the arrays elements own dictionary
     :param items: array to iterate over
     :return: dictionary
     '''
