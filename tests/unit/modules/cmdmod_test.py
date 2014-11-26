@@ -5,6 +5,7 @@
 
 # Import Salt Libs
 from salt.modules import cmdmod
+from salt.exceptions import CommandExecutionError
 from salt.log import LOG_LEVELS
 
 # Import Salt Testing Libs
@@ -29,12 +30,21 @@ class CMDMODTestCase(TestCase):
                       'trace': 'bar', 'garbage': 'bar', 'error': 'bar',
                       'debug': 'bar', 'warning': 'bar', 'quiet': 'bar'}
 
-    def test_render_cmd(self):
+    def test_render_cmd_no_template(self):
         '''
         Tests return when template=None
         '''
         self.assertEqual(cmdmod._render_cmd('foo', 'bar', None),
                          ('foo', 'bar'))
+
+    def test_render_cmd_unavailable_engine(self):
+        '''
+        Tests CommandExecutionError raised when template isn't in the
+        template registry
+        '''
+        self.assertRaises(CommandExecutionError,
+                          cmdmod._render_cmd,
+                          'boo', 'bar', 'baz')
 
     def test_check_loglevel_bad_level(self):
         '''
