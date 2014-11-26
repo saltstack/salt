@@ -594,6 +594,32 @@ class EventPublisher(multiprocessing.Process):
                 self.context.term()
 
 
+class EventReturn(multiprocessing.Process):
+    '''
+    A dedicated process which listens to the master event bus and queues
+    and forwards events to the specified returner.
+    '''
+    def __init__(self, opts):
+        multiprocessing.Process.__init__(self)
+
+        self.opts = opts
+        local_minion_opts = self.opts.copy()
+        local_minion_opts['file_client'] = 'local'
+        self.minion = salt.minion.MasterMinion(local_minion_opts)
+
+    def run(self):
+        salt.utils.appendproctitle(self.__class__.__name__)
+        self.event = get_event('master', opts=self.opts)
+        events = self.event.iter_events(full=True)
+        self.event.fire_event({}, 'salt/event_listen/start')
+        for data in events:
+            try:
+                self.minion.returners['{0}.event_return'.format(self.opts['event_return'])](data)
+            except KeyError:
+                log.error('Could not store return for event {0}. Returner {1} '
+                          'not found.'.format(data, self.opts.get('event_return', None)))
+
+
 class Reactor(multiprocessing.Process, salt.state.Compiler):
     '''
     Read in the reactor configuration variable and compare it to events

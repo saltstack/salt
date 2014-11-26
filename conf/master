@@ -124,7 +124,7 @@
 # be set. See various returners in salt/returners for details on required
 # configuration values.
 #
-#return_events: mysql
+#event_return: mysql
 
 # Passing very large events can cause the minion to consume large amounts of
 # memory. This value tunes the maximum size of a message allowed onto the

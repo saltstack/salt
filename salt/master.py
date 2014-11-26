@@ -401,6 +401,10 @@ class Master(SMaster):
             log.info('Creating master reactor process')
             process_manager.add_process(salt.utils.event.Reactor, args=(self.opts,))
 
+        if self.opts.get('event_return'):
+            log.info('Creating master event return process')
+            process_manager.add_process(salt.utils.event.EventReturn, args=(self.opts,))
+
         ext_procs = self.opts.get('ext_processes', [])
         for proc in ext_procs:
             log.info('Creating ext_processes process: {0}'.format(proc))
