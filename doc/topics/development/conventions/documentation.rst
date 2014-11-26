@@ -290,15 +290,8 @@ cross-referenced using two custom roles, ``conf_master`` and ``conf_minion``.
 Building the documentation
 ==========================
 
-1.  Install Sphinx using a system package manager. The other dependency
-    needed to build the docs is ``six``. The package names are often of the
-    form ``python-sphinx`` and ``python-six``. Both packages can also be
-    installed in a virtualenv with pip:
-
-    .. code-block:: bash
-
-        pip install Sphinx
-        pip install six
+1.  Install Sphinx using a system package manager or pip. The package name is
+    often of the form ``python-sphinx``. There are no other dependencies.
 
 2.  Build the documentation using the provided Makefile or ``.bat`` file on
     Windows.
