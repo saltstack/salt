@@ -1408,12 +1408,15 @@ def _file_lists(load, form):
         return cache_match
     if refresh_cache:
         ret = {}
-        ret['files'] = _get_file_list(load)
+        ret['files'], ret['symlinks'] = _get_file_list(load)
         ret['dirs'] = _get_dir_list(load)
         if save_cache:
             salt.fileserver.write_file_list_cache(
                 __opts__, ret, list_cache, w_lock
             )
+        # NOTE: symlinks are organized in a dict instead of a list, however the
+        # 'symlinks' key will be defined above so it will never get to the
+        # default value in the call to ret.get() below.
         return ret.get(form, [])
     # Shouldn't get here, but if we do, this prevents a TypeError
     return []
@@ -1442,48 +1445,60 @@ def _get_file_list(load):
 
     provider = _get_provider()
     if 'saltenv' not in load or load['saltenv'] not in envs():
-        return []
-    ret = set()
+        return [], {}
+    files = set()
+    symlinks = {}
     for repo in init():
+        fl_func = None
         if provider == 'gitpython':
-            ret.update(
-                _file_list_gitpython(repo, load['saltenv'])
-            )
+            fl_func = _file_list_gitpython
         elif provider == 'pygit2':
-            ret.update(
-                _file_list_pygit2(repo, load['saltenv'])
-            )
+            fl_func = _file_list_pygit2
         elif provider == 'dulwich':
-            ret.update(
-                _file_list_dulwich(repo, load['saltenv'])
-            )
-    return sorted(ret)
+            fl_func = _file_list_dulwich
+        try:
+            repo_files, repo_symlinks = fl_func(repo, load['saltenv'])
+        except TypeError:
+            # We should never get here unless the gitfs_provider is not
+            # accounted for in tbe above if/elif block.
+            continue
+        else:
+            files.update(repo_files)
+            symlinks.update(repo_symlinks)
+    return sorted(files), symlinks
 
 
 def _file_list_gitpython(repo, tgt_env):
     '''
     Get file list using GitPython
     '''
-    ret = set()
+    files = set()
+    symlinks = {}
     if tgt_env == 'base':
         tgt_env = repo['base']
     tree = _get_tree_gitpython(repo, tgt_env)
     if not tree:
-        return ret
+        return files, symlinks
     if repo['root']:
         try:
             tree = tree / repo['root']
         except KeyError:
-            return ret
-    for blob in tree.traverse():
-        if not isinstance(blob, git.Blob):
+            return files, symlinks
+    relpath = lambda path: os.path.relpath(path, repo['root'])
+    add_mountpoint = lambda path: os.path.join(repo['mountpoint'], path)
+    for file_blob in tree.traverse():
+        if not isinstance(file_blob, git.Blob):
             continue
-        if repo['root']:
-            path = os.path.relpath(blob.path, repo['root'])
-        else:
-            path = blob.path
-        ret.add(os.path.join(repo['mountpoint'], path))
-    return ret
+        file_path = add_mountpoint(relpath(file_blob.path))
+        files.add(file_path)
+        if stat.S_ISLNK(file_blob.mode):
+            stream = StringIO()
+            file_blob.stream_data(stream)
+            stream.seek(0)
+            link_tgt = stream.read()
+            stream.close()
+            symlinks[file_path] = link_tgt
+    return files, symlinks
 
 
 def _file_list_pygit2(repo, tgt_env):
@@ -1493,23 +1508,28 @@ def _file_list_pygit2(repo, tgt_env):
     def _traverse(tree, repo_obj, blobs, prefix):
         '''
         Traverse through a pygit2 Tree object recursively, accumulating all the
-        blob paths within it in the "blobs" list
+        file paths and symlink info in the "blobs" dict
         '''
         for entry in iter(tree):
-            blob = repo_obj[entry.oid]
-            if isinstance(blob, pygit2.Blob):
-                blobs.append(os.path.join(prefix, entry.name))
-            elif isinstance(blob, pygit2.Tree):
-                _traverse(blob,
+            obj = repo_obj[entry.oid]
+            if isinstance(obj, pygit2.Blob):
+                repo_path = os.path.join(prefix, entry.name)
+                blobs.setdefault('files', []).append(repo_path)
+                if stat.S_ISLNK(tree[entry.name].filemode):
+                    link_tgt = repo_obj[tree[entry.name].oid].data
+                    blobs.setdefault('symlinks', {})[repo_path] = link_tgt
+            elif isinstance(obj, pygit2.Tree):
+                _traverse(obj,
                           repo_obj,
                           blobs,
                           os.path.join(prefix, entry.name))
-    ret = set()
+    files = set()
+    symlinks = {}
     if tgt_env == 'base':
         tgt_env = repo['base']
     tree = _get_tree_pygit2(repo, tgt_env)
     if not tree:
-        return ret
+        return files, symlinks
     if repo['root']:
         try:
             # This might need to be changed to account for a root that
@@ -1517,17 +1537,21 @@ def _file_list_pygit2(repo, tgt_env):
             oid = tree[repo['root']].oid
             tree = repo['repo'][oid]
         except KeyError:
-            return ret
+            return files, symlinks
         if not isinstance(tree, pygit2.Tree):
-            return ret
-    blobs = []
+            return files, symlinks
+    blobs = {}
     if len(tree):
         _traverse(tree, repo['repo'], blobs, repo['root'])
-    for blob in blobs:
-        if repo['root']:
-            blob = os.path.relpath(blob, repo['root'])
-        ret.add(os.path.join(repo['mountpoint'], blob))
-    return ret
+    relpath = lambda path: os.path.relpath(path, repo['root'])
+    add_mountpoint = lambda path: os.path.join(repo['mountpoint'], path)
+    for repo_path in blobs.get('files', []):
+        repo_path = relpath(repo_path)
+        files.add(add_mountpoint(repo_path))
+    for repo_path, link_tgt in blobs.get('symlinks', {}).iteritems():
+        repo_path = relpath(repo_path)
+        symlinks[add_mountpoint(repo_path)] = link_tgt
+    return files, symlinks
 
 
 def _file_list_dulwich(repo, tgt_env):
@@ -1537,32 +1561,42 @@ def _file_list_dulwich(repo, tgt_env):
     def _traverse(tree, repo_obj, blobs, prefix):
         '''
         Traverse through a dulwich Tree object recursively, accumulating all the
-        blob paths within it in the "blobs" list
+        file paths and symlink info in the "blobs" dict
         '''
         for item in tree.items():
             obj = repo_obj.get_object(item.sha)
             if isinstance(obj, dulwich.objects.Blob):
-                blobs.append(os.path.join(prefix, item.path))
+                repo_path = os.path.join(prefix, item.path)
+                blobs.setdefault('files', []).append(repo_path)
+                mode, oid = tree[item.path]
+                if stat.S_ISLNK(mode):
+                    link_tgt = repo_obj.get_object(oid).as_raw_string()
+                    blobs.setdefault('symlinks', {})[repo_path] = link_tgt
             elif isinstance(obj, dulwich.objects.Tree):
                 _traverse(obj,
                           repo_obj,
                           blobs,
                           os.path.join(prefix, item.path))
-    ret = set()
+    files = set()
+    symlinks = {}
     if tgt_env == 'base':
         tgt_env = repo['base']
     tree = _get_tree_dulwich(repo, tgt_env)
     tree = _dulwich_walk_tree(repo['repo'], tree, repo['root'])
     if not isinstance(tree, dulwich.objects.Tree):
-        return ret
-    blobs = []
+        return files, symlinks
+    blobs = {}
     if len(tree):
         _traverse(tree, repo['repo'], blobs, repo['root'])
-    for blob in blobs:
-        if repo['root']:
-            blob = os.path.relpath(blob, repo['root'])
-        ret.add(os.path.join(repo['mountpoint'], blob))
-    return ret
+    relpath = lambda path: os.path.relpath(path, repo['root'])
+    add_mountpoint = lambda path: os.path.join(repo['mountpoint'], path)
+    for repo_path in blobs.get('files', []):
+        repo_path = relpath(repo_path)
+        files.add(add_mountpoint(repo_path))
+    for repo_path, link_tgt in blobs.get('symlinks', {}).iteritems():
+        repo_path = relpath(repo_path)
+        symlinks[add_mountpoint(repo_path)] = link_tgt
+    return files, symlinks
 
 
 def file_list_emptydirs(load):  # pylint: disable=W0613
@@ -1715,3 +1749,27 @@ def _dir_list_dulwich(repo, tgt_env):
             blob = os.path.relpath(blob, repo['root'])
         ret.add(os.path.join(repo['mountpoint'], blob))
     return ret
+
+
+def symlink_list(load):
+    '''
+    Return a dict of all symlinks based on a given path in the repo
+    '''
+    if 'env' in load:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        load['saltenv'] = load.pop('env')
+
+    if load['saltenv'] not in envs():
+        return {}
+    try:
+        prefix = load['prefix'].strip('/')
+    except KeyError:
+        prefix = ''
+    symlinks = _file_lists(load, 'symlinks')
+    return dict([(key, val)
+                 for key, val in symlinks.iteritems()
+                 if key.startswith(prefix)])
