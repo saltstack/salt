@@ -134,10 +134,10 @@ def prep_trans_tar(file_client, chunks, file_refs, pillar=None):
             ['salt://_outputters'],
             ['salt://_utils'],
             ]
-    with open(lowfn, 'w+') as fp_:
+    with salt.utils.fopen(lowfn, 'w+') as fp_:
         fp_.write(json.dumps(chunks))
     if pillar:
-        with open(pillarfn, 'w+') as fp_:
+        with salt.utils.fopen(pillarfn, 'w+') as fp_:
             fp_.write(json.dumps(pillar))
     for saltenv in file_refs:
         file_refs[saltenv].extend(sync_refs)
