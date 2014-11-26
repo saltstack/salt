@@ -20,8 +20,12 @@ Its output may be stored in a file or in a grain.
         - output:   "/tmp/query_id.txt"
 '''
 
+# Import python libs
 import sys
 import os.path
+
+# Import Salt libs
+import salt.utils
 
 
 def __virtual__():
@@ -168,7 +172,7 @@ def run(name,
                                     + grain + ":" + key
     elif output is not None:
         ret['changes']['query'] = "Executed. Output into " + output
-        with open(output, 'w') as output_file:
+        with salt.utils.fopen(output, 'w') as output_file:
             if 'results' in query_result:
                 for res in query_result['results']:
                     for col, val in res:
