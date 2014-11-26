@@ -272,8 +272,13 @@ html_show_sphinx = True
 html_show_copyright = True
 
 ### Latex options
+
 latex_documents = [
-  ('contents', 'Salt.tex', 'Salt Documentation', 'SaltStack, Inc.', 'manual'),
+  ('contents','Salt-All.tex','Salt All-In-One Documentation','SaltStack, Inc.','manual'),
+  ('contents-1','Salt-1.tex','Salt 1/4 Documentation','SaltStack, Inc.','manual'),
+  ('contents-2','Salt-2.tex','Salt 2/4 Documentation', 'SaltStack, Inc.','manual'),
+  ('contents-3','Salt-3.tex','Salt 3/4 Documentation','SaltStack, Inc.','manual'),
+  ('contents-4','Salt-4.tex','Salt 4/4 Documentation','SaltStack, Inc.','manual'),
 ]
 
 latex_logo = '_static/salt-logo.pdf'
