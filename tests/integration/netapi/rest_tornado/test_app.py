@@ -1,24 +1,3 @@
-<<<<<<< HEAD
-# coding: utf-8
-
-import json
-import time
-
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../../')
-
-try:
-    from salt.netapi.rest_tornado import saltnado
-
-    import tornado.testing
-    import tornado.concurrent
-    import tornado.web
-    import tornado.ioloop
-except ImportError:
-    pass
-
-from unit.netapi.rest_tornado.test_handlers import SaltnadoTestCase
-=======
 # -*- coding: utf-8 -*-
 
 # Import Python Libs
@@ -46,7 +25,6 @@ try:
     HAS_ZMQ_IOLOOP = True
 except ImportError:
     HAS_ZMQ_IOLOOP = False
->>>>>>> 2014.7
 
 
 @skipIf(HAS_TORNADO is False, 'Tornado must be installed to run these tests')
