@@ -1140,9 +1140,7 @@ def _write_config(config, newlines=2):
         text = config[key]
 
     try:
-        open_flags = 'a'
-
-        with open(__SYSLOG_NG_CONFIG_FILE, open_flags) as f:
+        with salt.utils.fopen(__SYSLOG_NG_CONFIG_FILE, 'a') as f:
             f.write(text)
 
             for i in range(0, newlines):
