@@ -11,6 +11,7 @@ from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../')
 
 import salt.state
+import salt.utils
 from salt.config import minion_config
 from salt.template import compile_template
 from salt.utils.odict import OrderedDict
@@ -209,7 +210,7 @@ class RendererMixin(object):
 
     def write_template_file(self, filename, content):
         full_path = os.path.join(self.root_dir, filename)
-        with open(full_path, 'w') as f:
+        with salt.utils.fopen(full_path, 'w') as f:
             f.write(content)
         return full_path
 
