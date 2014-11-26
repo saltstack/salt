@@ -532,20 +532,17 @@ def export(container, path):
     '''
     try:
         ppath = os.path.abspath(path)
-        fic = open(ppath, 'w')
-        status = base_status.copy()
-        client = _get_client()
-        response = client.export(_get_container_infos(container)['Id'])
-        try:
+        with salt.utils.fopen(ppath, 'w') as fic:
+            status = base_status.copy()
+            client = _get_client()
+            response = client.export(_get_container_infos(container)['Id'])
             byte = response.read(4096)
             fic.write(byte)
             while byte != '':
                 # Do stuff with byte.
                 byte = response.read(4096)
                 fic.write(byte)
-        finally:
             fic.flush()
-            fic.close()
         _valid(status,
                id_=container, out=ppath,
                comment='Exported to {0}'.format(ppath))
@@ -1945,10 +1942,8 @@ def get_container_root(container):
     default_rootfs = os.path.join(default_path, 'roofs')
     rootfs_re = re.compile(r'^lxc.rootfs\s*=\s*(.*)\s*$', re.U)
     try:
-        lxcconfig = os.path.join(
-            default_path, 'config.lxc')
-        f = open(lxcconfig)
-        try:
+        lxcconfig = os.path.join(default_path, 'config.lxc')
+        with salt.utils.fopen(lxcconfig) as fhr:
             lines = f.readlines()
             rlines = lines[:]
             rlines.reverse()
@@ -1957,8 +1952,6 @@ def get_container_root(container):
                 if robj:
                     rootfs = robj.groups()[0]
                     break
-        finally:
-            f.close()
     except Exception:
         rootfs = default_rootfs
     return rootfs
