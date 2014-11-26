@@ -13,7 +13,7 @@ import tempfile
 from integration import TestDaemon, TMP  # pylint: disable=W0403
 
 # Import Salt Testing libs
-from salttesting.parser import PNUM, print_header, cleanup_runtime_config_instance
+from salttesting.parser import PNUM, print_header
 from salttesting.parser.cover import SaltCoverageTestingParser
 
 TEST_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
@@ -376,10 +376,6 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             )
             status.append(results)
         return status
-
-    def exit(self, status=0, msg=None):
-        cleanup_runtime_config_instane()
-        SaltTestsuiteParser.exit(self, status, msg)
 
 
 def main():
