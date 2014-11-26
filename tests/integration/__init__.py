@@ -92,6 +92,13 @@ RUNTIME_CONFIGS = {}
 log = logging.getLogger(__name__)
 
 
+def cleanup_runtime_config_instance():
+    # Explicit and forced cleanup
+    for key in RUNTIME_CONFIGS.keys():
+        instance = RUNTIME_CONFIGS.pop(key)
+        del instance
+
+
 def run_tests(*test_cases, **kwargs):
     '''
     Run integration tests for the chosen test cases.
@@ -145,7 +152,7 @@ def run_tests(*test_cases, **kwargs):
             return SaltTestcaseParser.run_testcase(self, testcase)
 
         def exit(self, status=0, msg=None):
-            TestDaemon.cleanup_runtime_config_instane()
+            cleanup_runtime_config_instance()
             TestcaseParser.exit(self, status, msg)
 
     parser = TestcaseParser()
@@ -616,14 +623,6 @@ class TestDaemon(object):
         cls.syndic_opts = syndic_opts
         cls.syndic_master_opts = syndic_master_opts
         # <---- Verify Environment -----------------------------------------------------------------------------------
-
-    @classmethod
-    def cleanup_runtime_config_instane(cls):
-        # Explicit and forced cleanup
-        for key in RUNTIME_CONFIGS.keys():
-            instance = RUNTIME_CONFIGS.pop(key)
-            del instance
-        del RUNTIME_CONFIGS
 
     def __exit__(self, type, value, traceback):
         '''
