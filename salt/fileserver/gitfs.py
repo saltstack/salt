@@ -1546,11 +1546,9 @@ def _file_list_pygit2(repo, tgt_env):
     relpath = lambda path: os.path.relpath(path, repo['root'])
     add_mountpoint = lambda path: os.path.join(repo['mountpoint'], path)
     for repo_path in blobs.get('files', []):
-        repo_path = relpath(repo_path)
-        files.add(add_mountpoint(repo_path))
+        files.add(add_mountpoint(relpath(repo_path)))
     for repo_path, link_tgt in blobs.get('symlinks', {}).iteritems():
-        repo_path = relpath(repo_path)
-        symlinks[add_mountpoint(repo_path)] = link_tgt
+        symlinks[add_mountpoint(relpath(repo_path))] = link_tgt
     return files, symlinks
 
 
@@ -1591,11 +1589,9 @@ def _file_list_dulwich(repo, tgt_env):
     relpath = lambda path: os.path.relpath(path, repo['root'])
     add_mountpoint = lambda path: os.path.join(repo['mountpoint'], path)
     for repo_path in blobs.get('files', []):
-        repo_path = relpath(repo_path)
-        files.add(add_mountpoint(repo_path))
+        files.add(add_mountpoint(relpath(repo_path)))
     for repo_path, link_tgt in blobs.get('symlinks', {}).iteritems():
-        repo_path = relpath(repo_path)
-        symlinks[add_mountpoint(repo_path)] = link_tgt
+        symlinks[add_mountpoint(relpath(repo_path))] = link_tgt
     return files, symlinks
 
 
