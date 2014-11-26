@@ -1944,7 +1944,7 @@ def get_container_root(container):
     try:
         lxcconfig = os.path.join(default_path, 'config.lxc')
         with salt.utils.fopen(lxcconfig) as fhr:
-            lines = f.readlines()
+            lines = fhr.readlines()
             rlines = lines[:]
             rlines.reverse()
             for rl in rlines:
