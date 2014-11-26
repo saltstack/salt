@@ -62,10 +62,11 @@ class SyndicTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
         # Now kill it if still running
         if os.path.exists(pid_path):
-            try:
-                os.kill(int(open(pid_path).read()), signal.SIGKILL)
-            except OSError:
-                pass
+            with salt.utils.fopen(pid_path) as fhr:
+                try:
+                    os.kill(int(fhr.read()), signal.SIGKILL)
+                except OSError:
+                    pass
         try:
             self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
             self.assertIn(
