@@ -15,11 +15,12 @@ import logging
 from salt.ext.six import string_types
 
 # Import Salt libs
-from salt.utils.odict import OrderedDict as _OrderedDict
 import salt.client
+import salt.utils
 import salt.utils.virt
 import salt.utils.cloud
 import salt.key
+from salt.utils.odict import OrderedDict as _OrderedDict
 import salt.ext.six as six
 
 
@@ -305,10 +306,10 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
         if explicit_auth:
             fcontent = ''
             if os.path.exists(key):
-                with open(key) as fic:
+                with salt.utils.fopen(key) as fic:
                     fcontent = fic.read().strip()
             if pub_key.strip() != fcontent:
-                with open(key, 'w') as fic:
+                with salt.utils.fopen(key, 'w') as fic:
                     fic.write(pub_key)
                     fic.flush()
         mid = j_ret.get('mid', None)

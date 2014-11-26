@@ -182,11 +182,12 @@ class SSHAuthStateTests(integration.ModuleCase,
         self.assertSaltStateChangesEqual(
             ret, {'AAAAB3NzaC1kcQ9J5bYTEyZ==': 'New'}
         )
-        self.assertEqual(
-            open(authorized_keys_file, 'r').read(),
-            'ssh-rsa AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyY== root\n'
-            'ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n'.format(username)
-        )
+        with salt.utils.fopen(authorized_keys_file, 'r') as fhr:
+            self.assertEqual(
+                fhr.read(),
+                'ssh-rsa AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyY== root\n'
+                'ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n'.format(username)
+            )
 
     @destructiveTest
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
@@ -219,10 +220,11 @@ class SSHAuthStateTests(integration.ModuleCase,
             comment=username
         )
         self.assertSaltTrueReturn(ret)
-        self.assertEqual(
-            open(authorized_keys_file, 'r').read(),
-            'ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n'.format(username)
-        )
+        with salt.utils.fopen(authorized_keys_file, 'r') as fhr:
+            self.assertEqual(
+                fhr.read(),
+                'ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n'.format(username)
+            )
 
         os.unlink(authorized_keys_file)
 
@@ -236,10 +238,11 @@ class SSHAuthStateTests(integration.ModuleCase,
             saltenv='prod'
         )
         self.assertSaltTrueReturn(ret)
-        self.assertEqual(
-            open(authorized_keys_file, 'r').read(),
-            'ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n'.format(username)
-        )
+        with salt.utils.fopen(authorized_keys_file, 'r') as fhr:
+            self.assertEqual(
+                fhr.read(),
+                'ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n'.format(username)
+            )
 
 
 if __name__ == '__main__':

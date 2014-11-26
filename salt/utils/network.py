@@ -858,7 +858,7 @@ def active_tcp():
     '''
     ret = {}
     if os.path.isfile('/proc/net/tcp'):
-        with open('/proc/net/tcp', 'rb') as fp_:
+        with salt.utils.fopen('/proc/net/tcp', 'rb') as fp_:
             for line in fp_:
                 if line.strip().startswith('sl'):
                     continue
@@ -873,7 +873,7 @@ def local_port_tcp(port):
     '''
     ret = set()
     if os.path.isfile('/proc/net/tcp'):
-        with open('/proc/net/tcp', 'rb') as fp_:
+        with salt.utils.fopen('/proc/net/tcp', 'rb') as fp_:
             for line in fp_:
                 if line.strip().startswith('sl'):
                     continue
@@ -893,7 +893,7 @@ def remote_port_tcp(port):
     '''
     ret = set()
     if os.path.isfile('/proc/net/tcp'):
-        with open('/proc/net/tcp', 'rb') as fp_:
+        with salt.utils.fopen('/proc/net/tcp', 'rb') as fp_:
             for line in fp_:
                 if line.strip().startswith('sl'):
                     continue

@@ -31,7 +31,7 @@ __func_alias__ = {
 
 def _file_or_content(file_):
     if os.path.exists(file_):
-        with open(file_) as fic:
+        with salt.utils.fopen(file_) as fic:
             return fic.read()
     return file_
 
@@ -206,9 +206,9 @@ def mkconfig(config=None, tmp=None, id_=None, approve_key=True,
     privkeyfn = os.path.join(tmp, 'minion.pem')
     preseeded = pub_key and priv_key
     if preseeded:
-        with open(pubkeyfn, 'w') as fic:
+        with salt.utils.fopen(pubkeyfn, 'w') as fic:
             fic.write(_file_or_content(pub_key))
-        with open(privkeyfn, 'w') as fic:
+        with salt.utils.fopen(privkeyfn, 'w') as fic:
             fic.write(_file_or_content(priv_key))
         os.chmod(pubkeyfn, 0o600)
         os.chmod(privkeyfn, 0o600)

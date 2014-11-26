@@ -45,7 +45,8 @@ class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
                 'files', 'file', 'base', 'testfile'
             )
         )
-        testfile_contents = salt.utils.fopen(testfile, 'r').read()
+        with salt.utils.fopen(testfile, 'r') as fh_:
+            testfile_contents = fh_.read()
 
         for idx, minion in enumerate(minions):
             ret = self.run_salt(
@@ -122,12 +123,13 @@ class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
         config_file_name = 'master'
         config = yaml.load(
-            open(self.get_config_file_path(config_file_name), 'r').read()
+            salt.utils.fopen(self.get_config_file_path(config_file_name), 'r').read()
         )
         config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
-        open(os.path.join(config_dir, config_file_name), 'w').write(
-            yaml.dump(config, default_flow_style=False)
-        )
+        with salt.utils.fopen(os.path.join(config_dir, config_file_name), 'w') as fh_:
+            fh_.write(
+                yaml.dump(config, default_flow_style=False)
+            )
 
         ret = self.run_script(
             self._call_binary_,
