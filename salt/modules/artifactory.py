@@ -10,6 +10,9 @@ import xml.etree.ElementTree as ET
 from urllib2 import HTTPError
 import logging
 
+# Import Salt libs
+import salt.utils
+
 log = logging.getLogger(__name__)
 
 
@@ -281,7 +284,7 @@ def __save_artifact(artifact_url, target_file):
     log.debug('Downloading: {url} -> {target_file}'.format(url=artifact_url, target_file=target_file))
     try:
         f = urllib2.urlopen(artifact_url)
-        with open(target_file, "wb") as local_file:
+        with salt.utils.fopen(target_file, "wb") as local_file:
             local_file.write(f.read())
         result['status'] = True
         result['comment'] = __append_comment(('Artifact downloaded from URL: {0}'.format(artifact_url)), result['comment'])
