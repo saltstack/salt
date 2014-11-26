@@ -16,6 +16,7 @@ import errno
 import signal
 import shutil
 import pprint
+import atexit
 import logging
 import tempfile
 import subprocess
@@ -92,11 +93,14 @@ RUNTIME_CONFIGS = {}
 log = logging.getLogger(__name__)
 
 
-def cleanup_runtime_config_instance():
+def cleanup_runtime_config_instance(to_cleanup):
     # Explicit and forced cleanup
-    for key in RUNTIME_CONFIGS.keys():
-        instance = RUNTIME_CONFIGS.pop(key)
+    for key in to_cleanup.keys():
+        instance = to_cleanup.pop(key)
         del instance
+
+
+atexit.register(cleanup_runtime_config_instance, RUNTIME_CONFIGS)
 
 
 def run_tests(*test_cases, **kwargs):
@@ -150,10 +154,6 @@ def run_tests(*test_cases, **kwargs):
                 with TestDaemon(self):
                     return SaltTestcaseParser.run_testcase(self, testcase)
             return SaltTestcaseParser.run_testcase(self, testcase)
-
-        def exit(self, status=0, msg=None):
-            cleanup_runtime_config_instance()
-            TestcaseParser.exit(self, status, msg)
 
     parser = TestcaseParser()
     parser.parse_args()
