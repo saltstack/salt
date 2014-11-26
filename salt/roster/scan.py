@@ -56,7 +56,7 @@ class RosterMatcher(object):
                     sock.connect((addr, port))
                     sock.shutdown(socket.SHUT_RDWR)
                     sock.close()
-                    ret[addr] = {'host': addr, 'port': port }
+                    ret[addr] = {'host': addr, 'port': port}
                 except socket.error:
                     pass
         return ret
