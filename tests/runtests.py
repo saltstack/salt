@@ -377,10 +377,6 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             status.append(results)
         return status
 
-    def exit(self, status=0, msg=None):
-        TestDaemon.cleanup_runtime_config_instane()
-        SaltTestsuiteParser.exit(self, status, msg)
-
 
 def main():
     '''
