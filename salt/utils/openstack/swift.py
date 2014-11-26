@@ -199,7 +199,7 @@ class SaltSwift(object):
         Upload a file to Swift
         '''
         try:
-            with salt.utils.fopen(local_file, 'rb') as fp_
+            with salt.utils.fopen(local_file, 'rb') as fp_:
                 self.conn.put_object(cont, obj, fp_)
             return True
         except Exception as exc:
