@@ -1,7 +1,6 @@
 # coding: utf-8
 import salt.loader
 
-from salttesting.helpers import ensure_in_syspath
 from salttesting.case import ModuleCase
 
 
