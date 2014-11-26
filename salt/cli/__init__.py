@@ -36,7 +36,16 @@ import salt.ext.six as six
 log = logging.getLogger(__name__)
 
 
-class SaltCMD(parsers.SaltCMDOptionParser):
+class PreflightMixin(object):
+    def pre_flight(self):
+        try:
+            os.getcwd()
+        except OSError:
+            print('Could not access current working directory. Exiting!')
+            sys.exit(1)
+
+
+class SaltCMD(parsers.SaltCMDOptionParser, PreflightMixin):
     '''
     The execution of a salt command happens here
     '''
@@ -45,6 +54,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         '''
         Execute the salt command line
         '''
+        self.pre_flight()
         self.parse_args()
 
         if self.config['verify_env']:
@@ -314,7 +324,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             print_cli('')
 
 
-class SaltCP(parsers.SaltCPOptionParser):
+class SaltCP(parsers.SaltCPOptionParser, PreflightMixin):
     '''
     Run the salt-cp command line client
     '''
@@ -323,6 +333,7 @@ class SaltCP(parsers.SaltCPOptionParser):
         '''
         Execute salt-cp
         '''
+        self.pre_flight()
         self.parse_args()
 
         if self.config['verify_env']:
@@ -342,7 +353,7 @@ class SaltCP(parsers.SaltCPOptionParser):
         cp_.run()
 
 
-class SaltKey(parsers.SaltKeyOptionParser):
+class SaltKey(parsers.SaltKeyOptionParser, PreflightMixin):
     '''
     Initialize the Salt key manager
     '''
@@ -351,6 +362,7 @@ class SaltKey(parsers.SaltKeyOptionParser):
         '''
         Execute salt-key
         '''
+        self.pre_flight()
         self.parse_args()
 
         if self.config['verify_env']:
@@ -393,7 +405,7 @@ class SaltKey(parsers.SaltKeyOptionParser):
             key.run()
 
 
-class SaltCall(parsers.SaltCallOptionParser):
+class SaltCall(parsers.SaltCallOptionParser, PreflightMixin):
     '''
     Used to locally execute a salt command
     '''
@@ -402,6 +414,7 @@ class SaltCall(parsers.SaltCallOptionParser):
         '''
         Execute the salt call!
         '''
+        self.pre_flight()
         self.parse_args()
 
         if self.config['verify_env']:
@@ -453,7 +466,7 @@ class SaltCall(parsers.SaltCallOptionParser):
         caller.run()
 
 
-class SaltRun(parsers.SaltRunOptionParser):
+class SaltRun(parsers.SaltRunOptionParser, PreflightMixin):
     '''
     Used to execute Salt runners
     '''
@@ -461,6 +474,7 @@ class SaltRun(parsers.SaltRunOptionParser):
         '''
         Execute salt-run
         '''
+        self.pre_flight()
         self.parse_args()
 
         if self.config['verify_env']:
@@ -498,11 +512,12 @@ class SaltRun(parsers.SaltRunOptionParser):
             raise SystemExit(str(exc))
 
 
-class SaltSSH(parsers.SaltSSHOptionParser):
+class SaltSSH(parsers.SaltSSHOptionParser, PreflightMixin):
     '''
     Used to Execute the salt ssh routine
     '''
     def run(self):
+        self.pre_flight()
         self.parse_args()
 
         ssh = salt.client.ssh.SSH(self.config)
