@@ -332,12 +332,17 @@ def _init():
     cache_file = _get_buckets_cache_filename()
     exp = time.time() - _s3_cache_expire
 
+    metadata = None
+
     # check mtime of the buckets files cache
     if os.path.isfile(cache_file) and os.path.getmtime(cache_file) > exp:
-        return _read_buckets_cache_file(cache_file)
-    else:
+        metadata = _read_buckets_cache_file(cache_file)
+
+    if metadata is None:
         # bucket files cache expired
-        return _refresh_buckets_cache_file(cache_file)
+        metadata = _refresh_buckets_cache_file(cache_file)
+
+    return metadata
 
 
 def _get_cache_dir():
@@ -460,7 +465,11 @@ def _read_buckets_cache_file(cache_file):
     log.debug('Reading buckets cache file')
 
     with salt.utils.fopen(cache_file, 'rb') as fp_:
-        data = pickle.load(fp_)
+        try:
+            data = pickle.load(fp_)
+        except (pickle.UnpicklingError, AttributeError, EOFError, ImportError,
+                IndexError, KeyError):
+            data = None
 
     return data
 
