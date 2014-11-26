@@ -139,7 +139,9 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         if not os.path.isdir(config_dir):
             os.makedirs(config_dir)
 
-        master_config = yaml.load(open(self.get_config_file_path('master')).read())
+        with salt.utils.fopen(self.get_config_file_path('master')) as fhr:
+            master_config = yaml.load(fhr.read())
+
         master_root_dir = master_config['root_dir']
         this_minion_key = os.path.join(
             master_root_dir, 'pki', 'minions', 'minion_test_issue_2731'
