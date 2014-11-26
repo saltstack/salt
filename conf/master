@@ -119,6 +119,13 @@
 # Cache minion grains and pillar data in the cachedir.
 #minion_data_cache: True
 
+# Store all returns in the given returner.
+# Setting this option requires that any returner-specific configuration also 
+# be set. See various returners in salt/returners for details on required
+# configuration values.
+#
+#return_events: mysql
+
 # Passing very large events can cause the minion to consume large amounts of
 # memory. This value tunes the maximum size of a message allowed onto the
 # master event bus. The value is expressed in bytes.
