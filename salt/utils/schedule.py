@@ -740,7 +740,11 @@ class Schedule(object):
                     elif 'cron' in data:
                         log.error('Unable to use "splay" with "cron" option at this time. Ignoring.')
                     else:
-                        data['_seconds'] = data['seconds']
+                        if 'seconds' in data:
+                            log.debug('breakage here')
+                            data['_seconds'] = data['seconds']
+                        else:
+                            data['_seconds'] = 0
 
                 if 'when' in data:
                     if now - when >= seconds:
@@ -798,7 +802,7 @@ class Schedule(object):
                         log.error('Unable to use "splay" with "when" option at this time. Ignoring.')
                     else:
                         if isinstance(data['splay'], dict):
-                            if data['splay']['end'] > data['splay']['start']:
+                            if data['splay']['end'] >= data['splay']['start']:
                                 splay = random.randint(data['splay']['start'], data['splay']['end'])
                             else:
                                 log.error('schedule.handle_func: Invalid Splay, end must be larger than start. \
@@ -810,7 +814,10 @@ class Schedule(object):
                         if splay:
                             log.debug('schedule.handle_func: Adding splay of '
                                       '{0} seconds to next run.'.format(splay))
-                            data['seconds'] = data['_seconds'] + splay
+                            if 'seconds' in data:
+                                data['seconds'] = data['_seconds'] + splay
+                            else:
+                                data['seconds'] = 0 + splay
 
                 log.info('Running scheduled job: {0}'.format(job))
 

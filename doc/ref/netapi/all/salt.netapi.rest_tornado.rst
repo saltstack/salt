@@ -1,6 +1,6 @@
-=============
+============
 rest_tornado
-=============
+============
 
 .. automodule:: salt.netapi.rest_tornado.saltnado
 
@@ -18,58 +18,40 @@ REST URI Reference
 -----
 
 .. autoclass:: SaltAPIHandler
-    :members: GET, POST
+    :members: get, post, disbatch
 
 ``/login``
 ----------
 
-.. autoclass:: Login
-    :members: GET, POST
-
-``/logout``
------------
-
-.. autoclass:: Logout
-    :members: POST
+.. autoclass:: SaltAuthHandler
+    :members: get, post
 
 ``/minions``
 ------------
 
-.. autoclass:: Minions
-    :members: GET, POST
+.. autoclass:: MinionSaltAPIHandler
+    :members: get, post
 
 ``/jobs``
 ---------
 
-.. autoclass:: Jobs
-    :members: GET
+.. autoclass:: JobsSaltAPIHandler
+    :members: get
 
 ``/run``
 --------
 
-.. autoclass:: Run
-    :members: POST
+.. autoclass:: RunSaltAPIHandler
+    :members: post
 
 ``/events``
 -----------
 
-.. autoclass:: Events
-    :members: GET
-
-``/ws``
--------
-
-.. autoclass:: WebsocketEndpoint
-    :members: GET
+.. autoclass:: EventsSaltAPIHandler
+    :members: get
 
 ``/hook``
 ---------
 
-.. autoclass:: Webhook
-    :members: POST
-
-``/stats``
-----------
-
-.. autoclass:: Stats
-    :members: GET
+.. autoclass:: WebhookSaltAPIHandler
+    :members: post
