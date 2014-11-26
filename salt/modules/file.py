@@ -4311,6 +4311,7 @@ def move(src, dst):
 
     return ret
 
+
 def diskusage(path):
     '''
     Recursivly calculate diskusage of path and return it
@@ -4328,7 +4329,7 @@ def diskusage(path):
     if os.path.isfile(path):
         ret = stat.st_size
         return ret
-    
+
     for dirpath, dirnames, filenames in os.walk(path):
         for f in filenames:
             fp = os.path.join(dirpath, f)
