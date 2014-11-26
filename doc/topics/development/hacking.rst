@@ -228,14 +228,12 @@ Editing and previewing the documentation
 ----------------------------------------
 
 You need ``sphinx-build`` command to build the docs. In Debian/Ubuntu this is
-provided in the ``python-sphinx`` package. ``six`` is also needed to build the
-docs and is available on Debian/Ubuntu systems as ``python-six``. Sphinx and
-six can also be installed to a virtualenv using pip:
+provided in the ``python-sphinx`` package. Sphinx can also be installed
+to a virtualenv using pip:
 
 .. code-block:: bash
 
     pip install Sphinx
-    pip install six
 
 Change to salt documentation directory, then:
 
