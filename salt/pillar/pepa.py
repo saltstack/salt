@@ -276,6 +276,9 @@ import jinja2
 import re
 from os.path import isfile, join
 
+# Import Salt libs
+import salt.utils
+
 # Only used when called from a terminal
 log = None
 if __name__ == '__main__':
@@ -408,7 +411,8 @@ def ext_pillar(minion_id, pillar, resource, sequence, subkey=False, subkey_only=
             fn = join(templdir, re.sub(r'\W', '_', entry.lower()) + '.yaml')
             if isfile(fn):
                 log.info("Loading template: {0}".format(fn))
-                template = jinja2.Template(open(fn).read())
+                with salt.utils.fopen(fn) as fhr:
+                    template = jinja2.Template(fhr.read())
                 output['pepa_templates'].append(fn)
 
                 try:
@@ -504,7 +508,8 @@ def validate(output, resource):
     pepa_schemas = []
     for fn in glob.glob(valdir + '/*.yaml'):
         log.info("Loading schema: {0}".format(fn))
-        template = jinja2.Template(open(fn).read())
+        with salt.utils.fopen(fn) as fhr:
+            template = jinja2.Template(fhr.read())
         data = output
         data['grains'] = __grains__.copy()
         data['pillar'] = __pillar__.copy()
@@ -529,7 +534,8 @@ if __name__ == '__main__':
         sys.exit(1)
 
     # Get configuration
-    __opts__.update(yaml.load(open(args.config).read()))
+    with salt.utils.fopen(args.config) as fh_:
+        __opts__.update(yaml.load(fh_.read()))
 
     loc = 0
     for name in [e.iterkeys().next() for e in __opts__['ext_pillar']]:
