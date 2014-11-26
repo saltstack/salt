@@ -407,7 +407,7 @@ class TestDaemon(object):
         if keygen_ed25519_err:
             print('ssh-keygen had errors: {0}'.format(keygen_ed25519_err))
 
-        with open(os.path.join(TMP_CONF_DIR, 'sshd_config'), 'a') as ssh_config:
+        with salt.utils.fopen(os.path.join(TMP_CONF_DIR, 'sshd_config'), 'a') as ssh_config:
             ssh_config.write('AuthorizedKeysFile {0}\n'.format(auth_key_file))
             ssh_config.write('HostKey {0}\n'.format(server_dsa_priv_key_file))
             ssh_config.write('HostKey {0}\n'.format(server_ecdsa_priv_key_file))
@@ -426,7 +426,7 @@ class TestDaemon(object):
             print('sshd had errors on startup: {0}'.format(sshd_err))
         roster_path = os.path.join(FILES, 'conf/_ssh/roster')
         shutil.copy(roster_path, TMP_CONF_DIR)
-        with open(os.path.join(TMP_CONF_DIR, 'roster'), 'a') as roster:
+        with salt.utils.fopen(os.path.join(TMP_CONF_DIR, 'roster'), 'a') as roster:
             roster.write('  user: {0}\n'.format(pwd.getpwuid(os.getuid()).pw_name))
             roster.write('  priv: {0}/{1}'.format(TMP_CONF_DIR, 'key_test'))
 
@@ -551,7 +551,7 @@ class TestDaemon(object):
 
         for entry in ('master', 'minion', 'sub_minion', 'syndic_master'):
             computed_config = copy.deepcopy(locals()['{0}_opts'.format(entry)])
-            open(os.path.join(TMP_CONF_DIR, entry), 'w').write(
+            salt.utils.fopen(os.path.join(TMP_CONF_DIR, entry), 'w').write(
                 yaml.dump(computed_config, default_flow_style=False)
             )
         # <---- Transcribe Configuration -----------------------------------------------------------------------------
