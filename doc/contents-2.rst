@@ -7,6 +7,12 @@ Salt Table of Contents
     :glob:
     :numbered:
 
+    topics/topology/index
+    topics/windows/index
+    topics/cloud/index
+    topics/releases/index
+    topics/projects/index
+    faq
     topics/netapi/index
     topics/virt/index
     topics/yaml/index

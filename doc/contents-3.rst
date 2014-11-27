@@ -6,6 +6,7 @@ Salt Table of Contents
     :maxdepth: 3
     :glob:
     :numbered:
+
     topics/best_practices
     topics/troubleshooting/index
     topics/development/index
