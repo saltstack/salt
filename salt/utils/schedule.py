@@ -111,10 +111,27 @@ dictionary with the date strings using the dateutil format.
             start: 8:00am
             end: 5:00pm
 
-Using the invert option for range, this will schedule the command: state.sls httpd
-test=True every 3600 seconds (every hour) until the current time is between the hours
-of 8am and 5pm.  The range parameter must be a dictionary with the date strings using
-the dateutil format.
+Using the invert option for range, this will schedule the command: state.sls
+httpd test=True every 3600 seconds (every hour) until the current time is
+between the hours of 8am and 5pm.  The range parameter must be a dictionary
+with the date strings using the dateutil format.
+
+By default any job scheduled based on the startup time of the minion will run
+the scheduled job when the minion starts up.  Sometimes this is not the desired
+situation.  Using the 'run_on_start' parameter set to False will cause the
+scheduler to skip this first run and wait until the next scheduled run.
+
+    ... versionadded:: Lithium
+
+    schedule:
+      job1:
+        function: state.sls
+        seconds: 3600
+        run_on_start: False
+        args:
+          - httpd
+        kwargs:
+          test: True
 
 The scheduler also supports ensuring that there are no more than N copies of
 a particular routine running.  Use this for jobs that may be long-running
@@ -741,7 +758,6 @@ class Schedule(object):
                         log.error('Unable to use "splay" with "cron" option at this time. Ignoring.')
                     else:
                         if 'seconds' in data:
-                            log.debug('breakage here')
                             data['_seconds'] = data['seconds']
                         else:
                             data['_seconds'] = 0
@@ -755,7 +771,16 @@ class Schedule(object):
                     if seconds == 1:
                         run = True
                 else:
-                    run = True
+                    # If run_on_start is True, the job will run when the Salt
+                    # minion start.  If the value is False will run at the next
+                    # scheduled run.  Default is True.
+                    if 'run_on_start' in data:
+                        if data['run_on_start']:
+                            run = True
+                        else:
+                            self.intervals[job] = int(time.time())
+                    else:
+                        run = True
 
             if run:
                 if 'range' in data:

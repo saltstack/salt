@@ -154,6 +154,8 @@ def tagify(suffix='', prefix='', base=SALT):
 
 class SaltEvent(object):
     '''
+    Warning! Use the get_event function or the code will not be
+    RAET compatible
     The base class used to manage salt events
     '''
     def __init__(self, node, sock_dir=None, opts=None):
@@ -492,6 +494,8 @@ class SaltEvent(object):
 
 class MasterEvent(SaltEvent):
     '''
+    Warning! Use the get_event function or the code will not be
+    RAET compatible
     Create a master event management object
     '''
     def __init__(self, sock_dir):
@@ -500,6 +504,8 @@ class MasterEvent(SaltEvent):
 
 class LocalClientEvent(MasterEvent):
     '''
+    Warning! Use the get_event function or the code will not be
+    RAET compatible
     This class is just used to differentiate who is handling the events,
     specially on logs, but it's the same as MasterEvent.
     '''
@@ -507,6 +513,8 @@ class LocalClientEvent(MasterEvent):
 
 class RunnerEvent(MasterEvent):
     '''
+    Warning! Use the get_runner_event function or the code will not be
+    RAET compatible
     This is used to send progress and return events from runners.
     It extends MasterEvent to include information about how to
     display events to the user as a runner progresses.
@@ -523,6 +531,8 @@ class RunnerEvent(MasterEvent):
 
 class MinionEvent(SaltEvent):
     '''
+    Warning! Use the get_event function or the code will not be
+    RAET compatible
     Create a master event management object
     '''
     def __init__(self, opts):
