@@ -15,9 +15,4 @@ Salt Table of Contents
     topics/reactor/index
     topics/mine/index
     topics/eauth/index
-    topics/jobs/index
-    topics/event/index
-    topics/topology/index
-    topics/windows/index
-    topics/cloud/index
     glossary
