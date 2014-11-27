@@ -738,11 +738,12 @@ class TestDaemon(object):
             except OSError as exc:
                 if exc.errno != 3:
                     raise
-            try:
-                os.kill(int(open(self.sshd_pidfile).read()), signal.SIGKILL)
-            except OSError as exc:
-                if exc.errno != 3:
-                    raise
+            with salt.utils.fopen(self.sshd_pidfile) as fhr:
+                try:
+                    os.kill(int(fhr.read()), signal.SIGKILL)
+                except OSError as exc:
+                    if exc.errno != 3:
+                        raise
 
     def _exit_mockbin(self):
         path = os.environ.get('PATH', '')

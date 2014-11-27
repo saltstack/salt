@@ -236,7 +236,7 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
         config_file_name = 'master'
         with salt.utils.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
-            config = yaml.load(fhr.ready())
+            config = yaml.load(fhr.read())
             config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
             with salt.utils.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
                 fhw.write(

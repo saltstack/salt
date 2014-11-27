@@ -122,14 +122,13 @@ class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         os.chdir(config_dir)
 
         config_file_name = 'master'
-        config = yaml.load(
-            salt.utils.fopen(self.get_config_file_path(config_file_name), 'r').read()
-        )
-        config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
-        with salt.utils.fopen(os.path.join(config_dir, config_file_name), 'w') as fh_:
-            fh_.write(
-                yaml.dump(config, default_flow_style=False)
-            )
+        with salt.utils.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
+            config = yaml.load(fhr.read())
+            config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
+            with salt.utils.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
+                fhw.write(
+                    yaml.dump(config, default_flow_style=False)
+                )
 
         ret = self.run_script(
             self._call_binary_,
