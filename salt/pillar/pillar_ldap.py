@@ -135,12 +135,12 @@ def _do_search(conf):
     try:
         result = __salt__['ldap.search'](_filter, _dn, scope, attrs,
                                          **connargs)['results'][0][1]
+    except IndexError:  # we got no results for this search
         log.debug(
             'LDAP search returned no results for filter {0}'.format(
                 _filter
             )
         )
-    except IndexError:  # we got no results for this search
         result = {}
     except Exception:
         log.critical(
