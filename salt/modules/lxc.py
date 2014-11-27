@@ -556,7 +556,7 @@ class _LXCConfig(object):
         if self.name:
             self.path = '/var/lib/lxc/{0}/config'.format(self.name)
             if os.path.isfile(self.path):
-                with open(self.path) as f:
+                with salt.utils.fopen(self.path) as f:
                     for l in f.readlines():
                         match = self.pattern.findall((l.strip()))
                         if match:
@@ -603,7 +603,7 @@ class _LXCConfig(object):
             content = self.as_string()
             # 2 step rendering to be sure not to open/wipe the config
             # before as_string succeeds.
-            with open(self.path, 'w') as fic:
+            with salt.utils.fopen(self.path, 'w') as fic:
                 fic.write(content)
                 fic.flush()
 
@@ -1673,9 +1673,10 @@ def info(name):
 
     ret = {}
 
-    config = [(v[0].strip(), v[1].strip()) for v in
-              [l.split('#', 1)[0].strip().split('=', 1) for l in
-               open(f).readlines()] if len(v) == 2]
+    with salt.utils.fopen(f) as fhr:
+        config = [(v[0].strip(), v[1].strip()) for v in
+                  [l.split('#', 1)[0].strip().split('=', 1) for l in
+                   fhr.readlines()] if len(v) == 2]
 
     ifaces = []
     current = None
@@ -1821,7 +1822,7 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset):
         ret['comment'] = (
             'Configuration does not exist: {0}'.format(lxc_conf_p))
     else:
-        with open(lxc_conf_p, 'r') as fic:
+        with salt.utils.fopen(lxc_conf_p, 'r') as fic:
             filtered_lxc_conf = []
             for row in lxc_conf:
                 if not row:
@@ -1878,12 +1879,10 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset):
             conf_changed = conf != orig_config
             chrono = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
             if conf_changed:
-                wfic = open('{0}.{1}'.format(lxc_conf_p, chrono), 'w')
-                wfic.write(conf)
-                wfic.close()
-                wfic = open(lxc_conf_p, 'w')
-                wfic.write(conf)
-                wfic.close()
+                with salt.utils.fopen('{0}.{1}'.format(lxc_conf_p, chrono), 'w') as wfic:
+                    wfic.write(conf)
+                with salt.utils.fopen(lxc_conf_p, 'w') as wific:
+                    wfic.write(conf)
                 ret['comment'] = 'Updated'
                 ret['result'] = True
     if (

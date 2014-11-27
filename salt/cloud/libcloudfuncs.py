@@ -117,8 +117,8 @@ def ssh_pub(vm_):
     ssh = os.path.expanduser(ssh)
     if os.path.isfile(ssh):
         return None
-
-    return SSHKeyDeployment(open(ssh).read())
+    with salt.utils.fopen(ssh) as fhr:
+        return SSHKeyDeployment(fhr.read())
 
 
 def avail_locations(conn=None, call=None):

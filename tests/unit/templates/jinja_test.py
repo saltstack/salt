@@ -8,8 +8,8 @@ import datetime
 import pprint
 
 # Import Salt Testing libs
-from tests.integration import ModuleCase
-from salttesting import skipIf, TestCase
+from salttesting.unit import skipIf, TestCase
+from salttesting.case import ModuleCase
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 

@@ -100,16 +100,17 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods=''):
     thintar = os.path.join(thindir, 'thin.tgz')
     thinver = os.path.join(thindir, 'version')
     salt_call = os.path.join(thindir, 'salt-call')
-    with open(salt_call, 'w+') as fp_:
+    with salt.utils.fopen(salt_call, 'w+') as fp_:
         fp_.write(SALTCALL)
     if os.path.isfile(thintar):
-        if overwrite or not os.path.isfile(thinver):
-            try:
-                os.remove(thintar)
-            except OSError:
-                pass
-        elif open(thinver).read() == salt.__version__:
-            return thintar
+        with salt.utils.fopen(thinver) as fh_:
+            if overwrite or not os.path.isfile(thinver):
+                try:
+                    os.remove(thintar)
+                except OSError:
+                    pass
+            elif fh_.read() == salt.__version__:
+                return thintar
     tops = [
             os.path.dirname(salt.__file__),
             os.path.dirname(jinja2.__file__),
@@ -184,7 +185,7 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods=''):
             tempdir = None
     os.chdir(thindir)
     tfp.add('salt-call')
-    with open(thinver, 'w+') as fp_:
+    with salt.utils.fopen(thinver, 'w+') as fp_:
         fp_.write(salt.__version__)
     os.chdir(os.path.dirname(thinver))
     tfp.add('version')

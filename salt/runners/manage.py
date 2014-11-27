@@ -18,6 +18,7 @@ import urllib
 import salt.key
 import salt.client
 import salt.output
+import salt.utils
 import salt.utils.minions
 import salt.wheel
 import salt.version
@@ -419,9 +420,8 @@ objShell.Exec("{1}{2}")'''
                  '  >>' + x + '.vbs\ncscript.exe /NoLogo ' + x + '.vbs'
 
     batch_path = tempfile.mkstemp(suffix='.bat')[1]
-    batch_file = open(batch_path, 'wb')
-    batch_file.write(batch)
-    batch_file.close()
+    with salt.utils.fopen(batch_path, 'wb') as batch_file:
+        batch_file.write(batch)
 
     for host in hosts.split(","):
         argv = ['psexec', '\\\\' + host]

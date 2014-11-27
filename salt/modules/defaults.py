@@ -44,7 +44,8 @@ def _load(pillar_name, defaults_path):
     for loader in json, yaml:
         defaults_file = os.path.join(defaults_path, 'defaults.' + loader.__name__)
         if os.path.exists(defaults_file):
-            defaults = loader.load(open(defaults_file))
+            with salt.utils.fopen(defaults_file) as fhr:
+                defaults = loader.load(fhr)
             return defaults
 
 
