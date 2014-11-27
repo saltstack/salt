@@ -117,8 +117,10 @@ def _do_search(conf):
     '''
     # Build LDAP connection args
     connargs = {}
-    for name in ['server', 'port', 'tls', 'binddn', 'bindpw']:
+    for name in ['server', 'port', 'tls', 'binddn', 'bindpw', 'anonymous']:
         connargs[name] = _config(name, conf)
+    if connargs['binddn'] and connargs['bindpw']:
+        connargs['anonymous'] = False
     # Build search args
     try:
         _filter = conf['filter']
