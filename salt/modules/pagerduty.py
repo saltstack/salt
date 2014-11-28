@@ -49,7 +49,7 @@ def list_services(profile=None, api_key=None):
 
 def list_incidents(profile=None, api_key=None):
     '''
-    List services belonging to this account
+    List incidents belonging to this account
 
     CLI Example:
 
@@ -57,6 +57,19 @@ def list_incidents(profile=None, api_key=None):
     '''
     return salt.utils.pagerduty.list_items(
         'incidents', 'id', profile, api_key, opts=__opts__
+    )
+
+
+def list_users(profile=None, api_key=None):
+    '''
+    List users belonging to this account
+
+    CLI Example:
+
+        pagerduty.list_users my-pagerduty-account
+    '''
+    return salt.utils.pagerduty.list_items(
+        'users', 'id', profile, api_key, opts=__opts__
     )
 
 
