@@ -73,6 +73,19 @@ def list_users(profile=None, api_key=None):
     )
 
 
+def list_schedules(profile=None, api_key=None):
+    '''
+    List schedules belonging to this account
+
+    CLI Example:
+
+        pagerduty.list_schedules my-pagerduty-account
+    '''
+    return salt.utils.pagerduty.list_items(
+        'schedules', 'id', profile, api_key, opts=__opts__
+    )
+
+
 def create_event(service_key=None, description=None, details=None,
                  incident_key=None, profile=None):
     '''
