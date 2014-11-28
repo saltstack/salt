@@ -104,6 +104,24 @@ def list_windows(profile=None, api_key=None):
 list_maintenance_windows = list_windows
 
 
+def list_policies(profile=None, api_key=None):
+    '''
+    List maintenance policies belonging to this account
+
+    CLI Example:
+
+        pagerduty.list_policies my-pagerduty-account
+        pagerduty.list_escalation_policies my-pagerduty-account
+    '''
+    return salt.utils.pagerduty.list_items(
+        'escalation_policies', 'id', profile, api_key, opts=__opts__
+    )
+
+
+# The long version, added for consisntency
+list_escalation_policies = list_policies
+
+
 def create_event(service_key=None, description=None, details=None,
                  incident_key=None, profile=None):
     '''
