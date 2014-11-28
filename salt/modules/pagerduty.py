@@ -49,7 +49,7 @@ def list_services(profile=None, api_key=None):
 
 def list_incidents(profile=None, api_key=None):
     '''
-    List services belonging to this account
+    List incidents belonging to this account
 
     CLI Example:
 
@@ -58,6 +58,68 @@ def list_incidents(profile=None, api_key=None):
     return salt.utils.pagerduty.list_items(
         'incidents', 'id', profile, api_key, opts=__opts__
     )
+
+
+def list_users(profile=None, api_key=None):
+    '''
+    List users belonging to this account
+
+    CLI Example:
+
+        pagerduty.list_users my-pagerduty-account
+    '''
+    return salt.utils.pagerduty.list_items(
+        'users', 'id', profile, api_key, opts=__opts__
+    )
+
+
+def list_schedules(profile=None, api_key=None):
+    '''
+    List schedules belonging to this account
+
+    CLI Example:
+
+        pagerduty.list_schedules my-pagerduty-account
+    '''
+    return salt.utils.pagerduty.list_items(
+        'schedules', 'id', profile, api_key, opts=__opts__
+    )
+
+
+def list_windows(profile=None, api_key=None):
+    '''
+    List maintenance windows belonging to this account
+
+    CLI Example:
+
+        pagerduty.list_windows my-pagerduty-account
+        pagerduty.list_maintenance_windows my-pagerduty-account
+    '''
+    return salt.utils.pagerduty.list_items(
+        'maintenance_windows', 'id', profile, api_key, opts=__opts__
+    )
+
+
+# The long version, added for consistency
+list_maintenance_windows = list_windows
+
+
+def list_policies(profile=None, api_key=None):
+    '''
+    List escalation policies belonging to this account
+
+    CLI Example:
+
+        pagerduty.list_policies my-pagerduty-account
+        pagerduty.list_escalation_policies my-pagerduty-account
+    '''
+    return salt.utils.pagerduty.list_items(
+        'escalation_policies', 'id', profile, api_key, opts=__opts__
+    )
+
+
+# The long version, added for consistency
+list_escalation_policies = list_policies
 
 
 def create_event(service_key=None, description=None, details=None,
