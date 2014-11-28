@@ -106,7 +106,7 @@ list_maintenance_windows = list_windows
 
 def list_policies(profile=None, api_key=None):
     '''
-    List maintenance policies belonging to this account
+    List escalation policies belonging to this account
 
     CLI Example:
 
