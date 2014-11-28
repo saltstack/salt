@@ -86,6 +86,24 @@ def list_schedules(profile=None, api_key=None):
     )
 
 
+def list_windows(profile=None, api_key=None):
+    '''
+    List maintenance windows belonging to this account
+
+    CLI Example:
+
+        pagerduty.list_windows my-pagerduty-account
+        pagerduty.list_maintenance_windows my-pagerduty-account
+    '''
+    return salt.utils.pagerduty.list_items(
+        'maintenance_windows', 'id', profile, api_key, opts=__opts__
+    )
+
+
+# The long version, added for consisntency
+list_maintenance_windows = list_windows
+
+
 def create_event(service_key=None, description=None, details=None,
                  incident_key=None, profile=None):
     '''
