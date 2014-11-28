@@ -100,7 +100,7 @@ def list_windows(profile=None, api_key=None):
     )
 
 
-# The long version, added for consisntency
+# The long version, added for consistency
 list_maintenance_windows = list_windows
 
 
@@ -118,7 +118,7 @@ def list_policies(profile=None, api_key=None):
     )
 
 
-# The long version, added for consisntency
+# The long version, added for consistency
 list_escalation_policies = list_policies
 
 
