@@ -11,8 +11,8 @@ import subprocess
 # Import salt libs
 from salt import utils
 from salt.exceptions import SaltInvocationError, CommandExecutionError
-from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=no-name-in-module,import-error
-from salt.ext.six.moves.urllib.parse import urlunparse  # pylint: disable=no-name-in-module,import-error
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module,import-error
+from salt.ext.six.moves.urllib.parse import urlunparse as _urlunparse  # pylint: disable=no-name-in-module,import-error
 
 
 def __virtual__():
@@ -104,12 +104,12 @@ def _add_http_basic_auth(repository, https_user=None, https_pass=None):
     if https_user is None and https_pass is None:
         return repository
     else:
-        urltuple = urlparse(repository)
+        urltuple = _urlparse(repository)
         if urltuple.scheme == 'https':
             netloc = "{0}:{1}@{2}".format(https_user, https_pass,
                                           urltuple.netloc)
             urltuple = urltuple._replace(netloc=netloc)
-            return urlunparse(urltuple)
+            return _urlunparse(urltuple)
         else:
             raise ValueError('Basic Auth only supported for HTTPS scheme')
 
