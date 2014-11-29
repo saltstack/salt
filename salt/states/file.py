@@ -283,19 +283,26 @@ def _gen_keep_files(name, require):
     Generate the list of files that need to be kept when a dir based function
     like directory or recurse has a clean.
     '''
+    def _process(name):
+        ret = set()
+        ret.add(name.rstrip('/'))
+        if os.path.isdir(name):
+            for root, dirs, files in os.walk(name):
+                for name in files:
+                    ret.add(os.path.join(root, name))
+                for name in dirs:
+                    ret.add(os.path.join(root, name))
+        return ret
     keep = set()
     # Remove last slash if exists for all path
     keep.add(name.rstrip('/'))
     if isinstance(require, list):
         for comp in require:
             if 'file' in comp:
-                keep.add(comp['file'].rstrip('/'))
-                if os.path.isdir(comp['file']):
-                    for root, dirs, files in os.walk(comp['file']):
-                        for name in files:
-                            keep.add(os.path.join(root, name))
-                        for name in dirs:
-                            keep.add(os.path.join(root, name))
+                keep.update(_process(comp['file']))
+                for low in __lowstate__:
+                    if low['__id__'] == comp['file']:
+                        keep.update(_process(low['name']))
     return list(keep)
 
 
