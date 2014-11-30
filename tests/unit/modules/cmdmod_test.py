@@ -11,6 +11,8 @@ from salt.log import LOG_LEVELS
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
 from salttesting.mock import (
+    mock_open,
+    MagicMock,
     NO_MOCK,
     NO_MOCK_REASON,
     patch
@@ -18,6 +20,13 @@ from salttesting.mock import (
 from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
+
+cmdmod.__grains__ = {}
+
+DEFAULT_SHELL = 'foo/bar'
+MOCK_SHELL_FILE = '# List of acceptable shells\n' \
+                  '\n'\
+                  '/bin/bash\n'
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -73,6 +82,125 @@ class CMDMODTestCase(TestCase):
         '''
         with patch.dict(LOG_LEVELS, self.mock_loglevels):
             self.assertEqual(cmdmod._check_loglevel(quiet=True), None)
+
+    def test_parse_env_not_env(self):
+        '''
+        Tests the return of an env that is not an env
+        '''
+        self.assertEqual(cmdmod._parse_env(None), {})
+
+    def test_parse_env_list(self):
+        '''
+        Tests the return of an env that is a list
+        '''
+        ret = {'foo': None, 'bar': None}
+        self.assertEqual(ret, cmdmod._parse_env(['foo', 'bar']))
+
+    def test_parse_env_dict(self):
+        '''
+        Test the return of an env that is not a dict
+        '''
+        self.assertEqual(cmdmod._parse_env('test'), {})
+
+    @patch('salt.modules.cmdmod._is_valid_shell', MagicMock(return_value=True))
+    @patch('salt.utils.is_windows', MagicMock(return_value=False))
+    @patch('os.path.isfile', MagicMock(return_value=False))
+    def test_run_shell_is_not_file(self):
+        '''
+        Tests error raised when shell is not available after _is_valid_shell error msg
+        and os.path.isfile returns False
+        '''
+        self.assertRaises(CommandExecutionError, cmdmod._run, 'foo', 'bar')
+
+    @patch('salt.modules.cmdmod._is_valid_shell', MagicMock(return_value=True))
+    @patch('salt.utils.is_windows', MagicMock(return_value=False))
+    @patch('os.path.isfile', MagicMock(return_value=True))
+    @patch('os.access', MagicMock(return_value=False))
+    def test_run_shell_file_no_access(self):
+        '''
+        Tests error raised when shell is not available after _is_valid_shell error msg,
+        os.path.isfile returns True, but os.access returns False
+        '''
+        self.assertRaises(CommandExecutionError, cmdmod._run, 'foo', 'bar')
+
+    @patch('salt.modules.cmdmod._is_valid_shell', MagicMock(return_value=True))
+    @patch('salt.utils.is_windows', MagicMock(return_value=True))
+    def test_run_runas_with_windows(self):
+        '''
+        Tests error raised when runas is passed on windows
+        '''
+        with patch.dict(cmdmod.__grains__, {'os': 'fake_os'}):
+            self.assertRaises(CommandExecutionError,
+                              cmdmod._run,
+                              'foo', 'bar', runas='baz')
+
+    @patch('salt.modules.cmdmod._is_valid_shell', MagicMock(return_value=True))
+    @patch('salt.utils.is_windows', MagicMock(return_value=False))
+    @patch('os.path.isfile', MagicMock(return_value=True))
+    @patch('os.access', MagicMock(return_value=True))
+    def test_run_user_not_available(self):
+        '''
+        Tests return when runas user is not available
+        '''
+        self.assertRaises(CommandExecutionError, cmdmod._run, 'foo', 'bar', runas='baz')
+
+    @patch('salt.modules.cmdmod._is_valid_shell', MagicMock(return_value=True))
+    @patch('salt.utils.is_windows', MagicMock(return_value=False))
+    @patch('os.path.isfile', MagicMock(return_value=True))
+    @patch('os.access', MagicMock(return_value=True))
+    @patch('pwd.getpwnam', MagicMock(return_value=True))
+    def test_run_zero_umask(self):
+        '''
+        Tests error raised when umask is set to zero
+        '''
+        with patch.dict(cmdmod.__grains__, {'os': 'fake_os'}):
+            self.assertRaises(CommandExecutionError,
+                              cmdmod._run,
+                              'foo', 'bar', runas='baz', umask=0)
+
+    @patch('salt.modules.cmdmod._is_valid_shell', MagicMock(return_value=True))
+    @patch('salt.utils.is_windows', MagicMock(return_value=False))
+    @patch('os.path.isfile', MagicMock(return_value=True))
+    @patch('os.access', MagicMock(return_value=True))
+    @patch('pwd.getpwnam', MagicMock(return_value=True))
+    def test_run_invalid_umask(self):
+        '''
+        Tests error raised when an invalid umask is given
+        '''
+        with patch.dict(cmdmod.__grains__, {'os': 'fake_os'}):
+            self.assertRaises(CommandExecutionError,
+                              cmdmod._run,
+                              'foo', 'bar', umask='baz')
+
+    @patch('salt.utils.is_windows', MagicMock(return_value=True))
+    def test_is_valid_shell_windows(self):
+        '''
+        Tests return if running on windows
+        '''
+        self.assertTrue(cmdmod._is_valid_shell('foo'))
+
+    @patch('os.path.exists', MagicMock(return_value=False))
+    def test_is_valid_shell_none(self):
+        '''
+        Tests return of when os.path.exists(/etc/shells) isn't available
+        '''
+        self.assertIsNone(cmdmod._is_valid_shell('foo'))
+
+    @patch('os.path.exists', MagicMock(return_value=True))
+    def test_is_valid_shell_available(self):
+        '''
+        Tests return when provided shell is available
+        '''
+        with patch('salt.utils.fopen', mock_open(read_data=MOCK_SHELL_FILE)):
+            self.assertTrue(cmdmod._is_valid_shell('/bin/bash'))
+
+    @patch('os.path.exists', MagicMock(return_value=True))
+    def test_is_valid_shell_unavailable(self):
+        '''
+        Tests return when provided shell is not available
+        '''
+        with patch('salt.utils.fopen', mock_open(read_data=MOCK_SHELL_FILE)):
+            self.assertFalse(cmdmod._is_valid_shell('foo'))
 
 
 if __name__ == '__main__':
