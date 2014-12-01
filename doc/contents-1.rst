@@ -3,7 +3,7 @@ Salt Table of Contents
 ======================
 
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 3
     :glob:
     :numbered:
 
@@ -15,22 +15,4 @@ Salt Table of Contents
     topics/reactor/index
     topics/mine/index
     topics/eauth/index
-    topics/jobs/index
-    topics/event/index
-    topics/topology/index
-    topics/windows/index
-    topics/cloud/index
-    topics/netapi/index
-    topics/virt/index
-    topics/yaml/index
-    topics/master_tops/index
-    topics/ssh/*
-    ref/index
-    topics/best_practices
-    topics/troubleshooting/index
-    topics/development/index
-    topics/releases/index
-    topics/projects/index
-    security/index
-    faq
     glossary
