@@ -49,6 +49,8 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
     def __init__(self, opts):
         self.opts = opts
         self.functions = salt.loader.runner(opts)  # Must be self.functions for mixin to work correctly :-/
+        self.returners = salt.loader.returners(opts, self.functions)
+        self.outputters = salt.loader.outputters(opts)
         self.event = salt.utils.event.get_event('master', self.opts['sock_dir'], self.opts['transport'])
 
     def cmd(self, fun, arg, pub_data=None, kwarg=None):
