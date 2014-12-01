@@ -1,15 +1,4 @@
 # -*- coding: utf-8 -*-
-'''
-    :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-
-
-    tests.unit.utils.runtime_whitespace_regex_test
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-'''
-
-# Import python libs
-import re
-
 # Import Salt Testing libs
 from salttesting import skipIf
 from salttesting import TestCase
@@ -42,57 +31,57 @@ lo        Link encap:Local Loopback
 
 FREEBSD = '''
 em0: flags=8843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST> metric 0 mtu 1500
-	options=4219b<RXCSUM,TXCSUM,VLAN_MTU,VLAN_HWTAGGING,VLAN_HWCSUM,TSO4,WOL_MAGIC,VLAN_HWTSO>
-	ether 00:30:48:ff:ff:ff
-	inet 10.10.10.250 netmask 0xffffffe0 broadcast 10.10.10.255
-	inet 10.10.10.56 netmask 0xffffffc0 broadcast 10.10.10.63
-	media: Ethernet autoselect (1000baseT <full-duplex>)
-	status: active
+        options=4219b<RXCSUM,TXCSUM,VLAN_MTU,VLAN_HWTAGGING,VLAN_HWCSUM,TSO4,WOL_MAGIC,VLAN_HWTSO>
+        ether 00:30:48:ff:ff:ff
+        inet 10.10.10.250 netmask 0xffffffe0 broadcast 10.10.10.255
+        inet 10.10.10.56 netmask 0xffffffc0 broadcast 10.10.10.63
+        media: Ethernet autoselect (1000baseT <full-duplex>)
+        status: active
 em1: flags=8c02<BROADCAST,OACTIVE,SIMPLEX,MULTICAST> metric 0 mtu 1500
-	options=4219b<RXCSUM,TXCSUM,VLAN_MTU,VLAN_HWTAGGING,VLAN_HWCSUM,TSO4,WOL_MAGIC,VLAN_HWTSO>
-	ether 00:30:48:aa:aa:aa
-	media: Ethernet autoselect
-	status: no carrier
+        options=4219b<RXCSUM,TXCSUM,VLAN_MTU,VLAN_HWTAGGING,VLAN_HWCSUM,TSO4,WOL_MAGIC,VLAN_HWTSO>
+        ether 00:30:48:aa:aa:aa
+        media: Ethernet autoselect
+        status: no carrier
 plip0: flags=8810<POINTOPOINT,SIMPLEX,MULTICAST> metric 0 mtu 1500
 lo0: flags=8049<UP,LOOPBACK,RUNNING,MULTICAST> metric 0 mtu 16384
-	options=3<RXCSUM,TXCSUM>
-	inet6 fe80::1%lo0 prefixlen 64 scopeid 0x8
-	inet6 ::1 prefixlen 128
-	inet 127.0.0.1 netmask 0xff000000
-	nd6 options=3<PERFORMNUD,ACCEPT_RTADV>
+        options=3<RXCSUM,TXCSUM>
+        inet6 fe80::1%lo0 prefixlen 64 scopeid 0x8
+        inet6 ::1 prefixlen 128
+        inet 127.0.0.1 netmask 0xff000000
+        nd6 options=3<PERFORMNUD,ACCEPT_RTADV>
 tun0: flags=8051<UP,POINTOPOINT,RUNNING,MULTICAST> metric 0 mtu 1500
-	options=80000<LINKSTATE>
-	inet 10.12.0.1 --> 10.12.0.2 netmask 0xffffffff
-	Opened by PID 1964
+        options=80000<LINKSTATE>
+        inet 10.12.0.1 --> 10.12.0.2 netmask 0xffffffff
+        Opened by PID 1964
 '''
 
 SOLARIS = '''\
 lo0: flags=2001000849<UP,LOOPBACK,RUNNING,MULTICAST,IPv4,VIRTUAL> mtu 8232 index 1
-	inet 127.0.0.1 netmask ff000000
+        inet 127.0.0.1 netmask ff000000
 net0: flags=100001100943<UP,BROADCAST,RUNNING,PROMISC,MULTICAST,ROUTER,IPv4,PHYSRUNNING> mtu 1500 index 2
-	inet 10.10.10.38 netmask ffffffe0 broadcast 10.10.10.63
+        inet 10.10.10.38 netmask ffffffe0 broadcast 10.10.10.63
 ilbint0: flags=110001100843<UP,BROADCAST,RUNNING,MULTICAST,ROUTER,IPv4,VRRP,PHYSRUNNING> mtu 1500 index 3
-	inet 10.6.0.11 netmask ffffff00 broadcast 10.6.0.255
+        inet 10.6.0.11 netmask ffffff00 broadcast 10.6.0.255
 ilbext0: flags=110001100843<UP,BROADCAST,RUNNING,MULTICAST,ROUTER,IPv4,VRRP,PHYSRUNNING> mtu 1500 index 4
-	inet 10.10.11.11 netmask ffffffe0 broadcast 10.10.11.31
+        inet 10.10.11.11 netmask ffffffe0 broadcast 10.10.11.31
 ilbext0:1: flags=110001100843<UP,BROADCAST,RUNNING,MULTICAST,ROUTER,IPv4,VRRP,PHYSRUNNING> mtu 1500 index 4
-	inet 10.10.11.12 netmask ffffffe0 broadcast 10.10.11.31
+        inet 10.10.11.12 netmask ffffffe0 broadcast 10.10.11.31
 vpn0: flags=1000011008d1<UP,POINTOPOINT,RUNNING,NOARP,MULTICAST,ROUTER,IPv4,PHYSRUNNING> mtu 1480 index 5
-	inet tunnel src 10.10.11.12 tunnel dst 10.10.5.5
-	tunnel hop limit 64
-	inet 10.6.0.14 --> 10.6.0.15 netmask ff000000
+        inet tunnel src 10.10.11.12 tunnel dst 10.10.5.5
+        tunnel hop limit 64
+        inet 10.6.0.14 --> 10.6.0.15 netmask ff000000
 lo0: flags=2002000849<UP,LOOPBACK,RUNNING,MULTICAST,IPv6,VIRTUAL> mtu 8252 index 1
-	inet6 ::1/128
+        inet6 ::1/128
 net0: flags=120002004941<UP,RUNNING,PROMISC,MULTICAST,DHCP,IPv6,PHYSRUNNING> mtu 1500 index 2
-	inet6 fe80::221:9bff:fefd:2a22/10
+        inet6 fe80::221:9bff:fefd:2a22/10
 ilbint0: flags=120002000840<RUNNING,MULTICAST,IPv6,PHYSRUNNING> mtu 1500 index 3
-	inet6 ::/0
+        inet6 ::/0
 ilbext0: flags=120002000840<RUNNING,MULTICAST,IPv6,PHYSRUNNING> mtu 1500 index 4
-	inet6 ::/0
+        inet6 ::/0
 vpn0: flags=120002200850<POINTOPOINT,RUNNING,MULTICAST,NONUD,IPv6,PHYSRUNNING> mtu 1480 index 5
-	inet tunnel src 10.10.11.12 tunnel dst 10.10.5.5
-	tunnel hop limit 64
-	inet6 ::/0 --> fe80::b2d6:7c10
+        inet tunnel src 10.10.11.12 tunnel dst 10.10.5.5
+        tunnel hop limit 64
+        inet6 ::/0 --> fe80::b2d6:7c10
 '''
 
 
