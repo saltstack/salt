@@ -218,14 +218,14 @@ def __format_ds_changes(keys, old_dict, new_dict):
     return changes
 
 
-def __get_ds_value(dict, key):
+def __get_ds_value(dct, key):
     log.debug("__get_value(dict,%s)", key)
     if key == "password":
         return "***"
-    elif dict[key] is None:
+    elif dct[key] is None:
         return 'undefined'
     else:
-        return str(dict[key])
+        return str(dct[key])
 
 
 def bindings_exist(name, jboss_config, bindings):
@@ -287,13 +287,13 @@ def bindings_exist(name, jboss_config, bindings):
     return ret
 
 
-def __log_binding_change(changes, type, key, new, old=None):
-    if type not in changes:
-        changes[type] = ''
+def __log_binding_change(changes, type_, key, new, old=None):
+    if type_ not in changes:
+        changes[type_] = ''
     if old is None:
-        changes[type] += key + ':' + new + '\n'
+        changes[type_] += key + ':' + new + '\n'
     else:
-        changes[type] += key + ':' + old + '->' + new + '\n'
+        changes[type_] += key + ':' + old + '->' + new + '\n'
 
 
 def deployed(name, jboss_config, artifact=None, salt_source=None):
@@ -713,9 +713,9 @@ def reloaded(name, jboss_config, timeout=60, interval=5):
     return ret
 
 
-def __check_dict_contains(dict, dict_name, keys, comment='', result=True):
+def __check_dict_contains(dct, dict_name, keys, comment='', result=True):
     for key in keys:
-        if key not in dict.keys():
+        if key not in dct.keys():
             result = False
             comment = __append_comment("Missing {0} in {1}".format(key, dict_name), comment)
     return result, comment
