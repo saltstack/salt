@@ -509,8 +509,9 @@ class Schedule(object):
             when = 0
             seconds = 0
             cron = 0
-
+            now = int(time.time())
             time_conflict = False
+
             for item in ['seconds', 'minutes', 'hours', 'days']:
                 if item in data and 'when' in data:
                     time_conflict = True
@@ -540,7 +541,6 @@ class Schedule(object):
 
                 if isinstance(data['when'], list):
                     _when = []
-                    now = int(time.time())
                     for i in data['when']:
                         try:
                             tmp = int(dateutil_parser.parse(i).strftime('%s'))
@@ -560,7 +560,7 @@ class Schedule(object):
                         if '_when' in data and data['_when'] != when:
                             data['_when_run'] = True
                             data['_when'] = when
-                        seconds = when - int(time.time())
+                        seconds = when - now
 
                         # scheduled time is in the past
                         if seconds < 0:
@@ -588,7 +588,6 @@ class Schedule(object):
                         log.error('Invalid date string. Ignoring')
                         continue
 
-                    now = int(time.time())
                     seconds = when - now
 
                     # scheduled time is in the past
@@ -626,14 +625,16 @@ class Schedule(object):
             # loop interval needed. If it is lower then overwrite variable
             # external loops using can then check this variable for how often
             # they need to reschedule themselves
-            if seconds < self.loop_interval:
-                self.loop_interval = seconds
-            now = int(time.time())
+            # Not used with 'when' parameter, causes run away jobs and CPU
+            # spikes.
+            if 'when' not in data:
+                if seconds < self.loop_interval:
+                    self.loop_interval = seconds
             run = False
 
             if job in self.intervals:
                 if 'when' in data:
-                    if now - when >= seconds:
+                    if seconds == 0:
                         if data['_when_run']:
                             data['_when_run'] = False
                             run = True
@@ -657,7 +658,7 @@ class Schedule(object):
                             data['_seconds'] = 0
 
                 if 'when' in data:
-                    if now - when >= seconds:
+                    if seconds == 0:
                         if data['_when_run']:
                             data['_when_run'] = False
                             run = True
@@ -753,7 +754,7 @@ class Schedule(object):
                 if self.opts.get('multiprocessing', True):
                     proc.join()
             finally:
-                self.intervals[job] = int(time.time())
+                self.intervals[job] = now
 
 
 def clean_proc_dir(opts):
