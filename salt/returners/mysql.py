@@ -74,6 +74,7 @@ Use the following mysql database schema::
     `tag` varchar(255) NOT NULL,
     `data` varchar(1024) NOT NULL,
     `alter_time` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
     KEY `tag` (`tag`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
