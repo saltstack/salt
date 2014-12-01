@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
 # import Python Third Party Libs
+from salttesting.mock import patch
+
+# pylint: disable=import-error,no-name-in-module
 try:
     import boto
     HAS_BOTO = True
@@ -25,7 +28,8 @@ except ImportError:
         return stub_function
 
 # Import Python libs
-from distutils.version import LooseVersion
+from distutils.version import LooseVersion  # pylint: disable=no-name-in-module
+# pylint: enable=import-error
 
 # Import Salt Libs
 from salt.modules import boto_vpc
