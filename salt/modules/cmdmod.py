@@ -322,11 +322,15 @@ def _run(cmd,
               'stderr': stderr,
               'with_communicate': with_communicate}
 
-    if umask:
+    if umask is not None:
+        _umask = str(umask).lstrip('0')
+
+        if _umask == '':
+            msg = 'Zero umask is not allowed.'
+            raise CommandExecutionError(msg)
+
         try:
-            _umask = int(str(umask).lstrip('0'), 8)
-            if not _umask:
-                raise ValueError('Zero umask not allowed.')
+            _umask = int(_umask, 8)
         except ValueError:
             msg = 'Invalid umask: \'{0}\''.format(umask)
             raise CommandExecutionError(msg)

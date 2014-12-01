@@ -153,10 +153,7 @@ class CMDMODTestCase(TestCase):
         '''
         Tests error raised when umask is set to zero
         '''
-        with patch.dict(cmdmod.__grains__, {'os': 'fake_os'}):
-            self.assertRaises(CommandExecutionError,
-                              cmdmod._run,
-                              'foo', 'bar', runas='baz', umask=0)
+        self.assertRaises(CommandExecutionError, cmdmod._run, 'foo', 'bar', umask=0)
 
     @patch('salt.modules.cmdmod._is_valid_shell', MagicMock(return_value=True))
     @patch('salt.utils.is_windows', MagicMock(return_value=False))
@@ -167,10 +164,7 @@ class CMDMODTestCase(TestCase):
         '''
         Tests error raised when an invalid umask is given
         '''
-        with patch.dict(cmdmod.__grains__, {'os': 'fake_os'}):
-            self.assertRaises(CommandExecutionError,
-                              cmdmod._run,
-                              'foo', 'bar', umask='baz')
+        self.assertRaises(CommandExecutionError, cmdmod._run, 'foo', 'bar', umask='baz')
 
     @patch('salt.utils.is_windows', MagicMock(return_value=True))
     def test_is_valid_shell_windows(self):
