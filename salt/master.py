@@ -1293,7 +1293,7 @@ class AESFuncs(object):
         if not self.__verify_minion_publish(clear_load):
             return {}
         else:
-            return self.masterapi.minion_publish(clear_load, skip_verify=True)
+            return self.masterapi.minion_publish(clear_load)
 
     def revoke_auth(self, load):
         '''
