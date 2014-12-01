@@ -603,6 +603,7 @@ class EventReturn(multiprocessing.Process):
         multiprocessing.Process.__init__(self)
 
         self.opts = opts
+        self.event_return_queue = self.opts['event_return_queue']
         local_minion_opts = self.opts.copy()
         local_minion_opts['file_client'] = 'local'
         self.minion = salt.minion.MasterMinion(local_minion_opts)
@@ -612,8 +613,14 @@ class EventReturn(multiprocessing.Process):
         self.event = get_event('master', opts=self.opts)
         events = self.event.iter_events(full=True)
         self.event.fire_event({}, 'salt/event_listen/start')
+        event_queue = []
         try:
-            self.minion.returners['{0}.event_return'.format(self.opts['event_return'])](events)
+            for event in events:
+                event_queue.append(event)
+                if len(event_queue) >= self.event_return_queue:
+                    log.trace('Storing events')
+                    self.minion.returners['{0}.event_return'.format(self.opts['event_return'])](event_queue)
+                    event_queue = []
         except KeyError:
             log.error('Could not store return for events {0}. Returner {1} '
                       'not found.'.format(events, self.opts.get('event_return', None)))
