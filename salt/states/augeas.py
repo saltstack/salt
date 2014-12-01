@@ -34,6 +34,9 @@ import re
 import os.path
 import difflib
 
+# Import Salt libs
+import salt.utils
+
 
 def __virtual__():
     return 'augeas' if 'augeas.execute' in __salt__ else False
@@ -175,9 +178,8 @@ def change(name, context=None, changes=None, lens=None, **kwargs):
     if context:
         filename = re.sub('^/files|/$', '', context)
         if os.path.isfile(filename):
-            file_ = open(filename, 'r')
-            old_file = file_.readlines()
-            file_.close()
+            with salt.utils.fopen(filename, 'r') as file_:
+                old_file = file_.readlines()
 
     result = __salt__['augeas.execute'](context=context, lens=lens, commands=changes)
     ret['result'] = result['retval']
@@ -187,9 +189,8 @@ def change(name, context=None, changes=None, lens=None, **kwargs):
         return ret
 
     if old_file:
-        file_ = open(filename, 'r')
-        diff = ''.join(difflib.unified_diff(old_file, file_.readlines(), n=0))
-        file_.close()
+        with salt.utils.fopen(filename, 'r') as file_:
+            diff = ''.join(difflib.unified_diff(old_file, file_.readlines(), n=0))
 
         if diff:
             ret['comment'] = 'Changes have been saved'
