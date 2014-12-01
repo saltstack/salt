@@ -148,7 +148,6 @@ class CMDMODTestCase(TestCase):
     @patch('salt.utils.is_windows', MagicMock(return_value=False))
     @patch('os.path.isfile', MagicMock(return_value=True))
     @patch('os.access', MagicMock(return_value=True))
-    @patch('pwd.getpwnam', MagicMock(return_value=True))
     def test_run_zero_umask(self):
         '''
         Tests error raised when umask is set to zero
@@ -159,12 +158,65 @@ class CMDMODTestCase(TestCase):
     @patch('salt.utils.is_windows', MagicMock(return_value=False))
     @patch('os.path.isfile', MagicMock(return_value=True))
     @patch('os.access', MagicMock(return_value=True))
-    @patch('pwd.getpwnam', MagicMock(return_value=True))
     def test_run_invalid_umask(self):
         '''
         Tests error raised when an invalid umask is given
         '''
         self.assertRaises(CommandExecutionError, cmdmod._run, 'foo', 'bar', umask='baz')
+
+    @patch('salt.modules.cmdmod._is_valid_shell', MagicMock(return_value=True))
+    @patch('salt.utils.is_windows', MagicMock(return_value=False))
+    @patch('os.path.isfile', MagicMock(return_value=True))
+    @patch('os.access', MagicMock(return_value=True))
+    def test_run_invalid_cwd_not_abs_path(self):
+        '''
+        Tests error raised when cwd is not an absolute path
+        '''
+        self.assertRaises(CommandExecutionError, cmdmod._run, 'foo', 'bar')
+
+    @patch('salt.modules.cmdmod._is_valid_shell', MagicMock(return_value=True))
+    @patch('salt.utils.is_windows', MagicMock(return_value=False))
+    @patch('os.path.isfile', MagicMock(return_value=True))
+    @patch('os.access', MagicMock(return_value=True))
+    @patch('os.path.isabs', MagicMock(return_value=True))
+    def test_run_invalid_cwd_not_dir(self):
+        '''
+        Tests error raised when cwd is not a dir
+        '''
+        self.assertRaises(CommandExecutionError, cmdmod._run, 'foo', 'bar')
+
+    @patch('salt.modules.cmdmod._is_valid_shell', MagicMock(return_value=True))
+    @patch('salt.utils.is_windows', MagicMock(return_value=False))
+    @patch('os.path.isfile', MagicMock(return_value=True))
+    @patch('os.access', MagicMock(return_value=True))
+    @patch('salt.utils.timed_subprocess.TimedProc', MagicMock(side_effect=OSError))
+    def test_run_no_vt_os_error(self):
+        '''
+        Tests error raised when not useing vt and OSError is provided
+        '''
+        self.assertRaises(CommandExecutionError, cmdmod._run, 'foo')
+
+    @patch('salt.modules.cmdmod._is_valid_shell', MagicMock(return_value=True))
+    @patch('salt.utils.is_windows', MagicMock(return_value=False))
+    @patch('os.path.isfile', MagicMock(return_value=True))
+    @patch('os.access', MagicMock(return_value=True))
+    @patch('salt.utils.timed_subprocess.TimedProc', MagicMock(side_effect=IOError))
+    def test_run_no_vt_io_error(self):
+        '''
+        Tests error raised when not useing vt and IOError is provided
+        '''
+        self.assertRaises(CommandExecutionError, cmdmod._run, 'foo')
+
+    @patch('salt.modules.cmdmod._is_valid_shell', MagicMock(return_value=True))
+    @patch('salt.utils.is_windows', MagicMock(return_value=False))
+    @patch('os.path.isfile', MagicMock(return_value=True))
+    @patch('os.access', MagicMock(return_value=True))
+    def test_run(self):
+        '''
+        Tests end result when a command is not found
+        '''
+        ret = cmdmod._run('foo').get('stderr')
+        self.assertIn('foo', ret)
 
     @patch('salt.utils.is_windows', MagicMock(return_value=True))
     def test_is_valid_shell_windows(self):
