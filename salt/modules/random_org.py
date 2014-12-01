@@ -68,7 +68,7 @@ def __virtual__():
     return __virtualname__
 
 
-def _query(api_key=None, api_version=None, data=None):
+def _query(api_version=None, data=None):
     '''
     Slack object method function to construct and execute on the API URL.
 
@@ -160,7 +160,7 @@ def getUsage(api_key=None, api_version=None):
     data['method'] = _function
     data['params'] = {'apiKey': api_key}
 
-    result = _query(api_key=api_key, api_version=api_version, data=data)
+    result = _query(api_version=api_version, data=data)
 
     if result:
         ret['bitsLeft'] = result.get('bitsLeft')
@@ -275,7 +275,7 @@ def generateIntegers(api_key=None,
                       'base': base
                       }
 
-    result = _query(api_key=api_key, api_version=api_version, data=data)
+    result = _query(api_version=api_version, data=data)
     if result:
         log.debug('result {0}'.format(result))
         if 'random' in result:
@@ -380,7 +380,7 @@ def generateStrings(api_key=None,
                       'replacement': replacement,
                       }
 
-    result = _query(api_key=api_key, api_version=api_version, data=data)
+    result = _query(api_version=api_version, data=data)
     if result:
         if 'random' in result:
             random_data = result.get('random').get('data')
@@ -451,7 +451,7 @@ def generateUUIDs(api_key=None,
                       'n': kwargs['number'],
                       }
 
-    result = _query(api_key=api_key, api_version=api_version, data=data)
+    result = _query(api_version=api_version, data=data)
     if result:
         if 'random' in result:
             random_data = result.get('random').get('data')
@@ -546,7 +546,7 @@ def generateDecimalFractions(api_key=None,
                       'replacement': replacement,
                       }
 
-    result = _query(api_key=api_key, api_version=api_version, data=data)
+    result = _query(api_version=api_version, data=data)
     if result:
         if 'random' in result:
             random_data = result.get('random').get('data')
@@ -643,7 +643,7 @@ def generateGaussians(api_key=None,
                       'significantDigits': kwargs['significantDigits'],
                       }
 
-    result = _query(api_key=api_key, api_version=api_version, data=data)
+    result = _query(api_version=api_version, data=data)
     if result:
         if 'random' in result:
             random_data = result.get('random').get('data')
@@ -733,7 +733,7 @@ def generateBlobs(api_key=None,
                       'format': _format,
                       }
 
-    result = _query(api_key=api_key, api_version=api_version, data=data)
+    result = _query(api_version=api_version, data=data)
     if result:
         if 'random' in result:
             random_data = result.get('random').get('data')
