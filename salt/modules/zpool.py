@@ -247,8 +247,8 @@ def create(pool_name, *vdevs, **kwargs):
     # create "-o property=value" pairs
     if properties:
         optlist = []
-        for property in properties:
-            optlist.append('-o {0}={1}'.format(property, properties[property]))
+        for prop in properties:
+            optlist.append('-o {0}={1}'.format(prop, properties[prop]))
         opts = ' '.join(optlist)
         cmd = '{0} {1}'.format(cmd, opts)
     cmd = '{0} {1} {2}'.format(cmd, pool_name, devs)
