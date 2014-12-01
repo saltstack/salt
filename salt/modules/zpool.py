@@ -468,3 +468,54 @@ def import_(pool_name='', new_name='', **kwargs):
         else:
             ret[pool_name] = 'Imported'
     return ret
+
+
+def online(pool_name, *vdevs, **kwargs):
+    '''
+    Ensure that the specified devices are online
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zpool.online myzpool /path/to/vdev1 [...]         
+
+    '''
+    ret = {}
+    dlist = []
+
+    # Check if the pool_name exists
+    if not exists(pool_name):
+        ret['Error'] = 'Storage Pool `{0}` doesn\'t exist'.format(pool_name)
+        return ret
+
+    if not vdevs:
+        ret['Error'] = 'Missing vdev specification. Please specify vdevs.'
+        return ret
+
+    # make sure files are present on filesystem
+    for vdev in vdevs:
+        if not os.path.exists(vdev):
+            # Path doesn't exist so error and return
+            ret[vdev] = '{0} not present on filesystem'.format(vdev)
+            return ret
+        mode = os.stat(vdev).st_mode
+        if not stat.S_ISBLK(mode) and not stat.S_ISREG(mode):
+            # Not a block device or file vdev so error and return
+            ret[vdev] = '{0} is not a block device or a file vdev'.format(vdev)
+            return ret
+        dlist.append(vdev)
+
+    devs = ' '.join(dlist)
+    zpool = _check_zpool()
+    cmd = '{0} online {1} {2}'.format(zpool, pool_name, devs)
+
+    # Bring all specified devices online
+    res = __salt__['cmd.run'](cmd)
+    if res:
+        ret['Error'] = {}
+        ret['Error']['Message'] = 'Failure bringing device online.'
+        ret['Error']['Reason'] = res
+    else:
+        ret[pool_name] = 'Specified devices: {0} are online.'.format(vdevs)
+    return ret
