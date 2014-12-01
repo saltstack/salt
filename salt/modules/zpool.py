@@ -525,12 +525,16 @@ def offline(pool_name, *vdevs, **kwargs):
     '''
     Ensure that the specified devices are offline
 
+    .. warning::
+
+        By default, the OFFLINE state is persistent. The device remains offline when
+        the system is rebooted. To temporarily take a device offline, use ``temporary=True``.
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' zpool.offline myzpool /path/to/vdev1 [...]
-
+        salt '*' zpool.offline myzpool /path/to/vdev1 [...] [temporary=True|False]
     '''
     ret = {}
     dlist = []
@@ -559,7 +563,11 @@ def offline(pool_name, *vdevs, **kwargs):
 
     devs = ' '.join(dlist)
     zpool = _check_zpool()
-    cmd = '{0} offline {1} {2}'.format(zpool, pool_name, devs)
+    temporary_opt = kwargs.get('temporary', False)
+    if temporary_opt:
+        cmd = '{0} offline -t {1} {2}'.format(zpool, pool_name, devs)
+    else:
+        cmd = '{0} offline {1} {2}'.format(zpool, pool_name, devs)
 
     # Take all specified devices offline
     res = __salt__['cmd.run'](cmd)
