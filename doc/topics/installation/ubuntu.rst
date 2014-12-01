@@ -67,9 +67,11 @@ may be given at a time:
 ZeroMQ 4
 ========
 
-We recommend using ZeroMQ 4 where available. The **chris-lea/zeromq** PPA can
-be used to provide ZeroMQ 4 on Ubuntu 12.04 LTS. Adding this PPA can be done
-with a :mod:`pkgrepo.managed <salt.states.pkgrepo.managed>` state.
+We recommend using ZeroMQ 4 where available. ZeroMQ 4 is already available for
+Ubuntu 14.04 and Ubuntu 14.10 and nothing additional needs to be done. However,
+the **chris-lea/zeromq** PPA can be used to provide ZeroMQ 4 on Ubuntu 12.04 LTS.
+Adding this PPA can be done with a :mod:`pkgrepo.managed <salt.states.pkgrepo.managed>`
+state.
 
 .. code-block:: yaml
 
