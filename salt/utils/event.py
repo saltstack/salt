@@ -600,6 +600,11 @@ class EventReturn(multiprocessing.Process):
     and forwards events to the specified returner.
     '''
     def __init__(self, opts):
+        '''
+        Initialize the EventReturn system
+
+        Return an EventReturn instance
+        '''
         multiprocessing.Process.__init__(self)
 
         self.opts = opts
@@ -609,6 +614,9 @@ class EventReturn(multiprocessing.Process):
         self.minion = salt.minion.MasterMinion(local_minion_opts)
 
     def run(self):
+        '''
+        Spin up the multiprocess event returner
+        '''
         salt.utils.appendproctitle(self.__class__.__name__)
         self.event = get_event('master', opts=self.opts)
         events = self.event.iter_events(full=True)
@@ -616,14 +624,30 @@ class EventReturn(multiprocessing.Process):
         event_queue = []
         try:
             for event in events:
-                event_queue.append(event)
+                if self._filter(event):
+                    event_queue.append(event)
                 if len(event_queue) >= self.event_return_queue:
-                    log.trace('Storing events')
                     self.minion.returners['{0}.event_return'.format(self.opts['event_return'])](event_queue)
                     event_queue = []
         except KeyError:
             log.error('Could not store return for events {0}. Returner {1} '
                       'not found.'.format(events, self.opts.get('event_return', None)))
+
+    def _filter(self, event):
+        '''
+        Take an event and run it through configured filters.
+
+        Returns True if event should be stored, else False
+        '''
+        tag = event['tag']
+        if tag in self.opts['event_return_whitelist']:
+            if tag not in self.opts['event_return_blacklist']:
+                return True
+            else:
+                return False  # Event was whitelisted and blacklisted
+        elif tag in self.opts['event_return_blacklist']:
+            return False
+        return True
 
 
 class Reactor(multiprocessing.Process, salt.state.Compiler):
