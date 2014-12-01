@@ -16,7 +16,8 @@ import salt.utils.decorators as decorators
 log = logging.getLogger(__name__)
 
 __func_alias__ = {
-    'import_': 'import'
+    'import_': 'import',
+    'list_': 'list',
 }
 
 
@@ -77,7 +78,7 @@ def iostat(name=''):
     return ret
 
 
-def list():
+def list_():
     '''
     Return a list of all pools in the system with health status and space usage
 
@@ -112,7 +113,7 @@ def zpool_list():
             'being renamed to \'list()\'. This function \'zpool_list()\' will be removed in '
             'Salt Boron.'
         )
-    return list()
+    return list_()
 
 
 def exists(pool_name):
