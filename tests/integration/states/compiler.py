@@ -55,7 +55,8 @@ class CompileTest(integration.ModuleCase):
         ]
         try:
             ret = self.run_function('state.template_str', ['\n'.join(template)], timeout=120)
-            self.assertEqual('base', open(managed_file).read())
+            with salt.utils.fopen(managed_file) as fhr:
+                self.assertEqual('base', fhr.read())
         finally:
             if os.path.isfile(managed_file):
                 os.unlink(managed_file)
@@ -69,7 +70,8 @@ class CompileTest(integration.ModuleCase):
         ]
         try:
             ret = self.run_function('state.template_str', ['\n'.join(template)], timeout=120)
-            self.assertEqual('base', open(managed_file).read())
+            with salt.utils.fopen(managed_file) as fhr:
+                self.assertEqual('base', fhr.read())
         finally:
             if os.path.isfile(managed_file):
                 os.unlink(managed_file)
