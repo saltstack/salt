@@ -133,6 +133,20 @@ scheduler to skip this first run and wait until the next scheduled run.
         kwargs:
           test: True
 
+    ... versionadded:: 2014.7.0
+
+    schedule:
+      job1:
+        function: state.sls
+        cron: '*/15 * * * *'
+        args:
+          - httpd
+        kwargs:
+          test: True
+
+The scheduler also supports scheduling jobs using a cron like format.  This requires the
+python-croniter library.
+
 The scheduler also supports ensuring that there are no more than N copies of
 a particular routine running.  Use this for jobs that may be long-running
 and could step on each other or pile up in case of infrastructure outage.

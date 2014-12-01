@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # import Python Third Party Libs
-
-from mock import patch
+from salttesting.mock import patch
 
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.modules.boto_vpc import _maybe_set_name_tag, _maybe_set_tags
@@ -38,7 +37,7 @@ except ImportError:
 
 # Import Python libs
 from distutils.version import LooseVersion  # pylint: disable=no-name-in-module
-# pylint: disable=import-error
+# pylint: enable=import-error
 
 # Import Salt Libs
 from salt.modules import boto_vpc
