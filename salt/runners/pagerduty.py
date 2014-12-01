@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
-Module for Firing Events via PagerDuty
+Runner Module for Firing Events via PagerDuty
 
 .. versionadded:: 2014.1.0
 
 :configuration: This module can be used by specifying the name of a
-    configuration profile in the minion config, minion pillar, or master
-    config.
+    configuration profile in the master config.
 
     For example:
 
