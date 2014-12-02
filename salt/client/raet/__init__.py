@@ -59,8 +59,8 @@ class LocalClient(salt.client.LocalClient):
             emsg = ("Invalid application kind = '{0}' for Raet LocalClient.".format(kind))
             log.error(emsg + "\n")
             raise ValueError(emsg)
-        if kind in  [kinds.APPL_KIND_NAMES[kinds.applKinds.master],
-                     kinds.APPL_KIND_NAMES[kinds.applKinds.syndic]]:
+        if kind in [kinds.APPL_KIND_NAMES[kinds.applKinds.master],
+                    kinds.APPL_KIND_NAMES[kinds.applKinds.syndic]]:
             lanename = 'master'
         else:
             emsg = ("Unsupported application kind '{0}' for Raet LocalClient.".format(kind))
