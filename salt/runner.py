@@ -51,7 +51,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         self.functions = salt.loader.runner(opts)  # Must be self.functions for mixin to work correctly :-/
         self.returners = salt.loader.returners(opts, self.functions)
         self.outputters = salt.loader.outputters(opts)
-        self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
+        self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'])
 
     def cmd(self, fun, arg, pub_data=None, kwarg=None):
         '''
@@ -167,7 +167,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         ret_load = {'return': ret, 'fun': data['fun'], 'fun_args': data['args']}
         # Don't use the invoking processes' event socket because it could be closed down by the time we arrive here.
         # Create another, for safety's sake.
-        salt.utils.event.MasterEvent(opts['sock_dir']).fire_event(ret_load, tagify([data['jid'], 'return'], 'runner'))
+        salt.utils.event.get_master_event(opts, opts['sock_dir']).fire_event(ret_load, tagify([data['jid'], 'return'], 'runner'))
         try:
             fstr = '{0}.save_runner_load'.format(opts['master_job_cache'])
             instance.returners[fstr](data['jid'], ret_load)
