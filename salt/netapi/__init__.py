@@ -15,6 +15,7 @@ import salt.runner
 import salt.syspaths
 import salt.wheel
 import salt.utils
+import salt.client.ssh.client
 from salt.exceptions import SaltException, EauthAuthenticationError
 
 
@@ -83,6 +84,28 @@ class NetapiClient(object):
         '''
         local = salt.client.get_local_client(mopts=self.opts)
         return local.cmd_batch(*args, **kwargs)
+
+    def ssh(self, fun, timeout=None, **kwargs):
+        '''
+        Run salt-ssh commands synchronously
+
+        Wraps :py:meth:`salt.client.ssh.client.SSHClient.cmd_sync`.
+
+        :return: Returns the result from the salt-ssh command
+        '''
+        kwargs['fun'] = fun
+        return salt.client.ssh.client.cmd_sync(kwargs)
+
+    def ssh_async(self, fun, timeout=None, **kwargs):
+        '''
+        Run salt-ssh commands asynchronously
+
+        Wraps :py:meth:`salt.client.ssh.client.SSHClient.cmd_async`.
+
+        :return: Returns the JID to check for results on
+        '''
+        kwargs['fun'] = fun
+        return salt.client.ssh.cient.cmd_async(kwargs)
 
     def runner(self, fun, timeout=None, **kwargs):
         '''

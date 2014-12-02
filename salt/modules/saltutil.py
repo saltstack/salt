@@ -36,6 +36,7 @@ import salt
 import salt.payload
 import salt.state
 import salt.client
+import salt.client.ssh.client
 import salt.runner
 import salt.utils
 import salt.utils.process
@@ -649,7 +650,7 @@ def revoke_auth():
 
 def _get_ssh_or_api_client(cfgfile, ssh=False):
     if ssh:
-        client = salt.client.SSHClient(cfgfile)
+        client = salt.client.ssh.SSHClient(cfgfile)
     else:
         client = salt.client.get_local_client(cfgfile)
     return client
@@ -726,7 +727,7 @@ def cmd_iter(tgt,
         salt '*' saltutil.cmd_iter
     '''
     if ssh:
-        client = salt.client.SSHClient(__opts__['conf_file'])
+        client = salt.client.ssh.SSHClient(__opts__['conf_file'])
     else:
         client = salt.client.get_local_client(__opts__['conf_file'])
     for ret in client.cmd_iter(

@@ -9,6 +9,7 @@ from __future__ import absolute_import
 
 # Import salt libs
 import salt.loader
+import salt.syspaths
 
 import os
 import logging
@@ -18,8 +19,10 @@ log = logging.getLogger(__name__)
 def get_roster_file(options):
     if options.get('roster_file'):
         template = options.get('roster_file')
-    else:
+    elif 'config_dir' in options:
         template = os.path.join(options['config_dir'], 'roster')
+    else:
+        template = os.path.join(salt.syspaths.CONFIG_DIR, 'roster')
 
     if not os.path.isfile(template):
         raise IOError('No roster file found')
