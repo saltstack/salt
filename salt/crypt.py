@@ -644,9 +644,7 @@ class Auth(object):
 
         m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
 
-        channel = salt.transport.Channel.factory(self.opts,
-                                                 crypt='clear',
-                                                 master_uri=self.opts['master_uri'])
+        channel = salt.transport.Channel.factory(self.opts, crypt='clear')
 
         try:
             payload = channel.send(
