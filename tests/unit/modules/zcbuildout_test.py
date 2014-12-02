@@ -144,6 +144,7 @@ class BuildoutTestCase(Base):
         def callback2(a, b=1):
             raise Exception('foo')
 
+        # pylint: disable=invalid-sequence-index
         ret1 = callback1(1, b=3)
         # These lines are throwing pylint errors - disabling for now since we are skipping
         # these tests
@@ -187,6 +188,7 @@ class BuildoutTestCase(Base):
         self.assertEqual(ret2['out'], None)
         for l in buildout.LOG.levels:
             self.assertTrue(0 == len(buildout.LOG.by_level[l]))
+        # pylint: enable=invalid-sequence-index
 
     @requires_network()
     def test_get_bootstrap_url(self):
