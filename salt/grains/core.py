@@ -1410,7 +1410,7 @@ def path():
     '''
     # Provides:
     #   path
-    return {'path': os.environ['PATH'].strip()}
+    return {'path': os.environ.get('PATH', '').strip()}
 
 
 def pythonversion():
