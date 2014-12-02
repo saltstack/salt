@@ -130,5 +130,5 @@ class BotoVpcTestCase(TestCase):
 
 
 if __name__ == '__main__':
-    from integration import run_tests
+    from integration import run_tests  # pylint: disable=import-error
     run_tests(BotoVpcTestCase, needs_daemon=False)
