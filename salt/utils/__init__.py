@@ -1181,7 +1181,7 @@ def clean_kwargs(**kwargs):
     passing the kwargs forward wholesale.
     '''
     ret = {}
-    for key, val in six.iteritems(list(kwargs)):
+    for key, val in six.iteritems(kwargs):
         if not key.startswith('__pub'):
             ret[key] = val
     return ret
