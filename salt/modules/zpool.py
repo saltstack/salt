@@ -267,37 +267,52 @@ def create(pool_name, *vdevs, **kwargs):
     return ret
 
 
-def add(pool_name, vdev):
+def add(pool_name, *vdev):
     '''
-    Add the specified vdev to the given pool
+    Add the specified vdev's to the given pool
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' zpool.add myzpool /path/to/vdev
+        salt '*' zpool.add myzpool /path/to/vdev1 /path/to/vdev2 [...]
     '''
     ret = {}
+    dlist = []
+
     # check for pool
     if not exists(pool_name):
-        ret['Error'] = 'Can\'t add {0} to {1} pool is not available'.format(
-                pool_name,
-                vdev)
+        ret['Error'] = 'Storage Pool `{0}` doesn't exist'.format(pool_name)
         return ret
 
-    # check device is a file
-    if not os.path.isfile(vdev):
-        ret['Error'] = '{0} not on filesystem'.format(vdev)
+    if not vdevs:
+        ret['Error'] = 'Missing vdev specification. Please specify vdevs.'
         return ret
+
+    # make sure files are present on filesystem
+    for vdev in vdevs:
+        if vdev not in ['mirror', 'log', 'cache', 'raidz1', 'raidz2', 'raidz3', 'spare']:
+            if not os.path.exists(vdev):
+                # Path doesn't exist so error and return
+                ret[vdev] = '{0} not present on filesystem'.format(vdev)
+                return ret
+            mode = os.stat(vdev).st_mode
+            if not stat.S_ISBLK(mode) and not stat.S_ISREG(mode):
+                # Not a block device or file vdev so error and return
+                ret[vdev] = '{0} is not a block device or a file vdev'.format(vdev)
+                return ret
+        dlist.append(vdev)
+
+    devs = ' '.join(dlist)
 
     # try and add watch out for mismatched replication levels
     zpool = _check_zpool()
-    cmd = '{0} add {1} {2}'.format(zpool, pool_name, vdev)
+    cmd = '{0} add {1} {2}'.format(zpool, pool_name, devs)
     res = __salt__['cmd.run'](cmd)
     if 'errors' not in res.splitlines():
-        ret['Added'] = '{0} to {1}'.format(vdev, pool_name)
+        ret['Added'] = '{0} to {1}'.format(devs, pool_name)
         return ret
-    ret['Error'] = 'Something went wrong add {0} to {1}'.format(vdev, pool_name)
+    ret['Error'] = 'Something went wrong when adding {0} to {1}'.format(devs, pool_name)
 
 
 def replace(pool_name, old, new):
