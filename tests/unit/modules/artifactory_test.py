@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 
+# Import pytohn libs
+from __future__ import absolute_import
+
 # Import Salt testing libs
-from salttesting import TestCase
-from salttesting.mock import MagicMock
+from salttesting.unit import skipIf, TestCase
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
@@ -13,6 +16,7 @@ from salt.modules import artifactory
 import salt.ext.six as six
 
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ArtifactoryTestCase(TestCase):
 
     org_module_functions = {}
