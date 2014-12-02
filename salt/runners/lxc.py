@@ -6,13 +6,11 @@ Control Linux Containers via Salt
 '''
 
 # Import python libs
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import time
 import os
 import copy
 import logging
-from salt.ext.six import string_types
 
 # Import Salt libs
 import salt.client
@@ -21,8 +19,9 @@ import salt.utils.virt
 import salt.utils.cloud
 import salt.key
 from salt.utils.odict import OrderedDict as _OrderedDict
-import salt.ext.six as six
 
+# Import 3rd-party lib
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -191,7 +190,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
         ret['comment'] = 'A host must be provided'
         ret['result'] = False
         return ret
-    if isinstance(names, string_types):
+    if isinstance(names, six.string_types):
         names = names.split(',')
     if not isinstance(names, list):
         ret['comment'] = 'Container names are not formed as a list'

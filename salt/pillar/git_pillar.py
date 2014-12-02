@@ -17,7 +17,8 @@ to look for Pillar files (such as ``top.sls``).
     The optional ``root`` parameter will be added.
 
 .. versionchanged:: @TBD
-    The special branch name '__env__' will be replace by the environment ({{env}})
+    The special branch name '__env__' will be replace by the
+    environment ({{env}})
 
 Note that this is not the same thing as configuring pillar data using the
 :conf_master:`pillar_roots` parameter. The branch referenced in the
@@ -167,9 +168,9 @@ class GitPillar(object):
     def map_branch(self, branch, opts=None):
         opts = __opts__ if opts is None else opts
         if branch == '__env__':
-            branch = opts['environment']
+            branch = opts.get('environment', 'base')
             if branch == 'base':
-                branch = opts['gitfs_base']
+                branch = opts.get('gitfs_base', 'master')
         return branch
 
     def update(self):
