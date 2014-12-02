@@ -327,6 +327,14 @@
 # If set to 'changes', the output will be full unless the state didn't change.
 #state_output: full
 
+# Automatically aggregate all states that have support for mod_aggregate by
+# setting to True. Or pass a list of state module names to automatically
+# aggregate just those types.
+#
+# state_aggregate:
+#   - pkg
+#
+#state_aggregate: False
 
 #####      File Server settings      #####
 ##########################################
