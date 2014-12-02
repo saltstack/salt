@@ -10,6 +10,7 @@ from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../')
 
+import integration
 import salt.state
 import salt.utils
 from salt.config import minion_config
@@ -192,24 +193,32 @@ class RendererMixin(object):
     def setUp(self, *args, **kwargs):
         super(RendererMixin, self).setUp(*args, **kwargs)
 
-        self.root_dir = tempfile.mkdtemp('pyobjects_test_root')
+        self.root_dir = tempfile.mkdtemp('pyobjects_test_root', dir=integration.TMP)
+        self.state_tree_dir = os.path.join(self.root_dir, 'state_tree')
+        self.cache_dir = os.path.join(self.root_dir, 'cachedir')
+        if not os.path.isdir(self.root_dir):
+            os.makedirs(self.root_dir)
 
-        self.config = minion_config(None)
-        self.config.update({
-            'file_client': 'local',
-            'file_roots': {
-                'base': [self.root_dir]
-            },
-            'cachedir': 'cachedir'
-        })
+        if not os.path.isdir(self.state_tree_dir):
+            os.makedirs(self.state_tree_dir)
+
+        if not os.path.isdir(self.cache_dir):
+            os.makedirs(self.cache_dir)
+        self.config = salt.config.minion_config(None)
+        self.config['root_dir'] = self.root_dir
+        self.config['state_events'] = False
+        self.config['id'] = 'match'
+        self.config['file_client'] = 'local'
+        self.config['file_roots'] = dict(base=[self.state_tree_dir])
+        self.config['cachedir'] = self.cache_dir
+        self.config['test'] = False
 
     def tearDown(self, *args, **kwargs):
         shutil.rmtree(self.root_dir)
-
         super(RendererMixin, self).tearDown(*args, **kwargs)
 
     def write_template_file(self, filename, content):
-        full_path = os.path.join(self.root_dir, filename)
+        full_path = os.path.join(self.state_tree_dir, filename)
         with salt.utils.fopen(full_path, 'w') as f:
             f.write(content)
         return full_path
@@ -235,14 +244,18 @@ class RendererTests(RendererMixin, TestCase):
     def test_basic(self):
         ret = self.render(basic_template)
         self.assertEqual(ret, OrderedDict([
-            ('/tmp', {
-                'file.directory': [
-                    {'group': 'root'},
-                    {'mode': '1777'},
-                    {'owner': 'root'}
-                ]
-            }),
-        ]))
+            ('/usr/local/bin/pydmesg', OrderedDict(
+                [('file.managed', [{'group': 'root'},
+                                   {'mode': '0755'},
+                                   {'require': [
+                                       {'file': '/usr/local/bin'}
+                                    ]},
+                                   {'source': 'salt://debian/files/pydmesg.py'},
+                                   {'user': 'root'}])])),
+            ('/tmp', OrderedDict(
+                [('file.directory', [{'group': 'root'},
+                                     {'mode': '1777'},
+                                     {'owner': 'root'}])]))]))
 
         self.assertEqual(Registry.states, OrderedDict())
 
