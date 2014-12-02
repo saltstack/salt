@@ -89,7 +89,7 @@ def _setup(opts, ryn='manor'):
     '''
     Setup the LaneStack lane_stack and RemoteYard lane_remote_yard global
     '''
-    global lane_stack, lane_remote_yard  # pylint disable=W0602
+    global lane_stack, lane_remote_yard  # pylint: disable=W0602
 
     role = opts.get('id')
     if not role:
