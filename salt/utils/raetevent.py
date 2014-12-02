@@ -24,8 +24,6 @@ from raet import raeting, nacling
 from raet.lane.stacking import LaneStack
 from raet.lane.yarding import RemoteYard
 
-
-
 log = logging.getLogger(__name__)
 
 
@@ -252,8 +250,6 @@ class RAETEvent(object):
         if hasattr(self, 'stack'):
             self.stack.server.close()
 
-    #def __del__(self):  # Need to manually call destroy when we are done
-        #self.destroy()
 
 class MasterEvent(RAETEvent):
     '''
@@ -262,6 +258,7 @@ class MasterEvent(RAETEvent):
     def __init__(self, opts, sock_dir):
         super(MasterEvent, self).__init__('master', opts=opts, sock_dir=sock_dir)
 
+
 class RunnerEvent(MasterEvent):
     '''
     This is used to send progress and return events from runners.
@@ -269,7 +266,7 @@ class RunnerEvent(MasterEvent):
     display events to the user as a runner progresses.
     '''
     def __init__(self, opts, jid):
-        super(RunnerEvent, self).__init__( opts=opts, sock_dir=opts['sock_dir'],)
+        super(RunnerEvent, self).__init__(opts=opts, sock_dir=opts['sock_dir'])
         self.jid = jid
 
     def fire_progress(self, data, outputter='pprint'):
