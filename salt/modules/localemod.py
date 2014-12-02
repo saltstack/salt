@@ -145,6 +145,11 @@ def set_locale(locale):
 
 
 def _normalize_locale(locale):
+    # depending on the environment, the provided locale will also contain a charmap
+    # (e.g. 'en_US.UTF-8 UTF-8' instead of only the locale 'en_US.UTF-8')
+    # drop the charmap
+    locale = locale.split()[0]
+
     lang_encoding = locale.split('.')
     lang_split = lang_encoding[0].split('_')
     if len(lang_split) > 1:
