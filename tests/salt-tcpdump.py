@@ -122,7 +122,7 @@ class PCAPParser(object):
                            'tcp': {}
                           }
 
-            (header, packet) =next(cap)
+            (header, packet) = next(cap)
 
             eth_length, eth_protocol = self.parse_ether(packet)
 
