@@ -72,10 +72,10 @@ def _rbenv_path(runas=None):
     if runas in (None, 'root'):
         path = __salt__['config.option']('rbenv.root') or '/usr/local/rbenv'
     else:
-        path = _cmd_quote(os.path.expanduser(__salt__['config.option']('rbenv.root')
-                          or '~{0}/.rbenv'.format(runas)))
+        path = (__salt__['config.option']('rbenv.root') or
+                '~{0}/.rbenv'.format(runas))
 
-    return path
+    return _cmd_quote(os.path.expanduser(path))
 
 
 def _install_rbenv(path, runas=None):
