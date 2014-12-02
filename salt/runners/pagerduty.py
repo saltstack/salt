@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
-Module for Firing Events via PagerDuty
+Runner Module for Firing Events via PagerDuty
 
 .. versionadded:: 2014.1.0
 
 :configuration: This module can be used by specifying the name of a
-    configuration profile in the minion config, minion pillar, or master
-    config.
+    configuration profile in the master config.
 
     For example:
 
@@ -40,7 +39,7 @@ def list_services(profile=None, api_key=None):
 
     CLI Example:
 
-        salt myminion pagerduty.list_services my-pagerduty-account
+        salt-run pagerduty.list_services my-pagerduty-account
     '''
     return salt.utils.pagerduty.list_items(
         'services', 'name', profile, api_key, opts=__opts__
@@ -53,7 +52,7 @@ def list_incidents(profile=None, api_key=None):
 
     CLI Example:
 
-        salt myminion pagerduty.list_incidents my-pagerduty-account
+        salt-run pagerduty.list_incidents my-pagerduty-account
     '''
     return salt.utils.pagerduty.list_items(
         'incidents', 'id', profile, api_key, opts=__opts__
@@ -66,7 +65,7 @@ def list_users(profile=None, api_key=None):
 
     CLI Example:
 
-        salt myminion pagerduty.list_users my-pagerduty-account
+        salt-run pagerduty.list_users my-pagerduty-account
     '''
     return salt.utils.pagerduty.list_items(
         'users', 'id', profile, api_key, opts=__opts__
@@ -79,7 +78,7 @@ def list_schedules(profile=None, api_key=None):
 
     CLI Example:
 
-        salt myminion pagerduty.list_schedules my-pagerduty-account
+        salt-run pagerduty.list_schedules my-pagerduty-account
     '''
     return salt.utils.pagerduty.list_items(
         'schedules', 'id', profile, api_key, opts=__opts__
@@ -92,8 +91,8 @@ def list_windows(profile=None, api_key=None):
 
     CLI Example:
 
-        salt myminion pagerduty.list_windows my-pagerduty-account
-        salt myminion pagerduty.list_maintenance_windows my-pagerduty-account
+        salt-run pagerduty.list_windows my-pagerduty-account
+        salt-run pagerduty.list_maintenance_windows my-pagerduty-account
     '''
     return salt.utils.pagerduty.list_items(
         'maintenance_windows', 'id', profile, api_key, opts=__opts__
@@ -110,8 +109,8 @@ def list_policies(profile=None, api_key=None):
 
     CLI Example:
 
-        salt myminion pagerduty.list_policies my-pagerduty-account
-        salt myminion pagerduty.list_escalation_policies my-pagerduty-account
+        salt-run pagerduty.list_policies my-pagerduty-account
+        salt-run pagerduty.list_escalation_policies my-pagerduty-account
     '''
     return salt.utils.pagerduty.list_items(
         'escalation_policies', 'id', profile, api_key, opts=__opts__
@@ -131,7 +130,7 @@ def create_event(service_key=None, description=None, details=None,
 
     .. code-block:: yaml
 
-        salt myminion pagerduty.create_event <service_key> <description> <details> \
+        salt-run pagerduty.create_event <service_key> <description> <details> \
         profile=my-pagerduty-account
 
     The following parameters are required:

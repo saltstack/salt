@@ -3264,6 +3264,13 @@ def _toggle_delvol(name=None, instance_id=None, device=None, volume_id=None,
 def create_volume(kwargs=None, call=None, wait_to_finish=False):
     '''
     Create a volume
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt-cloud -f create_volume my-ec2-config zone=us-east-1b
+        salt-cloud -f create_volume my-ec2-config zone=us-east-1b tags='{"tag1": "val1", "tag2", "val2"}'
     '''
     if call != 'function':
         log.error(
@@ -3298,15 +3305,31 @@ def create_volume(kwargs=None, call=None, wait_to_finish=False):
 
     data = aws.query(params,
                      return_url=True,
+                     return_root=True,
                      location=get_location(),
                      provider=get_provider(),
                      opts=__opts__,
                      sigver='4')
+
     r_data = {}
-    for d in data:
+    for d in data[0]:
         for k, v in d.items():
             r_data[k] = v
     volume_id = r_data['volumeId']
+
+    # Allow tags to be set upon creation
+    if 'tags' in kwargs:
+        if isinstance(kwargs['tags'], six.string_types):
+            tags = yaml.safe_load(kwargs['tags'])
+        else:
+            tags = kwargs['tags']
+
+        if isinstance(tags, dict):
+            new_tags = set_tags(tags=tags,
+                                resource_id=volume_id,
+                                call='action',
+                                location=get_location())
+            r_data['tags'] = new_tags
 
     # Waits till volume is available
     if wait_to_finish:
@@ -3316,7 +3339,7 @@ def create_volume(kwargs=None, call=None, wait_to_finish=False):
                                                 argument_being_watched='status',
                                                 required_argument_response='available')
 
-    return data
+    return r_data
 
 
 def attach_volume(name=None, kwargs=None, instance_id=None, call=None):
