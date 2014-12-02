@@ -77,7 +77,8 @@ class VirtualenvTest(integration.ModuleCase,
         ]
 
         # Let's populate the requirements file, just pep-8 for now
-        open(requirements_file_path, 'a').write('pep8==1.3.3\n')
+        with salt.utils.fopen(requirements_file_path, 'a') as fhw:
+            fhw.write('pep8==1.3.3\n')
 
         # Let's run our state!!!
         try:
@@ -104,7 +105,8 @@ class VirtualenvTest(integration.ModuleCase,
         self.assertNotIn('zope.interface==4.0.1', ret)
 
         # Now let's update the requirements file, which is now cached.
-        open(requirements_file_path, 'w').write('zope.interface==4.0.1\n')
+        with salt.utils.fopen(requirements_file_path, 'w') as fhw:
+            fhw.write('zope.interface==4.0.1\n')
 
         # Let's run our state!!!
         try:

@@ -12,7 +12,7 @@ from keyservers.  Sign, encrypt and sign & encrypt text and files.
 from __future__ import absolute_import
 
 # Import python libs
-import distutils.version
+import distutils.version  # pylint: disable=import-error,no-name-in-module
 import logging
 import re
 import time

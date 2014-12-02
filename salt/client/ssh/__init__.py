@@ -140,7 +140,7 @@ if not is_windows():
     if not os.path.exists(shim_file):
         # On esky builds we only have the .pyc file
         shim_file += "c"
-    with open(shim_file) as ssh_py_shim:
+    with salt.utils.fopen(shim_file) as ssh_py_shim:
         SSH_PY_SHIM = ssh_py_shim.read()
 
 log = logging.getLogger(__name__)
@@ -232,7 +232,7 @@ class SSH(object):
                     )
                 )
         pub = '{0}.pub'.format(priv)
-        with open(pub, 'r') as fp_:
+        with salt.utils.fopen(pub, 'r') as fp_:
             return '{0} rsa root@master'.format(fp_.read().split()[1])
 
     def key_deploy(self, host, ret):

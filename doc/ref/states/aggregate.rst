@@ -16,7 +16,7 @@ How it Works
 The best example is the `pkg` state. One of the major requests in Salt has long
 been adding the ability to install all packages defined at the same time. The
 mod_aggregate system makes this a reality. While executing Salt's state system,
-when a `pkg` state is reached the ``mod_agregate`` function in the state module
+when a `pkg` state is reached the ``mod_aggregate`` function in the state module
 is called. For `pkg` this function scans all of the other states that are slated
 to run, and picks up the references to ``name`` and ``pkgs``, then adds them to
 ``pkgs`` in the first state. The result is calling yum/apt-get/pacman etc. just

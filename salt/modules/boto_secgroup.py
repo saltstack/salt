@@ -38,15 +38,17 @@ from __future__ import absolute_import
 # Import Python libs
 import logging
 import re
-from distutils.version import LooseVersion as _LooseVersion
+from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
 # Import third party libs
 try:
+    # pylint: disable=import-error
     import boto
     import boto.ec2
+    # pylint: enable=import-error
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:

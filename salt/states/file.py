@@ -3872,9 +3872,11 @@ def serialize(name,
     if merge_if_exists:
         if os.path.isfile(name):
             if formatter == 'yaml':
-                existing_data = yaml.safe_load(open(name, 'r'))
+                with salt.utils.fopen(name, 'r') as fhr:
+                    existing_data = yaml.safe_load(fhr.read())
             elif formatter == 'json':
-                existing_data = json.load(open(name, 'r'))
+                with salt.utils.fopen(name, 'r') as fhr:
+                    existing_data = json.load(fhr.read())
             else:
                 return {'changes': {},
                         'comment': ('{0} format is not supported for merging'

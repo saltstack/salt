@@ -1,13 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# import Python Third Party Libs
-
-from mock import patch
-
-from salt.exceptions import SaltInvocationError, CommandExecutionError
-from salt.modules.boto_vpc import _maybe_set_name_tag, _maybe_set_tags
-
-
+# import Third Party Libs
+from salttesting.mock import patch
+# pylint: disable=import-error,no-name-in-module
 try:
     import boto
     from boto.exception import BotoServerError
@@ -37,10 +32,13 @@ except ImportError:
         return stub_function
 
 # Import Python libs
-from distutils.version import LooseVersion
+from distutils.version import LooseVersion  # pylint: disable=no-name-in-module
+# pylint: enable=import-error
 
 # Import Salt Libs
 from salt.modules import boto_vpc
+from salt.exceptions import SaltInvocationError, CommandExecutionError
+from salt.modules.boto_vpc import _maybe_set_name_tag, _maybe_set_tags
 
 # Import Salt Testing Libs
 from salttesting import skipIf, TestCase
@@ -1450,6 +1448,5 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
 
 
 if __name__ == '__main__':
-    from integration import run_tests
-
+    from integration import run_tests  # pylint: disable=import-error
     run_tests(BotoVpcTestCase, needs_daemon=False)

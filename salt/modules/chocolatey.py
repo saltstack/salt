@@ -12,7 +12,7 @@ import logging
 import os.path
 import re
 import tempfile
-from distutils.version import LooseVersion as _LooseVersion
+from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import salt libs
 import salt.utils
