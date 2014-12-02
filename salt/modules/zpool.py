@@ -351,7 +351,9 @@ def create_file_vdev(size, *vdevs):
 
         salt '*' zpool.create_file_vdev 7g /path/to/vdev1 [/path/to/vdev2] [...]
 
-        Depending on file size this may take a while to return
+    .. note::
+
+        Depending on file size, the above command may take a while to return.
     '''
     ret = {}
     if not _check_mkfile():
@@ -478,7 +480,7 @@ def online(pool_name, *vdevs, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' zpool.online myzpool /path/to/vdev1 [...]         
+        salt '*' zpool.online myzpool /path/to/vdev1 [...]
 
     '''
     ret = {}
