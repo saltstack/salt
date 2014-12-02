@@ -25,8 +25,7 @@ configuration file.
 
 '''
 
-from __future__ import generators, with_statement
-from __future__ import absolute_import
+from __future__ import absolute_import, generators, with_statement
 
 import time
 import logging
@@ -780,7 +779,7 @@ def _add_to_path_envvar(directory):
     Adds directory to the PATH environment variable and returns the original
     one.
     '''
-    orig_path = os.environ["PATH"]
+    orig_path = os.environ.get('PATH', '')
     if directory:
         if not os.path.isdir(directory):
             log.error("The given parameter is not a directory")
