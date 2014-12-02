@@ -1,7 +1,16 @@
 # -*- coding: utf-8 -*-
-from salt.modules import artifactory
+
+# Import Salt testing libs
 from salttesting import TestCase
 from salttesting.mock import MagicMock
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
+
+# Import Salt libs
+from salt.modules import artifactory
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 class ArtifactoryTestCase(TestCase):
@@ -9,12 +18,12 @@ class ArtifactoryTestCase(TestCase):
     org_module_functions = {}
 
     def __save_module_functions(self):
-        for name, val in artifactory.__dict__.iteritems():
+        for name, val in six.iteritems(artifactory.__dict__):
             if callable(val):
                 self.org_module_functions[name] = val
 
     def __restore_module_functions(self):
-        for name, val in self.org_module_functions.iteritems():
+        for name, val in six.iteritems(self.org_module_functions):
             artifactory.__dict__[name] = val
 
     def setUp(self):
