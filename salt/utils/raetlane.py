@@ -51,8 +51,6 @@ if not msg:
 # Import python libs
 from __future__ import absolute_import
 import time
-import os
-import threading
 
 # Import Salt Libs
 
@@ -68,7 +66,7 @@ from raet.lane.yarding import RemoteYard
 # Module globals for default shared LaneStack for a process.
 rx_msgs = {}  # module global dict of deques one for each receipient of msgs
 lane_stack = None  # module global that holds raet LaneStack
-remote_yard = None # module global that holds raet
+remote_yard = None  # module global that holds raet
 master_estate_name = None  # module global of motivating master estate name
 master_yard_name = None  # module global of motivating master yard name
 
@@ -91,7 +89,7 @@ def _setup(opts, ryn='manor'):
     '''
     Setup the LaneStack lane_stack and RemoteYard lane_remote_yard global
     '''
-    global lane_stack, lane_remote_yard
+    global lane_stack, lane_remote_yard  # pylint disable=W0602
 
     role = opts.get('id')
     if not role:
@@ -125,9 +123,10 @@ def _setup(opts, ryn='manor'):
                              name=ryn,
                              lanename=lanename,
                              dirpath=opts['sock_dir'])
-    stack.addRemote(remote_yard)
+    lane_stack.addRemote(remote_yard)
     log.debug("Created new LaneStack and local Yard named {0} at {1}\n".format(
                 lane_stack.name, lane_stack.ha))
+
 
 def transmit(msg):
     '''
