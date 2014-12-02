@@ -31,7 +31,7 @@ correctly::
 
     DROP TABLE IF EXISTS jids;
     CREATE TABLE jids (
-      jid   bigint PRIMARY KEY,
+      jid   varchar(20) PRIMARY KEY,
       load  text NOT NULL
     );
 
