@@ -119,7 +119,7 @@ minion exe>` should match the contents of the corresponding md5 file.
 
 .. note::
 
-    The executables above will install dependencies that the Salt minion
+    The executables above will install all dependencies that the Salt minion
     requires.
 
 The 64bit installer has been tested on Windows 7 64bit and Windows Server
