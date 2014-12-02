@@ -269,7 +269,7 @@ def create(pool_name, *vdevs, **kwargs):
 
 def add(pool_name, *vdevs):
     '''
-    Add the specified vdev's to the given pool
+    Add the specified vdev\'s to the given pool
 
     CLI Example:
 
