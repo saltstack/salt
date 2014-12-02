@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# import Python Third Party Libs
-from salttesting.mock import patch
-
+# import Third Party Libs
 # pylint: disable=import-error,no-name-in-module
 try:
     import boto
