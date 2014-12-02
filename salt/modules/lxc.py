@@ -1639,7 +1639,7 @@ def info(name):
 
     ret = {}
 
-    with salt.utils.fopen(f) as fhr:
+    with salt.utils.fopen(fname) as fhr:
         config = [(v[0].strip(), v[1].strip()) for v in
                   [l.split('#', 1)[0].strip().split('=', 1) for l in
                    fhr.readlines()] if len(v) == 2]
