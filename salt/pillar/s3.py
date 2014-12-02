@@ -63,15 +63,19 @@ import logging
 import os
 import time
 import pickle
-import urllib
 from copy import deepcopy
+
+# Import 3rd-party libs
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
+import salt.ext.six as six
+from salt.ext.six.moves import filter
+from salt.ext.six.moves.urllib.parse import quote as _quote
+# pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 # Import salt libs
 from salt.pillar import Pillar
 import salt.utils
 import salt.utils.s3 as s3
-import six
-from six.moves import filter
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -347,7 +351,7 @@ def _get_file_from_s3(creds, metadata, saltenv, bucket, path,
         keyid=creds.keyid,
         bucket=bucket,
         service_url=creds.service_url,
-        path=urllib.quote(path),
+        path=_quote(path),
         local_file=cached_file_path,
         verify_ssl=creds.verify_ssl
     )

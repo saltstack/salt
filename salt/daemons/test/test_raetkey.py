@@ -7,7 +7,7 @@ from __future__ import absolute_import
 # pylint: skip-file
 # pylint: disable=C0103
 import sys
-from six.moves import map
+from salt.ext.six.moves import map
 if sys.version_info < (2, 7):
     import unittest2 as unittest
 else:

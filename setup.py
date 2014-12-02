@@ -725,7 +725,7 @@ class SaltDistribution(distutils.dist.Distribution):
             return {'console_scripts': scripts}
 
         if IS_WINDOWS_PLATFORM:
-            scripts.extend(['salt-cp = salt.scripts:salt_cp'
+            scripts.extend(['salt-cp = salt.scripts:salt_cp',
                             'salt-minion = salt.scripts:salt_minion',
                             'salt-unity = salt.scripts:salt_unity'])
             return {'console_scripts': scripts}

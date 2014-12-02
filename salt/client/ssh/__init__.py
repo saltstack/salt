@@ -18,14 +18,14 @@ import re
 import time
 import yaml
 import uuid
-from six.moves import input
+from salt.ext.six.moves import input
 
 # Import salt libs
 import salt.client.ssh.shell
 import salt.client.ssh.wrapper
 import salt.config
 import salt.exceptions
-import salt.exitcodes
+import salt.defaults.exitcodes
 import salt.log
 import salt.loader
 import salt.minion
@@ -38,7 +38,7 @@ import salt.utils.atomicfile
 import salt.utils.thin
 import salt.utils.verify
 import salt.utils.network
-from six import string_types
+from salt.ext.six import string_types
 from salt.utils import is_windows
 
 try:
@@ -132,7 +132,7 @@ done
 echo "ERROR: Unable to locate appropriate python command" >&2
 exit $EX_PYTHON_OLD
 EOF'''.format(
-    EX_THIN_PYTHON_OLD=salt.exitcodes.EX_THIN_PYTHON_OLD,
+    EX_THIN_PYTHON_OLD=salt.defaults.exitcodes.EX_THIN_PYTHON_OLD,
 )
 
 if not is_windows():
@@ -216,6 +216,7 @@ class SSH(object):
         self.serial = salt.payload.Serial(opts)
         self.returners = salt.loader.returners(self.opts, {})
         self.fsclient = salt.fileclient.FSClient(self.opts)
+        self.thin = salt.utils.thin.gen_thin(self.opts['cachedir'])
         self.mods = mod_data(self.fsclient)
 
     def get_pubkey(self):
@@ -274,6 +275,7 @@ class SSH(object):
                 host,
                 mods=self.mods,
                 fsclient=self.fsclient,
+                thin=self.thin,
                 **target)
         if salt.utils.which('ssh-copy-id'):
             # we have ssh-copy-id, use it!
@@ -288,6 +290,7 @@ class SSH(object):
                     host,
                     mods=self.mods,
                     fsclient=self.fsclient,
+                    thin=self.thin,
                     **target)
             stdout, stderr, retcode = single.cmd_block()
             try:
@@ -312,6 +315,7 @@ class SSH(object):
                 host,
                 mods=self.mods,
                 fsclient=self.fsclient,
+                thin=self.thin,
                 **target)
         ret = {'id': single.id}
         stdout, stderr, retcode = single.run()
@@ -496,6 +500,7 @@ class Single(object):
             tty=False,
             mods=None,
             fsclient=None,
+            thin=None,
             **kwargs):
         self.opts = opts
         if kwargs.get('wipe'):
@@ -548,6 +553,7 @@ class Single(object):
         self.serial = salt.payload.Serial(opts)
         self.wfuncs = salt.loader.ssh_wrapper(opts, None, self.context)
         self.shell = salt.client.ssh.shell.Shell(opts, **args)
+        self.thin = thin if thin else salt.utils.thin.thin_path(opts['cachedir'])
 
     def __arg_comps(self):
         '''
@@ -587,13 +593,8 @@ class Single(object):
         '''
         Deploy salt-thin
         '''
-        if self.opts.get('_caller_cachedir'):
-            cachedir = self.opts.get('_caller_cachedir')
-        else:
-            cachedir = self.opts['cachedir']
-        thin = salt.utils.thin.gen_thin(cachedir)
         self.shell.send(
-            thin,
+            self.thin,
             os.path.join(self.thin_dir, 'salt-thin.tgz'),
         )
         self.deploy_ext()
@@ -855,7 +856,7 @@ ARGS = {8}\n'''.format(self.minion_config,
             # RSTR was found in stdout but not stderr - which means there
             # is a SHIM command for the master.
             shim_command = re.split(r'\r?\n', stdout, 1)[0].strip()
-            if 'deploy' == shim_command and retcode == salt.exitcodes.EX_THIN_DEPLOY:
+            if 'deploy' == shim_command and retcode == salt.defaults.exitcodes.EX_THIN_DEPLOY:
                 self.deploy()
                 stdout, stderr, retcode = self.shell.exec_cmd(cmd_str)
                 if not re.search(RSTR_RE, stdout) or not re.search(RSTR_RE, stderr):
@@ -901,12 +902,12 @@ ARGS = {8}\n'''.format(self.minion_config,
                 'sudo expected a password, NOPASSWD required'
             ),
             (
-                (salt.exitcodes.EX_THIN_PYTHON_OLD,),
+                (salt.defaults.exitcodes.EX_THIN_PYTHON_OLD,),
                 'Python interpreter is too old',
                 'salt requires python 2.6 or newer on target hosts'
             ),
             (
-                (salt.exitcodes.EX_THIN_CHECKSUM,),
+                (salt.defaults.exitcodes.EX_THIN_CHECKSUM,),
                 'checksum mismatched',
                 'The salt thin transfer was corrupted'
             ),

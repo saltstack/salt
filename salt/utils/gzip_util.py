@@ -9,7 +9,9 @@ from __future__ import absolute_import
 
 # Import python libs
 import gzip
-from salt._compat import StringIO
+
+# Import 3rd-party libs
+from salt.ext.six.moves import StringIO  # pylint: disable=import-error
 
 
 class GzipFile(gzip.GzipFile):

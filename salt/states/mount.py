@@ -32,10 +32,10 @@ import os.path
 import re
 
 # Import salt libs
-from six import string_types
+from salt.ext.six import string_types
 
 import logging
-import six
+import salt.ext.six as six
 log = logging.getLogger(__name__)
 
 
@@ -156,7 +156,7 @@ def mounted(name,
             if uuid_device and uuid_device not in device_list:
                 device_list.append(uuid_device)
             if opts:
-                mount_invisible_options = ['defaults', 'comment', 'nobootwait', 'reconnect', 'delay_connect']
+                mount_invisible_options = ['defaults', 'comment', 'nobootwait', 'reconnect', 'delay_connect', 'nofail']
                 for opt in opts:
                     comment_option = opt.split('=')[0]
                     if comment_option == 'comment':

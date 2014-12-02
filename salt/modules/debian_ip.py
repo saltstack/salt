@@ -9,7 +9,7 @@ References:
 
 # Import python libs
 from __future__ import absolute_import
-import six
+import salt.ext.six as six
 import functools
 import logging
 import os.path
@@ -408,7 +408,7 @@ IPV4_ATTR_MAP = {
     'broadcast': __ipv4_quad,
     'metric':  __int,
     'gateway':  __ipv4_quad,  # supports a colon-delimited list
-    'pointtopoint':  __ipv4_quad,
+    'pointopoint':  __ipv4_quad,
     'hwaddress':  __mac,
     'mtu':  __int,
     'scope': __within(['global', 'link', 'host'], dtype=str),
@@ -1489,7 +1489,7 @@ def build_bond(iface, **settings):
         __salt__['cmd.run'](
             'sed -i -e "/^options\\s{0}.*/d" /etc/modprobe.conf'.format(iface)
         )
-        __salt__['cmd.run']('cat {0} >> /etc/modprobe.conf'.format(path))
+        __salt__['file.append']('/etc/modprobe.conf', path)
 
     # Load kernel module
     __salt__['kmod.load']('bonding')

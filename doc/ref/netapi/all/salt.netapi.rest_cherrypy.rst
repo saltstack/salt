@@ -62,7 +62,7 @@ REST URI Reference
 .. autoclass:: Webhook
     :members: POST
 
-``/key``
+``/keys``
 ---------
 
 .. autoclass:: Keys

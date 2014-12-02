@@ -14,15 +14,21 @@ Module for sending messages to hipchat
           api_key: peWcBiMOS9HrZG15peWcBiMOS9HrZG15
           api_version: v1
 '''
+# Import Python Libs
 from __future__ import absolute_import
 import json
-import requests
 import logging
-from urlparse import urljoin as _urljoin
+
+# Import 3rd-party Libs
+import requests
 from requests.exceptions import ConnectionError
-from six.moves import range
+# pylint: disable=import-error,no-name-in-module
+from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
+from salt.ext.six.moves import range
+# pylint: enable=import-error,no-name-in-module
 
 log = logging.getLogger(__name__)
+
 __virtualname__ = 'hipchat'
 
 

@@ -18,7 +18,7 @@ import jinja2.exceptions
 import salt.utils
 import salt.utils.templates
 import salt.utils.validate.net
-import six
+import salt.ext.six as six
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -847,7 +847,7 @@ def build_bond(iface, **settings):
         __salt__['cmd.run'](
             'sed -i -e "/^options\\s{0}.*/d" /etc/modprobe.conf'.format(iface)
         )
-        __salt__['cmd.run']('cat {0} >> /etc/modprobe.conf'.format(path))
+        __salt__['file.append']('/etc/modprobe.conf', path)
     __salt__['kmod.load']('bonding')
 
     if settings['test']:

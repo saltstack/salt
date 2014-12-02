@@ -41,6 +41,11 @@ external_auth:
       - '@wheel'
       - '@runner'
       - test.*
+    saltdev_api:
+      - '@wheel'
+      - '@runner'
+      - test.*
+      - grains.*
     '*':
       - '@wheel'
       - '@runner'

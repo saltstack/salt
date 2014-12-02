@@ -74,19 +74,21 @@ import uuid
 import pprint
 import logging
 import yaml
-import six
-from six.moves import map
-from six.moves import zip
-from six.moves import range
+
+# Import 3rd-party libs
+
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
+import requests
+import salt.ext.six as six
+from salt.ext.six.moves import map, range, zip
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse, urlencode as _urlencode
+# pylint: enable=import-error,no-name-in-module
 
 # Import libs for talking to the EC2 API
 import hmac
 import hashlib
 import binascii
 import datetime
-import urllib
-import urlparse
-import requests
 import base64
 
 # Import salt libs
@@ -94,6 +96,7 @@ import salt.utils
 from salt.utils import namespaced_function
 from salt.cloud.libcloudfuncs import get_salt_interface
 from salt._compat import ElementTree as ET
+import salt.utils.aws as aws
 
 # Import salt.cloud libs
 import salt.utils.cloud
@@ -312,11 +315,12 @@ def query(params=None, setname=None, requesturl=None, location=None,
 
             requesturl = 'https://{0}/'.format(endpoint)
         else:
-            endpoint = urlparse.urlparse(requesturl).netloc
+            endpoint = _urlparse(requesturl).netloc
             if endpoint == '':
-                endpoint_err = 'Could not find a valid endpoint in the requesturl: {0}. Looking for something like https://some.ec2.endpoint/?args'.format(
-                    requesturl
-                )
+                endpoint_err = (
+                        'Could not find a valid endpoint in the '
+                        'requesturl: {0}. Looking for something '
+                        'like https://some.ec2.endpoint/?args').format(requesturl)
                 log.error(endpoint_err)
                 if return_url is True:
                     return {'error': endpoint_err}, requesturl
@@ -337,7 +341,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
         params_with_headers['Version'] = ec2_api_version
         keys = sorted(params_with_headers)
         values = list(map(params_with_headers.get, keys))
-        querystring = urllib.urlencode(list(zip(keys, values)))
+        querystring = _urlencode(list(zip(keys, values)))
 
         # AWS signature version 2 requires that spaces be encoded as
         # %20, however urlencode uses '+'. So replace pluses with %20.
@@ -742,7 +746,12 @@ def avail_images(kwargs=None, call=None):
     ret = {}
     params = {'Action': 'DescribeImages',
               'Owner': owner}
-    images = query(params)
+    images = aws.query(params,
+                       location=get_location(),
+                       provider=get_provider(),
+                       opts=__opts__,
+                       sigver='4')
+
     for image in images:
         ret[image['imageId']] = image
     return ret
@@ -909,7 +918,11 @@ def avail_locations(call=None):
     ret = {}
 
     params = {'Action': 'DescribeRegions'}
-    result = query(params)
+    result = aws.query(params,
+                       location=get_location(),
+                       provider=get_provider(),
+                       opts=__opts__,
+                       sigver='4')
 
     for region in result:
         ret[region['regionName']] = {
@@ -1001,6 +1014,21 @@ def get_spot_config(vm_):
     )
 
 
+def get_provider(vm_=None):
+    '''
+    Extract the provider name from vm_
+    '''
+    if vm_ is None:
+        provider = __active_provider_name__ or 'ec2'
+    else:
+        provider = vm_.get('provider', 'ec2')
+
+    if ':' in provider:
+        prov_comps = provider.split(':')
+        provider = prov_comps[0]
+    return provider
+
+
 def _list_availability_zones():
     '''
     List all availability zones in the current region
@@ -1010,7 +1038,11 @@ def _list_availability_zones():
     params = {'Action': 'DescribeAvailabilityZones',
               'Filter.0.Name': 'region-name',
               'Filter.0.Value.0': get_location()}
-    result = query(params)
+    result = aws.query(params,
+                       location=get_location(),
+                       provider=get_provider(),
+                       opts=__opts__,
+                       sigver='4')
 
     for zone in result:
         ret[zone['zoneName']] = zone['zoneState']
@@ -1038,10 +1070,15 @@ def _request_eip(interface):
     '''
     params = {'Action': 'AllocateAddress'}
     params['Domain'] = interface.setdefault('domain', 'vpc')
-    eip = query(params, return_root=True)
-    for e in eip:
-        if 'allocationId' in e:
-            return e['allocationId']
+    eips = aws.query(params,
+                     return_root=True,
+                     location=get_location(),
+                     provider=get_provider(),
+                     opts=__opts__,
+                     sigver='4')
+    for eip in eips:
+        if 'allocationId' in eip:
+            return eip['allocationId']
     return None
 
 
@@ -1050,7 +1087,12 @@ def _create_eni(interface):
     Create and return an Elastic Interface
     '''
     params = {'Action': 'DescribeSubnets'}
-    subnet_query = query(params, return_root=True)
+    subnet_query = aws.query(params,
+                             return_root=True,
+                             location=get_location(),
+                             provider=get_provider(),
+                             opts=__opts__,
+                             sigver='4')
     found = False
 
     for subnet_query_result in subnet_query:
@@ -1077,7 +1119,13 @@ def _create_eni(interface):
         if k in interface:
             params.update(_param_from_config(k, interface[k]))
 
-    result = query(params, return_root=True)
+    result = aws.query(params,
+                       return_root=True,
+                       location=get_location(),
+                       provider=get_provider(),
+                       opts=__opts__,
+                       sigver='4')
+
     eni_desc = result[1]
     if not eni_desc or not eni_desc.get('networkInterfaceId'):
         raise SaltCloudException('Failed to create interface: {0}'.format(result))
@@ -1150,7 +1198,12 @@ def _associate_eip_with_interface(eni_id, eip_id, private_ip=None):
             params['PrivateIpAddress'] = private_ip
 
         retries = retries - 1
-        result = query(params, return_root=True)
+        result = aws.query(params,
+                           return_root=True,
+                           location=get_location(),
+                           provider=get_provider(),
+                           opts=__opts__,
+                           sigver='4')
 
         if isinstance(result, dict) and result.get('error'):
             time.sleep(1)
@@ -1198,7 +1251,12 @@ def _update_enis(interfaces, instance):
                   'NetworkInterfaceId': eni_id,
                   'Attachment.AttachmentId': eni_data['attachmentId'],
                   'Attachment.DeleteOnTermination': config_enis[eni_data['deviceIndex']].setdefault('delete_interface_on_terminate', True)}
-        set_eni_attributes = query(params, return_root=True)
+        set_eni_attributes = aws.query(params,
+                                       return_root=True,
+                                       location=get_location(),
+                                       provider=get_provider(),
+                                       opts=__opts__,
+                                       sigver='4')
 
     return None
 
@@ -1339,8 +1397,6 @@ def request_instance(vm_=None, call=None):
     vm_size = config.get_cloud_config_value(
         'size', vm_, __opts__, search_global=False
     )
-    if vm_size in SIZE_MAP:
-        vm_size = SIZE_MAP[vm_size]
     params[spot_prefix + 'InstanceType'] = vm_size
 
     ex_keyname = keyname(vm_)
@@ -1459,7 +1515,12 @@ def request_instance(vm_=None, call=None):
             'ImageId.1': image_id
         }
         try:
-            rd_data = query(rd_params, location=location)
+            rd_data = aws.query(rd_params,
+                                return_root=True,
+                                location=get_location(),
+                                provider=get_provider(),
+                                opts=__opts__,
+                                sigver='4')
             if 'error' in rd_data:
                 return rd_data['error']
             log.debug('EC2 Response: {0!r}'.format(rd_data))
@@ -1480,14 +1541,16 @@ def request_instance(vm_=None, call=None):
 
         # pull the root device name from the result and use it when
         # launching the new VM
-        if rd_data[0]['blockDeviceMapping'] is None:
-            # Some ami instances do not have a root volume. Ignore such cases
-            rd_name = None
-        elif isinstance(rd_data[0]['blockDeviceMapping']['item'], list):
-            rd_name = rd_data[0]['blockDeviceMapping']['item'][0]['deviceName']
-        else:
-            rd_name = rd_data[0]['blockDeviceMapping']['item']['deviceName']
-        log.info('Found root device name: {0}'.format(rd_name))
+        rd_name = None
+        if 'blockDeviceMapping' in rd_data[0]:
+            if rd_data[0]['blockDeviceMapping'] is None:
+                # Some ami instances do not have a root volume. Ignore such cases
+                rd_name = None
+            elif isinstance(rd_data[0]['blockDeviceMapping']['item'], list):
+                rd_name = rd_data[0]['blockDeviceMapping']['item'][0]['deviceName']
+            else:
+                rd_name = rd_data[0]['blockDeviceMapping']['item']['deviceName']
+            log.info('Found root device name: {0}'.format(rd_name))
 
         if rd_name is not None:
             if ex_blockdevicemappings:
@@ -1532,8 +1595,15 @@ def request_instance(vm_=None, call=None):
         transport=__opts__['transport']
     )
 
+    provider = get_provider(vm_)
+
     try:
-        data = query(params, 'instancesSet', location=location)
+        data = aws.query(params,
+                         'instancesSet',
+                         location=location,
+                         provider=provider,
+                         opts=__opts__,
+                         sigver='4')
         if 'error' in data:
             return data['error']
     except Exception as exc:
@@ -1555,7 +1625,11 @@ def request_instance(vm_=None, call=None):
         def __query_spot_instance_request(sir_id, location):
             params = {'Action': 'DescribeSpotInstanceRequests',
                       'SpotInstanceRequestId.1': sir_id}
-            data = query(params, location=location)
+            data = aws.query(params,
+                             location=location,
+                             provider=provider,
+                             opts=__opts__,
+                             sigver='4')
             if not data:
                 log.error(
                     'There was an error while querying EC2. Empty response'
@@ -1625,7 +1699,11 @@ def request_instance(vm_=None, call=None):
                 # Cancel the existing spot instance request
                 params = {'Action': 'CancelSpotInstanceRequests',
                           'SpotInstanceRequestId.1': sir_id}
-                data = query(params, location=location)
+                data = aws.query(params,
+                                 location=location,
+                                 provider=provider,
+                                 opts=__opts__,
+                                 sigver='4')
 
                 log.debug('Canceled spot instance request {0}. Data '
                           'returned: {1}'.format(sir_id, data))
@@ -1664,11 +1742,16 @@ def query_instance(vm_=None, call=None):
     params = {'Action': 'DescribeInstances',
               'InstanceId.1': instance_id}
 
+    provider = get_provider(vm_)
+
     attempts = 5
     while attempts > 0:
-        data, requesturl = query(                       # pylint: disable=W0632
-            params, location=location, return_url=True
-        )
+        data, requesturl = aws.query(params,  # pylint: disable=W0632
+                                     location=location,
+                                     provider=provider,
+                                     opts=__opts__,
+                                     return_url=True,
+                                     sigver='4')
         log.debug('The query returned: {0}'.format(data))
 
         if isinstance(data, dict) and 'error' in data:
@@ -1700,7 +1783,12 @@ def query_instance(vm_=None, call=None):
         )
 
     def __query_ip_address(params, url):
-        data = query(params, requesturl=url)
+        data = aws.query(params,
+                         #requesturl=url,
+                         location=location,
+                         provider=provider,
+                         opts=__opts__,
+                         sigver='4')
         if not data:
             log.error(
                 'There was an error while querying EC2. Empty response'
@@ -1912,6 +2000,9 @@ def create(vm_=None, call=None):
             'provider': vm_['provider'],
         },
         transport=__opts__['transport']
+    )
+    salt.utils.cloud.cachedir_index_add(
+        vm_['name'], vm_['profile'], 'ec2', vm_['provider']
     )
 
     key_filename = config.get_cloud_config_value(
@@ -2138,7 +2229,7 @@ def queue_instances(instances):
         salt.utils.cloud.cache_node(node, __active_provider_name__, __opts__)
 
 
-def create_attach_volumes(name, kwargs, call=None):
+def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
     '''
     Create and attach volumes to created node
     '''
@@ -2178,7 +2269,7 @@ def create_attach_volumes(name, kwargs, call=None):
                 volume_dict['iops'] = volume['iops']
 
         if 'volume_id' not in volume_dict:
-            created_volume = create_volume(volume_dict, call='function')
+            created_volume = create_volume(volume_dict, call='function', wait_to_finish=wait_to_finish)
             created = True
             for item in created_volume:
                 if 'volumeId' in item:
@@ -2229,7 +2320,11 @@ def stop(name, call=None):
 
     params = {'Action': 'StopInstances',
               'InstanceId.1': instance_id}
-    result = query(params)
+    result = aws.query(params,
+                       location=get_location(),
+                       provider=get_provider(),
+                       opts=__opts__,
+                       sigver='4')
 
     return result
 
@@ -2249,7 +2344,11 @@ def start(name, call=None):
 
     params = {'Action': 'StartInstances',
               'InstanceId.1': instance_id}
-    result = query(params)
+    result = aws.query(params,
+                       location=get_location(),
+                       provider=get_provider(),
+                       opts=__opts__,
+                       sigver='4')
 
     return result
 
@@ -2312,7 +2411,12 @@ def set_tags(name=None,
 
     attempts = 5
     while attempts >= 0:
-        query(params, setname='tagSet', location=location)
+        result = aws.query(params,
+                           setname='tagSet',
+                           location=get_location(),
+                           provider=get_provider(),
+                           opts=__opts__,
+                           sigver='4')
 
         settags = get_tags(
             instance_id=instance_id, call='action', location=location
@@ -2387,7 +2491,12 @@ def get_tags(name=None,
               'Filter.1.Name': 'resource-id',
               'Filter.1.Value': instance_id}
 
-    return query(params, setname='tagSet', location=location)
+    return aws.query(params,
+                     setname='tagSet',
+                     location=location,
+                     provider=get_provider(),
+                     opts=__opts__,
+                     sigver='4')
 
 
 def del_tags(name=None,
@@ -2404,6 +2513,7 @@ def del_tags(name=None,
 
     .. code-block:: bash
 
+        salt-cloud -a del_tags mymachine tags=mytag,
         salt-cloud -a del_tags mymachine tags=tag1,tag2,tag3
         salt-cloud -a del_tags resource_id=vol-3267ab32 tags=tag1,tag2,tag3
     '''
@@ -2428,7 +2538,12 @@ def del_tags(name=None,
     for idx, tag in enumerate(kwargs['tags'].split(',')):
         params['Tag.{0}.Key'.format(idx)] = tag
 
-    query(params, setname='tagSet')
+    aws.query(params,
+              setname='tagSet',
+              location=get_location(),
+              provider=get_provider(),
+              opts=__opts__,
+              sigver='4')
 
     if resource_id:
         return get_tags(resource_id=resource_id)
@@ -2521,7 +2636,15 @@ def destroy(name, call=None):
 
     params = {'Action': 'TerminateInstances',
               'InstanceId.1': instance_id}
-    result = query(params)
+
+    location = get_location()
+    provider = get_provider()
+    result = aws.query(params,
+                       location=location,
+                       provider=provider,
+                       opts=__opts__,
+                       sigver='4')
+
     log.info(result)
     ret.update(result[0])
 
@@ -2530,7 +2653,11 @@ def destroy(name, call=None):
     if sir_id is not None:
         params = {'Action': 'CancelSpotInstanceRequests',
                   'SpotInstanceRequestId.1': sir_id}
-        result = query(params)
+        result = aws.query(params,
+                           location=location,
+                           provider=provider,
+                           opts=__opts__,
+                           sigver='4')
         ret['spotInstance'] = result[0]
 
     salt.utils.cloud.fire_event(
@@ -2540,6 +2667,8 @@ def destroy(name, call=None):
         {'name': name, 'instance_id': instance_id},
         transport=__opts__['transport']
     )
+
+    salt.utils.cloud.cachedir_index_del(name)
 
     if __opts__.get('update_cachedir', False) is True:
         salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
@@ -2560,7 +2689,14 @@ def reboot(name, call=None):
     instance_id = _get_node(name)[name]['instanceId']
     params = {'Action': 'RebootInstances',
               'InstanceId.1': instance_id}
-    result = query(params)
+
+    result = aws.query(params,
+                       setname='tagSet',
+                       location=get_location(),
+                       provider=get_provider(),
+                       opts=__opts__,
+                       sigver='4')
+
     if result == []:
         log.info('Complete')
 
@@ -2578,7 +2714,12 @@ def show_image(kwargs, call=None):
 
     params = {'ImageId.1': kwargs['image'],
               'Action': 'DescribeImages'}
-    result = query(params)
+    result = aws.query(params,
+                       setname='tagSet',
+                       location=get_location(),
+                       provider=get_provider(),
+                       opts=__opts__,
+                       sigver='4')
     log.info(result)
 
     return result
@@ -2638,10 +2779,16 @@ def _get_node(name=None, instance_id=None, location=None):
 
     log.trace(params)
 
+    provider = get_provider()
+
     attempts = 10
     while attempts >= 0:
         try:
-            instances = query(params, location=location)
+            instances = aws.query(params,
+                                  location=location,
+                                  provider=provider,
+                                  opts=__opts__,
+                                  sigver='4')
             return _extract_instance_info(instances)
         except KeyError:
             attempts -= 1
@@ -2745,9 +2892,17 @@ def _list_nodes_full(location=None):
     '''
     Return a list of the VMs that in this location
     '''
+    provider = __active_provider_name__ or 'ec2'
+    if ':' in provider:
+        comps = provider.split(':')
+        provider = comps[0]
 
     params = {'Action': 'DescribeInstances'}
-    instances = query(params, location=location)
+    instances = aws.query(params,
+                          location=location,
+                          provider=provider,
+                          opts=__opts__,
+                          sigver='4')
     if 'error' in instances:
         raise SaltCloudSystemExit(
             'An error occurred while listing nodes: {0}'.format(
@@ -2757,10 +2912,6 @@ def _list_nodes_full(location=None):
 
     ret = _extract_instance_info(instances)
 
-    provider = __active_provider_name__ or 'ec2'
-    if ':' in provider:
-        comps = provider.split(':')
-        provider = comps[0]
     salt.utils.cloud.cache_node_list(ret, provider, __opts__)
     return ret
 
@@ -2778,7 +2929,11 @@ def list_nodes_min(location=None, call=None):
 
     ret = {}
     params = {'Action': 'DescribeInstances'}
-    instances = query(params)
+    instances = aws.query(params,
+                          location=get_location(),
+                          provider=get_provider(),
+                          opts=__opts__,
+                          sigver='4')
     if 'error' in instances:
         raise SaltCloudSystemExit(
             'An error occurred while listing nodes: {0}'.format(
@@ -2852,7 +3007,12 @@ def show_term_protect(name=None, instance_id=None, call=None, quiet=False):
     params = {'Action': 'DescribeInstanceAttribute',
               'InstanceId': instance_id,
               'Attribute': 'disableApiTermination'}
-    result = query(params, return_root=True)
+    result = aws.query(params,
+                       location=get_location(),
+                       provider=get_provider(),
+                       return_root=True,
+                       opts=__opts__,
+                       sigver='4')
 
     disable_protect = False
     for item in result:
@@ -2925,7 +3085,12 @@ def _toggle_term_protect(name, value):
               'InstanceId': instance_id,
               'DisableApiTermination.Value': value}
 
-    query(params, return_root=True)
+    result = aws.query(params,
+                       location=get_location(),
+                       provider=get_provider(),
+                       return_root=True,
+                       opts=__opts__,
+                       sigver='4')
 
     return show_term_protect(name=name, instance_id=instance_id, call='action')
 
@@ -2961,7 +3126,11 @@ def show_delvol_on_destroy(name, kwargs=None, call=None):
     params = {'Action': 'DescribeInstances',
               'InstanceId.1': instance_id}
 
-    data = query(params)
+    data = aws.query(params,
+                     location=get_location(),
+                     provider=get_provider(),
+                     opts=__opts__,
+                     sigver='4')
 
     blockmap = data[0]['instancesSet']['item']['blockDeviceMapping']
 
@@ -3048,12 +3217,20 @@ def _toggle_delvol(name=None, instance_id=None, device=None, volume_id=None,
         instance_id = instances[name]['instanceId']
 
     if requesturl:
-        data = query(requesturl=requesturl)
+        data = aws.query(requesturl=requesturl,
+                         location=get_location(),
+                         provider=get_provider(),
+                         opts=__opts__,
+                         sigver='4')
     else:
         params = {'Action': 'DescribeInstances',
                   'InstanceId.1': instance_id}
-        data, requesturl = query(                       # pylint: disable=W0632
-            params, return_url=True)
+        data, requesturl = aws.query(params,  # pylint: disable=W0632
+                                     return_url=True,
+                                     location=get_location(),
+                                     provider=get_provider(),
+                                     opts=__opts__,
+                                     sigver='4')
 
     blockmap = data[0]['instancesSet']['item']['blockDeviceMapping']
 
@@ -3074,14 +3251,26 @@ def _toggle_delvol(name=None, instance_id=None, device=None, volume_id=None,
         params['BlockDeviceMapping.{0}.DeviceName'.format(idx)] = device_name
         params['BlockDeviceMapping.{0}.Ebs.DeleteOnTermination'.format(idx)] = value
 
-    query(params, return_root=True)
+    aws.query(params,
+              return_root=True,
+              location=get_location(),
+              provider=get_provider(),
+              opts=__opts__,
+              sigver='4')
 
-    return query(requesturl=requesturl)
+    return _get_node(instance_id=instance_id)
 
 
 def create_volume(kwargs=None, call=None, wait_to_finish=False):
     '''
     Create a volume
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt-cloud -f create_volume my-ec2-config zone=us-east-1b
+        salt-cloud -f create_volume my-ec2-config zone=us-east-1b tags='{"tag1": "val1", "tag2", "val2"}'
     '''
     if call != 'function':
         log.error(
@@ -3114,12 +3303,33 @@ def create_volume(kwargs=None, call=None, wait_to_finish=False):
 
     log.debug(params)
 
-    data = query(params, return_root=True)
+    data = aws.query(params,
+                     return_url=True,
+                     return_root=True,
+                     location=get_location(),
+                     provider=get_provider(),
+                     opts=__opts__,
+                     sigver='4')
+
     r_data = {}
-    for d in data:
+    for d in data[0]:
         for k, v in d.items():
             r_data[k] = v
     volume_id = r_data['volumeId']
+
+    # Allow tags to be set upon creation
+    if 'tags' in kwargs:
+        if isinstance(kwargs['tags'], six.string_types):
+            tags = yaml.safe_load(kwargs['tags'])
+        else:
+            tags = kwargs['tags']
+
+        if isinstance(tags, dict):
+            new_tags = set_tags(tags=tags,
+                                resource_id=volume_id,
+                                call='action',
+                                location=get_location())
+            r_data['tags'] = new_tags
 
     # Waits till volume is available
     if wait_to_finish:
@@ -3129,7 +3339,7 @@ def create_volume(kwargs=None, call=None, wait_to_finish=False):
                                                 argument_being_watched='status',
                                                 required_argument_response='available')
 
-    return data
+    return r_data
 
 
 def attach_volume(name=None, kwargs=None, instance_id=None, call=None):
@@ -3170,7 +3380,12 @@ def attach_volume(name=None, kwargs=None, instance_id=None, call=None):
 
     log.debug(params)
 
-    data = query(params, return_root=True)
+    data = aws.query(params,
+                     return_url=True,
+                     location=get_location(),
+                     provider=get_provider(),
+                     opts=__opts__,
+                     sigver='4')
     return data
 
 
@@ -3205,7 +3420,12 @@ def detach_volume(name=None, kwargs=None, instance_id=None, call=None):
     params = {'Action': 'DetachVolume',
               'VolumeId': kwargs['volume_id']}
 
-    data = query(params, return_root=True)
+    data = aws.query(params,
+                     return_url=True,
+                     location=get_location(),
+                     provider=get_provider(),
+                     opts=__opts__,
+                     sigver='4')
     return data
 
 
@@ -3223,7 +3443,12 @@ def delete_volume(name=None, kwargs=None, instance_id=None, call=None):
     params = {'Action': 'DeleteVolume',
               'VolumeId': kwargs['volume_id']}
 
-    data = query(params, return_root=True)
+    data = aws.query(params,
+                     return_url=True,
+                     location=get_location(),
+                     provider=get_provider(),
+                     opts=__opts__,
+                     sigver='4')
     return data
 
 
@@ -3255,7 +3480,12 @@ def describe_volumes(kwargs=None, call=None):
 
     log.debug(params)
 
-    data = query(params, return_root=True)
+    data = aws.query(params,
+                     return_url=True,
+                     location=get_location(),
+                     provider=get_provider(),
+                     opts=__opts__,
+                     sigver='4')
     return data
 
 
@@ -3279,7 +3509,12 @@ def create_keypair(kwargs=None, call=None):
     params = {'Action': 'CreateKeyPair',
               'KeyName': kwargs['keyname']}
 
-    data = query(params, return_root=True)
+    data = aws.query(params,
+                     return_url=True,
+                     location=get_location(),
+                     provider=get_provider(),
+                     opts=__opts__,
+                     sigver='4')
     return data
 
 
@@ -3303,7 +3538,12 @@ def show_keypair(kwargs=None, call=None):
     params = {'Action': 'DescribeKeyPairs',
               'KeyName.1': kwargs['keyname']}
 
-    data = query(params, return_root=True)
+    data = aws.query(params,
+                     return_url=True,
+                     location=get_location(),
+                     provider=get_provider(),
+                     opts=__opts__,
+                     sigver='4')
     return data
 
 
@@ -3327,7 +3567,12 @@ def delete_keypair(kwargs=None, call=None):
     params = {'Action': 'DeleteKeyPair',
               'KeyName.1': kwargs['keyname']}
 
-    data = query(params, return_root=True)
+    data = aws.query(params,
+                     return_url=True,
+                     location=get_location(),
+                     provider=get_provider(),
+                     opts=__opts__,
+                     sigver='4')
     return data
 
 
@@ -3359,7 +3604,13 @@ def create_snapshot(kwargs=None, call=None, wait_to_finish=False):
 
     log.debug(params)
 
-    data = query(params, return_root=True)
+    data = aws.query(params,
+                     return_url=True,
+                     location=get_location(),
+                     provider=get_provider(),
+                     opts=__opts__,
+                     sigver='4')
+
     r_data = {}
     for d in data:
         for k, v in d.items():
@@ -3399,7 +3650,12 @@ def delete_snapshot(kwargs=None, call=None):
 
     log.debug(params)
 
-    data = query(params, return_root=True)
+    data = aws.query(params,
+                     return_url=True,
+                     location=get_location(),
+                     provider=get_provider(),
+                     opts=__opts__,
+                     sigver='4')
     return data
 
 
@@ -3437,7 +3693,12 @@ def copy_snapshot(kwargs=None, call=None):
 
     log.debug(params)
 
-    data = query(params, return_root=True)
+    data = aws.query(params,
+                     return_url=True,
+                     location=get_location(),
+                     provider=get_provider(),
+                     opts=__opts__,
+                     sigver='4')
     return data
 
 
@@ -3491,7 +3752,12 @@ def describe_snapshots(kwargs=None, call=None):
 
     log.debug(params)
 
-    data = query(params, return_root=True)
+    data = aws.query(params,
+                     return_url=True,
+                     location=get_location(),
+                     provider=get_provider(),
+                     opts=__opts__,
+                     sigver='4')
     return data
 
 
@@ -3528,7 +3794,13 @@ def get_console_output(
               'InstanceId': instance_id}
 
     ret = {}
-    data = query(params, return_root=True)
+    data = aws.query(params,
+                     return_url=True,
+                     location=get_location(),
+                     provider=get_provider(),
+                     opts=__opts__,
+                     sigver='4')
+
     for item in data:
         if next(item.iterkeys()) == 'output':
             ret['output_decoded'] = binascii.a2b_base64(next(item.itervalues()))
@@ -3585,7 +3857,13 @@ def get_password_data(
               'InstanceId': instance_id}
 
     ret = {}
-    data = query(params, return_root=True)
+    data = aws.query(params,
+                     return_url=True,
+                     location=get_location(),
+                     provider=get_provider(),
+                     opts=__opts__,
+                     sigver='4')
+
     for item in data:
         ret[item.keys()[0]] = item.values()[0]
 

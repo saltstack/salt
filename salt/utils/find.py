@@ -104,9 +104,12 @@ try:
 except ImportError:
     pass
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
 # Import salt libs
 import salt.utils
-from salt._compat import MAX_SIZE
+import salt.defaults.exitcodes
 from salt.utils.filebuffer import BufferedReader
 
 # Set up logger
@@ -209,7 +212,7 @@ def _parse_size(value):
         max_size = num
     elif style == '+':
         min_size = num
-        max_size = MAX_SIZE
+        max_size = six.MAXSIZE
     else:
         min_size = num
         max_size = num + multiplier - 1
@@ -683,7 +686,7 @@ def _main():
         finder = Finder(criteria)
     except ValueError as ex:
         sys.stderr.write('error: {0}\n'.format(ex))
-        sys.exit(salt.exitcodes.EX_GENERIC)
+        sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
     for result in finder.find(path):
         print(result)

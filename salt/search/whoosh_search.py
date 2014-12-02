@@ -9,7 +9,7 @@ import os
 
 # Import salt libs
 import salt.search
-import six
+import salt.ext.six as six
 
 # Import third party libs
 HAS_WHOOSH = False

@@ -250,9 +250,9 @@ import salt.utils.templates
 from salt.exceptions import CommandExecutionError
 from salt.utils.serializers import yaml as yaml_serializer
 from salt.utils.serializers import json as json_serializer
-from six.moves import map
-import six
-from six import string_types, integer_types
+from salt.ext.six.moves import map
+import salt.ext.six as six
+from salt.ext.six import string_types, integer_types
 
 log = logging.getLogger(__name__)
 
@@ -741,6 +741,8 @@ def symlink(
            'changes': {},
            'result': True,
            'comment': ''}
+    if not name:
+        return _error(ret, 'Must provide name to file.symlink')
 
     if user is None:
         user = __opts__['user']
@@ -895,6 +897,8 @@ def absent(name):
            'changes': {},
            'result': True,
            'comment': ''}
+    if not name:
+        return _error(ret, 'Must provide name to file.absent')
     if not os.path.isabs(name):
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name)
@@ -947,6 +951,8 @@ def exists(name):
            'changes': {},
            'result': True,
            'comment': ''}
+    if not name:
+        return _error(ret, 'Must provide name to file.exists')
     if not os.path.exists(name):
         return _error(ret, ('Specified path {0} does not exist').format(name))
 
@@ -968,6 +974,8 @@ def missing(name):
            'changes': {},
            'result': True,
            'comment': ''}
+    if not name:
+        return _error(ret, 'Must provide name to file.missing')
     if os.path.exists(name):
         return _error(ret, ('Specified path {0} exists').format(name))
 
@@ -1235,6 +1243,9 @@ def managed(name,
         run.
     '''
     name = os.path.expanduser(name)
+    # contents must be a string
+    if contents:
+        contents = str(contents)
 
     # Make sure that leading zeros stripped by YAML loader are added back
     mode = __salt__['config.manage_mode'](mode)
@@ -1251,6 +1262,12 @@ def managed(name,
             'to \'False\' to avoid reading the file unnecessarily'
         )
 
+    ret = {'changes': {},
+           'comment': '',
+           'name': name,
+           'result': True}
+    if not name:
+        return _error(ret, 'Must provide name to file.exists')
     user = _test_owner(kwargs, user=user)
     if salt.utils.is_windows():
         if group is not None:
@@ -1259,10 +1276,6 @@ def managed(name,
                 'is a Windows system.'.format(name)
             )
         group = user
-    ret = {'changes': {},
-           'comment': '',
-           'name': name,
-           'result': True}
     if not create:
         if not os.path.isfile(name):
             # Don't create a file that is not already present
@@ -1602,6 +1615,12 @@ def directory(name,
 
     '''
     name = os.path.expanduser(name)
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': ''}
+    if not name:
+        return _error(ret, 'Must provide name to file.directory')
     # Remove trailing slash, if present
     if name[-1] == '/':
         name = name[:-1]
@@ -1625,10 +1644,6 @@ def directory(name,
     dir_mode = __salt__['config.manage_mode'](dir_mode)
     file_mode = __salt__['config.manage_mode'](file_mode)
 
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': ''}
     u_check = _check_user(user, group)
     if u_check:
         # The specified user or group do not exist
@@ -2315,6 +2330,8 @@ def replace(name,
     name = os.path.expanduser(name)
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+    if not name:
+        return _error(ret, 'Must provide name to file.replace')
 
     check_res, check_msg = _check_file(name)
     if not check_res:
@@ -2456,6 +2473,8 @@ def blockreplace(
     name = os.path.expanduser(name)
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+    if not name:
+        return _error(ret, 'Must provide name to file.blockreplace')
 
     check_res, check_msg = _check_file(name)
     if not check_res:
@@ -2543,6 +2562,8 @@ def comment(name, regex, char='#', backup='.bak'):
     name = os.path.expanduser(name)
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+    if not name:
+        return _error(ret, 'Must provide name to file.comment')
 
     check_res, check_msg = _check_file(name)
     if not check_res:
@@ -2629,6 +2650,8 @@ def uncomment(name, regex, char='#', backup='.bak'):
     name = os.path.expanduser(name)
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+    if not name:
+        return _error(ret, 'Must provide name to file.uncomment')
 
     check_res, check_msg = _check_file(name)
     if not check_res:
@@ -2834,6 +2857,8 @@ def append(name,
     name = os.path.expanduser(name)
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+    if not name:
+        return _error(ret, 'Must provide name to file.append')
 
     if sources is None:
         sources = []
@@ -3015,6 +3040,8 @@ def prepend(name,
     name = os.path.expanduser(name)
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+    if not name:
+        return _error(ret, 'Must provide name to file.prepend')
 
     if sources is None:
         sources = []
@@ -3186,6 +3213,8 @@ def patch(name,
     name = os.path.expanduser(name)
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+    if not name:
+        return _error(ret, 'Must provide name to file.patch')
     check_res, check_msg = _check_file(name)
     if not check_res:
         return _error(ret, check_msg)
@@ -3286,6 +3315,8 @@ def touch(name, atime=None, mtime=None, makedirs=False):
         'name': name,
         'changes': {},
     }
+    if not name:
+        return _error(ret, 'Must provide name to file.touch')
     if not os.path.isabs(name):
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name)
@@ -3326,6 +3357,7 @@ def copy(
         user=None,
         group=None,
         mode=None,
+        subdir=False,
         **kwargs):
     '''
     If the source file exists on the system, copy it to the named file. The
@@ -3364,6 +3396,10 @@ def copy(
         The permissions to set on the copied file, aka 644, '0775', '4664'.
         If ``preserve`` is set to ``True``, then this will be ignored.
         Not supported on Windows
+
+    subdir
+        If the name is a directory then place the file inside the named
+        directory
     '''
     name = os.path.expanduser(name)
     source = os.path.expanduser(source)
@@ -3373,6 +3409,8 @@ def copy(
         'changes': {},
         'comment': 'Copied "{0}" to "{1}"'.format(source, name),
         'result': True}
+    if not name:
+        return _error(ret, 'Must provide name to file.comment')
 
     changed = True
     if not os.path.isabs(name):
@@ -3412,8 +3450,12 @@ def copy(
         if mode is None:
             mode = __salt__['file.get_mode'](source)
 
+    if os.path.isdir(name) and subdir:
+        # If the target is a dir, and overwrite_dir is False, copy into the dir
+        name = os.path.join(name, os.path.basename(source))
+
     if os.path.lexists(source) and os.path.lexists(name):
-        # if this is a file which did not changed, do not update
+        # if this is a file which did not change, do not update
         if force and os.path.isfile(name):
             hash1 = salt.utils.get_hash(name)
             hash2 = salt.utils.get_hash(source)
@@ -3499,6 +3541,8 @@ def rename(name, source, force=False, makedirs=False):
         'changes': {},
         'comment': '',
         'result': True}
+    if not name:
+        return _error(ret, 'Must provide name to file.rename')
 
     if not os.path.isabs(name):
         return _error(
@@ -3628,6 +3672,8 @@ def accumulated(name, filename, text, **kwargs):
         'result': True,
         'comment': ''
     }
+    if not name:
+        return _error(ret, 'Must provide name to file.accumulated')
     if text is None:
         ret['result'] = False
         ret['comment'] = 'No text supplied for accumulator'
@@ -3800,6 +3846,8 @@ def serialize(name,
            'comment': '',
            'name': name,
            'result': True}
+    if not name:
+        return _error(ret, 'Must provide name to file.serialize')
 
     if isinstance(env, string_types):
         msg = (
@@ -3962,6 +4010,8 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
            'changes': {},
            'comment': '',
            'result': False}
+    if not name:
+        return _error(ret, 'Must provide name to file.mknod')
 
     if ntype == 'c':
         # Check for file existence

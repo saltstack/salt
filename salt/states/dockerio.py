@@ -116,9 +116,9 @@ import functools
 import logging
 
 # Import salt libs
-from six import string_types
+from salt.ext.six import string_types
 import salt.utils
-import six
+import salt.ext.six as six
 
 # Enable proper logging
 log = logging.getLogger(__name__)
@@ -252,7 +252,7 @@ def pulled(name,
         Pull even if the image is already pulled
 
     insecure_registry
-        Set to ``True``to allow connections to non-HTTPS registries. Default ``False``.
+        Set to ``True`` to allow connections to non-HTTPS registries. Default ``False``.
     '''
     inspect_image = __salt__['docker.inspect_image']
     image_infos = inspect_image(name)
@@ -302,7 +302,7 @@ def pushed(name, tag=None, insecure_registry=False):
         Tag of the image [Optional]
 
     insecure_registry
-        Set to ``True``to allow connections to non-HTTPS registries. Default ``False``.
+        Set to ``True`` to allow connections to non-HTTPS registries. Default ``False``.
     '''
 
     if __opts__['test']:
@@ -591,25 +591,27 @@ def absent(name):
                 return _invalid(comment=("Container {0!r} could not be stopped"
                                          .format(cid)))
             else:
-                changes[cid]['new'] = 'stopped'
+                __salt__['docker.remove_container'](cid)
+                is_gone = __salt__['docker.exists'](cid)
+                if is_gone:
+                    return _valid(comment=('Container {0!r}'
+                                           ' was stopped and destroyed, '.format(cid)),
+                                           changes={name: True})
+                else:
+                    return _valid(comment=('Container {0!r}'
+                                           ' was stopped but could not be destroyed,'.format(cid)),
+                                           changes={name: True})
         else:
-            changes[cid]['old'] = 'stopped'
-
-        # Remove the stopped container
-        removal = __salt__['docker.remove_container'](cid)
-
-        if removal['status'] is True:
-            changes[cid]['new'] = 'removed'
-            return _valid(comment=("Container {0!r} has been destroyed"
-                                   .format(cid)),
-                          changes=changes)
-        else:
-            if 'new' not in changes[cid]:
-                changes = None
-            return _invalid(comment=("Container {0!r} could not be destroyed"
-                                     .format(cid)),
-                            changes=changes)
-
+            __salt__['docker.remove_container'](cid)
+            is_gone = __salt__['docker.exists'](cid)
+            if is_gone:
+                return _valid(comment=('Container {0!r}'
+                                       ' is stopped and was destroyed, '.format(cid)),
+                                       changes={name: True})
+            else:
+                return _valid(comment=('Container {0!r}'
+                                       ' is stopped but could not be destroyed,'.format(cid)),
+                                       changes={name: True})
     else:
         return _valid(comment="Container {0!r} not found".format(name))
 

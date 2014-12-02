@@ -39,7 +39,7 @@ set_file
     dict must be indented four spaces instead of two.
 '''
 from __future__ import absolute_import
-import six
+import salt.ext.six as six
 
 
 # Define the module's virtual name
@@ -59,9 +59,9 @@ def __virtual__():
     return __virtualname__
 
 
-def set_file(name, source, **kwargs):
+def set_file(name, source, template=None, context=None, defaults=None, **kwargs):
     '''
-    Set debconf selections from a file
+    Set debconf selections from a file or a template
 
     .. code-block:: yaml
 
@@ -73,20 +73,57 @@ def set_file(name, source, **kwargs):
           debconf.set_file:
             - source: salt://pathto/pkg.selections?saltenv=myenvironment
 
+        <state_id>:
+          debconf.set_file:
+            - source: salt://pathto/pkg.selections.jinja2
+            - template: jinja2
+            - context:
+                some_value: "false"
+
     source:
         The location of the file containing the package selections
+
+    template
+        If this setting is applied then the named templating engine will be
+        used to render the package selections file, currently jinja, mako, and
+        wempy are supported
+
+    context
+        Overrides default context variables passed to the template.
+
+    defaults
+        Default context passed to the template.
     '''
     ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': ''}
 
+    if context is None:
+        context = {}
+    elif not isinstance(context, dict):
+        ret['result'] = False
+        ret['comment'] = 'Context must be formed as a dict'
+        return ret
+
+    if defaults is None:
+        defaults = {}
+    elif not isinstance(defaults, dict):
+        ret['result'] = False
+        ret['comment'] = 'Defaults must be formed as a dict'
+        return ret
+
     if __opts__['test']:
         ret['result'] = None
         ret['comment'] = 'Debconf selections would have been set.'
         return ret
 
-    if __salt__['debconf.set_file'](source, **kwargs):
+    if template:
+        result = __salt__['debconf.set_template'](source, template, context, defaults, **kwargs)
+    else:
+        result = __salt__['debconf.set_file'](source, **kwargs)
+
+    if result:
         ret['comment'] = 'Debconf selections were set.'
     else:
         ret['result'] = False

@@ -27,7 +27,7 @@ import copy
 import logging
 import errno
 from datetime import datetime
-from six import string_types
+from salt.ext.six import string_types
 
 # Import salt libs
 import salt.config
@@ -43,7 +43,7 @@ import salt.syspaths as syspaths
 from salt.exceptions import (
     EauthAuthenticationError, SaltInvocationError, SaltReqTimeoutError
 )
-import six
+import salt.ext.six as six
 
 # Import third party libs
 try:
@@ -333,6 +333,7 @@ class LocalClient(object):
             kwarg=None,
             sub=3,
             cli=False,
+            progress=False,
             **kwargs):
         '''
         Execute a command on a random subset of the targeted systems
@@ -364,6 +365,7 @@ class LocalClient(object):
                 expr_form='list',
                 ret=ret,
                 kwarg=kwarg,
+                progress=progress,
                 **kwargs)
 
     def cmd_batch(
@@ -555,6 +557,7 @@ class LocalClient(object):
             ret='',
             verbose=False,
             kwarg=None,
+            progress=False,
             **kwargs):
         '''
         Used by the :command:`salt` CLI. This method returns minion returns as
@@ -587,6 +590,7 @@ class LocalClient(object):
                         tgt,
                         expr_form,
                         verbose,
+                        progress,
                         **kwargs):
 
                     if not fn_ret:
@@ -891,6 +895,8 @@ class LocalClient(object):
                     ret = {raw['data']['id']: {'ret': raw['data']['return']}}
                     if 'out' in raw['data']:
                         ret[raw['data']['id']]['out'] = raw['data']['out']
+                    if kwargs.get('_cmd_meta', False):
+                        ret[raw['data']['id']].update(raw['data'])
                     log.debug('jid {0} return from {1}'.format(jid, raw['data']['id']))
                     yield ret
 
@@ -1188,6 +1194,7 @@ class LocalClient(object):
             tgt='*',
             tgt_type='glob',
             verbose=False,
+            progress=False,
             show_timeout=False,
             show_jid=False,
             **kwargs):
@@ -1205,6 +1212,7 @@ class LocalClient(object):
 
         # lazy load the connected minions
         connected_minions = None
+        return_count = 0
 
         for ret in self.get_iter_returns(jid,
                                          minions,
@@ -1213,6 +1221,11 @@ class LocalClient(object):
                                          tgt_type=tgt_type,
                                          expect_minions=(verbose or show_timeout)
                                          ):
+            return_count = return_count + 1
+            if progress:
+                for id_, min_ret in six.iteritems(ret):
+                    if not min_ret.get('failed') is True:
+                        yield {'minion_count': len(minions), 'return_count': return_count}
             # replace the return structure for missing minions
             for id_, min_ret in six.iteritems(ret):
                 if min_ret.get('failed') is True:
@@ -1389,7 +1402,7 @@ class LocalClient(object):
                                               master_uri=master_uri)
 
         try:
-            payload = sreq.send(payload_kwargs)
+            payload = sreq.send(payload_kwargs, timeout=timeout)
         except SaltReqTimeoutError:
             log.error(
                 'Salt request timed out. If this error persists, '

@@ -22,34 +22,26 @@ You have those following methods:
 * run_buildout
 * buildout
 '''
-from __future__ import absolute_import
-import six
-from six.moves import range
-
-# Define the module's virtual name
-__virtualname__ = 'buildout'
-
-
-def __virtual__():
-    '''
-    Only load if buildout libs are present
-    '''
-    if True:
-        return __virtualname__
-    return False
 
 # Import python libs
+from __future__ import absolute_import
+
 import os
 import re
 import logging
 import sys
 import traceback
 import copy
-import urllib2
+
+# Import 3rd-party libs
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
+from salt.ext.six import string_types, text_type
+from salt.ext.six.moves import range
+from salt.ext.six.moves.urllib.request import urlopen as _urlopen
+# pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError
-from six import string_types
 
 
 INVALID_RESPONSE = 'We did not get any expectable answer from buildout'
@@ -72,6 +64,18 @@ _URL_VERSIONS = {
 }
 DEFAULT_VER = 2
 _logger = logging.getLogger(__name__)
+
+# Define the module's virtual name
+__virtualname__ = 'buildout'
+
+
+def __virtual__():
+    '''
+    Only load if buildout libs are present
+    '''
+    if True:
+        return __virtualname__
+    return False
 
 
 def _salt_callback(func, **kwargs):
@@ -139,7 +143,7 @@ class _Logger(object):
         self._by_level = {}
 
     def _log(self, level, msg):
-        if not isinstance(msg, six.text_type):
+        if not isinstance(msg, text_type):
             msg = msg.decode('utf-8')
         if level not in self._by_level:
             self._by_level[level] = []
@@ -182,7 +186,7 @@ LOG = _Logger()
 
 
 def _encode_string(string):
-    if isinstance(string, six.text_type):
+    if isinstance(string, text_type):
         string = string.encode('utf-8')
     return string
 
@@ -522,7 +526,7 @@ def upgrade_bootstrap(directory='.',
                     '{0}.updated_bootstrap'.format(buildout_ver)))
             except (OSError, IOError):
                 LOG.info('Bootstrap updated from repository')
-                data = urllib2.urlopen(booturl).read()
+                data = _urlopen(booturl).read()
                 updated = True
                 dled = True
         if 'socket.setdefaulttimeout' not in data:

@@ -11,7 +11,7 @@ import time
 import os
 import multiprocessing
 import logging
-from six.moves import range
+from salt.ext.six.moves import range
 
 # Import salt libs
 import salt.daemons.masterapi
@@ -27,7 +27,7 @@ import ioflo.base.deeding
 log = logging.getLogger(__name__)
 
 # convert to set once list is larger than about 3 because set hashes
-INHIBIT_RETURN = [] # ['_return']  # cmd for which we should not send return
+INHIBIT_RETURN = []  # ['_return']  # cmd for which we should not send return
 
 
 class SaltRaetWorkerFork(ioflo.base.deeding.Deed):

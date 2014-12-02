@@ -26,10 +26,13 @@ import salt.fileserver
 import salt.utils
 import salt.utils.templates
 import salt.utils.gzip_util
-from salt._compat import (
-    URLError, HTTPError, BaseHTTPServer, urlparse, urlunparse,
-    url_passwd_mgr, url_auth_handler, url_build_opener, url_install_opener)
 from salt.utils.openstack.swift import SaltSwift
+
+# pylint: disable=no-name-in-module,import-error
+import salt.ext.six.moves.BaseHTTPServer as BaseHTTPServer
+from salt.ext.six.moves.urllib.error import HTTPError, URLError
+from salt.ext.six.moves.urllib.parse import urlparse, urlunparse
+# pylint: enable=no-name-in-module,import-error
 
 log = logging.getLogger(__name__)
 
@@ -576,26 +579,22 @@ class Client(object):
             except Exception:
                 raise MinionError('Could not fetch from {0}'.format(url))
 
+        get_kwargs = {}
         if url_data.username is not None \
                 and url_data.scheme in ('http', 'https'):
             _, netloc = url_data.netloc.split('@', 1)
             fixed_url = urlunparse(
                 (url_data.scheme, netloc, url_data.path,
                  url_data.params, url_data.query, url_data.fragment))
-            passwd_mgr = url_passwd_mgr()
-            passwd_mgr.add_password(
-                None, fixed_url, url_data.username, url_data.password)
-            auth_handler = url_auth_handler(passwd_mgr)
-            opener = url_build_opener(auth_handler)
-            url_install_opener(opener)
+            get_kwargs['auth'] = (url_data.username, url_data.password)
         else:
             fixed_url = url
         try:
             if requests.__version__[0] == '0':
                 # 'stream' was called 'prefetch' before 1.0, with flipped meaning
-                get_kwargs = {'prefetch': False}
+                get_kwargs['prefetch'] = False
             else:
-                get_kwargs = {'stream': True}
+                get_kwargs['stream'] = True
             response = requests.get(fixed_url, **get_kwargs)
             with salt.utils.fopen(dest, 'wb') as destfp:
                 for chunk in response.iter_content(chunk_size=32*1024):

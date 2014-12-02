@@ -48,6 +48,8 @@ def latest(name,
            remote_name='origin',
            always_fetch=False,
            identity=None,
+           https_user=None,
+           https_pass=None,
            onlyif=False,
            unless=False):
     '''
@@ -102,6 +104,12 @@ def latest(name,
 
     identity
         A path to a private key to use over SSH
+
+    https_user
+        HTTP Basic Auth username for HTTPS (only) clones
+
+    https_pass
+        HTTP Basic Auth password for HTTPS (only) clones
 
     onlyif
         A command to run as a check, run the named command only if the command
@@ -192,7 +200,9 @@ def latest(name,
                                                        repository=name,
                                                        branch=branch,
                                                        user=user,
-                                                       identity=identity)
+                                                       identity=identity,
+                                                       https_user=https_user,
+                                                       https_pass=https_pass)
 
             # only do something, if the specified rev differs from the
             # current_rev and remote_rev
@@ -221,7 +231,9 @@ def latest(name,
                     __salt__['git.remote_set'](target,
                                                name=remote_name,
                                                url=name,
-                                               user=user)
+                                               user=user,
+                                               https_user=https_user,
+                                               https_pass=https_pass)
                     ret['changes']['remote/{0}'.format(remote_name)] = (
                         "{0} => {1}".format(str(remote), name)
                     )
@@ -352,7 +364,9 @@ def latest(name,
                                   name,
                                   user=user,
                                   opts=opts,
-                                  identity=identity)
+                                  identity=identity,
+                                  https_user=https_user,
+                                  https_pass=https_pass)
 
             if rev and not bare:
                 __salt__['git.checkout'](target, rev, user=user)

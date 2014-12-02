@@ -2,11 +2,16 @@
 '''
 Salt compatibility code
 '''
-# pylint: disable=W0611
+# pylint: disable=import-error,unused-import
 
 # Import python libs
 import sys
 import types
+
+# Import 3rd-party libs
+from salt.ext.six import binary_type, string_types, text_type
+from salt.ext.six.moves import cStringIO, StringIO
+
 try:
     import cPickle as pickle
 except ImportError:
@@ -33,43 +38,12 @@ except ImportError:
 # True if we are running on Python 3.
 PY3 = sys.version_info[0] == 3
 
-if PY3:
-    MAX_SIZE = sys.maxsize
-else:
-    MAX_SIZE = sys.maxint
-
-if PY3:
-    xrange = range
-else:
-    xrange = xrange
-
-# pylint: disable=C0103
-if PY3:
-    string_types = str,
-    integer_types = int,
-    class_types = type,
-    text_type = str
-    binary_type = bytes
-    long = int
-else:
-    string_types = basestring,
-    integer_types = (int, long)
-    class_types = (type, types.ClassType)
-    text_type = unicode
-    binary_type = str
-    long = long
 
 if PY3:
     import builtins
     exceptions = builtins  # pylint: disable=E0602
 else:
     import exceptions  # pylint: disable=W0403
-
-if PY3:
-    def callable(obj):
-        return any('__call__' in klass.__dict__ for klass in type(obj).__mro__)
-else:
-    callable = callable
 
 
 def text_(s, encoding='latin-1', errors='strict'):
@@ -102,31 +76,6 @@ else:
         if isinstance(s, text_type):
             s = s.encode('ascii')
         return str(s)
-
-if PY3:
-    exec_ = getattr(builtins, 'exec')  # pylint: disable=E0602
-
-    def reraise(tp, value, tb=None):
-        if value is None:
-            value = tp()
-        if value.__traceback__ is not tb:
-            raise value.with_traceback(tb)
-        raise value
-else:
-    def exec_(code_, globals_=None, locals_=None):
-        '''
-        Execute code directly in a passed namespace
-        '''
-        if globals_ is None:
-            frame = sys._getframe(1)
-            globals_ = frame.f_globals
-            if locals_ is None:
-                locals_ = frame.f_locals
-            del frame
-        elif locals_ is None:
-            locals_ = globals_
-        exec('''exec code_ in globals_, locals_''')
-
 
 ascii_native_.__doc__ = '''
 Python 3: If ``s`` is an instance of ``text_type``, return
@@ -164,60 +113,6 @@ Python 2: If ``s`` is an instance of ``text_type``, return
 ``s.encode(encoding, errors)``, otherwise return ``str(s)``
 '''
 
-if PY3:
-    # pylint: disable=E0611
-    from urllib.parse import urlparse
-    from urllib.parse import urlunparse
-    from urllib.error import URLError
-    import http.server as BaseHTTPServer
-    from urllib.error import HTTPError
-    from urllib.parse import quote as url_quote
-    from urllib.parse import quote_plus as url_quote_plus
-    from urllib.parse import unquote as url_unquote
-    from urllib.parse import urlencode as url_encode
-    from urllib.request import urlopen as url_open
-    from urllib.request import HTTPPasswordMgrWithDefaultRealm as url_passwd_mgr
-    from urllib.request import HTTPBasicAuthHandler as url_auth_handler
-    from urllib.request import build_opener as url_build_opener
-    from urllib.request import install_opener as url_install_opener
-    url_unquote_text = url_unquote
-    url_unquote_native = url_unquote
-    import configparser
-else:
-    from urlparse import urlparse
-    from urlparse import urlunparse
-    import BaseHTTPServer
-    from urllib2 import HTTPError, URLError
-    from urllib import quote as url_quote
-    from urllib import quote_plus as url_quote_plus
-    from urllib import unquote as url_unquote
-    from urllib import urlencode as url_encode
-    from urllib2 import urlopen as url_open
-    from urllib2 import HTTPPasswordMgrWithDefaultRealm as url_passwd_mgr
-    from urllib2 import HTTPBasicAuthHandler as url_auth_handler
-    from urllib2 import build_opener as url_build_opener
-    from urllib2 import install_opener as url_install_opener
-    import ConfigParser as configparser
-
-    def url_unquote_text(v, encoding='utf-8', errors='replace'):
-        v = url_unquote(v)
-        return v.decode(encoding, errors)
-
-    def url_unquote_native(v, encoding='utf-8', errors='replace'):
-        return native_(url_unquote_text(v, encoding, errors))
-
-if PY3:
-    zip = zip
-else:
-    from future_builtins import zip
-
-if PY3:
-    from io import StringIO
-    from io import BytesIO as cStringIO
-else:
-    from StringIO import StringIO
-    from cStringIO import StringIO as cStringIO
-
 
 def string_io(data=None):  # cStringIO can't handle unicode
     '''
@@ -227,10 +122,3 @@ def string_io(data=None):  # cStringIO can't handle unicode
         return cStringIO(bytes(data))
     except (UnicodeEncodeError, TypeError):
         return StringIO(data)
-
-
-if PY3:
-    import queue as Queue
-else:
-    import Queue
-# pylint: enable=C0103

@@ -41,17 +41,8 @@ def start():
 
     mod_opts = __opts__.get(__virtualname__, {})
 
-    if mod_opts.get('websockets', False):
-        from . import saltnado_websockets
-
     if 'num_processes' not in mod_opts:
         mod_opts['num_processes'] = 1
-
-    token_pattern = r"([0-9A-Fa-f]{0})".format(len(getattr(hashlib, __opts__.get('hash_type', 'md5'))().hexdigest()))
-
-    all_events_pattern = r"/all_events/{0}".format(token_pattern)
-    formatted_events_pattern = r"/formatted_events/{0}".format(token_pattern)
-    logger.debug("All events URL pattern is {0}".format(all_events_pattern))
 
     paths = [
         (r"/", saltnado.SaltAPIHandler),
@@ -67,6 +58,12 @@ def start():
 
     # if you have enabled websockets, add them!
     if mod_opts.get('websockets', False):
+        from . import saltnado_websockets
+
+        token_pattern = r"([0-9A-Fa-f]{0})".format(len(getattr(hashlib, __opts__.get('hash_type', 'md5'))().hexdigest()))
+        all_events_pattern = r"/all_events/{0}".format(token_pattern)
+        formatted_events_pattern = r"/formatted_events/{0}".format(token_pattern)
+        logger.debug("All events URL pattern is {0}".format(all_events_pattern))
         paths += [
             # Matches /all_events/[0-9A-Fa-f]{n}
             # Where n is the length of hexdigest

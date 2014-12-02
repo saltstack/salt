@@ -49,7 +49,7 @@ def list_():
     '''
     ret = {}
     for line in (__salt__['cmd.run_stdout']
-                 ('mdadm --detail --scan').splitlines()):
+                    ('mdadm --detail --scan', python_shell=False).splitlines()):
         if ' ' not in line:
             continue
         comps = line.split()
@@ -80,8 +80,8 @@ def detail(device='/dev/md0'):
         msg = "Device {0} doesn't exist!"
         raise CommandExecutionError(msg.format(device))
 
-    cmd = 'mdadm --detail {0}'.format(device)
-    for line in __salt__['cmd.run_stdout'](cmd).splitlines():
+    cmd = ['mdadm', '--detail', device]
+    for line in __salt__['cmd.run_stdout'](cmd, python_shell=False).splitlines():
         if line.startswith(device):
             continue
         if ' ' not in line:
@@ -259,8 +259,8 @@ def save_config():
         salt '*' raid.save_config
 
     '''
-    scan = __salt__['cmd.run']('mdadm --detail --scan').splitlines()
-    # Issue with mdadm and ubuntu requires removal of name and metadata tags
+    scan = __salt__['cmd.run']('mdadm --detail --scan', python_shell=False).split()
+    # Issue with mdadm and ubuntu
     # REF: http://askubuntu.com/questions/209702/why-is-my-raid-dev-md1-showing-up-as-dev-md126-is-mdadm-conf-being-ignored
     if __grains__['os'] == 'Ubuntu':
         buggy_ubuntu_tags = ['name', 'metadata']

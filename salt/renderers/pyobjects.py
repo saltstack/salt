@@ -263,7 +263,7 @@ from __future__ import absolute_import
 
 import logging
 import re
-from six import exec_
+from salt.ext.six import exec_
 
 from salt.loader import _create_loader
 from salt.fileclient import get_file_client

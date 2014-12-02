@@ -12,9 +12,14 @@ import re
 import time
 import datetime
 
+# Import 3rd-party libs
+# pylint: disable=import-error,redefined-builtin
+from salt.ext.six.moves import map
+from salt.ext.six.moves import shlex_quote as _cmd_quote
+# pylint: enable=import-error,redefined-builtin
+
 # Import salt libs
 import salt.utils
-from six.moves import map
 
 # OS Families that should work (Ubuntu and Debian are the default)
 # TODO: Refactor some of this module to remove the checks for binaries
@@ -207,8 +212,11 @@ def at(*args, **kwargs):  # pylint: disable=C0103
         echo_cmd = 'echo'
 
     if 'tag' in kwargs:
-        cmd = '{4} "### SALT: {0}\n{1}" | {2} {3}'.format(kwargs['tag'],
-            ' '.join(args[1:]), binary, args[0], echo_cmd)
+        cmd = '{4} "### SALT: {0}\n{1}" | {2} {3}'.format(_cmd_quote(kwargs['tag']),
+                                                          _cmd_quote(' '.join(args[1:])),
+                                                          binary,
+                                                          _cmd_quote(args[0]),
+                                                          echo_cmd)
     else:
         cmd = '{3} "{1}" | {2} {0}'.format(args[0], ' '.join(args[1:]),
             binary, echo_cmd)

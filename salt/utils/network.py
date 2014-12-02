@@ -11,8 +11,8 @@ import re
 import logging
 import os
 from string import ascii_letters, digits
-from six.moves import range
-import six
+from salt.ext.six.moves import range
+import salt.ext.six as six
 
 # Attempt to import wmi
 try:
@@ -97,6 +97,7 @@ def _filter_localhost_names(name_list):
         '::1.*',
         'fe00::.*',
         'fe02::.*',
+        '1.0.0.*.ip6.arpa',
     ]
     for name in name_list:
         filtered = False

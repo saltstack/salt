@@ -17,7 +17,7 @@ import hashlib
 import logging
 import traceback
 import binascii
-from six.moves import zip
+from salt.ext.six.moves import zip
 
 # Import third party libs
 try:
@@ -114,6 +114,10 @@ def gen_keys(keydir, keyname, keysize, user=None):
     pub = '{0}.pub'.format(base)
 
     gen = RSA.gen_key(keysize, 65537, callback=lambda x, y, z: None)
+    if os.path.isfile(priv):
+        # Between first checking and the generation another process has made
+        # a key! Use the winner's key
+        return priv
     cumask = os.umask(191)
     gen.save_key(priv, None)
     os.umask(cumask)

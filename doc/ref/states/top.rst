@@ -239,6 +239,13 @@ state.
 How Top Files Are Compiled
 ==========================
 
+.. warning::
+
+    There is currently a known issue with the topfile compilation. The below
+    may not be completely valid until
+    https://github.com/saltstack/salt/issues/12483#issuecomment-64181598
+    is closed.
+
 As mentioned earlier, the top files in the different environments are compiled
 into a single set of data. The way in which this is done follows a few rules,
 which are important to understand when arranging top files in different

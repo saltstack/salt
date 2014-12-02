@@ -21,9 +21,12 @@ import optparse
 import traceback
 from functools import partial
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
 # Import salt libs
 import salt.config as config
-import salt.exitcodes
+import salt.defaults.exitcodes
 import salt.loader as loader
 import salt.log.setup as log
 import salt.syspaths as syspaths
@@ -34,7 +37,6 @@ import salt.utils.xdg
 from salt.utils import kinds
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.validate.path import is_writeable
-from salt._compat import MAX_SIZE
 
 
 def _sorted(mixins_or_funcs):
@@ -152,7 +154,7 @@ class OptionParser(optparse.OptionParser):
             try:
                 process_option_func()
             except Exception as err:
-                logging.getlogger(__name__).exception(err)
+                logging.getLogger(__name__).exception(err)
                 self.error(
                     'Error while processing {0}: {1}'.format(
                         process_option_func, traceback.format_exc(err)
@@ -207,7 +209,7 @@ class MergeConfigMixIn(object):
     This mix-in should run last.
     '''
     __metaclass__ = MixInMeta
-    _mixin_prio_ = MAX_SIZE
+    _mixin_prio_ = six.MAXSIZE
 
     def _mixin_setup(self):
         if not hasattr(self, 'setup_config') and not hasattr(self, 'config'):
@@ -299,6 +301,8 @@ class SaltfileMixIn(object):
             saltfile = os.path.join(os.getcwd(), 'Saltfile')
             if os.path.isfile(saltfile):
                 self.options.saltfile = saltfile
+        else:
+            saltfile = self.options.saltfile
 
         if not self.options.saltfile:
             # There's still no valid Saltfile? No need to continue...
@@ -377,6 +381,10 @@ class SaltfileMixIn(object):
                     setattr(self.options,
                             option.dest,
                             cli_config[option.dest])
+
+        # Any left over value in the saltfile can now be safely added
+        for key in cli_config:
+            setattr(self.options, key, cli_config[key])
 
 
 class HardCrashMixin(object):
@@ -1454,6 +1462,12 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'all return.')
         )
         self.add_option(
+            '-p', '--progress',
+            default=False,
+            action='store_true',
+            help=('Display a progress graph')
+        )
+        self.add_option(
             '--async',
             default=False,
             dest='async',
@@ -1589,7 +1603,7 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                 # passed in. Regardless, we're in an unknown state here.
                 sys.stdout.write('Invalid options passed. Please try -h for '
                                  'help.')  # Try to warn if we can.
-                sys.exit(salt.exitcodes.EX_GENERIC)
+                sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
         if self.options.doc:
             # Include the target
@@ -2295,6 +2309,12 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                  'faster communication should be, default is %default'
         )
         self.add_option(
+            '--extra-filerefs',
+            dest='extra_filerefs',
+            default=None,
+            help='Pass in extra files to include in the state tarball'
+        )
+        self.add_option(
             '-v', '--verbose',
             default=False,
             action='store_true',
@@ -2364,6 +2384,24 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                  'initial deployment of keys very fast and easy'
         )
         self.add_option_group(auth_group)
+
+        scan_group = optparse.OptionGroup(
+            self, 'Scan Roster Options',
+            'Parameters affecting scan roster'
+        )
+        scan_group.add_option(
+            '--scan-ports',
+            default='22',
+            dest='ssh_scan_ports',
+            help='Comma-separated list of ports to scan in the scan roster.',
+        )
+        scan_group.add_option(
+            '--scan-timeout',
+            default=0.01,
+            dest='ssh_scan_timeout',
+            help='Scanning socket timeout for the scan roster.',
+        )
+        self.add_option_group(scan_group)
 
     def _mixin_after_parsed(self):
         if not self.args:

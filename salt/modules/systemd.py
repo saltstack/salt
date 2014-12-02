@@ -7,7 +7,7 @@ from __future__ import absolute_import
 import logging
 import os
 import re
-import six
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -84,7 +84,8 @@ def _get_all_units():
                       r')\s+loaded\s+(?P<active>[^\s]+)')
 
     out = __salt__['cmd.run_stdout'](
-        'systemctl --all --full --no-legend --no-pager list-units | col -b'
+        'systemctl --all --full --no-legend --no-pager list-units | col -b',
+        python_shell=True
     )
 
     ret = {}
@@ -106,7 +107,8 @@ def _get_all_unit_files():
                       r')\s+(?P<state>.+)$')
 
     out = __salt__['cmd.run_stdout'](
-        'systemctl --full --no-legend --no-pager list-unit-files | col -b'
+        'systemctl --full --no-legend --no-pager list-unit-files | col -b',
+        python_shell=True
     )
 
     ret = {}
@@ -357,8 +359,7 @@ def status(name, sig=None):
     '''
     if _untracked_custom_unit_found(name) or _unit_file_changed(name):
         systemctl_reload()
-    cmd = 'systemctl is-active {0}'.format(_canonical_unit_name(name))
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](_systemctl_cmd('is-active', name))
 
 
 def enable(name, **kwargs):
@@ -447,8 +448,7 @@ def show(name):
         salt '*' service.show <service name>
     '''
     ret = {}
-    cmd = 'systemctl show {0}.service'.format(name)
-    for line in __salt__['cmd.run'](cmd).splitlines():
+    for line in __salt__['cmd.run'](_systemctl_cmd('show', name)).splitlines():
         comps = line.split('=')
         name = comps[0]
         value = '='.join(comps[1:])

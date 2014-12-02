@@ -106,7 +106,7 @@ from copy import deepcopy
 # Import salt libs
 import salt.utils
 import salt.utils.minions
-import six
+import salt.ext.six as six
 
 # Set up logging
 log = logging.getLogger(__name__)

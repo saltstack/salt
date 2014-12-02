@@ -17,7 +17,7 @@ import signal
 import logging
 import multiprocessing
 from itertools import groupby
-from six.moves import input
+from salt.ext.six.moves import input
 
 # Import salt.cloud libs
 from salt.exceptions import (
@@ -34,7 +34,7 @@ import salt.loader
 import salt.utils
 import salt.utils.cloud
 from salt.utils import context
-from six import string_types
+from salt.ext.six import string_types
 from salt.template import compile_template
 
 # Import third party libs
@@ -273,6 +273,7 @@ class CloudClient(object):
         Query all instance information
         '''
         mapper = salt.cloud.Map(self._opts_defaults())
+        mapper.opts['selected_query_option'] = 'list_nodes_full'
         return mapper.map_providers_parallel(query_type)
 
     def select_query(self, query_type='list_nodes_select'):
@@ -280,6 +281,7 @@ class CloudClient(object):
         Query select instance information
         '''
         mapper = salt.cloud.Map(self._opts_defaults())
+        mapper.opts['selected_query_option'] = 'list_nodes_select'
         return mapper.map_providers_parallel(query_type)
 
     def min_query(self, query_type='list_nodes_min'):
@@ -287,6 +289,7 @@ class CloudClient(object):
         Query select instance information
         '''
         mapper = salt.cloud.Map(self._opts_defaults())
+        mapper.opts['selected_query_option'] = 'list_nodes_min'
         return mapper.map_providers_parallel(query_type)
 
     def profile(self, profile, names, vm_overrides=None, **kwargs):
@@ -1854,7 +1857,7 @@ class Map(Cloud):
                                 ret['existing'] = {}
                             ret['existing'][name] = ret['create'].pop(name)
 
-        if self.opts['hard']:
+        if 'hard' in self.opts and self.opts['hard']:
             if self.opts['enable_hard_maps'] is False:
                 raise SaltCloudSystemExit(
                     'The --hard map can be extremely dangerous to use, '

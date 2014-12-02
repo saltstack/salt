@@ -32,12 +32,14 @@ from __future__ import absolute_import
 
 # Import Python libs
 import logging
-import urllib
 import json
 
 log = logging.getLogger(__name__)
 
 # Import third party libs
+# pylint: disable=import-error
+from salt.ext.six import string_types
+from salt.ext.six.moves.urllib.parse import unquote as _unquote  # pylint: disable=no-name-in-module
 try:
     import boto
     import boto.iam
@@ -45,9 +47,9 @@ try:
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
+# pylint: enable=import-error
 
 # Import salt libs
-from six import string_types
 import salt.utils.odict as odict
 
 
@@ -342,7 +344,7 @@ def get_role_policy(role_name, policy_name, region=None, key=None,
         # I _hate_ you for not giving me an object boto.
         _policy = _policy.get_role_policy_response.policy_document
         # Policy is url encoded
-        _policy = urllib.unquote(_policy)
+        _policy = _unquote(_policy)
         _policy = json.loads(_policy, object_pairs_hook=odict.OrderedDict)
         return _policy
     except boto.exception.BotoServerError:

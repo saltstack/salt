@@ -11,7 +11,7 @@ from __future__ import absolute_import
 # Python Libs
 import logging
 import re
-from six.moves import map
+from salt.ext.six.moves import map
 
 # Third party libs
 try:

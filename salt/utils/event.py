@@ -59,7 +59,6 @@ import logging
 import time
 import datetime
 import multiprocessing
-from multiprocessing import Process
 from collections import MutableMapping
 
 # Import third party libs
@@ -76,7 +75,9 @@ import salt.loader
 import salt.state
 import salt.utils
 import salt.utils.cache
-from six import string_types
+from salt.ext.six import string_types
+import salt.utils.process
+from salt._compat import string_types
 log = logging.getLogger(__name__)
 
 # The SUB_EVENT set is for functions that require events fired based on
@@ -161,6 +162,8 @@ def tagify(suffix='', prefix='', base=SALT):
 
 class SaltEvent(object):
     '''
+    Warning! Use the get_event function or the code will not be
+    RAET compatible
     The base class used to manage salt events
     '''
     def __init__(self, node, sock_dir=None, opts=None):
@@ -319,7 +322,8 @@ class SaltEvent(object):
             if not ret['tag'].startswith(tag):  # tag not match
                 if any(ret['tag'].startswith(ptag) for ptag in pending_tags):
                     self.pending_events.append(ret)
-                wait = timeout_at - time.time()
+                if wait:  # only update the wait timeout if we had one
+                    wait = timeout_at - time.time()
                 continue
 
             log.trace('get_event() received = {0}'.format(ret))
@@ -498,6 +502,8 @@ class SaltEvent(object):
 
 class MasterEvent(SaltEvent):
     '''
+    Warning! Use the get_event function or the code will not be
+    RAET compatible
     Create a master event management object
     '''
     def __init__(self, sock_dir):
@@ -506,6 +512,8 @@ class MasterEvent(SaltEvent):
 
 class LocalClientEvent(MasterEvent):
     '''
+    Warning! Use the get_event function or the code will not be
+    RAET compatible
     This class is just used to differentiate who is handling the events,
     specially on logs, but it's the same as MasterEvent.
     '''
@@ -513,6 +521,8 @@ class LocalClientEvent(MasterEvent):
 
 class RunnerEvent(MasterEvent):
     '''
+    Warning! Use the get_runner_event function or the code will not be
+    RAET compatible
     This is used to send progress and return events from runners.
     It extends MasterEvent to include information about how to
     display events to the user as a runner progresses.
@@ -529,13 +539,15 @@ class RunnerEvent(MasterEvent):
 
 class MinionEvent(SaltEvent):
     '''
+    Warning! Use the get_event function or the code will not be
+    RAET compatible
     Create a master event management object
     '''
     def __init__(self, opts):
         super(MinionEvent, self).__init__('minion', sock_dir=opts.get('sock_dir', None), opts=opts)
 
 
-class EventPublisher(Process):
+class EventPublisher(multiprocessing.Process):
     '''
     The interface that takes master events and republishes them out to anyone
     who wants to listen
@@ -727,22 +739,25 @@ class ReactWrap(object):
         if ReactWrap.client_cache is None:
             ReactWrap.client_cache = salt.utils.cache.CacheDict(opts['reactor_refresh_interval'])
 
+        self.pool = salt.utils.process. ThreadPool(
+                        self.opts['reactor_worker_threads'],  # number of workers for runner/wheel
+                        queue_size=self.opts['reactor_worker_hwm']  # queue size for those workers
+                    )
+
     def run(self, low):
         '''
         Execute the specified function in the specified state by passing the
         LowData
         '''
         l_fun = getattr(self, low['state'])
-        f_call = salt.utils.format_call(l_fun, low)
         try:
-            ret = l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
+            f_call = salt.utils.format_call(l_fun, low)
+            l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
         except Exception:
             log.error(
                     'Failed to execute {0}: {1}\n'.format(low['state'], l_fun),
                     exc_info=True
                     )
-            return False
-        return ret
 
     def local(self, *args, **kwargs):
         '''
@@ -750,25 +765,25 @@ class ReactWrap(object):
         '''
         if 'local' not in self.client_cache:
             self.client_cache['local'] = salt.client.LocalClient(self.opts['conf_file'])
-        return self.client_cache['local'].cmd_async(*args, **kwargs)
+        self.client_cache['local'].cmd_async(*args, **kwargs)
 
     cmd = local
 
-    def runner(self, fun, **kwargs):
+    def runner(self, _, **kwargs):
         '''
         Wrap RunnerClient for executing :ref:`runner modules <all-salt.runners>`
         '''
         if 'runner' not in self.client_cache:
             self.client_cache['runner'] = salt.runner.RunnerClient(self.opts)
-        return self.client_cache['runner'].async(fun, kwargs, fire_event=False)
+        self.pool.fire_async(self.client_cache['runner'].low, kwargs)
 
-    def wheel(self, fun, **kwargs):
+    def wheel(self, _, **kwargs):
         '''
         Wrap Wheel to enable executing :ref:`wheel modules <all-salt.wheel>`
         '''
         if 'wheel' not in self.client_cache:
             self.client_cache['wheel'] = salt.wheel.Wheel(self.opts)
-        return self.client_cache['wheel'].async(fun, kwargs, fire_event=False)
+        self.pool.fire_async(self.client_cache['wheel'].low, kwargs)
 
 
 class StateFire(object):

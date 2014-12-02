@@ -30,11 +30,12 @@ import sys
 import tempfile
 import time
 import glob
-from functools import reduce
-from six import string_types
-from six.moves import range
-from six.moves import zip
-from six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=E0611
+
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
+from salt.ext.six import string_types
+from salt.ext.six.moves import range, reduce, zip
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
+# pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 try:
     import grp
@@ -4308,4 +4309,42 @@ def move(src, dst):
             "Unable to move '{0}' to '{1}': {2}".format(src, dst, exc)
         )
 
+    return ret
+
+
+def diskusage(path):
+    '''
+    Recursivly calculate diskusage of path and return it
+    in bytes
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.diskusage /path/to/check
+    '''
+
+    total_size = 0
+    seen = set()
+    if os.path.isfile(path):
+        ret = stat.st_size
+        return ret
+
+    for dirpath, dirnames, filenames in os.walk(path):
+        for f in filenames:
+            fp = os.path.join(dirpath, f)
+
+            try:
+                stat = os.stat(fp)
+            except OSError:
+                continue
+
+            if stat.st_ino in seen:
+                continue
+
+            seen.add(stat.st_ino)
+
+            total_size += stat.st_size
+
+    ret = total_size
     return ret

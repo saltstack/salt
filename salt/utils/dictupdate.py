@@ -7,8 +7,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import collections
-import six
-
+import salt.ext.six as six
 
 
 def update(dest, upd):
