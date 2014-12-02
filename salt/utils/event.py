@@ -120,6 +120,7 @@ def get_event(node, sock_dir=None, transport='zeromq', opts=None, listen=True):
                                               listen=listen,
                                               opts=opts)
 
+
 def get_master_event(opts, sock_dir):
     '''
     Return an event object suitable for the named transport
@@ -130,6 +131,7 @@ def get_master_event(opts, sock_dir):
         import salt.utils.raetevent
         return salt.utils.raetevent.MasterEvent(opts=opts, sock_dir=sock_dir)
 
+
 def get_runner_event(opts, jid):
     '''
     Return an event object suitable for the named transport
@@ -139,6 +141,7 @@ def get_runner_event(opts, jid):
     elif opts['transport'] == 'raet':
         import salt.utils.raetevent
         return salt.utils.raetevent.RunnerEvent(opts, jid)
+
 
 def tagify(suffix='', prefix='', base=SALT):
     '''
