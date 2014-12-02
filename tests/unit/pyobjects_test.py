@@ -11,9 +11,9 @@ from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../')
 
 import integration
+import salt.config
 import salt.state
 import salt.utils
-from salt.config import minion_config
 from salt.template import compile_template
 from salt.utils.odict import OrderedDict
 from salt.utils.pyobjects import (StateFactory, State, Registry,
@@ -244,19 +244,14 @@ class RendererTests(RendererMixin, TestCase):
     def test_basic(self):
         ret = self.render(basic_template)
         self.assertEqual(ret, OrderedDict([
-            ('/usr/local/bin/pydmesg', OrderedDict(
-                [('file.managed', [{'group': 'root'},
-                                   {'mode': '0755'},
-                                   {'require': [
-                                       {'file': '/usr/local/bin'}
-                                    ]},
-                                   {'source': 'salt://debian/files/pydmesg.py'},
-                                   {'user': 'root'}])])),
-            ('/tmp', OrderedDict(
-                [('file.directory', [{'group': 'root'},
-                                     {'mode': '1777'},
-                                     {'owner': 'root'}])]))]))
-
+            ('/tmp', {
+                'file.directory': [
+                    {'group': 'root'},
+                    {'mode': '1777'},
+                    {'owner': 'root'}
+                ]
+            }),
+        ]))
         self.assertEqual(Registry.states, OrderedDict())
 
     def test_invalid_function(self):
