@@ -90,8 +90,11 @@ be used as often as possible.
 
 .. note::
 
-    Formulas should never be referenced from the main repository, and should
-    be forked to a repo where unintended changes will not take place.
+    Formulas repositories on the saltstack-formulas GitHub organization should
+    not be pointed to directly from systems that automatically fetch new
+    updates such as GitFS or similar tooling. Instead formulas repositories
+    should be forked on GitHub or cloned locally, where unintended, automatic
+    changes will not take place.
 
 
 Structuring Pillar Files
