@@ -47,9 +47,8 @@ raetlane.service()
 msg = raetlane.wait(share=track, timeout=5.0)
 if not msg:
    raise ValueError("Timed out out waiting for response")
-
-
 '''
+# Import python libs
 from __future__ import absolute_import
 import time
 import os
@@ -66,13 +65,13 @@ from raet import raeting, nacling
 from raet.lane.stacking import LaneStack
 from raet.lane.yarding import RemoteYard
 
-
 # Module globals for default shared LaneStack for a process.
 rx_msgs = {}  # module global dict of deques one for each receipient of msgs
 lane_stack = None  # module global that holds raet LaneStack
 remote_yard = None # module global that holds raet
 master_estate_name = None  # module global of motivating master estate name
 master_yard_name = None  # module global of motivating master yard name
+
 
 def prep(opts, ryn='manor'):
     '''
@@ -136,6 +135,7 @@ def transmit(msg):
     '''
     lane_stack.transmit(msg, remote_yard.uid)
 
+
 def service():
     '''
     Service the lane_stack and move any received messages into their associated
@@ -145,6 +145,7 @@ def service():
     while lane_stack.rxMsgs:
         msg, sender = lane_stack.rxMsgs.popleft()
         rx_msgs[msg['route']['dst'][2]] = msg
+
 
 def receive(share):
     '''
@@ -156,6 +157,7 @@ def receive(share):
         if rx_msgs[share]:
             return rx_msgs[share].popleft()
     return None
+
 
 def wait(share, timeout=0.0, delay=0.01):
     '''
@@ -171,7 +173,3 @@ def wait(share, timeout=0.0, delay=0.01):
         time.sleep(delay)
         if timeout > 0.0 and (time.time() - start) >= timeout:
             return None
-
-'''
-
-
