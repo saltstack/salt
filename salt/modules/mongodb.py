@@ -247,3 +247,51 @@ def user_remove(name, user=None, password=None, host=None, port=None,
         return str(err)
 
     return True
+
+
+def _to_dict(objects):
+    """
+    Potentially interprets a string as JSON for usage with mongo
+    """
+    try:
+        if isinstance(objects, string_types):
+            objects = json.loads(objects)
+    except ValueError as err:
+        log.error("Could not parse objects: %s", err)
+        raise err
+
+    return objects
+
+
+def insert(objects, collection, user=None, password=None,
+           host=None, port=None, database='admin'):
+    """
+    Insert an object or list of objects into a collection
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mongodb.insert '[{"foo": "FOO", "bar": "BAR"}, {"foo": "BAZ", "bar": "BAM"}]' mycollection <user> <password> <host> <port> <database>
+
+    """
+    conn = _connect(user, password, host, port, database)
+    if not conn:
+        return "Failed to connect to mongo database"
+
+    try:
+        objects = _to_dict(objects)
+    except Exception, err:
+        return err.message
+
+    try:
+        log.info("Inserting %r into %s.%s", objects, database, collection)
+        mdb = pymongo.database.Database(conn, database)
+        col = getattr(mdb, collection)
+        ids = col.insert(objects)
+        return [str(id_) for id_ in ids]
+    except pymongo.errors.PyMongoError as err:
+        log.error("Inserting objects %r failed with error %s", objects, err.message)
+        return err.message
+
+
