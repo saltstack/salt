@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 
+# Import python libs
+import os
+import os.path
+import tempfile
+
 # Import Salt Testing libs
 from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
@@ -8,13 +13,14 @@ ensure_in_syspath('../')
 ensure_in_syspath('../../')
 
 # Import Salt libs
+import integration
 import salt.config
 from salt.state import HighState
 
 
 class HighStateTestCase(TestCase):
     def setUp(self):
-        self.root_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        self.root_dir = tempfile.mkdtemp(dir=integration.TMP)
         self.state_tree_dir = os.path.join(self.root_dir, 'state_tree')
         self.cache_dir = os.path.join(self.root_dir, 'cachedir')
         if not os.path.isdir(self.root_dir):
