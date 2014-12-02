@@ -292,7 +292,7 @@ def _split_module_dicts():
     if not isinstance(__salt__, dict):
         return __salt__
     mod_dict = dict(__salt__)
-    for module_func_name, mod_fun in six.iteritems(mod_dict):
+    for module_func_name, mod_fun in six.iteritems(mod_dict.copy()):
         mod, fun = module_func_name.split('.', 1)
         if mod not in mod_dict:
             # create an empty object that we can add attributes to
