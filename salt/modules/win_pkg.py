@@ -15,7 +15,7 @@ import re
 import copy
 import locale
 import logging
-from distutils.version import LooseVersion  # pylint: disable=E0611
+from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import third party libs
 import salt.ext.six as six
