@@ -287,19 +287,28 @@ def swap(name, persist=True, config='/etc/fstab'):
            'comment': ''}
     on_ = __salt__['mount.swaps']()
 
-    if name in on_:
+    if __salt__['file.is_link'](name):
+        real_swap_device = __salt__['file.readlink'](name)
+        if not real_swap_device.startswith('/'):
+            real_swap_device = '/dev/{0}'.format(os.path.basename(real_swap_device))
+        else:
+            real_swap_device = real_swap_device
+    else:
+        real_swap_device = name
+
+    if real_swap_device in on_:
         ret['comment'] = 'Swap {0} already active'.format(name)
     elif __opts__['test']:
         ret['result'] = None
         ret['comment'] = 'Swap {0} is set to be activated'.format(name)
     else:
-        __salt__['mount.swapon'](name)
+        __salt__['mount.swapon'](real_swap_device)
 
         on_ = __salt__['mount.swaps']()
 
-        if name in on_:
+        if real_swap_device in on_:
             ret['comment'] = 'Swap {0} activated'.format(name)
-            ret['changes'] = on_[name]
+            ret['changes'] = on_[real_swap_device]
         else:
             ret['comment'] = 'Swap {0} failed to activate'.format(name)
             ret['result'] = False
