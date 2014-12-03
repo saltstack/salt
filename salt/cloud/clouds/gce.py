@@ -233,6 +233,7 @@ def _expand_disk(disk):
     ret['extra']['zone'].update(zone.__dict__)
     return ret
 
+
 def _expand_address(addy):
     '''
     Convert the libcloud GCEAddress object into something more serializable.
@@ -435,7 +436,7 @@ def __get_host(node, vm_):
 #        return node.private_ips[0]
 
     if len(ip_address) > 0:
-      return ip_address;
+        return ip_address;
 
     return node.name
 
@@ -448,6 +449,7 @@ def __get_network(conn, vm_):
         'network', vm_, __opts__,
         default='default', search_global=False)
     return conn.ex_get_network(network)
+
 
 def __get_ssh_interface(vm_):
     '''
@@ -466,16 +468,17 @@ def __create_orget_address(conn, name, region):
     Returns a native GCEAddress construct to use with libcloud.
     '''
     try:
-      addy = conn.ex_get_address(name, region)
+        addy = conn.ex_get_address(name, region)
     except ResourceNotFoundError:  # pylint: disable=W0703
-      addr_kwargs = {
-        'name': name,
-        'region': region
-      }
-      new_addy = create_address(addr_kwargs, "function")
-      addy = conn.ex_get_address(new_addy['name'], new_addy['region'])
+        addr_kwargs = {
+            'name': name,
+            'region': region
+        }
+        new_addy = create_address(addr_kwargs, "function")
+        addy = conn.ex_get_address(new_addy['name'], new_addy['region'])
 
     return addy
+
 
 def _parse_allow(allow):
     '''
@@ -1034,6 +1037,7 @@ def create_address(kwargs=None, call=None):
 
     return _expand_address(addy)
 
+
 def delete_address(kwargs=None, call=None):
     '''
     Permanently delete a static address.
@@ -1078,7 +1082,7 @@ def delete_address(kwargs=None, call=None):
 
     try:
         result = conn.ex_destroy_address(
-            conn.ex_get_address(name,ex_region)
+            conn.ex_get_address(name, ex_region)
         )
     except ResourceNotFoundError as exc:
         log.error(
@@ -1102,6 +1106,7 @@ def delete_address(kwargs=None, call=None):
     log.info('Deleted GCE Address ' + name)
 
     return result
+
 
 def show_address(kwargs=None, call=None):
     '''
@@ -1131,6 +1136,7 @@ def show_address(kwargs=None, call=None):
 
     conn = get_conn()
     return _expand_address(conn.ex_get_address(kwargs['name'], kwargs['region']))
+
 
 def create_lb(kwargs=None, call=None):
     '''
@@ -1184,7 +1190,7 @@ def create_lb(kwargs=None, call=None):
 
     ex_address = kwargs.get('address', None)
     if ex_address is not None:
-      ex_address = __create_orget_address(conn, ex_address, ex_region)
+        ex_address = __create_orget_address(conn, ex_address, ex_region)
       
     if ex_healthchecks:
         ex_healthchecks = ex_healthchecks.split(',')
@@ -2048,8 +2054,8 @@ def create(vm_=None, call=None):
     if 'external_ip' in kwargs and kwargs['external_ip'] == "None":
         kwargs['external_ip'] = None
     elif kwargs['external_ip'] != 'ephemeral':
-        region = '-'.join( kwargs['location'].name.split('-')[:2] )
-        kwargs['external_ip'] = __create_orget_address(conn, kwargs['external_ip'], region);
+        region = '-'.join(kwargs['location'].name.split('-')[:2])
+        kwargs['external_ip'] = __create_orget_address(conn, kwargs['external_ip'], region)
 
     log.info('Creating GCE instance {0} in {1}'.format(vm_['name'],
         kwargs['location'].name)
