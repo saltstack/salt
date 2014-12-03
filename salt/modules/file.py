@@ -1122,10 +1122,10 @@ def replace(path,
     repl = str(repl)
     try:
         fi_file = fileinput.input(path,
-                        inplace=not dry_run,
+                        inplace=not (dry_run or search_only),
                         backup=False if dry_run else backup,
                         bufsize=bufsize,
-                        mode='rb')
+                        mode='r' if (dry_run or search_only) else 'rb')
         found = False
         for line in fi_file:
 
