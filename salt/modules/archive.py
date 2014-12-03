@@ -32,7 +32,7 @@ def __virtual__():
 
 
 @decorators.which('tar')
-def tar(options, tarfile, sources=None, dest=None, cwd=None, template=None):
+def tar(options, tarfile, sources=None, dest=None, cwd=None, template=None, runas=None):
     '''
     .. note::
 
@@ -95,11 +95,11 @@ def tar(options, tarfile, sources=None, dest=None, cwd=None, template=None):
     if sources:
         cmd += ' {0}'.format(' '.join(sources))
 
-    return __salt__['cmd.run'](cmd, cwd=cwd, template=template).splitlines()
+    return __salt__['cmd.run'](cmd, cwd=cwd, template=template, runas=runas).splitlines()
 
 
 @decorators.which('gzip')
-def gzip(sourcefile, template=None):
+def gzip(sourcefile, template=None, runas=None):
     '''
     Uses the gzip command to create gzip files
 
@@ -120,11 +120,11 @@ def gzip(sourcefile, template=None):
 
     '''
     cmd = 'gzip {0}'.format(sourcefile)
-    return __salt__['cmd.run'](cmd, template=template).splitlines()
+    return __salt__['cmd.run'](cmd, template=template, runas=runas).splitlines()
 
 
 @decorators.which('gunzip')
-def gunzip(gzipfile, template=None):
+def gunzip(gzipfile, template=None, runas=None):
     '''
     Uses the gunzip command to unpack gzip files
 
@@ -145,11 +145,11 @@ def gunzip(gzipfile, template=None):
 
     '''
     cmd = 'gunzip {0}'.format(gzipfile)
-    return __salt__['cmd.run'](cmd, template=template).splitlines()
+    return __salt__['cmd.run'](cmd, template=template, runas=runas).splitlines()
 
 
 @decorators.which('zip')
-def zip_(zipfile, sources, template=None):
+def zip_(zipfile, sources, template=None, runas=None):
     '''
     Uses the zip command to create zip files
 
@@ -172,11 +172,11 @@ def zip_(zipfile, sources, template=None):
     if isinstance(sources, string_types):
         sources = [s.strip() for s in sources.split(',')]
     cmd = 'zip {0} {1}'.format(zipfile, ' '.join(sources))
-    return __salt__['cmd.run'](cmd, template=template).splitlines()
+    return __salt__['cmd.run'](cmd, template=template, runas=runas).splitlines()
 
 
 @decorators.which('unzip')
-def unzip(zipfile, dest, excludes=None, template=None, options=None):
+def unzip(zipfile, dest, excludes=None, template=None, options=None, runas=None):
     '''
     Uses the unzip command to unpack zip files
 
@@ -209,11 +209,11 @@ def unzip(zipfile, dest, excludes=None, template=None, options=None):
 
     if excludes is not None:
         cmd += ' -x {0}'.format(' '.join(excludes))
-    return __salt__['cmd.run'](cmd, template=template).splitlines()
+    return __salt__['cmd.run'](cmd, template=template, runas=runas).splitlines()
 
 
 @decorators.which('rar')
-def rar(rarfile, sources, template=None):
+def rar(rarfile, sources, template=None, runas=None):
     '''
     Uses the rar command to create rar files
     Uses rar for Linux from http://www.rarlab.com/
@@ -238,11 +238,11 @@ def rar(rarfile, sources, template=None):
     if isinstance(sources, string_types):
         sources = [s.strip() for s in sources.split(',')]
     cmd = 'rar a -idp {0} {1}'.format(rarfile, ' '.join(sources))
-    return __salt__['cmd.run'](cmd, template=template).splitlines()
+    return __salt__['cmd.run'](cmd, template=template, runas=runas).splitlines()
 
 
 @decorators.which_bin(('unrar', 'rar'))
-def unrar(rarfile, dest, excludes=None, template=None):
+def unrar(rarfile, dest, excludes=None, template=None, runas=None):
     '''
     Uses the unrar command to unpack rar files
     Uses rar for Linux from http://www.rarlab.com/
@@ -271,4 +271,4 @@ def unrar(rarfile, dest, excludes=None, template=None):
         for exclude in excludes:
             cmd.extend(['-x', exclude])
     cmd.append(dest)
-    return __salt__['cmd.run'](' '.join(cmd), template=template).splitlines()
+    return __salt__['cmd.run'](' '.join(cmd), template=template, runas=runas).splitlines()
