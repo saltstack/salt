@@ -119,6 +119,29 @@
 # Cache minion grains and pillar data in the cachedir.
 #minion_data_cache: True
 
+# Store all returns in the given returner.
+# Setting this option requires that any returner-specific configuration also 
+# be set. See various returners in salt/returners for details on required
+# configuration values. (See also, event_return_queue below.)
+#
+#event_return: mysql
+
+# On busy systems, enabling event_returns can cause a considerable load on
+# the storage system for returners. Events can be queued on the master and
+# stored in a batched fashion using a single transaction for multiple events.
+# By default, events are not queued.
+#event_return_queue: 0
+
+# Only events returns matching tags in a whitelist
+# event_return_whitelist:
+#   - salt/master/a_tag
+#   - salt/master/another_tag
+
+# Store all event returns _except_ the tags in a blacklist
+# event_return_blacklist:
+#   - salt/master/not_this_tag
+#   - salt/master/or_this_one
+
 # Passing very large events can cause the minion to consume large amounts of
 # memory. This value tunes the maximum size of a message allowed onto the
 # master event bus. The value is expressed in bytes.
