@@ -282,7 +282,7 @@ def add(pool_name, *vdevs):
 
     # check for pool
     if not exists(pool_name):
-        ret['Error'] = 'Storage Pool `{0}` doesn't exist'.format(pool_name)
+        ret['Error'] = 'Storage Pool `{0}` doesn\'t exist'.format(pool_name)
         return ret
 
     if not vdevs:
