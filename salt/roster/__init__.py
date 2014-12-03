@@ -12,6 +12,8 @@ import salt.loader
 
 import os
 import logging
+from salt.ext.six import string_types
+
 log = logging.getLogger(__name__)
 
 
@@ -36,8 +38,10 @@ class Roster(object):
         self.opts = opts
         if isinstance(backends, list):
             self.backends = backends
-        else:
+        elif isinstance(backends, string_types):
             self.backends = backends.split(',')
+        else:
+            self.backends = backends
         if not backends:
             self.backends = ['flat']
         self.rosters = salt.loader.roster(opts)
