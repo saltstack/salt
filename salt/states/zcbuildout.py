@@ -199,7 +199,6 @@ def installed(name,
 
     loglevel
         loglevel for buildout commands
-
     '''
     ret = {}
 

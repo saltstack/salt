@@ -856,7 +856,7 @@ class RemoteFuncs(object):
             fp_.write(load['id'])
         return ret
 
-    def minion_publish(self, load, skip_verify=False):
+    def minion_publish(self, load):
         '''
         Publish a command initiated from a minion, this method executes minion
         restrictions so that the minion publication will only work if it is
