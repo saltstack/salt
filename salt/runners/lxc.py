@@ -13,10 +13,6 @@ import copy
 import logging
 
 # Import Salt libs
-<<<<<<< HEAD
-=======
-from salt.utils.odict import OrderedDict as _OrderedDict
->>>>>>> 7f92f2a92b9f9010adc44d1241a93c8cfd28afee
 import salt.client
 import salt.utils
 import salt.utils.virt

@@ -23,9 +23,6 @@ try:
 except ImportError:
     HAS_PARAMIKO = False
 
-# Import salt libs
-import salt.utils
-
 log = logging.getLogger(__name__)
 
 
