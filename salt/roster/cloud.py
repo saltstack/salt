@@ -22,7 +22,7 @@ import salt.utils.cloud
 import salt.utils.validate.net
 import salt.config
 from salt import syspaths
-from salt.utils.six import string_types
+from salt.ext.six import string_types
 
 
 def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
