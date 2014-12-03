@@ -112,7 +112,7 @@ def ext_pillar(minion_id,
     pillar_dir = os.path.normpath(os.path.join(_get_cache_dir(), environment,
                                                bucket))
 
-    if __opts__['pillar_roots'].get(environment, []) == [pillar_dir]:
+    if pillar_dir in __opts__['pillar_roots'].get(environment, []):
         return {}
 
     metadata = _init(s3_creds, multiple_env, environment)
@@ -134,7 +134,7 @@ def ext_pillar(minion_id,
         log.info('Sync local pillar cache from S3 completed.')
 
     opts = deepcopy(__opts__)
-    opts['pillar_roots'][environment] = [pillar_dir]
+    opts['pillar_roots'].setdefault(environment, []).append(pillar_dir)
 
     pil = Pillar(opts, __grains__, minion_id, environment)
 
