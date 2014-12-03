@@ -362,6 +362,8 @@ class Schedule(object):
                'schedule': data['name'],
                'jid': '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())}
 
+        salt.utils.appendproctitle(ret['jid'])
+
         proc_fn = os.path.join(
             salt.minion.get_proc_dir(self.opts['cachedir']),
             ret['jid']
