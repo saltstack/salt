@@ -14,7 +14,6 @@ import shutil
 import signal
 import logging
 import fnmatch
-import time
 import sys
 import copy
 
