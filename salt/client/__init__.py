@@ -803,24 +803,19 @@ class LocalClient(object):
             event = self.event
         jid_tag = 'salt/job/{0}'.format(jid)
         while True:
-            if HAS_ZMQ:
-                try:
-                    raw = event.get_event_noblock()
-                    if raw and raw.get('tag', '').startswith(jid_tag):
-                        yield raw
-                    else:
-                        yield None
-                except zmq.ZMQError as ex:
-                    if ex.errno == errno.EAGAIN or ex.errno == errno.EINTR:
-                        yield None
-                    else:
-                        raise
-            else:
+            try:
                 raw = event.get_event_noblock()
                 if raw and raw.get('tag', '').startswith(jid_tag):
                     yield raw
                 else:
                     yield None
+            except Exception as ex:
+                # TODO: create a "Salt" exception to raise instead of usinge zmq's
+                if HAS_ZMQ and isinstance(ex, zmq.ZMQError) and \
+                        (ex.errno == errno.EAGAIN or ex.errno == errno.EINTR):
+                    yield None
+                else:
+                    raise
 
     def get_iter_returns(
             self,
