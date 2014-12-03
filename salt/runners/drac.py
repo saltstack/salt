@@ -91,7 +91,7 @@ def pxe(hostname, timeout=20):
              2: 'racadm config -g cfgServerInfo -o cfgServerBootOnce 1',
              3: 'racadm serveraction powercycle'}
 
-    _keyswords = ['successful', 'successfully']
+    _keywords = ['successful', 'successfully']
 
     client = __connect(hostname, timeout)
 
