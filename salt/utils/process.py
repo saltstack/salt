@@ -221,10 +221,7 @@ class ProcessManager(object):
             p = multiprocessing.Process(target=tgt, args=args, kwargs=kwargs)
 
         p.start()
-        log.debug("Started '{0}'(*{1}, **{2} with pid {3}".format(tgt,
-                                                                  args,
-                                                                  kwargs,
-                                                                  p.pid))
+        log.debug("Started '{0}' with pid {1}".format(tgt.__name__, p.pid))
         self._process_map[p.pid] = {'tgt': tgt,
                                     'args': args,
                                     'kwargs': kwargs,
