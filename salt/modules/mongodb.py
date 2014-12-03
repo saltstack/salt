@@ -322,7 +322,7 @@ def remove(collection, query=None, user=None, password=None,
         mdb = pymongo.database.Database(conn, database)
         col = getattr(mdb, collection)
         ret = col.remove(query, w=w)
-        return "{} objects removed".format(ret['n'])
+        return "{0} objects removed".format(ret['n'])
     except pymongo.errors.PyMongoError as err:
         log.error("Removing objects failed with error: %s", err.message)
         return err.message
