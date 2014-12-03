@@ -121,7 +121,7 @@ def _split_rules(rules):
     return split
 
 
-def _get_group(conn, name=None, vpc_id=None, group_id=None, region=None):
+def _get_group(conn, name=None, vpc_id=None, group_id=None, region=None):  # pylint: disable=W0613
     '''
     Get a group object given a name, name and vpc_id or group_id. Return a
     boto.ec2.securitygroup.SecurityGroup object if the group is found, else
