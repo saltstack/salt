@@ -1383,6 +1383,49 @@ class Run(LowDataAdapter):
                 ms-2: true
                 ms-3: true
                 ms-4: true
+
+        The /run enpoint can also be used to issue commands using the salt-ssh subsystem.
+
+        When using salt-ssh, eauth credentials should not be supplied. Instad, authentication
+        should be handled by the SSH layer itself. The use of the salt-ssh client does not
+        require a salt master to be running. Instead, only a roster file must be present
+        in the salt configuration directory.
+
+        All SSH client requests are synchronous.
+
+        ** Example SSH client request:**
+
+        .. code-block:: bash
+
+            curl -sS localhost:8000/run \\
+                -H 'Accept: application/x-yaml' \\
+                -d client='ssh' \\
+                -d tgt='*' \\
+                -d fun='test.ping'
+
+        .. code-block:: http
+
+            POST /run HTTP/1.1
+            Host: localhost:8000
+            Accept: application/x-yaml
+            Content-Length: 75
+            Content-Type: application/x-www-form-urlencoded
+
+            client=ssh&tgt=*&fun=test.ping
+
+        **Example SSH response:**
+
+        .. code-block:: http
+
+                return:
+                - silver:
+                  fun: test.ping
+                  fun_args: []
+                  id: silver
+                  jid: '20141203103525666185'
+                  retcode: 0
+                  return: true
+                  success: true
         '''
         return {
             'return': list(self.exec_lowstate()),
