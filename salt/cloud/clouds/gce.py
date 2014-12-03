@@ -436,7 +436,7 @@ def __get_host(node, vm_):
 #        return node.private_ips[0]
 
     if len(ip_address) > 0:
-        return ip_address;
+        return ip_address
 
     return node.name
 
@@ -1191,7 +1191,7 @@ def create_lb(kwargs=None, call=None):
     ex_address = kwargs.get('address', None)
     if ex_address is not None:
         ex_address = __create_orget_address(conn, ex_address, ex_region)
-      
+
     if ex_healthchecks:
         ex_healthchecks = ex_healthchecks.split(',')
 
