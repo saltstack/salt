@@ -802,24 +802,19 @@ class LocalClient(object):
             event = self.event
         jid_tag = 'salt/job/{0}'.format(jid)
         while True:
-            if HAS_ZMQ:
-                try:
-                    raw = event.get_event_noblock()
-                    if raw and raw.get('tag', '').startswith(jid_tag):
-                        yield raw
-                    else:
-                        yield None
-                except zmq.ZMQError as ex:
-                    if ex.errno == errno.EAGAIN or ex.errno == errno.EINTR:
-                        yield None
-                    else:
-                        raise
-            else:
+            try:
                 raw = event.get_event_noblock()
                 if raw and raw.get('tag', '').startswith(jid_tag):
                     yield raw
                 else:
                     yield None
+            except Exception as ex:
+                # TODO: create a "Salt" exception to raise instead of usinge zmq's
+                if HAS_ZMQ and isinstance(ex, zmq.ZMQError) and \
+                        (ex.errno == errno.EAGAIN or ex.errno == errno.EINTR):
+                    yield None
+                else:
+                    raise
 
     def get_iter_returns(
             self,
@@ -1396,12 +1391,12 @@ class LocalClient(object):
 
         master_uri = 'tcp://' + salt.utils.ip_bracket(self.opts['interface']) + \
                      ':' + str(self.opts['ret_port'])
-        sreq = salt.transport.Channel.factory(self.opts,
-                                              crypt='clear',
-                                              master_uri=master_uri)
+        channel = salt.transport.Channel.factory(self.opts,
+                                                 crypt='clear',
+                                                 master_uri=master_uri)
 
         try:
-            payload = sreq.send(payload_kwargs, timeout=timeout)
+            payload = channel.send(payload_kwargs, timeout=timeout)
         except SaltReqTimeoutError:
             log.error(
                 'Salt request timed out. If this error persists, '
@@ -1417,12 +1412,12 @@ class LocalClient(object):
                 return payload
             self.key = key
             payload_kwargs['key'] = self.key
-            payload = sreq.send(payload_kwargs)
+            payload = channel.send(payload_kwargs)
             if not payload:
                 return payload
 
-        # We have the payload, let's get rid of SREQ fast(GC'ed faster)
-        del sreq
+        # We have the payload, let's get rid of the channel fast(GC'ed faster)
+        del channel
 
         return {'jid': payload['load']['jid'],
                 'minions': payload['load']['minions']}

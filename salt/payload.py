@@ -226,14 +226,6 @@ class SREQ(object):
                 )
         return self.serial.loads(self.socket.recv())
 
-    def send_auto(self, payload, tries=1, timeout=60):
-        '''
-        Detect the encryption type based on the payload
-        '''
-        enc = payload.get('enc', 'clear')
-        load = payload.get('load', {})
-        return self.send(enc, load, tries, timeout)
-
     def destroy(self):
         if isinstance(self.poller.sockets, dict):
             for socket in self.poller.sockets.keys():
