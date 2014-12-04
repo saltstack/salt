@@ -136,3 +136,115 @@ if _check_zfs():
 
         # Update the function alias so that salt finds the functions properly.
         __func_alias__['{0}_'.format(available_cmd)] = available_cmd
+
+
+def exists(name):
+    '''
+    .. versionadded:: Lithium
+
+    Check if a ZFS filesystem or volume or snapshot exists.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zfs.exists myzpool/mydataset
+    '''
+    zfs = _check_zfs()
+    cmd = '{0} list {1}'.format(zfs, name)
+    res = __salt__['cmd.run'](cmd, ignore_retcode=True)
+    if "dataset does not exist" in res or "invalid dataset name" in res:
+        return False
+    return True
+
+
+def create(name, **kwargs):
+    '''
+    .. versionadded:: Lithium
+
+    Create a ZFS File System.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zfs.create myzpool/mydataset [create_parent=True|False]
+
+    .. note::
+
+        ZFS properties can be specified at the time of creation of the filesystem by
+        passing an additional argument called "properties" and specifying the properties
+        with their respective values in the form of a python dictionary::
+
+            properties="{'property1': 'value1', 'property2': 'value2'}"
+
+        Example:
+
+        .. code-block:: bash
+
+            salt '*' zfs.create myzpool/mydataset properties="{'mountpoint': '/export/zfs', 'sharenfs': 'on'}"
+    '''
+    ret = {}
+
+    zfs = _check_zfs()
+    properties = kwargs.get('properties', None)
+    create_parent = kwargs.get('create_parent', False)
+    cmd = '{0} create'.format(zfs)
+
+    if create_parent:
+        cmd = '{0} -p'.format(cmd)
+
+    # if zpool properties specified, then
+    # create "-o property=value" pairs
+    if properties:
+        optlist = []
+        for prop in properties:
+            optlist.append('-o {0}={1}'.format(prop, properties[prop]))
+        opts = ' '.join(optlist)
+        cmd = '{0} {1}'.format(cmd, opts)
+    cmd = '{0} {1}'.format(cmd, name)
+
+    # Create filesystem
+    res = __salt__['cmd.run'](cmd)
+
+    # Check and see if the dataset is available
+    if not res:
+        ret[name] = 'created'
+        return ret
+    else:
+        ret['Error'] = res
+
+    return ret
+
+
+def destroy(name, **kwargs):
+    '''
+    .. versionadded:: Lithium
+
+    Destroy a ZFS File System.
+
+    CLI Example:
+
+    .. code-block:: bash
+    
+        salt '*' zfs.destroy myzpool/mydataset [force=True|False]
+    '''
+    ret = {}
+    zfs = _check_zfs()
+    force = kwargs.get('force', False)
+    cmd = '{0} destroy {1}'.format(zfs, name)
+
+    if force:
+        cmd = '{0} destroy -f {1}'.format(zfs, name)
+
+    res = __salt__['cmd.run'](cmd)
+    if not res:
+        ret[name] = 'Destroyed'
+        return ret
+    elif "dataset does not exist" in res:
+        ret['Error'] = 'Cannot destroy {0}: dataset does not exist'.format(name)
+    elif "operation does not apply to pools" in res:   
+        ret['Error'] = 'Cannot destroy {0}: use zpool.destroy to destroy the pool'.format(name)
+    else:
+        ret['Error'] = res
+    return ret

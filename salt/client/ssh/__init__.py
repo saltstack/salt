@@ -165,7 +165,7 @@ class SSH(object):
         self.opts['_ssh_version'] = ssh_version()
         self.tgt_type = self.opts['selected_target_option'] \
                 if self.opts['selected_target_option'] else 'glob'
-        self.roster = salt.roster.Roster(opts, opts.get('roster'))
+        self.roster = salt.roster.Roster(opts, opts.get('roster', 'flat'))
         self.targets = self.roster.targets(
                 self.opts['tgt'],
                 self.tgt_type)
@@ -495,7 +495,7 @@ class Single(object):
             port=None,
             passwd=None,
             priv=None,
-            timeout=None,
+            timeout=30,
             sudo=False,
             tty=False,
             mods=None,
@@ -679,6 +679,7 @@ class Single(object):
             opts_pkg['file_roots'] = self.opts['file_roots']
             opts_pkg['pillar_roots'] = self.opts['pillar_roots']
             opts_pkg['ext_pillar'] = self.opts['ext_pillar']
+            opts_pkg['extension_modules'] = self.opts['extension_modules']
             opts_pkg['_ssh_version'] = self.opts['_ssh_version']
             if '_caller_cachedir' in self.opts:
                 opts_pkg['_caller_cachedir'] = self.opts['_caller_cachedir']
@@ -757,7 +758,9 @@ class Single(object):
             cachedir = self.opts['cachedir']
         thin_sum = salt.utils.thin.thin_sum(cachedir, 'sha1')
         debug = ''
-        if salt.log.LOG_LEVELS['debug'] >= salt.log.LOG_LEVELS[self.opts['log_level']]:
+        if not self.opts.get('log_level'):
+            self.opts['log_level'] = 'info'
+        if salt.log.LOG_LEVELS['debug'] >= salt.log.LOG_LEVELS[self.opts.get('log_level', 'info')]:
             debug = '1'
         arg_str = '''
 OPTIONS = OBJ()

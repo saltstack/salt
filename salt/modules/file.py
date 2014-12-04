@@ -1187,10 +1187,10 @@ def replace(path,
     repl = str(repl)
     try:
         fi_file = fileinput.input(path,
-                        inplace=not dry_run,
+                        inplace=not (dry_run or search_only),
                         backup=False if dry_run else backup,
                         bufsize=bufsize,
-                        mode='rb')
+                        mode='r' if (dry_run or search_only) else 'rb')
         found = False
         for line in fi_file:
 
@@ -4310,7 +4310,7 @@ def move(src, dst):
 
 def diskusage(path):
     '''
-    Recursivly calculate diskusage of path and return it
+    Recursively calculate disk usage of path and return it
     in bytes
 
     CLI Example:
@@ -4323,7 +4323,8 @@ def diskusage(path):
     total_size = 0
     seen = set()
     if os.path.isfile(path):
-        ret = stat.st_size
+        stat_structure = os.stat(path)
+        ret = stat_structure.st_size
         return ret
 
     for dirpath, dirnames, filenames in os.walk(path):
@@ -4331,16 +4332,16 @@ def diskusage(path):
             fp = os.path.join(dirpath, f)
 
             try:
-                stat = os.stat(fp)
+                stat_structure = os.stat(fp)
             except OSError:
                 continue
 
-            if stat.st_ino in seen:
+            if stat_structure.st_ino in seen:
                 continue
 
-            seen.add(stat.st_ino)
+            seen.add(stat_structure.st_ino)
 
-            total_size += stat.st_size
+            total_size += stat_structure.st_size
 
     ret = total_size
     return ret

@@ -121,7 +121,7 @@ def get_event(node, sock_dir=None, transport='zeromq', opts=None, listen=True):
                                               opts=opts)
 
 
-def get_master_event(opts, sock_dir):
+def get_master_event(opts, sock_dir, listen=True):
     '''
     Return an event object suitable for the named transport
     '''
@@ -129,10 +129,10 @@ def get_master_event(opts, sock_dir):
         return MasterEvent(sock_dir)
     elif opts['transport'] == 'raet':
         import salt.utils.raetevent
-        return salt.utils.raetevent.MasterEvent(opts=opts, sock_dir=sock_dir)
+        return salt.utils.raetevent.MasterEvent(opts=opts, sock_dir=sock_dir, listen=listen)
 
 
-def get_runner_event(opts, jid):
+def get_runner_event(opts, jid, listen=True):
     '''
     Return an event object suitable for the named transport
     '''
@@ -140,7 +140,7 @@ def get_runner_event(opts, jid):
         return RunnerEvent(opts, jid)
     elif opts['transport'] == 'raet':
         import salt.utils.raetevent
-        return salt.utils.raetevent.RunnerEvent(opts, jid)
+        return salt.utils.raetevent.RunnerEvent(opts, jid, listen=listen)
 
 
 def tagify(suffix='', prefix='', base=SALT):
@@ -615,6 +615,62 @@ class EventPublisher(multiprocessing.Process):
                 self.context.term()
 
 
+class EventReturn(multiprocessing.Process):
+    '''
+    A dedicated process which listens to the master event bus and queues
+    and forwards events to the specified returner.
+    '''
+    def __init__(self, opts):
+        '''
+        Initialize the EventReturn system
+
+        Return an EventReturn instance
+        '''
+        multiprocessing.Process.__init__(self)
+
+        self.opts = opts
+        self.event_return_queue = self.opts['event_return_queue']
+        local_minion_opts = self.opts.copy()
+        local_minion_opts['file_client'] = 'local'
+        self.minion = salt.minion.MasterMinion(local_minion_opts)
+
+    def run(self):
+        '''
+        Spin up the multiprocess event returner
+        '''
+        salt.utils.appendproctitle(self.__class__.__name__)
+        self.event = get_event('master', opts=self.opts)
+        events = self.event.iter_events(full=True)
+        self.event.fire_event({}, 'salt/event_listen/start')
+        event_queue = []
+        try:
+            for event in events:
+                if self._filter(event):
+                    event_queue.append(event)
+                if len(event_queue) >= self.event_return_queue:
+                    self.minion.returners['{0}.event_return'.format(self.opts['event_return'])](event_queue)
+                    event_queue = []
+        except KeyError:
+            log.error('Could not store return for events {0}. Returner {1} '
+                      'not found.'.format(events, self.opts.get('event_return', None)))
+
+    def _filter(self, event):
+        '''
+        Take an event and run it through configured filters.
+
+        Returns True if event should be stored, else False
+        '''
+        tag = event['tag']
+        if tag in self.opts['event_return_whitelist']:
+            if tag not in self.opts['event_return_blacklist']:
+                return True
+            else:
+                return False  # Event was whitelisted and blacklisted
+        elif tag in self.opts['event_return_blacklist']:
+            return False
+        return True
+
+
 class Reactor(multiprocessing.Process, salt.state.Compiler):
     '''
     Read in the reactor configuration variable and compare it to events
@@ -742,10 +798,10 @@ class ReactWrap(object):
         if ReactWrap.client_cache is None:
             ReactWrap.client_cache = salt.utils.cache.CacheDict(opts['reactor_refresh_interval'])
 
-        self.pool = salt.utils.process. ThreadPool(
-                        self.opts['reactor_worker_threads'],  # number of workers for runner/wheel
-                        queue_size=self.opts['reactor_worker_hwm']  # queue size for those workers
-                    )
+        self.pool = salt.utils.process.ThreadPool(
+            self.opts['reactor_worker_threads'],  # number of workers for runner/wheel
+            queue_size=self.opts['reactor_worker_hwm']  # queue size for those workers
+        )
 
     def run(self, low):
         '''

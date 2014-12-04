@@ -486,10 +486,15 @@ def _interfaces_ifconfig(out):
 
     piface = re.compile(r'^([^\s:]+)')
     pmac = re.compile('.*?(?:HWaddr|ether|address:|lladdr) ([0-9a-fA-F:]+)')
-    pip = re.compile(r'.*?(?:inet addr:|inet )(.*?)\s')
-    pip6 = re.compile('.*?(?:inet6 addr: (.*?)/|inet6 )([0-9a-fA-F:]+)')
+    if salt.utils.is_sunos():
+        pip = re.compile(r'.*?(?:inet\s+)([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)(.*)')
+        pip6 = re.compile('.*?(?:inet6 )([0-9a-fA-F:]+)')
+        pmask6 = re.compile(r'.*?(?:inet6 [0-9a-fA-F:]+/(\d+)).*')
+    else:
+        pip = re.compile(r'.*?(?:inet addr:|inet )(.*?)\s')
+        pip6 = re.compile('.*?(?:inet6 addr: (.*?)/|inet6 )([0-9a-fA-F:]+)')
+        pmask6 = re.compile(r'.*?(?:inet6 addr: [0-9a-fA-F:]+/(\d+)|prefixlen (\d+)).*')
     pmask = re.compile(r'.*?(?:Mask:|netmask )(?:((?:0x)?[0-9a-fA-F]{8})|([\d\.]+))')
-    pmask6 = re.compile(r'.*?(?:inet6 addr: [0-9a-fA-F:]+/(\d+)|prefixlen (\d+)).*')
     pupdown = re.compile('UP')
     pbcast = re.compile(r'.*?(?:Bcast:|broadcast )([\d\.]+)')
 
@@ -537,7 +542,16 @@ def _interfaces_ifconfig(out):
                     addr_obj['prefixlen'] = mmask6.group(1) or mmask6.group(2)
                 data['inet6'].append(addr_obj)
         data['up'] = updown
-        ret[iface] = data
+        if iface in ret:
+            # SunOS optimization, where interfaces occur twice in 'ifconfig -a'
+            # output with the same name: for ipv4 and then for ipv6 addr family.
+            # Every instance has it's own 'UP' status and we assume that ipv4
+            # status determines global interface status.
+            #
+            # merge items with higher priority for older values
+            ret[iface] = dict(data.items() + ret[iface].items())
+        else:
+            ret[iface] = data
         del data
     return ret
 

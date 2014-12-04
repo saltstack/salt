@@ -208,6 +208,19 @@ typically also include a hard-coded default.
       #
       delete_boot_pd: False
 
+      # Specify whether to use public or private IP for deploy script.
+      # Valid options are:
+      #     private_ips - The salt-master is also hosted with GCE
+      #     public_ips - The salt-master is hosted outside of GCE
+      ssh_interface: public_ips
+
+      # Per instance setting: Used a named fixed IP address to this host.
+      # Valid options are:
+      #     ephemeral - The host will use a GCE ephemeral IP
+      #     None - No external IP will be configured on this host.
+      # Optionally, pass the name of a GCE address to use a fixed IP address.
+      # If the address does not already exist, it will be created.
+      external_ip: "ephemeral"
 
 GCE instances do not allow remote access to the root user by default.
 Instead, another user must be used to run the deploy script using sudo. 
@@ -403,6 +416,30 @@ Specify the network name to view information about the network.
 
     salt-cloud -f show_network gce name=mynet
 
+Create address
+---------------
+Create a new named static IP address in a region. 
+
+.. code-block:: bash
+
+    salt-cloud -f create_address gce name=my-fixed-ip region=us-central1
+
+Delete address
+---------------
+Delete an existing named fixed IP address.
+
+.. code-block:: bash
+
+    salt-cloud -f delete_address gce name=my-fixed-ip region=us-central1
+
+Show address
+---------------
+View details on a named address.
+
+.. code-block:: bash
+
+    salt-cloud -f show_address gce name=my-fixed-ip region=us-central1
+
 Create firewall
 ---------------
 You'll need to create custom firewall rules if you want to allow other traffic
@@ -477,6 +514,12 @@ requires the name.
     salt-cloud -f delete_lb gce name=lb
     salt-cloud -f show_lb gce name=lb
 
+You can also create a load balancer using a named fixed IP addressby specifying the name of the address.
+If the address does not exist yet it will be created.
+
+.. code-block:: bash
+
+    salt-cloud -f create_lb gce name=my-lb region=us-central1 ports=234 members=s1,s2,s3 address=my-lb-ip
 
 Attach and Detach LB
 --------------------

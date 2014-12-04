@@ -106,7 +106,7 @@ def unpack_ext(ext_path):
     shutil.move(ver_path, ver_dst)
 
 
-def main(argv):
+def main(argv):  # pylint: disable=W0613
     thin_path = os.path.join(OPTIONS.saltdir, THIN_ARCHIVE)
     if os.path.isfile(thin_path):
         if OPTIONS.checksum != get_hash(thin_path, OPTIONS.hashfunc):

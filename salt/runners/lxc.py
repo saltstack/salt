@@ -63,18 +63,18 @@ def _do_names(names, fun):
 
     client = salt.client.get_local_client(__opts__['conf_file'])
     cmds = []
-    for host, sub_names in hosts.items():
+    for id_, sub_names in hosts.items():
         for name in sub_names:
             cmds.append(client.cmd_iter(
-                    host,
+                    id_,
                     'lxc.{0}'.format(fun),
                     [name],
                     timeout=60))
     for cmd in cmds:
         data = next(cmd)
-        data = data.get(host, {}).get('ret', None)
+        data = data.get(id_, {}).get('ret', None)
         if data:
-            ret.update({host: data})
+            ret.update({id_: data})
     return ret
 
 
