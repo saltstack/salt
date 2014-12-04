@@ -217,19 +217,26 @@ def create(name, **kwargs):
     return ret
 
 
-def destroy(name):
+def destroy(name, **kwargs):
     '''
+    .. versionadded:: Lithium
+
     Destroy a ZFS File System.
 
     CLI Example:
 
     .. code-block:: bash
     
-        salt '*' zfs.destroy myzpool/mydataset
+        salt '*' zfs.destroy myzpool/mydataset [force=True|False]
     '''
     ret = {}
     zfs = _check_zfs()
+    force = kwargs.get('force', False)
     cmd = '{0} destroy {1}'.format(zfs, name)
+
+    if force:
+        cmd = '{0} destroy -f {1}'.format(zfs, name)
+
     res = __salt__['cmd.run'](cmd)
     if not res:
         ret[name] = 'Destroyed'
