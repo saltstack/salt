@@ -3071,7 +3071,7 @@ class RemoteHighState(object):
         self.grains = grains
         self.serial = salt.payload.Serial(self.opts)
         # self.auth = salt.crypt.SAuth(opts)
-        self.sreq = salt.transport.Channel.factory(self.opts['master_uri'])
+        self.channel = salt.transport.Channel.factory(self.opts['master_uri'])
 
     def compile_master(self):
         '''
@@ -3081,11 +3081,6 @@ class RemoteHighState(object):
                 'opts': self.opts,
                 'cmd': '_master_state'}
         try:
-            return self.sreq.send(load, tries=3, timeout=72000)
-            # return self.auth.crypticle.loads(self.sreq.send(
-            #         'aes',
-            #         self.auth.crypticle.dumps(load),
-            #         3,
-            #         72000))
+            return self.channel.send(load, tries=3, timeout=72000)
         except SaltReqTimeoutError:
             return {}

@@ -77,9 +77,9 @@ def _publish(
             'form': form,
             'id': __opts__['id']}
 
-    sreq = salt.transport.Channel.factory(__opts__)
+    channel = salt.transport.Channel.factory(__opts__)
     try:
-        peer_data = sreq.send(load)
+        peer_data = channel.send(load)
     except SaltReqTimeoutError:
         return '{0!r} publish timed out'.format(fun)
     if not peer_data:
@@ -95,7 +95,7 @@ def _publish(
                     'id': __opts__['id'],
                     'tok': tok,
                     'jid': peer_data['jid']}
-            ret = sreq.send(load)
+            ret = channel.send(load)
             returned_minions = list(ret.keys())
             if returned_minions >= matched_minions:
                 if form == 'clean':
@@ -115,7 +115,7 @@ def _publish(
                 'id': __opts__['id'],
                 'tok': tok,
                 'jid': peer_data['jid']}
-        ret = sreq.send(load)
+        ret = channel.send(load)
         if form == 'clean':
             cret = {}
             for host in ret:
@@ -256,8 +256,8 @@ def runner(fun, arg=None, timeout=5):
             'tmo': timeout,
             'id': __opts__['id']}
 
-    sreq = salt.transport.Channel.factory(__opts__)
+    channel = salt.transport.Channel.factory(__opts__)
     try:
-        return sreq.send(load)
+        return channel.send(load)
     except SaltReqTimeoutError:
         return '{0!r} runner publish timed out'.format(fun)
