@@ -143,6 +143,8 @@ class Master(SMaster):
         pillargitfs = salt.daemons.masterapi.init_git_pillar(self.opts)
         # Clean out the fileserver backend cache
         salt.daemons.masterapi.clean_fsbackend(self.opts)
+        # Clean out pub auth
+        salt.daemons.masterapi.clean_pub_auth(self.opts)
 
         old_present = set()
         while True:
