@@ -33,7 +33,6 @@ import salt.payload
 import salt.utils.verify
 import salt.version
 import salt.minion
-import salt.transport
 from salt.exceptions import (
     AuthenticationError, SaltClientError, SaltReqTimeoutError
 )
@@ -350,28 +349,30 @@ class Auth(object):
         '''
         return self.get_keys().private_encrypt(clear_tok, 5)
 
-    def minion_sign_in_load(self):
+    def minion_sign_in_payload(self):
         '''
-        Generates the load used to authenticate with the master
-        server. This load consists of the passed in id_ and the ssh
+        Generates the payload used to authenticate with the master
+        server. This payload consists of the passed in id_ and the ssh
         public key to encrypt the AES key sent back form the master.
 
-        :return: Load dictionary
+        :return: Payload dictionary
         :rtype: dict
         '''
-        load = {}
-        load['cmd'] = '_auth'
-        load['id'] = self.opts['id']
+        payload = {}
+        payload['enc'] = 'clear'
+        payload['load'] = {}
+        payload['load']['cmd'] = '_auth'
+        payload['load']['id'] = self.opts['id']
         try:
             pub = RSA.load_pub_key(
                 os.path.join(self.opts['pki_dir'], self.mpub)
             )
-            load['token'] = pub.public_encrypt(self.token, RSA.pkcs1_oaep_padding)
+            payload['load']['token'] = pub.public_encrypt(self.token, RSA.pkcs1_oaep_padding)
         except Exception:
             pass
         with salt.utils.fopen(self.pub_path, 'r') as fp_:
-            load['pub'] = fp_.read()
-        return load
+            payload['load']['pub'] = fp_.read()
+        return payload
 
     def decrypt_aes(self, payload, master_pub=True):
         '''
@@ -644,11 +645,13 @@ class Auth(object):
 
         m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
 
-        channel = salt.transport.Channel.factory(self.opts, crypt='clear')
+        sreq = salt.payload.SREQ(
+            self.opts['master_uri'],
+        )
 
         try:
-            payload = channel.send(
-                self.minion_sign_in_load(),
+            payload = sreq.send_auto(
+                self.minion_sign_in_payload(),
                 tries=tries,
                 timeout=timeout
             )
