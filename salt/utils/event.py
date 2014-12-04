@@ -699,10 +699,10 @@ class ReactWrap(object):
         if ReactWrap.client_cache is None:
             ReactWrap.client_cache = salt.utils.cache.CacheDict(opts['reactor_refresh_interval'])
 
-        self.pool = salt.utils.process. ThreadPool(
-                        self.opts['reactor_worker_threads'],  # number of workers for runner/wheel
-                        queue_size=self.opts['reactor_worker_hwm']  # queue size for those workers
-                    )
+        self.pool = salt.utils.process.ThreadPool(
+            self.opts['reactor_worker_threads'],  # number of workers for runner/wheel
+            queue_size=self.opts['reactor_worker_hwm']  # queue size for those workers
+        )
 
     def run(self, low):
         '''
