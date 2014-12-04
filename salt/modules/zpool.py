@@ -80,6 +80,8 @@ def iostat(name=''):
 
 def list_():
     '''
+    .. versionadded:: Lithium
+
     Return a list of all pools in the system with health status and space usage
 
     CLI Example:
@@ -182,6 +184,8 @@ def scrub(pool_name=None):
 
 def create(pool_name, *vdevs, **kwargs):
     '''
+    .. versionadded:: Lithium
+
     Create a simple zpool, a mirrored zpool, a zpool having nested VDEVs, a hybrid zpool with cache, spare and log drives or a zpool with RAIDZ-1, RAIDZ-2 or RAIDZ-3
 
     CLI Example:
