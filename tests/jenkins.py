@@ -766,9 +766,8 @@ def run(opts):
             print(stderr)
         sys.stderr.flush()
 
-        # Download packages only if the script ran and was successful
-        if 'Build complete' in stdout:
-            download_packages(opts)
+        # Grab packages and log file (or just log file if build failed)
+        download_packages(opts)
 
     if opts.download_remote_reports:
         # Download unittest reports
