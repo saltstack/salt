@@ -505,7 +505,7 @@ def single(fun, name, test=None, **kwargs):
     __pillar__.update(kwargs.get('pillar', {}))
 
     # Create the State environment
-    st_ = salt.state.State(__opts__, pillar)
+    st_ = salt.state.SSHState(__opts__, __pillar__)
 
     # Verify the low chunk
     err = st_.verify_data(kwargs)
