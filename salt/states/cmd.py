@@ -695,6 +695,7 @@ def run(name,
 
     cmd_kwargs = {'cwd': cwd,
                   'runas': user,
+                  'creates': creates,
                   'use_vt': use_vt,
                   'shell': shell or __grains__['shell'],
                   'env': env,

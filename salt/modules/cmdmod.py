@@ -155,6 +155,7 @@ def _parse_env(env):
 
 def _run(cmd,
          cwd=None,
+         creates=None,
          stdin=None,
          stdout=subprocess.PIPE,
          stderr=subprocess.PIPE,
@@ -189,6 +190,9 @@ def _run(cmd,
             'Attempt to run a shell command with what may be an invalid shell! '
             'Check to ensure that the shell <{0}> is valid for this user.'
             .format(shell))
+
+    if creates:
+        __salt__['file.touch'](creates)
 
     # Set the default working directory to the home directory of the user
     # salt-minion is running as. Defaults to home directory of user under which
@@ -804,6 +808,7 @@ def run_stderr(cmd,
 
 def run_all(cmd,
             cwd=None,
+            creates=None,
             stdin=None,
             runas=None,
             shell=DEFAULT_SHELL,
@@ -852,6 +857,7 @@ def run_all(cmd,
     ret = _run(cmd,
                runas=runas,
                cwd=cwd,
+               creates=creates,
                stdin=stdin,
                shell=shell,
                python_shell=python_shell,
@@ -1232,6 +1238,7 @@ def exec_code(lang, code, cwd=None):
     codefile = salt.utils.mkstemp()
     with salt.utils.fopen(codefile, 'w+t') as fp_:
         fp_.write(code)
+
     cmd = [lang, codefile]
     ret = run(cmd, cwd=cwd, python_shell=False)
     os.remove(codefile)
