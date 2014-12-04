@@ -147,15 +147,16 @@ def destroy(pool_name):
         salt '*' zpool.destroy myzpool
     '''
     ret = {}
-    if exists(pool_name):
+    if not exists(pool_name):
+        ret['Error'] = 'Storage pool {0} does not exist'.format(pool_name)
+        return ret
+    else:
         zpool = _check_zpool()
         cmd = '{0} destroy {1}'.format(zpool, pool_name)
         __salt__['cmd.run'](cmd)
         if not exists(pool_name):
             ret[pool_name] = "Deleted"
-            return ret
-    else:
-        ret['Error'] = 'Storage pool {0} does not exist'.format(pool_name)
+    return ret
 
 
 def scrub(pool_name=None):
