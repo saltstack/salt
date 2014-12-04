@@ -168,7 +168,7 @@ def create(name, **kwargs):
 
     .. note::
 
-        ZFS properties can be specified at the time of creation of the pool by
+        ZFS properties can be specified at the time of creation of the filesystem by
         passing an additional argument called "properties" and specifying the properties
         with their respective values in the form of a python dictionary::
 
