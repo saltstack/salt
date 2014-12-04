@@ -140,7 +140,7 @@ if _check_zfs():
 
 def exists(name):
     '''
-    .. versionadded: Lithium
+    .. versionadded:: Lithium
 
     Check if a ZFS filesystem or volume or snapshot exists.
 
@@ -160,7 +160,7 @@ def exists(name):
 
 def create(name, **kwargs):
     '''
-    .. versionadded: Lithium
+    .. versionadded:: Lithium
 
     Create a ZFS file system
 
