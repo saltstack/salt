@@ -66,7 +66,7 @@ from raet.lane.yarding import RemoteYard
 # Module globals for default shared LaneStack for a process.
 rx_msgs = {}  # module global dict of deques one for each receipient of msgs
 lane_stack = None  # module global that holds raet LaneStack
-remote_yard = None  # module global that holds raet
+remote_yard = None  # module global that holds raet remote Yard
 master_estate_name = None  # module global of motivating master estate name
 master_yard_name = None  # module global of motivating master yard name
 
@@ -84,12 +84,11 @@ def prep(opts, ryn='manor'):
     if not lane_stack:
         _setup(opts=opts, ryn=ryn)
 
-
 def _setup(opts, ryn='manor'):
     '''
     Setup the LaneStack lane_stack and RemoteYard lane_remote_yard global
     '''
-    global lane_stack, lane_remote_yard  # pylint: disable=W0602
+    global lane_stack, remote_yard  # pylint: disable=W0602
 
     role = opts.get('id')
     if not role:
@@ -119,14 +118,15 @@ def _setup(opts, ryn='manor'):
                       sockdirpath=opts['sock_dir'])
 
     lane_stack.Pk = raeting.packKinds.pack
+    log.debug("Created new LaneStack and local Yard named {0} at {1}\n".format(
+                    lane_stack.name, lane_stack.ha))
     remote_yard = RemoteYard(stack=lane_stack,
                              name=ryn,
                              lanename=lanename,
                              dirpath=opts['sock_dir'])
     lane_stack.addRemote(remote_yard)
-    log.debug("Created new LaneStack and local Yard named {0} at {1}\n".format(
-                lane_stack.name, lane_stack.ha))
-
+    log.debug("Added to LaneStack {0} remote Yard named {1} at {2}\n".format(
+                    lane_stack.name, remote_yard.name remote_yard.ha))
 
 def transmit(msg):
     '''
@@ -134,17 +134,15 @@ def transmit(msg):
     '''
     lane_stack.transmit(msg, remote_yard.uid)
 
-
 def service():
     '''
     Service the lane_stack and move any received messages into their associated
-    deques in lane_rx_msgs keyed by the destination share in the msg route dict
+    deques in rx_msgs keyed by the destination share in the msg route dict
     '''
     lane_stack.serviceAll()
     while lane_stack.rxMsgs:
         msg, sender = lane_stack.rxMsgs.popleft()
         rx_msgs[msg['route']['dst'][2]] = msg
-
 
 def receive(share):
     '''
@@ -156,7 +154,6 @@ def receive(share):
         if rx_msgs[share]:
             return rx_msgs[share].popleft()
     return None
-
 
 def wait(share, timeout=0.0, delay=0.01):
     '''
