@@ -60,6 +60,13 @@ try:
 except ImportError:
     pass
 
+HAS_RAET = False
+try:
+    import salt.client.raet
+    HAS_RAET = True
+except ImportError:
+    pass
+
 log = logging.getLogger(__name__)
 
 
@@ -76,10 +83,8 @@ def get_local_client(
     if mopts:
         opts = mopts
     else:
-        import salt.config
         opts = salt.config.client_config(c_path)
     if opts['transport'] == 'raet':
-        import salt.client.raet
         return salt.client.raet.LocalClient(mopts=opts)
     elif opts['transport'] == 'zeromq':
         return LocalClient(mopts=opts, skip_perm_errors=skip_perm_errors)
