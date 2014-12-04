@@ -47,8 +47,8 @@ def _mine_send(load, opts):
 def _mine_get(load, opts):
     if opts.get('transport', '') == 'zeromq':
         load['tok'] = _auth().gen_token('salt')
-    sreq = salt.transport.Channel.factory(opts)
-    ret = sreq.send(load)
+    channel = salt.transport.Channel.factory(opts)
+    ret = channel.send(load)
     return ret
 
 

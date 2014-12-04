@@ -669,14 +669,14 @@ def push(path, keep_symlinks=False):
             'id': __opts__['id'],
             'path': path.lstrip(os.sep),
             'tok': auth.gen_token('salt')}
-    sreq = salt.transport.Channel.factory(__opts__)
+    channel = salt.transport.Channel.factory(__opts__)
     with salt.utils.fopen(path, 'rb') as fp_:
         while True:
             load['loc'] = fp_.tell()
             load['data'] = fp_.read(__opts__['file_buffer_size'])
             if not load['data']:
                 return True
-            ret = sreq.send(load)
+            ret = channel.send(load)
             if not ret:
                 log.error('cp.push Failed transfer failed. Ensure master has '
                 '\'file_recv\' set to \'True\' and that the file is not '

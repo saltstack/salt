@@ -1549,9 +1549,9 @@ class Minion(MinionBase):
         '''
         Send mine data to the master
         '''
-        sreq = salt.transport.Channel.factory(self.opts)
+        channel = salt.transport.Channel.factory(self.opts)
         load = salt.utils.event.SaltEvent.unpack(package)[1]
-        ret = sreq.send(load)
+        ret = channel.send(load)
         return ret
 
     def handle_event(self, package):

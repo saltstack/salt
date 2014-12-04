@@ -879,9 +879,9 @@ class StateFire(object):
                     'cmd': '_minion_event',
                     'tok': self.auth.gen_token('salt')})
 
-        sreq = salt.transport.Channel.factory(self.opts)
+        channel = salt.transport.Channel.factory(self.opts)
         try:
-            sreq.send(load)
+            channel.send(load)
         except Exception:
             pass
         return True
@@ -909,9 +909,9 @@ class StateFire(object):
                     {'tag': tag,
                      'data': running[stag]}
                     )
-        sreq = salt.transport.Channel.factory(self.opts)
+        channel = salt.transport.Channel.factory(self.opts)
         try:
-            sreq.send(load)
+            channel.send(load)
         except Exception:
             pass
         return True

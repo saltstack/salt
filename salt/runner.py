@@ -200,10 +200,10 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         '''
         load = kwargs
         load['cmd'] = 'runner'
-        sreq = salt.transport.Channel.factory(self.opts,
+        channel = salt.transport.Channel.factory(self.opts,
                                               crypt='clear',
                                               usage='master_call')
-        ret = sreq.send(load)
+        ret = channel.send(load)
         if isinstance(ret, collections.Mapping):
             if 'error' in ret:
                 raise_error(**ret['error'])
