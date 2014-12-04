@@ -204,7 +204,7 @@ def safe_accept(target, expr_form='glob'):
         salt-run manage.safe_accept minion1,minion2 expr_form=list
     '''
     salt_key = salt.key.Key(__opts__)
-    ssh_client = salt.client.SSHClient()
+    ssh_client = salt.client.ssh.client.SSHClient()
 
     ret = ssh_client.cmd(target, 'key.finger', expr_form=expr_form)
 
