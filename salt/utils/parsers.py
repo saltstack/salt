@@ -1001,6 +1001,12 @@ class OutputOptionsMixIn(object):
             action='store_true',
             help='Force colored output'
         )
+        group.add_option(
+            '--state-output', '--state_output',
+            default='full',
+            help=('Override the configured state_output value for minion output'
+                  '. Default: full')
+        )
 
         for option in self.output_options_group.option_list:
             def process(opt):
@@ -1419,12 +1425,6 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             dest='async',
             action='store_true',
             help=('Run the salt command but don\'t wait for a reply')
-        )
-        self.add_option(
-            '--state-output', '--state_output',
-            default='full',
-            help=('Override the configured state_output value for minion output'
-                  '. Default: full')
         )
         self.add_option(
             '--subset',
