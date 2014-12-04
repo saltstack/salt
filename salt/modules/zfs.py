@@ -168,7 +168,7 @@ def create(name, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' zfs.create myzpool/mydataset
+        salt '*' zfs.create myzpool/mydataset [create_parent=True|False]
 
     .. note::
 
@@ -188,7 +188,11 @@ def create(name, **kwargs):
 
     zfs = _check_zfs()
     properties = kwargs.get('properties', None)
+    create_parent = kwargs.get('create_parent', False)
     cmd = '{0} create'.format(zfs)
+
+    if create_parent:
+        cmd = '{0} -p'.format(cmd)
 
     # if zpool properties specified, then
     # create "-o property=value" pairs
