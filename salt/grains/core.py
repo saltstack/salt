@@ -1585,7 +1585,7 @@ def _smartos_zone_data():
         grains['pkgsrcpath'] = 'Unknown'
 
     grains['zonename'] = __salt__['cmd.run']('zonename')
-    grains['zoneid'] = __salt__['cmd.run']('zoneadm list -p | awk -F: \'{ print $1 }\'')
+    grains['zoneid'] = __salt__['cmd.run']('zoneadm list -p').split()[1]
     grains['hypervisor_uuid'] = __salt__['cmd.run']('mdata-get sdc:server_uuid')
     grains['datacenter'] = __salt__['cmd.run']('mdata-get sdc:datacenter_name')
     if "FAILURE" in grains['datacenter'] or "No metadata" in grains['datacenter']:
