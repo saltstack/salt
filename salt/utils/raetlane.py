@@ -84,6 +84,7 @@ def prep(opts, ryn='manor'):
     if not lane_stack:
         _setup(opts=opts, ryn=ryn)
 
+
 def _setup(opts, ryn='manor'):
     '''
     Setup the LaneStack lane_stack and RemoteYard lane_remote_yard global
@@ -128,11 +129,13 @@ def _setup(opts, ryn='manor'):
     log.debug("Added to LaneStack {0} remote Yard named {1} at {2}\n"
               "".format(lane_stack.name, remote_yard.name, remote_yard.ha))
 
+
 def transmit(msg):
     '''
     Sends msg to remote_yard
     '''
     lane_stack.transmit(msg, remote_yard.uid)
+
 
 def service():
     '''
@@ -144,6 +147,7 @@ def service():
         msg, sender = lane_stack.rxMsgs.popleft()
         rx_msgs[msg['route']['dst'][2]] = msg
 
+
 def receive(share):
     '''
     Returns first message from deque at key given by share in rx_msgs if any
@@ -154,6 +158,7 @@ def receive(share):
         if rx_msgs[share]:
             return rx_msgs[share].popleft()
     return None
+
 
 def wait(share, timeout=0.0, delay=0.01):
     '''
