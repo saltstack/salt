@@ -154,3 +154,56 @@ def exists(name):
     if "dataset does not exist" in res:
         return False
     return True
+
+
+def create(name, **kwargs):
+    '''
+    Create a ZFS file system
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zfs.create myzpool/mydataset
+
+    .. note::
+
+        ZFS properties can be specified at the time of creation of the pool by
+        passing an additional argument called "properties" and specifying the properties
+        with their respective values in the form of a python dictionary::
+
+            properties="{'property1': 'value1', 'property2': 'value2'}"
+
+        Example:
+
+        .. code-block:: bash
+
+            salt '*' zfs.create myzpool/mydataset properties="{'mountpoint': '/export/zfs', 'sharenfs': 'on'}"
+    '''
+    ret = {}
+
+    zfs = _check_zfs()
+    properties = kwargs.get('properties', None)
+    cmd = '{0} create'.format(zfs)
+
+    # if zpool properties specified, then
+    # create "-o property=value" pairs
+    if properties:
+        optlist = []
+        for prop in properties:
+            optlist.append('-o {0}={1}'.format(prop, properties[prop]))
+        opts = ' '.join(optlist)
+        cmd = '{0} {1}'.format(cmd, opts)
+    cmd = '{0} {1}'.format(cmd, name)
+
+    # Create filesystem
+    res = __salt__['cmd.run'](cmd)
+
+    # Check and see if the dataset is available
+    if not res:
+        ret[name] = 'created'
+        return ret
+    else:
+        ret['Error'] = res
+
+    return ret
