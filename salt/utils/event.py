@@ -701,7 +701,7 @@ class ReactWrap(object):
 
         self.pool = salt.utils.process.ThreadPool(
             self.opts['reactor_worker_threads'],  # number of workers for runner/wheel
-            # queue_size=self.opts['reactor_worker_hwm']  # queue size for those workers
+            queue_size=self.opts['reactor_worker_hwm']  # queue size for those workers
         )
 
     def run(self, low):
