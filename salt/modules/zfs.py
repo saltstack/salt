@@ -140,7 +140,7 @@ if _check_zfs():
 
 def exists(name):
     '''
-    Check if a ZFS pool/dataset exists.
+    Check if a ZFS filesystem or volume or snapshot exists.
 
     CLI Example:
 
