@@ -109,7 +109,7 @@ def mounted(name,
         name = name.rstrip('/')
 
     # Get the active data
-    active = __salt__['mount.active']()
+    active = __salt__['mount.active'](extended=True)
     real_name = os.path.realpath(name)
     if device.startswith('/'):
         real_device = os.path.realpath(device)
@@ -186,7 +186,7 @@ def mounted(name,
                         ret['changes']['umount'] += " (" + real_device + ")"
                     ret['changes']['umount'] += ", current: " + ', '.join(device_list)
                     out = __salt__['mount.umount'](real_name, user=user)
-                    active = __salt__['mount.active']()
+                    active = __salt__['mount.active'](extended=True)
                     if real_name in active:
                         ret['comment'] = "Unable to unmount"
                         ret['result'] = None
@@ -214,7 +214,7 @@ def mounted(name,
                     return ret
 
             out = __salt__['mount.mount'](name, device, mkmnt, fstype, opts, user=user)
-            active = __salt__['mount.active']()
+            active = __salt__['mount.active'](extended=True)
             if isinstance(out, string_types):
                 # Failed to (re)mount, the state has failed!
                 ret['comment'] = out
@@ -329,19 +329,28 @@ def swap(name, persist=True, config='/etc/fstab'):
            'comment': ''}
     on_ = __salt__['mount.swaps']()
 
-    if name in on_:
+    if __salt__['file.is_link'](name):
+        real_swap_device = __salt__['file.readlink'](name)
+        if not real_swap_device.startswith('/'):
+            real_swap_device = '/dev/{0}'.format(os.path.basename(real_swap_device))
+        else:
+            real_swap_device = real_swap_device
+    else:
+        real_swap_device = name
+
+    if real_swap_device in on_:
         ret['comment'] = 'Swap {0} already active'.format(name)
     elif __opts__['test']:
         ret['result'] = None
         ret['comment'] = 'Swap {0} is set to be activated'.format(name)
     else:
-        __salt__['mount.swapon'](name)
+        __salt__['mount.swapon'](real_swap_device)
 
         on_ = __salt__['mount.swaps']()
 
-        if name in on_:
+        if real_swap_device in on_:
             ret['comment'] = 'Swap {0} activated'.format(name)
-            ret['changes'] = on_[name]
+            ret['changes'] = on_[real_swap_device]
         else:
             ret['comment'] = 'Swap {0} failed to activate'.format(name)
             ret['result'] = False
@@ -421,7 +430,7 @@ def unmounted(name,
            'comment': ''}
 
     # Get the active data
-    active = __salt__['mount.active']()
+    active = __salt__['mount.active'](extended=True)
     if name not in active:
         # Nothing to unmount
         ret['comment'] = 'Target was already unmounted'

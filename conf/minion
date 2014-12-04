@@ -366,6 +366,14 @@
 # Top file to execute if startup_states is 'top':
 #top_file: ''
 
+# Automatically aggregate all states that have support for mod_aggregate by
+# setting to True. Or pass a list of state module names to automatically
+# aggregate just those types.
+#
+# state_aggregate:
+#   - pkg
+#
+#state_aggregate: False
 
 #####     File Directory Settings    #####
 ##########################################

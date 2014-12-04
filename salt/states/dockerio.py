@@ -254,6 +254,10 @@ def pulled(name,
     insecure_registry
         Set to ``True`` to allow connections to non-HTTPS registries. Default ``False``.
     '''
+
+    if tag:
+        name = '{0}:{1}'.format(name, tag)
+
     inspect_image = __salt__['docker.inspect_image']
     image_infos = inspect_image('{0}:{1}'.format(name, tag))
     if image_infos['status'] and not force:

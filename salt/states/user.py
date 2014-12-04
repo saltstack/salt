@@ -524,7 +524,7 @@ def present(name,
                         ret['result'] = False
                     ret['changes']['mindays'] = mindays
                 if maxdays:
-                    __salt__['shadow.set_maxdays'](name, mindays)
+                    __salt__['shadow.set_maxdays'](name, maxdays)
                     spost = __salt__['shadow.info'](name)
                     if spost['max'] != maxdays:
                         ret['comment'] = 'User {0} created but failed to set' \
@@ -547,7 +547,7 @@ def present(name,
                     if spost['warn'] != warndays:
                         ret['comment'] = 'User {0} created but failed to set' \
                                          ' warn days to' \
-                                         ' {1}'.format(name, mindays)
+                                         ' {1}'.format(name, warndays)
                         ret['result'] = False
                     ret['changes']['warndays'] = warndays
                 if expire:

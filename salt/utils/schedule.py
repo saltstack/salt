@@ -414,6 +414,8 @@ class Schedule(object):
                 log.warning('schedule: The metadata parameter must be '
                             'specified as a dictionary.  Ignoring.')
 
+        salt.utils.appendproctitle(ret['jid'])
+
         proc_fn = os.path.join(
             salt.minion.get_proc_dir(self.opts['cachedir']),
             ret['jid']
