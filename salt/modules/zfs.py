@@ -162,7 +162,7 @@ def create(name, **kwargs):
     '''
     .. versionadded:: Lithium
 
-    Create a ZFS file system
+    Create a ZFS File System.
 
     CLI Example:
 
@@ -214,4 +214,30 @@ def create(name, **kwargs):
     else:
         ret['Error'] = res
 
+    return ret
+
+
+def destroy(name):
+    '''
+    Destroy a ZFS File System.
+
+    CLI Example:
+
+    .. code-block:: bash
+    
+        salt '*' zfs.destroy myzpool/mydataset
+    '''
+    ret = {}
+    zfs = _check_zfs()
+    cmd = '{0} destroy {1}'.format(zfs, name)
+    res = __salt__['cmd.run'](cmd)
+    if not res:
+        ret[name] = 'Destroyed'
+        return ret
+    elif "dataset does not exist" in res:
+        ret['Error'] = 'Cannot destroy {0}: dataset does not exist'.format(name)
+    elif "operation does not apply to pools" in res:   
+        ret['Error'] = 'Cannot destroy {0}: use zpool.destroy to destroy the pool'.format(name)
+    else:
+        ret['Error'] = res
     return ret
