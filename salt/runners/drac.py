@@ -84,19 +84,20 @@ def pxe(hostname, timeout=20):
 
         salt-run drac.pxe example.com
     '''
-    _cmds = {1: 'racadm config -g cfgServerInfo -o cfgServerFirstBootDevice pxe',
-             2: 'racadm config -g cfgServerInfo -o cfgServerBootOnce 1',
-             3: 'racadm serveraction powercycle'}
-
+    _cmds = [
+        'racadm config -g cfgServerInfo -o cfgServerFirstBootDevice pxe',
+        'racadm config -g cfgServerInfo -o cfgServerBootOnce 1',
+        'racadm serveraction powercycle',
+    ]
     _keywords = ['successful', 'successfully']
 
     client = __connect(hostname, timeout)
 
     if isinstance(client, paramiko.SSHClient):
-        for cmd in sorted(_cmds.keys()):
-            log.info('Executing command {0}'.format(cmd))
+        for i, cmd in enumerate(_cmds, 1):
+            log.info('Executing command {0}'.format(i))
 
-            (stdin, stdout, stderr) = client.exec_command(_cmds[cmd])
+            (stdin, stdout, stderr) = client.exec_command(cmd)
 
         if bool([True for i in _keywords if i in stdout.readline().rstrip()]):
             log.info('Executing command: {0}'.format(cmd))
