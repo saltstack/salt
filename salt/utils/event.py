@@ -289,8 +289,9 @@ class SaltEvent(object):
                 continue
 
             try:
-                ret = self.get_event_block()  # Please do not use non-blocking mode here.
-                                              # Reliability is more important than pure speed on the event bus.
+                # Please do not use non-blocking mode here.
+                # Reliability is more important than pure speed on the event bus.
+                ret = self.get_event_block()
             except zmq.ZMQError as ex:
                 if ex.errno == errno.EAGAIN or ex.errno == errno.EINTR:
                     continue
