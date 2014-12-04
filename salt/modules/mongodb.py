@@ -290,7 +290,7 @@ def insert(objects, collection, user=None, password=None,
         mdb = pymongo.database.Database(conn, database)
         col = getattr(mdb, collection)
         ids = col.insert(objects)
-        return [str(id_) for id_ in ids]
+        return ids
     except pymongo.errors.PyMongoError as err:
         log.error("Inserting objects %r failed with error %s", objects, err.message)
         return err.message
