@@ -80,6 +80,8 @@ def iostat(name=''):
 
 def list_():
     '''
+    .. versionadded:: Lithium
+
     Return a list of all pools in the system with health status and space usage
 
     CLI Example:
@@ -145,15 +147,16 @@ def destroy(pool_name):
         salt '*' zpool.destroy myzpool
     '''
     ret = {}
-    if exists(pool_name):
+    if not exists(pool_name):
+        ret['Error'] = 'Storage pool {0} does not exist'.format(pool_name)
+        return ret
+    else:
         zpool = _check_zpool()
         cmd = '{0} destroy {1}'.format(zpool, pool_name)
         __salt__['cmd.run'](cmd)
         if not exists(pool_name):
             ret[pool_name] = "Deleted"
-            return ret
-    else:
-        ret['Error'] = 'Storage pool {0} does not exist'.format(pool_name)
+    return ret
 
 
 def scrub(pool_name=None):
@@ -182,6 +185,8 @@ def scrub(pool_name=None):
 
 def create(pool_name, *vdevs, **kwargs):
     '''
+    .. versionadded:: Lithium
+
     Create a simple zpool, a mirrored zpool, a zpool having nested VDEVs, a hybrid zpool with cache, spare and log drives or a zpool with RAIDZ-1, RAIDZ-2 or RAIDZ-3
 
     CLI Example:
@@ -399,6 +404,8 @@ def create_file_vdev(size, *vdevs):
 
 def export(*pools, **kwargs):
     '''
+    .. versionadded:: Lithium
+
     Export storage pools
 
     CLI Example:
@@ -440,6 +447,8 @@ def export(*pools, **kwargs):
 
 def import_(pool_name='', new_name='', **kwargs):
     '''
+    .. versionadded:: Lithium
+
     Import storage pools or list pools available for import
 
     CLI Example:
@@ -490,6 +499,8 @@ def import_(pool_name='', new_name='', **kwargs):
 
 def online(pool_name, *vdevs, **kwargs):
     '''
+    .. versionadded:: Lithium
+
     Ensure that the specified devices are online
 
     CLI Example:
@@ -541,6 +552,8 @@ def online(pool_name, *vdevs, **kwargs):
 
 def offline(pool_name, *vdevs, **kwargs):
     '''
+    .. versionadded:: Lithium
+
     Ensure that the specified devices are offline
 
     .. warning::
