@@ -295,6 +295,27 @@ def insert(objects, collection, user=None, password=None,
         log.error("Inserting objects %r failed with error %s", objects, err.message)
         return err.message
 
+def find(collection, query=None, user=None, password=None,
+         host=None, port=None, database='admin'):
+    conn = _connect(user, password, host, port)
+    if not conn:
+        return 'Failed to connect to mongo database'
+
+    try:
+        query = _to_dict(query)
+    except Exception, err:
+        return err.message
+
+    try:
+        log.info("Searching for %r in %s", query, collection)
+        mdb = pymongo.database.Database(conn, database)
+        col = getattr(mdb, collection)
+        ret = col.find(query)
+        return list(ret)
+    except pymongo.errors.PyMongoError as err:
+        log.error("Removing objects failed with error: %s", err.message)
+        return err.message
+
 
 def remove(collection, query=None, user=None, password=None,
            host=None, port=None, database='admin', w=1):
