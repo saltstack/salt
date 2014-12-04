@@ -4310,7 +4310,7 @@ def move(src, dst):
 
 def diskusage(path):
     '''
-    Recursivly calculate diskusage of path and return it
+    Recursively calculate disk usage of path and return it
     in bytes
 
     CLI Example:
