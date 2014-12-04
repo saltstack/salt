@@ -154,7 +154,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         # - Provide JID if the runner wants to access it directly
         done = {}
         if opts.get('async', False):
-            progress = salt.utils.event.get_runner_event(opts, data['jid']).fire_progress
+            progress = salt.utils.event.get_runner_event(opts, data['jid'], listen=False).fire_progress
         else:
             progress = _progress_print
         for func_name, func in instance.functions.items():
@@ -170,7 +170,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         ret_load = {'return': ret, 'fun': data['fun'], 'fun_args': data['args']}
         # Don't use the invoking processes' event socket because it could be closed down by the time we arrive here.
         # Create another, for safety's sake.
-        master_event = salt.utils.event.get_master_event(opts, opts['sock_dir'])
+        master_event = salt.utils.event.get_master_event(opts, opts['sock_dir'], listen=False)
         master_event.fire_event(ret_load, tagify([data['jid'], 'return'], 'runner'))
         master_event.destroy()
         try:

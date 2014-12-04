@@ -255,8 +255,8 @@ class MasterEvent(RAETEvent):
     '''
     Create a master event management object
     '''
-    def __init__(self, opts, sock_dir):
-        super(MasterEvent, self).__init__('master', opts=opts, sock_dir=sock_dir)
+    def __init__(self, opts, sock_dir, listen=True):
+        super(MasterEvent, self).__init__('master', opts=opts, sock_dir=sock_dir, listen=listen)
 
 
 class RunnerEvent(MasterEvent):
@@ -265,8 +265,8 @@ class RunnerEvent(MasterEvent):
     It extends MasterEvent to include information about how to
     display events to the user as a runner progresses.
     '''
-    def __init__(self, opts, jid):
-        super(RunnerEvent, self).__init__(opts=opts, sock_dir=opts['sock_dir'])
+    def __init__(self, opts, jid, listen=True):
+        super(RunnerEvent, self).__init__(opts=opts, sock_dir=opts['sock_dir'], listen=listen)
         self.jid = jid
 
     def fire_progress(self, data, outputter='pprint'):
