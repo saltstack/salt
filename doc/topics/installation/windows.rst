@@ -233,20 +233,38 @@ Setting up a Windows build environment
 
         pip install wmi
 
-20. Install esky 
+20. Install requests
+
+    .. code-block:: bash
+
+        pip install requests
+
+21. Install markupsafe
+
+    .. code-block:: bash
+
+        pip install markupsafe
+
+22. Install six
+
+    .. code-block:: bash
+
+        pip install six
+
+23. Install esky
 
     .. code-block:: bash
 
         pip install esky
 
-21. Install Salt
+24. Install Salt
 
     .. code-block:: bash
 
         cd salt
         python setup.py install
 
-22. Build a frozen binary distribution of Salt
+25. Build a frozen binary distribution of Salt
 
     .. code-block:: bash
 
