@@ -481,6 +481,9 @@ def single(fun, name, test=None, **kwargs):
         salt '*' state.single pkg.installed name=vim
 
     '''
+    st_kwargs = __salt__.kwargs
+    __opts__['grains'] = __grains__
+
     # state.fun -> [state, fun]
     comps = fun.split('.')
     if len(comps) < 2:
