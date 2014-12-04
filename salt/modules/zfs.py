@@ -136,3 +136,21 @@ if _check_zfs():
 
         # Update the function alias so that salt finds the functions properly.
         __func_alias__['{0}_'.format(available_cmd)] = available_cmd
+
+
+def exists(name):
+    '''
+    Check if a ZFS pool/dataset exists.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zfs.exists myzpool/mydataset
+    '''
+    zfs = _check_zfs()
+    cmd = '{0} list {1}'.format(zfs, name)
+    res = __salt__['cmd.run'](cmd, ignore_retcode=True)
+    if "dataset does not exist" in res:
+        return False
+    return True
