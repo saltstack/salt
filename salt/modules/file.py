@@ -4323,7 +4323,8 @@ def diskusage(path):
     total_size = 0
     seen = set()
     if os.path.isfile(path):
-        ret = stat.st_size
+        stat_structure = os.stat(path)
+        ret = stat_structure.st_size
         return ret
 
     for dirpath, dirnames, filenames in os.walk(path):
@@ -4331,16 +4332,16 @@ def diskusage(path):
             fp = os.path.join(dirpath, f)
 
             try:
-                stat = os.stat(fp)
+                stat_structure = os.stat(fp)
             except OSError:
                 continue
 
-            if stat.st_ino in seen:
+            if stat_structure.st_ino in seen:
                 continue
 
-            seen.add(stat.st_ino)
+            seen.add(stat_structure.st_ino)
 
-            total_size += stat.st_size
+            total_size += stat_structure.st_size
 
     ret = total_size
     return ret
