@@ -399,7 +399,7 @@ def create_file_vdev(size, *vdevs):
 
 def export(*pools, **kwargs):
     '''
-    .. versionadded: Lithium
+    .. versionadded:: Lithium
 
     Export storage pools
 
@@ -442,7 +442,7 @@ def export(*pools, **kwargs):
 
 def import_(pool_name='', new_name='', **kwargs):
     '''
-    .. versionadded: Lithium
+    .. versionadded:: Lithium
 
     Import storage pools or list pools available for import
 
@@ -494,7 +494,7 @@ def import_(pool_name='', new_name='', **kwargs):
 
 def online(pool_name, *vdevs, **kwargs):
     '''
-    .. versionadded: Lithium
+    .. versionadded:: Lithium
 
     Ensure that the specified devices are online
 
@@ -547,7 +547,7 @@ def online(pool_name, *vdevs, **kwargs):
 
 def offline(pool_name, *vdevs, **kwargs):
     '''
-    .. versionadded: Lithium
+    .. versionadded:: Lithium
 
     Ensure that the specified devices are offline
 
