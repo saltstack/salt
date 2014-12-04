@@ -186,11 +186,11 @@
 # option, then the master will log a warning message.
 #
 # Include a config file from some other path:
-#include: /etc/salt/extra_config
+# include: /etc/salt/extra_config
 #
 # Include config from several files and directories:
-#include:
-#  - /etc/salt/extra_config
+# include:
+#   - /etc/salt/extra_config
 
 
 #####        Security settings       #####
