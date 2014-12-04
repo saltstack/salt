@@ -151,7 +151,7 @@ def exists(name):
     zfs = _check_zfs()
     cmd = '{0} list {1}'.format(zfs, name)
     res = __salt__['cmd.run'](cmd, ignore_retcode=True)
-    if "dataset does not exist" or "invalid dataset name" in res:
+    if "dataset does not exist" in res or "invalid dataset name" in res:
         return False
     return True
 
