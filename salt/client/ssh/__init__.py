@@ -495,7 +495,7 @@ class Single(object):
             port=None,
             passwd=None,
             priv=None,
-            timeout=None,
+            timeout=30,
             sudo=False,
             tty=False,
             mods=None,

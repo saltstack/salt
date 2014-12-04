@@ -64,7 +64,7 @@ HAS_RAET = False
 try:
     import salt.client.raet
     HAS_RAET = True
-except ImportError:
+except (AttributeError, ImportError):
     pass
 
 log = logging.getLogger(__name__)
