@@ -105,7 +105,7 @@ class NetapiClient(object):
         :return: Returns the JID to check for results on
         '''
         kwargs['fun'] = fun
-        return salt.client.ssh.cient.cmd_async(kwargs)
+        return salt.client.ssh.client.cmd_async(kwargs)
 
     def runner(self, fun, timeout=None, **kwargs):
         '''
