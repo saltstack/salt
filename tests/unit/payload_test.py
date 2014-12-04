@@ -102,6 +102,17 @@ class SREQTestCase(TestCase):
     def get_sreq(self):
         return salt.payload.SREQ('tcp://127.0.0.1:{0}'.format(SREQTestCase.port))
 
+    def test_send_auto(self):
+        '''
+        Test creation, send/rect
+        '''
+        sreq = self.get_sreq()
+        # check default of empty load and enc clear
+        assert sreq.send_auto({}) == {'enc': 'clear', 'load': {}}
+
+        # check that the load always gets passed
+        assert sreq.send_auto({'load': 'foo'}) == {'load': 'foo', 'enc': 'clear'}
+
     def test_send(self):
         sreq = self.get_sreq()
         assert sreq.send('clear', 'foo') == {'enc': 'clear', 'load': 'foo'}

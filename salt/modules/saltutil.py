@@ -14,6 +14,7 @@ import shutil
 import signal
 import logging
 import fnmatch
+import time
 import sys
 import copy
 
@@ -613,9 +614,9 @@ def regen_keys():
             os.remove(path)
         except os.error:
             pass
-    # TODO: move this into a channel function? Or auth?
-    # create a channel again, this will force the key regen
-    channel = salt.transport.Channel.factory(__opts__)
+    time.sleep(60)
+    sreq = salt.payload.SREQ(__opts__['master_uri'])
+    auth = salt.crypt.SAuth(__opts__)
 
 
 def revoke_auth():
@@ -630,16 +631,21 @@ def revoke_auth():
 
         salt '*' saltutil.revoke_auth
     '''
-    channel = salt.transport.Channel.factory(__opts__)
-    tok = channel.auth.gen_token('salt')
+    # sreq = salt.payload.SREQ(__opts__['master_uri'])
+    auth = salt.crypt.SAuth(__opts__)
+    tok = auth.gen_token('salt')
     load = {'cmd': 'revoke_auth',
             'id': __opts__['id'],
             'tok': tok}
 
+    sreq = salt.transport.Channel.factory(__opts__)
     try:
-        return channel.send(load)
+        sreq.send(load)
+        # return auth.crypticle.loads(
+        #         sreq.send('aes', auth.crypticle.dumps(load), 1))
     except SaltReqTimeoutError:
         return False
+    return False
 
 
 def _get_ssh_or_api_client(cfgfile, ssh=False):
