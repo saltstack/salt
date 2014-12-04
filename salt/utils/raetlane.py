@@ -118,15 +118,15 @@ def _setup(opts, ryn='manor'):
                       sockdirpath=opts['sock_dir'])
 
     lane_stack.Pk = raeting.packKinds.pack
-    log.debug("Created new LaneStack and local Yard named {0} at {1}\n".format(
-                    lane_stack.name, lane_stack.ha))
+    log.debug("Created new LaneStack and local Yard named {0} at {1}\n"
+              "".format(lane_stack.name, lane_stack.ha))
     remote_yard = RemoteYard(stack=lane_stack,
                              name=ryn,
                              lanename=lanename,
                              dirpath=opts['sock_dir'])
     lane_stack.addRemote(remote_yard)
-    log.debug("Added to LaneStack {0} remote Yard named {1} at {2}\n".format(
-                    lane_stack.name, remote_yard.name remote_yard.ha))
+    log.debug("Added to LaneStack {0} remote Yard named {1} at {2}\n"
+              "".format(lane_stack.name, remote_yard.name, remote_yard.ha))
 
 def transmit(msg):
     '''
