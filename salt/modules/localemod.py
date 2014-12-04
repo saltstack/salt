@@ -145,6 +145,11 @@ def set_locale(locale):
 
 
 def _normalize_locale(locale):
+    # depending on the environment, the provided locale will also contain a charmap
+    # (e.g. 'en_US.UTF-8 UTF-8' instead of only the locale 'en_US.UTF-8')
+    # drop the charmap
+    locale = locale.split()[0]
+
     lang_encoding = locale.split('.')
     lang_split = lang_encoding[0].split('_')
     if len(lang_split) > 1:
@@ -183,7 +188,18 @@ def gen_locale(locale):
 
         salt '*' locale.gen_locale 'en_US.UTF-8'
     '''
-    if __grains__.get('os') == 'Debian':
+    # validate the supplied locale
+    valid = __salt__['file.replace'](
+        '/usr/share/i18n/SUPPORTED',
+        '^{0}$'.format(locale),
+        '^{0}$'.format(locale),
+        search_only=True
+    )
+    if not valid:
+        log.error('The provided locale "{0}" is invalid'.format(locale))
+        return False
+
+    if __grains__.get('os') == 'Debian' or __grains__.get('os_family') == 'Gentoo':
         __salt__['file.replace'](
             '/etc/locale.gen',
             '# {0} '.format(locale),
@@ -191,8 +207,13 @@ def gen_locale(locale):
             append_if_not_found=True
         )
 
-    __salt__['cmd.run'](
-        'locale-gen {0}'.format(locale)
-    )
+    if __grains__.get('os_family') == 'Gentoo':
+        return __salt__['cmd.retcode'](
+            'locale-gen --generate "{0}"'.format(locale)
+        )
+    else:
+        return __salt__['cmd.retcode'](
+            'locale-gen "{0}"'.format(locale)
+        )
 
-    return True
+    return False
