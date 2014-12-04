@@ -303,7 +303,7 @@ class Fileserver(object):
         for fsb in back:
             fstr = '{0}.update'.format(fsb)
             if fstr in self.servers:
-                #log.debug('Updating fileserver cache')
+                log.debug('Updating fileserver cache')
                 self.servers[fstr]()
 
     def envs(self, back=None, sources=False):
