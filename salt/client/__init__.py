@@ -23,7 +23,6 @@ from __future__ import print_function
 from __future__ import absolute_import
 import os
 import time
-import copy
 import logging
 import errno
 from datetime import datetime
@@ -76,6 +75,8 @@ def get_local_client(
     if mopts:
         opts = mopts
     else:
+        # Late import to prevent circular import
+        import salt.config
         opts = salt.config.client_config(c_path)
     if opts['transport'] == 'raet':
         import salt.client.raet
