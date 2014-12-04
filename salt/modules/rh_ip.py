@@ -152,13 +152,6 @@ def _parse_ethtool_opts(opts, iface):
         else:
             _raise_error_iface(iface, 'duplex', valid)
 
-    if 'mtu' in opts:
-        try:
-            int(opts['mtu'])
-            config.update({'mtu': opts['mtu']})
-        except Exception:
-            _raise_error_iface(iface, 'mtu', ['integer'])
-
     if 'speed' in opts:
         valid = ['10', '100', '1000', '10000']
         if str(opts['speed']) in valid:
@@ -630,6 +623,13 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     for opt in ['ipv6addr', 'ipv6gateway']:
         if opt in opts:
             result[opt] = opts[opt]
+
+    if 'mtu' in opts:
+        try:
+            int(opts['mtu'])
+            result['mtu'] = opts['mtu']
+        except Exception:
+            _raise_error_iface(iface, 'mtu', ['integer'])
 
     if 'ipv6_autoconf' in opts:
         result['ipv6_autoconf'] = opts['ipv6_autoconf']
