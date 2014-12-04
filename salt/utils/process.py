@@ -158,11 +158,7 @@ class ThreadPool(object):
     # intentionally not called "apply_async"  since we aren't keeping track of
     # the return at all, if we want to make this API compatible with multiprocessing
     # threadpool we can in the future, and we won't have to worry about name collision
-    def fire_async(self, func, args=None, kwargs=None):
-        if args is None:
-            args = []
-        if kwargs is None:
-            kwargs = {}
+    def fire_async(self, func, args=[], kwargs={}):
         try:
             self._job_queue.put((func, args, kwargs), False)
             return True
