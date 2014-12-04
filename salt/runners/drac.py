@@ -89,7 +89,6 @@ def pxe(hostname, timeout=20):
         'racadm config -g cfgServerInfo -o cfgServerBootOnce 1',
         'racadm serveraction powercycle',
     ]
-    _keywords = ['successful', 'successfully']
 
     client = __connect(hostname, timeout)
 
@@ -99,7 +98,7 @@ def pxe(hostname, timeout=20):
 
             (stdin, stdout, stderr) = client.exec_command(cmd)
 
-        if bool([True for i in _keywords if i in stdout.readline().rstrip()]):
+        if 'successful' in stdout.readline():
             log.info('Executing command: {0}'.format(cmd))
         else:
             log.error('Unable to execute: {0}'.format(cmd))
@@ -120,12 +119,10 @@ def reboot(hostname, timeout=20):
     '''
     client = __connect(hostname, timeout)
 
-    _keywords = ['successful', 'successfully']
-
     if isinstance(client, paramiko.SSHClient):
         (stdin, stdout, stderr) = client.exec_command('racadm serveraction powercycle')
 
-        if bool([True for i in _keywords if i in stdout.readline().rstrip()]):
+        if 'successful' in stdout.readline():
             log.info('powercycle successful')
         else:
             log.error('powercycle racadm command failed')
@@ -149,12 +146,10 @@ def poweroff(hostname, timeout=20):
     '''
     client = __connect(hostname, timeout)
 
-    _keywords = ['successful', 'successfully']
-
     if isinstance(client, paramiko.SSHClient):
         (stdin, stdout, stderr) = client.exec_command('racadm serveraction powerdown')
 
-        if bool([True for i in _keywords if i in stdout.readline().rstrip()]):
+        if 'successful' in stdout.readline():
             log.info('powerdown successful')
         else:
             log.error('powerdown racadm command failed')
@@ -178,12 +173,10 @@ def poweron(hostname, timeout=20):
     '''
     client = __connect(hostname, timeout)
 
-    _keywords = ['successful', 'successfully']
-
     if isinstance(client, paramiko.SSHClient):
         (stdin, stdout, stderr) = client.exec_command('racadm serveraction powerup')
 
-        if bool([True for i in _keywords if i in stdout.readline().rstrip()]):
+        if 'successful' in stdout.readline():
             log.info('powerup successful')
         else:
             log.error('powerup racadm command failed')
