@@ -5,7 +5,7 @@ and what hosts are down
 '''
 
 # Import python libs
-, print_function
+from __future__ print_function
 import os
 import operator
 import re
