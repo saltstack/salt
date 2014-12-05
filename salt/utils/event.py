@@ -662,7 +662,9 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         if high:
             errors = self.verify_high(high)
             if errors:
-                return errors
+                log.error(('Unable to render reactions for event {0} due to '
+                           'errors ({1}) in one or more of the sls files ({2})').format(tag, errors, reactors))
+                return []  # We'll return nothing since there was an error
             chunks = self.order_chunks(self.compile_high_data(high))
         return chunks
 
