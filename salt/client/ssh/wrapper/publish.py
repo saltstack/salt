@@ -24,7 +24,6 @@ def _publish(tgt,
              returner='',
              timeout=None,
              form='clean',
-             wait=False,
              roster=None):
     '''
     Publish a command "from the minion out to other minions". In reality, the
@@ -32,8 +31,9 @@ def _publish(tgt,
     no access control is enabled, as minions cannot initiate publishes
     themselves.
 
-    Salt-ssh publishes will default to the ``flat`` roster, which can be
-    overridden using the ``roster`` argument
+    Salt-ssh publishes will default to whichever roster was used for the
+    initiating salt-ssh call, and can be overridden using the ``roster``
+    argument
 
     Returners are not currently supported
 
@@ -93,4 +93,75 @@ def _publish(tgt,
         return cret
     else:
         return rets
+
+
+def publish(tgt,
+            fun,
+            arg=None,
+            expr_form='glob',
+            returner='',
+            timeout=5,
+            roster=None):
+    '''
+    Publish a command "from the minion out to other minions". In reality, the
+    minion does not execute this function, it is executed by the master. Thus,
+    no access control is enabled, as minions cannot initiate publishes
+    themselves.
+
+
+    Salt-ssh publishes will default to whichever roster was used for the
+    initiating salt-ssh call, and can be overridden using the ``roster``
+    argument
+
+    Returners are not currently supported
+
+    The expr_form argument is used to pass a target other than a glob into
+    the execution, the available options are:
+
+    - glob
+    - pcre
+
+    The arguments sent to the minion publish function are separated with
+    commas. This means that for a minion executing a command with multiple
+    args it will look like this:
+
+    .. code-block:: bash
+
+        salt-ssh system.example.com publish.publish '*' user.add 'foo,1020,1020'
+        salt-ssh system.example.com publish.publish '127.0.0.1' network.interfaces '' roster=scan
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt system.example.com publish.publish '*' cmd.run 'ls -la /tmp'
+
+
+    .. admonition:: Attention
+
+        If you need to pass a value to a function argument and that value
+        contains an equal sign, you **must** include the argument name.
+        For example:
+
+        .. code-block:: bash
+
+            salt '*' publish.publish test.kwarg arg='cheese=spam'
+
+        Multiple keyword arguments should be passed as a list.
+
+        .. code-block:: bash
+
+            salt '*' publish.publish test.kwarg arg="['cheese=spam','spam=cheese']"
+
+
+
+    '''
+    return _publish(tgt,
+                    fun,
+                    arg=arg,
+                    expr_form=expr_form,
+                    returner=returner,
+                    timeout=timeout,
+                    form='clean',
+                    roster=roster)
 
