@@ -134,7 +134,7 @@ def publish(tgt,
 
     .. code-block:: bash
 
-        salt system.example.com publish.publish '*' cmd.run 'ls -la /tmp'
+        salt-ssh system.example.com publish.publish '*' cmd.run 'ls -la /tmp'
 
 
     .. admonition:: Attention
@@ -145,13 +145,13 @@ def publish(tgt,
 
         .. code-block:: bash
 
-            salt '*' publish.publish test.kwarg arg='cheese=spam'
+            salt-ssh '*' publish.publish test.kwarg arg='cheese=spam'
 
         Multiple keyword arguments should be passed as a list.
 
         .. code-block:: bash
 
-            salt '*' publish.publish test.kwarg arg="['cheese=spam','spam=cheese']"
+            salt-ssh '*' publish.publish test.kwarg arg="['cheese=spam','spam=cheese']"
 
 
 
@@ -165,3 +165,40 @@ def publish(tgt,
                     form='clean',
                     roster=roster)
 
+
+def full_data(tgt,
+              fun,
+              arg=None,
+              expr_form='glob',
+              returner='',
+              timeout=5,
+              roster=None):
+    '''
+    Return the full data about the publication, this is invoked in the same
+    way as the publish function
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-ssh system.example.com publish.full_data '*' cmd.run 'ls -la /tmp'
+
+    .. admonition:: Attention
+
+        If you need to pass a value to a function argument and that value
+        contains an equal sign, you **must** include the argument name.
+        For example:
+
+        .. code-block:: bash
+
+            salt-ssh '*' publish.full_data test.kwarg arg='cheese=spam'
+
+    '''
+    return _publish(tgt,
+                    fun,
+                    arg=arg,
+                    expr_form=expr_form,
+                    returner=returner,
+                    timeout=timeout,
+                    form='full',
+                    roster=roster)
