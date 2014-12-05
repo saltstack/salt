@@ -295,6 +295,7 @@ def insert(objects, collection, user=None, password=None,
         log.error("Inserting objects %r failed with error %s", objects, err.message)
         return err.message
 
+
 def find(collection, query=None, user=None, password=None,
          host=None, port=None, database='admin'):
     conn = _connect(user, password, host, port)
