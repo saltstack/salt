@@ -3385,26 +3385,36 @@ def copy(
         If the target subdirectories don't exist create them
 
     preserve
+        .. versionadded:: Lithium
+
         Set ``preserve: True`` to preserve user/group ownership and mode
         after copying. Default is ``False``. If ``preseve`` is set to ``True``,
         then user/group/mode attributes will be ignored.
 
     user
+        .. versionadded:: Lithium
+
         The user to own the copied file, this defaults to the user salt is
         running as on the minion. If ``preserve`` is set to ``True``, then
         this will be ignored
 
     group
+        .. versionadded:: Lithium
+
         The group to own the copied file, this defaults to the group salt is
         running as on the minion. If ``preserve`` is set to ``True`` or on
         Windows this will be ignored
 
     mode
+        .. versionadded:: Lithium
+
         The permissions to set on the copied file, aka 644, '0775', '4664'.
         If ``preserve`` is set to ``True``, then this will be ignored.
         Not supported on Windows
 
     subdir
+        .. versionadded:: Lithium
+
         If the name is a directory then place the file inside the named
         directory
     '''
