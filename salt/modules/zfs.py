@@ -226,7 +226,7 @@ def destroy(name, **kwargs):
     CLI Example:
 
     .. code-block:: bash
-    
+
         salt '*' zfs.destroy myzpool/mydataset [force=True|False]
     '''
     ret = {}
@@ -243,7 +243,7 @@ def destroy(name, **kwargs):
         return ret
     elif "dataset does not exist" in res:
         ret['Error'] = 'Cannot destroy {0}: dataset does not exist'.format(name)
-    elif "operation does not apply to pools" in res:   
+    elif "operation does not apply to pools" in res:
         ret['Error'] = 'Cannot destroy {0}: use zpool.destroy to destroy the pool'.format(name)
     else:
         ret['Error'] = res
