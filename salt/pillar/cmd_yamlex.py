@@ -7,7 +7,7 @@ directly overlaid onto the minion's Pillar data
 # Don't "fix" the above docstring to put it on two lines, as the sphinx
 # autosummary pulls only the first line for its description.
 
-from __future__ import absolute_import
+
 
 # Import python libs
 import logging

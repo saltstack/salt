@@ -4,7 +4,7 @@ Package support for pkgin based systems, inspired from freebsdpkg module
 '''
 
 # Import python libs
-from __future__ import absolute_import
+
 import os
 import re
 import logging

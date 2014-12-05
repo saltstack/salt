@@ -33,7 +33,7 @@ the default location::
 
     salt '*' test.ping --return mongo_return --return_config alternative
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import logging

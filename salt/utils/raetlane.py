@@ -49,7 +49,7 @@ if not msg:
    raise ValueError("Timed out out waiting for response")
 '''
 # Import python libs
-from __future__ import absolute_import
+
 import time
 
 # Import Salt Libs

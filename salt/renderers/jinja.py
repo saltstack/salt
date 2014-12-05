@@ -264,7 +264,7 @@ in the current Jinja context.
     Context is: {{ show_full_context() }}
 '''
 
-from __future__ import absolute_import
+
 
 # Import python libs
 from StringIO import StringIO

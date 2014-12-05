@@ -33,7 +33,7 @@ This is necessary and can not be replaced by a require clause in the pkg.
       pkg.installed
 '''
 
-from __future__ import absolute_import
+
 
 # Import python libs
 import logging

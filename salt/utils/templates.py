@@ -2,10 +2,8 @@
 '''
 Template render systems
 '''
-
-from __future__ import absolute_import
-
 # Import python libs
+from __future__ import absolute_import
 import codecs
 import os
 import imp

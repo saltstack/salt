@@ -13,7 +13,7 @@
     logger instance uses our ``salt.log.setup.SaltLoggingClass``.
 '''
 
-from __future__ import absolute_import
+
 
 # Import python libs
 import os

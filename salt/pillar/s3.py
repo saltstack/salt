@@ -56,7 +56,7 @@ Multiple environment mode must have this bucket structure:
 
     s3://<bucket name>/<environment>/<files>
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import logging

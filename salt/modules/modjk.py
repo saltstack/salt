@@ -30,7 +30,7 @@ this module.
         realm: authentication realm2 for digest passwords
         timeout: 600
 '''
-from __future__ import absolute_import
+
 
 # Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module

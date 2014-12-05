@@ -14,7 +14,7 @@ this module exclusively from the command line.
     salt minion-id ports.config security/nmap IPV6=off
     salt minion-id ports.install security/nmap
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import fnmatch

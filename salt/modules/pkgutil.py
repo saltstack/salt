@@ -2,7 +2,7 @@
 '''
 Pkgutil support for Solaris
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import copy

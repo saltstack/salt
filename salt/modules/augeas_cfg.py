@@ -23,7 +23,7 @@ This module requires the ``augeas`` Python module.
     For affected Debian/Ubuntu hosts, installing ``libpython2.7`` has been
     known to resolve the issue.
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import os

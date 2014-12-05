@@ -16,7 +16,7 @@ Useful documentation:
 . https://github.com/xapi-project/xen-api/tree/master/scripts/examples/python
 . http://xenbits.xen.org/gitweb/?p=xen.git;a=tree;f=tools/python/xen/xm;hb=HEAD
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import sys

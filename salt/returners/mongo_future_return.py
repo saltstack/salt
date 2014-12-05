@@ -37,7 +37,7 @@ in the future and should not be considered API stable yet.
 
     salt '*' test.ping --return mongo --return_config alternative
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import logging

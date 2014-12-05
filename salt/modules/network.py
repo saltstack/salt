@@ -4,7 +4,7 @@ Module for gathering and managing network information
 '''
 
 # Import python libs
-from __future__ import absolute_import
+
 import datetime
 import hashlib
 import logging

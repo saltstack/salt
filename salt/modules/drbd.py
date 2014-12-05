@@ -2,7 +2,7 @@
 '''
 DRBD administration module
 '''
-from __future__ import absolute_import
+
 
 import logging
 

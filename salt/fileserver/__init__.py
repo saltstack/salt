@@ -2,7 +2,7 @@
 '''
 File server pluggable modules and generic backend functions
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import errno

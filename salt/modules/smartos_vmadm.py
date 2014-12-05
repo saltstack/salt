@@ -2,7 +2,7 @@
 '''
 Module for managing VMs on SmartOS
 '''
-from __future__ import absolute_import
+
 
 # Import Python libs
 import json

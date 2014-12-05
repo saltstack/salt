@@ -5,7 +5,7 @@ The default file server backend
 Based on the environments in the :conf_master:`file_roots` configuration
 option.
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import os

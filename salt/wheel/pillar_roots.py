@@ -3,7 +3,7 @@
 The `pillar_roots` wheel module is used to manage files under the pillar roots
 directories on the master server.
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import os

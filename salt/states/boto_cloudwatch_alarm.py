@@ -52,7 +52,7 @@ as a passed in dict, or as a string to pull from pillars or minion config:
             alarm_actions:
               - arn:aws:sns:us-east-1:1111111:myalerting-action
 '''
-from __future__ import absolute_import
+
 
 from salt.ext.six import string_types
 

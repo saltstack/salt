@@ -18,7 +18,7 @@ requisite to a pkg.installed state for the package which provides pip
         - require:
           - pkg: python-pip
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import logging

@@ -9,7 +9,7 @@
     This is where all the black magic happens on all of salt's CLI tools.
 '''
 
-from __future__ import absolute_import
+
 
 # Import python libs
 from __future__ import print_function

@@ -7,7 +7,7 @@ Manage client ssh components
     this module should be disabled or removed.
 '''
 
-from __future__ import absolute_import
+
 
 # Import python libs
 import os

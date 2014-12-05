@@ -27,7 +27,7 @@ An example Django module that registers a function called
 
 '''
 # Import Python libraries
-from __future__ import absolute_import
+
 import logging
 
 # Import Salt libraries

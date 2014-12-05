@@ -2,7 +2,7 @@
 '''
 Virtual machine image management tools
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import logging

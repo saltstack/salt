@@ -188,7 +188,7 @@ The following example (in JSON format) causes Salt to execute two commands::
 # We need a custom pylintrc here...
 # pylint: disable=W0212,E1101,C0103,R0201,W0221,W0613
 
-from __future__ import absolute_import
+
 
 # Import Python libs
 import collections

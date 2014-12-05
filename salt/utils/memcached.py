@@ -36,7 +36,7 @@ better to always use a named configuration profile, as shown above.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+
 import logging
 
 # Import salt libs

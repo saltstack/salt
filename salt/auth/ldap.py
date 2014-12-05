@@ -4,7 +4,6 @@ Provide authentication using simple LDAP binds
 
 :depends:   - ldap Python module
 '''
-
 # Import python libs
 from __future__ import absolute_import
 import logging

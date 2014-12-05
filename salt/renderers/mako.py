@@ -3,7 +3,7 @@
 Mako Renderer for Salt
 '''
 
-from __future__ import absolute_import
+
 
 # Import python libs
 from StringIO import StringIO

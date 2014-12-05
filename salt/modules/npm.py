@@ -2,7 +2,7 @@
 '''
 Manage and query NPM packages.
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import json

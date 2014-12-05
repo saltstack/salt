@@ -23,7 +23,7 @@ Use of this module requires the ``apikey``, ``secretkey``, ``host`` and
 '''
 # pylint: disable=E0102
 
-from __future__ import absolute_import
+
 
 # Import python libs
 import copy

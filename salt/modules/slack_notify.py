@@ -17,7 +17,7 @@ Module for sending messages to Slack
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+
 import logging
 
 # Import 3rd-party libs

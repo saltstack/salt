@@ -10,7 +10,7 @@ Module for running windows updates.
 .. versionadded:: 2014.7.0
 
 '''
-from __future__ import absolute_import
+
 
 # Import Python libs
 import logging

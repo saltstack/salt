@@ -121,7 +121,7 @@ Usage examples
 :status 401: authentication required
 
 '''
-from __future__ import absolute_import
+
 import errno
 import json
 import logging

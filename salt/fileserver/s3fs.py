@@ -62,7 +62,7 @@ structure::
 .. note:: This fileserver back-end requires the use of the MD5 hashing algorithm.
     MD5 may not be compliant with all security policies.
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import datetime

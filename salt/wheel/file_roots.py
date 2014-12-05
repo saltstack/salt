@@ -2,7 +2,7 @@
 '''
 Read in files from the file_root and save files to the file root
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import os

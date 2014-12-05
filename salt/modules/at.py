@@ -5,7 +5,7 @@ Wrapper module for at(1)
 Also, a 'tag' feature has been added to more
 easily tag jobs.
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import re

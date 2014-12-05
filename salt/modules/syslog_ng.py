@@ -24,9 +24,7 @@ configuration file.
 
 
 '''
-
-from __future__ import absolute_import, generators, with_statement
-
+from __future__ import generators, with_statement
 import time
 import logging
 import salt

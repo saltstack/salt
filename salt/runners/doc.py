@@ -3,7 +3,7 @@
 A runner module to collect and display the inline documentation from the
 various module types
 '''
-from __future__ import absolute_import
+
 # Import Python libs
 import itertools
 

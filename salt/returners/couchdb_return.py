@@ -43,7 +43,7 @@ otherwise multi-minion targetting can lead to losing output:
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+
 import logging
 import time
 import json

@@ -30,7 +30,7 @@ file, in order to use this module to manage packages, like so:
       pkg: pkgng
 
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import copy

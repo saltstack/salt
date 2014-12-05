@@ -4,7 +4,7 @@ Windows Service module.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+
 import salt.utils
 import time
 import logging

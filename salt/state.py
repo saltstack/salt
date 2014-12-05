@@ -12,7 +12,7 @@ The data sent to the state calls is as follows:
       }
 '''
 
-from __future__ import absolute_import
+
 
 # Import python libs
 import os

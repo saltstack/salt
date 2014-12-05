@@ -3,7 +3,7 @@
 Cheetah Renderer for Salt
 '''
 
-from __future__ import absolute_import
+
 
 # Import 3rd party libs
 try:

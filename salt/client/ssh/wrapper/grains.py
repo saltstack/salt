@@ -2,7 +2,7 @@
 '''
 Return/control aspects of the grains data
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import collections

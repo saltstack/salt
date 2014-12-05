@@ -5,7 +5,7 @@ Manage glusterfs pool.
 
 # Import python libs
 from __future__ import generators
-from __future__ import absolute_import
+
 import logging
 import socket
 

@@ -25,7 +25,7 @@ Mount any type of mountable filesystem with the mounted function:
         - persist: True
         - mkmnt: True
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import os.path

@@ -63,7 +63,7 @@ To use the EC2 cloud module, set up the cloud configuration at
 '''
 # pylint: disable=E0102
 
-from __future__ import absolute_import
+
 
 # Import python libs
 import os

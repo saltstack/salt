@@ -4,7 +4,7 @@ Generate the salt thin tarball from the installed python files
 '''
 
 # Import python libs
-from __future__ import absolute_import
+
 
 import os
 import shutil

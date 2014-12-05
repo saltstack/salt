@@ -4,7 +4,7 @@ Module for the management of MacOS systems that use launchd/launchctl
 
 :depends:   - plistlib Python module
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import os

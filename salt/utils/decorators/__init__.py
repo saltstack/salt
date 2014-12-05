@@ -3,7 +3,7 @@
 Helpful decorators module writing
 '''
 
-from __future__ import absolute_import
+
 
 # Import python libs
 import inspect

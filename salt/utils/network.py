@@ -2,7 +2,7 @@
 '''
 Define some generic socket functions for network modules
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import socket

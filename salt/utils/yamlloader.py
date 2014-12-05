@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Import python libs
-from __future__ import absolute_import
+
 import warnings
 
 # Import third party libs

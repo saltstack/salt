@@ -6,7 +6,7 @@ znc - An advanced IRC bouncer
 
 Provides an interface to basic ZNC functionality
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import hashlib

@@ -21,7 +21,7 @@ Or you can set the provider in sls for each pkg:
 '''
 # Import python libs
 from __future__ import print_function
-from __future__ import absolute_import
+
 import logging
 
 

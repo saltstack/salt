@@ -13,7 +13,7 @@ or use Self-Signed certificates.
         ca.cert_base_path: '/etc/pki'
 '''
 
-from __future__ import absolute_import
+
 
 # pylint: disable=C0103
 

@@ -42,7 +42,7 @@ create the table(s) and get and set values.
     get_query: "SELECT d FROM advanced WHERE a=:key"
     set_query: "INSERT OR REPLACE INTO advanced (a, d) VALUES (:key, :value)"
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import logging

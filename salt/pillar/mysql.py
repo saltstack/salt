@@ -175,7 +175,7 @@ More complete example
             as_list: True
             with_lists: [1,3]
 '''
-from __future__ import absolute_import
+
 
 # Please don't strip redundant parentheses from this file.
 # I have added some for clarity.

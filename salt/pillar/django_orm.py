@@ -89,7 +89,7 @@ work since the return from values() changes if a ManyToMany is present.
 Module Documentation
 ====================
 '''
-from __future__ import absolute_import
+
 
 import logging
 import os

@@ -9,7 +9,7 @@ will always be executed first, so that any grains loaded here in the core
 module can be overwritten just by returning dict keys with the same value
 as those returned here
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import os

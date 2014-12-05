@@ -18,7 +18,7 @@ Module for retrieving random information from Random.org
 '''
 
 # Import Python libs
-from __future__ import absolute_import
+
 import logging
 
 # Import 3rd-party libs

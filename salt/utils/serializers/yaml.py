@@ -8,14 +8,14 @@
     Underneath, it is based on pyyaml and use the safe dumper and loader.
     It also use C bindings if they are available.
 '''
-
+# Import python libs
 from __future__ import absolute_import
 import datetime
-
+# Impot yaml
 import yaml
 from yaml.constructor import ConstructorError
 from yaml.scanner import ScannerError
-
+# Import salt
 from salt.utils.serializers import DeserializationError, SerializationError
 import salt.ext.six as six
 

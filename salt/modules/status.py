@@ -3,7 +3,7 @@
 Module for returning various status data about a minion.
 These data can be useful for compiling into stats later.
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import os

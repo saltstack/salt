@@ -20,7 +20,7 @@ The data structure needs to be:
 #
 # Import python libs
 from __future__ import print_function
-from __future__ import absolute_import
+
 import os
 import time
 import logging

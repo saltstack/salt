@@ -4,7 +4,7 @@ The service module for OpenBSD
 '''
 
 # Import python libs
-from __future__ import absolute_import
+
 import os
 import logging
 from salt.ext.six.moves import map

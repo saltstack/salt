@@ -13,7 +13,7 @@ Use section as DEFAULT_IMPLICIT if your ini file does not have any section
 
 # Import Python libs
 from __future__ import print_function
-from __future__ import absolute_import
+
 import re
 
 # Import Salt libs
