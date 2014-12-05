@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
-
-
-
 # Import Python Libs
+from __future__ import absolute_import
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt Testing libs

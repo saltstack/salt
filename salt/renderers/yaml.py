@@ -2,10 +2,8 @@
 '''
 YAML Renderer for Salt
 '''
-
-
-
 # Import python libs
+from __future__ import absolute_import
 import logging
 import warnings
 from yaml.scanner import ScannerError
