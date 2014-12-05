@@ -83,7 +83,7 @@ the following:
     user:  user name
 '''
 
-from __future__ import absolute_import
+
 
 # Import python libs
 from __future__ import print_function

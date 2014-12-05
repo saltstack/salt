@@ -15,7 +15,7 @@
 
 '''
 
-from __future__ import absolute_import
+
 from salt.exceptions import SaltException, SaltRenderError
 
 

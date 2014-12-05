@@ -67,7 +67,7 @@ The corresponding ``top.sls`` would be like:
       '*':
         - bar
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 from copy import deepcopy

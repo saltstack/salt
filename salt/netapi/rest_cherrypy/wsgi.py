@@ -43,7 +43,7 @@ An example Apache virtual host configuration::
     </VirtualHost>
 
 '''
-from __future__ import absolute_import
+
 # pylint: disable=C0103
 
 import os

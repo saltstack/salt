@@ -59,7 +59,7 @@ default gateway using the ``gateway`` parameter:
           - 10.2.3.4/24
         - gateway: 10.2.3.1
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import logging

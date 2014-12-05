@@ -2,7 +2,7 @@
 '''
 Run nagios plugins/checks from salt and get the return as data.
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import os

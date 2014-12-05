@@ -2,7 +2,7 @@
 '''
 Routines to manage interactions with the whoosh search system
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import os

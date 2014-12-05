@@ -3,7 +3,7 @@
 All salt configuration loading and defaults should be in this module
 '''
 
-from __future__ import absolute_import
+
 
 # Import python libs
 from __future__ import generators

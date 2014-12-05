@@ -43,7 +43,7 @@ the default location::
 
     salt '*' test.ping --return carbon --return_config alternative
 '''
-from __future__ import absolute_import
+
 
 
 # Import python libs

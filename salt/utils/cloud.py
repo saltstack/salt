@@ -3,7 +3,7 @@
 Utility functions for salt.cloud
 '''
 
-from __future__ import absolute_import
+
 
 # Import python libs
 import os

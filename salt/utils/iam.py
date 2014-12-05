@@ -4,7 +4,7 @@ Connection library for Amazon IAM
 
 :depends: requests
 '''
-from __future__ import absolute_import
+
 
 # Import Python libs
 import json

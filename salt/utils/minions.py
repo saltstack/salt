@@ -4,7 +4,7 @@ This module contains routines used to verify the matcher against the minions
 expected to return
 '''
 
-from __future__ import absolute_import
+
 
 # Import python libs
 import os

@@ -7,7 +7,7 @@ Install Salt on an LXC Container
 
 Please read :ref:`core config documentation <config_lxc>`.
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import json

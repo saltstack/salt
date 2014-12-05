@@ -87,7 +87,7 @@ passed in as a dict, or as a string to pull from pillars or minion config:
                 keyid: GKTADJGHEIQSXMKKRBJ08H
                 key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 '''
-from __future__ import absolute_import
+
 import salt.utils.dictupdate as dictupdate
 from salt.exceptions import SaltInvocationError
 import salt.ext.six as six

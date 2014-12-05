@@ -2,7 +2,7 @@
 '''
 Support for the Amazon Simple Queue Service.
 '''
-from __future__ import absolute_import
+
 import logging
 import json
 

@@ -63,7 +63,7 @@ arguments. For example:
         - kwargs:
             interface: eth0
 '''
-from __future__ import absolute_import
+
 # Import python libs
 import datetime
 

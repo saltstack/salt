@@ -11,7 +11,7 @@ Cassandra NoSQL Database Module
         cassandra.host: localhost
         cassandra.thrift_port: 9160
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import logging

@@ -73,7 +73,7 @@ with the role. This is the default behavior of the AWS console.
                 key: GKTADJGHEIQSXMKKRBJ08H
                 keyid: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 '''
-from __future__ import absolute_import
+
 import salt.utils.dictupdate as dictupdate
 import salt.ext.six as six
 

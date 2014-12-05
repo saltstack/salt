@@ -14,7 +14,7 @@ when identifying discrepancies in a large infrastructure managed by salt.
 
 from __future__ import print_function
 
-from __future__ import absolute_import
+
 
 import salt.client
 from salt.ext.six.moves import range

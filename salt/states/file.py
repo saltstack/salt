@@ -232,7 +232,7 @@ A more complex ``recurse`` example:
         - source: salt://project/templates_dir
         - include_empty: True
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import difflib

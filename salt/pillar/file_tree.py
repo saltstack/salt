@@ -95,7 +95,7 @@ will result in the following pillar tree for minion in the node group
                 file2.txt:
                     Contents of file #2.
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import logging

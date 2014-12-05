@@ -33,7 +33,7 @@ associated with that vm. An example profile might look like:
 
 :depends: requests
 '''
-from __future__ import absolute_import
+
 # pylint: disable=E0102
 
 # The import section is mostly libcloud boilerplate

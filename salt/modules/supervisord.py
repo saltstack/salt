@@ -6,7 +6,7 @@ virtualenv
 
 
 # Import python libs
-from __future__ import absolute_import
+
 import os
 
 # Import 3rd-party libs

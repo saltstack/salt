@@ -264,7 +264,7 @@ For more examples and information see <https://github.com/mickep76/pepa>.
 
 from __future__ import print_function
 
-from __future__ import absolute_import
+
 
 __author__ = 'Michael Persson <michael.ake.persson@gmail.com>'
 __copyright__ = 'Copyright (c) 2013 Michael Persson'

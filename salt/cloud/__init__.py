@@ -4,7 +4,7 @@ The top level interface used to translate configuration data back to the
 correct cloud modules
 '''
 
-from __future__ import absolute_import
+
 
 # Import python libs
 from __future__ import print_function, generators

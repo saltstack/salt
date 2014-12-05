@@ -118,7 +118,7 @@ Alternatively, one could use the private IP to connect by specifying:
 
 
 '''
-from __future__ import absolute_import
+
 
 # The import section is mostly libcloud boilerplate
 

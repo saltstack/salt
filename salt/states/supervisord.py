@@ -13,7 +13,7 @@ Interaction with the Supervisor daemon
         - watch:
           - file: /etc/nginx/sites-enabled/wsgi_server.conf
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import logging

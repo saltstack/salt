@@ -59,7 +59,7 @@ Example of a ``cmd`` state calling a python function::
     state('hello').cmd.call(hello, 'pydsl!')
 
 '''
-from __future__ import absolute_import
+
 
 # Implementation note:
 #  - There's a bit of terminology mix-up here:

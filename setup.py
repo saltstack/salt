@@ -4,7 +4,7 @@
 The setup script for salt
 '''
 
-from __future__ import absolute_import
+
 
 # pylint: disable=C0111,E1101,E1103,F0401,W0611,W0201,W0232,R0201,R0902,R0903
 

@@ -3,7 +3,7 @@
 Functions to perform introspection on a minion, and return data in a format
 usable by Salt States
 '''
-from __future__ import absolute_import
+
 
 import os
 

@@ -191,7 +191,7 @@ at some point be deprecated in favor of a more generic `firewall` state.
     output of iptables-save. This may have unintended consequences on legacy
     releases of ``iptables``.
 '''
-from __future__ import absolute_import
+
 
 # Import salt libs
 import salt.utils

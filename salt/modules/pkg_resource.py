@@ -2,7 +2,7 @@
 '''
 Resources needed by pkg providers
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import fnmatch

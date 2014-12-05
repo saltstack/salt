@@ -8,7 +8,7 @@
 
     Context managers used throughout Salt's source code.
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 from contextlib import contextmanager

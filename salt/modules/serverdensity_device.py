@@ -5,7 +5,7 @@ Wrapper around Server Density API
 
 .. versionadded:: 2014.7.0
 '''
-from __future__ import absolute_import
+
 
 import requests
 import json

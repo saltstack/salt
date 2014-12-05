@@ -8,7 +8,7 @@ lxc >= 1.0 (even beta alpha) is required
 
 '''
 
-from __future__ import absolute_import
+
 
 # Import python libs
 from __future__ import print_function

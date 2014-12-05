@@ -90,7 +90,7 @@ accept them
 Note: You must include the default net-ids when setting networks or the server
 will be created without the rest of the interfaces
 '''
-from __future__ import absolute_import
+
 # pylint: disable=E0102
 
 # The import section is mostly libcloud boilerplate

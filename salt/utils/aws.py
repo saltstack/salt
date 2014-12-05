@@ -8,7 +8,7 @@ This is a base library used by a number of AWS services.
 
 :depends: requests
 '''
-from __future__ import absolute_import
+
 
 # Import Python libs
 import sys

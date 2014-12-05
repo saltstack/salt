@@ -6,7 +6,7 @@ A flexible renderer that takes a templating engine and a data format
 :maturity: new
 :platform: all
 '''
-from __future__ import absolute_import
+
 # See http://docs.saltstack.org/en/latest/ref/renderers/all/salt.renderers.stateconf.html
 # for a guide to using this module.
 #

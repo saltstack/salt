@@ -24,7 +24,7 @@ You have those following methods:
 '''
 
 # Import python libs
-from __future__ import absolute_import
+
 
 import os
 import re

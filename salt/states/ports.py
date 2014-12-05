@@ -14,7 +14,7 @@ Manage software from FreeBSD ports
 
         salt -t 1200 '*' state.highstate
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import copy

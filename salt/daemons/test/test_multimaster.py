@@ -3,7 +3,7 @@
 Tests of utilities that support multiple masters in Salt Raet
 
 '''
-from __future__ import absolute_import
+
 # pylint: skip-file
 # pylint: disable=C0103
 import sys

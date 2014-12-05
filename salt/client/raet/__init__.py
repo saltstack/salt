@@ -2,7 +2,7 @@
 '''
 The client libs to communicate with the salt master when running raet
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import os

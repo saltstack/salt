@@ -2,7 +2,7 @@
 '''
 The networking module for RHEL/Fedora based distros
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import logging

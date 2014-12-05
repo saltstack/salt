@@ -2,7 +2,7 @@
 '''
 Control a salt cloud system
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import json

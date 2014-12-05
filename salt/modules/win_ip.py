@@ -2,7 +2,7 @@
 '''
 The networking module for Windows based systems
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import logging

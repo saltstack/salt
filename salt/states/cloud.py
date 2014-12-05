@@ -13,7 +13,7 @@ Use this minion to spin up a cloud instance:
       cloud.profile:
         my-ec2-config
 '''
-from __future__ import absolute_import
+
 
 import pprint
 from salt.ext.six import string_types

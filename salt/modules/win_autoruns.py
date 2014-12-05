@@ -5,7 +5,7 @@ Module for listing programs that automatically run on startup
 '''
 
 # Import python libs
-from __future__ import absolute_import
+
 import os
 
 # Import salt libs

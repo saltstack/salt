@@ -4,7 +4,7 @@ The core behaviors used by minion and master
 '''
 # pylint: disable=W0232
 
-from __future__ import absolute_import
+
 
 # Import python libs
 import time

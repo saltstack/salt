@@ -8,7 +8,7 @@ References:
 '''
 
 # Import python libs
-from __future__ import absolute_import
+
 import salt.ext.six as six
 import functools
 import logging

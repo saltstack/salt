@@ -5,7 +5,7 @@ A convenience system to manage jobs, both active and already run
 
 from __future__ import print_function
 
-from __future__ import absolute_import
+
 
 # Import python libs
 import fnmatch

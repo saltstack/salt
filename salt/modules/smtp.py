@@ -41,7 +41,7 @@ Module for Sending Messages via SMTP
 
 '''
 
-from __future__ import absolute_import
+
 import logging
 import socket
 

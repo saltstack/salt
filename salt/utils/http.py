@@ -3,7 +3,7 @@
 Utils for making various web calls. Primarily designed for REST, SOAP, webhooks
 and the like, but also useful for basic HTTP testing.
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import pprint

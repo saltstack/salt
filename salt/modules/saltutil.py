@@ -6,7 +6,7 @@ minion.
 
 :depends:   - esky Python module for update functionality
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import os

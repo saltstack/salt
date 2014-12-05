@@ -26,7 +26,7 @@ SoftLayer salt.cloud modules. See: https://pypi.python.org/pypi/SoftLayer
 '''
 # pylint: disable=E0102
 
-from __future__ import absolute_import
+
 
 # Import python libs
 import copy

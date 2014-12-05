@@ -2,7 +2,7 @@
 '''
 Support for SQLite3
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 try:

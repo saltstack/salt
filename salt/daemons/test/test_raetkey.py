@@ -3,7 +3,7 @@
 Tests to try out salt key.RaetKey Potentially ephemeral
 
 '''
-from __future__ import absolute_import
+
 # pylint: skip-file
 # pylint: disable=C0103
 import sys

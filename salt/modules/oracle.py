@@ -27,7 +27,7 @@ Oracle DataBase connection module
         oracle.dbs.<db>.uri: connection credentials in format:
             user/password@host[:port]/sid[ as {sysdba|sysoper}]
 '''
-from __future__ import absolute_import
+
 
 import os
 import logging

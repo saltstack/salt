@@ -15,7 +15,7 @@ Module for sending messages to hipchat
           api_version: v1
 '''
 # Import Python Libs
-from __future__ import absolute_import
+
 import json
 import logging
 

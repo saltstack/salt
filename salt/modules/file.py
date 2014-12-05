@@ -5,7 +5,7 @@ and special files on the minion, set/read user,
 group, mode, and data
 '''
 
-from __future__ import absolute_import
+
 
 # TODO: We should add the capability to do u+r type operations here
 # some time in the future

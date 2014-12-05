@@ -100,7 +100,7 @@
     Document is defacto an aggregate mapping.
 '''
 
-from __future__ import absolute_import
+
 from copy import copy
 import datetime
 import logging

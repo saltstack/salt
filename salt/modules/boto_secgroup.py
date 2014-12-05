@@ -33,7 +33,7 @@ Connection module for Amazon Security Groups
 
 :depends: boto
 '''
-from __future__ import absolute_import
+
 
 # Import Python libs
 import logging

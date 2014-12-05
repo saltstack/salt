@@ -2,7 +2,7 @@
 '''
 State to control Apache modjk
 '''
-from __future__ import absolute_import
+
 
 # Python Libs
 import logging

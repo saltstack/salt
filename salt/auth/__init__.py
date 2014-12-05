@@ -6,7 +6,7 @@ This system allows for authentication to be managed in a module pluggable way
 so that any external authentication system can be used inside of Salt
 '''
 
-from __future__ import absolute_import
+
 
 # 1. Create auth loader instance
 # 2. Accept arguments as a dict

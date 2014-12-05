@@ -147,7 +147,7 @@ These are the available methods:
 
 '''
 
-from __future__ import absolute_import
+
 from salt.ext.six.moves import range
 __docformat__ = 'restructuredtext en'
 

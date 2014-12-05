@@ -5,7 +5,7 @@ Runner to manage Windows software repo
 
 from __future__ import print_function
 
-from __future__ import absolute_import
+
 
 # Import python libs
 import os

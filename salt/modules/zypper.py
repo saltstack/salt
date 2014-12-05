@@ -4,7 +4,7 @@ Package support for openSUSE via the zypper package manager
 
 :depends: - ``zypp`` Python module.  Install with ``zypper install python-zypp``
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import copy

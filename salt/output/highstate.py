@@ -55,7 +55,7 @@ Example output::
     ------------
     Total:     0
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import pprint

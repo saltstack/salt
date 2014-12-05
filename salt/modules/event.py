@@ -3,7 +3,7 @@
 Use the :doc:`Salt Event System </topics/event/index>` to fire events from the
 master to the minion and vice-versa.
 '''
-from __future__ import absolute_import
+
 # Import Python libs
 import collections
 import os

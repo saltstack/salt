@@ -8,7 +8,7 @@ Work with virtual machines managed by libvirt
 # of his in the virt func module have been used
 
 # Import python libs
-from __future__ import absolute_import
+
 import os
 import re
 import sys

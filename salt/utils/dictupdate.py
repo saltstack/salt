@@ -3,7 +3,7 @@
 Alex Martelli's soulution for recursive dict update from
 http://stackoverflow.com/a/3233356
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import collections

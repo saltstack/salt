@@ -3,7 +3,7 @@
 The generic libcloud template used to create the connections and deploy the
 cloud virtual machines
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
 import os

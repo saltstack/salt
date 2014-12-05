@@ -101,7 +101,7 @@ as a passed in dict, or as a string to pull from pillars or minion config:
         # If instances exist, we must force the deletion of the asg.
         - force: True
 '''
-from __future__ import absolute_import
+
 
 # Import Python libs
 import hashlib
