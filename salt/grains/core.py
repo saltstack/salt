@@ -946,9 +946,9 @@ def os_data():
         # Add SELinux grain, if you have it
         if _linux_bin_exists('selinuxenabled'):
             grains['selinux'] = {}
-            grains['selinux']['enabled'] = __salt__['cmd.run'](
-                'selinuxenabled; echo $?'
-            ).strip() == '0'
+            grains['selinux']['enabled'] = __salt__['cmd.retcode'](
+                'selinuxenabled'
+            ) == 0
             if _linux_bin_exists('getenforce'):
                 grains['selinux']['enforced'] = __salt__['cmd.run'](
                     'getenforce'

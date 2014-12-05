@@ -111,15 +111,21 @@ def sls(mods, saltenv='base', test=None, exclude=None, env=None, **kwargs):
             trans_tar,
             '{0}/salt_state.tgz'.format(__opts__['thin_dir']))
     stdout, stderr, _ = single.cmd_block()
+
+    # Clean up our tar
+    try:
+        os.remove(trans_tar)
+    except (OSError, IOError):
+        pass
+
+    # Read in the JSON data and return the data structure
     try:
         return json.loads(stdout, object_hook=salt.utils.decode_dict)
     except Exception as e:
         log.error("JSON Render failed for: {0}\n{1}".format(stdout, stderr))
         log.error(str(e))
-    try:
-        os.remove(trans_tar)
-    except (OSError, IOError):
-        pass
+
+    # If for some reason the json load fails, return the stdout
     return stdout
 
 
@@ -171,11 +177,22 @@ def low(data, **kwargs):
             trans_tar,
             '{0}/salt_state.tgz'.format(__opts__['thin_dir']))
     stdout, stderr, _ = single.cmd_block()
+
+    # Clean up our tar
     try:
         os.remove(trans_tar)
     except (OSError, IOError):
         pass
-    return json.loads(stdout, object_hook=salt.utils.decode_dict)
+
+    # Read in the JSON data and return the data structure
+    try:
+        return json.loads(stdout, object_hook=salt.utils.decode_dict)
+    except Exception as e:
+        log.error("JSON Render failed for: {0}\n{1}".format(stdout, stderr))
+        log.error(str(e))
+
+    # If for some reason the json load fails, return the stdout
+    return stdout
 
 
 def high(data, **kwargs):
@@ -223,11 +240,22 @@ def high(data, **kwargs):
             trans_tar,
             '{0}/salt_state.tgz'.format(__opts__['thin_dir']))
     stdout, stderr, _ = single.cmd_block()
+
+    # Clean up our tar
     try:
         os.remove(trans_tar)
     except (OSError, IOError):
         pass
-    return json.loads(stdout, object_hook=salt.utils.decode_dict)
+
+    # Read in the JSON data and return the data structure
+    try:
+        return json.loads(stdout, object_hook=salt.utils.decode_dict)
+    except Exception as e:
+        log.error("JSON Render failed for: {0}\n{1}".format(stdout, stderr))
+        log.error(str(e))
+
+    # If for some reason the json load fails, return the stdout
+    return stdout
 
 
 def highstate(test=None, **kwargs):
@@ -282,15 +310,21 @@ def highstate(test=None, **kwargs):
             trans_tar,
             '{0}/salt_state.tgz'.format(__opts__['thin_dir']))
     stdout, stderr, _ = single.cmd_block()
-    try:
-        stdout = json.loads(stdout, object_hook=salt.utils.decode_dict)
-    except Exception as e:
-        log.error('JSON Render failed for: {0}\n{1}'.format(stdout, stderr))
-        log.error(str(e))
+
+    # Clean up our tar
     try:
         os.remove(trans_tar)
     except (OSError, IOError):
         pass
+
+    # Read in the JSON data and return the data structure
+    try:
+        return json.loads(stdout, object_hook=salt.utils.decode_dict)
+    except Exception as e:
+        log.error("JSON Render failed for: {0}\n{1}".format(stdout, stderr))
+        log.error(str(e))
+
+    # If for some reason the json load fails, return the stdout
     return stdout
 
 
@@ -346,11 +380,22 @@ def top(topfn, test=None, **kwargs):
             trans_tar,
             '{0}/salt_state.tgz'.format(__opts__['thin_dir']))
     stdout, stderr, _ = single.cmd_block()
+
+    # Clean up our tar
     try:
         os.remove(trans_tar)
     except (OSError, IOError):
         pass
-    return json.loads(stdout, object_hook=salt.utils.decode_dict)
+
+    # Read in the JSON data and return the data structure
+    try:
+        return json.loads(stdout, object_hook=salt.utils.decode_dict)
+    except Exception as e:
+        log.error("JSON Render failed for: {0}\n{1}".format(stdout, stderr))
+        log.error(str(e))
+
+    # If for some reason the json load fails, return the stdout
+    return stdout
 
 
 def show_highstate():
