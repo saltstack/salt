@@ -15,7 +15,7 @@ import logging
 
 import salt.client.ssh
 
-log = loggin.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 def _publish(tgt,
              fun,
