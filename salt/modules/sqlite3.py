@@ -2,9 +2,8 @@
 '''
 Support for SQLite3
 '''
-
-
 # Import python libs
+from __future__ import absolute_import
 try:
     import sqlite3
     HAS_SQLITE3 = True
