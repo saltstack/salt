@@ -399,7 +399,40 @@ class SSH(object):
         '''
         Execute and yield returns as they come in, do not print to the display
         '''
+        fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
+        jid = self.returners[fstr]()
+
+        # Save the invocation information
+        argv = self.opts['argv']
+
+        if self.opts['raw_shell']:
+            fun = 'ssh._raw'
+            args = argv
+        else:
+            fun = argv[0] if argv else ''
+            args = argv[1:]
+
+        job_load = {
+            'jid': jid,
+            'tgt_type': self.tgt_type,
+            'tgt': self.opts['tgt'],
+            'user': self.opts['user'],
+            'fun': fun,
+            'arg': args,
+            }
+
+        # save load to the master job cache
+        self.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load)
+
         for ret in self.handle_ssh():
+            host = next(ret.iterkeys())
+            self.cache_job(jid, host, ret[host])
+            if self.event:
+                self.event.fire_event(
+                        ret,
+                        salt.utils.event.tagify(
+                            [jid, 'ret', host],
+                            'job'))
             yield ret
 
     def cache_job(self, jid, id_, ret):
