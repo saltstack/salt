@@ -445,7 +445,7 @@ class SSH(object):
 
     def run(self):
         '''
-        Execute the overall routine
+        Execute the overall routine, print results via outputters
         '''
         fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
         jid = self.returners[fstr]()
