@@ -1613,7 +1613,7 @@ class Events(object):
         if (not (self._is_valid_salt_api_token(token) or
                  self._is_valid_salt_token(salt_token))):
 
-                raise cherrypy.HTTPError(401)
+            raise cherrypy.HTTPError(401)
 
         # Release the session lock before starting the long-running response
         cherrypy.session.release_lock()
