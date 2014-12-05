@@ -253,7 +253,7 @@ class SaltEvent(object):
             mtag = raw[0:20].rstrip('|')
             mdata = raw[20:]
         else:  # new style
-            mtag, sep, mdata = raw.partition(TAGEND)  # split tag from data
+            mtag, _, mdata = raw.partition(TAGEND)  # split tag from data
 
         data = serial.loads(mdata)
         return mtag, data
@@ -732,7 +732,7 @@ class ReactWrap(object):
 
     cmd = local
 
-    def runner(self, fun, **kwargs):
+    def runner(self, _, **kwargs):
         '''
         Wrap RunnerClient for executing :ref:`runner modules <all-salt.runners>`
         '''
@@ -740,7 +740,7 @@ class ReactWrap(object):
             self.client_cache['runner'] = salt.runner.RunnerClient(self.opts)
         self.pool.fire_async(self.client_cache['runner'].low, kwargs)
 
-    def wheel(self, fun, **kwargs):
+    def wheel(self, _, **kwargs):
         '''
         Wrap Wheel to enable executing :ref:`wheel modules <all-salt.wheel>`
         '''
