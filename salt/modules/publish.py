@@ -212,7 +212,8 @@ def full_data(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
                     expr_form=expr_form,
                     returner=returner,
                     timeout=timeout,
-                    form='full')
+                    form='full',
+                    wait=True)
 
 
 def runner(fun, arg=None, timeout=5):
