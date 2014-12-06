@@ -33,32 +33,48 @@ Connection module for Amazon Security Groups
 
 :depends: boto
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import logging
+import re
+from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
 # Import third party libs
 try:
+    # pylint: disable=import-error
     import boto
     import boto.ec2
+    # pylint: enable=import-error
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
 
-from salt._compat import string_types
+from salt.ext.six import string_types
 import salt.utils.odict as odict
 
 
 def __virtual__():
     '''
-    Only load if boto libraries exist.
+    Only load if boto libraries exist and if boto libraries are greater than
+    a given version.
     '''
+    required_boto_version = '2.4.0'
+    # Boto < 2.4.0 GroupOrCIDR objects have different attributes than
+    # Boto >= 2.4.0 GroupOrCIDR objects
+    # Differences include no group_id attribute in Boto < 2.4.0 and returning
+    # a groupId attribute when a GroupOrCIDR object authorizes an IP range
+    # Support for Boto < 2.4.0 can be added if needed
     if not HAS_BOTO:
         return False
-    return True
+    elif _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
+        return False
+    else:
+        return True
 
 
 def exists(name=None, region=None, key=None, keyid=None, profile=None,
@@ -73,7 +89,7 @@ def exists(name=None, region=None, key=None, keyid=None, profile=None,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    group = _get_group(conn, name, vpc_id, group_id)
+    group = _get_group(conn, name, vpc_id, group_id, region)
     if group:
         return True
     else:
@@ -99,13 +115,13 @@ def _split_rules(rules):
             _rule = {'ip_protocol': ip_protocol,
                      'to_port': to_port,
                      'from_port': from_port}
-            for key, val in grant.iteritems():
+            for key, val in six.iteritems(grant):
                 _rule[key] = val
             split.append(_rule)
     return split
 
 
-def _get_group(conn, name=None, vpc_id=None, group_id=None, region=None):
+def _get_group(conn, name=None, vpc_id=None, group_id=None, region=None):  # pylint: disable=W0613
     '''
     Get a group object given a name, name and vpc_id or group_id. Return a
     boto.ec2.securitygroup.SecurityGroup object if the group is found, else
@@ -113,7 +129,7 @@ def _get_group(conn, name=None, vpc_id=None, group_id=None, region=None):
     '''
     if name:
         if vpc_id is None:
-            logging.debug('getting group for {0}'.format(name))
+            log.debug('getting group for {0}'.format(name))
             group_filter = {'group-name': name}
             filtered_groups = conn.get_all_security_groups(filters=group_filter)
             # security groups can have the same name if groups exist in both
@@ -126,7 +142,7 @@ def _get_group(conn, name=None, vpc_id=None, group_id=None, region=None):
                     return group
             return None
         elif vpc_id:
-            logging.debug('getting group for {0} in vpc_id {1}'.format(name, vpc_id))
+            log.debug('getting group for {0} in vpc_id {1}'.format(name, vpc_id))
             group_filter = {'group-name': name, 'vpc_id': vpc_id}
             filtered_groups = conn.get_all_security_groups(filters=group_filter)
             if len(filtered_groups) == 1:
@@ -160,11 +176,40 @@ def get_group_id(name, vpc_id=None, region=None, key=None, keyid=None, profile=N
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    group = _get_group(conn, name, vpc_id)
+    group = _get_group(conn, name, vpc_id, region)
     if group:
         return group.id
     else:
         return False
+
+
+def convert_to_group_ids(groups, vpc_id, region=None, key=None, keyid=None,
+                         profile=None):
+    '''
+    Given a list of security groups and a vpc_id, convert_to_group_ids will
+    convert all list items in the given list to security group ids.
+
+    CLI example::
+
+        salt myminion boto_secgroup.convert_to_group_ids mysecgroup vpc-89yhh7h
+    '''
+    log.debug('security group contents {0} pre-conversion'.format(groups))
+    group_ids = []
+    for group in groups:
+        if re.match('sg-.*', group):
+            log.debug('group {0} is a group id. get_group_id not called.'
+                      .format(group))
+            group_ids.append(group)
+        else:
+            log.debug('calling boto_secgroup.get_group_id for'
+                      ' group name {0}'.format(group))
+            group_id = get_group_id(group, vpc_id, region, key, keyid, profile)
+            log.debug('group name {0} has group id {1}'.format(
+                group, group_id)
+            )
+            group_ids.append(str(group_id))
+    log.debug('security group contents {0} post-conversion'.format(group_ids))
+    return group_ids
 
 
 def get_config(name=None, group_id=None, region=None, key=None, keyid=None,
@@ -179,7 +224,7 @@ def get_config(name=None, group_id=None, region=None, key=None, keyid=None,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return None
-    sg = _get_group(conn, name, vpc_id, group_id)
+    sg = _get_group(conn, name, vpc_id, group_id, region)
     if sg:
         ret = odict.OrderedDict()
         ret['name'] = sg.name
@@ -191,6 +236,7 @@ def get_config(name=None, group_id=None, region=None, key=None, keyid=None,
         # TODO: add support for tags
         _rules = []
         for rule in sg.rules:
+            log.debug('examining rule {0} for group {1}'.format(rule, sg.id))
             attrs = ['ip_protocol', 'from_port', 'to_port', 'grants']
             _rule = odict.OrderedDict()
             for attr in attrs:
@@ -200,12 +246,13 @@ def get_config(name=None, group_id=None, region=None, key=None, keyid=None,
                 if attr == 'grants':
                     _grants = []
                     for grant in val:
+                        log.debug('examining grant {0} for'.format(grant))
                         g_attrs = {'name': 'source_group_name',
                                    'owner_id': 'source_group_owner_id',
                                    'group_id': 'source_group_group_id',
                                    'cidr_ip': 'cidr_ip'}
                         _grant = odict.OrderedDict()
-                        for g_attr, g_attr_map in g_attrs.iteritems():
+                        for g_attr, g_attr_map in six.iteritems(g_attrs):
                             g_val = getattr(grant, g_attr)
                             if not g_val:
                                 continue
@@ -259,7 +306,7 @@ def delete(name=None, group_id=None, region=None, key=None, keyid=None,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    group = _get_group(conn, name, vpc_id, group_id)
+    group = _get_group(conn, name, vpc_id, group_id, region)
     if group:
         deleted = conn.delete_security_group(group_id=group.id)
         if deleted:
@@ -290,7 +337,7 @@ def authorize(name=None, source_group_name=None,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    group = _get_group(conn, name, vpc_id, group_id)
+    group = _get_group(conn, name, vpc_id, group_id, region)
     if group:
         try:
             added = conn.authorize_security_group(
@@ -334,7 +381,7 @@ def revoke(name=None, source_group_name=None,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    group = _get_group(conn, name, vpc_id, group_id)
+    group = _get_group(conn, name, vpc_id, group_id, region)
     if group:
         try:
             revoked = conn.revoke_security_group(

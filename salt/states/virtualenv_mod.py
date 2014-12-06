@@ -4,6 +4,7 @@ Setup of Python virtualenv sandboxes
 ====================================
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -35,7 +36,6 @@ def managed(name,
             never_download=None,
             prompt=None,
             user=None,
-            runas=None,
             no_chown=False,
             cwd=None,
             index_url=None,
@@ -45,7 +45,8 @@ def managed(name,
             pip_download=None,
             pip_download_cache=None,
             pip_exists_action=None,
-            proxy=None):
+            proxy=None,
+            use_vt=False):
     '''
     Create a virtualenv and optionally manage it with pip
 
@@ -81,29 +82,6 @@ def managed(name,
         ret['result'] = False
         ret['comment'] = 'Virtualenv was not detected on this system'
         return ret
-
-    if runas:
-        # Warn users about the deprecation
-        salt.utils.warn_until(
-            'Lithium',
-            'The support for \'runas\' is being deprecated in favor of '
-            '\'user\' and will be removed in Salt Beryllium. Please update '
-            'your state files.'
-        )
-    if user is not None and runas is not None:
-        # user wins over runas but let warn about the deprecation.
-        salt.utils.warn_until(
-            'Lithium',
-            'Passed both the \'runas\' and \'user\' arguments. \'runas\' is '
-            'being ignored in favor of \'user\' as the support for \'runas\' '
-            'is being deprecated in favor of \'user\' and will be removed in '
-            'Salt Beryllium. Please update your state files.'
-        )
-        runas = None
-    elif runas is not None:
-        # Support old runas usage
-        user = runas
-        runas = None
 
     if salt.utils.is_windows():
         venv_py = os.path.join(name, 'Scripts', 'python.exe')
@@ -167,7 +145,8 @@ def managed(name,
             extra_search_dir=extra_search_dir,
             never_download=never_download,
             prompt=prompt,
-            user=user
+            user=user,
+            use_vt=use_vt,
         )
 
         ret['result'] = _ret['retcode'] == 0
@@ -195,7 +174,7 @@ def managed(name,
 
     # Populate the venv via a requirements file
     if requirements:
-        before = set(__salt__['pip.freeze'](bin_env=name))
+        before = set(__salt__['pip.freeze'](bin_env=name, user=user, use_vt=use_vt))
         _ret = __salt__['pip.install'](
             requirements=requirements,
             bin_env=name,
@@ -211,6 +190,7 @@ def managed(name,
             exists_action=pip_exists_action,
             no_deps=no_deps,
             proxy=proxy,
+            use_vt=use_vt
         )
         ret['result'] &= _ret['retcode'] == 0
         if _ret['retcode'] > 0:

@@ -41,7 +41,7 @@ To generate a cipher from a secret:
 
 .. code-block:: bash
 
-   $ echo -n"supersecret" | gpg --homedir --armor --encrypt -r <KEY-name>
+   $ echo -n "supersecret" | gpg --homedir --armor --encrypt -r <KEY-name>
 
 Set up the renderer on your master by adding something like this line to your
 config:
@@ -69,6 +69,7 @@ Now you can include your ciphers in your pillar data like so:
       =Eqsm
       -----END PGP MESSAGE-----
 '''
+from __future__ import absolute_import
 
 import re
 import salt.utils

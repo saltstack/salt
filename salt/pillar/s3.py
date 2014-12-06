@@ -17,51 +17,60 @@ options
           verify_ssl: True
           service_url: s3.amazonaws.com
 
-The `bucket=` parameter specifies the target S3 bucket. It is required.
+The ``bucket`` parameter specifies the target S3 bucket. It is required.
 
-The `keyid=` parameter specifies the key id to use when access the S3 bucket.
+The ``keyid`` parameter specifies the key id to use when access the S3 bucket.
 It is required.
 
-The `key=` parameter specifies the key to use when access the S3 bucket. It
+The ``key`` parameter specifies the key to use when access the S3 bucket. It
 is required.
 
-The `multiple_env=` defaults to False. It specifies whether the pillar should
+The ``multiple_env`` defaults to False. It specifies whether the pillar should
 interpret top level folders as pillar environments (see mode section below).
 
-The `environment=` defaults to 'base'. It specifies which environment the
+The ``environment`` defaults to 'base'. It specifies which environment the
 bucket represents when in single environments mode (see mode section below). It
 is ignored if multiple_env is True.
 
-The `verify_ssl=` parameter defaults to True. It specifies whether to check for
+The ``verify_ssl`` parameter defaults to True. It specifies whether to check for
 valid S3 SSL certificates. *NOTE* If you use bucket names with periods, this
 must be set to False else an invalid certificate error will be thrown (issue
 #12200).
 
-The `service_url=` parameter defaults to 's3.amazonaws.com'. It specifies the
+The ``service_url`` parameter defaults to 's3.amazonaws.com'. It specifies the
 base url to use for accessing S3.
 
 
 This pillar can operate in two modes, single environment per bucket or multiple
 environments per bucket.
 
-Single environment mode must have this bucket structure::
+Single environment mode must have this bucket structure:
 
-s3://<bucket name>/<files>
+.. code-block:: text
 
-Multiple environment mode must have this bucket structure::
+    s3://<bucket name>/<files>
 
-s3://<bucket name>/<environment>/<files>
+Multiple environment mode must have this bucket structure:
 
+.. code-block:: text
+
+    s3://<bucket name>/<environment>/<files>
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
 import os
 import time
-import hashlib
 import pickle
-import urllib
 from copy import deepcopy
+
+# Import 3rd-party libs
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
+import salt.ext.six as six
+from salt.ext.six.moves import filter
+from salt.ext.six.moves.urllib.parse import quote as _quote
+# pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 # Import salt libs
 from salt.pillar import Pillar
@@ -84,8 +93,15 @@ class S3Credentials(object):
         self.verify_ssl = verify_ssl
 
 
-def ext_pillar(minion_id, pillar, bucket, key, keyid, verify_ssl,
-               multiple_env=False, environment='base', service_url=None):
+def ext_pillar(minion_id,
+               pillar,  # pylint: disable=W0613
+               bucket,
+               key,
+               keyid,
+               verify_ssl,
+               multiple_env=False,
+               environment='base',
+               service_url=None):
     '''
     Execute a command and read the output as YAML
     '''
@@ -96,7 +112,7 @@ def ext_pillar(minion_id, pillar, bucket, key, keyid, verify_ssl,
     pillar_dir = os.path.normpath(os.path.join(_get_cache_dir(), environment,
                                                bucket))
 
-    if __opts__['pillar_roots'].get(environment, []) == [pillar_dir]:
+    if pillar_dir in __opts__['pillar_roots'].get(environment, []):
         return {}
 
     metadata = _init(s3_creds, multiple_env, environment)
@@ -104,8 +120,8 @@ def ext_pillar(minion_id, pillar, bucket, key, keyid, verify_ssl,
     if _s3_sync_on_update:
         # sync the buckets to the local cache
         log.info('Syncing local pillar cache from S3...')
-        for saltenv, env_meta in metadata.iteritems():
-            for bucket, files in _find_files(env_meta).iteritems():
+        for saltenv, env_meta in six.iteritems(metadata):
+            for bucket, files in six.iteritems(_find_files(env_meta)):
                 for file_path in files:
                     cached_file_path = _get_cached_file_name(bucket, saltenv,
                                                              file_path)
@@ -118,7 +134,7 @@ def ext_pillar(minion_id, pillar, bucket, key, keyid, verify_ssl,
         log.info('Sync local pillar cache from S3 completed.')
 
     opts = deepcopy(__opts__)
-    opts['pillar_roots'][environment] = [pillar_dir]
+    opts['pillar_roots'].setdefault(environment, []).append(pillar_dir)
 
     pil = Pillar(opts, __grains__, minion_id, environment)
 
@@ -204,13 +220,11 @@ def _refresh_buckets_cache_file(creds, cache_file, multiple_env, environment):
 
     # grab only the files/dirs in the bucket
     def __get_pillar_files_from_s3_meta(s3_meta):
-        return filter(lambda k: 'Key' in k, s3_meta)
+        return [k for k in s3_meta if 'Key' in k]
 
     # pull out the environment dirs (e.g. the root dirs)
     def __get_pillar_environments(files):
-        environments = map(
-            lambda k: (os.path.dirname(k['Key']).split('/', 1))[0], files
-        )
+        environments = [(os.path.dirname(k['Key']).split('/', 1))[0] for k in files]
         return set(environments)
 
     log.debug('Refreshing S3 buckets pillar cache file')
@@ -279,22 +293,21 @@ def _read_buckets_cache_file(cache_file):
     return data
 
 
-def _find_files(metadata, dirs_only=False):
+def _find_files(metadata):
     '''
     Looks for all the files in the S3 bucket cache metadata
     '''
 
     ret = {}
 
-    for bucket, data in metadata.iteritems():
+    for bucket, data in six.iteritems(metadata):
         if bucket not in ret:
             ret[bucket] = []
 
         # grab the paths from the metadata
-        filePaths = map(lambda k: k['Key'], data)
-        # filter out the files or the dirs depending on flag
-        ret[bucket] += filter(lambda k: k.endswith('/') == dirs_only,
-                              filePaths)
+        filePaths = [k['Key'] for k in data]
+        # filter out the dirs
+        ret[bucket] += [k for k in filePaths if not k.endswith('/')]
 
     return ret
 
@@ -306,7 +319,7 @@ def _find_file_meta(metadata, bucket, saltenv, path):
 
     env_meta = metadata[saltenv] if saltenv in metadata else {}
     bucket_meta = env_meta[bucket] if bucket in env_meta else {}
-    files_meta = filter((lambda k: 'Key' in k), bucket_meta)
+    files_meta = list(list(filter((lambda k: 'Key' in k), bucket_meta)))
 
     for item_meta in files_meta:
         if 'Key' in item_meta and item_meta['Key'] == path:
@@ -323,15 +336,13 @@ def _get_file_from_s3(creds, metadata, saltenv, bucket, path,
     # check the local cache...
     if os.path.isfile(cached_file_path):
         file_meta = _find_file_meta(metadata, bucket, saltenv, path)
-        file_md5 = filter(str.isalnum, file_meta['ETag']) \
+        file_md5 = list(filter(str.isalnum, file_meta['ETag'])) \
             if file_meta else None
 
-        cached_file_hash = hashlib.md5()
-        with salt.utils.fopen(cached_file_path, 'rb') as fp_:
-            cached_file_hash.update(fp_.read())
+        cached_md5 = salt.utils.get_hash(cached_file_path, 'md5')
 
         # hashes match we have a cache hit
-        if cached_file_hash.hexdigest() == file_md5:
+        if cached_md5 == file_md5:
             return
 
     # ... or get the file from S3
@@ -340,7 +351,7 @@ def _get_file_from_s3(creds, metadata, saltenv, bucket, path,
         keyid=creds.keyid,
         bucket=bucket,
         service_url=creds.service_url,
-        path=urllib.quote(path),
+        path=_quote(path),
         local_file=cached_file_path,
         verify_ssl=creds.verify_ssl
     )

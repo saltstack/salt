@@ -14,9 +14,10 @@ you can specify what ruby version and gemset to target.
         - user: rvm
         - ruby: jruby@jgemset
 '''
+from __future__ import absolute_import
 
-# Import salt libs
-import salt.utils
+import logging
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -28,12 +29,13 @@ def __virtual__():
 
 def installed(name,          # pylint: disable=C0103
               ruby=None,
-              runas=None,
+              gem_bin=None,
               user=None,
               version=None,
               rdoc=False,
               ri=False,
-              pre_releases=False):     # pylint: disable=C0103
+              pre_releases=False,
+              proxy=None):     # pylint: disable=C0103
     '''
     Make sure that a gem is installed.
 
@@ -41,12 +43,13 @@ def installed(name,          # pylint: disable=C0103
         The name of the gem to install
 
     ruby: None
-        For RVM or rbenv installations: the ruby version and gemset to target.
+        Only for RVM or rbenv installations: the ruby version and gemset to
+        target.
 
-    runas: None
-        The user under which to run the ``gem`` command
-
-        .. deprecated:: 0.17.0
+    gem_bin: None
+        Custom ``gem`` command to run instead of the default.
+        Use this to install gems to a non-default ruby install. If you are
+        using rvm or rbenv use the ruby argument instead.
 
     user: None
         The user under which to run the ``gem`` command
@@ -65,34 +68,17 @@ def installed(name,          # pylint: disable=C0103
 
     pre_releases : False
         Install pre-release version of gem(s) if available.
+
+    proxy : None
+        Use the specified HTTP proxy server for all outgoing traffic.
+        Format: http://hostname[:port]
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
-
-    salt.utils.warn_until(
-        'Lithium',
-        'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 0.17.0',
-        _dont_call_warnings=True
-    )
-    if runas:
-        # Warn users about the deprecation
-        ret.setdefault('warnings', []).append(
-            'The \'runas\' argument is being deprecated in favor of \'user\', '
-            'please update your state files.'
+    if ruby is not None and (__salt__['rvm.is_installed'](runas=user) or __salt__['rbenv.is_installed'](runas=user)):
+        log.warning(
+            'Use of argument ruby found, but neither rvm or rbenv is installed'
         )
-    if user is not None and runas is not None:
-        # user wins over runas but let warn about the deprecation.
-        ret.setdefault('warnings', []).append(
-            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
-            '\'runas\' is being ignored in favor of \'user\'.'
-        )
-        runas = None
-    elif runas is not None:
-        # Support old runas usage
-        user = runas
-        runas = None
-
-    gems = __salt__['gem.list'](name, ruby, runas=user)
+    gems = __salt__['gem.list'](name, ruby, gem_bin=gem_bin, runas=user)
     if name in gems and version is not None and version in gems[name]:
         ret['result'] = True
         ret['comment'] = 'Gem is already installed.'
@@ -107,11 +93,13 @@ def installed(name,          # pylint: disable=C0103
         return ret
     if __salt__['gem.install'](name,
                                ruby=ruby,
+                               gem_bin=gem_bin,
                                runas=user,
                                version=version,
                                rdoc=rdoc,
                                ri=ri,
-                               pre_releases=pre_releases):
+                               pre_releases=pre_releases,
+                               proxy=proxy):
         ret['result'] = True
         ret['changes'][name] = 'Installed'
         ret['comment'] = 'Gem was successfully installed'
@@ -122,20 +110,19 @@ def installed(name,          # pylint: disable=C0103
     return ret
 
 
-def removed(name, ruby=None, runas=None, user=None):
+def removed(name, ruby=None, user=None, gem_bin=None):
     '''
     Make sure that a gem is not installed.
 
     name
         The name of the gem to uninstall
 
-    ruby: None
-        For RVM or rbenv installations: the ruby version and gemset to target.
+    gem_bin : None
+        Full path to ``gem`` binary to use.
 
-    runas: None
-        The user under which to run the ``gem`` command
-
-        .. deprecated:: 0.17.0
+    ruby : None
+        If RVM or rbenv are installed, the ruby version and gemset to use.
+        Ignored if ``gem_bin`` is specified.
 
     user: None
         The user under which to run the ``gem`` command
@@ -144,31 +131,7 @@ def removed(name, ruby=None, runas=None, user=None):
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
-    salt.utils.warn_until(
-        'Lithium',
-        'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 0.17.0',
-        _dont_call_warnings=True
-    )
-    if runas:
-        # Warn users about the deprecation
-        ret.setdefault('warnings', []).append(
-            'The \'runas\' argument is being deprecated in favor of \'user\', '
-            'please update your state files.'
-        )
-    if user is not None and runas is not None:
-        # user wins over runas but let warn about the deprecation.
-        ret.setdefault('warnings', []).append(
-            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
-            '\'runas\' is being ignored in favor of \'user\'.'
-        )
-        runas = None
-    elif runas is not None:
-        # Support old runas usage
-        user = runas
-        runas = None
-
-    if name not in __salt__['gem.list'](name, ruby, runas=user):
+    if name not in __salt__['gem.list'](name, ruby, gem_bin=gem_bin, runas=user):
         ret['result'] = True
         ret['comment'] = 'Gem is not installed.'
         return ret
@@ -176,7 +139,7 @@ def removed(name, ruby=None, runas=None, user=None):
     if __opts__['test']:
         ret['comment'] = 'The gem {0} would have been removed'.format(name)
         return ret
-    if __salt__['gem.uninstall'](name, ruby, runas=user):
+    if __salt__['gem.uninstall'](name, ruby, gem_bin=gem_bin, runas=user):
         ret['result'] = True
         ret['changes'][name] = 'Removed'
         ret['comment'] = 'Gem was successfully removed.'

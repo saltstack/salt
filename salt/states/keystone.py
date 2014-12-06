@@ -107,7 +107,7 @@ def user_present(name,
     ret = {'name': name,
            'changes': {},
            'result': True,
-           'comment': 'User "{0}" is already present'.format(name)}
+           'comment': 'User "{0}" will be updated'.format(name)}
 
     # Validate tenant if set
     if tenant is not None:
@@ -126,12 +126,21 @@ def user_present(name,
     user = __salt__['keystone.user_get'](name=name, profile=profile,
                                          **connection_args)
     if 'Error' not in user:
+        ret['comment'] = 'User "{0}" is already present'.format(name)
         if user[name]['email'] != email:
+            if __opts__['test']:
+                ret['result'] = None
+                ret['changes']['Email'] = 'Will be updated'
+                return ret
             __salt__['keystone.user_update'](name=name, email=email,
                                              profile=profile, **connection_args)
             ret['comment'] = 'User "{0}" has been updated'.format(name)
             ret['changes']['Email'] = 'Updated'
         if user[name]['enabled'] != enabled:
+            if __opts__['test']:
+                ret['result'] = None
+                ret['changes']['Enabled'] = 'Will be {0}'.format(enabled)
+                return ret
             __salt__['keystone.user_update'](name=name,
                                              enabled=enabled,
                                              profile=profile,
@@ -140,6 +149,10 @@ def user_present(name,
             ret['changes']['Enabled'] = 'Now {0}'.format(enabled)
         if tenant and ('tenant_id' not in user[name] or
                        user[name]['tenant_id'] != tenant_id):
+            if __opts__['test']:
+                ret['result'] = None
+                ret['changes']['Tenant'] = 'Will be added to "{0}" tenant'.format(tenant)
+                return ret
             __salt__['keystone.user_update'](name=name, tenant=tenant,
                                              profile=profile,
                                              **connection_args)
@@ -149,6 +162,10 @@ def user_present(name,
                                                          password=password,
                                                          profile=profile,
                                                          **connection_args):
+            if __opts__['test']:
+                ret['result'] = None
+                ret['changes']['Password'] = 'Will be updated'
+                return ret
             __salt__['keystone.user_password_update'](name=name,
                                                       password=password,
                                                       profile=profile,
@@ -156,12 +173,19 @@ def user_present(name,
             ret['comment'] = 'User "{0}" has been updated'.format(name)
             ret['changes']['Password'] = 'Updated'
         if roles:
-            for tenant_role in roles[0].keys():
+            for tenant_role in roles[0]:
                 args = dict({'user_name': name, 'tenant_name':
                              tenant_role, 'profile': profile}, **connection_args)
                 tenant_roles = __salt__['keystone.user_role_list'](**args)
                 for role in roles[0][tenant_role]:
                     if role not in tenant_roles:
+                        if __opts__['test']:
+                            ret['result'] = None
+                            if 'roles' in ret['changes']:
+                                ret['changes']['roles'].append(role)
+                            else:
+                                ret['changes']['roles'] = [role]
+                            return ret
                         addargs = dict({'user': name, 'role': role,
                                         'tenant': tenant_role,
                                         'profile': profile},
@@ -173,6 +197,11 @@ def user_present(name,
                             ret['changes']['roles'] = [newrole]
     else:
         # Create that user!
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'Keystone user "{0}" will be added'.format(name)
+            ret['changes']['User'] = 'Will be created'
+            return ret
         __salt__['keystone.user_create'](name=name,
                                          password=password,
                                          email=email,
@@ -181,7 +210,7 @@ def user_present(name,
                                          profile=profile,
                                          **connection_args)
         if roles:
-            for tenant_role in roles[0].keys():
+            for tenant_role in roles[0]:
                 for role in roles[0][tenant_role]:
                     __salt__['keystone.user_role_add'](user=name,
                                                        role=role,
@@ -210,6 +239,11 @@ def user_absent(name, profile=None, **connection_args):
     user = __salt__['keystone.user_get'](name=name, profile=profile,
                                          **connection_args)
     if 'Error' not in user:
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'User "{0}" will be deleted'.format(name)
+            ret['changes']['User'] = 'Will be deleted'
+            return ret
         # Delete that user!
         __salt__['keystone.user_delete'](name=name, profile=profile,
                                          **connection_args)
@@ -221,7 +255,7 @@ def user_absent(name, profile=None, **connection_args):
 
 def tenant_present(name, description=None, enabled=True, profile=None,
                    **connection_args):
-    ''''
+    '''
     Ensures that the keystone tenant exists
 
     name
@@ -238,29 +272,44 @@ def tenant_present(name, description=None, enabled=True, profile=None,
            'result': True,
            'comment': 'Tenant "{0}" already exists'.format(name)}
 
-    # Check if user is already present
+    # Check if tenant is already present
     tenant = __salt__['keystone.tenant_get'](name=name,
                                              profile=profile,
                                              **connection_args)
 
     if 'Error' not in tenant:
         if tenant[name]['description'] != description:
-            __salt__['keystone.tenant_update'](name, description,
-                                               enabled,
+            if __opts__['test']:
+                ret['result'] = None
+                ret['comment'] = 'Tenant "{0}" will be updated'.format(name)
+                ret['changes']['Description'] = 'Will be updated'
+                return ret
+            __salt__['keystone.tenant_update'](name=name,
+                                               description=description,
+                                               enabled=enabled,
                                                profile=profile,
                                                **connection_args)
-            comment = 'Tenant "{0}" has been updated'.format(name)
-            ret['comment'] = comment
+            ret['comment'] = 'Tenant "{0}" has been updated'.format(name)
             ret['changes']['Description'] = 'Updated'
         if tenant[name]['enabled'] != enabled:
-            __salt__['keystone.tenant_update'](name, description,
-                                               enabled,
+            if __opts__['test']:
+                ret['result'] = None
+                ret['comment'] = 'Tenant "{0}" will be updated'.format(name)
+                ret['changes']['Enabled'] = 'Will be {0}'.format(enabled)
+                return ret
+            __salt__['keystone.tenant_update'](name=name,
+                                               description=description,
+                                               enabled=enabled,
                                                profile=profile,
                                                **connection_args)
-            comment = 'Tenant "{0}" has been updated'.format(name)
-            ret['comment'] = comment
+            ret['comment'] = 'Tenant "{0}" has been updated'.format(name)
             ret['changes']['Enabled'] = 'Now {0}'.format(enabled)
     else:
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'Tenant "{0}" will be added'.format(name)
+            ret['changes']['Tenant'] = 'Will be created'
+            return ret
         # Create tenant
         __salt__['keystone.tenant_create'](name, description, enabled,
                                            profile=profile,
@@ -287,6 +336,11 @@ def tenant_absent(name, profile=None, **connection_args):
                                              profile=profile,
                                              **connection_args)
     if 'Error' not in tenant:
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'Tenant "{0}" will be deleted'.format(name)
+            ret['changes']['Tenant'] = 'Will be deleted'
+            return ret
         # Delete tenant
         __salt__['keystone.tenant_delete'](name=name, profile=profile,
                                            **connection_args)
@@ -315,6 +369,11 @@ def role_present(name, profile=None, **connection_args):
     if 'Error' not in role:
         return ret
     else:
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'Role "{0}" will be added'.format(name)
+            ret['changes']['Role'] = 'Will be created'
+            return ret
         # Create role
         __salt__['keystone.role_create'](name, profile=profile,
                                          **connection_args)
@@ -339,6 +398,11 @@ def role_absent(name, profile=None, **connection_args):
     role = __salt__['keystone.role_get'](name=name, profile=profile,
                                          **connection_args)
     if 'Error' not in role:
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'Role "{0}" will be deleted'.format(name)
+            ret['changes']['Role'] = 'Will be deleted'
+            return ret
         # Delete role
         __salt__['keystone.role_delete'](name=name, profile=profile,
                                          **connection_args)
@@ -375,6 +439,11 @@ def service_present(name, service_type, description=None,
     if 'Error' not in role:
         return ret
     else:
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'Service "{0}" will be added'.format(name)
+            ret['changes']['Service'] = 'Will be created'
+            return ret
         # Create service
         __salt__['keystone.service_create'](name, service_type,
                                             description,
@@ -402,6 +471,11 @@ def service_absent(name, profile=None, **connection_args):
                                             profile=profile,
                                             **connection_args)
     if 'Error' not in role:
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'Service "{0}" will be deleted'.format(name)
+            ret['changes']['Service'] = 'Will be deleted'
+            return ret
         # Delete service
         __salt__['keystone.service_delete'](name=name,
                                             profile=profile,
@@ -452,20 +526,32 @@ def endpoint_present(name,
         if endpoint == cur_endpoint:
             return ret
         else:
+            if __opts__['test']:
+                ret['result'] = None
+                ret['comment'] = 'Endpoint for service "{0}" will be updated'.format(name)
+                ret['changes']['endpoint'] = 'Will be updated'
+                return ret
             __salt__['keystone.endpoint_delete'](name,
                                                  profile=profile,
                                                  **connection_args)
-            ret['comment'] = 'endpoint for service "{0}" has been updated'.format(name)
+            ret['comment'] = 'Endpoint for service "{0}" has been updated'.format(name)
     else:
-        ret['comment'] = 'endpoint for service "{0}" has been added'.format(name)
-    ret['changes'] = __salt__['keystone.endpoint_create'](
-        name,
-        region=region,
-        publicurl=publicurl,
-        adminurl=adminurl,
-        internalurl=internalurl,
-        profile=profile,
-        **connection_args)
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'Endpoint for service "{0}" will be added'.format(name)
+            ret['changes']['endpoint'] = 'Will be created'
+            return ret
+        ret['comment'] = 'Endpoint for service "{0}" has been added'.format(name)
+
+    if not __opts__['test']:
+        ret['changes'] = __salt__['keystone.endpoint_create'](
+            name,
+            region=region,
+            publicurl=publicurl,
+            adminurl=adminurl,
+            internalurl=internalurl,
+            profile=profile,
+            **connection_args)
     return ret
 
 
@@ -487,10 +573,16 @@ def endpoint_absent(name, profile=None, **connection_args):
                                                  **connection_args)
     if not endpoint:
         return ret
+    else:
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'Endpoint for service "{0}" will be deleted'.format(name)
+            ret['changes']['endpoint'] = 'Will be deleted'
+            return ret
         # Delete service
-    __salt__['keystone.endpoint_delete'](name,
-                                         profile=profile,
-                                         **connection_args)
-    ret['comment'] = 'endpoint for service "{0}" has been deleted'.format(name)
-    ret['changes']['endpoint'] = 'Deleted'
+        __salt__['keystone.endpoint_delete'](name,
+                                             profile=profile,
+                                             **connection_args)
+        ret['comment'] = 'Endpoint for service "{0}" has been deleted'.format(name)
+        ret['changes']['endpoint'] = 'Deleted'
     return ret

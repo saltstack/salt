@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 '''
 Support for haproxy
+
+.. versionadded:: 2014.7.0
 '''
 
 from __future__ import generators
+from __future__ import absolute_import
 
 # Import python libs
 import stat

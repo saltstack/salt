@@ -26,6 +26,8 @@ SoftLayer salt.cloud modules. See: https://pypi.python.org/pypi/SoftLayer
 '''
 # pylint: disable=E0102
 
+from __future__ import absolute_import
+
 # Import python libs
 import copy
 import pprint
@@ -34,7 +36,7 @@ import time
 
 # Import salt cloud libs
 import salt.config as config
-from salt.cloud.exceptions import SaltCloudSystemExit
+from salt.exceptions import SaltCloudSystemExit
 from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
 from salt.utils import namespaced_function
 
@@ -308,10 +310,10 @@ def create(vm_):
             'Error creating {0} on SoftLayer\n\n'
             'The following exception was thrown by libcloud when trying to '
             'run the initial deployment: \n{1}'.format(
-                vm_['name'], exc.message
+                vm_['name'], str(exc)
             ),
             # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 

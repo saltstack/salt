@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Manage Elasticache
-==================
 
 .. versionadded:: 2014.7.0
 
@@ -156,7 +155,7 @@ def present(
         to the cache cluster during the maintenance window. A value of True
         allows these upgrades to occur; False disables automatic upgrades.
 
-    security_groups_ids
+    security_group_ids
         One or more VPC security groups associated with the cache cluster. Use
         this parameter only when you are creating a cluster in a VPC.
 
@@ -193,17 +192,31 @@ def present(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
     '''
-    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    if cache_security_group_names and cache_subnet_group_name:
+        _subnet_group = __salt__['boto_elasticache.get_cache_subnet_group'](
+            cache_subnet_group_name, region, key, keyid, profile
+        )
+        vpc_id = _subnet_group['vpc_id']
+        if not security_group_ids:
+            security_group_ids = []
+        _security_group_ids = __salt__['boto_secgroup.convert_to_group_ids'](
+            cache_security_group_names, vpc_id, region, key, keyid, profile
+        )
+        security_group_ids.extend(_security_group_ids)
+        cache_security_group_names = None
     config = __salt__['boto_elasticache.get_config'](name, region, key, keyid,
                                                      profile)
     if config is None:
         msg = 'Failed to retrieve cache cluster info from AWS.'
         ret['comment'] = msg
+        ret['result'] = None
         return ret
     elif not config:
         if __opts__['test']:
             msg = 'Cache cluster {0} is set to be created.'.format(name)
             ret['comment'] = msg
+            ret['result'] = None
             return ret
         created = __salt__['boto_elasticache.create'](
             name=name, num_cache_nodes=num_cache_nodes,
@@ -220,7 +233,6 @@ def present(
             auto_minor_version_upgrade=auto_minor_version_upgrade,
             wait=wait, region=region, key=key, keyid=keyid, profile=profile)
         if created:
-            ret['result'] = True
             ret['changes']['old'] = None
             config = __salt__['boto_elasticache.get_config'](name, region, key,
                                                              keyid, profile)
@@ -265,7 +277,7 @@ def absent(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
     '''
-    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     is_present = __salt__['boto_elasticache.exists'](name, region, key, keyid,
                                                      profile)
@@ -274,11 +286,11 @@ def absent(
         if __opts__['test']:
             ret['comment'] = 'Cache cluster {0} is set to be removed.'.format(
                 name)
+            ret['result'] = None
             return ret
         deleted = __salt__['boto_elasticache.delete'](name, wait, region, key,
                                                       keyid, profile)
         if deleted:
-            ret['result'] = True
             ret['changes']['old'] = name
             ret['changes']['new'] = None
         else:

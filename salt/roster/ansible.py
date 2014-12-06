@@ -90,6 +90,7 @@ This is the format that an inventory script needs to output to work with ansible
 
 Any of the [groups] or direct hostnames will return.  The 'all' is special, and returns everything.
 '''
+from __future__ import absolute_import
 import os
 import re
 import fnmatch

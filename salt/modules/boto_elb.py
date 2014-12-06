@@ -33,10 +33,12 @@ Connection module for Amazon ELB
 
 :depends: boto
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import logging
 import json
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -50,7 +52,7 @@ try:
 except ImportError:
     HAS_BOTO = False
 
-from salt._compat import string_types
+from salt.ext.six import string_types
 import salt.utils.odict as odict
 
 
@@ -166,7 +168,7 @@ def create(name, availability_zones, listeners=None, subnets=None,
             return False
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        msg = 'Failed to create ELB {0}'.format(name)
+        msg = 'Failed to create ELB {0}: {1}'.format(name, e.message)
         log.error(msg)
         return False
 
@@ -231,7 +233,7 @@ def create_listeners(name, listeners=None, region=None, key=None, keyid=None,
         return True
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        msg = 'Failed to create ELB listeners on {0}'.format(name)
+        msg = 'Failed to create ELB listeners on {0}: {1}'.format(name, e.message)
         log.error(msg)
         return False
 
@@ -257,7 +259,7 @@ def delete_listeners(name, ports, region=None, key=None, keyid=None,
         return True
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        msg = 'Failed to delete ELB listeners on {0}'.format(name)
+        msg = 'Failed to delete ELB listeners on {0}: {1}'.format(name, e.message)
         log.error(msg)
         return False
 
@@ -283,7 +285,7 @@ def enable_availability_zones(name, availability_zones, region=None, key=None,
         return True
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        msg = 'Failed to enable availability_zones on ELB {0}'.format(name)
+        msg = 'Failed to enable availability_zones on ELB {0}: {1}'.format(name, e.message)
         log.error(msg)
         return False
 
@@ -309,7 +311,7 @@ def disable_availability_zones(name, availability_zones, region=None, key=None,
         return True
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        msg = 'Failed to disable availability_zones on ELB {0}'.format(name)
+        msg = 'Failed to disable availability_zones on ELB {0}: {1}'.format(name, e.message)
         log.error(msg)
         return False
 
@@ -335,7 +337,7 @@ def attach_subnets(name, subnets, region=None, key=None, keyid=None,
         return True
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        msg = 'Failed to attach ELB {0} on subnets.'.format(name)
+        msg = 'Failed to attach ELB {0} on subnets: {1}'.format(name, e.message)
         log.error(msg)
         return False
 
@@ -356,12 +358,12 @@ def detach_subnets(name, subnets, region=None, key=None, keyid=None,
         subnets = json.loads(subnets)
     try:
         conn.detach_lb_from_subnets(name, subnets)
-        msg = 'Detatched ELB {0} from subnets.'.format(name)
+        msg = 'Detached ELB {0} from subnets.'.format(name)
         log.info(msg)
         return True
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        msg = 'Failed to detach ELB {0} from subnets.'.format(name)
+        msg = 'Failed to detach ELB {0} from subnets: {1}'.format(name, e.message)
         log.error(msg)
         return False
 
@@ -392,7 +394,7 @@ def get_attributes(name, region=None, key=None, keyid=None, profile=None):
         return ret
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        log.error('ELB {0} does not exist.'.format(name))
+        log.error('ELB {0} does not exist: {1}'.format(name, e.message))
         return {}
 
 
@@ -468,7 +470,7 @@ def get_health_check(name, region=None, key=None, keyid=None, profile=None):
         return ret
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        log.error('ELB {0} does not exist.'.format(name))
+        log.error('ELB {0} does not exist: {1}'.format(name, e.message))
         return {}
 
 
@@ -490,7 +492,7 @@ def set_health_check(name, health_check, region=None, key=None, keyid=None,
         log.info('Configured health check on ELB {0}'.format(name))
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        log.info('Failed to configure health check on ELB {0}'.format(name))
+        log.info('Failed to configure health check on ELB {0}: {1}'.format(name, e.message))
         return False
     return True
 
@@ -501,16 +503,40 @@ def register_instances(name, instances, region=None, key=None, keyid=None,
     Register instances with an ELB.  Instances is either a string
     instance id or a list of string instance id's.
 
-    CLI example to set attributes on an ELB::
+    Returns:
+
+    - ``True``: instance(s) registered successfully
+    - ``False``: instance(s) failed to be registered
+
+    CLI example::
 
         salt myminion boto_elb.register_instances myelb instance_id
         salt myminion boto_elb.register_instances myelb "[instance_id,instance_id]"
     '''
+    # convert instances to list type, enabling consistent use of instances
+    # variable throughout the register_instances method
+    if isinstance(instances, str) or isinstance(instances, six.text_type):
+        instances = [instances]
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    load_balancer = conn.get_all_load_balancers(name)[0]
-    return load_balancer.register_instances(instances)
+    try:
+        registered_instances = conn.register_instances(name, instances)
+    except boto.exception.BotoServerError as e:
+        log.warn(e)
+        return False
+    registered_instance_ids = [instance.id for instance in
+                               registered_instances]
+    # register_failues is a set that will contain any instances that were not
+    # able to be registered with the given ELB
+    register_failures = set(instances).difference(set(registered_instance_ids))
+    if register_failures:
+        log.warn('Instance(s): {0} not registered with ELB {1}.'
+                 .format(list(register_failures), name))
+        register_result = False
+    else:
+        register_result = True
+    return register_result
 
 
 def deregister_instances(name, instances, region=None, key=None, keyid=None,
@@ -519,16 +545,78 @@ def deregister_instances(name, instances, region=None, key=None, keyid=None,
     Deregister instances with an ELB.  Instances is either a string
     instance id or a list of string instance id's.
 
-    CLI example to set attributes on an ELB::
+    Returns:
+
+    - ``True``: instance(s) deregistered successfully
+    - ``False``: instance(s) failed to be deregistered
+    - ``None``: instance(s) not valid or not registered, no action taken
+
+    CLI example::
 
         salt myminion boto_elb.deregister_instances myelb instance_id
-        salt myminion boto_elb.deregister_instances myelb "[instance_id,instance_id]"
+        salt myminion boto_elb.deregister_instances myelb "[instance_id, instance_id]"
     '''
+    # convert instances to list type, enabling consistent use of instances
+    # variable throughout the deregister_instances method
+    if isinstance(instances, str) or isinstance(instances, six.text_type):
+        instances = [instances]
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    load_balancer = conn.get_all_load_balancers(name)[0]
-    return load_balancer.deregister_instances(instances)
+    try:
+        registered_instances = conn.deregister_instances(name, instances)
+    except boto.exception.BotoServerError as e:
+        # if the instance(s) given as an argument are not members of the ELB
+        # boto returns e.error_code == 'InvalidInstance'
+        # deregister_instances returns "None" because the instances are
+        # effectively deregistered from ELB
+        if e.error_code == 'InvalidInstance':
+            log.warn('One or more of instance(s) {0} are not part of ELB {1}.'
+                     ' deregister_instances not performed.'
+                     .format(instances, name))
+            return None
+        else:
+            log.warn(e)
+            return False
+    registered_instance_ids = [instance.id for instance in
+                               registered_instances]
+    # deregister_failures is a set that will contain any instances that were
+    # unable to be deregistered from the given ELB
+    deregister_failures = set(instances).intersection(set(registered_instance_ids))
+    if deregister_failures:
+        log.warn('Instance(s): {0} not deregistered from ELB {1}.'
+                 .format(list(deregister_failures), name))
+        deregister_result = False
+    else:
+        deregister_result = True
+    return deregister_result
+
+
+def get_instance_health(name, region=None, key=None, keyid=None, profile=None, instances=None):
+    '''
+    Get a list of instances and their health state
+
+    CLI example::
+
+        salt myminion boto_elb.get_instance_health myelb
+        salt myminion boto_elb.get_instance_health myelb region=us-east-1 instances="[instance_id,instance_id]"
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return []
+    try:
+        instance_states = conn.describe_instance_health(name, instances)
+        ret = []
+        for _instance in instance_states:
+            ret.append({'instance_id': _instance.instance_id,
+                        'description': _instance.description,
+                        'state': _instance.state,
+                        'reason_code': _instance.reason_code
+                        })
+        return ret
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        return []
 
 
 def _get_conn(region, key, keyid, profile):

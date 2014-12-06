@@ -11,7 +11,7 @@ state:
 
     mine.send:
       module.run:
-        - func: network.interfaces
+        - name: network.interfaces
 
 Note that this example is probably unnecessary to use in practice, since the
 ``mine_functions`` and ``mine_interval`` config parameters can be used to
@@ -25,7 +25,7 @@ for this the :mod:`module.wait <salt.states.module.wait>` state can be used:
 
     mine.send:
       module.wait:
-        - func: network.interfaces
+        - name: network.interfaces
         - watch:
           - file: /etc/network/interfaces
 
@@ -51,13 +51,26 @@ argument, to avoid a collision with the ``name`` argument. For example:
       module.run:
         - name: service.disable
         - m_name: nfs
+
+Note that some modules read all or some of the arguments from a list of keyword
+arguments. For example:
+
+.. code-block:: yaml
+
+    mine.send:
+      module.run:
+        - func: network.ip_addrs
+        - kwargs:
+            interface: eth0
 '''
+from __future__ import absolute_import
 # Import python libs
 import datetime
 
 # Import salt libs
 import salt.loader
 import salt.utils
+from salt.ext.six.moves import range
 
 
 def wait(name, **kwargs):
@@ -118,7 +131,6 @@ def run(name, **kwargs):
         return ret
 
     aspec = salt.utils.get_function_argspec(__salt__[name])
-
     args = []
     defaults = {}
 
@@ -197,7 +209,7 @@ def run(name, **kwargs):
         ret['result'] = False
         return ret
     else:
-        if mret:
+        if mret is not None:
             ret['changes']['ret'] = mret
 
     if 'returner' in kwargs:
@@ -210,9 +222,18 @@ def run(name, **kwargs):
         if kwargs['returner'] in returners:
             returners[kwargs['returner']](ret_ret)
     ret['comment'] = 'Module function {0} executed'.format(name)
+
     ret['result'] = True
-    if ret['changes'].get('retcode', 0) != 0:
+    # if mret is a dict and there is retcode and its non-zero
+    if isinstance(mret, dict) and mret.get('retcode', 0) != 0:
         ret['result'] = False
+    # if its a boolean, return that as the result
+    elif isinstance(mret, bool):
+        ret['result'] = mret
+    else:
+        changes_ret = ret['changes'].get('ret', {})
+        if isinstance(changes_ret, dict) and changes_ret.get('retcode', 0) != 0:
+            ret['result'] = False
     return ret
 
 mod_watch = run  # pylint: disable=C0103

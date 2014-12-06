@@ -15,7 +15,7 @@ except ImportError:
     HAS_LIBS = False
 
 # Import salt libs
-from salt._compat import string_types
+from salt.ext.six import string_types
 
 
 def render(genshi_data, saltenv='base', sls='', method='xml', **kws):

@@ -15,10 +15,12 @@ Example output::
 
     {'myminion': {'foo': {'list': ['Hello', 'World'], 'bar': 'baz', 'dictionary': {'abc': 123, 'def': 456}}}}
 '''
+# Import Salt libs
+import salt.utils
 
 
 def output(data):
     '''
     Rather basic....
     '''
-    return str(data)
+    return salt.utils.sdecode(str(data))

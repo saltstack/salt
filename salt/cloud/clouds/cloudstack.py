@@ -6,6 +6,8 @@ CloudStack Cloud Module
 The CloudStack cloud module is used to control access to a CloudStack based
 Public Cloud.
 
+:depends: libcloud
+
 Use of this module requires the ``apikey``, ``secretkey``, ``host`` and
 ``path`` parameters.
 
@@ -21,6 +23,8 @@ Use of this module requires the ``apikey``, ``secretkey``, ``host`` and
 '''
 # pylint: disable=E0102
 
+from __future__ import absolute_import
+
 # Import python libs
 import copy
 import pprint
@@ -30,7 +34,7 @@ import logging
 import salt.config as config
 from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
 from salt.utils import namespaced_function
-from salt.cloud.exceptions import SaltCloudSystemExit
+from salt.exceptions import SaltCloudSystemExit
 
 # CloudStackNetwork will be needed during creation of a new node
 try:
@@ -43,13 +47,13 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 # Redirect CloudStack functions to this module namespace
+get_node = namespaced_function(get_node, globals())
 get_size = namespaced_function(get_size, globals())
 get_image = namespaced_function(get_image, globals())
 avail_locations = namespaced_function(avail_locations, globals())
 avail_images = namespaced_function(avail_images, globals())
 avail_sizes = namespaced_function(avail_sizes, globals())
 script = namespaced_function(script, globals())
-destroy = namespaced_function(destroy, globals())
 list_nodes = namespaced_function(list_nodes, globals())
 list_nodes_full = namespaced_function(list_nodes_full, globals())
 list_nodes_select = namespaced_function(list_nodes_select, globals())
@@ -194,6 +198,24 @@ def get_networkid(vm_):
         return False
 
 
+def get_project(conn, vm_):
+    '''
+    Return the project to use.
+    '''
+    projects = conn.ex_list_projects()
+    projid = config.get_cloud_config_value('projectid', vm_, __opts__)
+
+    if not projid:
+        return False
+
+    for project in projects:
+        if str(projid) in (str(project.id), str(project.name)):
+            return project
+
+    log.warning("Couldn't find project {0} in projects".format(projid))
+    return False
+
+
 def create(vm_):
     '''
     Create a single VM from a data dict
@@ -230,6 +252,9 @@ def create(vm_):
                                                    None, None),
                              )
 
+    if get_project(conn, vm_) is not False:
+        kwargs['project'] = get_project(conn, vm_)
+
     salt.utils.cloud.fire_event(
         'event',
         'requesting instance',
@@ -240,6 +265,38 @@ def create(vm_):
         transport=__opts__['transport']
     )
 
+    volumes = {}
+    ex_blockdevicemappings = block_device_mappings(vm_)
+    if ex_blockdevicemappings:
+        for ex_blockdevicemapping in ex_blockdevicemappings:
+            if 'VirtualName' not in ex_blockdevicemapping:
+                ex_blockdevicemapping['VirtualName'] = '{0}-{1}'.format(vm_['name'], len(volumes))
+            salt.utils.cloud.fire_event(
+              'event',
+              'requesting volume',
+              'salt/cloud/{0}/requesting'.format(ex_blockdevicemapping['VirtualName']),
+              {'kwargs': {'name': ex_blockdevicemapping['VirtualName'],
+                          'device': ex_blockdevicemapping['DeviceName'],
+                          'size': ex_blockdevicemapping['VolumeSize']}},
+            )
+            try:
+                volumes[ex_blockdevicemapping['DeviceName']] = conn.create_volume(
+                        ex_blockdevicemapping['VolumeSize'],
+                        ex_blockdevicemapping['VirtualName']
+                    )
+            except Exception as exc:
+                log.error(
+                    'Error creating volume {0} on CLOUDSTACK\n\n'
+                    'The following exception was thrown by libcloud when trying to '
+                    'requesting a volume: \n{1}'.format(
+                        ex_blockdevicemapping['VirtualName'], exc.message
+                    ),
+                    # Show the traceback if the debug logging level is enabled
+                    exc_info_on_loglevel=logging.DEBUG
+                )
+                return False
+    else:
+        ex_blockdevicemapping = {}
     try:
         data = conn.create_node(**kwargs)
     except Exception as exc:
@@ -247,12 +304,27 @@ def create(vm_):
             'Error creating {0} on CLOUDSTACK\n\n'
             'The following exception was thrown by libcloud when trying to '
             'run the initial deployment: \n{1}'.format(
-                vm_['name'], exc.message
+                vm_['name'], str(exc)
             ),
             # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
+
+    for device_name in volumes.keys():
+        try:
+            conn.attach_volume(data, volumes[device_name], device_name)
+        except Exception as exc:
+            log.error(
+                'Error attaching volume {0} on CLOUDSTACK\n\n'
+                'The following exception was thrown by libcloud when trying to '
+                'attach a volume: \n{1}'.format(
+                    ex_blockdevicemapping.get('VirtualName', 'UNKNOWN'), exc.message
+                ),
+                # Show the traceback if the debug logging level is enabled
+                exc_info=log.isEnabledFor(logging.DEBUG)
+            )
+            return False
 
     ssh_username = config.get_cloud_config_value(
         'ssh_username', vm_, __opts__, default='root'
@@ -388,3 +460,104 @@ def create(vm_):
     )
 
     return ret
+
+
+def destroy(name, conn=None, call=None):
+    '''
+    Delete a single VM, and all of its volumes
+    '''
+    if call == 'function':
+        raise SaltCloudSystemExit(
+            'The destroy action must be called with -d, --destroy, '
+            '-a or --action.'
+        )
+
+    salt.utils.cloud.fire_event(
+        'event',
+        'destroying instance',
+        'salt/cloud/{0}/destroying'.format(name),
+        {'name': name},
+    )
+
+    if not conn:
+        conn = get_conn()   # pylint: disable=E0602
+
+    node = get_node(conn, name)
+    if node is None:
+        log.error('Unable to find the VM {0}'.format(name))
+    volumes = conn.list_volumes(node)
+    if volumes is None:
+        log.error('Unable to find volumes of the VM {0}'.format(name))
+    # TODO add an option like 'delete_sshkeys' below
+    for volume in volumes:
+        if volume.extra['volume_type'] != 'DATADISK':
+            log.info('Ignoring volume type {0}: {1}'.format(
+                volume.extra['volume_type'], volume.name)
+            )
+            continue
+        log.info('Detaching volume: {0}'.format(volume.name))
+        salt.utils.cloud.fire_event(
+            'event',
+            'detaching volume',
+            'salt/cloud/{0}/detaching'.format(volume.name),
+            {'name': volume.name},
+        )
+        if not conn.detach_volume(volume):
+            log.error('Failed to Detach volume: {0}'.format(volume.name))
+            return False
+        log.info('Detached volume: {0}'.format(volume.name))
+        salt.utils.cloud.fire_event(
+            'event',
+            'detached volume',
+            'salt/cloud/{0}/detached'.format(volume.name),
+            {'name': volume.name},
+        )
+
+        log.info('Destroying volume: {0}'.format(volume.name))
+        salt.utils.cloud.fire_event(
+            'event',
+            'destroying volume',
+            'salt/cloud/{0}/destroying'.format(volume.name),
+            {'name': volume.name},
+        )
+        if not conn.destroy_volume(volume):
+            log.error('Failed to Destroy volume: {0}'.format(volume.name))
+            return False
+        log.info('Destroyed volume: {0}'.format(volume.name))
+        salt.utils.cloud.fire_event(
+            'event',
+            'destroyed volume',
+            'salt/cloud/{0}/destroyed'.format(volume.name),
+            {'name': volume.name},
+        )
+    log.info('Destroying VM: {0}'.format(name))
+    ret = conn.destroy_node(node)
+    if not ret:
+        log.error('Failed to Destroy VM: {0}'.format(name))
+        return False
+    log.info('Destroyed VM: {0}'.format(name))
+    # Fire destroy action
+    event = salt.utils.event.SaltEvent('master', __opts__['sock_dir'])
+    salt.utils.cloud.fire_event(
+        'event',
+        'destroyed instance',
+        'salt/cloud/{0}/destroyed'.format(name),
+        {'name': name},
+    )
+    if __opts__['delete_sshkeys'] is True:
+        salt.utils.cloud.remove_sshkey(node.public_ips[0])
+    return True
+
+
+def block_device_mappings(vm_):
+    '''
+    Return the block device mapping:
+
+    ::
+
+        [{'DeviceName': '/dev/sdb', 'VirtualName': 'ephemeral0'},
+          {'DeviceName': '/dev/sdc', 'VirtualName': 'ephemeral1'}]
+    '''
+    return config.get_cloud_config_value(
+        'block_device_mappings', vm_, __opts__, search_global=True
+    )

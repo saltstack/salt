@@ -16,6 +16,10 @@ to look for Pillar files (such as ``top.sls``).
 .. versionchanged:: 2014.7.0
     The optional ``root`` parameter will be added.
 
+.. versionchanged:: @TBD
+    The special branch name '__env__' will be replace by the
+    environment ({{env}})
+
 Note that this is not the same thing as configuring pillar data using the
 :conf_master:`pillar_roots` parameter. The branch referenced in the
 :conf_master:`ext_pillar` entry above (``master``), would evaluate to the
@@ -45,7 +49,25 @@ section in it, like this:
     dev:
       '*':
         - bar
+
+In a gitfs base setup with pillars from the same repository as the states,
+the ``ext_pillar:`` configuration would be like:
+
+.. code-block:: yaml
+
+    ext_pillar:
+      - git: _ git://gitserver/git-pillar.git root=pillar
+
+The (optinal) root=pillar defines the directory that contains the pillar data.
+The corresponding ``top.sls`` would be like:
+
+.. code-block:: yaml
+
+    {{env}}:
+      '*':
+        - bar
 '''
+from __future__ import absolute_import
 
 # Import python libs
 from copy import deepcopy
@@ -96,7 +118,7 @@ class GitPillar(object):
         '''
         Try to initialize the Git repo object
         '''
-        self.branch = branch
+        self.branch = self.map_branch(branch, opts)
         self.rp_location = repo_location
         self.opts = opts
         self._envs = set()
@@ -142,6 +164,14 @@ class GitPillar(object):
             else:
                 if self.repo.remotes.origin.url != self.rp_location:
                     self.repo.remotes.origin.config_writer.set('url', self.rp_location)
+
+    def map_branch(self, branch, opts=None):
+        opts = __opts__ if opts is None else opts
+        if branch == '__env__':
+            branch = opts.get('environment', 'base')
+            if branch == 'base':
+                branch = opts.get('gitfs_base', 'master')
+        return branch
 
     def update(self):
         '''
@@ -207,17 +237,16 @@ def envs(branch, repo_location):
     return gitpil.envs()
 
 
-def _extract_key_val(kv, delim='='):
+def _extract_key_val(kv, delimiter='='):
     '''Extract key and value from key=val string.
 
     Example:
     >>> _extract_key_val('foo=bar')
     ('foo', 'bar')
     '''
-    delim = '='
-    pieces = kv.split(delim)
+    pieces = kv.split(delimiter)
     key = pieces[0]
-    val = delim.join(pieces[1:])
+    val = delimiter.join(pieces[1:])
     return key, val
 
 
@@ -248,6 +277,7 @@ def ext_pillar(minion_id,
             log.warning('Unrecognized extra parameter: {0}'.format(key))
 
     gitpil = GitPillar(branch, repo_location, __opts__)
+    branch = gitpil.branch
 
     # environment is "different" from the branch
     branch = (branch == 'master' and 'base' or branch)
@@ -264,14 +294,13 @@ def ext_pillar(minion_id,
 
     # Don't recurse forever-- the Pillar object will re-call the ext_pillar
     # function
-    if __opts__['pillar_roots'].get(branch, []) == [pillar_dir]:
+    if pillar_dir in __opts__['pillar_roots'].get(branch, []):
         return {}
 
     gitpil.update()
 
     opts = deepcopy(__opts__)
-
-    opts['pillar_roots'][branch] = [pillar_dir]
+    opts['pillar_roots'].setdefault(branch, []).append(pillar_dir)
 
     pil = Pillar(opts, __grains__, minion_id, branch)
 

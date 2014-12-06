@@ -6,6 +6,7 @@ znc - An advanced IRC bouncer
 
 Provides an interface to basic ZNC functionality
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import hashlib
@@ -16,6 +17,7 @@ import signal
 
 # Import salt libs
 import salt.utils
+from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 
@@ -46,7 +48,7 @@ def _makepass(password, hasher='sha256'):
         "0123456789!?.,:;/*-+_()"
     r = {
         'Method': h.name,
-        'Salt': ''.join(random.choice(c) for x in xrange(20)),
+        'Salt': ''.join(random.SystemRandom().choice(c) for x in range(20)),
     }
 
     # Salt the password hash

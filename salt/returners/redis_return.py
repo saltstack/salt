@@ -12,13 +12,30 @@ config, these are the defaults:
     redis.host: 'salt'
     redis.port: 6379
 
+Alternative configuration values can be used by prefacing the configuration.
+Any values not found in the alternative configuration will be pulled from
+the default location::
+
+    alternative.redis.db: '0'
+    alternative.redis.host: 'salt'
+    alternative.redis.port: 6379
+
   To use the redis returner, append '--return redis' to the salt command. ex:
 
     salt '*' test.ping --return redis
+
+  To use the alternative configuration, append '--return_config alternative' to the salt command. ex:
+
+    salt '*' test.ping --return redis --return_config alternative
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import json
+
+# Import Salt libs
+import salt.utils
+import salt.returners
 
 # Import third party libs
 try:
@@ -37,21 +54,42 @@ def __virtual__():
     return __virtualname__
 
 
-def _get_serv():
+def _get_options(ret=None):
+    '''
+    Get the redis options from salt.
+    '''
+    attrs = {'host': 'host',
+             'port': 'port',
+             'db': 'db'}
+
+    _options = salt.returners.get_returner_options(__virtualname__,
+                                                   ret,
+                                                   attrs,
+                                                   __salt__=__salt__,
+                                                   __opts__=__opts__)
+    return _options
+
+
+def _get_serv(ret=None):
     '''
     Return a redis server object
     '''
+    _options = _get_options(ret)
+    host = _options.get('host')
+    port = _options.get('port')
+    db = _options.get('db')
+
     return redis.Redis(
-            host=__salt__['config.option']('redis.host'),
-            port=__salt__['config.option']('redis.port'),
-            db=__salt__['config.option']('redis.db'))
+            host=host,
+            port=port,
+            db=db)
 
 
 def returner(ret):
     '''
     Return data to a redis data store
     '''
-    serv = _get_serv()
+    serv = _get_serv(ret)
     serv.set('{0}:{1}'.format(ret['id'], ret['jid']), json.dumps(ret))
     serv.lpush('{0}:{1}'.format(ret['id'], ret['fun']), ret['jid'])
     serv.sadd('minions', ret['id'])
@@ -62,7 +100,7 @@ def save_load(jid, load):
     '''
     Save the load to the specified jid
     '''
-    serv = _get_serv()
+    serv = _get_serv(ret=None)
     serv.set(jid, json.dumps(load))
     serv.sadd('jids', jid)
 
@@ -71,7 +109,7 @@ def get_load(jid):
     '''
     Return the load data that marks a specified jid
     '''
-    serv = _get_serv()
+    serv = _get_serv(ret=None)
     data = serv.get(jid)
     if data:
         return json.loads(data)
@@ -82,7 +120,7 @@ def get_jid(jid):
     '''
     Return the information returned when the specified job id was executed
     '''
-    serv = _get_serv()
+    serv = _get_serv(ret=None)
     ret = {}
     for minion in serv.smembers('minions'):
         data = serv.get('{0}:{1}'.format(minion, jid))
@@ -95,7 +133,7 @@ def get_fun(fun):
     '''
     Return a dict of the last function called for all minions
     '''
-    serv = _get_serv()
+    serv = _get_serv(ret=None)
     ret = {}
     for minion in serv.smembers('minions'):
         ind_str = '{0}:{1}'.format(minion, fun)
@@ -113,7 +151,7 @@ def get_jids():
     '''
     Return a list of all job ids
     '''
-    serv = _get_serv()
+    serv = _get_serv(ret=None)
     return list(serv.smembers('jids'))
 
 
@@ -121,5 +159,12 @@ def get_minions():
     '''
     Return a list of minions
     '''
-    serv = _get_serv()
+    serv = _get_serv(ret=None)
     return list(serv.smembers('minions'))
+
+
+def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
+    '''
+    Do any work necessary to prepare a JID, including sending a custom id
+    '''
+    return passed_jid if passed_jid is not None else salt.utils.gen_jid()

@@ -15,13 +15,33 @@ to the minion config files::
     mongo.password: <MongoDB user password>
     mongo.port: 27017
 
+Alternative configuration values can be used by prefacing the configuration.
+Any values not found in the alternative configuration will be pulled from
+the default location::
+
+    alternative.mongo.db: <database name>
+    alternative.mongo.host: <server ip address>
+    alternative.mongo.user: <MongoDB username>
+    alternative.mongo.password: <MongoDB user password>
+    alternative.mongo.port: 27017
+
   To use the mongo returner, append '--return mongo' to the salt command. ex:
 
-    salt '*' test.ping --return mongo
+    salt '*' test.ping --return mongo_return
+
+  To use the alternative configuration, append '--return_config alternative' to the salt command. ex:
+
+    salt '*' test.ping --return mongo_return --return_config alternative
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
+
+# import Salt libs
+import salt.utils
+import salt.returners
+import salt.ext.six as six
 
 # Import third party libs
 try:
@@ -33,6 +53,10 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+# currently only used iby _get_options
+__virtualname__ = 'mongo'
+
 
 def __virtual__():
     if not HAS_PYMONGO:
@@ -41,25 +65,49 @@ def __virtual__():
 
 
 def _remove_dots(src):
+    '''
+    Remove dots from the given data structure
+    '''
     output = {}
-    for key, val in src.iteritems():
+    for key, val in six.iteritems(src):
         if isinstance(val, dict):
             val = _remove_dots(val)
         output[key.replace('.', '-')] = val
     return output
 
 
-def _get_conn():
+def _get_options(ret):
+    '''
+    Get the monogo_return options from salt.
+    '''
+    attrs = {'host': 'host',
+             'port': 'port',
+             'db': 'db',
+             'username': 'username',
+             'password': 'password'}
+
+    _options = salt.returners.get_returner_options(__virtualname__,
+                                                   ret,
+                                                   attrs,
+                                                   __salt__=__salt__,
+                                                   __opts__=__opts__)
+    return _options
+
+
+def _get_conn(ret):
     '''
     Return a mongodb connection object
     '''
-    conn = pymongo.Connection(
-            __salt__['config.option']('mongo.host'),
-            __salt__['config.option']('mongo.port'))
-    mdb = conn[__salt__['config.option']('mongo.db')]
+    _options = _get_options(ret)
 
-    user = __salt__['config.option']('mongo.user')
-    password = __salt__['config.option']('mongo.password')
+    host = _options.get('host')
+    port = _options.get('port')
+    db_ = _options.get('db')
+    user = _options.get('user')
+    password = _options.get('password')
+
+    conn = pymongo.Connection(host, port)
+    mdb = conn[db_]
 
     if user and password:
         mdb.authenticate(user, password)
@@ -70,7 +118,7 @@ def returner(ret):
     '''
     Return data to a mongodb server
     '''
-    conn, mdb = _get_conn()
+    conn, mdb = _get_conn(ret)
     col = mdb[ret['id']]
 
     if isinstance(ret['return'], dict):
@@ -89,7 +137,7 @@ def get_jid(jid):
     '''
     Return the return information associated with a jid
     '''
-    conn, mdb = _get_conn()
+    conn, mdb = _get_conn(ret=None)
     ret = {}
     for collection in mdb.collection_names():
         rdata = mdb[collection].find_one({jid: {'$exists': 'true'}})
@@ -102,10 +150,17 @@ def get_fun(fun):
     '''
     Return the most recent jobs that have executed the named function
     '''
-    conn, mdb = _get_conn()
+    conn, mdb = _get_conn(ret=None)
     ret = {}
     for collection in mdb.collection_names():
         rdata = mdb[collection].find_one({'fun': fun})
         if rdata:
             ret[collection] = rdata
     return ret
+
+
+def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
+    '''
+    Do any work necessary to prepare a JID, including sending a custom id
+    '''
+    return passed_jid if passed_jid is not None else salt.utils.gen_jid()

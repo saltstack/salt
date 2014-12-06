@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Management of zc.buildout
-=========================
 
 .. versionadded:: 2014.1.0
 
@@ -24,30 +23,26 @@ You have those following methods:
 * buildout
 '''
 
-# Define the module's virtual name
-__virtualname__ = 'buildout'
-
-
-def __virtual__():
-    '''
-    Only load if buildout libs are present
-    '''
-    if True:
-        return __virtualname__
-    return False
-
 # Import python libs
+from __future__ import absolute_import
+
 import os
 import re
 import logging
 import sys
 import traceback
 import copy
-import urllib2
+
+# Import 3rd-party libs
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
+from salt.ext.six import string_types, text_type
+from salt.ext.six.moves import range
+from salt.ext.six.moves.urllib.request import urlopen as _urlopen
+# pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 # Import salt libs
+import salt.utils
 from salt.exceptions import CommandExecutionError
-from salt._compat import string_types
 
 
 INVALID_RESPONSE = 'We did not get any expectable answer from buildout'
@@ -70,6 +65,16 @@ _URL_VERSIONS = {
 }
 DEFAULT_VER = 2
 _logger = logging.getLogger(__name__)
+
+# Define the module's virtual name
+__virtualname__ = 'buildout'
+
+
+def __virtual__():
+    '''
+    Only load if buildout libs are present
+    '''
+    return __virtualname__
 
 
 def _salt_callback(func, **kwargs):
@@ -137,7 +142,7 @@ class _Logger(object):
         self._by_level = {}
 
     def _log(self, level, msg):
-        if not isinstance(msg, unicode):
+        if not isinstance(msg, text_type):
             msg = msg.decode('utf-8')
         if level not in self._by_level:
             self._by_level[level] = []
@@ -180,7 +185,7 @@ LOG = _Logger()
 
 
 def _encode_string(string):
-    if isinstance(string, unicode):
+    if isinstance(string, text_type):
         string = string.encode('utf-8')
     return string
 
@@ -386,11 +391,10 @@ def _get_bootstrap_content(directory='.'):
     Get the current bootstrap.py script content
     '''
     try:
-        fic = open(
-            os.path.join(
-                os.path.abspath(directory), 'bootstrap.py'))
-        oldcontent = fic.read()
-        fic.close()
+        with salt.utils.fopen(os.path.join(
+                                os.path.abspath(directory),
+                                'bootstrap.py')) as fic:
+            oldcontent = fic.read()
     except (OSError, IOError):
         oldcontent = ''
     return oldcontent
@@ -412,16 +416,15 @@ def _get_buildout_ver(directory='.'):
     try:
         files = _find_cfgs(directory)
         for f in files:
-            fic = open(f)
-            buildout1re = re.compile(r'^zc\.buildout\s*=\s*1', RE_F)
-            dfic = fic.read()
-            if (
-                    ('buildout.dumppick' in dfic)
-                    or
-                    (buildout1re.search(dfic))
-            ):
-                buildoutver = 1
-            fic.close()
+            with salt.utils.fopen(f) as fic:
+                buildout1re = re.compile(r'^zc\.buildout\s*=\s*1', RE_F)
+                dfic = fic.read()
+                if (
+                        ('buildout.dumppick' in dfic)
+                        or
+                        (buildout1re.search(dfic))
+                ):
+                    buildoutver = 1
         bcontent = _get_bootstrap_content(directory)
         if (
             '--download-base' in bcontent
@@ -515,12 +518,12 @@ def upgrade_bootstrap(directory='.',
                 if not os.path.isdir(dbuild):
                     os.makedirs(dbuild)
                 # only try to download once per buildout checkout
-                open(os.path.join(
+                salt.utils.fopen(os.path.join(
                     dbuild,
                     '{0}.updated_bootstrap'.format(buildout_ver)))
             except (OSError, IOError):
                 LOG.info('Bootstrap updated from repository')
-                data = urllib2.urlopen(booturl).read()
+                data = _urlopen(booturl).read()
                 updated = True
                 dled = True
         if 'socket.setdefaulttimeout' not in data:
@@ -530,20 +533,17 @@ def upgrade_bootstrap(directory='.',
             data = '\n'.join(ldata)
         if updated:
             comment = 'Bootstrap updated'
-            fic = open(b_py, 'w')
-            fic.write(data)
-            fic.close()
+            with salt.utils.fopen(b_py, 'w') as fic:
+                fic.write(data)
         if dled:
-            afic = open(os.path.join(
-                dbuild, '{0}.updated_bootstrap'.format(buildout_ver)
-            ), 'w')
-            afic.write('foo')
-            afic.close()
+            with salt.utils.fopen(os.path.join(dbuild,
+                                               '{0}.updated_bootstrap'.format(
+                                                   buildout_ver)), 'w') as afic:
+                afic.write('foo')
     except (OSError, IOError):
         if oldcontent:
-            fic = open(b_py, 'w')
-            fic.write(oldcontent)
-            fic.close()
+            with salt.utils.fopen(b_py, 'w') as fic:
+                fic.write(oldcontent)
 
     return {'comment': comment}
 
@@ -733,9 +733,8 @@ def bootstrap(directory='.',
                       buildout_ver=buildout_ver)
     # be sure which buildout bootstrap we have
     b_py = os.path.join(directory, 'bootstrap.py')
-    fic = open(b_py)
-    content = fic.read()
-    fic.close()
+    with salt.utils.fopen(b_py) as fic:
+        content = fic.read()
     if (
         (False != test_release)
         and ' --accept-buildout-test-releases' in content
@@ -750,7 +749,7 @@ def bootstrap(directory='.',
             gid = __salt__['user.info'](runas)['gid']
             os.chown('bootstrap.py', uid, gid)
     except (IOError, OSError) as exc:
-        # dont block here, try to execute it if can pass
+        # don't block here, try to execute it if can pass
         _logger.error('BUILDOUT bootstrap permissions error:'
                       ' {0}'.format(exc),
                   exc_info=_logger.isEnabledFor(logging.DEBUG))

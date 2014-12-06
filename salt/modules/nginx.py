@@ -2,7 +2,11 @@
 '''
 Support for nginx
 '''
-import urllib2
+from __future__ import absolute_import
+
+# Import 3rd-party libs
+from salt.ext.six.moves.urllib.request import urlopen as _urlopen  # pylint: disable=no-name-in-module,import-error
+
 # Import salt libs
 import salt.utils
 import salt.utils.decorators as decorators
@@ -109,7 +113,7 @@ def status(url="http://127.0.0.1/status"):
 
         salt '*' nginx.status
     """
-    resp = urllib2.urlopen(url)
+    resp = _urlopen(url)
     status_data = resp.read()
     resp.close()
 

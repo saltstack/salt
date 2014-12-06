@@ -3,6 +3,7 @@
 Monit service module. This module will create a monit type
 service watcher.
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils
@@ -111,10 +112,40 @@ def summary(svc_name=''):
         else:
             parts = line.split('\'')
             if len(parts) == 3:
-                resource, name, status = (
+                resource, name, status_ = (
                     parts[0].strip(), parts[1], parts[2].strip()
                 )
                 if resource not in ret:
                     ret[resource] = {}
-                ret[resource][name] = status
+                ret[resource][name] = status_
+    return ret
+
+
+def status(svc_name=''):
+    '''
+    Display a process status from monit
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' monit.status
+        salt '*' monit.status <service name>
+    '''
+    cmd = 'monit status'
+    res = __salt__['cmd.run'](cmd)
+    prostr = 'Process'+' '*28
+    s = res.replace('Process', prostr).replace("'", '').split('\n\n')
+    entries = {}
+    for process in s[1:-1]:
+        pro = process.splitlines()
+        tmp = {}
+        for items in pro:
+            key = items[:36].strip()
+            tmp[key] = items[35:].strip()
+        entries[pro[0].split()[1]] = tmp
+    if svc_name == '':
+        ret = entries
+    else:
+        ret = entries.get(svc_name, 'No such service')
     return ret
