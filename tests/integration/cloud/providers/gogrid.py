@@ -16,16 +16,8 @@ ensure_in_syspath('../../../')
 import integration
 from salt.config import cloud_providers_config
 
-# Import Third-Party Libs
-try:
-    import libcloud  # pylint: disable=W0611
-    HAS_LIBCLOUD = True
-except ImportError:
-    HAS_LIBCLOUD = False
-
 
 @skipIf(True, 'waiting on bug report fixes from #13365')
-@skipIf(HAS_LIBCLOUD is False, 'salt-cloud requires >= libcloud 0.13.2')
 class GoGridTest(integration.ShellCase):
     '''
     Integration tests for the GoGrid cloud provider in Salt-Cloud

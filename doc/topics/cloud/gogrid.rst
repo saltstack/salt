@@ -7,8 +7,7 @@ GoGrid is a public cloud provider supporting Linux and Windows.
 
 Dependencies
 ============
-The GoGrid driver for Salt Cloud requires Libcloud 0.13.2 or higher to be
-installed.
+* Libcloud >= 0.13.2
 
 
 Configuration

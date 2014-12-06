@@ -33,6 +33,7 @@ Module to provide MySQL compatibility to salt.
     </ref/states/all/salt.states.mysql_user>`. Additionally, it is now possible
     to setup a user with no password.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import time
@@ -40,6 +41,8 @@ import logging
 import re
 import sys
 import shlex
+from salt.ext.six.moves import zip
+from salt.ext.six.moves import range
 
 # Import salt libs
 import salt.utils
@@ -142,7 +145,7 @@ __ssl_options__ = __ssl_options_parameterized__ + [
 # quote_identifier. This is not the same as escaping '%' to '\%' or '_' to '\%'
 # when using a LIKE query (example in db_exists), as this escape is there to
 # avoid having _ or % characters interpreted in LIKE queries. The string parted
-# of the first query could become (still used with args dictionnary for myval):
+# of the first query could become (still used with args dictionary for myval):
 # 'SELECT * FROM {0} WHERE bar=%(myval)s'.format(quote_identifier('user input'))
 #
 # Check integration tests if you find a hole in theses strings and escapes rules
@@ -280,6 +283,9 @@ def _connect(**kwargs):
     # Ensure MySQldb knows the format we use for queries with arguments
     MySQLdb.paramstyle = 'pyformat'
 
+    if connargs.get('passwd', True) is None:  # If present but set to None. (Extreme edge case.)
+        log.warning('MySQL password of None found. Attempting passwordless login.')
+        connargs.pop('passwd')
     try:
         dbc = MySQLdb.connect(**connargs)
     except MySQLdb.OperationalError as exc:
@@ -315,7 +321,7 @@ def _grant_to_tokens(grant):
 
     :param grant: An un-parsed MySQL GRANT statement str, like
         "GRANT SELECT, ALTER, LOCK TABLES ON `mydb`.* TO 'testuser'@'localhost'"
-        or a dictionnary with 'qry' and 'args' keys for 'user' and 'host'.
+        or a dictionary with 'qry' and 'args' keys for 'user' and 'host'.
     :return:
         A Python dict with the following keys/values:
             - user: MySQL User
@@ -327,7 +333,7 @@ def _grant_to_tokens(grant):
     dict_mode = False
     if isinstance(grant, dict):
         dict_mode = True
-        # Everything coming in dictionnary form was made for a MySQLdb execute
+        # Everything coming in dictionary form was made for a MySQLdb execute
         # call and contain a '%%' escaping of '%' characters for MySQLdb
         # that we should remove here.
         grant_sql = grant.get('qry', 'undefined').replace('%%', '%')
@@ -414,6 +420,9 @@ def _grant_to_tokens(grant):
             except IndexError:
                 break
 
+        elif phrase == 'tables':
+            database += token
+
         elif phrase == 'user':
             if dict_mode:
                 break
@@ -484,7 +493,7 @@ def _execute(cur, qry, args=None):
     query. For example '%' characters on the query must be encoded as '%%' and
     will be restored as '%' when arguments are applied. But when there're no
     arguments the '%%' is not managed. We cannot apply Identifier quoting in a
-    predictible way if the query are not always applying the same filters. So
+    predictable way if the query are not always applying the same filters. So
     this wrapper ensure this escape is not made if no arguments are used.
     '''
     if args is None or args == {}:
@@ -568,7 +577,7 @@ def query(database, query, **connection_args):
     # into Python objects. It leaves them as strings.
     orig_conv = MySQLdb.converters.conversions
     conv_iter = iter(orig_conv)
-    conv = dict(zip(conv_iter, [str] * len(orig_conv.keys())))
+    conv = dict(zip(conv_iter, [str] * len(orig_conv)))
     # some converters are lists, do not break theses
     conv[FIELD_TYPE.BLOB] = [
         (FLAG.BINARY, str),
@@ -1019,14 +1028,13 @@ def user_exists(user,
     '''
     dbc = _connect(**connection_args)
     # Did we fail to connect with the user we are checking
-    # Its password might have previousely change with the same command/state
+    # Its password might have previously change with the same command/state
     if dbc is None \
             and __context__['mysql.error'] \
                 .startswith("MySQL Error 1045: Access denied for user '{0}'@".format(user)) \
             and password:
         # Clear the previous error
         __context__['mysql.error'] = None
-        log.info('Retrying with "{0}" as connection password for {1} ...'.format(password, user))
         connection_args['connection_pass'] = password
         dbc = _connect(**connection_args)
     if dbc is None:
@@ -1458,7 +1466,7 @@ def __ssl_option_sanitize(ssl_option):
 
     # Like most other "salt dsl" YAML structures, ssl_option is a list of single-element dicts
     for opt in ssl_option:
-        key = opt.keys()[0]
+        key = next(opt.iterkeys())
         value = opt[key]
 
         normal_key = key.strip().upper()

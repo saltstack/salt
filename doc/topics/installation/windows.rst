@@ -20,6 +20,18 @@ minion exe>` should match the contents of the corresponding md5 file.
 
 .. admonition:: Download here
 
+    * 2014.7.0
+    * `Salt-Minion-2014.7.0-x86-Setup.exe <http://docs.saltstack.com/downloads/Salt-Minion-2014.7.0-x86-Setup.exe>`__ | `md5 <http://docs.saltstack.com/downloads/Salt-Minion-2014.7.0-x86-Setup.exe.md5>`__
+    * `Salt-Minion-2014.7.0-AMD64-Setup.exe <http://docs.saltstack.com/downloads/Salt-Minion-2014.7.0-AMD64-Setup.exe>`__ | `md5 <http://docs.saltstack.com/downloads/Salt-Minion-2014.7.0-AMD64-Setup.exe.md5>`__
+
+    * 2014.1.13
+    * `Salt-Minion-2014.1.13-x86-Setup.exe <http://docs.saltstack.com/downloads/Salt-Minion-2014.1.13-x86-Setup.exe>`__ | `md5 <http://docs.saltstack.com/downloads/Salt-Minion-2014.1.13-x86-Setup.exe.md5>`__
+    * `Salt-Minion-2014.1.13-AMD64-Setup.exe <http://docs.saltstack.com/downloads/Salt-Minion-2014.1.13-AMD64-Setup.exe>`__ | `md5 <http://docs.saltstack.com/downloads/Salt-Minion-2014.1.13-AMD64-Setup.exe.md5>`__
+
+    * 2014.1.11
+    * `Salt-Minion-2014.1.11-win32-Setup.exe <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.11-win32-Setup.exe>`__ | `md5 <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.11-win32-Setup.exe.md5>`__
+    * `Salt-Minion-2014.1.11-AMD64-Setup.exe <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.11-AMD64-Setup.exe>`__ | `md5 <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.11-AMD64-Setup.exe.md5>`__
+
     * 2014.1.10
     * `Salt-Minion-2014.1.10-win32-Setup.exe <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.10-win32-Setup.exe>`__ | `md5 <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.10-win32-Setup.exe.md5>`__
     * `Salt-Minion-2014.1.10-AMD64-Setup.exe <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.10-AMD64-Setup.exe>`__ | `md5 <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.10-AMD64-Setup.exe.md5>`__
@@ -107,7 +119,7 @@ minion exe>` should match the contents of the corresponding md5 file.
 
 .. note::
 
-    The executables above will install dependencies that the Salt minion
+    The executables above will install all dependencies that the Salt minion
     requires.
 
 The 64bit installer has been tested on Windows 7 64bit and Windows Server
@@ -221,20 +233,38 @@ Setting up a Windows build environment
 
         pip install wmi
 
-20. Install esky 
+20. Install requests
+
+    .. code-block:: bash
+
+        pip install requests
+
+21. Install markupsafe
+
+    .. code-block:: bash
+
+        pip install markupsafe
+
+22. Install six
+
+    .. code-block:: bash
+
+        pip install six
+
+23. Install esky
 
     .. code-block:: bash
 
         pip install esky
 
-21. Install Salt
+24. Install Salt
 
     .. code-block:: bash
 
         cd salt
         python setup.py install
 
-22. Build a frozen binary distribution of Salt
+25. Build a frozen binary distribution of Salt
 
     .. code-block:: bash
 
@@ -329,7 +359,7 @@ Packages management under Windows 2003
 
 On windows Server 2003, you need to install optional component "wmi windows
 installer provider" to have full list of installed packages. If you don't have
-this, salt-minion can't report some installed softwares.
+this, salt-minion can't report some installed packages.
 
 
 .. _http://csa-net.dk/salt: http://csa-net.dk/salt

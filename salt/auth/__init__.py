@@ -6,6 +6,8 @@ This system allows for authentication to be managed in a module pluggable way
 so that any external authentication system can be used inside of Salt
 '''
 
+from __future__ import absolute_import
+
 # 1. Create auth loader instance
 # 2. Accept arguments as a dict
 # 3. Verify with function introspection
@@ -21,6 +23,7 @@ import time
 import logging
 import random
 import getpass
+from salt.ext.six.moves import input
 
 # Import salt libs
 import salt.config
@@ -77,8 +80,7 @@ class LoadAuth(object):
             else:
                 return self.auth[fstr](*fcall['args'])
         except Exception:
-            err = 'Authentication module threw an exception: '
-            log.critical(err, exc_info=True)
+            err = 'Authentication module threw an exception. Exception not logged.'
             return False
 
     def time_auth(self, load):
@@ -93,7 +95,7 @@ class LoadAuth(object):
         if f_time > self.max_fail:
             self.max_fail = f_time
         deviation = self.max_fail / 4
-        r_time = random.uniform(
+        r_time = random.SystemRandom().uniform(
                 self.max_fail - deviation,
                 self.max_fail + deviation
                 )
@@ -183,7 +185,7 @@ class Authorize(object):
 
     def auth_data(self):
         '''
-        Gather and create the autorization data sets
+        Gather and create the authorization data sets
         '''
         auth_data = self.opts['external_auth']
         #for auth_back in self.opts.get('external_auth_sources', []):
@@ -322,8 +324,7 @@ class Resolver(object):
         elif self.opts['transport'] == 'raet':
             sreq = salt.transport.Channel.factory(
                     self.opts)
-            sreq.route['dst'] = (None, None, 'local_cmd')
-            sreq.route['src'] = (None, sreq.stack.local.name, None)
+            sreq.dst = (None, None, 'local_cmd')
             tdata = sreq.send(load)
             return tdata
 
@@ -349,12 +350,12 @@ class Resolver(object):
             elif arg.startswith('pass'):
                 ret[arg] = getpass.getpass('{0}: '.format(arg))
             else:
-                ret[arg] = raw_input('{0}: '.format(arg))
-        for kwarg, default in args['kwargs'].items():
+                ret[arg] = input('{0}: '.format(arg))
+        for kwarg, default in list(args['kwargs'].items()):
             if kwarg in self.opts:
                 ret['kwarg'] = self.opts[kwarg]
             else:
-                ret[kwarg] = raw_input('{0} [{1}]: '.format(kwarg, default))
+                ret[kwarg] = input('{0} [{1}]: '.format(kwarg, default))
 
         return ret
 
@@ -368,7 +369,7 @@ class Resolver(object):
         tdata = self._send_token_request(load)
         if 'token' not in tdata:
             return tdata
-        oldmask = os.umask(0177)
+        oldmask = os.umask(0o177)
         try:
             with salt.utils.fopen(self.opts['token_file'], 'w+') as fp_:
                 fp_.write(tdata['token'])

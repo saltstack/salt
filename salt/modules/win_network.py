@@ -2,6 +2,7 @@
 '''
 Module for gathering and managing network information
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils

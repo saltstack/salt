@@ -2,6 +2,7 @@
 '''
 Module for viewing and modifying sysctl parameters
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -10,7 +11,7 @@ import re
 
 # Import salt libs
 import salt.utils
-from salt._compat import string_types
+from salt.ext.six import string_types
 from salt.exceptions import CommandExecutionError
 from salt.modules.systemd import _sd_booted
 
@@ -81,9 +82,8 @@ def show(config_file=False):
     '''
     ret = {}
     if config_file:
-        config_file_path = default_config()
         try:
-            for line in salt.utils.fopen(config_file_path):
+            for line in salt.utils.fopen(config_file):
                 if not line.startswith('#') and '=' in line:
                     # search if we have some '=' instead of ' = ' separators
                     SPLIT = ' = '
@@ -93,7 +93,7 @@ def show(config_file=False):
                     key = key.strip()
                     value = value.lstrip()
                     ret[key] = value
-        except OSError:
+        except (OSError, IOError):
             log.error('Could not open sysctl file')
             return None
     else:
@@ -141,15 +141,16 @@ def assign(name, value):
     cmd = 'sysctl -w {0}="{1}"'.format(name, value)
     data = __salt__['cmd.run_all'](cmd)
     out = data['stdout']
+    err = data['stderr']
 
     # Example:
     #    # sysctl -w net.ipv4.tcp_rmem="4096 87380 16777216"
     #    net.ipv4.tcp_rmem = 4096 87380 16777216
     regex = re.compile(r'^{0}\s+=\s+{1}$'.format(re.escape(name), re.escape(value)))
 
-    if not regex.match(out):
-        if data['retcode'] != 0 and data['stderr']:
-            error = data['stderr']
+    if not regex.match(out) or 'Invalid argument' in str(err):
+        if data['retcode'] != 0 and err:
+            error = err
         else:
             error = out
         raise CommandExecutionError('sysctl -w failed: {0}'.format(error))

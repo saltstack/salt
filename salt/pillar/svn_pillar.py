@@ -46,6 +46,7 @@ section in it, like this:
       '*':
         - bar
 '''
+from __future__ import absolute_import
 
 # Import python libs
 from copy import deepcopy
@@ -139,21 +140,22 @@ class SvnPillar(object):
         return repo_dir
 
 
-def _extract_key_val(kv, delim='='):
+def _extract_key_val(kv, delimiter='='):
     '''Extract key and value from key=val string.
 
     Example:
     >>> _extract_key_val('foo=bar')
     ('foo', 'bar')
     '''
-    delim = '='
-    pieces = kv.split(delim)
+    pieces = kv.split(delimiter)
     key = pieces[0]
-    val = delim.join(pieces[1:])
+    val = delimiter.join(pieces[1:])
     return key, val
 
 
-def ext_pillar(minion_id, pillar, repo_string):
+def ext_pillar(minion_id,
+               pillar,  # pylint: disable=W0613
+               repo_string):
     '''
     Execute a command and read the output as YAML
     '''

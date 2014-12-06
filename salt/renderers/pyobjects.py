@@ -28,8 +28,8 @@ Creating state data
 ^^^^^^^^^^^^^^^^^^^
 Pyobjects takes care of creating an object for each of the available states on
 the minion. Each state is represented by an object that is the CamelCase
-version of its name (ie. ``File``, ``Service``, ``User``, etc), and these
-objects expose all of their available state functions (ie. ``File.managed``,
+version of its name (i.e. ``File``, ``Service``, ``User``, etc), and these
+objects expose all of their available state functions (i.e. ``File.managed``,
 ``Service.running``, etc).
 
 The name of the state is split based upon underscores (``_``), then each part
@@ -259,10 +259,13 @@ TODO
 * Interface for working with reactor files
 '''
 
+from __future__ import absolute_import
+
 import logging
 import re
-import sys
+from salt.ext.six import exec_
 
+import salt.utils
 from salt.loader import _create_loader
 from salt.fileclient import get_file_client
 from salt.utils.pyobjects import Registry, StateFactory, SaltObject, Map
@@ -296,7 +299,7 @@ def load_states():
     for mod in load.modules:
         module_name = mod.__name__.rsplit('.', 1)[-1]
 
-        (virtual_ret, virtual_name) = load.process_virtual(mod, module_name)
+        (virtual_ret, virtual_name, _) = load.process_virtual(mod, module_name)
 
         # if the module returned a True value and a new name use that
         # otherwise use the default module name
@@ -327,19 +330,14 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
             for part in mod.split('_')
         ])
         valid_funcs = "','".join(
-            __context__['pyobjects_states'][mod].keys()
+            __context__['pyobjects_states'][mod]
         )
         mod_cmd = "{0} = StateFactory('{1!s}', valid_funcs=['{2}'])".format(
             mod_camel,
             mod,
             valid_funcs
         )
-        if sys.version_info[0] > 2:
-            # in py3+ exec is a function
-            exec(mod_cmd, mod_globals, mod_locals)
-        else:
-            # prior to that it is a statement
-            exec mod_cmd in mod_globals, mod_locals
+        exec_(mod_cmd, mod_globals, mod_locals)
 
         _globals[mod_camel] = mod_locals[mod_camel]
 
@@ -406,19 +404,14 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
             if not state_file:
                 raise ImportError("Could not find the file {0!r}".format(import_file))
 
-            with open(state_file) as f:
+            with salt.utils.fopen(state_file) as f:
                 state_contents = f.read()
 
             state_locals = {}
-            if sys.version_info[0] > 2:
-                # in py3+ exec is a function
-                exec(state_contents, _globals, state_locals)
-            else:
-                # prior to that it is a statement
-                exec state_contents in _globals, state_locals
+            exec_(state_contents, _globals, state_locals)
 
             if imports is None:
-                imports = state_locals.keys()
+                imports = list(state_locals.keys())
 
             for name in imports:
                 name = name.strip()
@@ -441,11 +434,6 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
     Registry.enabled = True
 
     # now exec our template using our created scopes
-    if sys.version_info[0] > 2:
-        # in py3+ exec is a function
-        exec(final_template, _globals, _locals)
-    else:
-        # prior to that it is a statement
-        exec final_template in _globals, _locals
+    exec_(final_template, _globals, _locals)
 
     return Registry.salt_data()

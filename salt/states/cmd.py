@@ -194,7 +194,7 @@ import logging
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError, SaltRenderError
-from salt._compat import string_types
+from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 
@@ -301,6 +301,7 @@ def mod_run_check(cmd_kwargs, onlyif, unless, group, creates):
             log.debug('Last command return code: {0}'.format(cmd))
             if cmd != 0:
                 return {'comment': 'onlyif execution failed',
+                        'skip_watch': True,
                         'result': True}
         elif isinstance(onlyif, list):
             for entry in onlyif:
@@ -308,11 +309,13 @@ def mod_run_check(cmd_kwargs, onlyif, unless, group, creates):
                 log.debug('Last command return code: {0}'.format(cmd))
                 if cmd != 0:
                     return {'comment': 'onlyif execution failed',
+                        'skip_watch': True,
                         'result': True}
         elif not isinstance(onlyif, string_types):
             if not onlyif:
                 log.debug('Command not run: onlyif did not evaluate to string_type')
                 return {'comment': 'onlyif execution failed',
+                        'skip_watch': True,
                         'result': True}
 
     if unless is not None:
@@ -321,6 +324,7 @@ def mod_run_check(cmd_kwargs, onlyif, unless, group, creates):
             log.debug('Last command return code: {0}'.format(cmd))
             if cmd == 0:
                 return {'comment': 'unless execution succeeded',
+                        'skip_watch': True,
                         'result': True}
         elif isinstance(unless, list):
             for entry in unless:
@@ -328,11 +332,13 @@ def mod_run_check(cmd_kwargs, onlyif, unless, group, creates):
                 log.debug('Last command return code: {0}'.format(cmd))
                 if cmd == 0:
                     return {'comment': 'unless execution succeeded',
+                            'skip_watch': True,
                             'result': True}
         elif not isinstance(unless, string_types):
             if unless:
                 log.debug('Command not run: unless did not evaluate to string_type')
                 return {'comment': 'unless execution succeeded',
+                        'skip_watch': True,
                         'result': True}
 
     if isinstance(creates, string_types) and os.path.exists(creates):

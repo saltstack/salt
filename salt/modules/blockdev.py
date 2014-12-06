@@ -4,6 +4,7 @@ Module for managing block devices
 
 .. versionadded:: 2014.7.0
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -109,3 +110,22 @@ def dump(device, args=None):
             return ret
     else:
         return False
+
+
+def resize2fs(device):
+    '''
+    Resizes the filesystem.
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' blockdev.resize2fs /dev/sda1
+    '''
+    ret = {}
+    cmd = 'resize2fs {0}'.format(device)
+    try:
+        out = __salt__['cmd.run_all'](cmd)
+    except subprocess.CalledProcessError as err:
+        return False
+    if out['retcode'] == 0:
+        return True

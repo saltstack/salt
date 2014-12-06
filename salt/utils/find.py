@@ -18,6 +18,9 @@ and/or actions:
     delete [= file-types]               # default type = 'f'
     exec    = command [arg ...]         # where {} is replaced by pathname
     print  [= print-opts]
+and/or depth criteria:
+   maxdepth = maximum depth to transverse in path
+   mindepth = minimum depth to transverse before checking files or directories
 
 The default action is 'print=path'.
 
@@ -80,15 +83,19 @@ the following:
     user:  user name
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 from __future__ import print_function
-import hashlib
 import logging
 import os
 import re
 import stat
+import shutil
 import sys
 import time
+import shlex
+from subprocess import Popen, PIPE
 try:
     import grp
     import pwd
@@ -97,9 +104,12 @@ try:
 except ImportError:
     pass
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
 # Import salt libs
 import salt.utils
-from salt._compat import MAX_SIZE
+import salt.defaults.exitcodes
 from salt.utils.filebuffer import BufferedReader
 
 # Set up logger
@@ -202,7 +212,7 @@ def _parse_size(value):
         max_size = num
     elif style == '+':
         min_size = num
-        max_size = MAX_SIZE
+        max_size = six.MAXSIZE
     else:
         min_size = num
         max_size = num + multiplier - 1
@@ -391,7 +401,7 @@ class MtimeOption(Option):
     Match files modified since the specified time.
     The option name is 'mtime', e.g. {'mtime' : '3d'}.
     The value format is [<num>w] [<num>[d]] [<num>h] [<num>m] [<num>s]
-    where num is an integer or float and the case-insenstive suffixes are:
+    where num is an integer or float and the case-insensitive suffixes are:
         w = week
         d = day
         h = hour
@@ -467,7 +477,7 @@ class PrintOption(Option):
     def requires(self):
         return _REQUIRES_STAT if self.need_stat else _REQUIRES_PATH
 
-    def execute(self, fullpath, fstat):
+    def execute(self, fullpath, fstat, test=False):
         result = []
         for arg in self.fmt:
             if arg == 'path':
@@ -498,13 +508,8 @@ class PrintOption(Option):
                     result.append(gid)
             elif arg == 'md5':
                 if stat.S_ISREG(fstat[stat.ST_MODE]):
-                    with salt.utils.fopen(fullpath, 'rb') as ifile:
-                        buf = ifile.read(8192)
-                        md5hash = hashlib.md5()
-                        while buf:
-                            md5hash.update(buf)
-                            buf = ifile.read(8192)
-                    result.append(md5hash.hexdigest())
+                    md5digest = salt.utils.get_hash(fullpath, 'md5')
+                    result.append(md5digest)
                 else:
                     result.append('')
 
@@ -514,12 +519,86 @@ class PrintOption(Option):
             return result
 
 
+class DeleteOption(TypeOption):
+    '''
+    Deletes matched file.
+    Delete options are one or more of the following:
+        a: all file types
+        b: block device
+        c: character device
+        d: directory
+        p: FIFO (named pipe)
+        f: plain file
+        l: symlink
+        s: socket
+    '''
+    def __init__(self, key, value):
+        if 'a' in value:
+            value = 'bcdpfls'
+        super(self.__class__, self).__init__(key, value)
+
+    def execute(self, fullpath, fstat, test=False):
+        if test:
+            return fullpath
+        try:
+            if os.path.isfile(fullpath) or os.path.islink(fullpath):
+                os.remove(fullpath)
+            elif os.path.isdir(fullpath):
+                shutil.rmtree(fullpath)
+        except (OSError, IOError) as exc:
+            return None
+        return fullpath
+
+
+class ExecOption(Option):
+    '''
+    Execute the given command, {} replaced by filename.
+    Quote the {} if commands might include whitespace.
+    '''
+    def __init__(self, key, value):
+        self.command = value
+
+    def execute(self, fullpath, fstat, test=False):
+        try:
+            command = self.command.replace('{}', fullpath)
+            print(shlex.split(command))
+            p = Popen(shlex.split(command),
+                      stdout=PIPE,
+                      stderr=PIPE)
+            (out, err) = p.communicate()
+            if err:
+                log.error(
+                    'Error running command: {0}\n\n{1}'.format(
+                    command,
+                    err))
+            return "{0}:\n{1}\n".format(command, out)
+
+        except Exception as e:
+            log.error(
+                'Exception while executing command "{0}":\n\n{1}'.format(
+                    command,
+                    e))
+            return '{0}: Failed'.format(fullpath)
+
+
 class Finder(object):
     def __init__(self, options):
         self.actions = []
+        self.maxdepth = None
+        self.mindepth = 0
+        self.test = False
         criteria = {_REQUIRES_PATH: list(),
                     _REQUIRES_STAT: list(),
                     _REQUIRES_CONTENTS: list()}
+        if 'mindepth' in options:
+            self.mindepth = options['mindepth']
+            del options['mindepth']
+        if 'maxdepth' in options:
+            self.maxdepth = options['maxdepth']
+            del options['maxdepth']
+        if 'test' in options:
+            self.test = options['test']
+            del options['test']
         for key, value in options.items():
             if key.startswith('_'):
                 # this is a passthrough object, continue
@@ -555,27 +634,32 @@ class Finder(object):
         until there are no more results.
         '''
         for dirpath, dirs, files in os.walk(path):
-            for name in dirs + files:
-                fstat = None
-                matches = True
-                fullpath = None
-                for criterion in self.criteria:
-                    if fstat is None and criterion.requires() & _REQUIRES_STAT:
-                        fullpath = os.path.join(dirpath, name)
-                        fstat = os.stat(fullpath)
-                    if not criterion.match(dirpath, name, fstat):
-                        matches = False
-                        break
-                if matches:
-                    if fullpath is None:
-                        fullpath = os.path.join(dirpath, name)
-                    for action in self.actions:
-                        if (fstat is None and
-                            action.requires() & _REQUIRES_STAT):
-                            fstat = os.stat(fullpath)
-                        result = action.execute(fullpath, fstat)
-                        if result is not None:
-                            yield result
+            depth = dirpath[len(path) + len(os.path.sep):].count(os.path.sep)
+            if depth == self.maxdepth:
+                dirs[:] = []
+            else:
+                if depth >= self.mindepth:
+                    for name in dirs + files:
+                        fstat = None
+                        matches = True
+                        fullpath = None
+                        for criterion in self.criteria:
+                            if fstat is None and criterion.requires() & _REQUIRES_STAT:
+                                fullpath = os.path.join(dirpath, name)
+                                fstat = os.stat(fullpath)
+                            if not criterion.match(dirpath, name, fstat):
+                                matches = False
+                                break
+                        if matches:
+                            if fullpath is None:
+                                fullpath = os.path.join(dirpath, name)
+                            for action in self.actions:
+                                if (fstat is None and
+                                    action.requires() & _REQUIRES_STAT):
+                                    fstat = os.stat(fullpath)
+                                result = action.execute(fullpath, fstat, test=self.test)
+                                if result is not None:
+                                    yield result
 
 
 def find(path, options):
@@ -602,7 +686,7 @@ def _main():
         finder = Finder(criteria)
     except ValueError as ex:
         sys.stderr.write('error: {0}\n'.format(ex))
-        sys.exit(salt.exitcodes.EX_GENERIC)
+        sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
     for result in finder.find(path):
         print(result)

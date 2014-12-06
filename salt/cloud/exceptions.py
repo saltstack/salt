@@ -7,9 +7,10 @@
 
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
 '''
+from __future__ import absolute_import
 
 # Import salt libs
-import salt.exitcodes
+import salt.defaults.exitcodes
 from salt.exceptions import SaltException
 
 
@@ -23,9 +24,9 @@ class SaltCloudSystemExit(SaltCloudException):
     '''
     This exception is raised when the execution should be stopped.
     '''
-    def __init__(self, message, exit_code=salt.exitcodes.EX_GENERIC):
+    def __init__(self, message, exit_code=salt.defaults.exitcodes.EX_GENERIC):
         SaltCloudException.__init__(self, message)
-        self.message = message
+        self.message = '{0} [WARNING: salt.cloud.exceptions is deprecated. Please migrate to salt.exceptions!]'.format(message)
         self.exit_code = exit_code
 
 

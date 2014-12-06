@@ -15,3 +15,4 @@ Full list of builtin wheel modules
     file_roots
     key
     pillar_roots
+    minions

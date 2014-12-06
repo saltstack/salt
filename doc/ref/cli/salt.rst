@@ -39,20 +39,20 @@ Options
 
 .. option:: --async
 
-    Instead of waiting for the job to run on minions only print the jod id of
+    Instead of waiting for the job to run on minions only print the job id of
     the started execution and complete.
 
 .. option:: --state-output=STATE_OUTPUT
 
     .. versionadded:: 0.17
-    
-    Override the configured state_output value for minion output.  Default: 
-    full
+
+    Choose the format of the state output. The options are `full`,
+    `terse`, `mixed`, `changes` and `filter`. Default: full
 
 .. option:: --subset=SUBSET
 
-    Execute the routine on a random subset of the targeted minions.  The 
-    minions will be verified that they have the named function before 
+    Execute the routine on a random subset of the targeted minions.  The
+    minions will be verified that they have the named function before
     executing.
 
 .. option:: -v VERBOSE, --verbose
@@ -60,10 +60,10 @@ Options
     Turn on verbosity for the salt call, this will cause the salt command to
     print out extra data like the job id.
 
-.. option:: --show-timeout
+.. option:: --hide-timeout
 
-    Instead of only showing the return data from the online minions this option
-    also prints the names of the minions which could not be reached.
+    Instead of showing the return data for all minions. This option
+    prints only the online minions which could be reached.
 
 .. option:: -b BATCH, --batch-size=BATCH
 
@@ -75,7 +75,9 @@ Options
 .. option:: -a EAUTH, --auth=EAUTH
 
     Pass in an external authentication medium to validate against. The
-    credentials will be prompted for. Can be used with the -T option.
+    credentials will be prompted for. The options are `auto`,
+    `keystone`, `ldap`, `pam` and `stormpath`. Can be used with the -T
+    option.
 
 .. option:: -T, --make-token
 
@@ -85,9 +87,13 @@ Options
 
 .. option:: --return=RETURNER
 
-    Chose an alternative returner to call on the minion, if an alternative
-    returner is used then the return will not come back to the command line
-    but will be sent to the specified return system.
+    Choose an alternative returner to call on the minion, if an
+    alternative returner is used then the return will not come back to
+    the command line but will be sent to the specified return system.
+    The options are `carbon`, `cassandra`, `couchbase`, `couchdb`,
+    `elasticsearch`, `etcd`, `hipchat`, `local`, `local_cache`,
+    `memcache`, `mongo`, `mysql`, `odbc`, `postgres`, `redis`,
+    `sentry`, `slack`, `sms`, `smtp`, `sqlite3`, `syslog` and `xmpp`.
 
 .. option:: -d, --doc, --documentation
 
@@ -95,8 +101,8 @@ Options
 
 .. option:: --args-separator=ARGS_SEPARATOR
 
-    Set the special argument used as a delimiter between command arguments of 
-    compound commands. This is useful when one wants to pass commas as 
+    Set the special argument used as a delimiter between command arguments of
+    compound commands. This is useful when one wants to pass commas as
     arguments to some of the commands in a compound command.
 
 .. include:: _includes/logging-options.rst

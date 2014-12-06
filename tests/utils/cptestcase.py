@@ -68,7 +68,7 @@ class BaseCherryPyTestCase(TestCase):
 
         * Responses are dispatched to a mounted application's
           page handler, if found. This is the reason why you
-          must indicate which app you are targetting with
+          must indicate which app you are targeting with
           this request by specifying its mount point.
 
         You can simulate various request settings by setting

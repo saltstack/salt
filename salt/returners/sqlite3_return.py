@@ -17,6 +17,13 @@ minion config::
     returner.sqlite3.database: /usr/lib/salt/salt.db
     returner.sqlite3.timeout: 5.0
 
+Alternative configuration values can be used by prefacing the configuration.
+Any values not found in the alternative configuration will be pulled from
+the default location::
+
+    alternative.returner.sqlite3.database: /usr/lib/salt/salt.db
+    alternative.returner.sqlite3.timeout: 5.0
+
 Use the commands to create the sqlite3 database and tables::
 
     sqlite3 /usr/lib/salt/salt.db << EOF
@@ -44,15 +51,25 @@ Use the commands to create the sqlite3 database and tables::
       );
     EOF
 
-  To use the sqlite returner, append '--return sqlite' to the salt command. ex:
+  To use the sqlite returner, append '--return sqlite3' to the salt command. ex:
 
-    salt '*' test.ping --return sqlite
+    salt '*' test.ping --return sqlite3
+
+  To use the alternative configuration, append '--return_config alternative' to the salt command. ex:
+
+    salt '*' test.ping --return sqlite3 --return_config alternative
+
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
 import json
 import datetime
+
+# Import Salt libs
+import salt.utils
+import salt.returners
 
 # Better safe than sorry here. Even though sqlite3 is included in python
 try:
@@ -73,24 +90,41 @@ def __virtual__():
     return __virtualname__
 
 
-def _get_conn():
+def _get_options(ret=None):
+    '''
+    Get the SQLite3 options from salt.
+    '''
+    attrs = {'database': 'database',
+             'timeout': 'timeout'}
+
+    _options = salt.returners.get_returner_options(__virtualname__,
+                                                   ret,
+                                                   attrs,
+                                                   __salt__=__salt__,
+                                                   __opts__=__opts__)
+    return _options
+
+
+def _get_conn(ret=None):
     '''
     Return a sqlite3 database connection
     '''
     # Possible todo: support detect_types, isolation_level, check_same_thread,
     # factory, cached_statements. Do we really need to though?
-    if not __salt__['config.option']('returner.sqlite3.database'):
+    _options = _get_options(ret)
+    database = _options.get('database')
+    timeout = _options.get('timeout')
+
+    if not database:
         raise Exception(
                 'sqlite3 config option "returner.sqlite3.database" is missing')
-    if not __salt__['config.option']('returner.sqlite3.timeout'):
+    if not timeout:
         raise Exception(
                 'sqlite3 config option "returner.sqlite3.timeout" is missing')
     log.debug('Connecting the sqlite3 database: {0} timeout: {1}'.format(
-              __salt__['config.option']('returner.sqlite3.database'),
-              __salt__['config.option']('returner.sqlite3.timeout')))
-    conn = sqlite3.connect(
-                  __salt__['config.option']('returner.sqlite3.database'),
-        timeout=float(__salt__['config.option']('returner.sqlite3.timeout')))
+              database,
+              timeout))
+    conn = sqlite3.connect(database, timeout=float(timeout))
     return conn
 
 
@@ -108,7 +142,7 @@ def returner(ret):
     Insert minion return data into the sqlite3 database
     '''
     log.debug('sqlite3 returner <returner> called with data: {0}'.format(ret))
-    conn = _get_conn()
+    conn = _get_conn(ret)
     cur = conn.cursor()
     sql = '''INSERT INTO salt_returns
              (fun, jid, id, fun_args, date, full_ret, success)
@@ -130,7 +164,7 @@ def save_load(jid, load):
     '''
     log.debug('sqlite3 returner <save_load> called jid:{0} load:{1}'
               .format(jid, load))
-    conn = _get_conn()
+    conn = _get_conn(ret=None)
     cur = conn.cursor()
     sql = '''INSERT INTO jids (jid, load) VALUES (:jid, :load)'''
     cur.execute(sql,
@@ -144,7 +178,7 @@ def get_load(jid):
     Return the load from a specified jid
     '''
     log.debug('sqlite3 returner <get_load> called jid: {0}'.format(jid))
-    conn = _get_conn()
+    conn = _get_conn(ret=None)
     cur = conn.cursor()
     sql = '''SELECT load FROM jids WHERE jid = :jid'''
     cur.execute(sql,
@@ -161,7 +195,7 @@ def get_jid(jid):
     Return the information returned from a specified jid
     '''
     log.debug('sqlite3 returner <get_jid> called jid: {0}'.format(jid))
-    conn = _get_conn()
+    conn = _get_conn(ret=None)
     cur = conn.cursor()
     sql = '''SELECT id, full_ret FROM salt_returns WHERE jid = :jid'''
     cur.execute(sql,
@@ -181,7 +215,7 @@ def get_fun(fun):
     Return a dict of the last function called for all minions
     '''
     log.debug('sqlite3 returner <get_fun> called fun: {0}'.format(fun))
-    conn = _get_conn()
+    conn = _get_conn(ret=None)
     cur = conn.cursor()
     sql = '''SELECT s.id, s.full_ret, s.jid
             FROM salt_returns s
@@ -209,7 +243,7 @@ def get_jids():
     Return a list of all job ids
     '''
     log.debug('sqlite3 returner <get_fun> called')
-    conn = _get_conn()
+    conn = _get_conn(ret=None)
     cur = conn.cursor()
     sql = '''SELECT jid FROM jids'''
     cur.execute(sql)
@@ -226,7 +260,7 @@ def get_minions():
     Return a list of minions
     '''
     log.debug('sqlite3 returner <get_minions> called')
-    conn = _get_conn()
+    conn = _get_conn(ret=None)
     cur = conn.cursor()
     sql = '''SELECT DISTINCT id FROM salt_returns'''
     cur.execute(sql)
@@ -236,3 +270,10 @@ def get_minions():
         ret.append(minion[0])
     _close_conn(conn)
     return ret
+
+
+def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
+    '''
+    Do any work necessary to prepare a JID, including sending a custom id
+    '''
+    return passed_jid if passed_jid is not None else salt.utils.gen_jid()

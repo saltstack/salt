@@ -4,6 +4,7 @@ Manage events
 
 This module is used to manage events via RAET
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -16,6 +17,8 @@ import salt.payload
 import salt.loader
 import salt.state
 import salt.utils.event
+from salt import transport
+from salt.utils import kinds
 from salt import syspaths
 from raet import raeting, nacling
 from raet.lane.stacking import LaneStack
@@ -24,7 +27,7 @@ from raet.lane.yarding import RemoteYard
 log = logging.getLogger(__name__)
 
 
-class SaltEvent(salt.utils.event.PendingEventsBase):
+class RAETEvent(object):
     '''
     The base class used to manage salt events
     '''
@@ -32,34 +35,75 @@ class SaltEvent(salt.utils.event.PendingEventsBase):
         '''
         Set up the stack and remote yard
         '''
-        super(SaltEvent, self).__init__()
-        self.node = node
+        self.node = node  # application kind see kinds.APPL_KIND_NAMES
         self.sock_dir = sock_dir
         self.listen = listen
         if opts is None:
             opts = {}
         self.opts = opts
+        self.stack = None
+        self.ryn = 'manor'  # remote yard name
+        self.connected = False
         self.__prep_stack()
 
     def __prep_stack(self):
-        self.yid = nacling.uuid(size=18)
-        name = 'event' + self.yid
-        cachedir = self.opts.get('cachedir', os.path.join(syspaths.CACHE_DIR, self.node))
-        self.connected = False
-        self.stack = LaneStack(
-                name=name,
-                yid=self.yid,
-                lanename=self.node,
-                sockdirpath=self.sock_dir)
-        self.stack.Pk = raeting.packKinds.pack
-        self.router_yard = RemoteYard(
-                stack=self.stack,
-                lanename=self.node,
-                yid=0,
-                name='manor',
-                dirpath=self.sock_dir)
-        self.stack.addRemote(self.router_yard)
+        '''
+        Prepare the stack objects
+        '''
+        if not self.stack:
+            if transport.jobber_stack:
+                self.stack = transport.jobber_stack
+            else:
+                self.stack = transport.jobber_stack = self._setup_stack(ryn=self.ryn)
+        log.debug("RAETEvent Using Jobber Stack at = {0}\n".format(self.stack.ha))
         self.connect_pub()
+
+    def _setup_stack(self, ryn='manor'):
+        kind = self.opts.get('__role', '')  # opts optional for master
+        if kind:  # not all uses of Raet SaltEvent has opts defined
+            if kind not in kinds.APPL_KINDS:
+                emsg = ("Invalid application kind = '{0}' for RAET SaltEvent.".format(kind))
+                log.error(emsg + "\n")
+                raise ValueError(emsg)
+            if kind != self.node:
+                emsg = ("Mismatch between node = '{0}' and kind = '{1}' in "
+                        "RAET SaltEvent.".format(self.node, kind))
+                log.error(emsg + '\n')
+                raise ValueError(emsg)
+
+        if self.node in [kinds.APPL_KIND_NAMES[kinds.applKinds.master],
+                         kinds.APPL_KIND_NAMES[kinds.applKinds.syndic]]:  # []'master', 'syndic']
+            lanename = 'master'
+        elif self.node in [kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
+                           kinds.APPL_KIND_NAMES[kinds.applKinds.caller]]:  # ['minion', 'caller']
+            role = self.opts.get('id', '')  # opts required for minion
+            if not role:
+                emsg = ("Missing role required to setup RAET SaltEvent.")
+                log.error(emsg + "\n")
+                raise ValueError(emsg)
+            if not kind:
+                emsg = "Missing kind required to setup RAET SaltEvent."
+                log.error(emsg + '\n')
+                raise ValueError(emsg)
+            lanename = "{0}_{1}".format(role, kind)
+        else:
+            emsg = ("Unsupported application node kind '{0}' for RAET SaltEvent.".format(self.node))
+            log.error(emsg + '\n')
+            raise ValueError(emsg)
+
+        name = 'event' + nacling.uuid(size=18)
+        cachedir = self.opts.get('cachedir', os.path.join(syspaths.CACHE_DIR, self.node))
+
+        stack = LaneStack(
+                name=name,
+                lanename=lanename,
+                sockdirpath=self.sock_dir)
+        stack.Pk = raeting.packKinds.pack
+        stack.addRemote(RemoteYard(stack=stack,
+                                   lanename=lanename,
+                                   name=ryn,
+                                   dirpath=self.sock_dir))
+        return stack
 
     def subscribe(self, tag=None):
         '''
@@ -79,12 +123,10 @@ class SaltEvent(salt.utils.event.PendingEventsBase):
         '''
         if not self.connected and self.listen:
             try:
-                route = {'dst': (None, self.router_yard.name, 'event_req'),
+                route = {'dst': (None, self.ryn, 'event_req'),
                          'src': (None, self.stack.local.name, None)}
-                msg = {
-                        'route': route,
-                        'load': {'yid': self.yid, 'dirpath': self.sock_dir}}
-                self.stack.transmit(msg, self.router_yard.uid)
+                msg = {'route': route}
+                self.stack.transmit(msg, self.stack.nameRemotes[self.ryn].uid)
                 self.stack.serviceAll()
                 self.connected = True
             except Exception:
@@ -103,49 +145,46 @@ class SaltEvent(salt.utils.event.PendingEventsBase):
         '''
         return raw
 
-    def get_event(self, wait=5, tag='', full=False, use_pending=False, pending_tags=None):
+    def get_event(self, wait=5, tag='', full=False):
         '''
         Get a single publication.
         IF no publication available THEN block for up to wait seconds
         AND either return publication OR None IF no publication available.
 
         IF wait is 0 then block forever.
-
-        use_pending
-            Defines whether to keep all unconsumed events in a pending_events
-            list, or to discard events that don't match the requested tag.  If
-            set to True, MAY CAUSE MEMORY LEAKS.
-
-        pending_tags
-            Add any events matching the listed tags to the pending queue.
-            Still MAY CAUSE MEMORY LEAKS but less likely than use_pending
-            assuming you later get_event for the tags you've listed here
         '''
         self.connect_pub()
-        return super(SaltEvent, self).get_event(wait, tag, full, use_pending, pending_tags)
-
-    def _get_event_inner(self, wait):
-        event = self._get_event_noblock_inner()
-        if event is None:
-            # Not returning anything sleep for a bit instead? (does serviceAll not block at all?)
+        start = time.time()
+        while True:
+            self.stack.serviceAll()
+            if self.stack.rxMsgs:
+                msg, sender = self.stack.rxMsgs.popleft()
+                if 'tag' not in msg and 'data' not in msg:
+                    # Invalid event, how did this get here?
+                    continue
+                if not msg['tag'].startswith(tag):
+                    # Not what we are looking for, throw it away
+                    continue
+                if full:
+                    return msg
+                else:
+                    return msg['data']
+            if start + wait < time.time():
+                return None
             time.sleep(0.01)
-        return event
 
     def get_event_noblock(self):
         '''
-        Get the raw event without blocking or any other niceties
+        Get the raw event msg without blocking or any other niceties
         '''
         self.connect_pub()
-        return self._get_event_noblock_inner()
-
-    def _get_event_noblock_inner(self):
         self.stack.serviceAll()
         if self.stack.rxMsgs:
-            event, sender = self.stack.rxMsgs.popleft()
-            if 'tag' not in event and 'data' not in event:
+            msg, sender = self.stack.rxMsgs.popleft()
+            if 'tag' not in msg and 'data' not in msg:
                 # Invalid event, how did this get here?
                 return None
-            return event
+            return msg
 
     def iter_events(self, tag='', full=False):
         '''
@@ -169,10 +208,10 @@ class SaltEvent(salt.utils.event.PendingEventsBase):
 
         if not isinstance(data, MutableMapping):  # data must be dict
             raise ValueError('Dict object expected, not "{0!r}".'.format(data))
-        route = {'dst': (None, self.router_yard.name, 'event_fire'),
+        route = {'dst': (None, self.ryn, 'event_fire'),
                  'src': (None, self.stack.local.name, None)}
         msg = {'route': route, 'tag': tag, 'data': data}
-        self.stack.transmit(msg)
+        self.stack.transmit(msg, self.stack.nameRemotes[self.ryn].uid)
         self.stack.serviceAll()
 
     def fire_ret_load(self, load):
@@ -211,5 +250,26 @@ class SaltEvent(salt.utils.event.PendingEventsBase):
         if hasattr(self, 'stack'):
             self.stack.server.close()
 
-    def __del__(self):
-        self.destroy()
+
+class MasterEvent(RAETEvent):
+    '''
+    Create a master event management object
+    '''
+    def __init__(self, opts, sock_dir, listen=True):
+        super(MasterEvent, self).__init__('master', opts=opts, sock_dir=sock_dir, listen=listen)
+
+
+class RunnerEvent(MasterEvent):
+    '''
+    This is used to send progress and return events from runners.
+    It extends MasterEvent to include information about how to
+    display events to the user as a runner progresses.
+    '''
+    def __init__(self, opts, jid, listen=True):
+        super(RunnerEvent, self).__init__(opts=opts, sock_dir=opts['sock_dir'], listen=listen)
+        self.jid = jid
+
+    def fire_progress(self, data, outputter='pprint'):
+        progress_event = {'data': data,
+                          'outputter': outputter}
+        self.fire_event(progress_event, salt.utils.event.tagify([self.jid, 'progress'], 'runner'))

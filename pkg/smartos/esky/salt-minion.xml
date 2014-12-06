@@ -28,7 +28,7 @@
 
       <exec_method type="method"
                    name="start"
-                   exec="auditconfig -setaudit 0 lo 0,0,localhost 5417 SALT_PREFIX/bin/salt-minion"
+                   exec="/usr/sbin/auditconfig -setaudit 0 lo 0,0,localhost 5417 SALT_PREFIX/bin/salt-minion"
                    timeout_seconds="60">
         <method_context>
           <method_environment>

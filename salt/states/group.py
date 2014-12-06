@@ -28,6 +28,7 @@ can be either present or absent:
           - user1
           - user2
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import sys
@@ -52,7 +53,7 @@ def _changes(name,
             change['gid'] = gid
 
     if members:
-        #-- if new memeber list if different than the current
+        #-- if new member list if different than the current
         if set(lgrp['members']) ^ set(members):
             change['members'] = members
 

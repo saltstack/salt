@@ -7,11 +7,16 @@ Use pycrypto to generate random passwords on the fly.
 # Import python libraries
 try:
     import Crypto.Random  # pylint: disable=E0611
-    # Windows does not have the crypt module
-    import crypt
     HAS_RANDOM = True
 except ImportError:
     HAS_RANDOM = False
+
+try:
+    # Windows does not have the crypt module
+    import crypt
+    HAS_CRYPT = True
+except ImportError:
+    HAS_CRYPT = False
 
 import re
 import string
@@ -19,7 +24,6 @@ import random
 
 # Import salt libs
 from salt.exceptions import SaltInvocationError
-import salt.utils
 
 
 def secure_password(length=20):
@@ -31,7 +35,7 @@ def secure_password(length=20):
         if HAS_RANDOM:
             pw += re.sub(r'\W', '', Crypto.Random.get_random_bytes(1))
         else:
-            pw += random.choice(string.ascii_letters + string.digits)
+            pw += random.SystemRandom().choice(string.ascii_letters + string.digits)
     return pw
 
 
@@ -39,8 +43,7 @@ def gen_hash(crypt_salt=None, password=None, algorithm='sha512'):
     '''
     Generate /etc/shadow hash
     '''
-    # Windows does not have the crypt module
-    if salt.utils.is_windows():
+    if not HAS_CRYPT:
         raise SaltInvocationError('No crypt module for windows')
 
     hash_algorithms = dict(

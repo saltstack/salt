@@ -5,6 +5,8 @@ how executions are run in the salt-ssh system, this allows for state routines
 to be easily rewritten to execute in a way that makes them do the same tasks
 as ZeroMQ salt, but via ssh.
 '''
+from __future__ import absolute_import
+
 # Import python libs
 import json
 
@@ -14,7 +16,7 @@ import salt.utils
 import salt.client.ssh
 
 
-class FunctionWrapper(dict):
+class FunctionWrapper(object):
     '''
     Create an object that acts like the salt function dict and makes function
     calls remotely via the SSH shell system
@@ -25,12 +27,16 @@ class FunctionWrapper(dict):
             id_,
             host,
             wfuncs=None,
+            mods=None,
+            fsclient=None,
             **kwargs):
         super(FunctionWrapper, self).__init__()
         self.wfuncs = wfuncs if isinstance(wfuncs, dict) else {}
         self.opts = opts
+        self.mods = mods if isinstance(mods, dict) else {}
         self.kwargs = {'id_': id_,
                        'host': host}
+        self.fsclient = fsclient
         self.kwargs.update(kwargs)
 
     def __getitem__(self, cmd):
@@ -50,14 +56,24 @@ class FunctionWrapper(dict):
             single = salt.client.ssh.Single(
                     self.opts,
                     argv,
+                    mods=self.mods,
+                    wipe=True,
+                    fsclient=self.fsclient,
                     **self.kwargs
             )
-            stdout, _, _ = single.cmd_block()
+            stdout, stderr, _ = single.cmd_block()
+            if stderr.count('Permission Denied'):
+                return {'_error': 'Permission Denied',
+                        'stdout': stdout,
+                        'stderr': stderr}
             try:
                 ret = json.loads(stdout, object_hook=salt.utils.decode_dict)
+                if len(ret) < 2 and 'local' in ret:
+                    ret = ret['local']
+                ret = ret.get('return', {})
             except ValueError:
-                ret = {'_error': 'Failed to return clean data'}
-            if len(ret) < 2 and 'local' in ret:
-                ret = ret['local']
+                ret = {'_error': 'Failed to return clean data',
+                       'stderr': stderr,
+                       'stdout': stdout}
             return ret
         return caller

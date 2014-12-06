@@ -8,12 +8,12 @@ from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import patch, call, NO_MOCK, NO_MOCK_REASON, MagicMock
 
+ensure_in_syspath('../')
+
 # Import Salt libraries
 import salt.master
 import integration
 from salt import auth
-
-ensure_in_syspath('../')
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -75,10 +75,11 @@ class MasterACLTestCase(integration.ModuleCase):
     @patch('salt.minion.MasterMinion', MagicMock())
     @patch('salt.utils.verify.check_path_traversal', MagicMock())
     def setUp(self):
-        opts = self.minion_opts
+        opts = self.get_config('minion', from_scratch=True)
         opts['client_acl_blacklist'] = {}
         opts['master_job_cache'] = ''
         opts['sign_pub_messages'] = False
+        opts['con_cache'] = ''
         opts['external_auth'] = {'pam': {'test_user': [{'*': ['test.ping']},
                                                        {'minion_glob*': ['foo.bar']},
                                                        {'minion_func_test': ['func_test.*']}],

@@ -4,13 +4,18 @@ Provide the service module for system supervisord or supervisord in a
 virtualenv
 '''
 
+
 # Import python libs
+from __future__ import absolute_import
 import os
+
+# Import 3rd-party libs
+from salt.ext.six import string_types
+from salt.ext.six.moves import configparser  # pylint: disable=import-error
 
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
-from salt._compat import configparser, string_types
 
 
 def __virtual__():
@@ -374,10 +379,12 @@ def options(name, conf_file=None):
     ret = {}
     for key, val in config.items(section_name):
         val = salt.utils.str_to_num(val.split(';')[0].strip())
+        # pylint: disable=maybe-no-member
         if isinstance(val, string_types):
             if val.lower() == 'true':
                 val = True
             elif val.lower() == 'false':
                 val = False
+        # pylint: enable=maybe-no-member
         ret[key] = val
     return ret

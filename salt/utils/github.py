@@ -4,6 +4,7 @@ Connection library for GitHub
 
 :depends: requests
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import json
@@ -42,7 +43,7 @@ def get_user_pubkeys(users):
     for user in users:
         key_ids = []
         if isinstance(user, dict):
-            tmp_user = user.keys()[0]
+            tmp_user = next(user.iterkeys())
             key_ids = user[tmp_user]
             user = tmp_user
 

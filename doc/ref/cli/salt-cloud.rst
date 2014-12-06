@@ -84,6 +84,18 @@ Options
     Can be used in conjunction with -m to display only information about the
     specified map.
 
+.. option:: --list-providers
+
+    Display a list of configured providers.
+
+.. option:: --list-profiles
+
+    .. versionadded:: 2014.7.0
+
+    Display a list of configured profiles. Pass in a cloud provider to view
+    the provider's associated profiles, such as ``digital_ocean``, or pass in
+    ``all`` to list all the configured profiles.
+
 .. option:: --list-images
 
     Display a list of images available in configured cloud providers.

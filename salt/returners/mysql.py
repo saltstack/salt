@@ -17,6 +17,16 @@ config, these are the defaults::
     mysql.db: 'salt'
     mysql.port: 3306
 
+Alternative configuration values can be used by prefacing the configuration.
+Any values not found in the alternative configuration will be pulled from
+the default location::
+
+    alternative.mysql.host: 'salt'
+    alternative.mysql.user: 'salt'
+    alternative.mysql.pass: 'salt'
+    alternative.mysql.db: 'salt'
+    alternative.mysql.port: 3306
+
 Use the following mysql database schema::
 
     CREATE DATABASE  `salt`
@@ -54,12 +64,31 @@ Use the following mysql database schema::
       KEY `fun` (`fun`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+    --
+    -- Table structure for table `salt_events`
+    --
+
+    DROP TABLE IF EXISTS `salt_events`;
+    CREATE TABLE `salt_events` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `tag` varchar(255) NOT NULL,
+    `data` varchar(1024) NOT NULL,
+    `alter_time` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `tag` (`tag`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 Required python modules: MySQLdb
 
   To use the mysql returner, append '--return mysql' to the salt command. ex:
 
     salt '*' test.ping --return mysql
+
+  To use the alternative configuration, append '--return_config alternative' to the salt command. ex:
+
+    salt '*' test.ping --return mysql --return_config alternative
 '''
+from __future__ import absolute_import
 # Let's not allow PyLint complain about string substitution
 # pylint: disable=W1321,E1321
 
@@ -68,6 +97,10 @@ from contextlib import contextmanager
 import sys
 import json
 import logging
+
+# Import salt libs
+import salt.returners
+import salt.utils
 
 # Import third party libs
 try:
@@ -78,6 +111,9 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'mysql'
+
 
 def __virtual__():
     if not HAS_MYSQL:
@@ -85,7 +121,7 @@ def __virtual__():
     return True
 
 
-def _get_options():
+def _get_options(ret=None):
     '''
     Returns options used for the MySQL connection.
     '''
@@ -94,34 +130,42 @@ def _get_options():
                 'pass': 'salt',
                 'db': 'salt',
                 'port': 3306}
-    _options = {}
-    for attr in defaults:
-        _attr = __salt__['config.option']('mysql.{0}'.format(attr))
-        if not _attr:
-            log.debug('Using default for MySQL {0}'.format(attr))
-            _options[attr] = defaults[attr]
-            continue
-        if attr == 'port':
-            _options[attr] = int(_attr)
-        else:
-            _options[attr] = _attr
 
+    attrs = {'host': 'host',
+             'user': 'user',
+             'pass': 'pass',
+             'db': 'db',
+             'port': 'port'}
+
+    _options = salt.returners.get_returner_options(__virtualname__,
+                                                   ret,
+                                                   attrs,
+                                                   __salt__=__salt__,
+                                                   __opts__=__opts__,
+                                                   defaults=defaults)
+    # Ensure port is an int
+    if 'port' in _options:
+        _options['port'] = int(_options['port'])
     return _options
 
 
 @contextmanager
-def _get_serv(commit=False):
+def _get_serv(ret=None, commit=False):
     '''
     Return a mysql cursor
     '''
-    _options = _get_options()
-    conn = MySQLdb.connect(host=_options['host'], user=_options['user'], passwd=_options['pass'], db=_options['db'], port=_options['port'])
+    _options = _get_options(ret)
+    conn = MySQLdb.connect(host=_options.get('host'),
+                           user=_options.get('user'),
+                           passwd=_options.get('pass'),
+                           db=_options.get('db'),
+                           port=_options.get('port'))
     cursor = conn.cursor()
     try:
         yield cursor
     except MySQLdb.DatabaseError as err:
-        error, = err.args
-        sys.stderr.write(error.message)
+        error = err.args
+        sys.stderr.write(str(error))
         cursor.execute("ROLLBACK")
         raise err
     else:
@@ -137,14 +181,32 @@ def returner(ret):
     '''
     Return data to a mysql server
     '''
-    with _get_serv(commit=True) as cur:
+    with _get_serv(ret, commit=True) as cur:
         sql = '''INSERT INTO `salt_returns`
                 (`fun`, `jid`, `return`, `id`, `success`, `full_ret` )
                 VALUES (%s, %s, %s, %s, %s, %s)'''
 
         cur.execute(sql, (ret['fun'], ret['jid'],
-                            json.dumps(ret['return']), ret['id'],
-                            ret['success'], json.dumps(ret)))
+                          json.dumps(ret['return']),
+                          ret['id'],
+                          ret['success'],
+                          json.dumps(ret)))
+
+
+def event_return(events):
+    '''
+    Return event to mysql server
+
+    Requires that configuration be enabled via 'event_return'
+    option in master config.
+    '''
+    with _get_serv(events, commit=True) as cur:
+        for event in events:
+            tag = event.get('tag', '')
+            data = event.get('data', '')
+            sql = '''INSERT INTO `salt_events` (`tag`, `data` )
+                     VALUES (%s, %s)'''
+            cur.execute(sql, (tag, data))
 
 
 def save_load(jid, load):
@@ -164,15 +226,13 @@ def get_load(jid):
     '''
     Return the load data that marks a specified jid
     '''
-    with _get_serv(commit=True) as cur:
+    with _get_serv(ret=None, commit=True) as cur:
 
-        sql = '''SELECT load FROM `jids`
-                WHERE `jid` = '%s';'''
-
+        sql = '''SELECT `load` FROM `jids` WHERE `jid` = %s;'''
         cur.execute(sql, (jid,))
         data = cur.fetchone()
         if data:
-            return json.loads(data)
+            return json.loads(data[0])
         return {}
 
 
@@ -180,7 +240,7 @@ def get_jid(jid):
     '''
     Return the information returned when the specified job id was executed
     '''
-    with _get_serv(commit=True) as cur:
+    with _get_serv(ret=None, commit=True) as cur:
 
         sql = '''SELECT id, full_ret FROM `salt_returns`
                 WHERE `jid` = %s'''
@@ -198,7 +258,7 @@ def get_fun(fun):
     '''
     Return a dict of the last function called for all minions
     '''
-    with _get_serv(commit=True) as cur:
+    with _get_serv(ret=None, commit=True) as cur:
 
         sql = '''SELECT s.id,s.jid, s.full_ret
                 FROM `salt_returns` s
@@ -213,7 +273,7 @@ def get_fun(fun):
 
         ret = {}
         if data:
-            for minion, jid, full_ret in data:
+            for minion, _, full_ret in data:
                 ret[minion] = json.loads(full_ret)
         return ret
 
@@ -222,7 +282,7 @@ def get_jids():
     '''
     Return a list of all job ids
     '''
-    with _get_serv(commit=True) as cur:
+    with _get_serv(ret=None, commit=True) as cur:
 
         sql = '''SELECT DISTINCT jid
                 FROM `jids`'''
@@ -239,7 +299,7 @@ def get_minions():
     '''
     Return a list of minions
     '''
-    with _get_serv(commit=True) as cur:
+    with _get_serv(ret=None, commit=True) as cur:
 
         sql = '''SELECT DISTINCT id
                 FROM `salt_returns`'''
@@ -250,3 +310,10 @@ def get_minions():
         for minion in data:
             ret.append(minion[0])
         return ret
+
+
+def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
+    '''
+    Do any work necessary to prepare a JID, including sending a custom id
+    '''
+    return passed_jid if passed_jid is not None else salt.utils.gen_jid()

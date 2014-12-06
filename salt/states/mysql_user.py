@@ -18,7 +18,7 @@ Management of MySQL users
     Authentication overrides have been added.
 
 The MySQL authentication information specified in the minion config file can be
-overidden in states using the following arguments: ``connection_host``,
+overridden in states using the following arguments: ``connection_host``,
 ``connection_port``, ``connection_user``, ``connection_pass``,
 ``connection_db``, ``connection_unix_socket``, ``connection_default_file`` and
 ``connection_charset``.
@@ -35,6 +35,7 @@ overidden in states using the following arguments: ``connection_host``,
         - saltenv:
           - LC_ALL: "en_US.utf8"
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import sys
@@ -99,11 +100,11 @@ def present(name,
         If ``True``, then ``password`` and ``password_hash`` can be omitted to
         permit a passwordless login.
 
-    unix_socket
-        If ``True`` and allow_passwordless is ``True`` then will be used unix_socket auth plugin.
+        .. versionadded:: 0.16.2
 
-    .. note::
-        The ``allow_passwordless`` option will be available in version 0.16.2.
+    unix_socket
+        If ``True`` and allow_passwordless is ``True``, the unix_socket auth
+        plugin will be used.
     '''
     ret = {'name': name,
            'changes': {},

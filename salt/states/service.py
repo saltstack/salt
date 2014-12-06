@@ -93,7 +93,7 @@ def _enable(name, started, result=True, **kwargs):
             return ret
 
     # Service can be enabled
-    if __salt__['service.enabled'](name):
+    if __salt__['service.enabled'](name, **kwargs):
         # Service is enabled
         if started is True:
             ret['changes'][name] = True
@@ -462,6 +462,10 @@ def mod_watch(name, sfun=None, sig=None, reload=False, full_restart=False):
             func = __salt__['service.start']
             verb = 'start'
             past_participle = verb + 'ed'
+    else:
+        ret['comment'] = 'Unable to trigger watch for service.{0}'.format(sfun)
+        ret['result'] = False
+        return ret
 
     if __opts__['test']:
         ret['result'] = None

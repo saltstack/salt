@@ -2,6 +2,7 @@
 '''
 Extract the pillar data for this minion
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import collections
@@ -12,12 +13,13 @@ import yaml
 # Import salt libs
 import salt.pillar
 import salt.utils
-from salt._compat import string_types
+from salt.defaults import DEFAULT_TARGET_DELIM
+from salt.ext.six import string_types
 
 __proxyenabled__ = ['*']
 
 
-def get(key, default='', merge=False, delim=':'):
+def get(key, default='', merge=False, delimiter=DEFAULT_TARGET_DELIM):
     '''
     .. versionadded:: 0.14
 
@@ -43,7 +45,7 @@ def get(key, default='', merge=False, delim=':'):
 
         .. versionadded:: 2014.7.0
 
-    delim
+    delimiter
         Specify an alternate delimiter to use when traversing a nested dict
 
         .. versionadded:: 2014.7.0
@@ -55,12 +57,15 @@ def get(key, default='', merge=False, delim=':'):
         salt '*' pillar.get pkg:apache
     '''
     if merge:
-        ret = salt.utils.traverse_dict_and_list(__pillar__, key, {}, delim)
+        ret = salt.utils.traverse_dict_and_list(__pillar__, key, {}, delimiter)
         if isinstance(ret, collections.Mapping) and \
                 isinstance(default, collections.Mapping):
             return salt.utils.dictupdate.update(default, ret)
 
-    return salt.utils.traverse_dict_and_list(__pillar__, key, default, delim)
+    return salt.utils.traverse_dict_and_list(__pillar__,
+                                             key,
+                                             default,
+                                             delimiter)
 
 
 def items(*args):
@@ -97,7 +102,7 @@ def item(*args):
     '''
     .. versionadded:: 0.16.2
 
-    Return one ore more pillar entries
+    Return one or more pillar entries
 
     CLI Examples:
 

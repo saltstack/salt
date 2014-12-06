@@ -5,9 +5,11 @@ The management of salt command line utilities are stored in here
 
 # Import python libs
 from __future__ import print_function
+from __future__ import absolute_import
 import logging
 import os
 import sys
+from glob import glob
 
 # Import salt libs
 import salt.cli.caller
@@ -20,6 +22,7 @@ import salt.output
 import salt.runner
 import salt.auth
 import salt.key
+from salt.config import _expand_glob_path
 
 from salt.utils import parsers, print_cli
 from salt.utils.verify import check_user, verify_env, verify_files
@@ -28,6 +31,7 @@ from salt.exceptions import (
     SaltClientError,
     EauthAuthenticationError,
 )
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -90,10 +94,24 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                     sys.exit(2)
                 eauth.update(res)
                 eauth['eauth'] = self.options.eauth
-            batch = salt.cli.batch.Batch(self.config, eauth)
-            # Printing the output is already taken care of in run() itself
-            for res in batch.run():
-                pass
+
+            if self.options.static:
+
+                batch = salt.cli.batch.Batch(self.config, quiet=True)
+
+                ret = {}
+
+                for res in batch.run():
+                    ret.update(res)
+
+                self._output_ret(ret, '')
+
+            else:
+                batch = salt.cli.batch.Batch(self.config)
+                # Printing the output is already taken care of in run() itself
+                for res in batch.run():
+                    pass
+
         else:
             if self.options.timeout <= 0:
                 self.options.timeout = local.opts['timeout']
@@ -113,6 +131,8 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 except IOError:
                     kwargs['token'] = self.config['token']
 
+            kwargs['delimiter'] = self.options.delimiter
+
             if self.selected_target_option:
                 kwargs['expr_form'] = self.selected_target_option
             else:
@@ -120,6 +140,12 @@ class SaltCMD(parsers.SaltCMDOptionParser):
 
             if getattr(self.options, 'return'):
                 kwargs['ret'] = getattr(self.options, 'return')
+
+            if getattr(self.options, 'return_config'):
+                kwargs['ret_config'] = getattr(self.options, 'return_config')
+
+            if getattr(self.options, 'metadata'):
+                kwargs['metadata'] = getattr(self.options, 'metadata')
 
             # If using eauth and a token hasn't already been loaded into
             # kwargs, prompt the user to enter auth credentials
@@ -158,6 +184,17 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                         full_ret = local.cmd_full_return(**kwargs)
                         ret, out, retcode = self._format_ret(full_ret)
                         self._output_ret(ret, out)
+                    if self.options.progress:
+                        kwargs['progress'] = True
+                        self.config['progress'] = True
+                        ret = {}
+                        for progress in cmd_func(**kwargs):
+                            out = 'progress'
+                            self._progress_ret(progress, out)
+                            if 'return_count' not in progress:
+                                ret.update(progress)
+                        self._progress_end(out)
+                        self._print_returns_summary(ret)
                     elif self.config['fun'] == 'sys.doc':
                         ret = {}
                         out = ''
@@ -210,13 +247,24 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         print_cli('-------------------------------------------')
         print_cli('Summary')
         print_cli('-------------------------------------------')
-        if self.options.verbose:
-            print_cli('# of Minions Targeted: {0}'.format(return_counter + not_return_counter))
+        print_cli('# of Minions Targeted: {0}'.format(return_counter + not_return_counter))
         print_cli('# of Minions Returned: {0}'.format(return_counter))
+        print_cli('# of Minions Did Not Return: {0}'.format(not_return_counter))
         if self.options.verbose:
-            print_cli('# of Minions Did Not Return: {0}'.format(not_return_counter))
             print_cli('Minions Which Did Not Return: {0}'.format(" ".join(not_return_minions)))
         print_cli('-------------------------------------------')
+
+    def _progress_end(self, out):
+        salt.output.progress_end(self.progress_bar)
+
+    def _progress_ret(self, progress, out):
+        '''
+        Print progress events
+        '''
+        # Get the progress bar
+        if not hasattr(self, 'progress_bar'):
+            self.progress_bar = salt.output.get_progress(self.config, out, progress)
+        salt.output.update_progress(self.config, progress, self.progress_bar, out)
 
     def _output_ret(self, ret, out):
         '''
@@ -377,12 +425,12 @@ class SaltCall(parsers.SaltCallOptionParser):
         if self.options.file_root:
             # check if the argument is pointing to a file on disk
             file_root = os.path.abspath(self.options.file_root)
-            self.config['file_roots'] = {'base': [file_root]}
+            self.config['file_roots'] = {'base': _expand_glob_path([file_root])}
 
         if self.options.pillar_root:
             # check if the argument is pointing to a file on disk
             pillar_root = os.path.abspath(self.options.pillar_root)
-            self.config['pillar_roots'] = {'base': [pillar_root]}
+            self.config['pillar_roots'] = {'base': _expand_glob_path([pillar_root])}
 
         if self.options.local:
             self.config['file_client'] = 'local'
@@ -392,7 +440,6 @@ class SaltCall(parsers.SaltCallOptionParser):
         # Setup file logging!
         self.setup_logfile_logger()
 
-        #caller = salt.cli.caller.Caller(self.config)
         caller = salt.cli.caller.Caller.factory(self.config)
 
         if self.options.doc:
@@ -439,7 +486,7 @@ class SaltRun(parsers.SaltRunOptionParser):
 
         runner = salt.runner.Runner(self.config)
         if self.options.doc:
-            runner._print_docs()
+            runner.print_docs()
             self.exit(os.EX_OK)
 
         # Run this here so SystemExit isn't raised anywhere else when
@@ -462,13 +509,13 @@ class SaltSSH(parsers.SaltSSHOptionParser):
         ssh.run()
 
 
-class SaltAPI(parsers.OptionParser, parsers.ConfigDirMixIn,
+class SaltAPI(six.with_metaclass(parsers.OptionParserMeta,  # pylint: disable=W0232
+        parsers.OptionParser, parsers.ConfigDirMixIn,
         parsers.LogLevelMixIn, parsers.PidfileMixin, parsers.DaemonMixIn,
-        parsers.MergeConfigMixIn):
+        parsers.MergeConfigMixIn)):
     '''
     The cli parser object used to fire up the salt api system.
     '''
-    __metaclass__ = parsers.OptionParserMeta
 
     VERSION = salt.version.__version__
 

@@ -41,8 +41,26 @@ specific groups of tests or individual tests:
 
 * Run unit tests only: ``./tests/runtests.py --unit-tests``
 * Run unit and integration tests for states: ``./tests/runtests.py --state``
-* Run integration tests for an individual module: ``./tests/runtests.py -n integration.modules.virt -vv``
-* Run unit tests for an individual module: ``./tests/runtests.py -n unit.modules.virt_test -vv``
+* Run integration tests for an individual module: ``./tests/runtests.py -n integration.modules.virt``
+* Run unit tests for an individual module: ``./tests/runtests.py -n unit.modules.virt_test``
+* Run an individual test by using the class and test name (this example is for the ``test_default_kvm_profile`` test in the ``integration.module.virt``): ``./tests/runtests.py -n ingtegration.module.virt.VirtTest.test_default_kvm_profile``
+
+
+Running Unit Tests Without Integration Test Daemons
+===================================================
+
+Since the unit tests do not require a master or minion to execute, it is often useful to be able to
+run unit tests individually, or as a whole group, without having to start up the integration testing
+daemons. Starting up the master, minion, and syndic daemons takes a lot of time before the tests can
+even start running and is unnecessary to run unit tests. To run unit tests without invoking the
+integration test daemons, simple remove the ``/tests`` portion of the ``runtests.py`` command:
+
+.. code-block:: bash
+
+    ./runtests.py --unit
+
+All of the other options to run individual tests, entire classes of tests, or entire test modules still
+apply.
 
 
 Running Destructive Integration Tests
@@ -84,8 +102,8 @@ provided in ``tests/integration/files/conf/cloud.providers.d/``. In order to run
 the cloud provider tests, valid credentials, which differ per provider, must be
 supplied. Each credential item that must be supplied is indicated by an empty
 string value and should be edited by the user before running the tests. For
-example, Digital Ocean requires a client key and an api key to operate. Therefore,
-the default cloud provider configuration file for Digital Ocean looks like this:
+example, DigitalOcean requires a client key and an api key to operate. Therefore,
+the default cloud provider configuration file for DigitalOcean looks like this:
 
 .. code-block:: yaml
 

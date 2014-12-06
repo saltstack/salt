@@ -4,6 +4,7 @@ Library for checking SSH options. This library primarily exists for purposes of
 sanitizing options passed into SSH, than for checking to see whether those
 options actually work.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging

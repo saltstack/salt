@@ -11,6 +11,8 @@ Place all Windows package files in the 'win_repo' directory.
 '''
 
 # Import python libs
+from __future__ import absolute_import
+from __future__ import print_function
 import os
 
 # Import third party libs
@@ -24,7 +26,7 @@ except ImportError:
 import salt.output
 import salt.utils
 import logging
-from salt._compat import string_types
+from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 
@@ -68,11 +70,11 @@ def genrepo():
                         # when log.debug works
                         log.debug('Failed to compile'
                                   '{0}: {1}'.format(os.path.join(root, name), exc))
-                        print 'Failed to compile {0}: {1}'.format(os.path.join(root, name), exc)
+                        print('Failed to compile {0}: {1}'.format(os.path.join(root, name), exc))
                 if config:
                     revmap = {}
-                    for pkgname, versions in config.iteritems():
-                        for version, repodata in versions.iteritems():
+                    for pkgname, versions in config.items():
+                        for version, repodata in versions.items():
                             if not isinstance(version, string_types):
                                 config[pkgname][str(version)] = \
                                     config[pkgname].pop(version)

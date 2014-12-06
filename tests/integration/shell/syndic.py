@@ -19,6 +19,7 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+import salt.utils
 
 
 class SyndicTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
@@ -35,18 +36,18 @@ class SyndicTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
         for fname in ('master', 'minion'):
             pid_path = os.path.join(config_dir, '{0}.pid'.format(fname))
-            config = yaml.load(
-                open(self.get_config_file_path(fname), 'r').read()
-            )
-            config['log_file'] = config['syndic_log_file'] = 'file:///tmp/log/LOG_LOCAL3'
-            config['root_dir'] = config_dir
-            if 'ret_port' in config:
-                config['ret_port'] = int(config['ret_port']) + 10
-                config['publish_port'] = int(config['publish_port']) + 10
+            with salt.utils.fopen(self.get_config_file_path(fname), 'r') as fhr:
+                config = yaml.load(fhr.read())
+                config['log_file'] = config['syndic_log_file'] = 'file:///tmp/log/LOG_LOCAL3'
+                config['root_dir'] = config_dir
+                if 'ret_port' in config:
+                    config['ret_port'] = int(config['ret_port']) + 10
+                    config['publish_port'] = int(config['publish_port']) + 10
 
-            open(os.path.join(config_dir, fname), 'w').write(
-                yaml.dump(config, default_flow_style=False)
-            )
+                with salt.utils.fopen(os.path.join(config_dir, fname), 'w') as fhw:
+                    fhw.write(
+                        yaml.dump(config, default_flow_style=False)
+                    )
 
         ret = self.run_script(
             self._call_binary_,
@@ -61,10 +62,11 @@ class SyndicTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
         # Now kill it if still running
         if os.path.exists(pid_path):
-            try:
-                os.kill(int(open(pid_path).read()), signal.SIGKILL)
-            except OSError:
-                pass
+            with salt.utils.fopen(pid_path) as fhr:
+                try:
+                    os.kill(int(fhr.read()), signal.SIGKILL)
+                except OSError:
+                    pass
         try:
             self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
             self.assertIn(

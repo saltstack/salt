@@ -51,6 +51,11 @@ minion is configured to not gather this data from the master.
 Now the salt minion will not look for a master and will assume that the local
 system has all of the file and pillar resources.
 
+.. note::
+
+    When running Salt in masterless mode, do not run the salt-minion daemon.
+    Otherwise, it will attempt to connect to a master and fail. The salt-call
+    command stands on its own and does not need the salt-minion daemon.
 
 Create State Tree
 =================
@@ -85,6 +90,12 @@ ensures that the server has the Apache webserver installed.
     apache:               # ID declaration
       pkg:                # state declaration
         - installed       # function declaration
+
+.. note::
+
+    The apache package has different names on different platforms, for
+    instance on Debian/Ubuntu it is apache2, on Fedora/RHEL it is httpd
+    and on Arch it is apache
 
 The only thing left is to provision our minion using salt-call and the
 highstate command.

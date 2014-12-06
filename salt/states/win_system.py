@@ -19,6 +19,8 @@ description.
         - computer_desc
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 import logging
 

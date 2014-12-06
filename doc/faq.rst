@@ -7,9 +7,9 @@ Is Salt open-core?
 ------------------
 
 No. Salt is 100% committed to being open-source, including all of our APIs and
-the new `'Halite' web interface`_ which was introduced in version 0.17.0. It
-is developed under the `Apache 2.0 license`_, allowing it to be used in both
-open and proprietary projects.
+the `'Halite' web interface`_ which was introduced in version 0.17.0. It is
+developed under the `Apache 2.0 license`_, allowing it to be used in both open
+and proprietary projects.
 
 .. _`'Halite' web interface`: https://github.com/saltstack/halite
 .. _`Apache 2.0 license`: http://www.apache.org/licenses/LICENSE-2.0.html
@@ -191,38 +191,84 @@ method to use, you still need to specify that the file should be backed up!).
 What is the best way to restart a Salt daemon using Salt?
 ---------------------------------------------------------
 
-Restarting Salt using Salt without having the restart interrupt the whole
-process is a tricky problem to solve. We're still working on it but in the
-meantime a good way is to use the system scheduler with a short interval. The
-following example is a state that will always execute at the very end of a
-state run.
+Updating the salt-minion package requires a restart of the salt-minion service.
+But restarting the service while in the middle of a state run interrupts the
+process of the minion running states and sending results back to the master.
+It's a tricky problem to solve, and we're working on it, but in the meantime
+one way of handling this (on Linux and UNIX-based operating systems) is to use
+**at** (a job scheduler which predates cron) to schedule a restart of the
+service. **at** is not installed by default on most distros, and requires a
+service to be running (usually called **atd**) in order to schedule jobs.
+Here's an example of how to upgrade the salt-minion package at the end of a
+Salt run, and schedule a service restart for one minute after the package
+update completes.
 
-For Unix machines:
+Linux/Unix
+**********
 
 .. code-block:: yaml
 
-    salt-minion-reload:
+    salt-minion:
+      pkg:
+        - installed
+        - version: 2014.1.7-3.el6
+        - order: last
+      service:
+        - running
+        - require:
+          - pkg: salt-minion
       cmd:
-        - run
+        - wait
         - name: echo service salt-minion restart | at now + 1 minute
+        - watch:
+          - pkg: salt-minion
+
+To ensure that **at** is installed and **atd** is running, the following states
+can be used (be sure to double-check the package name and service name for the
+distro the minion is running, in case they differ from the example below.
+
+.. code-block:: yaml
+
+    at:
+      pkg:
+        - installed
+      service:
+        - running
+        - name: atd
+        - enable: True
+
+An alternatvie to using the :program:`atd` daemon is to fork and disown the
+process.
+
+.. code-block:: yaml
+
+    restart_minion:
+      cmd.run:
+        - name: |
+            nohup /bin/sh -c 'sleep 10 && salt-call --local service.restart salt-minion'
+        - python_shell: True
         - order: last
 
-For Windows machines:
+Windows
+*******
+
+For Windows machines, restarting the minion at can be accomplished by
+adding the following state:
 
 .. code-block:: yaml
 
     schedule-start:
       cmd:
         - run
-        - name: at (Get-Date).AddMinutes(1).ToString("HH:mm") cmd /c "net start salt-minion"
-        - shell: powershell
+        - name: 'start powershell "Restart-Service -Name salt-minion"'
         - order: last
-      service:
-        - dead
-        - name: salt-minion
-        - require:
-            - cmd: schedule-start
 
+or running immediately from the command line:
+
+.. code-block:: bash
+
+    salt -G kernel:Windows cmd.run 'start powershell "Restart-Service -Name salt-minion"'
+    
 Salting the Salt Master
 -----------------------
 

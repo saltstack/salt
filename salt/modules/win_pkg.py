@@ -498,7 +498,7 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
     if salt.utils.is_true(refresh):
         refresh_db()
 
-    # Ignore pkg_type from parse_targets, Windows does not suport the "sources"
+    # Ignore pkg_type from parse_targets, Windows does not support the "sources"
     # argument
     pkg_params = __salt__['pkg_resource.parse_targets'](name,
                                                         pkgs,
@@ -758,6 +758,5 @@ def _reverse_cmp_pkg_versions(pkg1, pkg2):
 
 def _get_latest_pkg_version(pkginfo):
     if len(pkginfo) == 1:
-        return pkginfo.keys().pop()
-    pkgkeys = pkginfo.keys()
-    return sorted(pkgkeys, cmp=_reverse_cmp_pkg_versions).pop()
+        return pkginfo.iterkeys().next()
+    return sorted(pkginfo, cmp=_reverse_cmp_pkg_versions).pop()

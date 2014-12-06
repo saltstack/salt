@@ -17,7 +17,12 @@ Code Names
 To distinguish future releases from the current release, code names are used.
 The periodic table is used to derive the next codename. The first release in
 the date based system was code named ``Hydrogen``, each subsequent release will
-go to the next atomic number.
+go to the next `atomic number <https://en.wikipedia.org/wiki/List_of_elements>`.
+
+Assigned codenames:
+
+- Hydrogen: ``2014.1.0``
+- Helium: ``2014.7.0``
 
 Example
 -------

@@ -16,6 +16,16 @@ the following values configured in the minion or master config::
     returner.postgres.db: 'salt'
     returner.postgres.port: 5432
 
+Alternative configuration values can be used by prefacing the configuration.
+Any values not found in the alternative configuration will be pulled from
+the default location::
+
+    alternative.returner.postgres.host: 'salt'
+    alternative.returner.postgres.user: 'salt'
+    alternative.returner.postgres.passwd: 'salt'
+    alternative.returner.postgres.db: 'salt'
+    alternative.returner.postgres.port: 5432
+
 Running the following commands as the postgres user should create the database
 correctly::
 
@@ -31,7 +41,7 @@ correctly::
 
     DROP TABLE IF EXISTS jids;
     CREATE TABLE jids (
-      jid   bigint PRIMARY KEY,
+      jid   varchar(20) PRIMARY KEY,
       load  text NOT NULL
     );
 
@@ -59,12 +69,21 @@ Required python modules: psycopg2
   To use the postgres returner, append '--return postgres' to the salt command. ex:
 
     salt '*' test.ping --return postgres
+
+  To use the alternative configuration, append '--return_config alternative' to the salt command. ex:
+
+    salt '*' test.ping --return postgres --return_config alternative
 '''
+from __future__ import absolute_import
 # Let's not allow PyLint complain about string substitution
 # pylint: disable=W1321,E1321
 
 # Import python libs
 import json
+
+# Import Salt libs
+import salt.utils
+import salt.returners
 
 # Import third party libs
 try:
@@ -74,26 +93,57 @@ try:
 except ImportError:
     HAS_POSTGRES = False
 
+__virtualname__ = 'postgres'
+
 
 def __virtual__():
     if not HAS_POSTGRES:
         return False
-    return 'postgres'
+    return __virtualname__
 
 
-def _get_conn():
+def _get_options(ret=None):
+    '''
+    Get the postgres options from salt.
+    '''
+    attrs = {'host': 'host',
+             'user': 'user',
+             'passwd': 'passwd',
+             'db': 'db',
+             'port': 'port'}
+
+    _options = salt.returners.get_returner_options('returner.{0}'.format(__virtualname__),
+                                                   ret,
+                                                   attrs,
+                                                   __salt__=__salt__,
+                                                   __opts__=__opts__)
+    return _options
+
+
+def _get_conn(ret=None):
     '''
     Return a postgres connection.
     '''
+    _options = _get_options(ret)
+
+    host = _options.get('host')
+    user = _options.get('user')
+    passwd = _options.get('passwd')
+    db = _options.get('db')
+    port = _options.get('port')
+
     return psycopg2.connect(
-            host=__salt__['config.option']('returner.postgres.host'),
-            user=__salt__['config.option']('returner.postgres.user'),
-            password=__salt__['config.option']('returner.postgres.passwd'),
-            database=__salt__['config.option']('returner.postgres.db'),
-            port=__salt__['config.option']('returner.postgres.port'))
+            host=host,
+            user=user,
+            password=passwd,
+            database=db,
+            port=port)
 
 
 def _close_conn(conn):
+    '''
+    Close the Postgres connection
+    '''
     conn.commit()
     conn.close()
 
@@ -102,7 +152,7 @@ def returner(ret):
     '''
     Return data to a postgres server
     '''
-    conn = _get_conn()
+    conn = _get_conn(ret)
     cur = conn.cursor()
     sql = '''INSERT INTO salt_returns
             (fun, jid, return, id, success)
@@ -123,7 +173,7 @@ def save_load(jid, load):
     '''
     Save the load to the specified jid id
     '''
-    conn = _get_conn()
+    conn = _get_conn(ret=None)
     cur = conn.cursor()
     sql = '''INSERT INTO jids (jid, load) VALUES (%s, %s)'''
 
@@ -135,7 +185,7 @@ def get_load(jid):
     '''
     Return the load data that marks a specified jid
     '''
-    conn = _get_conn()
+    conn = _get_conn(ret=None)
     cur = conn.cursor()
     sql = '''SELECT load FROM jids WHERE jid = %s;'''
 
@@ -151,7 +201,7 @@ def get_jid(jid):
     '''
     Return the information returned when the specified job id was executed
     '''
-    conn = _get_conn()
+    conn = _get_conn(ret=None)
     cur = conn.cursor()
     sql = '''SELECT id, full_ret FROM salt_returns WHERE jid = %s'''
 
@@ -169,7 +219,7 @@ def get_fun(fun):
     '''
     Return a dict of the last function called for all minions
     '''
-    conn = _get_conn()
+    conn = _get_conn(ret=None)
     cur = conn.cursor()
     sql = '''SELECT s.id,s.jid, s.full_ret
             FROM salt_returns s
@@ -183,7 +233,7 @@ def get_fun(fun):
 
     ret = {}
     if data:
-        for minion, jid, full_ret in data:
+        for minion, _, full_ret in data:
             ret[minion] = json.loads(full_ret)
     _close_conn(conn)
     return ret
@@ -193,7 +243,7 @@ def get_jids():
     '''
     Return a list of all job ids
     '''
-    conn = _get_conn()
+    conn = _get_conn(ret=None)
     cur = conn.cursor()
     sql = '''SELECT jid FROM jids'''
 
@@ -210,7 +260,7 @@ def get_minions():
     '''
     Return a list of minions
     '''
-    conn = _get_conn()
+    conn = _get_conn(ret=None)
     cur = conn.cursor()
     sql = '''SELECT DISTINCT id FROM salt_returns'''
 
@@ -221,3 +271,10 @@ def get_minions():
         ret.append(minion[0])
     _close_conn(conn)
     return ret
+
+
+def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
+    '''
+    Do any work necessary to prepare a JID, including sending a custom id
+    '''
+    return passed_jid if passed_jid is not None else salt.utils.gen_jid()

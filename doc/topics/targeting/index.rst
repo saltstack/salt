@@ -32,3 +32,4 @@ There are many ways to target individual minions or groups of minions in Salt:
     compound
     nodegroups
     batch
+    range

@@ -2,6 +2,7 @@
 '''
 The networking module for Windows based systems
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -16,6 +17,7 @@ from salt.exceptions import (
     CommandExecutionError,
     SaltInvocationError
 )
+from salt.ext.six.moves import range
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -253,7 +255,7 @@ def set_static_ip(iface, addr, gateway=None, append=False):
     def _find_addr(iface, addr, timeout=1):
         ip, cidr = addr.rsplit('/', 1)
         netmask = salt.utils.network.cidr_to_ipv4_netmask(cidr)
-        for idx in xrange(timeout):
+        for idx in range(timeout):
             for addrinfo in get_interface(iface).get('ip_addrs', []):
                 if addrinfo['IP Address'] == ip \
                         and addrinfo['Netmask'] == netmask:

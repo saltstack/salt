@@ -4,11 +4,16 @@ Module for managing container and VM images
 
 .. versionadded:: 2014.7.0
 '''
+from __future__ import absolute_import
 
 # Import python libs
-import os.path
+import os
 import pprint
 import logging
+try:
+    from shlex import quote as _cmd_quote  # pylint: disable=E0611
+except ImportError:
+    from pipes import quote as _cmd_quote
 
 # Import salt libs
 import salt.utils
@@ -128,11 +133,12 @@ def _bootstrap_yum(root, pkg_confs='/etc/yum*'):
         which are required for the install to work.
     '''
     _make_nodes(root)
-    __salt__['cmd.run']('cp /etc/resolv/conf /etc/*release {root}/etc'.format(root=root, confs=pkg_confs))
-    __salt__['cmd.run']('cp -r /etc/*release {root}/etc'.format(root=root, confs=pkg_confs))
-    __salt__['cmd.run']('cp -r {confs} {root}/etc'.format(root=root, confs=pkg_confs))
-    __salt__['cmd.run']('yum install --installroot={0} -y yum centos-release iputils'.format(root))
-    __salt__['cmd.run']('rpm --root={0} -Uvh http://download.fedoraproject.org/pub/epel/6/i386/epel-release-6-8.noarch.rpm'.format(root))
+    release_files = [rf for rf in os.listdir('/etc') if rf.endswith('release')]
+    __salt__['cmd.run']('cp /etc/resolv/conf {rfs} {root}/etc'.format(root=_cmd_quote(root), rfs=' '.join(release_files)))
+    __salt__['cmd.run']('cp -r {rfs} {root}/etc'.format(root=_cmd_quote(root), rfs=' '.join(release_files)))
+    __salt__['cmd.run']('cp -r {confs} {root}/etc'.format(root=_cmd_quote(root), confs=_cmd_quote(pkg_confs)))
+    __salt__['cmd.run']('yum install --installroot={0} -y yum centos-release iputils'.format(_cmd_quote(root)))
+    __salt__['cmd.run']('rpm --root={0} -Uvh http://download.fedoraproject.org/pub/epel/6/i386/epel-release-6-8.noarch.rpm'.format(_cmd_quote(root)))
 
 
 def _bootstrap_deb(
@@ -169,21 +175,32 @@ def _bootstrap_deb(
 
     __salt__['cmd.run'](
         'debootstrap --foreign --arch {arch} {flavor} {root} {url}'.format(
-            arch=arch, flavor=flavor, root=root, url=repo_url
+            arch=_cmd_quote(arch),
+            flavor=_cmd_quote(flavor),
+            root=_cmd_quote(root),
+            url=_cmd_quote(repo_url)
         )
     )
     __salt__['cmd.run'](
-        'cp {qemu} {root}/usr/bin/'.format(qemu=static_qemu, root=root)
-    )
-    env = ('DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true ',
-           'LC_ALL=C LANGUAGE=C LANG=C PATH=/sbin:/bin:/usr/bin')
-    __salt__['cmd.run'](
-        '{env} chroot {root} /debootstrap/debootstrap --second-stage'.format(
-            env=env, root=root
+        'cp {qemu} {root}/usr/bin/'.format(
+            qemu=_cmd_quote(static_qemu), root=_cmd_quote(root)
         )
     )
+    env = {'DEBIAN_FRONTEND': 'noninteractive',
+           'DEBCONF_NONINTERACTIVE_SEEN': 'true',
+           'LC_ALL': 'C',
+           'LANGUAGE': 'C',
+           'LANG': 'C',
+           'PATH': '/sbin:/bin:/usr/bin'}
     __salt__['cmd.run'](
-        '{env} chroot {root} dpkg --configure -a'.format(env=env, root=root)
+        'chroot {root} /debootstrap/debootstrap --second-stage'.format(
+            root=_cmd_quote(root)
+        ),
+        env=env
+    )
+    __salt__['cmd.run'](
+        'chroot {root} dpkg --configure -a'.format(root=_cmd_quote(root)),
+        env=env
     )
 
 
@@ -203,8 +220,9 @@ def _bootstrap_pacman(root, pkg_confs='/etc/pacman*'):
     __salt__['file.mkdir'](
         '{0}/var/lib/pacman/local'.format(root), 'root', 'root', '755'
     )
-    __salt__['cmd.run']('cp -r /etc/pacman.* {0}/etc'.format(root))
-    __salt__['cmd.run']('pacman --noconfirm -r {0} -Sy pacman'.format(root))
+    pac_files = [rf for rf in os.listdir('/etc') if rf.startswith('pacman.')]
+    __salt__['cmd.run']('cp -r {0} {1}/etc'.format(' '.join(pac_files), _cmd_quote(root)))
+    __salt__['cmd.run']('pacman --noconfirm -r {0} -Sy pacman'.format(_cmd_quote(root)))
 
 
 def _make_nodes(root):
@@ -249,7 +267,7 @@ def avail_platforms():
         salt myminion genesis.avail_platforms
     '''
     ret = {}
-    for platform in CMD_MAP.keys():
+    for platform in CMD_MAP:
         ret[platform] = True
         for cmd in CMD_MAP[platform]:
             if not salt.utils.which(cmd):

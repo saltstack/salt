@@ -4,11 +4,11 @@ Salt SSH
 
 .. note::
 
-    SALT-SSH IS ALPHA SOFTWARE AND MAY NOT BE READY FOR PRODUCTION USE
+    Salt ssh is considered production ready in version 2014.7.0
 
 .. note::
 
-    On many systems, ``salt-ssh`` will be in its own package, usually named
+    On many systems, the ``salt-ssh`` executable will be in its own package, usually named
     ``salt-ssh``.
 
 In version 0.17.0 of Salt a new transport system was introduced, the ability
@@ -67,6 +67,11 @@ address. A more elaborate roster can be created:
       sudo: True         # Whether to sudo to root, not enabled by default
     web2:
       host: 192.168.42.2
+      
+.. note::
+
+    sudo works only if NOPASSWD is set for user in /etc/sudoers:
+    ``fred ALL=(ALL) NOPASSWD: ALL`` 
 
 Calling Salt SSH
 ================

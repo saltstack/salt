@@ -1,23 +1,28 @@
 ##### Primary configuration settings #####
 ##########################################
+# This configuration file is used to manage the behavior of the Salt Minion.
+# With the exception of the location of the Salt Master Server, values that
+# are commented out but have no space after the comment are defaults that need
+# not be set in the config. If there is a space after the comment that the value
+# is presented as an example and is not the default.
 
 # Per default the minion will automatically include all config files
 # from minion.d/*.conf (minion.d is a directory in the same directory
 # as the main minion config file).
 #default_include: minion.d/*.conf
 
-# Set the location of the salt master server, if the master server cannot be
+# Set the location of the salt master server. If the master server cannot be
 # resolved, then the minion will fail to start.
 #master: salt
 
 # If multiple masters are specified in the 'master' setting, the default behavior
 # is to always try to connect to them in the order they are listed. If random_master is
 # set to True, the order will be randomized instead. This can be helpful in distributing
-# the load of many minions executing salt-call requests, for example from a cron job.
+# the load of many minions executing salt-call requests, for example, from a cron job.
 # If only one master is listed, this setting is ignored and a warning will be logged.
 #random_master: False
 
-# Set whether the minion should connect to the master via IPv6
+# Set whether the minion should connect to the master via IPv6:
 #ipv6: False
 
 # Set the number of seconds to wait before attempting to resolve
@@ -25,13 +30,13 @@
 # Set to zero if the minion should shutdown and not retry.
 # retry_dns: 30
 
-# Set the port used by the master reply and authentication server
+# Set the port used by the master reply and authentication server.
 #master_port: 4506
 
-# The user to run salt
+# The user to run salt.
 #user: root
 
-# Specify the location of the daemon process ID file
+# Specify the location of the daemon process ID file.
 #pidfile: /var/run/salt-minion.pid
 
 # The root directory prepended to these options: pki_dir, cachedir, log_file,
@@ -55,7 +60,7 @@
 
 # Custom static grains for this minion can be specified here and used in SLS
 # files just like all other grains. This example sets 4 custom grains, with
-# the 'roles' grain having two values that can be matched against:
+# the 'roles' grain having two values that can be matched against.
 #grains:
 #  roles:
 #    - webserver
@@ -64,39 +69,38 @@
 #  cabinet: 13
 #  cab_u: 14-15
 
-# Where cache data goes
+# Where cache data goes.
 #cachedir: /var/cache/salt/minion
 
-# Verify and set permissions on configuration directories at startup
+# Verify and set permissions on configuration directories at startup.
 #verify_env: True
 
 # The minion can locally cache the return data from jobs sent to it, this
 # can be a good way to keep track of jobs the minion has executed
-# (on the minion side). By default this feature is disabled, to enable
-# set cache_jobs to True
+# (on the minion side). By default this feature is disabled, to enable, set
+# cache_jobs to True.
 #cache_jobs: False
 
-# set the directory used to hold unix sockets
+# Set the directory used to hold unix sockets.
 #sock_dir: /var/run/salt/minion
 
 # Set the default outputter used by the salt-call command. The default is
-# "nested"
+# "nested".
 #output: nested
 #
-# By default output is colored, to disable colored output set the color value
-# to False
+# By default output is colored. To disable colored output, set the color value
+# to False.
 #color: True
 
-# Do not strip off the colored output from nested results and states outputs
-# (true by default)
-# strip_colors: false
+# Do not strip off the colored output from nested results and state outputs
+# (true by default).
+# strip_colors: False
 
 # Backup files that are replaced by file.managed and file.recurse under
 # 'cachedir'/file_backups relative to their original location and appended
 # with a timestamp. The only valid setting is "minion". Disabled by default.
 #
 # Alternatively this can be specified for each file in state files:
-#
 # /etc/ssh/sshd_config:
 #   file.managed:
 #     - source: salt://ssh/sshd_config
@@ -114,37 +118,46 @@
 # set to zero, the time between reconnection attempts will stay constant.
 #acceptance_wait_time_max: 0
 
-# If the master rejects the minion's public key, retry instead exiting. Rejected keys
-# # will be handled the same as waiting on acceptance.
+# If the master rejects the minion's public key, retry instead of exiting.
+# Rejected keys will be handled the same as waiting on acceptance.
 #rejected_retry: False
 
 # When the master key changes, the minion will try to re-auth itself to receive
 # the new master key. In larger environments this can cause a SYN flood on the
 # master because all minions try to re-auth immediately. To prevent this and
 # have a minion wait for a random amount of time, use this optional parameter.
-# The wait-time will be a random number of seconds between
-# 0 and the defined value.
+# The wait-time will be a random number of seconds between 0 and the defined value.
 #random_reauth_delay: 60
 
 # When waiting for a master to accept the minion's public key, salt will
 # continuously attempt to reconnect until successful. This is the timeout value,
 # in seconds, for each individual attempt. After this timeout expires, the minion
-# will wait for acceptance_wait_time seconds before trying again.
-# Unless your master is under unusually heavy load, this should be left at the default.
+# will wait for acceptance_wait_time seconds before trying again. Unless your master
+# is under unusually heavy load, this should be left at the default.
 #auth_timeout: 60
 
-# Number of consecutive SaltReqTimeoutError that are acceptable when trying to authenticate.
-#auth_tries: 1
+# Number of consecutive SaltReqTimeoutError that are acceptable when trying to
+# authenticate.
+#auth_tries: 7
 
-# If authentication failes due to SaltReqTimeoutError during a ping_interval,
-# cause sub minion proccess to restart.
+# If authentication fails due to SaltReqTimeoutError during a ping_interval,
+# cause sub minion process to restart.
 #auth_safemode: False
 
 # Ping Master to ensure connection is alive (minutes).
-# TODO: perhaps could update the scheduler to raise Exception in main thread after /mine_interval (60 minutes)/ fails
-#ping_interval: 90
+#ping_interval: 0
 
-# If you don't have any problems with syn-floods, dont bother with the
+# To auto recover minions if master changes IP address (DDNS)
+#    auth_tries: 10
+#    auth_safemode: False
+#    ping_interval: 90
+#    restart_on_error: True
+#
+# Minions won't know master is missing until a ping fails. After the ping fail,
+# the minion will attempt authentication and likely fails out and cause a restart.
+# When the minion restarts it will resolve the masters IP and attempt to reconnect.
+
+# If you don't have any problems with syn-floods, don't bother with the
 # three recon_* settings described below, just leave the defaults!
 #
 # The ZeroMQ pull-socket that binds to the masters publishing interface tries
@@ -153,7 +166,6 @@
 # minions reconnect immediately which might flood the master (the ZeroMQ-default
 # is usually a 100ms delay). To prevent this, these three recon_* settings
 # can be used.
-#
 # recon_default: the interval in milliseconds that the socket should wait before
 #                trying to reconnect to the master (1000ms = 1 second)
 #
@@ -176,21 +188,18 @@
 #                  setup is quite large (several thousand minions), they will still
 #                  flood the master. The desired behavior is to have timeframe within
 #                  all minions try to reconnect.
-
-# Example on how to use these settings:
-# The goal: have all minions reconnect within a 60 second timeframe on a disconnect
 #
-# The settings:
-#recon_default: 1000
-#recon_max: 59000
-#recon_randomize: True
+# Example on how to use these settings. The goal: have all minions reconnect within a
+# 60 second timeframe on a disconnect.
+# recon_default: 1000
+# recon_max: 59000
+# recon_randomize: True
 #
 # Each minion will have a randomized reconnect value between 'recon_default'
 # and 'recon_default + recon_max', which in this example means between 1000ms
 # 60000ms (or between 1 and 60 seconds). The generated random-value will be
 # doubled after each attempt to reconnect. Lets say the generated random
 # value is 11 seconds (or 11000ms).
-#
 # reconnect 1: wait 11 seconds
 # reconnect 2: wait 22 seconds
 # reconnect 3: wait 33 seconds
@@ -204,9 +213,9 @@
 #
 # In a setup with ~6000 thousand hosts these settings would average the reconnects
 # to about 100 per second and all hosts would be reconnected within 60 seconds.
-#recon_default: 100
-#recon_max: 5000
-#recon_randomize: False
+# recon_default: 100
+# recon_max: 5000
+# recon_randomize: False
 
 # The loop_interval sets how long in seconds the minion will wait between
 # evaluating the scheduler and running cleanup tasks. This defaults to a
@@ -227,7 +236,7 @@
 #grains_refresh_every: 1
 
 # Cache grains on the minion. Default is False.
-# grains_cache: False
+#grains_cache: False
 
 # Grains cache expiration, in seconds. If the cache file is older than this
 # number of seconds then the grains cache will be dumped and fully re-populated
@@ -238,7 +247,7 @@
 # Windows platforms lack posix IPC and must rely on slower TCP based inter-
 # process communications. Set ipc_mode to 'tcp' on such systems
 #ipc_mode: ipc
-#
+
 # Overwrite the default tcp ports used by the minion when in tcp mode
 #tcp_pub_port: 4510
 #tcp_pull_port: 4511
@@ -248,13 +257,18 @@
 # minion event bus. The value is expressed in bytes.
 #max_event_size: 1048576
 
+# To detect failed master(s) and fire events on connect/disconnect, set
+# master_alive_interval to the number of seconds to poll the masters for
+# connection events.
+#
+#master_alive_interval: 30
+
 # The minion can include configuration from other files. To enable this,
 # pass a list of paths to this option. The paths can be either relative or
 # absolute; if relative, they are considered to be relative to the directory
 # the main minion configuration file lives in (this file). Paths can make use
 # of shell-style globbing. If no files are matched by a path passed to this
 # option then the minion will log a warning message.
-#
 #
 # Include a config file from some other path:
 # include: /etc/salt/extra_config
@@ -264,10 +278,11 @@
 #  - /etc/salt/extra_config
 #  - /etc/roles/webserver
 
+
 #####   Minion module management     #####
 ##########################################
 # Disable specific modules. This allows the admin to limit the level of
-# access the master has to the minion
+# access the master has to the minion.
 #disable_modules: [cmd,test]
 #disable_returners: []
 #
@@ -285,19 +300,15 @@
 # via the providers option, in this case the default module will be
 # overwritten by the specified module. In this example the pkg module will
 # be provided by the yumpkg5 module instead of the system default.
-#
 #providers:
 #  pkg: yumpkg5
 #
 # Enable Cython modules searching and loading. (Default: False)
 #cython_enable: False
 #
-#
-#
-# Specify a max size (in bytes) for modules on import
-# this feature is currently only supported on *nix OSs and requires psutil
+# Specify a max size (in bytes) for modules on import. This feature is currently
+# only supported on *nix operating systems and requires psutil.
 # modules_max_memory: -1
-
 
 
 #####    State Management Settings    #####
@@ -317,21 +328,21 @@
 #renderer: yaml_jinja
 #
 # The failhard option tells the minions to stop immediately after the first
-# failure detected in the state execution, defaults to False
+# failure detected in the state execution. Defaults to False.
 #failhard: False
 #
-# autoload_dynamic_modules Turns on automatic loading of modules found in the
-# environments on the master. This is turned on by default, to turn of
-# autoloading modules when states run set this value to False
+# autoload_dynamic_modules turns on automatic loading of modules found in the
+# environments on the master. This is turned on by default. To turn of
+# autoloading modules when states run, set this value to False.
 #autoload_dynamic_modules: True
 #
 # clean_dynamic_modules keeps the dynamic modules on the minion in sync with
 # the dynamic modules on the master, this means that if a dynamic module is
-# not on the master it will be deleted from the minion. By default this is
-# enabled and can be disabled by changing this value to False
+# not on the master it will be deleted from the minion. By default, this is
+# enabled and can be disabled by changing this value to False.
 #clean_dynamic_modules: True
 #
-# Normally the minion is not isolated to any single environment on the master
+# Normally, the minion is not isolated to any single environment on the master
 # when running states, but the environment can be isolated on the minion side
 # by statically setting it. Remember that the recommended way to manage
 # environments is to isolate via the top file.
@@ -347,13 +358,22 @@
 # 'top' -- Read top_file option and execute based on that file on the Master
 #startup_states: ''
 #
-# list of states to run when the minion starts up if startup_states is 'sls'
+# List of states to run when the minion starts up if startup_states is 'sls':
 #sls_list:
 #  - edit.vim
 #  - hyper
 #
-# top file to execute if startup_states is 'top'
+# Top file to execute if startup_states is 'top':
 #top_file: ''
+
+# Automatically aggregate all states that have support for mod_aggregate by
+# setting to True. Or pass a list of state module names to automatically
+# aggregate just those types.
+#
+# state_aggregate:
+#   - pkg
+#
+#state_aggregate: False
 
 #####     File Directory Settings    #####
 ##########################################
@@ -390,11 +410,9 @@
 # to attempt to find files. To limit this behavior so that the fileserver only
 # traverses directories with SLS files and special Salt directories like _modules,
 # enable the option below. This might be useful for installations where a file root
-# has a very large number of files and performance is negatively impacted.
-#
-# Default is False.
-#
-# fileserver_limit_traversal: False
+# has a very large number of files and performance is negatively impacted. Default
+# is False.
+#fileserver_limit_traversal: False
 
 # The hash_type is the hash to use when discovering the hash of a file in
 # the local fileserver. The default is md5, but sha1, sha224, sha256, sha384
@@ -402,7 +420,6 @@
 #
 # Warning: Prior to changing this value, the minion should be stopped and all
 # Salt caches should be cleared.
-#
 #hash_type: md5
 
 # The Salt pillar is searched for locally if file_client is set to local. If
@@ -411,6 +428,7 @@
 #pillar_roots:
 #  base:
 #    - /srv/pillar
+
 
 ######        Security settings       #####
 ###########################################
@@ -431,27 +449,29 @@
 # The state_verbose setting can be set to True or False, when set to False
 # all data that has a result of True and no changes will be suppressed.
 #state_verbose: True
-#
+
 # The state_output setting changes if the output is the full multi line
 # output for each changed state if set to 'full', but if set to 'terse'
 # the output will be shortened to a single line.
 #state_output: full
-#
+
 # The state_output_diff setting changes whether or not the output from
-# sucessful states is returned. Useful when even the terse output of these
+# successful states is returned. Useful when even the terse output of these
 # states is cluttering the logs. Set it to True to ignore them.
 #state_output_diff: False
-#
+
 # Fingerprint of the master public key to double verify the master is valid,
 # the master fingerprint can be found by running "salt-key -F master" on the
 # salt master.
 #master_finger: ''
+
 
 ######         Thread settings        #####
 ###########################################
 # Disable multiprocessing support, by default when a minion receives a
 # publication a new process is spawned and the command is executed therein.
 #multiprocessing: True
+
 
 #####         Logging settings       #####
 ##########################################
@@ -466,12 +486,12 @@
 #
 #log_file: /var/log/salt/minion
 #key_logfile: /var/log/salt/key
-#
+
 # The level of messages to send to the console.
 # One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
 # Default: 'warning'
 #log_level: warning
-#
+
 # The level of messages to send to the log file.
 # One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
 # Default: 'warning'
@@ -481,12 +501,12 @@
 # can be seen here: http://docs.python.org/library/time.html#time.strftime
 #log_datefmt: '%H:%M:%S'
 #log_datefmt_logfile: '%Y-%m-%d %H:%M:%S'
-#
+
 # The format of the console logging messages. Allowed formatting options can
 # be seen here: http://docs.python.org/library/logging.html#logrecord-attributes
 #log_fmt_console: '[%(levelname)-8s] %(message)s'
 #log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
-#
+
 # This can be used to control logging levels more specificically.  This
 # example sets the main salt library at the 'warning' level, but sets
 # 'salt.modules' to log at the 'debug' level:
@@ -495,6 +515,7 @@
 #     'salt.modules': 'debug'
 #
 #log_granular_levels: {}
+
 
 ######      Module configuration      #####
 ###########################################
@@ -538,20 +559,20 @@
 # the risk that it could tear down the connection the master and minion
 # without informing either party that their connection has been taken away.
 # Enabling TCP Keepalives prevents this from happening.
-#
+
 # Overall state of TCP Keepalives, enable (1 or True), disable (0 or False)
 # or leave to the OS defaults (-1), on Linux, typically disabled. Default True, enabled.
 #tcp_keepalive: True
-#
+
 # How long before the first keepalive should be sent in seconds. Default 300
 # to send the first keepalive after 5 minutes, OS default (-1) is typically 7200 seconds
 # on Linux see /proc/sys/net/ipv4/tcp_keepalive_time.
 #tcp_keepalive_idle: 300
-#
+
 # How many lost probes are needed to consider the connection lost. Default -1
 # to use OS defaults, typically 9 on Linux, see /proc/sys/net/ipv4/tcp_keepalive_probes.
 #tcp_keepalive_cnt: -1
-#
+
 # How often, in seconds, to send keepalives after the first one. Default -1 to
 # use OS defaults, typically 75 seconds on Linux, see
 # /proc/sys/net/ipv4/tcp_keepalive_intvl.
@@ -560,5 +581,11 @@
 
 ######      Windows Software settings ######
 ############################################
-# Location of the repository cache file on the master
+# Location of the repository cache file on the master:
 #win_repo_cachefile: 'salt://win/repo/winrepo.p'
+
+
+######      Returner  settings        ######
+############################################
+# Which returner(s) will be used for minion's result:
+#return: mysql

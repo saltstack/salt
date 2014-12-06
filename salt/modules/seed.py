@@ -3,6 +3,8 @@
 Virtual machine image management tools
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 import os
 import shutil
@@ -15,6 +17,7 @@ import salt.crypt
 import salt.utils
 import salt.config
 import salt.syspaths
+import uuid
 
 
 # Set up logging
@@ -28,9 +31,33 @@ __func_alias__ = {
 
 def _file_or_content(file_):
     if os.path.exists(file_):
-        with open(file_) as fic:
+        with salt.utils.fopen(file_) as fic:
             return fic.read()
     return file_
+
+
+def prep_bootstrap(mpt):
+    '''
+    Update and get the random script to a random place
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' seed.prep_bootstrap /tmp
+
+    '''
+    # Verify that the boostrap script is downloaded
+    bs_ = __salt__['config.gather_bootstrap_script']()
+    fpd_ = os.path.join(mpt, 'tmp', "{0}".format(
+        uuid.uuid4()))
+    if not os.path.exists(fpd_):
+        os.makedirs(fpd_)
+    os.chmod(fpd_, 0o700)
+    fp_ = os.path.join(fpd_, os.path.basename(bs_))
+    # Copy script into tmp
+    shutil.copy(bs_, fp_)
+    return fp_
 
 
 def _mount(path, ftype):
@@ -179,12 +206,12 @@ def mkconfig(config=None, tmp=None, id_=None, approve_key=True,
     privkeyfn = os.path.join(tmp, 'minion.pem')
     preseeded = pub_key and priv_key
     if preseeded:
-        with open(pubkeyfn, 'w') as fic:
+        with salt.utils.fopen(pubkeyfn, 'w') as fic:
             fic.write(_file_or_content(pub_key))
-        with open(privkeyfn, 'w') as fic:
+        with salt.utils.fopen(privkeyfn, 'w') as fic:
             fic.write(_file_or_content(priv_key))
-        os.chmod(pubkeyfn, 0600)
-        os.chmod(privkeyfn, 0600)
+        os.chmod(pubkeyfn, 0o600)
+        os.chmod(privkeyfn, 0o600)
     else:
         salt.crypt.gen_keys(tmp, 'minion', 2048)
     if approve_key and not preseeded:
@@ -203,10 +230,12 @@ def _install(mpt):
     '''
 
     _check_resolv(mpt)
+    boot_ = (prep_bootstrap(mpt)
+             or salt.syspaths.BOOTSTRAP)
     # Exec the chroot command
     cmd = 'if type salt-minion; then exit 0; '
     cmd += 'else sh {0} -c /tmp; fi'.format(salt.syspaths.BOOTSTRAP)
-    return not __salt__['cmd.run_chroot'](mpt, cmd)['retcode']
+    return not __salt__['cmd.run_chroot'](mpt, cmd, python_shell=True)['retcode']
 
 
 def _check_resolv(mpt):
@@ -236,9 +265,11 @@ def _check_install(root):
         sh_ = '/bin/bash'
 
     cmd = ('if ! type salt-minion; then exit 1; fi')
-    cmd = 'chroot {0} {1} -c {2!r}'.format(
+    cmd = 'chroot \'{0}\' {1} -c {2!r}'.format(
         root,
         sh_,
         cmd)
 
-    return not __salt__['cmd.retcode'](cmd, output_loglevel='quiet')
+    return not __salt__['cmd.retcode'](cmd,
+                                       output_loglevel='quiet',
+                                       python_shell=True)

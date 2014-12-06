@@ -23,6 +23,7 @@ as either absent or present
     testuser:
       user.absent
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -61,6 +62,7 @@ def _changes(name,
              roomnumber='',
              workphone='',
              homephone='',
+             loginclass=None,
              date=0,
              mindays=0,
              maxdays=999999,
@@ -146,6 +148,12 @@ def _changes(name,
     if 'user.chhomephone' in __salt__:
         if homephone is not None and lusr['homephone'] != homephone:
             change['homephone'] = homephone
+    # OpenBSD login class
+    if __grains__['kernel'] == 'OpenBSD':
+        if not loginclass:
+            loginclass = '""'
+        if __salt__['user.get_loginclass'](name)['loginclass'] != loginclass:
+            change['loginclass'] = loginclass
 
     return change
 
@@ -169,6 +177,7 @@ def present(name,
             roomnumber=None,
             workphone=None,
             homephone=None,
+            loginclass=None,
             date=None,
             mindays=None,
             maxdays=None,
@@ -208,7 +217,7 @@ def present(name,
 
     remove_groups
         Remove groups that the user is a member of that weren't specified in
-        the state, Default is ``False``.
+        the state, Default is ``True``.
 
     home
         The location of the home directory to manage
@@ -244,8 +253,11 @@ def present(name,
         Choose UID in the range of FIRST_SYSTEM_UID and LAST_SYSTEM_UID, Default is
         ``False``.
 
+    loginclass
+        The login class, defaults to empty
+        (BSD only)
 
-    User comment field (GECOS) support (currently Linux, FreeBSD, and MacOS
+    User comment field (GECOS) support (currently Linux, BSD, and MacOS
     only):
 
     The below values should be specified as strings to avoid ambiguities when
@@ -293,10 +305,10 @@ def present(name,
         Date that account expires, represented in days since epoch (January 1,
         1970).
     '''
-    fullname = str(fullname) if fullname is not None else fullname
-    roomnumber = str(roomnumber) if roomnumber is not None else roomnumber
-    workphone = str(workphone) if workphone is not None else workphone
-    homephone = str(homephone) if homephone is not None else homephone
+    fullname = salt.utils.sdecode(fullname) if fullname is not None else fullname
+    roomnumber = salt.utils.sdecode(roomnumber) if roomnumber is not None else roomnumber
+    workphone = salt.utils.sdecode(workphone) if workphone is not None else workphone
+    homephone = salt.utils.sdecode(homephone) if homephone is not None else homephone
 
     ret = {'name': name,
            'changes': {},
@@ -368,6 +380,8 @@ def present(name,
         # The user is present
         if 'shadow.info' in __salt__:
             lshad = __salt__['shadow.info'](name)
+        if __grains__['kernel'] == 'OpenBSD':
+            lcpre = __salt__['user.get_loginclass'](name)
         pre = __salt__['user.info'](name)
         for key, val in changes.items():
             if key == 'passwd' and not empty_password:
@@ -409,6 +423,8 @@ def present(name,
         if 'shadow.info' in __salt__:
             if lshad['passwd'] != password:
                 spost = __salt__['shadow.info'](name)
+        if __grains__['kernel'] == 'OpenBSD':
+            lcpost = __salt__['user.get_loginclass'](name)
         # See if anything changed
         for key in post:
             if post[key] != pre[key]:
@@ -417,6 +433,9 @@ def present(name,
             for key in spost:
                 if lshad[key] != spost[key]:
                     ret['changes'][key] = spost[key]
+        if __grains__['kernel'] == 'OpenBSD':
+            if lcpost['loginclass'] != lcpre['loginclass']:
+                ret['changes']['loginclass'] = lcpost['loginclass']
         if ret['changes']:
             ret['comment'] = 'Updated user {0}'.format(name)
         changes = _changes(name,
@@ -435,6 +454,7 @@ def present(name,
                            roomnumber,
                            workphone,
                            homephone,
+                           loginclass,
                            date,
                            mindays,
                            maxdays,
@@ -471,6 +491,7 @@ def present(name,
                                 roomnumber=roomnumber,
                                 workphone=workphone,
                                 homephone=homephone,
+                                loginclass=loginclass,
                                 createhome=createhome):
             ret['comment'] = 'New user {0} created'.format(name)
             ret['changes'] = __salt__['user.info'](name)
@@ -503,7 +524,7 @@ def present(name,
                         ret['result'] = False
                     ret['changes']['mindays'] = mindays
                 if maxdays:
-                    __salt__['shadow.set_maxdays'](name, mindays)
+                    __salt__['shadow.set_maxdays'](name, maxdays)
                     spost = __salt__['shadow.info'](name)
                     if spost['max'] != maxdays:
                         ret['comment'] = 'User {0} created but failed to set' \
@@ -526,7 +547,7 @@ def present(name,
                     if spost['warn'] != warndays:
                         ret['comment'] = 'User {0} created but failed to set' \
                                          ' warn days to' \
-                                         ' {1}'.format(name, mindays)
+                                         ' {1}'.format(name, warndays)
                         ret['result'] = False
                     ret['changes']['warndays'] = warndays
                 if expire:

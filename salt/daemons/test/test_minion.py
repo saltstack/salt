@@ -3,6 +3,9 @@
 '''
 Runs minion floscript
 '''
+
+from __future__ import absolute_import
+from __future__ import print_function
 # pylint: skip-file
 
 import os
@@ -40,10 +43,10 @@ def test():
     localFilepath = os.path.join(pkiDirpath, 'local.key')
     if os.path.exists(localFilepath):
         mode = os.stat(localFilepath).st_mode
-        print mode
+        print(mode)
         os.chmod(localFilepath, mode | stat.S_IWUSR | stat.S_IRUSR)
         mode = os.stat(localFilepath).st_mode
-        print mode
+        print(mode)
 
 
     cacheDirpath = os.path.join('/tmp/raet', 'cache', 'minion')
@@ -59,6 +62,7 @@ def test():
     filepath = 'minion.flo'
     opts = dict(
             id="minion",
+            __role='minion',
             ioflo_period=0.1,
             ioflo_realtime=True,
             minion_floscript=filepath,

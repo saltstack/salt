@@ -2,6 +2,7 @@
 '''
 Execute puppet routines
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -198,7 +199,7 @@ def enable():
 
     .. code-block:: bash
 
-        salt '*' puppet.disable
+        salt '*' puppet.enable
     '''
 
     _check_puppet()

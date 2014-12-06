@@ -17,6 +17,7 @@ Follow one of the below links for further information and examples
     json_out
     key
     nested
+    newline_values_only
     no_out
     no_return
     overstatestage

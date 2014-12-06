@@ -49,13 +49,13 @@ _master_options=(
     '(--state-output --state_output)'{--state-output,--state_output}'[Override the configured state_output value for minion output. Default: full]:Outputs:(full terse mixed changes)'
     '--subset[Execute the routine on a random subset of the targeted minions]:Subset:'
     '(-v --verbose)'{-v,--verbose}'[Turn on command verbosity, display jid and active job queries]'
-    '--show-timeout[Display minions that timeout]'
+    '--hide-timeout[Hide minions that timeout]'
     '(-b --batch --batch-size)'{-b,--batch,--batch-size}'[Execute the salt job in batch mode, pass number or percentage to batch.]:Batch Size:'
     '(-a --auth --eauth --extrenal-auth)'{-a,--auth,--eauth,--external-auth}'[Specify an external authentication system to use.]:eauth:'
     '(-T --make-token)'{-T,--make-token}'[Generate and save an authentication token for re-use.]'
     "--return[Set an alternative return method.]:Returners:_path_files -W '$salt_dir/returners' -g '[^_]*.py(\:r)'"
     '(-d --doc --documentation)'{-d,--doc,--documentation}"[Return the documentation for the specified module]:Module:_path_files -W '$salt_dir/modules' -g '[^_]*.py(\:r)'"
-    '--args-separator[Set the special argument used as a delimiter between command arguments of compound commands.]:Arg seperator:'
+    '--args-separator[Set the special argument used as a delimiter between command arguments of compound commands.]:Arg separator:'
 )
 
 _minion_options=(

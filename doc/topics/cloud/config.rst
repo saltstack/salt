@@ -32,7 +32,7 @@ be used here.
 .. code-block:: yaml
 
     minion:
-        master: saltmaster.example.com
+      master: saltmaster.example.com
 
 
 In particular, this is the location to specify the location of the salt master
@@ -130,7 +130,7 @@ configuration key in the defined profiles.
     rhel_aws:
       provider: aws
       image: ami-e565ba8c
-      size: Micro Instance
+      size: t1.micro
 
 
 * To:
@@ -140,7 +140,7 @@ configuration key in the defined profiles.
     rhel_aws:
       provider: my-aws-migrated-config
       image: ami-e565ba8c
-      size: Micro Instance
+      size: t1.micro
 
 
 This new configuration syntax even allows you to have multiple cloud
@@ -174,7 +174,7 @@ key on any defined profile to change, see the example:
     rhel_aws_dev:
       provider: production-config:aws
       image: ami-e565ba8c
-      size: Micro Instance
+      size: t1.micro
 
     rhel_aws_prod:
       provider: production-config:aws
@@ -205,7 +205,7 @@ Pillar Configuration
 ====================
 
 It is possible to configure cloud providers using pillars.  This is only used
-when inside the cloud module.  You can setup a variable called ``clouds`` that
+when inside the cloud module.  You can setup a variable called ``cloud`` that
 contains your profile and provider to pass that information to the cloud
 servers instead of having to copy the full configuration to every minion.
 
@@ -353,6 +353,8 @@ be set:
     my-linode-config:
       apikey: asldkgfakl;sdfjsjaslfjaklsdjf;askldjfaaklsjdfhasldsadfghdkf
       password: F00barbaz
+      ssh_pubkey: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKHEOLLbeXgaqRQT9NBAopVz366SdYc0KKX33vAnq+2R user@host
+      ssh_key_file: ~/.ssh/id_ed25519
       provider: linode
 
 
@@ -551,11 +553,11 @@ For in-house OpenStack Essex installation, libcloud needs the service_type :
 
 
 
-Digital Ocean
+DigitalOcean
 -------------
 
-Using Salt for Digital Ocean requires a client_key and an api_key. These can be
-found in the Digital Ocean web interface, in the "My Settings" section, under
+Using Salt for DigitalOcean requires a client_key and an api_key. These can be
+found in the DigitalOcean web interface, in the "My Settings" section, under
 the API Access tab.
 
 * Using the old format:
@@ -572,8 +574,7 @@ the API Access tab.
 
     my-digitalocean-config:
       provider: digital_ocean
-      client_key: wFGEwgregeqw3435gDger
-      api_key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
+      personal_access_token: xxx
       location: New York 1
 
 
@@ -627,13 +628,13 @@ obtained from your cloud provider. Both PAM and PVE users can be used.
       user: saltcloud@pve
       password: xyzzy
       url: your.proxmox.host
-  
+
 lxc
 ---
 
 The lxc driver is a new, experimental driver for installing Salt on
-newly provisioned (via saltcloud) lxc containers. It will in turn use saltify to install
-salt an rattach the lxc container as a new lxc minion.
+newly provisioned (via saltcloud) lxc containers. It will in turn use saltify
+to install salt and reattach the lxc container as a new lxc minion.
 As soon as we can, we manage baremetal operation over SSH.
 You can also destroy those containers via this driver.
 
@@ -724,7 +725,7 @@ Some example usage on how to use ``extends`` with profiles. Consider
 
     development-instances:
       provider: my-ec2-config
-      size: Micro Instance
+      size: t1.micro
       ssh_username: ec2_user
       securitygroup:
         - default
@@ -754,27 +755,27 @@ data:
       'profile': 'Fedora-17',
       'provider': 'my-ec2-config',
       'securitygroup': ['default'],
-      'size': 'Micro Instance',
+      'size': 't1.micro',
       'ssh_username': 'ec2_user'},
      {'deploy': False,
       'image': 'ami-09b61d60',
       'profile': 'CentOS-5',
       'provider': 'my-aws-config',
       'securitygroup': ['default'],
-      'size': 'Micro Instance',
+      'size': 't1.micro',
       'ssh_username': 'ec2_user'},
      {'deploy': False,
       'image': 'ami-54cf5c3d',
       'profile': 'Amazon-Linux-AMI-2012.09-64bit',
       'provider': 'my-ec2-config',
       'securitygroup': ['default'],
-      'size': 'Micro Instance',
+      'size': 't1.micro',
       'ssh_username': 'ec2_user'},
      {'deploy': False,
       'profile': 'development-instances',
       'provider': 'my-ec2-config',
       'securitygroup': ['default'],
-      'size': 'Micro Instance',
+      'size': 't1.micro',
       'ssh_username': 'ec2_user'}]
 
 Pretty cool right?

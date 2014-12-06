@@ -8,20 +8,24 @@ from __future__ import with_statement
 HAS_NOVA = False
 try:
     from novaclient.v1_1 import client
+    from novaclient.shell import OpenStackComputeShell
+    import novaclient.utils
     import novaclient.auth_plugin
     import novaclient.exceptions
     import novaclient.extension
+    import novaclient.base
     HAS_NOVA = True
 except ImportError:
     pass
 
 # Import python libs
+import inspect
 import time
 import logging
 
 # Import salt libs
 import salt.utils
-from salt.cloud.exceptions import SaltCloudSystemExit
+from salt.exceptions import SaltCloudSystemExit
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -29,6 +33,12 @@ log = logging.getLogger(__name__)
 
 def check_nova():
     return HAS_NOVA
+
+
+# kwargs has to be an object instead of a dictionary for the __post_parse_arg__
+class KwargsStruct(object):
+    def __init__(self, **entries):
+        self.__dict__.update(entries)
 
 
 class NovaServer(object):
@@ -79,7 +89,7 @@ def sanatize_novaclient(kwargs):
         'auth_token', 'cacert', 'tenant_id'
     )
     ret = {}
-    for var in kwargs.keys():
+    for var in kwargs:
         if var in variables:
             ret[var] = kwargs[var]
 
@@ -87,7 +97,7 @@ def sanatize_novaclient(kwargs):
 
 
 # Function alias to not shadow built-ins
-class SaltNova(object):
+class SaltNova(OpenStackComputeShell):
     '''
     Class for all novaclient functions
     '''
@@ -108,11 +118,23 @@ class SaltNova(object):
             return None
 
         self.kwargs = kwargs.copy()
+
+        if not novaclient.base.Manager._hooks_map:
+            self.extensions = self._discover_extensions('1.1')
+            for extension in self.extensions:
+                extension.run_hooks('__pre_parse_args__')
+            self.kwargs['extensions'] = self.extensions
+
         self.kwargs['username'] = username
         self.kwargs['project_id'] = project_id
         self.kwargs['auth_url'] = auth_url
         self.kwargs['region_name'] = region_name
         self.kwargs['service_type'] = 'compute'
+
+        # used in novaclient extensions to see if they are rackspace or not, to know if it needs to load
+        # the hooks for that extension or not.  This is cleaned up by sanatize_novaclient
+        self.kwargs['os_auth_url'] = auth_url
+
         if os_auth_plugin is not None:
             novaclient.auth_plugin.discover_auth_systems()
             auth_plugin = novaclient.auth_plugin.load_plugin(os_auth_plugin)
@@ -121,15 +143,14 @@ class SaltNova(object):
 
         if not self.kwargs.get('api_key', None):
             self.kwargs['api_key'] = password
-        extensions = []
-        if 'extensions' in kwargs:
-            exts = []
-            for key, item in self.kwargs['extensions'].items():
-                mod = __import__(item.replace('-', '_'))
-                exts.append(
-                    novaclient.extension.Extension(key, mod)
-                )
-            self.kwargs['extensions'] = exts
+
+        # This has to be run before sanatize_novaclient before extra variables are cleaned out.
+        if hasattr(self, 'extensions'):
+            # needs an object, not a dictionary
+            self.kwargstruct = KwargsStruct(**self.kwargs)
+            for extension in self.extensions:
+                extension.run_hooks('__post_parse_args__', self.kwargstruct)
+            self.kwargs = self.kwargstruct.__dict__
 
         self.kwargs = sanatize_novaclient(self.kwargs)
 
@@ -172,6 +193,20 @@ class SaltNova(object):
 
         self.kwargs['service_type'] = 'volume'
         self.volume_conn = client.Client(**self.kwargs)
+        if hasattr(self, 'extensions'):
+            self.expand_extensions()
+
+    def expand_extensions(self):
+        for connection in (self.compute_conn, self.volume_conn):
+            for extension in self.extensions:
+                for attr in extension.module.__dict__:
+                    if not inspect.isclass(getattr(extension.module, attr)):
+                        continue
+                    for key, value in connection.__dict__.items():
+                        if not isinstance(value, novaclient.base.Manager):
+                            continue
+                        if value.__class__.__name__ == attr:
+                            setattr(connection, key, getattr(connection, extension.name))
 
     def get_catalog(self):
         '''
@@ -184,8 +219,8 @@ class SaltNova(object):
         Make output look like libcloud output for consistency
         '''
         server_info = self.server_show(uuid)
-        server = server_info.values()[0]
-        server_name = server_info.keys()[0]
+        server = server_info.itervalues().next()
+        server_name = server_info.iterkeys().next()
         if not hasattr(self, 'password'):
             self.password = None
         ret = NovaServer(server_name, server, self.password)
@@ -197,6 +232,9 @@ class SaltNova(object):
         Boot a cloud server.
         '''
         nt_ks = self.compute_conn
+        for key in ('name', 'flavor', 'image'):
+            if key in kwargs:
+                del kwargs[key]
         response = nt_ks.servers.create(
             name=name, flavor=flavor_id, image=image_id, **kwargs
         )
@@ -781,7 +819,7 @@ class SaltNova(object):
             'priority', 'project_id', 'vlan_start', 'vpn_start'
         ]
 
-        for variable in kwargs.keys():
+        for variable in kwargs.keys():  # iterate over a copy, we might delete some
             if variable not in params:
                 del kwargs[variable]
         return kwargs

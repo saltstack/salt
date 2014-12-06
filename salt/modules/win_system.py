@@ -2,6 +2,7 @@
 '''
 Support for reboot, shutdown, etc
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -206,7 +207,7 @@ def set_computer_desc(desc):
 
         salt 'minion-id' system.set_computer_desc 'This computer belongs to Dave!'
     '''
-    cmd = 'net config server /srvcomment:"{0}"'.format(desc)
+    cmd = u'net config server /srvcomment:"{0}"'.format(salt.utils.sdecode(desc))
     __salt__['cmd.run'](cmd)
     return {'Computer Description': get_computer_desc()}
 

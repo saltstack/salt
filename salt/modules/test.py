@@ -2,6 +2,7 @@
 '''
 Module for running arbitrary tests
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import os
@@ -15,6 +16,7 @@ import random
 import salt
 import salt.version
 import salt.loader
+import salt.ext.six as six
 
 __proxyenabled__ = ['*']
 
@@ -212,7 +214,7 @@ def arg_type(*args, **kwargs):
         ret['args'].append(str(type(argument)))
 
     # all the kwargs
-    for key, val in kwargs.iteritems():
+    for key, val in six.iteritems(kwargs):
         ret['kwargs'][key] = str(type(val))
 
     return ret
@@ -393,38 +395,6 @@ def opts_pkg():
     return ret
 
 
-def tty(device, echo=None):
-    '''
-    Echo a string to a specific tty
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' test.tty tty0 'This is a test'
-        salt '*' test.tty pts3 'This is a test'
-    '''
-    if device.startswith('tty'):
-        teletype = '/dev/{0}'.format(device)
-    elif device.startswith('pts'):
-        teletype = '/dev/{0}'.format(device.replace('pts', 'pts/'))
-    else:
-        return {'Error': 'The specified device is not a valid TTY'}
-
-    cmd = 'echo {0} > {1}'.format(echo, teletype)
-    ret = __salt__['cmd.run_all'](cmd)
-    if ret['retcode'] == 0:
-        return {
-            'Success': 'Message was successfully echoed to {0}'.format(teletype)
-        }
-    else:
-        return {
-            'Error': 'Echoing to {0} returned error code {1}'.format(
-                teletype,
-                ret['retcode'])
-        }
-
-
 def rand_str(size=9999999999):
     '''
     Return a random string
@@ -436,7 +406,7 @@ def rand_str(size=9999999999):
         salt '*' test.rand_str
     '''
     hasher = getattr(hashlib, __opts__.get('hash_type', 'md5'))
-    return hasher(str(random.randint(0, size))).hexdigest()
+    return hasher(str(random.SystemRandom().randint(0, size))).hexdigest()
 
 
 def exception(message='Test Exception'):
@@ -465,3 +435,30 @@ def stack():
         salt '*' test.stack
     '''
     return ''.join(traceback.format_stack())
+
+
+def tty(*args, **kwargs):  # pylint: disable=W0613
+    '''
+    Deprecated! Moved to cmdmod.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' test.tty tty0 'This is a test'
+        salt '*' test.tty pts3 'This is a test'
+    '''
+    return 'ERROR: This function has been moved to cmd.tty'
+
+
+def assertion(assertion):
+    '''
+    Assert the given argument
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' test.assert False
+    '''
+    assert assertion

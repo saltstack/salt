@@ -1,7 +1,35 @@
 # -*- coding: utf-8 -*-
 '''
-Support for MacPorts under MacOSX
+Support for MacPorts under Mac OSX.
+
+This module has some caveats.
+
+1. Updating the database of available ports is quite resource-intensive.
+However, `refresh=True` is the default for all operations that need an
+up-to-date copy of available ports.  Consider `refresh=False` when you are
+sure no db update is needed.
+
+2. In some cases MacPorts doesn't always realize when another copy of itself
+is running and will gleefully tromp all over the available ports database.
+This makes MacPorts behave in undefined ways until a fresh complete
+copy is retrieved.
+
+Because of 1 and 2 it is possible to get the salt-minion into a state where
+`salt mac-machine pkg./something/` won't want to return.  Use
+
+`salt-run jobs.active`
+
+on the master to check for potentially long-running calls to `port`.
+
+Finally, ports database updates are always handled with `port selfupdate`
+as opposed to `port sync`.  This makes sense in the MacPorts user commmunity
+but may confuse experienced Linux admins as Linux package managers
+don't upgrade the packaging software when doing a package database update.
+In other words `salt mac-machine pkg.refresh_db` is more like
+`apt-get update; apt-get upgrade dpkg apt-get` than simply `apt-get update`.
+
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import copy
@@ -10,11 +38,13 @@ import re
 
 # Import salt libs
 import salt.utils
+from salt.exceptions import (
+    CommandExecutionError
+)
 
 log = logging.getLogger(__name__)
 
 LIST_ACTIVE_ONLY = True
-
 __virtualname__ = 'pkg'
 
 
@@ -31,7 +61,20 @@ def __virtual__():
 def _list(query=''):
     ret = {}
     cmd = 'port list {0}'.format(query)
-    out = __salt__['cmd.run'](cmd, output_loglevel='trace')
+    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+
+    if call['retcode'] != 0:
+        comment = ''
+        if 'stderr' in call:
+            comment += call['stderr']
+        if 'stdout' in call:
+            comment += call['stdout']
+        raise CommandExecutionError(
+            '{0}'.format(comment)
+        )
+    else:
+        out = call['stdout']
+
     for line in out.splitlines():
         try:
             name, version_num, category = re.split(r'\s+', line.lstrip())[0:3]
@@ -56,8 +99,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
         salt '*' pkg.list_pkgs
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
-    # 'removed' not yet implemented or not applicable
-    if salt.utils.is_true(kwargs.get('removed')):
+    # 'removed', 'purge_desired' not yet implemented or not applicable
+    if any([salt.utils.is_true(kwargs.get(x))
+            for x in ('removed', 'purge_desired')]):
         return {}
 
     if 'pkg.list_pkgs' in __context__:
@@ -69,8 +113,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
             return ret
 
     ret = {}
-    cmd = 'port installed'
-    out = __salt__['cmd.run'](cmd, output_loglevel='trace')
+    cmd = ['port', 'installed']
+    out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
     for line in out.splitlines():
         try:
             name, version_num, active = re.split(r'\s+', line.lstrip())[0:3]
@@ -179,11 +223,12 @@ def remove(name=None, pkgs=None, **kwargs):
     targets = [x for x in pkg_params if x in old]
     if not targets:
         return {}
-    cmd = 'port uninstall {0}'.format(' '.join(targets))
-    __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+    cmd = ['port', 'uninstall']
+    cmd.extend(targets)
+    __salt__['cmd.run_all'](cmd, output_loglevel='trace', python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return __salt__['pkg_resource.find_changes'](old, new)
+    return salt.utils.compare_dicts(old, new)
 
 
 def install(name=None, refresh=False, pkgs=None, **kwargs):
@@ -274,15 +319,14 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
     for pname, pparams in pkg_params.items():
         formulas_array.append(pname + (pparams or ''))
 
-    formulas = ' '.join(formulas_array)
-
     old = list_pkgs()
-    cmd = 'port install {0}'.format(formulas)
+    cmd = ['port', 'install']
+    cmd.extend(formulas_array)
 
-    __salt__['cmd.run'](cmd, output_loglevel='trace')
+    __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return __salt__['pkg_resource.find_changes'](old, new)
+    return salt.utils.compare_dicts(old, new)
 
 
 def list_upgrades(refresh=True):
@@ -323,12 +367,20 @@ def refresh_db():
     '''
     Update ports with ``port selfupdate``
     '''
-    __salt__['cmd.run_all']('port selfupdate', output_loglevel='trace')
+    call = __salt__['cmd.run_all']('port selfupdate', output_loglevel='trace')
+    if call['retcode'] != 0:
+        comment = ''
+        if 'stderr' in call:
+            comment += call['stderr']
+
+        raise CommandExecutionError(
+            '{0}'.format(comment)
+        )
 
 
-def upgrade(refresh=True):
+def upgrade(refresh=True):  # pylint: disable=W0613
     '''
-    Run a full upgrade
+    Run a full upgrade using MacPorts 'port upgrade outdated'
 
     Options:
 
@@ -346,12 +398,18 @@ def upgrade(refresh=True):
 
         salt '*' pkg.upgrade
     '''
+    ret = {'changes': {},
+           'result': True,
+           'comment': '',
+           }
+
+    if refresh:
+        refresh_db()
 
     old = list_pkgs()
+    cmd = ['port', 'upgrade', 'outdated']
 
-    for pkg in list_upgrades(refresh=refresh):
-        __salt__['pkg.install'](pkg)
-
+    __salt__['cmd.run_all'](cmd, output_loglevel='trace', python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return __salt__['pkg_resource.find_changes'](old, new)
+    return salt.utils.compare_dicts(old, new)

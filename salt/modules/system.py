@@ -2,6 +2,7 @@
 '''
 Support for reboot, shutdown, etc
 '''
+from __future__ import absolute_import
 
 import salt.utils
 

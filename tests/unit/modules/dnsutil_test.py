@@ -5,12 +5,19 @@
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
-from salttesting.mock import MagicMock, patch, mock_open, call
 from salttesting.helpers import ensure_in_syspath
+from salttesting.mock import (
+    MagicMock,
+    patch,
+    mock_open,
+    call,
+    NO_MOCK,
+    NO_MOCK_REASON
+)
 
 ensure_in_syspath('../../')
 
-#Import Salt Libs
+# Import Salt Libs
 from salt.modules import dnsutil
 
 mock_hosts_file = '##\n' \
@@ -27,22 +34,6 @@ mock_hosts_file = '##\n' \
 mock_hosts_file_rtn = {'::1': ['localhost'], '255.255.255.255': ['broadcasthost'],
                        '127.0.0.1': ['localhost'], 'fe80::1%lo0': ['localhost']}
 
-mock_calls_list = [call.read(), call.write('##\n'),
-                   call.write('# Host Database\n'),
-                   call.write('#\n'),
-                   call.write('# localhost is used to configure the loopback interface\n'),
-                   call.write('# when the system is booting.  Do not change this entry.\n'),
-                   call.write('##\n'),
-                   call.write('127.0.0.1 localhost'),
-                   call.write('\n'),
-                   call.write('255.255.255.255 broadcasthost'),
-                   call.write('\n'),
-                   call.write('::1 localhost'),
-                   call.write('\n'),
-                   call.write('fe80::1%lo0 localhost'),
-                   call.write('\n'),
-                   call.close()]
-
 mock_soa_zone = '$TTL 3D\n' \
                 '@               IN      SOA     land-5.com. root.land-5.com. (\n' \
                 '199609203       ; Serial\n' \
@@ -53,7 +44,25 @@ mock_soa_zone = '$TTL 3D\n' \
                 'NS      land-5.com.\n\n' \
                 '1                       PTR     localhost.'
 
+if NO_MOCK is False:
+    mock_calls_list = [call.read(), call.write('##\n'),
+                       call.write('# Host Database\n'),
+                       call.write('#\n'),
+                       call.write('# localhost is used to configure the loopback interface\n'),
+                       call.write('# when the system is booting.  Do not change this entry.\n'),
+                       call.write('##\n'),
+                       call.write('127.0.0.1 localhost'),
+                       call.write('\n'),
+                       call.write('255.255.255.255 broadcasthost'),
+                       call.write('\n'),
+                       call.write('::1 localhost'),
+                       call.write('\n'),
+                       call.write('fe80::1%lo0 localhost'),
+                       call.write('\n'),
+                       call.close()]
 
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class DNSUtilTestCase(TestCase):
     def test_parse_hosts(self):
         with patch('salt.utils.fopen', mock_open(read_data=mock_hosts_file)):

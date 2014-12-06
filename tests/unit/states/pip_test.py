@@ -319,7 +319,7 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
 
         # Test VCS installations with version info like >= 0.1
         try:
-            orignal_pip_version = pip.__version__
+            original_pip_version = pip.__version__
             pip.__version__ = MagicMock(
                 side_effect=AttributeError(
                     'Faked missing __version__ attribute'
@@ -351,7 +351,7 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
 
         # Reset the version attribute if existing
         if hasattr(pip, '__version__'):
-            pip.__version__ = orignal_pip_version
+            pip.__version__ = original_pip_version
 
 
 if __name__ == '__main__':

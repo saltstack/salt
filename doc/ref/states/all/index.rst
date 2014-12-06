@@ -21,6 +21,7 @@ Full list of builtin state modules
     aws_sqs
     blockdev
     boto_asg
+    boto_cloudwatch_alarm
     boto_elasticache
     boto_elb
     boto_iam_role
@@ -55,6 +56,7 @@ Full list of builtin state modules
     ini_manage
     ipset
     iptables
+    jboss7
     keyboard
     keystone
     kmod
@@ -122,6 +124,7 @@ Full list of builtin state modules
     supervisord
     svn
     sysctl
+    syslog_ng
     test
     timezone
     tomcat

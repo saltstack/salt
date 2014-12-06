@@ -20,7 +20,7 @@ environments.
 
 .. note::
 
-    Environments in Salt are very flexible, this section defines how the top
+    Environments in Salt are very flexible. This section defines how the top
     file can be used to define what states from what environments are to be
     used for specific minions.
 
@@ -238,6 +238,13 @@ state.
 
 How Top Files Are Compiled
 ==========================
+
+.. warning::
+
+    There is currently a known issue with the topfile compilation. The below
+    may not be completely valid until
+    https://github.com/saltstack/salt/issues/12483#issuecomment-64181598
+    is closed.
 
 As mentioned earlier, the top files in the different environments are compiled
 into a single set of data. The way in which this is done follows a few rules,

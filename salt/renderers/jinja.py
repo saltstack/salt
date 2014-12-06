@@ -124,7 +124,7 @@ starts at the root of the state tree or pillar.
 Filters
 =======
 
-Saltstack extends `builtin filters`_ with his custom filters:
+Saltstack extends `builtin filters`_ with these custom filters:
 
 strftime
   Converts any time related object into a time based string. It requires a
@@ -139,6 +139,63 @@ strftime
       {{ "1040814000"|strftime("%Y-%m-%d") }}
       {{ datetime|strftime("%u") }}
       {{ "now"|strftime }}
+
+sequence
+  Ensure that parsed data is a sequence.
+
+yaml_encode
+  Serializes a single object into a YAML scalar with any necessary
+  handling for escaping special characters.  This will work for any
+  scalar YAML data type: ints, floats, timestamps, booleans, strings,
+  unicode.  It will *not* work for multi-objects such as sequences or
+  maps.
+
+  .. code-block:: yaml
+
+      {%- set bar = 7 %}
+      {%- set baz = none %}
+      {%- set zip = true %}
+      {%- set zap = 'The word of the day is "salty"' %}
+
+      {%- load_yaml as foo %}
+      bar: {{ bar|yaml_encode }}
+      baz: {{ baz|yaml_encode }}
+      baz: {{ zip|yaml_encode }}
+      baz: {{ zap|yaml_encode }}
+      {%- endload %}
+
+   In the above case ``{{ bar }}`` and ``{{ foo.bar }}`` should be
+   identical and ``{{ baz }}`` and ``{{ foo.baz }}`` should be
+   identical.
+
+yaml_dquote
+  Serializes a string into a properly-escaped YAML double-quoted
+  string.  This is useful when the contents of a string are unknown
+  and may contain quotes or unicode that needs to be preserved.  The
+  resulting string will be emitted with opening and closing double
+  quotes.
+
+  .. code-block:: yaml
+
+      {%- set bar = '"The quick brown fox . . ."' %}
+      {%- set baz = 'The word of the day is "salty".' %}
+
+      {%- load_yaml as foo %}
+      bar: {{ bar|yaml_dquote }}
+      baz: {{ baz|yaml_dquote }}
+      {%- endload %}
+
+   In the above case ``{{ bar }}`` and ``{{ foo.bar }}`` should be
+   identical and ``{{ baz }}`` and ``{{ foo.baz }}`` should be
+   identical.  If variable contents are not guaranteed to be a string
+   then it is better to use ``yaml_encode`` which handles all YAML
+   scalar types.
+
+yaml_squote
+   Similar to the ``yaml_dquote`` filter but with single quotes.  Note
+   that YAML only allows special escapes inside double quotes so
+   ``yaml_squote`` is not nearly as useful (viz. you likely want to
+   use ``yaml_encode`` or ``yaml_dquote``).
 
 .. _`builtin filters`: http://jinja.pocoo.org/docs/templates/#builtin-filters
 .. _`timelib`: https://github.com/pediapress/timelib/
@@ -221,15 +278,9 @@ import salt.utils.templates
 log = logging.getLogger(__name__)
 
 
-class SaltDotLookup(dict):
-    def __init__(self, *args, **kwargs):
-        dict.__init__(self, *args, **kwargs)
-        self.__dict__ = self
-
-
-def _split_module_dicts(__salt__):
+def _split_module_dicts():
     '''
-    Create a dictionary from module.function as module[function]
+    Create a copy of __salt__ dictionary with module.function and module[function]
 
     Takes advantage of Jinja's syntactic sugar lookup:
 
@@ -237,11 +288,15 @@ def _split_module_dicts(__salt__):
 
         {{ salt.cmd.run('uptime') }}
     '''
-    mod_dict = SaltDotLookup()
-    for module_func_name in __salt__.keys():
-        mod, _, fun = module_func_name.partition('.')
-        mod_dict.setdefault(mod,
-                SaltDotLookup())[fun] = __salt__[module_func_name]
+    if not isinstance(__salt__, dict):
+        return __salt__
+    mod_dict = dict(__salt__)
+    for module_func_name, mod_fun in mod_dict.items():
+        mod, fun = module_func_name.split('.', 1)
+        if mod not in mod_dict:
+            # create an empty object that we can add attributes to
+            mod_dict[mod] = lambda: None
+        setattr(mod_dict[mod], fun, mod_fun)
     return mod_dict
 
 
@@ -259,12 +314,9 @@ def render(template_file, saltenv='base', sls='', argline='',
                 'Unknown renderer option: {opt}'.format(opt=argline)
         )
 
-    salt_dict = SaltDotLookup(**__salt__)
-    salt_dict.__dict__.update(_split_module_dicts(__salt__))
-
     tmp_data = salt.utils.templates.JINJA(template_file,
                                           to_str=True,
-                                          salt=salt_dict,
+                                          salt=_split_module_dicts(),
                                           grains=__grains__,
                                           opts=__opts__,
                                           pillar=__pillar__,

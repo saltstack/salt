@@ -4,7 +4,9 @@ Module for handling openstack keystone calls.
 
 :optdepends:    - keystoneclient Python adapter
 :configuration: This module is not usable until the following are specified
-    either in a pillar or in the minion's config file::
+    either in a pillar or in the minion's config file:
+
+    .. code-block:: yaml
 
         keystone.user: admin
         keystone.password: verybadpass
@@ -12,14 +14,17 @@ Module for handling openstack keystone calls.
         keystone.tenant_id: f80919baedab48ec8931f200c65a50df
         keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
 
-        OR (for token based authentication)
+    OR (for token based authentication)
+
+    .. code-block:: yaml
 
         keystone.token: 'ADMIN'
         keystone.endpoint: 'http://127.0.0.1:35357/v2.0'
 
     If configuration for multiple openstack accounts is required, they can be
-    set up as different configuration profiles:
-    For example::
+    set up as different configuration profiles. For example:
+
+    .. code-block:: yaml
 
         openstack1:
           keystone.user: admin
@@ -37,7 +42,9 @@ Module for handling openstack keystone calls.
 
     With this configuration in place, any of the keystone functions can make use
     of a configuration profile by declaring it explicitly.
-    For example::
+    For example:
+
+    .. code-block:: bash
 
         salt '*' keystone.tenant_list profile=openstack1
 '''
@@ -119,8 +126,8 @@ def ec2_credentials_create(user_id=None, name=None,
 
         salt '*' keystone.ec2_credentials_create name=admin tenant=admin
         salt '*' keystone.ec2_credentials_create \
-            user_id=c965f79c4f864eaaa9c3b41904e67082 \
-            tenant_id=722787eb540849158668370dc627ec5f
+user_id=c965f79c4f864eaaa9c3b41904e67082 \
+tenant_id=722787eb540849158668370dc627ec5f
     '''
     kstone = auth(profile, **connection_args)
 
@@ -153,10 +160,9 @@ def ec2_credentials_delete(user_id=None, name=None, access_key=None,
     .. code-block:: bash
 
         salt '*' keystone.ec2_credentials_delete \
-            860f8c2c38ca4fab989f9bc56a061a64
-            access_key=5f66d2f24f604b8bb9cd28886106f442
+860f8c2c38ca4fab989f9bc56a061a64 access_key=5f66d2f24f604b8bb9cd28886106f442
         salt '*' keystone.ec2_credentials_delete name=admin \
-            access_key=5f66d2f24f604b8bb9cd28886106f442
+access_key=5f66d2f24f604b8bb9cd28886106f442
     '''
     kstone = auth(profile, **connection_args)
 
@@ -289,7 +295,8 @@ def endpoint_create(service, publicurl=None, internalurl=None, adminurl=None,
             'http://internal/url' 'http://adminurl/url' region
     '''
     kstone = auth(profile, **connection_args)
-    keystone_service = service_get(name=service, **connection_args)
+    keystone_service = service_get(name=service, profile=profile,
+                                   **connection_args)
     if not keystone_service or 'Error' in keystone_service:
         return {'Error': 'Could not find the specified service'}
     kstone.endpoints.create(region=region,
@@ -297,7 +304,7 @@ def endpoint_create(service, publicurl=None, internalurl=None, adminurl=None,
                             publicurl=publicurl,
                             adminurl=adminurl,
                             internalurl=internalurl)
-    return endpoint_get(service, **connection_args)
+    return endpoint_get(service, profile, **connection_args)
 
 
 def endpoint_delete(service, profile=None, **connection_args):
@@ -421,7 +428,7 @@ def service_create(name, service_type, description=None, profile=None,
     .. code-block:: bash
 
         salt '*' keystone.service_create nova compute \
-                'OpenStack Compute Service'
+'OpenStack Compute Service'
     '''
     kstone = auth(profile, **connection_args)
     service = kstone.services.create(name, service_type, description)
@@ -591,7 +598,7 @@ def tenant_list(profile=None, **connection_args):
     return ret
 
 
-def tenant_update(tenant_id=None, name=None, email=None,
+def tenant_update(tenant_id=None, name=None, description=None,
                   enabled=None, profile=None, **connection_args):
     '''
     Update a tenant's information (keystone tenant-update)
@@ -617,11 +624,11 @@ def tenant_update(tenant_id=None, name=None, email=None,
     tenant = kstone.tenants.get(tenant_id)
     if not name:
         name = tenant.name
-    if not email:
-        email = tenant.email
+    if not description:
+        description = tenant.description
     if enabled is None:
         enabled = tenant.enabled
-    kstone.tenants.update(tenant_id, name, email, enabled)
+    kstone.tenants.update(tenant_id, name, description, enabled)
 
 
 def token_get(profile=None, **connection_args):
@@ -831,9 +838,9 @@ def user_password_update(user_id=None, name=None, password=None,
 
     .. code-block:: bash
 
-        salt '*' keystone.user_delete c965f79c4f864eaaa9c3b41904e67082 password=12345
-        salt '*' keystone.user_delete user_id=c965f79c4f864eaaa9c3b41904e67082 password=12345
-        salt '*' keystone.user_delete name=nova password=12345
+        salt '*' keystone.user_password_update c965f79c4f864eaaa9c3b41904e67082 password=12345
+        salt '*' keystone.user_password_update user_id=c965f79c4f864eaaa9c3b41904e67082 password=12345
+        salt '*' keystone.user_password_update name=nova password=12345
     '''
     kstone = auth(profile, **connection_args)
     if name:
@@ -861,9 +868,9 @@ def user_role_add(user_id=None, user=None, tenant_id=None,
     .. code-block:: bash
 
         salt '*' keystone.user_role_add \
-            user_id=298ce377245c4ec9b70e1c639c89e654 \
-            tenant_id=7167a092ece84bae8cead4bf9d15bb3b \
-            role_id=ce377245c4ec9b70e1c639c89e8cead4
+user_id=298ce377245c4ec9b70e1c639c89e654 \
+tenant_id=7167a092ece84bae8cead4bf9d15bb3b \
+role_id=ce377245c4ec9b70e1c639c89e8cead4
         salt '*' keystone.user_role_add user=admin tenant=admin role=admin
     '''
     kstone = auth(profile, **connection_args)
@@ -872,7 +879,7 @@ def user_role_add(user_id=None, user=None, tenant_id=None,
                            **connection_args)[user]['id']
     else:
         user = user_get(user_id, profile=profile,
-                        **connection_args).keys()[0]['name']
+                        **connection_args).iterkeys().next()['name']
     if not user_id:
         return {'Error': 'Unable to resolve user id'}
 
@@ -881,7 +888,7 @@ def user_role_add(user_id=None, user=None, tenant_id=None,
                                **connection_args)[tenant]['id']
     else:
         tenant = tenant_get(tenant_id, profile=profile,
-                            **connection_args).keys()[0]['name']
+                            **connection_args).iterkeys().next()['name']
     if not tenant_id:
         return {'Error': 'Unable to resolve tenant id'}
 
@@ -890,7 +897,7 @@ def user_role_add(user_id=None, user=None, tenant_id=None,
                            **connection_args)[role]['id']
     else:
         role = role_get(role_id, profile=profile,
-                        **connection_args).keys()[0]['name']
+                        **connection_args).iterkeys().next()['name']
     if not role_id:
         return {'Error': 'Unable to resolve role id'}
 
@@ -910,9 +917,9 @@ def user_role_remove(user_id=None, user=None, tenant_id=None,
     .. code-block:: bash
 
         salt '*' keystone.user_role_remove \
-            user_id=298ce377245c4ec9b70e1c639c89e654 \
-            tenant_id=7167a092ece84bae8cead4bf9d15bb3b \
-            role_id=ce377245c4ec9b70e1c639c89e8cead4
+user_id=298ce377245c4ec9b70e1c639c89e654 \
+tenant_id=7167a092ece84bae8cead4bf9d15bb3b \
+role_id=ce377245c4ec9b70e1c639c89e8cead4
         salt '*' keystone.user_role_remove user=admin tenant=admin role=admin
     '''
     kstone = auth(profile, **connection_args)
@@ -921,7 +928,7 @@ def user_role_remove(user_id=None, user=None, tenant_id=None,
                            **connection_args)[user]['id']
     else:
         user = user_get(user_id, profile=profile,
-                        **connection_args).keys()[0]['name']
+                        **connection_args).iterkeys().next()['name']
     if not user_id:
         return {'Error': 'Unable to resolve user id'}
 
@@ -930,7 +937,7 @@ def user_role_remove(user_id=None, user=None, tenant_id=None,
                                **connection_args)[tenant]['id']
     else:
         tenant = tenant_get(tenant_id, profile=profile,
-                            **connection_args).keys()[0]['name']
+                            **connection_args).iterkeys().next()['name']
     if not tenant_id:
         return {'Error': 'Unable to resolve tenant id'}
 
@@ -938,7 +945,7 @@ def user_role_remove(user_id=None, user=None, tenant_id=None,
         role_id = role_get(name=role, profile=profile,
                            **connection_args)[role]['id']
     else:
-        role = role_get(role_id).keys()[0]['name']
+        role = role_get(role_id).iterkeys().next()['name']
     if not role_id:
         return {'Error': 'Unable to resolve role id'}
 
@@ -957,8 +964,8 @@ def user_role_list(user_id=None, tenant_id=None, user_name=None,
     .. code-block:: bash
 
         salt '*' keystone.user_role_list \
-            user_id=298ce377245c4ec9b70e1c639c89e654 \
-            tenant_id=7167a092ece84bae8cead4bf9d15bb3b
+user_id=298ce377245c4ec9b70e1c639c89e654 \
+tenant_id=7167a092ece84bae8cead4bf9d15bb3b
         salt '*' keystone.user_role_list user_name=admin tenant_name=admin
     '''
     kstone = auth(profile, **connection_args)

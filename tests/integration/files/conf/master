@@ -10,6 +10,7 @@ sock_dir: .salt-unix
 open_mode: True
 syndic_master: localhost
 fileserver_list_cache_time: 0
+pillar_opts: True
 peer:
   '.*':
     - 'test.*'
@@ -37,6 +38,15 @@ external_auth:
       - test.*
   auto:
     saltdev_auto:
+      - '@wheel'
+      - '@runner'
+      - test.*
+    saltdev_api:
+      - '@wheel'
+      - '@runner'
+      - test.*
+      - grains.*
+    '*':
       - '@wheel'
       - '@runner'
       - test.*

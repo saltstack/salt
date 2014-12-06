@@ -48,11 +48,13 @@ class LocalClientTestCase(TestCase,
     def test_cmd_subset(self, cmd_mock):
         with patch('salt.client.LocalClient.cmd_cli') as cmd_cli_mock:
             self.client.cmd_subset('*', 'first.func', sub=1, cli=True)
-            cmd_cli_mock.assert_called_with(['minion1'], 'first.func', (), kwarg=None, expr_form='list',
+            cmd_cli_mock.assert_called_with(['minion1'], 'first.func', (), progress=False,
+                                                kwarg=None, expr_form='list',
                                                 ret=['first.func', 'second.func'])
 
             self.client.cmd_subset('*', 'first.func', sub=10, cli=True)
-            cmd_cli_mock.assert_called_with(['minion1', 'minion2'], 'first.func', (), kwarg=None, expr_form='list',
+            cmd_cli_mock.assert_called_with(['minion1', 'minion2'], 'first.func', (), progress=False,
+                                                kwarg=None, expr_form='list',
                                                 ret=['first.func', 'second.func'])
 
     def test_pub(self):

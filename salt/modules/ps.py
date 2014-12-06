@@ -6,13 +6,14 @@ See http://code.google.com/p/psutil.
 :depends:   - psutil Python module, version 0.3.0 or later
             - python-utmp package (optional)
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import time
 import datetime
 
 # Import salt libs
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 # Import third party libs
 try:
@@ -91,7 +92,7 @@ def _get_proc_pid(proc):
 
     It's backward compatible with < 2.0 versions of psutil.
     '''
-    return proc.pid() if PSUTIL2 else proc.pid
+    return proc.pid
 
 
 def top(num_processes=5, interval=3):
@@ -163,6 +164,32 @@ def get_pid_list():
         salt '*' ps.get_pid_list
     '''
     return psutil.get_pid_list()
+
+
+def proc_info(pid, attrs=None):
+    '''
+    Return a dictionary of information for a process id (PID).
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ps.proc_info 2322
+        salt '*' ps.proc_info 2322 attrs='["pid", "name"]'
+
+    pid
+        PID of process to query.
+
+    attrs
+        Optional list of desired process attributes.  The list of possible
+        attributes can be found here:
+        http://pythonhosted.org/psutil/#psutil.Process
+    '''
+    try:
+        proc = psutil.Process(pid)
+        return proc.as_dict(attrs)
+    except (psutil.NoSuchProcess, psutil.AccessDenied, AttributeError) as exc:
+        raise CommandExecutionError(exc)
 
 
 def kill_pid(pid, signal=15):
@@ -347,12 +374,19 @@ def virtual_memory():
 
     Return a dict that describes statistics about system memory usage.
 
+    .. note::
+
+        This function is only available in psutil version 0.6.0 and above.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' ps.virtual_memory
     '''
+    if psutil.version_info < (0, 6, 0):
+        msg = 'virtual_memory is only available in psutil 0.6.0 or greater'
+        raise CommandExecutionError(msg)
     return dict(psutil.virtual_memory()._asdict())
 
 
@@ -362,12 +396,19 @@ def swap_memory():
 
     Return a dict that describes swap memory statistics.
 
+    .. note::
+
+        This function is only available in psutil version 0.6.0 and above.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' ps.swap_memory
     '''
+    if psutil.version_info < (0, 6, 0):
+        msg = 'swap_memory is only available in psutil 0.6.0 or greater'
+        raise CommandExecutionError(msg)
     return dict(psutil.swap_memory()._asdict())
 
 

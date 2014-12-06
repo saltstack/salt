@@ -1,7 +1,7 @@
 /build
 *.py[co]
 pkg/arch/*.tar.xz
-*.swp
+*.sw[pon]
 doc/_build
 dist
 MANIFEST
@@ -19,6 +19,7 @@ MANIFEST
 bin/
 include/
 lib/
+lib64
 pip/
 share/
 tests/integration/tmp/
@@ -39,6 +40,8 @@ htmlcov/
 /.pydevproject
 /.idea
 /.ropeproject
+.ropeproject
+*_flymake.py
 /*.iml
 *.sublime-project
 *.sublime-workspace
@@ -57,3 +60,6 @@ Vagrantfile
 
 # Allow a user to set their own _version.py for testing
 _version.py
+
+# Ignore grains file written out during tests
+tests/integration/files/conf/grains

@@ -3,6 +3,8 @@
 lxc / Spin up and control LXC containers
 =========================================
 '''
+
+from __future__ import absolute_import
 __docformat__ = 'restructuredtext en'
 import traceback
 
@@ -45,7 +47,7 @@ def absent(name):
             ret['result'] = not __salt__['lxc.exists'](name)
             if not ret['result']:
                 raise Exception('Container won`t destroy')
-        except Exception, ex:
+        except Exception as ex:
             trace = traceback.format_exc()
             ret['result'] = False
             ret['comment'] = 'Error in container removal'

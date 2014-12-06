@@ -2,6 +2,7 @@
 '''
 The function cache system allows for data to be stored on the master so it can be easily read by other minions
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import copy
@@ -11,6 +12,7 @@ import logging
 import salt.crypt
 import salt.payload
 import salt.utils.network
+import salt.utils.event
 
 __proxyenabled__ = ['*']
 
@@ -32,6 +34,22 @@ def _mine_function_available(func):
                  .format(func))
         return False
     return True
+
+
+def _mine_send(load, opts):
+    if opts.get('transport', '') == 'zeromq':
+        load['tok'] = _auth().gen_token('salt')
+
+    eventer = salt.utils.event.MinionEvent(opts)
+    return eventer.fire_event(load, '_minion_mine')
+
+
+def _mine_get(load, opts):
+    if opts.get('transport', '') == 'zeromq':
+        load['tok'] = _auth().gen_token('salt')
+    channel = salt.transport.Channel.factory(opts)
+    ret = channel.send(load)
+    return ret
 
 
 def update(clear=False):
@@ -95,15 +113,7 @@ def update(clear=False):
             'id': __opts__['id'],
             'clear': clear,
     }
-    if __opts__.get('transport', '') == 'zeromq':
-        load['tok'] = _auth().gen_token('salt')
-    # Changed for transport plugin
-    # sreq = salt.payload.SREQ(__opts__['master_uri'])
-    # ret = sreq.send('aes', auth.crypticle.dumps(load))
-    # return auth.crypticle.loads(ret)
-    sreq = salt.transport.Channel.factory(__opts__)
-    ret = sreq.send(load)
-    return ret
+    return _mine_send(load, __opts__)
 
 
 def send(func, *args, **kwargs):
@@ -114,12 +124,14 @@ def send(func, *args, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' mine.send network.interfaces eth0
+        salt '*' mine.send network.ip_addrs eth0
+        salt '*' mine.send eth0_ip_addrs mine_function=network.ip_addrs eth0
     '''
-    if func not in __salt__:
+    mine_func = kwargs.pop('mine_function', func)
+    if mine_func not in __salt__:
         return False
     data = {}
-    arg_data = salt.utils.arg_lookup(__salt__[func])
+    arg_data = salt.utils.arg_lookup(__salt__[mine_func])
     func_data = copy.deepcopy(kwargs)
     for ind, _ in enumerate(arg_data.get('args', [])):
         try:
@@ -127,15 +139,18 @@ def send(func, *args, **kwargs):
         except IndexError:
             # Safe error, arg may be in kwargs
             pass
-    f_call = salt.utils.format_call(__salt__[func], func_data)
+    f_call = salt.utils.format_call(__salt__[mine_func], func_data)
+    for arg in args:
+        if arg not in f_call['args']:
+            f_call['args'].append(arg)
     try:
         if 'kwargs' in f_call:
-            data[func] = __salt__[func](*f_call['args'], **f_call['kwargs'])
+            data[func] = __salt__[mine_func](*f_call['args'], **f_call['kwargs'])
         else:
-            data[func] = __salt__[func](*f_call['args'])
+            data[func] = __salt__[mine_func](*f_call['args'])
     except Exception as exc:
         log.error('Function {0} in mine.send failed to execute: {1}'
-                  .format(func, exc))
+                  .format(mine_func, exc))
         return False
     if __opts__['file_client'] == 'local':
         old = __salt__['data.getval']('mine_cache')
@@ -148,15 +163,7 @@ def send(func, *args, **kwargs):
             'data': data,
             'id': __opts__['id'],
     }
-    if __opts__.get('transport', '') == 'zeromq':
-        load['tok'] = _auth().gen_token('salt')
-    # Changed for transport plugin
-    # sreq = salt.payload.SREQ(__opts__['master_uri'])
-    # ret = sreq.send('aes', auth.crypticle.dumps(load))
-    # return auth.crypticle.loads(ret)
-    sreq = salt.transport.Channel.factory(__opts__)
-    ret = sreq.send(load)
-    return ret
+    return _mine_send(load, __opts__)
 
 
 def get(tgt, fun, expr_form='glob'):
@@ -171,6 +178,10 @@ def get(tgt, fun, expr_form='glob'):
         grain
         grain_pcre
         compound
+        pillar
+
+    Note that all pillar matches, whether using the compound matching system or
+    the pillar matching system, will be exact matches, with globbing disabled.
 
     CLI Example:
 
@@ -180,9 +191,6 @@ def get(tgt, fun, expr_form='glob'):
         salt '*' mine.get 'os:Fedora' network.interfaces grain
         salt '*' mine.get 'os:Fedora and S@192.168.5.0/24' network.ipaddrs compound
     '''
-    if expr_form.lower == 'pillar':
-        log.error('Pillar matching not supported on mine.get')
-        return ''
     if __opts__['file_client'] == 'local':
         ret = {}
         is_target = {'glob': __salt__['match.glob'],
@@ -190,8 +198,9 @@ def get(tgt, fun, expr_form='glob'):
                      'list': __salt__['match.list'],
                      'grain': __salt__['match.grain'],
                      'grain_pcre': __salt__['match.grain_pcre'],
-                     'compound': __salt__['match.compound'],
                      'ipcidr': __salt__['match.ipcidr'],
+                     'compound': __salt__['match.compound'],
+                     'pillar': __salt__['match.pillar'],
                      }[expr_form](tgt)
         if is_target:
             data = __salt__['data.getval']('mine_cache')
@@ -205,15 +214,7 @@ def get(tgt, fun, expr_form='glob'):
             'fun': fun,
             'expr_form': expr_form,
     }
-    if __opts__.get('transport', '') == 'zeromq':
-        load['tok'] = _auth().gen_token('salt')
-    # Changed for transport plugin
-    # sreq = salt.payload.SREQ(__opts__['master_uri'])
-    # ret = sreq.send('aes', auth.crypticle.dumps(load))
-    # return auth.crypticle.loads(ret)
-    sreq = salt.transport.Channel.factory(__opts__)
-    ret = sreq.send(load)
-    return ret
+    return _mine_get(load, __opts__)
 
 
 def delete(fun):
@@ -236,15 +237,7 @@ def delete(fun):
             'id': __opts__['id'],
             'fun': fun,
     }
-    if __opts__.get('transport', '') == 'zeromq':
-        load['tok'] = _auth().gen_token('salt')
-    # Changed for transport plugin
-    # sreq = salt.payload.SREQ(__opts__['master_uri'])
-    # ret = sreq.send('aes', auth.crypticle.dumps(load))
-    # return auth.crypticle.loads(ret)
-    sreq = salt.transport.Channel.factory(__opts__)
-    ret = sreq.send(load)
-    return ret
+    return _mine_send(load, __opts__)
 
 
 def flush():
@@ -263,15 +256,7 @@ def flush():
             'cmd': '_mine_flush',
             'id': __opts__['id'],
     }
-    if __opts__.get('transport', '') == 'zeromq':
-        load['tok'] = _auth().gen_token('salt')
-    # Changed for transport plugin
-    # sreq = salt.payload.SREQ(__opts__['master_uri'])
-    # ret = sreq.send('aes', auth.crypticle.dumps(load))
-    # return auth.crypticle.loads(ret)
-    sreq = salt.transport.Channel.factory(__opts__)
-    ret = sreq.send(load)
-    return ret
+    return _mine_send(load, __opts__)
 
 
 def get_docker(interfaces=None, cidrs=None):

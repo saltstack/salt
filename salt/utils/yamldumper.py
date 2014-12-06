@@ -17,6 +17,13 @@ except ImportError:
 
 from salt.utils.odict import OrderedDict
 
+try:
+    from ioflo.base.odicting import odict
+    HAS_IOFLO = True
+except ImportError:
+    odict = None
+    HAS_IOFLO = False
+
 
 class OrderedDumper(Dumper):
     '''
@@ -36,3 +43,7 @@ def represent_ordereddict(dumper, data):
 
 OrderedDumper.add_representer(OrderedDict, represent_ordereddict)
 SafeOrderedDumper.add_representer(OrderedDict, represent_ordereddict)
+
+if HAS_IOFLO:
+    OrderedDumper.add_representer(odict, represent_ordereddict)
+    SafeOrderedDumper.add_representer(odict, represent_ordereddict)

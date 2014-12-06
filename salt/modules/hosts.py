@@ -2,6 +2,7 @@
 '''
 Manage the information in the hosts file
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -9,6 +10,8 @@ import os
 # Import salt libs
 import salt.utils
 import salt.utils.odict as odict
+from salt.ext.six.moves import range
+import salt.ext.six as six
 
 
 # pylint: disable=C0103
@@ -27,6 +30,7 @@ def _list_hosts():
     '''
     Return the hosts found in the hosts file in as an OrderedDict
     '''
+    count = 0
     hfn = __get_hosts_filename()
     ret = odict.OrderedDict()
     if not os.path.isfile(hfn):
@@ -37,6 +41,8 @@ def _list_hosts():
             if not line:
                 continue
             if line.startswith('#'):
+                ret.setdefault('comment-{0}'.format(count), []).extend(line)
+                count += 1
                 continue
             if '#' in line:
                 line = line[:line.index('#')].strip()
@@ -224,11 +230,15 @@ def add_host(ip, alias):
 
 def _write_hosts(hosts):
     lines = []
-    for ip, aliases in hosts.iteritems():
-        line = '{0}\t\t{1}'.format(
-            ip,
-            '\t\t'.join(aliases)
-            )
+    for ip, aliases in six.iteritems(hosts):
+        if ip:
+            if ip.startswith('comment'):
+                line = ''.join(aliases)
+            else:
+                line = '{0}\t\t{1}'.format(
+                    ip,
+                    '\t\t'.join(aliases)
+                    )
         lines.append(line)
 
     hfn = __get_hosts_filename()

@@ -141,4 +141,4 @@ Driver Support
 
 - Container creation
 - Image listing (LXC templates)
-- Running container informations (IP addresses, etc.)
+- Running container information (IP addresses, etc.)

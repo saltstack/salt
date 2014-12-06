@@ -2,6 +2,7 @@
 '''
 Support for the Git SCM
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -10,6 +11,8 @@ import subprocess
 # Import salt libs
 from salt import utils
 from salt.exceptions import SaltInvocationError, CommandExecutionError
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module,import-error
+from salt.ext.six.moves.urllib.parse import urlunparse as _urlunparse  # pylint: disable=no-name-in-module,import-error
 
 
 def __virtual__():
@@ -97,6 +100,20 @@ def _check_git():
     utils.check_or_die('git')
 
 
+def _add_http_basic_auth(repository, https_user=None, https_pass=None):
+    if https_user is None and https_pass is None:
+        return repository
+    else:
+        urltuple = _urlparse(repository)
+        if urltuple.scheme == 'https':
+            netloc = "{0}:{1}@{2}".format(https_user, https_pass,
+                                          urltuple.netloc)
+            urltuple = urltuple._replace(netloc=netloc)
+            return _urlunparse(urltuple)
+        else:
+            raise ValueError('Basic Auth only supported for HTTPS scheme')
+
+
 def current_branch(cwd, user=None):
     '''
     Returns the current branch name, if on a branch.
@@ -140,7 +157,8 @@ def revision(cwd, rev='HEAD', short=False, user=None):
     return _git_run(cmd, cwd, runas=user)
 
 
-def clone(cwd, repository, opts=None, user=None, identity=None):
+def clone(cwd, repository, opts=None, user=None, identity=None,
+          https_user=None, https_pass=None):
     '''
     Clone a new repository
 
@@ -159,6 +177,12 @@ def clone(cwd, repository, opts=None, user=None, identity=None):
     identity : None
         A path to a private key to use over SSH
 
+    https_user : None
+        HTTP Basic Auth username for HTTPS (only) clones
+
+    https_pass : None
+        HTTP Basic Auth password for HTTPS (only) clones
+
     CLI Example:
 
     .. code-block:: bash
@@ -170,6 +194,8 @@ def clone(cwd, repository, opts=None, user=None, identity=None):
 
     '''
     _check_git()
+
+    repository = _add_http_basic_auth(repository, https_user, https_pass)
 
     if not opts:
         opts = ''
@@ -443,7 +469,8 @@ def init(cwd, opts=None, user=None):
         salt '*' git.init /path/to/repo.git opts='--bare'
     '''
     _check_git()
-
+    if not opts:
+        opts = ''
     cmd = 'git init {0} {1}'.format(cwd, opts)
     return _git_run(cmd, runas=user)
 
@@ -692,7 +719,8 @@ def remote_get(cwd, remote='origin', user=None):
         return None
 
 
-def remote_set(cwd, name='origin', url=None, user=None):
+def remote_set(cwd, name='origin', url=None, user=None, https_user=None,
+               https_pass=None):
     '''
     sets a remote with name and URL like git remote add <remote_name> <remote_url>
 
@@ -705,6 +733,12 @@ def remote_set(cwd, name='origin', url=None, user=None):
     user : None
         Run git as a user other than what the minion runs as
 
+    https_user : None
+        HTTP Basic Auth username for HTTPS (only) clones
+
+    https_pass : None
+        HTTP Basic Auth password for HTTPS (only) clones
+
     CLI Example:
 
     .. code-block:: bash
@@ -715,6 +749,7 @@ def remote_set(cwd, name='origin', url=None, user=None):
     if remote_get(cwd, name):
         cmd = 'git remote rm {0}'.format(name)
         _git_run(cmd, cwd=cwd, runas=user)
+    url = _add_http_basic_auth(url, https_user, https_pass)
     cmd = 'git remote add {0} {1}'.format(name, url)
     _git_run(cmd, cwd=cwd, runas=user)
     return remote_get(cwd=cwd, remote=name, user=None)
@@ -804,17 +839,17 @@ def config_set(cwd=None, setting_name=None, setting_value=None, user=None, is_gl
     Set a key in the git configuration file (.git/config) of the repository or
     globally.
 
-    setting_name
-        The name of the configuration key to set
-
-    setting_value
-        The (new) value to set
-
     cwd : None
         Options path to the Git repository
 
         .. versionchanged:: 2014.7.0
             Made ``cwd`` optional
+
+    setting_name : None
+        The name of the configuration key to set. Required.
+
+    setting_value : None
+        The (new) value to set. Required.
 
     user : None
         Run git as a user other than what the minion runs as
@@ -826,7 +861,7 @@ def config_set(cwd=None, setting_name=None, setting_value=None, user=None, is_gl
 
     .. code-block:: bash
 
-        salt '*' git.config_set user.email me@example.com /path/to/repo
+        salt '*' git.config_set /path/to/repo user.email me@example.com
     '''
     if setting_name is None or setting_value is None:
         raise TypeError
@@ -840,7 +875,7 @@ def config_set(cwd=None, setting_name=None, setting_value=None, user=None, is_gl
 
     _check_git()
 
-    return _git_run('git config {0} {1} {2}'.format(scope, setting_name, setting_value),
+    return _git_run('git config {0} {1} "{2}"'.format(scope, setting_name, setting_value),
                     cwd=cwd, runas=user)
 
 
@@ -848,14 +883,14 @@ def config_get(cwd=None, setting_name=None, user=None):
     '''
     Get a key or keys from the git configuration file (.git/config).
 
-    setting_name
-        The name of the configuration key to get
-
     cwd : None
         Optional path to a Git repository
 
         .. versionchanged:: 2014.7.0
             Made ``cwd`` optional
+
+    setting_name : None
+        The name of the configuration key to get. Required.
 
     user : None
         Run git as a user other than what the minion runs as
@@ -864,8 +899,8 @@ def config_get(cwd=None, setting_name=None, user=None):
 
     .. code-block:: bash
 
-        salt '*' git.config_get user.email
-        salt '*' git.config_get user.name cwd=/path/to/repo user=arthur
+        salt '*' git.config_get setting_name=user.email
+        salt '*' git.config_get /path/to/repo user.name arthur
     '''
     if setting_name is None:
         raise TypeError
@@ -874,7 +909,8 @@ def config_get(cwd=None, setting_name=None, user=None):
     return _git_run('git config {0}'.format(setting_name), cwd=cwd, runas=user)
 
 
-def ls_remote(cwd, repository="origin", branch="master", user=None, identity=None):
+def ls_remote(cwd, repository="origin", branch="master", user=None,
+              identity=None, https_user=None, https_pass=None):
     '''
     Returns the upstream hash for any given URL and branch.
 
@@ -894,6 +930,12 @@ def ls_remote(cwd, repository="origin", branch="master", user=None, identity=Non
     identity : none
         a path to a private key to use over ssh
 
+    https_user : None
+        HTTP Basic Auth username for HTTPS (only) clones
+
+    https_pass : None
+        HTTP Basic Auth password for HTTPS (only) clones
+
     CLI Example:
 
     .. code-block:: bash
@@ -902,5 +944,6 @@ def ls_remote(cwd, repository="origin", branch="master", user=None, identity=Non
 
     '''
     _check_git()
+    repository = _add_http_basic_auth(repository, https_user, https_pass)
     cmd = "git ls-remote -h " + repository + " " + branch + " | cut -f 1"
     return _git_run(cmd, cwd=cwd, runas=user, identity=identity)

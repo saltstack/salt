@@ -7,6 +7,8 @@ The Rackspace cloud module. This module uses the preferred means to set up a
 libcloud based cloud module and should be used as the general template for
 setting up additional libcloud based modules.
 
+:depends: libcloud >= 0.13.2
+
 Please note that the `rackspace` driver is only intended for 1st gen instances,
 aka, "the old cloud" at Rackspace. It is required for 1st gen instances, but
 will *not* work with OpenStack-based instances. Unless you explicitly have a
@@ -29,6 +31,7 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       # The Rackspace user's apikey
       apikey: 901d3f579h23c8v73q9
 '''
+from __future__ import absolute_import
 
 # The import section is mostly libcloud boilerplate
 
@@ -55,7 +58,7 @@ import salt.utils
 import salt.utils.cloud
 import salt.config as config
 from salt.utils import namespaced_function
-from salt.cloud.exceptions import (
+from salt.exceptions import (
     SaltCloudSystemExit,
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout
@@ -79,6 +82,7 @@ list_nodes = namespaced_function(list_nodes, globals())
 list_nodes_full = namespaced_function(list_nodes_full, globals())
 list_nodes_select = namespaced_function(list_nodes_select, globals())
 show_instance = namespaced_function(show_instance, globals())
+get_salt_interface = namespaced_function(get_salt_interface, globals())
 
 
 # Only load in this module is the RACKSPACE configurations are in place
@@ -117,31 +121,11 @@ def get_conn():
         search_global=False,
         default=False
     )
-    compute_region = config.get_cloud_config_value(
-        'compute_region',
-        get_configured_provider(),
-        __opts__,
-        search_global=False,
-        default='DFW'
-    ).upper()
     if force_first_gen:
         log.info('Rackspace driver will only have access to first-gen images')
-        driver = get_driver(Provider.RACKSPACE)
+        driver = get_driver(Provider.RACKSPACE_FIRST_GEN)
     else:
-        computed_provider = 'RACKSPACE_NOVA_{0}'.format(compute_region)
-        try:
-            driver = get_driver(getattr(Provider, computed_provider))
-        except AttributeError:
-            log.info(
-                'Rackspace driver will only have access to first-gen images '
-                'since it was unable to load the driver as {0}'.format(
-                    computed_provider
-                )
-            )
-            driver = get_driver(Provider.RACKSPACE)
-        except Exception:
-            # http://goo.gl/qFgY42
-            driver = get_driver(Provider.RACKSPACE)
+        driver = get_driver(Provider.RACKSPACE)
 
     return driver(
         config.get_cloud_config_value(
@@ -155,7 +139,14 @@ def get_conn():
             get_configured_provider(),
             __opts__,
             search_global=False
-        )
+        ),
+        region=config.get_cloud_config_value(
+            'compute_region',
+            get_configured_provider(),
+            __opts__,
+            search_global=False,
+            default='dfw'
+        ).lower()
     )
 
 
@@ -240,7 +231,7 @@ def create(vm_):
                 vm_['name'], exc
             ),
             # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -261,7 +252,7 @@ def create(vm_):
                     err
                 ),
                 # Show the traceback if the debug logging level is enabled
-                exc_info=log.isEnabledFor(logging.DEBUG)
+                exc_info_on_loglevel=logging.DEBUG
             )
             # Trigger a failure in the wait for IP function
             return False
@@ -320,7 +311,7 @@ def create(vm_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(exc.message)
+            raise SaltCloudSystemExit(str(exc))
 
     log.debug('VM is now running')
     if ssh_interface(vm_) == 'private_ips':
@@ -328,6 +319,13 @@ def create(vm_):
     else:
         ip_address = preferred_ip(vm_, data.public_ips)
     log.debug('Using IP address {0}'.format(ip_address))
+
+    if get_salt_interface(vm_) == 'private_ips':
+        salt_ip_address = preferred_ip(vm_, data.private_ips)
+        log.info('Salt interface set to: {0}'.format(salt_ip_address))
+    else:
+        salt_ip_address = preferred_ip(vm_, data.public_ips)
+        log.debug('Salt interface set to: {0}'.format(salt_ip_address))
 
     if not ip_address:
         raise SaltCloudSystemExit(
@@ -344,6 +342,7 @@ def create(vm_):
         deploy_kwargs = {
             'opts': __opts__,
             'host': ip_address,
+            'salt_host': salt_ip_address,
             'username': ssh_username,
             'password': data.extra['password'],
             'script': deploy_script.script,
@@ -406,9 +405,11 @@ def create(vm_):
             deploy_kwargs['username'] = config.get_cloud_config_value(
                 'win_username', vm_, __opts__, default='Administrator'
             )
-            deploy_kwargs['password'] = config.get_cloud_config_value(
-                'win_password', vm_, __opts__, default=data.extra['password']
+            win_pass = config.get_cloud_config_value(
+                'win_password', vm_, __opts__, default=''
             )
+            if win_pass:
+                deploy_kwargs['password'] = win_pass
 
         # Store what was used to the deploy the VM
         event_kwargs = copy.deepcopy(deploy_kwargs)

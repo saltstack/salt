@@ -3,6 +3,7 @@
 Manage the process of the overstate. The overstate is a means to orchestrate
 the deployment of states over groups of servers.
 '''
+from __future__ import absolute_import
 
 # 1. Read in overstate
 # 2. Create initial order
@@ -20,6 +21,7 @@ import salt.utils
 
 # Import third party libs
 import yaml
+import salt.ext.six as six
 
 
 class OverState(object):
@@ -87,7 +89,7 @@ class OverState(object):
         if isinstance(match, list):
             match = ' or '.join(match)
         raw = self.local.cmd(match, 'test.ping', expr_form='compound')
-        return raw.keys()
+        return list(raw.keys())
 
     def _names(self):
         '''
@@ -95,7 +97,7 @@ class OverState(object):
         '''
         names = set()
         for comp in self.over:
-            names.add(comp.keys()[0])
+            names.add(next(six.iterkeys(comp)))
         return names
 
     def get_stage(self, name):
@@ -177,7 +179,7 @@ class OverState(object):
             if isinstance(fun_d, str):
                 fun = fun_d
             elif isinstance(fun_d, dict):
-                fun = fun_d.keys()[0]
+                fun = next(six.iterkeys(fun_d))
                 arg = fun_d[fun]
             else:
                 yield {name: {}}
@@ -212,7 +214,7 @@ class OverState(object):
             else:
                 # Req has not be called
                 for comp in self.over:
-                    rname = comp.keys()[0]
+                    rname = next(six.iterkeys(comp))
                     if req == rname:
                         rstage = comp[rname]
                         v_stage = self.verify_stage(rstage)
@@ -263,7 +265,7 @@ class OverState(object):
         self.over_run = {}
 
         for comp in self.over:
-            name = comp.keys()[0]
+            name = next(six.iterkeys(comp))
             stage = comp[name]
             if name not in self.over_run:
                 self.call_stage(name, stage)
@@ -286,7 +288,7 @@ class OverState(object):
         self.over_run = {}
         yield self.over
         for comp in self.over:
-            name = comp.keys()[0]
+            name = next(six.iterkeys(comp))
             stage = comp[name]
             if name not in self.over_run:
                 v_stage = self.verify_stage(stage)
@@ -296,7 +298,7 @@ class OverState(object):
                 else:
                     for sret in self.call_stage(name, stage):
                         for yret in yielder(sret):
-                            sname = yret.keys()[0]
+                            sname = next(six.iterkeys(yret))
                             yield [self.get_stage(sname)]
                             final = {}
                             for minion in yret[sname]:

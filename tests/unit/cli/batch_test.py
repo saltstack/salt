@@ -7,20 +7,21 @@
 from salt.cli.batch import Batch
 
 # Import Salt Testing Libs
-from salttesting import TestCase
-from salttesting.mock import MagicMock, patch
+from salttesting import skipIf, TestCase
+from salttesting.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
 
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class BatchTestCase(TestCase):
     '''
     Unit Tests for the salt.cli.batch module
     '''
 
     def setUp(self):
-        opts = {'batch': '', 'conf_file': {}, 'tgt': ''}
+        opts = {'batch': '', 'conf_file': {}, 'tgt': '', 'timeout': ''}
         mock_client = MagicMock()
         with patch('salt.client.get_local_client', MagicMock(return_value=mock_client)):
             with patch('salt.client.LocalClient.cmd_iter', MagicMock(return_value=[])):

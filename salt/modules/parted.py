@@ -15,6 +15,7 @@ In light of parted not directly supporting partition IDs, some of this module
 has been written to utilize sfdisk instead. For further information, please
 reference the man page for ``sfdisk(8)``.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -53,12 +54,56 @@ def __virtual__():
         return False
     if not salt.utils.which('lsblk'):
         return False
+    if not salt.utils.which('partprobe'):
+        return False
     return __virtualname__
 
 
-def probe(device=''):
+# TODO: all the other inputs to the functions in this module are repetitively
+# validated within each function; collect them into validation functions here,
+# similar to _validate_device and _validate_partition_boundary
+def _validate_device(device):
     '''
-    Ask the kernel to update its local partition data
+    Ensure the device name supplied is valid in a manner similar to the
+    `exists` function, but raise errors on invalid input rather than return
+    False.
+
+    This function only validates a block device, it does not check if the block
+    device is a drive or a partition or a filesystem, etc.
+    '''
+    if os.path.exists(device):
+        dev = os.stat(device).st_mode
+
+        if stat.S_ISBLK(dev):
+            return
+
+    raise CommandExecutionError(
+        'Invalid device passed to partition module.'
+    )
+
+
+def _validate_partition_boundary(boundary):
+    '''
+    Ensure valid partition boundaries are supplied.
+    '''
+    try:
+        for unit in VALID_UNITS:
+            if boundary.endswith(unit):
+                return
+        int(boundary)
+    except Exception:
+        raise CommandExecutionError(
+            'Invalid partition boundary passed: "{0}"'.format(boundary)
+        )
+
+
+def probe(*devices, **kwargs):
+    '''
+    Ask the kernel to update its local partition data. When no args are
+    specified all block devices are tried.
+
+    Caution: Generally only works on devices with no mounted partitions and
+    may take a long time to return if specified devices are in use.
 
     CLI Examples:
 
@@ -66,14 +111,19 @@ def probe(device=''):
 
         salt '*' partition.probe
         salt '*' partition.probe /dev/sda
+        salt '*' partition.probe /dev/sda /dev/sdb
     '''
-    if device:
-        dev = device.replace('/dev/', '')
-        if dev not in os.listdir('/dev'):
-            raise CommandExecutionError(
-                'Invalid device passed to partition.probe'
-            )
-    cmd = 'partprobe {0}'.format(device)
+    salt.utils.kwargs_warn_until(kwargs, 'Beryllium')
+    if 'device' in kwargs:
+        devices = tuple([kwargs['device']] + list(devices))
+        del kwargs['device']
+    if kwargs:
+        raise TypeError("probe() takes no keyword arguments")
+
+    for device in devices:
+        _validate_device(device)
+
+    cmd = 'partprobe -- {0}'.format(" ".join(devices))
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
 
@@ -90,6 +140,11 @@ def part_list(device, unit=None):
         salt '*' partition.part_list /dev/sda unit=s
         salt '*' partition.part_list /dev/sda unit=kB
     '''
+    salt.utils.warn_until(
+        'Beryllium',
+        '''The \'part_list\' function has been deprecated in favor of
+        \'list_\'. Please update your code and configs to reflect this.''')
+
     return list_(device, unit)
 
 
@@ -107,12 +162,7 @@ def list_(device, unit=None):
         salt '*' partition.list /dev/sda unit=s
         salt '*' partition.list /dev/sda unit=kB
     '''
-    if device:
-        dev = device.replace('/dev/', '')
-        if dev not in os.listdir('/dev'):
-            raise CommandExecutionError(
-                'Invalid device passed to partition.part_list'
-            )
+    _validate_device(device)
 
     if unit:
         if unit not in VALID_UNITS:
@@ -127,37 +177,42 @@ def list_(device, unit=None):
     ret = {'info': {}, 'partitions': {}}
     mode = 'info'
     for line in out:
-        if line.startswith('BYT'):
+        if line in ('BYT;', 'CHS;', 'CYL;'):
             continue
-        comps = line.replace(';', '').split(':')
+        cols = line.replace(';', '').split(':')
         if mode == 'info':
-            if 7 <= len(comps) <= 8:
+            if 7 <= len(cols) <= 8:
                 ret['info'] = {
-                    'disk': comps[0],
-                    'size': comps[1],
-                    'interface': comps[2],
-                    'logical sector': comps[3],
-                    'physical sector': comps[4],
-                    'partition table': comps[5],
-                    'model': comps[6]}
-                try:
-                    ret['info']['disk flags'] = comps[7]
-                except IndexError:
+                    'disk': cols[0],
+                    'size': cols[1],
+                    'interface': cols[2],
+                    'logical sector': cols[3],
+                    'physical sector': cols[4],
+                    'partition table': cols[5],
+                    'model': cols[6]}
+                if len(cols) == 8:
+                    ret['info']['disk flags'] = cols[7]
                     # Older parted (2.x) doesn't show disk flags in the 'print'
                     # output, and will return a 7-column output for the info
                     # line. In these cases we just leave this field out of the
                     # return dict.
-                    pass
                 mode = 'partitions'
+            else:
+                raise CommandExecutionError(
+                    'Problem encountered while parsing output from parted')
         else:
-            ret['partitions'][comps[0]] = {
-                'number': comps[0],
-                'start': comps[1],
-                'end': comps[2],
-                'size': comps[3],
-                'type': comps[4],
-                'file system': comps[5],
-                'flags': comps[6]}
+            if len(cols) == 7:
+                ret['partitions'][cols[0]] = {
+                    'number': cols[0],
+                    'start': cols[1],
+                    'end': cols[2],
+                    'size': cols[3],
+                    'type': cols[4],
+                    'file system': cols[5],
+                    'flags': cols[6]}
+            else:
+                raise CommandExecutionError(
+                    'Problem encountered while parsing output from parted')
     return ret
 
 
@@ -174,11 +229,7 @@ def align_check(device, part_type, partition):
 
         salt '*' partition.align_check /dev/sda minimal 1
     '''
-    dev = device.replace('/dev/', '')
-    if dev not in os.listdir('/dev'):
-        raise CommandExecutionError(
-            'Invalid device passed to partition.align_check'
-        )
+    _validate_device(device)
 
     if part_type not in set(['minimal', 'optimal']):
         raise CommandExecutionError(
@@ -211,9 +262,7 @@ def check(device, minor):
 
         salt '*' partition.check 1
     '''
-    dev = device.replace('/dev/', '')
-    if dev not in os.listdir('/dev'):
-        raise CommandExecutionError('Invalid device passed to partition.check')
+    _validate_device(device)
 
     try:
         int(minor)
@@ -241,9 +290,7 @@ def cp(device, from_minor, to_minor):  # pylint: disable=C0103
 
         salt '*' partition.cp /dev/sda 2 3
     '''
-    dev = device.replace('/dev/', '')
-    if dev not in os.listdir('/dev'):
-        raise CommandExecutionError('Invalid device passed to partition.cp')
+    _validate_device(device)
 
     try:
         int(from_minor)
@@ -277,9 +324,7 @@ def get_id(device, minor):
 
         salt '*' partition.get_id /dev/sda 1
     '''
-    dev = device.replace('/dev/', '')
-    if dev not in os.listdir('/dev'):
-        raise CommandExecutionError('Invalid device passed to partition.get_id')
+    _validate_device(device)
 
     try:
         int(minor)
@@ -312,9 +357,7 @@ def set_id(device, minor, system_id):
 
         salt '*' partition.set_id /dev/sda 1 83
     '''
-    dev = device.replace('/dev/', '')
-    if dev not in os.listdir('/dev'):
-        raise CommandExecutionError('Invalid device passed to partition.set_id')
+    _validate_device(device)
 
     try:
         int(minor)
@@ -369,15 +412,16 @@ def mkfs(device, fs_type):
 
         salt '*' partition.mkfs /dev/sda2 fat32
     '''
-    dev = device.replace('/dev/', '')
-    if dev not in os.listdir('/dev'):
-        raise CommandExecutionError('Invalid device passed to partition.mkfs')
+    _validate_device(device)
 
     if fs_type not in set(['ext2', 'fat32', 'fat16', 'linux-swap', 'reiserfs',
                           'hfs', 'hfs+', 'hfsx', 'NTFS', 'ufs']):
         raise CommandExecutionError('Invalid fs_type passed to partition.mkfs')
 
-    cmd = 'mkfs.{0} {1}'.format(fs_type, device)
+    mkfs_cmd = 'mkfs.{0}'.format(fs_type)
+    if not salt.utils.which(mkfs_cmd):
+        return 'Error: {0} is unavailable.'
+    cmd = '{0} {1}'.format(mkfs_cmd, device)
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
 
@@ -396,11 +440,7 @@ def mklabel(device, label_type):
 
         salt '*' partition.mklabel /dev/sda msdos
     '''
-    dev = device.replace('/dev/', '')
-    if dev not in os.listdir('/dev'):
-        raise CommandExecutionError(
-            'Invalid device passed to partition.mklabel'
-        )
+    _validate_device(device)
 
     if label_type not in set(['aix', 'amiga', 'bsd', 'dvh', 'gpt', 'loop', 'mac',
                              'msdos', 'pc98', 'sun']):
@@ -411,18 +451,6 @@ def mklabel(device, label_type):
     cmd = 'parted -m -s {0} mklabel {1}'.format(device, label_type)
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
-
-
-def _validate_partition_boundary(boundary):
-    try:
-        for unit in VALID_UNITS:
-            if boundary.endswith(unit):
-                return
-        int(boundary)
-    except Exception:
-        raise CommandExecutionError(
-            'Invalid partition boundary passed: "{0}"'.format(boundary)
-        )
 
 
 def mkpart(device, part_type, fs_type=None, start=None, end=None):
@@ -440,15 +468,11 @@ def mkpart(device, part_type, fs_type=None, start=None, end=None):
         salt '*' partition.mkpart /dev/sda primary fat32 0 639
         salt '*' partition.mkpart /dev/sda primary start=0 end=639
     '''
+    _validate_device(device)
+
     if not start or not end:
         raise CommandExecutionError(
             'partition.mkpart requires a start and an end'
-        )
-
-    dev = device.replace('/dev/', '')
-    if dev not in os.listdir('/dev'):
-        raise CommandExecutionError(
-            'Invalid device passed to partition.mkpart'
         )
 
     if part_type not in set(['primary', 'logical', 'extended']):
@@ -456,7 +480,7 @@ def mkpart(device, part_type, fs_type=None, start=None, end=None):
             'Invalid part_type passed to partition.mkpart'
         )
 
-    if fs_type not in set(['ext2', 'fat32', 'fat16', 'linux-swap', 'reiserfs',
+    if fs_type and fs_type not in set(['ext2', 'fat32', 'fat16', 'linux-swap', 'reiserfs',
                           'hfs', 'hfs+', 'hfsx', 'NTFS', 'ufs', 'xfs']):
         raise CommandExecutionError(
             'Invalid fs_type passed to partition.mkpart'
@@ -494,11 +518,7 @@ def mkpartfs(device, part_type, fs_type, start, end):
 
         salt '*' partition.mkpartfs /dev/sda logical ext2 440 670
     '''
-    dev = device.replace('/dev/', '')
-    if dev not in os.listdir('/dev'):
-        raise CommandExecutionError(
-            'Invalid device passed to partition.mkpartfs'
-        )
+    _validate_device(device)
 
     if part_type not in set(['primary', 'logical', 'extended']):
         raise CommandExecutionError(
@@ -534,9 +554,7 @@ def name(device, partition, name):
 
         salt '*' partition.name /dev/sda 1 'My Documents'
     '''
-    dev = device.replace('/dev/', '')
-    if dev not in os.listdir('/dev'):
-        raise CommandExecutionError('Invalid device passed to partition.name')
+    _validate_device(device)
 
     try:
         int(partition)
@@ -571,10 +589,7 @@ def rescue(device, start, end):
 
         salt '*' partition.rescue /dev/sda 0 8056
     '''
-    dev = device.replace('/dev/', '')
-    if dev not in os.listdir('/dev'):
-        raise CommandExecutionError('Invalid device passed to partition.rescue')
-
+    _validate_device(device)
     _validate_partition_boundary(start)
     _validate_partition_boundary(end)
 
@@ -599,9 +614,7 @@ def resize(device, minor, start, end):
 
         salt '*' partition.resize /dev/sda 3 200 850
     '''
-    dev = device.replace('/dev/', '')
-    if dev not in os.listdir('/dev'):
-        raise CommandExecutionError('Invalid device passed to partition.resize')
+    _validate_device(device)
 
     try:
         int(minor)
@@ -633,9 +646,7 @@ def rm(device, minor):  # pylint: disable=C0103
 
         salt '*' partition.rm /dev/sda 5
     '''
-    dev = device.replace('/dev/', '')
-    if dev not in os.listdir('/dev'):
-        raise CommandExecutionError('Invalid device passed to partition.rm')
+    _validate_device(device)
 
     try:
         int(minor)
@@ -663,9 +674,7 @@ def set_(device, minor, flag, state):
 
         salt '*' partition.set /dev/sda 1 boot on
     '''
-    dev = device.replace('/dev/', '')
-    if dev not in os.listdir('/dev'):
-        raise CommandExecutionError('Invalid device passed to partition.set')
+    _validate_device(device)
 
     try:
         int(minor)
@@ -698,9 +707,7 @@ def toggle(device, partition, flag):
 
         salt '*' partition.name /dev/sda 1 boot
     '''
-    dev = device.replace('/dev/', '')
-    if dev not in os.listdir('/dev'):
-        raise CommandExecutionError('Invalid device passed to partition.toggle')
+    _validate_device(device)
 
     try:
         int(partition)
@@ -751,11 +758,6 @@ def get_block_device():
 
         salt '*' partition.get_block_device
     '''
-    ret = []
-    cmd = '/bin/lsblk -n -io KNAME -d -e 1,7,11 -l'
+    cmd = 'lsblk -n -io KNAME -d -e 1,7,11 -l'
     devs = __salt__['cmd.run'](cmd).splitlines()
-    for dev in devs:
-        if dev not in os.listdir('/dev'):
-            continue
-        ret.append(dev)
-    return ret
+    return devs

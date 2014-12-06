@@ -18,6 +18,7 @@ requisite to a pkg.installed state for the package which provides pip
         - require:
           - pkg: python-pip
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -94,6 +95,7 @@ def installed(name,
               env=None,
               bin_env=None,
               use_wheel=False,
+              no_use_wheel=False,
               log=None,
               proxy=None,
               timeout=None,
@@ -128,7 +130,9 @@ def installed(name,
               allow_all_external=False,
               allow_external=None,
               allow_unverified=None,
-              process_dependency_links=False):
+              process_dependency_links=False,
+              env_vars=None,
+              use_vt=False):
     '''
     Make sure the package is installed
 
@@ -160,10 +164,118 @@ def installed(name,
     use_wheel : False
         Prefer wheel archives (requires pip>=1.4)
 
+    no_use_wheel : False
+        Force to not use wheel archives (requires pip>=1.4)
+
+    log
+        Log file where a complete (maximum verbosity) record will be kept
+
+    proxy
+        Specify a proxy in the form
+        user:passwd@proxy.server:port. Note that the
+        user:password@ is optional and required only if you
+        are behind an authenticated proxy.  If you provide
+        user@proxy.server:port then you will be prompted for a
+        password.
+
+    timeout
+        Set the socket timeout (default 15 seconds)
+
+    editable
+        install something editable (i.e.
+        git+https://github.com/worldcompany/djangoembed.git#egg=djangoembed)
+
+    find_links
+        URL to look for packages at
+
+    index_url
+        Base URL of Python Package Index
+
+    extra_index_url
+        Extra URLs of package indexes to use in addition to ``index_url``
+
+    no_index
+        Ignore package index
+
+    mirrors
+        Specific mirror URL(s) to query (automatically adds --use-mirrors)
+
+    build
+        Unpack packages into ``build`` dir
+
+    target
+        Install packages into ``target`` dir
+
+    download
+        Download packages into ``download`` instead of installing them
+
+    download_cache
+        Cache downloaded packages in ``download_cache`` dir
+
+    source
+        Check out ``editable`` packages into ``source`` dir
+
+    upgrade
+        Upgrade all packages to the newest available version
+
+    force_reinstall
+        When upgrading, reinstall all packages even if they are already
+        up-to-date.
+
+    ignore_installed
+        Ignore the installed packages (reinstalling instead)
+
+    exists_action
+        Default action when a path already exists: (s)witch, (i)gnore, (w)ipe,
+        (b)ackup
+
+    no_deps
+        Ignore package dependencies
+
+    no_install
+        Download and unpack all packages, but don't actually install them
+
+    no_chown
+        When user is given, do not attempt to copy and chown
+        a requirements file
+
+    cwd
+        Current working directory to run pip from
+
+    activate
+        Activates the virtual environment, if given via bin_env,
+        before running install.
+
+    pre_releases
+        Include pre-releases in the available versions
+
+    cert
+        Provide a path to an alternate CA bundle
+
+    allow_all_external
+        Allow the installation of all externally hosted files
+
+    allow_external
+        Allow the installation of externally hosted files (comma separated list)
+
+    allow_unverified
+        Allow the installation of insecure and unverifiable files (comma separated list)
+
+    process_dependency_links
+        Enable the processing of dependency links
+
     bin_env : None
         Absolute path to a virtual environment directory or absolute path to
         a pip executable. The example below assumes a virtual environment
         has been created at ``/foo/.virtualenvs/bar``.
+
+    env_vars
+        Add or modify environment variables. Useful for tweaking build steps,
+        such as specifying INCLUDE or LIBRARY paths in Makefiles, build scripts or
+        compiler calls.
+
+    use_vt
+        Use VT terminal emulation (see ouptut while installing)
 
     Example:
 
@@ -254,6 +366,17 @@ def installed(name,
                                            ver2=min_version):
             ret['result'] = False
             ret['comment'] = ('The \'use_wheel\' option is only supported in '
+                              'pip {0} and newer. The version of pip detected '
+                              'was {1}.').format(min_version, cur_version)
+            return ret
+
+    if no_use_wheel:
+        min_version = '1.4'
+        cur_version = __salt__['pip.version'](bin_env)
+        if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
+                                           ver2=min_version):
+            ret['result'] = False
+            ret['comment'] = ('The \'no_use_wheel\' option is only supported in '
                               'pip {0} and newer. The version of pip detected '
                               'was {1}.').format(min_version, cur_version)
             return ret
@@ -403,6 +526,7 @@ def installed(name,
         requirements=requirements,
         bin_env=bin_env,
         use_wheel=use_wheel,
+        no_use_wheel=no_use_wheel,
         log=log,
         proxy=proxy,
         timeout=timeout,
@@ -436,7 +560,9 @@ def installed(name,
         allow_external=allow_external,
         allow_unverified=allow_unverified,
         process_dependency_links=process_dependency_links,
-        saltenv=__env__
+        saltenv=__env__,
+        env_vars=env_vars,
+        use_vt=use_vt
     )
 
     if pip_install_call and (pip_install_call.get('retcode', 1) == 0):
@@ -476,7 +602,7 @@ def installed(name,
                 ret['changes']['{0}==???'.format(name)] = 'Installed'
                 return ret
 
-            version = list(pkg_list.values())[0]
+            version = next(pkg_list.itervalues())
             pkg_name = next(iter(pkg_list))
             ret['changes']['{0}=={1}'.format(pkg_name, version)] = 'Installed'
             ret['comment'] = 'Package was successfully installed'
@@ -516,7 +642,8 @@ def removed(name,
             timeout=None,
             user=None,
             runas=None,
-            cwd=None):
+            cwd=None,
+            use_vt=False):
     '''
     Make sure that a package is not installed.
 
@@ -526,6 +653,8 @@ def removed(name,
         The user under which to run pip
     bin_env : None
         the pip executable or virtualenenv to use
+    use_vt
+        Use VT terminal emulation (see ouptut while installing)
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
@@ -573,11 +702,68 @@ def removed(name,
                                  proxy=proxy,
                                  timeout=timeout,
                                  user=user,
-                                 cwd=cwd):
+                                 cwd=cwd,
+                                 use_vt=use_vt):
         ret['result'] = True
         ret['changes'][name] = 'Removed'
         ret['comment'] = 'Package was successfully removed.'
     else:
         ret['result'] = False
         ret['comment'] = 'Could not remove package.'
+    return ret
+
+
+def uptodate(name,
+             bin_env=None,
+             user=None,
+             runas=None,
+             cwd=None,
+             use_vt=False):
+    '''
+    .. versionadded:: Lithium
+
+    Verify that the system is completely up to date.
+
+    name
+        The name has no functional value and is only used as a tracking
+        reference
+    user
+        The user under which to run pip
+    bin_env
+        the pip executable or virtualenenv to use
+    use_vt
+        Use VT terminal emulation (see ouptut while installing)
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': 'Failed to update.'}
+
+    try:
+        packages = __salt__['pip.list_upgrades'](bin_env=bin_env, user=user,
+                                                 runas=runas, cwd=cwd)
+    except Exception as e:
+        ret['comment'] = str(e)
+        return ret
+
+    if not packages:
+        ret['comment'] = 'System is already up-to-date.'
+        ret['result'] = True
+        return ret
+    elif __opts__['test']:
+        ret['comment'] = 'System update will be performed'
+        ret['result'] = None
+        return ret
+
+    updated = __salt__['pip.upgrade'](bin_env=bin_env, user=user, runas=runas, cwd=cwd, use_vt=use_vt)
+
+    if updated.get('result') is False:
+        ret.update(updated)
+    elif updated:
+        ret['changes'] = updated
+        ret['comment'] = 'Upgrade successful.'
+        ret['result'] = True
+    else:
+        ret['comment'] = 'Upgrade failed.'
+
     return ret

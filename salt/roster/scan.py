@@ -2,12 +2,13 @@
 '''
 Scan a netmask or ipaddr for open ssh ports
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import socket
 
 # Import salt libs
-import salt.utils.ipaddr
+import salt.ext.ipaddr
 
 
 def targets(tgt, tgt_type='glob', **kwargs):
@@ -34,23 +35,28 @@ class RosterMatcher(object):
         '''
         addrs = ()
         ret = {}
+        ports = __opts__['ssh_scan_ports']
+        if not isinstance(ports, list):
+            # Comma-separate list of integers
+            ports = list(map(int, str(ports).split(',')))
         try:
-            salt.utils.ipaddr.IPAddress(self.tgt)
+            salt.ext.ipaddr.IPAddress(self.tgt)
             addrs = [self.tgt]
         except ValueError:
             try:
-                addrs = salt.utils.ipaddr.IPNetwork(self.tgt).iterhosts()
+                addrs = salt.ext.ipaddr.IPNetwork(self.tgt).iterhosts()
             except ValueError:
                 pass
         for addr in addrs:
             addr = str(addr)
-            try:
-                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                sock.settimeout(0.01)
-                sock.connect((addr, 22))
-                sock.shutdown(socket.SHUT_RDWR)
-                sock.close()
-                ret[addr] = {'host': addr}
-            except socket.error:
-                pass
+            for port in ports:
+                try:
+                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    sock.settimeout(float(__opts__['ssh_scan_timeout']))
+                    sock.connect((addr, port))
+                    sock.shutdown(socket.SHUT_RDWR)
+                    sock.close()
+                    ret[addr] = {'host': addr, 'port': port}
+                except socket.error:
+                    pass
         return ret

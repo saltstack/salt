@@ -2,6 +2,7 @@
 '''
 Module for managing dnsmasq
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils
@@ -91,7 +92,7 @@ def set_config(config_file='/etc/dnsmasq.conf', follow=True, **kwargs):
             if filename.endswith('#') and filename.endswith('#'):
                 continue
             includes.append('{0}/{1}'.format(dnsopts['conf-dir'], filename))
-    for key in kwargs.keys():
+    for key in kwargs:
         if key in dnsopts:
             if isinstance(dnsopts[key], str):
                 for config in includes:

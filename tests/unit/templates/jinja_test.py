@@ -8,8 +8,8 @@ import datetime
 import pprint
 
 # Import Salt Testing libs
-from tests.integration import ModuleCase
-from salttesting import skipIf, TestCase
+from salttesting.unit import skipIf, TestCase
+from salttesting.case import ModuleCase
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
@@ -131,7 +131,11 @@ class TestGetTemplate(TestCase):
             'file_client': 'local',
             'file_roots': {
                 'other': [os.path.join(TEMPLATES_DIR, 'files', 'test')]
-            }
+            },
+            'fileserver_backend': ['roots'],
+            'extension_modules': os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                'extmods'),
         }
 
     def test_fallback(self):

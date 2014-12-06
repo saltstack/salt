@@ -116,7 +116,7 @@ def full_query(query_type='list_nodes_full'):
 
         salt '*' cloud.full_query
     '''
-    return query(query_type='list_nodes_full')
+    return query(query_type=query_type)
 
 
 def select_query(query_type='list_nodes_select'):
@@ -129,7 +129,54 @@ def select_query(query_type='list_nodes_select'):
 
         salt '*' cloud.select_query
     '''
-    return query(query_type='list_nodes_select')
+    return query(query_type=query_type)
+
+
+def has_instance(name, provider=None):
+    '''
+    Return true if the instance is found on a provider
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cloud.has_instance myinstance
+    '''
+    data = get_instance(name, provider)
+    if data is None:
+        return False
+    return True
+
+
+def get_instance(name, provider=None):
+    '''
+    Return details on an instance.
+
+    Similar to the cloud action show_instance
+    but returns only the instance details.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cloud.get_instance myinstance
+
+    SLS Example:
+
+    .. code-block:: bash
+
+        {{ salt['cloud.get_instance']('myinstance')['mac_address'] }}
+
+    '''
+    client = _get_client()
+    data = action(fun='show_instance', names=[name], provider=provider)
+    info = salt.utils.cloud.simple_types_filter(data)
+    try:
+        # get the first: [alias][driver][vm_name]
+        info = info.itervalues().next().itervalues().next().itervalues().next()
+    except AttributeError:
+        return None
+    return info
 
 
 def profile_(profile, names, vm_overrides=None, **kwargs):
@@ -178,8 +225,7 @@ def action(
 
         salt '*' cloud.action start instance=myinstance
         salt '*' cloud.action stop instance=myinstance
-        salt '*' cloud.action show_image provider=my-ec2-config \
-            image=ami-1624987f
+        salt '*' cloud.action show_image provider=my-ec2-config image=ami-1624987f
     '''
     client = _get_client()
     info = client.action(fun, cloudmap, names, provider, instance, kwargs)
@@ -194,9 +240,7 @@ def create(provider, names, **kwargs):
 
     .. code-block:: bash
 
-        salt minionname cloud.create my-ec2-config myinstance \
-            image=ami-1624987f size='Micro Instance' ssh_username=ec2-user \
-            securitygroup=default delvol_on_destroy=True
+        salt minionname cloud.create my-ec2-config myinstance image=ami-1624987f size='t1.micro' ssh_username=ec2-user securitygroup=default delvol_on_destroy=True
     '''
     client = _get_client()
     info = client.create(provider, names, **kwargs)
@@ -243,8 +287,7 @@ def volume_create(provider, names, **kwargs):
 
     .. code-block:: bash
 
-        salt minionname cloud.volume_create my-nova myblock size=100 \
-                voltype=SSD
+        salt minionname cloud.volume_create my-nova myblock size=100 voltype=SSD
 
     '''
     client = _get_client()
@@ -260,9 +303,7 @@ def volume_attach(provider, names, **kwargs):
 
     .. code-block:: bash
 
-        salt minionname cloud.volume_attach my-nova myblock \
-                server_name=myserver \
-                device='/dev/xvdf'
+        salt minionname cloud.volume_attach my-nova myblock server_name=myserver device='/dev/xvdf'
 
     '''
     client = _get_client()
@@ -278,8 +319,7 @@ def volume_detach(provider, names, **kwargs):
 
     .. code-block:: bash
 
-        salt minionname cloud.volume_detach my-nova myblock \
-                server_name=myserver
+        salt minionname cloud.volume_detach my-nova myblock server_name=myserver
 
     '''
     client = _get_client()

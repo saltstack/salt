@@ -16,12 +16,14 @@ from salt.states import (
     postgres_user,
     postgres_group,
     postgres_extension,
+    postgres_schema,
 )
 MODS = (
     postgres_database,
     postgres_user,
     postgres_group,
     postgres_extension,
+    postgres_schema,
 )
 
 
@@ -367,13 +369,13 @@ class PostgresExtensionTestCase(TestCase):
         ret = postgres_extension.present('foo')
         self.assertEqual(
             ret,
-            {'comment': 'Extention foo is already present',
+            {'comment': 'Extension foo is already present',
              'changes': {}, 'name': 'foo', 'result': True}
         )
         ret = postgres_extension.present('foo')
         self.assertEqual(
             ret,
-            {'comment': 'The extension foo has been upgradeed',
+            {'comment': 'The extension foo has been upgraded',
              'changes': {}, 'name': 'foo', 'result': True}
         )
 
@@ -481,6 +483,82 @@ class PostgresExtensionTestCase(TestCase):
             {'comment': 'Extension foo is set to be removed',
              'changes': {}, 'name': 'foo', 'result': None}
         )
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@patch.multiple(postgres_schema,
+                __grains__={'os_family': 'Linux'},
+                __salt__=SALT_STUB)
+@patch('salt.utils.which', Mock(return_value='/usr/bin/pgsql'))
+class PostgresSchemaTestCase(TestCase):
+
+    @patch.dict(SALT_STUB, {
+        'postgres.schema_get': Mock(return_value=None),
+        'postgres.schema_create': MagicMock(),
+    })
+    def test_present_creation(self):
+        ret = postgres_schema.present('dbname', 'foo')
+        self.assertEqual(
+            ret,
+            {'comment': 'Schema foo has been created in database dbname',
+             'changes': {'foo': 'Present'},
+             'dbname': 'dbname',
+             'name': 'foo',
+             'result': True}
+            )
+        self.assertEqual(SALT_STUB['postgres.schema_create'].call_count, 1)
+
+    @patch.dict(SALT_STUB, {
+        'postgres.schema_get': Mock(return_value={'foo':
+                                                  {'acl': '',
+                                                   'owner': 'postgres'}
+                                                  }),
+        'postgres.schema_create': MagicMock(),
+    })
+    def test_present_nocreation(self):
+        ret = postgres_schema.present('dbname', 'foo')
+        self.assertEqual(
+            ret,
+            {'comment': 'Schema foo already exists in database dbname',
+             'changes': {},
+             'dbname': 'dbname',
+             'name': 'foo',
+             'result': True}
+            )
+        self.assertEqual(SALT_STUB['postgres.schema_create'].call_count, 0)
+
+    @patch.dict(SALT_STUB, {
+        'postgres.schema_exists': Mock(return_value=True),
+        'postgres.schema_remove': MagicMock(),
+    })
+    def test_absent_remove(self):
+        ret = postgres_schema.absent('dbname', 'foo')
+        self.assertEqual(
+            ret,
+            {'comment': 'Schema foo has been removed from database dbname',
+             'changes': {'foo': 'Absent'},
+             'dbname': 'dbname',
+             'name': 'foo',
+             'result': True}
+            )
+        self.assertEqual(SALT_STUB['postgres.schema_remove'].call_count, 1)
+
+    @patch.dict(SALT_STUB, {
+        'postgres.schema_exists': Mock(return_value=False),
+        'postgres.schema_remove': MagicMock(),
+    })
+    def test_absent_noremove(self):
+        ret = postgres_schema.absent('dbname', 'foo')
+        self.assertEqual(
+            ret,
+            {'comment': 'Schema foo is not present in database dbname,'
+                        ' so it cannot be removed',
+             'changes': {},
+             'dbname': 'dbname',
+             'name': 'foo',
+             'result': True}
+            )
+        self.assertEqual(SALT_STUB['postgres.schema_remove'].call_count, 0)
 
 
 if __name__ == '__main__':

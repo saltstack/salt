@@ -21,6 +21,7 @@ Example:
                 - '.*'
             - runas: rabbitmq
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -66,24 +67,47 @@ def present(name,
 
     user_exists = __salt__['rabbitmq.user_exists'](name, runas=runas)
 
-    if user_exists and not force:
-        ret['comment'] = 'User {0} already exists'.format(name)
-
-    elif __opts__['test']:
+    if __opts__['test']:
         ret['result'] = None
 
-        if not user_exists:
+        if user_exists:
+            if force:
+                ret['comment'] = 'User {0} is set to be updated'
+            else:
+                ret['comment'] = 'User {0} already presents'
+        else:
             ret['comment'] = 'User {0} is set to be created'
-        elif force:
-            ret['comment'] = 'User {0} is set to be updated'
-        ret['comment'] = ret['comment'].format(name)
 
+        ret['comment'] = ret['comment'].format(name)
+        return ret
+
+    if user_exists and not force:
+        log.debug('User exists, and force is not set - Abandoning')
+        ret['comment'] = 'User {0} already presents'.format(name)
+        return ret
     else:
         changes = {'old': '', 'new': ''}
 
         # Get it into the correct format
         if tags and isinstance(tags, (list, tuple)):
             tags = ' '.join(tags)
+        if not tags:
+            tags = ''
+
+        def _set_tags_and_perms(tags, perms):
+            if tags:
+                result.update(__salt__['rabbitmq.set_user_tags'](
+                    name, tags, runas=runas)
+                )
+                changes['new'] += 'Set tags: {0}\n'.format(tags)
+            for element in perms:
+                for vhost, perm in element.items():
+                    result.update(__salt__['rabbitmq.set_permissions'](
+                        vhost, name, perm[0], perm[1], perm[2], runas)
+                    )
+                    changes['new'] += (
+                        'Set permissions {0} for vhost {1}'
+                    ).format(perm, vhost)
 
         if not user_exists:
             log.debug(
@@ -91,39 +115,20 @@ def present(name,
             result = __salt__['rabbitmq.add_user'](
                 name, password, runas=runas)
 
-            if tags:
-                result = __salt__['rabbitmq.set_user_tags'](
-                    name, tags, runas=runas)
-            for element in perms:
-                for vhost, perm in element.items():
-                    result = __salt__['rabbitmq.set_permissions'](
-                        vhost, name, perm[0], perm[1], perm[2], runas)
-                    changes['new'] += tags
-        elif force:
-            log.debug('User exists and force is set - Overriding')
+            _set_tags_and_perms(tags, perms)
+        else:
+            log.debug('RabbitMQ user exists and force is set - Overriding')
             if password is not None:
                 result = __salt__['rabbitmq.change_password'](
                     name, password, runas=runas)
-                changes['new'] = ' New password'
+                changes['new'] = 'Set password.\n'
             else:
                 log.debug('Password is not set - Clearing password')
                 result = __salt__['rabbitmq.clear_password'](
                     name, runas=runas)
-                changes['old'] += ' Old password removed'
-            if tags:
-                result.update(__salt__['rabbitmq.set_user_tags'](
-                    name, tags, runas=runas)
-                )
-                changes['new'] += ' Tags: {0}'.format(', '.join(tags))
-            for element in perms:
-                for vhost, perm in element.items():
-                    result.update(__salt__['rabbitmq.set_permissions'](
-                        vhost, name, perm[0], perm[1], perm[2], runas)
-                    )
-                    changes['new'] += ' {0} {1}'.format(vhost, perm)
-        else:
-            log.debug('User exists, and force is not set - Abandoning')
-            ret['comment'] = 'User {0} is not going to be modified'.format(name)
+                changes['old'] += 'Removed password.\n'
+
+            _set_tags_and_perms(tags, perms)
 
         if 'Error' in result:
             ret['result'] = False
@@ -138,7 +143,7 @@ def present(name,
             ret['comment'] = result['Password Cleared']
             ret['changes'] = changes
 
-    return ret
+        return ret
 
 
 def absent(name,

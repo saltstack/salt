@@ -31,6 +31,26 @@ an empty list must be added:
         interface: eth0
         cidr: '10.0.0.0/8'
 
+Mine Functions Aliases
+----------------------
+
+Function aliases can be used to provide usage intentions or to allow multiple
+calls of the same function with different arguments.
+
+.. versionadded:: 2014.7
+
+.. code-block:: yaml
+
+    mine_functions:
+      network.ip_addrs: [eth0]
+      networkplus.internal_ip_addrs: []
+      internal_ip_addrs:
+        mine_function: network.ip_addrs
+        cidr: 192.168.0.0/16
+      loopback_ip_addrs:
+        mine_function: network.ip_addrs
+        lo: True
+
 Mine Interval
 =============
 

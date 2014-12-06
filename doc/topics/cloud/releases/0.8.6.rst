@@ -201,7 +201,7 @@ required: name or instance_id, volume_id and device.
 
 Show a Volume
 -------------
-The details about an existing volume may be retreived.
+The details about an existing volume may be retrieved.
 
 .. code-block:: bash
 

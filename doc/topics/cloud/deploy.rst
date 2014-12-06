@@ -116,7 +116,7 @@ Or even on the VM's profile settings:
     ubuntu_aws:
       provider: aws
       image: ami-7e2da54e
-      size: Micro Instance
+      size: t1.micro
       deploy: False
 
 
@@ -176,7 +176,7 @@ to pass arguments to the deploy script:
     aws-amazon:
         provider: aws
         image: ami-1624987f
-        size: Micro Instance
+        size: t1.micro
         ssh_username: ec2-user
         script: bootstrap-salt
         script_args: -c /tmp/

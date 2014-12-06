@@ -13,43 +13,71 @@ all, it makes Salt much more dynamic.
 How it Works
 ============
 
-The best example is the `pkg` state. One of the major requests in Salt has long
+The best example is the ``pkg`` state. One of the major requests in Salt has long
 been adding the ability to install all packages defined at the same time. The
 mod_aggregate system makes this a reality. While executing Salt's state system,
-when a `pkg` state is reached the ``mod_agregate`` function in the state module
-is called. For `pkg` this function scans all of the other states that are slated
+when a ``pkg`` state is reached the ``mod_aggregate`` function in the state module
+is called. For ``pkg`` this function scans all of the other states that are slated
 to run, and picks up the references to ``name`` and ``pkgs``, then adds them to
-``pkgs`` in the first state. The result is calling yum/apt-get/pacman etc. just
-once to install of the packages as part of the first package install.
+``pkgs`` in the first state. The result is a single call to yum, apt-get,
+pacman, etc as part of the first package install.
 
 How to Use it
 =============
 
-
 .. note::
 
-    Since this option changes the basic behavior of the state runtime states
-    should be executed in 
+    Since this option changes the basic behavior of the state runtime, after
+    it is enabled states should be executed using `test=True` to ensure that
+    the desired behavior is preserved.
 
-Since this behavior can dramatically change the flow of configuration
-management inside of Salt it is disabled by default. But enabling it is easy.
+In config files
+---------------
 
-To enable for all states just add:
+The first way to enable aggregation is with a configuration option in either
+the master or minion configuration files. Salt will invoke ``mod_aggregate``
+the first time it encounters a state module that has aggregate support.
+
+If this option is set in the master config it will apply to all state runs on
+all minions, if set in the minion config it will only apply to said minion.
+
+Enable for all states:
 
 .. code-block:: yaml
 
     state_aggregate: True
 
-Similarly only specific states can be enabled:
+Enable for only specific state modules:
 
 .. code-block:: yaml
 
     state_aggregate:
       - pkg
 
-To the master or minion config and restart the master or minion, if this option
-is set in the master config it will apply to all state runs on all minions, if
-set in the minion config it will only apply to said minion.
+In states
+---------
+
+The second way to enable aggregation is with the state-level ``aggregate``
+keyword. In this configuration, Salt will invoke the ``mod_aggregate`` function
+the first time it encounters this keyword. Any additional occurances of the
+keyword will be ignored as the aggregation has already taken place.
+
+The following example will trigger ``mod_aggregate`` when the ``lamp_stack``
+state is processed resulting in a single call to the underlying package
+manager.
+
+.. code-block:: yaml
+
+    lamp_stack:
+      pkg.installed:
+        - pkgs:
+          - php
+          - mysql-client
+        - aggregate: True
+
+    memcached:
+      pkg.installed:
+        - name: memcached
 
 Adding mod_aggregate to a State Module
 ======================================

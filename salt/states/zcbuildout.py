@@ -35,13 +35,13 @@ Available Functions
           - onlyif: /bin/test_else_installed
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import sys
 
 # Import salt libs
-import salt.utils
-from salt._compat import string_types
+from salt.ext.six import string_types
 
 # Define the module's virtual name
 __virtualname__ = 'buildout'
@@ -120,7 +120,6 @@ def installed(name,
               config='buildout.cfg',
               quiet=False,
               parts=None,
-              runas=None,
               user=None,
               env=(),
               buildout_ver=None,
@@ -153,11 +152,6 @@ def installed(name,
 
     parts
         specific buildout parts to run
-
-    runas
-        user used to run buildout as
-
-        .. deprecated:: 2014.1.4
 
     user
         user used to run buildout as
@@ -205,33 +199,8 @@ def installed(name,
 
     loglevel
         loglevel for buildout commands
-
     '''
     ret = {}
-
-    salt.utils.warn_until(
-        'Lithium',
-        'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 2014.1.4.',
-        _dont_call_warnings=True
-    )
-    if runas:
-        # Warn users about the deprecation
-        ret.setdefault('warnings', []).append(
-            'The \'runas\' argument is being deprecated in favor of \'user\', '
-            'please update your state files.'
-        )
-    if user is not None and runas is not None:
-        # user wins over runas but let warn about the deprecation.
-        ret.setdefault('warnings', []).append(
-            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
-            '\'runas\' is being ignored in favor of \'user\'.'
-        )
-        runas = None
-    elif runas is not None:
-        # Support old runas usage
-        user = runas
-        runas = None
 
     try:
         test_release = int(test_release)
@@ -256,7 +225,8 @@ def installed(name,
         verbose=verbose,
         onlyif=onlyif,
         unless=unless,
-        use_vt=use_vt
+        use_vt=use_vt,
+        loglevel=loglevel
     )
     ret.update(_ret_status(func(**kwargs), name, quiet=quiet))
     return ret

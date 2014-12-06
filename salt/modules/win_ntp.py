@@ -4,6 +4,7 @@ Management of NTP servers on Windows
 
 .. versionadded:: 2014.1.0
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -62,7 +63,10 @@ def get_servers():
     cmd = 'w32tm /query /configuration'
     lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
-        if 'NtpServer' in line:
-            _, ntpsvrs = line.rstrip(' (Local)').split(':', 1)
-            return sorted(ntpsvrs.split())
+        try:
+            if 'NtpServer' in line:
+                _, ntpsvrs = line.rstrip(' (Local)').split(':', 1)
+                return sorted(ntpsvrs.split())
+        except ValueError as e:
+            return False
     return False

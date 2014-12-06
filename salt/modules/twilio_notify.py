@@ -16,6 +16,7 @@ Module for notifications via Twilio
             twilio.account_sid: AC32a3c83990934481addd5ce1659f04d2
             twilio.auth_token: mytoken
 '''
+from __future__ import absolute_import
 import logging
 
 HAS_LIBS = False

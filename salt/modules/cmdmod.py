@@ -5,11 +5,11 @@ A module for shelling out
 Keep in mind that this module is insecure, in that it can give whomever has
 access to the master root execution access to all salt minions.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import time
 import functools
-import json
 import glob
 import logging
 import os
@@ -23,9 +23,11 @@ from salt.utils import vt
 import salt.utils
 import salt.utils.timed_subprocess
 import salt.grains.extra
-from salt._compat import string_types
+from salt.ext.six import string_types
 from salt.exceptions import CommandExecutionError, TimedProcTimeoutError
 from salt.log import LOG_LEVELS
+import salt.ext.six as six
+from salt.ext.six.moves import range
 
 # Only available on POSIX systems, nonfatal on windows
 try:
@@ -100,7 +102,7 @@ def _render_cmd(cmd, cwd, template, saltenv='base'):
         if not data['result']:
             # Failed to render the template
             raise CommandExecutionError(
-                'Failed to cmd with error: {0}'.format(
+                'Failed to execute cmd with error: {0}'.format(
                     data['data']
                 )
             )
@@ -141,6 +143,16 @@ def _check_loglevel(level='info', quiet=False):
     return LOG_LEVELS[level]
 
 
+def _parse_env(env):
+    if not env:
+        env = {}
+    if isinstance(env, list):
+        env = salt.utils.repack_dictlist(env)
+    if not isinstance(env, dict):
+        env = {}
+    return env
+
+
 def _run(cmd,
          cwd=None,
          stdin=None,
@@ -172,7 +184,7 @@ def _run(cmd,
             'instead.'
         )
 
-    if not _is_valid_shell(shell):
+    if _is_valid_shell(shell) is False:
         log.warning(
             'Attempt to run a shell command with what may be an invalid shell! '
             'Check to ensure that the shell <{0}> is valid for this user.'
@@ -221,12 +233,9 @@ def _run(cmd,
 
     ret = {}
 
-    if not env:
-        env = {}
-    if isinstance(env, list):
-        env = salt.utils.repack_dictlist(env)
+    env = _parse_env(env)
 
-    for bad_env_key in (x for x, y in env.iteritems() if y is None):
+    for bad_env_key in (x for x, y in six.iteritems(env) if y is None):
         log.error('Environment variable {0!r} passed without a value. '
                   'Setting value to an empty string'.format(bad_env_key))
         env[bad_env_key] = ''
@@ -247,28 +256,33 @@ def _run(cmd,
         try:
             # Getting the environment for the runas user
             # There must be a better way to do this.
-            py_code = 'import os, json;' \
-                      'print(json.dumps(os.environ.__dict__))'
+            py_code = (
+                'import os, itertools; '
+                'print \"\\0\".join(itertools.chain(*os.environ.items()))'
+            )
             if __grains__['os'] in ['MacOS', 'Darwin']:
-                env_cmd = ('sudo -i -u {0} -- "{1}"'
-                           ).format(runas, sys.executable)
+                env_cmd = ('sudo', '-i', '-u', runas, '--',
+                           sys.executable)
             elif __grains__['os'] in ['FreeBSD']:
-                env_cmd = ('su - {1} -c "{0} -c \'{2}\'"'
-                           ).format(shell, runas, sys.executable)
+                env_cmd = ('su', '-', runas, '-c',
+                           "{0} -c {1}".format(shell, sys.executable))
             else:
-                env_cmd = ('su -s {0} - {1} -c "{2}"'
-                           ).format(shell, runas, sys.executable)
-            env_json = subprocess.Popen(
+                env_cmd = ('su', '-s', shell, '-', runas, '-c', sys.executable)
+            env_encoded = subprocess.Popen(
                 env_cmd,
-                shell=python_shell,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE
             ).communicate(py_code)[0]
-            env_json = (filter(lambda x: x.startswith('{') and x.endswith('}'),
-                               env_json.splitlines()) or ['{}']).pop()
-            env_runas = json.loads(env_json).get('data', {})
+            import itertools
+            env_runas = dict(itertools.izip(*[iter(env_encoded.split(b'\0'))]*2))
             env_runas.update(env)
             env = env_runas
+            # Encode unicode kwargs to filesystem encoding to avoid a
+            # UnicodeEncodeError when the subprocess is invoked.
+            fse = sys.getfilesystemencoding()
+            for key, val in six.iteritems(env):
+                if isinstance(val, six.text_type):
+                    env[key] = val.encode(fse)
         except ValueError:
             raise CommandExecutionError(
                 'Environment could not be retrieved for User {0!r}'.format(
@@ -311,11 +325,15 @@ def _run(cmd,
               'stderr': stderr,
               'with_communicate': with_communicate}
 
-    if umask:
+    if umask is not None:
+        _umask = str(umask).lstrip('0')
+
+        if _umask == '':
+            msg = 'Zero umask is not allowed.'
+            raise CommandExecutionError(msg)
+
         try:
-            _umask = int(str(umask).lstrip('0'), 8)
-            if not _umask:
-                raise ValueError('Zero umask not allowed.')
+            _umask = int(_umask, 8)
         except ValueError:
             msg = 'Invalid umask: \'{0}\''.format(umask)
             raise CommandExecutionError(msg)
@@ -390,18 +408,15 @@ def _run(cmd,
                                log_stdout=True,
                                log_stderr=True,
                                cwd=cwd,
-                               user=runas,
-                               umask=umask,
-                               env=env,
+                               preexec_fn=kwargs.get('preexec_fn', None),
+                               env=run_env,
                                log_stdin_level=output_loglevel,
                                log_stdout_level=output_loglevel,
                                log_stderr_level=output_loglevel,
                                stream_stdout=True,
                                stream_stderr=True)
-            # consume output
-            finished = False
             ret['pid'] = proc.pid
-            while not finished:
+            while proc.has_unread_data:
                 try:
                     try:
                         time.sleep(0.5)
@@ -417,8 +432,6 @@ def _run(cmd,
                             stderr += cstderr
                         else:
                             cstderr = ''
-                        if not cstdout and not cstderr and not proc.isalive():
-                            finished = True
                         if timeout and (time.time() > will_timeout):
                             ret['stderr'] = (
                                 'SALT: Timeout after {0}s\n{1}').format(
@@ -432,13 +445,15 @@ def _run(cmd,
                 except vt.TerminalException as exc:
                     log.error(
                         'VT: {0}'.format(exc),
-                        exc_info=log.isEnabledFor(logging.DEBUG))
+                        exc_info_on_loglevel=logging.DEBUG)
                     ret = {'retcode': 1, 'pid': '2'}
                     break
-                # only set stdout on sucess as we already mangled in other
+                # only set stdout on success as we already mangled in other
                 # cases
                 ret['stdout'] = stdout
-                if finished:
+                if not proc.isalive():
+                    # Process terminated, i.e., not canceled by the user or by
+                    # the timeout
                     ret['stderr'] = stderr
                     ret['retcode'] = proc.exitstatus
                 ret['pid'] = proc.pid
@@ -1000,7 +1015,7 @@ def script(source,
            shell=DEFAULT_SHELL,
            python_shell=True,
            env=None,
-           template='jinja',
+           template=None,
            umask=None,
            output_loglevel='debug',
            quiet=False,
@@ -1221,11 +1236,39 @@ def exec_code(lang, code, cwd=None):
     codefile = salt.utils.mkstemp()
     with salt.utils.fopen(codefile, 'w+t') as fp_:
         fp_.write(code)
-
-    cmd = '{0} {1}'.format(lang, codefile)
-    ret = run(cmd, cwd=cwd)
+    cmd = [lang, codefile]
+    ret = run(cmd, cwd=cwd, python_shell=False)
     os.remove(codefile)
     return ret
+
+
+def tty(device, echo=None):
+    '''
+    Echo a string to a specific tty
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cmd.tty tty0 'This is a test'
+        salt '*' cmd.tty pts3 'This is a test'
+    '''
+    if device.startswith('tty'):
+        teletype = '/dev/{0}'.format(device)
+    elif device.startswith('pts'):
+        teletype = '/dev/{0}'.format(device.replace('pts', 'pts/'))
+    else:
+        return {'Error': 'The specified device is not a valid TTY'}
+    try:
+        with salt.utils.fopen(teletype, 'wb') as tty_device:
+            tty_device.write(echo)
+        return {
+            'Success': 'Message was successfully echoed to {0}'.format(teletype)
+        }
+    except IOError:
+        return {
+            'Error': 'Echoing to {0} returned error'.format(teletype)
+        }
 
 
 def run_chroot(root, cmd):

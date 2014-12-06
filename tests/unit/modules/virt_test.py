@@ -183,7 +183,7 @@ class VirtTestCase(TestCase):
     def test_default_disk_profile_hypervisor_esxi(self):
         mock = MagicMock(return_value={})
         with patch.dict(virt.__salt__, {'config.get': mock}):
-            ret = virt._disk_profile('nonexistant', 'esxi')
+            ret = virt._disk_profile('nonexistent', 'esxi')
             self.assertTrue(len(ret) == 1)
             self.assertIn('system', ret[0])
             system = ret[0]['system']
@@ -194,7 +194,7 @@ class VirtTestCase(TestCase):
     def test_default_disk_profile_hypervisor_kvm(self):
         mock = MagicMock(return_value={})
         with patch.dict(virt.__salt__, {'config.get': mock}):
-            ret = virt._disk_profile('nonexistant', 'kvm')
+            ret = virt._disk_profile('nonexistent', 'kvm')
             self.assertTrue(len(ret) == 1)
             self.assertIn('system', ret[0])
             system = ret[0]['system']
@@ -205,7 +205,7 @@ class VirtTestCase(TestCase):
     def test_default_nic_profile_hypervisor_esxi(self):
         mock = MagicMock(return_value={})
         with patch.dict(virt.__salt__, {'config.get': mock}):
-            ret = virt._nic_profile('nonexistant', 'esxi')
+            ret = virt._nic_profile('nonexistent', 'esxi')
             self.assertTrue(len(ret) == 1)
             eth0 = ret[0]
             self.assertEqual(eth0['name'], 'eth0')
@@ -216,7 +216,7 @@ class VirtTestCase(TestCase):
     def test_default_nic_profile_hypervisor_kvm(self):
         mock = MagicMock(return_value={})
         with patch.dict(virt.__salt__, {'config.get': mock}):
-            ret = virt._nic_profile('nonexistant', 'kvm')
+            ret = virt._nic_profile('nonexistent', 'kvm')
             self.assertTrue(len(ret) == 1)
             eth0 = ret[0]
             self.assertEqual(eth0['name'], 'eth0')

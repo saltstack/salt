@@ -2,7 +2,7 @@
 '''
 Edit ini files
 
-:maintainer: <ageeleshwar.kandavelu@csscorp.com>
+:maintainer: <akilesh1597@gmail.com>
 :maturity: new
 :depends: re
 :platform: all
@@ -12,7 +12,12 @@ Use section as DEFAULT_IMPLICIT if your ini file does not have any section
 '''
 
 # Import Python libs
+from __future__ import print_function
+from __future__ import absolute_import
 import re
+
+# Import Salt libs
+import salt.utils
 
 __virtualname__ = 'ini'
 
@@ -277,14 +282,12 @@ class _Ini(object):
         self.sections = []
         current_section = _Section('DEFAULT_IMPLICIT')
         self.sections.append(current_section)
-        with open(self.file_name, 'r') as inifile:
+        with salt.utils.fopen(self.file_name, 'r') as inifile:
             previous_line = None
             for line in inifile.readlines():
-
                 # Make sure the empty lines between options are preserved
                 if _Ini.isempty(previous_line) and not _Ini.isnewsection(line):
                     current_section.append('\n')
-
                 if _Ini.iscomment(line):
                     current_section.append(_Ini.decrypt_comment(line))
                 elif _Ini.isnewsection(line):
@@ -293,14 +296,13 @@ class _Ini(object):
                 elif _Ini.isoption(line):
                     current_section.append(_Ini.decrypt_option(line))
                 previous_line = line
-        return self
 
     def flush(self):
-        with open(self.file_name, 'w') as outfile:
+        with salt.utils.fopen(self.file_name, 'w') as outfile:
             outfile.write(self.current_contents())
 
     def dump(self):
-        print self.current_contents()
+        print(self.current_contents())
 
     def current_contents(self):
         file_contents = ''
@@ -386,6 +388,10 @@ class _Ini(object):
     @staticmethod
     def get_ini_file(file_name):
         try:
-            return _Ini(file_name).refresh()
+            inifile = _Ini(file_name)
+            inifile.refresh()
+            return inifile
+        except IOError:
+            return inifile
         except Exception:
             return

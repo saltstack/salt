@@ -18,6 +18,7 @@ ensure_in_syspath('../../')
 from salt.returners import smtp_return as smtp
 
 smtp.__salt__ = {}
+smtp.__opts__ = {}
 
 try:
     import gnupg  # pylint: disable=unused-import

@@ -5,12 +5,12 @@
 Pythonic object interface to creating state data, see the pyobjects renderer
 for more documentation.
 '''
+from __future__ import absolute_import
 import inspect
 import logging
 
-from collections import namedtuple
-
 from salt.utils.odict import OrderedDict
+import salt.ext.six as six
 
 REQUISITES = ('require', 'watch', 'use', 'require_in', 'watch_in', 'use_in')
 
@@ -57,7 +57,7 @@ class Registry(object):
     def salt_data(cls):
         states = OrderedDict([
             (id_, states_)
-            for id_, states_ in cls.states.iteritems()
+            for id_, states_ in six.iteritems(cls.states)
         ])
 
         if cls.includes:
@@ -66,7 +66,7 @@ class Registry(object):
         if cls.extends:
             states['extend'] = OrderedDict([
                 (id_, states_)
-                for id_, states_ in cls.extends.iteritems()
+                for id_, states_ in six.iteritems(cls.extends)
             ])
 
         cls.empty()
@@ -198,7 +198,7 @@ class State(object):
     This represents a single item in the state tree
 
     The id_ is the id of the state, the func is the full name of the salt
-    state (ie. file.managed). All the keyword args you pass in become the
+    state (i.e. file.managed). All the keyword args you pass in become the
     properties of your state.
     '''
 
@@ -240,7 +240,7 @@ class State(object):
         # have consistent ordering for tests
         return [
             {k: kwargs[k]}
-            for k in sorted(kwargs.iterkeys())
+            for k in sorted(six.iterkeys(kwargs))
         ]
 
     @property
@@ -272,27 +272,16 @@ class SaltObject(object):
         Salt.cmd.run(bar)
     '''
     def __init__(self, salt):
-        _mods = {}
-        for full_func in salt:
-            mod, func = full_func.split('.')
-
-            if mod not in _mods:
-                _mods[mod] = {}
-            _mods[mod][func] = salt[full_func]
-
-        # now transform using namedtuples
-        self.mods = {}
-        for mod in _mods.keys():
-            mod_name = '{0}Module'.format(str(mod).capitalize())
-            mod_object = namedtuple(mod_name, _mods[mod].keys())
-
-            self.mods[mod] = mod_object(**_mods[mod])
+        self._salt = salt
 
     def __getattr__(self, mod):
-        if mod not in self.mods:
-            raise AttributeError
-
-        return self.mods[mod]
+        class __wrapper__(object):
+            def __getattr__(wself, func):  # pylint: disable=E0213
+                try:
+                    return self._salt['{0}.{1}'.format(mod, func)]
+                except KeyError:
+                    raise AttributeError
+        return __wrapper__()
 
 
 class MapMeta(type):
@@ -360,8 +349,7 @@ def need_salt(*a, **k):
     return {}
 
 
-class Map(object):
-    __metaclass__ = MapMeta
+class Map(six.with_metaclass(MapMeta, object)):  # pylint: disable=W0232
     __salt__ = {
         'grains.filter_by': need_salt,
         'pillar.get': need_salt

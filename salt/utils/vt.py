@@ -19,6 +19,7 @@
     .. __: https://github.com/pexpect/pexpect
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -45,9 +46,8 @@ else:
     import resource
 
 # Import salt libs
-from salt._compat import string_types
+from salt.ext.six import string_types
 from salt.log.setup import LOG_LEVELS
-import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -93,10 +93,7 @@ class Terminal(object):
                  shell=False,
                  cwd=None,
                  env=None,
-
-                 # user setup
-                 user=None,
-                 umask=None,
+                 preexec_fn=None,
 
                  # Terminal Size
                  rows=None,
@@ -129,6 +126,7 @@ class Terminal(object):
         self.shell = shell
         self.cwd = cwd
         self.env = env
+        self.preexec_fn = preexec_fn
 
         # ----- Set the desired terminal size ------------------------------->
         if rows is None and cols is None:
@@ -145,15 +143,14 @@ class Terminal(object):
         self.pid = None
         self.stdin = None
         self.stdout = None
-        self.user = user
-        self.umask = umask
         self.stderr = None
 
         self.child_fd = None
         self.child_fde = None
 
         self.closed = True
-        self.flag_eof = False
+        self.flag_eof_stdout = False
+        self.flag_eof_stderr = False
         self.terminated = True
         self.exitstatus = None
         self.signalstatus = None
@@ -210,7 +207,7 @@ class Terminal(object):
             # exception type
             log.warning(
                 'Failed to spawn the VT: {0}'.format(err),
-                 exc_info=log.isEnabledFor(logging.DEBUG)
+                 exc_info_on_loglevel=logging.DEBUG
             )
             raise TerminalException(
                 'Failed to spawn the VT. Error: {0}'.format(err)
@@ -319,6 +316,10 @@ class Terminal(object):
                 if not self.terminate(kill):
                     raise TerminalException('Failed to terminate child process.')
             self.closed = True
+
+    @property
+    def has_unread_data(self):
+        return self.flag_eof_stderr is False or self.flag_eof_stdout is False
 
     # <---- Common Public API ------------------------------------------------
 
@@ -431,7 +432,7 @@ class Terminal(object):
                             'Failed to set the VT terminal size: {0}'.format(
                                 err
                             ),
-                            exc_info=log.isEnabledFor(logging.DEBUG)
+                            exc_info_on_loglevel=logging.DEBUG
                         )
 
                 # Do not allow child to inherit open file descriptors from
@@ -445,9 +446,8 @@ class Terminal(object):
                 if self.cwd is not None:
                     os.chdir(self.cwd)
 
-                if self.user or self.umask:
-                    salt.utils.chugid_and_umask(
-                        self.user, self.umask)
+                if self.preexec_fn:
+                    self.preexec_fn()
 
                 if self.env is None:
                     os.execvp(self.executable, self.args)
@@ -575,7 +575,7 @@ class Terminal(object):
                     return None, None
                 rlist, _, _ = select.select(rfds, [], [], 0)
                 if not rlist:
-                    self.flag_eof = True
+                    self.flag_eof_stdout = self.flag_eof_stderr = True
                     log.debug('End of file(EOL). Brain-dead platform.')
                     return None, None
             elif self.__irix_hack:
@@ -586,7 +586,7 @@ class Terminal(object):
                 # That sucks.
                 rlist, _, _ = select.select(rfds, [], [], 2)
                 if not rlist:
-                    self.flag_eof = True
+                    self.flag_eof_stdout = self.flag_eof_stderr = True
                     log.debug('End of file(EOL). Slow platform.')
                     return None, None
 
@@ -616,7 +616,7 @@ class Terminal(object):
             # ----- Nothing to Process!? ------------------------------------>
             if not rlist:
                 if not self.isalive():
-                    self.flag_eof = True
+                    self.flag_eof_stdout = self.flag_eof_stderr = True
                     log.debug('End of file(EOL). Very slow platform.')
                     return None, None
             # <---- Nothing to Process!? -------------------------------------
@@ -629,7 +629,7 @@ class Terminal(object):
                     )
 
                     if not stderr:
-                        self.flag_eof = True
+                        self.flag_eof_stderr = True
                         stderr = None
                     else:
                         if self.stream_stderr:
@@ -645,9 +645,10 @@ class Terminal(object):
                 except OSError:
                     os.close(self.child_fde)
                     self.child_fde = None
+                    self.flag_eof_stderr = True
                     stderr = None
                 finally:
-                    if self.isalive() and self.child_fde is not None:
+                    if self.child_fde is not None:
                         fcntl.fcntl(self.child_fde, fcntl.F_SETFL, fde_flags)
             # <---- Process STDERR -------------------------------------------
 
@@ -659,7 +660,7 @@ class Terminal(object):
                     )
 
                     if not stdout:
-                        self.flag_eof = True
+                        self.flag_eof_stdout = True
                         stdout = None
                     else:
                         if self.stream_stdout:
@@ -675,9 +676,10 @@ class Terminal(object):
                 except OSError:
                     os.close(self.child_fd)
                     self.child_fd = None
+                    self.flag_eof_stdout = True
                     stdout = None
                 finally:
-                    if self.isalive() and self.child_fd is not None:
+                    if self.child_fd is not None:
                         fcntl.fcntl(self.child_fd, fcntl.F_SETFL, fd_flags)
             # <---- Process STDOUT -------------------------------------------
             return stdout, stderr
@@ -760,10 +762,10 @@ class Terminal(object):
             if self.terminated:
                 return False
 
-            if self.flag_eof:
+            if self.has_unread_data is False:
                 # This is for Linux, which requires the blocking form
                 # of waitpid to get status of a defunct process.
-                # This is super-lame. The flag_eof would have been set
+                # This is super-lame. The flag_eof_* would have been set
                 # in recv(), so this should be safe.
                 waitpid_options = 0
             else:
@@ -857,7 +859,7 @@ class Terminal(object):
                 if not self.isalive():
                     return True
                 if force:
-                    self.send(signal.SIGKILL)
+                    self.send_signal(signal.SIGKILL)
                     time.sleep(0.1)
                     if not self.isalive():
                         return True

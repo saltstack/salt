@@ -20,10 +20,12 @@ Module to provide Postgres compatibility to salt.
 :note: This module uses MD5 hashing which may not be compliant with certain
     security audits.
 '''
+
 # This pylint error is popping up where there are no colons?
 # pylint: disable=E8203
 
 # Import python libs
+from __future__ import absolute_import
 import datetime
 import distutils.version  # pylint: disable=E0611
 import logging
@@ -31,6 +33,7 @@ import StringIO
 import hashlib
 import os
 import tempfile
+from salt.ext.six.moves import zip
 try:
     import pipes
     import csv
@@ -40,7 +43,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
-from salt._compat import string_types
+from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 
@@ -83,6 +86,8 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None,
         if not host or host.startswith('/'):
             if 'FreeBSD' in __grains__['os_family']:
                 runas = 'pgsql'
+            if 'OpenBSD' in __grains__['os_family']:
+                runas = '_postgresql'
             else:
                 runas = 'postgres'
 
@@ -376,7 +381,7 @@ def db_create(name,
         'TABLESPACE': tablespace,
     }
     with_chunks = []
-    for key, value in with_args.iteritems():
+    for key, value in with_args.items():
         if value is not None:
             with_chunks += [key, '=', value]
     # Build a final query
@@ -569,7 +574,7 @@ def role_get(name, user=None, host=None, port=None, maintenance_db=None,
         return all_users.get(name, None)
     except AttributeError:
         log.error('Could not retrieve Postgres role. Is Postgres running?')
-        return False
+        return None
 
 
 def user_exists(name,
@@ -633,6 +638,7 @@ def _role_cmd_args(name,
                    typ_='role',
                    encrypted=None,
                    login=None,
+                   connlimit=None,
                    inherit=None,
                    createdb=None,
                    createuser=None,
@@ -685,6 +691,10 @@ def _role_cmd_args(name,
          'skip': skip_superuser},
         {'flag': 'REPLICATION', 'test': replication},
         {'flag': 'LOGIN', 'test': login},
+        {'flag': 'CONNECTION LIMIT',
+         'test': bool(connlimit),
+         'addtxt': str(connlimit),
+         'skip': connlimit is None},
         {'flag': 'ENCRYPTED',
          'test': (encrypted is not None and bool(rolepassword)),
          'skip': skip_passwd or isinstance(rolepassword, bool),
@@ -700,7 +710,7 @@ def _role_cmd_args(name,
         sub_cmd = sub_cmd.replace(' WITH', '')
     if groups:
         for group in groups.split(','):
-            sub_cmd = '{0}; GRANT {1} TO {2}'.format(sub_cmd, group, name)
+            sub_cmd = '{0}; GRANT "{1}" TO "{2}"'.format(sub_cmd, group, name)
     return sub_cmd
 
 
@@ -716,6 +726,7 @@ def _role_create(name,
                  encrypted=None,
                  superuser=None,
                  login=None,
+                 connlimit=None,
                  inherit=None,
                  replication=None,
                  rolepassword=None,
@@ -739,6 +750,7 @@ def _role_create(name,
         typ_=typ_,
         encrypted=encrypted,
         login=login,
+        connlimit=connlimit,
         inherit=inherit,
         createdb=createdb,
         createroles=createroles,
@@ -767,6 +779,7 @@ def user_create(username,
                 createroles=None,
                 inherit=None,
                 login=None,
+                connlimit=None,
                 encrypted=None,
                 superuser=None,
                 replication=None,
@@ -796,6 +809,7 @@ def user_create(username,
                         createroles=createroles,
                         inherit=inherit,
                         login=login,
+                        connlimit=connlimit,
                         encrypted=encrypted,
                         superuser=superuser,
                         replication=replication,
@@ -816,6 +830,7 @@ def _role_update(name,
                  createroles=None,
                  inherit=None,
                  login=None,
+                 connlimit=None,
                  encrypted=None,
                  superuser=None,
                  replication=None,
@@ -839,11 +854,12 @@ def _role_update(name,
         log.info('{0} {1!r} could not be found'.format(typ_.capitalize(), name))
         return False
 
-    sub_cmd = 'ALTER ROLE {0} WITH'.format(name)
+    sub_cmd = 'ALTER ROLE "{0}" WITH'.format(name)
     sub_cmd = '{0} {1}'.format(sub_cmd, _role_cmd_args(
         name,
         encrypted=encrypted,
         login=login,
+        connlimit=connlimit,
         inherit=inherit,
         createdb=createdb,
         createuser=createuser,
@@ -875,18 +891,19 @@ def user_update(username,
                 superuser=None,
                 inherit=None,
                 login=None,
+                connlimit=None,
                 replication=None,
                 rolepassword=None,
                 groups=None,
                 runas=None):
     '''
-    Creates a Postgres user.
+    Updates a Postgres user.
 
     CLI Examples:
 
     .. code-block:: bash
 
-        salt '*' postgres.user_create 'username' user='user' \\
+        salt '*' postgres.user_update 'username' user='user' \\
                 host='hostname' port='port' password='password' \\
                 rolepassword='rolepassword'
     '''
@@ -899,6 +916,7 @@ def user_update(username,
                         typ_='user',
                         inherit=inherit,
                         login=login,
+                        connlimit=connlimit,
                         createdb=createdb,
                         createuser=createuser,
                         createroles=createroles,
@@ -1057,13 +1075,13 @@ def is_available_extension(name,
                            password=None,
                            runas=None):
     '''
-    Test if a specific extension is installed
+    Test if a specific extension is available
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' postgres.is_installed_extension
+        salt '*' postgres.is_available_extension
 
     '''
     exts = available_extensions(user=user,
@@ -1126,7 +1144,7 @@ def create_metadata(name,
                     password=None,
                     runas=None):
     '''
-    Get lifecycle informations about an extension
+    Get lifecycle information about an extension
 
     CLI Example:
 
@@ -1406,7 +1424,7 @@ def group_update(groupname,
                  groups=None,
                  runas=None):
     '''
-    Updated a postgres group
+    Updates a postgres group
 
     CLI Examples:
 
@@ -1523,7 +1541,7 @@ def owner_to(dbname,
 
     sqlfile.write('commit;\n')
     sqlfile.flush()
-    os.chmod(sqlfile.name, 0644)  # ensure psql can read the file
+    os.chmod(sqlfile.name, 0o644)  # ensure psql can read the file
 
     # run the generated sqlfile in the db
     cmdret = _psql_prepare_and_run(['-f', sqlfile.name],
@@ -1534,3 +1552,237 @@ def owner_to(dbname,
                                    password=password,
                                    maintenance_db=dbname)
     return cmdret
+
+# Schema related actions
+
+
+def schema_create(dbname, name, owner=None,
+                  user=None,
+                  db_user=None, db_password=None,
+                  db_host=None, db_port=None):
+    '''
+    Creates a Postgres schema.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.schema_create dbname name owner='owner' \\
+                user='user' \\
+                db_user='user' db_password='password'
+                db_host='hostname' db_port='port'
+    '''
+
+    # check if schema exists
+    if schema_exists(dbname, name,
+                     db_user=db_user, db_password=db_password,
+                     db_host=db_host, db_port=db_port):
+        log.info('{0!r} already exists in {1!r}'.format(name, dbname))
+        return False
+
+    sub_cmd = 'CREATE SCHEMA {0}'.format(name)
+    if owner is not None:
+        sub_cmd = '{0} AUTHORIZATION {1}'.format(sub_cmd, owner)
+
+    ret = _psql_prepare_and_run(['-c', sub_cmd],
+                                user=db_user, password=db_password,
+                                port=db_port, host=db_host,
+                                maintenance_db=dbname, runas=user)
+
+    return ret['retcode'] == 0
+
+
+def schema_remove(dbname, name,
+                  user=None,
+                  db_user=None, db_password=None,
+                  db_host=None, db_port=None):
+    '''
+    Removes a schema from the Postgres server.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.schema_remove dbname schemaname
+
+    dbname
+        Database name we work on
+
+    schemaname
+        The schema's name we'll remove
+
+    user
+        System user all operations should be performed on behalf of
+
+    db_user
+        database username if different from config or default
+
+    db_password
+        user password if any password for a specified user
+
+    db_host
+        Database host if different from config or default
+
+    db_port
+        Database port if different from config or default
+
+    '''
+
+    # check if schema exists
+    if not schema_exists(dbname, name,
+                         db_user=db_user, db_password=db_password,
+                         db_host=db_host, db_port=db_port):
+        log.info('Schema {0!r} does not exist in {1!r}'.format(name, dbname))
+        return False
+
+    # schema exists, proceed
+    sub_cmd = 'DROP SCHEMA {0}'.format(name)
+    _psql_prepare_and_run(
+        ['-c', sub_cmd],
+        runas=user,
+        maintenance_db=dbname,
+        host=db_host, user=db_user, port=db_port, password=db_password)
+
+    if not schema_exists(dbname, name,
+                         db_user=db_user, db_password=db_password,
+                         db_host=db_host, db_port=db_port):
+        return True
+    else:
+        log.info('Failed to delete schema {0!r}.'.format(name))
+        return False
+
+
+def schema_exists(dbname, name,
+                  db_user=None, db_password=None,
+                  db_host=None, db_port=None):
+    '''
+    Checks if a schema exists on the Postgres server.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.schema_exists dbname schemaname
+
+    dbname
+        Database name we query on
+
+    name
+       Schema name we look for
+
+    db_user
+        database username if different from config or default
+
+    db_password
+        user password if any password for a specified user
+
+    db_host
+        Database host if different from config or default
+
+    db_port
+        Database port if different from config or default
+
+    '''
+    return bool(
+        schema_get(dbname, name,
+                   db_user=db_user,
+                   db_host=db_host,
+                   db_port=db_port,
+                   db_password=db_password))
+
+
+def schema_get(dbname, name,
+               db_user=None, db_password=None,
+               db_host=None, db_port=None):
+    '''
+    Return a dict with information about schemas in a database.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.schema_get dbname name
+
+    dbname
+        Database name we query on
+
+    name
+       Schema name we look for
+
+    db_user
+        database username if different from config or default
+
+    db_password
+        user password if any password for a specified user
+
+    db_host
+        Database host if different from config or default
+
+    db_port
+        Database port if different from config or default
+    '''
+    all_schemas = schema_list(dbname,
+                              db_user=db_user,
+                              db_host=db_host,
+                              db_port=db_port,
+                              db_password=db_password)
+    try:
+        return all_schemas.get(name, None)
+    except AttributeError:
+        log.error('Could not retrieve Postgres schema. Is Postgres running?')
+        return False
+
+
+def schema_list(dbname,
+                db_user=None, db_password=None,
+                db_host=None, db_port=None):
+    '''
+    Return a dict with information about schemas in a Postgres database.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.schema_list dbname
+
+    dbname
+        Database name we query on
+
+    db_user
+        database username if different from config or default
+
+    db_password
+        user password if any password for a specified user
+
+    db_host
+        Database host if different from config or default
+
+    db_port
+        Database port if different from config or default
+    '''
+
+    ret = {}
+
+    query = (''.join([
+        'SELECT '
+        'pg_namespace.nspname as "name",'
+        'pg_namespace.nspacl as "acl", '
+        'pg_roles.rolname as "owner" '
+        'FROM pg_namespace '
+        'LEFT JOIN pg_roles ON pg_roles.oid = pg_namespace.nspowner '
+    ]))
+
+    rows = psql_query(query,
+                      host=db_host,
+                      user=db_user,
+                      port=db_port,
+                      maintenance_db=dbname,
+                      password=db_password)
+
+    for row in rows:
+        retrow = {}
+        for key in ('owner', 'acl'):
+            retrow[key] = row[key]
+        ret[row['name']] = retrow
+
+    return ret

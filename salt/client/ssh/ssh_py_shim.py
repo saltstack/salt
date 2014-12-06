@@ -5,10 +5,11 @@ then invoking thin.
 
 This is not intended to be instantiated as a module, rather it is a
 helper script used by salt.client.ssh.Single.  It is here, in a
-seperate file, for convenience of development.
+separate file, for convenience of development.
 '''
 
-import optparse
+from __future__ import absolute_import
+
 import hashlib
 import tarfile
 import shutil
@@ -17,72 +18,38 @@ import os
 import stat
 
 THIN_ARCHIVE = 'salt-thin.tgz'
+EXT_ARCHIVE = 'salt-ext_mods.tgz'
 
 # FIXME - it would be ideal if these could be obtained directly from
 #         salt.exitcodes rather than duplicated.
 EX_THIN_DEPLOY = 11
 EX_THIN_CHECKSUM = 12
+EX_MOD_DEPLOY = 13
 
+
+class OBJ(object):
+    pass
 
 OPTIONS = None
 ARGS = None
-
-
-def parse_argv(argv):
-    global OPTIONS
-    global ARGS
-
-    oparser = optparse.OptionParser(usage="%prog -- [SHIM_OPTIONS] -- [SALT_OPTIONS]")
-    oparser.add_option(
-        "-c", "--config",
-        default='',
-        help="YAML configuration for salt thin",
-    )
-    oparser.add_option(
-        "-d", "--delimeter",
-        help="Delimeter string (viz. magic string) to indicate beginning of salt output",
-    )
-    oparser.add_option(
-        "-s", "--saltdir",
-        help="Directory where salt thin is or will be installed.",
-    )
-    oparser.add_option(
-        "--sum", "--checksum",
-        dest="checksum",
-        help="Salt thin checksum",
-    )
-    oparser.add_option(
-        "--hashfunc",
-        default='sha1',
-        help="Hash function for computing checksum",
-    )
-    oparser.add_option(
-        "-v", "--version",
-        help="Salt thin version to be deployed/verified",
-    )
-
-    if argv and '--' not in argv:
-        oparser.error('A "--" argument must be the initial argument indicating the start of options to this script')
-
-    (OPTIONS, ARGS) = oparser.parse_args(argv[argv.index('--')+1:])
-
-    for option in (
-            'delimeter',
-            'saltdir',
-            'checksum',
-            'version',
-    ):
-        if getattr(OPTIONS, option, None):
-            continue
-        oparser.error('Option "--{0}" is required.'.format(option))
+#%%OPTS
 
 
 def need_deployment():
     if os.path.exists(OPTIONS.saltdir):
         shutil.rmtree(OPTIONS.saltdir)
-    old_umask = os.umask(0077)
+    old_umask = os.umask(0o077)
     os.makedirs(OPTIONS.saltdir)
     os.umask(old_umask)
+    # Verify perms on saltdir
+    euid = os.geteuid()
+    dstat = os.stat(OPTIONS.saltdir)
+    if dstat.st_uid != euid:
+        # Attack detected, try again
+        need_deployment()
+    if dstat.st_mode != 16832:
+        # Attack detected
+        need_deployment()
     # If SUDOing then also give the super user group write permissions
     sudo_gid = os.environ.get('SUDO_GID')
     if sudo_gid:
@@ -91,12 +58,12 @@ def need_deployment():
         os.chmod(OPTIONS.saltdir, st.st_mode | stat.S_IWGRP | stat.S_IRGRP | stat.S_IXGRP)
 
     # Delimeter emitted on stdout *only* to indicate shim message to master.
-    sys.stdout.write("{0}\ndeploy\n".format(OPTIONS.delimeter))
+    sys.stdout.write("{0}\ndeploy\n".format(OPTIONS.delimiter))
     sys.exit(EX_THIN_DEPLOY)
 
 
 # Adapted from salt.utils.get_hash()
-def get_hash(path, form='md5', chunk_size=4096):
+def get_hash(path, form='sha1', chunk_size=4096):
     try:
         hash_type = getattr(hashlib, form)
     except AttributeError:
@@ -116,12 +83,35 @@ def unpack_thin(thin_path):
     os.unlink(thin_path)
 
 
-def main(argv):
-    parse_argv(argv)
+def need_ext():
+    sys.stdout.write("{0}\next_mods\n".format(OPTIONS.delimiter))
+    sys.exit(EX_MOD_DEPLOY)
 
+
+def unpack_ext(ext_path):
+    modcache = os.path.join(
+            OPTIONS.saltdir,
+            'running_data',
+            'var',
+            'cache',
+            'salt',
+            'minion',
+            'extmods')
+    tfile = tarfile.TarFile.gzopen(ext_path)
+    tfile.extractall(path=modcache)
+    tfile.close()
+    os.unlink(ext_path)
+    ver_path = os.path.join(modcache, 'ext_version')
+    ver_dst = os.path.join(OPTIONS.saltdir, 'ext_version')
+    shutil.move(ver_path, ver_dst)
+
+
+def main(argv):  # pylint: disable=W0613
     thin_path = os.path.join(OPTIONS.saltdir, THIN_ARCHIVE)
-    if os.path.exists(thin_path):
+    if os.path.isfile(thin_path):
         if OPTIONS.checksum != get_hash(thin_path, OPTIONS.hashfunc):
+            sys.stderr.write('{0}\n'.format(OPTIONS.checksum))
+            sys.stderr.write('{0}\n'.format(get_hash(thin_path, OPTIONS.hashfunc)))
             os.unlink(thin_path)
             sys.stderr.write('WARNING: checksum mismatch for "{0}"\n'.format(thin_path))
             sys.exit(EX_THIN_CHECKSUM)
@@ -149,11 +139,22 @@ def main(argv):
     salt_call_path = os.path.join(OPTIONS.saltdir, 'salt-call')
     if not os.path.isfile(salt_call_path):
         sys.stderr.write('ERROR: thin is missing "{0}"\n'.format(salt_call_path))
-        sys.exit(os.EX_SOFTWARE)
+        need_deployment()
 
     with open(os.path.join(OPTIONS.saltdir, 'minion'), 'w') as config:
         config.write(OPTIONS.config + '\n')
-
+    if OPTIONS.ext_mods:
+        ext_path = os.path.join(OPTIONS.saltdir, EXT_ARCHIVE)
+        if os.path.exists(ext_path):
+            unpack_ext(ext_path)
+        else:
+            version_path = os.path.join(OPTIONS.saltdir, 'ext_version')
+            if not os.path.exists(version_path) or not os.path.isfile(version_path):
+                need_ext()
+            with open(version_path, 'r') as vpo:
+                cur_version = vpo.readline().strip()
+            if cur_version != OPTIONS.ext_mods:
+                need_ext()
     #Fix parameter passing issue
     if len(ARGS) == 1:
         argv_prepared = ARGS[0].split()
@@ -164,6 +165,7 @@ def main(argv):
         sys.executable,
         salt_call_path,
         '--local',
+        '--metadata',
         '--out', 'json',
         '-l', 'quiet',
         '-c', OPTIONS.saltdir,
@@ -174,11 +176,16 @@ def main(argv):
 
     # Only emit the delimiter on *both* stdout and stderr when completely successful.
     # Yes, the flush() is necessary.
-    sys.stdout.write(OPTIONS.delimeter + '\n')
+    sys.stdout.write(OPTIONS.delimiter + '\n')
     sys.stdout.flush()
-    sys.stderr.write(OPTIONS.delimeter + '\n')
+    sys.stderr.write(OPTIONS.delimiter + '\n')
     sys.stderr.flush()
-    os.execv(sys.executable, salt_argv)
+    if OPTIONS.wipe:
+        import subprocess
+        subprocess.call(salt_argv)
+        shutil.rmtree(OPTIONS.saltdir)
+    else:
+        os.execv(sys.executable, salt_argv)
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     sys.exit(main(sys.argv))

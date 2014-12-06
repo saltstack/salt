@@ -1,7 +1,9 @@
 # encoding: utf-8
+from __future__ import absolute_import
 import json
 import logging
 import threading
+import salt.ext.six as six
 
 import salt.netapi
 
@@ -35,7 +37,7 @@ class SaltInfo(object):
         minions = {}
 
         logger.debug('starting loop')
-        for minion, minion_info in self.minions.iteritems():
+        for minion, minion_info in six.iteritems(self.minions):
             logger.debug(minion)
             # logger.debug(minion_info)
             curr_minion = {}
@@ -69,7 +71,7 @@ class SaltInfo(object):
         minion = self.minions[mid]
 
         minion.update({'grains': event_info['return']})
-        logger.debug("In process minion grains update with minions={0}".format(self.minions.keys()))
+        logger.debug("In process minion grains update with minions={0}".format(self.minions))
         self.publish_minions()
 
     def process_ret_job_event(self, event_data):
@@ -89,7 +91,7 @@ class SaltInfo(object):
         minion.update({'success': event_info['success']})
 
         job_complete = all([minion['success'] for mid, minion
-                            in job['minions'].iteritems()])
+                            in six.iteritems(job['minions'])])
 
         if job_complete:
             job['state'] = 'complete'
@@ -157,7 +159,7 @@ class SaltInfo(object):
         if set(salt_data['data'].get('lost', [])):
             dropped_minions = set(salt_data['data'].get('lost', []))
         else:
-            dropped_minions = set(self.minions.keys()) - set(salt_data['data'].get('present', []))
+            dropped_minions = set(self.minions) - set(salt_data['data'].get('present', []))
 
         for minion in dropped_minions:
             changed = True
@@ -169,9 +171,9 @@ class SaltInfo(object):
             logger.debug('got new minions')
             new_minions = set(salt_data['data'].get('new', []))
             changed = True
-        elif set(salt_data['data'].get('present', [])) - set(self.minions.keys()):
+        elif set(salt_data['data'].get('present', [])) - set(self.minions):
             logger.debug('detected new minions')
-            new_minions = set(salt_data['data'].get('present', [])) - set(self.minions.keys())
+            new_minions = set(salt_data['data'].get('present', [])) - set(self.minions)
             changed = True
         else:
             new_minions = []

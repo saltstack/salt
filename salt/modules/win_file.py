@@ -7,6 +7,7 @@ data
             - win32file
             - win32security
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -15,6 +16,7 @@ import os.path
 import logging
 import struct
 # pylint: disable=W0611
+import datetime  # do not remove.
 import tempfile  # do not remove. Used in salt.modules.file.__clean_tmp
 import itertools  # same as above, do not remove, it's used in __clean_tmp
 import contextlib  # do not remove, used in imported file.py functions
@@ -26,8 +28,10 @@ import re  # do not remove, used in imported file.py functions
 import sys  # do not remove, used in imported file.py functions
 import fileinput  # do not remove, used in imported file.py functions
 import fnmatch  # do not remove, used in imported file.py functions
+from salt.ext.six import string_types  # do not remove, used in imported file.py functions
+# do not remove, used in imported file.py functions
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=import-error,no-name-in-module
 import salt.utils.atomicfile  # do not remove, used in imported file.py functions
-import salt._compat  # do not remove, used in imported file.py functions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 # pylint: enable=W0611
 
@@ -347,7 +351,7 @@ def get_pgid(path, follow_symlinks=True):
         return 'S-1-1-0'
     except pywinerror as exc:
         # Incorrect function error (win2k8+)
-        if exc.winerror == 1:
+        if exc.winerror == 1 or exc.winerror == 50:
             return 'S-1-1-0'
         raise
     group_sid = secdesc.GetSecurityDescriptorGroup()
@@ -543,7 +547,7 @@ def get_uid(path, follow_symlinks=True):
         return 'S-1-1-0'
     except pywinerror as exc:
         # Incorrect function error (win2k8+)
-        if exc.winerror == 1:
+        if exc.winerror == 1 or exc.winerror == 50:
             return 'S-1-1-0'
         raise
     owner_sid = secdesc.GetSecurityDescriptorOwner()
@@ -925,7 +929,7 @@ def get_attributes(path):
     attributes['mountedVolume'] = False
     if attributes['reparsePoint'] is True and attributes['directory'] is True:
         fileIterator = win32file.FindFilesIterator(path)
-        findDataTuple = fileIterator.next()
+        findDataTuple = next(fileIterator)
         if findDataTuple[6] == 0xA0000003:
             attributes['mountedVolume'] = True
     # check if it's a soft (symbolic) link
@@ -937,7 +941,7 @@ def get_attributes(path):
     attributes['symbolicLink'] = False
     if attributes['reparsePoint'] is True:
         fileIterator = win32file.FindFilesIterator(path)
-        findDataTuple = fileIterator.next()
+        findDataTuple = next(fileIterator)
         if findDataTuple[6] == 0xA000000C:
             attributes['symbolicLink'] = True
 

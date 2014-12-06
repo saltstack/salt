@@ -3,35 +3,28 @@
 Control the Salt command interface
 ==================================
 
-The Salt state is used to control the salt command interface. This state is
-intended for use primarily from the state runner from the master.
+This state is intended for use from the Salt Master. It provides access to
+sending commands down to minions as well as access to executing master-side
+modules. These state functions wrap Salt's :ref:`Python API <python-api>`.
 
-The salt.state declaration can call out a highstate or a list of sls:
+.. seealso:: More Orchestrate documentation
 
-.. code-block:: yaml
-
-    webservers:
-      salt.state:
-        - tgt: 'web*'
-        - sls:
-          - apache
-          - django
-          - core
-        - saltenv: prod
-
-    databases:
-      salt.state:
-        - tgt: role:database
-        - tgt_type: grain
-        - highstate: True
+    * :ref:`Full Orchestrate Tutorial <orchestrate-tutorial>`
+    * :py:func:`The Orchestrate runner <salt.runners.state.orchestrate>`
 '''
+from __future__ import absolute_import
 
 # Import python libs
+import fnmatch
 import logging
+import time
 
 # Import salt libs
+import salt.syspaths
 import salt.utils
-import salt._compat
+import salt.utils.event
+import salt.ext.six as six
+from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 
@@ -123,6 +116,33 @@ def state(
         WARNING: This flag is potentially dangerous. It is designed
         for use when multiple state runs can safely be run at the same
         Do not use this flag for performance optimization.
+
+    Examples:
+
+    Run a list of sls files via :py:func:`state.sls <salt.state.sls>` on target
+    minions:
+
+    .. code-block:: yaml
+
+        webservers:
+          salt.state:
+            - tgt: 'web*'
+            - sls:
+              - apache
+              - django
+              - core
+            - saltenv: prod
+
+    Run a full :py:func:`state.highstate <salt.state.highstate>` on target
+    mininons.
+
+    .. code-block:: yaml
+
+        databases:
+          salt.state:
+            - tgt: role:database
+            - tgt_type: grain
+            - highstate: True
     '''
     cmd_kw = {'arg': [], 'kwarg': {}, 'ret': ret, 'timeout': timeout}
 
@@ -210,7 +230,7 @@ def state(
 
     if fail_minions is None:
         fail_minions = ()
-    elif isinstance(fail_minions, salt._compat.string_types):
+    elif isinstance(fail_minions, string_types):
         fail_minions = [minion.strip() for minion in fail_minions.split(',')]
     elif not isinstance(fail_minions, list):
         ret.setdefault('warnings', []).append(
@@ -219,7 +239,7 @@ def state(
         )
         fail_minions = ()
 
-    for minion, mdata in cmd_ret.iteritems():
+    for minion, mdata in six.iteritems(cmd_ret):
         if mdata.get('out', '') != 'highstate':
             log.warning("Output from salt state not highstate")
 
@@ -236,7 +256,7 @@ def state(
                 fail.add(minion)
             failures[minion] = m_ret and m_ret or 'Minion did not respond'
             continue
-        for state_item in m_ret.itervalues():
+        for state_item in six.itervalues(m_ret):
             if state_item['changes']:
                 changes[minion] = m_ret
                 break
@@ -256,7 +276,7 @@ def state(
             ret['comment'] += ' No changes made to {0}.'.format(', '.join(no_change))
     if failures:
         ret['comment'] += '\nFailures:\n'
-        for minion, failure in failures.iteritems():
+        for minion, failure in six.iteritems(failures):
             ret['comment'] += '\n'.join(
                     (' ' * 4 + l)
                     for l in salt.output.out_format(
@@ -316,15 +336,19 @@ def function(
     ssh
         Set to `True` to use the ssh client instaed of the standard salt client
     '''
-    if kwarg is None:
-        kwarg = {}
-
-    cmd_kw = {'arg': arg or [], 'kwarg': kwarg, 'ret': ret, 'timeout': timeout}
-
     ret = {'name': name,
            'changes': {},
            'comment': '',
            'result': True}
+    if kwarg is None:
+        kwarg = {}
+    if isinstance(arg, str):
+        ret['warnings'] = ['Please specify \'arg\' as a list, not a string. '
+                           'Modifying in place, but please update SLS file '
+                           'to remove this warning.']
+        arg = arg.split()
+
+    cmd_kw = {'arg': arg or [], 'kwarg': kwarg, 'ret': ret, 'timeout': timeout}
 
     if expr_form and tgt_type:
         ret['warnings'] = [
@@ -340,6 +364,7 @@ def function(
     cmd_kw['expr_form'] = tgt_type
     cmd_kw['ssh'] = ssh
     cmd_kw['expect_minions'] = expect_minions
+    cmd_kw['_cmd_meta'] = True
     fun = name
     if __opts__['test'] is True:
         ret['comment'] = (
@@ -355,7 +380,7 @@ def function(
 
     if fail_minions is None:
         fail_minions = ()
-    elif isinstance(fail_minions, salt._compat.string_types):
+    elif isinstance(fail_minions, string_types):
         fail_minions = [minion.strip() for minion in fail_minions.split(',')]
     elif not isinstance(fail_minions, list):
         ret.setdefault('warnings', []).append(
@@ -364,9 +389,11 @@ def function(
         )
         fail_minions = ()
 
-    for minion, mdata in cmd_ret.iteritems():
+    for minion, mdata in six.iteritems(cmd_ret):
         m_ret = False
-
+        if mdata.get('retcode'):
+            ret['result'] = False
+            fail.add(minion)
         if mdata.get('failed', False):
             m_func = False
         else:
@@ -391,7 +418,7 @@ def function(
         ret['comment'] += ' Function {0} ran on {1}.'.format(name, ', '.join(changes))
     if failures:
         ret['comment'] += '\nFailures:\n'
-        for minion, failure in failures.iteritems():
+        for minion, failure in six.iteritems(failures):
             ret['comment'] += '\n'.join(
                     (' ' * 4 + l)
                     for l in salt.output.out_format(
@@ -401,4 +428,162 @@ def function(
                         ).splitlines()
                     )
             ret['comment'] += '\n'
+    return ret
+
+
+def wait_for_event(
+        name,
+        id_list,
+        event_id='id',
+        timeout=300):
+    '''
+    Watch Salt's event bus and block until a condition is met
+
+    .. versionadded:: 2014.7
+
+    name
+        An event tag to watch for; supports Reactor-style globbing.
+    id_list
+        A list of event identifiers to watch for -- usually the minion ID. Each
+        time an event tag is matched the event data is inspected for
+        ``event_id``, if found it is removed from ``id_list``. When ``id_list``
+        is empty this function returns success.
+    event_id : id
+        The name of a key in the event data. Default is ``id`` for the minion
+        ID, another common value is ``name`` for use with orchestrating
+        salt-cloud events.
+    timeout : 300
+        The maximum time in seconds to wait before failing.
+
+    The following example blocks until all the listed minions complete a
+    restart and reconnect to the Salt master:
+
+    .. code-block:: yaml
+
+        reboot_all_minions:
+          salt.function:
+            - name: system.reboot
+            - tgt: '*'
+
+        wait_for_reboots:
+          salt.wait_for_event:
+            - name: salt/minion/*/start
+            - id_list:
+              - jerry
+              - stuart
+              - dave
+              - phil
+              - kevin
+              - mike
+            - require:
+              - salt: reboot_all_minions
+    '''
+    ret = {'name': name, 'changes': {}, 'comment': '', 'result': False}
+
+    sevent = salt.utils.event.get_event(
+            'master',
+            __opts__['sock_dir'],
+            __opts__['transport'],
+            opts=__opts__)
+
+    del_counter = 0
+    starttime = time.time()
+    timelimit = starttime + timeout
+    while True:
+        event = sevent.get_event(full=True)
+        is_timedout = time.time() > timelimit
+
+        if event is None and not is_timedout:
+            log.trace("wait_for_event: No event data; waiting.")
+            continue
+        elif event is None and is_timedout:
+            ret['comment'] = 'Timeout value reached.'
+            return ret
+
+        if fnmatch.fnmatch(event['tag'], name):
+            val = event['data'].get(event_id)
+
+            if val is not None:
+                try:
+                    val_idx = id_list.index(val)
+                except ValueError:
+                    log.trace("wait_for_event: Event identifier '{0}' not in "
+                            "id_list; skipping.".format(event_id))
+                else:
+                    del id_list[val_idx]
+                    del_counter += 1
+                    minions_seen = ret['changes'].setdefault('minions_seen', [])
+                    minions_seen.append(val)
+
+                    log.debug("wait_for_event: Event identifier '{0}' removed "
+                            "from id_list; {1} items remaining."
+                            .format(val, len(id_list)))
+            else:
+                log.trace("wait_for_event: Event identifier '{0}' not in event "
+                        "'{1}'; skipping.".format(event_id, event['tag']))
+        else:
+            log.debug("wait_for_event: Skipping unmatched event '{0}'"
+                    .format(event['tag']))
+
+        if len(id_list) == 0:
+            ret['result'] = True
+            ret['comment'] = 'All events seen in {0} seconds.'.format(
+                    time.time() - starttime)
+            return ret
+
+        if is_timedout:
+            ret['comment'] = 'Timeout value reached.'
+            return ret
+
+
+def runner(name, **kwargs):
+    '''
+    Execute a runner module on the master
+
+    .. versionadded:: 2014.7
+
+    name
+        The name of the function to run
+    kwargs
+        Any keyword arguments to pass to the runner function
+    '''
+    ret = {'name': name, 'result': False, 'changes': {}, 'comment': ''}
+    out = __salt__['saltutil.runner'](name, **kwargs)
+
+    ret['result'] = True
+    ret['comment'] = "Runner function '{0}' executed.".format(name)
+
+    if out:
+        ret['changes'] = out
+
+    return ret
+
+
+def wheel(name, **kwargs):
+    '''
+    Execute a wheel module on the master
+
+    .. versionadded:: 2014.7
+
+    name
+        The name of the function to run
+    kwargs
+        Any keyword arguments to pass to the wheel function
+
+    .. code-block:: yaml
+
+        accept_minion_key:
+          salt.wheel:
+            - name: key.accept
+            - match: frank
+    '''
+    ret = {'name': name, 'result': False, 'changes': {}, 'comment': ''}
+    out = __salt__['saltutil.wheel'](name, **kwargs)
+
+    ret['result'] = True
+    ret['comment'] = "Wheel function '{0}' executed.".format(name)
+
+    if out:
+        ret['changes'] = out
+
     return ret

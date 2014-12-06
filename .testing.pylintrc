@@ -34,6 +34,7 @@ load-plugins=salttesting.pylintplugins.pep8,salttesting.pylintplugins.pep263,sal
 # --disable=W"
 disable=R,
   I0011,
+  I0012,
   I0013,
   E1101,
   E1103,
@@ -77,6 +78,7 @@ disable=R,
 # Disabled:
 # R* [refactoring suggestions & reports]
 # I0011 (locally-disabling)
+# I0012 (locally-enabling)
 # I0013 (file-ignored)
 # E1101 (no-member) [pylint isn't smart enough]
 # E1103 (maybe-no-member)
@@ -111,12 +113,6 @@ disable=R,
 
 [REPORTS]
 
-# Include message's id in output
-include-ids=yes
-
-# Include symbolic ids of messages in output
-symbols=no
-
 # Tells whether to display a full report or only the messages
 reports=no
 
@@ -150,7 +146,7 @@ indent-string='    '
 
 # List of additional names supposed to be defined in builtins. Remember that
 # you should avoid to define new builtins when possible.
-additional-builtins=__opts__,__salt__,__pillar__,__grains__,__context__,__ret__,__env__,__low__,__states__,__lowstate__,__running__,__active_provider_name__
+additional-builtins=__opts__,__salt__,__pillar__,__grains__,__context__,__ret__,__env__,__low__,__states__,__lowstate__,__running__,__active_provider_name__,__master_opts__,__progress__
 
 
 [IMPORTS]

@@ -7,6 +7,7 @@ Support for htpasswd command
 The functions here will load inside the webutil module. This allows other
 functions that don't use htpasswd to use the webutil module name.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os

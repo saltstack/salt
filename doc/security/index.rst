@@ -7,11 +7,12 @@ Security disclosure policy
 :email: security@saltstack.com
 :gpg key ID: 4EA0793D
 :gpg key fingerprint: ``8ABE 4EFC F0F4 B24B FF2A  AF90 D570 F2D3 4EA0 793D``
-**gpg public key**:
+
+**gpg public key:**
 
 .. code-block:: text
 
-    -----BEGIN PGP PUBLIC KEY BLOCK----
+    -----BEGIN PGP PUBLIC KEY BLOCK-----
     Version: GnuPG/MacGPG2 v2.0.22 (Darwin)
 
     mQINBFO15mMBEADa3CfQwk5ED9wAQ8fFDku277CegG3U1hVGdcxqKNvucblwoKCb
@@ -73,7 +74,7 @@ release can be prepared. At that time we will release the fix and make a public
 announcement with upgrade instructions and download locations.
 
 Security response procedure
-============================
+===========================
 
 SaltStack takes security and the trust of our customers and users very
 seriously. Our disclosure policy is intended to resolve security issues as

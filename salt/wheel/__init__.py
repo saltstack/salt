@@ -2,6 +2,7 @@
 '''
 Modules used to control the master itself
 '''
+from __future__ import absolute_import
 #import python libs
 import collections
 import os
@@ -13,7 +14,6 @@ import salt.config
 import salt.loader
 import salt.payload
 import salt.utils
-import salt.exceptions
 from salt.client import mixins
 from salt.utils.error import raise_error
 from salt.utils.event import tagify
@@ -97,24 +97,7 @@ class WheelClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
             })
             {'minions': {'jerry': '5d:f6:79:43:5e:d4:42:3f:57:b8:45:a8:7e:a4:6e:ca'}}
         '''
-        sevent = salt.utils.event.get_event('master', self.opts['sock_dir'],
-                self.opts['transport'])
-        job = self.master_call(**low)
-        ret_tag = tagify('ret', base=job['tag'])
-
-        timelimit = time.time() + (timeout or 300)
-        while True:
-            ret = sevent.get_event(full=True)
-            if ret is None:
-                continue
-
-            if ret['tag'] == ret_tag:
-                return ret['data']['return']
-
-            if time.time() > timelimit:
-                raise salt.exceptions.SaltClientTimeout(
-                    "WheelClient job '%s' timed out", job['jid'],
-                    jid=job['jid'])
+        return self.master_call(**low)
 
     def cmd_async(self, low):
         '''

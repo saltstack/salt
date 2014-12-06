@@ -12,6 +12,7 @@ The final result set is merged with the pillar data.
 
 # Import python libs
 from __future__ import print_function
+from __future__ import absolute_import
 import os
 import logging
 
@@ -117,8 +118,10 @@ def _do_search(conf):
     '''
     # Build LDAP connection args
     connargs = {}
-    for name in ['server', 'port', 'tls', 'binddn', 'bindpw']:
+    for name in ['server', 'port', 'tls', 'binddn', 'bindpw', 'anonymous']:
         connargs[name] = _config(name, conf)
+    if connargs['binddn'] and connargs['bindpw']:
+        connargs['anonymous'] = False
     # Build search args
     try:
         _filter = conf['filter']
@@ -135,12 +138,12 @@ def _do_search(conf):
     try:
         result = __salt__['ldap.search'](_filter, _dn, scope, attrs,
                                          **connargs)['results'][0][1]
+    except IndexError:  # we got no results for this search
         log.debug(
             'LDAP search returned no results for filter {0}'.format(
                 _filter
             )
         )
-    except IndexError:  # we got no results for this search
         result = {}
     except Exception:
         log.critical(
@@ -150,7 +153,9 @@ def _do_search(conf):
     return result
 
 
-def ext_pillar(minion_id, pillar, config_file):
+def ext_pillar(minion_id,  # pylint: disable=W0613
+               pillar,  # pylint: disable=W0613
+               config_file):
     '''
     Execute LDAP searches and return the aggregated data
     '''

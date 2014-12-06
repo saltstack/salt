@@ -9,7 +9,7 @@ import random
 
 # Import Salt Libs
 import integration
-from salt.utils import mkstemp, fopen
+import salt.utils
 from salt.exceptions import CommandExecutionError
 
 # Import Salt Testing Libs
@@ -155,16 +155,12 @@ class DarwinSysctlModuleTest(integration.ModuleCase):
         file will be restored in tearDown
         '''
         # Create new temporary file path and open needed files
-        org_conf = fopen(CONFIG, 'r')
-        temp_path = mkstemp()
-        temp_sysconf = open(temp_path, 'w')
-
-        # write sysctl lines to temp file
-        for line in org_conf:
-            temp_sysconf.write(line)
-        org_conf.close()
-        temp_sysconf.close()
-
+        temp_path = salt.utils.mkstemp()
+        with salt.utils.fopen(CONFIG, 'r') as org_conf:
+            with salt.utils.fopen(temp_path, 'w') as temp_sysconf:
+                # write sysctl lines to temp file
+                for line in org_conf:
+                    temp_sysconf.write(line)
         return temp_path
 
     def __restore_sysctl(self):
@@ -174,14 +170,12 @@ class DarwinSysctlModuleTest(integration.ModuleCase):
         # If sysctl testing file exists, delete it
         if os.path.isfile(CONFIG):
             os.remove(CONFIG)
-        temp_sysctl = open(self.conf, 'r')
-        sysctl = open(CONFIG, 'w')
 
         # write temp lines to sysctl file to restore
-        for line in temp_sysctl:
-            sysctl.write(line)
-        temp_sysctl.close()
-        sysctl.close()
+        with salt.utils.fopen(self.conf, 'r') as temp_sysctl:
+            with salt.utils.fopen(CONFIG, 'w') as sysctl:
+                for line in temp_sysctl:
+                    sysctl.write(line)
 
         # delete temporary file
         os.remove(self.conf)
@@ -190,13 +184,11 @@ class DarwinSysctlModuleTest(integration.ModuleCase):
         '''
         Returns True if given line is present in file
         '''
-        f_in = open(conf_file, 'r')
-        for line in f_in:
-            if to_find in line:
-                f_in.close()
-                return True
-        f_in.close()
-        return False
+        with salt.utils.fopen(conf_file, 'r') as f_in:
+            for line in f_in:
+                if to_find in line:
+                    return True
+            return False
 
     @destructiveTest
     @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')

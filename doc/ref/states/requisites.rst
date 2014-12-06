@@ -76,6 +76,8 @@ Each direct requisite also has a corresponding requisite_in: ``require_in``,
 All of the requisites define specific relationships and always work with the
 dependency logic defined above.
 
+.. _requisites-require:
+
 require
 ~~~~~~~
 
@@ -102,6 +104,8 @@ including the sls file and then setting a state to ``require`` the included sls 
       pkg.installed:
         - require:
           - sls: foo
+
+.. _requisites-watch:
 
 watch
 ~~~~~
@@ -186,6 +190,8 @@ to Salt ensuring that the service is running.
         - name: /etc/ntp.conf
         - source: salt://ntp/files/ntp.conf
 
+.. _requisites-prereq:
+
 prereq
 ~~~~~~
 
@@ -196,18 +202,18 @@ a state that has not yet been executed. The state containing the ``prereq``
 requisite is defined as the pre-requiring state. The state specified in the
 ``prereq`` statement is defined as the pre-required state.
 
-When ``prereq`` is called, the pre-required state reports if it expects to
-have any changes. It does this by running the pre-required single state as a
-test-run by enabling ``test=True``. This test-run will return a dictionary
-containing a key named "changes". (See the ``watch`` section above for
-examples of "changes" dictionaries.)
+When a ``prereq`` requisite is evaluated, the pre-required state reports if it
+expects to have any changes. It does this by running the pre-required single
+state as a test-run by enabling ``test=True``. This test-run will return a
+dictionary containing a key named "changes". (See the ``watch`` section above
+for examples of "changes" dictionaries.)
 
 If the "changes" key contains a populated dictionary, it means that the
 pre-required state expects changes to occur when the state is actually
-executed, as opposed to the test-run. The pre-required state will now
-actually run. If the pre-required state executes successfully, the
-pre-requiring state will then execute. If the pre-required state fails, the
-pre-requiring state will not execute.
+executed, as opposed to the test-run. The pre-requiring state will now
+actually run. If the pre-requiring state executes successfully, the
+pre-required state will then execute. If the pre-requiring state fails, the
+pre-required state will not execute.
 
 If the "changes" key contains an empty dictionary, this means that changes are
 not expected by the pre-required state. Neither the pre-required state nor the
@@ -409,31 +415,53 @@ even more stateful.  The check_cmds option helps ensure that the result of a
 state is evaluated correctly.
 
 Unless
-~~~~~~
+------
 
 .. versionadded:: 2014.7.0
 
-Use unless to only run if any of the specified commands return False.
+The ``unless`` requisite specifies that a state should only run when any of
+the specified commands return ``False``. The ``unless`` requisite operates
+as NOR and is useful in giving more granular control over when a state should
+execute.
 
 .. code-block:: yaml
 
     vim:
       pkg.installed:
         - unless:
-            - rpm -q vim-enhanced
-            - ls /usr/bin/vim
+          - rpm -q vim-enhanced
+          - ls /usr/bin/vim
 
-This state will not run if the vim-enhanced package is already installed, or if
-/usr/bin/vim exists.  It gives more granular control over when a state should be
-run.
+In the example above, the state will only run if either the vim-enhanced
+package is not installed (returns ``False``) or if /usr/bin/vim does not
+exist (returns ``False``). The state will run if both commands return
+``False``.
+
+However, the state will not run if both commands return ``True``.
+
+Unless requisites are resolved for each name to which they are associated.
+
+For example:
+
+.. code-block:: yaml
+
+    deploy_app:
+      cmd.run:
+        - first_deploy_cmd
+        - second_deploy_cmd
+      - unless: some_check
+
+In the above case, ``some_check`` will be run prior to _each_ name -- once for
+``first_deploy_cmd`` and a second time for ``second_deploy_cmd``.
 
 Onlyif
-~~~~~~
+------
 
 .. versionadded:: 2014.7.0
 
-Onlyif is the opposite of Unless.  If all of the commands in onlyif return True,
-then the state is run.
+``onlyif`` is the opposite of ``unless``. If all of the commands in ``onlyif``
+return ``True``, then the state is run. If any of the specified commands
+return ``False``, the state will not run.
 
 .. code-block:: yaml
 
@@ -442,7 +470,7 @@ then the state is run.
         - name: glusterfs.stop_volume
         - m_name: work
         - onlyif:
-            - gluster volume status work
+          - gluster volume status work
         - order: 1
 
     remove-volume:
@@ -450,15 +478,15 @@ then the state is run.
         - name: glusterfs.delete
         - m_name: work
         - onlyif:
-            - gluster volume info work
+          - gluster volume info work
         - watch:
           - cmd: stop-volume
 
-This will ensure that the stop_volume and delete modules are only run if the
-gluster commands return back a 0 ret value.
+The above example ensures that the stop_volume and delete modules only run
+if the gluster commands return a 0 ret value.
 
 Listen/Listen_in
-~~~~~~~~~~~~~~~~
+----------------
 
 .. versionadded:: 2014.7.0
 
@@ -475,7 +503,7 @@ at the end of a state run, after all states have completed.
    service.running:
      - name: apache2
      - listen:
-     - file: /etc/apache2/apache2.conf
+       - file: /etc/apache2/apache2.conf
 
  configure-apache2:
    file.managed:
@@ -496,13 +524,13 @@ changed, but the apache2 restart will happen at the end of the state run.
      - path: /etc/apache2/apache2.conf
      - source: salt://apache2/apache2.conf
      - listen_in:
-     - service: apache2
+       - service: apache2
 
 This example does the same as the above example, but puts the state argument
 on the file resource, rather than the service resource.
 
-Check_Cmd
-~~~~~~~~~
+check_cmd
+---------
 
 .. versionadded:: 2014.7.0
 
@@ -517,7 +545,7 @@ expected.
         - pattern: ^enabled=0
         - repl: enabled=1
         - check_cmd:
-            - grep 'enabled=0' /etc/yum.repos.d/fedora.repo && return 1 || return 0
+          - grep 'enabled=0' /etc/yum.repos.d/fedora.repo && return 1 || return 0
 
 This will attempt to do a replace on all enabled=0 in the .repo file, and
 replace them with enabled=1.  The check_cmd is just a bash command.  It will do
@@ -532,9 +560,9 @@ Overriding Checks
 
 There are two commands used for the above checks.
 
-`mod_run_check` is used to check for onlyif and unless.  If the goal is to
-override the global check for these to variables, include a mod_run_check in the
+``mod_run_check`` is used to check for ``onlyif`` and ``unless``.  If the goal is to
+override the global check for these to variables, include a ``mod_run_check`` in the
 salt/states/ file.
 
-`mod_run_check_cmd` is used to check for the check_cmd options.  To override
-this one, include a mod_run_check_cmd in the states file for the state.
+``mod_run_check_cmd`` is used to check for the check_cmd options.  To override
+this one, include a ``mod_run_check_cmd`` in the states file for the state.

@@ -2,59 +2,72 @@
 
 house master
 
-init .raet.udp.stack.local to eid 1 main true name "master"
-
-init .salt.uxd.stack.local to yid 0 name "master" lanename "master"
-
 framer masterudpstack be active first setup
+    # Begin the pre-flight checks
     frame setup
         enter
             do salt raet cleanup
-            do salt raet road stack setup per inode ".raet.udp.stack"
-            do salt manor lane setup per inode ".salt.uxd.stack"
+            do salt raet road stack setup per inode ".salt.road.manor"
+            do salt raet manor lane setup per inode ".salt.lane.manor"
         go spawnmaint
 
+    # Create the maintanence frame
     frame spawnmaint
         enter
-            do fork maint
+            do salt raet maint fork
         go spawnworkers
 
+    # Start forking master workers
     frame spawnworkers
         enter
-            do worker fork
+            do salt raet worker fork
         go start
 
     frame start
+        # Start the message receive framer
         bid start inbound
+        # Start the message receive framer
         bid start uxdrouter
+        # Start the event framer
         bid start events
+        # Start the publish framer
         bid start publish
+        # Start the manage framer
         bid start manager
+        # Start the outbound framer
         bid start outbound
         exit
-            do salt raet road stack closer per inode ".raet.udp.stack."
-            do salt raet lane stack closer per inode ".salt.uxd.stack."
+            do salt raet road stack closer per inode ".salt.road.manor."
+            do salt raet lane stack closer per inode ".salt.lane.manor."
 
+# Inbound framer
 framer inbound be inactive first start
     frame start
         do salt raet road stack service rx
+        do salt raet lane stack service rx
 
+# Router framer
 framer uxdrouter be inactive first start
     frame start
-        do router
+        do salt raet router
 
+# Event bus framer
 framer events be inactive first start
     frame start
-        do eventer
+        do salt raet eventer
 
+# Publisher framer
 framer publish be inactive first start
     frame start
-        do salt publisher
+        do salt raet publisher
 
+# Manager framer
 framer manager be inactive first start at 10.0
     frame start
-         do salt raet road stack manager per inode ".raet.udp.stack"
+         do salt raet road stack manager per inode ".salt.road.manor"
 
+# Outbound framer
 framer outbound be inactive first start
     frame start
+        do salt raet lane stack service tx
         do salt raet road stack service tx

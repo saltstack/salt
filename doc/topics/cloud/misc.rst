@@ -16,7 +16,7 @@ to pass arguments to the deploy script:
     ec2-amazon:
         provider: ec2
         image: ami-1624987f
-        size: Micro Instance
+        size: t1.micro
         ssh_username: ec2-user
         script: bootstrap-salt
         script_args: -c /tmp/
@@ -34,6 +34,7 @@ Some distributions do not have scp distributed with the ssh package.  The
 solution is to use sftp with the `use_sftp` flag
 
 .. code-block:: yaml
+
     use_sftp: True
 
 
@@ -215,8 +216,8 @@ update_cachedir
 ~~~~~~~~~~~~~~~
 
 On supported cloud providers, whether or not to maintain a cache of nodes
-returned from a --full-query. The data will be stored in ``json`` format under
-``<SALT_CACHEDIR>/cloud/active/<DRIVER>/<PROVIDER>/<NODE_NAME>.json``. This
+returned from a --full-query. The data will be stored in ``msgpack`` format
+under ``<SALT_CACHEDIR>/cloud/active/<DRIVER>/<PROVIDER>/<NODE_NAME>.p``. This
 setting can be True or False.
 
 
@@ -286,3 +287,15 @@ It is highly recommended that this option is *not* set, unless the user has
 verified that the provider supports this functionality, and that the image
 being used is capable of providing the necessary information. At this time,
 only the EC2 driver supports this functionality.
+
+SSH Agent
+=========
+
+.. versionadded:: Lithium
+
+If the ssh key is not stored on the server salt-cloud is being run on, set
+ssh_agent and salt-cloud will use the forwarded ssh-agent to authenticate.
+
+.. code-block:: yaml
+
+    ssh_agent: True

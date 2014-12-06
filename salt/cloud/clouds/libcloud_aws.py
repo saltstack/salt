@@ -29,6 +29,7 @@ If this driver is still needed, set up the cloud configuration at
       provider: aws
 
 '''
+from __future__ import absolute_import
 # pylint: disable=E0102
 
 # Import python libs
@@ -43,13 +44,14 @@ import salt.utils.cloud
 import salt.config as config
 from salt.utils import namespaced_function
 
-from salt.cloud.exceptions import (
+from salt.exceptions import (
     SaltCloudException,
     SaltCloudSystemExit,
     SaltCloudConfigError,
     SaltCloudExecutionTimeout,
     SaltCloudExecutionFailure
 )
+import salt.ext.six as six
 
 try:
     from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
@@ -76,6 +78,9 @@ except ImportError:
 # Get logging started
 log = logging.getLogger(__name__)
 
+# namespace libcloudfuncs
+get_salt_interface = namespaced_function(get_salt_interface, globals())
+
 # Define the module's virtual name
 __virtualname__ = 'aws'
 
@@ -98,7 +103,7 @@ def __virtual__():
     if get_configured_provider() is False:
         return False
 
-    for provider, details in __opts__['providers'].iteritems():
+    for provider, details in six.iteritems(__opts__['providers']):
         if 'provider' not in details or details['provider'] != 'aws':
             continue
 
@@ -238,7 +243,7 @@ def ssh_username(vm_):
         usernames = [usernames]
 
     # get rid of None's or empty names
-    usernames = filter(lambda x: x, usernames)
+    usernames = [x for x in usernames if x]
     # Keep a copy of the usernames the user might have provided
     initial = usernames[:]
 
@@ -369,7 +374,7 @@ def create(vm_):
                 vm_['name'], exc
             ),
             # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -404,7 +409,7 @@ def create(vm_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(exc.message)
+            raise SaltCloudSystemExit(str(exc))
 
     if tags:
         set_tags(vm_['name'], tags, call='action')
@@ -415,6 +420,13 @@ def create(vm_):
     else:
         log.info('Salt node data. Public_ip: {0}'.format(data.public_ips[0]))
         ip_address = data.public_ips[0]
+
+    if get_salt_interface(vm_) == 'private_ips':
+        salt_ip_address = data.private_ips[0]
+        log.info('Salt interface set to: {0}'.format(salt_ip_address))
+    else:
+        salt_ip_address = data.public_ips[0]
+        log.debug('Salt interface set to: {0}'.format(salt_ip_address))
 
     username = 'ec2-user'
     ssh_connect_timeout = config.get_cloud_config_value(
@@ -448,6 +460,7 @@ def create(vm_):
         deploy_kwargs = {
             'opts': __opts__,
             'host': ip_address,
+            'salt_host': salt_ip_address,
             'username': username,
             'key_filename': key_filename,
             'tmp_dir': config.get_cloud_config_value(
@@ -744,7 +757,7 @@ def rename(name, kwargs, call=None):
                 name, kwargs['newname'], exc
             ),
             # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
     return kwargs['newname']
 
@@ -774,7 +787,7 @@ def destroy(name):
         result = libcloudfuncs_destroy(newname, get_conn())
         ret.update({'Destroyed': result})
     except Exception as exc:
-        if not exc.message.startswith('OperationNotPermitted'):
+        if not str(exc).startswith('OperationNotPermitted'):
             log.exception(exc)
             raise exc
 

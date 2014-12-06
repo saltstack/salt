@@ -13,13 +13,15 @@ Primary interfaces for the salt-cloud system
 
 # Import python libs
 from __future__ import print_function
+from __future__ import absolute_import
 import os
 import sys
 import logging
+from salt.ext.six.moves import input
 
 # Import salt libs
 import salt.config
-import salt.exitcodes
+import salt.defaults.exitcodes
 import salt.output
 import salt.utils
 from salt.utils import parsers
@@ -27,7 +29,8 @@ from salt.utils.verify import check_user, verify_env, verify_files
 
 # Import salt.cloud libs
 import salt.cloud
-from salt.cloud.exceptions import SaltCloudException, SaltCloudSystemExit
+from salt.exceptions import SaltCloudException, SaltCloudSystemExit
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -92,6 +95,14 @@ class SaltCloud(parsers.SaltCloudParser):
                     msg = 'There was an error listing providers: {0}'
                     self.handle_exception(msg, exc)
 
+            elif self.selected_query_option == 'list_profiles':
+                provider = self.options.list_profiles
+                try:
+                    ret = mapper.profile_list(provider)
+                except(SaltCloudException, Exception) as exc:
+                    msg = 'There was an error listing profiles: {0}'
+                    self.handle_exception(msg, exc)
+
             elif self.config.get('map', None):
                 log.info('Applying map from {0!r}.'.format(self.config['map']))
                 try:
@@ -154,9 +165,9 @@ class SaltCloud(parsers.SaltCloudParser):
 
             msg = 'The following virtual machines are set to be destroyed:\n'
             names = set()
-            for alias, drivers in matching.iteritems():
+            for alias, drivers in six.iteritems(matching):
                 msg += '  {0}:\n'.format(alias)
-                for driver, vms in drivers.iteritems():
+                for driver, vms in six.iteritems(drivers):
                     msg += '    {0}:\n'.format(driver)
                     for name in vms:
                         msg += '      {0}\n'.format(name)
@@ -244,7 +255,7 @@ class SaltCloud(parsers.SaltCloudParser):
                 self.selected_query_option is None:
             if len(mapper.rendered_map) == 0:
                 sys.stderr.write('No nodes defined in this map')
-                self.exit(salt.exitcodes.EX_GENERIC)
+                self.exit(salt.defaults.exitcodes.EX_GENERIC)
             try:
                 ret = {}
                 run_map = True
@@ -256,7 +267,7 @@ class SaltCloud(parsers.SaltCloudParser):
                 if 'errors' in dmap:
                     # display profile errors
                     msg += 'Found the following errors:\n'
-                    for profile_name, error in dmap['errors'].iteritems():
+                    for profile_name, error in six.iteritems(dmap['errors']):
                         msg += '  {0}: {1}\n'.format(profile_name, error)
                     sys.stderr.write(msg)
                     sys.stderr.flush()
@@ -296,7 +307,7 @@ class SaltCloud(parsers.SaltCloudParser):
                         log.info('Complete')
 
                 if dmap.get('existing', None):
-                    for name in dmap['existing'].keys():
+                    for name in dmap['existing']:
                         ret[name] = {'Message': 'Already running'}
 
             except (SaltCloudException, Exception) as exc:
@@ -317,7 +328,7 @@ class SaltCloud(parsers.SaltCloudParser):
         if self.options.assume_yes:
             return True
         print(msg)
-        res = raw_input('Proceed? [N/y] ')
+        res = input('Proceed? [N/y] ')
         if not res.lower().startswith('y'):
             return False
         print('... proceeding')
@@ -334,13 +345,13 @@ class SaltCloud(parsers.SaltCloudParser):
                 self.exit(
                     exc.exit_code,
                     '{0}\n'.format(
-                        msg.format(exc.message.rstrip())
+                        msg.format(str(exc).rstrip())
                     )
                 )
             # It's not a system exit but it's an error we can
             # handle
             self.error(
-                msg.format(exc.message)
+                msg.format(str(exc))
             )
         # This is a generic exception, log it, include traceback if
         # debug logging is enabled and exit.
@@ -348,6 +359,6 @@ class SaltCloud(parsers.SaltCloudParser):
             msg.format(exc),
             # Show the traceback if the debug logging level is
             # enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
-        self.exit(salt.exitcodes.EX_GENERIC)
+        self.exit(salt.defaults.exitcodes.EX_GENERIC)

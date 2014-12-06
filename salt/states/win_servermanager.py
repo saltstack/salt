@@ -26,8 +26,22 @@ def installed(name, recurse=False, force=False):
         the installation of the sub-features
 
     Note:
-    Some features requires reboot after un/installation, if so until the server is restarted
-    Other features can not be installed !
+    Some features require reboot after un/installation. If so, until the server is restarted
+    other features can not be installed!
+
+    Example:
+
+    Run ``salt MinionName win_servermanager.list_available`` to get a list of available roles and features. Use
+    the name in the right column. Do not use the role or feature names mentioned in the PKGMGR documentation. In
+    this example for IIS-WebServerRole the name to be used is Web-Server.
+
+    .. code-block:: yaml
+
+        ISWebserverRole:
+          win_servermanager.installed:
+            - force: True
+            - recurse: True
+            - name: Web-Server
     '''
     ret = {'name': name,
            'result': True,

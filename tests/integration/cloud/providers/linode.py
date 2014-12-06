@@ -5,6 +5,8 @@
 
 # Import Python Libs
 import os
+import random
+import string
 
 # Import Salt Testing Libs
 from salttesting import skipIf
@@ -22,6 +24,19 @@ try:
     HAS_LIBCLOUD = True
 except ImportError:
     HAS_LIBCLOUD = False
+
+
+def __random_name(size=6):
+    '''
+    Generates a random cloud instance name
+    '''
+    return 'CLOUD-TEST-' + ''.join(
+        random.choice(string.ascii_uppercase + string.digits)
+        for x in range(size)
+    )
+
+# Create the cloud instance name to be used throughout the tests
+INSTANCE_NAME = __random_name()
 
 
 @skipIf(HAS_LIBCLOUD is False, 'salt-cloud requires >= libcloud 0.13.2')
@@ -68,21 +83,19 @@ class LinodeTest(integration.ShellCase):
         '''
         Test creating an instance on Linode
         '''
-        name = 'linode-testing'
-
         # create the instance
-        instance = self.run_cloud('-p linode-test {0}'.format(name))
-        ret_str = '        {0}'.format(name)
+        instance = self.run_cloud('-p linode-test {0}'.format(INSTANCE_NAME))
+        ret_str = '        {0}'.format(INSTANCE_NAME)
 
         # check if instance with salt installed returned
         try:
             self.assertIn(ret_str, instance)
         except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(name))
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
             raise
 
         # delete the instance
-        delete = self.run_cloud('-d {0} --assume-yes'.format(name))
+        delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
         ret_str = '            True'
         try:
             self.assertIn(ret_str, delete)
@@ -93,13 +106,12 @@ class LinodeTest(integration.ShellCase):
         '''
         Clean up after tests
         '''
-        name = 'linode-testing'
         query = self.run_cloud('--query')
-        ret_str = '        {0}:'.format(name)
+        ret_str = '        {0}:'.format(INSTANCE_NAME)
 
         # if test instance is still present, delete it
         if ret_str in query:
-            self.run_cloud('-d {0} --assume-yes'.format(name))
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
 
 
 if __name__ == '__main__':

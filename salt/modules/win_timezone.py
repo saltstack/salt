@@ -2,6 +2,7 @@
 '''
 Module for managing timezone on Windows systems.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import salt.utils

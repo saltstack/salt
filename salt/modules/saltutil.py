@@ -6,10 +6,10 @@ minion.
 
 :depends:   - esky Python module for update functionality
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
-import hashlib
 import shutil
 import signal
 import logging
@@ -17,29 +17,37 @@ import fnmatch
 import time
 import sys
 import copy
-import threading
+
+# Import 3rd-party libs
+# pylint: disable=import-error
+try:
+    import esky
+    from esky import EskyVersionError
+    HAS_ESKY = True
+except ImportError:
+    HAS_ESKY = False
+# pylint: disable=no-name-in-module
+from salt.ext.six import string_types
+from salt.ext.six.moves.urllib.error import URLError
+# pylint: enable=import-error,no-name-in-module
 
 # Import salt libs
 import salt
 import salt.payload
 import salt.state
 import salt.client
+import salt.client.ssh.client
+import salt.runner
 import salt.utils
 import salt.utils.process
+import salt.utils.minion
 import salt.transport
+import salt.wheel
 from salt.exceptions import (
     SaltReqTimeoutError, SaltRenderError, CommandExecutionError
 )
-from salt._compat import string_types
 
 __proxyenabled__ = ['*']
-
-# Import third party libs
-try:
-    import esky
-    HAS_ESKY = True
-except ImportError:
-    HAS_ESKY = False
 
 log = logging.getLogger(__name__)
 
@@ -55,7 +63,7 @@ def _get_top_file_envs():
             st_ = salt.state.HighState(__opts__)
             top = st_.get_top()
             if top:
-                envs = st_.top_matches(top).keys() or 'base'
+                envs = list(st_.top_matches(top).keys()) or 'base'
             else:
                 envs = 'base'
         except SaltRenderError as exc:
@@ -103,32 +111,17 @@ def _sync(form, saltenv=None):
                 )
         log.debug('Local cache dir: {0!r}'.format(local_cache_dir))
         for fn_ in cache:
-            if __opts__.get('file_client', '') == 'local':
-                for fn_root in __opts__['file_roots'].get(sub_env, []):
-                    if fn_.startswith(fn_root):
-                        relpath = os.path.relpath(fn_, fn_root)
-                        relpath = relpath[relpath.index('/') + 1:]
-                        relname = os.path.splitext(relpath)[0].replace(
-                                os.sep,
-                                '.')
-                        remote.add(relpath)
-                        dest = os.path.join(mod_dir, relpath)
-            else:
-                relpath = os.path.relpath(fn_, local_cache_dir)
-                relname = os.path.splitext(relpath)[0].replace(os.sep, '.')
-                remote.add(relpath)
-                dest = os.path.join(mod_dir, relpath)
+            relpath = os.path.relpath(fn_, local_cache_dir)
+            relname = os.path.splitext(relpath)[0].replace(os.sep, '.')
+            remote.add(relpath)
+            dest = os.path.join(mod_dir, relpath)
             log.info('Copying {0!r} to {1!r}'.format(fn_, dest))
             if os.path.isfile(dest):
                 # The file is present, if the sum differs replace it
-                hash_type = getattr(hashlib, __opts__.get('hash_type', 'md5'))
-                srch = hash_type(
-                    salt.utils.fopen(fn_, 'r').read()
-                ).hexdigest()
-                dsth = hash_type(
-                    salt.utils.fopen(dest, 'r').read()
-                ).hexdigest()
-                if srch != dsth:
+                hash_type = __opts__.get('hash_type', 'md5')
+                src_digest = salt.utils.get_hash(fn_, hash_type)
+                dst_digest = salt.utils.get_hash(dest, hash_type)
+                if src_digest != dst_digest:
                     # The downloaded file differs, replace!
                     shutil.copyfile(fn_, dest)
                     ret.append('{0}.{1}'.format(form, relname))
@@ -183,7 +176,11 @@ def _list_emptydirs(rootdir):
 def update(version=None):
     '''
     Update the salt minion from the URL defined in opts['update_url']
+    SaltStack, Inc provides the latest builds here:
+    update_url: http://docs.saltstack.com/downloads/
 
+    Be aware that as of 2014-8-11 there's a bug in esky such that only the
+    latest version available in the update_url can be downloaded and installed.
 
     This feature requires the minion to be running a bdist_esky build.
 
@@ -196,31 +193,50 @@ def update(version=None):
 
     .. code-block:: bash
 
+        salt '*' saltutil.update
         salt '*' saltutil.update 0.10.3
     '''
+    ret = {}
     if not HAS_ESKY:
-        return 'Esky not available as import'
+        ret['_error'] = 'Esky not available as import'
+        return ret
     if not getattr(sys, 'frozen', False):
-        return 'Minion is not running an Esky build'
+        ret['_error'] = 'Minion is not running an Esky build'
+        return ret
     if not __salt__['config.option']('update_url'):
-        return '"update_url" not configured on this minion'
+        ret['_error'] = '"update_url" not configured on this minion'
+        return ret
     app = esky.Esky(sys.executable, __opts__['update_url'])
     oldversion = __grains__['saltversion']
-    try:
-        if not version:
+    if not version:
+        try:
             version = app.find_update()
-        if not version:
-            return 'No updates available'
+        except URLError as exc:
+            ret['_error'] = 'Could not connect to update_url. Error: {0}'.format(exc)
+            return ret
+    if not version:
+        ret['_error'] = 'No updates available'
+        return ret
+    try:
         app.fetch_version(version)
+    except EskyVersionError as exc:
+        ret['_error'] = 'Unable to fetch version {0}. Error: {1}'.format(version, exc)
+        return ret
+    try:
         app.install_version(version)
+    except EskyVersionError as exc:
+        ret['_error'] = 'Unable to install version {0}. Error: {1}'.format(version, exc)
+        return ret
+    try:
         app.cleanup()
-    except Exception as err:
-        return err
+    except Exception as exc:
+        ret['_error'] = 'Unable to cleanup. Error: {0}'.format(exc)
     restarted = {}
     for service in __opts__['update_restart_services']:
         restarted[service] = __salt__['service.restart'](service)
-    return {'comment': 'Updated from {0} to {1}'.format(oldversion, version),
-            'restarted': restarted}
+    ret['comment'] = 'Updated from {0} to {1}'.format(oldversion, version)
+    ret['restarted'] = restarted
+    return ret
 
 
 def sync_modules(saltenv=None, refresh=True):
@@ -362,6 +378,9 @@ def sync_all(saltenv=None, refresh=True):
     Sync down all of the dynamic modules from the file server for a specific
     environment
 
+    refresh : True
+        Also refresh the execution modules available to the minion.
+
     CLI Example:
 
     .. code-block:: bash
@@ -392,7 +411,14 @@ def refresh_pillar():
 
         salt '*' saltutil.refresh_pillar
     '''
-    return __salt__['event.fire']({}, 'pillar_refresh')
+    try:
+        ret = __salt__['event.fire']({}, 'pillar_refresh')
+    except KeyError:
+        log.error('Event module not available. Module refresh failed.')
+        ret = False  # Effectively a no-op, since we can't really return without an event system
+    return ret
+
+pillar_refresh = refresh_pillar
 
 
 def refresh_modules():
@@ -405,7 +431,12 @@ def refresh_modules():
 
         salt '*' saltutil.refresh_modules
     '''
-    return __salt__['event.fire']({}, 'module_refresh')
+    try:
+        ret = __salt__['event.fire']({}, 'module_refresh')
+    except KeyError:
+        log.error('Event module not available. Module refresh failed.')
+        ret = False  # Effectively a no-op, since we can't really return without an event system
+    return ret
 
 
 def is_running(fun):
@@ -437,63 +468,7 @@ def running():
 
         salt '*' saltutil.running
     '''
-    ret = []
-    serial = salt.payload.Serial(__opts__)
-    pid = os.getpid()
-    current_thread = threading.currentThread().name
-    proc_dir = os.path.join(__opts__['cachedir'], 'proc')
-    if not os.path.isdir(proc_dir):
-        return []
-
-    def _read_proc_file(path):
-        '''
-        Return a dict of JID metadata, or None
-        '''
-        with salt.utils.fopen(path, 'rb') as fp_:
-            buf = fp_.read()
-            fp_.close()
-            if buf:
-                data = serial.loads(buf)
-            else:
-                # Proc file is empty, remove
-                os.remove(path)
-                return None
-        if not isinstance(data, dict):
-            # Invalid serial object
-            return None
-        if not salt.utils.process.os_is_running(data['pid']):
-            # The process is no longer running, clear out the file and
-            # continue
-            os.remove(path)
-            return None
-        if __opts__['multiprocessing']:
-            if data.get('pid') == pid:
-                return None
-        else:
-            if data.get('pid') != pid:
-                os.remove(path)
-                return None
-            if data.get('jid') == current_thread:
-                return None
-            if not data.get('jid') in [x.name for x in threading.enumerate()]:
-                os.remove(path)
-                return None
-
-        return data
-
-    for fn_ in os.listdir(proc_dir):
-        path = os.path.join(proc_dir, fn_)
-        try:
-            data = _read_proc_file(path)
-            if data is not None:
-                ret.append(data)
-        except IOError:
-            # proc files may be removed at any time during this process by
-            # the minion process that is executing the JID in question, so
-            # we must ignore ENOENT during this process
-            pass
-
-    return ret
+    return salt.utils.minion.running(__opts__)
 
 
 def clear_cache():
@@ -675,7 +650,7 @@ def revoke_auth():
 
 def _get_ssh_or_api_client(cfgfile, ssh=False):
     if ssh:
-        client = salt.client.SSHClient(cfgfile)
+        client = salt.client.ssh.client.SSHClient(cfgfile)
     else:
         client = salt.client.get_local_client(cfgfile)
     return client
@@ -749,10 +724,10 @@ def cmd_iter(tgt,
 
     .. code-block:: bash
 
-        salt '*' saltutil.cmd
+        salt '*' saltutil.cmd_iter
     '''
     if ssh:
-        client = salt.client.SSHClient(__opts__['conf_file'])
+        client = salt.client.ssh.client.SSHClient(__opts__['conf_file'])
     else:
         client = salt.client.get_local_client(__opts__['conf_file'])
     for ret in client.cmd_iter(
@@ -765,6 +740,48 @@ def cmd_iter(tgt,
             kwarg,
             **kwargs):
         yield ret
+
+
+def runner(fun, **kwargs):
+    '''
+    Execute a runner module (this function must be run on the master)
+
+    .. versionadded:: 2014.7
+
+    name
+        The name of the function to run
+    kwargs
+        Any keyword arguments to pass to the runner function
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.runner jobs.list_jobs
+    '''
+    rclient = salt.runner.RunnerClient(__opts__)
+    return rclient.cmd(fun, [], kwarg=kwargs)
+
+
+def wheel(fun, **kwargs):
+    '''
+    Execute a wheel module (this function must be run on the master)
+
+    .. versionadded:: 2014.7
+
+    name
+        The name of the function to run
+    kwargs
+        Any keyword arguments to pass to the wheel function
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.wheel key.accept match=jerry
+    '''
+    wclient = salt.wheel.WheelClient(__opts__)
+    return wclient.cmd(fun, **kwargs)
 
 
 # this is the only way I could figure out how to get the REAL file_roots

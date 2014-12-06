@@ -4,6 +4,7 @@ Connection library for Amazon S3
 
 :depends: requests
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import binascii
@@ -11,8 +12,10 @@ import datetime
 import hashlib
 import hmac
 import logging
-import urllib
+
+# Import 3rd-party libs
 import requests
+from salt.ext.six.moves.urllib.parse import urlencode  # pylint: disable=no-name-in-module,import-error
 
 # Import Salt libs
 import salt.utils
@@ -108,7 +111,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
         string_to_sign = '{0}\n'.format(method)
 
         new_headers = []
-        for header in sorted(headers.keys()):
+        for header in sorted(headers):
             if header.lower().startswith('x-amz'):
                 log.debug(header.lower())
                 new_headers.append('{0}:{1}'.format(header.lower(),
@@ -127,7 +130,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
         sig = binascii.b2a_base64(hashed.digest())
         headers['Authorization'] = 'AWS {0}:{1}'.format(keyid, sig.strip())
 
-        querystring = urllib.urlencode(params)
+        querystring = urlencode(params)
         if action:
             if querystring:
                 querystring = '{0}&{1}'.format(action, querystring)
@@ -216,6 +219,8 @@ def query(key, keyid, method='GET', params=None, headers=None,
         if return_url is True:
             return ret, requesturl
     else:
+        if method == 'GET' or method == 'HEAD':
+            return
         ret = {'headers': []}
         for header in result.headers:
             ret['headers'].append(header.strip())

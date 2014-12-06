@@ -4,22 +4,22 @@ Set up the version of Salt
 '''
 
 # Import python libs
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 import re
 import sys
 
-# Import salt libs
-try:
-    from salt._compat import string_types
-except ImportError:
-    if sys.version_info[0] == 3:
-        string_types = str
-    else:
-        string_types = basestring
+# Don't rely on external packages in this module since it's used at install time
+if sys.version_info[0] == 3:
+    MAX_SIZE = sys.maxsize
+    string_types = (str,)
+else:
+    MAX_SIZE = sys.maxint
+    string_types = (basestring,)
+    from itertools import imap as map
 
 # ----- ATTENTION --------------------------------------------------------------------------------------------------->
 #
-# ALL major version bumps, new release codenames, MUST be defined in the SaltStackVersion.NAMES dictionary, ie:
+# ALL major version bumps, new release codenames, MUST be defined in the SaltStackVersion.NAMES dictionary, i.e.:
 #
 #    class SaltStackVersion(object):
 #
@@ -77,120 +77,120 @@ class SaltStackVersion(object):
         # ------------------------------------------------------------------------------------------------------------
         'Hydrogen'      : (2014, 1),
         'Helium'        : (2014, 7),
-        'Lithium'       : (sys.maxint - 106, 0),
-        'Beryllium'     : (sys.maxint - 105, 0),
-        'Boron'         : (sys.maxint - 104, 0),
-        #'Carbon'       : (sys.maxint - 103, 0),
-        #'Nitrogen'     : (sys.maxint - 102, 0),
-        #'Oxygen'       : (sys.maxint - 101, 0),
-        #'Fluorine'     : (sys.maxint - 100, 0),
-        #'Neon'         : (sys.maxint - 99 , 0),
-        #'Sodium'       : (sys.maxint - 98 , 0),
-        #'Magnesium'    : (sys.maxint - 97 , 0),
-        #'Aluminium'    : (sys.maxint - 96 , 0),
-        #'Silicon'      : (sys.maxint - 95 , 0),
-        #'Phosphorus'   : (sys.maxint - 94 , 0),
-        #'Sulfur'       : (sys.maxint - 93 , 0),
-        #'Chlorine'     : (sys.maxint - 92 , 0),
-        #'Argon'        : (sys.maxint - 91 , 0),
-        #'Potassium'    : (sys.maxint - 90 , 0),
-        #'Calcium'      : (sys.maxint - 89 , 0),
-        #'Scandium'     : (sys.maxint - 88 , 0),
-        #'Titanium'     : (sys.maxint - 87 , 0),
-        #'Vanadium'     : (sys.maxint - 86 , 0),
-        #'Chromium'     : (sys.maxint - 85 , 0),
-        #'Manganese'    : (sys.maxint - 84 , 0),
-        #'Iron'         : (sys.maxint - 83 , 0),
-        #'Cobalt'       : (sys.maxint - 82 , 0),
-        #'Nickel'       : (sys.maxint - 81 , 0),
-        #'Copper'       : (sys.maxint - 80 , 0),
-        #'Zinc'         : (sys.maxint - 79 , 0),
-        #'Gallium'      : (sys.maxint - 78 , 0),
-        #'Germanium'    : (sys.maxint - 77 , 0),
-        #'Arsenic'      : (sys.maxint - 76 , 0),
-        #'Selenium'     : (sys.maxint - 75 , 0),
-        #'Bromine'      : (sys.maxint - 74 , 0),
-        #'Krypton'      : (sys.maxint - 73 , 0),
-        #'Rubidium'     : (sys.maxint - 72 , 0),
-        #'Strontium'    : (sys.maxint - 71 , 0),
-        #'Yttrium'      : (sys.maxint - 70 , 0),
-        #'Zirconium'    : (sys.maxint - 69 , 0),
-        #'Niobium'      : (sys.maxint - 68 , 0),
-        #'Molybdenum'   : (sys.maxint - 67 , 0),
-        #'Technetium'   : (sys.maxint - 66 , 0),
-        #'Ruthenium'    : (sys.maxint - 65 , 0),
-        #'Rhodium'      : (sys.maxint - 64 , 0),
-        #'Palladium'    : (sys.maxint - 63 , 0),
-        #'Silver'       : (sys.maxint - 62 , 0),
-        #'Cadmium'      : (sys.maxint - 61 , 0),
-        #'Indium'       : (sys.maxint - 60 , 0),
-        #'Tin'          : (sys.maxint - 59 , 0),
-        #'Antimony'     : (sys.maxint - 58 , 0),
-        #'Tellurium'    : (sys.maxint - 57 , 0),
-        #'Iodine'       : (sys.maxint - 56 , 0),
-        #'Xenon'        : (sys.maxint - 55 , 0),
-        #'Caesium'      : (sys.maxint - 54 , 0),
-        #'Barium'       : (sys.maxint - 53 , 0),
-        #'Lanthanum'    : (sys.maxint - 52 , 0),
-        #'Cerium'       : (sys.maxint - 51 , 0),
-        #'Praseodymium' : (sys.maxint - 50 , 0),
-        #'Neodymium'    : (sys.maxint - 49 , 0),
-        #'Promethium'   : (sys.maxint - 48 , 0),
-        #'Samarium'     : (sys.maxint - 47 , 0),
-        #'Europium'     : (sys.maxint - 46 , 0),
-        #'Gadolinium'   : (sys.maxint - 45 , 0),
-        #'Terbium'      : (sys.maxint - 44 , 0),
-        #'Dysprosium'   : (sys.maxint - 43 , 0),
-        #'Holmium'      : (sys.maxint - 42 , 0),
-        #'Erbium'       : (sys.maxint - 41 , 0),
-        #'Thulium'      : (sys.maxint - 40 , 0),
-        #'Ytterbium'    : (sys.maxint - 39 , 0),
-        #'Lutetium'     : (sys.maxint - 38 , 0),
-        #'Hafnium'      : (sys.maxint - 37 , 0),
-        #'Tantalum'     : (sys.maxint - 36 , 0),
-        #'Tungsten'     : (sys.maxint - 35 , 0),
-        #'Rhenium'      : (sys.maxint - 34 , 0),
-        #'Osmium'       : (sys.maxint - 33 , 0),
-        #'Iridium'      : (sys.maxint - 32 , 0),
-        #'Platinum'     : (sys.maxint - 31 , 0),
-        #'Gold'         : (sys.maxint - 30 , 0),
-        #'Mercury'      : (sys.maxint - 29 , 0),
-        #'Thallium'     : (sys.maxint - 28 , 0),
-        #'Lead'         : (sys.maxint - 27 , 0),
-        #'Bismuth'      : (sys.maxint - 26 , 0),
-        #'Polonium'     : (sys.maxint - 25 , 0),
-        #'Astatine'     : (sys.maxint - 24 , 0),
-        #'Radon'        : (sys.maxint - 23 , 0),
-        #'Francium'     : (sys.maxint - 22 , 0),
-        #'Radium'       : (sys.maxint - 21 , 0),
-        #'Actinium'     : (sys.maxint - 20 , 0),
-        #'Thorium'      : (sys.maxint - 19 , 0),
-        #'Protactinium' : (sys.maxint - 18 , 0),
-        #'Uranium'      : (sys.maxint - 17 , 0),
-        #'Neptunium'    : (sys.maxint - 16 , 0),
-        #'Plutonium'    : (sys.maxint - 15 , 0),
-        #'Americium'    : (sys.maxint - 14 , 0),
-        #'Curium'       : (sys.maxint - 13 , 0),
-        #'Berkelium'    : (sys.maxint - 12 , 0),
-        #'Californium'  : (sys.maxint - 11 , 0),
-        #'Einsteinium'  : (sys.maxint - 10 , 0),
-        #'Fermium'      : (sys.maxint - 9  , 0),
-        #'Mendelevium'  : (sys.maxint - 8  , 0),
-        #'Nobelium'     : (sys.maxint - 7  , 0),
-        #'Lawrencium'   : (sys.maxint - 6  , 0),
-        #'Rutherfordium': (sys.maxint - 5  , 0),
-        #'Dubnium'      : (sys.maxint - 4  , 0),
-        #'Seaborgium'   : (sys.maxint - 3  , 0),
-        #'Bohrium'      : (sys.maxint - 2  , 0),
-        #'Hassium'      : (sys.maxint - 1  , 0),
-        #'Meitnerium'   : (sys.maxint - 0  , 0),
+        'Lithium'       : (MAX_SIZE - 106, 0),
+        'Beryllium'     : (MAX_SIZE - 105, 0),
+        'Boron'         : (MAX_SIZE - 104, 0),
+        #'Carbon'       : (MAX_SIZE - 103, 0),
+        #'Nitrogen'     : (MAX_SIZE - 102, 0),
+        #'Oxygen'       : (MAX_SIZE - 101, 0),
+        #'Fluorine'     : (MAX_SIZE - 100, 0),
+        #'Neon'         : (MAX_SIZE - 99 , 0),
+        #'Sodium'       : (MAX_SIZE - 98 , 0),
+        #'Magnesium'    : (MAX_SIZE - 97 , 0),
+        #'Aluminium'    : (MAX_SIZE - 96 , 0),
+        #'Silicon'      : (MAX_SIZE - 95 , 0),
+        #'Phosphorus'   : (MAX_SIZE - 94 , 0),
+        #'Sulfur'       : (MAX_SIZE - 93 , 0),
+        #'Chlorine'     : (MAX_SIZE - 92 , 0),
+        #'Argon'        : (MAX_SIZE - 91 , 0),
+        #'Potassium'    : (MAX_SIZE - 90 , 0),
+        #'Calcium'      : (MAX_SIZE - 89 , 0),
+        #'Scandium'     : (MAX_SIZE - 88 , 0),
+        #'Titanium'     : (MAX_SIZE - 87 , 0),
+        #'Vanadium'     : (MAX_SIZE - 86 , 0),
+        #'Chromium'     : (MAX_SIZE - 85 , 0),
+        #'Manganese'    : (MAX_SIZE - 84 , 0),
+        #'Iron'         : (MAX_SIZE - 83 , 0),
+        #'Cobalt'       : (MAX_SIZE - 82 , 0),
+        #'Nickel'       : (MAX_SIZE - 81 , 0),
+        #'Copper'       : (MAX_SIZE - 80 , 0),
+        #'Zinc'         : (MAX_SIZE - 79 , 0),
+        #'Gallium'      : (MAX_SIZE - 78 , 0),
+        #'Germanium'    : (MAX_SIZE - 77 , 0),
+        #'Arsenic'      : (MAX_SIZE - 76 , 0),
+        #'Selenium'     : (MAX_SIZE - 75 , 0),
+        #'Bromine'      : (MAX_SIZE - 74 , 0),
+        #'Krypton'      : (MAX_SIZE - 73 , 0),
+        #'Rubidium'     : (MAX_SIZE - 72 , 0),
+        #'Strontium'    : (MAX_SIZE - 71 , 0),
+        #'Yttrium'      : (MAX_SIZE - 70 , 0),
+        #'Zirconium'    : (MAX_SIZE - 69 , 0),
+        #'Niobium'      : (MAX_SIZE - 68 , 0),
+        #'Molybdenum'   : (MAX_SIZE - 67 , 0),
+        #'Technetium'   : (MAX_SIZE - 66 , 0),
+        #'Ruthenium'    : (MAX_SIZE - 65 , 0),
+        #'Rhodium'      : (MAX_SIZE - 64 , 0),
+        #'Palladium'    : (MAX_SIZE - 63 , 0),
+        #'Silver'       : (MAX_SIZE - 62 , 0),
+        #'Cadmium'      : (MAX_SIZE - 61 , 0),
+        #'Indium'       : (MAX_SIZE - 60 , 0),
+        #'Tin'          : (MAX_SIZE - 59 , 0),
+        #'Antimony'     : (MAX_SIZE - 58 , 0),
+        #'Tellurium'    : (MAX_SIZE - 57 , 0),
+        #'Iodine'       : (MAX_SIZE - 56 , 0),
+        #'Xenon'        : (MAX_SIZE - 55 , 0),
+        #'Caesium'      : (MAX_SIZE - 54 , 0),
+        #'Barium'       : (MAX_SIZE - 53 , 0),
+        #'Lanthanum'    : (MAX_SIZE - 52 , 0),
+        #'Cerium'       : (MAX_SIZE - 51 , 0),
+        #'Praseodymium' : (MAX_SIZE - 50 , 0),
+        #'Neodymium'    : (MAX_SIZE - 49 , 0),
+        #'Promethium'   : (MAX_SIZE - 48 , 0),
+        #'Samarium'     : (MAX_SIZE - 47 , 0),
+        #'Europium'     : (MAX_SIZE - 46 , 0),
+        #'Gadolinium'   : (MAX_SIZE - 45 , 0),
+        #'Terbium'      : (MAX_SIZE - 44 , 0),
+        #'Dysprosium'   : (MAX_SIZE - 43 , 0),
+        #'Holmium'      : (MAX_SIZE - 42 , 0),
+        #'Erbium'       : (MAX_SIZE - 41 , 0),
+        #'Thulium'      : (MAX_SIZE - 40 , 0),
+        #'Ytterbium'    : (MAX_SIZE - 39 , 0),
+        #'Lutetium'     : (MAX_SIZE - 38 , 0),
+        #'Hafnium'      : (MAX_SIZE - 37 , 0),
+        #'Tantalum'     : (MAX_SIZE - 36 , 0),
+        #'Tungsten'     : (MAX_SIZE - 35 , 0),
+        #'Rhenium'      : (MAX_SIZE - 34 , 0),
+        #'Osmium'       : (MAX_SIZE - 33 , 0),
+        #'Iridium'      : (MAX_SIZE - 32 , 0),
+        #'Platinum'     : (MAX_SIZE - 31 , 0),
+        #'Gold'         : (MAX_SIZE - 30 , 0),
+        #'Mercury'      : (MAX_SIZE - 29 , 0),
+        #'Thallium'     : (MAX_SIZE - 28 , 0),
+        #'Lead'         : (MAX_SIZE - 27 , 0),
+        #'Bismuth'      : (MAX_SIZE - 26 , 0),
+        #'Polonium'     : (MAX_SIZE - 25 , 0),
+        #'Astatine'     : (MAX_SIZE - 24 , 0),
+        #'Radon'        : (MAX_SIZE - 23 , 0),
+        #'Francium'     : (MAX_SIZE - 22 , 0),
+        #'Radium'       : (MAX_SIZE - 21 , 0),
+        #'Actinium'     : (MAX_SIZE - 20 , 0),
+        #'Thorium'      : (MAX_SIZE - 19 , 0),
+        #'Protactinium' : (MAX_SIZE - 18 , 0),
+        #'Uranium'      : (MAX_SIZE - 17 , 0),
+        #'Neptunium'    : (MAX_SIZE - 16 , 0),
+        #'Plutonium'    : (MAX_SIZE - 15 , 0),
+        #'Americium'    : (MAX_SIZE - 14 , 0),
+        #'Curium'       : (MAX_SIZE - 13 , 0),
+        #'Berkelium'    : (MAX_SIZE - 12 , 0),
+        #'Californium'  : (MAX_SIZE - 11 , 0),
+        #'Einsteinium'  : (MAX_SIZE - 10 , 0),
+        #'Fermium'      : (MAX_SIZE - 9  , 0),
+        #'Mendelevium'  : (MAX_SIZE - 8  , 0),
+        #'Nobelium'     : (MAX_SIZE - 7  , 0),
+        #'Lawrencium'   : (MAX_SIZE - 6  , 0),
+        #'Rutherfordium': (MAX_SIZE - 5  , 0),
+        #'Dubnium'      : (MAX_SIZE - 4  , 0),
+        #'Seaborgium'   : (MAX_SIZE - 3  , 0),
+        #'Bohrium'      : (MAX_SIZE - 2  , 0),
+        #'Hassium'      : (MAX_SIZE - 1  , 0),
+        #'Meitnerium'   : (MAX_SIZE - 0  , 0),
         # <---- Please refrain from fixing PEP-8 E203 and E265 -------------------------------------------------------
         # pylint: enable=E8203,E8265
     }
 
-    LNAMES = dict((k.lower(), v) for (k, v) in NAMES.iteritems())
-    VNAMES = dict((v, k) for (k, v) in NAMES.iteritems())
-    RMATCH = dict((v[:2], k) for (k, v) in NAMES.iteritems())
+    LNAMES = dict((k.lower(), v) for (k, v) in NAMES.items())
+    VNAMES = dict((v, k) for (k, v) in NAMES.items())
+    RMATCH = dict((v[:2], k) for (k, v) in NAMES.items())
 
     def __init__(self,              # pylint: disable=C0103
                  major,
@@ -242,7 +242,7 @@ class SaltStackVersion(object):
     def parse(cls, version_string):
         if version_string.lower() in cls.LNAMES:
             return cls.from_name(version_string)
-        match = cls.git_describe_regex.match(version_string)
+        match = cls.git_describe_regex.match(version_string.decode())
         if not match:
             raise ValueError(
                 'Unable to parse version string: {0!r}'.format(version_string)
@@ -262,8 +262,8 @@ class SaltStackVersion(object):
         return cls.from_name(
             cls.VNAMES[
                 max([version_info for version_info in
-                     cls.VNAMES.keys() if
-                     version_info[0] < (sys.maxint - 200)])
+                     cls.VNAMES if
+                     version_info[0] < (MAX_SIZE - 200)])
             ]
         )
 
@@ -452,8 +452,16 @@ def __get_version(saltstack_version):
             kwargs['close_fds'] = True
 
         process = subprocess.Popen(
-                ['git', 'describe', '--tags', '--match', 'v[0-9]*', '--always'], **kwargs)
+            ['git', 'describe', '--tags', '--first-parent', '--match', 'v[0-9]*', '--always'], **kwargs)
+
         out, err = process.communicate()
+
+        if process.returncode != 0:
+            # The git version running this might not support --first-parent
+            # Revert to old command
+            process = subprocess.Popen(
+                ['git', 'describe', '--tags', '--match', 'v[0-9]*', '--always'], **kwargs)
+            out, err = process.communicate()
         out = out.strip()
         err = err.strip()
 

@@ -4,8 +4,13 @@ The service module for OpenBSD
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import logging
+from salt.ext.six.moves import map
+
+# Import Salt libs
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -24,11 +29,13 @@ def __virtual__():
     Only work on OpenBSD
     '''
     if __grains__['os'] == 'OpenBSD' and os.path.exists('/etc/rc.d/rc.subr'):
-        krel = map(int, __grains__['kernelrelease'].split('.'))
+        krel = list(list(map(int, __grains__['kernelrelease'].split('.'))))
         # The -f flag, used to force a script to run even if disabled,
         # was added after the 5.0 release.
+        # the rcctl(8) command is the preferred way to manage services.
         if krel[0] > 5 or (krel[0] == 5 and krel[1] > 0):
-            return __virtualname__
+            if not os.path.exists('/usr/sbin/rcctl'):
+                return __virtualname__
     return False
 
 
@@ -127,7 +134,7 @@ def _get_rc():
     try:
         # now read the system startup script /etc/rc
         # to know what are the system enabled daemons
-        with open('/etc/rc', 'r') as handle:
+        with salt.utils.fopen('/etc/rc', 'r') as handle:
             lines = handle.readlines()
     except IOError:
         log.error('Unable to read /etc/rc')
@@ -145,7 +152,10 @@ def _get_rc():
 
     # this will execute rc.conf and rc.conf.local
     # used in /etc/rc at boot to start the daemons
-    variables = __salt__['cmd.run']('(. /etc/rc.conf && set)', clean_env=True, output_loglevel='quiet').split('\n')
+    variables = __salt__['cmd.run']('(. /etc/rc.conf && set)',
+                                    clean_env=True,
+                                    output_loglevel='quiet',
+                                    python_shell=True).split('\n')
     for var in variables:
         match = service_flags_regex.match(var)
         if match:
@@ -241,7 +251,7 @@ def get_enabled():
     return sorted(set(get_all()) & set(services))
 
 
-def enabled(name):
+def enabled(name, **kwargs):
     '''
     .. versionadded:: 2014.7.0
 

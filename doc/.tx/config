@@ -4808,3 +4808,69 @@ source_file = _build/locale/topics/tutorials/multimaster_pki.pot
 source_lang = en
 source_name = topics/tutorials/multimaster_pki.rst
 
+[salt.ref--output--all--salt_output_newline_values_only]
+file_filter = locale/<lang>/LC_MESSAGES/ref/output/all/salt.output.newline_values_only.po
+source_file = _build/locale/ref/output/all/salt.output.newline_values_only.pot
+source_lang = en
+source_name = ref/output/all/salt.output.newline_values_only.rst
+
+[salt.topics--releases--releasecandidate]
+file_filter = locale/<lang>/LC_MESSAGES/topics/releases/releasecandidate.po
+source_file = _build/locale/topics/releases/releasecandidate.pot
+source_lang = en
+source_name = topics/releases/releasecandidate.rst
+
+[salt.topics--targeting--range]
+file_filter = locale/<lang>/LC_MESSAGES/topics/targeting/range.po
+source_file = _build/locale/topics/targeting/range.pot
+source_lang = en
+source_name = topics/targeting/range.rst
+
+[salt.ref--modules--all--salt_modules_boto_cloudwatch]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.boto_cloudwatch.po
+source_file = _build/locale/ref/modules/all/salt.modules.boto_cloudwatch.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.boto_cloudwatch.rst
+
+[salt.ref--states--all--salt_states_boto_cloudwatch_alarm]
+file_filter = locale/<lang>/LC_MESSAGES/ref/states/all/salt.states.boto_cloudwatch_alarm.po
+source_file = _build/locale/ref/states/all/salt.states.boto_cloudwatch_alarm.pot
+source_lang = en
+source_name = ref/states/all/salt.states.boto_cloudwatch_alarm.rst
+
+[salt.topics--releases--2014_1_11]
+file_filter = locale/<lang>/LC_MESSAGES/topics/releases/2014.1.11.po
+source_file = _build/locale/topics/releases/2014.1.11.pot
+source_lang = en
+source_name = topics/releases/2014.1.11.rst
+
+[salt.ref--cli--salt-unity]
+file_filter = locale/<lang>/LC_MESSAGES/ref/cli/salt-unity.po
+source_file = _build/locale/ref/cli/salt-unity.pot
+source_lang = en
+source_name = ref/cli/salt-unity.rst
+
+[salt.topics--development--architecture]
+file_filter = locale/<lang>/LC_MESSAGES/topics/development/architecture.po
+source_file = _build/locale/topics/development/architecture.pot
+source_lang = en
+source_name = topics/development/architecture.rst
+
+[salt.topics--releases--2014_1_12]
+file_filter = locale/<lang>/LC_MESSAGES/topics/releases/2014.1.12.po
+source_file = _build/locale/topics/releases/2014.1.12.pot
+source_lang = en
+source_name = topics/releases/2014.1.12.rst
+
+[salt.topics--releases--2014_1_13]
+file_filter = locale/<lang>/LC_MESSAGES/topics/releases/2014.1.13.po
+source_file = _build/locale/topics/releases/2014.1.13.pot
+source_lang = en
+source_name = topics/releases/2014.1.13.rst
+
+[salt.topics--releases--2014_7_1]
+file_filter = locale/<lang>/LC_MESSAGES/topics/releases/2014.7.1.po
+source_file = _build/locale/topics/releases/2014.7.1.pot
+source_lang = en
+source_name = topics/releases/2014.7.1.rst
+

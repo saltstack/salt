@@ -2,6 +2,7 @@
 '''
 Run nagios plugins/checks from salt and get the return as data.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -45,10 +46,10 @@ def _execute_pillar(pillar_name, run_type):
     ------
     webserver:
         Ping_google:
-            - check_icmp:8.8.8.8
-            - check_icmp:google.com
+            - check_icmp: 8.8.8.8
+            - check_icmp: google.com
         Load:
-            - check_load:-w 0.8 -c 1
+            - check_load: -w 0.8 -c 1
         APT:
             - check_apt
     -------
@@ -63,7 +64,7 @@ def _execute_pillar(pillar_name, run_type):
             #Check if is a dict to get the arguments
             #in command if not set the arguments to empty string
             if isinstance(command, dict):
-                plugin = command.keys()[0]
+                plugin = next(command.iterkeys())
                 args = command[plugin]
             else:
                 plugin = command
@@ -134,10 +135,10 @@ def retcode_pillar(pillar_name):
         ------
         webserver:
             Ping_google:
-                - check_icmp:8.8.8.8
-                - check_icmp:google.com
+                - check_icmp: 8.8.8.8
+                - check_icmp: google.com
             Load:
-                - check_load:-w 0.8 -c 1
+                - check_load: -w 0.8 -c 1
             APT:
                 - check_apt
         -------
@@ -165,7 +166,7 @@ def retcode_pillar(pillar_name):
             #Check if is a dict to get the arguments
             #in command if not set the arguments to empty string
             if isinstance(command, dict):
-                plugin = command.keys()[0]
+                plugin = next(command.iterkeys())
                 args = command[plugin]
             else:
                 plugin = command
@@ -195,10 +196,10 @@ def run_pillar(pillar_name):
         ------
         webserver:
             Ping_google:
-                - check_icmp:8.8.8.8
-                - check_icmp:google.com
+                - check_icmp: 8.8.8.8
+                - check_icmp: google.com
             Load:
-                - check_load:-w 0.8 -c 1
+                - check_load: -w 0.8 -c 1
             APT:
                 - check_apt
         -------
@@ -227,10 +228,10 @@ def run_all_pillar(pillar_name):
         ------
         webserver:
             Ping_google:
-                - check_icmp:8.8.8.8
-                - check_icmp:google.com
+                - check_icmp: 8.8.8.8
+                - check_icmp: google.com
             Load:
-                - check_load:-w 0.8 -c 1
+                - check_load: -w 0.8 -c 1
             APT:
                 - check_apt
         -------

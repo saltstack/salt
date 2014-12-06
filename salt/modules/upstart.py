@@ -38,6 +38,7 @@ about this, at least.
     used, as it supports the hybrid upstart/sysvinit system used in
     RHEL/CentOS 6.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import glob
@@ -45,6 +46,7 @@ import os
 
 # Import salt libs
 import salt.utils
+import salt.modules.cmdmod
 
 __func_alias__ = {
     'reload_': 'reload'
@@ -82,7 +84,7 @@ def _find_utmp():
             result[os.stat(utmp).st_mtime] = utmp
         except Exception:
             pass
-    return result[sorted(result.keys()).pop()]
+    return result[sorted(result).pop()]
 
 
 def _default_runlevel():
@@ -425,7 +427,7 @@ def _upstart_disable(name):
     Disable an Upstart service.
     '''
     override = '/etc/init/{0}.override'.format(name)
-    with file(override, 'w') as ofile:
+    with salt.utils.fopen(override, 'w') as ofile:
         ofile.write('manual')
     return _upstart_is_disabled(name)
 
@@ -474,7 +476,7 @@ def disable(name, **kwargs):
     return not __salt__['cmd.retcode'](cmd)
 
 
-def enabled(name):
+def enabled(name, **kwargs):
     '''
     Check to see if the named service is enabled to start on boot
 

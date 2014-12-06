@@ -40,7 +40,8 @@ Management of the Salt scheduler
             - Friday 5:00pm
 
     This will schedule the command: state.sls httpd test=True at 5pm on Monday,
-    Wednesday and Friday, and 3pm on Tuesday and Thursday.
+    Wednesday and Friday, and 3pm on Tuesday and Thursday.  Requires that
+    python-dateutil is installed on the minion.
 
     job1:
       schedule.present:
@@ -53,8 +54,28 @@ Management of the Salt scheduler
 
     Scheduled jobs can also be specified using the format used by cron.  This will
     schedule the command: state.sls httpd test=True to run every 5 minutes.  Requires
-    that python-croniter is installed.
+    that python-croniter is installed on the minion.
 
+    job1:
+      schedule.present:
+        - function: state.sls
+        - args:
+          - httpd
+        - kwargs:
+          test: True
+        - when:
+            - Monday 5:00pm
+            - Tuesday 3:00pm
+            - Wednesday 5:00pm
+            - Thursday 3:00pm
+            - Friday 5:00pm
+        - returner: xmpp
+        - return_config: xmpp_state_run
+
+    This will schedule the command: state.sls httpd test=True at 5pm on Monday,
+    Wednesday and Friday, and 3pm on Tuesday and Thursday.  Using the xmpp returner
+    to return the results of the scheduled job, with the alternative configuration
+    options found in the xmpp_state_run section.
 
 '''
 
@@ -87,10 +108,12 @@ def present(name,
         This will schedule the job at the specified time(s).
         The when parameter must be a single value or a dictionary
         with the date string(s) using the dateutil format.
+        Requires python-dateutil.
 
     cron
         This will schedule the job at the specified time(s)
         using the crontab format.
+        Requires python-croniter.
 
     function
         The function that should be executed by the scheduled job.
@@ -115,7 +138,13 @@ def present(name,
     range
         This will schedule the command within the range specified.
         The range parameter must be a dictionary with the date strings
-        using the dateutil format.
+        using the dateutil format. Requires python-dateutil.
+
+    returner
+        The returner to use to return the results of the scheduled job.
+
+    return_config
+        The alternative configuration to use for returner configuration options.
 
     '''
 

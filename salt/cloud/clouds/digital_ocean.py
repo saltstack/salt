@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-Digital Ocean Cloud Module
+DigitalOcean Cloud Module
 ==========================
 
-The Digital Ocean cloud module is used to control access to the Digital Ocean
+The DigitalOcean cloud module is used to control access to the DigitalOcean
 VPS system.
 
 Use of this module only requires the ``api_key`` parameter to be set. Set up the
@@ -13,13 +13,14 @@ cloud configuration at ``/etc/salt/cloud.providers`` or
 .. code-block:: yaml
 
     my-digital-ocean-config:
-      # Digital Ocean account keys
+      # DigitalOcean account keys
       client_key: wFGEwgregeqw3435gDger
       api_key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
       provider: digital_ocean
 
 :depends: requests
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -33,7 +34,7 @@ import logging
 # Import salt cloud libs
 import salt.utils.cloud
 import salt.config as config
-from salt.cloud.exceptions import (
+from salt.exceptions import (
     SaltCloudConfigError,
     SaltCloudNotFound,
     SaltCloudSystemExit,
@@ -48,7 +49,7 @@ log = logging.getLogger(__name__)
 # Only load in this module if the DIGITAL_OCEAN configurations are in place
 def __virtual__():
     '''
-    Check for Digital Ocean configurations
+    Check for DigitalOcean configurations
     '''
     if get_configured_provider() is False:
         return False
@@ -82,7 +83,7 @@ def avail_locations(call=None):
     ret = {}
     for region in items['regions']:
         ret[region['name']] = {}
-        for item in region.keys():
+        for item in region:
             ret[region['name']][item] = str(region[item])
 
     return ret
@@ -101,9 +102,9 @@ def avail_images(call=None):
     items = query(method='images')
     ret = {}
     for image in items['images']:
-        ret[image['name']] = {}
-        for item in image.keys():
-            ret[image['name']][item] = str(image[item])
+        ret[image['id']] = {}
+        for item in image:
+            ret[image['id']][item] = str(image[item])
 
     return ret
 
@@ -122,7 +123,7 @@ def avail_sizes(call=None):
     ret = {}
     for size in items['sizes']:
         ret[size['name']] = {}
-        for item in size.keys():
+        for item in size:
             ret[size['name']][item] = str(size[item])
 
     return ret
@@ -165,7 +166,7 @@ def list_nodes_full(call=None):
     ret = {}
     for node in items['droplets']:
         ret[node['name']] = {}
-        for item in node.keys():
+        for item in node:
             value = node[item]
             if value is not None:
                 value = str(value)
@@ -283,7 +284,7 @@ def create(vm_):
 
     if key_filename is None:
         raise SaltCloudConfigError(
-            'The Digital Ocean driver requires an ssh_key_file and an ssh_key_name '
+            'The DigitalOcean driver requires an ssh_key_file and an ssh_key_name '
             'because it does not supply a root password upon building the server.'
         )
 
@@ -319,10 +320,10 @@ def create(vm_):
             'The following exception was thrown when trying to '
             'run the initial deployment: {1}'.format(
                 vm_['name'],
-                exc.message
+                str(exc)
             ),
             # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -350,7 +351,7 @@ def create(vm_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(exc.message)
+            raise SaltCloudSystemExit(str(exc))
 
     ssh_username = config.get_cloud_config_value(
         'ssh_username', vm_, __opts__, default='root'
@@ -485,7 +486,7 @@ def create(vm_):
 
 def query(method='droplets', droplet_id=None, command=None, args=None):
     '''
-    Make a web call to Digital Ocean
+    Make a web call to DigitalOcean
     '''
     base_path = str(config.get_cloud_config_value(
         'api_root',
@@ -516,7 +517,7 @@ def query(method='droplets', droplet_id=None, command=None, args=None):
     request = requests.get(path, params=args)
     if request.status_code != 200:
         raise SaltCloudSystemExit(
-            'An error occurred while querying Digital Ocean. HTTP Code: {0}  '
+            'An error occurred while querying DigitalOcean. HTTP Code: {0}  '
             'Error: {1!r}'.format(
                 request.getcode(),
                 #request.read()
@@ -554,7 +555,7 @@ def script(vm_):
 
 def show_instance(name, call=None):
     '''
-    Show the details from Digital Ocean concerning a droplet
+    Show the details from DigitalOcean concerning a droplet
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
@@ -598,7 +599,7 @@ def list_keypairs(call=None):
     ret = {}
     for keypair in items['ssh_keys']:
         ret[keypair['name']] = {}
-        for item in keypair.keys():
+        for item in keypair:
             ret[keypair['name']][item] = str(keypair[item])
 
     return ret

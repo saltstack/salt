@@ -5,6 +5,7 @@ The default file server backend
 Based on the environments in the :conf_master:`file_roots` configuration
 option.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -14,6 +15,7 @@ import logging
 import salt.fileserver
 import salt.utils
 from salt.utils.event import tagify
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -64,7 +66,7 @@ def envs():
     '''
     Return the file server environments
     '''
-    return __opts__['file_roots'].keys()
+    return list(__opts__['file_roots'].keys())
 
 
 def serve_file(load, fnd):
@@ -140,7 +142,7 @@ def update():
     if not os.path.exists(mtime_map_path_dir):
         os.makedirs(mtime_map_path_dir)
     with salt.utils.fopen(mtime_map_path, 'w') as fp_:
-        for file_path, mtime in new_mtime_map.iteritems():
+        for file_path, mtime in six.iteritems(new_mtime_map):
             fp_.write('{file_path}:{mtime}\n'.format(file_path=file_path,
                                                      mtime=mtime))
 
@@ -150,6 +152,7 @@ def update():
                 'master',
                 __opts__['sock_dir'],
                 __opts__['transport'],
+                opts=__opts__,
                 listen=False)
         event.fire_event(data, tagify(['roots', 'update'], prefix='fileserver'))
 

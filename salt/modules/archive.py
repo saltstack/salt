@@ -1,13 +1,16 @@
 # -*- coding: utf-8 -*-
 '''
-A module to wrap archive calls
+A module to wrap (non-Windows) archive calls
 
 .. versionadded:: 2014.1.0
 '''
+from __future__ import absolute_import
+
+from salt.ext.six import string_types
 
 # Import salt libs
-import salt._compat
-from salt.utils import which as _which, which_bin as _which_bin
+from salt.utils import \
+    which as _which, which_bin as _which_bin, is_windows as _is_windows
 import salt.utils.decorators as decorators
 
 # TODO: Check that the passed arguments are correct
@@ -19,6 +22,8 @@ __func_alias__ = {
 
 
 def __virtual__():
+    if _is_windows():
+        return False
     commands = ('tar', 'gzip', 'gunzip', 'zip', 'unzip', 'rar', 'unrar')
     # If none of the above commands are in $PATH this module is a no-go
     if not any(_which(cmd) for cmd in commands):
@@ -27,7 +32,7 @@ def __virtual__():
 
 
 @decorators.which('tar')
-def tar(options, tarfile, sources=None, dest=None, cwd=None, template=None):
+def tar(options, tarfile, sources=None, dest=None, cwd=None, template=None, runas=None):
     '''
     .. note::
 
@@ -80,7 +85,7 @@ def tar(options, tarfile, sources=None, dest=None, cwd=None, template=None):
         salt '*' archive.tar xf foo.tar dest=/target/directory
 
     '''
-    if isinstance(sources, salt._compat.string_types):
+    if isinstance(sources, string_types):
         sources = [s.strip() for s in sources.split(',')]
 
     if dest:
@@ -90,11 +95,11 @@ def tar(options, tarfile, sources=None, dest=None, cwd=None, template=None):
     if sources:
         cmd += ' {0}'.format(' '.join(sources))
 
-    return __salt__['cmd.run'](cmd, cwd=cwd, template=template).splitlines()
+    return __salt__['cmd.run'](cmd, cwd=cwd, template=template, runas=runas).splitlines()
 
 
 @decorators.which('gzip')
-def gzip(sourcefile, template=None):
+def gzip(sourcefile, template=None, runas=None):
     '''
     Uses the gzip command to create gzip files
 
@@ -115,11 +120,11 @@ def gzip(sourcefile, template=None):
 
     '''
     cmd = 'gzip {0}'.format(sourcefile)
-    return __salt__['cmd.run'](cmd, template=template).splitlines()
+    return __salt__['cmd.run'](cmd, template=template, runas=runas).splitlines()
 
 
 @decorators.which('gunzip')
-def gunzip(gzipfile, template=None):
+def gunzip(gzipfile, template=None, runas=None):
     '''
     Uses the gunzip command to unpack gzip files
 
@@ -140,11 +145,11 @@ def gunzip(gzipfile, template=None):
 
     '''
     cmd = 'gunzip {0}'.format(gzipfile)
-    return __salt__['cmd.run'](cmd, template=template).splitlines()
+    return __salt__['cmd.run'](cmd, template=template, runas=runas).splitlines()
 
 
 @decorators.which('zip')
-def zip_(zipfile, sources, template=None):
+def zip_(zipfile, sources, template=None, runas=None):
     '''
     Uses the zip command to create zip files
 
@@ -164,14 +169,14 @@ def zip_(zipfile, sources, template=None):
         salt '*' archive.zip template=jinja /tmp/zipfile.zip /tmp/sourcefile1,/tmp/{{grains.id}}.txt
 
     '''
-    if isinstance(sources, salt._compat.string_types):
+    if isinstance(sources, string_types):
         sources = [s.strip() for s in sources.split(',')]
     cmd = 'zip {0} {1}'.format(zipfile, ' '.join(sources))
-    return __salt__['cmd.run'](cmd, template=template).splitlines()
+    return __salt__['cmd.run'](cmd, template=template, runas=runas).splitlines()
 
 
 @decorators.which('unzip')
-def unzip(zipfile, dest, excludes=None, template=None, options=None):
+def unzip(zipfile, dest, excludes=None, template=None, options=None, runas=None):
     '''
     Uses the unzip command to unpack zip files
 
@@ -194,7 +199,7 @@ def unzip(zipfile, dest, excludes=None, template=None, options=None):
         salt '*' archive.unzip template=jinja /tmp/zipfile.zip /tmp/{{grains.id}}/ excludes=file_1,file_2
 
     '''
-    if isinstance(excludes, salt._compat.string_types):
+    if isinstance(excludes, string_types):
         excludes = [entry.strip() for entry in excludes.split(',')]
 
     if options:
@@ -204,11 +209,11 @@ def unzip(zipfile, dest, excludes=None, template=None, options=None):
 
     if excludes is not None:
         cmd += ' -x {0}'.format(' '.join(excludes))
-    return __salt__['cmd.run'](cmd, template=template).splitlines()
+    return __salt__['cmd.run'](cmd, template=template, runas=runas).splitlines()
 
 
 @decorators.which('rar')
-def rar(rarfile, sources, template=None):
+def rar(rarfile, sources, template=None, runas=None):
     '''
     Uses the rar command to create rar files
     Uses rar for Linux from http://www.rarlab.com/
@@ -230,14 +235,14 @@ def rar(rarfile, sources, template=None):
 
 
     '''
-    if isinstance(sources, salt._compat.string_types):
+    if isinstance(sources, string_types):
         sources = [s.strip() for s in sources.split(',')]
     cmd = 'rar a -idp {0} {1}'.format(rarfile, ' '.join(sources))
-    return __salt__['cmd.run'](cmd, template=template).splitlines()
+    return __salt__['cmd.run'](cmd, template=template, runas=runas).splitlines()
 
 
 @decorators.which_bin(('unrar', 'rar'))
-def unrar(rarfile, dest, excludes=None, template=None):
+def unrar(rarfile, dest, excludes=None, template=None, runas=None):
     '''
     Uses the unrar command to unpack rar files
     Uses rar for Linux from http://www.rarlab.com/
@@ -258,7 +263,7 @@ def unrar(rarfile, dest, excludes=None, template=None):
         salt '*' archive.unrar template=jinja /tmp/rarfile.rar /tmp/{{grains.id}}/ excludes=file_1,file_2
 
     '''
-    if isinstance(excludes, salt._compat.string_types):
+    if isinstance(excludes, string_types):
         excludes = [entry.strip() for entry in excludes.split(',')]
 
     cmd = [_which_bin(('unrar', 'rar')), 'x', '-idp', rarfile]
@@ -266,4 +271,4 @@ def unrar(rarfile, dest, excludes=None, template=None):
         for exclude in excludes:
             cmd.extend(['-x', exclude])
     cmd.append(dest)
-    return __salt__['cmd.run'](' '.join(cmd), template=template).splitlines()
+    return __salt__['cmd.run'](' '.join(cmd), template=template, runas=runas).splitlines()

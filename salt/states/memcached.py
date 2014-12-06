@@ -5,6 +5,7 @@ States for Management of Memcached Keys
 
 .. versionadded:: 2014.1.0
 '''
+from __future__ import absolute_import
 from salt.modules.memcached import (
     DEFAULT_HOST,
     DEFAULT_PORT,

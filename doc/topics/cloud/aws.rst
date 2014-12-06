@@ -41,8 +41,8 @@ parameters are discussed in more detail below.
       # Specify whether to use public or private IP for deploy script.
       #
       # Valid options are:
-      #     private_ips - The salt-master is also hosted with EC2
-      #     public_ips - The salt-master is hosted outside of EC2
+      #     private_ips - The salt-cloud command is run inside the EC2
+      #     public_ips - The salt-cloud command is run outside of EC2
       #
       ssh_interface: public_ips
 
@@ -58,6 +58,7 @@ parameters are discussed in more detail below.
       securitygroup: default
 
       # Optionally configure default region
+      # Use salt-cloud --list-locations <provider> to obtain valid regions
       #
       location: ap-southeast-1
       availability_zone: ap-southeast-1b
@@ -209,13 +210,13 @@ Set up an initial profile at ``/etc/salt/cloud.profiles``:
     base_ec2_private:
       provider: my-ec2-southeast-private-ips
       image: ami-e565ba8c
-      size: Micro Instance
+      size: t1.micro
       ssh_username: ec2-user
 
     base_ec2_public:
       provider: my-ec2-southeast-public-ips
       image: ami-e565ba8c
-      size: Micro Instance
+      size: t1.micro
       ssh_username: ec2-user
 
     base_ec2_db:
@@ -432,6 +433,8 @@ its size to 100G by using the following configuration.
       block_device_mappings:
         - DeviceName: /dev/sda
           Ebs.VolumeSize: 100
+          Ebs.VolumeType: gp2
+          Ebs.SnapshotId: dummy0
 
 Existing EBS volumes may also be attached (not created) to your instances or
 you can create new EBS volumes based on EBS snapshots. To simply attach an
@@ -887,6 +890,8 @@ image should be created. Then, edit your cloud.profiles file like so:-
 Specifying interface properties
 -------------------------------
 
+.. versionadded:: 2014.7.0
+
 Launching into a VPC allows you to specify more complex configurations for
 the network interfaces of your virtual machines, for example:-
 
@@ -921,7 +926,7 @@ the network interfaces of your virtual machines, for example:-
           # interface (will be associated with the primary private ip address
           # of the interface
           #
-          # allocation_new_eip: True
+          # allocate_new_eip: True
 
           # Uncomment this instead to allocate a new Elastic IP Address to
           # both the primary private ip address and each of the secondary ones

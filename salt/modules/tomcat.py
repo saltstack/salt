@@ -40,14 +40,26 @@ Notes:
   Tomcat Version:
       Apache Tomcat/7.0.37
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import glob
 import hashlib
-import urllib
-import urllib2
 import tempfile
 import os
+import re
+
+# Import 3rd-party libs
+# pylint: disable=no-name-in-module,import-error
+from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
+from salt.ext.six.moves.urllib.request import (
+        urlopen as _urlopen,
+        HTTPBasicAuthHandler as _HTTPBasicAuthHandler,
+        HTTPDigestAuthHandler as _HTTPDigestAuthHandler,
+        build_opener as _build_opener,
+        install_opener as _install_opener
+)
+# pylint: enable=no-name-in-module,import-error
 
 # Import Salt libs
 import salt.utils
@@ -72,9 +84,11 @@ def __catalina_home():
     '''
     locations = ['/usr/share/tomcat*', '/opt/tomcat']
     for location in locations:
-        catalina_home = glob.glob(location)
-        if catalina_home:
-            return catalina_home[-1]
+        folders = glob.glob(location)
+        if folders:
+            for catalina_home in folders:
+                if os.path.isdir(catalina_home + "/bin"):
+                    return catalina_home
     return False
 
 
@@ -112,13 +126,13 @@ def _auth(uri):
     if user is False or password is False:
         return False
 
-    basic = urllib2.HTTPBasicAuthHandler()
+    basic = _HTTPBasicAuthHandler()
     basic.add_password(realm='Tomcat Manager Application', uri=uri,
             user=user, passwd=password)
-    digest = urllib2.HTTPDigestAuthHandler()
+    digest = _HTTPDigestAuthHandler()
     digest.add_password(realm='Tomcat Manager Application', uri=uri,
             user=user, passwd=password)
-    return urllib2.build_opener(basic, digest)
+    return _build_opener(basic, digest)
 
 
 def _wget(cmd, opts=None, url='http://localhost:8080/manager', timeout=180):
@@ -163,19 +177,19 @@ def _wget(cmd, opts=None, url='http://localhost:8080/manager', timeout=180):
     url += 'text/{0}'.format(cmd)
     url6 += '{0}'.format(cmd)
     if opts:
-        url += '?{0}'.format(urllib.urlencode(opts))
-        url6 += '?{0}'.format(urllib.urlencode(opts))
+        url += '?{0}'.format(_urlencode(opts))
+        url6 += '?{0}'.format(_urlencode(opts))
 
     # Make the HTTP request
-    urllib2.install_opener(auth)
+    _install_opener(auth)
 
     try:
         # Trying tomcat >= 7 url
-        ret['msg'] = urllib2.urlopen(url, timeout=timeout).read().splitlines()
+        ret['msg'] = _urlopen(url, timeout=timeout).read().splitlines()
     except Exception:
         try:
             # Trying tomcat6 url
-            ret['msg'] = urllib2.urlopen(url6, timeout=timeout).read().splitlines()
+            ret['msg'] = _urlopen(url6, timeout=timeout).read().splitlines()
         except Exception:
             ret['msg'] = 'Failed to create HTTP request'
 
@@ -521,12 +535,20 @@ def deploy_war(war,
             __salt__['file.set_mode'](cached, '0644')
         except KeyError:
             pass
+    else:
+        tfile = war
+
+    version_extract = re.findall("\\d+.\\d+.\\d+?", os.path.basename(war).replace('.war', ''))
+    if len(version_extract) == 1:
+        version_string = version_extract[0]
+    else:
+        version_string = None
 
     # Prepare options
     opts = {
         'war': 'file:{0}'.format(tfile),
         'path': context,
-        'version': os.path.basename(war).replace('.war', ''),
+        'version': version_string,
     }
     if force == 'yes':
         opts['update'] = 'true'
@@ -617,7 +639,7 @@ def fullversion():
             continue
         if ': ' in line:
             comps = line.split(': ')
-            ret[comps[0]] = comps[1]
+            ret[comps[0]] = comps[1].lstrip()
     return ret
 
 

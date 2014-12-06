@@ -40,6 +40,7 @@ Or using the ``names`` directive, you can put several names for the same IP.
           - server1
 
 '''
+from __future__ import absolute_import
 
 import salt.utils.validate.net
 

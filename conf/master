@@ -1,35 +1,36 @@
 ##### Primary configuration settings #####
 ##########################################
-# This configuration file is used to manage the behavior of the Salt Master
+# This configuration file is used to manage the behavior of the Salt Master.
 # Values that are commented out but have no space after the comment are
 # defaults that need not be set in the config. If there is a space after the
 # comment that the value is presented as an example and is not the default.
 
 # Per default, the master will automatically include all config files
 # from master.d/*.conf (master.d is a directory in the same directory
-# as the main master config file)
+# as the main master config file).
 #default_include: master.d/*.conf
 
-# The address of the interface to bind to
+# The address of the interface to bind to:
 #interface: 0.0.0.0
 
 # Whether the master should listen for IPv6 connections. If this is set to True,
-# the interface option must be adjusted too (for example: "interface: '::'")
+# the interface option must be adjusted, too. (For example: "interface: '::'")
 #ipv6: False
 
-# The tcp port used by the publisher
+# The tcp port used by the publisher:
 #publish_port: 4505
 
 # The user under which the salt master will run. Salt will update all
 # permissions to allow the specified user to run the master. The exception is
-# the job cache, which must be deleted if this user is changed.  If the
-# modified files cause conflicts set verify_env to False.
+# the job cache, which must be deleted if this user is changed. If the
+# modified files cause conflicts, set verify_env to False.
 #user: root
 
 # Max open files
+#
 # Each minion connecting to the master uses AT LEAST one file descriptor, the
 # master subscription connection. If enough minions connect you might start
-# seeing on the console(and then salt-master crashes):
+# seeing on the console (and then salt-master crashes):
 #   Too many open files (tcp_listener.cpp:335)
 #   Aborted (core dumped)
 #
@@ -39,32 +40,32 @@
 # If you wish to set a different value than the default one, uncomment and
 # configure this setting. Remember that this value CANNOT be higher than the
 # hard limit. Raising the hard limit depends on your OS and/or distribution,
-# a good way to find the limit is to search the internet for(for example):
+# a good way to find the limit is to search the internet. For example:
 #   raise max open files hard limit debian
 #
 #max_open_files: 100000
 
-# The number of worker threads to start, these threads are used to manage
-# return calls made from minions to the master, if the master seems to be
-# running slowly, increase the number of threads
+# The number of worker threads to start. These threads are used to manage
+# return calls made from minions to the master. If the master seems to be
+# running slowly, increase the number of threads.
 #worker_threads: 5
 
 # The port used by the communication interface. The ret (return) port is the
-# interface used for the file server, authentication, job returnes, etc.
+# interface used for the file server, authentication, job returns, etc.
 #ret_port: 4506
 
-# Specify the location of the daemon process ID file
+# Specify the location of the daemon process ID file:
 #pidfile: /var/run/salt-master.pid
 
 # The root directory prepended to these options: pki_dir, cachedir,
 # sock_dir, log_file, autosign_file, autoreject_file, extension_modules,
-# key_logfile, pidfile.
+# key_logfile, pidfile:
 #root_dir: /
 
-# Directory used to store public key data
+# Directory used to store public key data:
 #pki_dir: /etc/salt/pki/master
 
-# Directory to store job and cache data
+# Directory to store job and cache data:
 #cachedir: /var/cache/salt/master
 
 # Directory for custom modules. This directory can contain subdirectories for
@@ -72,14 +73,14 @@
 # "states", "returners", etc.
 #extension_modules: <no default>
 
-# Verify and set permissions on configuration directories at startup
+# Verify and set permissions on configuration directories at startup:
 #verify_env: True
 
-# Set the number of hours to keep old job information in the job cache
+# Set the number of hours to keep old job information in the job cache:
 #keep_jobs: 24
 
-# Set the default timeout for the salt command and api, the default is 5
-# seconds
+# Set the default timeout for the salt command and api. The default is 5
+# seconds.
 #timeout: 5
 
 # The loop_interval option controls the seconds for the master's maintenance
@@ -87,55 +88,109 @@
 # job cache and executes the scheduler.
 #loop_interval: 60
 
-# Set the default outputter used by the salt command. The default is "nested"
+# Set the default outputter used by the salt command. The default is "nested".
 #output: nested
 
-# By default output is colored, to disable colored output set the color value
-# to False
+# Return minions that timeout when running commands like test.ping
+#show_timeout: True
+
+# By default, output is colored. To disable colored output, set the color value
+# to False.
 #color: True
 
-# Do not strip off the colored output from nested results and states outputs
-# (true by default)
-# strip_colors: false
+# Do not strip off the colored output from nested results and state outputs
+# (true by default).
+# strip_colors: False
 
-# Set the directory used to hold unix sockets
+# Set the directory used to hold unix sockets:
 #sock_dir: /var/run/salt/master
 
 # The master can take a while to start up when lspci and/or dmidecode is used
 # to populate the grains for the master. Enable if you want to see GPU hardware
 # data for your master.
-#
 # enable_gpu_grains: False
 
-# The master maintains a job cache, while this is a great addition it can be
+# The master maintains a job cache. While this is a great addition, it can be
 # a burden on the master for larger deployments (over 5000 minions).
 # Disabling the job cache will make previously executed jobs unavailable to
 # the jobs system and is not generally recommended.
-#
 #job_cache: True
 
 # Cache minion grains and pillar data in the cachedir.
 #minion_data_cache: True
+
+# Store all returns in the given returner.
+# Setting this option requires that any returner-specific configuration also 
+# be set. See various returners in salt/returners for details on required
+# configuration values. (See also, event_return_queue below.)
+#
+#event_return: mysql
+
+# On busy systems, enabling event_returns can cause a considerable load on
+# the storage system for returners. Events can be queued on the master and
+# stored in a batched fashion using a single transaction for multiple events.
+# By default, events are not queued.
+#event_return_queue: 0
+
+# Only events returns matching tags in a whitelist
+# event_return_whitelist:
+#   - salt/master/a_tag
+#   - salt/master/another_tag
+
+# Store all event returns _except_ the tags in a blacklist
+# event_return_blacklist:
+#   - salt/master/not_this_tag
+#   - salt/master/or_this_one
 
 # Passing very large events can cause the minion to consume large amounts of
 # memory. This value tunes the maximum size of a message allowed onto the
 # master event bus. The value is expressed in bytes.
 #max_event_size: 1048576
 
+# By default, the master AES key rotates every 24 hours. The next command
+# following a key rotation will trigger a key refresh from the minion which may
+# result in minions which do not respond to the first command after a key refresh.
+#
+# To tell the master to ping all minions immediately after an AES key refresh, set
+# ping_on_rotate to True. This should mitigate the issue where a minion does not
+# appear to initially respond after a key is rotated.
+#
+# Note that ping_on_rotate may cause high load on the master immediately after
+# the key rotation event as minions reconnect. Consider this carefully if this
+# salt master is managing a large number of minions.
+#
+# If disabled, it is recommended to handle this event by listening for the 
+# 'aes_key_rotate' event with the 'key' tag and acting appropriately.
+# ping_on_rotate: False
+
+# By default, the master deletes its cache of minion data when the key for that
+# minion is removed. To preserve the cache after key deletion, set 
+# 'preserve_minion_cache' to True.
+#
+# WARNING: This may have security implications if compromised minions auth with
+# a previous deleted minion ID.
+#preserve_minion_cache: False
+
+# If max_minions is used in large installations, the master might experience
+# high-load situations because of having to check the number of connected
+# minions for every authentication. This cache provides the minion-ids of
+# all connected minions to all MWorker-processes and greatly improves the
+# performance of max_minions.
+# con_cache: False
+
 # The master can include configuration from other files. To enable this,
 # pass a list of paths to this option. The paths can be either relative or
 # absolute; if relative, they are considered to be relative to the directory
 # the main master configuration file lives in (this file). Paths can make use
 # of shell-style globbing. If no files are matched by a path passed to this
-# option then the master will log a warning message.
-#
+# option, then the master will log a warning message.
 #
 # Include a config file from some other path:
-#include: /etc/salt/extra_config
+# include: /etc/salt/extra_config
 #
 # Include config from several files and directories:
-#include:
-#  - /etc/salt/extra_config
+# include:
+#   - /etc/salt/extra_config
 
 
 #####        Security settings       #####
@@ -150,7 +205,7 @@
 # public keys from the minions. Note that this is insecure.
 #auto_accept: False
 
-# Time in minutes that a incomming public key with a matching name found in
+# Time in minutes that a incoming public key with a matching name found in
 # pki_dir/minion_autosign/keyid is automatically accepted. Expired autosign keys
 # are removed when the master checks the minion_autosign directory.
 # 0 equals no timeout
@@ -166,31 +221,28 @@
 # the autosign_file and the auto_accept setting.
 #autoreject_file: /etc/salt/autoreject.conf
 
-# Enable permissive access to the salt keys.  This allows you to run the
+# Enable permissive access to the salt keys. This allows you to run the
 # master or minion as root, but have a non-root group be given access to
-# your pki_dir.  To make the access explicit, root must belong to the group
-# you've given access to.  This is potentially quite insecure.
-# If an autosign_file is specified, enabling permissive_pki_access will allow group access
-# to that specific file.
+# your pki_dir. To make the access explicit, root must belong to the group
+# you've given access to. This is potentially quite insecure. If an autosign_file
+# is specified, enabling permissive_pki_access will allow group access to that
+# specific file.
 #permissive_pki_access: False
 
 # Allow users on the master access to execute specific commands on minions.
 # This setting should be treated with care since it opens up execution
 # capabilities to non root users. By default this capability is completely
 # disabled.
-#
 #client_acl:
 #  larry:
 #    - test.ping
 #    - network.*
-#
 
 # Blacklist any of the following users or modules
 #
 # This example would blacklist all non sudo users, including root from
 # running any commands. It would also blacklist any use of the "cmd"
-# module.
-# This is completely disabled by default.
+# module. This is completely disabled by default.
 #
 #client_acl_blacklist:
 #  users:
@@ -199,14 +251,17 @@
 #  modules:
 #    - cmd
 
+# Enforce client_acl & client_acl_blacklist when users have sudo
+# access to the salt command. 
+#
+#sudo_acl: False
+
 # The external auth system uses the Salt auth modules to authenticate and
 # validate users to access areas of the Salt system.
-#
 #external_auth:
 #  pam:
 #    fred:
 #      - test.*
-#
 
 # Time (in seconds) for a newly generated token to live. Default: 12 hours
 #token_expire: 43200
@@ -216,8 +271,7 @@
 #file_recv: False
 
 # Set a hard-limit on the size of the files that can be pushed to the master.
-# It will be interpreted as megabytes.
-# Default: 100
+# It will be interpreted as megabytes. Default: 100
 #file_recv_max_size: 100
 
 # Signature verification on messages published from the master.
@@ -233,17 +287,17 @@
 # message it will be accepted, the signature will not be checked, and a warning message
 # will be logged. This behavior went away in Salt 2014.1.0 and these two situations
 # will cause minion to throw an exception and drop the message.
-#
 # sign_pub_messages: False
+
 
 #####    Master Module Management    #####
 ##########################################
-# Manage how master side modules are loaded
+# Manage how master side modules are loaded.
 
-# Add any additional locations to look for master runners
+# Add any additional locations to look for master runners:
 #runner_dirs: []
 
-# Enable Cython for master side modules
+# Enable Cython for master side modules:
 #cython_enable: False
 
 
@@ -257,6 +311,7 @@
 # The master_tops option replaces the external_nodes option by creating
 # a plugable system for the generation of external top data. The external_nodes
 # option is deprecated by the master_tops option.
+#
 # To gain the capabilities of the classic external_nodes system, use the
 # following configuration:
 # master_tops:
@@ -303,6 +358,14 @@
 # If set to 'changes', the output will be full unless the state didn't change.
 #state_output: full
 
+# Automatically aggregate all states that have support for mod_aggregate by
+# setting to True. Or pass a list of state module names to automatically
+# aggregate just those types.
+#
+# state_aggregate:
+#   - pkg
+#
+#state_aggregate: False
 
 #####      File Server settings      #####
 ##########################################
@@ -335,7 +398,6 @@
 #
 # Prior to changing this value, the master should be stopped and all Salt 
 # caches should be cleared.
-#
 #hash_type: md5
 
 # The buffer size in the file server can be adjusted here:
@@ -347,7 +409,6 @@
 # For example, if you manage your custom modules and states in subversion
 # and don't want all the '.svn' folders and content synced to your minions,
 # you could set this to '/\.svn($|/)'. By default nothing is ignored.
-#
 #file_ignore_regex:
 #  - '/\.svn($|/)'
 #  - '/\.git($|/)'
@@ -356,25 +417,23 @@
 # path before syncing the modules and states to the minions. This is similar
 # to file_ignore_regex above, but works on globs instead of regex. By default
 # nothing is ignored.
-#
 # file_ignore_glob:
 #  - '*.pyc'
 #  - '*/somefolder/*.bak'
 #  - '*.swp'
 
 # File Server Backend
+#
 # Salt supports a modular fileserver backend system, this system allows
 # the salt master to link directly to third party systems to gather and
 # manage the files available to minions. Multiple backends can be
 # configured and will be searched for the requested file in the order in which
 # they are defined here. The default setting only enables the standard backend
 # "roots" which uses the "file_roots" option.
-#
 #fileserver_backend:
 #  - roots
 #
 # To use multiple backends list them in the order they are searched:
-#
 #fileserver_backend:
 #  - git
 #  - roots
@@ -383,14 +442,12 @@
 # symlinks when walking the filesystem tree. This is set to True
 # by default. Currently this only applies to the default roots
 # fileserver_backend.
-#
 #fileserver_followsymlinks: False
 #
 # Uncomment the line below if you do not want symlinks to be
 # treated as the files they are pointing to. By default this is set to
 # False. By uncommenting the line below, any detected symlink while listing
 # files on the Master will not be returned to the Minion.
-#
 #fileserver_ignoresymlinks: True
 #
 # By default, the Salt fileserver recurses fully into all defined environments
@@ -398,15 +455,14 @@
 # traverses directories with SLS files and special Salt directories like _modules,
 # enable the option below. This might be useful for installations where a file root
 # has a very large number of files and performance is impacted. Default is False.
-#
 # fileserver_limit_traversal: False
 #
 # The fileserver can fire events off every time the fileserver is updated,
 # these are disabled by default, but can be easily turned on by setting this
 # flag to True
 #fileserver_events: False
-#
-# Git fileserver backend configuration
+
+# Git File Server Backend Configuration
 #
 # Gitfs can be provided by one of two python modules: GitPython or pygit2. If
 # using pygit2, both libgit2 and git must also be installed.
@@ -421,7 +477,6 @@
 # environments.
 # Note:  file:// repos will be treated as a remote, so refs you want used must
 # exist in that repo as *local* refs.
-#
 #gitfs_remotes:
 #  - git://github.com/saltstack/salt-states.git
 #  - file:///var/git/saltmaster
@@ -432,7 +487,6 @@
 # keep in mind that setting this flag to anything other than the default of True
 # is a security concern, you may want to try using the ssh transport.
 #gitfs_ssl_verify: True
-#
 #
 # The gitfs_root option gives the ability to serve files from a subdirectory
 # within the repository. The path is defined relative to the root of the
@@ -447,14 +501,18 @@
 # Pillar is laid out in the same fashion as the file server, with environments,
 # a top file and sls files. However, pillar data does not need to be in the
 # highstate format, and is generally just key/value pairs.
-
 #pillar_roots:
 #  base:
 #    - /srv/pillar
-
+#
 #ext_pillar:
 #  - hiera: /etc/hiera.yaml
 #  - cmd_yaml: cat /etc/salt/yaml
+
+# The ext_pillar_first option allows for external pillar sources to populate
+# before file system pillar. This allows for targeting file system pillar from
+# ext_pillar.
+#ext_pillar_first: False
 
 # The pillar_gitfs_ssl_verify option specifies whether to ignore ssl certificate
 # errors when contacting the pillar gitfs backend. You might want to set this to
@@ -466,7 +524,7 @@
 # The pillar_opts option adds the master configuration file data to a dict in
 # the pillar called "master". This is used to set simple configurations in the
 # master config file that can then be used on minions.
-#pillar_opts: True
+#pillar_opts: False
 
 
 #####          Syndic settings       #####
@@ -486,14 +544,15 @@
 # this master where to receive commands from.
 #syndic_master: masterofmaster
 
-# This is the 'ret_port' of the MasterOfMaster
+# This is the 'ret_port' of the MasterOfMaster:
 #syndic_master_port: 4506
 
-# PID file of the syndic daemon
+# PID file of the syndic daemon:
 #syndic_pidfile: /var/run/salt-syndic.pid
 
-# LOG file of the syndic daemon
+# LOG file of the syndic daemon:
 #syndic_log_file: syndic.log
+
 
 #####      Peer Publish settings     #####
 ##########################################
@@ -506,14 +565,12 @@
 # of regular expressions to match functions. The following will allow the
 # minion authenticated as foo.example.com to execute functions from the test
 # and pkg modules.
-#
 #peer:
 #  foo.example.com:
 #    - test.*
 #    - pkg.*
 #
 # This will allow all minions to execute all commands:
-#
 #peer:
 #  .*:
 #    - .*
@@ -528,37 +585,35 @@
 #
 # All peer runner support is turned off by default and must be enabled before
 # using. This will enable all peer runners for all minions:
-#
 #peer_run:
 #  .*:
 #    - .*
 #
 # To enable just the manage.up runner for the minion foo.example.com:
-#
 #peer_run:
 #  foo.example.com:
 #    - manage.up
+
 
 #####         Mine settings     #####
 ##########################################
 # Restrict mine.get access from minions. By default any minion has a full access
 # to get all mine data from master cache. In acl definion below, only pcre matches
 # are allowed.
-#
 # mine_get:
 #   .*:
 #     - .*
 #
-# Example below enables minion foo.example.com to get  'network.interfaces' mine data only
-# , minions web* to get all network.* and disk.* mine data and all other minions won't get
-# any mine data.
-#
+# The example below enables minion foo.example.com to get 'network.interfaces' mine
+# data only, minions web* to get all network.* and disk.* mine data and all other
+# minions won't get any mine data.
 # mine_get:
 #   foo.example.com:
 #     - network.interfaces
 #   web.*:
 #     - network.*
 #     - disk.*
+
 
 #####         Logging settings       #####
 ##########################################
@@ -604,9 +659,8 @@
 
 #####         Node Groups           #####
 ##########################################
-# Node groups allow for logical groupings of minion nodes.
-# A group consists of a group name and a compound target.
-#
+# Node groups allow for logical groupings of minion nodes. A group consists of a group
+# name and a compound target.
 #nodegroups:
 #  group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com and bl*.domain.com'
 #  group2: 'G@os:Debian and foo.domain.com'
@@ -615,19 +669,24 @@
 #####     Range Cluster settings     #####
 ##########################################
 # The range server (and optional port) that serves your cluster information
-# https://github.com/grierj/range/wiki/Introduction-to-Range-with-YAML-files
+# https://github.com/ytoolshed/range/wiki/%22yamlfile%22-module-file-spec
 #
 #range_server: range:80
 
 
 #####     Windows Software Repo settings #####
 ##############################################
-# Location of the repo on the master
+# Location of the repo on the master:
 #win_repo: '/srv/salt/win/repo'
 
-# Location of the master's repo cache file
+# Location of the master's repo cache file:
 #win_repo_mastercachefile: '/srv/salt/win/repo/winrepo.p'
 
-# List of git repositories to include with the local repo
+# List of git repositories to include with the local repo:
 #win_gitrepos:
 #  - 'https://github.com/saltstack/salt-winrepo.git'
+
+#####      Returner settings          ######
+############################################
+# Which returner(s) will be used for minion's result:
+#return: mysql

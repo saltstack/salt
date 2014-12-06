@@ -6,23 +6,23 @@ framer jobcleaner be active first setup
     frame setup
         print Setup Maint
         enter
-            do setup maint
+            do salt raet maint setup
         go modules
     frame modules
         enter
-            do load modules
+            do salt load modules
         go fsclean
     frame fsclean
         enter
-            do fileserver clean
+            do salt raet maint fileserver clean
         go start
     frame start
-        do clear old jobs
+        do salt raet maint old jobs clear
 
 framer backends be active first start
     frame start
-        do update backends
+        do salt raet maint backends update
 
 framer scheduler be active first start
     frame start
-        do schedule
+        do salt schedule

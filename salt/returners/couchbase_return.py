@@ -26,6 +26,7 @@ JID/MINION_ID
 return: return_data
 out: out_data
 '''
+from __future__ import absolute_import
 
 import logging
 
@@ -93,21 +94,21 @@ def _verify_views():
 
     if VERIFIED_VIEWS or __opts__.get('couchbase.skip_verify_views', False):
         return
-    cb = _get_connection()
+    cb_ = _get_connection()
     ddoc = {'views': {'jids': {'map': "function (doc, meta) { if (meta.id.indexOf('/') === -1 && doc.load){ emit(meta.id, null) } }"},
                       'jid_returns': {'map': "function (doc, meta) { if (meta.id.indexOf('/') > -1){ key_parts = meta.id.split('/'); emit(key_parts[0], key_parts[1]); } }"}
                       }
             }
 
     try:
-        curr_ddoc = cb.design_get(DESIGN_NAME, use_devmode=False).value
+        curr_ddoc = cb_.design_get(DESIGN_NAME, use_devmode=False).value
         if curr_ddoc['views'] == ddoc['views']:
             VERIFIED_VIEWS = True
             return
     except couchbase.exceptions.HTTPError:
         pass
 
-    cb.design_create(DESIGN_NAME, ddoc, use_devmode=False)
+    cb_.design_create(DESIGN_NAME, ddoc, use_devmode=False)
     VERIFIED_VIEWS = True
 
 
@@ -119,22 +120,28 @@ def _get_ttl():
 
 
 #TODO: add to returner docs-- this is a new one
-def prep_jid(nocache=False):
+def prep_jid(nocache=False, passed_jid=None):
     '''
     Return a job id and prepare the job id directory
     This is the function responsible for making sure jids don't collide (unless its passed a jid)
     So do what you have to do to make sure that stays the case
     '''
-    cb = _get_connection()
+    if passed_jid is None:
+        jid = salt.utils.gen_jid()
+    else:
+        jid = passed_jid
 
-    jid = salt.utils.gen_jid()
+    cb_ = _get_connection()
+
     try:
-        cb.add(str(jid),
+        cb_.add(str(jid),
                {'nocache': nocache},
                ttl=_get_ttl(),
                )
     except couchbase.exceptions.KeyExistsError:
-        return prep_jid(nocache=nocache)
+        # TODO: some sort of sleep or something? Spinning is generally bad practice
+        if passed_jid is None:
+            return prep_jid(nocache=nocache)
 
     return jid
 
@@ -143,9 +150,9 @@ def returner(load):
     '''
     Return data to the local job cache
     '''
-    cb = _get_connection()
+    cb_ = _get_connection()
     try:
-        jid_doc = cb.get(load['jid'])
+        jid_doc = cb_.get(load['jid'])
         if jid_doc.value['nocache'] is True:
             return
     except couchbase.exceptions.NotFoundError:
@@ -161,7 +168,7 @@ def returner(load):
         if 'out' in load:
             ret_doc['out'] = load['out']
 
-        cb.add(hn_key,
+        cb_.add(hn_key,
                ret_doc,
                ttl=_get_ttl(),
                )
@@ -179,10 +186,10 @@ def save_load(jid, clear_load):
     '''
     Save the load to the specified jid
     '''
-    cb = _get_connection()
+    cb_ = _get_connection()
 
     try:
-        jid_doc = cb.get(str(jid))
+        jid_doc = cb_.get(str(jid))
     except couchbase.exceptions.NotFoundError:
         log.warning('Could not write job cache file for jid: {0}'.format(jid))
         return False
@@ -200,7 +207,7 @@ def save_load(jid, clear_load):
 
     jid_doc.value['load'] = clear_load
 
-    cb.replace(str(jid),
+    cb_.replace(str(jid),
                jid_doc.value,
                cas=jid_doc.cas,
                ttl=_get_ttl()
@@ -211,10 +218,10 @@ def get_load(jid):
     '''
     Return the load data that marks a specified jid
     '''
-    cb = _get_connection()
+    cb_ = _get_connection()
 
     try:
-        jid_doc = cb.get(str(jid))
+        jid_doc = cb_.get(str(jid))
     except couchbase.exceptions.NotFoundError:
         return {}
 
@@ -229,12 +236,12 @@ def get_jid(jid):
     '''
     Return the information returned when the specified job id was executed
     '''
-    cb = _get_connection()
+    cb_ = _get_connection()
     _verify_views()
 
     ret = {}
 
-    for result in cb.query(DESIGN_NAME, 'jid_returns', key=str(jid), include_docs=True):
+    for result in cb_.query(DESIGN_NAME, 'jid_returns', key=str(jid), include_docs=True):
         ret[result.value] = result.doc.value
 
     return ret
@@ -244,27 +251,41 @@ def get_jids():
     '''
     Return a list of all job ids
     '''
-    cb = _get_connection()
+    cb_ = _get_connection()
     _verify_views()
 
     ret = {}
 
-    for result in cb.query(DESIGN_NAME, 'jids', include_docs=True):
+    for result in cb_.query(DESIGN_NAME, 'jids', include_docs=True):
         ret[result.key] = _format_jid_instance(result.key, result.doc.value['load'])
 
     return ret
 
 
 def _format_job_instance(job):
-    return {'Function': job.get('fun', 'unknown-function'),
-            'Arguments': list(job.get('arg', [])),
-            # unlikely but safeguard from invalid returns
-            'Target': job.get('tgt', 'unknown-target'),
-            'Target-type': job.get('tgt_type', []),
-            'User': job.get('user', 'root')}
+    '''
+    Return a properly formatted job dict
+    '''
+    ret = {'Function': job.get('fun', 'unknown-function'),
+           'Arguments': list(job.get('arg', [])),
+           # unlikely but safeguard from invalid returns
+           'Target': job.get('tgt', 'unknown-target'),
+           'Target-type': job.get('tgt_type', []),
+           'User': job.get('user', 'root')}
+
+    if 'metadata' in job:
+        ret['Metadata'] = job.get('metadata', {})
+    else:
+        if 'kwargs' in job:
+            if 'metadata' in job['kwargs']:
+                ret['Metadata'] = job['kwargs'].get('metadata', {})
+    return ret
 
 
 def _format_jid_instance(jid, job):
+    '''
+    Return a properly formatted jid dict
+    '''
     ret = _format_job_instance(job)
     ret.update({'StartTime': salt.utils.jid_to_time(jid)})
     return ret

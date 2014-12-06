@@ -4,10 +4,12 @@ Manage Windows users with the net user command
 
 NOTE: This currently only works with local user accounts, not domain accounts
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils
-from salt._compat import string_types
+from salt.ext.six import string_types
+from salt.exceptions import CommandExecutionError
 import logging
 
 log = logging.getLogger(__name__)
@@ -34,6 +36,7 @@ def __virtual__():
 
 
 def add(name,
+        password=None,
         # Disable pylint checking on the next options. They exist to match the
         # user modules of other distributions.
         # pylint: disable=W0613
@@ -60,7 +63,10 @@ def add(name,
 
         salt '*' user.add name password
     '''
-    ret = __salt__['cmd.run_all']('net user {0} /add'.format(name))
+    if password:
+        ret = __salt__['cmd.run_all']('net user {0} {1} /add /y'.format(name, password))
+    else:
+        ret = __salt__['cmd.run_all']('net user {0} /add'.format(name))
     if groups:
         chgroups(name, groups)
     if fullname:
@@ -319,10 +325,10 @@ def _get_userprofile_from_registry(user, sid):
     we can get it from the registry
     '''
     profile_dir = __salt__['reg.read_key'](
-        'HKEY_LOCAL_MACHINE', 'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\{0}'.format(sid),
+        'HKEY_LOCAL_MACHINE', u'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\{0}'.format(sid),
         'ProfileImagePath'
     )
-    log.debug('user {0} with sid={2} profile is located at "{1}"'.format(user, profile_dir, sid))
+    log.debug(u'user {0} with sid={2} profile is located at "{1}"'.format(user, profile_dir, sid))
     return profile_dir
 
 
@@ -402,3 +408,27 @@ def list_users():
         return user_list
     except win32net.error:
         pass
+
+
+def rename(name, new_name):
+    '''
+    Change the username for a named user
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' user.rename name new_name
+    '''
+    current_info = info(name)
+    if not current_info:
+        raise CommandExecutionError('User {0!r} does not exist'.format(name))
+    new_info = info(new_name)
+    if new_info:
+        raise CommandExecutionError('User {0!r} already exists'.format(new_name))
+    cmd = 'wmic useraccount where name="{0}" rename {1}'.format(name, new_name)
+    __salt__['cmd.run'](cmd)
+    post_info = info(new_name)
+    if post_info['name'] != current_info['name']:
+        return post_info['name'] == new_name
+    return False

@@ -170,6 +170,16 @@ class TestSaltEvent(TestCase):
             evt2 = me.get_event(tag='evt1')
             self.assertIsNone(evt2)
 
+    def test_event_no_timeout(self):
+        '''Test no wait timeout, we should block forever, until we get one '''
+        with eventpublisher_process():
+            me = event.MasterEvent(SOCK_DIR)
+            me.subscribe()
+            me.fire_event({'data': 'foo1'}, 'evt1')
+            me.fire_event({'data': 'foo2'}, 'evt2')
+            evt = me.get_event(tag='evt2', wait=0)
+            self.assertGotEvent(evt, {'data': 'foo2'})
+
     def test_event_subscription_matching(self):
         '''Test a subscription startswith matching'''
         with eventpublisher_process():
@@ -218,7 +228,7 @@ class TestSaltEvent(TestCase):
             me1.fire_event({'data': 'foo1'}, 'evt1')
             evt1 = me1.get_event(tag='evt1')
             self.assertGotEvent(evt1, {'data': 'foo1'})
-            # Can't replicate this failure int he wild, need to fix the
+            # Can't replicate this failure in the wild, need to fix the
             # test system bug here
             #evt2 = me2.get_event(tag='evt1')
             #self.assertGotEvent(evt2, {'data': 'foo1'})
@@ -235,7 +245,7 @@ class TestSaltEvent(TestCase):
             evt2 = me.get_event(tag='evt2')
             evt1 = me.get_event(tag='evt1')
             self.assertGotEvent(evt2, {'data': 'foo2'})
-            # This one will be None because we're dropping unrelated events
+            # This one will be None because we're dripping unrelated events
             self.assertIsNone(evt1)
 
             # Fire events again
@@ -247,59 +257,6 @@ class TestSaltEvent(TestCase):
             evt1 = me.get_event(tag='evt3', use_pending=True)
             self.assertGotEvent(evt2, {'data': 'foo4'})
             self.assertGotEvent(evt1, {'data': 'foo3'})
-
-    def test_event_nested_subs_explict_pending(self):
-        with eventpublisher_process():
-            me = event.MasterEvent(SOCK_DIR)
-            me.subscribe()
-
-            # Fire events
-            me.fire_event({'data': 'foo3'}, 'evt3')
-            me.fire_event({'data': 'foo4'}, 'evt4')
-
-            evt2 = me.get_event(tag='evt4', pending_tags=['evt3'])
-            evt1 = me.get_event(tag='evt3')
-            self.assertGotEvent(evt1, {'data': 'foo3'})
-            self.assertGotEvent(evt2, {'data': 'foo4'})
-            self.assertEqual(me.pending_events, [], "All pending events should be consumed")
-
-    def test_event_nested_subs_explict_pending3(self):
-        with eventpublisher_process():
-            me = event.MasterEvent(SOCK_DIR)
-            me.subscribe()
-
-            # Fire events
-            me.fire_event({'data': 'foo3'}, 'evt3')
-            me.fire_event({'data': 'foo4'}, 'evt4')
-            me.fire_event({'data': 'foo5'}, 'evt5')
-
-            evt2 = me.get_event(tag='evt4', pending_tags=['evt3'])
-            # Check that we keep the event whilst receiving a third
-            evt3 = me.get_event(tag='evt5', pending_tags=['evt3'])
-            evt1 = me.get_event(tag='evt3')
-            self.assertGotEvent(evt1, {'data': 'foo3'})
-            self.assertGotEvent(evt2, {'data': 'foo4'})
-            self.assertGotEvent(evt3, {'data': 'foo5'})
-            self.assertEqual(me.pending_events, [], "All pending events should be consumed")
-
-    def test_event_nested_subs_explict_pending_drop(self):
-        with eventpublisher_process():
-            me = event.MasterEvent(SOCK_DIR)
-            me.subscribe()
-
-            # Fire events
-            me.fire_event({'data': 'foo3'}, 'evt3')
-            me.fire_event({'data': 'foo4'}, 'evt4')
-            me.fire_event({'data': 'foo5'}, 'evt5')
-
-            evt3 = me.get_event(tag='evt5', pending_tags=['evt3'])
-            # Check that we keep the event whilst receiving a third
-            evt2 = me.get_event(tag='evt4', pending_tags=['evt3'])
-            evt1 = me.get_event(tag='evt3')
-            self.assertGotEvent(evt1, {'data': 'foo3'})
-            self.assertIsNone(evt2)
-            self.assertGotEvent(evt3, {'data': 'foo5'})
-            self.assertEqual(me.pending_events, [], "All pending events should be consumed")
 
     @expectedFailure
     def test_event_nested_sub_all(self):

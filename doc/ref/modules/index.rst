@@ -30,11 +30,9 @@ default this is `/srv/salt/_modules` on Linux systems.
 Modules placed in ``_modules/`` will be synced to the minions when any of the following
 Salt functions are called:
 
-    :mod:`state.highstate <salt.modules.state.highstate>`
-
-    :mod:`saltutil.sync_modules <salt.modules.saltutil.sync_modules>`
-
-    :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>`
+* :mod:`state.highstate <salt.modules.state.highstate>`
+* :mod:`saltutil.sync_modules <salt.modules.saltutil.sync_modules>`
+* :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>`
 
 Note that a module's default name is its filename
 (i.e. ``foo.py`` becomes module ``foo``), but that its name can be overridden
@@ -156,15 +154,28 @@ The ``__virtual__`` function is used to return either a
 False is returned then the module is not loaded, if a string is returned then
 the module is loaded with the name of the string.
 
+.. note::
+
+   Optionally, modules may additionally return a list of reasons that a module could
+   not be loaded. For example, if a dependency for 'my_mod' was not met, a
+   __virtual__ function could do as follows:
+
+    return False, ['My Module must be installed before this module can be
+    used.']
+
 This means that the package manager modules can be presented as the ``pkg`` module
 regardless of what the actual module is named.
 
-The package manager modules are the best example of using the ``__virtual__``
+Since ``__virtual__`` is called before the module is loaded, ``__salt__`` will be
+unavailable as it will not have been packed into the module at this point in time.
+
+The package manager modules are among the best example of using the ``__virtual__``
 function. Some examples:
 
 - :blob:`pacman.py <salt/modules/pacman.py>`
 - :blob:`yumpkg.py <salt/modules/yumpkg.py>`
 - :blob:`aptpkg.py <salt/modules/aptpkg.py>`
+- :blob:`at.py <salt/modules/at.py>`
 
 .. note::
     Modules which return a string from ``__virtual__`` that is already used by a module that

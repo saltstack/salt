@@ -27,6 +27,7 @@ Full list of builtin execution modules
     blockdev
     bluez
     boto_asg
+    boto_cloudwatch
     boto_elasticache
     boto_elb
     boto_iam
@@ -217,6 +218,7 @@ Full list of builtin execution modules
     svn
     swift
     sysbench
+    syslog_ng
     sysmod
     system
     systemd

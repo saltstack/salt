@@ -42,7 +42,9 @@ load-plugins=salttesting.pylintplugins.pep8,salttesting.pylintplugins.pep263,sal
 # multiple time (only on the command line, not in the configuration file where
 # it should appear only once).
 disable=W0142,
-  C0330
+  C0330,
+  I0011,
+  I0012
 #  E8121,
 #  E8122,
 #  E8123,
@@ -58,6 +60,8 @@ disable=W0142,
 # E812* All PEP8 E12*
 # E8501 PEP8 line too long
 # C0330 (bad-continuation)
+# I0011 (locally-disabling)
+# I0012 (locally-enabling)
 
 
 [REPORTS]
@@ -65,9 +69,6 @@ disable=W0142,
 # Set the output format. Available formats are text, parseable, colorized, msvs
 # (visual studio) and html
 output-format=text
-
-# Include message's id in output
-include-ids=yes
 
 # Put messages in a separate file for each module / package specified on the
 # command line instead of printing them on stdout. Reports (if any) will be
@@ -186,7 +187,7 @@ dummy-variables-rgx=_|dummy
 
 # List of additional names supposed to be defined in builtins. Remember that
 # you should avoid to define new builtins when possible.
-additional-builtins=__opts__,__salt__,__pillar__,__grains__,__context__,__ret__,__env__,__low__,__states__,__lowstate__,__running__,__active_provider_name__
+additional-builtins=__opts__,__salt__,__pillar__,__grains__,__context__,__ret__,__env__,__low__,__states__,__lowstate__,__running__,__active_provider_name__,__master_opts__,__progress__
 
 
 [SIMILARITIES]

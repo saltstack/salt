@@ -49,23 +49,24 @@ Google Compute Engine Setup
    To set up authorization, navigate to *APIs & auth* section and then the
    *Credentials* link and click the *CREATE NEW CLIENT ID* button. Select
    *Service Account* and click the *Create Client ID* button. This will
-   prompt you to save a private key file.  Look for a new *Service Account*
-   section in the page and record the generated email address for the
-   matching key/fingerprint.  The email address will be used in the
-   ``service_account_email_address`` of your ``/etc/salt/cloud``
-   file.
+   automatically download a ``.json`` file, which should be ignored. Look for
+   a new *Service Account* section in the page and record the generated email
+   address for the matching key/fingerprint. The email address will be used
+   in the ``service_account_email_address`` of the ``/etc/salt/cloud`` file.
 
 #. Key Format
 
-   You will need to convert the private key to a format compatible with
-   libcloud.  The original Google-generated private key was encrypted using
-   *notasecret* as a passphrase.  Use the following command and record the
-   location of the converted private key and record the location for use
-   in the ``service_account_private_key`` of your ``/etc/salt/cloud`` file:
+   In the new *Service Account* section, click *Generate new P12 key*, which
+   will automatically download a ``.p12`` private key file. The ``.p12``
+   private key needs to be converted to a format compatible with libcloud.
+   This new Google-generated private key was encrypted using *notasecret* as
+   a passphrase. Use the following command and record the location of the
+   converted private key and record the location for use in the
+   ``service_account_private_key`` of the ``/etc/salt/cloud`` file:
 
    .. code-block:: bash
 
-       openssl pkcs12 -in ORIG.pkey -passin pass:notasecret \
+       openssl pkcs12 -in ORIG.p12 -passin pass:notasecret \
        -nodes -nocerts | openssl rsa -out NEW.pem
 
 
@@ -83,7 +84,7 @@ Set up the cloud config at ``/etc/salt/cloud``:
       gce-config:
         # Set up the Project name and Service Account authorization
         #
-        project: "your-project-name"
+        project: "your-project-id"
         service_account_email_address: "123-a5gt@developer.gserviceaccount.com"
         service_account_private_key: "/path/to/your/NEW.pem"
 
@@ -102,7 +103,8 @@ Set up the cloud config at ``/etc/salt/cloud``:
 
 .. note::
 
-    The value provided for ``project`` must not contain underscores or spaces.
+    The value provided for ``project`` must not contain underscores or spaces and
+    is labeled as "Project ID" on the Google Developers Console.
 
 
 Cloud Profiles
@@ -206,6 +208,19 @@ typically also include a hard-coded default.
       #
       delete_boot_pd: False
 
+      # Specify whether to use public or private IP for deploy script.
+      # Valid options are:
+      #     private_ips - The salt-master is also hosted with GCE
+      #     public_ips - The salt-master is hosted outside of GCE
+      ssh_interface: public_ips
+
+      # Per instance setting: Used a named fixed IP address to this host.
+      # Valid options are:
+      #     ephemeral - The host will use a GCE ephemeral IP
+      #     None - No external IP will be configured on this host.
+      # Optionally, pass the name of a GCE address to use a fixed IP address.
+      # If the address does not already exist, it will be created.
+      external_ip: "ephemeral"
 
 GCE instances do not allow remote access to the root user by default.
 Instead, another user must be used to run the deploy script using sudo. 
@@ -401,6 +416,30 @@ Specify the network name to view information about the network.
 
     salt-cloud -f show_network gce name=mynet
 
+Create address
+---------------
+Create a new named static IP address in a region. 
+
+.. code-block:: bash
+
+    salt-cloud -f create_address gce name=my-fixed-ip region=us-central1
+
+Delete address
+---------------
+Delete an existing named fixed IP address.
+
+.. code-block:: bash
+
+    salt-cloud -f delete_address gce name=my-fixed-ip region=us-central1
+
+Show address
+---------------
+View details on a named address.
+
+.. code-block:: bash
+
+    salt-cloud -f show_address gce name=my-fixed-ip region=us-central1
+
 Create firewall
 ---------------
 You'll need to create custom firewall rules if you want to allow other traffic
@@ -475,6 +514,12 @@ requires the name.
     salt-cloud -f delete_lb gce name=lb
     salt-cloud -f show_lb gce name=lb
 
+You can also create a load balancer using a named fixed IP addressby specifying the name of the address.
+If the address does not exist yet it will be created.
+
+.. code-block:: bash
+
+    salt-cloud -f create_lb gce name=my-lb region=us-central1 ports=234 members=s1,s2,s3 address=my-lb-ip
 
 Attach and Detach LB
 --------------------

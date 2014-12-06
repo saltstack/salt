@@ -5,6 +5,7 @@ Module for interfacing to Junos devices
 ALPHA QUALITY code.
 
 '''
+from __future__ import absolute_import
 
 # Import python libraries
 import logging

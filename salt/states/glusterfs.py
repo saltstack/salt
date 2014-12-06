@@ -5,6 +5,7 @@ Manage glusterfs pool.
 
 # Import python libs
 from __future__ import generators
+from __future__ import absolute_import
 import logging
 import socket
 
@@ -254,7 +255,7 @@ def add_volume_bricks(name, bricks):
         old_bricks = current_bricks
         new_bricks = __salt__['glusterfs.status'](name)
         ret['result'] = True
-        ret['changes'] = {'new': new_bricks['bricks'].keys(), 'old': old_bricks['bricks'].keys()}
+        ret['changes'] = {'new': list(new_bricks['bricks'].keys()), 'old': list(old_bricks['bricks'].keys())}
         return ret
 
     if 'Bricks already in volume' in add_bricks:

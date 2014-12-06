@@ -47,6 +47,8 @@ Namespaced tag
 
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 import os
 import fnmatch
@@ -57,7 +59,6 @@ import logging
 import time
 import datetime
 import multiprocessing
-from multiprocessing import Process
 from collections import MutableMapping
 
 # Import third party libs
@@ -74,6 +75,8 @@ import salt.loader
 import salt.state
 import salt.utils
 import salt.utils.cache
+from salt.ext.six import string_types
+import salt.utils.process
 from salt._compat import string_types
 log = logging.getLogger(__name__)
 
@@ -112,10 +115,32 @@ def get_event(node, sock_dir=None, transport='zeromq', opts=None, listen=True):
         return SaltEvent(node, sock_dir, opts)
     elif transport == 'raet':
         import salt.utils.raetevent
-        return salt.utils.raetevent.SaltEvent(node,
+        return salt.utils.raetevent.RAETEvent(node,
                                               sock_dir=sock_dir,
                                               listen=listen,
                                               opts=opts)
+
+
+def get_master_event(opts, sock_dir, listen=True):
+    '''
+    Return an event object suitable for the named transport
+    '''
+    if opts['transport'] == 'zeromq':
+        return MasterEvent(sock_dir)
+    elif opts['transport'] == 'raet':
+        import salt.utils.raetevent
+        return salt.utils.raetevent.MasterEvent(opts=opts, sock_dir=sock_dir, listen=listen)
+
+
+def get_runner_event(opts, jid, listen=True):
+    '''
+    Return an event object suitable for the named transport
+    '''
+    if opts['transport'] == 'zeromq':
+        return RunnerEvent(opts, jid)
+    elif opts['transport'] == 'raet':
+        import salt.utils.raetevent
+        return salt.utils.raetevent.RunnerEvent(opts, jid, listen=listen)
 
 
 def tagify(suffix='', prefix='', base=SALT):
@@ -138,102 +163,13 @@ def tagify(suffix='', prefix='', base=SALT):
     return TAGPARTER.join([part for part in parts if part])
 
 
-class PendingEventsBase(object):
-
-    def __init__(self):
-        super(PendingEventsBase, self).__init__()
-        self.pending_events = []
-
-    def _get_event_inner(self, wait):
-        """Wait for event. Don't do any filtering or retrying
-
-        :param wait: Max seconds to wait for event
-        :return:
-        """
-        raise NotImplementedError()
-
-    def _check_pending(self, tag, pending_tags):
-        """Check the pending_events list for events that match the tag
-
-        :param tag: The tag to search for
-        :type tag: str
-        :param pending_tags: List of tags to preserve
-        :type pending_tags: list[str]
-        :return:
-        """
-        old_events = self.pending_events
-        self.pending_events = []
-        ret = None
-        for evt in old_events:
-            if evt['tag'].startswith(tag):
-                if ret is None:
-                    ret = evt
-                else:
-                    self.pending_events.append(evt)
-            elif any(evt['tag'].startswith(ptag) for ptag in pending_tags):
-                self.pending_events.append(evt)
-        return ret
-
-    def _get_event(self, wait, tag, pending_tags):
-        start = time.time()
-        timeout_at = start + wait
-        while not wait or time.time() <= timeout_at:
-            ret = self._get_event_inner(wait)
-
-            log.trace('get_event() received = {0}'.format(ret))
-            if ret is not None:
-                if ret['tag'].startswith(tag):
-                    return ret
-                elif any(ret['tag'].startswith(ptag) for ptag in pending_tags):
-                    self.pending_events.append(ret)
-
-            wait = timeout_at - time.time()
-
-        return None
-
-    def get_event(self, wait=5, tag='', full=False, use_pending=False, pending_tags=None):
-        '''
-        Get a single publication.
-        IF no publication available THEN block for upto wait seconds
-        AND either return publication OR None IF no publication available.
-
-        IF wait is 0 then block forever.
-
-        New in Boron always checks the list of pending events
-
-        use_pending
-            Defines whether to keep all unconsumed events in a pending_events
-            list, or to discard events that don't match the requested tag.  If
-            set to True, MAY CAUSE MEMORY LEAKS.
-
-        pending_tags
-            Add any events matching the listed tags to the pending queue.
-            Still MAY CAUSE MEMORY LEAKS but less likely than use_pending
-            assuming you later get_event for the tags you've listed here
-
-            New in Boron
-        '''
-        if pending_tags is None:
-            pending_tags = []
-        if use_pending:
-            pending_tags = ['']
-
-        ret = self._check_pending(tag, pending_tags)
-        if ret is None:
-            ret = self._get_event(wait, tag, pending_tags)
-
-        if ret is None or full:
-            return ret
-        else:
-            return ret['data']
-
-
-class SaltEvent(PendingEventsBase):
+class SaltEvent(object):
     '''
+    Warning! Use the get_event function or the code will not be
+    RAET compatible
     The base class used to manage salt events
     '''
     def __init__(self, node, sock_dir=None, opts=None):
-        super(SaltEvent, self).__init__()
         self.serial = salt.payload.Serial({'serial': 'msgpack'})
         self.context = zmq.Context()
         self.poller = zmq.Poller()
@@ -245,6 +181,8 @@ class SaltEvent(PendingEventsBase):
         if sock_dir is None:
             sock_dir = opts.get('sock_dir', None)
         self.puburi, self.pulluri = self.__load_uri(sock_dir, node)
+        self.subscribe()
+        self.pending_events = []
 
     def __load_uri(self, sock_dir, node):
         '''
@@ -339,33 +277,67 @@ class SaltEvent(PendingEventsBase):
         if serial is None:
             serial = salt.payload.Serial({'serial': 'msgpack'})
 
-        if ord(raw[20]) >= 0x80:  # old style
-            mtag = raw[0:20].rstrip('|')
-            mdata = raw[20:]
-        else:  # new style
-            mtag, sep, mdata = raw.partition(TAGEND)  # split tag from data
+        mtag, sep, mdata = raw.partition(TAGEND)  # split tag from data
 
         data = serial.loads(mdata)
         return mtag, data
 
-    def _get_event_inner(self, wait):
-        # convert to milliseconds
-        socks = dict(self.poller.poll(wait * 1000))
-        if socks.get(self.sub) != zmq.POLLIN:
-            return None
+    def _check_pending(self, tag, pending_tags):
+        """Check the pending_events list for events that match the tag
 
-        try:
-            return self.get_event_noblock()
-        except zmq.ZMQError as ex:
-            if ex.errno == errno.EAGAIN or ex.errno == errno.EINTR:
-                return None
-            else:
-                raise
+        :param tag: The tag to search for
+        :type tag: str
+        :param pending_tags: List of tags to preserve
+        :type pending_tags: list[str]
+        :return:
+        """
+        old_events = self.pending_events
+        self.pending_events = []
+        ret = None
+        for evt in old_events:
+            if evt['tag'].startswith(tag):
+                if ret is None:
+                    ret = evt
+                else:
+                    self.pending_events.append(evt)
+            elif any(evt['tag'].startswith(ptag) for ptag in pending_tags):
+                self.pending_events.append(evt)
+        return ret
+
+    def _get_event(self, wait, tag, pending_tags):
+        start = time.time()
+        timeout_at = start + wait
+        while not wait or time.time() <= timeout_at:
+            # convert to milliseconds
+            socks = dict(self.poller.poll(wait * 1000))
+            if socks.get(self.sub) != zmq.POLLIN:
+                continue
+
+            try:
+                ret = self.get_event_block()  # Please do not use non-blocking mode here.
+                                              # Reliability is more important than pure speed on the event bus.
+            except zmq.ZMQError as ex:
+                if ex.errno == errno.EAGAIN or ex.errno == errno.EINTR:
+                    continue
+                else:
+                    raise
+
+            if not ret['tag'].startswith(tag):  # tag not match
+                if any(ret['tag'].startswith(ptag) for ptag in pending_tags):
+                    self.pending_events.append(ret)
+                if wait:  # only update the wait timeout if we had one
+                    wait = timeout_at - time.time()
+                continue
+
+            log.trace('get_event() received = {0}'.format(ret))
+            return ret
+
+        return None
 
     def get_event(self, wait=5, tag='', full=False, use_pending=False, pending_tags=None):
         '''
         Get a single publication.
-        IF no publication available THEN block for upto wait seconds
+        IF no publication available THEN block for up to wait seconds
         AND either return publication OR None IF no publication available.
 
         IF wait is 0 then block forever.
@@ -384,14 +356,35 @@ class SaltEvent(PendingEventsBase):
 
             New in Boron
         '''
-        self.subscribe()
 
-        return super(SaltEvent, self).get_event(wait, tag, full, use_pending, pending_tags)
+        if pending_tags is None:
+            pending_tags = []
+        if use_pending:
+            pending_tags = ['']
+
+        ret = self._check_pending(tag, pending_tags)
+        if ret is None:
+            ret = self._get_event(wait, tag, pending_tags)
+
+        if ret is None or full:
+            return ret
+        else:
+            return ret['data']
 
     def get_event_noblock(self):
         '''Get the raw event without blocking or any other niceties
         '''
+        if not self.cpub:
+            self.connect_pub()
         raw = self.sub.recv(zmq.NOBLOCK)
+        mtag, data = self.unpack(raw, self.serial)
+        return {'data': data, 'tag': mtag}
+
+    def get_event_block(self):
+        '''Get the raw event in a blocking fashion
+           Slower, but decreases the possibility of dropped events
+        '''
+        raw = self.sub.recv()
         mtag, data = self.unpack(raw, self.serial)
         return {'data': data, 'tag': mtag}
 
@@ -410,8 +403,6 @@ class SaltEvent(PendingEventsBase):
         Send a single event into the publisher with payload dict "data" and event
         identifier "tag"
 
-        Supports new style long tags.
-        The 0MQ push timeout on the send is set to timeout in milliseconds
         The default is 1000 ms
         Note the linger timeout must be at least as long as this timeout
         '''
@@ -426,11 +417,7 @@ class SaltEvent(PendingEventsBase):
 
         data['_stamp'] = datetime.datetime.now().isoformat()
 
-        tagend = ''
-        if len(tag) <= 20:  # old style compatible tag
-            tag = '{0:|<20}'.format(tag)  # pad with pipes '|' to 20 character length
-        else:  # new style longer than 20 chars
-            tagend = TAGEND
+        tagend = TAGEND
         serialized_data = salt.utils.trim_dict(self.serial.dumps(data),
                 self.opts.get('max_event_size', 1048576),
                 is_msgpacked=True
@@ -518,29 +505,52 @@ class SaltEvent(PendingEventsBase):
 
 class MasterEvent(SaltEvent):
     '''
+    Warning! Use the get_event function or the code will not be
+    RAET compatible
     Create a master event management object
     '''
     def __init__(self, sock_dir):
         super(MasterEvent, self).__init__('master', sock_dir)
-        self.connect_pub()
 
 
 class LocalClientEvent(MasterEvent):
     '''
+    Warning! Use the get_event function or the code will not be
+    RAET compatible
     This class is just used to differentiate who is handling the events,
     specially on logs, but it's the same as MasterEvent.
     '''
 
 
+class RunnerEvent(MasterEvent):
+    '''
+    Warning! Use the get_runner_event function or the code will not be
+    RAET compatible
+    This is used to send progress and return events from runners.
+    It extends MasterEvent to include information about how to
+    display events to the user as a runner progresses.
+    '''
+    def __init__(self, opts, jid):
+        super(RunnerEvent, self).__init__(opts['sock_dir'])
+        self.jid = jid
+
+    def fire_progress(self, data, outputter='pprint'):
+        progress_event = {'data': data,
+                          'outputter': outputter}
+        self.fire_event(progress_event, tagify([self.jid, 'progress'], 'runner'))
+
+
 class MinionEvent(SaltEvent):
     '''
+    Warning! Use the get_event function or the code will not be
+    RAET compatible
     Create a master event management object
     '''
     def __init__(self, opts):
         super(MinionEvent, self).__init__('minion', sock_dir=opts.get('sock_dir', None), opts=opts)
 
 
-class EventPublisher(Process):
+class EventPublisher(multiprocessing.Process):
     '''
     The interface that takes master events and republishes them out to anyone
     who wants to listen
@@ -571,7 +581,7 @@ class EventPublisher(Process):
         salt.utils.check_ipc_path_max_len(epull_uri)
 
         # Start the master event publisher
-        old_umask = os.umask(0177)
+        old_umask = os.umask(0o177)
         try:
             self.epull_sock.bind(epull_uri)
             self.epub_sock.bind(epub_uri)
@@ -579,7 +589,7 @@ class EventPublisher(Process):
                 os.chmod(
                         os.path.join(self.opts['sock_dir'],
                             'master_event_pub.ipc'),
-                        0666
+                        0o666
                         )
         finally:
             os.umask(old_umask)
@@ -605,6 +615,62 @@ class EventPublisher(Process):
                 self.context.term()
 
 
+class EventReturn(multiprocessing.Process):
+    '''
+    A dedicated process which listens to the master event bus and queues
+    and forwards events to the specified returner.
+    '''
+    def __init__(self, opts):
+        '''
+        Initialize the EventReturn system
+
+        Return an EventReturn instance
+        '''
+        multiprocessing.Process.__init__(self)
+
+        self.opts = opts
+        self.event_return_queue = self.opts['event_return_queue']
+        local_minion_opts = self.opts.copy()
+        local_minion_opts['file_client'] = 'local'
+        self.minion = salt.minion.MasterMinion(local_minion_opts)
+
+    def run(self):
+        '''
+        Spin up the multiprocess event returner
+        '''
+        salt.utils.appendproctitle(self.__class__.__name__)
+        self.event = get_event('master', opts=self.opts)
+        events = self.event.iter_events(full=True)
+        self.event.fire_event({}, 'salt/event_listen/start')
+        event_queue = []
+        try:
+            for event in events:
+                if self._filter(event):
+                    event_queue.append(event)
+                if len(event_queue) >= self.event_return_queue:
+                    self.minion.returners['{0}.event_return'.format(self.opts['event_return'])](event_queue)
+                    event_queue = []
+        except KeyError:
+            log.error('Could not store return for events {0}. Returner {1} '
+                      'not found.'.format(events, self.opts.get('event_return', None)))
+
+    def _filter(self, event):
+        '''
+        Take an event and run it through configured filters.
+
+        Returns True if event should be stored, else False
+        '''
+        tag = event['tag']
+        if tag in self.opts['event_return_whitelist']:
+            if tag not in self.opts['event_return_blacklist']:
+                return True
+            else:
+                return False  # Event was whitelisted and blacklisted
+        elif tag in self.opts['event_return_blacklist']:
+            return False
+        return True
+
+
 class Reactor(multiprocessing.Process, salt.state.Compiler):
     '''
     Read in the reactor configuration variable and compare it to events
@@ -617,12 +683,20 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         salt.state.Compiler.__init__(self, opts)
         self.wrap = ReactWrap(self.opts)
 
+        local_minion_opts = self.opts.copy()
+        local_minion_opts['file_client'] = 'local'
+        self.minion = salt.minion.MasterMinion(local_minion_opts)
+
     def render_reaction(self, glob_ref, tag, data):
         '''
         Execute the render system against a single reaction file and return
         the data structure
         '''
         react = {}
+
+        if glob_ref.startswith('salt://'):
+            glob_ref = self.minion.functions['cp.cache_file'](glob_ref)
+
         for fn_ in glob.glob(glob_ref):
             try:
                 react.update(self.render_template(
@@ -663,7 +737,7 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
                 continue
             if len(ropt) != 1:
                 continue
-            key = ropt.keys()[0]
+            key = next(iter(ropt.keys()))
             val = ropt[key]
             if fnmatch.fnmatch(tag, key):
                 if isinstance(val, string_types):
@@ -701,7 +775,9 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         '''
         salt.utils.appendproctitle(self.__class__.__name__)
         self.event = SaltEvent('master', self.opts['sock_dir'])
-        for data in self.event.iter_events(full=True):
+        events = self.event.iter_events(full=True)
+        self.event.fire_event({}, 'salt/reactor/start')
+        for data in events:
             reactors = self.list_reactors(data['tag'])
             if not reactors:
                 continue
@@ -722,46 +798,51 @@ class ReactWrap(object):
         if ReactWrap.client_cache is None:
             ReactWrap.client_cache = salt.utils.cache.CacheDict(opts['reactor_refresh_interval'])
 
+        self.pool = salt.utils.process.ThreadPool(
+            self.opts['reactor_worker_threads'],  # number of workers for runner/wheel
+            queue_size=self.opts['reactor_worker_hwm']  # queue size for those workers
+        )
+
     def run(self, low):
         '''
         Execute the specified function in the specified state by passing the
         LowData
         '''
         l_fun = getattr(self, low['state'])
-        f_call = salt.utils.format_call(l_fun, low)
         try:
-            ret = l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
+            f_call = salt.utils.format_call(l_fun, low)
+            l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
         except Exception:
             log.error(
                     'Failed to execute {0}: {1}\n'.format(low['state'], l_fun),
                     exc_info=True
                     )
-            return False
-        return ret
 
-    def cmd(self, *args, **kwargs):
+    def local(self, *args, **kwargs):
         '''
         Wrap LocalClient for running :ref:`execution modules <all-salt.modules>`
         '''
         if 'local' not in self.client_cache:
             self.client_cache['local'] = salt.client.LocalClient(self.opts['conf_file'])
-        return self.client_cache['local'].cmd_async(*args, **kwargs)
+        self.client_cache['local'].cmd_async(*args, **kwargs)
 
-    def runner(self, fun, **kwargs):
+    cmd = local
+
+    def runner(self, _, **kwargs):
         '''
         Wrap RunnerClient for executing :ref:`runner modules <all-salt.runners>`
         '''
         if 'runner' not in self.client_cache:
             self.client_cache['runner'] = salt.runner.RunnerClient(self.opts)
-        return self.client_cache['runner'].async(fun, kwargs)
+        self.pool.fire_async(self.client_cache['runner'].low, kwargs)
 
-    def wheel(self, fun, **kwargs):
+    def wheel(self, _, **kwargs):
         '''
         Wrap Wheel to enable executing :ref:`wheel modules <all-salt.wheel>`
         '''
         if 'wheel' not in self.client_cache:
             self.client_cache['wheel'] = salt.wheel.Wheel(self.opts)
-        return self.client_cache['wheel'].call_func(fun, **kwargs)
+        self.pool.fire_async(self.client_cache['wheel'].low, kwargs)
 
 
 class StateFire(object):
@@ -798,9 +879,9 @@ class StateFire(object):
                     'cmd': '_minion_event',
                     'tok': self.auth.gen_token('salt')})
 
-        sreq = salt.transport.Channel.factory(self.opts)
+        channel = salt.transport.Channel.factory(self.opts)
         try:
-            sreq.send(load)
+            channel.send(load)
         except Exception:
             pass
         return True
@@ -828,9 +909,9 @@ class StateFire(object):
                     {'tag': tag,
                      'data': running[stag]}
                     )
-        sreq = salt.transport.Channel.factory(self.opts)
+        channel = salt.transport.Channel.factory(self.opts)
         try:
-            sreq.send(load)
+            channel.send(load)
         except Exception:
             pass
         return True

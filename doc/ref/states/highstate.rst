@@ -67,9 +67,8 @@ ID declarations with the same name will be ignored.
 
 .. note:: Naming gotchas
 
-        Until 0.9.6, IDs could **not** contain a dot, otherwise highstate
-        summary output was unpredictable. (It was fixed in versions 0.9.7 and
-        above)
+    In Salt versions earlier than 0.9.7, ID declarations containing dots would
+    result in unpredictable highstate output.
 
 .. _extend-declaration:
 
@@ -319,6 +318,24 @@ declaration will be expanded into the following three state declarations:
       python-yaml:
         pkg.installed
 
+Other values can be overridden during the expansion by providing an additional
+dictionary level.
+
+.. versionadded:: 2014.7.0
+
+.. code-block:: yaml
+
+  ius:
+    pkgrepo.managed:
+      - humanname: IUS Community Packages for Enterprise Linux 6 - $basearch
+      - gpgcheck: 1
+      - baseurl: http://mirror.rackspace.com/ius/stable/CentOS/6/$basearch
+      - gpgkey: http://dl.iuscommunity.org/pub/ius/IUS-COMMUNITY-GPG-KEY
+      - names:
+          - ius
+          - ius-devel:
+              - baseurl: http://mirror.rackspace.com/ius/development/CentOS/6/$basearch
+
 .. _states-highstate-example:
 
 Large example
@@ -341,7 +358,7 @@ components.
     # standard declaration
 
     <ID Declaration>:
-      <State Declaration>:
+      <State Module>:
         - <Function>
         - <Function Arg>
         - <Function Arg>
@@ -355,7 +372,7 @@ components.
     # inline function and names
 
     <ID Declaration>:
-      <State Declaration>.<Function>:
+      <State Module>.<Function>:
         - <Function Arg>
         - <Function Arg>
         - <Function Arg>
@@ -367,17 +384,17 @@ components.
           - <Requisite Reference>
           - <Requisite Reference>
 
- 
+
     # multiple states for single id
 
     <ID Declaration>:
-      <State Declaration>:
-        - <Function> 
+      <State Module>:
+        - <Function>
         - <Function Arg>
         - <Name>: <name>
         - <Requisite Declaration>:
           - <Requisite Reference>
-      <State Declaration>:
+      <State Module>:
         - <Function>
         - <Function Arg>
         - <Names>:

@@ -144,7 +144,7 @@ def db_create(name, user=None, password=None, host=None, port=None):
         salt '*' influxdb.db_create <name>
         salt '*' influxdb.db_create <name> <user> <password> <host> <port>
     """
-    if db_exists(name):
+    if db_exists(name, user, password, host, port):
         log.info('DB {0!r} already exists'.format(name))
         return False
     client = _client(user=user, password=password, host=host, port=port)
@@ -177,16 +177,19 @@ def db_remove(name, user=None, password=None, host=None, port=None):
         salt '*' influxdb.db_remove <name>
         salt '*' influxdb.db_remove <name> <user> <password> <host> <port>
     """
-    if not db_exists(name):
+    if not db_exists(name, user, password, host, port):
         log.info('DB {0!r} does not exist'.format(name))
         return False
     client = _client(user=user, password=password, host=host, port=port)
     return client.delete_database(name)
 
 
-def user_list(database, user=None, password=None, host=None, port=None):
+def user_list(database=None, user=None, password=None, host=None, port=None):
     """
-    List users of a InfluxDB database
+    List cluster admins or database users.
+
+    If a database is specified: it will return database users list.
+    If a database is not specified: it will return cluster admins list.
 
     database
         The database to list the users from
@@ -207,18 +210,24 @@ def user_list(database, user=None, password=None, host=None, port=None):
 
     .. code-block:: bash
 
+        salt '*' influxdb.user_list
         salt '*' influxdb.user_list <database>
         salt '*' influxdb.user_list <database> <user> <password> <host> <port>
     """
     client = _client(user=user, password=password, host=host, port=port)
-    client.switch_db(database)
-    return client.get_database_users()
+    if database:
+        client.switch_db(database)
+        return client.get_database_users()
+    return client.get_list_cluster_admins()
 
 
 def user_exists(
-        name, database, user=None, password=None, host=None, port=None):
+        name, database=None, user=None, password=None, host=None, port=None):
     '''
-    Checks if a user exists for a InfluxDB database
+    Checks if a cluster admin or database user exists.
+
+    If a database is specified: it will check for database user existence.
+    If a database is not specified: it will check for cluster admin existence.
 
     name
         User name
@@ -242,6 +251,7 @@ def user_exists(
 
     .. code-block:: bash
 
+        salt '*' influxdb.user_exists <name>
         salt '*' influxdb.user_exists <name> <database>
         salt '*' influxdb.user_exists <name> <database> <user> <password> <host> <port>
     '''
@@ -251,10 +261,13 @@ def user_exists(
     return name in [u['name'] for u in users]
 
 
-def user_create(name, passwd, database, user=None, password=None, host=None,
-                port=None):
+def user_create(name, passwd, database=None, user=None, password=None,
+                host=None, port=None):
     """
-    Create a InfluxDB user for a specific database
+    Create a cluster admin or a database user.
+
+    If a database is specified: it will create database user.
+    If a database is not specified: it will create a cluster admin.
 
     name
         User name for the new user to create
@@ -281,24 +294,34 @@ def user_create(name, passwd, database, user=None, password=None, host=None,
 
     .. code-block:: bash
 
+        salt '*' influxdb.user_create <name> <passwd>
         salt '*' influxdb.user_create <name> <passwd> <database>
         salt '*' influxdb.user_create <name> <passwd> <database> <user> <password> <host> <port>
     """
-    if user_exists(name, database):
-        log.info('User {0!r} already exists for DB {1!r}'.format(
-            name, database))
+    if user_exists(name, database, user, password, host, port):
+        if database:
+            log.info('User {0!r} already exists for DB {1!r}'.format(
+                name, database))
+        else:
+            log.info('Cluster admin {0!r} already exists'.format(name))
         return False
+
     client = _client(user=user, password=password, host=host, port=port)
-    client.switch_db(database)
-    return client.add_database_user(name, passwd)
+    if database:
+        client.switch_db(database)
+        return client.add_database_user(name, passwd)
+    return client.add_cluster_admin(name, passwd)
 
 
-def user_chpass(dbuser, passwd, database, user=None, password=None, host=None,
-                port=None):
+def user_chpass(name, passwd, database=None, user=None, password=None,
+                host=None, port=None):
     """
-    Change password for a InfluxDB database user
+    Change password for a cluster admin or a database user.
 
-    dbuser
+    If a database is specified: it will update database user password.
+    If a database is not specified: it will update cluster admin password.
+
+    name
         User name for whom to change the password
 
     passwd
@@ -323,22 +346,31 @@ def user_chpass(dbuser, passwd, database, user=None, password=None, host=None,
 
     .. code-block:: bash
 
-        salt '*' influxdb.user_chpass <dbuser> <passwd> <database>
-        salt '*' influxdb.user_chpass <dbuser> <passwd> <database> <user> <password> <host> <port>
+        salt '*' influxdb.user_chpass <name> <passwd>
+        salt '*' influxdb.user_chpass <name> <passwd> <database>
+        salt '*' influxdb.user_chpass <name> <passwd> <database> <user> <password> <host> <port>
     """
-    if not user_exists(dbuser, database):
-        log.info('User {0!r} does not exist for DB {1!r}'.format(
-            dbuser, database))
+    if not user_exists(name, database, user, password, host, port):
+        if database:
+            log.info('User {0!r} does not exist for DB {1!r}'.format(
+                name, database))
+        else:
+            log.info('Cluster admin {0!r} does not exist'.format(name))
         return False
     client = _client(user=user, password=password, host=host, port=port)
-    client.switch_db(database)
-    return client.update_database_user_password(dbuser, passwd)
+    if database:
+        client.switch_db(database)
+        return client.update_database_user_password(name, passwd)
+    return client.update_cluster_admin_password(name, passwd)
 
 
-def user_remove(name, database, user=None, password=None, host=None,
+def user_remove(name, database=None, user=None, password=None, host=None,
                 port=None):
     """
-    Remove a InfluxDB database user
+    Remove a cluster admin or a database user.
+
+    If a database is specified: it will remove the database user.
+    If a database is not specified: it will remove the cluster admin.
 
     name
         User name to remove
@@ -365,16 +397,22 @@ def user_remove(name, database, user=None, password=None, host=None,
 
     .. code-block:: bash
 
+        salt '*' influxdb.user_remove <name>
         salt '*' influxdb.user_remove <name> <database>
         salt '*' influxdb.user_remove <name> <database> <user> <password> <host> <port>
     """
-    if not user_exists(name, database):
-        log.info('User {0!r} does not exist for DB {1!r}'.format(
-            name, database))
+    if not user_exists(name, database, user, password, host, port):
+        if database:
+            log.info('User {0!r} does not exist for DB {1!r}'.format(
+                name, database))
+        else:
+            log.info('Cluster admin {0!r} does not exist'.format(name))
         return False
     client = _client(user=user, password=password, host=host, port=port)
-    client.switch_db(database)
-    return client.delete_database_user(user)
+    if database:
+        client.switch_db(database)
+        return client.delete_database_user(user)
+    return client.delete_cluster_admin(user)
 
 
 def query(database, query, time_precision='s', chunked=False, user=None,

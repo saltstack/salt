@@ -53,6 +53,14 @@ Configure as you see fit::
     returner.odbc.user: 'salt'
     returner.odbc.passwd: 'salt'
 
+Alternative configuration values can be used by prefacing the configuration.
+Any values not found in the alternative configuration will be pulled from
+the default location::
+
+    alternative.returner.odbc.dsn: 'TS'
+    alternative.returner.odbc.user: 'salt'
+    alternative.returner.odbc.passwd: 'salt'
+
 Running the following commands against Microsoft SQL Server in the desired
 database as the appropriate user should create the database tables
 correctly.  Replace with equivalent SQL for other ODBC-compliant servers::
@@ -94,12 +102,20 @@ correctly.  Replace with equivalent SQL for other ODBC-compliant servers::
 
     salt '*' status.diskusage --return odbc
 
+  To use the alternative configuration, append '--return_config alternative' to the salt command. ex:
+
+    salt '*' test.ping --return odbc --return_config alternative
 '''
+from __future__ import absolute_import
 # Let's not allow PyLint complain about string substitution
 # pylint: disable=W1321,E1321
 
 # Import python libs
 import json
+
+# Import Salt libs
+import salt.utils
+import salt.returners
 
 # FIXME We'll need to handle this differently for Windows.
 # Import third party libs
@@ -110,6 +126,9 @@ try:
 except ImportError:
     HAS_ODBC = False
 
+# Define the module's virtual name
+__virtualname__ = 'odbc'
+
 
 def __virtual__():
     if not HAS_ODBC:
@@ -117,17 +136,41 @@ def __virtual__():
     return True
 
 
-def _get_conn():
+def _get_options(ret=None):
+    '''
+    Get the odbc options from salt.
+    '''
+    attrs = {'dsn': 'dsn',
+             'user': 'user',
+             'passwd': 'passwd'}
+
+    _options = salt.returners.get_returner_options('returner.{0}'.format(__virtualname__),
+                                                   ret,
+                                                   attrs,
+                                                   __salt__=__salt__,
+                                                   __opts__=__opts__)
+    return _options
+
+
+def _get_conn(ret=None):
     '''
     Return a MSSQL connection.
     '''
+    _options = _get_options(ret)
+    dsn = _options.get('dsn')
+    user = _options.get('user')
+    passwd = _options.get('passwd')
+
     return pyodbc.connect('DSN={0};UID={1};PWD={2}'.format(
-            __salt__['config.option']('returner.odbc.dsn'),
-            __salt__['config.option']('returner.odbc.user'),
-            __salt__['config.option']('returner.odbc.passwd')))
+            dsn,
+            user,
+            passwd))
 
 
 def _close_conn(conn):
+    '''
+    Close the MySQL connection
+    '''
     conn.commit()
     conn.close()
 
@@ -136,7 +179,7 @@ def returner(ret):
     '''
     Return data to an odbc server
     '''
-    conn = _get_conn()
+    conn = _get_conn(ret)
     cur = conn.cursor()
     sql = '''INSERT INTO salt_returns
             (fun, jid, retval, id, success, full_ret)
@@ -158,7 +201,7 @@ def save_load(jid, load):
     '''
     Save the load to the specified jid id
     '''
-    conn = _get_conn()
+    conn = _get_conn(ret=None)
     cur = conn.cursor()
     sql = '''INSERT INTO jids (jid, load) VALUES (?, ?)'''
 
@@ -170,7 +213,7 @@ def get_load(jid):
     '''
     Return the load data that marks a specified jid
     '''
-    conn = _get_conn()
+    conn = _get_conn(ret=None)
     cur = conn.cursor()
     sql = '''SELECT load FROM jids WHERE jid = ?;'''
 
@@ -186,7 +229,7 @@ def get_jid(jid):
     '''
     Return the information returned when the specified job id was executed
     '''
-    conn = _get_conn()
+    conn = _get_conn(ret=None)
     cur = conn.cursor()
     sql = '''SELECT id, full_ret FROM salt_returns WHERE jid = ?'''
 
@@ -204,7 +247,7 @@ def get_fun(fun):
     '''
     Return a dict of the last function called for all minions
     '''
-    conn = _get_conn()
+    conn = _get_conn(ret=None)
     cur = conn.cursor()
     sql = '''SELECT s.id,s.jid, s.full_ret
             FROM salt_returns s
@@ -218,7 +261,7 @@ def get_fun(fun):
 
     ret = {}
     if data:
-        for minion, jid, retval in data:
+        for minion, _, retval in data:
             ret[minion] = json.loads(retval)
     _close_conn(conn)
     return ret
@@ -228,7 +271,7 @@ def get_jids():
     '''
     Return a list of all job ids
     '''
-    conn = _get_conn()
+    conn = _get_conn(ret=None)
     cur = conn.cursor()
     sql = '''SELECT distinct jid FROM jids'''
 
@@ -245,7 +288,7 @@ def get_minions():
     '''
     Return a list of minions
     '''
-    conn = _get_conn()
+    conn = _get_conn(ret=None)
     cur = conn.cursor()
     sql = '''SELECT DISTINCT id FROM salt_returns'''
 
@@ -256,3 +299,10 @@ def get_minions():
         ret.append(minion[0])
     _close_conn(conn)
     return ret
+
+
+def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
+    '''
+    Do any work necessary to prepare a JID, including sending a custom id
+    '''
+    return passed_jid if passed_jid is not None else salt.utils.gen_jid()

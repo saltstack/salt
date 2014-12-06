@@ -2,6 +2,7 @@
 '''
 A few checks to make sure the environment is sane
 '''
+from __future__ import absolute_import
 
 # Original Author: Jeff Schroeder <jeffschroeder@computer.org>
 
@@ -386,7 +387,7 @@ def check_max_open_files(opts):
         mof_s, mof_h = resource.getrlimit(resource.RLIMIT_NOFILE)
 
     accepted_keys_dir = os.path.join(opts.get('pki_dir'), 'minions')
-    accepted_count = sum(1 for _ in os.listdir(accepted_keys_dir))
+    accepted_count = len(os.listdir(accepted_keys_dir))
 
     log.debug(
         'This salt-master instance has accepted {0} minion keys.'.format(
@@ -461,3 +462,24 @@ def valid_id(opts, id_):
         return bool(clean_path(opts['pki_dir'], id_))
     except (AttributeError, KeyError) as e:
         return False
+
+
+def safe_py_code(code):
+    '''
+    Check a string to see if it has any potentially unsafe routines which
+    could be executed via python, this routine is used to improve the
+    safety of modules suct as virtualenv
+    '''
+    bads = (
+            'import',
+            ';',
+            'subprocess',
+            'eval',
+            'open',
+            'file',
+            'exec',
+            'input')
+    for bad in bads:
+        if code.count(bad):
+            return False
+    return True

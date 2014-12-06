@@ -3,6 +3,8 @@
 Make me some salt!
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 import os
 import sys
@@ -23,6 +25,13 @@ warnings.filterwarnings(
     DeprecationWarning
 )
 
+# Filter the backports package UserWarning about being re-imported
+warnings.filterwarnings(
+    'ignore',
+    '^Module backports was already imported from (.*), but (.*) is being added to sys.path$',
+    UserWarning
+)
+
 # Import salt libs
 # We import log ASAP because we NEED to make sure that any logger instance salt
 # instantiates is using salt.log.setup.SaltLoggingClass
@@ -33,6 +42,7 @@ import salt.log.setup
 # cause the build to fail
 from salt.version import __version__
 from salt.utils import migrations
+from salt.utils import kinds
 
 try:
     from salt.utils import parsers, ip_bracket
@@ -199,7 +209,7 @@ class Minion(parsers.MinionOptionParser):
                                                                 'udp://',
                                                                 'file://')):
                     # Logfile is not using Syslog, verify
-                    current_umask = os.umask(0077)
+                    current_umask = os.umask(0o077)
                     verify_files([logfile], self.config['user'])
                     os.umask(current_umask)
         except OSError as err:
@@ -249,6 +259,34 @@ class Minion(parsers.MinionOptionParser):
             self.prepare()
             if check_user(self.config['user']):
                 self.minion.tune_in()
+        except (KeyboardInterrupt, SaltSystemExit) as exc:
+            logger.warn('Stopping the Salt Minion')
+            if isinstance(exc, KeyboardInterrupt):
+                logger.warn('Exiting on Ctrl-c')
+            else:
+                logger.error(str(exc))
+        finally:
+            self.shutdown()
+
+    def call(self, cleanup_protecteds):
+        '''
+        Start the actual minion as a caller minion.
+
+        cleanup_protecteds is list of yard host addresses that should not be
+        cleaned up this is to fix race condition when salt-caller minion starts up
+
+        If sub-classed, don't **ever** forget to run:
+
+            super(YourSubClass, self).start()
+
+        NOTE: Run any required code before calling `super()`.
+        '''
+        try:
+            self.prepare()
+            if check_user(self.config['user']):
+                self.minion.opts['__role'] = kinds.APPL_KIND_NAMES[kinds.applKinds.caller]
+                self.minion.opts['raet_cleanup_protecteds'] = cleanup_protecteds
+                self.minion.call_in()
         except (KeyboardInterrupt, SaltSystemExit) as exc:
             logger.warn('Stopping the Salt Minion')
             if isinstance(exc, KeyboardInterrupt):

@@ -2,6 +2,7 @@
 '''
 Read in the roster from a flat file using the renderer system
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import fnmatch
@@ -10,7 +11,7 @@ import re
 # Import Salt libs
 import salt.loader
 from salt.template import compile_template
-from salt._compat import string_types
+from salt.ext.six import string_types
 from salt.roster import get_roster_file
 
 import logging

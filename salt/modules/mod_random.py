@@ -4,6 +4,7 @@
 
 Provides access to randomness generators.
 '''
+from __future__ import absolute_import
 # Import python libs
 import hashlib
 

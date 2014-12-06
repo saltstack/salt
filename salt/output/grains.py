@@ -20,9 +20,11 @@ Example output::
           World
       bar: baz
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils
+import salt.ext.six as six
 
 
 def output(grains):
@@ -47,7 +49,7 @@ def output(grains):
             elif key == 'pythonversion':
                 ret += ' {0}'.format(colors['LIGHT_GREEN'])
                 for val in minion[key]:
-                    ret += u'{0}.'.format(unicode(val))
+                    ret += u'{0}.'.format(six.text_type(val))
                 ret = ret[:-1]
                 ret += '{0}\n'.format(colors['ENDC'])
             elif isinstance(minion[key], list):

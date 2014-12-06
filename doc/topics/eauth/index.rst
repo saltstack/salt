@@ -7,9 +7,8 @@ External Authentication System
 Salt's External Authentication System (eAuth) allows for Salt to  pass through
 command authorization to any external authentication system, such as PAM or LDAP.
 
-.. toctree::
-
-    access_control
+Access Control System
+---------------------
 
 The external authentication system allows for specific users to be granted
 access to execute specific functions on specific minions. Access is configured
@@ -41,8 +40,17 @@ modules <all-salt.runners>` the following ``@`` syntax must be used:
     external_auth:
       pam:
         thatch:
-          - '@wheel'
-          - '@runner'
+          - '@wheel'   # to allow access to all wheel modules
+          - '@runner'  # to allow access to all runner modules
+          - '@jobs'    # to allow access to the jobs runner and/or wheel module
+
+.. note::
+    The runner/wheel markup is different, since there are no minions to scope the
+    acl to.
+
+.. note::
+    Globs will not match wheel or runners! They must be explicitly
+    allowed with @wheel or @runner.
 
 The external authentication system can then be used from the command-line by
 any user on the same system as the master with the ``-a`` option:
@@ -79,7 +87,7 @@ adding a ``-T`` option when authenticating:
     $ salt -T -a pam web\* test.ping
 
 Now a token will be created that has a expiration of 12 hours (by default).
-This token is stored in a file named ``.salt_token`` in the active user's home 
+This token is stored in a file named ``.salt_token`` in the active user's home
 directory.
 
 Once the token is created, it is sent with all subsequent communications.
@@ -88,7 +96,7 @@ User authentication does not need to be entered again until the token expires.
 Token expiration time can be set in the Salt master config file.
 
 
-LDAP 
+LDAP
 ----
 
 Salt supports both user and group authentication for LDAP.
@@ -118,7 +126,7 @@ To bind to a DN, a password is required
 
     auth.ldap.bindpw: mypassword
 
-Salt users a filter to find the DN associated with a user. Salt substitutes
+Salt uses a filter to find the DN associated with a user. Salt substitutes
 the ``{{ username }}`` value for the username when querying LDAP.
 
 .. code-block:: yaml

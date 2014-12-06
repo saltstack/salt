@@ -2,6 +2,7 @@
 '''
 File server pluggable modules and generic backend functions
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import errno
@@ -14,6 +15,7 @@ import time
 # Import salt libs
 import salt.loader
 import salt.utils
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -170,7 +172,7 @@ def generate_mtime_map(path_map):
     Generate a dict of filename -> mtime
     '''
     file_map = {}
-    for saltenv, path_list in path_map.iteritems():
+    for saltenv, path_list in six.iteritems(path_map):
         for path in path_list:
             for directory, dirnames, filenames in os.walk(path):
                 for item in filenames:
@@ -190,11 +192,6 @@ def diff_mtime_map(map1, map2):
     '''
     Is there a change to the mtime map? return a boolean
     '''
-    # check if the file lists are different
-    if cmp(sorted(map1.keys()), sorted(map2.keys())) != 0:
-        #log.debug('diff_mtime_map: the keys are different')
-        return True
-
     # check if the mtimes are the same
     if cmp(sorted(map1), sorted(map2)) != 0:
         #log.debug('diff_mtime_map: the maps are different')
@@ -292,6 +289,12 @@ class Fileserver(object):
             if '{0}.envs'.format(sub) in self.servers:
                 ret.append(sub)
         return ret
+
+    def master_opts(self, load):
+        '''
+        Simplify master opts
+        '''
+        return self.opts
 
     def update(self, back=None):
         '''
@@ -532,3 +535,34 @@ class Fileserver(object):
                 (x, y) for x, y in ret.items() if x.startswith(prefix)
             ])
         return ret
+
+
+class FSChan(object):
+    '''
+    A class that mimics the transport channels allowing for local access to
+    to the fileserver class class structure
+    '''
+    def __init__(self, opts, **kwargs):
+        self.opts = opts
+        self.kwargs = kwargs
+        self.fs = Fileserver(self.opts)
+        self.fs.init()
+        self.fs.update()
+        self.cmd_stub = {'ext_nodes': {}}
+
+    def send(self, load, tries=None, timeout=None):
+        '''
+        Emulate the channel send method, the tries and timeout are not used
+        '''
+        if 'cmd' not in load:
+            log.error('Malformed request, no cmd: {0}'.format(load))
+            return {}
+        cmd = load['cmd'].lstrip('_')
+        if cmd in self.cmd_stub:
+            return self.cmd_stub[cmd]
+        if cmd == 'file_envs':
+            return self.fs.envs()
+        if not hasattr(self.fs, cmd):
+            log.error('Malformed request, invalid cmd: {0}'.format(load))
+            return {}
+        return getattr(self.fs, cmd)(load)

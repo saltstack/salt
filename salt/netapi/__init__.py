@@ -2,6 +2,7 @@
 '''
 Make api awesomeness
 '''
+from __future__ import absolute_import
 # Import Python libs
 import inspect
 import os
@@ -14,6 +15,7 @@ import salt.runner
 import salt.syspaths
 import salt.wheel
 import salt.utils
+import salt.client.ssh.client
 from salt.exceptions import SaltException, EauthAuthenticationError
 
 
@@ -37,7 +39,7 @@ class NetapiClient(object):
         if 'client' not in low:
             raise SaltException('No client specified')
 
-        if not ('token' in low or 'eauth' in low):
+        if not ('token' in low or 'eauth' in low) and low['client'] != 'ssh':
             raise EauthAuthenticationError(
                     'No authentication credentials given')
 
@@ -83,6 +85,28 @@ class NetapiClient(object):
         local = salt.client.get_local_client(mopts=self.opts)
         return local.cmd_batch(*args, **kwargs)
 
+    def ssh(self, *args, **kwargs):
+        '''
+        Run salt-ssh commands synchronously
+
+        Wraps :py:meth:`salt.client.ssh.client.SSHClient.cmd_sync`.
+
+        :return: Returns the result from the salt-ssh command
+        '''
+        ssh_client = salt.client.ssh.client.SSHClient(mopts=self.opts)
+        return ssh_client.cmd_sync(kwargs)
+
+    def ssh_async(self, fun, timeout=None, **kwargs):
+        '''
+        Run salt-ssh commands asynchronously
+
+        Wraps :py:meth:`salt.client.ssh.client.SSHClient.cmd_async`.
+
+        :return: Returns the JID to check for results on
+        '''
+        kwargs['fun'] = fun
+        return salt.client.ssh.client.cmd_async(kwargs)
+
     def runner(self, fun, timeout=None, **kwargs):
         '''
         Run `runner modules <all-salt.runners>` synchronously
@@ -117,7 +141,7 @@ class NetapiClient(object):
         '''
         kwargs['fun'] = fun
         wheel = salt.wheel.WheelClient(self.opts)
-        return wheel.master_call(**kwargs)
+        return wheel.cmd_sync(kwargs)
 
     def wheel_async(self, fun, **kwargs):
         '''

@@ -1,0 +1,13 @@
+===========================
+Salt 2014.7.1 Release Notes
+===========================
+
+:release: TBA
+
+Version 2014.7.1 is a bugfix release for :doc:`2014.7.0
+</topics/releases/2014.7.0>`.  The changes include:
+
+- Fixed gitfs serving symlinks in :mod:`file.recurse
+  <salt.states.file.recurse>` states (:issue:`17700`)
+- Fix holding of multiple packages (YUM) when combined with version pinning
+  (:issue:`18468`)

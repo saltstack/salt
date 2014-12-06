@@ -1,5 +1,5 @@
 !define PRODUCT_NAME "Salt Minion"
-!define PRODUCT_VERSION "2014.1.7"
+!define PRODUCT_VERSION "{{ salt_version }}"
 !define PRODUCT_PUBLISHER "SaltStack, Inc"
 !define PRODUCT_WEB_SITE "http://saltstack.org"
 !define PRODUCT_DIR_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\salt-minion.exe"
@@ -163,7 +163,7 @@ Section -Prerequisites
     NSISdl::download /TIMEOUT=30000 $VcRedistUri $TEMP\vcredist.exe
     Pop $R0
     StrCmp $R0 "success" +2
-      MessageBox MB_OK "VC redist package download failed: $R0"     ; just report, do not break installation
+      MessageBox MB_OK "VC redist package download failed: $R0" /SD IDOK    ; just report, do not break installation
     Execwait '"$TEMP\vcredist.exe" /q'
   ${EndIf}
 
@@ -203,11 +203,11 @@ FunctionEnd
 
 Function un.onUninstSuccess
   HideWindow
-  MessageBox MB_ICONINFORMATION|MB_OK "$(^Name) was successfully removed from your computer."
+  MessageBox MB_ICONINFORMATION|MB_OK "$(^Name) was successfully removed from your computer." /SD IDOK
 FunctionEnd
 
 Function un.onInit
-  MessageBox MB_ICONQUESTION|MB_YESNO|MB_DEFBUTTON2 "Are you sure you want to completely remove $(^Name) and all of its components?" IDYES +2
+  MessageBox MB_ICONQUESTION|MB_YESNO|MB_DEFBUTTON2 "Are you sure you want to completely remove $(^Name) and all of its components?" /SD IDYES IDYES +2
   Abort
 FunctionEnd
 
