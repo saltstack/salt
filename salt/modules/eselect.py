@@ -16,7 +16,7 @@ def __virtual__():
     return False
 
 
-def exec_action(module, action, parameter='', state_only=False):
+def exec_action(module, action, module_parameter=None, action_parameter=None, parameter=None, state_only=False):
     '''
     Execute an arbitrary action on a module.
 
@@ -24,11 +24,19 @@ def exec_action(module, action, parameter='', state_only=False):
 
     .. code-block:: bash
 
-        salt '*' eselect.exec_action <module name> <action> [parameter]
+        salt '*' eselect.exec_action <module name> [module_parameter] <action> [action_parameter]
     '''
+    if parameter:
+        salt.utils.warn_until(
+            'Lithium',
+            'The \'parameter\' option is deprecated and will be removed in the '
+            '\'Lithium\' Salt release. Please use either \'module_parameter\' or '
+            '\'action_parameter\' instead.'
+        )
+        action_parameter=parameter
     out = __salt__['cmd.run'](
-        'eselect --brief --colour=no {0} {1} {2}'.format(
-            module, action, parameter
+        'eselect --brief --colour=no {0} {1} {2} {3}'.format(
+            module, module_parameter or '', action, action_parameter or ''
         )
     )
     out = out.strip().split('\n')
@@ -54,7 +62,7 @@ def get_modules():
     '''
     modules = []
     try:
-        module_list = exec_action('modules', 'list', parameter='--only-names')
+        module_list = exec_action('modules', 'list', action_parameter='--only-names')
     except:
         return None
 
@@ -85,7 +93,7 @@ def get_target_list(module):
     return target_list
 
 
-def get_current_target(module, parameter=None):
+def get_current_target(module, module_parameter=None, action_parameter=None):
     '''
     Get the currently selected target for the given module.
 
@@ -93,15 +101,15 @@ def get_current_target(module, parameter=None):
 
     .. code-block:: bash
 
-        salt '*' eselect.get_current_target <module name> parameter='optional module params'
+        salt '*' eselect.get_current_target <module name> module_parameter='optional module params' action_parameter='optional action params'
     '''
     try:
-        return exec_action(module, 'show', parameter=parameter)[0]
+        return exec_action(module, 'show', module_parameter=module_parameter, action_parameter=action_parameter)[0]
     except:
         return None
 
 
-def set_target(module, target, parameter=None):
+def set_target(module, target, module_parameter=None, action_parameter=None):
     '''
     Set the target for the given module.
     Target can be specified by index or name.
@@ -110,9 +118,9 @@ def set_target(module, target, parameter=None):
 
     .. code-block:: bash
 
-        salt '*' eselect.set_target <module name> <target> parameter='optional module params'
+        salt '*' eselect.set_target <module name> <target> module_parameter='optional module params' action_parameter='optional action params'
     '''
     try:
-        return exec_action(module, 'set', target, state_only=True, parameter=parameter)
+        return exec_action(module, 'set', target, module_parameter=module_parameter, action_parameter=action_parameter)
     except:
         return False
