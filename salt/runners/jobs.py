@@ -73,6 +73,26 @@ def lookup_jid(jid,
     '''
     Return the printout from a previously executed job
 
+    jid
+        The jid to look up.
+
+    ext_source
+        The external job cache to use. Default: `None`.
+
+    missing
+        When set to `True`, adds the minions that did not return from the command.
+        Default: `False`.
+
+    outputter
+        The outputter to use. Default: `None`.
+
+        .. versionadded:: Lithium
+
+    display_progress
+        Displays progress events when set to `True`. Default: `False`.
+
+        .. versionadded:: Lithium
+
     CLI Example:
 
     .. code-block:: bash
