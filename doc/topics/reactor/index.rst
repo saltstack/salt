@@ -113,7 +113,7 @@ See :py:mod:`salt.modules.event` for more information.
 Knowing what event is being fired
 =================================
 
-Knowing exactly which event is being fired and what data is has for use in the
+Knowing exactly which event is being fired and what data it has for use in the
 sls files can be challenging. The easiest way to see exactly what's going on is
 to use the :strong:`eventlisten.py` script. This script is not part of packages
 but is part of the source.
