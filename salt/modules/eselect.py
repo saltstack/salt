@@ -93,7 +93,7 @@ def get_current_target(module, parameter=None):
 
     .. code-block:: bash
 
-        salt '*' eselect.get_current_target <module name>
+        salt '*' eselect.get_current_target <module name> parameter='optional module params'
     '''
     try:
         return exec_action(module, 'show', parameter=parameter)[0]
@@ -110,7 +110,7 @@ def set_target(module, target, parameter=None):
 
     .. code-block:: bash
 
-        salt '*' eselect.set_target <module name> <target>
+        salt '*' eselect.set_target <module name> <target> parameter='optional module params'
     '''
     try:
         return exec_action(module, 'set', target, state_only=True, parameter=parameter)
