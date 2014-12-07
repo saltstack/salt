@@ -73,10 +73,16 @@ def get_target_list(module):
 
         salt '*' eselect.get_target_list <module name>
     '''
+    target_list = []
     try:
-        return exec_action(module, 'list')
+        exec_output = exec_action(module, 'list')
     except:
         return None
+
+    for item in exec_output:
+        target_list.append(item.split(None, 1)[0])
+
+    return target_list
 
 
 def get_current_target(module, parameter=None):
