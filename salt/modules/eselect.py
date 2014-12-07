@@ -74,7 +74,7 @@ def get_target_list(module):
         return None
 
 
-def get_current_target(module):
+def get_current_target(module, parameter=None):
     '''
     Get the currently selected target for the given module.
 
@@ -85,12 +85,12 @@ def get_current_target(module):
         salt '*' eselect.get_current_target <module name>
     '''
     try:
-        return exec_action(module, 'show')[0]
+        return exec_action(module, 'show', parameter=parameter)[0]
     except:
         return None
 
 
-def set_target(module, target):
+def set_target(module, target, parameter=None):
     '''
     Set the target for the given module.
     Target can be specified by index or name.
@@ -102,6 +102,6 @@ def set_target(module, target):
         salt '*' eselect.set_target <module name> <target>
     '''
     try:
-        return exec_action(module, 'set', target, state_only=True)
+        return exec_action(module, 'set', target, state_only=True, parameter=parameter)
     except:
         return False
