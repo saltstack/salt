@@ -52,11 +52,16 @@ def get_modules():
 
         salt '*' eselect.get_modules
     '''
+    modules = []
     try:
-        return exec_action('modules', 'list')
+        module_list = exec_action('modules', 'list', parameter='--only-names')
     except:
         return None
 
+    for module in module_list:
+        if module not in ['help', 'usage', 'version']:
+            modules.append(module)
+    return modules
 
 def get_target_list(module):
     '''
