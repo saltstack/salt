@@ -52,7 +52,10 @@ def get_modules():
 
         salt '*' eselect.get_modules
     '''
-    return exec_action('modules', 'list')
+    try:
+        return exec_action('modules', 'list')
+    except:
+        return None
 
 
 def get_target_list(module):
@@ -65,7 +68,10 @@ def get_target_list(module):
 
         salt '*' eselect.get_target_list <module name>
     '''
-    return exec_action(module, 'list')
+    try:
+        return exec_action(module, 'list')
+    except:
+        return None
 
 
 def get_current_target(module):
@@ -78,7 +84,10 @@ def get_current_target(module):
 
         salt '*' eselect.get_current_target <module name>
     '''
-    return exec_action(module, 'show')[0]
+    try:
+        return exec_action(module, 'show')[0]
+    except:
+        return None
 
 
 def set_target(module, target):
@@ -92,4 +101,7 @@ def set_target(module, target):
 
         salt '*' eselect.set_target <module name> <target>
     '''
-    return exec_action(module, 'set', target, state_only=True)
+    try:
+        return exec_action(module, 'set', target, state_only=True)
+    except:
+        return False
