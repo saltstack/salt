@@ -323,8 +323,5 @@ def list_(name='', **kwargs):
     cmd = '{0} {1}'.format(cmd, name)
 
     res = __salt__['cmd.run'](cmd)
-
-    if not res:
-        dataset_list = [l for l in res.splitlines()]
-        return {'datasets': dataset_list}
-    return {'Error': res}
+    dataset_list = [l for l in res.splitlines()]
+    return {'datasets': dataset_list}
