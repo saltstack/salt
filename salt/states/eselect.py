@@ -31,6 +31,20 @@ def set_(name, target, parameter=None, module_parameter=None, action_parameter=N
 
     name
         The name of the module
+
+    target
+        The target to be set for this module
+
+    module_parameter
+        additional params passed to the defined module
+
+    action_parameter
+        additional params passed to the defined action
+
+    parameter
+        additional params passed to the defined action
+        .. deprecated:: Lithium
+
     '''
     ret = {'changes': {},
            'comment': '',
