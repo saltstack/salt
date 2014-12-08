@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
 Module for running ZFS zpool command
+
+:codeauthor: Nitin Madhok <nmadhok@clemson.edu>
 '''
 from __future__ import absolute_import
 

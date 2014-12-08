@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
 Salt interface to ZFS commands
+
+:codeauthor: Nitin Madhok <nmadhok@clemson.edu>
 '''
 from __future__ import absolute_import
 
