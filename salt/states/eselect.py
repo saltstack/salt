@@ -58,7 +58,7 @@ def set_(name, target, parameter=None, module_parameter=None, action_parameter=N
             '\'Lithium\' Salt release. Please use either \'module_parameter\' or '
             '\'action_parameter\' instead.'
         )
-        action_parameter=parameter
+        action_parameter = parameter
 
     old_target = __salt__['eselect.get_current_target'](name, module_parameter=module_parameter, action_parameter=action_parameter)
 
