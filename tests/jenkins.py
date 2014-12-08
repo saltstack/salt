@@ -775,7 +775,7 @@ def run(opts):
         # Download unittest reports
         download_unittest_reports(opts)
         # Download coverage report
-        if options.test_without_coverage is False:
+        if opts.test_without_coverage is False:
             download_coverage_report(opts)
 
     if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
