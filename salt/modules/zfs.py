@@ -295,14 +295,32 @@ def list_(name='', **kwargs):
         salt '*' zfs.list [recursive=True|False]
         salt '*' zfs.list /myzpool/mydataset [recursive=True|False]
 
+    .. note::
+
+        Dataset property value output can be customized by passing an additional argument called
+        "properties" in the form of a python list::
+
+            properties="[property1, property2, property3]"
+
+        Example:
+
+        .. code-block:: bash
+
+            salt '*' zfs.list /myzpool/mydataset properties="[name, sharenfs, mountpoint]"
+
     '''
     zfs = _check_zfs()
     recursive_opt = kwargs.get('recursive', False)
+    properties_opt = kwargs.get('properties', False)
+    cmd = '{0} list'.format(zfs)
 
     if recursive_opt:
-        cmd = '{0} list -r {1}'.format(zfs, name)
-    else:
-        cmd = '{0} list {1}'.format(zfs, name)
+        cmd = '{0} -r'.format(cmd)
+
+    if properties_opt:
+        cmd = '{0} -o {1}'.format(cmd, ','.join(properties_opt))
+
+    cmd = '{0} {1}'.format(cmd, name)
 
     res = __salt__['cmd.run'](cmd)
 
