@@ -70,7 +70,7 @@ def _result_to_dict(data, result, conf):
 
     Rules:
     Attributes tagged in the pillar config as 'attrs' or 'lists' are
-    scanned for a 'key=value' format (non matching entires are ignored.
+    scanned for a 'key=value' format (non matching entries are ignored.
 
     Entries matching the 'attrs' tag overwrite previous values where
     the key matches a previous result.
