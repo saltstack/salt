@@ -283,17 +283,17 @@ def list_(name='', **kwargs):
 
     Return a list of all datasets or a specified dataset on the system and the values of their used, available, referenced, and mountpoint properties.
 
+    .. note::
+
+        Information about the dataset and all of it\'s descendent datasets can be displayed
+        by passing ``recursive=True`` on the CLI.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' zfs.list [recursive=True|False]
         salt '*' zfs.list /myzpool/mydataset [recursive=True|False]
-
-    .. note::
-
-        Information about the dataset and all of it\'s descendent datasets can be displayed
-        by passing ``recursive=True`` on the CLI.
 
     '''
     zfs = _check_zfs()
