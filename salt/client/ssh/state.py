@@ -160,7 +160,7 @@ def prep_trans_tar(file_client, chunks, file_refs, pillar=None):
                     for filename in files:
                         fn = filename[filename.find(short) + len(short):]
                         if fn.startswith('/'):
-                            fn.strip('/')
+                            fn = fn.strip('/')
                         tgt = os.path.join(
                                 env_root,
                                 short,
