@@ -57,7 +57,7 @@ def need_deployment():
         st = os.stat(OPTIONS.saltdir)
         os.chmod(OPTIONS.saltdir, st.st_mode | stat.S_IWGRP | stat.S_IRGRP | stat.S_IXGRP)
 
-    # Delimeter emitted on stdout *only* to indicate shim message to master.
+    # Delimiter emitted on stdout *only* to indicate shim message to master.
     sys.stdout.write("{0}\ndeploy\n".format(OPTIONS.delimiter))
     sys.exit(EX_THIN_DEPLOY)
 
