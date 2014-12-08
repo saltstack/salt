@@ -213,7 +213,6 @@ def create(name, **kwargs):
         return ret
     else:
         ret['Error'] = res
-
     return ret
 
 
@@ -245,6 +244,31 @@ def destroy(name, **kwargs):
         ret['Error'] = 'Cannot destroy {0}: dataset does not exist'.format(name)
     elif "operation does not apply to pools" in res:
         ret['Error'] = 'Cannot destroy {0}: use zpool.destroy to destroy the pool'.format(name)
+    else:
+        ret['Error'] = res
+    return ret
+
+
+def rename(name, new_name):
+    '''
+    .. versionadded:: Lithium
+
+    Rename or Relocate a ZFS File System.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zfs.rename myzpool/mydataset myzpool/renameddataset
+    '''
+    ret = {}
+    zfs = _check_zfs()
+    cmd = '{0} rename {1} {2}'.format(zfs, name, new_name)
+
+    res = __salt__['cmd.run'](cmd)
+    if not res:
+        ret[name] = 'Renamed/Relocated to {0}'.format(new_name)
+        return ret
     else:
         ret['Error'] = res
     return ret
