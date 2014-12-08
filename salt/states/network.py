@@ -148,11 +148,18 @@ all interfaces are ignored unless specified.
         - proto: dhcp
         - bridge: br0
         - delay: 0
+        - ports: eth4
         - bypassfirewall: True
         - use:
           - network: eth4
         - require:
           - network: eth4
+
+.. note::
+
+    When managing bridged interfaces on a Debian or Ubuntu based system, the
+    ports argument is required.  Red Hat systems will ignore the argument.
+
 '''
 
 # Import python libs
