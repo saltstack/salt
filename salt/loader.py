@@ -715,8 +715,6 @@ class Loader(object):
         Return a dict of functions found in the defined module_dirs
         '''
         funcs = {}
-#	if 'proxy' in self.opts:
-#	    import pudb; pu.db
         self.load_modules()
         for mod in self.modules:
             # If this is a proxy minion then MOST modules cannot work.  Therefore, require that
@@ -727,7 +725,7 @@ class Loader(object):
                     # This is a proxy minion but this module doesn't support proxy
                     # minions at all
                     continue
-                if not (self.opts['proxy']['proxytype'] in mod.__proxyenabled__ or \
+                if not (self.opts['proxy']['proxytype'] in mod.__proxyenabled__ or
                         '*' in mod.__proxyenabled__):
                     # This is a proxy minion, this module supports proxy
                     # minions, but not this particular minion
