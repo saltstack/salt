@@ -130,9 +130,14 @@ def get_current_target(module, module_parameter=None, action_parameter=None):
         salt '*' eselect.get_current_target kernel
     '''
     try:
-        return exec_action(module, 'show', module_parameter=module_parameter, action_parameter=action_parameter)[0]
+        result = exec_action(module, 'show', module_parameter=module_parameter, action_parameter=action_parameter)[0]
     except:
         return None
+
+    if result == '(unset)':
+        return None
+
+    return result
 
 
 def set_target(module, target, module_parameter=None, action_parameter=None):
