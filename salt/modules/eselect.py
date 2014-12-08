@@ -52,7 +52,7 @@ def exec_action(module, action, module_parameter=None, action_parameter=None, pa
 
 def get_modules():
     '''
-    Get available modules list.
+    List available ``eselect`` modules.
 
     CLI Example:
 
@@ -73,13 +73,16 @@ def get_modules():
 
 def get_target_list(module):
     '''
-    Get available target for the given module.
+    List available targets for the given module.
+
+    module
+        name of the module to be queried for its targets
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' eselect.get_target_list <module name>
+        salt '*' eselect.get_target_list kernel
     '''
     target_list = []
     try:
