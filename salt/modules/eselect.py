@@ -108,11 +108,26 @@ def get_current_target(module, module_parameter=None, action_parameter=None):
     '''
     Get the currently selected target for the given module.
 
-    CLI Example:
+    module
+        name of the module to be queried for its current target
+
+    module_parameter
+        additional params passed to the defined module
+
+    action_parameter
+        additional params passed to the 'show' action
+
+    CLI Example (current target of system-wide ``java-vm``):
 
     .. code-block:: bash
 
-        salt '*' eselect.get_current_target <module name> module_parameter='optional module params' action_parameter='optional action params'
+        salt '*' eselect.get_current_target java-vm action_parameter='system'
+
+    CLI Example (current target of ``kernel`` symlink):
+
+    .. code-block:: bash
+
+        salt '*' eselect.get_current_target kernel
     '''
     try:
         return exec_action(module, 'show', module_parameter=module_parameter, action_parameter=action_parameter)[0]
