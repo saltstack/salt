@@ -3,9 +3,12 @@
 Support for eselect, Gentoo's configuration and management tool.
 '''
 
+import logging
+
 # Import salt libs
 import salt.utils
 
+log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
@@ -192,6 +195,12 @@ def set_target(module, target, module_parameter=None, action_parameter=None):
         action_parameter = '{0} {1}'.format(action_parameter, target)
     else:
         action_parameter = target
+
+    # get list of available modules
+    if module not in get_modules():
+        log.error('Module {0} not available'.format(module))
+        return False
+
     try:
         return exec_action(module, 'set', module_parameter=module_parameter, action_parameter=action_parameter, state_only=True)
     except:
