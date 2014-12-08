@@ -275,19 +275,20 @@ def rename(name, new_name):
     return ret
 
 
-def list_():
+def list_(name=''):
     '''
     .. versionadded:: Lithium
 
-    Return a list of all datasets on the system and the values of their used, available, referenced, and mountpoint properties.
+    Return a list of all datasets or a specified dataset on the system and the values of their used, available, referenced, and mountpoint properties.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' zfs.list
+        salt '*' zfs.list /myzpool/mydataset
     '''
     zfs = _check_zfs()
-    res = __salt__['cmd.run']('{0} list'.format(zfs))
+    res = __salt__['cmd.run']('{0} list {1}'.format(zfs, name))
     dataset_list = [l for l in res.splitlines()]
     return {'datasets': dataset_list}
