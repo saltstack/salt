@@ -1016,7 +1016,7 @@ def get_spot_config(vm_):
 
 def get_provider(vm_=None):
     '''
-    Extract the provider name from vm_
+    Extract the provider name from vm
     '''
     if vm_ is None:
         provider = __active_provider_name__ or 'ec2'
