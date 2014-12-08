@@ -145,11 +145,29 @@ def set_target(module, target, module_parameter=None, action_parameter=None):
     Set the target for the given module.
     Target can be specified by index or name.
 
-    CLI Example:
+    module
+        name of the module for which a target should be set
+
+    target
+        name of the target to be set for this module
+
+    module_parameter
+        additional params passed to the defined module
+
+    action_parameter
+        additional params passed to the defined action
+
+    CLI Example (setting target of system-wide ``java-vm``):
 
     .. code-block:: bash
 
-        salt '*' eselect.set_target <module name> <target> module_parameter='optional module params' action_parameter='optional action params'
+        salt '*' eselect.set_target java-vm icedtea-bin-7 action_parameter='system'
+
+    CLI Example (setting target of ``kernel`` symlink):
+
+    .. code-block:: bash
+
+        salt '*' eselect.set_target kernel linux-3.17.5-gentoo
     '''
     if action_parameter:
         action_parameter = '{0} {1}'.format(action_parameter, target)
