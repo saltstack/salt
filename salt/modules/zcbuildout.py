@@ -472,7 +472,7 @@ def upgrade_bootstrap(directory='.',
     else:
         buildout_ver = _get_buildout_ver(directory)
         booturl = _get_bootstrap_url(directory)
-    LOG.debug('Using %s' % booturl)
+    LOG.debug('Using {0}').format(booturl)
     # try to download an up-to-date bootstrap
     # set defaulttimeout
     # and add possible content
@@ -695,7 +695,7 @@ def bootstrap(directory='.',
         new_st = False
         if buildout_ver == 1:
             LOG.warning(u'Using distribute !')
-            bootstrap_args += ' %s' % '--distribute'
+            bootstrap_args += ' --distribute'
     if not os.path.isdir(dbuild):
         os.makedirs(dbuild)
     upgrade_bootstrap(directory,
@@ -712,8 +712,8 @@ def bootstrap(directory='.',
     ):
         bootstrap_args += ' --accept-buildout-test-releases'
     if config and '"-c"' in content:
-        bootstrap_args += ' -c %s' % config
-    cmd = '%s bootstrap.py %s ' % (python, bootstrap_args,)
+        bootstrap_args += ' -c {0}'.format(config)
+    cmd = '{0} bootstrap.py {1}'.format(python, bootstrap_args)
     ret = _Popen(cmd, directory=directory, runas=runas, env=env)
     output = ret['output']
     return {'comment': cmd, 'out': output}
@@ -940,8 +940,7 @@ def buildout(directory='.',
         salt '*' buildout.buildout /srv/mybuildout
     '''
     LOG.info(
-        'Running buildout in %s (%s)' % (directory,
-                                         config))
+        'Running buildout in {0} ({1})'.format(directory, config))
     boot_ret = bootstrap(directory,
                          config=config,
                          buildout_ver=buildout_ver,
