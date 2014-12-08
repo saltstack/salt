@@ -275,7 +275,7 @@ def rename(name, new_name):
     return ret
 
 
-def list_(name=''):
+def list_(name='', **kwargs):
     '''
     .. versionadded:: Lithium
 
@@ -285,10 +285,28 @@ def list_(name=''):
 
     .. code-block:: bash
 
-        salt '*' zfs.list
-        salt '*' zfs.list /myzpool/mydataset
+        salt '*' zfs.list [recursive=True|False]
+        salt '*' zfs.list /myzpool/mydataset [recursive=True|False]
+
+    .. note::
+
+        Information about the dataset and all of it\'s descendent datasets can be displayed
+        by passing ``recursive=True`` on the CLI.
+
     '''
     zfs = _check_zfs()
-    res = __salt__['cmd.run']('{0} list {1}'.format(zfs, name))
-    dataset_list = [l for l in res.splitlines()]
-    return {'datasets': dataset_list}
+    recursive_opt = kwargs.get('recursive', False)
+
+    if recursive_opt:
+        cmd = '{0} list -r {1}'.format(zfs, name)
+    else:
+        cmd = '{0} list {1}'.format(zfs, name)
+
+    res = __salt__['cmd.run'](cmd)
+    
+    if not res:
+        dataset_list = [l for l in res.splitlines()]
+        return {'datasets': dataset_list}
+    else:
+        ret['Error'] = res
+    return ret
