@@ -695,8 +695,7 @@ def list_pkgs(versions_as_list=False,
 
     if not apt_cache_support:
         msg = 'Error: apt.cache python module not found'
-        log.error(msg)
-        return msg
+        raise CommandExecutionError(msg)
 
     # Check for virtual packages. We need dctrl-tools for this.
     if not removed:
