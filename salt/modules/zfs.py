@@ -303,10 +303,8 @@ def list_(name='', **kwargs):
         cmd = '{0} list {1}'.format(zfs, name)
 
     res = __salt__['cmd.run'](cmd)
-    
+
     if not res:
         dataset_list = [l for l in res.splitlines()]
         return {'datasets': dataset_list}
-    else:
-        ret['Error'] = res
-    return ret
+    return {'Error': res}
