@@ -296,16 +296,16 @@ def list_(name='', **kwargs):
         salt '*' zfs.list /myzpool/mydataset [recursive=True|False]
 
     .. note::
-                
+
         Dataset property value output can be customized by passing an additional argument called
         "properties" in the form of a python list::
-        
+
             properties="[property1, property2, property3]"
-    
+
         Example:
-    
+
         .. code-block:: bash
-    
+
             salt '*' zfs.list /myzpool/mydataset properties="[name, sharenfs, mountpoint]"
 
     '''
