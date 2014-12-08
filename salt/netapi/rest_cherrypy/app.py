@@ -1460,8 +1460,51 @@ class Events(object):
     def __init__(self):
         self.opts = cherrypy.config['saltopts']
         self.auth = salt.auth.LoadAuth(self.opts)
+        self.resolver = salt.auth.Resolver(self.opts)
 
-    def GET(self, token=None):
+    def _is_valid_salt_token(self, salt_token):
+        '''
+        Check if this is a valid salt master token
+        More on salt master token generation can
+        be found at
+        http://docs.saltstack.com/en/latest/topics/eauth/index.html#tokens
+
+        Returns
+            True if this token is a valid salt token
+            False otherwise
+        '''
+        if salt_token and self.resolver.get_token(salt_token):
+            return True
+        return False
+
+    def _is_valid_salt_api_token(self, salt_api_token):
+        '''
+        Check if this is a valid salt api token
+        Salt API tokens are generated on Login
+
+        Returns
+            True if this token is a valid salt api token
+            False otherwise
+        '''
+        if not salt_api_token:
+            return False
+
+        # Pulling the session token from an URL param is a workaround for
+        # browsers not supporting CORS in the EventSource API.
+        if salt_api_token:
+            orig_sesion, _ = cherrypy.session.cache.get(salt_api_token,
+                                                        ({}, None))
+            salt_token = orig_sesion.get('token')
+        else:
+            salt_token = cherrypy.session.get('token')
+
+        # Manually verify the token
+        if salt_token and self.auth.get_tok(salt_token):
+            return True
+
+        return False
+
+    def GET(self, token=None, salt_token=None):
         r'''
         An HTTP stream of the Salt master event bus
 
@@ -1478,7 +1521,16 @@ class Events(object):
 
         .. code-block:: bash
 
-            curl -NsS localhost:8000/events
+            curl -NsS localhost:8000/events?salt_token=307427657b16a70aed360a46c5370035
+
+        Or you can pass the token sent by cherrypy's
+        `/login` endpoint (these are different tokens).
+        :ref:`salt-token-generation` describes the process of obtaining a
+        Salt token.
+
+        .. code-block:: bash
+
+            curl -NsS localhost:8000/events?token=308650dbd728d8405a32ac9c2b2c1ed7705222bc
 
         .. code-block:: http
 
@@ -1503,8 +1555,9 @@ class Events(object):
 
         .. code-block:: javascript
 
-            # Note, you must be authenticated!
-            var source = new EventSource('/events');
+            var source = new EventSource('/events?token=ecd589e4e01912cf3c4035afad73426dbb8dba75');
+            // Salt token works as well!
+            // var source = new EventSource('/events?salt_token=307427657b16a70aed360a46c5370035');
             source.onopen = function() { console.debug('opening') };
             source.onerror = function(e) { console.debug('error!', e) };
             source.onmessage = function(e) { console.debug(e.data) };
@@ -1513,7 +1566,9 @@ class Events(object):
 
         .. code-block:: javascript
 
-            var source = new EventSource('/events', {withCredentials: true});
+            var source = new EventSource('/events?token=ecd589e4e01912cf3c4035afad73426dbb8dba75', {withCredentials: true});
+            // You can supply the salt token as well
+            var source = new EventSource('/events?salt_token=307427657b16a70aed360a46c5370035', {withCredentials: true});
 
         Some browser clients lack CORS support for the ``EventSource()`` API. Such
         clients may instead pass the :mailheader:`X-Auth-Token` value as an URL
@@ -1536,7 +1591,7 @@ class Events(object):
 
         .. code-block:: bash
 
-            curl -NsS localhost:8000/events |\
+            curl -NsS localhost:8000/events?salt_token=307427657b16a70aed360a46c5370035 |\
                     while IFS= read -r line ; do
                         echo $line
                     done
@@ -1545,7 +1600,7 @@ class Events(object):
 
         .. code-block:: bash
 
-            curl -NsS localhost:8000/events |\
+            curl -NsS localhost:8000/events?salt_token=307427657b16a70aed360a46c5370035 |\
                     awk '
                         BEGIN { RS=""; FS="\\n" }
                         $1 ~ /^tag: salt\/job\/[0-9]+\/new$/ { print $0 }
@@ -1555,16 +1610,9 @@ class Events(object):
             tag: 20140112010149808995
             data: {"tag": "20140112010149808995", "data": {"fun_args": [], "jid": "20140112010149808995", "return": true, "retcode": 0, "success": true, "cmd": "_return", "_stamp": "2014-01-12_01:01:49.819316", "fun": "test.ping", "id": "jerry"}}
         '''
-        # Pulling the session token from an URL param is a workaround for
-        # browsers not supporting CORS in the EventSource API.
-        if token:
-            orig_sesion, _ = cherrypy.session.cache.get(token, ({}, None))
-            salt_token = orig_sesion.get('token')
-        else:
-            salt_token = cherrypy.session.get('token')
+        if (not (self._is_valid_salt_api_token(token) or
+                 self._is_valid_salt_token(salt_token))):
 
-        # Manually verify the token
-        if not salt_token or not self.auth.get_tok(salt_token):
             raise cherrypy.HTTPError(401)
 
         # Release the session lock before starting the long-running response
