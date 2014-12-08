@@ -326,7 +326,7 @@ def deployed(name, jboss_config, artifact=None, salt_source=None):
     * Undeploy the artifact if it is already deployed
     * Deploy the new artifact
 
-    Examples::
+    Examples:
 
     Deployment of a file from Salt file system:
 
