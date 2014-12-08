@@ -887,8 +887,8 @@ def list_pkgs(versions_as_list=False,
         return ret
 
     ret = {'installed': {}, 'removed': {}, 'purge_desired': {}}
-    cmd = ('dpkg-query', '--showformat',
-           '${Status} ${Package} ${Version} ${Architecture}\n', '-W')
+    cmd = ['dpkg-query', '--showformat',
+           '${Status} ${Package} ${Version} ${Architecture}\n', '-W']
 
     out = __salt__['cmd.run_stdout'](
             cmd,
