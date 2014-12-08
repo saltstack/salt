@@ -57,7 +57,8 @@ def build_pillar_data(options):
     Build a YAML formatted string to properly pass pillar data
     '''
     pillar = {'test_transport': options.test_transport,
-              'cloud_only': options.cloud_only}
+              'cloud_only': options.cloud_only,
+              'with_coverage': options.test_without_coverage is False}
     if options.test_git_commit is not None:
         pillar['test_git_commit'] = options.test_git_commit
     if options.test_git_url is not None:
@@ -371,7 +372,8 @@ def run(opts):
     )
 
     if opts.download_remote_reports:
-        opts.download_coverage_report = vm_name
+        if opts.test_without_coverage is False:
+            opts.download_coverage_report = vm_name
         opts.download_unittest_reports = vm_name
         opts.download_packages = vm_name
 
@@ -773,7 +775,8 @@ def run(opts):
         # Download unittest reports
         download_unittest_reports(opts)
         # Download coverage report
-        download_coverage_report(opts)
+        if options.test_without_coverage is False:
+            download_coverage_report(opts)
 
     if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
         delete_vm(opts)
@@ -829,6 +832,12 @@ def parse():
         default='zeromq',
         choices=('zeromq', 'raet'),
         help='Set to raet to run integration tests with raet transport. Default: %default')
+    parser.add_option(
+        '--test-without-coverage',
+        default=False,
+        action='store_true',
+        help='Do not generate coverage reports'
+    )
     parser.add_option(
         '--prep-sls',
         default='git.salt',
@@ -943,9 +952,10 @@ def parse():
         download_unittest_reports(options)
         parser.exit(0)
 
-    if options.download_coverage_report is not None and not options.test_git_commit:
-        download_coverage_report(options)
-        parser.exit(0)
+    if options.test_without_coverage is False:
+        if options.download_coverage_report is not None and not options.test_git_commit:
+            download_coverage_report(options)
+            parser.exit(0)
 
     if options.download_remote_logs is not None and not options.test_git_commit:
         download_remote_logs(options)
