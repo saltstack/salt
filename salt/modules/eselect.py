@@ -89,9 +89,8 @@ def get_modules():
         salt '*' eselect.get_modules
     '''
     modules = []
-    try:
-        module_list = exec_action('modules', 'list', action_parameter='--only-names')
-    except:
+    module_list = exec_action('modules', 'list', action_parameter='--only-names')
+    if not module_list:
         return None
 
     for module in module_list:
@@ -112,9 +111,8 @@ def get_target_list(module):
 
         salt '*' eselect.get_target_list kernel
     '''
-    try:
-        exec_output = exec_action(module, 'list')
-    except:
+    exec_output = exec_action(module, 'list')
+    if not exec_output:
         return None
 
     target_list = []
@@ -151,9 +149,8 @@ def get_current_target(module, module_parameter=None, action_parameter=None):
 
         salt '*' eselect.get_current_target kernel
     '''
-    try:
-        result = exec_action(module, 'show', module_parameter=module_parameter, action_parameter=action_parameter)[0]
-    except:
+    result = exec_action(module, 'show', module_parameter=module_parameter, action_parameter=action_parameter)[0]
+    if not result:
         return None
 
     if result == '(unset)':
@@ -201,7 +198,7 @@ def set_target(module, target, module_parameter=None, action_parameter=None):
         log.error('Module {0} not available'.format(module))
         return False
 
-    try:
-        return exec_action(module, 'set', module_parameter=module_parameter, action_parameter=action_parameter, state_only=True)
-    except:
-        return False
+    exec_result = exec_action(module, 'set', module_parameter=module_parameter, action_parameter=action_parameter, state_only=True)
+    if exec_result:
+        return exec_result
+    return False
