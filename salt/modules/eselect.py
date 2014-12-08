@@ -120,7 +120,11 @@ def set_target(module, target, module_parameter=None, action_parameter=None):
 
         salt '*' eselect.set_target <module name> <target> module_parameter='optional module params' action_parameter='optional action params'
     '''
+    if action_parameter:
+        action_parameter = '{0} {1}'.format(action_parameter, target)
+    else:
+        action_parameter = target
     try:
-        return exec_action(module, 'set', target, module_parameter=module_parameter, action_parameter=action_parameter)
+        return exec_action(module, 'set', module_parameter=module_parameter, action_parameter=action_parameter, state_only=True)
     except:
         return False
