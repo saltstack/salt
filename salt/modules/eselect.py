@@ -20,11 +20,30 @@ def exec_action(module, action, module_parameter=None, action_parameter=None, pa
     '''
     Execute an arbitrary action on a module.
 
-    CLI Example:
+    module
+        name of the module to be executed
+
+    action
+        name of the module's action to be run
+
+    module_parameter
+        additional params passed to the defined module
+
+    action_parameter
+        additional params passed to the defined action
+
+    parameter
+        additional params passed to the defined action
+        .. deprecated:: Lithium
+
+    state_only
+        don't return any output but only the success/failure of the operation
+
+    CLI Example (updating the ``php`` implementation used for ``apache2``):
 
     .. code-block:: bash
 
-        salt '*' eselect.exec_action <module name> [module_parameter] <action> [action_parameter]
+        salt '*' eselect.exec_action php update action_parameter='apache2'
     '''
     if parameter:
         salt.utils.warn_until(
