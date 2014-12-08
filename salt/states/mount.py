@@ -159,7 +159,6 @@ def mounted(name,
                                                         + "options changed"
                             remount_result = __salt__['mount.remount'](real_name, device, mkmnt=mkmnt, fstype=fstype, opts=opts)
                             ret['result'] = remount_result
-                            return ret
             if real_device not in device_list:
                 # name matches but device doesn't - need to umount
                 if __opts__['test']:
