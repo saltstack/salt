@@ -19,9 +19,10 @@ import salt.modules.cmdmod as salt_cmd
 
 log = logging.getLogger(__name__)
 
-# Function alias to set mapping. Filled
-# in later on.
-__func_alias__ = {}
+# Function alias to set mapping.
+__func_alias__ = {
+    'list_': 'list',
+}
 
 
 @decorators.memoize
@@ -272,3 +273,21 @@ def rename(name, new_name):
     else:
         ret['Error'] = res
     return ret
+
+
+def list_():
+    '''
+    .. versionadded:: Lithium
+
+    Return a list of all datasets on the system and the values of their used, available, referenced, and mountpoint properties.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zfs.list
+    '''
+    zfs = _check_zfs()
+    res = __salt__['cmd.run']('{0} list'.format(zfs))
+    dataset_list = [l for l in res.splitlines()]
+    return {'datasets': dataset_list}
