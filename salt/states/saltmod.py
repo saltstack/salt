@@ -9,6 +9,7 @@ modules. These state functions wrap Salt's :ref:`Python API <python-api>`.
 
 .. seealso:: More Orchestrate documentation
 
+    * :ref:`Full Orchestrate Tutorial <orchestrate-runner>`
     * :py:func:`The Orchestrate runner <salt.runners.state.orchestrate>`
 '''
 from __future__ import absolute_import
