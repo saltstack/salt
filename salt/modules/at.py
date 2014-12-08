@@ -300,28 +300,28 @@ def _atq(**kwargs):
 
         if not hour:
             pass
-        elif "%02d" % int(hour) == job['time'].split(':')[0]:
+        elif '{0:02d}'.format(int(hour)) == job['time'].split(':')[0]:
             pass
         else:
             continue
 
         if not minute:
             pass
-        elif "%02d" % int(minute) == job['time'].split(':')[1]:
+        elif '{0:02d}'.format(int(minute)) == job['time'].split(':')[1]:
             pass
         else:
             continue
 
         if not day:
             pass
-        elif "%02d" % int(day) == job['date'].split('-')[2]:
+        elif '{0:02d}'.format(int(day)) == job['date'].split('-')[2]:
             pass
         else:
             continue
 
         if not month:
             pass
-        elif "%02d" % int(month) == job['date'].split('-')[1]:
+        elif '{0:02d}'.format(int(month)) == job['date'].split('-')[1]:
             pass
         else:
             continue
