@@ -378,9 +378,9 @@ def create(vm_):
                     # might be to allow salt-cloud to dynamically allociate new
                     # address but that might be tricky to manage.
                     raise SaltCloudSystemExit(
-                        "Floating pool '%s' has not more address available, "
-                        "please create some more or use a different pool." %
-                        net['floating']
+                        "Floating pool '{0}' has not more address available, "
+                        "please create some more or use a different pool.".format(
+                            net['floating'])
                     )
 
     userdata_file = config.get_cloud_config_value(
