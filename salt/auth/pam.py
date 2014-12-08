@@ -64,7 +64,7 @@ class PamMessage(Structure):
             ]
 
     def __repr__(self):
-        return "<PamMessage %i '%s'>" % (self.msg_style, self.msg)
+        return '<PamMessage {0} {1!r}>'.format(self.msg_style, self.msg)
 
 
 class PamResponse(Structure):
@@ -77,7 +77,7 @@ class PamResponse(Structure):
             ]
 
     def __repr__(self):
-        return "<PamResponse %i '%s'>" % (self.resp_retcode, self.resp)
+        return '<PamResponse {0} {1!r}>'.format(self.resp_retcode, self.resp)
 
 
 CONV_FUNC = CFUNCTYPE(c_int,
