@@ -47,6 +47,12 @@ def exec_action(module, action, module_parameter=None, action_parameter=None, pa
     if state_only:
         return True
 
+    if len(out) < 1:
+        return False
+
+    if len(out) == 1 and not out[0].strip():
+        return False
+
     return out
 
 
@@ -84,16 +90,18 @@ def get_target_list(module):
 
         salt '*' eselect.get_target_list kernel
     '''
-    target_list = []
     try:
         exec_output = exec_action(module, 'list')
     except:
         return None
 
-    for item in exec_output:
-        target_list.append(item.split(None, 1)[0])
+    target_list = []
+    if isinstance(exec_output, list):
+        for item in exec_output:
+            target_list.append(item.split(None, 1)[0])
+        return target_list
 
-    return target_list
+    return None
 
 
 def get_current_target(module, module_parameter=None, action_parameter=None):
