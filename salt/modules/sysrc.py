@@ -76,7 +76,7 @@ def set(name, value, **kwargs):
     if 'jail' in kwargs:
         cmd += ' -j '+kwargs['jail']
 
-    cmd += ' '+name+"="+value
+    cmd += ' '+name+"=\""+value+"\""
 
     sysrcs = __salt__['cmd.run'](cmd)
 
