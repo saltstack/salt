@@ -82,6 +82,7 @@ def orchestrate(mods, saltenv='base', test=None, exclude=None, pillar=None):
 
     .. seealso:: More Orchestrate documentation
 
+        * :ref:`Full Orchestrate Tutorial <orchestrate-runner>`
         * :py:mod:`Docs for the master-side state module <salt.states.saltmod>`
 
     CLI Examples:
