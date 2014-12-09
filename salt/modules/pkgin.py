@@ -475,7 +475,7 @@ def rehash():
 
         salt '*' pkg.rehash
     '''
-    shell = __salt__['cmd.run']('echo $SHELL', output_loglevel='debug')
+    shell = __salt__['environ.get']('SHELL', output_loglevel='debug')
     if shell.split('/')[-1] in ('csh', 'tcsh'):
         __salt__['cmd.run']('rehash', output_loglevel='debug')
 
