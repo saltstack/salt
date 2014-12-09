@@ -725,8 +725,8 @@ class Loader(object):
                     # This is a proxy minion but this module doesn't support proxy
                     # minions at all
                     continue
-                if not self.opts['proxy']['proxytype'] in mod.__proxyenabled__ or \
-                        '*' in mod.__proxyenabled__:
+                if not (self.opts['proxy']['proxytype'] in mod.__proxyenabled__ or
+                        '*' in mod.__proxyenabled__):
                     # This is a proxy minion, this module supports proxy
                     # minions, but not this particular minion
                     log.debug(mod)
@@ -820,6 +820,7 @@ class Loader(object):
         '''
         Loads all of the modules from module_dirs and returns a list of them
         '''
+
         self.modules = []
 
         log.trace('loading {0} in {1}'.format(self.tag, self.module_dirs))
