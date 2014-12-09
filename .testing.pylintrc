@@ -113,12 +113,6 @@ disable=R,
 
 [REPORTS]
 
-# Include message's id in output
-include-ids=yes
-
-# Include symbolic ids of messages in output
-symbols=no
-
 # Tells whether to display a full report or only the messages
 reports=no
 
