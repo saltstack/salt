@@ -16,6 +16,7 @@ import traceback
 import datetime
 import pipes
 import copy
+import difflib
 import logging
 import tempfile
 import os
@@ -355,9 +356,9 @@ def cloud_init_interface(name, vm_=None, **kwargs):
             ethx['ipv4'] += '/{0}'.format(nm)
         for i in ('mac', 'hwaddr'):
             if i in iopts:
-                ethx['hwaddr'] = iopts[i]
                 ethx['mac'] = iopts[i]
-        if 'hwaddr' not in ethx:
+                break
+        if 'mac' not in ethx:
             raise ValueError('No mac for {0}'.format(ifh))
     gateway = vm_.get('gateway', 'auto')
     #
@@ -395,9 +396,73 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     return lxc_init_interface
 
 
+def get_container_profile(name=None, **kwargs):
+    '''
+    .. versionadded:: Lithium
+
+    Gather a pre-configured set of container configuration parameters. If no
+    arguments are passed, an empty profile is returned.
+
+    Profiles can be defined in the minion or master config files, or in pillar
+    or grains, and are loaded using :mod:`config.get
+    <salt.modules.config.get>`. The key under which LXC profiles must be
+    configured is ``lxc.container_profile.profile_name``. An example container
+    profile would be as follows:
+
+    .. code-block:: yaml
+
+        lxc.container_profile:
+          ubuntu:
+            template: ubuntu
+            backing: lvm
+            vgname: lxc
+            size: 1G
+
+    Parameters set in a profile can be overridden by passing additional
+    container creation arguments (such as the ones passed to :mod:`lxc.create
+    <salt.modules.lxc.create>`) to this function.
+
+    A profile can be defined either as the name of the profile, or a dictionary
+    of variable names and values. See the :ref:`LXC Tutorial
+    <tutorial-lxc-profiles>` for more information on how to use LXC profiles.
+
+    CLI Example::
+
+    .. code-block:: bash
+
+        salt-call lxc.get_container_profile centos
+        salt-call lxc.get_container_profile ubuntu template=ubuntu backing=overlayfs
+    '''
+    if isinstance(name, dict):
+        profilename = name.pop('name', None)
+        return get_container_profile(profilename, **name)
+
+    if name is None:
+        profile_match = {}
+    else:
+        profile_match = \
+            __salt__['config.get'](
+                'lxc.container_profile.{0}'.format(name), {}
+            )
+    if not isinstance(profile_match, dict):
+        raise CommandExecutionError('Container profile must be a dictionary')
+
+    # Overlay the kwargs to override matched profile data
+    overrides = copy.deepcopy(kwargs)
+    for key in overrides.keys():
+        if key.startswith('__'):
+            # Remove pub data from kwargs
+            overrides.pop(key)
+    profile_match = salt.utils.dictupdate.update(
+        copy.deepcopy(profile_match),
+        overrides
+    )
+    return profile_match
+
+
 def get_network_profile(name=None):
     '''
-    .. versionadded:: 2014.7.1
+    .. versionadded:: Lithium
 
     Gather a pre-configured set of network configuration parameters. If no
     arguments are passed, the following default profile is returned:
@@ -425,7 +490,7 @@ def get_network_profile(name=None):
 
     A profile can be passed either as the name of the profile, or a
     dictionary of variable names and values. See the :ref:`LXC Tutorial
-    <tutorial-lxc-profiles>` for more information on how to use container
+    <tutorial-lxc-profiles>` for more information on how to use network
     profiles.
 
     CLI Example::
@@ -433,11 +498,15 @@ def get_network_profile(name=None):
     .. code-block:: bash
 
         salt-call lxc.get_network_profile default
-        salt-call lxc.get_network_profile default link=mybridge
     '''
-    return __salt__['config.get'](
-        'lxc.network_profile.{0}'.format(name), DEFAULT_NIC_PROFILE
+    # Legacy location (lxc.nic)
+    net_profile = __salt__['config.get']('lxc.nic', {}).get(name)
+    if net_profile is not None:
+        return net_profile
+    net_profile = __salt__['config.get'](
+        'lxc.network_profile.{0}'.format(name)
     )
+    return net_profile if net_profile is not None else DEFAULT_NIC_PROFILE
 
 
 def _rand_cpu_str(cpu):
@@ -824,6 +893,7 @@ def init(name,
          memory=None,
          profile=None,
          network_profile=None,
+         nic=None,
          nic_opts=None,
          cpu=None,
          autostart=True,
@@ -891,8 +961,14 @@ def init(name,
     bridge
         the bridge to use
         the default does nothing more than lxcutils does
+    network_profile
+        Network interfaces profile
+
+        .. versionadded:: Lithium
+
     nic
-        Network interfaces profile (defined in config or pillar).
+        .. deprecated:: Lithium
+            Use ``network_profile`` instead
 
     nic_opts
         Extra options for network interfaces, will override
@@ -942,7 +1018,7 @@ def init(name,
         Delay in seconds between end of container creation and bootstrapping.
         Useful when waiting for container to obtain a DHCP lease.
 
-        .. versionadded:: 2014.7.1
+        .. versionadded:: Lithium
 
     bootstrap_url
         See lxc.bootstrap
@@ -978,6 +1054,14 @@ def init(name,
     ret = {'name': name,
            'result': False,
            'changes': {}}
+
+    if nic:
+        salt.utils.warn_until(
+            'Boron',
+            'The \'nic\' argument to \'lxc.init\' has been deprecated, '
+            'please use \'network_profile\' instead.'
+        )
+        network_profile = nic
 
     # Changes is a pointer to changes_dict['init']. This method is used so that
     # we can have a list of changes as they are made, providing an ordered list
@@ -1063,12 +1147,15 @@ def init(name,
         with cfg.tempfile() as cfile:
             try:
                 create(name, config=cfile.name, profile=profile, **kwargs)
+                changes.append({'create': 'Container created'})
             except (SaltInvocationError, CommandExecutionError) as exc:
-                ret['comment'] = exc.message
-                if changes:
-                    ret['changes'] = changes_dict
-                return ret
-        changes.append({'create': 'Container created'})
+                if 'already exists' in exc.strerror:
+                    changes.append({'create': 'Container already exists'})
+                else:
+                    ret['comment'] = exc.strerror
+                    if changes:
+                        ret['changes'] = changes_dict
+                    return ret
         path = '/var/lib/lxc/{0}/config'.format(name)
         old_chunks = []
         if os.path.exists(path):
@@ -1280,7 +1367,7 @@ def cloud_init(name, vm_=None, **kwargs):
 
 def images(dist=None):
     '''
-    .. versionadded:: 2014.7.1
+    .. versionadded:: Lithium
 
     List the available images for LXC's ``download`` template.
 
@@ -1311,8 +1398,9 @@ def images(dist=None):
         except ValueError:
             continue
 
-        if not passed_header and dist == 'DIST':
-            passed_header = True
+        if not passed_header:
+            if distro == 'DIST':
+                passed_header = True
             continue
 
         dist_list = ret.setdefault(distro, [])
@@ -1331,6 +1419,7 @@ def images(dist=None):
 def create(name,
            config=None,
            profile=None,
+           network_profile=None,
            **kwargs):
     '''
     Create a new container.
@@ -1346,11 +1435,16 @@ def create(name,
         <salt.modules.lxc.get_container_profile>`). Values in a profile will be
         overridden by the **Container Creation Arguments** listed below.
 
+    network_profile
+        Network profile to use for container
+
+        .. versionadded:: Lithium
+
     **Container Creation Arguments**
 
     template
-        The template to use. E.g., 'ubuntu' or 'fedora'. Conflicts with the
-        ``image`` argument.
+        The template to use. For example, ``ubuntu`` or ``fedora``. Conflicts
+        with the ``image`` argument.
 
         .. note::
 
@@ -1484,6 +1578,14 @@ def create(name,
     ret = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
     _clear_context()
     if ret['retcode'] == 0 and exists(name):
+        if network_profile:
+            network_changes = apply_network_profile(name, network_profile)
+            if network_changes:
+                log.info(
+                    'Network changes from applying network profile \'{0}\' '
+                    'to newly-created container \'{1}\':\n{2}'
+                    .format(network_profile, name, network_changes)
+                )
         c_state = state(name)
         return {'result': True,
                 'state': {'old': None, 'new': c_state}}
@@ -1514,7 +1616,7 @@ def clone(name,
     clone_from
         Name of the original container to be cloned
 
-        .. versionadded:: 2014.7.1
+        .. versionadded:: Lithium
 
     profile
         Profile to use in container cloning (see
@@ -1638,7 +1740,7 @@ def list_(extra=False, limit=None):
         Return output matching a specific state (**frozen**, **running**, or
         **stopped**).
 
-        .. versionadded:: 2014.7.1
+        .. versionadded:: Lithium
 
     CLI Examples:
 
@@ -1764,7 +1866,7 @@ def _ensure_running(name, no_start=False):
 
 def restart(name, force=False):
     '''
-    .. versionadded:: 2014.7.1
+    .. versionadded:: Lithium
 
     Restart the named container. If the container was not running, the
     container will merely be started.
@@ -1798,7 +1900,7 @@ def start(name, **kwargs):
     Start the named container
 
     restart : False
-        .. deprecated:: 2014.7.1
+        .. deprecated:: Lithium
             Use :mod:`lxc.restart <salt.modules.lxc.restart>`
 
         Restart the container if it is already running
@@ -1833,7 +1935,7 @@ def stop(name, kill=False):
         Older LXC versions will stop containers like this irrespective of this
         argument.
 
-        .. versionchanged:: 2014.7.1
+        .. versionchanged:: Lithium
             Default value changed to ``False``
 
     CLI Example:
@@ -1865,7 +1967,7 @@ def freeze(name, **kwargs):
         If ``True`` and the container is stopped, the container will be started
         before attempting to freeze.
 
-        .. versionadded:: 2014.7.1
+        .. versionadded:: Lithium
 
     CLI Example:
 
@@ -2179,7 +2281,7 @@ def info(name):
 
 def set_password(name, users, password, encrypted=True):
     '''
-    .. versionchanged:: 2014.7.1
+    .. versionchanged:: Lithium
         Function renamed from ``set_pass`` to ``set_password``. Additionally,
         this function now supports (and defaults to using) a password hash
         instead of a plaintext password.
@@ -2197,7 +2299,7 @@ def set_password(name, users, password, encrypted=True):
         If true, ``password`` must be a password hash. Set to ``False`` to set
         a plaintext password (not recommended).
 
-        .. versionadded:: 2014.7.1
+        .. versionadded:: Lithium
 
     CLI Example:
 
@@ -2334,7 +2436,7 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset):
 
 def set_dns(name, dnsservers=None, searchdomains=None):
     '''
-    .. versionchanged:: 2014.7.1
+    .. versionchanged:: Lithium
         The ``dnsservers`` and ``searchdomains`` parameters can now be passed
         as a comma-separated list.
 
@@ -2414,7 +2516,7 @@ def bootstrap(name,
         Delay in seconds between end of container creation and bootstrapping.
         Useful when waiting for container to obtain a DHCP lease.
 
-        .. versionadded:: 2014.7.1
+        .. versionadded:: Lithium
 
     bootstrap_url
         url, content or filepath to the salt bootstrap script
@@ -2695,7 +2797,7 @@ def run_cmd(name,
             ignore_retcode=False,
             keep_env='http_proxy,https_proxy,no_proxy'):
     '''
-    .. deprecated:: 2014.7.1
+    .. deprecated:: Lithium
         Use :mod:`lxc.cmd_run <salt.module.lxc.cmd_run>` instead
     '''
     salt.utils.warn_until(
@@ -2724,7 +2826,7 @@ def cmd_run(name,
             ignore_retcode=False,
             keep_env='http_proxy,https_proxy,no_proxy'):
     '''
-    .. versionadded:: 2014.7.1
+    .. versionadded:: Lithium
 
     Run :mod:`cmd.run <salt.modules.cmdmod.run>` within a container
 
@@ -2797,7 +2899,7 @@ def cmd_run_stdout(name,
                    ignore_retcode=False,
                    keep_env='http_proxy,https_proxy,no_proxy'):
     '''
-    .. versionadded:: 2014.7.1
+    .. versionadded:: Lithium
 
     Run :mod:`cmd.run_stdout <salt.modules.cmdmod.run_stdout>` within a container
 
@@ -2870,7 +2972,7 @@ def cmd_run_stderr(name,
                    ignore_retcode=False,
                    keep_env='http_proxy,https_proxy,no_proxy'):
     '''
-    .. versionadded:: 2014.7.1
+    .. versionadded:: Lithium
 
     Run :mod:`cmd.run_stderr <salt.modules.cmdmod.run_stderr>` within a container
 
@@ -2941,7 +3043,7 @@ def cmd_retcode(name,
                 ignore_retcode=False,
                 keep_env='http_proxy,https_proxy,no_proxy'):
     '''
-    .. versionadded:: 2014.7.1
+    .. versionadded:: Lithium
 
     Run :mod:`cmd.retcode <salt.modules.cmdmod.retcode>` within a container
 
@@ -3014,7 +3116,7 @@ def cmd_run_all(name,
                 ignore_retcode=False,
                 keep_env='http_proxy,https_proxy,no_proxy'):
     '''
-    .. versionadded:: 2014.7.1
+    .. versionadded:: Lithium
 
     Run :mod:`cmd.run_all <salt.modules.cmdmod.run_all>` within a container
 
@@ -3102,7 +3204,7 @@ def cp(name, source, dest, makedirs=False):
     dest
         Destination on the container. Must be an absolute path.
 
-        .. versionchanged:: 2014.7.1
+        .. versionchanged:: Lithium
             If the destination is a directory, the file will be copied into
             that directory.
 
@@ -3111,7 +3213,7 @@ def cp(name, source, dest, makedirs=False):
         Create the parent directory on the container if it does not already
         exist.
 
-        .. versionadded:: 2014.7.1
+        .. versionadded:: Lithium
 
     CLI Example:
 
@@ -3541,3 +3643,42 @@ def reconfigure(name,
                 cret = reboot(name)
                 ret['result'] = cret['result']
     return ret
+
+
+def apply_network_profile(name, network_profile):
+    '''
+    .. versionadded:: Lithium
+
+    Apply a network profile to a container
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt 'minion' lxc.apply_network_profile web1 centos
+    '''
+    path = '/var/lib/lxc/{0}/config'.format(name)
+
+    before = []
+    with salt.utils.fopen(path, 'r') as fp_:
+        for line in fp_:
+            before.append(line)
+
+    network_params = {}
+    for param in _network_conf(network_profile=network_profile):
+        network_params.update(param)
+    if network_params:
+        edit_conf(path, **network_params)
+
+    after = []
+    with salt.utils.fopen(path, 'r') as fp_:
+        for line in fp_:
+            after.append(line)
+
+    diff = ''
+    for line in difflib.unified_diff(before,
+                                     after,
+                                     fromfile='before',
+                                     tofile='after'):
+        diff += line
+    return diff
