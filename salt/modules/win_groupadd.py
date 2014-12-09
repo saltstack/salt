@@ -7,8 +7,6 @@ from __future__ import absolute_import
 
 import salt.utils
 from salt.ext.six import string_types
-#from salt._compat import string_types
-
 
 try:
     import win32com.client
@@ -235,7 +233,7 @@ def adduser(name, username):
                 if 'dc=' in username.lower():
                     groupObj.Add('LDAP://' + username)
                 else:
-                    #have to use a different ADSPath when adding/removing users to Domain Groups...
+                    # have to use a different ADSPath when adding/removing users to Domain Groups...
                     with salt.utils.winapi.Com():
                         c = wmi.WMI()
                         for wmiComp in c.Win32_ComputerSystem():
@@ -303,7 +301,7 @@ def deluser(name, username):
                 if 'dc=' in username.lower():
                     groupObj.Remove('LDAP://' + username)
                 else:
-                    #have to use a different ADSPath when adding/removing users to Domain Groups...
+                    # have to use a different ADSPath when adding/removing users to Domain Groups...
                     with salt.utils.winapi.Com():
                         c = wmi.WMI()
                         for wmiComp in c.Win32_ComputerSystem():
@@ -385,7 +383,7 @@ def members(name, members_list):
                     else:
                         ret['result'] = False
                         ret['comment'].append(this_return['comment'])
-            #remove users not in the list
+            # remove users not in the list
             for member in current_info['members']:
                 if member.lower() not in [x.lower() for x in members_list]:
                     this_return = deluser(name, member)
@@ -415,12 +413,10 @@ def list_groups(useldap=False):
     nt = win32com.client.Dispatch('AdsNameSpaces')
 
     if useldap:
-        '''
-        try to recurse through the ldap server and get all user objects...
-        could do 'LDAP:' and allow any domain member the ability to get all ldap users
-        if anonymous binds are allowed, but for now, the code will try to connect to ldap on the local
-        host
-        '''
+        # try to recurse through the ldap server and get all user objects...
+        # could do 'LDAP:' and allow any domain member the ability to get all ldap users
+        # if anonymous binds are allowed, but for now, the code will try to connect to ldap on the local
+        # host
         ret = _recursecontainersforgroups('LDAP://localhost')
     else:
         results = nt.GetObject('', 'WinNT://.')
