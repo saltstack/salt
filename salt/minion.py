@@ -2187,7 +2187,7 @@ class MultiSyndic(MinionBase):
         '''
         Attempt to connect to master, including back-off for each one
 
-        return boolean of wether you connected or not
+        return boolean of whether you connected or not
         '''
         if master not in self.master_syndics:
             log.error('Unable to connect to {0}, not in the list of masters'.format(master))
