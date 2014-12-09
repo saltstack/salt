@@ -1378,7 +1378,7 @@ class Minion(object):
                     'Exception {0} occurred in scheduled job'.format(exc)
                 )
             try:
-                log.trace("Check main poller timeout %s" % loop_interval)
+                log.trace("Check main poller timeout {0}".format(loop_interval))
                 socks = dict(self.poller.poll(
                     loop_interval * 1000)
                 )

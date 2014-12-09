@@ -42,7 +42,7 @@ def _git_ssh_helper(identity):
     helper.writelines([
         '#!/bin/sh\n',
         'exec ssh {opts} -i {identity} $*\n'.format(
-            opts=' '.join('-o%s=%s' % (key, value)
+            opts=' '.join('-o{0}={1}'.format(key, value)
                           for key, value in opts.items()),
             identity=identity,
         )
