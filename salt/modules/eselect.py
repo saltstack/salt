@@ -10,6 +10,7 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
+
 def __virtual__():
     '''
     Only work on Gentoo systems with eselect installed
@@ -55,7 +56,7 @@ def exec_action(module, action, module_parameter=None, action_parameter=None, pa
             '\'Lithium\' Salt release. Please use either \'module_parameter\' or '
             '\'action_parameter\' instead.'
         )
-        action_parameter=parameter
+        action_parameter = parameter
     out = __salt__['cmd.run'](
         'eselect --brief --colour=no {0} {1} {2} {3}'.format(
             module, module_parameter or '', action, action_parameter or ''
@@ -97,6 +98,7 @@ def get_modules():
         if module not in ['help', 'usage', 'version']:
             modules.append(module)
     return modules
+
 
 def get_target_list(module):
     '''
