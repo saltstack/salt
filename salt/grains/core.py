@@ -426,7 +426,7 @@ def _virtual(osdata):
         if not cmd:
             continue
 
-        cmd = '%s %s' % (command, ' '.join(args))
+        cmd = '{0} {1}'.format(command, ' '.join(args))
 
         ret = __salt__['cmd.run_all'](cmd)
 
