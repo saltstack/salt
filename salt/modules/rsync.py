@@ -130,7 +130,7 @@ def config(confile='/etc/rsyncd.conf'):
     '''
 
     if not os.path.isfile(confile):
-        raise CommandExecutionError('ERROR: %s is not exists' % confile)
+        raise CommandExecutionError('ERROR: {0} does not exist'.format(confile))
 
     cmd = (
           r'''cat {confile}'''
