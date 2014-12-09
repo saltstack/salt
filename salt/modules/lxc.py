@@ -728,7 +728,7 @@ def _get_base(**kwargs):
             return profile_match
         return kw_overrides_match
 
-    cntrs = ls()
+    cntrs = ls_()
     image = select('image')
     vgname = select('vgname')
     template = select('template')
@@ -1576,7 +1576,7 @@ def clone(name,
 
 def ls_():
     '''
-    Return just a list of the containers available
+    Return a list of the containers available on the minion
 
     CLI Example:
 
@@ -1616,7 +1616,7 @@ def list_(extra=False, limit=None):
         salt '*' lxc.list extra=True
         salt '*' lxc.list limit=running
     '''
-    ctnrs = ls()
+    ctnrs = ls_()
 
     if extra:
         stopped = {}
@@ -1911,7 +1911,7 @@ def exists(name):
 
         salt '*' lxc.exists name
     '''
-    return name in ls()
+    return name in ls_()
 
 
 def state(name):
@@ -2482,7 +2482,7 @@ def bootstrap(name,
                     'mkdir -p {0}'.format(dest_dir),
                     'chmod 700 {0}'.format(dest_dir),
                 ]:
-                    if run_cmd(name, cmd, stdout=True):
+                    if cmd_run_stdout(name, cmd):
                         log.error(
                             ('tmpdir {0} creation'
                              ' failed ({1}').format(dest_dir, cmd))
