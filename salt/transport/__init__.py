@@ -79,7 +79,6 @@ class Channel(object):
         raise NotImplementedError()
 
 
-
 class RAETChannel(Channel):
     '''
     Build the communication framework to communicate over the local process
