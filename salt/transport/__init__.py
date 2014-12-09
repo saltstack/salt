@@ -10,6 +10,7 @@ import threading
 # Import Salt Libs
 import salt.payload
 import salt.auth
+import salt.crypt
 import salt.utils
 import logging
 from collections import defaultdict
@@ -63,6 +64,20 @@ class Channel(object):
         else:
             raise Exception('Channels are only defined for ZeroMQ and raet')
             # return NewKindOfChannel(opts, **kwargs)
+
+    def send(self, load, tries=3, timeout=60):
+        '''
+        Send "load" to the master.
+        '''
+        raise NotImplementedError()
+
+    def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
+        '''
+        Send "load" to the master in a way that the load is only readable by
+        the minion and the master (not other minions etc.)
+        '''
+        raise NotImplementedError()
+
 
 
 class RAETChannel(Channel):
@@ -286,9 +301,7 @@ class ZeroMQChannel(Channel):
         return self.sreq.send(self.crypt, load, tries, timeout)
 
     def send(self, load, tries=3, timeout=60):
-
-        if self.crypt != 'clear':
-            return self._crypted_transfer(load, tries, timeout)
-        else:
+        if self.crypt == 'clear':  # for sign-in requests
             return self._uncrypted_transfer(load, tries, timeout)
-        # Do we ever do non-crypted transfers?
+        else:  # for just about everything else
+            return self._crypted_transfer(load, tries, timeout)

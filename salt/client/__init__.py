@@ -1397,12 +1397,12 @@ class LocalClient(object):
 
         master_uri = 'tcp://' + salt.utils.ip_bracket(self.opts['interface']) + \
                      ':' + str(self.opts['ret_port'])
-        sreq = salt.transport.Channel.factory(self.opts,
-                                              crypt='clear',
-                                              master_uri=master_uri)
+        channel = salt.transport.Channel.factory(self.opts,
+                                                 crypt='clear',
+                                                 master_uri=master_uri)
 
         try:
-            payload = sreq.send(payload_kwargs, timeout=timeout)
+            payload = channel.send(payload_kwargs, timeout=timeout)
         except SaltReqTimeoutError:
             log.error(
                 'Salt request timed out. If this error persists, '
@@ -1418,12 +1418,12 @@ class LocalClient(object):
                 return payload
             self.key = key
             payload_kwargs['key'] = self.key
-            payload = sreq.send(payload_kwargs)
+            payload = channel.send(payload_kwargs)
             if not payload:
                 return payload
 
-        # We have the payload, let's get rid of SREQ fast(GC'ed faster)
-        del sreq
+        # We have the payload, let's get rid of the channel fast(GC'ed faster)
+        del channel
 
         return {'jid': payload['load']['jid'],
                 'minions': payload['load']['minions']}
