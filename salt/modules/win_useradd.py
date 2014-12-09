@@ -770,7 +770,7 @@ def info(name):
             'profile': '',
             'home': '',
             'groups': '',
-            'gid': '',}
+            'gid': ''}
     try:
         if 'dc=' in name.lower():
             #ldapServer = name.split('dc=', 1)[1].replace('dc=', '.').replace(',', '')
