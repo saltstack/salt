@@ -29,7 +29,7 @@ def _get_files(pillar_name):
     paths = []
 
     for ext in ('yaml', 'json'):
-        source_url = 'salt://%s/%s' % (pillar_name, 'defaults.' + ext)
+        source_url = 'salt://{0}/{1}'.format(pillar_name, 'defaults.' + ext)
         paths.append(source_url)
 
     return __context__['cp.fileclient'].cache_files(paths)
