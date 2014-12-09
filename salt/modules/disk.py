@@ -117,7 +117,7 @@ def inodeusage(args=None):
         salt '*' disk.inodeusage
     '''
     flags = _clean_flags(args, 'disk.inodeusage')
-    cmd = 'df -i'
+    cmd = 'df -iP'
     if flags:
         cmd += ' -{0}'.format(flags)
     ret = {}
