@@ -65,6 +65,20 @@ class Channel(object):
             raise Exception('Channels are only defined for ZeroMQ and raet')
             # return NewKindOfChannel(opts, **kwargs)
 
+    def send(self, load, tries=3, timeout=60):
+        '''
+        Send "load" to the master.
+        '''
+        raise NotImplementedError()
+
+    def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
+        '''
+        Send "load" to the master in a way that the load is only readable by
+        the minion and the master (not other minions etc.)
+        '''
+        raise NotImplementedError()
+
+
 
 class RAETChannel(Channel):
     '''
