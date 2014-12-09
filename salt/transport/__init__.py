@@ -10,6 +10,7 @@ import threading
 # Import Salt Libs
 import salt.payload
 import salt.auth
+import salt.crypt
 import salt.utils
 import logging
 from collections import defaultdict
