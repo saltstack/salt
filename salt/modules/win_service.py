@@ -31,6 +31,19 @@ def __virtual__():
     return False
 
 
+def has_powershell():
+    '''
+    Confirm if Powershell is available
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.has_powershell
+    '''
+    return 'powershell' in __salt__['cmd.run']('where powershell')
+
+
 def get_enabled():
     '''
     Return the enabled services
