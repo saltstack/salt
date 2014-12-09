@@ -61,7 +61,7 @@ def get_zone():
                 'consider using timezone.get_zonecode or timezone.zonecompare')
     elif 'Solaris' in __grains__['os_family']:
         cmd = 'grep "TZ=" /etc/TIMEZONE'
-    out = __salt__['cmd.run'](cmd, output_loglevel='debug').split('=')
+    out = __salt__['cmd.run'](cmd, output_loglevel='debug', python_shell=True).split('=')
     ret = out[1].replace('"', '')
     return ret
 
@@ -220,7 +220,7 @@ def get_hwclock():
         #Original way to look up hwclock on Debian-based systems
         cmd = 'grep "UTC=" /etc/default/rcS | grep -vE "^#"'
         out = __salt__['cmd.run'](
-            cmd, output_loglevel='debug', ignore_retcode=True).split('=')
+            cmd, output_loglevel='debug', ignore_retcode=True, python_shell=True).split('=')
         if len(out) > 1:
             if out[1] == 'yes':
                 return 'UTC'
@@ -232,7 +232,7 @@ def get_hwclock():
             return __salt__['cmd.run'](cmd, output_loglevel='debug')
     elif 'Gentoo' in __grains__['os_family']:
         cmd = 'grep "^clock=" /etc/conf.d/hwclock | grep -vE "^#"'
-        out = __salt__['cmd.run'](cmd, output_loglevel='debug').split('=')
+        out = __salt__['cmd.run'](cmd, output_loglevel='debug', python_shell=True).split('=')
         return out[1].replace('"', '')
     elif 'Solaris' in __grains__['os_family']:
         if os.path.isfile('/etc/rtc_config'):
