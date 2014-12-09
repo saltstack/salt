@@ -176,7 +176,7 @@ def create(path,
                 cmd.append('--distribute')
 
         if python is not None and python.strip() != '':
-            if not os.access(python, os.X_OK):
+            if not salt.utils.which(python):
                 raise salt.exceptions.CommandExecutionError(
                     'Requested python ({0}) does not appear '
                     'executable.'.format(python)
