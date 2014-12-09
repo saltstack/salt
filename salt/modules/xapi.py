@@ -828,7 +828,7 @@ def vm_cputime(vm_=None):
                 # Divide by vcpus to always return a number between 0 and 100
                 cputime_percent = (1.0e-7 * cputime / host_cpus) / vcpus
             return {'cputime': int(cputime),
-                    'cputime_percent': int('%.0f' % cputime_percent)}
+                    'cputime_percent': int('{0:.0f}'.format(cputime_percent))}
         info = {}
         if vm_:
             info[vm_] = _info(vm_)
