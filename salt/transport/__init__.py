@@ -287,9 +287,7 @@ class ZeroMQChannel(Channel):
         return self.sreq.send(self.crypt, load, tries, timeout)
 
     def send(self, load, tries=3, timeout=60):
-
-        if self.crypt != 'clear':
-            return self._crypted_transfer(load, tries, timeout)
-        else:
+        if self.crypt == 'clear':  # for sign-in requests
             return self._uncrypted_transfer(load, tries, timeout)
-        # Do we ever do non-crypted transfers?
+        else:  # for just about everything else
+            return self._crypted_transfer(load, tries, timeout)
