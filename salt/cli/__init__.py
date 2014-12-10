@@ -35,11 +35,11 @@ class SaltCMD(parsers.SaltCMDOptionParser):
     '''
 
     def run(self):
-        import salt.auth
-        import salt.cli.batch
         '''
         Execute the salt command line
         '''
+        import salt.auth
+        import salt.cli.batch
         self.parse_args()
 
         if self.config['verify_env']:
@@ -315,10 +315,10 @@ class SaltCP(parsers.SaltCPOptionParser):
     '''
 
     def run(self):
-        import salt.cli.cp
         '''
         Execute salt-cp
         '''
+        import salt.cli.cp
         self.parse_args()
 
         if self.config['verify_env']:
