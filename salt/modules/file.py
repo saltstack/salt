@@ -2732,7 +2732,6 @@ def extract_hash(hash_fn, hash_type='sha256', file_name=''):
                                           source_sum['hash_type'],
                                           source_sum['hsum']))
                             return source_sum
-
     if partial_id:
         log.debug('modules.file.py - extract_hash: Returning the partially '
                   'identified {0} hash "{1}".'.format(
