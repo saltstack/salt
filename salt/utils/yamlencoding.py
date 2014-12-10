@@ -5,10 +5,11 @@ import six
 
 
 def yaml_dquote(text):
-    """Make text into a double-quoted YAML string with correct escaping
+    '''
+    Make text into a double-quoted YAML string with correct escaping
     for special characters.  Includes the opening and closing double
     quote characters.
-    """
+    '''
     with io.StringIO() as ostream:
         yemitter = yaml.emitter.Emitter(ostream)
         yemitter.write_double_quoted(six.text_type(text))
@@ -16,10 +17,11 @@ def yaml_dquote(text):
 
 
 def yaml_squote(text):
-    """Make text into a single-quoted YAML string with correct escaping
+    '''
+    Make text into a single-quoted YAML string with correct escaping
     for special characters.  Includes the opening and closing single
     quote characters.
-    """
+    '''
     with io.StringIO() as ostream:
         yemitter = yaml.emitter.Emitter(ostream)
         yemitter.write_single_quoted(six.text_type(text))
@@ -27,9 +29,10 @@ def yaml_squote(text):
 
 
 def yaml_encode(data):
-    """A simple YAML encode that can take a single-element datatype and return
+    '''
+    A simple YAML encode that can take a single-element datatype and return
     a string representation.
-    """
+    '''
     yrepr = yaml.representer.SafeRepresenter()
     ynode = yrepr.represent_data(data)
     if not isinstance(ynode, yaml.ScalarNode):
