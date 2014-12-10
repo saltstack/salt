@@ -51,7 +51,7 @@ def get(**kwargs):
         rcfile = sysrc.split(': ')[0]
         var = sysrc.split(': ')[1]
         val = sysrc.split(': ')[2]
-        if not rcfile in ret:
+        if rcfile not in ret:
             ret[rcfile] = {}
         ret[rcfile][var] = val
     return ret
@@ -86,7 +86,7 @@ def set(name, value, **kwargs):
         var = sysrc.split(': ')[1]
         oldval = sysrc.split(': ')[2].split(" -> ")[0]
         newval = sysrc.split(': ')[2].split(" -> ")[1]
-        if not rcfile in ret:
+        if rcfile not in ret:
             ret[rcfile] = {}
         #ret[rcfile][var] = {}
         #ret[rcfile][var]['old'] = oldval
