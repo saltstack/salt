@@ -20,6 +20,7 @@ import jinja2.ext
 
 # Import salt libs
 import salt.utils
+import salt.utils.yamlencoding
 from salt.exceptions import (
     SaltRenderError, CommandExecutionError, SaltInvocationError
 )
@@ -264,9 +265,9 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
 
     jinja_env.filters['strftime'] = salt.utils.date_format
     jinja_env.filters['sequence'] = ensure_sequence_filter
-    jinja_env.filters['yaml_dquote'] = salt.utils.yaml_dquote
-    jinja_env.filters['yaml_squote'] = salt.utils.yaml_squote
-    jinja_env.filters['yaml_encode'] = salt.utils.yaml_encode
+    jinja_env.filters['yaml_dquote'] = salt.utils.yamlencoding.yaml_dquote
+    jinja_env.filters['yaml_squote'] = salt.utils.yamlencoding.yaml_squote
+    jinja_env.filters['yaml_encode'] = salt.utils.yamlencoding.yaml_encode
 
     jinja_env.globals['odict'] = OrderedDict
     jinja_env.globals['show_full_context'] = show_full_context

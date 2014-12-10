@@ -40,10 +40,12 @@ import salt.daemons.masterapi
 import salt.defaults.exitcodes
 import salt.utils.atomicfile
 import salt.utils.event
+import salt.utils.reactor
 import salt.utils.verify
 import salt.utils.minions
 import salt.utils.gzip_util
 import salt.utils.process
+import salt.utils.zeromq
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.debug import enable_sigusr1_handler, enable_sigusr2_handler, inspect_stack
 from salt.utils.event import tagify
@@ -400,7 +402,7 @@ class Master(SMaster):
 
         if self.opts.get('reactor'):
             log.info('Creating master reactor process')
-            process_manager.add_process(salt.utils.event.Reactor, args=(self.opts,))
+            process_manager.add_process(salt.utils.reactor.Reactor, args=(self.opts,))
 
         if self.opts.get('event_return'):
             log.info('Creating master event return process')
@@ -510,7 +512,7 @@ class Publisher(multiprocessing.Process):
         pull_uri = 'ipc://{0}'.format(
             os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
         )
-        salt.utils.check_ipc_path_max_len(pull_uri)
+        salt.utils.zeromq.check_ipc_path_max_len(pull_uri)
 
         # Start the minion command publisher
         log.info('Starting the Salt Publisher on {0}'.format(pub_uri))

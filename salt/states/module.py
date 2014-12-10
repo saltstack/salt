@@ -130,7 +130,7 @@ def run(name, **kwargs):
         ret['comment'] = 'Module function {0} is set to execute'.format(name)
         return ret
 
-    aspec = salt.utils.get_function_argspec(__salt__[name])
+    aspec = salt.utils.args.get_function_argspec(__salt__[name])
     args = []
     defaults = {}
 
