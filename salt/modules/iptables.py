@@ -759,6 +759,7 @@ def _parse_conf(conf_file=None, in_mem=False, family='ipv4'):
 
     ret = {}
     table = ''
+    parser = _parser()
     for line in rules.splitlines():
         if line.startswith('*'):
             table = line.replace('*', '')
@@ -794,7 +795,6 @@ def _parse_conf(conf_file=None, in_mem=False, family='ipv4'):
                 index += 1
             if args[-1].startswith('-'):
                 args.append('')
-            parser = _parser()
             parsed_args = []
             if sys.version.startswith('2.6'):
                 (opts, leftover_args) = parser.parse_args(args)
