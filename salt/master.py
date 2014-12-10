@@ -40,6 +40,7 @@ import salt.daemons.masterapi
 import salt.defaults.exitcodes
 import salt.utils.atomicfile
 import salt.utils.event
+import salt.utils.reactor
 import salt.utils.verify
 import salt.utils.minions
 import salt.utils.gzip_util
@@ -400,7 +401,7 @@ class Master(SMaster):
 
         if self.opts.get('reactor'):
             log.info('Creating master reactor process')
-            process_manager.add_process(salt.utils.event.Reactor, args=(self.opts,))
+            process_manager.add_process(salt.utils.reactor.Reactor, args=(self.opts,))
 
         if self.opts.get('event_return'):
             log.info('Creating master event return process')

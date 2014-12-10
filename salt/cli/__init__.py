@@ -12,16 +12,8 @@ import sys
 from glob import glob
 
 # Import salt libs
-import salt.cli.caller
-import salt.cli.cp
-import salt.cli.batch
 import salt.client
-import salt.client.ssh
-import salt.client.netapi
 import salt.output
-import salt.runner
-import salt.auth
-import salt.key
 from salt.config import _expand_glob_path
 
 from salt.utils import parsers, print_cli
@@ -42,6 +34,8 @@ class SaltCMD(parsers.SaltCMDOptionParser):
     '''
 
     def run(self):
+        import salt.auth
+        import salt.cli.batch
         '''
         Execute the salt command line
         '''
@@ -318,6 +312,7 @@ class SaltCP(parsers.SaltCPOptionParser):
     '''
     Run the salt-cp command line client
     '''
+    import salt.cli.cp
 
     def run(self):
         '''
@@ -351,6 +346,8 @@ class SaltKey(parsers.SaltKeyOptionParser):
         '''
         Execute salt-key
         '''
+
+        import salt.key
         self.parse_args()
 
         if self.config['verify_env']:
@@ -402,6 +399,7 @@ class SaltCall(parsers.SaltCallOptionParser):
         '''
         Execute the salt call!
         '''
+        import salt.cli.caller
         self.parse_args()
 
         if self.config['verify_env']:
@@ -457,10 +455,12 @@ class SaltRun(parsers.SaltRunOptionParser):
     '''
     Used to execute Salt runners
     '''
+
     def run(self):
         '''
         Execute salt-run
         '''
+        import salt.runner
         self.parse_args()
 
         if self.config['verify_env']:
@@ -502,7 +502,9 @@ class SaltSSH(parsers.SaltSSHOptionParser):
     '''
     Used to Execute the salt ssh routine
     '''
+
     def run(self):
+        import salt.client.ssh
         self.parse_args()
 
         ssh = salt.client.ssh.SSH(self.config)
@@ -531,6 +533,7 @@ class SaltAPI(six.with_metaclass(parsers.OptionParserMeta,  # pylint: disable=W0
         '''
         Run the api
         '''
+        import salt.client.netapi
         self.parse_args()
         try:
             if self.config['verify_env']:
