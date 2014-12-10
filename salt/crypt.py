@@ -32,7 +32,6 @@ import salt.utils
 import salt.payload
 import salt.utils.verify
 import salt.version
-import salt.minion
 from salt.exceptions import (
     AuthenticationError, SaltClientError, SaltReqTimeoutError
 )
