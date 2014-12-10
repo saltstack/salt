@@ -24,7 +24,6 @@ except Exception:
     pass
 
 # Import salt libs
-import salt.crypt
 import salt.utils
 import salt.utils.network
 import salt.syspaths
@@ -2043,6 +2042,7 @@ def apply_master_config(overrides=None, defaults=None):
     '''
     Returns master configurations dict.
     '''
+    import salt.crypt
     if defaults is None:
         defaults = DEFAULT_MASTER_OPTS
 
