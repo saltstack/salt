@@ -1150,30 +1150,22 @@ def replace(path,
 
         if not found:
             for line in fi_file:
+                result, nrepl = re.subn(cpattern, repl, line, count)
 
-                if search_only:
-                    # Just search; bail as early as a match is found
-                    result = re.search(cpattern, line)
+                # found anything? (even if no change)
+                if nrepl > 0:
+                    found = True
 
-                    if result:
-                        return True  # `finally` block handles file closure
-                else:
-                    result, nrepl = re.subn(cpattern, repl, line, count)
+                # Identity check each potential change until one change is made
+                if has_changes is False and result != line:
+                    has_changes = True
 
-                    # found anything? (even if no change)
-                    if nrepl > 0:
-                        found = True
+                if show_changes:
+                    orig_file.append(line)
+                    new_file.append(result)
 
-                    # Identity check each potential change until one change is made
-                    if has_changes is False and result != line:
-                        has_changes = True
-
-                    if show_changes:
-                        orig_file.append(line)
-                        new_file.append(result)
-
-                    if not dry_run:
-                        print(result, end='', file=sys.stdout)
+                if not dry_run:
+                    print(result, end='', file=sys.stdout)
     finally:
         fi_file.close()
 
