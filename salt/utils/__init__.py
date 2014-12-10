@@ -16,7 +16,6 @@ import fnmatch
 import hashlib
 import imp
 import io
-import inspect
 import json
 import logging
 import os
@@ -32,7 +31,6 @@ import tempfile
 import time
 import types
 import warnings
-import yaml
 import string
 import locale
 from calendar import month_abbr as months
@@ -77,12 +75,6 @@ except ImportError:
     HAS_WIN32API = False
 
 try:
-    import zmq
-except ImportError:
-    # Running as purely local
-    pass
-
-try:
     import grp
     HAS_GRP = True
 except ImportError:
@@ -107,6 +99,7 @@ from salt.defaults import DEFAULT_TARGET_DELIM
 import salt.log
 import salt.payload
 import salt.version
+import salt.defaults.exitcodes
 from salt.utils.decorators import memoize as real_memoize
 from salt.exceptions import (
     CommandExecutionError, SaltClientError,
@@ -139,27 +132,6 @@ ENDC = '\033[0m'
 
 log = logging.getLogger(__name__)
 _empty = object()
-
-
-def get_function_argspec(func):
-    '''
-    A small wrapper around getargspec that also supports callable classes
-    '''
-    if not callable(func):
-        raise TypeError('{0} is not a callable'.format(func))
-
-    if inspect.isfunction(func):
-        aspec = inspect.getargspec(func)
-    elif inspect.ismethod(func):
-        aspec = inspect.getargspec(func)
-        del aspec.args[0]  # self
-    elif isinstance(func, object):
-        aspec = inspect.getargspec(func.__call__)
-        del aspec.args[0]  # self
-    else:
-        raise TypeError('Cannot inspect argument list for {0!r}'.format(func))
-
-    return aspec
 
 
 def safe_rm(tgt):
@@ -284,7 +256,7 @@ def daemonize(redirect_out=True):
         log.error(
             'fork #1 failed: {0} ({1})'.format(exc.errno, exc.strerror)
         )
-        sys.exit(salt.exitcodes.EX_GENERIC)
+        sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
     # decouple from parent environment
     os.chdir('/')
@@ -303,17 +275,17 @@ def daemonize(redirect_out=True):
                 exc.errno, exc.strerror
             )
         )
-        sys.exit(salt.exitcodes.EX_GENERIC)
+        sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
     # A normal daemonization redirects the process output to /dev/null.
     # Unfortunately when a python multiprocess is called the output is
     # not cleanly redirected and the parent process dies when the
     # multiprocessing process attempts to access stdout or err.
     if redirect_out:
-        dev_null = open('/dev/null', 'r+')
-        os.dup2(dev_null.fileno(), sys.stdin.fileno())
-        os.dup2(dev_null.fileno(), sys.stdout.fileno())
-        os.dup2(dev_null.fileno(), sys.stderr.fileno())
+        with fopen('/dev/null', 'r+') as dev_null:
+            os.dup2(dev_null.fileno(), sys.stdin.fileno())
+            os.dup2(dev_null.fileno(), sys.stdout.fileno())
+            os.dup2(dev_null.fileno(), sys.stderr.fileno())
 
 
 def daemonize_if(opts):
@@ -825,7 +797,7 @@ def format_call(fun,
     ret['args'] = []
     ret['kwargs'] = {}
 
-    aspec = get_function_argspec(fun)
+    aspec = salt.utils.args.get_function_argspec(fun)
 
     args, kwargs = iter(arg_lookup(fun).values())
 
@@ -939,7 +911,7 @@ def arg_lookup(fun):
     function.
     '''
     ret = {'kwargs': {}}
-    aspec = get_function_argspec(fun)
+    aspec = salt.utils.args.get_function_argspec(fun)
     if aspec.defaults:
         ret['kwargs'] = dict(zip(aspec.args[::-1], aspec.defaults[::-1]))
     ret['args'] = [arg for arg in aspec.args if arg not in ret['kwargs']]
@@ -1088,7 +1060,7 @@ def flopen(*args, **kwargs):
                 fcntl.flock(fp_.fileno(), fcntl.LOCK_UN)
 
 
-def expr_match(expr, line):
+def expr_match(line, expr):
     '''
     Evaluate a line of text against an expression. First try a full-string
     match, next try globbing, and then try to match assuming expr is a regular
@@ -1424,22 +1396,6 @@ def check_include_exclude(path_str, include_pat=None, exclude_pat=None):
         ret = True
 
     return ret
-
-
-def check_ipc_path_max_len(uri):
-    # The socket path is limited to 107 characters on Solaris and
-    # Linux, and 103 characters on BSD-based systems.
-    ipc_path_max_len = getattr(zmq, 'IPC_PATH_MAX_LEN', 103)
-    if ipc_path_max_len and len(uri) > ipc_path_max_len:
-        raise SaltSystemExit(
-            'The socket path is longer than allowed by OS. '
-            '{0!r} is longer than {1} characters. '
-            'Either try to reduce the length of this setting\'s '
-            'path or switch to TCP; in the configuration file, '
-            'set "ipc_mode: tcp".'.format(
-                uri, ipc_path_max_len
-            )
-        )
 
 
 def gen_state_tag(low):
@@ -1806,49 +1762,6 @@ def date_format(date=None, format="%Y-%m-%d"):
     return date_cast(date).strftime(format)
 
 
-def yaml_dquote(text):
-    """Make text into a double-quoted YAML string with correct escaping
-    for special characters.  Includes the opening and closing double
-    quote characters.
-    """
-    with io.StringIO() as ostream:
-        yemitter = yaml.emitter.Emitter(ostream)
-        yemitter.write_double_quoted(six.text_type(text))
-        return ostream.getvalue()
-
-
-def yaml_squote(text):
-    """Make text into a single-quoted YAML string with correct escaping
-    for special characters.  Includes the opening and closing single
-    quote characters.
-    """
-    with io.StringIO() as ostream:
-        yemitter = yaml.emitter.Emitter(ostream)
-        yemitter.write_single_quoted(six.text_type(text))
-        return ostream.getvalue()
-
-
-def yaml_encode(data):
-    """A simple YAML encode that can take a single-element datatype and return
-    a string representation.
-    """
-    yrepr = yaml.representer.SafeRepresenter()
-    ynode = yrepr.represent_data(data)
-    if not isinstance(ynode, yaml.ScalarNode):
-        raise TypeError(
-            "yaml_encode() only works with YAML scalar data;"
-            " failed for {0}".format(type(data))
-        )
-
-    tag = ynode.tag.rsplit(':', 1)[-1]
-    ret = ynode.value
-
-    if tag == "str":
-        ret = yaml_dquote(ynode.value)
-
-    return ret
-
-
 def warn_until(version,
                message,
                category=DeprecationWarning,
@@ -1899,6 +1812,7 @@ def warn_until(version,
     _version_ = salt.version.SaltStackVersion(*_version_info_)
 
     if _version_ >= version:
+        import inspect
         caller = inspect.getframeinfo(sys._getframe(stacklevel - 1))
         raise RuntimeError(
             'The warning triggered on filename {filename!r}, line number '
@@ -2097,7 +2011,7 @@ def argspec_report(functions, module=''):
     if _use_fnmatch:
         for fun in fnmatch.filter(functions, target_mod):
             try:
-                aspec = get_function_argspec(functions[fun])
+                aspec = salt.utils.args.get_function_argspec(functions[fun])
             except TypeError:
                 # this happens if not callable
                 continue
@@ -2114,7 +2028,7 @@ def argspec_report(functions, module=''):
         for fun in functions:
             if fun == module or fun.startswith(target_module):
                 try:
-                    aspec = get_function_argspec(functions[fun])
+                    aspec = salt.utils.args.get_function_argspec(functions[fun])
                 except TypeError:
                     # this happens if not callable
                     continue
@@ -2191,7 +2105,7 @@ def is_bin_file(path):
     if not os.path.isfile(path):
         return None
     try:
-        with open(path, 'r') as fp_:
+        with fopen(path, 'r') as fp_:
             return is_bin_str(fp_.read(2048))
     except os.error:
         return None
@@ -2226,6 +2140,7 @@ def repack_dictlist(data):
     '''
     if isinstance(data, string_types):
         try:
+            import yaml
             data = yaml.safe_load(data)
         except yaml.parser.ParserError as err:
             log.error(err)
@@ -2529,19 +2444,21 @@ def get_encodings():
     return encodings
 
 
-def sdecode(string):
+def sdecode(string_):
     '''
     Since we don't know where a string is coming from and that string will
     need to be safely decoded, this function will attempt to decode the string
     until if has a working string that does not stack trace
     '''
+    if not isinstance(string_, str):
+        return string_
     encodings = get_encodings()
     for encoding in encodings:
         try:
-            decoded = string.decode(encoding)
+            decoded = string_.decode(encoding)
             # Make sure unicode string ops work
             u' ' + decoded  # pylint: disable=W0104
             return decoded
         except UnicodeDecodeError:
             continue
-    return string
+    return string_

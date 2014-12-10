@@ -502,14 +502,15 @@ def _get_mounts():
     List mounted filesystems.
     '''
     mounts = {}
-    for line in open("/proc/mounts").readlines():
-        device, mntpnt, fstype, options, fs_freq, fs_passno = line.strip().split(" ")
-        if fstype != 'xfs':
-            continue
-        mounts[device] = {
-            'mount_point': mntpnt,
-            'options': options.split(","),
-        }
+    with salt.utils.fopen("/proc/mounts") as fhr:
+        for line in fhr.readlines():
+            device, mntpnt, fstype, options, fs_freq, fs_passno = line.strip().split(" ")
+            if fstype != 'xfs':
+                continue
+            mounts[device] = {
+                'mount_point': mntpnt,
+                'options': options.split(","),
+            }
 
     return mounts
 

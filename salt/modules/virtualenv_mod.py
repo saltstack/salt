@@ -155,7 +155,9 @@ def create(path,
         except ImportError:
             # Unable to import?? Let's parse the version from the console
             version_cmd = '{0} --version'.format(venv_bin)
-            ret = __salt__['cmd.run_all'](version_cmd, runas=user)
+            ret = __salt__['cmd.run_all'](
+                    version_cmd, runas=user, python_shell=False
+                )
             if ret['retcode'] > 0 or not ret['stdout'].strip():
                 raise salt.exceptions.CommandExecutionError(
                     'Unable to get the virtualenv version output using {0!r}. '
@@ -247,7 +249,7 @@ def create(path,
     cmd.append(path)
 
     # Let's create the virtualenv
-    ret = __salt__['cmd.run_all'](' '.join(cmd), runas=user)
+    ret = __salt__['cmd.run_all'](cmd, runas=user, python_shell=False)
     if ret['retcode'] > 0:
         # Something went wrong. Let's bail out now!
         return ret
@@ -331,7 +333,8 @@ def _install_script(source, cwd, python, user, saltenv='base', use_vt=False):
             runas=user,
             cwd=cwd,
             env={'VIRTUAL_ENV': cwd},
-            use_vt=use_vt
+            use_vt=use_vt,
+            python_shell=False,
         )
     finally:
         os.remove(tmppath)

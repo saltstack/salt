@@ -649,7 +649,8 @@ class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
             log.error(emsg + "\n")
             raise ValueError(emsg)
 
-        if kind == kinds.APPL_KIND_NAMES[kinds.applKinds.master]:
+        if kind in [kinds.APPL_KIND_NAMES[kinds.applKinds.master],
+                    kinds.APPL_KIND_NAMES[kinds.applKinds.syndic]]:
             lanename = 'master'
         elif kind in [kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
                       kinds.APPL_KIND_NAMES[kinds.applKinds.caller], ]:
@@ -885,8 +886,6 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
         elif d_share == 'fun':
             if self.road_stack.value.kind == kinds.applKinds.minion:
                 self.fun.value.append(msg)
-            elif self.road_stack.value.kind == kinds.applKinds.syndic:
-                self.self.publish.value.append(msg)
 
     def _process_uxd_rxmsg(self, msg, sender):
         '''

@@ -25,7 +25,7 @@ import salt.client.ssh.shell
 import salt.client.ssh.wrapper
 import salt.config
 import salt.exceptions
-import salt.exitcodes
+import salt.defaults.exitcodes
 import salt.log
 import salt.loader
 import salt.minion
@@ -132,7 +132,7 @@ done
 echo "ERROR: Unable to locate appropriate python command" >&2
 exit $EX_PYTHON_OLD
 EOF'''.format(
-    EX_THIN_PYTHON_OLD=salt.exitcodes.EX_THIN_PYTHON_OLD,
+    EX_THIN_PYTHON_OLD=salt.defaults.exitcodes.EX_THIN_PYTHON_OLD,
 )
 
 if not is_windows():
@@ -140,7 +140,7 @@ if not is_windows():
     if not os.path.exists(shim_file):
         # On esky builds we only have the .pyc file
         shim_file += "c"
-    with open(shim_file) as ssh_py_shim:
+    with salt.utils.fopen(shim_file) as ssh_py_shim:
         SSH_PY_SHIM = ssh_py_shim.read()
 
 log = logging.getLogger(__name__)
@@ -165,7 +165,7 @@ class SSH(object):
         self.opts['_ssh_version'] = ssh_version()
         self.tgt_type = self.opts['selected_target_option'] \
                 if self.opts['selected_target_option'] else 'glob'
-        self.roster = salt.roster.Roster(opts, opts.get('roster'))
+        self.roster = salt.roster.Roster(opts, opts.get('roster', 'flat'))
         self.targets = self.roster.targets(
                 self.opts['tgt'],
                 self.tgt_type)
@@ -232,7 +232,7 @@ class SSH(object):
                     )
                 )
         pub = '{0}.pub'.format(priv)
-        with open(pub, 'r') as fp_:
+        with salt.utils.fopen(pub, 'r') as fp_:
             return '{0} rsa root@master'.format(fp_.read().split()[1])
 
     def key_deploy(self, host, ret):
@@ -495,7 +495,7 @@ class Single(object):
             port=None,
             passwd=None,
             priv=None,
-            timeout=None,
+            timeout=30,
             sudo=False,
             tty=False,
             mods=None,
@@ -679,6 +679,7 @@ class Single(object):
             opts_pkg['file_roots'] = self.opts['file_roots']
             opts_pkg['pillar_roots'] = self.opts['pillar_roots']
             opts_pkg['ext_pillar'] = self.opts['ext_pillar']
+            opts_pkg['extension_modules'] = self.opts['extension_modules']
             opts_pkg['_ssh_version'] = self.opts['_ssh_version']
             if '_caller_cachedir' in self.opts:
                 opts_pkg['_caller_cachedir'] = self.opts['_caller_cachedir']
@@ -757,7 +758,9 @@ class Single(object):
             cachedir = self.opts['cachedir']
         thin_sum = salt.utils.thin.thin_sum(cachedir, 'sha1')
         debug = ''
-        if salt.log.LOG_LEVELS['debug'] >= salt.log.LOG_LEVELS[self.opts['log_level']]:
+        if not self.opts.get('log_level'):
+            self.opts['log_level'] = 'info'
+        if salt.log.LOG_LEVELS['debug'] >= salt.log.LOG_LEVELS[self.opts.get('log_level', 'info')]:
             debug = '1'
         arg_str = '''
 OPTIONS = OBJ()
@@ -856,7 +859,7 @@ ARGS = {8}\n'''.format(self.minion_config,
             # RSTR was found in stdout but not stderr - which means there
             # is a SHIM command for the master.
             shim_command = re.split(r'\r?\n', stdout, 1)[0].strip()
-            if 'deploy' == shim_command and retcode == salt.exitcodes.EX_THIN_DEPLOY:
+            if 'deploy' == shim_command and retcode == salt.defaults.exitcodes.EX_THIN_DEPLOY:
                 self.deploy()
                 stdout, stderr, retcode = self.shell.exec_cmd(cmd_str)
                 if not re.search(RSTR_RE, stdout) or not re.search(RSTR_RE, stderr):
@@ -902,12 +905,12 @@ ARGS = {8}\n'''.format(self.minion_config,
                 'sudo expected a password, NOPASSWD required'
             ),
             (
-                (salt.exitcodes.EX_THIN_PYTHON_OLD,),
+                (salt.defaults.exitcodes.EX_THIN_PYTHON_OLD,),
                 'Python interpreter is too old',
                 'salt requires python 2.6 or newer on target hosts'
             ),
             (
-                (salt.exitcodes.EX_THIN_CHECKSUM,),
+                (salt.defaults.exitcodes.EX_THIN_CHECKSUM,),
                 'checksum mismatched',
                 'The salt thin transfer was corrupted'
             ),

@@ -14,7 +14,6 @@ import os
 import logging
 from threading import Thread, Event
 import multiprocessing
-import zmq
 import signal
 # Import salt libs
 import salt.log
@@ -25,6 +24,13 @@ import salt.utils.minions
 import salt.payload
 from salt.exceptions import SaltException
 import salt.config
+
+# Import third party libs
+try:
+    import zmq
+    HAS_ZMQ = True
+except ImportError:
+    HAS_ZMQ = False
 
 log = logging.getLogger(__name__)
 

@@ -11,7 +11,7 @@ Latest Stable Release
 .. releasestree::
     :maxdepth: 1
 
-    2014.1.13
+    2014.7.0
 
 Previous Releases
 =================
@@ -20,6 +20,7 @@ Previous Releases
     :maxdepth: 1
     :glob:
 
+    2014.7.0
     2014.1.*
     0.*
 

@@ -35,7 +35,9 @@ state_tabular:
     output format.  If you wish to use a custom format, this can be set to a
     string.
 
-Example output::
+Example output:
+
+.. code-block:: text
 
     myminion:
     ----------
@@ -59,7 +61,6 @@ from __future__ import absolute_import
 
 # Import python libs
 import pprint
-import sys
 
 # Import salt libs
 import salt.utils
@@ -85,6 +86,14 @@ def _format_host(host, data):
     hstrs = []
     nchanges = 0
     strip_colors = __opts__.get('strip_colors', True)
+
+    if isinstance(data, int) or isinstance(data, str):
+        # Data in this format is from saltmod.function,
+        # so it is always a 'change'
+        nchanges = 1
+        hstrs.append((u'{0}    {1}{2[ENDC]}'
+                      .format(hcolor, data, colors)))
+        hcolor = colors['CYAN']  # Print the minion name in cyan
     if isinstance(data, list):
         # Errors have been detected, list them in RED!
         hcolor = colors['RED_BOLD']
@@ -102,7 +111,7 @@ def _format_host(host, data):
             data = _strip_clean(data)
         # Verify that the needed data is present
         for tname, info in data.items():
-            if '__run_num__' not in info:
+            if isinstance(info, dict) and '__run_num__' not in info:
                 err = (u'The State execution failed to record the order '
                        'in which all states were executed. The state '
                        'return missing data is:')
@@ -208,7 +217,7 @@ def _format_host(host, data):
                 # but try to continue on errors
                 pass
             try:
-                comment = ret['comment'].decode(sys.getfilesystemencoding())
+                comment = salt.utils.sdecode(ret['comment'])
                 comment = comment.strip().replace(
                         u'\n',
                         u'\n' + u' ' * 14)

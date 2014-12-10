@@ -42,7 +42,9 @@ load-plugins=salttesting.pylintplugins.pep8,salttesting.pylintplugins.pep263,sal
 # multiple time (only on the command line, not in the configuration file where
 # it should appear only once).
 disable=W0142,
-  C0330
+  C0330,
+  I0011,
+  I0012
 #  E8121,
 #  E8122,
 #  E8123,
@@ -58,6 +60,8 @@ disable=W0142,
 # E812* All PEP8 E12*
 # E8501 PEP8 line too long
 # C0330 (bad-continuation)
+# I0011 (locally-disabling)
+# I0012 (locally-enabling)
 
 
 [REPORTS]

@@ -93,7 +93,7 @@ class Shell(object):
             options.append('PasswordAuthentication=yes')
         else:
             options.append('PasswordAuthentication=no')
-        if self.opts['_ssh_version'] > '4.9':
+        if self.opts.get('_ssh_version', '') > '4.9':
             options.append('GSSAPIAuthentication=no')
         options.append('ConnectTimeout={0}'.format(self.timeout))
         if self.opts.get('ignore_host_keys'):
@@ -198,6 +198,7 @@ class Shell(object):
         # TODO: if tty, then our SSH_SHIM cannot be supplied from STDIN Will
         # need to deliver the SHIM to the remote host and execute it there
 
+        opts = ''
         if self.passwd:
             opts = self._passwd_opts()
         if self.priv:

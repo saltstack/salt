@@ -1173,7 +1173,7 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
 
     targets = []
     if pkgs:
-        for pkg in pkgs:
+        for pkg in salt.utils.repack_dictlist(pkgs):
             ret = check_db(pkg)
             if not ret[pkg]['found']:
                 raise SaltInvocationError(
@@ -1266,7 +1266,8 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
 
     targets = []
     if pkgs:
-        targets.extend(pkgs)
+        for pkg in salt.utils.repack_dictlist(pkgs):
+            targets.append(pkg)
     elif sources:
         for source in sources:
             targets.append(next(iter(source)))

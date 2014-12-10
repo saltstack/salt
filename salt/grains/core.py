@@ -595,14 +595,12 @@ def _virtual(osdata):
                 pass
         if os.path.isfile('/proc/1/cgroup'):
             try:
-                if ':/lxc/' in salt.utils.fopen(
-                    '/proc/1/cgroup', 'r'
-                ).read():
-                    grains['virtual_subtype'] = 'LXC'
-                if ':/docker/' in salt.utils.fopen(
-                    '/proc/1/cgroup', 'r'
-                ).read():
-                    grains['virtual_subtype'] = 'Docker'
+                with salt.utils.fopen('/proc/1/cgroup', 'r') as fhr:
+                    if ':/lxc/' in fhr.read():
+                        grains['virtual_subtype'] = 'LXC'
+                with salt.utils.fopen('/proc/1/cgroup', 'r') as fhr:
+                    if ':/docker/' in fhr.read():
+                        grains['virtual_subtype'] = 'Docker'
             except IOError:
                 pass
         if isdir('/proc/vz'):
@@ -635,14 +633,13 @@ def _virtual(osdata):
                     grains['virtual_subtype'] = 'Xen HVM DomU'
                 elif os.path.isfile('/proc/xen/capabilities') and \
                         os.access('/proc/xen/capabilities', os.R_OK):
-                    caps = salt.utils.fopen('/proc/xen/capabilities')
-                    if 'control_d' not in caps.read():
-                        # Tested on CentOS 5.5 / 2.6.18-194.3.1.el5xen
-                        grains['virtual_subtype'] = 'Xen PV DomU'
-                    else:
-                        # Shouldn't get to this, but just in case
-                        grains['virtual_subtype'] = 'Xen Dom0'
-                    caps.close()
+                    with salt.utils.fopen('/proc/xen/capabilities') as fhr:
+                        if 'control_d' not in fhr.read():
+                            # Tested on CentOS 5.5 / 2.6.18-194.3.1.el5xen
+                            grains['virtual_subtype'] = 'Xen PV DomU'
+                        else:
+                            # Shouldn't get to this, but just in case
+                            grains['virtual_subtype'] = 'Xen Dom0'
                 # Tested on Fedora 10 / 2.6.27.30-170.2.82 with xen
                 # Tested on Fedora 15 / 2.6.41.4-1 without running xen
                 elif isdir('/sys/bus/xen'):
@@ -656,9 +653,9 @@ def _virtual(osdata):
             if 'dom' in grains.get('virtual_subtype', '').lower():
                 grains['virtual'] = 'xen'
         if os.path.isfile('/proc/cpuinfo'):
-            if 'QEMU Virtual CPU' in \
-                    salt.utils.fopen('/proc/cpuinfo', 'r').read():
-                grains['virtual'] = 'kvm'
+            with salt.utils.fopen('/proc/cpuinfo', 'r') as fhr:
+                if 'QEMU Virtual CPU' in fhr.read():
+                    grains['virtual'] = 'kvm'
     elif osdata['kernel'] == 'FreeBSD':
         kenv = salt.utils.which('kenv')
         if kenv:
@@ -949,9 +946,9 @@ def os_data():
         # Add SELinux grain, if you have it
         if _linux_bin_exists('selinuxenabled'):
             grains['selinux'] = {}
-            grains['selinux']['enabled'] = __salt__['cmd.run'](
-                'selinuxenabled; echo $?'
-            ).strip() == '0'
+            grains['selinux']['enabled'] = __salt__['cmd.retcode'](
+                'selinuxenabled'
+            ) == 0
             if _linux_bin_exists('getenforce'):
                 grains['selinux']['enforced'] = __salt__['cmd.run'](
                     'getenforce'
@@ -1024,10 +1021,10 @@ def os_data():
                                 grains['lsb_distrib_id'] = value.strip()
             elif os.path.isfile('/etc/SuSE-release'):
                 grains['lsb_distrib_id'] = 'SUSE'
-                rel = open('/etc/SuSE-release').read().split('\n')[1]
-                patch = open('/etc/SuSE-release').read().split('\n')[2]
-                rel = re.sub("[^0-9]", "", rel)
-                patch = re.sub("[^0-9]", "", patch)
+                with salt.utils.fopen('/etc/SuSE-release') as fhr:
+                    rel = re.sub("[^0-9]", "", fhr.read().split('\n')[1])
+                with salt.utils.fopen('/etc/SuSE-release') as fhr:
+                    patch = re.sub("[^0-9]", "", fhr.read().split('\n')[2])
                 release = rel + " SP" + patch
                 grains['lsb_distrib_release'] = release
                 grains['lsb_distrib_codename'] = "n.a"
@@ -1413,7 +1410,7 @@ def path():
     '''
     # Provides:
     #   path
-    return {'path': os.environ['PATH'].strip()}
+    return {'path': os.environ.get('PATH', '').strip()}
 
 
 def pythonversion():
@@ -1681,7 +1678,7 @@ def _smartos_zone_data():
         grains['pkgsrcpath'] = 'Unknown'
 
     grains['zonename'] = __salt__['cmd.run']('zonename')
-    grains['zoneid'] = __salt__['cmd.run']('zoneadm list -p | awk -F: \'{ print $1 }\'')
+    grains['zoneid'] = __salt__['cmd.run']('zoneadm list -p').split()[1]
     grains['hypervisor_uuid'] = __salt__['cmd.run']('mdata-get sdc:server_uuid')
     grains['datacenter'] = __salt__['cmd.run']('mdata-get sdc:datacenter_name')
     if "FAILURE" in grains['datacenter'] or "No metadata" in grains['datacenter']:

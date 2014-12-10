@@ -154,7 +154,7 @@ def list_nodes(call=None):
             'id': node['id'],
             'image': node['image']['name'],
             'networks': str(node['networks']),
-            'size': node['size']['slug'],
+            'size': node['size_slug'],
             'state': str(node['status']),
         }
     return ret

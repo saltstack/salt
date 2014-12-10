@@ -12,16 +12,9 @@ import sys
 from glob import glob
 
 # Import salt libs
-import salt.cli.caller
-import salt.cli.cp
-import salt.cli.batch
 import salt.client
-import salt.client.ssh
-import salt.client.netapi
 import salt.output
-import salt.runner
-import salt.auth
-import salt.key
+import salt.client.ssh
 from salt.config import _expand_glob_path
 
 from salt.utils import parsers, print_cli
@@ -45,6 +38,8 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         '''
         Execute the salt command line
         '''
+        import salt.auth
+        import salt.cli.batch
         self.parse_args()
 
         if self.config['verify_env']:
@@ -184,6 +179,17 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                         full_ret = local.cmd_full_return(**kwargs)
                         ret, out, retcode = self._format_ret(full_ret)
                         self._output_ret(ret, out)
+                    if self.options.progress:
+                        kwargs['progress'] = True
+                        self.config['progress'] = True
+                        ret = {}
+                        for progress in cmd_func(**kwargs):
+                            out = 'progress'
+                            self._progress_ret(progress, out)
+                            if 'return_count' not in progress:
+                                ret.update(progress)
+                        self._progress_end(out)
+                        self._print_returns_summary(ret)
                     elif self.config['fun'] == 'sys.doc':
                         ret = {}
                         out = ''
@@ -243,6 +249,18 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             print_cli('Minions Which Did Not Return: {0}'.format(" ".join(not_return_minions)))
         print_cli('-------------------------------------------')
 
+    def _progress_end(self, out):
+        salt.output.progress_end(self.progress_bar)
+
+    def _progress_ret(self, progress, out):
+        '''
+        Print progress events
+        '''
+        # Get the progress bar
+        if not hasattr(self, 'progress_bar'):
+            self.progress_bar = salt.output.get_progress(self.config, out, progress)
+        salt.output.update_progress(self.config, progress, self.progress_bar, out)
+
     def _output_ret(self, ret, out):
         '''
         Print the output from a single return to the terminal
@@ -300,6 +318,7 @@ class SaltCP(parsers.SaltCPOptionParser):
         '''
         Execute salt-cp
         '''
+        import salt.cli.cp
         self.parse_args()
 
         if self.config['verify_env']:
@@ -328,6 +347,8 @@ class SaltKey(parsers.SaltKeyOptionParser):
         '''
         Execute salt-key
         '''
+
+        import salt.key
         self.parse_args()
 
         if self.config['verify_env']:
@@ -374,6 +395,7 @@ class SaltCall(parsers.SaltCallOptionParser):
     '''
     Used to locally execute a salt command
     '''
+    import salt.cli.caller
 
     def run(self):
         '''
@@ -434,10 +456,12 @@ class SaltRun(parsers.SaltRunOptionParser):
     '''
     Used to execute Salt runners
     '''
+
     def run(self):
         '''
         Execute salt-run
         '''
+        import salt.runner
         self.parse_args()
 
         if self.config['verify_env']:
@@ -479,6 +503,7 @@ class SaltSSH(parsers.SaltSSHOptionParser):
     '''
     Used to Execute the salt ssh routine
     '''
+
     def run(self):
         self.parse_args()
 
@@ -508,6 +533,7 @@ class SaltAPI(six.with_metaclass(parsers.OptionParserMeta,  # pylint: disable=W0
         '''
         Run the api
         '''
+        import salt.client.netapi
         self.parse_args()
         try:
             if self.config['verify_env']:

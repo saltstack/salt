@@ -26,7 +26,6 @@ from M2Crypto import RSA
 import salt.crypt
 import salt.utils
 import salt.client
-import salt.exitcodes
 import salt.payload
 import salt.pillar
 import salt.state
@@ -38,12 +37,15 @@ import salt.search
 import salt.key
 import salt.fileserver
 import salt.daemons.masterapi
+import salt.defaults.exitcodes
 import salt.utils.atomicfile
 import salt.utils.event
+import salt.utils.reactor
 import salt.utils.verify
 import salt.utils.minions
 import salt.utils.gzip_util
 import salt.utils.process
+import salt.utils.zeromq
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.debug import enable_sigusr1_handler, enable_sigusr2_handler, inspect_stack
 from salt.utils.event import tagify
@@ -167,8 +169,7 @@ class Maintenance(multiprocessing.Process):
                                                      returners=self.returners)
         self.ckminions = salt.utils.minions.CkMinions(self.opts)
         # Make Event bus for firing
-        self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
-
+        self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'])
         # Init any values needed by the git ext pillar
         self.pillargitfs = salt.daemons.masterapi.init_git_pillar(self.opts)
         # Set up search object
@@ -191,6 +192,8 @@ class Maintenance(multiprocessing.Process):
         last = int(time.time())
         # Clean out the fileserver backend cache
         salt.daemons.masterapi.clean_fsbackend(self.opts)
+        # Clean out pub auth
+        salt.daemons.masterapi.clean_pub_auth(self.opts)
 
         old_present = set()
         while True:
@@ -373,7 +376,7 @@ class Master(SMaster):
             for error in errors:
                 log.error(error)
             log.error('Master failed pre flight checks, exiting\n')
-            sys.exit(salt.exitcodes.EX_GENERIC)
+            sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
     def start(self):
         '''
@@ -399,7 +402,11 @@ class Master(SMaster):
 
         if self.opts.get('reactor'):
             log.info('Creating master reactor process')
-            process_manager.add_process(salt.utils.event.Reactor, args=(self.opts,))
+            process_manager.add_process(salt.utils.reactor.Reactor, args=(self.opts,))
+
+        if self.opts.get('event_return'):
+            log.info('Creating master event return process')
+            process_manager.add_process(salt.utils.event.EventReturn, args=(self.opts,))
 
         ext_procs = self.opts.get('ext_processes', [])
         for proc in ext_procs:
@@ -505,7 +512,7 @@ class Publisher(multiprocessing.Process):
         pull_uri = 'ipc://{0}'.format(
             os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
         )
-        salt.utils.check_ipc_path_max_len(pull_uri)
+        salt.utils.zeromq.check_ipc_path_max_len(pull_uri)
 
         # Start the minion command publisher
         log.info('Starting the Salt Publisher on {0}'.format(pub_uri))
@@ -853,7 +860,7 @@ class AESFuncs(object):
         :returns: Instance for handling AES operations
         '''
         self.opts = opts
-        self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
+        self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'])
         self.serial = salt.payload.Serial(opts)
         self.crypticle = crypticle
         self.ckminions = salt.utils.minions.CkMinions(opts)
@@ -1418,7 +1425,7 @@ class AESFuncs(object):
         if not self.__verify_minion_publish(clear_load):
             return {}
         else:
-            return self.masterapi.minion_publish(clear_load, skip_verify=True)
+            return self.masterapi.minion_publish(clear_load)
 
     def revoke_auth(self, load):
         '''
@@ -1519,7 +1526,7 @@ class ClearFuncs(object):
         self.master_key = master_key
         self.crypticle = crypticle
         # Create the event manager
-        self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
+        self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'])
         # Make a client
         self.local = salt.client.get_local_client(self.opts['conf_file'])
         # Make an minion checker object

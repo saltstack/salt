@@ -10,6 +10,7 @@ import threading
 # Import Salt Libs
 import salt.payload
 import salt.auth
+import salt.crypt
 import salt.utils
 import logging
 from collections import defaultdict
@@ -64,6 +65,19 @@ class Channel(object):
             raise Exception('Channels are only defined for ZeroMQ and raet')
             # return NewKindOfChannel(opts, **kwargs)
 
+    def send(self, load, tries=3, timeout=60):
+        '''
+        Send "load" to the master.
+        '''
+        raise NotImplementedError()
+
+    def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
+        '''
+        Send "load" to the master in a way that the load is only readable by
+        the minion and the master (not other minions etc.)
+        '''
+        raise NotImplementedError()
+
 
 class RAETChannel(Channel):
     '''
@@ -93,8 +107,21 @@ class RAETChannel(Channel):
                         jobber_yard_name or None,
                         'remote_cmd')
         self.stack = None
+        self.ryn = 'manor'  # remote yard name
 
-    def _setup_stack(self):
+    def __prep_stack(self):
+        '''
+        Prepare the stack objects
+        '''
+        global jobber_stack
+        if not self.stack:
+            if jobber_stack:
+                self.stack = jobber_stack
+            else:
+                self.stack = jobber_stack = self._setup_stack(ryn=self.ryn)
+        log.debug("RAETChannel Using Jobber Stack at = {0}\n".format(self.stack.ha))
+
+    def _setup_stack(self, ryn='manor'):
         '''
         Setup and return the LaneStack and Yard used by by channel when global
         not already setup such as in salt-call to communicate to-from the minion
@@ -111,9 +138,11 @@ class RAETChannel(Channel):
             emsg = ("Invalid application kind = '{0}' for RAETChannel.".format(kind))
             log.error(emsg + "\n")
             raise ValueError(emsg)
-        if kind == 'master':
+        if kind in [kinds.APPL_KIND_NAMES[kinds.applKinds.master],
+                    kinds.APPL_KIND_NAMES[kinds.applKinds.syndic]]:
             lanename = 'master'
-        elif kind == 'minion':
+        elif kind == [kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
+                      kinds.APPL_KIND_NAMES[kinds.applKinds.caller]]:
             lanename = "{0}_{1}".format(role, kind)
         else:
             emsg = ("Unsupported application kind '{0}' for RAETChannel.".format(kind))
@@ -127,23 +156,11 @@ class RAETChannel(Channel):
 
         stack.Pk = raeting.packKinds.pack
         stack.addRemote(RemoteYard(stack=stack,
-                                   name='manor',
+                                   name=ryn,
                                    lanename=lanename,
                                    dirpath=self.opts['sock_dir']))
         log.debug("Created Channel Jobber Stack {0}\n".format(stack.name))
         return stack
-
-    def __prep_stack(self):
-        '''
-        Prepare the stack objects
-        '''
-        global jobber_stack
-        if not self.stack:
-            if jobber_stack:
-                self.stack = jobber_stack
-            else:
-                self.stack = jobber_stack = self._setup_stack()
-        log.debug("Using Jobber Stack at = {0}\n".format(self.stack.ha))
 
     def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
         '''
@@ -164,7 +181,7 @@ class RAETChannel(Channel):
         src = (None, self.stack.local.name, track)
         self.route = {'src': src, 'dst': self.dst}
         msg = {'route': self.route, 'load': load}
-        self.stack.transmit(msg, self.stack.nameRemotes['manor'].uid)
+        self.stack.transmit(msg, self.stack.nameRemotes[self.ryn].uid)
         while track not in jobber_rxMsgs:
             self.stack.serviceAll()
             while self.stack.rxMsgs:
@@ -176,8 +193,12 @@ class RAETChannel(Channel):
             if time.time() - start > timeout:
                 if tried >= tries:
                     raise ValueError("Message send timed out after '{0} * {1}'"
-                             " secs on route = {2}".format(tries, timeout, self.route))
-                #self.stack.transmit(msg, self.stack.nameRemotes['manor'].uid)
+                             " secs. route = {2} track = {3} load={4}".format(tries,
+                                                                       timeout,
+                                                                       self.route,
+                                                                       track,
+                                                                       load))
+                self.stack.transmit(msg, self.stack.nameRemotes['manor'].uid)
                 tried += 1
             time.sleep(0.01)
         return jobber_rxMsgs.pop(track).get('return', {})
@@ -279,9 +300,7 @@ class ZeroMQChannel(Channel):
         return self.sreq.send(self.crypt, load, tries, timeout)
 
     def send(self, load, tries=3, timeout=60):
-
-        if self.crypt != 'clear':
-            return self._crypted_transfer(load, tries, timeout)
-        else:
+        if self.crypt == 'clear':  # for sign-in requests
             return self._uncrypted_transfer(load, tries, timeout)
-        # Do we ever do non-crypted transfers?
+        else:  # for just about everything else
+            return self._crypted_transfer(load, tries, timeout)

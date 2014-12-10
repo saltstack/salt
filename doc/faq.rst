@@ -260,10 +260,15 @@ adding the following state:
     schedule-start:
       cmd:
         - run
-        - name: 'at (Get-Date).AddMinutes(1).ToString("HH:mm") cmd /c "net stop salt-minion && net start salt-minion"'
-        - shell: powershell
+        - name: 'start powershell "Restart-Service -Name salt-minion"'
         - order: last
 
+or running immediately from the command line:
+
+.. code-block:: bash
+
+    salt -G kernel:Windows cmd.run 'start powershell "Restart-Service -Name salt-minion"'
+    
 Salting the Salt Master
 -----------------------
 

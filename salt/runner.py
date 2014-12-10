@@ -51,7 +51,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         self.functions = salt.loader.runner(opts)  # Must be self.functions for mixin to work correctly :-/
         self.returners = salt.loader.returners(opts, self.functions)
         self.outputters = salt.loader.outputters(opts)
-        self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
+        self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'])
 
     def cmd(self, fun, arg, pub_data=None, kwarg=None):
         '''
@@ -153,7 +153,10 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         # - the progress event system with the correct jid
         # - Provide JID if the runner wants to access it directly
         done = {}
-        progress = salt.utils.event.get_runner_event(opts, data['jid']).fire_progress
+        if opts.get('async', False):
+            progress = salt.utils.event.get_runner_event(opts, data['jid'], listen=False).fire_progress
+        else:
+            progress = _progress_print
         for func_name, func in instance.functions.items():
             if func.__module__ in done:
                 continue
@@ -167,7 +170,9 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         ret_load = {'return': ret, 'fun': data['fun'], 'fun_args': data['args']}
         # Don't use the invoking processes' event socket because it could be closed down by the time we arrive here.
         # Create another, for safety's sake.
-        salt.utils.event.MasterEvent(opts['sock_dir']).fire_event(ret_load, tagify([data['jid'], 'return'], 'runner'))
+        master_event = salt.utils.event.get_master_event(opts, opts['sock_dir'], listen=False)
+        master_event.fire_event(ret_load, tagify([data['jid'], 'return'], 'runner'))
+        master_event.destroy()
         try:
             fstr = '{0}.save_runner_load'.format(opts['master_job_cache'])
             instance.returners[fstr](data['jid'], ret_load)
@@ -195,10 +200,10 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         '''
         load = kwargs
         load['cmd'] = 'runner'
-        sreq = salt.transport.Channel.factory(self.opts,
+        channel = salt.transport.Channel.factory(self.opts,
                                               crypt='clear',
                                               usage='master_call')
-        ret = sreq.send(load)
+        ret = channel.send(load)
         if isinstance(ret, collections.Mapping):
             if 'error' in ret:
                 raise_error(**ret['error'])
@@ -256,18 +261,13 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
                 'eauth': 'pam',
             })
         '''
-        sevent = salt.utils.event.get_event('master',
-                                            self.opts['sock_dir'],
-                                            self.opts['transport'],
-                                            opts=self.opts)
-
         reformatted_low = self._reformat_low(low)
         job = self.master_call(**reformatted_low)
         ret_tag = tagify('ret', base=job['tag'])
 
         timelimit = time.time() + (timeout or 300)
         while True:
-            ret = sevent.get_event(full=True)
+            ret = self.event.get_event(full=True)
             if ret is None:
                 if time.time() > timelimit:
                     raise salt.exceptions.SaltClientTimeout(
@@ -310,7 +310,6 @@ class Runner(RunnerClient):
                     log.info('Running in async mode. Results of this execution may '
                              'be collected by attaching to the master event bus or '
                              'by examing the master job cache, if configured.')
-                    sys.exit(0)
                     rets = self.get_runner_returns(jid)
                 else:
                     rets = [jid]
@@ -367,3 +366,7 @@ class Runner(RunnerClient):
                     continue
             except (IndexError, KeyError):
                 continue
+
+
+def _progress_print(text, *args, **kwargs):
+    print(text)

@@ -70,10 +70,12 @@ class WheelClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         '''
         load = kwargs
         load['cmd'] = 'wheel'
-        sreq = salt.payload.SREQ(
-                'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
-                )
-        ret = sreq.send('clear', load)
+        master_uri = 'tcp://' + salt.utils.ip_bracket(self.opts['interface']) + \
+                     ':' + str(self.opts['ret_port'])
+        channel = salt.transport.Channel.factory(self.opts,
+                                                 crypt='clear',
+                                                 master_uri=master_uri)
+        ret = channel.send(load)
         if isinstance(ret, collections.Mapping):
             if 'error' in ret:
                 raise_error(**ret['error'])

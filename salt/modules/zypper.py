@@ -790,13 +790,14 @@ def list_locks():
         return False
 
     locks = {}
-    for meta in [item.split('\n') for item in open(LOCKS).read().split('\n\n')]:
-        lock = {}
-        for element in [el for el in meta if el]:
-            if ':' in element:
-                lock.update(dict([tuple([i.strip() for i in element.split(':', 1)]), ]))
-        if lock.get('solvable_name'):
-            locks[lock.pop('solvable_name')] = lock
+    with salt.utils.fopen(LOCKS) as fhr:
+        for meta in [item.split('\n') for item in fhr.read().split('\n\n')]:
+            lock = {}
+            for element in [el for el in meta if el]:
+                if ':' in element:
+                    lock.update(dict([tuple([i.strip() for i in element.split(':', 1)]), ]))
+            if lock.get('solvable_name'):
+                locks[lock.pop('solvable_name')] = lock
 
     return locks
 

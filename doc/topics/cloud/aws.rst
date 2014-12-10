@@ -926,7 +926,7 @@ the network interfaces of your virtual machines, for example:-
           # interface (will be associated with the primary private ip address
           # of the interface
           #
-          # allocation_new_eip: True
+          # allocate_new_eip: True
 
           # Uncomment this instead to allocate a new Elastic IP Address to
           # both the primary private ip address and each of the secondary ones

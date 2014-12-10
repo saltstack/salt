@@ -14,11 +14,6 @@ ifeq ($(shell which $(SPHINXBUILD) >/dev/null 2>&1; echo $$?), 1)
 $(error The '$(SPHINXBUILD)' command was not found. Make sure you have Sphinx installed, then set the SPHINXBUILD environment variable to point to the full path of the '$(SPHINXBUILD)' executable. Alternatively you can add the directory with the executable to your PATH. If you don't have Sphinx installed, grab it from http://sphinx-doc.org/)
 endif
 
-# User-friendly check for xelatex
-ifeq ($(shell which $(XELATEX) >/dev/null 2>&1; echo $$?), 1)
-$(error The '$(XELATEX)' command was not found.)
-endif
-
 # ----- Translations Support ------------------------------------------------>
 #  If language is set, also set translation options
 ifeq ($(shell [ "x$(SPHINXLANG)" != "x" ] && echo 0 || echo 1), 0)
@@ -55,7 +50,7 @@ help:
 	@echo "  devhelp    to make HTML files and a Devhelp project"
 	@echo "  epub       to make an epub"
 	@echo "  latex      to make LaTeX files, you can set PAPER=a4 or PAPER=letter"
-	@echo "  xetexpdf   to make LaTeX files and run them through xelatex"
+	@echo "  pdf        to make Salt-all.pdf and splitted pdf using xelatex"
 	@echo "  cheatsheet to create salt-cheatsheet.pdf"
 	@echo "  latexpdf   to make LaTeX files and run them through pdflatex"
 	@echo "  latexpdfja to make LaTeX files and run them through platex/dvipdfmx"
@@ -147,7 +142,10 @@ latexpdfja: translations
 	$(MAKE) -C $(BUILDDIR)/latex all-pdf-ja
 	@echo "pdflatex finished; the PDF files are in $(BUILDDIR)/latex."
 
-xetexpdf: translations
+pdf: translations
+	@if [ "$(XELATEX)"  = "xelatex" ] || [ "x$(XELATEX)" = "x" ]; then \
+		echo "The '$(XELATEX)' command was not found."; \
+	fi
 	$(SPHINXBUILD) -b latex $(ALLSPHINXOPTS) $(BUILDDIR)/latex
 	@echo "Running LaTeX files through xelatex..."
 	perl -pi -e 's!pdflatex!xelatex!' $(BUILDDIR)/latex/Makefile

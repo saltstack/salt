@@ -199,7 +199,7 @@ def enable():
 
     .. code-block:: bash
 
-        salt '*' puppet.disable
+        salt '*' puppet.enable
     '''
 
     _check_puppet()

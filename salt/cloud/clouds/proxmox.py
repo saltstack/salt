@@ -542,7 +542,7 @@ def create(vm_):
 
     # Wait until the VM has fully started
     log.debug('Waiting for state "running" for vm {0} on {1}'.format(vmid, host))
-    if not wait_for_state(vmid, host, nodeType, 'running'):
+    if not wait_for_state(vmid, 'running'):
         return {'Error': 'Unable to start {0}, command timed out'.format(name)}
 
     ssh_username = config.get_cloud_config_value(
@@ -800,9 +800,9 @@ def wait_for_created(upid, timeout=300):
         info = _lookup_proxmox_task(upid)
 
 
-def wait_for_state(vmid, node, nodeType, state, timeout=300):
+def wait_for_state(vmid, state, timeout=300):
     '''
-    Wait until a specific state has been reached on  a node
+    Wait until a specific state has been reached on a node
     '''
     start_time = time.time()
     node = get_vm_status(vmid=vmid)
@@ -856,7 +856,7 @@ def destroy(name, call=None):
         stop(name, vmobj['vmid'], 'action')
 
         # wait until stopped
-        if not wait_for_state(vmobj['vmid'], vmobj['node'], vmobj['type'], 'stopped'):
+        if not wait_for_state(vmobj['vmid'], 'stopped'):
             return {'Error': 'Unable to stop {0}, command timed out'.format(name)}
 
         query('delete', 'nodes/{0}/{1}'.format(

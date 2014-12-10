@@ -1016,7 +1016,7 @@ def get_spot_config(vm_):
 
 def get_provider(vm_=None):
     '''
-    Extract the provider name from vm_
+    Extract the provider name from vm
     '''
     if vm_ is None:
         provider = __active_provider_name__ or 'ec2'
@@ -1394,6 +1394,22 @@ def request_instance(vm_=None, call=None):
     image_id = vm_['image']
     params[spot_prefix + 'ImageId'] = image_id
 
+    userdata_file = config.get_cloud_config_value(
+        'userdata_file', vm_, __opts__, search_global=False, default=None
+    )
+    if userdata_file is None:
+        userdata = config.get_cloud_config_value(
+            'userdata', vm_, __opts__, search_global=False, default=None
+        )
+    else:
+        log.trace('userdata_file: {0}'.format(userdata_file))
+        if os.path.exists(userdata_file):
+            with salt.utils.fopen(userdata_file, 'r') as fh_:
+                userdata = fh_.read()
+
+    if userdata is not None:
+        params['UserData'] = base64.b64encode(userdata)
+
     vm_size = config.get_cloud_config_value(
         'size', vm_, __opts__, search_global=False
     )
@@ -1541,14 +1557,16 @@ def request_instance(vm_=None, call=None):
 
         # pull the root device name from the result and use it when
         # launching the new VM
-        if rd_data[0]['blockDeviceMapping'] is None:
-            # Some ami instances do not have a root volume. Ignore such cases
-            rd_name = None
-        elif isinstance(rd_data[0]['blockDeviceMapping']['item'], list):
-            rd_name = rd_data[0]['blockDeviceMapping']['item'][0]['deviceName']
-        else:
-            rd_name = rd_data[0]['blockDeviceMapping']['item']['deviceName']
-        log.info('Found root device name: {0}'.format(rd_name))
+        rd_name = None
+        if 'blockDeviceMapping' in rd_data[0]:
+            if rd_data[0]['blockDeviceMapping'] is None:
+                # Some ami instances do not have a root volume. Ignore such cases
+                rd_name = None
+            elif isinstance(rd_data[0]['blockDeviceMapping']['item'], list):
+                rd_name = rd_data[0]['blockDeviceMapping']['item'][0]['deviceName']
+            else:
+                rd_name = rd_data[0]['blockDeviceMapping']['item']['deviceName']
+            log.info('Found root device name: {0}'.format(rd_name))
 
         if rd_name is not None:
             if ex_blockdevicemappings:
@@ -1744,12 +1762,12 @@ def query_instance(vm_=None, call=None):
 
     attempts = 5
     while attempts > 0:
-        data, requesturl = aws.query(params,
+        data, requesturl = aws.query(params,  # pylint: disable=W0632
                                      location=location,
                                      provider=provider,
                                      opts=__opts__,
                                      return_url=True,
-                                     sigver='4')  # pylint: disable=W0632
+                                     sigver='4')
         log.debug('The query returned: {0}'.format(data))
 
         if isinstance(data, dict) and 'error' in data:
@@ -1887,6 +1905,25 @@ def wait_for_instance(
         win_passwd = config.get_cloud_config_value(
             'win_password', vm_, __opts__, default=''
         )
+        if win_passwd and win_passwd == 'auto':
+            log.debug('Waiting for auto-generated Windows EC2 password')
+            while True:
+                password_data = get_password_data(
+                    name=vm_['name'],
+                    kwargs={
+                        'key_file': vm_['private_key'],
+                    },
+                    call='action',
+                )
+                log.debug(password_data)
+                win_passwd = password_data.get('password', None)
+                if win_passwd is None:
+                    # This wait is so high, because the password is unlikely to
+                    # be generated for at least 4 minutes
+                    time.sleep(60)
+                else:
+                    break
+
         if not salt.utils.cloud.wait_for_port(ip_address,
                                               port=445,
                                               timeout=ssh_connect_timeout):
@@ -3223,12 +3260,12 @@ def _toggle_delvol(name=None, instance_id=None, device=None, volume_id=None,
     else:
         params = {'Action': 'DescribeInstances',
                   'InstanceId.1': instance_id}
-        data, requesturl = aws.query(params,
+        data, requesturl = aws.query(params,  # pylint: disable=W0632
                                      return_url=True,
                                      location=get_location(),
                                      provider=get_provider(),
                                      opts=__opts__,
-                                     sigver='4')  # pylint: disable=W0632
+                                     sigver='4')
 
     blockmap = data[0]['instancesSet']['item']['blockDeviceMapping']
 
@@ -3262,6 +3299,13 @@ def _toggle_delvol(name=None, instance_id=None, device=None, volume_id=None,
 def create_volume(kwargs=None, call=None, wait_to_finish=False):
     '''
     Create a volume
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt-cloud -f create_volume my-ec2-config zone=us-east-1b
+        salt-cloud -f create_volume my-ec2-config zone=us-east-1b tags='{"tag1": "val1", "tag2", "val2"}'
     '''
     if call != 'function':
         log.error(
@@ -3296,15 +3340,31 @@ def create_volume(kwargs=None, call=None, wait_to_finish=False):
 
     data = aws.query(params,
                      return_url=True,
+                     return_root=True,
                      location=get_location(),
                      provider=get_provider(),
                      opts=__opts__,
                      sigver='4')
+
     r_data = {}
-    for d in data:
+    for d in data[0]:
         for k, v in d.items():
             r_data[k] = v
     volume_id = r_data['volumeId']
+
+    # Allow tags to be set upon creation
+    if 'tags' in kwargs:
+        if isinstance(kwargs['tags'], six.string_types):
+            tags = yaml.safe_load(kwargs['tags'])
+        else:
+            tags = kwargs['tags']
+
+        if isinstance(tags, dict):
+            new_tags = set_tags(tags=tags,
+                                resource_id=volume_id,
+                                call='action',
+                                location=get_location())
+            r_data['tags'] = new_tags
 
     # Waits till volume is available
     if wait_to_finish:
@@ -3314,7 +3374,7 @@ def create_volume(kwargs=None, call=None, wait_to_finish=False):
                                                 argument_being_watched='status',
                                                 required_argument_response='available')
 
-    return data
+    return r_data
 
 
 def attach_volume(name=None, kwargs=None, instance_id=None, call=None):
@@ -3833,7 +3893,7 @@ def get_password_data(
 
     ret = {}
     data = aws.query(params,
-                     return_url=True,
+                     return_root=True,
                      location=get_location(),
                      provider=get_provider(),
                      opts=__opts__,

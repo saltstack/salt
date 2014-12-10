@@ -25,8 +25,7 @@ configuration file.
 
 '''
 
-from __future__ import generators, with_statement
-from __future__ import absolute_import
+from __future__ import absolute_import, generators, with_statement
 
 import time
 import logging
@@ -780,7 +779,7 @@ def _add_to_path_envvar(directory):
     Adds directory to the PATH environment variable and returns the original
     one.
     '''
-    orig_path = os.environ["PATH"]
+    orig_path = os.environ.get('PATH', '')
     if directory:
         if not os.path.isdir(directory):
             log.error("The given parameter is not a directory")
@@ -1140,9 +1139,7 @@ def _write_config(config, newlines=2):
         text = config[key]
 
     try:
-        open_flags = 'a'
-
-        with open(__SYSLOG_NG_CONFIG_FILE, open_flags) as f:
+        with salt.utils.fopen(__SYSLOG_NG_CONFIG_FILE, 'a') as f:
             f.write(text)
 
             for i in range(0, newlines):

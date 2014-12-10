@@ -574,7 +574,7 @@ def role_get(name, user=None, host=None, port=None, maintenance_db=None,
         return all_users.get(name, None)
     except AttributeError:
         log.error('Could not retrieve Postgres role. Is Postgres running?')
-        return False
+        return None
 
 
 def user_exists(name,

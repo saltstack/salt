@@ -31,7 +31,7 @@ passed in as a dict, or as a string to pull from pillars or minion config:
     myprofile:
         keyid: GKTADJGHEIQSXMKKRBJ08H
         key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-            region: us-east-1
+        region: us-east-1
 
 .. code-block:: yaml
 
@@ -39,6 +39,10 @@ passed in as a dict, or as a string to pull from pillars or minion config:
         boto_elb.present:
             - name: myelb
             - region: us-east-1
+            - availability_zones:
+                - us-east-1a
+                - us-east-1c
+                - us-east-1d
             - keyid: GKTADJGHEIQSXMKKRBJ08H
             - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
             - listeners:
@@ -378,6 +382,12 @@ def _attributes_present(
         _czlb = _attributes['cross_zone_load_balancing']
         if czlb['enabled'] != _czlb['enabled']:
             attrs_to_set.append('cross_zone_load_balancing')
+    if 'connection_draining' in attributes:
+        cd = attributes['connection_draining']
+        _cd = _attributes['connection_draining']
+        if (cd['enabled'] != _cd['enabled']
+                or cd.get('timeout', 300) != _cd.get('timeout')):
+            attrs_to_set.append('connection_draining')
     if 'access_log' in attributes:
         for attr, val in six.iteritems(attributes['access_log']):
             if str(_attributes['access_log'][attr]) != str(val):

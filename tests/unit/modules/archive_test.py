@@ -31,13 +31,15 @@ class ArchiveTestCase(TestCase):
                 'zcvf', 'foo.tar',
                 ['/tmp/something-to-compress-1',
                  '/tmp/something-to-compress-2'],
-                cwd=None, template=None
+                cwd=None,
+                template=None
             )
             self.assertEqual(['salt'], ret)
             mock.assert_called_once_with(
                 'tar -zcvf foo.tar /tmp/something-to-compress-1 '
                 '/tmp/something-to-compress-2',
                 cwd=None,
+                runas=None,
                 template=None
             )
 
@@ -46,13 +48,15 @@ class ArchiveTestCase(TestCase):
             ret = archive.tar(
                 'zcvf', 'foo.tar',
                 '/tmp/something-to-compress-1,/tmp/something-to-compress-2',
-                cwd=None, template=None
+                cwd=None,
+                template=None
             )
             self.assertEqual(['salt'], ret)
             mock.assert_called_once_with(
                 'tar -zcvf foo.tar /tmp/something-to-compress-1 '
                 '/tmp/something-to-compress-2',
                 cwd=None,
+                runas=None,
                 template=None
             )
 
@@ -77,6 +81,7 @@ class ArchiveTestCase(TestCase):
             self.assertEqual(['salt'], ret)
             mock.assert_called_once_with(
                 'gzip /tmp/something-to-compress',
+                runas=None,
                 template=None
             )
 
@@ -98,6 +103,7 @@ class ArchiveTestCase(TestCase):
             self.assertEqual(['salt'], ret)
             mock.assert_called_once_with(
                 'gunzip /tmp/something-to-decompress.tar.gz',
+                runas=None,
                 template=None
             )
 
@@ -125,6 +131,7 @@ class ArchiveTestCase(TestCase):
             mock.assert_called_once_with(
                 'zip /tmp/salt.{{grains.id}}.zip '
                 '/tmp/tmpePe8yO /tmp/tmpLeSw1A',
+                runas=None,
                 template='jinja'
             )
 
@@ -139,6 +146,7 @@ class ArchiveTestCase(TestCase):
             mock.assert_called_once_with(
                 'zip /tmp/salt.{{grains.id}}.zip '
                 '/tmp/tmpePe8yO /tmp/tmpLeSw1A',
+                runas=None,
                 template='jinja'
             )
 
@@ -169,6 +177,7 @@ class ArchiveTestCase(TestCase):
             mock.assert_called_once_with(
                 'unzip /tmp/salt.{{grains.id}}.zip -d /tmp/dest '
                 '-x /tmp/tmpePe8yO /tmp/tmpLeSw1A',
+                runas=None,
                 template='jinja'
             )
 
@@ -184,6 +193,7 @@ class ArchiveTestCase(TestCase):
             mock.assert_called_once_with(
                 'unzip /tmp/salt.{{grains.id}}.zip -d /tmp/dest '
                 '-x /tmp/tmpePe8yO /tmp/tmpLeSw1A',
+                runas=None,
                 template='jinja'
             )
 
@@ -200,6 +210,7 @@ class ArchiveTestCase(TestCase):
             mock.assert_called_once_with(
                 'unzip -fo /tmp/salt.{{grains.id}}.zip -d /tmp/dest '
                 '-x /tmp/tmpePe8yO /tmp/tmpLeSw1A',
+                runas=None,
                 template='jinja',
             )
 
@@ -216,6 +227,7 @@ class ArchiveTestCase(TestCase):
             mock.assert_called_once_with(
                 'unzip -fo /tmp/salt.{{grains.id}}.zip -d /tmp/dest '
                 '-x /tmp/tmpePe8yO /tmp/tmpLeSw1A',
+                runas=None,
                 template='jinja'
             )
 
@@ -245,6 +257,7 @@ class ArchiveTestCase(TestCase):
             mock.assert_called_once_with(
                 'rar a -idp /tmp/rarfile.rar '
                 '/tmp/sourcefile1 /tmp/sourcefile2',
+                runas=None,
                 template=None
             )
 
@@ -258,6 +271,7 @@ class ArchiveTestCase(TestCase):
             mock.assert_called_once_with(
                 'rar a -idp /tmp/rarfile.rar '
                 '/tmp/sourcefile1 /tmp/sourcefile2',
+                runas=None,
                 template=None
             )
 
@@ -287,6 +301,7 @@ class ArchiveTestCase(TestCase):
             mock.assert_called_once_with(
                 'unrar x -idp /tmp/rarfile.rar '
                 '-x file_1 -x file_2 /home/strongbad/',
+                runas=None,
                 template=None
             )
 
@@ -301,6 +316,7 @@ class ArchiveTestCase(TestCase):
             mock.assert_called_once_with(
                 'unrar x -idp /tmp/rarfile.rar '
                 '-x file_1 -x file_2 /home/strongbad/',
+                runas=None,
                 template=None
             )
 

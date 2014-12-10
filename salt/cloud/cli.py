@@ -21,7 +21,7 @@ from salt.ext.six.moves import input
 
 # Import salt libs
 import salt.config
-import salt.exitcodes
+import salt.defaults.exitcodes
 import salt.output
 import salt.utils
 from salt.utils import parsers
@@ -255,7 +255,7 @@ class SaltCloud(parsers.SaltCloudParser):
                 self.selected_query_option is None:
             if len(mapper.rendered_map) == 0:
                 sys.stderr.write('No nodes defined in this map')
-                self.exit(salt.exitcodes.EX_GENERIC)
+                self.exit(salt.defaults.exitcodes.EX_GENERIC)
             try:
                 ret = {}
                 run_map = True
@@ -361,4 +361,4 @@ class SaltCloud(parsers.SaltCloudParser):
             # enabled
             exc_info_on_loglevel=logging.DEBUG
         )
-        self.exit(salt.exitcodes.EX_GENERIC)
+        self.exit(salt.defaults.exitcodes.EX_GENERIC)

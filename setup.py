@@ -755,6 +755,7 @@ class SaltDistribution(distutils.dist.Distribution):
             'zmq.core.*',
             'zmq.utils.*',
             'ast',
+            'csv',
             'difflib',
             'distutils',
             'distutils.version',

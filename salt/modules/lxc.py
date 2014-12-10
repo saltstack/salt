@@ -2259,7 +2259,8 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset):
     changes = {'edited': [], 'added': [], 'removed': []}
     ret = {'changes': changes, 'result': True, 'comment': ''}
 
-    with salt.utils.fopen(lxc_conf_p, 'r') as fic:
+    # do not use salt.utils.fopen !
+    with open(lxc_conf_p, 'r') as fic:
         filtered_lxc_conf = []
         for row in lxc_conf:
             if not row:

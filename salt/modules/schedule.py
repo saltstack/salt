@@ -267,6 +267,8 @@ def add(name, **kwargs):
     .. code-block:: bash
 
         salt '*' schedule.add job1 function='test.ping' seconds=3600
+        # If function have some arguments, use job_args
+        salt '*' schedule.add job2 function='cmd.run' job_args=['date >> /tmp/date.log'] seconds=60
     '''
 
     ret = {'comment': [],

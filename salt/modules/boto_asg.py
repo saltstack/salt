@@ -81,8 +81,13 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
     if not conn:
         return False
     try:
-        conn.get_all_groups(names=[name])
-        return True
+        _conn = conn.get_all_groups(names=[name])
+        if _conn:
+            return True
+        else:
+            msg = 'The autoscale group does not exist in region {0}'.format(region)
+            log.debug(msg)
+            return False
     except boto.exception.BotoServerError as e:
         log.debug(e)
         return False
@@ -388,10 +393,16 @@ def launch_configuration_exists(name, region=None, key=None, keyid=None,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    lc = conn.get_all_launch_configurations(names=[name])
-    if lc:
-        return True
-    else:
+    try:
+        lc = conn.get_all_launch_configurations(names=[name])
+        if lc:
+            return True
+        else:
+            msg = 'The launch configuration does not exist in region {0}'.format(region)
+            log.debug(msg)
+            return False
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
         return False
 
 

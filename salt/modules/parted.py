@@ -59,6 +59,44 @@ def __virtual__():
     return __virtualname__
 
 
+# TODO: all the other inputs to the functions in this module are repetitively
+# validated within each function; collect them into validation functions here,
+# similar to _validate_device and _validate_partition_boundary
+def _validate_device(device):
+    '''
+    Ensure the device name supplied is valid in a manner similar to the
+    `exists` function, but raise errors on invalid input rather than return
+    False.
+
+    This function only validates a block device, it does not check if the block
+    device is a drive or a partition or a filesystem, etc.
+    '''
+    if os.path.exists(device):
+        dev = os.stat(device).st_mode
+
+        if stat.S_ISBLK(dev):
+            return
+
+    raise CommandExecutionError(
+        'Invalid device passed to partition module.'
+    )
+
+
+def _validate_partition_boundary(boundary):
+    '''
+    Ensure valid partition boundaries are supplied.
+    '''
+    try:
+        for unit in VALID_UNITS:
+            if boundary.endswith(unit):
+                return
+        int(boundary)
+    except Exception:
+        raise CommandExecutionError(
+            'Invalid partition boundary passed: "{0}"'.format(boundary)
+        )
+
+
 def probe(*devices, **kwargs):
     '''
     Ask the kernel to update its local partition data. When no args are
@@ -81,6 +119,10 @@ def probe(*devices, **kwargs):
         del kwargs['device']
     if kwargs:
         raise TypeError("probe() takes no keyword arguments")
+
+    for device in devices:
+        _validate_device(device)
+
     cmd = 'partprobe -- {0}'.format(" ".join(devices))
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
@@ -120,6 +162,8 @@ def list_(device, unit=None):
         salt '*' partition.list /dev/sda unit=s
         salt '*' partition.list /dev/sda unit=kB
     '''
+    _validate_device(device)
+
     if unit:
         if unit not in VALID_UNITS:
             raise CommandExecutionError(
@@ -185,6 +229,8 @@ def align_check(device, part_type, partition):
 
         salt '*' partition.align_check /dev/sda minimal 1
     '''
+    _validate_device(device)
+
     if part_type not in set(['minimal', 'optimal']):
         raise CommandExecutionError(
             'Invalid part_type passed to partition.align_check'
@@ -216,6 +262,8 @@ def check(device, minor):
 
         salt '*' partition.check 1
     '''
+    _validate_device(device)
+
     try:
         int(minor)
     except Exception:
@@ -242,6 +290,8 @@ def cp(device, from_minor, to_minor):  # pylint: disable=C0103
 
         salt '*' partition.cp /dev/sda 2 3
     '''
+    _validate_device(device)
+
     try:
         int(from_minor)
         int(to_minor)
@@ -274,6 +324,8 @@ def get_id(device, minor):
 
         salt '*' partition.get_id /dev/sda 1
     '''
+    _validate_device(device)
+
     try:
         int(minor)
     except Exception:
@@ -305,6 +357,8 @@ def set_id(device, minor, system_id):
 
         salt '*' partition.set_id /dev/sda 1 83
     '''
+    _validate_device(device)
+
     try:
         int(minor)
     except Exception:
@@ -358,6 +412,8 @@ def mkfs(device, fs_type):
 
         salt '*' partition.mkfs /dev/sda2 fat32
     '''
+    _validate_device(device)
+
     if fs_type not in set(['ext2', 'fat32', 'fat16', 'linux-swap', 'reiserfs',
                           'hfs', 'hfs+', 'hfsx', 'NTFS', 'ufs']):
         raise CommandExecutionError('Invalid fs_type passed to partition.mkfs')
@@ -384,6 +440,8 @@ def mklabel(device, label_type):
 
         salt '*' partition.mklabel /dev/sda msdos
     '''
+    _validate_device(device)
+
     if label_type not in set(['aix', 'amiga', 'bsd', 'dvh', 'gpt', 'loop', 'mac',
                              'msdos', 'pc98', 'sun']):
         raise CommandExecutionError(
@@ -393,18 +451,6 @@ def mklabel(device, label_type):
     cmd = 'parted -m -s {0} mklabel {1}'.format(device, label_type)
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
-
-
-def _validate_partition_boundary(boundary):
-    try:
-        for unit in VALID_UNITS:
-            if boundary.endswith(unit):
-                return
-        int(boundary)
-    except Exception:
-        raise CommandExecutionError(
-            'Invalid partition boundary passed: "{0}"'.format(boundary)
-        )
 
 
 def mkpart(device, part_type, fs_type=None, start=None, end=None):
@@ -422,6 +468,8 @@ def mkpart(device, part_type, fs_type=None, start=None, end=None):
         salt '*' partition.mkpart /dev/sda primary fat32 0 639
         salt '*' partition.mkpart /dev/sda primary start=0 end=639
     '''
+    _validate_device(device)
+
     if not start or not end:
         raise CommandExecutionError(
             'partition.mkpart requires a start and an end'
@@ -470,6 +518,8 @@ def mkpartfs(device, part_type, fs_type, start, end):
 
         salt '*' partition.mkpartfs /dev/sda logical ext2 440 670
     '''
+    _validate_device(device)
+
     if part_type not in set(['primary', 'logical', 'extended']):
         raise CommandExecutionError(
             'Invalid part_type passed to partition.mkpartfs'
@@ -504,6 +554,8 @@ def name(device, partition, name):
 
         salt '*' partition.name /dev/sda 1 'My Documents'
     '''
+    _validate_device(device)
+
     try:
         int(partition)
     except Exception:
@@ -537,6 +589,7 @@ def rescue(device, start, end):
 
         salt '*' partition.rescue /dev/sda 0 8056
     '''
+    _validate_device(device)
     _validate_partition_boundary(start)
     _validate_partition_boundary(end)
 
@@ -561,6 +614,8 @@ def resize(device, minor, start, end):
 
         salt '*' partition.resize /dev/sda 3 200 850
     '''
+    _validate_device(device)
+
     try:
         int(minor)
     except Exception:
@@ -591,6 +646,8 @@ def rm(device, minor):  # pylint: disable=C0103
 
         salt '*' partition.rm /dev/sda 5
     '''
+    _validate_device(device)
+
     try:
         int(minor)
     except Exception:
@@ -617,6 +674,8 @@ def set_(device, minor, flag, state):
 
         salt '*' partition.set /dev/sda 1 boot on
     '''
+    _validate_device(device)
+
     try:
         int(minor)
     except Exception:
@@ -648,6 +707,8 @@ def toggle(device, partition, flag):
 
         salt '*' partition.name /dev/sda 1 boot
     '''
+    _validate_device(device)
+
     try:
         int(partition)
     except Exception:

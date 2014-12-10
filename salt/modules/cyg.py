@@ -129,7 +129,8 @@ def _run_silent_cygwin(cyg_arch='x86_64',
         os.remove(cyg_setup_path)
 
     file_data = _urlopen(cyg_setup_source)
-    open(cyg_setup_path, "wb").write(file_data.read())
+    with salt.utils.fopen(cyg_setup_path, "wb") as fhw:
+        fhw.write(file_data.read())
 
     setup_command = cyg_setup_path
     options = []

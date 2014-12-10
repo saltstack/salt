@@ -822,6 +822,9 @@ def list_(prefix=None,
             # ignore -f line as it contains --find-links directory
             # ignore comment lines
             continue
+        elif line.startswith('-e hg+not trust'):
+            # ignore hg + not trust problem
+            continue
         elif line.startswith('-e'):
             line = line.split('-e ')[1]
             version_, name = line.split('#egg=')
@@ -908,6 +911,8 @@ def upgrade_available(pkg,
                       runas=None,
                       cwd=None):
     '''
+    .. versionadded:: Lithium
+
     Check whether or not an upgrade is available for a given package
 
     CLI Example:
@@ -925,6 +930,8 @@ def upgrade(bin_env=None,
             cwd=None,
             use_vt=False):
     '''
+    .. versionadded:: Lithium
+
     Upgrades outdated pip packages
 
     Returns a dict containing the changes.

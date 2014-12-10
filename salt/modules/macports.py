@@ -223,11 +223,12 @@ def remove(name=None, pkgs=None, **kwargs):
     targets = [x for x in pkg_params if x in old]
     if not targets:
         return {}
-    cmd = ['port', 'uninstall'].append(targets)
+    cmd = ['port', 'uninstall']
+    cmd.extend(targets)
     __salt__['cmd.run_all'](cmd, output_loglevel='trace', python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return __salt__['saltutil.compare_dicts'](old, new)
+    return salt.utils.compare_dicts(old, new)
 
 
 def install(name=None, refresh=False, pkgs=None, **kwargs):
@@ -319,7 +320,8 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         formulas_array.append(pname + (pparams or ''))
 
     old = list_pkgs()
-    cmd = ['port', 'install'].append(formulas_array)
+    cmd = ['port', 'install']
+    cmd.extend(formulas_array)
 
     __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
     __context__.pop('pkg.list_pkgs', None)

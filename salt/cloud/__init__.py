@@ -1857,7 +1857,7 @@ class Map(Cloud):
                                 ret['existing'] = {}
                             ret['existing'][name] = ret['create'].pop(name)
 
-        if self.opts['hard']:
+        if 'hard' in self.opts and self.opts['hard']:
             if self.opts['enable_hard_maps'] is False:
                 raise SaltCloudSystemExit(
                     'The --hard map can be extremely dangerous to use, '

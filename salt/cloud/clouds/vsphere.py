@@ -9,6 +9,13 @@ The vSphere cloud module is used to control access to VMWare vSphere.
 
 :depends:   - PySphere Python module
 
+Note: Ensure python pysphere module is installed by running following one-liner
+check. The output should be 0.
+
+.. code-block:: bash
+
+   python -c "import pysphere" ; echo $?
+
 Use of this module only requires a URL, username and password. Set up the cloud
 configuration at:
 
@@ -32,6 +39,7 @@ your VMWare installation is configured:
     https://10.1.1.1:443
     https://10.1.1.1:443/sdk
     10.1.1.1:443/sdk
+
 
 folder: Name of the folder that will contain the new VM. If not set, the VM will
         be added to the folder the original VM belongs to.
@@ -87,6 +95,9 @@ def __virtual__():
     '''
     Set up the libcloud functions and check for vSphere configurations.
     '''
+    if not HAS_LIBS:
+        return False
+
     if get_configured_provider() is False:
         return False
 

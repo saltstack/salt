@@ -86,8 +86,8 @@ from salt.ext.six.moves.urllib.parse import quote as _quote
 
 log = logging.getLogger(__name__)
 
-_s3_cache_expire = 30  # cache for 30 seconds
-_s3_sync_on_update = True  # sync cache on update rather than jit
+S3_CACHE_EXPIRE = 30  # cache for 30 seconds
+S3_SYNC_ON_UPDATE = True  # sync cache on update rather than jit
 
 
 def envs():
@@ -108,7 +108,7 @@ def update():
 
     metadata = _init()
 
-    if _s3_sync_on_update:
+    if S3_SYNC_ON_UPDATE:
         # sync the buckets to the local cache
         log.info('Syncing local cache from S3...')
         for saltenv, env_meta in six.iteritems(metadata):
@@ -335,16 +335,22 @@ def _init():
     Connect to S3 and download the metadata for each file in all buckets
     specified and cache the data to disk.
     '''
-
     cache_file = _get_buckets_cache_filename()
-    exp = time.time() - _s3_cache_expire
+    exp = time.time() - S3_CACHE_EXPIRE
 
     # check mtime of the buckets files cache
-    if os.path.isfile(cache_file) and os.path.getmtime(cache_file) > exp:
-        return _read_buckets_cache_file(cache_file)
-    else:
-        # bucket files cache expired
-        return _refresh_buckets_cache_file(cache_file)
+    metadata = None
+    try:
+        if os.path.getmtime(cache_file) > exp:
+            metadata = _read_buckets_cache_file(cache_file)
+    except OSError:
+        pass
+
+    if metadata is None:
+        # bucket files cache expired or does not exist
+        metadata = _refresh_buckets_cache_file(cache_file)
+
+    return metadata
 
 
 def _get_cache_dir():
@@ -467,7 +473,11 @@ def _read_buckets_cache_file(cache_file):
     log.debug('Reading buckets cache file')
 
     with salt.utils.fopen(cache_file, 'rb') as fp_:
-        data = pickle.load(fp_)
+        try:
+            data = pickle.load(fp_)
+        except (pickle.UnpicklingError, AttributeError, EOFError, ImportError,
+                IndexError, KeyError):
+            data = None
 
     return data
 
@@ -518,13 +528,17 @@ def _find_file_meta(metadata, bucket_name, saltenv, path):
     '''
     Looks for a file's metadata in the S3 bucket cache file
     '''
-
     env_meta = metadata[saltenv] if saltenv in metadata else {}
     bucket_meta = env_meta[bucket_name] if bucket_name in env_meta else {}
     files_meta = list(list(filter((lambda k: 'Key' in k), bucket_meta)))
 
     for item_meta in files_meta:
         if 'Key' in item_meta and item_meta['Key'] == path:
+            try:
+                # Get rid of quotes surrounding md5
+                item_meta['ETag'] = item_meta['ETag'].strip('"')
+            except KeyError:
+                pass
             return item_meta
 
 
