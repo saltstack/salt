@@ -16,7 +16,6 @@ import fnmatch
 import hashlib
 import imp
 import io
-import inspect
 import json
 import logging
 import os
@@ -76,12 +75,6 @@ except ImportError:
     HAS_WIN32API = False
 
 try:
-    import zmq
-except ImportError:
-    # Running as purely local
-    pass
-
-try:
     import grp
     HAS_GRP = True
 except ImportError:
@@ -139,27 +132,6 @@ ENDC = '\033[0m'
 
 log = logging.getLogger(__name__)
 _empty = object()
-
-
-def get_function_argspec(func):
-    '''
-    A small wrapper around getargspec that also supports callable classes
-    '''
-    if not callable(func):
-        raise TypeError('{0} is not a callable'.format(func))
-
-    if inspect.isfunction(func):
-        aspec = inspect.getargspec(func)
-    elif inspect.ismethod(func):
-        aspec = inspect.getargspec(func)
-        del aspec.args[0]  # self
-    elif isinstance(func, object):
-        aspec = inspect.getargspec(func.__call__)
-        del aspec.args[0]  # self
-    else:
-        raise TypeError('Cannot inspect argument list for {0!r}'.format(func))
-
-    return aspec
 
 
 def safe_rm(tgt):
@@ -825,7 +797,7 @@ def format_call(fun,
     ret['args'] = []
     ret['kwargs'] = {}
 
-    aspec = get_function_argspec(fun)
+    aspec = salt.utils.args.get_function_argspec(fun)
 
     args, kwargs = iter(arg_lookup(fun).values())
 
@@ -939,7 +911,7 @@ def arg_lookup(fun):
     function.
     '''
     ret = {'kwargs': {}}
-    aspec = get_function_argspec(fun)
+    aspec = salt.utils.args.get_function_argspec(fun)
     if aspec.defaults:
         ret['kwargs'] = dict(zip(aspec.args[::-1], aspec.defaults[::-1]))
     ret['args'] = [arg for arg in aspec.args if arg not in ret['kwargs']]
@@ -1426,8 +1398,6 @@ def check_include_exclude(path_str, include_pat=None, exclude_pat=None):
     return ret
 
 
-
-
 def gen_state_tag(low):
     '''
     Generate the running dict tag string from the low data structure
@@ -1792,8 +1762,6 @@ def date_format(date=None, format="%Y-%m-%d"):
     return date_cast(date).strftime(format)
 
 
-
-
 def warn_until(version,
                message,
                category=DeprecationWarning,
@@ -1844,6 +1812,7 @@ def warn_until(version,
     _version_ = salt.version.SaltStackVersion(*_version_info_)
 
     if _version_ >= version:
+        import inspect
         caller = inspect.getframeinfo(sys._getframe(stacklevel - 1))
         raise RuntimeError(
             'The warning triggered on filename {filename!r}, line number '
@@ -2042,7 +2011,7 @@ def argspec_report(functions, module=''):
     if _use_fnmatch:
         for fun in fnmatch.filter(functions, target_mod):
             try:
-                aspec = get_function_argspec(functions[fun])
+                aspec = salt.utils.args.get_function_argspec(functions[fun])
             except TypeError:
                 # this happens if not callable
                 continue
@@ -2059,7 +2028,7 @@ def argspec_report(functions, module=''):
         for fun in functions:
             if fun == module or fun.startswith(target_module):
                 try:
-                    aspec = get_function_argspec(functions[fun])
+                    aspec = salt.utils.args.get_function_argspec(functions[fun])
                 except TypeError:
                     # this happens if not callable
                     continue

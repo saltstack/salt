@@ -171,7 +171,7 @@ def load_args_and_kwargs(func, args, data=None):
     Detect the args and kwargs that need to be passed to a function call, and
     check them against what was passed.
     '''
-    argspec = salt.utils.get_function_argspec(func)
+    argspec = salt.utils.args.get_function_argspec(func)
     _args = []
     _kwargs = {}
     invalid_kwargs = []

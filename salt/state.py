@@ -827,7 +827,7 @@ class State(object):
                         )
         else:
             # First verify that the parameters are met
-            aspec = salt.utils.get_function_argspec(self.states[full])
+            aspec = salt.utils.args.get_function_argspec(self.states[full])
             arglen = 0
             deflen = 0
             if isinstance(aspec.args, list):
