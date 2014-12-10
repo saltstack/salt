@@ -14,6 +14,7 @@ from glob import glob
 # Import salt libs
 import salt.client
 import salt.output
+import salt.client.ssh
 from salt.config import _expand_glob_path
 
 from salt.utils import parsers, print_cli
@@ -394,12 +395,12 @@ class SaltCall(parsers.SaltCallOptionParser):
     '''
     Used to locally execute a salt command
     '''
+    import salt.cli.caller
 
     def run(self):
         '''
         Execute the salt call!
         '''
-        import salt.cli.caller
         self.parse_args()
 
         if self.config['verify_env']:
@@ -504,7 +505,6 @@ class SaltSSH(parsers.SaltSSHOptionParser):
     '''
 
     def run(self):
-        import salt.client.ssh
         self.parse_args()
 
         ssh = salt.client.ssh.SSH(self.config)
