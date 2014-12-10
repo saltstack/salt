@@ -32,7 +32,7 @@ __opts__ = {
 def _shlex_split(s):
     # from python:shlex.split: passing None for s will read
     # the string to split from standard input.
-    if s == None:
+    if s is None:
         ret = shlex.split('')
     else:
         ret = shlex.split(s)
