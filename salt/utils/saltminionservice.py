@@ -38,7 +38,7 @@ def _main():
     except win32service.error as details:
         if details[0] == winerror.ERROR_SERVICE_DOES_NOT_EXIST:
             instart(MinionService, servicename, 'Salt Minion')
-            sys.exit(os.EX_OK)
+            sys.exit(salt.exitcodes.EX_OK)
     if status[1] == win32service.SERVICE_RUNNING:
         win32serviceutil.StopServiceWithDeps(servicename)
         win32serviceutil.StartService(servicename)
