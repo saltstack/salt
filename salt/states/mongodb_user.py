@@ -2,6 +2,9 @@
 '''
 Management of Mongodb users
 ===========================
+
+.. note::
+    This module requires PyMongo to be installed.
 '''
 
 # Define the module's virtual name

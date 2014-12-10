@@ -746,7 +746,7 @@ class Schedule(object):
                 continue
 
             # Check if the seconds variable is lower than current lowest
-            # loop interval needed. If it is lower then overwrite variable
+            # loop interval needed. If it is lower than overwrite variable
             # external loops using can then check this variable for how often
             # they need to reschedule themselves
             # Not used with 'when' parameter, causes run away jobs and CPU

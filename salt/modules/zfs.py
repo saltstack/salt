@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
 Salt interface to ZFS commands
+
+:codeauthor: Nitin Madhok <nmadhok@clemson.edu>
 '''
 from __future__ import absolute_import
 
@@ -19,9 +21,10 @@ import salt.modules.cmdmod as salt_cmd
 
 log = logging.getLogger(__name__)
 
-# Function alias to set mapping. Filled
-# in later on.
-__func_alias__ = {}
+# Function alias to set mapping.
+__func_alias__ = {
+    'list_': 'list',
+}
 
 
 @decorators.memoize
@@ -213,7 +216,6 @@ def create(name, **kwargs):
         return ret
     else:
         ret['Error'] = res
-
     return ret
 
 
@@ -248,3 +250,82 @@ def destroy(name, **kwargs):
     else:
         ret['Error'] = res
     return ret
+
+
+def rename(name, new_name):
+    '''
+    .. versionadded:: Lithium
+
+    Rename or Relocate a ZFS File System.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zfs.rename myzpool/mydataset myzpool/renameddataset
+    '''
+    ret = {}
+    zfs = _check_zfs()
+    cmd = '{0} rename {1} {2}'.format(zfs, name, new_name)
+
+    res = __salt__['cmd.run'](cmd)
+    if not res:
+        ret[name] = 'Renamed/Relocated to {0}'.format(new_name)
+        return ret
+    else:
+        ret['Error'] = res
+    return ret
+
+
+def list_(name='', **kwargs):
+    '''
+    .. versionadded:: Lithium
+
+    Return a list of all datasets or a specified dataset on the system and the values of their used, available, referenced, and mountpoint properties.
+
+    .. note::
+
+        Information about the dataset and all of it\'s descendent datasets can be displayed
+        by passing ``recursive=True`` on the CLI.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zfs.list [recursive=True|False]
+        salt '*' zfs.list /myzpool/mydataset [recursive=True|False]
+
+    .. note::
+
+        Dataset property value output can be customized by passing an additional argument called
+        "properties" in the form of a python list::
+
+            properties="[property1, property2, property3]"
+
+        Example:
+
+        .. code-block:: bash
+
+            salt '*' zfs.list /myzpool/mydataset properties="[name, sharenfs, mountpoint]"
+
+    '''
+    zfs = _check_zfs()
+    recursive_opt = kwargs.get('recursive', False)
+    properties_opt = kwargs.get('properties', False)
+    cmd = '{0} list'.format(zfs)
+
+    if recursive_opt:
+        cmd = '{0} -r'.format(cmd)
+
+    if properties_opt:
+        cmd = '{0} -o {1}'.format(cmd, ','.join(properties_opt))
+
+    cmd = '{0} {1}'.format(cmd, name)
+
+    res = __salt__['cmd.run_all'](cmd)
+
+    if res['retcode'] == 0:
+        dataset_list = [l for l in res['stdout'].splitlines()]
+        return {'datasets': dataset_list}
+    else:
+        return {'Error': res['stderr']}

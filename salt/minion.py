@@ -67,6 +67,7 @@ import salt.utils.args
 import salt.utils.event
 import salt.utils.minion
 import salt.utils.schedule
+import salt.utils.zeromq
 import salt.defaults.exitcodes
 
 from salt.defaults import DEFAULT_TARGET_DELIM
@@ -170,7 +171,7 @@ def load_args_and_kwargs(func, args, data=None):
     Detect the args and kwargs that need to be passed to a function call, and
     check them against what was passed.
     '''
-    argspec = salt.utils.get_function_argspec(func)
+    argspec = salt.utils.args.get_function_argspec(func)
     _args = []
     _kwargs = {}
     invalid_kwargs = []
@@ -331,9 +332,9 @@ class MinionBase(object):
             )
         else:
             epub_uri = 'ipc://{0}'.format(epub_sock_path)
-            salt.utils.check_ipc_path_max_len(epub_uri)
+            salt.utils.zeromq.check_ipc_path_max_len(epub_uri)
             epull_uri = 'ipc://{0}'.format(epull_sock_path)
-            salt.utils.check_ipc_path_max_len(epull_uri)
+            salt.utils.zeromq.check_ipc_path_max_len(epull_uri)
 
         log.debug(
             '{0} PUB socket URI: {1}'.format(
@@ -2187,7 +2188,7 @@ class MultiSyndic(MinionBase):
         '''
         Attempt to connect to master, including back-off for each one
 
-        return boolean of wether you connected or not
+        return boolean of whether you connected or not
         '''
         if master not in self.master_syndics:
             log.error('Unable to connect to {0}, not in the list of masters'.format(master))

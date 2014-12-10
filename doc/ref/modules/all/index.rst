@@ -21,6 +21,7 @@ Full list of builtin execution modules
     apache
     aptpkg
     archive
+    artifactory
     at
     augeas_cfg
     aws_sqs
@@ -101,6 +102,8 @@ Full list of builtin execution modules
     introspect
     ipset
     iptables
+    jboss7
+    jboss7_cli
     junos
     key
     keyboard

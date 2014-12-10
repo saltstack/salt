@@ -44,7 +44,7 @@ def _cron_matched(cron, cmd, identifier=None):
       - but also be smart enough to remove states changed crons where we do
         not removed priorly by a cron.absent by matching on the provided
         identifier.
-        We assure retrocompatiblity by only checking on identifier if
+        We assure retrocompatibility by only checking on identifier if
         and only if an identifier was set on the serialized crontab
     '''
     ret, id_matched = False, None

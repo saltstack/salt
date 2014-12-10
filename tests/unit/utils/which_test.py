@@ -37,7 +37,7 @@ class TestWhich(integration.TestCase):
 
     # The mock patch bellow, since we're not providing the return value, we
     # will be able to tweak it within the test case. The testcase MUST accept
-    # an arguemnt which is the MagicMock'ed object
+    # an argument which is the MagicMock'ed object
     @patch('os.access')
     def test_existing_binary_in_windows(self, osaccess):
         # We define the side_effect attribute on the mocked object in order to
@@ -86,7 +86,7 @@ class TestWhich(integration.TestCase):
 
     # The mock patch bellow, since we're not providing the return value, we
     # will be able to tweak it within the test case. The testcase MUST accept
-    # an arguemnt which is the MagicMock'ed object
+    # an argument which is the MagicMock'ed object
     @patch('os.access')
     def test_existing_binary_in_windows_pathext(self, osaccess):
         # We define the side_effect attribute on the mocked object in order to

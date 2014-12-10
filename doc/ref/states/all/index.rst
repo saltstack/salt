@@ -16,6 +16,7 @@ Full list of builtin state modules
     apache_module
     apt
     archive
+    artifactory
     at
     augeas
     aws_sqs

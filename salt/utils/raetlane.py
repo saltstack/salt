@@ -162,7 +162,7 @@ def receive(share):
 
 def wait(share, timeout=0.0, delay=0.01):
     '''
-    Blocks until recieves a msg addressed to share or timeout
+    Blocks until receives a msg addressed to share or timeout
     Return msg or None if timed out
     Delay is sleep time between services
     '''

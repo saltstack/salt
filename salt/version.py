@@ -411,18 +411,7 @@ __saltstack_version__ = SaltStackVersion.from_last_named_version()
 
 
 # ----- Dynamic/Runtime Salt Version Information -------------------------------------------------------------------->
-def __get_version(saltstack_version):
-    '''
-    If we can get a version provided at installation time or from Git, use
-    that instead, otherwise we carry on.
-    '''
-    try:
-        # Try to import the version information provided at install time
-        from salt._version import __saltstack_version__  # pylint: disable=E0611,F0401
-        return __saltstack_version__
-    except ImportError:
-        pass
-
+def __discover_version(saltstack_version):
     # This might be a 'python setup.py develop' installation type. Let's
     # discover the version information at runtime.
     import os
@@ -485,6 +474,19 @@ def __get_version(saltstack_version):
             # developers
             raise
     return saltstack_version
+
+
+def __get_version(saltstack_version):
+    '''
+    If we can get a version provided at installation time or from Git, use
+    that instead, otherwise we carry on.
+    '''
+    try:
+        # Try to import the version information provided at install time
+        from salt._version import __saltstack_version__  # pylint: disable=E0611,F0401
+        return __saltstack_version__
+    except ImportError:
+        return __discover_version(saltstack_version)
 
 
 # Get additional version information if available

@@ -24,7 +24,6 @@ except Exception:
     pass
 
 # Import salt libs
-import salt.crypt
 import salt.utils
 import salt.utils.network
 import salt.syspaths
@@ -222,8 +221,6 @@ VALID_OPTS = {
     'publish_session': int,
     'reactor': list,
     'reactor_refresh_interval': int,
-    'reactor_worker_threads': int,
-    'reactor_worker_hwm': int,
     'serial': str,
     'search': str,
     'search_index_interval': int,
@@ -2045,6 +2042,7 @@ def apply_master_config(overrides=None, defaults=None):
     '''
     Returns master configurations dict.
     '''
+    import salt.crypt
     if defaults is None:
         defaults = DEFAULT_MASTER_OPTS
 

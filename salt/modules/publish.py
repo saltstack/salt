@@ -52,8 +52,8 @@ def _publish(
 
         salt system.example.com publish.publish '*' cmd.run 'ls -la /tmp'
     '''
-    if fun == 'publish.publish':
-        log.info('Function name is \'publish.publish\'. Returning {}')
+    if fun.startswith('publish.'):
+        log.info('Cannot publish publish calls. Returning {}')
         return {}
 
     if not isinstance(arg, list):
@@ -223,7 +223,8 @@ def full_data(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
                     expr_form=expr_form,
                     returner=returner,
                     timeout=timeout,
-                    form='full')
+                    form='full',
+                    wait=True)
 
 
 def runner(fun, arg=None, timeout=5):

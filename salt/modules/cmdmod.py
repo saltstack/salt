@@ -913,6 +913,10 @@ def retcode(cmd,
     Note that ``env`` represents the environment variables for the command, and
     should be formatted as a dict, or a YAML string which resolves to a dict.
 
+    :rtype: int
+    :rtype: None
+    :returns: Return Code as an int or None if there was an exception.
+
     CLI Example:
 
     .. code-block:: bash

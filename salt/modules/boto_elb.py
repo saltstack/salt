@@ -46,7 +46,10 @@ log = logging.getLogger(__name__)
 try:
     import boto
     import boto.ec2
-    import boto.ec2.elb as elb
+    from boto.ec2.elb import HealthCheck
+    from boto.ec2.elb.attributes import AccessLogAttribute
+    from boto.ec2.elb.attributes import ConnectionDrainingAttribute
+    from boto.ec2.elb.attributes import CrossZoneLoadBalancingAttribute
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
@@ -77,8 +80,13 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
     if not conn:
         return False
     try:
-        conn.get_all_load_balancers(load_balancer_names=[name])
-        return True
+        elb = conn.get_all_load_balancers(load_balancer_names=[name])
+        if elb:
+            return True
+        else:
+            msg = 'The load balancer does not exist in region {0}'.format(region)
+            log.debug(msg)
+            return False
     except boto.exception.BotoServerError as e:
         log.debug(e)
         return False
@@ -384,13 +392,17 @@ def get_attributes(name, region=None, key=None, keyid=None, profile=None):
         ret = odict.OrderedDict()
         ret['access_log'] = odict.OrderedDict()
         ret['cross_zone_load_balancing'] = odict.OrderedDict()
+        ret['connection_draining'] = odict.OrderedDict()
         al = lbattrs.access_log
         czlb = lbattrs.cross_zone_load_balancing
+        cd = lbattrs.connection_draining
         ret['access_log']['enabled'] = al.enabled
         ret['access_log']['s3_bucket_name'] = al.s3_bucket_name
         ret['access_log']['s3_bucket_prefix'] = al.s3_bucket_prefix
         ret['access_log']['emit_interval'] = al.emit_interval
         ret['cross_zone_load_balancing']['enabled'] = czlb.enabled
+        ret['connection_draining']['enabled'] = cd.enabled
+        ret['connection_draining']['timeout'] = cd.timeout
         return ret
     except boto.exception.BotoServerError as e:
         log.debug(e)
@@ -412,11 +424,12 @@ def set_attributes(name, attributes, region=None, key=None, keyid=None,
         return False
     al = attributes.get('access_log', {})
     czlb = attributes.get('cross_zone_load_balancing', {})
-    if not al and not czlb:
+    cd = attributes.get('connection_draining', {})
+    if not al and not czlb and not cd:
         log.error('No supported attributes for ELB.')
         return False
     if al:
-        _al = elb.attributes.AccessLogAttribute()
+        _al = AccessLogAttribute()
         _al.enabled = al.get('enabled', False)
         if not _al.enabled:
             msg = 'Access log attribute configured, but enabled config missing'
@@ -433,7 +446,7 @@ def set_attributes(name, attributes, region=None, key=None, keyid=None,
             log.error(msg.format(name))
             return False
     if czlb:
-        _czlb = elb.attributes.CrossZoneLoadBalancingAttribute()
+        _czlb = CrossZoneLoadBalancingAttribute()
         _czlb.enabled = czlb['enabled']
         added_attr = conn.modify_lb_attribute(name, 'crossZoneLoadBalancing',
                                               _czlb.enabled)
@@ -442,6 +455,17 @@ def set_attributes(name, attributes, region=None, key=None, keyid=None,
             log.info(msg.format(name))
         else:
             log.error('Failed to add cross_zone_load_balancing attribute.')
+            return False
+    if cd:
+        _cd = ConnectionDrainingAttribute()
+        _cd.enabled = cd['enabled']
+        _cd.timeout = cd.get('timeout', 300)
+        added_attr = conn.modify_lb_attribute(name, 'connectionDraining', _cd)
+        if added_attr:
+            msg = 'Added connection_draining attribute to {0} elb.'
+            log.info(msg.format(name))
+        else:
+            log.error('Failed to add connection_draining attribute.')
             return False
     return True
 
@@ -486,7 +510,7 @@ def set_health_check(name, health_check, region=None, key=None, keyid=None,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    hc = elb.HealthCheck(**health_check)
+    hc = HealthCheck(**health_check)
     try:
         conn.configure_health_check(name, hc)
         log.info('Configured health check on ELB {0}'.format(name))
@@ -644,7 +668,7 @@ def _get_conn(region, key, keyid, profile):
         keyid = __salt__['config.option']('elb.keyid')
 
     try:
-        conn = elb.connect_to_region(region, aws_access_key_id=keyid,
+        conn = boto.ec2.elb.connect_to_region(region, aws_access_key_id=keyid,
                                               aws_secret_access_key=key)
     except boto.exception.NoAuthHandlerFound:
         log.error('No authentication credentials found when attempting to'
