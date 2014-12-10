@@ -178,8 +178,7 @@ def create(path,
         if python is not None and python.strip() != '':
             if not salt.utils.which(python):
                 raise salt.exceptions.CommandExecutionError(
-                    'Requested python ({0}) does not appear '
-                    'executable.'.format(python)
+                    'Cannot find requested python ({0}).'.format(python)
                 )
             cmd.append('--python={0}'.format(python))
         if extra_search_dir is not None:
