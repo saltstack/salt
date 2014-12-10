@@ -16,7 +16,6 @@ import time
 import signal
 import logging
 import multiprocessing
-import re
 from itertools import groupby
 from salt.ext.six.moves import input
 
@@ -1813,10 +1812,9 @@ class Map(Cloud):
             for alias, drivers in pmap.items():
                 for driver, vms in drivers.items():
                     for vm_name, details in vms.items():
-                        if re.match(name + '(?:-i-[a-fA-F0-9]+)?',vm_name):
+                        if vm_name == name:
                             if driver not in matches:
-                                matches[driver] = []
-                            matches[driver].append(details['state'])
+                                matches[driver] = details['state']
             return matches
 
         for alias, drivers in pmap.items():
@@ -1832,33 +1830,32 @@ class Map(Cloud):
                         continue
 
                     # A machine by the same name exists
-                    for mdriver, states in matching.items():
-                        for state in states:
-                            if name not in ret['create']:
-                                # Machine already removed
-                                break
+                    for mdriver, state in matching.items():
+                        if name not in ret['create']:
+                            # Machine already removed
+                            break
 
-                            if mdriver not in ('aws', 'ec2') and \
-                                    state.lower() != 'terminated':
-                                # Regarding other providers, simply remove
-                                # them for the create map.
-                                log.warn(
-                                    '{0!r} already exists, removing from '
-                                    'the create map'.format(name)
-                                )
-                                if 'existing' not in ret:
-                                    ret['existing'] = {}
-                                ret['existing'][name] = ret['create'].pop(name)
-                                continue
+                        if mdriver not in ('aws', 'ec2') and \
+                                state.lower() != 'terminated':
+                            # Regarding other providers, simply remove
+                            # them for the create map.
+                            log.warn(
+                                '{0!r} already exists, removing from '
+                                'the create map'.format(name)
+                            )
+                            if 'existing' not in ret:
+                                ret['existing'] = {}
+                            ret['existing'][name] = ret['create'].pop(name)
+                            continue
 
-                            if state.lower() != 'terminated':
-                                log.info(
-                                    '{0!r} already exists, removing '
-                                    'from the create map'.format(name)
-                                )
-                                if 'existing' not in ret:
-                                    ret['existing'] = {}
-                                ret['existing'][name] = ret['create'].pop(name)
+                        if state.lower() != 'terminated':
+                            log.info(
+                                '{0!r} already exists, removing '
+                                'from the create map'.format(name)
+                            )
+                            if 'existing' not in ret:
+                                ret['existing'] = {}
+                            ret['existing'][name] = ret['create'].pop(name)
 
         if 'hard' in self.opts and self.opts['hard']:
             if self.opts['enable_hard_maps'] is False:

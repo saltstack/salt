@@ -2894,8 +2894,6 @@ def _extract_instance_info(instances):
         if isinstance(instance['instancesSet']['item'], list):
             for item in instance['instancesSet']['item']:
                 name = _extract_name_tag(item)
-                if name in ret:
-                    name = name + '-' + item['instanceId']
                 ret[name] = item
                 ret[name].update(
                     dict(
@@ -2910,8 +2908,6 @@ def _extract_instance_info(instances):
         else:
             item = instance['instancesSet']['item']
             name = _extract_name_tag(item)
-            if name in ret:
-                name = name + '-' + item['instanceId']
             ret[name] = item
             ret[name].update(
                 dict(
