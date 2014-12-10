@@ -1016,7 +1016,7 @@ def get_spot_config(vm_):
 
 def get_provider(vm_=None):
     '''
-    Extract the provider name from vm_
+    Extract the provider name from vm
     '''
     if vm_ is None:
         provider = __active_provider_name__ or 'ec2'
@@ -1393,6 +1393,22 @@ def request_instance(vm_=None, call=None):
 
     image_id = vm_['image']
     params[spot_prefix + 'ImageId'] = image_id
+
+    userdata_file = config.get_cloud_config_value(
+        'userdata_file', vm_, __opts__, search_global=False, default=None
+    )
+    if userdata_file is None:
+        userdata = config.get_cloud_config_value(
+            'userdata', vm_, __opts__, search_global=False, default=None
+        )
+    else:
+        log.trace('userdata_file: {0}'.format(userdata_file))
+        if os.path.exists(userdata_file):
+            with salt.utils.fopen(userdata_file, 'r') as fh_:
+                userdata = fh_.read()
+
+    if userdata is not None:
+        params['UserData'] = base64.b64encode(userdata)
 
     vm_size = config.get_cloud_config_value(
         'size', vm_, __opts__, search_global=False
@@ -1889,6 +1905,25 @@ def wait_for_instance(
         win_passwd = config.get_cloud_config_value(
             'win_password', vm_, __opts__, default=''
         )
+        if win_passwd and win_passwd == 'auto':
+            log.debug('Waiting for auto-generated Windows EC2 password')
+            while True:
+                password_data = get_password_data(
+                    name=vm_['name'],
+                    kwargs={
+                        'key_file': vm_['private_key'],
+                    },
+                    call='action',
+                )
+                log.debug(password_data)
+                win_passwd = password_data.get('password', None)
+                if win_passwd is None:
+                    # This wait is so high, because the password is unlikely to
+                    # be generated for at least 4 minutes
+                    time.sleep(60)
+                else:
+                    break
+
         if not salt.utils.cloud.wait_for_port(ip_address,
                                               port=445,
                                               timeout=ssh_connect_timeout):
@@ -3862,7 +3897,7 @@ def get_password_data(
 
     ret = {}
     data = aws.query(params,
-                     return_url=True,
+                     return_root=True,
                      location=get_location(),
                      provider=get_provider(),
                      opts=__opts__,

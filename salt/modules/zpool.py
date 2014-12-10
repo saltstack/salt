@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
 Module for running ZFS zpool command
+
+:codeauthor: Nitin Madhok <nmadhok@clemson.edu>
 '''
 from __future__ import absolute_import
 
@@ -99,7 +101,7 @@ def list_():
 def zpool_list():
     '''
     .. deprecated:: 2014.7.0
-       Use :py:func:`~salt.modules.zpool.list` instead.
+       Use :py:func:`~salt.modules.zpool.list_` instead.
 
     Return a list of all pools in the system with health status and space usage
 
