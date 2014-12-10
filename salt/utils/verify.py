@@ -156,7 +156,7 @@ def verify_files(files, user):
         err = ('Failed to prepare the Salt environment for user '
                '{0}. The user is not available.\n').format(user)
         sys.stderr.write(err)
-        sys.exit(os.EX_NOUSER)
+        sys.exit(salt.exitcodes.EX_NOUSER)
     for fn_ in files:
         dirname = os.path.dirname(fn_)
         try:
@@ -197,7 +197,7 @@ def verify_env(dirs, user, permissive=False, pki_dir=''):
         err = ('Failed to prepare the Salt environment for user '
                '{0}. The user is not available.\n').format(user)
         sys.stderr.write(err)
-        sys.exit(os.EX_NOUSER)
+        sys.exit(salt.exitcodes.EX_NOUSER)
     for dir_ in dirs:
         if not dir_:
             continue
