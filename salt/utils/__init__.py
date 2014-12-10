@@ -32,7 +32,6 @@ import tempfile
 import time
 import types
 import warnings
-import yaml
 import string
 import locale
 from calendar import month_abbr as months
@@ -1793,47 +1792,6 @@ def date_format(date=None, format="%Y-%m-%d"):
     return date_cast(date).strftime(format)
 
 
-def yaml_dquote(text):
-    """Make text into a double-quoted YAML string with correct escaping
-    for special characters.  Includes the opening and closing double
-    quote characters.
-    """
-    with io.StringIO() as ostream:
-        yemitter = yaml.emitter.Emitter(ostream)
-        yemitter.write_double_quoted(six.text_type(text))
-        return ostream.getvalue()
-
-
-def yaml_squote(text):
-    """Make text into a single-quoted YAML string with correct escaping
-    for special characters.  Includes the opening and closing single
-    quote characters.
-    """
-    with io.StringIO() as ostream:
-        yemitter = yaml.emitter.Emitter(ostream)
-        yemitter.write_single_quoted(six.text_type(text))
-        return ostream.getvalue()
-
-
-def yaml_encode(data):
-    """A simple YAML encode that can take a single-element datatype and return
-    a string representation.
-    """
-    yrepr = yaml.representer.SafeRepresenter()
-    ynode = yrepr.represent_data(data)
-    if not isinstance(ynode, yaml.ScalarNode):
-        raise TypeError(
-            "yaml_encode() only works with YAML scalar data;"
-            " failed for {0}".format(type(data))
-        )
-
-    tag = ynode.tag.rsplit(':', 1)[-1]
-    ret = ynode.value
-
-    if tag == "str":
-        ret = yaml_dquote(ynode.value)
-
-    return ret
 
 
 def warn_until(version,
@@ -2213,6 +2171,7 @@ def repack_dictlist(data):
     '''
     if isinstance(data, string_types):
         try:
+            import yaml
             data = yaml.safe_load(data)
         except yaml.parser.ParserError as err:
             log.error(err)
