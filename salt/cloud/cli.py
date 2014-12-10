@@ -77,7 +77,7 @@ class SaltCloud(parsers.SaltCloudParser):
                 self.options.output, self.config
             )
             print(display_output(ret))
-            self.exit(os.EX_OK)
+            self.exit(salt.exitcodes.EX_OK)
 
         log.info('salt-cloud starting')
         mapper = salt.cloud.Map(self.config)
@@ -150,7 +150,7 @@ class SaltCloud(parsers.SaltCloudParser):
 
             if not matching:
                 print('No machines were found to be destroyed')
-                self.exit(os.EX_OK)
+                self.exit(salt.exitcodes.EX_OK)
 
             msg = 'The following virtual machines are set to be destroyed:\n'
             names = set()
@@ -311,7 +311,7 @@ class SaltCloud(parsers.SaltCloudParser):
         )
         # display output using salt's outputter system
         print(display_output(ret))
-        self.exit(os.EX_OK)
+        self.exit(salt.exitcodes.EX_OK)
 
     def print_confirm(self, msg):
         if self.options.assume_yes:
