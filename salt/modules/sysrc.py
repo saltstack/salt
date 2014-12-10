@@ -4,17 +4,16 @@ sysrc module for FreeBSD
 '''
 from __future__ import absolute_import
 
-import salt
 import salt.utils
-
-from salt.utils.decorators import depends
 from salt.exceptions import CommandExecutionError
+
 
 def __virtual__():
     '''
     Only runs if sysrc exists
     '''
     return __salt__['cmd.has_exec']('sysrc')
+
 
 def get(**kwargs):
     '''
@@ -42,9 +41,8 @@ def get(**kwargs):
     if 'jail' in kwargs:
         cmd += ' -j '+kwargs['jail']
 
-    sysrcs = __salt__['cmd.run'](cmd)
+    sysrcs = __salt__['cmd.run'](cmd, python_shell=False)
     if "sysrc: unknown variable" in sysrcs:
-        # raise CommandExecutionError(sysrcs)
         return None
 
     ret = {}
@@ -52,10 +50,11 @@ def get(**kwargs):
         rcfile = sysrc.split(': ')[0]
         var = sysrc.split(': ')[1]
         val = sysrc.split(': ')[2]
-        if not rcfile in ret:
+        if rcfile not in ret:
             ret[rcfile] = {}
         ret[rcfile][var] = val
     return ret
+
 
 def set(name, value, **kwargs):
     '''
@@ -78,21 +77,18 @@ def set(name, value, **kwargs):
 
     cmd += ' '+name+"="+value
 
-    sysrcs = __salt__['cmd.run'](cmd)
+    sysrcs = __salt__['cmd.run'](cmd, python_shell=False)
 
     ret = {}
     for sysrc in sysrcs.split("\n"):
         rcfile = sysrc.split(': ')[0]
         var = sysrc.split(': ')[1]
-        oldval = sysrc.split(': ')[2].split(" -> ")[0]
         newval = sysrc.split(': ')[2].split(" -> ")[1]
-        if not rcfile in ret:
+        if rcfile not in ret:
             ret[rcfile] = {}
-        #ret[rcfile][var] = {}
-        #ret[rcfile][var]['old'] = oldval
-        #ret[rcfile][var]['new'] = newval
         ret[rcfile][var] = newval
     return ret
+
 
 def remove(name, **kwargs):
     '''
@@ -115,7 +111,7 @@ def remove(name, **kwargs):
 
     cmd += ' -x '+name
 
-    sysrcs = __salt__['cmd.run'](cmd)
+    sysrcs = __salt__['cmd.run'](cmd, python_shell=False)
     if "sysrc: unknown variable" in sysrcs:
         raise CommandExecutionError(sysrcs)
     else:
