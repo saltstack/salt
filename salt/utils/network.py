@@ -978,7 +978,7 @@ def _freebsd_remotes_on(port, which_end):
     Returns set of ipv4 host addresses of remote established connections
     on local tcp port port.
 
-    Parses output of shell 'sockstat' (FreeBSD) 
+    Parses output of shell 'sockstat' (FreeBSD)
     to get connections
 
     $ sudo sockstat -4
@@ -1008,7 +1008,7 @@ def _freebsd_remotes_on(port, which_end):
         chunks = line.split()
         if not chunks:
             continue
-        # ['root', 'python2.7', '1456', '37', 'tcp4', 
+        # ['root', 'python2.7', '1456', '37', 'tcp4',
         #  '127.0.0.1:4505-', '127.0.0.1:55703']
         #print chunks
         if 'COMMAND' in chunks[1]:

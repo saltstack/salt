@@ -175,7 +175,7 @@ class NetworkTestCase(TestCase):
     def test_freebsd_remotes_on(self):
         with patch('salt.utils.is_sunos', lambda: False):
             with patch('salt.utils.is_freebsd', lambda: True):
-                with patch('subprocess.check_output', 
+                with patch('subprocess.check_output',
                            return_value=FREEBSD_SOCKSTAT):
                     remotes = network._freebsd_remotes_on('4506', 'remote')
                     self.assertEqual(remotes, set(['127.0.0.1']))
