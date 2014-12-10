@@ -312,9 +312,9 @@ class SaltCP(parsers.SaltCPOptionParser):
     '''
     Run the salt-cp command line client
     '''
-    import salt.cli.cp
 
     def run(self):
+        import salt.cli.cp
         '''
         Execute salt-cp
         '''
