@@ -4,17 +4,15 @@ sysrc module for FreeBSD
 '''
 from __future__ import absolute_import
 
-import salt
-import salt.utils
-
-from salt.utils.decorators import depends
 from salt.exceptions import CommandExecutionError
+
 
 def __virtual__():
     '''
     Only runs if sysrc exists
     '''
     return __salt__['cmd.has_exec']('sysrc')
+
 
 def get(**kwargs):
     '''
@@ -57,6 +55,7 @@ def get(**kwargs):
         ret[rcfile][var] = val
     return ret
 
+
 def set(name, value, **kwargs):
     '''
     Set system rc configuration variables
@@ -93,6 +92,7 @@ def set(name, value, **kwargs):
         #ret[rcfile][var]['new'] = newval
         ret[rcfile][var] = newval
     return ret
+
 
 def remove(name, **kwargs):
     '''

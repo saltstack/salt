@@ -1,12 +1,13 @@
-import salt.exceptions
-
+# -*- coding: utf-8 -*-
 # define the module's virtual name
+
 
 def __virtual__():
     '''
     Only load if sysrc executable exists
     '''
     return __salt__['cmd.has_exec']('sysrc')
+
 
 def managed(name, value, **kwargs):
     '''
@@ -26,14 +27,14 @@ def managed(name, value, **kwargs):
 
     # Check the current state
     current_state = __salt__['sysrc.get'](name=name, **kwargs)
-    if current_state != None:
+    if current_state is not None:
         for rcname, rcdict in current_state.iteritems():
             if rcdict[name] == value:
                 ret['result'] = True
                 ret['comment'] = '{0} is already set to the desired value.'.format(name)
                 return ret
 
-    if __opts__['test'] == True:
+    if __opts__['test'] is True:
         ret['comment'] = 'The value of "{0}" will be changed!'.format(name)
         ret['changes'] = {
             'old': current_state,
@@ -58,6 +59,7 @@ def managed(name, value, **kwargs):
 
     return ret
 
+
 def absent(name, **kwargs):
     '''
     Ensure a sysrc variable is absent.
@@ -74,12 +76,12 @@ def absent(name, **kwargs):
 
     # Check the current state
     current_state = __salt__['sysrc.get'](name=name, **kwargs)
-    if current_state == None:
+    if current_state is None:
         ret['result'] = True
         ret['comment'] = '"{0}" is already absent.'.format(name)
         return ret
 
-    if __opts__['test'] == True:
+    if __opts__['test'] is True:
         ret['comment'] = '"{0}" will be removed!'.format(name)
         ret['changes'] = {
             'old': current_state,
