@@ -1120,20 +1120,33 @@ def replace(path,
 
     # Avoid TypeErrors by forcing repl to be a string
     repl = str(repl)
+
+    found = False
+
+    # First check the whole file, whether the replacement has already been made
     try:
+        # open the file read-only and inplace=False, otherwise the result
+        # will be an empty file after iterating over it just for searching
         fi_file = fileinput.input(path,
-                        inplace=not (dry_run or search_only),
-                        backup=False if dry_run else backup,
+                        inplace=False,
                         bufsize=bufsize,
-                        mode='r' if (dry_run or search_only) else 'rb')
-        found = False
-        # First check the whole file, whether the replacement has already been made
+                        mode='r')
+
         for line in fi_file:
             result = re.search(repl, line)
             if result:
                 if search_only:
                     return True
                 found = True
+    finally:
+        fi_file.close()
+
+    try:
+        fi_file = fileinput.input(path,
+                        inplace=not (dry_run or search_only),
+                        backup=False if dry_run else backup,
+                        bufsize=bufsize,
+                        mode='r' if (dry_run or search_only) else 'rb')
 
         if not found:
             for line in fi_file:
