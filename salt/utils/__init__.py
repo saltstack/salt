@@ -1090,7 +1090,7 @@ def flopen(*args, **kwargs):
                 fcntl.flock(fp_.fileno(), fcntl.LOCK_UN)
 
 
-def expr_match(expr, line):
+def expr_match(line, expr):
     '''
     Evaluate a line of text against an expression. First try a full-string
     match, next try globbing, and then try to match assuming expr is a regular
