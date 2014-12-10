@@ -45,6 +45,7 @@ def set_(name, target, parameter=None, module_parameter=None, action_parameter=N
 
     parameter
         additional params passed to the defined action
+
         .. deprecated:: Lithium
 
     '''
