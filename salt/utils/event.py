@@ -72,6 +72,7 @@ import salt.loader
 import salt.utils
 import salt.utils.cache
 import salt.utils.process
+import salt.utils.zeromq
 log = logging.getLogger(__name__)
 
 # The SUB_EVENT set is for functions that require events fired based on
@@ -192,12 +193,12 @@ class SaltEvent(object):
                     sock_dir,
                     'master_event_pub.ipc'
                     ))
-            salt.utils.check_ipc_path_max_len(puburi)
+            salt.utils.zeromq.check_ipc_path_max_len(puburi)
             pulluri = 'ipc://{0}'.format(os.path.join(
                     sock_dir,
                     'master_event_pull.ipc'
                     ))
-            salt.utils.check_ipc_path_max_len(pulluri)
+            salt.utils.zeromq.check_ipc_path_max_len(pulluri)
         else:
             if self.opts.get('ipc_mode', '') == 'tcp':
                 puburi = 'tcp://127.0.0.1:{0}'.format(
@@ -211,12 +212,12 @@ class SaltEvent(object):
                         sock_dir,
                         'minion_event_{0}_pub.ipc'.format(id_hash)
                         ))
-                salt.utils.check_ipc_path_max_len(puburi)
+                salt.utils.zeromq.check_ipc_path_max_len(puburi)
                 pulluri = 'ipc://{0}'.format(os.path.join(
                         sock_dir,
                         'minion_event_{0}_pull.ipc'.format(id_hash)
                         ))
-                salt.utils.check_ipc_path_max_len(pulluri)
+                salt.utils.zeromq.check_ipc_path_max_len(pulluri)
         log.debug(
             '{0} PUB socket URI: {1}'.format(self.__class__.__name__, puburi)
         )
@@ -567,13 +568,13 @@ class EventPublisher(multiprocessing.Process):
         epub_uri = 'ipc://{0}'.format(
                 os.path.join(self.opts['sock_dir'], 'master_event_pub.ipc')
                 )
-        salt.utils.check_ipc_path_max_len(epub_uri)
+        salt.utils.zeromq.check_ipc_path_max_len(epub_uri)
         # Prepare master event pull socket
         self.epull_sock = self.context.socket(zmq.PULL)
         epull_uri = 'ipc://{0}'.format(
                 os.path.join(self.opts['sock_dir'], 'master_event_pull.ipc')
                 )
-        salt.utils.check_ipc_path_max_len(epull_uri)
+        salt.utils.zeromq.check_ipc_path_max_len(epull_uri)
 
         # Start the master event publisher
         old_umask = os.umask(0o177)

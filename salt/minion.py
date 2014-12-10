@@ -67,6 +67,7 @@ import salt.utils.args
 import salt.utils.event
 import salt.utils.minion
 import salt.utils.schedule
+import salt.utils.zeromq
 import salt.defaults.exitcodes
 
 from salt.defaults import DEFAULT_TARGET_DELIM
@@ -331,9 +332,9 @@ class MinionBase(object):
             )
         else:
             epub_uri = 'ipc://{0}'.format(epub_sock_path)
-            salt.utils.check_ipc_path_max_len(epub_uri)
+            salt.utils.zeromq.check_ipc_path_max_len(epub_uri)
             epull_uri = 'ipc://{0}'.format(epull_sock_path)
-            salt.utils.check_ipc_path_max_len(epull_uri)
+            salt.utils.zeromq.check_ipc_path_max_len(epull_uri)
 
         log.debug(
             '{0} PUB socket URI: {1}'.format(
