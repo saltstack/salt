@@ -121,7 +121,7 @@ def main(argv):
 
         if not os.path.isdir(OPTIONS.saltdir):
             sys.stderr.write('ERROR: salt path "{0}" exists but is not a directory\n'.format(OPTIONS.saltdir))
-            sys.exit(os.EX_CANTCREAT)
+            sys.exit(salt.exitcodes.EX_CANTCREAT)
 
         version_path = os.path.join(OPTIONS.saltdir, 'version')
         if not os.path.exists(version_path) or not os.path.isfile(version_path):
