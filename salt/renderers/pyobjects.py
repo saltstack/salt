@@ -415,15 +415,13 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
                 imports = list(state_locals.keys())
 
             for name in imports:
-                name = name.strip()
+                name = alias = name.strip()
 
                 matches = re.match(FROM_AS_RE, name)
                 if matches is not None:
                     name = matches.group(1).strip()
                     alias = matches.group(2).strip()
-                else:
-                    alais = name
-                
+
                 if name not in state_locals:
                     raise ImportError("{0!r} was not found in {1!r}".format(
                         name,
