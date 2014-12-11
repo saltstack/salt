@@ -6,6 +6,7 @@ lxc / Spin up and control LXC containers
 __docformat__ = 'restructuredtext en'
 
 # Import salt libs
+import salt.utils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 
