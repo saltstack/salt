@@ -18,8 +18,7 @@ import stat
 THIN_ARCHIVE = 'salt-thin.tgz'
 EXT_ARCHIVE = 'salt-ext_mods.tgz'
 
-# FIXME - it would be ideal if these could be obtained directly from
-#         salt.exitcodes rather than duplicated.
+# Keep these in sync with salt/exitcodes.py
 EX_THIN_DEPLOY = 11
 EX_THIN_CHECKSUM = 12
 EX_MOD_DEPLOY = 13
