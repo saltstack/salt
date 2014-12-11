@@ -41,7 +41,7 @@ def _cmd(binary, *args):
     binary = salt.utils.which(binary)
     if binary:
         return __salt__['cmd.run_stdout']('{0} {1}'.format(binary,
-            ' '.join(args)))
+                                                           ' '.join(args)))
 
 
 def atq(tag=None):
@@ -210,10 +210,14 @@ def at(*args, **kwargs):  # pylint: disable=C0103
     # Ensure untrusted input is quoted when passing to shell
     if 'tag' in kwargs:
         cmd = '{4} "### SALT: {0}\n{1}" | {2} {3}'.format(_cmd_quote(kwargs['tag']),
-            cmd_quote(' '.join(args[1:])), binary, _cmd_quote(args[0]), echo_cmd)
+                                                          _cmd_quote(' '.join(args[1:])),
+                                                          binary,
+                                                          _cmd_quote(args[0]),
+                                                          echo_cmd)
     else:
-        cmd = '{3} {1} | {2} {0}'.format(_cmd_quote(args[0]), _cmd_quote(' '.join(args[1:])),
-            binary, echo_cmd)
+        cmd = '{3} {1} | {2} {0}'.format(_cmd_quote(args[0]),
+                                         _cmd_quote(' '.join(args[1:])),
+                                         binary, echo_cmd)
 
     # Can't use _cmd here since we need to prepend 'echo_cmd'
     if 'runas' in kwargs:
