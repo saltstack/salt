@@ -693,6 +693,7 @@ def install(name=None,
 
             salt '*' pkg.install <extended regular expression> pcre=True
     '''
+    import pdb; pdb.set_trace()
     try:
         pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
             name, pkgs, sources, **kwargs
@@ -721,7 +722,7 @@ def install(name=None,
         opts += 'q'
     if salt.utils.is_true(reinstall_requires):
         opts += 'R'
-    if salt.utils.is_true(fromrepo):
+    if fromrepo: 
         repo_opts += 'r {0}'.format(fromrepo)
     if salt.utils.is_true(regex):
         opts += 'x'
@@ -1495,11 +1496,11 @@ def fetch(name,
     if opts:
         opts = '-' + opts
     if repo_opts:
-        opts = '-' + repo_opts
+        repo_opts = '-' + repo_opts
 
     return __salt__['cmd.run'](
         '{0} fetch -y {1} {2} {3}'.format(
-            _pkg(jail, chroot), opts, name
+            _pkg(jail, chroot), opts, repo_opts, name
         ),
         output_loglevel='trace'
     )
