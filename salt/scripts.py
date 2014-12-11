@@ -45,8 +45,8 @@ def salt_master():
     '''
     Start the salt master.
     '''
-    import salt
-    master = salt.Master()
+    import salt.cli.daemons
+    master = salt.cli.daemons.Master()
     master.start()
 
 
@@ -54,7 +54,7 @@ def minion_process(queue):
     '''
     Start a minion process
     '''
-    import salt
+    import salt.cli.daemons
     # salt_minion spawns this function in a new process
 
     def suicide_when_without_parent(parent_pid):
@@ -78,7 +78,7 @@ def minion_process(queue):
     restart = False
     minion = None
     try:
-        minion = salt.Minion()
+        minion = salt.cli.daemons.Minion()
         minion.start()
     except (Exception, SaltClientError, SaltReqTimeoutError, SaltSystemExit) as exc:
         log.error(exc)
@@ -104,7 +104,7 @@ def salt_minion():
     '''
     Start the salt minion.
     '''
-    import salt
+    import salt.cli.daemons
     import multiprocessing
     if '' in sys.path:
         sys.path.remove('')
@@ -130,7 +130,7 @@ def salt_minion():
             queue = multiprocessing.Queue()
         except Exception:
             # This breaks in containers
-            minion = salt.Minion()
+            minion = salt.cli.daemons.Minion()
             minion.start()
             return
         process = multiprocessing.Process(target=minion_process, args=(queue,))
@@ -163,10 +163,10 @@ def salt_syndic():
     '''
     Start the salt syndic.
     '''
-    import salt
+    import salt.cli.daemons
     pid = os.getpid()
     try:
-        syndic = salt.Syndic()
+        syndic = salt.cli.daemons.Syndic()
         syndic.start()
     except KeyboardInterrupt:
         os.kill(pid, 15)

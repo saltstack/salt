@@ -5,7 +5,6 @@ from __future__ import absolute_import
 import os
 import sys
 
-import salt.output
 from salt.utils import parsers, print_cli
 from salt.utils.verify import verify_files
 from salt.exceptions import (
@@ -236,12 +235,14 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         print_cli('-------------------------------------------')
 
     def _progress_end(self, out):
+        import salt.output
         salt.output.progress_end(self.progress_bar)
 
     def _progress_ret(self, progress, out):
         '''
         Print progress events
         '''
+        import salt.output
         # Get the progress bar
         if not hasattr(self, 'progress_bar'):
             self.progress_bar = salt.output.get_progress(self.config, out, progress)
@@ -251,6 +252,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         '''
         Print the output from a single return to the terminal
         '''
+        import salt.output
         # Handle special case commands
         if self.config['fun'] == 'sys.doc' and not isinstance(ret, Exception):
             self._print_docs(ret)
@@ -279,6 +281,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         '''
         Print out the docstrings for all of the functions on the minions
         '''
+        import salt.output
         docs = {}
         if not ret:
             self.exit(2, 'No minions found to gather docs from\n')
