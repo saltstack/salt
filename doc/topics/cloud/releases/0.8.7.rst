@@ -277,4 +277,3 @@ sharing some of the same configuration:
         user: my-production-user@mycorp.com
         location: us-east-1
         availability_zone: us-east-1
-

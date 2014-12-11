@@ -118,7 +118,7 @@ Now the workhorse method ``run_function`` can be used to test a module:
 
 .. code-block:: python
 
-    
+
     import os
     import integration
 

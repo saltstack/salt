@@ -223,14 +223,14 @@ typically also include a hard-coded default.
       external_ip: "ephemeral"
 
 GCE instances do not allow remote access to the root user by default.
-Instead, another user must be used to run the deploy script using sudo. 
+Instead, another user must be used to run the deploy script using sudo.
 Append something like this to ``/etc/salt/cloud.profiles``:
 
 .. code-block:: yaml
 
   all_settings:
       ...
-  
+
       # SSH to GCE instances as gceuser
       ssh_username: gceuser
 
@@ -418,7 +418,7 @@ Specify the network name to view information about the network.
 
 Create address
 ---------------
-Create a new named static IP address in a region. 
+Create a new named static IP address in a region.
 
 .. code-block:: bash
 
@@ -530,4 +530,3 @@ Both the instance and load-balancer must exist before using these functions.
 
     salt-cloud -f attach_lb gce name=lb member=w4
     salt-cloud -f detach_lb gce name=lb member=oops
-

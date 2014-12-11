@@ -19,8 +19,8 @@ Dependencies
 
 Configuration
 =============
-To use the `openstack` driver (recommended), set up the cloud configuration at 
-  ``/etc/salt/cloud.providers`` or 
+To use the `openstack` driver (recommended), set up the cloud configuration at
+  ``/etc/salt/cloud.providers`` or
   ``/etc/salt/cloud.providers.d/rackspace.conf``:
 
 .. code-block:: yaml
@@ -50,8 +50,8 @@ To use the `openstack` driver (recommended), set up the cloud configuration at
       provider: openstack
 
 
-To use the `rackspace` driver, set up the cloud configuration at 
-  ``/etc/salt/cloud.providers`` or 
+To use the `rackspace` driver, set up the cloud configuration at
+  ``/etc/salt/cloud.providers`` or
   ``/etc/salt/cloud.providers.d/rackspace.conf``:
 
 .. code-block:: yaml
@@ -86,12 +86,12 @@ Note: Currently the LON region is only available with a UK account, and UK accou
 Authentication
 ==============
 
-The ``user`` is the same user as is used to log into the Rackspace Control 
-Panel. The ``tenant`` and ``apikey`` can be found in the API Keys area of the 
-Control Panel. The ``apikey`` will be labeled as API Key (and may need to be 
+The ``user`` is the same user as is used to log into the Rackspace Control
+Panel. The ``tenant`` and ``apikey`` can be found in the API Keys area of the
+Control Panel. The ``apikey`` will be labeled as API Key (and may need to be
 generated), and ``tenant`` will be labeled as Cloud Account Number.
 
-An initial profile can be configured in ``/etc/salt/cloud.profiles`` or 
+An initial profile can be configured in ``/etc/salt/cloud.profiles`` or
 ``/etc/salt/cloud.profiles.d/rackspace.conf``:
 
 .. code-block:: yaml
@@ -108,10 +108,10 @@ To instantiate a machine based on this profile:
     # salt-cloud -p openstack_512 myinstance
 
 This will create a virtual machine at Rackspace with the name ``myinstance``.
-This operation may take several minutes to complete, depending on the current 
+This operation may take several minutes to complete, depending on the current
 load at the Rackspace data center.
 
-Once the instance has been created with salt-minion installed, connectivity to 
+Once the instance has been created with salt-minion installed, connectivity to
 it can be verified with Salt:
 
 .. code-block:: bash
@@ -160,7 +160,7 @@ First and Next Generation Images
 
 Rackspace provides two sets of virtual machine images, *first* and *next*
 generation. As of ``0.8.9`` salt-cloud will default to using the *next*
-generation images. To force the use of first generation images, on the profile 
+generation images. To force the use of first generation images, on the profile
 configuration please add:
 
 .. code-block:: yaml
@@ -170,4 +170,3 @@ configuration please add:
       size: 512 MB Standard
       image: FreeBSD 9.0
       force_first_gen: True
-

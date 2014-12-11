@@ -2,7 +2,7 @@
 Getting Started With Proxmox
 ==============================
 
-Proxmox Virtual Environment is a complete server virtualization management solution, 
+Proxmox Virtual Environment is a complete server virtualization management solution,
 based on KVM virtualization and OpenVZ containers.
 Further information can be found at:
 
@@ -12,8 +12,8 @@ Please note:
 This module allows you to create both OpenVZ and KVM but installing Salt on it will only be
 done when the VM is an OpenVZ container rather than a KVM virtual machine.
 
-* Set up the cloud configuration at 
-  ``/etc/salt/cloud.providers`` or 
+* Set up the cloud configuration at
+  ``/etc/salt/cloud.providers`` or
   ``/etc/salt/cloud.providers.d/proxmox.conf``:
 
 .. code-block:: yaml
@@ -38,13 +38,13 @@ done when the VM is an OpenVZ container rather than a KVM virtual machine.
 
 Access Credentials
 ==================
-The ``user``, ``password`` and ``url`` will be provided to you by your cloud 
+The ``user``, ``password``, and ``url`` will be provided to you by your cloud
 provider. These are all required in order for the PROXMOX driver to work.
 
 
 Cloud Profiles
 ==============
-Set up an initial profile at ``/etc/salt/cloud.profiles`` or 
+Set up an initial profile at ``/etc/salt/cloud.profiles`` or
 ``/etc/salt/cloud.profiles.d/proxmox.conf``:
 
 * Configure a profile to be used:
@@ -66,12 +66,12 @@ The profile can be realized now with a salt command:
 
     # salt-cloud -p proxmox-ubuntu myubuntu
 
-This will create an instance named ``myubuntu`` on the cloud provider. The 
+This will create an instance named ``myubuntu`` on the cloud provider. The
 minion that is installed on this instance will have a ``hostname`` of ``myubuntu``.
-If the command was executed on the salt-master, its Salt key will automatically 
+If the command was executed on the salt-master, its Salt key will automatically
 be signed on the master.
 
-Once the instance has been created with salt-minion installed, connectivity to 
+Once the instance has been created with salt-minion installed, connectivity to
 it can be verified with Salt:
 
 .. code-block:: bash
@@ -95,10 +95,10 @@ The following settings are always required for PROXMOX:
 
 Optional Settings
 =================
-Unlike other cloud providers in Salt Cloud, Proxmox does not utilize a 
-``size`` setting. This is because Proxmox allows the end-user to specify a 
-more detailed configuration for their instances, than is allowed by many other 
-cloud providers. The following options are available to be used in a profile, 
+Unlike other cloud providers in Salt Cloud, Proxmox does not utilize a
+``size`` setting. This is because Proxmox allows the end-user to specify a
+more detailed configuration for their instances, than is allowed by many other
+cloud providers. The following options are available to be used in a profile,
 with their default settings listed.
 
 .. code-block:: yaml

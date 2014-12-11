@@ -109,5 +109,3 @@ Ubuntu packages automatically start the service upon installation, and needed
 to be handled differently in the deploy script. Configuration is now laid down
 before the package is installed, so that the minion can make its initial start
 happen with the correct configuration.
-
-
