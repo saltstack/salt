@@ -22,6 +22,7 @@ else:
 # Import salt libs
 from salt.log import is_console_configured
 from salt.exceptions import SaltClientError
+import salt.exitcodes
 import salt.utils
 
 log = logging.getLogger(__name__)

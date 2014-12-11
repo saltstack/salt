@@ -9,6 +9,7 @@ import multiprocessing
 import signal
 
 # Import salt libs
+import salt.exitcodes
 import salt.utils
 
 log = logging.getLogger(__name__)

@@ -100,6 +100,7 @@ except ImportError:
     pass
 
 # Import salt libs
+import salt.exitcodes
 import salt.utils
 from salt._compat import MAX_SIZE
 from salt.utils.filebuffer import BufferedReader

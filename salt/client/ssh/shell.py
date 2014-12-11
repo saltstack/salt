@@ -11,6 +11,7 @@ import logging
 import subprocess
 
 # Import salt libs
+import salt.exitcodes
 import salt.utils
 import salt.utils.nb_popen
 import salt.utils.vt

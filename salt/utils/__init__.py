@@ -98,6 +98,7 @@ except ImportError:
 
 # Import salt libs
 import salt._compat
+import salt.exitcodes
 import salt.log
 import salt.payload
 import salt.version

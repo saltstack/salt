@@ -13,6 +13,7 @@ import logging
 # Import salt libs
 import salt
 import salt.exceptions
+import salt.exitcodes
 import salt.cli
 
 

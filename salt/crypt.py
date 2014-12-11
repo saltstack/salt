@@ -25,6 +25,7 @@ except ImportError:
     pass
 
 # Import salt libs
+import salt.exitcodes
 import salt.utils
 import salt.payload
 import salt.utils.verify

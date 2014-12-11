@@ -16,6 +16,7 @@ import salt.cli.batch
 import salt.client
 import salt.client.ssh
 import salt.client.netapi
+import salt.exitcodes
 import salt.output
 import salt.runner
 import salt.auth
