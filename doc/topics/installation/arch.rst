@@ -67,4 +67,3 @@ seen here:
     systemctl start salt-master
 
 Now go to the :doc:`Configuring Salt</ref/configuration/index>` page.
-

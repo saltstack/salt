@@ -5,8 +5,8 @@ Ubuntu Installation
 Add repository
 ==============
 
-The latest packages for Ubuntu are published in the saltstack PPA. If you have 
-the ``add-apt-repository`` utility, you can add the repository and import the 
+The latest packages for Ubuntu are published in the saltstack PPA. If you have
+the ``add-apt-repository`` utility, you can add the repository and import the
 key in one step:
 
 .. code-block:: bash
@@ -51,13 +51,13 @@ After adding the repository, update the package management database:
 Install packages
 ================
 
-Install the Salt master, minion, or syndic from the repository with the apt-get 
-command. These examples each install one daemon, but more than one package name 
+Install the Salt master, minion, or syndic from the repository with the apt-get
+command. These examples each install one daemon, but more than one package name
 may be given at a time:
 
 .. code-block:: bash
 
-    sudo apt-get install salt-master 
+    sudo apt-get install salt-master
 
 .. code-block:: bash
 
@@ -119,4 +119,3 @@ Post-installation tasks
 =======================
 
 Now go to the :doc:`Configuring Salt</ref/configuration/index>` page.
-
