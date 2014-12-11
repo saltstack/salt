@@ -38,6 +38,7 @@ import salt.utils.event
 import salt.utils.verify
 import salt.utils.minions
 import salt.utils.gzip_util
+import salt.utils.jid
 from salt.pillar import git_pillar
 from salt.utils.event import tagify
 from salt.exceptions import SaltMasterError
@@ -1135,7 +1136,7 @@ class LocalFuncs(object):
                 return dict(error=dict(name='TokenAuthenticationError',
                                        message=msg))
 
-            jid = salt.utils.gen_jid()
+            jid = salt.utils.jid.gen_jid()
             fun = load.pop('fun')
             tag = tagify(jid, prefix='wheel')
             data = {'fun': "wheel.{0}".format(fun),
@@ -1205,7 +1206,7 @@ class LocalFuncs(object):
                 return dict(error=dict(name='EauthAuthenticationError',
                                        message=msg))
 
-            jid = salt.utils.gen_jid()
+            jid = salt.utils.jid.gen_jid()
             fun = load.pop('fun')
             tag = tagify(jid, prefix='wheel')
             data = {'fun': "wheel.{0}".format(fun),

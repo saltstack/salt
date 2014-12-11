@@ -63,6 +63,7 @@ import salt.crypt
 import salt.loader
 import salt.payload
 import salt.utils
+import salt.utils.jid
 import salt.utils.args
 import salt.utils.event
 import salt.utils.minion
@@ -2107,7 +2108,7 @@ class Syndic(Minion):
                 self.event_forward_timeout = (
                         time.time() + self.opts['syndic_event_forward_timeout']
                         )
-            if salt.utils.is_jid(event['tag']) and 'return' in event['data']:
+            if salt.utils.jid.is_jid(event['tag']) and 'return' in event['data']:
                 if 'jid' not in event['data']:
                     # Not a job return
                     continue
@@ -2344,7 +2345,7 @@ class MultiSyndic(MinionBase):
                 self.event_forward_timeout = (
                         time.time() + self.opts['syndic_event_forward_timeout']
                         )
-            if salt.utils.is_jid(event['tag']) and 'return' in event['data']:
+            if salt.utils.jid.is_jid(event['tag']) and 'return' in event['data']:
                 if 'jid' not in event['data']:
                     # Not a job return
                     continue
