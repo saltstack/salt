@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-import os
 
 # Import salt libs
 from salt.utils.winservice import Service, instart
 import salt
+import salt.exitcodes
 
 # Import third party libs
 import win32serviceutil
