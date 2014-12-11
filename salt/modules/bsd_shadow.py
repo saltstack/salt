@@ -10,7 +10,7 @@ except ImportError:
     pass
 
 try:
-    from shlex import quote as _cmd_quote
+    from shlex import quote as _cmd_quote  # pylint: disable=E0611
 except ImportError:
     from pipes import quote as _cmd_quote
 
