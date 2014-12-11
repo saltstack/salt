@@ -72,7 +72,7 @@ redundant master. Both masters are first-class and have rights to the minions.
     to reconnect to them quickly. To enable this functionality, set
     `master_alive_interval` in the minion config and specify a number of
     seconds to poll the masters for connection status.
-    
+
     If this option is not set, minions will still reconnect to failed masters
     but the first command sent after a master comes back up may be lost while
     the minion authenticates.

@@ -2,7 +2,7 @@
 States tutorial, part 2 - More Complex States, Requisites
 =========================================================
 
-.. note:: 
+.. note::
 
     This tutorial builds on topics covered in :doc:`part 1 <states_pt1>`. It is
     recommended that you begin there.

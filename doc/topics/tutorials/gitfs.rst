@@ -160,7 +160,7 @@ master:
    <gitfs-authentication>`.
 
 3. Restart the master to load the new configuration.
-   
+
 
 .. note::
 
@@ -621,7 +621,7 @@ server via SSH:
 .. code-block:: bash
 
     $ su
-    Password: 
+    Password:
     # ssh github.com
     The authenticity of host 'github.com (192.30.252.128)' can't be established.
     RSA key fingerprint is 16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48.

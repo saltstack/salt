@@ -383,4 +383,3 @@ Because this is a monitoring state, it will return extra data to code that
 expects it. This data will always include ``text`` and ``status``. Optionally,
 ``headers`` and ``dict`` may also be requested by setting the ``headers`` and
 ``decode`` arguments to True, respectively.
-

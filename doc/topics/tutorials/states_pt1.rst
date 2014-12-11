@@ -18,7 +18,7 @@ States are stored in text files on the master and transferred to the minions on
 demand via the master's File Server. The collection of state files make up the
 ``State Tree``.
 
-To start using a central state system in Salt, the Salt File Server must first 
+To start using a central state system in Salt, the Salt File Server must first
 be set up. Edit the master config file (:conf_master:`file_roots`) and
 uncomment the following lines:
 
@@ -85,7 +85,7 @@ named ``webserver.sls``, containing the following:
         - installed         # function declaration
 
 The first line, called the :ref:`id-declaration`, is an arbitrary identifier.
-In this case it defines the name of the package to be installed. 
+In this case it defines the name of the package to be installed.
 
 .. note::
 
