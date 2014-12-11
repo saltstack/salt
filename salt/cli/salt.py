@@ -24,7 +24,6 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         Execute the salt command line
         '''
         import salt.auth
-        import salt.cli.batch
         self.parse_args()
 
         if self.config['verify_env']:
@@ -54,6 +53,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             return
 
         if self.options.batch:
+            import salt.cli.batch
             eauth = {}
             if 'token' in self.config:
                 eauth['token'] = self.config['token']
