@@ -11,6 +11,10 @@ Synopsis
 
     salt-cloud -m /etc/salt/cloud.map
 
+    salt-cloud -m /etc/salt/cloud.map NAME
+
+    salt-cloud -m /etc/salt/cloud.map NAME1 NAME2
+
     salt-cloud -p PROFILE NAME
 
     salt-cloud -p PROFILE NAME1 NAME2 NAME3 NAME4 NAME5 NAME6
@@ -38,8 +42,9 @@ Options
 .. option:: -m MAP, --map=MAP
 
     Specify a map file to use. If used without any other options, this option
-    will ensure that all of the mapped VMs are created. If the named VM
-    already exists then it will be skipped.
+    will ensure that all of the mapped VMs are created. If VM names are
+    also passed as arguments, they will be used to filter the map file.
+    If the named VM already exists then it will be skipped.
 
 .. option:: -H, --hard
 
