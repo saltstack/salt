@@ -1,4 +1,4 @@
- # -*- coding: utf-8 -*-
- '''
- Salt package
- '''
+# -*- coding: utf-8 -*-
+'''
+Salt package
+'''
