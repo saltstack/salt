@@ -8,6 +8,11 @@ import salt.utils
 from salt.exceptions import CommandExecutionError
 
 
+__func_alias__ = {
+    'set_': 'set'
+}
+
+
 def __virtual__():
     '''
     Only runs if sysrc exists
@@ -57,7 +62,7 @@ def get(**kwargs):
     return ret
 
 
-def set(name, value, **kwargs):
+def set_(name, value, **kwargs):
     '''
     Set system rc configuration variables
 
