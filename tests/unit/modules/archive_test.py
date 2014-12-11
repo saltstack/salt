@@ -19,7 +19,9 @@ from salt.exceptions import CommandNotFoundError
 
 
 class ZipFileMock(MagicMock):
-    def __init__(self, files=['salt'], **kwargs):
+    def __init__(self, files=None, **kwargs):  # pylint: disable=W0231
+        if files is None:
+            files = ['salt']
         MagicMock.__init__(self, **kwargs)
         self._files = files
 
@@ -31,6 +33,7 @@ archive.__salt__ = {}
 archive.__pillar__ = {}
 archive.__grains__ = {"id": "0"}
 archive.__opts__ = {}
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class ArchiveTestCase(TestCase):
@@ -167,12 +170,12 @@ class ArchiveTestCase(TestCase):
     @patch('os.path.isdir', MagicMock(return_value=False))
     @patch('zipfile.ZipFile', MagicMock())
     def test_zip(self):
-            ret = archive.zip_(
-                '/tmp/salt.{{grains.id}}.zip',
-                '/tmp/tmpePe8yO,/tmp/tmpLeSw1A',
-                template='jinja'
-            )
-            self.assertEqual(['/tmp/tmpePe8yO', '/tmp/tmpLeSw1A'], ret)
+        ret = archive.zip_(
+            '/tmp/salt.{{grains.id}}.zip',
+            '/tmp/tmpePe8yO,/tmp/tmpLeSw1A',
+            template='jinja'
+        )
+        self.assertEqual(['/tmp/tmpePe8yO', '/tmp/tmpLeSw1A'], ret)
 
     @patch('salt.utils.which', lambda exe: None)
     def test_zip_raises_exception_if_not_found(self):
