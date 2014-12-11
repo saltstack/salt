@@ -40,7 +40,6 @@ import salt.log.setup
 
 # the try block below bypasses an issue at build time so that modules don't
 # cause the build to fail
-from salt.version import __version__
 from salt.utils import migrations
 from salt.utils import kinds
 
@@ -51,7 +50,7 @@ try:
 except ImportError as exc:
     if exc.args[0] != 'No module named _msgpack':
         raise
-from salt.exceptions import SaltSystemExit, MasterExit
+from salt.exceptions import SaltSystemExit
 
 
 # Let's instantiate logger using salt.log.setup.logging.getLogger() so pylint
