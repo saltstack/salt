@@ -54,6 +54,7 @@ except ImportError:
     HAS_LIBS = False
 
 import salt.utils
+import salt.utils.jid
 
 log = logging.getLogger(__name__)
 
@@ -173,4 +174,4 @@ def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return passed_jid if passed_jid is not None else salt.utils.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
