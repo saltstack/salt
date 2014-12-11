@@ -1143,6 +1143,7 @@ def _consolidate_repo_sources(sources):
     repos = [s for s in sources.list if not s.invalid]
 
     for repo in repos:
+        repo.uri = repo.uri.rstrip('/')
         key = str((getattr(repo, 'architectures', []),
                    repo.disabled, repo.type, repo.uri))
         if key in consolidated:
@@ -1150,7 +1151,7 @@ def _consolidate_repo_sources(sources):
             combined_comps = set(repo.comps).union(set(combined.comps))
             consolidated[key].comps = list(combined_comps)
         else:
-            consolidated[key] = sourceslist.SourceEntry(repo.line)
+            consolidated[key] = sourceslist.SourceEntry(_strip_uri(repo.line))
 
         if repo.file != base_file:
             delete_files.add(repo.file)
