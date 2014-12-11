@@ -10,11 +10,12 @@ from __future__ import absolute_import
 import os
 import re
 import logging
+import salt.utils
+import shlex
 try:
     from shlex import quote as _cmd_quote  # pylint: disable=E0611
 except ImportError:
     from pipes import quote as _cmd_quote
-from shlex import split as _cmd_split
 
 # Set up logger
 log = logging.getLogger(__name__)
@@ -29,6 +30,33 @@ __opts__ = {
 }
 
 
+def _shlex_split(s):
+    # from python:shlex.split: passing None for s will read
+    # the string to split from standard input.
+    if s is None:
+        ret = shlex.split('')
+    else:
+        ret = shlex.split(s)
+
+    return ret
+
+
+def _parse_env(env):
+    if not env:
+        env = {}
+    if isinstance(env, list):
+        env = salt.utils.repack_dictlist(env)
+    if not isinstance(env, dict):
+        env = {}
+
+    for bad_env_key in (x for x, y in env.iteritems() if y is None):
+        log.error('Environment variable {0!r} passed without a value. '
+                  'Setting value to an empty string'.format(bad_env_key))
+        env[bad_env_key] = ''
+
+    return env
+
+
 def _rbenv_exec(command, args='', env=None, runas=None, ret=None):
     if not is_installed(runas):
         return False
@@ -36,16 +64,10 @@ def _rbenv_exec(command, args='', env=None, runas=None, ret=None):
     binary = _rbenv_bin(runas)
     path = _rbenv_path(runas)
 
-    environ = {}
-    for token in _cmd_split(env):
-        try:
-            var, val = token.split('=')
-            environ[var] = val
-        except Exception:
-            pass  # if token != var=val, it's not a proper env anyway
+    environ = _parse_env(env)
     environ['RBENV_ROOT'] = path
 
-    args = ' '.join([_cmd_quote(arg) for arg in _cmd_split(args)])
+    args = ' '.join([_cmd_quote(arg) for arg in _shlex_split(args)])
 
     result = __salt__['cmd.run_all'](
         '{0} {1} {2}'.format(binary, _cmd_quote(command), args),
@@ -314,7 +336,7 @@ def do(cmdline=None, runas=None):
     '''
     path = _rbenv_path(runas)
     environ = {'PATH': '{0}/shims:{1}'.format(path, os.environ['PATH'])}
-    cmdline = ' '.join([_cmd_quote(cmd) for cmd in _cmd_split(cmdline)])
+    cmdline = ' '.join([_cmd_quote(cmd) for cmd in _shlex_split(cmdline)])
     result = __salt__['cmd.run_all'](
         cmdline,
         runas=runas,
