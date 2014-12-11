@@ -1499,7 +1499,7 @@ def fetch(name,
 
     return __salt__['cmd.run'](
         '{0} fetch -y {1} {2} {3}'.format(
-            _pkg(jail, chroot), repo_opts, opts, name
+            _pkg(jail, chroot), opts, name
         ),
         output_loglevel='trace'
     )
