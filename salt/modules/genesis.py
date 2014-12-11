@@ -89,6 +89,8 @@ def bootstrap(platform,
 
     CLI Examples:
 
+    .. code-block:: bash
+
         salt myminion genesis.bootstrap pacman /root/arch
         salt myminion genesis.bootstrap rpm /root/redhat
         salt myminion genesis.bootstrap deb /root/wheezy arch=amd64 \
@@ -263,6 +265,8 @@ def avail_platforms():
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt myminion genesis.avail_platforms
     '''
     ret = {}
@@ -280,6 +284,8 @@ def pack(name, root, path=None, pack_format='tar', compress='bzip2'):
 
     CLI Examples:
 
+    .. code-block:: bash
+
         salt myminion genesis.pack centos /root/centos
         salt myminion genesis.pack centos /root/centos pack_format='tar'
     '''
@@ -292,6 +298,8 @@ def unpack(name, dest=None, path=None, pack_format='tar', compress='bz2'):
     Unpack an image into a directory structure
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt myminion genesis.unpack centos /root/centos
     '''
