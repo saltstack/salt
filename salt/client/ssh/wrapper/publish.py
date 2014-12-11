@@ -89,7 +89,10 @@ def _publish(tgt,
     if form == 'clean':
         cret = {}
         for host in rets:
-            cret[host] = rets[host]['ret']
+            if 'ret' in rets[host]:
+                cret[host] = rets[host]['ret']
+            else:
+                cret[host] = rets[host]
         return cret
     else:
         return rets
