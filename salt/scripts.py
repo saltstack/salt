@@ -13,6 +13,7 @@ import logging
 # Import salt libs
 import salt
 import salt.exceptions
+import salt.exitcodes
 import salt.cli
 
 
@@ -201,7 +202,7 @@ def salt_cloud():
 
     if not HAS_SALTCLOUD:
         print('salt-cloud is not available in this system')
-        sys.exit(os.EX_UNAVAILABLE)
+        sys.exit(salt.exitcodes.EX_UNAVAILABLE)
 
     client = None
     try:

@@ -98,6 +98,7 @@ except ImportError:
 
 # Import salt libs
 import salt._compat
+import salt.exitcodes
 import salt.log
 import salt.payload
 import salt.version
@@ -274,7 +275,7 @@ def daemonize(redirect_out=True):
         pid = os.fork()
         if pid > 0:
             # exit first parent
-            sys.exit(os.EX_OK)
+            sys.exit(salt.exitcodes.EX_OK)
     except OSError as exc:
         log.error(
             'fork #1 failed: {0} ({1})'.format(exc.errno, exc.strerror)
@@ -291,7 +292,7 @@ def daemonize(redirect_out=True):
     try:
         pid = os.fork()
         if pid > 0:
-            sys.exit(os.EX_OK)
+            sys.exit(salt.exitcodes.EX_OK)
     except OSError as exc:
         log.error(
             'fork #2 failed: {0} ({1})'.format(
