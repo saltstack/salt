@@ -2,12 +2,12 @@
 Logging
 =======
 
-The salt project tries to get the logging to work for you and help us solve any 
+The salt project tries to get the logging to work for you and help us solve any
 issues you might find along the way.
 
-If you want to get some more information on the nitty-gritty of salt's logging 
-system, please head over to the :doc:`logging development 
-document</topics/development/logging>`, if all you're after is salt's logging 
+If you want to get some more information on the nitty-gritty of salt's logging
+system, please head over to the :doc:`logging development
+document</topics/development/logging>`, if all you're after is salt's logging
 configurations, please continue reading.
 
 
@@ -59,7 +59,7 @@ Examples:
 Default: ``warning``
 
 The level of log record messages to send to the console.
-One of ``all``, ``garbage``, ``trace``, ``debug``, ``info``, ``warning``, 
+One of ``all``, ``garbage``, ``trace``, ``debug``, ``info``, ``warning``,
 ``error``, ``critical``, ``quiet``.
 
 .. code-block:: yaml
@@ -76,7 +76,7 @@ One of ``all``, ``garbage``, ``trace``, ``debug``, ``info``, ``warning``,
 Default: ``warning``
 
 The level of messages to send to the log file.
-One of ``all``, ``garbage``, ``trace``, ``debug``, ``info``, ``warning``, 
+One of ``all``, ``garbage``, ``trace``, ``debug``, ``info``, ``warning``,
 ``error``, ``critical``, ``quiet``.
 
 .. code-block:: yaml
@@ -92,7 +92,7 @@ One of ``all``, ``garbage``, ``trace``, ``debug``, ``info``, ``warning``,
 
 Default: ``%H:%M:%S``
 
-The date and time format used in console log messages. Allowed date/time 
+The date and time format used in console log messages. Allowed date/time
 formatting can be seen on :func:`time.strftime <python2:time.strftime>`.
 
 .. code-block:: yaml
@@ -108,7 +108,7 @@ formatting can be seen on :func:`time.strftime <python2:time.strftime>`.
 
 Default: ``%Y-%m-%d %H:%M:%S``
 
-The date and time format used in log file messages. Allowed date/time 
+The date and time format used in log file messages. Allowed date/time
 formatting can be seen on :func:`time.strftime <python2:time.strftime>`.
 
 .. code-block:: yaml
@@ -156,8 +156,8 @@ be seen on the :ref:`LogRecord attributes <python2:logrecord-attributes>`.
 
 Default: ``{}``
 
-This can be used to control logging levels more specifically.  The example sets 
-the main salt library at the 'warning' level, but sets ``salt.modules`` to log 
+This can be used to control logging levels more specifically.  The example sets
+the main salt library at the 'warning' level, but sets ``salt.modules`` to log
 at the ``debug`` level:
 
 .. code-block:: yaml

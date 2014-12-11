@@ -76,7 +76,7 @@ Running Salt
 
         salt-master --log-level=debug
 
-    For information on salt's logging system please see the :doc:`logging 
+    For information on salt's logging system please see the :doc:`logging
     document</ref/configuration/logging/index>`.
 
 
@@ -181,4 +181,3 @@ Understanding :doc:`targeting </topics/targeting/index>` is important. From ther
 depending on the way you wish to use Salt, you should also proceed to learn
 about :doc:`States </topics/tutorials/starting_states>` and :doc:`Execution Modules
 </ref/modules/index>`.
-
