@@ -24,6 +24,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         Execute the salt command line
         '''
         import salt.auth
+        import salt.client
         self.parse_args()
 
         if self.config['verify_env']:
