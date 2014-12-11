@@ -307,7 +307,6 @@ def unzip(archive, dest, excludes=None, template=None, options=None, runas=None)
         return cleaned_files
 
 
-
 @decorators.which('rar')
 def rar(rarfile, sources, template=None, runas=None):
     '''
