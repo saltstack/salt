@@ -273,7 +273,7 @@ from salt.utils.pyobjects import Registry, StateFactory, SaltObject, Map
 # our import regexes
 FROM_RE = r'^\s*from\s+(salt:\/\/.*)\s+import (.*)$'
 IMPORT_RE = r'^\s*import\s+(salt:\/\/.*)$'
-FROM_AS_RE = r'^\(.*) as (.*)$'
+FROM_AS_RE = r'^(.*) as (.*)$'
 
 log = logging.getLogger(__name__)
 
