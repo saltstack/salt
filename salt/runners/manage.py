@@ -151,10 +151,17 @@ def present(subset=None, show_ipv4=False):
 
         salt-run manage.present
     '''
-    ckminions = salt.utils.minions.CkMinions(__opts__)
+    conf_file = __opts__['conf_file']
+    opts = salt.config.client_config(conf_file)
+    if opts['transport'] == 'raet':
+        event = salt.utils.raetevent.PresenceEvent(__opts__, __opts__['sock_dir'])
+        data = event.get_event(wait=60, tag=salt.utils.event.tagify('present', 'presence'))
+        connected = data['present'] if data else []
+    else:
+        ckminions = salt.utils.minions.CkMinions(__opts__)
 
-    minions = ckminions.connected_ids(show_ipv4=show_ipv4, subset=subset)
-    connected = dict(minions) if show_ipv4 else sorted(minions)
+        minions = ckminions.connected_ids(show_ipv4=show_ipv4, subset=subset)
+        connected = dict(minions) if show_ipv4 else sorted(minions)
 
     return connected
 
@@ -176,10 +183,17 @@ def not_present(subset=None, show_ipv4=False):
 
         salt-run manage.not_present
     '''
-    ckminions = salt.utils.minions.CkMinions(__opts__)
+    conf_file = __opts__['conf_file']
+    opts = salt.config.client_config(conf_file)
+    if opts['transport'] == 'raet':
+        event = salt.utils.raetevent.PresenceEvent(__opts__, __opts__['sock_dir'])
+        data = event.get_event(wait=60, tag=salt.utils.event.tagify('present', 'presence'))
+        connected = data['present'] if data else []
+    else:
+        ckminions = salt.utils.minions.CkMinions(__opts__)
 
-    minions = ckminions.connected_ids(show_ipv4=show_ipv4, subset=subset)
-    connected = dict(minions) if show_ipv4 else sorted(minions)
+        minions = ckminions.connected_ids(show_ipv4=show_ipv4, subset=subset)
+        connected = dict(minions) if show_ipv4 else sorted(minions)
 
     key = salt.key.Key(__opts__)
     keys = key.list_keys()
@@ -189,7 +203,7 @@ def not_present(subset=None, show_ipv4=False):
         if minion not in connected:
             not_connected.append(minion)
 
-    return connected
+    return not_connected
 
 
 def safe_accept(target, expr_form='glob'):
