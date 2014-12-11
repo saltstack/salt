@@ -200,7 +200,7 @@ The easiest way to accept the minion key is to accept all pending keys:
 
     On the master:
 
-    .. code-block: bash
+    .. code-block:: bash
 
         # salt-key -f foo.domain.com
         Unaccepted Keys:
@@ -208,7 +208,7 @@ The easiest way to accept the minion key is to accept all pending keys:
 
     On the minion:
 
-    .. code-block: bash
+    .. code-block:: bash
 
         # salt-call key.finger --local
         local:
