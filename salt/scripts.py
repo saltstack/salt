@@ -11,16 +11,13 @@ import os
 import sys
 import traceback
 import logging
-import multiprocessing
 import threading
 import time
 from random import randint
 
 # Import salt libs
-import salt
 from salt.exceptions import SaltSystemExit, SaltClientError, SaltReqTimeoutError
 import salt.defaults.exitcodes
-import salt.cli
 
 
 log = logging.getLogger(__name__)
@@ -48,6 +45,7 @@ def salt_master():
     '''
     Start the salt master.
     '''
+    import salt
     master = salt.Master()
     master.start()
 
@@ -56,6 +54,7 @@ def minion_process(queue):
     '''
     Start a minion process
     '''
+    import salt
     # salt_minion spawns this function in a new process
 
     def suicide_when_without_parent(parent_pid):
@@ -105,6 +104,8 @@ def salt_minion():
     '''
     Start the salt minion.
     '''
+    import salt
+    import multiprocessing
     if '' in sys.path:
         sys.path.remove('')
 
@@ -162,6 +163,7 @@ def salt_syndic():
     '''
     Start the salt syndic.
     '''
+    import salt
     pid = os.getpid()
     try:
         syndic = salt.Syndic()
@@ -174,9 +176,10 @@ def salt_key():
     '''
     Manage the authentication keys with salt-key.
     '''
+    import salt.cli.key
     client = None
     try:
-        client = salt.cli.SaltKey()
+        client = salt.cli.key.SaltKey()
         client.run()
     except KeyboardInterrupt as err:
         trace = traceback.format_exc()
@@ -195,9 +198,10 @@ def salt_cp():
     Publish commands to the salt system from the command line on the
     master.
     '''
+    import salt.cli.cp
     client = None
     try:
-        client = salt.cli.SaltCP()
+        client = salt.cli.cp.SaltCPCli()
         client.run()
     except KeyboardInterrupt as err:
         trace = traceback.format_exc()
@@ -216,11 +220,12 @@ def salt_call():
     Directly call a salt command in the modules, does not require a running
     salt minion to run.
     '''
+    import salt.cli.call
     if '' in sys.path:
         sys.path.remove('')
     client = None
     try:
-        client = salt.cli.SaltCall()
+        client = salt.cli.call.SaltCall()
         client.run()
     except KeyboardInterrupt as err:
         trace = traceback.format_exc()
@@ -238,11 +243,12 @@ def salt_run():
     '''
     Execute a salt convenience routine.
     '''
+    import salt.cli.run
     if '' in sys.path:
         sys.path.remove('')
     client = None
     try:
-        client = salt.cli.SaltRun()
+        client = salt.cli.run.SaltRun()
         client.run()
     except KeyboardInterrupt as err:
         trace = traceback.format_exc()
@@ -260,11 +266,12 @@ def salt_ssh():
     '''
     Execute the salt-ssh system
     '''
+    import salt.cli.ssh
     if '' in sys.path:
         sys.path.remove('')
     client = None
     try:
-        client = salt.cli.SaltSSH()
+        client = salt.cli.ssh.SaltSSH()
         client.run()
     except KeyboardInterrupt as err:
         trace = traceback.format_exc()
@@ -325,7 +332,8 @@ def salt_api():
     '''
     The main function for salt-api
     '''
-    sapi = salt.cli.SaltAPI()  # pylint: disable=E1120
+    import salt.cli.api
+    sapi = salt.cli.api.SaltAPI()  # pylint: disable=E1120
     sapi.run()
 
 
@@ -334,11 +342,12 @@ def salt_main():
     Publish commands to the salt system from the command line on the
     master.
     '''
+    import salt.cli.salt
     if '' in sys.path:
         sys.path.remove('')
     client = None
     try:
-        client = salt.cli.SaltCMD()
+        client = salt.cli.salt.SaltCMD()
         client.run()
     except KeyboardInterrupt as err:
         trace = traceback.format_exc()

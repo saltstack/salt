@@ -64,6 +64,7 @@ import salt.loader
 import salt.payload
 import salt.utils
 import salt.utils.jid
+import salt.pillar
 import salt.utils.args
 import salt.utils.event
 import salt.utils.minion
