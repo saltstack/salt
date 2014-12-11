@@ -22,7 +22,7 @@ sls
 top
   Read in the ``top_file`` option and execute states based on that top file
   on the Salt Master
-  
+
 Examples:
 ---------
 

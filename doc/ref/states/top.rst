@@ -365,4 +365,3 @@ are set as in the :ref:`above multi-environment example
 .. note::
     When in doubt, the simplest way to configure your states is with a single
     top.sls in the ``base`` environment.
-
