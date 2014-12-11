@@ -14,10 +14,15 @@ import shutil
 import sys
 import os
 import stat
-import salt.exitcodes
 
 THIN_ARCHIVE = 'salt-thin.tgz'
 EXT_ARCHIVE = 'salt-ext_mods.tgz'
+
+# FIXME - it would be ideal if these could be obtained directly from
+#         salt.exitcodes rather than duplicated.
+EX_THIN_DEPLOY = 11
+EX_THIN_CHECKSUM = 12
+EX_MOD_DEPLOY = 13
 
 
 class OBJ(object):
@@ -52,7 +57,7 @@ def need_deployment():
 
     # Delimeter emitted on stdout *only* to indicate shim message to master.
     sys.stdout.write("{0}\ndeploy\n".format(OPTIONS.delimiter))
-    sys.exit(salt.exitcodes.EX_THIN_DEPLOY)
+    sys.exit(EX_THIN_DEPLOY)
 
 
 # Adapted from salt.utils.get_hash()
@@ -78,7 +83,7 @@ def unpack_thin(thin_path):
 
 def need_ext():
     sys.stdout.write("{0}\next_mods\n".format(OPTIONS.delimiter))
-    sys.exit(salt.exitcodes.EX_MOD_DEPLOY)
+    sys.exit(EX_MOD_DEPLOY)
 
 
 def unpack_ext(ext_path):
@@ -107,7 +112,7 @@ def main(argv):
             sys.stderr.write('{0}\n'.format(get_hash(thin_path, OPTIONS.hashfunc)))
             os.unlink(thin_path)
             sys.stderr.write('WARNING: checksum mismatch for "{0}"\n'.format(thin_path))
-            sys.exit(salt.exitcodes.EX_THIN_CHECKSUM)
+            sys.exit(EX_THIN_CHECKSUM)
         unpack_thin(thin_path)
         # Salt thin now is available to use
     else:
@@ -116,7 +121,7 @@ def main(argv):
 
         if not os.path.isdir(OPTIONS.saltdir):
             sys.stderr.write('ERROR: salt path "{0}" exists but is not a directory\n'.format(OPTIONS.saltdir))
-            sys.exit(salt.exitcodes.EX_CANTCREAT)
+            sys.exit(os.EX_CANTCREAT)
 
         version_path = os.path.join(OPTIONS.saltdir, 'version')
         if not os.path.exists(version_path) or not os.path.isfile(version_path):
