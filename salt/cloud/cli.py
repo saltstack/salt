@@ -86,7 +86,7 @@ class SaltCloud(parsers.SaltCloudParser):
         mapper = salt.cloud.Map(self.config)
 
         names = self.config.get('names', None)
-        if names != None:
+        if names is not None:
             filtered_rendered_map = {}
             for map_profile in mapper.rendered_map:
                 filtered_map_profile = {}
