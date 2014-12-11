@@ -232,7 +232,7 @@ def zip_(archive, sources, template=None, runas=None):
 
 
 @decorators.which('unzip')
-def unzip_cmd(zipfile, dest, excludes=None, template=None, options=None, runas=None):
+def cmd_unzip_(zipfile, dest, excludes=None, template=None, options=None, runas=None):
     '''
     Uses the unzip command to unpack zip files
 
@@ -268,7 +268,7 @@ def unzip_cmd(zipfile, dest, excludes=None, template=None, options=None, runas=N
     return __salt__['cmd.run'](cmd, template=template, runas=runas).splitlines()
 
 
-@decorators.depends('zipfile', fallback_function=unzip_cmd)
+@decorators.depends('zipfile', fallback_function=cmd_unzip_)
 def unzip(archive, dest, excludes=None, template=None, options=None, runas=None):
     '''
     Uses the zipfile module to unpack zip files
@@ -299,7 +299,8 @@ def unzip(archive, dest, excludes=None, template=None, options=None, runas=None)
             zf.extractall(dest)
             return files
 
-        excludes = excludes.split(",")
+        if not isinstance(excludes, list):
+            excludes = excludes.split(",")
         cleaned_files = [x for x in files if x not in excludes]
         for f in cleaned_files:
             if f not in excludes:
