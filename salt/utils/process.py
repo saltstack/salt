@@ -164,7 +164,7 @@ class ThreadPool(object):
         if kwargs is None:
             kwargs = {}
         try:
-            self._job_queue.put((func, args, kwargs), False)
+            self._job_queue.put_nowait((func, args, kwargs))
             return True
         except Queue.Full:
             return False
@@ -174,6 +174,7 @@ class ThreadPool(object):
             # 1s timeout so that if the parent dies this thread will die within 1s
             try:
                 func, args, kwargs = self._job_queue.get(timeout=1)
+                self._job_queue.task_done()  # Mark the task as done once we get it
             except Queue.Empty:
                 continue
             try:
