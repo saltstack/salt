@@ -178,8 +178,8 @@ class ThreadPool(object):
                 continue
             try:
                 func(*args, **kwargs)
-            except Exception:
-                pass
+            except Exception as err:
+                log.debug(err, exc_info=True)
 
 
 class ProcessManager(object):
