@@ -11,6 +11,7 @@ import multiprocessing
 import signal
 
 # Import salt libs
+import salt.exitcodes
 import salt.utils
 import salt.ext.six as six
 
@@ -61,7 +62,7 @@ def set_pidfile(pidfile, user):
                 user
             )
         )
-        sys.exit(os.EX_NOUSER)
+        sys.exit(salt.exitcodes.EX_NOUSER)
 
     if os.getuid() == uid:
         # The current user already owns the pidfile. Return!
