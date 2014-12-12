@@ -9,13 +9,14 @@ salt-ssh calls and return the data from them.
 
 No access control is needed because calls cannot originate from the minions.
 '''
-
+# Import python libs
 import copy
 import logging
-
+# Import salt libs
 import salt.client.ssh
 
 log = logging.getLogger(__name__)
+
 
 def _publish(tgt,
              fun,
