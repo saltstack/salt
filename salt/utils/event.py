@@ -585,7 +585,6 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
     def __init__(self, opts):
         multiprocessing.Process.__init__(self)
         salt.state.Compiler.__init__(self, opts)
-        self.wrap = ReactWrap(self.opts)
 
         local_minion_opts = self.opts.copy()
         local_minion_opts['file_client'] = 'local'
@@ -680,7 +679,11 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         Enter into the server loop
         '''
         salt.utils.appendproctitle(self.__class__.__name__)
+
+        # instantiate some classes inside our new process
         self.event = SaltEvent('master', self.opts['sock_dir'])
+        self.wrap = ReactWrap(self.opts)
+
         for data in self.event.iter_events(full=True):
             reactors = self.list_reactors(data['tag'])
             if not reactors:
@@ -732,7 +735,7 @@ class ReactWrap(object):
 
     cmd = local
 
-    def runner(self, _, **kwargs):
+    def runner(self, **kwargs):
         '''
         Wrap RunnerClient for executing :ref:`runner modules <all-salt.runners>`
         '''
@@ -740,7 +743,7 @@ class ReactWrap(object):
             self.client_cache['runner'] = salt.runner.RunnerClient(self.opts)
         self.pool.fire_async(self.client_cache['runner'].low, kwargs)
 
-    def wheel(self, _, **kwargs):
+    def wheel(self, **kwargs):
         '''
         Wrap Wheel to enable executing :ref:`wheel modules <all-salt.wheel>`
         '''
