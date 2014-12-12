@@ -1106,7 +1106,10 @@ class SaltRaetPresenter(ioflo.base.deeding.Deed):
     Ioinits = {'opts': '.salt.opts',
                'presence_req': '.salt.presence.event_req',
                'lane_stack': '.salt.lane.manor.stack',
-               'aliveds': '.salt.var.presence.aliveds'}
+               'aliveds': {'ipath': '.salt.var.presence.aliveds',
+                           'ival': odict()},
+               'availables': {'ipath': '.salt.var.presence.availables',
+                              'ival': set()}, }
 
     def _send_presence(self, msg):
         '''
@@ -1118,7 +1121,11 @@ class SaltRaetPresenter(ioflo.base.deeding.Deed):
             pass # drop msg don't answer
         else:
             # create answer message
-            data = {'present': list(self.aliveds.value)}
+            present = odict()
+            for name in self.availables.value:
+                minion = self.aliveds.value[name]
+                present[name] = minion.ha[0] if minion else None
+            data = {'present': present}
             tag = tagify('present', 'presence')
             route= {'dst': (None, None, 'event_fire'),
                     'src': (None, self.lane_stack.value.local.name, None)}

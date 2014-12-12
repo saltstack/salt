@@ -156,12 +156,13 @@ def present(subset=None, show_ipv4=False):
     if opts['transport'] == 'raet':
         event = salt.utils.raetevent.PresenceEvent(__opts__, __opts__['sock_dir'])
         data = event.get_event(wait=60, tag=salt.utils.event.tagify('present', 'presence'))
-        connected = data['present'] if data else []
+        present = data['present'] if data else []
+        minions = [m for m in present if m in subset] if subset else present
     else:
         ckminions = salt.utils.minions.CkMinions(__opts__)
-
         minions = ckminions.connected_ids(show_ipv4=show_ipv4, subset=subset)
-        connected = dict(minions) if show_ipv4 else sorted(minions)
+
+    connected = dict(minions) if show_ipv4 else sorted(minions)
 
     return connected
 
@@ -183,24 +184,21 @@ def not_present(subset=None, show_ipv4=False):
 
         salt-run manage.not_present
     '''
-    conf_file = __opts__['conf_file']
-    opts = salt.config.client_config(conf_file)
-    if opts['transport'] == 'raet':
-        event = salt.utils.raetevent.PresenceEvent(__opts__, __opts__['sock_dir'])
-        data = event.get_event(wait=60, tag=salt.utils.event.tagify('present', 'presence'))
-        connected = data['present'] if data else []
-    else:
-        ckminions = salt.utils.minions.CkMinions(__opts__)
+    connected = present(subset=None, show_ipv4=show_ipv4)
 
-        minions = ckminions.connected_ids(show_ipv4=show_ipv4, subset=subset)
-        connected = dict(minions) if show_ipv4 else sorted(minions)
-
-    key = salt.key.Key(__opts__)
+    key = salt.key.get_key(__opts__)
     keys = key.list_keys()
 
+    # TODO: Need better way to handle key/node name difference for raet
+    # In raet case node name is '<name>_<kind>' meanwhile the key name
+    # is just '<name>'. So append '_minion' to the name to match.
+    appen_kind = isinstance(key, salt.key.RaetKey)
+
     not_connected = []
-    for minion in keys['minions']:
-        if minion not in connected:
+    for minion in keys[key.ACC]:
+        if appen_kind:
+            minion += '_minion'
+        if minion not in connected and (subset is None or minion in subset):
             not_connected.append(minion)
 
     return not_connected
