@@ -2,7 +2,7 @@
 Getting Started With Joyent
 ===========================
 
-Joyent is a public cloud provider supporting SmartOS, Linux, FreeBSD and
+Joyent is a public cloud provider supporting SmartOS, Linux, FreeBSD, and
 Windows.
 
 

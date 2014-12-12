@@ -194,7 +194,7 @@ wait_for_fun_timeout
 ~~~~~~~~~~~~~~~~~~~~
 
 Some cloud drivers check for an available IP or a successful SSH connection
-using a function, namely, SoftLayer and SoftLayer-HW. So, the amount of time
+using a function, namely, SoftLayer, and SoftLayer-HW. So, the amount of time
 Salt Cloud should retry such functions before failing. Default: 5 minutes.
 
 
@@ -294,7 +294,7 @@ SSH Agent
 .. versionadded:: Lithium
 
 If the ssh key is not stored on the server salt-cloud is being run on, set
-ssh_agent and salt-cloud will use the forwarded ssh-agent to authenticate.
+ssh_agent, and salt-cloud will use the forwarded ssh-agent to authenticate.
 
 .. code-block:: yaml
 

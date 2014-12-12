@@ -797,7 +797,7 @@ will be used.
 Attaching Volumes
 -----------------
 Unattached volumes may be attached to an instance. The following values are
-required; name or instance_id, volume_id and device.
+required; name or instance_id, volume_id, and device.
 
 .. code-block:: bash
 

@@ -119,7 +119,7 @@ manager. These do not need to be handled by the developer in the cloud module.
 After the appropriate deploy function completes, a final event is fired
 which describes the virtual machine that has just been created. This event is
 tagged ``salt/cloud/<vm name>/created``. The payload contains the names of the
-VM, profile and provider.
+VM, profile, and provider.
 
 Finally, a dict (queried from the provider) which describes the new virtual
 machine is returned to the user. Because this data is not fired on the event
@@ -215,9 +215,9 @@ functionality, though they may refer to images by a different name (for example,
 The avail_sizes() Function
 --------------------------
 This function returns a list of sizes available for this cloud provider.
-Generally, this refers to a combination of RAM, CPU and/or disk space. This
+Generally, this refers to a combination of RAM, CPU, and/or disk space. This
 functionality may not be present on some cloud providers. For example, the
-Parallels module breaks down RAM, CPU and disk space into separate options,
+Parallels module breaks down RAM, CPU, and disk space into separate options,
 whereas in other providers, these options are baked into the image. It is
 normally called using the ``--list-sizes`` option.
 
