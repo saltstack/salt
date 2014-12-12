@@ -39,7 +39,7 @@ from __future__ import absolute_import
 import logging
 
 # import Salt libs
-import salt.utils
+import salt.utils.jid
 import salt.returners
 import salt.ext.six as six
 
@@ -163,4 +163,4 @@ def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return passed_jid if passed_jid is not None else salt.utils.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()

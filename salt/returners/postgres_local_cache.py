@@ -77,6 +77,7 @@ import sys
 
 # Import salt libs
 import salt.utils
+import salt.utils.jid
 # Import third party libs
 try:
     import psycopg2
@@ -148,7 +149,7 @@ def _format_jid_instance(jid, job):
     Format the jid correctly
     '''
     ret = _format_job_instance(job)
-    ret.update({'StartTime': salt.utils.jid_to_time(jid)})
+    ret.update({'StartTime': salt.utils.jid.jid_to_time(jid)})
     return ret
 
 
@@ -156,7 +157,7 @@ def _gen_jid(cur):
     '''
     Generate an unique job id
     '''
-    jid = salt.utils.gen_jid()
+    jid = salt.utils.jid.gen_jid()
     sql = '''SELECT jid FROM jids WHERE jid = %s'''
     cur.execute(sql, (jid,))
     data = cur.fetchall()
@@ -229,7 +230,7 @@ def save_load(jid, clear_load):
     cur.execute(
         sql, (
             jid,
-            salt.utils.jid_to_time(jid),
+            salt.utils.jid.jid_to_time(jid),
             str(clear_load.get("tgt_type")),
             str(clear_load.get("cmd")),
             str(clear_load.get("tgt")),
