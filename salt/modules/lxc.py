@@ -2441,6 +2441,8 @@ def bootstrap(name,
     if not c_info:
         return None
 
+    # default set here as we cannot set them
+    # in def as it can come from a chain of procedures.
     if bootstrap_args:
         bootstrap_args = '{0} -c {{0}}'.format(bootstrap_args)
     else:
@@ -2452,13 +2454,13 @@ def bootstrap(name,
     if not orig_state:
         return orig_state
 
+    cmd = ('sh -c "if command -v salt-minion; then '
+            'salt-call --local service.stop salt-minion; exit 0; '
+            'else exit 1; fi"')
     if not force_install:
-        needs_install = True
-    else:
-        cmd = ('sh -c "if command -v salt-minion; then '
-               'salt-call --local service.stop salt-minion; exit 0; '
-               'else exit 1; fi"')
         needs_install = cmd_retcode(name, cmd) == 1
+    else:
+        needs_install = True
     seeded = cmd_retcode(name, 'test -e \'{0}\''.format(SEED_MARKER)) == 0
     tmp = tempfile.mkdtemp()
     if seeded and not unconditional_install:
@@ -2497,8 +2499,10 @@ def bootstrap(name,
                 cp(name, cfg_files['pubkey'],
                    os.path.join(configdir, 'minion.pub'))
                 bootstrap_args = bootstrap_args.format(configdir)
-                cmd = ('{0} /tmp/bootstrap.sh {1}'
-                       .format(bootstrap_shell, bootstrap_args))
+                cmd = ('{0} /{2}/bootstrap.sh {1}'
+                       .format(bootstrap_shell,
+                               bootstrap_args.replace("'", "''"),
+                               dest_dir))
                 # log ASAP the forged bootstrap command which can be wrapped
                 # out of the output in case of unexpected problem
                 log.info('Running {0} in LXC container \'{1}\''
