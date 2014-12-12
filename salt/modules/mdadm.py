@@ -129,7 +129,7 @@ def destroy(device):
     if __salt__['cmd.retcode'](stop_cmd):
         for number in details['members']:
             zero_cmd.append(number['device'])
-            __salt__['cmd.retcode'](zero_cmd)
+        __salt__['cmd.retcode'](zero_cmd)
 
     # Remove entry from config file:
     if __grains__.get('os_family') == 'Debian':
