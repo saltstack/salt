@@ -16,6 +16,7 @@ import hashlib
 # Import salt libs
 import salt.payload
 import salt.utils
+import salt.utils.jid
 
 log = logging.getLogger(__name__)
 
@@ -93,7 +94,7 @@ def _format_jid_instance(jid, job):
     Format the jid correctly
     '''
     ret = _format_job_instance(job)
-    ret.update({'StartTime': salt.utils.jid_to_time(jid)})
+    ret.update({'StartTime': salt.utils.jid.jid_to_time(jid)})
     return ret
 
 
@@ -105,7 +106,7 @@ def prep_jid(nocache=False, passed_jid=None):
     So do what you have to do to make sure that stays the case
     '''
     if passed_jid is None:  # this can be a None of an empty string
-        jid = salt.utils.gen_jid()
+        jid = salt.utils.jid.gen_jid()
     else:
         jid = passed_jid
 

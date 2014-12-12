@@ -71,6 +71,7 @@ import salt.payload
 import salt.loader
 import salt.utils
 import salt.utils.cache
+import salt.utils.dicttrim
 import salt.utils.process
 import salt.utils.zeromq
 log = logging.getLogger(__name__)
@@ -414,7 +415,7 @@ class SaltEvent(object):
         data['_stamp'] = datetime.datetime.now().isoformat()
 
         tagend = TAGEND
-        serialized_data = salt.utils.trim_dict(self.serial.dumps(data),
+        serialized_data = salt.utils.dicttrim.trim_dict(self.serial.dumps(data),
                 self.opts.get('max_event_size', 1048576),
                 is_msgpacked=True
                 )
