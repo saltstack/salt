@@ -105,7 +105,8 @@ def bootstrap(force=False):
             url = ps_downloads[(__grains__['osrelease'], __grains__['cpuarch'])]
             dest = os.path.join(temp_dir, 'powershell.exe')
             __salt__['cp.get_url'](url, dest)
-            result = __salt__['cmd.run_all'](dest + ' /quiet /norestart')
+            cmd = [dest, '/quiet', '/norestart']
+            result = __salt__['cmd.run_all'](cmd, python_shell=False)
             if result['retcode'] != 0:
                 err = 'Installing Windows PowerShell failed. Please run the installer GUI on the host to get a more specific reason.'
                 log.error(err)
@@ -118,20 +119,22 @@ def bootstrap(force=False):
     # Run the .NET Framework 4 web installer
     dest = os.path.join(temp_dir, 'dotnet4.exe')
     __salt__['cp.get_url'](net4_url, dest)
-    result = __salt__['cmd.run_all'](dest + ' /q /norestart')
+    cmd = [dest, '/q', '/norestart']
+    result = __salt__['cmd.run_all'](cmd, python_shell=False)
     if result['retcode'] != 0:
         err = 'Installing .NET v4.0 failed. Please run the installer GUI on the host to get a more specific reason.'
         log.error(err)
         raise CommandExecutionError(err)
 
     # Run the Chocolatey bootstrap.
-    result = __salt__['cmd.run_all'](
+    cmd = (
         '{0} -NoProfile -ExecutionPolicy unrestricted '
         '-Command "iex ((new-object net.webclient).'
         'DownloadString(\'https://chocolatey.org/install.ps1\'))" '
         '&& SET PATH=%PATH%;%systemdrive%\\chocolatey\\bin'
         .format(ps_path)
     )
+    result = __salt__['cmd.run_all'](cmd, python_shell=True)
 
     if result['retcode'] != 0:
         err = 'Bootstrapping Chocolatey failed: {0}'.format(result['stderr'])
@@ -171,15 +174,15 @@ def list_(filter, all_versions=False, pre_versions=False, source=None):
         log.error(err)
         raise CommandExecutionError(err)
 
-    cmd = choc_path + ' list ' + filter
+    cmd = [choc_path, 'list', filter]
     if salt.utils.is_true(all_versions):
-        cmd += ' -AllVersions'
+        cmd.append('-AllVersions')
     if salt.utils.is_true(pre_versions):
-        cmd += ' -Prerelease'
+        cmd.append('-Prerelease')
     if source:
-        cmd += ' -Source ' + source
+        cmd.extend(['-Source', source])
 
-    result = __salt__['cmd.run_all'](cmd)
+    result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
         err = 'Running chocolatey failed: {0}'.format(result['stderr'])
@@ -216,8 +219,8 @@ def list_webpi():
         log.error(err)
         raise CommandExecutionError(err)
 
-    cmd = choc_path + ' list -Source webpi'
-    result = __salt__['cmd.run_all'](cmd)
+    cmd = [choc_path, 'list', '-Source', 'webpi']
+    result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
         err = 'Running chocolatey failed: {0}'.format(result['stderr'])
@@ -244,8 +247,8 @@ def list_windowsfeatures():
         log.error(err)
         raise CommandExecutionError(err)
 
-    cmd = choc_path + ' list -Source windowsfeatures'
-    result = __salt__['cmd.run_all'](cmd)
+    cmd = [choc_path, 'list', '-Source', 'windowsfeatures']
+    result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
         err = 'Running chocolatey failed: {0}'.format(result['stderr'])
@@ -286,14 +289,14 @@ def install(name, version=None, source=None, force=False):
         raise CommandExecutionError(err)
 
     # chocolatey helpfully only supports a single package argument
-    cmd = choc_path + ' install ' + name
+    cmd = [choc_path, 'install', name]
     if version:
-        cmd += ' -Version ' + version
+        cmd.extend(['-Version', version])
     if source:
-        cmd += ' -Source ' + source
+        cmd.extend(['-Source', source])
     if salt.utils.is_true(force):
-        cmd += ' -Force'
-    result = __salt__['cmd.run_all'](cmd)
+        cmd.append('-Force')
+    result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
         err = 'Running chocolatey failed: {0}'.format(result['stderr'])
@@ -322,8 +325,8 @@ def install_cygwin(name):
         log.error(err)
         raise CommandExecutionError(err)
 
-    cmd = choc_path + ' cygwin ' + name
-    result = __salt__['cmd.run_all'](cmd)
+    cmd = [choc_path, 'cygwin', name]
+    result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
         err = 'Running chocolatey failed: {0}'.format(result['stderr'])
@@ -357,10 +360,10 @@ def install_gem(name, version=None):
         log.error(err)
         raise CommandExecutionError(err)
 
-    cmd = choc_path + ' gem ' + name
+    cmd = [choc_path, 'gem', name]
     if version:
-        cmd += ' -Version ' + version
-    result = __salt__['cmd.run_all'](cmd)
+        cmd.extend(['-Version', version])
+    result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
         err = 'Running chocolatey failed: {0}'.format(result['stderr'])
@@ -399,12 +402,12 @@ def install_missing(name, version=None, source=None):
         raise CommandExecutionError(err)
 
     # chocolatey helpfully only supports a single package argument
-    cmd = choc_path + ' installmissing ' + name
+    cmd = [choc_path, 'installmissing', name]
     if version:
-        cmd += ' -Version ' + version
+        cmd.extend(['-Version', version])
     if source:
-        cmd += ' -Source ' + source
-    result = __salt__['cmd.run_all'](cmd)
+        cmd.extend(['-Source', source])
+    result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
         err = 'Running chocolatey failed: {0}'.format(result['stderr'])
@@ -438,10 +441,10 @@ def install_python(name, version=None):
         log.error(err)
         raise CommandExecutionError(err)
 
-    cmd = choc_path + ' python ' + name
+    cmd = [choc_path, 'python', name]
     if version:
-        cmd += ' -Version ' + version
-    result = __salt__['cmd.run_all'](cmd)
+        cmd.extend(['-Version', version])
+    result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
         err = 'Running chocolatey failed: {0}'.format(result['stderr'])
@@ -471,8 +474,8 @@ def install_windowsfeatures(name):
         log.error(err)
         raise CommandExecutionError(err)
 
-    cmd = choc_path + ' windowsfeatures ' + name
-    result = __salt__['cmd.run_all'](cmd)
+    cmd = [choc_path, 'windowsfeatures', name]
+    result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
         err = 'Running chocolatey failed: {0}'.format(result['stderr'])
@@ -501,8 +504,8 @@ def install_webpi(name):
         log.error(err)
         raise CommandExecutionError(err)
 
-    cmd = choc_path + ' webpi ' + name
-    result = __salt__['cmd.run_all'](cmd)
+    cmd = [choc_path, 'webpi', name]
+    result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
         err = 'Running chocolatey failed: {0}'.format(result['stderr'])
@@ -537,10 +540,10 @@ def uninstall(name, version=None):
         raise CommandExecutionError(err)
 
     # chocolatey helpfully only supports a single package argument
-    cmd = choc_path + ' uninstall ' + name
+    cmd = [choc_path, 'uninstall', name]
     if version:
-        cmd += ' -Version ' + version
-    result = __salt__['cmd.run_all'](cmd)
+        cmd.extend(['-Version', version])
+    result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
         err = 'Running chocolatey failed: {0}'.format(result['stderr'])
@@ -579,12 +582,12 @@ def update(name, source=None, pre_versions=False):
         log.error(err)
         raise CommandExecutionError(err)
 
-    cmd = choc_path + ' update ' + name
+    cmd = [choc_path, 'update', name]
     if source:
-        cmd += ' -Source ' + source
+        cmd.extend(['-Source', source])
     if salt.utils.is_true(pre_versions):
-        cmd += ' -PreRelease'
-    result = __salt__['cmd.run_all'](cmd)
+        cmd.append('-PreRelease')
+    result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
         err = 'Running chocolatey failed: {0}'.format(result['stderr'])
@@ -626,15 +629,15 @@ def version(name, check_remote=False, source=None, pre_versions=False):
         log.error(err)
         raise CommandExecutionError(err)
 
-    cmd = choc_path + ' version ' + name
+    cmd = [choc_path, 'version', name]
     if not salt.utils.is_true(check_remote):
-        cmd += ' -LocalOnly'
+        cmd.append('-LocalOnly')
     if salt.utils.is_true(pre_versions):
-        cmd += ' -Prerelease'
+        cmd.append('-Prerelease')
     if source:
-        cmd += ' -Source ' + source
+        cmd.extend(['-Source', source])
 
-    result = __salt__['cmd.run_all'](cmd)
+    result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
         err = 'Running chocolatey failed: {0}'.format(result['stderr'])
