@@ -771,8 +771,17 @@ def _windows_platform_data():
         biosinfo = wmi_c.Win32_BIOS()[0]
         # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394498(v=vs.85).aspx
         timeinfo = wmi_c.Win32_TimeZone()[0]
+
         # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394072(v=vs.85).aspx
-        motherboardinfo = wmi_c.Win32_BaseBoard()[0]
+        motherboard = {}
+        motherboard['product'] = None
+        motherboard['serial'] = None
+        try:
+            motherboardinfo = wmi_c.Win32_BaseBoard()[0]
+            motherboard['product'] = motherboardinfo.Product
+            motherboard['serial'] = motherboardinfo.SerialNumber
+        except IndexError:
+            log.debug('Motherboard info not available on this sytem')
 
         # the name of the OS comes with a bunch of other data about the install
         # location. For example:
@@ -792,8 +801,8 @@ def _windows_platform_data():
             'timezone': timeinfo.Description,
             'windowsdomain': systeminfo.Domain,
             'motherboard': {
-                'productname': motherboardinfo.Product,
-                'serialnumber': motherboardinfo.SerialNumber
+                'productname': motherboard['product'],
+                'serialnumber': motherboard['serial']
             }
         }
 
