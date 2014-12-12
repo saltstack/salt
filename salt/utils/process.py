@@ -171,7 +171,7 @@ class ThreadPool(object):
 
     def _thread_target(self):
         while True:
-            # 1s timeout so that if the parent dies this thread will die after 1s
+            # 1s timeout so that if the parent dies this thread will die within 1s
             try:
                 func, args, kwargs = self._job_queue.get(timeout=1)
             except Queue.Empty:
