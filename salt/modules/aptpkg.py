@@ -1228,7 +1228,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
             if not imported:
                 cmd = ('apt-key adv --keyserver {0} --logger-fd 1 '
                        '--recv-keys {1}')
-                ret = __salt__['cmd.run_all'](cmd.format(_cmd_quote(keyserver),
+                ret = __salt__['cmd.run_all'](cmd.format(_cmd_quote(ks),
                                                          _cmd_quote(keyid)),
                                               output_loglevel='debug',
                                               **kwargs)
