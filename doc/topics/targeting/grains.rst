@@ -20,7 +20,7 @@ operating system.
 
 .. note::
 
-    Grains resolve to lowercase letters. For example, ``FOO`` and ``foo``
+    Grains resolve to lowercase letters. For example, ``FOO``, and ``foo``
     target the same grain.
 
 Match all CentOS minions:
