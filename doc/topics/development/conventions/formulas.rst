@@ -5,7 +5,7 @@ Salt Formulas
 =============
 
 Formulas are pre-written Salt States. They are as open-ended as Salt States
-themselves and can be used for tasks such as installing a package, configuring
+themselves and can be used for tasks such as installing a package, configuring,
 and starting a service, setting up users or permissions, and many other common
 tasks.
 
@@ -340,7 +340,7 @@ Pillar would replace the ``config`` value from the call above.
 .. note:: Protecting Expansion of Content with Special Characters
 
   When templating keep in mind that YAML does have special characters for
-  quoting, flows and other special structure and content.  When a Jinja
+  quoting, flows, and other special structure and content.  When a Jinja
   substitution may have special characters that will be incorrectly parsed by
   YAML care must be taken.  It is a good policy to use the ``yaml_encode`` or
   the ``yaml_dquote`` Jinja filters:

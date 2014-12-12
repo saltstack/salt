@@ -290,7 +290,7 @@ Settings
 --------
 
 Individual settings in the Salt Master or Salt Minion configuration files are
-cross-referenced using two custom roles, ``conf_master`` and ``conf_minion``.
+cross-referenced using two custom roles, ``conf_master``, and ``conf_minion``.
 
 .. code-block:: restructuredtext
 
