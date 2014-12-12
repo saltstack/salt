@@ -78,16 +78,16 @@ class TestProcessManager(TestCase):
         assert counter.value == 4
         process_manager.kill_children()
 
+
 class TestThreadPool(TestCase):
 
     def test_basic(self):
         '''
         Make sure the threadpool can do things
         '''
-        counter = multiprocessing.Value('i', 0)
         def incr_counter(counter):
             counter.value += 1
-
+        counter = multiprocessing.Value('i', 0)
 
         pool = salt.utils.process.ThreadPool()
         sent = pool.fire_async(incr_counter, args=(counter,))
@@ -100,9 +100,9 @@ class TestThreadPool(TestCase):
         '''
         Make sure that a full threadpool acts as we expect
         '''
-        counter = multiprocessing.Value('i', 0)
         def incr_counter(counter):
             counter.value += 1
+        counter = multiprocessing.Value('i', 0)
 
         # Create a pool with no workers and 1 queue size
         pool = salt.utils.process.ThreadPool(0, 1)
