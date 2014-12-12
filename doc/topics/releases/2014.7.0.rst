@@ -180,7 +180,7 @@ The new ``onchanges`` and ``onchanges_in`` requisites make a state apply only if
 there are changes in the required state. This is useful to execute post hooks
 after changes occur on a system.
 
-The other new requisites, ``onfail`` and ``onfail_in``, allow for a state to run
+The other new requisites, ``onfail``, and ``onfail_in``, allow for a state to run
 in reaction to the failure of another state.
 
 For more information about these new requisites, see the
@@ -366,7 +366,7 @@ call, such as with a Kickstart script, all using regular shell tools.
 Fileserver Backend Enhancements
 -------------------------------
 
-All of the fileserver backends have been overhauled to be faster, lighter and
+All of the fileserver backends have been overhauled to be faster, lighter, and
 more reliable. The VCS backends (:mod:`gitfs <salt.fileserver.gitfs>`,
 :mod:`hgfs <salt.fileserver.hgfs>`, and :mod:`svnfs <salt.fileserver.svnfs>`)
 have also received a **lot** of new features.
@@ -408,7 +408,7 @@ Environment Whitelisting/Blacklisting
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 By default, gitfs will expose all branches and tags as Salt fileserver
-environments. Two new config parameters, :conf_master:`gitfs_env_whitelist` and
+environments. Two new config parameters, :conf_master:`gitfs_env_whitelist`, and
 :conf_master:`gitfs_env_blacklist`, allow more control over which branches and
 tags are exposed. More detailed information on how these two options work can
 be found in the :ref:`Gitfs Walkthrough <gitfs-whitelist-blacklist>`.
@@ -495,7 +495,7 @@ Minion Whitelisting/Blacklisting
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 By default, minionfs will expose the pushed files from all minions. Two new
-config parameters, :conf_master:`minionfs_whitelist` and
+config parameters, :conf_master:`minionfs_whitelist`, and
 :conf_master:`minionfs_blacklist`, allow minionfs to be restricted to serve
 files from only the desired minions.
 

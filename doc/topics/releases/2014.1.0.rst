@@ -69,7 +69,7 @@ Salt Virt
 ---------
 
 Salt Virt is a cloud controller that supports virtual machine deployment,
-inspection, migration and integration with many aspects of Salt.
+inspection, migration, and integration with many aspects of Salt.
 
 Salt Virt has undergone a major overhaul with this release and now supports
 many more features and includes a number of critical improvements.
