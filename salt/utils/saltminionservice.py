@@ -7,7 +7,7 @@ import sys
 # Import salt libs
 from salt.utils.winservice import Service, instart
 import salt
-import salt.exitcodes
+import salt.defaults.exitcodes
 
 # Import third party libs
 import win32serviceutil
@@ -39,7 +39,7 @@ def _main():
     except win32service.error as details:
         if details[0] == winerror.ERROR_SERVICE_DOES_NOT_EXIST:
             instart(MinionService, servicename, 'Salt Minion')
-            sys.exit(salt.exitcodes.EX_OK)
+            sys.exit(salt.defaults.exitcodes.EX_OK)
     if status[1] == win32service.SERVICE_RUNNING:
         win32serviceutil.StopServiceWithDeps(servicename)
         win32serviceutil.StartService(servicename)

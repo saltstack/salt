@@ -23,7 +23,7 @@ else:
 # Import salt libs
 from salt.log import is_console_configured
 from salt.exceptions import SaltClientError
-import salt.exitcodes
+import salt.defaults.exitcodes
 import salt.utils
 
 log = logging.getLogger(__name__)
@@ -158,7 +158,7 @@ def verify_files(files, user):
         err = ('Failed to prepare the Salt environment for user '
                '{0}. The user is not available.\n').format(user)
         sys.stderr.write(err)
-        sys.exit(salt.exitcodes.EX_NOUSER)
+        sys.exit(salt.defaults.exitcodes.EX_NOUSER)
     for fn_ in files:
         dirname = os.path.dirname(fn_)
         try:
@@ -199,7 +199,7 @@ def verify_env(dirs, user, permissive=False, pki_dir=''):
         err = ('Failed to prepare the Salt environment for user '
                '{0}. The user is not available.\n').format(user)
         sys.stderr.write(err)
-        sys.exit(salt.exitcodes.EX_NOUSER)
+        sys.exit(salt.defulats.exitcodes.EX_NOUSER)
     for dir_ in dirs:
         if not dir_:
             continue

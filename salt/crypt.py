@@ -28,7 +28,7 @@ except ImportError:
     pass
 
 # Import salt libs
-import salt.exitcodes
+import salt.defaults.exitcodes
 import salt.utils
 import salt.payload
 import salt.utils.verify
@@ -680,7 +680,7 @@ class Auth(object):
                             'minion.\nOr restart the Salt Master in open mode to '
                             'clean out the keys. The Salt Minion will now exit.'
                         )
-                        sys.exit(salt.exitcodes.EX_OK)
+                        sys.exit(salt.defaults.exitcodes.EX_OK)
                 # has the master returned that its maxed out with minions?
                 elif payload['load']['ret'] == 'full':
                     return 'full'
