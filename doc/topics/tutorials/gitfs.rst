@@ -394,10 +394,10 @@ be searched first for the requested file; then, if it is not found on the
 master, each configured git remote will be searched.
 
 
-Branches, Environments and Top Files
+Branches, Environments, and Top Files
 ====================================
 
-When using the gitfs backend, branches and tags will be mapped to environments
+When using the gitfs backend, branches, and tags will be mapped to environments
 using the branch/tag name as an identifier.
 
 There is one exception to this rule: the ``master`` branch is implicitly mapped

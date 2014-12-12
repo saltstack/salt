@@ -214,7 +214,7 @@ Given the above setup, the OverState will be carried out as follows:
    minion IDs start with "web".
 
 3. Finally, the ``all`` stage will execute, running :mod:`state.highstate
-   <salt.modules.state.highstate>` on all systems, if and only if the ``mysql``
+   <salt.modules.state.highstate>` on all systems, if, and only if the ``mysql``
    and ``webservers`` stages completed without any failures.
 
 Any failure in the above steps would cause the requires to fail, preventing the

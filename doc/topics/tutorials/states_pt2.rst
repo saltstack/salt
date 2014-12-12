@@ -108,7 +108,7 @@ Verify that Apache is now serving your custom HTML.
 
 .. admonition:: ``require`` vs. ``watch``
 
-    There are two :ref:`requisite-declaration`, “require” and “watch”. Not
+    There are two :ref:`requisite-declaration`, “require”, and “watch”. Not
     every state supports “watch”. The :mod:`service state
     <salt.states.service>` does support “watch” and will restart a service
     based on the watch condition.
@@ -142,5 +142,5 @@ Verify that Apache is now serving your custom HTML.
 Next steps
 ==========
 
-In :doc:`part 3 <states_pt3>` we will discuss how to use includes, extends and
+In :doc:`part 3 <states_pt3>` we will discuss how to use includes, extends, and
 templating to make a more complete State Tree configuration.
