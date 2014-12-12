@@ -169,14 +169,25 @@ class SSH(object):
         self.targets = self.roster.targets(
                 self.opts['tgt'],
                 self.tgt_type)
-        priv = self.opts.get(
-                'ssh_priv',
-                os.path.join(
-                    self.opts['pki_dir'],
-                    'ssh',
-                    'salt-ssh.rsa'
+        # If we're in a wfunc, we need to get the ssh key location from the
+        # top level opts, stored in __master_opts__
+        if '__master_opts__' in self.opts:
+            priv = self.opts['__master_opts__'].get(
+                    'ssh_priv',
+                    os.path.join(
+                        self.opts['__master_opts__']['pki_dir'],
+                        'ssh',
+                        'salt-ssh.rsa'
+                        )
                     )
-                )
+        else:
+            priv = self.opts.get(
+                    'ssh_priv',
+                    os.path.join(
+                        self.opts['pki_dir'],
+                        'ssh',
+                        'salt-ssh.rsa'
+                        )
         if not os.path.isfile(priv):
             try:
                 salt.client.ssh.shell.gen_key(priv)
