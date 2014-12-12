@@ -144,7 +144,7 @@ Section -Prerequisites
 
   !define VC_REDIST_X64_GUID "{8220EEFE-38CD-377E-8595-13398D740ACE}"
   !define VC_REDIST_X86_GUID "{9A25302D-30C0-39D9-BD6F-21E6EC160475}"
-  !define VC_REDIST_X64_URI "http://download.microsoft.com/download/d/2/4/d242c3fb-da5a-4542-ad66-f9661d0a8d19/vcredist_x64.exe"
+  !define VC_REDIST_X64_URI "http://download.microsoft.com/download/2/d/6/2d61c766-107b-409d-8fba-c39e61ca08e8/vcredist_x64.exe"
   !define VC_REDIST_X86_URI "http://download.microsoft.com/download/d/d/9/dd9a82d0-52ef-40db-8dab-795376989c03/vcredist_x86.exe"
 
   Var /GLOBAL VcRedistGuid
