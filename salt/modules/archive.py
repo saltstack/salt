@@ -160,7 +160,7 @@ def gunzip(gzipfile, template=None, runas=None):
 
 
 @decorators.which('zip')
-def cmd_zip_(zipfile, sources, template=None, runas=None):
+def cmd_zip_(zip_file, sources, template=None, runas=None):
     '''
     Uses the zip command to create zip files
 
@@ -182,7 +182,7 @@ def cmd_zip_(zipfile, sources, template=None, runas=None):
     '''
     if isinstance(sources, string_types):
         sources = [s.strip() for s in sources.split(',')]
-    cmd = 'zip {0} {1}'.format(zipfile, ' '.join(sources))
+    cmd = 'zip {0} {1}'.format(zip_file, ' '.join(sources))
     return __salt__['cmd.run'](cmd, template=template, runas=runas).splitlines()
 
 
@@ -232,7 +232,7 @@ def zip_(archive, sources, template=None, runas=None):
 
 
 @decorators.which('unzip')
-def cmd_unzip_(zipfile, dest, excludes=None, template=None, options=None, runas=None):
+def cmd_unzip_(zip_file, dest, excludes=None, template=None, options=None, runas=None):
     '''
     Uses the unzip command to unpack zip files
 
@@ -259,9 +259,9 @@ def cmd_unzip_(zipfile, dest, excludes=None, template=None, options=None, runas=
         excludes = [entry.strip() for entry in excludes.split(',')]
 
     if options:
-        cmd = 'unzip -{0} {1} -d {2}'.format(options, zipfile, dest)
+        cmd = 'unzip -{0} {1} -d {2}'.format(options, zip_file, dest)
     else:
-        cmd = 'unzip {0} -d {1}'.format(zipfile, dest)
+        cmd = 'unzip {0} -d {1}'.format(zip_file, dest)
 
     if excludes is not None:
         cmd += ' -x {0}'.format(' '.join(excludes))
@@ -370,14 +370,14 @@ def unrar(rarfile, dest, excludes=None, template=None, runas=None):
     return __salt__['cmd.run'](' '.join(cmd), template=template, runas=runas).splitlines()
 
 
-def _render_filenames(filenames, zipfile, saltenv, template):
+def _render_filenames(filenames, zip_file, saltenv, template):
     '''
     Process markup in the :param:`filenames` and :param:`zipfile` variables (NOT the
     files under the paths they ultimately point to) according to the markup
     format provided by :param:`template`.
     '''
     if not template:
-        return (filenames, zipfile)
+        return (filenames, zip_file)
 
     # render the path as a template using path_template_engine as the engine
     if template not in salt.utils.templates.TEMPLATE_REGISTRY:
@@ -419,5 +419,5 @@ def _render_filenames(filenames, zipfile, saltenv, template):
             return data['data']
 
     filenames = _render(filenames)
-    zipfile = _render(zipfile)
-    return (filenames, zipfile)
+    zip_file = _render(zip_file)
+    return (filenames, zip_file)
