@@ -2302,6 +2302,8 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
                 volume_dict['type'] = volume['type']
             if 'iops' in volume:
                 volume_dict['iops'] = volume['iops']
+            if 'encrypted' in volume:
+                volume_dict['encrypted'] = volume['encrypted']
 
         if 'volume_id' not in volume_dict:
             created_volume = create_volume(volume_dict, call='function', wait_to_finish=wait_to_finish)
@@ -3335,6 +3337,9 @@ def create_volume(kwargs=None, call=None, wait_to_finish=False):
 
     if 'iops' in kwargs and kwargs.get('type', 'standard') == 'io1':
         params['Iops'] = kwargs['iops']
+
+    if 'encrypted' in kwargs:
+        params['Encrypted'] = kwargs['encrypted']
 
     log.debug(params)
 
