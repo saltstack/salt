@@ -101,7 +101,7 @@ Structuring Pillar Files
 secure and insecure data pertaining to minions. When designing the structure
 of the ``/srv/pillar`` directory, the pillars contained within
 should once again be focused on clear and concise data which users can easily
-review, modify and understand.
+review, modify, and understand.
 
 The ``/srv/pillar/`` directory is primarily controlled by ``top.sls``. It
 should be noted that the pillar ``top.sls`` is not used as a location to
