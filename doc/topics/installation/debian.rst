@@ -2,8 +2,8 @@
 Debian Installation
 ===================
 
-Currently the latest packages for Debian Old Stable, Stable and
-Unstable (Squeeze, Wheezy and Sid) are published in our
+Currently the latest packages for Debian Old Stable, Stable, and
+Unstable (Squeeze, Wheezy, and Sid) are published in our
 (saltstack.com) Debian repository.
 
 Configure Apt

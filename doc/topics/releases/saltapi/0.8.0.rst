@@ -137,7 +137,7 @@ Running the REST interface via any WSGI-compliant server
 The :py:mod:`rest_cherrypy <salt.netapi.rest_cherrypy.app>` netapi module is
 a regular WSGI application written using the CherryPy framework. It was written
 with the intent of also running from any WSGI-compliant server such as Apache
-and mod_wsgi, Gunicorn, uWSGI, Nginx and FastCGI, etc.
+and mod_wsgi, Gunicorn, uWSGI, Nginx, and FastCGI, etc.
 
 The WSGI application entry point has been factored out into a stand-alone file
 in this release suitable for calling from an external server.

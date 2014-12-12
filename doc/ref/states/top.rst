@@ -156,7 +156,7 @@ A clean and recommended setup for multiple environments would look like this:
       prod:
         - /srv/salt/prod
 
-Then only place state trees in the dev, qa and prod environments, leaving
+Then only place state trees in the dev, qa, and prod environments, leaving
 the base environment open for generic file transfers. Then the top.sls file
 would look something like this:
 
@@ -224,7 +224,7 @@ of matches you can perform:
             - match: compound
             - nagios.server
 
-In this example ``top.sls``, all minions get the ldap-client, networking and
+In this example ``top.sls``, all minions get the ldap-client, networking, and
 salt.minion states. Any minion with an id matching the ``salt-master*`` glob
 will get the salt.master state. Any minion with ids matching the regular
 expression ``^(memcache|web).(qa|prod).loc$`` will get the nagios.mon.web and

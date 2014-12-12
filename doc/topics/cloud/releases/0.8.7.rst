@@ -49,7 +49,7 @@ Added Parallels Support
 =======================
 As mentioned above, X-Mission was kind enough to lend us the resources to write
 a cloud driver for Parallels-based cloud providers. This driver requires only
-a ``user``, ``password`` and a ``url``. These can be obtained from your cloud
+a ``user``, ``password``, and a ``url``. These can be obtained from your cloud
 provider.
 
 * Using the legacy configuration format:

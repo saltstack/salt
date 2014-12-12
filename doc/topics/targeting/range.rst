@@ -75,7 +75,7 @@ One might target host1 through host100 in the test.com domain with Salt as follo
     salt --range %test:CLUSTER test.ping
 
 
-The following salt command would target three hosts: ``frontend``, ``backend`` and ``mysql``:
+The following salt command would target three hosts: ``frontend``, ``backend``, and ``mysql``:
 
 .. code-block:: bash
 

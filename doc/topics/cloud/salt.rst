@@ -301,7 +301,7 @@ usual:
 
 CloudClient
 -----------
-The execution, state and runner modules ultimately all use the CloudClient
+The execution, state, and runner modules ultimately all use the CloudClient
 library that ships with Salt. To use the CloudClient library locally (either on
 the master or a minion), create a client object and issue a command against it:
 

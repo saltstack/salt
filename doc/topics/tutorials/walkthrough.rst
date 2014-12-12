@@ -27,7 +27,7 @@ that can solve many specific problems in an infrastructure.
 
 The backbone of Salt is the remote execution engine, which creates a high-speed,
 secure and bi-directional communication net for groups of systems. On top of this
-communication system, Salt provides an extremely fast, flexible and easy-to-use
+communication system, Salt provides an extremely fast, flexible, and easy-to-use
 configuration management system called ``Salt States``.
 
 Installing Salt
@@ -184,7 +184,7 @@ master. To list the keys that are on the master:
 
     salt-key -L
 
-The keys that have been rejected, accepted and pending acceptance are listed.
+The keys that have been rejected, accepted, and pending acceptance are listed.
 The easiest way to accept the minion key is to accept all pending keys:
 
 .. code-block:: bash
@@ -398,7 +398,7 @@ Targeting
 
 Salt allows for minions to be targeted based on a wide range of criteria.  The
 default targeting system uses globular expressions to match minions, hence if
-there are minions named ``larry1``, ``larry2``, ``curly1`` and ``curly2``, a
+there are minions named ``larry1``, ``larry2``, ``curly1``, and ``curly2``, a
 glob of ``larry*`` will match ``larry1`` and ``larry2``, and a glob of ``*1``
 will match ``larry1`` and ``curly1``.
 

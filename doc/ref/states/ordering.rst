@@ -54,7 +54,7 @@ Often when setting up states any single action will require or depend on
 another action. Salt allows for the building of relationships between states
 with requisite statements. A requisite statement ensures that the named state
 is evaluated before the state requiring it. There are three types of requisite
-statements in Salt, **require**, **watch** and **prereq**.
+statements in Salt, **require**, **watch**, and **prereq**.
 
 These requisite statements are applied to a specific state declaration:
 
@@ -78,7 +78,7 @@ executing them before the state that requires them. Then the required states
 can be evaluated to see if they have executed correctly.
 
 Require statements can refer to any state defined in Salt. The basic examples
-are `pkg`, `service` and `file`, but any used state can be referenced.
+are `pkg`, `service`, and `file`, but any used state can be referenced.
 
 In addition to state declarations such as pkg, file, etc., **sls** type requisites
 are also recognized, and essentially allow 'chaining' of states. This provides a
@@ -142,7 +142,7 @@ more requisites. Both requisite types can also be separately declared:
         - present
 
 In this example, the httpd service is only going to be started if the package,
-user, group and file are executed successfully.
+user, group, and file are executed successfully.
 
 
 Requisite Documentation

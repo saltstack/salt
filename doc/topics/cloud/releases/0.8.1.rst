@@ -40,7 +40,7 @@ Increased Map Functionality
 ===========================
 
 Previously, map files were only used for creating VMs. Now they can also be
-used to query and delete VMs. The -Q, -F and -d options can all be used in
+used to query and delete VMs. The -Q, -F, and -d options can all be used in
 conjunction with -m, to display map-specific data. If a VM that is specified
 in the map does not exist, it will still show up under -Q and -F as "Absent".
 If a VM specified in the map does not exist when a -d is specified, it will

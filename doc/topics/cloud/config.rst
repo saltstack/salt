@@ -193,7 +193,7 @@ Notice that because of the multiple entries, one has to be explicit about the
 provider alias and name, from the above example, ``production-config:aws``.
 
 This new syntax also changes the interaction with the ``salt-cloud`` binary.
-``--list-location``, ``--list-images`` and ``--list-sizes`` which needs a cloud
+``--list-location``, ``--list-images``, and ``--list-sizes`` which needs a cloud
 provider as an argument. Since 0.8.7 the argument used should be the configured
 cloud provider alias. If the provider alias only has a single entry, use
 ``<provider-alias>``.  If it has multiple entries,
@@ -362,7 +362,7 @@ be set:
 ``provider: my-linode-config`` instead of ``provider: linode`` on a profile
 configuration.
 
-The password needs to be 8 characters and contain lowercase, uppercase and
+The password needs to be 8 characters and contain lowercase, uppercase, and
 numbers.
 
 
@@ -521,7 +521,7 @@ my-openstack-rackspace-config`` instead of ``provider: openstack`` on a profile
 configuration.
 
 
-You will certainly need to configure the ``user``, ``tenant`` and either
+You will certainly need to configure the ``user``, ``tenant``, and either
 ``password`` or ``apikey``.
 
 
@@ -586,7 +586,7 @@ profile configuration.
 Parallels
 ---------
 
-Using Salt with Parallels requires a user, password and URL. These can be
+Using Salt with Parallels requires a user, password, and URL. These can be
 obtained from your cloud provider.
 
 * Using the old format:
@@ -616,7 +616,7 @@ profile configuration.
 Proxmox
 ---------
 
-Using Salt with Proxmox requires a user, password and URL. These can be
+Using Salt with Proxmox requires a user, password, and URL. These can be
 obtained from your cloud provider. Both PAM and PVE users can be used.
 
 * Using the new configuration format:

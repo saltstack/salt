@@ -475,7 +475,7 @@ and set them up to be mounted, and the ``salt`` object is used multiple
 times to call shell commands to gather data.
 
 
-Introducing the Python, PyDSL and the Pyobjects Renderers
+Introducing the Python, PyDSL, and the Pyobjects Renderers
 ---------------------------------------------------------
 
 Sometimes the chosen default renderer might not have enough logical power to

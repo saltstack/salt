@@ -36,7 +36,7 @@ already running, stop it. There is only one requirement when preparing a
 redundant master, which is that masters share the same private key. When the
 first master was created, the master's identifying key pair was generated and
 placed in the master's ``pki_dir``. The default location of the master's key
-pair is ``/etc/salt/pki/master/``. Take the private key, ``master.pem`` and
+pair is ``/etc/salt/pki/master/``. Take the private key, ``master.pem``, and
 copy it to the same location on the redundant master. Do the same for the
 master's public key, ``master.pub``. Assuming that no minions have yet been
 connected to the new redundant master, it is safe to delete any existing key

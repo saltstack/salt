@@ -47,7 +47,7 @@ Options
     .. versionadded:: 0.17
 
     Choose the format of the state output. The options are `full`,
-    `terse`, `mixed`, `changes` and `filter`. Default: full
+    `terse`, `mixed`, `changes`, and `filter`. Default: full
 
 .. option:: --subset=SUBSET
 
@@ -76,7 +76,7 @@ Options
 
     Pass in an external authentication medium to validate against. The
     credentials will be prompted for. The options are `auto`,
-    `keystone`, `ldap`, `pam` and `stormpath`. Can be used with the -T
+    `keystone`, `ldap`, `pam`, and `stormpath`. Can be used with the -T
     option.
 
 .. option:: -T, --make-token
@@ -93,7 +93,7 @@ Options
     The options are `carbon`, `cassandra`, `couchbase`, `couchdb`,
     `elasticsearch`, `etcd`, `hipchat`, `local`, `local_cache`,
     `memcache`, `mongo`, `mysql`, `odbc`, `postgres`, `redis`,
-    `sentry`, `slack`, `sms`, `smtp`, `sqlite3`, `syslog` and `xmpp`.
+    `sentry`, `slack`, `sms`, `smtp`, `sqlite3`, `syslog`, and `xmpp`.
 
 .. option:: -d, --doc, --documentation
 

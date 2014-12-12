@@ -155,7 +155,7 @@ Options
 Examples
 ========
 
-To create 4 VMs named web1, web2, db1 and db2 from specified profiles:
+To create 4 VMs named web1, web2, db1, and db2 from specified profiles:
 
 .. code-block:: bash
 
