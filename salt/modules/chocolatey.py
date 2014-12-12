@@ -199,7 +199,6 @@ def list_(filter, all_versions=False, pre_versions=False, source=None):
                 ret[name] = []
             ret[name].append(ver)
 
-    #log.info(repr(ret))
     return ret
 
 
