@@ -94,7 +94,7 @@ except ImportError:
 
 # Import salt libs
 from salt.defaults import DEFAULT_TARGET_DELIM
-import salt.defaults.xitcodes
+import salt.defaults.exitcodes
 import salt.log
 import salt.version
 import salt.defaults.exitcodes
