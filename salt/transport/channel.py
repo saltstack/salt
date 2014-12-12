@@ -1,0 +1,89 @@
+# -*- coding: utf-8 -*-
+'''
+Encapsulate the different transports available to Salt.
+
+This includes client and server side transport, for the ReqServer and the Publisher
+'''
+
+
+class ReqChannel(object):
+    '''
+    Factory class to create a communication channels to the ReqServer
+    '''
+    @staticmethod
+    def factory(opts, **kwargs):
+        # Default to ZeroMQ for now
+        ttype = 'zeromq'
+
+        # determine the ttype
+        if 'transport' in opts:
+            ttype = opts['transport']
+        elif 'transport' in opts.get('pillar', {}).get('master', {}):
+            ttype = opts['pillar']['master']['transport']
+
+        # switch on available ttypes
+        if ttype == 'zeromq':
+            import salt.transport.zeromq
+            return salt.transport.zeromq.ZeroMQReqChannel(opts, **kwargs)
+        elif ttype == 'raet':
+            import salt.transport.raet
+            return salt.transport.raet.RAETReqChannel(opts, **kwargs)
+        elif ttype == 'local':
+            import salt.transport.local
+            return salt.transport.local.LocalChannel(opts, **kwargs)
+        else:
+            raise Exception('Channels are only defined for ZeroMQ and raet')
+            # return NewKindOfChannel(opts, **kwargs)
+
+    def send(self, load, tries=3, timeout=60):
+        '''
+        Send "load" to the master.
+        '''
+        raise NotImplementedError()
+
+    def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
+        '''
+        Send "load" to the master in a way that the load is only readable by
+        the minion and the master (not other minions etc.)
+        '''
+        raise NotImplementedError()
+
+# TODO:
+class PubChannel(object):
+    '''
+    Factory class to create subscription channels to the master's Publisher
+    '''
+    @staticmethod
+    def factory(opts, **kwargs):
+        # Default to ZeroMQ for now
+        ttype = 'zeromq'
+
+        # determine the ttype
+        if 'transport' in opts:
+            ttype = opts['transport']
+        elif 'transport' in opts.get('pillar', {}).get('master', {}):
+            ttype = opts['pillar']['master']['transport']
+
+        # switch on available ttypes
+        if ttype == 'zeromq':
+            return ZeroMQChannel(opts, **kwargs)
+        elif ttype == 'raet':
+            return RAETChannel(opts, **kwargs)
+        else:
+            raise Exception('Channels are only defined for ZeroMQ and raet')
+            # return NewKindOfChannel(opts, **kwargs)
+
+    def get_pub(self, timeout=0):
+        '''
+        Get a pub job, with an optional timeout (0==forever)
+        '''
+        raise NotImplementedError()
+
+    def get_pub_noblock(self):
+        '''
+        Get a pub job in a non-blocking manner.
+        Return pub or None
+        '''
+        raise NotImplementedError()
+
+# EOF
