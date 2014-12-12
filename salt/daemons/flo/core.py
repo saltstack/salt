@@ -978,7 +978,7 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
             #log.debug("\n**** Event Fire \n {0}\n".format(msg))
         elif d_share == 'presence_req':
             self.presence_req.value.append(msg)
-            log.debug("\n**** Presence Subscribe \n {0}\n".format(msg))
+            #log.debug("\n**** Presence Request \n {0}\n".format(msg))
         elif d_share == 'remote_cmd':  # assume  minion to master or salt-call
             if not self.road_stack.value.remotes:
                 log.error("**** Lane Router: Missing joined master. Unable to route "
@@ -1113,10 +1113,8 @@ class SaltRaetPresenter(ioflo.base.deeding.Deed):
         Forward an presence message to all subscribed yards
         Presence message has a route
         '''
-        console.terse('Presenter handling event: {0}\n'.format(str(msg)))
         y_name = msg['route']['src'][1]
         if y_name not in self.lane_stack.value.nameRemotes: # subscriber not a remote
-            console.terse('Requester not found in remotes, dropping\n')
             pass # drop msg don't answer
         else:
             # create answer message
