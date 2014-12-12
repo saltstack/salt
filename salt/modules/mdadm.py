@@ -47,7 +47,7 @@ def list_():
     '''
     ret = {}
     for line in (__salt__['cmd.run_stdout']
-                    (['mdadm','--detail','--scan'], 
+                    (['mdadm', '--detail', '--scan'],
                      python_shell=False).splitlines()):
         if ' ' not in line:
             continue
@@ -123,7 +123,7 @@ def destroy(device):
     except CommandExecutionError:
         return False
 
-    stop_cmd = ['mdadm','--stop',device]
+    stop_cmd = ['mdadm', '--stop', device]
     zero_cmd = ['mdadm', '--zero-superblock']
 
     if __salt__['cmd.retcode'](stop_cmd):
