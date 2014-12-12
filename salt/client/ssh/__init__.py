@@ -188,6 +188,7 @@ class SSH(object):
                         'ssh',
                         'salt-ssh.rsa'
                         )
+                    )
         if not os.path.isfile(priv):
             try:
                 salt.client.ssh.shell.gen_key(priv)
