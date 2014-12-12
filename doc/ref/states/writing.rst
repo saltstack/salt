@@ -24,7 +24,7 @@ illustrate:
         - mode: 644
         - source: salt://salt/master
 
-Therefore this SLS data can be directly linked to a module, function and
+Therefore this SLS data can be directly linked to a module, function, and
 arguments passed to that function.
 
 This does issue the burden, that function names, state names and function
