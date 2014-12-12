@@ -74,7 +74,7 @@ To retrieve the tag as well as the event data, pass ``full=True``:
     tag, data = evdata['tag'], evdata['data']
 
     # tag == 'salt/job/JOBID/ret/MINIONNAME
-    
+
 
 Instead of looking for a single event, the ``iter_events`` method can be used to
 make a generator which will continually yield salt events.

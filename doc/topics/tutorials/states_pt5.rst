@@ -207,7 +207,7 @@ Given the above setup, the OverState will be carried out as follows:
    <salt.modules.state.sls>` once for each of the two listed SLS targets
    (``mysql.server`` and ``drbd``).  These states will be executed on all
    minions whose minion ID starts with "db".
-   
+
 2. The ``webservers`` stage will then be executed, but only if the ``mysql``
    stage executes without any failures. The ``webservers`` stage will execute a
    :mod:`state.highstate <salt.modules.state.highstate>` on all minions whose
@@ -277,5 +277,3 @@ the stages defined in ``/root/other-overstate.sls``.
 .. note::
 
     Remember, salt-run is always executed on the master.
-
-

@@ -71,7 +71,7 @@ Default: ``None``
 The id to be passed in the publish job to minions. This is used for MultiSyndics
 to return the job to the requesting master.
 
-.. note:: 
+.. note::
 
     This must be the same string as the syndic is configured with.
 

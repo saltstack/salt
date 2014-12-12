@@ -62,7 +62,7 @@ server:
 
     $ cat /etc/range/test.yaml
     CLUSTER: host1..100.test.com
-    APPS: 
+    APPS:
       - frontend
       - backend
       - mysql

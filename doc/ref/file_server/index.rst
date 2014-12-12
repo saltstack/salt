@@ -147,5 +147,3 @@ data is not available, it needs to be generated:
         client = salt.minion.FileClient(opts)
         # Call get_file
         return client.get_file(path, dest, False, env)
-
-

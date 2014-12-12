@@ -261,4 +261,3 @@ This function removes the key pair from Amazon.
 .. code-block:: bash
 
     salt-cloud -f delete_keypair ec2 keyname=mykeypair
-

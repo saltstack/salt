@@ -30,14 +30,14 @@ standard ``salt`` commands.
 
 .. note::
 
-    The Salt SSH eventually is supposed to support the same set of commands and 
-    functionality as standard ``salt`` command. 
-    
-    At the moment fileserver operations must be wrapped to ensure that the 
-    relevant files are delivered with the ``salt-ssh`` commands. 
-    The state module is an exception, which compiles the state run on the 
-    master, and in the process finds all the references to ``salt://`` paths and 
-    copies those files down in the same tarball as the state run. 
+    The Salt SSH eventually is supposed to support the same set of commands and
+    functionality as standard ``salt`` command.
+
+    At the moment fileserver operations must be wrapped to ensure that the
+    relevant files are delivered with the ``salt-ssh`` commands.
+    The state module is an exception, which compiles the state run on the
+    master, and in the process finds all the references to ``salt://`` paths and
+    copies those files down in the same tarball as the state run.
     However, needed fileserver wrappers are still under development.
 
 Salt SSH Roster
@@ -67,11 +67,11 @@ address. A more elaborate roster can be created:
       sudo: True         # Whether to sudo to root, not enabled by default
     web2:
       host: 192.168.42.2
-      
+
 .. note::
 
     sudo works only if NOPASSWD is set for user in /etc/sudoers:
-    ``fred ALL=(ALL) NOPASSWD: ALL`` 
+    ``fred ALL=(ALL) NOPASSWD: ALL``
 
 Calling Salt SSH
 ================
@@ -86,7 +86,7 @@ command:
 Commands with ``salt-ssh`` follow the same syntax as the ``salt`` command.
 
 The standard salt functions are available! The output is the same as ``salt``
-and many of the same flags are available. Please see 
+and many of the same flags are available. Please see
 http://docs.saltstack.com/ref/cli/salt-ssh.html for all of the available
 options.
 
@@ -123,7 +123,7 @@ Configuring Salt SSH
 
 Salt SSH takes its configuration from a master configuration file. Normally, this
 file is in ``/etc/salt/master``. If one wishes to use a customized configuration file,
-the ``-c`` option to Salt SSH facilitates passing in a directory to look inside for a 
+the ``-c`` option to Salt SSH facilitates passing in a directory to look inside for a
 configuration file named ``master``.
 
 Running Salt SSH as non-root user
@@ -156,4 +156,3 @@ contents:
 Instead of having to call
 ``salt-ssh --config-dir=path/to/config/dir --max-procs=30 \* test.ping`` you
 can call ``salt-ssh \* test.ping``.
-

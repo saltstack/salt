@@ -61,30 +61,30 @@ The package definition file should look similar to this example for Firefox:
 .. code-block:: yaml
 
     Firefox:
-      17.0.1: 
+      17.0.1:
         installer: 'salt://win/repo/firefox/English/Firefox Setup 17.0.1.exe'
-        full_name: Mozilla Firefox 17.0.1 (x86 en-US) 
+        full_name: Mozilla Firefox 17.0.1 (x86 en-US)
         locale: en_US
         reboot: False
         install_flags: ' -ms'
         uninstaller: '%ProgramFiles(x86)%/Mozilla Firefox/uninstall/helper.exe'
-        uninstall_flags: ' /S' 
-      16.0.2: 
+        uninstall_flags: ' /S'
+      16.0.2:
         installer: 'salt://win/repo/firefox/English/Firefox Setup 16.0.2.exe'
-        full_name: Mozilla Firefox 16.0.2 (x86 en-US) 
+        full_name: Mozilla Firefox 16.0.2 (x86 en-US)
         locale: en_US
         reboot: False
         install_flags: ' -ms'
         uninstaller: '%ProgramFiles(x86)%/Mozilla Firefox/uninstall/helper.exe'
-        uninstall_flags: ' /S' 
-      15.0.1: 
+        uninstall_flags: ' /S'
+      15.0.1:
         installer: 'salt://win/repo/firefox/English/Firefox Setup 15.0.1.exe'
-        full_name: Mozilla Firefox 15.0.1 (x86 en-US) 
+        full_name: Mozilla Firefox 15.0.1 (x86 en-US)
         locale: en_US
         reboot: False
         install_flags: ' -ms'
         uninstaller: '%ProgramFiles(x86)%/Mozilla Firefox/uninstall/helper.exe'
-        uninstall_flags: ' /S'        
+        uninstall_flags: ' /S'
 
 More examples can be found here: https://github.com/saltstack/salt-winrepo
 
@@ -160,12 +160,12 @@ project's wiki_:
         installer: salt://win/repo/7zip/7z920-x64.msi
         full_name: 7-Zip 9.20 (x64 edition)
         reboot: False
-        install_flags: ' /q '  
+        install_flags: ' /q '
         msiexec: True
         uninstaller: salt://win/repo/7zip/7z920-x64.msi
         uninstall_flags: ' /qn'
- 
- 
+
+
 
 Generate Repo Cache File
 ========================
@@ -197,8 +197,8 @@ Now you can query the available version of Firefox using the Salt pkg module.
                      '17.0.1': 'Mozilla Firefox 17.0.1 (x86 en-US)'}}
 
 As you can see, there are three versions of Firefox available for installation.
-You can refer a software package by its ``name`` or its ``full_name`` surround 
-by single quotes. 
+You can refer a software package by its ``name`` or its ``full_name`` surround
+by single quotes.
 
 .. code-block:: bash
 
@@ -258,7 +258,7 @@ includes package definitions for open source software. This repo points to the
 HTTP or ftp locations of the installer files. Anyone is welcome to send a pull
 request to this repo to add new package definitions. Browse the repo
 here: `https://github.com/saltstack/salt-winrepo
-<https://github.com/saltstack/salt-winrepo>`_ . 
+<https://github.com/saltstack/salt-winrepo>`_ .
 
 Configure which git repos the master can search for package definitions by
 modifying or extending the ``win_gitrepos`` configuration option list in the
@@ -301,12 +301,11 @@ updated the repository cache on the relevant minions:
 
     salt-run winrepo.genrepo
     salt 'MINION' pkg.refresh_db
-    
-    
+
+
 Packages management under Windows 2003
 ----------------------------------------
 
-On windows server 2003, you need to install optional windows component 
+On windows server 2003, you need to install optional windows component
 "wmi windows installer provider" to have full list of installed packages.
 If you don't have this, salt-minion can't report some installed software.
-

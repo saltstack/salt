@@ -37,12 +37,12 @@ Salt source releases are available for download via the following PyPI link:
 
     https://pypi.python.org/pypi/salt
 
-The installation document, found in the following link,  outlines where to 
+The installation document, found in the following link,  outlines where to
 obtain packages and installation specifics for platforms:
 
     :doc:`Installation </topics/installation/index>`
 
-The Salt Bootstrap project, found in the following repository, is a single 
+The Salt Bootstrap project, found in the following repository, is a single
 shell script, which automates the install correctly on  multiple platforms:
 
     https://github.com/saltstack/salt-bootstrap
@@ -55,7 +55,7 @@ foundational knowledge of Salt:
 
 :doc:`Official Salt Walkthrough</topics/tutorials/walkthrough>`
 
-The following getting started tutorials are also available: 
+The following getting started tutorials are also available:
 
 States - Configuration Management with Salt:
     - :doc:`Getting Started with States<topics/tutorials/starting_states>`
@@ -74,7 +74,7 @@ Salt in depth
 =============
 
 While setting up, and using, Salt is a simple task, its capabilities run much
-deeper. These documents provide a greater understanding of how Salt 
+deeper. These documents provide a greater understanding of how Salt
 empowers infrastructure management.
 
 Remote execution
@@ -97,12 +97,12 @@ modules and returners, which are two key elements of remote execution.
 
 **Returners**
     Salt returners allow saving minion responses in various datastores, or
-    to various locations, in addition to displaying the responses at the CLI. 
-    Returners can be used to extend Salt to communicate with new, or custom, 
+    to various locations, in addition to displaying the responses at the CLI.
+    Returners can be used to extend Salt to communicate with new, or custom,
     interfaces and to support new databases.
 
     :doc:`Full list of returners </ref/returners/all/index>`
-        Contains: list of returner modules used to store minion responses 
+        Contains: list of returner modules used to store minion responses
         in Redis, Mongo, Cassandra, SQL, and others.
 
     :doc:`Writing returners <ref/returners/index>`
@@ -143,9 +143,9 @@ Configuration management
 ------------------------
 
 Salt contains a robust and flexible configuration management framework, which
-is built on the remote execution core. This framework executes on the minions, 
+is built on the remote execution core. This framework executes on the minions,
 allowing effortless, simultaneous configuration of tens of thousands of hosts,
-by rendering language specific state files. The following links provide 
+by rendering language specific state files. The following links provide
 resources to learn more about state and renderers.
 
 **States**
@@ -167,24 +167,24 @@ resources to learn more about state and renderers.
         configuration format that states represent.
 
     :doc:`Writing states <ref/states/writing>`
-        Contains: a guide on how to write Salt state modules, easily extending 
+        Contains: a guide on how to write Salt state modules, easily extending
         Salt to directly manage more software.
 
 **Renderers**
     Renderers use state configuration files written in a variety of languages,
-    templating engines, or files. Salt's configuration management system is, 
+    templating engines, or files. Salt's configuration management system is,
     under the hood, language agnostic.
 
     :doc:`Full list of renderers <ref/renderers/all/index>`
-        Contains: a list of renderers. 
+        Contains: a list of renderers.
         YAML is one choice, but many systems are available, from
         alternative templating engines to the PyDSL language for rendering
         sls formulas.
 
     :doc:`Renderers <ref/renderers/index>`
         Contains: more information about renderers. Salt states are only
-        concerned with the ultimate highstate data structure, not how the 
-        data structure was created. 
+        concerned with the ultimate highstate data structure, not how the
+        data structure was created.
 
 Miscellaneous topics
 --------------------
@@ -206,7 +206,7 @@ The following links explore various Salt topics in depth.
 
 :doc:`Peer Communication <ref/peer>`
     Allow minions to communicate among themselves. For example, configure
-    one minion by querying live data from all the others. 
+    one minion by querying live data from all the others.
 
 :doc:`Reactor System <topics/reactor/index>`
     The reactor system allows for Salt to create a self aware environment
@@ -233,7 +233,7 @@ The following links explore various Salt topics in depth.
     unable to run a salt-minion.
 
 :ref:`Python API interface <python-api>`
-    The Python API allows the developer to use Salt locally from scripts and 
+    The Python API allows the developer to use Salt locally from scripts and
     programs easily via ``import salt``.
 
 :ref:`External API interfaces <netapi-introduction>`

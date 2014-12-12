@@ -161,7 +161,7 @@ Setting up a Windows build environment
 2.  Install `msysgit`_
 
 3.  Clone the Salt git repository from GitHub
-    
+
     .. code-block:: bash
 
         git clone git://github.com/saltstack/salt.git
@@ -176,11 +176,11 @@ Setting up a Windows build environment
     .. code-block:: bash
 
         python ez_setup.py
-    
+
 7.  Install Pip
 
     .. code-block:: bash
-        
+
         easy_install pip
 
 8.  Install the latest point release of `OpenSSL for Windows`_
@@ -214,20 +214,20 @@ Setting up a Windows build environment
     .. code-block:: bash
 
         easy_install pyzmq
-        
+
 17. Install PyYAML
 
     .. code-block:: bash
 
         easy_install pyyaml
-        
+
 18. Install bbfreeze
 
     .. code-block:: bash
 
         easy_install bbfreeze
 
-19. Install wmi 
+19. Install wmi
 
     .. code-block:: bash
 
@@ -375,4 +375,3 @@ this, salt-minion can't report some installed packages.
 .. _Cython: http://www.lfd.uci.edu/~gohlke/pythonlibs/#cython
 .. _jinja2: http://www.lfd.uci.edu/~gohlke/pythonlibs/#jinja2
 .. _msgpack: http://www.lfd.uci.edu/~gohlke/pythonlibs/#msgpack
-

@@ -94,5 +94,3 @@ providers a different user (ec2-user, ubuntu, bitnami, etc). Deployment on
 such images must be handled using sudo. Previously, sudo was used to issue
 all deployment commands, but this failed on images where sudo was not installed
 by default (such as FreeBSD). Now sudo will only be used with non-root logins.
-
-

@@ -213,14 +213,14 @@ The easiest way to accept the minion key is to accept all pending keys:
         # salt-call key.finger --local
         local:
             39:f9:e4:8a:aa:74:8d:52:1a:ec:92:03:82:09:c8:f9
-            
+
     If they match, approve the key with ``salt-key -a foo.domain.com``.
 
 
 Sending the First Commands
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Now that the minion is connected to the master and authenticated, the master 
+Now that the minion is connected to the master and authenticated, the master
 can start to command the minion.
 
 Salt commands allow for a vast set of functions to be executed and for

@@ -94,7 +94,7 @@ The ``/tmp/.saltcloud/`` directory should the following files:
   have permissions of ``0600``. Ensure that the ``.pem`` and ``.pub`` files have
   been properly copied to the ``/etc/salt/pki/minion/`` directory.
 - A file called ``minion``. This file should have been copied to the
-  ``/etc/salt/`` directory. 
+  ``/etc/salt/`` directory.
 - Optionally, a file called ``grains``. This file, if present, should have been
   copied to the ``/etc/salt/`` directory.
 

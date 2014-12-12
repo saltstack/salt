@@ -42,7 +42,7 @@ nodegroup`` on the line directly following the nodegroup name.
 .. note::
 
     When adding or modifying nodegroups to a master configuration file, the master must be restarted
-    for those changes to be fully recognized. 
+    for those changes to be fully recognized.
 
     A limited amount of functionality, such as targeting with -N from the command-line may be
     available without a restart.

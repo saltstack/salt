@@ -30,7 +30,7 @@ Here's a list of features enabled by this renderer.
 
   For example, in the `salt://some/file.sls`, a state id such as ``.sls_params``
   will be turned into ``some.file::sls_params``. Example:
-  
+
   .. code-block:: yaml
 
       #!stateconf yaml . jinja
@@ -45,7 +45,7 @@ Here's a list of features enabled by this renderer.
       some.file::vim:
         pkg.installed:
           - name: vim
-  
+
   Notice how that if a state under a dot-prefixed state id has no ``name``
   argument then one will be added automatically by using the state id with
   the leading dot stripped off.
@@ -283,4 +283,3 @@ argument. (Yes, in the above example, you can actually ``require`` the
 reason is that this renderer will re-write or rename state id's and their
 references for state id's prefixed with ``.``. So, if you reference ``name``
 then there's no way to reliably rewrite such reference.
-

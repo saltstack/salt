@@ -184,4 +184,3 @@ a state to the end of the line. To do this, set the order to ``last``:
     vim:
       pkg.installed:
         - order: last
-

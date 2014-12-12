@@ -69,7 +69,7 @@ The 2014.7 release of RAET is not complete! The Syndic and Multi Master have
 not been completed yet and these are slated for completion in the Lithium
 release.
 
-Also, Salt-Raet allows for more control over the client but these hooks have 
+Also, Salt-Raet allows for more control over the client but these hooks have
 not been implemented yet, thereforre the client still uses the same system
 as the ZeroMQ client. This means that the extra reliability that RAET exposes
 has not yet been implemented in the CLI client.
