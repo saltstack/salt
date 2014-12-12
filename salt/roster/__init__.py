@@ -21,6 +21,9 @@ log = logging.getLogger(__name__)
 def get_roster_file(options):
     if options.get('roster_file'):
         template = options.get('roster_file')
+    elif 'config_dir' in options.get('__master_opts__', {}):
+        template = os.path.join(options['__master_opts__']['config_dir'],
+                                'roster')
     elif 'config_dir' in options:
         template = os.path.join(options['config_dir'], 'roster')
     else:
