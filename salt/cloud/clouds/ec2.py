@@ -3015,7 +3015,10 @@ def _toggle_delvol(name=None, instance_id=None, device=None, volume_id=None,
 
     query(params, return_root=True)
 
-    return query(requesturl=requesturl)
+    kwargs = {'instance_id': instance_id,
+              'device': device,
+              'volume_id': volume_id}
+    return show_delvol_on_destroy(name, kwargs, call='action')
 
 
 def create_volume(kwargs=None, call=None, wait_to_finish=False):
