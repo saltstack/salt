@@ -6,8 +6,7 @@ Interaction with the Supervisor daemon
 .. code-block:: yaml
 
     wsgi_server:
-      supervisord:
-        - running
+      supervisord.running:
         - require:
           - pkg: supervisor
         - watch:

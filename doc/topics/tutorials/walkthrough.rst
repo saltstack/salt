@@ -519,7 +519,7 @@ Now, to beef up the vim SLS formula, a ``vimrc`` can be added:
 .. code-block:: yaml
 
     vim:
-      pkg.installed
+      pkg.installed: []
 
     /etc/vimrc:
       file.managed:
@@ -553,10 +553,8 @@ make an nginx subdirectory and add an init.sls file:
 .. code-block:: yaml
 
     nginx:
-      pkg:
-        - installed
-      service:
-        - running
+      pkg.installed: []
+      service.running:
         - require:
           - pkg: nginx
 

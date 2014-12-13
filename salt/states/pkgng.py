@@ -10,8 +10,7 @@ typically rather simple:
 .. code-block:: yaml
 
     pkgng_clients:
-      pkgng:
-        - update_packaging_site
+      pkgng.update_packaging_site:
         - name: "http://192.168.0.2"
 '''
 

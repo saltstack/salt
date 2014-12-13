@@ -192,8 +192,7 @@ preferred:
       - apache
 
     apache_conf:
-      file:
-        - managed
+      file.managed:
         - name: {{ name }}
         - source: {{ tmpl }}
         - template: jinja
@@ -224,8 +223,7 @@ locations within a single state:
       - apache
 
     apache_conf:
-      file:
-        - managed
+      file.managed:
         - name: {{ salt['pillar.get']('apache:lookup:name') }}
         - source: {{ salt['pillar.get']('apache:lookup:config:tmpl') }}
         - template: jinja
@@ -250,15 +248,12 @@ is not very modular to one that is:
 .. code-block:: yaml
 
     httpd:
-      pkg:
-        - installed
-      service:
-        - running
+      pkg.installed: []
+      service.running:
         - enable: True
 
     /etc/httpd/httpd.conf:
-      file:
-        - managed
+      file.managed:
         - source: salt://apache/files/httpd.conf
         - template: jinja
         - watch_in:
@@ -286,17 +281,14 @@ opposed to direct ID references:
 .. code-block:: yaml
 
     apache:
-      pkg:
-        - installed
+      pkg.installed:
         - name: httpd
-      service:
+      service.running:
         - name: httpd
         - enable: True
-        - running
 
     apache_conf:
-      file: 
-        - managed
+      file.managed:
         - name: /etc/httpd/httpd.conf
         - source: salt://apache/files/httpd.conf
         - template: jinja
@@ -351,17 +343,14 @@ modification of static values:
     {% from "apache/map.jinja" import apache with context %}
 
     apache:
-      pkg:
-        - installed
+      pkg.installed:
         - name: {{ apache.server }}
-      service:
+      service.running:
         - name: {{ apache.service }}
         - enable: True
-        - running
 
     apache_conf:
-      file:
-        - managed
+      file.managed:
         - name: {{ apache.conf }}
         - source: {{ salt['pillar.get']('apache:lookup:config:tmpl') }}
         - template: jinja
@@ -411,13 +400,11 @@ to be broken into two states.
     {% from "apache/map.jinja" import apache with context %}
 
     apache:
-      pkg:
-        - installed
+      pkg.installed:
         - name: {{ apache.server }}
-      service:
+      service.running:
         - name: {{ apache.service }}
         - enable: True
-        - running
 
 ``/srv/salt/apache/conf.sls``:
 
@@ -429,8 +416,7 @@ to be broken into two states.
       - apache
 
     apache_conf:
-      file:
-        - managed
+      file.managed:
         - name: {{ apache.conf }}
         - source: {{ salt['pillar.get']('apache:lookup:config:tmpl') }}
         - template: jinja
@@ -463,8 +449,7 @@ accessible by the appropriate hosts:
 .. code-block:: yaml
 
     testdb:
-      mysql_database:
-        - present:
+      mysql_database.present::
         - name: testerdb
 
 ``/srv/salt/mysql/user.sls``:
@@ -475,8 +460,7 @@ accessible by the appropriate hosts:
       - mysql.testerdb
 
     testdb_user:
-      mysql_user:
-        - present
+      mysql_user.present:
         - name: frank
         - password: "test3rdb"
         - host: localhost
@@ -521,8 +505,7 @@ the associated pillar:
 .. code-block:: yaml
 
     testdb:
-      mysql_database:
-        - present:
+      mysql_database.present:
         - name: {{ salt['pillar.get']('mysql:lookup:name') }}
 
 ``/srv/salt/mysql/user.sls``:
@@ -533,8 +516,7 @@ the associated pillar:
       - mysql.testerdb
 
     testdb_user:
-      mysql_user:
-        - present
+      mysql_user.present:
         - name: {{ salt['pillar.get']('mysql:lookup:user') }}
         - password: {{ salt['pillar.get']('mysql:lookup:password') }}
         - host: {{ salt['pillar.get']('mysql:lookup:host') }}

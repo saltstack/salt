@@ -116,8 +116,7 @@ package until after the EPEL repository has also been installed:
       - epel
 
     python26:
-      pkg:
-        - installed
+      pkg.installed:
         - require:
           - pkg: epel
 
@@ -767,11 +766,9 @@ state file using the following syntax:
     {% from "mysql/map.jinja" import mysql with context %}
 
     mysql-server:
-      pkg:
-        - installed
+      pkg.installed:
         - name: {{ mysql.server }}
-      service:
-        - running
+      service.running:
         - name: {{ mysql.service }}
 
 Overriding values in the lookup table
@@ -973,11 +970,9 @@ skips platform-specific options for brevity. See the full
 
     # apache/init.sls
     apache:
-      pkg:
-        - installed
+      pkg.installed:
         [...]
-      service:
-        - running
+      service.running:
         [...]
 
     # apache/mod_wsgi.sls
@@ -985,8 +980,7 @@ skips platform-specific options for brevity. See the full
       - apache
 
     mod_wsgi:
-      pkg:
-        - installed
+      pkg.installed:
         [...]
         - require:
           - pkg: apache
@@ -996,8 +990,7 @@ skips platform-specific options for brevity. See the full
       - apache
 
     apache_conf:
-      file:
-        - managed
+      file.managed:
         [...]
         - watch_in:
           - service: apache
@@ -1088,8 +1081,7 @@ thousands of function calls across a large state tree.
     {% set settings = salt['pillar.get']('apache', {}) %}
 
     mod_status:
-      file:
-        - managed
+      file.managed:
         - name: {{ apache.conf_dir }}
         - source: {{ settings.get('mod_status_conf', 'salt://apache/mod_status.conf') }}
         - template: {{ settings.get('template_engine', 'jinja') }}

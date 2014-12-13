@@ -23,10 +23,8 @@ You can specify multiple :ref:`state-declaration` under an
     :emphasize-lines: 4,5
 
     apache:
-      pkg:
-        - installed
-      service:
-        - running
+      pkg.installed: []
+      service.running:
         - require:
           - pkg: apache
 
@@ -47,10 +45,8 @@ installed and running. Include the following at the bottom of your
     :emphasize-lines: 7,11
 
     apache:
-      pkg:
-        - installed
-      service:
-        - running
+      pkg.installed: []
+      service.running:
         - require:
           - pkg: apache
 
@@ -121,15 +117,12 @@ Verify that Apache is now serving your custom HTML.
         :emphasize-lines: 1,2,3,4,11,12
 
         /etc/httpd/extra/httpd-vhosts.conf:
-          file:
-            - managed
+          file.managed:
             - source: salt://webserver/httpd-vhosts.conf
 
         apache:
-          pkg:
-            - installed
-          service:
-            - running
+          pkg.installed: []
+          service.running:
             - watch:
               - file: /etc/httpd/extra/httpd-vhosts.conf
             - require:
