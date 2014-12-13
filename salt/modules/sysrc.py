@@ -2,11 +2,16 @@
 '''
 sysrc module for FreeBSD
 '''
+
+# Import Python libs
 from __future__ import absolute_import
 
+# Import Salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError
 
+
+__virtualname__ = 'sysrc'
 
 __func_alias__ = {
     'set_': 'set'
@@ -17,7 +22,9 @@ def __virtual__():
     '''
     Only runs if sysrc exists
     '''
-    return salt.utils.which_bin('sysrc')
+    if salt.utils.which_bin('sysrc') is not None:
+        return True
+    return False
 
 
 def get(**kwargs):
