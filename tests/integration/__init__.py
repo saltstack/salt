@@ -45,6 +45,7 @@ from salttesting import TestCase
 from salttesting.case import ShellTestCase
 from salttesting.mixins import CheckShellBinaryNameAndVersionMixIn
 from salttesting.parser import PNUM, print_header, SaltTestcaseParser
+from salttesting.helpers import requires_sshd_server
 from salttesting.helpers import ensure_in_syspath, RedirectStdStreams
 
 # Update sys.path
@@ -424,6 +425,8 @@ class TestDaemon(object):
         _, sshd_err = self.sshd_process.communicate()
         if sshd_err:
             print('sshd had errors on startup: {0}'.format(sshd_err))
+        else:
+            os.environ['SSH_DAEMON_RUNNING'] = 'True'
         roster_path = os.path.join(FILES, 'conf/_ssh/roster')
         shutil.copy(roster_path, TMP_CONF_DIR)
         with salt.utils.fopen(os.path.join(TMP_CONF_DIR, 'roster'), 'a') as roster:
@@ -1285,6 +1288,7 @@ class ShellCaseCommonTestsMixIn(CheckShellBinaryNameAndVersionMixIn):
         self.assertIn(parsed_version.string, out)
 
 
+@requires_sshd_server
 class SSHCase(ShellCase):
     '''
     Execute a command via salt-ssh
