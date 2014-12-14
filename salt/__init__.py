@@ -43,6 +43,7 @@ import salt.log.setup
 from salt.version import __version__
 from salt.utils import migrations
 from salt.utils import kinds
+from salt import ext
 
 try:
     from salt.utils import parsers, ip_bracket
