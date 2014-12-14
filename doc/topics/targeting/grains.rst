@@ -20,7 +20,7 @@ operating system.
 
 .. note::
 
-    Grains resolve to lowercase letters. For example, ``FOO`` and ``foo``
+    Grains resolve to lowercase letters. For example, ``FOO``, and ``foo``
     target the same grain.
 
 Match all CentOS minions:
@@ -128,7 +128,7 @@ the following configuration:
     'node_type:lb':
       - match: grain
       - lb
-        
+
 For this example to work, you would need to have defined the grain
 ``node_type`` for the minions you wish to match. This simple example is nice,
 but too much of the code is similar. To go one step further, Jinja templating

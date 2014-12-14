@@ -3,7 +3,7 @@ Salt :index:`Best Practices`
 ============================
 
 Salt's extreme flexibility leads to many questions concerning the structure of
-configuration files. 
+configuration files.
 
 This document exists to clarify these points through examples and
 code.
@@ -25,7 +25,7 @@ Structuring States and Formulas
 When structuring Salt States and Formulas it is important to begin with the
 directory structure. A proper directory structure clearly defines the
 functionality of each state to the user via visual inspection of the state's
-name. 
+name.
 
 Reviewing the :formula:`MySQL Salt Formula <mysql-formula>`
 it is clear to see the benefits to the end-user when reviewing a sample of the
@@ -42,7 +42,7 @@ available states:
 This directory structure would lead to these states being referenced in a top
 file in the following way:
 
-.. code-block:: yaml 
+.. code-block:: yaml
 
     base:
       'web*':
@@ -97,11 +97,11 @@ be used as often as possible.
 Structuring Pillar Files
 ------------------------
 
-:ref:`Pillars <pillar>` are used to store 
+:ref:`Pillars <pillar>` are used to store
 secure and insecure data pertaining to minions. When designing the structure
-of the ``/srv/pillar`` directory, the pillars contained within 
+of the ``/srv/pillar`` directory, the pillars contained within
 should once again be focused on clear and concise data which users can easily
-review, modify and understand.
+review, modify, and understand.
 
 The ``/srv/pillar/`` directory is primarily controlled by ``top.sls``. It
 should be noted that the pillar ``top.sls`` is not used as a location to
@@ -143,7 +143,7 @@ is why it is important to understand that the top file for pillar is not used
 for variable definitions.
 
 Each SLS file within the ``/srv/pillar/`` directory should correspond to the
-states which it matches. 
+states which it matches.
 
 This would mean that the apache pillar file should contain data relevant to
 apache. Structuring files in this way once again ensures modularity, and
@@ -176,7 +176,7 @@ defined. Looking at several examples shows how these different items can
 lead to extensive flexibility.
 
 Although it is possible to set variables locally, this is generally not
-preferred: 
+preferred:
 
 /srv/salt/apache/conf.sls
 
@@ -216,7 +216,7 @@ locations within a single state:
 /srv/salt/apache/conf.sls
 
 .. code-block:: yaml
-    
+
     {% from "apache/map.jinja" import apache with context %}
 
     include:
@@ -233,8 +233,8 @@ locations within a single state:
           - service: apache
 
 This flexibility provides users with a centralized location to modify
-variables, which is extremely important as an environment grows. 
- 
+variables, which is extremely important as an environment grows.
+
 Modularity Within States
 ------------------------
 
@@ -294,7 +294,7 @@ opposed to direct ID references:
         - running
 
     apache_conf:
-      file: 
+      file:
         - managed
         - name: /etc/httpd/httpd.conf
         - source: salt://apache/files/httpd.conf
@@ -484,7 +484,7 @@ accessible by the appropriate hosts:
 
 Many users would review this state and see that the password is there in plain
 text, which is quite problematic. It results in several issues which may not
-be immediately visible. 
+be immediately visible.
 
 The first of these issues is clear to most users -- the password being visible
 in this state. This  means that any minion will have a copy of this, and

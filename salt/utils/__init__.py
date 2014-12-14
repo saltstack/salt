@@ -33,7 +33,6 @@ import types
 import warnings
 import string
 import locale
-from calendar import month_abbr as months
 from salt.ext.six import string_types
 from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=E0611
 import salt.ext.six as six
@@ -97,7 +96,6 @@ except ImportError:
 # Import salt libs
 from salt.defaults import DEFAULT_TARGET_DELIM
 import salt.log
-import salt.payload
 import salt.version
 import salt.defaults.exitcodes
 from salt.utils.decorators import memoize as real_memoize
@@ -422,31 +420,6 @@ def list_files(directory):
     return list(ret)
 
 
-def jid_to_time(jid):
-    '''
-    Convert a salt job id into the time when the job was invoked
-    '''
-    jid = str(jid)
-    if len(jid) != 20:
-        return ''
-    year = jid[:4]
-    month = jid[4:6]
-    day = jid[6:8]
-    hour = jid[8:10]
-    minute = jid[10:12]
-    second = jid[12:14]
-    micro = jid[14:]
-
-    ret = '{0}, {1} {2} {3}:{4}:{5}.{6}'.format(year,
-                                                months[int(month)],
-                                                day,
-                                                hour,
-                                                minute,
-                                                second,
-                                                micro)
-    return ret
-
-
 def gen_mac(prefix='AC:DE:48'):
     '''
     Generates a MAC address with the defined OUI prefix.
@@ -548,90 +521,6 @@ def required_modules_error(name, docstring):
     filename = os.path.basename(name).split('.')[0]
     msg = '\'{0}\' requires these python modules: {1}'
     return msg.format(filename, ', '.join(modules))
-
-
-def gen_jid():
-    '''
-    Generate a jid
-    '''
-    return '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
-
-
-def prep_jid(cachedir, sum_type, user='root', nocache=False):
-    '''
-    Return a job id and prepare the job id directory
-    '''
-    salt.utils.warn_until(
-                    'Boron',
-                    'All job_cache management has been moved into the local_cache '
-                    'returner, this util function will be removed-- please use '
-                    'the returner'
-                )
-    jid = gen_jid()
-
-    jid_dir_ = jid_dir(jid, cachedir, sum_type)
-    if not os.path.isdir(jid_dir_):
-        if os.path.exists(jid_dir_):
-            # Somehow we ended up with a file at our jid destination.
-            # Delete it.
-            os.remove(jid_dir_)
-        os.makedirs(jid_dir_)
-        with fopen(os.path.join(jid_dir_, 'jid'), 'w+') as fn_:
-            fn_.write(jid)
-        if nocache:
-            with fopen(os.path.join(jid_dir_, 'nocache'), 'w+') as fn_:
-                fn_.write('')
-    else:
-        return prep_jid(cachedir, sum_type, user=user, nocache=nocache)
-    return jid
-
-
-def jid_dir(jid, cachedir, sum_type):
-    '''
-    Return the jid_dir for the given job id
-    '''
-    salt.utils.warn_until(
-                    'Boron',
-                    'All job_cache management has been moved into the local_cache '
-                    'returner, this util function will be removed-- please use '
-                    'the returner'
-                )
-    jid = str(jid)
-    jhash = getattr(hashlib, sum_type)(jid).hexdigest()
-    return os.path.join(cachedir, 'jobs', jhash[:2], jhash[2:])
-
-
-def jid_load(jid, cachedir, sum_type, serial='msgpack'):
-    '''
-    Return the load data for a given job id
-    '''
-    salt.utils.warn_until(
-                    'Boron',
-                    'Getting the load has been moved into the returner interface '
-                    'please get the data from the master_job_cache '
-                )
-    _dir = jid_dir(jid, cachedir, sum_type)
-    load_fn = os.path.join(_dir, '.load.p')
-    if not os.path.isfile(load_fn):
-        return {}
-    serial = salt.payload.Serial(serial)
-    with fopen(load_fn, 'rb') as fp_:
-        return serial.load(fp_)
-
-
-def is_jid(jid):
-    '''
-    Returns True if the passed in value is a job id
-    '''
-    if not isinstance(jid, string_types):
-        return False
-    if len(jid) != 20:
-        return False
-    try:
-        int(jid)
-        return True
-    except ValueError:
-        return False
 
 
 def check_or_die(command):
@@ -2250,78 +2139,6 @@ def get_gid_list(user=None, include_default=True):
         return []
     gid_list = [gid for (group, gid) in list(salt.utils.get_group_dict(user, include_default=include_default).items())]
     return sorted(set(gid_list))
-
-
-def trim_dict(
-        data,
-        max_dict_bytes,
-        percent=50.0,
-        stepper_size=10,
-        replace_with='VALUE_TRIMMED',
-        is_msgpacked=False):
-    '''
-    Takes a dictionary and iterates over its keys, looking for
-    large values and replacing them with a trimmed string.
-
-    If after the first pass over dictionary keys, the dictionary
-    is not sufficiently small, the stepper_size will be increased
-    and the dictionary will be rescanned. This allows for progressive
-    scanning, removing large items first and only making additional
-    passes for smaller items if necessary.
-
-    This function uses msgpack to calculate the size of the dictionary
-    in question. While this might seem like unnecessary overhead, a
-    data structure in python must be serialized in order for sys.getsizeof()
-    to accurately return the items referenced in the structure.
-
-    Ex:
-    >>> salt.utils.trim_dict({'a': 'b', 'c': 'x' * 10000}, 100)
-    {'a': 'b', 'c': 'VALUE_TRIMMED'}
-
-    To improve performance, it is adviseable to pass in msgpacked
-    data structures instead of raw dictionaries. If a msgpack
-    structure is passed in, it will not be unserialized unless
-    necessary.
-
-    If a msgpack is passed in, it will be repacked if necessary
-    before being returned.
-    '''
-    serializer = salt.payload.Serial({'serial': 'msgpack'})
-    if is_msgpacked:
-        dict_size = sys.getsizeof(data)
-    else:
-        dict_size = sys.getsizeof(serializer.dumps(data))
-    if dict_size > max_dict_bytes:
-        if is_msgpacked:
-            data = serializer.loads(data)
-        while True:
-            percent = float(percent)
-            max_val_size = float(max_dict_bytes * (percent / 100))
-            try:
-                for key in data:
-                    if sys.getsizeof(data[key]) > max_val_size:
-                        data[key] = replace_with
-                percent = percent - stepper_size
-                max_val_size = float(max_dict_bytes * (percent / 100))
-                cur_dict_size = sys.getsizeof(serializer.dumps(data))
-                if cur_dict_size < max_dict_bytes:
-                    if is_msgpacked:  # Repack it
-                        return serializer.dumps(data)
-                    else:
-                        return data
-                elif max_val_size == 0:
-                    if is_msgpacked:
-                        return serializer.dumps(data)
-                    else:
-                        return data
-            except ValueError:
-                pass
-        if is_msgpacked:
-            return serializer.dumps(data)
-        else:
-            return data
-    else:
-        return data
 
 
 def total_seconds(td):

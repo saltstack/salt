@@ -12,8 +12,8 @@ Dependencies
 
 Configuration
 =============
-To use Salt Cloud with GoGrid log into the GoGrid web interface and create an 
-API key. Do this by clicking on "My Account" and then going to the API Keys 
+To use Salt Cloud with GoGrid log into the GoGrid web interface and create an
+API key. Do this by clicking on "My Account" and then going to the API Keys
 tab.
 
 The ``apikey`` and the ``sharedsecret`` configuration parameters need to be set

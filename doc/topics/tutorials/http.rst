@@ -13,7 +13,7 @@ from the minion as an execution module, in addition to the master as a runner,
 it was abstracted into this multi-use library. This library can also be imported
 by 3rd-party programs wishing to take advantage of its extended functionality.
 
-Core functionality of the execution, state and runner modules is derived from
+Core functionality of the execution, state, and runner modules is derived from
 this library, so common usages between them are described here. Documentation
 specific to each module is described below.
 
@@ -245,7 +245,7 @@ If decoding is turned on, and references to JSON or XML cannot be found, then
 this module will default to plain text, and return the undecoded data as
 ``text`` (even if text is set to ``False``; see below).
 
-The ``query()`` function can return the HTTP status code, headers and/or text
+The ``query()`` function can return the HTTP status code, headers, and/or text
 as required. However, each must individually be turned on.
 
 .. code-block:: python
@@ -284,7 +284,7 @@ they are not specified, the minion defaults will be used as necessary.
 
 Because passing complete data structures from the command line can be tricky at
 best and dangerous (in terms of execution injection attacks) at worse, the
-``data_file`` and ``header_file`` are likely to see more use here.
+``data_file``, and ``header_file`` are likely to see more use here.
 
 All methods for the library are available in the execution module, as kwargs.
 
@@ -383,4 +383,3 @@ Because this is a monitoring state, it will return extra data to code that
 expects it. This data will always include ``text`` and ``status``. Optionally,
 ``headers`` and ``dict`` may also be requested by setting the ``headers`` and
 ``decode`` arguments to True, respectively.
-

@@ -71,7 +71,7 @@ Default: ``None``
 The id to be passed in the publish job to minions. This is used for MultiSyndics
 to return the job to the requesting master.
 
-.. note:: 
+.. note::
 
     This must be the same string as the syndic is configured with.
 
@@ -115,7 +115,7 @@ seeing on the console(and then salt-master crashes):
 By default this value will be the one of `ulimit -Hn`, i.e., the hard limit for
 max open files.
 
-To set a different value than the default one, uncomment and configure this
+To set a different value than the default one, uncomment, and configure this
 setting. Remember that this value CANNOT be higher than the hard limit. Raising
 the hard limit depends on the OS and/or distribution, a good way to find the
 limit is to search the internet for something like this:
@@ -444,7 +444,7 @@ performance of max_minions.
 
 Default: False
 
-When enabled the master regularly sends events of currently connected, lost
+When enabled the master regularly sends events of currently connected, lost,
 and newly connected minions on the eventbus.
 
 .. code-block:: yaml
@@ -905,8 +905,8 @@ Example:
 Default: ``md5``
 
 The hash_type is the hash to use when discovering the hash of a file on
-the master server. The default is md5, but sha1, sha224, sha256, sha384
-and sha512 are also supported.
+the master server. The default is md5, but sha1, sha224, sha256, sha384, and
+sha512 are also supported.
 
 .. code-block:: yaml
 

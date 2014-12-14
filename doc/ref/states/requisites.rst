@@ -492,7 +492,7 @@ Listen/Listen_in
 
 listen and its counterpart listen_in trigger mod_wait functions for states,
 when those states succeed and result in changes, similar to how watch its
-counterpart watch_in. Unlike watch and watch_in, listen and listen_in will
+counterpart watch_in. Unlike watch and watch_in, listen, and listen_in will
 not modify the order of states and can be used to ensure your states are
 executed in the order they are defined. All listen/listen_in actions will occur
 at the end of a state run, after all states have completed.

@@ -59,11 +59,11 @@ class UtilsTestCase(TestCase):
     def test_jid_to_time(self):
         test_jid = 20131219110700123489
         expected_jid = '2013, Dec 19 11:07:00.123489'
-        self.assertEqual(utils.jid_to_time(test_jid), expected_jid)
+        self.assertEqual(utils.jid.jid_to_time(test_jid), expected_jid)
 
         # Test incorrect lengths
         incorrect_jid_length = 2012
-        self.assertEqual(utils.jid_to_time(incorrect_jid_length), '')
+        self.assertEqual(utils.jid.jid_to_time(incorrect_jid_length), '')
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     @patch('random.randint', return_value=1)
@@ -86,14 +86,14 @@ class UtilsTestCase(TestCase):
 
         expected_jid_dir = '/tmp/cachdir/jobs/69/fda308ccfa70d8296345e6509de136'
 
-        ret = utils.jid_dir(test_jid, test_cache_dir, test_hash_type)
+        ret = utils.jid.jid_dir(test_jid, test_cache_dir, test_hash_type)
 
         self.assertEqual(ret, expected_jid_dir)
 
     def test_is_jid(self):
-        self.assertTrue(utils.is_jid('20131219110700123489'))  # Valid JID
-        self.assertFalse(utils.is_jid(20131219110700123489))  # int
-        self.assertFalse(utils.is_jid('2013121911070012348911111'))  # Wrong length
+        self.assertTrue(utils.jid.is_jid('20131219110700123489'))  # Valid JID
+        self.assertFalse(utils.jid.is_jid(20131219110700123489))  # int
+        self.assertFalse(utils.jid.is_jid('2013121911070012348911111'))  # Wrong length
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     @patch('salt.utils.is_windows', return_value=False)
@@ -696,7 +696,7 @@ class UtilsTestCase(TestCase):
         now = datetime.datetime(2002, 12, 25, 12, 00, 00, 00)
         with patch('datetime.datetime'):
             datetime.datetime.now.return_value = now
-            ret = utils.gen_jid()
+            ret = utils.jid.gen_jid()
             self.assertEqual(ret, '20021225120000000000')
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)

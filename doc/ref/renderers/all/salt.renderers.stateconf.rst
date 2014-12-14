@@ -9,7 +9,7 @@ salt.renderers.stateconf
 :platform: all
 
 This module provides a custom renderer that processes a salt file with a
-specified templating engine (e.g., Jinja) and a chosen data renderer (e.g., YAML),
+specified templating engine (e.g. Jinja) and a chosen data renderer (e.g. YAML),
 extracts arguments for any ``stateconf.set`` state, and provides the extracted
 arguments (including Salt-specific args, such as ``require``, etc) as template
 context. The goal is to make writing reusable/configurable/parameterized
@@ -30,7 +30,7 @@ Here's a list of features enabled by this renderer.
 
   For example, in the `salt://some/file.sls`, a state id such as ``.sls_params``
   will be turned into ``some.file::sls_params``. Example:
-  
+
   .. code-block:: yaml
 
       #!stateconf yaml . jinja
@@ -45,14 +45,14 @@ Here's a list of features enabled by this renderer.
       some.file::vim:
         pkg.installed:
           - name: vim
-  
+
   Notice how that if a state under a dot-prefixed state id has no ``name``
   argument then one will be added automatically by using the state id with
   the leading dot stripped off.
 
   The leading dot trick can be used with extending state ids as well,
   so you can include relatively and extend relatively. For example, when
-  extending a state in `salt://some/other_file.sls`, e.g.,:
+  extending a state in `salt://some/other_file.sls`, e.g.:
 
   .. code-block:: yaml
 
@@ -192,7 +192,7 @@ Here's a list of features enabled by this renderer.
 
 
 - Optionally (enabled by default, *disable* via the `-G` renderer option,
-  e.g., in the shebang line: ``#!stateconf -G``), generates a
+  e.g. in the shebang line: ``#!stateconf -G``), generates a
   ``stateconf.set`` goal state (state id named as ``.goal`` by default,
   configurable via the master/minion config option, ``stateconf_goal_state``)
   that requires all other states in the salt file. Note, the ``.goal``
@@ -204,7 +204,7 @@ Here's a list of features enabled by this renderer.
   all states in the Tomcat sls file will be executed before some state in
   the webapp sls file.
 
-- Optionally (enable via the `-o` renderer option, e.g., in the shebang line:
+- Optionally (enable via the `-o` renderer option, e.g. in the shebang line:
   ``#!stateconf -o``), orders the states in a sls file by adding a
   ``require`` requisite to each state such that every state requires the
   state defined just before it. The order of the states here is the order
@@ -283,4 +283,3 @@ argument. (Yes, in the above example, you can actually ``require`` the
 reason is that this renderer will re-write or rename state id's and their
 references for state id's prefixed with ``.``. So, if you reference ``name``
 then there's no way to reliably rewrite such reference.
-

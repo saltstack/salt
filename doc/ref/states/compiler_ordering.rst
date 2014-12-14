@@ -76,41 +76,41 @@ Will have High Data which looks like this represented in json:
     {
         "apache": {
             "pkg": [
-                "installed", 
+                "installed",
                 {
                     "order": 10000
                 }
-            ], 
+            ],
             "service": [
-                "running", 
+                "running",
                 {
                     "watch": [
                         {
                             "file": "/etc/httpd/conf.d/httpd.conf"
-                        }, 
+                        },
                         {
                             "pkg": "apache"
                         }
                     ]
-                }, 
+                },
                 {
                     "order": 10001
                 }
-            ], 
-            "__sls__": "apache", 
+            ],
+            "__sls__": "apache",
             "__env__": "base"
-        }, 
+        },
         "/etc/httpd/conf.d/httpd.conf": {
             "file": [
-                "managed", 
+                "managed",
                 {
                     "source": "salt://apache/httpd.conf"
-                }, 
+                },
                 {
                     "order": 10002
                 }
-            ], 
-            "__sls__": "apache", 
+            ],
+            "__sls__": "apache",
             "__env__": "base"
         }
     }
@@ -121,39 +121,39 @@ The subsequent Low Data will look like this:
 
     [
         {
-            "name": "apache", 
-            "state": "pkg", 
-            "__id__": "apache", 
-            "fun": "installed", 
-            "__env__": "base", 
-            "__sls__": "apache", 
+            "name": "apache",
+            "state": "pkg",
+            "__id__": "apache",
+            "fun": "installed",
+            "__env__": "base",
+            "__sls__": "apache",
             "order": 10000
-        }, 
+        },
         {
-            "name": "apache", 
+            "name": "apache",
             "watch": [
                 {
                     "file": "/etc/httpd/conf.d/httpd.conf"
-                }, 
+                },
                 {
                     "pkg": "apache"
                 }
-            ], 
-            "state": "service", 
-            "__id__": "apache", 
-            "fun": "running", 
-            "__env__": "base", 
-            "__sls__": "apache", 
+            ],
+            "state": "service",
+            "__id__": "apache",
+            "fun": "running",
+            "__env__": "base",
+            "__sls__": "apache",
             "order": 10001
-        }, 
+        },
         {
-            "name": "/etc/httpd/conf.d/httpd.conf", 
-            "source": "salt://apache/httpd.conf", 
-            "state": "file", 
-            "__id__": "/etc/httpd/conf.d/httpd.conf", 
-            "fun": "managed", 
-            "__env__": "base", 
-            "__sls__": "apache", 
+            "name": "/etc/httpd/conf.d/httpd.conf",
+            "source": "salt://apache/httpd.conf",
+            "state": "file",
+            "__id__": "/etc/httpd/conf.d/httpd.conf",
+            "fun": "managed",
+            "__env__": "base",
+            "__sls__": "apache",
             "order": 10002
         }
     ]

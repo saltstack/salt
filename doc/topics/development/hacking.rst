@@ -129,7 +129,7 @@ Edit the master config file:
 1.  Uncomment and change the ``user: root`` value to your own user.
 2.  Uncomment and change the ``root_dir: /`` value to point to
     ``/path/to/your/virtualenv``.
-3.  If you are running version 0.11.1 or older, uncomment and change the
+3.  If you are running version 0.11.1 or older, uncomment, and change the
     ``pidfile: /var/run/salt-master.pid`` value to point to
     ``/path/to/your/virtualenv/salt-master.pid``.
 4.  If you are also running a non-development version of Salt you will have to
@@ -139,7 +139,7 @@ Edit the minion config file:
 
 1.  Repeat the edits you made in the master config for the ``user`` and
     ``root_dir`` values as well as any port changes.
-2.  If you are running version 0.11.1 or older, uncomment and change the
+2.  If you are running version 0.11.1 or older, uncomment, and change the
     ``pidfile: /var/run/salt-minion.pid`` value to point to
     ``/path/to/your/virtualenv/salt-minion.pid``.
 3.  Uncomment and change the ``master: salt`` value to point at ``localhost``.
@@ -180,7 +180,7 @@ Once the minion starts, you may see an error like the following:
 .. code-block:: bash
 
     zmq.core.error.ZMQError: ipc path "/path/to/your/virtualenv/
-    var/run/salt/minion/minion_event_7824dcbcfd7a8f6755939af70b96249f_pub.ipc" 
+    var/run/salt/minion/minion_event_7824dcbcfd7a8f6755939af70b96249f_pub.ipc"
     is longer than 107 characters (sizeof(sockaddr_un.sun_path)).
 
 This means that the path to the socket the minion is using is too long. This is

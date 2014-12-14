@@ -495,14 +495,14 @@ def check(table='filter', chain=None, rule=None, family='ipv4'):
         _chain_name = hex(uuid.getnode())
 
         # Create temporary table
-        __salt__['cmd.run']('{0} -N {1}'.format(_iptables_cmd(family), _chain_name))
-        __salt__['cmd.run']('{0} -A {1} {2}'.format(_iptables_cmd(family), _chain_name, rule))
+        __salt__['cmd.run']('{0} -t {1} -N {2}'.format(_iptables_cmd(family), table, _chain_name))
+        __salt__['cmd.run']('{0} -t {1} -A {2} {3}'.format(_iptables_cmd(family), table, _chain_name, rule))
 
         out = __salt__['cmd.run']('{0}-save'.format(_iptables_cmd(family)))
 
         # Clean up temporary table
-        __salt__['cmd.run']('{0} -F {1}'.format(_iptables_cmd(family), _chain_name))
-        __salt__['cmd.run']('{0} -X {1}'.format(_iptables_cmd(family), _chain_name))
+        __salt__['cmd.run']('{0} -t {1} -F {2}'.format(_iptables_cmd(family), table, _chain_name))
+        __salt__['cmd.run']('{0} -t {1} -X {2}'.format(_iptables_cmd(family), table, _chain_name))
 
         for i in out.splitlines():
             if i.startswith('-A {0}'.format(_chain_name)):
@@ -759,6 +759,7 @@ def _parse_conf(conf_file=None, in_mem=False, family='ipv4'):
 
     ret = {}
     table = ''
+    parser = _parser()
     for line in rules.splitlines():
         if line.startswith('*'):
             table = line.replace('*', '')
@@ -794,7 +795,6 @@ def _parse_conf(conf_file=None, in_mem=False, family='ipv4'):
                 index += 1
             if args[-1].startswith('-'):
                 args.append('')
-            parser = _parser()
             parsed_args = []
             if sys.version.startswith('2.6'):
                 (opts, leftover_args) = parser.parse_args(args)

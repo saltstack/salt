@@ -80,7 +80,7 @@ configuration and environment variables.
 The first thing the ``create()`` function must do is fire an event stating that
 it has started the create process. This event is tagged
 ``salt/cloud/<vm name>/creating``. The payload contains the names of the VM,
-profile and provider. 
+profile and provider.
 
 A set of kwargs is then usually created, to describe the parameters required
 by the cloud provider to request the virtual machine.
@@ -102,7 +102,7 @@ will contain a set of deploy kwargs, useful for debugging purposed. Any private
 data, including passwords and keys (including public keys) should be stripped
 from the deploy kwargs before the event is fired.
 
-If any Windows options have been passed in, the 
+If any Windows options have been passed in, the
 ``salt.utils.cloud.deploy_windows()`` function will be called. Otherwise, it
 will be assumed that the target is a Linux or Unix machine, and the
 ``salt.utils.cloud.deploy_script()`` will be called.
@@ -119,7 +119,7 @@ manager. These do not need to be handled by the developer in the cloud module.
 After the appropriate deploy function completes, a final event is fired
 which describes the virtual machine that has just been created. This event is
 tagged ``salt/cloud/<vm name>/created``. The payload contains the names of the
-VM, profile and provider.
+VM, profile, and provider.
 
 Finally, a dict (queried from the provider) which describes the new virtual
 machine is returned to the user. Because this data is not fired on the event
@@ -144,17 +144,17 @@ within the cloud module.
 
 .. code-block:: python
 
-    get_size = namespaced_function(get_size, globals())    
-    get_image = namespaced_function(get_image, globals())    
-    avail_locations = namespaced_function(avail_locations, globals())    
-    avail_images = namespaced_function(avail_images, globals())    
-    avail_sizes = namespaced_function(avail_sizes, globals())    
-    script = namespaced_function(script, globals())    
-    destroy = namespaced_function(destroy, globals())    
-    list_nodes = namespaced_function(list_nodes, globals())    
-    list_nodes_full = namespaced_function(list_nodes_full, globals())    
-    list_nodes_select = namespaced_function(list_nodes_select, globals())          
-    show_instance = namespaced_function(show_instance, globals())    
+    get_size = namespaced_function(get_size, globals())
+    get_image = namespaced_function(get_image, globals())
+    avail_locations = namespaced_function(avail_locations, globals())
+    avail_images = namespaced_function(avail_images, globals())
+    avail_sizes = namespaced_function(avail_sizes, globals())
+    script = namespaced_function(script, globals())
+    destroy = namespaced_function(destroy, globals())
+    list_nodes = namespaced_function(list_nodes, globals())
+    list_nodes_full = namespaced_function(list_nodes_full, globals())
+    list_nodes_select = namespaced_function(list_nodes_select, globals())
+    show_instance = namespaced_function(show_instance, globals())
 
 If necessary, these functions may be replaced by removing the appropriate
 declaration line, and then adding the function as normal.
@@ -179,7 +179,7 @@ https://github.com/saltstack/salt/tree/develop/salt/cloud/clouds/digital_ocean.p
 The ``create()`` Function
 -------------------------
 The ``create()`` function must be created as described in the libcloud-based
-module documentation. 
+module documentation.
 
 The get_size() Function
 -----------------------
@@ -215,9 +215,9 @@ functionality, though they may refer to images by a different name (for example,
 The avail_sizes() Function
 --------------------------
 This function returns a list of sizes available for this cloud provider.
-Generally, this refers to a combination of RAM, CPU and/or disk space. This
+Generally, this refers to a combination of RAM, CPU, and/or disk space. This
 functionality may not be present on some cloud providers. For example, the
-Parallels module breaks down RAM, CPU and disk space into separate options,
+Parallels module breaks down RAM, CPU, and disk space into separate options,
 whereas in other providers, these options are baked into the image. It is
 normally called using the ``--list-sizes`` option.
 
@@ -311,7 +311,7 @@ appropriately:
         '''
         if not conn:
             conn = get_conn()   # pylint: disable=E0602
-    
+
         return salt.utils.cloud.list_nodes_select(
             list_nodes_full(conn, 'function'),
             __opts__['query.selection'],
@@ -404,12 +404,12 @@ useful information to the user. A basic function looks like:
             raise SaltCloudSystemExit(
                 'The show_image action must be called with -f or --function.'
             )
-    
+
         params = {'ImageId.1': kwargs['image'],
                   'Action': 'DescribeImages'}
         result = query(params)
         log.info(result)
-    
+
         return result
 
 Take note that generic kwargs are passed through to functions as ``kwargs`` and

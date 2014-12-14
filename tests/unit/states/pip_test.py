@@ -59,7 +59,7 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
                 self.assertSaltTrueReturn({'testsuite': ret})
                 # Is the state returning a warnings key with the deprecation
                 # message?
-                self.assertInSalStatetWarning(
+                self.assertInSaltStateWarning(
                     'The \'runas\' argument to pip.installed is deprecated, '
                     'and will be removed in Salt Lithium (Unreleased). '
                     'Please use \'user\' instead.', {'testsuite': ret}
@@ -97,7 +97,7 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
                 self.assertSaltTrueReturn({'testsuite': ret})
                 # Is the state returning a warnings key with the deprecation
                 # message?
-                self.assertInSalStatetWarning(
+                self.assertInSaltStateWarning(
                     'The \'runas\' argument to pip.installed is deprecated, '
                     'and will be removed in Salt Lithium (Unreleased). '
                     'Please use \'user\' instead.', {'testsuite': ret}

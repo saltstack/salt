@@ -245,7 +245,7 @@ minions. This allows the syndic interface to be tested and master/minion
 communication to be verified. All of the integration tests are executed as
 live salt commands sent through the started daemons.
 
-Integration tests are particularly good at testing modules, states and shell
+Integration tests are particularly good at testing modules, states, and shell
 commands.
 
 * :doc:`Writing integration tests <integration>`

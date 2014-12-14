@@ -15,7 +15,7 @@ firewall rules for allowing these incoming connections to the master.
 Fedora 18 and beyond / RHEL 7 / CentOS 7
 ========================================
 
-Starting with Fedora 18 `FirewallD`_ is the tool that is used to dynamically 
+Starting with Fedora 18 `FirewallD`_ is the tool that is used to dynamically
 manage the firewall rules on a host. It has support for IPv4/6 settings and
 the separation of runtime and permanent configurations. To interact with
 FirewallD use the command line client ``firewall-cmd``.
@@ -94,7 +94,7 @@ firewall.
 iptables
 ========
 
-Different Linux distributions store their `iptables` (also known as 
+Different Linux distributions store their `iptables` (also known as
 `netfilter`_) rules in different places, which makes it difficult to
 standardize firewall documentation. Included are some of the more
 common locations, but your mileage may vary.

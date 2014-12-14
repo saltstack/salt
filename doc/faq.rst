@@ -268,7 +268,7 @@ or running immediately from the command line:
 .. code-block:: bash
 
     salt -G kernel:Windows cmd.run 'start powershell "Restart-Service -Name salt-minion"'
-    
+
 Salting the Salt Master
 -----------------------
 

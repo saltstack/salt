@@ -32,7 +32,7 @@ master config file.
 
 There is no single method to get the keypair to your minion.  The difficulty is
 finding a distribution method which is secure. For Amazon EC2 only, an AWS best
-practice is to use IAM Roles to pass credentials. (See blog post, 
+practice is to use IAM Roles to pass credentials. (See blog post,
 http://blogs.aws.amazon.com/security/post/Tx610S2MLVZWEA/Using-IAM-roles-to-distribute-non-AWS-credentials-to-your-EC2-instances )
 
 .. admonition:: Security Warning

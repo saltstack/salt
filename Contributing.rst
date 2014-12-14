@@ -55,13 +55,13 @@ reason to ask first.
 Fixing issues
 =============
 
-If you wish to help us fixing the issue you're reporting, `Salt's documentation`_ already includes 
+If you wish to help us fixing the issue you're reporting, `Salt's documentation`_ already includes
 information to help you setup a development environment, under `Developing Salt`_.
 
-Fix the issue you have in hands, if possible also add a test case to Salt's testing suite, create a 
+Fix the issue you have in hands, if possible also add a test case to Salt's testing suite, create a
 `pull request`_, and **that's it**!
 
-Salt's development team will review your fix and if everything is OK, your fix will be merged into 
+Salt's development team will review your fix and if everything is OK, your fix will be merged into
 salt's code.
 
 

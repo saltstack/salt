@@ -46,6 +46,7 @@ import salt.utils.minions
 import salt.utils.gzip_util
 import salt.utils.process
 import salt.utils.zeromq
+import salt.utils.jid
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.debug import enable_sigusr1_handler, enable_sigusr2_handler, inspect_stack
 from salt.utils.event import tagify
@@ -2017,7 +2018,7 @@ class ClearFuncs(object):
             else:
                 token = self.loadauth.get_tok(clear_load['token'])
 
-            jid = salt.utils.gen_jid()
+            jid = salt.utils.jid.gen_jid()
             fun = clear_load.pop('fun')
             tag = tagify(jid, prefix='wheel')
             data = {'fun': "wheel.{0}".format(fun),
@@ -2049,7 +2050,7 @@ class ClearFuncs(object):
             eauth_error = self.process_eauth(clear_load, 'wheel')
             if eauth_error:
                 return eauth_error
-            jid = salt.utils.gen_jid()
+            jid = salt.utils.jid.gen_jid()
             fun = clear_load.pop('fun')
             tag = tagify(jid, prefix='wheel')
             data = {'fun': "wheel.{0}".format(fun),
