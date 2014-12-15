@@ -418,8 +418,8 @@ class SaltRaetRoadStackManager(ioflo.base.deeding.Deed):
         # fire presence present event
         data = {'present': list(self.aliveds.value)}
         tag = tagify('present', 'presence')
-        route= {'dst': (None, None, 'event_fire'),
-                'src': (None, stack.local.name, None)}
+        route = {'dst': (None, None, 'event_fire'),
+                 'src': (None, stack.local.name, None)}
         msg = {'route': route, 'tag': tag, 'data': data}
         self.event.value.append(msg)
 
@@ -1117,8 +1117,8 @@ class SaltRaetPresenter(ioflo.base.deeding.Deed):
         Presence message has a route
         '''
         y_name = msg['route']['src'][1]
-        if y_name not in self.lane_stack.value.nameRemotes: # subscriber not a remote
-            pass # drop msg don't answer
+        if y_name not in self.lane_stack.value.nameRemotes:  # subscriber not a remote
+            pass  # drop msg don't answer
         else:
             # create answer message
             present = odict()
@@ -1127,7 +1127,7 @@ class SaltRaetPresenter(ioflo.base.deeding.Deed):
                 present[name] = minion.ha[0] if minion else None
             data = {'present': present}
             tag = tagify('present', 'presence')
-            route= {'dst': (None, None, 'event_fire'),
+            route = {'dst': (None, None, 'event_fire'),
                     'src': (None, self.lane_stack.value.local.name, None)}
             msg = {'route': route, 'tag': tag, 'data': data}
             self.lane_stack.value.transmit(msg,
