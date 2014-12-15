@@ -93,7 +93,7 @@ def version():
 
         salt '*' test.version
     '''
-    return salt.__version__
+    return salt.version.__version__
 
 
 def versions_information():
