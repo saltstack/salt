@@ -85,6 +85,18 @@ class SaltCloud(parsers.SaltCloudParser):
         log.info('salt-cloud starting')
         mapper = salt.cloud.Map(self.config)
 
+        names = self.config.get('names', None)
+        if names is not None:
+            filtered_rendered_map = {}
+            for map_profile in mapper.rendered_map:
+                filtered_map_profile = {}
+                for name in mapper.rendered_map[map_profile]:
+                    if name in names:
+                        filtered_map_profile[name] = mapper.rendered_map[map_profile][name]
+                if filtered_map_profile:
+                    filtered_rendered_map[map_profile] = filtered_map_profile
+            mapper.rendered_map = filtered_rendered_map
+
         ret = {}
 
         if self.selected_query_option is not None:

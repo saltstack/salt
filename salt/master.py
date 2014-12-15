@@ -40,10 +40,13 @@ import salt.daemons.masterapi
 import salt.defaults.exitcodes
 import salt.utils.atomicfile
 import salt.utils.event
+import salt.utils.reactor
 import salt.utils.verify
 import salt.utils.minions
 import salt.utils.gzip_util
 import salt.utils.process
+import salt.utils.zeromq
+import salt.utils.jid
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.debug import enable_sigusr1_handler, enable_sigusr2_handler, inspect_stack
 from salt.utils.event import tagify
@@ -190,6 +193,8 @@ class Maintenance(multiprocessing.Process):
         last = int(time.time())
         # Clean out the fileserver backend cache
         salt.daemons.masterapi.clean_fsbackend(self.opts)
+        # Clean out pub auth
+        salt.daemons.masterapi.clean_pub_auth(self.opts)
 
         old_present = set()
         while True:
@@ -398,7 +403,7 @@ class Master(SMaster):
 
         if self.opts.get('reactor'):
             log.info('Creating master reactor process')
-            process_manager.add_process(salt.utils.event.Reactor, args=(self.opts,))
+            process_manager.add_process(salt.utils.reactor.Reactor, args=(self.opts,))
 
         if self.opts.get('event_return'):
             log.info('Creating master event return process')
@@ -508,7 +513,7 @@ class Publisher(multiprocessing.Process):
         pull_uri = 'ipc://{0}'.format(
             os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
         )
-        salt.utils.check_ipc_path_max_len(pull_uri)
+        salt.utils.zeromq.check_ipc_path_max_len(pull_uri)
 
         # Start the minion command publisher
         log.info('Starting the Salt Publisher on {0}'.format(pub_uri))
@@ -2013,7 +2018,7 @@ class ClearFuncs(object):
             else:
                 token = self.loadauth.get_tok(clear_load['token'])
 
-            jid = salt.utils.gen_jid()
+            jid = salt.utils.jid.gen_jid()
             fun = clear_load.pop('fun')
             tag = tagify(jid, prefix='wheel')
             data = {'fun': "wheel.{0}".format(fun),
@@ -2045,7 +2050,7 @@ class ClearFuncs(object):
             eauth_error = self.process_eauth(clear_load, 'wheel')
             if eauth_error:
                 return eauth_error
-            jid = salt.utils.gen_jid()
+            jid = salt.utils.jid.gen_jid()
             fun = clear_load.pop('fun')
             tag = tagify(jid, prefix='wheel')
             data = {'fun': "wheel.{0}".format(fun),

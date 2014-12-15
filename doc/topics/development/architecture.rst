@@ -3,11 +3,11 @@
 Overview
 ========
 
-In its most typical use, Salt is a software application in which clients, 
-called "minions" can be commanded and controlled from a central command server 
+In its most typical use, Salt is a software application in which clients,
+called "minions" can be commanded and controlled from a central command server
 called a "master".
 
-Commands are normally issued to the minions (via the master) by calling a a 
+Commands are normally issued to the minions (via the master) by calling a a
 client script simply called, 'salt'.
 
 Salt features a pluggable transport system to issue commands from a master to
@@ -38,7 +38,7 @@ Overview
 --------
 
 The salt-master deamon runs on the designated Salt master and performs
-functions such as authenticating minions, sending and receiving requests 
+functions such as authenticating minions, sending, and receiving requests
 from connected minions and sending and receiving requests and replies to the
 'salt' CLI.
 
@@ -80,7 +80,7 @@ MWorker
 Worker processes manage the back-end operations for the Salt Master.
 
 The number of workers is equivilient to the number of 'worker_threads'
-specified in the master configuration and is always at least one. 
+specified in the master configuration and is always at least one.
 
 Workers are bound to the following:
 
@@ -114,15 +114,15 @@ might be as follows:
 2) The 'salt' command uses LocalClient to generate a request to the salt master
 by connecting to the ReqServer on TCP:4506 and issuing the job.
 
-3) The salt-master ReqServer sees the request and passes it to an available 
+3) The salt-master ReqServer sees the request and passes it to an available
 MWorker over workers.ipc.
 
 4) A worker picks up the request and handles it. First, it checks to ensure
 that the requested user has permissions to issue the command. Then, it sends
 the publish command to all connected minions. For the curious, this happens
-in ClearFuncs.publish(). 
+in ClearFuncs.publish().
 
-5) The worker announces on the master event bus that it is about to publish 
+5) The worker announces on the master event bus that it is about to publish
 a job to conneceted minions. This happens by placing the event on the master
 event bus (master_event_pull.ipc) where the EventPublisher picks it up and
 distributes it to all connected event listeners on master_event_pub.ipc.
@@ -134,7 +134,7 @@ on publish_pull.ipc.
 port 4505 where they await commands. When the Publisher receives the job over
 publish_pull, it sends the jobs across the wire to the minions for processing.
 
-8) After the minions receive the request, they decrypt it and perform any 
+8) After the minions receive the request, they decrypt it and perform any
 requested work, if they determine that they are targeted to do so.
 
 9) When the minion is ready to respond, it publishes the result of its job back
@@ -143,7 +143,7 @@ where it is again picked up by the ReqServer and forwarded to an available
 MWorker for processing. (Again, this happens by passing this message across
 workers.ipc to an available worker.)
 
-10) When the MWorker receives the job it decrypts it and fires an event onto 
+10) When the MWorker receives the job it decrypts it and fires an event onto
 the master event bus (master_event_pull.ipc). (Again for the curious, this
 happens in AESFuncs._return().
 
@@ -200,7 +200,7 @@ Job Flow
 --------
 
 When a salt minion starts up, it attempts to connect to the Publisher and the
-ReqServer on the salt master. It then attempts to authenticate and once the 
+ReqServer on the salt master. It then attempts to authenticate and once the
 minion has successfully authenticated, it simply listens for jobs.
 
 Jobs normally come either come from the 'salt-call' script run by a local user
@@ -209,10 +209,10 @@ on the salt minion or they can come directly from a master.
 Master Job Flow
 ---------------
 
-1) A master publishes a job that is received by a minion as outlined by the 
+1) A master publishes a job that is received by a minion as outlined by the
 master's job flow above.
 
-2) The minion is polling its receive socket that's connected to the master 
+2) The minion is polling its receive socket that's connected to the master
 Publisher (TCP 4505 on master). When it detects an incoming message, it picks it
 up from the socket and decrypts it.
 

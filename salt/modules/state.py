@@ -18,6 +18,7 @@ import tempfile
 # Import salt libs
 import salt.config
 import salt.utils
+import salt.utils.jid
 import salt.state
 import salt.payload
 from salt.ext.six import string_types
@@ -110,7 +111,7 @@ def running(concurrent=False):
         ).format(
             data['fun'],
             data['pid'],
-            salt.utils.jid_to_time(data['jid']),
+            salt.utils.jid.jid_to_time(data['jid']),
             data['jid'],
         )
         ret.append(err)

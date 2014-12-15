@@ -69,7 +69,7 @@ Salt Virt
 ---------
 
 Salt Virt is a cloud controller that supports virtual machine deployment,
-inspection, migration and integration with many aspects of Salt.
+inspection, migration, and integration with many aspects of Salt.
 
 Salt Virt has undergone a major overhaul with this release and now supports
 many more features and includes a number of critical improvements.
@@ -235,11 +235,11 @@ documentation for the :mod:`pagerduty <salt.modules.pagerduty>` module.
 Virtual Terminal
 ----------------
 
-Sometimes the subprocess module is not good enough, and, in fact, not even 
-``askpass`` is. This virtual terminal is still in it's infant childhood, needs 
-quite some love, and was originally created to replace ``askpass``, but, while 
-developing it, it immediately proved that it could do so much more. It's 
-currently used by salt-cloud when bootstrapping salt on clouds which require 
+Sometimes the subprocess module is not good enough, and, in fact, not even
+``askpass`` is. This virtual terminal is still in it's infant childhood, needs
+quite some love, and was originally created to replace ``askpass``, but, while
+developing it, it immediately proved that it could do so much more. It's
+currently used by salt-cloud when bootstrapping salt on clouds which require
 the use of a password.
 
 

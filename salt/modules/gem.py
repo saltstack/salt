@@ -78,7 +78,7 @@ def install(gems,           # pylint: disable=C0103
 
         salt '*' gem.install vagrant
 
-        salt '*' gem.install redphone gem_bin=/opt/sensu/embeded/bin/gem
+        salt '*' gem.install redphone gem_bin=/opt/sensu/embedded/bin/gem
     '''
     options = []
     if version:

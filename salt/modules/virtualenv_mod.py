@@ -10,10 +10,6 @@ import shutil
 import logging
 import os
 import os.path
-try:
-    from shlex import quote as _cmd_quote  # pylint: disable=E0611
-except ImportError:
-    from pipes import quote as _cmd_quote
 
 # Import salt libs
 import salt.utils
@@ -130,7 +126,7 @@ def create(path,
     elif runas is not None and not user:
         user = str(runas)
 
-    cmd = [_cmd_quote(venv_bin)]
+    cmd = [venv_bin]
 
     if 'pyvenv' not in venv_bin:
         # ----- Stop the user if pyvenv only options are used --------------->
@@ -158,8 +154,10 @@ def create(path,
             )
         except ImportError:
             # Unable to import?? Let's parse the version from the console
-            version_cmd = '{0} --version'.format(_cmd_quote(venv_bin))
-            ret = __salt__['cmd.run_all'](version_cmd, runas=user)
+            version_cmd = '{0} --version'.format(venv_bin)
+            ret = __salt__['cmd.run_all'](
+                    version_cmd, runas=user, python_shell=False
+                )
             if ret['retcode'] > 0 or not ret['stdout'].strip():
                 raise salt.exceptions.CommandExecutionError(
                     'Unable to get the virtualenv version output using {0!r}. '
@@ -182,12 +180,11 @@ def create(path,
                 cmd.append('--distribute')
 
         if python is not None and python.strip() != '':
-            if not os.access(python, os.X_OK):
+            if not salt.utils.which(python):
                 raise salt.exceptions.CommandExecutionError(
-                    'Requested python ({0}) does not appear '
-                    'executable.'.format(python)
+                    'Cannot find requested python ({0}).'.format(python)
                 )
-            cmd.append('--python={0}'.format(_cmd_quote(python)))
+            cmd.append('--python={0}'.format(python))
         if extra_search_dir is not None:
             if isinstance(extra_search_dir, string_types) and \
                     extra_search_dir.strip() != '':
@@ -195,7 +192,7 @@ def create(path,
                     e.strip() for e in extra_search_dir.split(',')
                 ]
             for entry in extra_search_dir:
-                cmd.append('--extra-search-dir={0}'.format(_cmd_quote(entry)))
+                cmd.append('--extra-search-dir={0}'.format(entry))
         if never_download is True:
             if virtualenv_version_info >= (1, 10):
                 log.info(
@@ -207,7 +204,7 @@ def create(path,
             else:
                 cmd.append('--never-download')
         if prompt is not None and prompt.strip() != '':
-            cmd.append('--prompt={0!r}'.format(_cmd_quote(prompt)))
+            cmd.append('--prompt={0!r}'.format(prompt))
     else:
         # venv module from the Python >= 3.3 standard library
 
@@ -248,10 +245,10 @@ def create(path,
         cmd.append('--system-site-packages')
 
     # Finally the virtualenv path
-    cmd.append(_cmd_quote(path))
+    cmd.append(path)
 
     # Let's create the virtualenv
-    ret = __salt__['cmd.run_all'](' '.join(cmd), runas=user)
+    ret = __salt__['cmd.run_all'](cmd, runas=user, python_shell=False)
     if ret['retcode'] > 0:
         # Something went wrong. Let's bail out now!
         return ret
@@ -314,7 +311,7 @@ def get_site_packages(venv):
         raise salt.exceptions.CommandExecutionError(
             "Path does not appear to be a virtualenv: '{0}'".format(bin_path))
 
-    return __salt__['cmd.exec_code'](_cmd_quote(bin_path),
+    return __salt__['cmd.exec_code'](bin_path,
             'from distutils import sysconfig; print sysconfig.get_python_lib()')
 
 
@@ -331,11 +328,12 @@ def _install_script(source, cwd, python, user, saltenv='base', use_vt=False):
         os.chown(tmppath, __salt__['file.user_to_uid'](user), -1)
     try:
         return __salt__['cmd.run_all'](
-            '{0} {1}'.format(_cmd_quote(python), _cmd_quote(tmppath)),
+            '{0} {1}'.format(python, tmppath),
             runas=user,
             cwd=cwd,
             env={'VIRTUAL_ENV': cwd},
-            use_vt=use_vt
+            use_vt=use_vt,
+            python_shell=False,
         )
     finally:
         os.remove(tmppath)

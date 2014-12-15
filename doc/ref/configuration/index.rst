@@ -8,7 +8,7 @@ setting up a :term:`minion` is to set the location of the master in the minion
 configuration file.
 
 The configuration files will be installed to :file:`/etc/salt` and are named
-after the respective components, :file:`/etc/salt/master` and
+after the respective components, :file:`/etc/salt/master`, and
 :file:`/etc/salt/minion`.
 
 Master Configuration
@@ -76,7 +76,7 @@ Running Salt
 
         salt-master --log-level=debug
 
-    For information on salt's logging system please see the :doc:`logging 
+    For information on salt's logging system please see the :doc:`logging
     document</ref/configuration/logging/index>`.
 
 
@@ -85,7 +85,7 @@ Running Salt
     To run Salt as another user, set the :conf_master:`user` parameter in the
     master config file.
 
-    Additionally, ownership and permissions need to be set such that the
+    Additionally, ownership, and permissions need to be set such that the
     desired user can read from and write to the following directories (and
     their subdirectories, where applicable):
 
@@ -181,4 +181,3 @@ Understanding :doc:`targeting </topics/targeting/index>` is important. From ther
 depending on the way you wish to use Salt, you should also proceed to learn
 about :doc:`States </topics/tutorials/starting_states>` and :doc:`Execution Modules
 </ref/modules/index>`.
-

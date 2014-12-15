@@ -75,10 +75,12 @@ class PartedTestCase(TestCase):
         parted.probe()
         self.cmdrun.assert_called_once_with('partprobe -- ')
 
+    @patch('salt.modules.parted._validate_device', MagicMock())
     def test_probe_w_single_arg(self):
         parted.probe("/dev/sda")
         self.cmdrun.assert_called_once_with('partprobe -- /dev/sda')
 
+    @patch('salt.modules.parted._validate_device', MagicMock())
     def test_probe_w_multiple_args(self):
         parted.probe('/dev/sda', '/dev/sdb')
         self.cmdrun.assert_called_once_with('partprobe -- /dev/sda /dev/sdb')
@@ -91,6 +93,7 @@ class PartedTestCase(TestCase):
         parted.salt.utils.kwargs_warn_until.side_effect = check_args
 
     @patch('salt.utils.kwargs_warn_until')
+    @patch('salt.modules.parted._validate_device', MagicMock())
     def test_probe_w_device_kwarg(self, *args, **kwargs):
         device_kwargs = {'device': '/dev/sda'}
         parted.probe(**device_kwargs)
@@ -98,6 +101,7 @@ class PartedTestCase(TestCase):
         self.cmdrun.assert_called_once_with('partprobe -- /dev/sda')
 
     @patch('salt.utils.kwargs_warn_until')
+    @patch('salt.modules.parted._validate_device', MagicMock())
     def test_probe_w_device_kwarg_and_arg(self, *args, **kwargs):
         '''device arg is concatenated with positional args'''
         device_kwargs = {'device': '/dev/sda'}
@@ -167,6 +171,7 @@ class PartedTestCase(TestCase):
     def test_list__without_device(self):
         self.assertRaises(TypeError, parted.list_)
 
+    @patch('salt.modules.parted._validate_device', MagicMock())
     def test_list__empty_cmd_output(self):
         self.cmdrun.return_value = self.parted_print_output('empty')
         output = parted.list_('/dev/sda')
@@ -174,6 +179,7 @@ class PartedTestCase(TestCase):
         expected = {'info': {}, 'partitions': {}}
         self.assertEqual(output, expected)
 
+    @patch('salt.modules.parted._validate_device', MagicMock())
     def test_list__valid_unit_empty_cmd_output(self):
         self.cmdrun.return_value = self.parted_print_output('empty')
         output = parted.list_('/dev/sda', unit='s')
@@ -186,21 +192,25 @@ class PartedTestCase(TestCase):
                           unit='badbadbad')
         self.assertFalse(self.cmdrun.called)
 
+    @patch('salt.modules.parted._validate_device', MagicMock())
     def test_list__bad_header(self):
         self.cmdrun.return_value = self.parted_print_output('bad_header')
         self.assertRaises(CommandExecutionError, parted.list_, '/dev/sda')
         self.cmdrun.assert_called_once_with('parted -m -s /dev/sda print')
 
+    @patch('salt.modules.parted._validate_device', MagicMock())
     def test_list__bad_label_info(self):
         self.cmdrun.return_value = self.parted_print_output('bad_label_info')
         self.assertRaises(CommandExecutionError, parted.list_, '/dev/sda')
         self.cmdrun.assert_called_once_with('parted -m -s /dev/sda print')
 
+    @patch('salt.modules.parted._validate_device', MagicMock())
     def test_list__bad_partition(self):
         self.cmdrun.return_value = self.parted_print_output('bad_partition')
         self.assertRaises(CommandExecutionError, parted.list_, '/dev/sda')
         self.cmdrun.assert_called_once_with('parted -m -s /dev/sda print')
 
+    @patch('salt.modules.parted._validate_device', MagicMock())
     def test_list__valid_cmd_output(self):
         self.cmdrun.return_value = self.parted_print_output('valid')
         output = parted.list_('/dev/sda')
@@ -238,6 +248,7 @@ class PartedTestCase(TestCase):
         }
         self.assertEqual(output, expected)
 
+    @patch('salt.modules.parted._validate_device', MagicMock())
     def test_list__valid_unit_valid_cmd_output(self):
         self.cmdrun.return_value = self.parted_print_output('valid')
         output = parted.list_('/dev/sda', unit='s')
@@ -275,6 +286,7 @@ class PartedTestCase(TestCase):
         }
         self.assertEqual(output, expected)
 
+    @patch('salt.modules.parted._validate_device', MagicMock())
     def test_list__valid_legacy_cmd_output(self):
         self.cmdrun.return_value = self.parted_print_output('valid_legacy')
         output = parted.list_('/dev/sda')
@@ -311,6 +323,7 @@ class PartedTestCase(TestCase):
         }
         self.assertEqual(output, expected)
 
+    @patch('salt.modules.parted._validate_device', MagicMock())
     def test_list__valid_unit_valid_legacy_cmd_output(self):
         self.cmdrun.return_value = self.parted_print_output('valid_legacy')
         output = parted.list_('/dev/sda', unit='s')

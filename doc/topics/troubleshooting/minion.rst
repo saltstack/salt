@@ -134,7 +134,7 @@ Salt Minion Doesn't Return Anything While Running Jobs Locally
 When a command being run via Salt takes a very long time to return
 (package installations, certain scripts, etc.) the minion may drop you back
 to the shell. In most situations the job is still running but Salt has
-exceeded the set timeout before returning. Querying the job queue will 
+exceeded the set timeout before returning. Querying the job queue will
 provide the data of the job but is inconvenient. This can be resolved by
 either manually using the ``-t`` option to set a longer timeout when running
 commands (by default it is 5 seconds) or by modifying the minion

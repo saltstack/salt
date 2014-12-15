@@ -40,12 +40,12 @@ solution is to use sftp with the `use_sftp` flag
 
 Sync After Install
 ==================
-Salt allows users to create custom modules, grains and states which can be 
+Salt allows users to create custom modules, grains, and states which can be
 synchronised to minions to extend Salt with further functionality.
 
 This option will inform Salt Cloud to synchronise your custom modules, grains,
-states or all these to the minion just after it has been created. For this to 
-happen, the following line needs to be added to the main cloud 
+states or all these to the minion just after it has been created. For this to
+happen, the following line needs to be added to the main cloud
 configuration file:
 
 .. code-block:: yaml
@@ -125,9 +125,9 @@ root logins, even for file transfers (which makes /root/ unavailable).
 
 Hide Output From Minion Install
 ===============================
-By default Salt Cloud will stream the output from the minion deploy script 
-directly to STDOUT. Although this can been very useful, in certain cases you 
-may wish to switch this off. The following config option is there to enable or 
+By default Salt Cloud will stream the output from the minion deploy script
+directly to STDOUT. Although this can been very useful, in certain cases you
+may wish to switch this off. The following config option is there to enable or
 disable this output:
 
 .. code-block:: yaml
@@ -138,12 +138,12 @@ disable this output:
 Connection Timeout
 ==================
 
-There are several stages when deploying Salt where Salt Cloud needs to wait for 
-something to happen. The VM getting it's IP address, the VM's SSH port is 
+There are several stages when deploying Salt where Salt Cloud needs to wait for
+something to happen. The VM getting it's IP address, the VM's SSH port is
 available, etc.
 
-If you find that the Salt Cloud defaults are not enough and your deployment 
-fails because Salt Cloud did not wait log enough, there are some settings you 
+If you find that the Salt Cloud defaults are not enough and your deployment
+fails because Salt Cloud did not wait log enough, there are some settings you
 can tweak.
 
 .. admonition:: Note
@@ -151,35 +151,35 @@ can tweak.
     All values should be provided in seconds
 
 
-You can tweak these settings globally, per cloud provider, or event per profile 
+You can tweak these settings globally, per cloud provider, or event per profile
 definition.
 
 
 wait_for_ip_timeout
 ~~~~~~~~~~~~~~~~~~~
 
-The amount of time Salt Cloud should wait for a VM to start and get an IP back 
+The amount of time Salt Cloud should wait for a VM to start and get an IP back
 from the cloud provider. Default: 5 minutes.
 
 
 wait_for_ip_interval
 ~~~~~~~~~~~~~~~~~~~~
 
-The amount of time Salt Cloud should sleep while querying for the VM's IP.  
+The amount of time Salt Cloud should sleep while querying for the VM's IP.
 Default: 5 seconds.
 
 
 ssh_connect_timeout
 ~~~~~~~~~~~~~~~~~~~
 
-The amount of time Salt Cloud should wait for a successful SSH connection to 
+The amount of time Salt Cloud should wait for a successful SSH connection to
 the VM. Default: 5 minutes.
 
 
 wait_for_passwd_timeout
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-The amount of time until an ssh connection can be established via password or 
+The amount of time until an ssh connection can be established via password or
 ssh key. Default 15 seconds.
 
 
@@ -193,15 +193,15 @@ Default 15 attempts
 wait_for_fun_timeout
 ~~~~~~~~~~~~~~~~~~~~
 
-Some cloud drivers check for an available IP or a successful SSH connection 
-using a function, namely, SoftLayer and SoftLayer-HW. So, the amount of time 
+Some cloud drivers check for an available IP or a successful SSH connection
+using a function, namely, SoftLayer, and SoftLayer-HW. So, the amount of time
 Salt Cloud should retry such functions before failing. Default: 5 minutes.
 
 
 wait_for_spot_timeout
 ~~~~~~~~~~~~~~~~~~~~~
 
-The amount of time Salt Cloud should wait before an EC2 Spot instance is 
+The amount of time Salt Cloud should wait before an EC2 Spot instance is
 available. This setting is only available for the EC2 cloud driver.
 
 
@@ -294,7 +294,7 @@ SSH Agent
 .. versionadded:: Lithium
 
 If the ssh key is not stored on the server salt-cloud is being run on, set
-ssh_agent and salt-cloud will use the forwarded ssh-agent to authenticate.
+ssh_agent, and salt-cloud will use the forwarded ssh-agent to authenticate.
 
 .. code-block:: yaml
 

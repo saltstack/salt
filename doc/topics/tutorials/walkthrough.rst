@@ -27,7 +27,7 @@ that can solve many specific problems in an infrastructure.
 
 The backbone of Salt is the remote execution engine, which creates a high-speed,
 secure and bi-directional communication net for groups of systems. On top of this
-communication system, Salt provides an extremely fast, flexible and easy-to-use
+communication system, Salt provides an extremely fast, flexible, and easy-to-use
 configuration management system called ``Salt States``.
 
 Installing Salt
@@ -184,7 +184,7 @@ master. To list the keys that are on the master:
 
     salt-key -L
 
-The keys that have been rejected, accepted and pending acceptance are listed.
+The keys that have been rejected, accepted, and pending acceptance are listed.
 The easiest way to accept the minion key is to accept all pending keys:
 
 .. code-block:: bash
@@ -200,7 +200,7 @@ The easiest way to accept the minion key is to accept all pending keys:
 
     On the master:
 
-    .. code-block: bash
+    .. code-block:: bash
 
         # salt-key -f foo.domain.com
         Unaccepted Keys:
@@ -208,19 +208,19 @@ The easiest way to accept the minion key is to accept all pending keys:
 
     On the minion:
 
-    .. code-block: bash
+    .. code-block:: bash
 
         # salt-call key.finger --local
         local:
             39:f9:e4:8a:aa:74:8d:52:1a:ec:92:03:82:09:c8:f9
-            
+
     If they match, approve the key with ``salt-key -a foo.domain.com``.
 
 
 Sending the First Commands
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Now that the minion is connected to the master and authenticated, the master 
+Now that the minion is connected to the master and authenticated, the master
 can start to command the minion.
 
 Salt commands allow for a vast set of functions to be executed and for
@@ -398,7 +398,7 @@ Targeting
 
 Salt allows for minions to be targeted based on a wide range of criteria.  The
 default targeting system uses globular expressions to match minions, hence if
-there are minions named ``larry1``, ``larry2``, ``curly1`` and ``curly2``, a
+there are minions named ``larry1``, ``larry2``, ``curly1``, and ``curly2``, a
 glob of ``larry*`` will match ``larry1`` and ``larry2``, and a glob of ``*1``
 will match ``larry1`` and ``curly1``.
 

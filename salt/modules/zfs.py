@@ -322,9 +322,10 @@ def list_(name='', **kwargs):
 
     cmd = '{0} {1}'.format(cmd, name)
 
-    res = __salt__['cmd.run'](cmd)
+    res = __salt__['cmd.run_all'](cmd)
 
-    if not res:
-        dataset_list = [l for l in res.splitlines()]
+    if res['retcode'] == 0:
+        dataset_list = [l for l in res['stdout'].splitlines()]
         return {'datasets': dataset_list}
-    return {'Error': res}
+    else:
+        return {'Error': res['stderr']}

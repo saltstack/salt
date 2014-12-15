@@ -29,13 +29,13 @@ for :doc:`Cobbler <../../ref/tops/all/salt.tops.cobbler>` or:
 
 for :doc:`Reclass <../../ref/tops/all/salt.tops.reclass_adapter>`.
 
-It's also possible to create custom master_tops modules.  These modules must go
+It's also possible to create custom master_tops modules. These modules must go
 in a subdirectory called `tops` in the `extension_modules` directory.
 The `extension_modules` directory is not defined by default (the
 default `/srv/salt/_modules` will NOT work as of this release)
 
 Custom tops modules are written like any other execution module, see the source
-for the two modules above for examples of fully functional ones.  Below is
+for the two modules above for examples of fully functional ones. Below is
 a degenerate example:
 
 /etc/salt/master:
@@ -48,7 +48,7 @@ a degenerate example:
 
 /srv/salt/modules/tops/customtop.py:
 
-.. code-block: python
+.. code-block:: python
 
     import logging
     import sys
@@ -67,7 +67,7 @@ a degenerate example:
 
 `salt minion state.show_top` should then display something like:
 
-.. code-block: bash
+.. code-block:: bash
 
    $ salt minion state.show_top
 
@@ -75,5 +75,3 @@ a degenerate example:
        ----------
        base:
          - test
-
-

@@ -7,7 +7,7 @@ Intro to RAET Programming
     This page is still under construction
 
 The first thing to cover is that RAET does not present a socket api, it
-presents and queueing api, all messages in RAET are made available to via
+presents, and queueing api, all messages in RAET are made available to via
 queues. This is the single most differentiating factor with RAET vs other
 networking libraries, instead of making a socket, a stack is created.
 Instead of calling send() or recv(), messages are placed on the stack to be

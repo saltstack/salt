@@ -46,7 +46,7 @@ script would open up port 445, and apply the changes:
 .. code-block:: other
 
     <powershell>
-    New-NetFirewallRule -Name "WinRM445" -DisplayName "WinRM445" -Protocol TCP -LocalPort 445
+    New-NetFirewallRule -Name "SMB445" -DisplayName "SMB445" -Protocol TCP -LocalPort 445
     Set-Item (dir wsman:\localhost\Listener\*\Port -Recurse).pspath 445 -Force
     Restart-Service winrm
     </powershell>
@@ -97,7 +97,7 @@ might look like:
 
 .. code-block:: yaml
 
-    techhat-windows:
+    windows-server-2012:
       provider: my-ec2-config
       image: ami-c49c0dac
       size: m1.small

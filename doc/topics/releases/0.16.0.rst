@@ -132,4 +132,4 @@ Support for Setting Password Hashes on BSD Minions
 --------------------------------------------------
 
 FreeBSD, NetBSD, and OpenBSD all now support setting passwords in
-:mod:`user.present <salt.states.user.present>` states. 
+:mod:`user.present <salt.states.user.present>` states.

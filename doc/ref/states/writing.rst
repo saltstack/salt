@@ -24,7 +24,7 @@ illustrate:
         - mode: 644
         - source: salt://salt/master
 
-Therefore this SLS data can be directly linked to a module, function and
+Therefore this SLS data can be directly linked to a module, function, and
 arguments passed to that function.
 
 This does issue the burden, that function names, state names and function
@@ -101,8 +101,8 @@ A State Module must return a dict containing the following keys/values:
 Test State
 ==========
 
-All states should check for and support ``test`` being passed in the options. 
-This will return data about what changes would occur if the state were actually 
+All states should check for and support ``test`` being passed in the options.
+This will return data about what changes would occur if the state were actually
 run. An example of such a check could look like this:
 
 .. code-block:: python

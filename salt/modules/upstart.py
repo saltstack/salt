@@ -455,7 +455,7 @@ def enable(name, **kwargs):
     if _service_is_upstart(name):
         return _upstart_enable(name)
     executable = _get_service_exec()
-    cmd = '{0} -f {1} defaults'.format(executable, name)
+    cmd = '{0} -f {1} enable'.format(executable, name)
     return not __salt__['cmd.retcode'](cmd)
 
 

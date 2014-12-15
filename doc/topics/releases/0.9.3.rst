@@ -170,7 +170,7 @@ File State Additions
 ````````````````````
 
 The file state has been given a number of new features, primarily the
-directory, recurse, symlink and absent functions.
+directory, recurse, symlink, and absent functions.
 
 file.directory
     Make sure that a directory exists and has the right permissions.
@@ -210,7 +210,7 @@ file.recurse
 
 file.absent
     Make sure that the file is not on the system, recursively deletes
-    directories, files and symlinks.
+    directories, files, and symlinks.
 
     .. code-block:: yaml
 

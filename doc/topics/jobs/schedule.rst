@@ -108,8 +108,8 @@ localtime.
             - Thursday 3:00pm
             - Friday 5:00pm
 
-This will schedule the command: state.sls httpd test=True at 5pm on Monday, Wednesday
-and Friday, and 3pm on Tuesday and Thursday.
+This will schedule the command: state.sls httpd test=True at 5pm on Monday,
+Wednesday, and Friday, and 3pm on Tuesday and Thursday.
 
 .. code-block:: yaml
 

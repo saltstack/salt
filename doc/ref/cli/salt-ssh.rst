@@ -52,7 +52,7 @@ Options
     defines how many processes are opened up at a time to manage connections,
     the more running process the faster communication should be, default
     is 25.
-    
+
 .. option:: -i, --ignore-host-keys
 
     Ignore the ssh host keys which by default are honored and connections

@@ -104,9 +104,9 @@ __virtual__
 If you define a ``__virtual__`` function, you can control whether or not this
 module is visible. If it returns ``False`` then Salt ignores this module. If
 it returns a string, then that string will be how Salt identifies this external
-pillar in its ``ext_pillar`` configuration. If you're not renaming the module, 
-simply return ``True`` in the ``__virtual__`` function, which is the same as if 
-this function did not exist, then, the name Salt's ``ext_pillar`` will use to 
+pillar in its ``ext_pillar`` configuration. If you're not renaming the module,
+simply return ``True`` in the ``__virtual__`` function, which is the same as if
+this function did not exist, then, the name Salt's ``ext_pillar`` will use to
 identify this module is its conventional name in Python.
 
 This is useful to write modules that can be installed on all Salt masters, but
@@ -211,7 +211,7 @@ external pillar, add something like this to your master config:
 Reminder
 --------
 
-Just as with traditional pillars, external pillars must be refreshed in order for 
+Just as with traditional pillars, external pillars must be refreshed in order for
 minions to see any fresh data:
 
 .. code-block:: bash

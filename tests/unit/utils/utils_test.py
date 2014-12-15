@@ -59,11 +59,11 @@ class UtilsTestCase(TestCase):
     def test_jid_to_time(self):
         test_jid = 20131219110700123489
         expected_jid = '2013, Dec 19 11:07:00.123489'
-        self.assertEqual(utils.jid_to_time(test_jid), expected_jid)
+        self.assertEqual(utils.jid.jid_to_time(test_jid), expected_jid)
 
         # Test incorrect lengths
         incorrect_jid_length = 2012
-        self.assertEqual(utils.jid_to_time(incorrect_jid_length), '')
+        self.assertEqual(utils.jid.jid_to_time(incorrect_jid_length), '')
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     @patch('random.randint', return_value=1)
@@ -86,14 +86,14 @@ class UtilsTestCase(TestCase):
 
         expected_jid_dir = '/tmp/cachdir/jobs/69/fda308ccfa70d8296345e6509de136'
 
-        ret = utils.jid_dir(test_jid, test_cache_dir, test_hash_type)
+        ret = utils.jid.jid_dir(test_jid, test_cache_dir, test_hash_type)
 
         self.assertEqual(ret, expected_jid_dir)
 
     def test_is_jid(self):
-        self.assertTrue(utils.is_jid('20131219110700123489'))  # Valid JID
-        self.assertFalse(utils.is_jid(20131219110700123489))  # int
-        self.assertFalse(utils.is_jid('2013121911070012348911111'))  # Wrong length
+        self.assertTrue(utils.jid.is_jid('20131219110700123489'))  # Valid JID
+        self.assertFalse(utils.jid.is_jid(20131219110700123489))  # int
+        self.assertFalse(utils.jid.is_jid('2013121911070012348911111'))  # Wrong length
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     @patch('salt.utils.is_windows', return_value=False)
@@ -115,7 +115,7 @@ class UtilsTestCase(TestCase):
 
         expected_argspec = namedtuple('ArgSpec', 'args varargs keywords defaults')(
             args=['first', 'second', 'third', 'fourth'], varargs=None, keywords=None, defaults=('fifth',))
-        ret = utils.get_function_argspec(dummy_func)
+        ret = utils.args.get_function_argspec(dummy_func)
 
         self.assertEqual(ret, expected_argspec)
 
@@ -141,12 +141,12 @@ class UtilsTestCase(TestCase):
             self.assertTrue(False, "utils.safe_rm raised exception when it should not have")
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
-    @patch.multiple('salt.utils', get_function_argspec=DEFAULT, arg_lookup=DEFAULT)
-    def test_format_call(self, arg_lookup, get_function_argspec):
+    @patch('salt.utils.arg_lookup')
+    def test_format_call(self, arg_lookup):
         def dummy_func(first=None, second=None, third=None):
             pass
-
         arg_lookup.return_value = {'args': ['first', 'second', 'third'], 'kwargs': {}}
+        get_function_argspec = DEFAULT
         get_function_argspec.return_value = namedtuple('ArgSpec', 'args varargs keywords defaults')(
             args=['first', 'second', 'third', 'fourth'], varargs=None, keywords=None, defaults=('fifth',))
 
@@ -435,7 +435,7 @@ class UtilsTestCase(TestCase):
         Ensure we throw an exception if we have a too-long IPC URI
         '''
         with patch('zmq.IPC_PATH_MAX_LEN', 1):
-            self.assertRaises(SaltSystemExit, utils.check_ipc_path_max_len, '1' * 1024)
+            self.assertRaises(SaltSystemExit, utils.zeromq.check_ipc_path_max_len, '1' * 1024)
 
     def test_test_mode(self):
         self.assertTrue(utils.test_mode(test=True))
@@ -523,18 +523,18 @@ class UtilsTestCase(TestCase):
 
     def test_yaml_dquote(self):
         for teststr in (r'"\ []{}"',):
-            self.assertEqual(teststr, yaml.safe_load(utils.yaml_dquote(teststr)))
+            self.assertEqual(teststr, yaml.safe_load(utils.yamlencoding.yaml_dquote(teststr)))
 
     def test_yaml_squote(self):
-        ret = utils.yaml_squote(r'"')
+        ret = utils.yamlencoding.yaml_squote(r'"')
         self.assertEqual(ret, r"""'"'""")
 
     def test_yaml_encode(self):
         for testobj in (None, True, False, '[7, 5]', '"monkey"', 5, 7.5, "2014-06-02 15:30:29.7"):
-            self.assertEqual(testobj, yaml.safe_load(utils.yaml_encode(testobj)))
+            self.assertEqual(testobj, yaml.safe_load(utils.yamlencoding.yaml_encode(testobj)))
 
         for testobj in ({}, [], set()):
-            self.assertRaises(TypeError, utils.yaml_encode, testobj)
+            self.assertRaises(TypeError, utils.yamlencoding.yaml_encode, testobj)
 
     def test_compare_dicts(self):
         ret = utils.compare_dicts(old={'foo': 'bar'}, new={'foo': 'bar'})
@@ -696,7 +696,7 @@ class UtilsTestCase(TestCase):
         now = datetime.datetime(2002, 12, 25, 12, 00, 00, 00)
         with patch('datetime.datetime'):
             datetime.datetime.now.return_value = now
-            ret = utils.gen_jid()
+            ret = utils.jid.gen_jid()
             self.assertEqual(ret, '20021225120000000000')
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)

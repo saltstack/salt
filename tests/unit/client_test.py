@@ -72,7 +72,7 @@ class LocalClientTestCase(TestCase,
                 # Do we raise an exception if the nodegroup can't be matched?
                 self.assertRaises(SaltInvocationError,
                                   self.client.pub,
-                                  'non_existant_group', 'test.ping', expr_form='nodegroup')
+                                  'non_existent_group', 'test.ping', expr_form='nodegroup')
 
 
 if __name__ == '__main__':

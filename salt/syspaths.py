@@ -42,6 +42,9 @@ try:
         BASE_MASTER_ROOTS_DIR,
         LOGS_DIR,
         PIDFILE_DIR,
+        CLOUD_DIR,
+        INSTALL_DIR,
+        BOOTSTRAP,
     )
 except ImportError:
     # The installation time was not generated, let's define the default values

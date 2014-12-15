@@ -41,7 +41,7 @@ def sdb_set(uri, value, opts):
     '''
     Set a value in a db, using a uri in the form of ``sdb://<profile>/<key>``.
     If the uri provided does not start with ``sdb://`` or the value is not
-    succesfully set, return ``False``.
+    successfully set, return ``False``.
     '''
     if not isinstance(uri, string_types):
         return uri
