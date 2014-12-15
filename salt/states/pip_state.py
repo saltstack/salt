@@ -89,7 +89,108 @@ def _fulfills_version_spec(version, version_spec):
     return True
 
 
+def _check_pkg_version_format(pkg):
+    '''
+    Takes a package name and version specification (if any) and checks it using
+    the pip library.
+    '''
+
+    ret = {'result': False, 'comment': None,
+           'prefix': None, 'version_spec': None}
+    from_vcs = False
+    try:
+        # Get the requirement object from the pip library
+        try:
+            # With pip < 1.2, the __version__ attribute does not exist and
+            # vcs+URL urls are not properly parsed.
+            # The next line is meant to trigger an AttributeError and
+            # handle lower pip versions
+            logger.debug(
+                'Installed pip version: {0}'.format(pip.__version__)
+            )
+            install_req = pip.req.InstallRequirement.from_line(pkg)
+        except AttributeError:
+            logger.debug('Installed pip version is lower than 1.2')
+            supported_vcs = ('git', 'svn', 'hg', 'bzr')
+            if pkg.startswith(supported_vcs):
+                for vcs in supported_vcs:
+                    if pkg.startswith(vcs):
+                        from_vcs = True
+                        install_req = pip.req.InstallRequirement.from_line(
+                            pkg.split('{0}+'.format(vcs))[-1]
+                        )
+                        break
+            else:
+                install_req = pip.req.InstallRequirement.from_line(pkg)
+    except ValueError as exc:
+        ret['result'] = False
+        if not from_vcs and '=' in pkg and '==' not in pkg:
+            ret['comment'] = (
+                'Invalid version specification in package {0}. \'=\' is '
+                'not supported, use \'==\' instead.'.format(pkg)
+            )
+            return ret
+        ret['comment'] = (
+            'pip raised an exception while parsing {0!r}: {1}'.format(
+                pkg, exc
+            )
+        )
+        return ret
+
+    if install_req.req is None:
+        # This is most likely an url and there's no way to know what will
+        # be installed before actually installing it.
+        ret['result'] = True
+        ret['prefix'] = ''
+        ret['version_spec'] = []
+    else:
+        ret['result'] = True
+        ret['prefix'] = install_req.req.project_name
+        ret['version_spec'] = install_req.req.specs
+
+    return ret
+
+
+def _check_if_installed(prefix, state_pkg_name, version_spec,
+                        ignore_installed, force_reinstall,
+                        upgrade, user, cwd, bin_env):
+
+    # result: None means the command failed to run
+    # result: True means the package is installed
+    # result: False means the package is not installed
+    ret = {'result': False, 'comment': None}
+
+    # Check if the requested packated is already installed.
+    try:
+        pip_list = __salt__['pip.list'](prefix, bin_env=bin_env,
+                                        user=user, cwd=cwd)
+        prefix_realname = _find_key(prefix, pip_list)
+    except (CommandNotFoundError, CommandExecutionError) as err:
+        ret['result'] = None
+        ret['comment'] = 'Error installing {0!r}: {1}'.format(state_pkg_name,
+                                                              err)
+        return ret
+
+    # If the package was already installed, check
+    # the ignore_installed and force_reinstall flags
+    if ignore_installed is False and prefix_realname is not None:
+        if force_reinstall is False and not upgrade:
+            # Check desired version (if any) against currently-installed
+            if (
+                any(version_spec) and
+                _fulfills_version_spec(pip_list[prefix_realname],
+                                       version_spec)
+            ) or (not any(version_spec)):
+                ret['result'] = True
+                ret['comment'] = ('Python package {0} was already '
+                                  'installed'.format(state_pkg_name))
+                return ret
+
+    return ret
+
+
 def installed(name,
+              pkgs=None,
               pip_bin=None,
               requirements=None,
               env=None,
@@ -352,13 +453,28 @@ def installed(name,
 
     .. _`virtualenv`: http://www.virtualenv.org/en/latest/
     '''
+
     if pip_bin and not bin_env:
         bin_env = pip_bin
     elif env and not bin_env:
         bin_env = env
 
-    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    # If pkgs is present, ignore name
+    if not pkgs:
+        pkgs = [name]
 
+    # Assumption: If `pkg` is not an `string`, it's a `collections.OrderedDict`
+    # prepro = lambda pkg: pkg if type(pkg) == str else \
+    #     ' '.join((pkg.items()[0][0], pkg.items()[0][1].replace(',', ';')))
+    # pkgs = ','.join([prepro(pkg) for pkg in pkgs])
+    prepro = lambda pkg: pkg if type(pkg) == str else \
+        ' '.join((pkg.items()[0][0], pkg.items()[0][1]))
+    pkgs = [prepro(pkg) for pkg in pkgs]
+
+    ret = {'name': ';'.join(pkgs), 'result': None,
+           'comment': '', 'changes': {}}
+
+    # Check that the pip binary supports the 'use_wheel' option
     if use_wheel:
         min_version = '1.4'
         cur_version = __salt__['pip.version'](bin_env)
@@ -370,6 +486,7 @@ def installed(name,
                               'was {1}.').format(min_version, cur_version)
             return ret
 
+    # Check that the pip binary supports the 'no_use_wheel' option
     if no_use_wheel:
         min_version = '1.4'
         cur_version = __salt__['pip.version'](bin_env)
@@ -381,6 +498,7 @@ def installed(name,
                               'was {1}.').format(min_version, cur_version)
             return ret
 
+    # Deprecation warning for the repo option
     if repo is not None:
         msg = ('The \'repo\' argument to pip.installed is deprecated and will '
                'be removed in Salt {version}. Please use \'name\' instead. '
@@ -394,59 +512,8 @@ def installed(name,
         ret.setdefault('warnings', []).append(msg)
         name = repo
 
-    from_vcs = False
-
-    if name and not requirements:
-        try:
-            try:
-                # With pip < 1.2, the __version__ attribute does not exist and
-                # vcs+URL urls are not properly parsed.
-                # The next line is meant to trigger an AttributeError and
-                # handle lower pip versions
-                logger.debug(
-                    'Installed pip version: {0}'.format(pip.__version__)
-                )
-                install_req = pip.req.InstallRequirement.from_line(name)
-            except AttributeError:
-                logger.debug('Installed pip version is lower than 1.2')
-                supported_vcs = ('git', 'svn', 'hg', 'bzr')
-                if name.startswith(supported_vcs):
-                    for vcs in supported_vcs:
-                        if name.startswith(vcs):
-                            from_vcs = True
-                            install_req = pip.req.InstallRequirement.from_line(
-                                name.split('{0}+'.format(vcs))[-1]
-                            )
-                            break
-                else:
-                    install_req = pip.req.InstallRequirement.from_line(name)
-        except ValueError as exc:
-            ret['result'] = False
-            if not from_vcs and '=' in name and '==' not in name:
-                ret['comment'] = (
-                    'Invalid version specification in package {0}. \'=\' is '
-                    'not supported, use \'==\' instead.'.format(name)
-                )
-                return ret
-            ret['comment'] = (
-                'pip raised an exception while parsing {0!r}: {1}'.format(
-                    name, exc
-                )
-            )
-            return ret
-
-        if install_req.req is None:
-            # This is most likely an url and there's no way to know what will
-            # be installed before actually installing it.
-            prefix = ''
-            version_spec = []
-        else:
-            prefix = install_req.req.project_name
-            version_spec = install_req.req.specs
-    else:
-        prefix = ''
-        version_spec = []
-
+    # Deprecation warning regarding the use of runas.
+    # Setup of the variable `user` to the provided runas value.
     if runas is not None:
         # The user is using a deprecated argument, warn!
         msg = ('The \'runas\' argument to pip.installed is deprecated, and '
@@ -467,17 +534,32 @@ def installed(name,
         else:
             user = runas
 
-    # Replace commas (used for version ranges) with semicolons (which are not
-    # supported) in name so it does not treat them as multiple packages.  Comma
-    # will be re-added in pip.install call.
-    name = name.replace(',', ';')
+    # Get the packages parsed name and version from the pip library.
+    # This only is done when there is no requirements parameter.
+    pkgs_details = []
+    if pkgs and not requirements:
+        comments = []
+        for pkg in iter(pkgs):
+            out = _check_pkg_version_format(pkg)
+            if out['result'] is False:
+                ret['result'] = False
+                comments.append(out['comment'])
+            elif out['result'] is True:
+                pkgs_details.append((out['prefix'], pkg, out['version_spec']))
+
+        if ret['result'] is False:
+            ret['comment'] = '\n'.join(comments)
+            return ret
 
     # If a requirements file is specified, only install the contents of the
     # requirements file. Similarly, using the --editable flag with pip should
-    # also ignore the "name" parameter.
+    # also ignore the "name" and "pkgs" parameters.
+    target_pkgs = []
+    already_installed_comments = []
     if requirements or editable:
         name = ''
         comments = []
+        # Append comments if this is a dry run.
         if __opts__['test']:
             ret['result'] = None
             if requirements:
@@ -492,37 +574,54 @@ def installed(name,
                 )
             ret['comment'] = ' '.join(comments)
             return ret
-    else:
-        try:
-            pip_list = __salt__['pip.list'](prefix, bin_env=bin_env,
-                                            user=user, cwd=cwd)
-            prefix_realname = _find_key(prefix, pip_list)
-        except (CommandNotFoundError, CommandExecutionError) as err:
-            ret['result'] = False
-            ret['comment'] = 'Error installing {0!r}: {1}'.format(name, err)
-            return ret
 
-        if ignore_installed is False and prefix_realname is not None:
-            if force_reinstall is False and not upgrade:
-                # Check desired version (if any) against currently-installed
-                if (
-                        any(version_spec) and
-                        _fulfills_version_spec(pip_list[prefix_realname],
-                                            version_spec)
-                        ) or (not any(version_spec)):
-                    ret['result'] = True
-                    ret['comment'] = ('Python package {0} already '
-                                    'installed'.format(name))
+    # No requirements case.
+    # Check pre-existence of the requested packages.
+    else:
+        for prefix, state_pkg_name, version_spec in pkgs_details:
+
+            if prefix:
+                state_pkg_name = state_pkg_name
+                version_spec = version_spec
+                out = _check_if_installed(prefix, state_pkg_name, version_spec,
+                                          ignore_installed, force_reinstall,
+                                          upgrade, user, cwd, bin_env)
+            else:
+                out = {'result': False, 'comment': None}
+
+            result = out['result']
+
+            # The package is not present. Add it to the pkgs to install.
+            if result is False:
+                # Replace commas (used for version ranges) with semicolons
+                # (which are not supported) in name so it does not treat
+                # them as multiple packages.
+                target_pkgs.append((prefix, state_pkg_name.replace(',', ';')))
+
+                # Append comments if this is a dry run.
+                if __opts__['test']:
+                    msg = 'Python package {0} is set to be installed'
+                    ret['result'] = None
+                    ret['comment'] = msg.format(state_pkg_name)
                     return ret
 
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'] = \
-                'Python package {0} is set to be installed'.format(name)
-            return ret
+            # The package is already present and will not be reinstalled.
+            elif result is True:
+                # Append comment stating its presence
+                already_installed_comments.append(out['comment'])
 
+            # The command pip.list failed. Abort.
+            elif result is None:
+                ret['result'] = None
+                ret['comment'] = out['comment']
+                return ret
+
+    # Construct the string that will get passed to the install call
+    pkgs_str = ','.join([state_name for _, state_name in target_pkgs])
+
+    # Call to install the package. Actual installation takes place here
     pip_install_call = __salt__['pip.install'](
-        pkgs='{0}'.format(name) if name else '',
+        pkgs='{0}'.format(pkgs_str) if pkgs_str else '',
         requirements=requirements,
         bin_env=bin_env,
         use_wheel=use_wheel,
@@ -587,25 +686,44 @@ def installed(name,
                 ret['changes']['editable'] = True
             ret['comment'] = ' '.join(comments)
         else:
-            if not prefix:
-                pkg_list = {}
-            else:
-                pkg_list = __salt__['pip.list'](
-                    prefix, bin_env, user=user, cwd=cwd
-                )
-            if not pkg_list:
-                ret['comment'] = (
-                    'There was no error installing package \'{0}\' although '
-                    'it does not show when calling '
-                    '\'pip.freeze\'.'.format(name)
-                )
-                ret['changes']['{0}==???'.format(name)] = 'Installed'
-                return ret
 
-            version = next(pkg_list.itervalues())
-            pkg_name = next(iter(pkg_list))
-            ret['changes']['{0}=={1}'.format(pkg_name, version)] = 'Installed'
-            ret['comment'] = 'Package was successfully installed'
+            # Check that the packages set to be installed were installed.
+            # Create comments reporting success and failures
+            pkg_404_comms = []
+
+            for prefix, state_name in target_pkgs:
+
+                # Case for packages that are not an URL
+                if prefix:
+                    pipsearch = __salt__['pip.list'](prefix, bin_env,
+                                                     user=user, cwd=cwd)
+
+                    # If we didnt find the package in the system after
+                    # installing it report it
+                    if not pipsearch:
+                        msg = (
+                            'There was no error installing package \'{0}\' '
+                            'although it does not show when calling '
+                            '\'pip.freeze\'.'.format(pkg)
+                        )
+                        pkg_404_comms.append(msg)
+                    else:
+                        pkg_name = _find_key(prefix, pipsearch)
+                        ver = pipsearch[pkg_name]
+                        ret['changes']['{0}=={1}'.format(pkg_name,
+                                                         ver)] = 'Installed'
+                # Case for packages that are an URL
+                else:
+                    ret['changes']['{0}==???'.format(state_name)] = 'Installed'
+
+            # Set comments
+            aicomms = '\n'.join(already_installed_comments)
+            succ_comm = 'All packages were successfully installed'\
+                        if not pkg_404_comms else ''
+            ret['comment'] = aicomms + ('\n' if aicomms else '') + succ_comm
+
+            return ret
+
     elif pip_install_call:
         ret['result'] = False
         if 'stdout' in pip_install_call:
@@ -625,8 +743,11 @@ def installed(name,
             comments.append(error)
             ret['comment'] = ' '.join(comments)
         else:
-            ret['comment'] = ('Failed to install package {0}. '
-                              '{1}'.format(name, error))
+            pkgs_str = ', '.join([state_name for _, state_name in target_pkgs])
+            aicomms = '\n'.join(already_installed_comments)
+            error_comm = ('Failed to install packages: {0}. '
+                          '{1}'.format(pkgs_str, error))
+            ret['comment'] = aicomms + ('\n' if aicomms else '') + error_comm
     else:
         ret['result'] = False
         ret['comment'] = 'Could not install package'
