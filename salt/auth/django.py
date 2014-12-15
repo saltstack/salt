@@ -2,6 +2,35 @@
 '''
 Provide authentication using Django Web Framework
 
+Django authentication depends on the presence of the django
+framework in the PYTHONPATH, the django project's settings.py file being in
+the PYTHONPATH and accessible via the DJANGO_SETTINGS_MODULE environment
+variable.  This can be hard to debug.
+
+django auth can be defined like any other eauth module:
+
+external_auth:
+  django:
+    fred:
+      - .*
+      - '@runner'
+
+This will authenticate Fred via django and allow him to run any
+execution module and all runners.
+
+The details of the django auth can also be located inside the django database.  The
+relevant entry in the models.py file would look like this:
+
+class SaltExternalAuthModel(models.Model):
+
+  user_fk = models.ForeignKey(auth.User)
+  minion_matcher = models.CharField()
+  minion_fn = models.CharField()
+
+The contents of this table is loaded and merged with whatever external_auth
+definition is in the master config file.  This enables fallback in case the
+django database is in an inconsistent state.
+
 This external auth module requires that a particular schema be loaded.
 It also needs to
 
@@ -114,7 +143,13 @@ def auth(username, password):
     '''
     Simple Django auth
     '''
-    django.setup()
+
+    # Versions 1.7 and later of Django don't pull models until
+    # they are needed.  When using framework facilities outside the
+    # web application container we need to run django.setup() to
+    # get the model definitions cached.
+    if django.VERSION >= (1,7):
+        django.setup()
     user = django.contrib.auth.authenticate(username=username, password=password)
     if user is not None:
         if user.is_active:
