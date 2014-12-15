@@ -32,6 +32,7 @@ import re
 
 # Import salt libs
 from salt._compat import string_types
+from salt.exceptions import SaltInvocationError
 
 
 def mounted(name,
@@ -155,14 +156,26 @@ def mounted(name,
                             ret['comment'] = "Remount would be forced because options changed"
                             return ret
                         else:
-                            ret['changes']['umount'] = "Forced remount because " \
-                                                        + "options changed"
-                            remount_result = __salt__['mount.remount'](real_name, device, mkmnt=mkmnt, fstype=fstype, opts=opts)
-                            ret['result'] = remount_result
-                            # Cleanup after the remount, so we
-                            # don't write remount into fstab
-                            if 'remount' in opts:
-                                opts.remove('remount')
+                            # nfs requires umounting and mounting if options change
+                            # add others to list that require similiar functionality
+                            if fstype in ['nfs']:
+                                ret['changes']['umount'] = "Forced unmount and mount because " \
+                                                            + "options changed"
+                                unmount_result = __salt__['mount.umount'](real_name)
+                                if unmount_result is True:
+                                    mount_result = __salt__['mount.mount'](real_name, device, mkmnt=mkmnt, fstype=fstype, opts=opts)
+                                    ret['result'] = mount_result
+                                else:
+                                    raise SaltInvocationError('Unable to unmount {0}: {1}.'.format(real_name, unmount_result))
+                            else:
+                                ret['changes']['umount'] = "Forced remount because " \
+                                                            + "options changed"
+                                remount_result = __salt__['mount.remount'](real_name, device, mkmnt=mkmnt, fstype=fstype, opts=opts)
+                                ret['result'] = remount_result
+                                # Cleanup after the remount, so we
+                                # don't write remount into fstab
+                                if 'remount' in opts:
+                                    opts.remove('remount')
             if real_device not in device_list:
                 # name matches but device doesn't - need to umount
                 if __opts__['test']:
