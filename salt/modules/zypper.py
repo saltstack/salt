@@ -189,7 +189,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
             __salt__['pkg_resource.stringify'](ret)
             return ret
 
-    cmd = ('rpm', '-qa', '--queryformat', '%{NAME}_|-%{VERSION}_|-%{RELEASE}\\n')
+    cmd = ['rpm', '-qa', '--queryformat', '%{NAME}_|-%{VERSION}_|-%{RELEASE}\\n']
     ret = {}
     out = __salt__['cmd.run'](
         cmd,
@@ -362,13 +362,13 @@ def install(name=None,
     old = list_pkgs()
     downgrades = []
     if fromrepo:
-        fromrepoopt = ('--force', '--force-resolution', '--from', fromrepo)
+        fromrepoopt = ['--force', '--force-resolution', '--from', fromrepo]
         log.info('Targeting repo {0!r}'.format(fromrepo))
     # Split the targets into batches of 500 packages each, so that
     # the maximal length of the command line is not broken
     while targets:
         cmd = ['zypper', '--non-interactive', 'install', '--name',
-                '--auto-agree-with-licenses']
+               '--auto-agree-with-licenses']
         if fromrepo:
             cmd.extend(fromrepoopt)
         cmd.extend(targets[:500])
