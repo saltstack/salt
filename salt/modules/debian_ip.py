@@ -1527,6 +1527,7 @@ def build_interface(iface, iface_type, enabled, **settings):
 
     elif iface_type == 'vlan':
         settings['vlan'] = 'yes'
+        __salt__['pkg.install']('vlan')
 
     elif iface_type == 'pppoe':
         settings['pppoe'] = 'yes'
