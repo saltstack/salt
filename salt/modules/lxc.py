@@ -769,7 +769,7 @@ def init(name,
          cpu=None,
          autostart=True,
          password=None,
-         password_encrypted=True,
+         password_encrypted=None,
          users=None,
          dnsservers=None,
          searchdomains=None,
@@ -797,15 +797,15 @@ def init(name,
 
         salt 'minion' lxc.init name [cpuset=cgroups_cpuset] \\
                 [cpushare=cgroups_cpushare] [memory=cgroups_memory] \\
-                [network_profile=network_profile] [profile=lxc_profile] \\
-                [nic_opts=nic_opts] [start=(True|False)] \\
-                [seed=(True|False)] [install=(True|False)] \\
-                [config=minion_config] [approve_key=(True|False) \\
-                [clone=original] [autostart=True] \\
-                [priv_key=/path_or_content] [pub_key=/path_or_content] \\
-                [bridge=lxcbr0] [gateway=10.0.3.1] \\
-                [dnsservers[dns1,dns2]] \\
-                [users=[foo]] password='secret'
+                [profile=lxc_profile] [network_proflile=network_profile] \\
+                [nic_opts=nic_opts] [start=(True|False)] [seed=(True|False)] \\
+                [install=(True|False)] [config=minion_config] \\
+                [approve_key=(True|False) [clone_from=original] \\
+                [autostart=True] [priv_key=/path_or_content] \\
+                [pub_key=/path_or_content] [bridge=lxcbr0] \\
+                [gateway=10.0.3.1] [dnsservers[dns1,dns2]] \\
+                [users=[foo]] [password='secret'] \\
+                [password_encrypted=(True|False)]
 
     name
         Name of the container
@@ -834,7 +834,7 @@ def init(name,
         the default does nothing more than lxcutils does
 
     network_profile
-        Network interfaces profile
+        Network profile to use for the container
 
         .. versionadded:: Lithium
 
@@ -864,26 +864,38 @@ def init(name,
         to retrieve it in configuration
 
     start
-        Start the newly created container.
+        Start the newly-created container
+
     dnsservers
         list of dns servers to set in the container, default [] (no setting)
+
     seed
         Seed the container with the minion config. Default: ``True``
+
     install
         If salt-minion is not already installed, install it. Default: ``True``
+
     config
         Optional config parameters. By default, the id is set to
         the name of the container.
+
     pub_key
         Explicit public key to preseed the minion with (optional).
         This can be either a filepath or a string representing the key
+
     priv_key
         Explicit private key to preseed the minion with (optional).
         This can be either a filepath or a string representing the key
+
     approve_key
         If explicit preseeding is not used;
         Attempt to request key approval from the master. Default: ``True``
+
     clone
+        .. deprecated:: Lithium
+            Use ``clone_from`` instead
+
+    clone_from
         Original from which to use a clone operation to create the container.
         Default: ``None``
 
@@ -898,12 +910,15 @@ def init(name,
 
     bootstrap_shell
         See lxc.bootstrap
+
     bootstrap_args
         See lxc.bootstrap
+
     force_install
         Force installation even if salt-minion is detected,
         this is the way to run vendor bootstrap scripts even
         if a salt minion is already present in the container
+
     unconditional_install
         Run the script even if the container seems seeded
 
@@ -921,11 +936,11 @@ def init(name,
                 [priv_key=/path_or_content] [pub_key=/path_or_content] \\
                 [bridge=lxcbr0] [gateway=10.0.3.1] \\
                 [dnsservers[dns1,dns2]] \\
-                [users=[foo]] password='secret'
+                [users=[foo]] [password='secret'] \\
+                [password_encrypted=(True|False)]
 
     '''
     ret = {'name': name,
-           'result': False,
            'changes': {}}
 
     if nic:
@@ -935,6 +950,17 @@ def init(name,
             'please use \'network_profile\' instead.'
         )
         network_profile = nic
+
+    try:
+        kwargs['clone_from'] = kwargs.pop('clone')
+    except KeyError:
+        pass
+    else:
+        salt.utils.warn_until(
+            'Boron',
+            'The \'clone\' argument to \'lxc.init\' has been deprecated, '
+            'please use \'clone_from\' instead.'
+        )
 
     # Changes is a pointer to changes_dict['init']. This method is used so that
     # we can have a list of changes as they are made, providing an ordered list
@@ -973,7 +999,15 @@ def init(name,
     seed_cmd = select('seed_cmd')
     salt_config = select('config')
     approve_key = select('approve_key', True)
-    clone_from = select('clone')
+    clone_from = select('clone_from')
+    if password and password_encrypted is None:
+        salt.utils.warn_until(
+            'Boron',
+            'Starting with the Boron release, passwords passed to the '
+            '\'lxc.init\' function will be assumed to be hashed, unless '
+            'password_encrypted=False. Please keep this in mind.'
+        )
+        password_encrypted = False
 
     # If using a volume group then set up to make snapshot cow clones
     if vgname and not clone_from:
@@ -993,12 +1027,15 @@ def init(name,
         remove_seed_marker = True
         try:
             clone(name, clone_from, profile=profile, **kwargs)
+            changes.append({'create': 'Container cloned'})
         except (SaltInvocationError, CommandExecutionError) as exc:
-            ret['comment'] = exc.message
-            if changes:
-                ret['changes'] = changes_dict
-            return ret
-        changes.append({'create': 'Container cloned'})
+            if 'already exists' in exc.strerror:
+                changes.append({'create': 'Container already exists'})
+            else:
+                ret['comment'] = exc.strerror
+                if changes:
+                    ret['changes'] = changes_dict
+                return ret
         cfg = _LXCConfig(name=name, network_profile=network_profile,
                          nic_opts=nic_opts, bridge=bridge,
                          gateway=gateway, autostart=autostart,
@@ -1082,7 +1119,7 @@ def init(name,
                 '/lxc.initial_pass',
                 '/.lxc.{0}.initial_pass'.format(name)]
         if not any(cmd_retcode(name,
-                               'test -e {0}'.format(x),
+                               'test -e "{0}"'.format(x),
                                ignore_retcode=True) == 0
                    for x in gids):
             try:
@@ -1091,18 +1128,17 @@ def init(name,
                                     password=password,
                                     encrypted=password_encrypted)
             except (SaltInvocationError, CommandExecutionError) as exc:
-                ret['comment'] = exc.message
-                if changes:
-                    ret['changes'] = changes_dict
-                return ret
-            changes.append({'password': 'Password(s) updated'})
-            if cmd_retcode(name,
-                           'sh -c \'touch "{0}"; test -e "{0}"'.format(gid),
-                           ignore_retcode=True) != 0:
-                ret['comment'] = 'Failed to set password marker'
-                if changes:
-                    ret['changes'] = changes_dict
-                return ret
+                ret['comment'] = 'Failed to set password' + exc.strerror
+                ret['result'] = False
+            else:
+                changes.append({'password': 'Password(s) updated'})
+                if cmd_retcode(name,
+                               ('sh -c \'touch "{0}"; test -e "{0}"\''
+                                .format(gid)),
+                               ignore_retcode=True) != 0:
+                    ret['comment'] = 'Failed to set password marker'
+                    changes[-1]['password'] += '. ' + ret['comment'] + '.'
+                    ret['result'] = False
 
     # set dns servers if any, only the first time
     if dnsservers:
@@ -1112,7 +1148,7 @@ def init(name,
                 '/lxc.initial_dns',
                 '/lxc.{0}.initial_dns'.format(name)]
         if not any(cmd_retcode(name,
-                               'test -e {0}'.format(x),
+                               'test -e "{0}"'.format(x),
                                ignore_retcode=True) == 0
                    for x in gids):
             try:
@@ -1120,18 +1156,17 @@ def init(name,
                         dnsservers=dnsservers,
                         searchdomains=searchdomains)
             except (SaltInvocationError, CommandExecutionError) as exc:
-                ret['comment'] = exc.message
-                if changes:
-                    ret['changes'] = changes_dict
-                return ret
-            changes.append({'dns': 'DNS updated'})
-            if cmd_retcode(name,
-                           'sh -c \'touch "{0}"; test -e "{0}"\''.format(gid),
-                           ignore_retcode=True) != 0:
-                ret['comment'] = 'Failed to set DNS marker'
-                if changes:
-                    ret['changes'] = changes_dict
-                return ret
+                ret['comment'] = 'Failed to set DNS: ' + exc.strerror
+                ret['result'] = False
+            else:
+                changes.append({'dns': 'DNS updated'})
+                if cmd_retcode(name,
+                               ('sh -c \'touch "{0}"; test -e "{0}"\''
+                                .format(gid)),
+                               ignore_retcode=True) != 0:
+                    ret['comment'] = 'Failed to set DNS marker'
+                    changes[-1]['dns'] += '. ' + ret['comment'] + '.'
+                    ret['result'] = False
 
     if seed or seed_cmd:
         if seed:
@@ -1148,58 +1183,56 @@ def init(name,
                     bootstrap_shell=bootstrap_shell,
                     bootstrap_args=bootstrap_args)
             except (SaltInvocationError, CommandExecutionError) as exc:
-                ret['comment'] = exc.message
-                if changes:
-                    ret['changes'] = changes_dict
-                return ret
+                ret['comment'] = 'Bootstrap failed: ' + exc.strerror
+                ret['result'] = False
             else:
                 if not result:
-                    ret['comment'] = 'Bootstrap failed'
-                    if changes:
-                        ret['changes'] = changes_dict
-                    return ret
-                changes.append(
-                    {'bootstrap': 'Continer successfully bootstrapped'}
-                )
+                    ret['comment'] = ('Bootstrap failed, see minion log for '
+                                      'more information')
+                    ret['result'] = False
+                else:
+                    changes.append(
+                        {'bootstrap': 'Continer successfully bootstrapped'}
+                    )
         elif seed_cmd:
             try:
                 result = __salt__[seed_cmd](info(name)['rootfs'],
                                             name,
                                             salt_config)
             except (SaltInvocationError, CommandExecutionError) as exc:
-                ret['comment'] = exc.message
-                if changes:
-                    ret['changes'] = changes_dict
-                return ret
+                ret['comment'] = ('Bootstrap via seed_cmd \'{0}\' failed: {1}'
+                                  .format(seed_cmd, exc.strerror))
+                ret['result'] = False
             else:
                 if not result:
-                    ret['comment'] = ('Bootstrap via seed_cmd \'{0}\' failed'
+                    ret['comment'] = ('Bootstrap via seed_cmd \'{0}\' failed, '
+                                      'see minion log for more information '
                                       .format(seed_cmd))
-                    if changes:
-                        ret['changes'] = changes_dict
-                    return ret
-                changes.append(
-                    {'bootstrap': 'Continer successfully bootstrapped using '
-                                  'seed_cmd \'{0}\''.format(seed_cmd)}
-                )
+                    ret['result'] = False
+                else:
+                    changes.append(
+                        {'bootstrap': 'Continer successfully bootstrapped '
+                                      'using seed_cmd \'{0}\''
+                                      .format(seed_cmd)}
+                    )
 
     if not start_:
         try:
             stop(name)
         except (SaltInvocationError, CommandExecutionError) as exc:
             ret['comment'] = 'Unable to stop container: {0}'.format(exc)
-            if changes:
-                ret['changes'] = changes_dict
-            return ret
+            ret['result'] = False
 
     state_post = state(name)
     if state_pre != state_post:
         changes.append({'state': {'old': state_pre, 'new': state_post}})
 
-    ret['comment'] = 'Container \'{0}\' successfully initialized'.format(name)
+    if ret.get('result', True):
+        ret['comment'] = ('Container \'{0}\' successfully initialized'
+                          .format(name))
+        ret['result'] = True
     if changes:
         ret['changes'] = changes_dict
-    ret['result'] = True
     return ret
 
 
@@ -2499,7 +2532,7 @@ def bootstrap(name,
                 cp(name, cfg_files['pubkey'],
                    os.path.join(configdir, 'minion.pub'))
                 bootstrap_args = bootstrap_args.format(configdir)
-                cmd = ('{0} /{2}/bootstrap.sh {1}'
+                cmd = ('{0} {2}/bootstrap.sh {1}'
                        .format(bootstrap_shell,
                                bootstrap_args.replace("'", "''"),
                                dest_dir))
