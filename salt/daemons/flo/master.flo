@@ -30,6 +30,8 @@ framer masterudpstack be active first setup
         bid start uxdrouter
         # Start the event framer
         bid start events
+        # Start the presence framer
+        bid start presence
         # Start the publish framer
         bid start publish
         # Start the manage framer
@@ -55,6 +57,11 @@ framer uxdrouter be inactive first start
 framer events be inactive first start
     frame start
         do salt raet eventer
+
+# Presence framer
+framer presence be inactive first start
+    frame start
+        do salt raet presenter
 
 # Publisher framer
 framer publish be inactive first start
