@@ -312,7 +312,7 @@ class SSH(object):
                 if stderr:
                     return {host: stderr}
                 return {host: 'Bad Return'}
-        if os.EX_OK != retcode:
+        if salt.exitcodes.EX_OK != retcode:
             return {host: stderr}
         return {host: stdout}
 
@@ -961,7 +961,7 @@ ARGS = {8}\n'''.format(self.minion_config,
                 'The salt thin transfer was corrupted'
             ),
             (
-                (os.EX_CANTCREAT,),
+                (salt.exitcodes.EX_CANTCREAT,),
                 'salt path .* exists but is not a directory',
                 'A necessary path for salt thin unexpectedly exists:\n ' + stderr,
             ),
@@ -986,7 +986,7 @@ ARGS = {8}\n'''.format(self.minion_config,
                 perm_error_fmt.format(stderr)
             ),
             (
-                (os.EX_SOFTWARE,),
+                (salt.exitcodes.EX_SOFTWARE,),
                 'exists but is not',
                 'An internal error occurred with the shim, please investigate:\n ' + stderr,
             ),
