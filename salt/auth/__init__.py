@@ -183,7 +183,7 @@ class Authorize(object):
 
     def auth_data(self):
         '''
-        Gather and create the autorization data sets
+        Gather and create the authorization data sets
         '''
         auth_data = self.opts['external_auth']
         #for auth_back in self.opts.get('external_auth_sources', []):
