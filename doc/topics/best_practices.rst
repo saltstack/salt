@@ -90,8 +90,11 @@ be used as often as possible.
 
 .. note::
 
-    Formulas should never be referenced from the main repository, and should
-    be forked to a repo where unintended changes will not take place.
+    Formulas repositories on the saltstack-formulas GitHub organization should
+    not be pointed to directly from systems that automatically fetch new
+    updates such as GitFS or similar tooling. Instead formulas repositories
+    should be forked on GitHub or cloned locally, where unintended, automatic
+    changes will not take place.
 
 
 Structuring Pillar Files
@@ -145,13 +148,13 @@ for variable definitions.
 Each SLS file within the ``/srv/pillar/`` directory should correspond to the
 states which it matches. 
 
-This would mean that the apache pillar file should contain data relevant to
-apache. Structuring files in this way once again ensures modularity, and
+This would mean that the ``apache`` pillar file should contain data relevant to
+Apache. Structuring files in this way once again ensures modularity, and
 creates a consistent understanding throughout our Salt environment. Users can
 expect that pillar variables found in an Apache state will live inside of an
 Apache pillar:
 
-/srv/salt/pillar/apache.sls
+``/srv/salt/pillar/apache.sls``:
 
 .. code-block:: yaml
 
@@ -178,7 +181,7 @@ lead to extensive flexibility.
 Although it is possible to set variables locally, this is generally not
 preferred: 
 
-/srv/salt/apache/conf.sls
+``/srv/salt/apache/conf.sls``:
 
 .. code-block:: yaml
 
@@ -189,8 +192,7 @@ preferred:
       - apache
 
     apache_conf:
-      file:
-        - managed
+      file.managed:
         - name: {{ name }}
         - source: {{ tmpl }}
         - template: jinja
@@ -203,7 +205,7 @@ When generating this information it can be easily transitioned to the pillar
 where data can be overwritten, modified, and applied to multiple states, or
 locations within a single state:
 
-/srv/pillar/apache.sls
+``/srv/pillar/apache.sls``:
 
 .. code-block:: yaml
 
@@ -213,18 +215,15 @@ locations within a single state:
         config:
           tmpl: salt://apache/files/httpd.conf
 
-/srv/salt/apache/conf.sls
+``/srv/salt/apache/conf.sls``:
 
 .. code-block:: yaml
     
-    {% from "apache/map.jinja" import apache with context %}
-
     include:
       - apache
 
     apache_conf:
-      file:
-        - managed
+      file.managed:
         - name: {{ salt['pillar.get']('apache:lookup:name') }}
         - source: {{ salt['pillar.get']('apache:lookup:config:tmpl') }}
         - template: jinja
@@ -244,20 +243,17 @@ state could be re-used, and what it relies on to operate. Below are several
 examples which will iteratively explain how a user can go from a state which
 is not very modular to one that is:
 
-/srv/salt/apache/init.sls:
+``/srv/salt/apache/init.sls``:
 
 .. code-block:: yaml
 
     httpd:
-      pkg:
-        - installed
-      service:
-        - running
+      pkg.installed: []
+      service.running:
         - enable: True
 
     /etc/httpd/httpd.conf:
-      file:
-        - managed
+      file.managed:
         - source: salt://apache/files/httpd.conf
         - template: jinja
         - watch_in:
@@ -280,22 +276,19 @@ conf file.
 Our second revision begins to address the referencing by using ``- name``, as
 opposed to direct ID references:
 
-/srv/salt/apache/init.sls:
+``/srv/salt/apache/init.sls``:
 
 .. code-block:: yaml
 
     apache:
-      pkg:
-        - installed
+      pkg.installed:
         - name: httpd
-      service:
+      service.running:
         - name: httpd
         - enable: True
-        - running
 
     apache_conf:
-      file: 
-        - managed
+      file.managed:
         - name: /etc/httpd/httpd.conf
         - source: salt://apache/files/httpd.conf
         - template: jinja
@@ -317,7 +310,7 @@ Starting with the addition of a map.jinja file (as noted in the
 :ref:`Formula documentation <conventions-formula>`), and
 modification of static values:
 
-/srv/salt/apache/map.jinja:
+``/srv/salt/apache/map.jinja``:
 
 .. code-block:: yaml
 
@@ -343,24 +336,21 @@ modification of static values:
         config:
           tmpl: salt://apache/files/httpd.conf
 
-/srv/salt/apache/init.sls:
+``/srv/salt/apache/init.sls``:
 
 .. code-block:: yaml
 
     {% from "apache/map.jinja" import apache with context %}
 
     apache:
-      pkg:
-        - installed
+      pkg.installed:
         - name: {{ apache.server }}
-      service:
+      service.running:
         - name: {{ apache.service }}
         - enable: True
-        - running
 
     apache_conf:
-      file:
-        - managed
+      file.managed:
         - name: {{ apache.conf }}
         - source: {{ salt['pillar.get']('apache:lookup:config:tmpl') }}
         - template: jinja
@@ -376,7 +366,7 @@ configuration file, but the default apache conf. With the current state setup
 this is not possible. To attain this level of modularity this state will need
 to be broken into two states.
 
-/srv/salt/apache/map.jinja:
+``/srv/salt/apache/map.jinja``:
 
 .. code-block:: yaml
 
@@ -393,7 +383,7 @@ to be broken into two states.
         },
     }, merge=salt['pillar.get']('apache:lookup')) %}
 
-/srv/pillar/apache.sls:
+``/srv/pillar/apache.sls``:
 
 .. code-block:: yaml
 
@@ -403,22 +393,20 @@ to be broken into two states.
           tmpl: salt://apache/files/httpd.conf
 
 
-/srv/salt/apache/init.sls:
+``/srv/salt/apache/init.sls``:
 
 .. code-block:: yaml
 
     {% from "apache/map.jinja" import apache with context %}
 
     apache:
-      pkg:
-        - installed
+      pkg.installed:
         - name: {{ apache.server }}
-      service:
+      service.running:
         - name: {{ apache.service }}
         - enable: True
-        - running
 
-/srv/salt/apache/conf.sls:
+``/srv/salt/apache/conf.sls``:
 
 .. code-block:: yaml
 
@@ -428,8 +416,7 @@ to be broken into two states.
       - apache
 
     apache_conf:
-      file:
-        - managed
+      file.managed:
         - name: {{ apache.conf }}
         - source: {{ salt['pillar.get']('apache:lookup:config:tmpl') }}
         - template: jinja
@@ -457,16 +444,15 @@ those servers which require this secure data have access to it. In this
 example a use can go from an insecure configuration to one which is only
 accessible by the appropriate hosts:
 
-/srv/salt/mysql/testerdb.sls:
+``/srv/salt/mysql/testerdb.sls``:
 
 .. code-block:: yaml
 
     testdb:
-      mysql_database:
-        - present:
+      mysql_database.present::
         - name: testerdb
 
-/srv/salt/mysql/user.sls:
+``/srv/salt/mysql/user.sls``:
 
 .. code-block:: yaml
 
@@ -474,8 +460,7 @@ accessible by the appropriate hosts:
       - mysql.testerdb
 
     testdb_user:
-      mysql_user:
-        - present
+      mysql_user.present:
         - name: frank
         - password: "test3rdb"
         - host: localhost
@@ -504,7 +489,7 @@ portable it may result in more work later!
 Fixing this issue is relatively simple, the content just needs to be moved to
 the associated pillar:
 
-/srv/pillar/mysql.sls
+``/srv/pillar/mysql.sls``:
 
 .. code-block:: yaml
 
@@ -515,16 +500,15 @@ the associated pillar:
         user: frank
         host: localhost
 
-/srv/salt/mysql/testerdb.sls:
+``/srv/salt/mysql/testerdb.sls``:
 
 .. code-block:: yaml
 
     testdb:
-      mysql_database:
-        - present:
+      mysql_database.present:
         - name: {{ salt['pillar.get']('mysql:lookup:name') }}
 
-/srv/salt/mysql/user.sls:
+``/srv/salt/mysql/user.sls``:
 
 .. code-block:: yaml
 
@@ -532,8 +516,7 @@ the associated pillar:
       - mysql.testerdb
 
     testdb_user:
-      mysql_user:
-        - present
+      mysql_user.present:
         - name: {{ salt['pillar.get']('mysql:lookup:user') }}
         - password: {{ salt['pillar.get']('mysql:lookup:password') }}
         - host: {{ salt['pillar.get']('mysql:lookup:host') }}

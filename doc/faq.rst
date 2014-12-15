@@ -203,8 +203,7 @@ Linux/Unix
 .. code-block:: yaml
 
     salt-minion-reload:
-      cmd:
-        - run
+      cmd.run:
         - name: echo service salt-minion restart | at now + 1 minute
         - order: last
 
@@ -215,10 +214,9 @@ distro the minion is running, in case they differ from the example below.
 .. code-block:: yaml
 
     at:
-      pkg:
-        - installed
-      service:
-        - running
+      pkg.installed:
+        - name: at
+      service.running:
         - name: atd
         - enable: True
 
@@ -240,13 +238,11 @@ Windows
 .. code-block:: yaml
 
     schedule-start:
-      cmd:
-        - run
+      cmd.run:
         - name: at (Get-Date).AddMinutes(1).ToString("HH:mm") cmd /c "net start salt-minion"
         - shell: powershell
         - order: last
-      service:
-        - dead
+      service.dead:
         - name: salt-minion
         - require:
             - cmd: schedule-start

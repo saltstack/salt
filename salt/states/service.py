@@ -9,16 +9,14 @@ rc scripts, services can be defined as running or dead.
 .. code-block:: yaml
 
     httpd:
-      service:
-        - running
+      service.running: []
 
 The service can also be set to be started at runtime via the enable option:
 
 .. code-block:: yaml
 
     openvpn:
-      service:
-        - running
+      service.running:
         - enable: True
 
 By default if a service is triggered to refresh due to a watch statement the
@@ -28,8 +26,7 @@ service, then set the reload value to True:
 .. code-block:: yaml
 
     redis:
-      service:
-        - running
+      service.running:
         - enable: True
         - reload: True
         - watch:

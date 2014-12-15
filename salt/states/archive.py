@@ -47,8 +47,7 @@ def extracted(name,
     .. code-block:: yaml
 
         graylog2-server:
-          archive:
-            - extracted
+          archive.extracted:
             - name: /opt/
             - source: https://github.com/downloads/Graylog2/graylog2-server/graylog2-server-0.9.6p1.tar.lzma
             - source_hash: md5=499ae16dcae71eeb7c3a30c75ea7a1a6
@@ -59,8 +58,7 @@ def extracted(name,
     .. code-block:: yaml
 
         graylog2-server:
-          archive:
-            - extracted
+          archive.extracted:
             - name: /opt/
             - source: https://github.com/downloads/Graylog2/graylog2-server/graylog2-server-0.9.6p1.tar.gz
             - source_hash: md5=499ae16dcae71eeb7c3a30c75ea7a1a6

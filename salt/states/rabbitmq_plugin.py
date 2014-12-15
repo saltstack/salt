@@ -10,8 +10,7 @@ Example:
 .. code-block:: yaml
 
     some_plugin:
-        rabbitmq_plugin:
-          - enabled
+        rabbitmq_plugin.enabled: []
 '''
 
 # Import python libs

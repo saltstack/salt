@@ -247,8 +247,7 @@ A simple formula:
 .. code-block:: yaml
 
     vim:
-      pkg:
-        - installed
+      pkg.installed: []
 
     /etc/vimrc:
       file.managed:
@@ -266,8 +265,7 @@ Can be easily transformed into a powerful, parameterized formula:
 .. code-block:: jinja
 
     vim:
-      pkg:
-        - installed
+      pkg.installed:
         - name: {{ pillar['pkgs']['vim'] }}
 
     /etc/vimrc:
