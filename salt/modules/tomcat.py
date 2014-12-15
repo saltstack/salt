@@ -43,7 +43,7 @@ Also configure a user in the conf/tomcat-users.xml file:
      access to the manager only from localhost for more info:
      http://tomcat.apache.org/tomcat-7.0-doc/manager-howto.html#Configuring_Manager_Application_Access
    - Tested on:
- 
+
      JVM Vendor:
          Sun Microsystems Inc.
      JVM Version:
@@ -85,6 +85,7 @@ __valid_configs = {
         'tomcat-manager:passwd'
     ]
 }
+
 
 def __virtual__():
     '''
@@ -131,11 +132,6 @@ def _get_credentials():
                 if value:
                     ret[item] = value
                     break
-            else:
-                continue
-        else:
-            continue
-        break
     return ret['user'], ret['passwd']
 
 
@@ -688,7 +684,7 @@ def signal(signal=None):
 if __name__ == '__main__':
     '''
     Allow testing from the CLI
-    '''
+    '''  # pylint: disable=W0105
     __opts__ = {}
     __grains__ = {}
     __pillar__ = {
