@@ -167,8 +167,7 @@ def started(name):
     .. code-block:: yaml
 
         mycluster:
-          glusterfs:
-            - started
+          glusterfs.started: []
     '''
     ret = {'name': name,
            'changes': {},
