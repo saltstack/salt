@@ -1229,7 +1229,7 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
 
 class ShellCaseCommonTestsMixIn(CheckShellBinaryNameAndVersionMixIn):
 
-    _call_binary_expected_version_ = salt.__version__
+    _call_binary_expected_version_ = salt.version.__version__
 
     def test_salt_with_git_version(self):
         if getattr(self, '_call_binary_', None) is None:
