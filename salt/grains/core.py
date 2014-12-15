@@ -739,6 +739,8 @@ def _windows_platform_data():
             grains['virtual'] = 'Xen'
             if 'HVM domU' in systeminfo.Model:
                 grains['virtual_subtype'] = 'HVM domU'
+        elif 'OpenStack' in systeminfo.Model:
+            grains['virtual'] = 'OpenStack'
 
     return grains
 
