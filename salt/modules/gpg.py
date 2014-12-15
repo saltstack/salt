@@ -108,8 +108,7 @@ def _create_gpg(user=None):
         user = __salt__['config.option']('user')
 
     if user == 'salt':
-        homeDir = '/etc/salt/gpg'
-        homeDir = os.path.join(salt.syspaths.CONFIG_DIR, 'gpg')
+        homeDir = os.path.join(salt.syspaths.CONFIG_DIR, 'gpgkeys')
     else:
         userinfo = __salt__['user.info'](user)
         if userinfo:
