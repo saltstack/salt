@@ -6,7 +6,7 @@ import six
 import sys
 import logging
 
-from salt.utils import parsers
+import salt.utils.parsers as parsers
 import salt.version
 
 log = logging.getLogger(__name__)
