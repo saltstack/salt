@@ -149,7 +149,7 @@ def mounted(name,
                     comment_option = opt.split('=')[0]
                     if comment_option == 'comment':
                         opt = comment_option
-                    if opt not in active[real_name]['opts'] and opt not in mount_invisible_options:
+                    if opt not in active[real_name]['opts'] and opt not in active[real_name]['superopts'] and opt not in mount_invisible_options:
                         if __opts__['test']:
                             ret['result'] = None
                             ret['comment'] = "Remount would be forced because options changed"
@@ -159,6 +159,10 @@ def mounted(name,
                                                         + "options changed"
                             remount_result = __salt__['mount.remount'](real_name, device, mkmnt=mkmnt, fstype=fstype, opts=opts)
                             ret['result'] = remount_result
+                            # Cleanup after the remount, so we
+                            # don't write remount into fstab
+                            if 'remount' in opts:
+                                opts.remove('remount')
             if real_device not in device_list:
                 # name matches but device doesn't - need to umount
                 if __opts__['test']:

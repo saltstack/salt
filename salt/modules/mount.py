@@ -52,7 +52,13 @@ def _active_mountinfo(ret):
         for line in ifile:
             comps = line.split()
             device = comps[2].split(':')
-            device_name = comps[8]
+            # each line can have any number of
+            # optional parameters, we use the
+            # location of the seperator field to
+            # determine the location of the elements
+            # after it.
+            _sep = comps.index('-')
+            device_name = comps[_sep + 2]
             device_uuid = None
             if device_name:
                 device_uuid = blkid_info.get(device_name, {}).get('UUID')
@@ -63,10 +69,10 @@ def _active_mountinfo(ret):
                              'minor': device[1],
                              'root': comps[3],
                              'opts': comps[5].split(','),
-                             'fstype': comps[7],
+                             'fstype': comps[_sep + 1],
                              'device': device_name,
                              'alt_device': _list.get(comps[4], None),
-                             'superopts': comps[9].split(','),
+                             'superopts': comps[_sep + 3].split(','),
                              'device_uuid': device_uuid}
     return ret
 
