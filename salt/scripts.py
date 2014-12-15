@@ -111,7 +111,7 @@ def salt_minion():
 
     if '--disable-keepalive' in sys.argv:
         sys.argv.remove('--disable-keepalive')
-        minion = salt.Minion()
+        minion = salt.cli.daemons.Minion()
         minion.start()
         return
 
