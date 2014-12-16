@@ -155,7 +155,7 @@ def is_enabled(iface):
             iface_found = True
             return line.split()[-1] == 'Connected'
     if not iface_found:
-        raise CommandExecutionError('Interface {0!r} not found')
+        raise CommandExecutionError('Interface {0!r} not found'.format(iface))
     return False
 
 
