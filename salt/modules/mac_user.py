@@ -109,9 +109,8 @@ def add(name,
     if not isinstance(gid, int):
         raise SaltInvocationError('gid must be an integer')
 
-    _dscl('/Users/{0} UniqueID {1!r}'.format(_cmd_quote(name), _cmd_quote(uid)))
-    _dscl('/Users/{0} PrimaryGroupID {1!r}'.format(_cmd_quote(name),
-                                                   _cmd_quote(gid)))
+    _dscl('/Users/{0} UniqueID {1!r}'.format(_cmd_quote(name), uid))
+    _dscl('/Users/{0} PrimaryGroupID {1!r}'.format(_cmd_quote(name), gid))
     _dscl('/Users/{0} UserShell {1!r}'.format(_cmd_quote(name),
                                               _cmd_quote(shell)))
     _dscl('/Users/{0} NFSHomeDirectory {1!r}'.format(_cmd_quote(name),
@@ -196,7 +195,7 @@ def chuid(name, uid):
         return True
     _dscl(
         '/Users/{0} UniqueID {1!r} {2!r}'.format(_cmd_quote(name),
-                                                 _cmd_quote(pre_info['uid']),
+                                                 pre_info['uid'],
                                                  uid),
         ctype='change'
     )
@@ -225,8 +224,9 @@ def chgid(name, gid):
         return True
     _dscl(
         '/Users/{0} PrimaryGroupID {1!r} {2!r}'.format(
-            _cmd_quote(name), _cmd_quote(pre_info['gid']),
-            _cmd_quote(gid)),
+            _cmd_quote(name),
+            pre_info['gid'],
+            gid),
         ctype='change'
     )
     # dscl buffers changes, sleep 1 second before checking if new value
@@ -308,8 +308,7 @@ def chfullname(name, fullname):
     if fullname == pre_info['fullname']:
         return True
     _dscl(
-        '/Users/{0} RealName {1!r}'.format(_cmd_quote(name),
-                                           _cmd_quote(fullname)),
+        '/Users/{0} RealName {1!r}'.format(_cmd_quote(name), fullname),
         # use a "create" command, because a "change" command would fail if
         # current fullname is an empty string. The "create" will just overwrite
         # this field.
