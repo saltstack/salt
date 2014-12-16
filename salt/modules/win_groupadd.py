@@ -27,9 +27,8 @@ def add(name, gid=None, system=False):
 
         salt '*' group.add foo
     '''
-    cmd = 'net localgroup {0} /add'.format(name)
-
-    ret = __salt__['cmd.run_all'](cmd)
+    cmd = ['net', 'localgroup', name, '/add']
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     return not ret['retcode']
 
@@ -44,7 +43,8 @@ def delete(name):
 
         salt '*' group.delete foo
     '''
-    ret = __salt__['cmd.run_all']('net localgroup {0} /delete'.format(name))
+    cmd = ['net', 'localgroup', name, '/delete']
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     return not ret['retcode']
 
@@ -59,7 +59,8 @@ def info(name):
 
         salt '*' group.info foo
     '''
-    lines = __salt__['cmd.run']('net localgroup {0}'.format(name)).splitlines()
+    cmd = ['net', 'localgroup', name]
+    lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     memberline = False
     gr_mem = []
     gr_name = ''
@@ -97,7 +98,8 @@ def getent(refresh=False):
 
     ret = []
     ret2 = []
-    lines = __salt__['cmd.run']('net localgroup').splitlines()
+    cmd = ['net', 'localgroup']
+    lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     groupline = False
     for line in lines:
         if 'successfully' in line:
@@ -109,7 +111,8 @@ def getent(refresh=False):
     for item in ret:
         members = []
         gid = __salt__['file.group_to_gid'](item)
-        memberlines = __salt__['cmd.run']('net localgroup "{0}"'.format(item)).splitlines()
+        cmd = ['net', 'localgroup', item]
+        memberlines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
         memberline = False
         for line in memberlines:
             if 'successfully' in line:
