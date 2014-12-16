@@ -9,7 +9,6 @@ import logging
 import hashlib
 import os
 import shutil
-import time
 import requests
 
 # Import salt libs
@@ -982,21 +981,11 @@ class RemoteClient(Client):
                     return False
             fn_ = salt.utils.fopen(dest, 'wb+')
         while True:
-            init_retries = 10
             if not fn_:
                 load['loc'] = 0
             else:
                 load['loc'] = fn_.tell()
-            try:
-                channel = self._get_channel()
-                data = channel.send(load)
-            except SaltReqTimeoutError:
-                return ''
-            if not data:
-                if init_retries:
-                    init_retries -= 1
-                    time.sleep(0.02)
-                    continue
+            data = self.channel.send(load)
             if 'data' not in data:
                 log.error('Data is {0}'.format(data))
             if not data['data']:
