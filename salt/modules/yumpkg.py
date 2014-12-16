@@ -18,7 +18,8 @@ import copy
 import logging
 import os
 import re
-from distutils.version import LooseVersion as _LooseVersion
+from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
+
 try:
     from shlex import quote as _cmd_quote  # pylint: disable=E0611
 except ImportError:
