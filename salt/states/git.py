@@ -102,10 +102,10 @@ def latest(name,
         If a tag or branch name is used as the rev a fetch will not occur
         until the tag or branch name changes. Setting this to true will force
         a fetch to occur. Only applies when rev is set. (Default: False)
-    
+
     depth
-        Defines depth in history when git a clone is needed in order to ensure 
-        latest. E.g. ``depth: 0`` is usefull when deploying from a repository 
+        Defines depth in history when git a clone is needed in order to ensure
+        latest. E.g. ``depth: 0`` is usefull when deploying from a repository
         with a long history. (Default: ``None``)
 
     identity
@@ -369,7 +369,7 @@ def latest(name,
             # if depth is given add --depth <depth> to opts
             if depth is not None:
                 opts += ' --depth {0}'.format(depth)
-                
+
             # do the clone
             __salt__['git.clone'](target,
                                   name,
