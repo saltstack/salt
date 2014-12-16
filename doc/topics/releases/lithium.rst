@@ -5,7 +5,8 @@ Salt 2014.12.0 Release Notes - Codename Lithium
 Salt SSH
 ========
 
-Additional configuration options and command line flags have been added to
-configure the scan roster on the fly
-
-Added support for ``state.single`` in ``salt-ssh``
+- Additional configuration options and command line flags have been added to
+  configure the scan roster on the fly
+- Added support for ``state.single`` in ``salt-ssh``
+- Added support for ``publish.publish``, ``publish.full_data``, and
+  ``publish.runner`` in ``salt-ssh``
