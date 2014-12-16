@@ -196,7 +196,7 @@ class OptionParser(optparse.OptionParser, object):
 
     def print_versions_report(self, file=sys.stdout):
         print('\n'.join(version.versions_report()), file=file)
-        self.exit(os.EX_OK)
+        self.exit(salt.exitcodes.EX_OK)
 
 
 class MergeConfigMixIn(six.with_metaclass(MixInMeta, object)):
@@ -1017,6 +1017,12 @@ class OutputOptionsMixIn(six.with_metaclass(MixInMeta, object)):
             action='store_true',
             help='Force colored output'
         )
+        group.add_option(
+            '--state-output', '--state_output',
+            default='full',
+            help=('Override the configured state_output value for minion output'
+                  '. Default: full')
+        )
 
         for option in self.output_options_group.option_list:
             def process(opt):
@@ -1105,6 +1111,7 @@ class ExecutionOptionsMixIn(six.with_metaclass(MixInMeta, object)):
             default=None,
             help='Specify a cloud map file to use for deployment. This option '
                  'may be used alone, or in conjunction with -Q, -F, -S or -d.'
+                 'The map can also be filtered by a list of VM names.'
         )
         group.add_option(
             '-H', '--hard',
@@ -1466,12 +1473,6 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
             help=('Run the salt command but don\'t wait for a reply')
         )
         self.add_option(
-            '--state-output', '--state_output',
-            default='full',
-            help=('Override the configured state_output value for minion output'
-                  '. Default: full')
-        )
-        self.add_option(
             '--subset',
             default=0,
             type=int,
@@ -1698,7 +1699,7 @@ class SaltCPOptionParser(six.with_metaclass(OptionParserMeta,
         # salt-cp needs arguments
         if len(self.args) <= 1:
             self.print_help()
-            self.exit(os.EX_USAGE)
+            self.exit(salt.exitcodes.EX_USAGE)
 
         if self.options.list:
             if ',' in self.args[0]:
@@ -2107,7 +2108,7 @@ class SaltCallOptionParser(six.with_metaclass(OptionParserMeta,
     def _mixin_after_parsed(self):
         if not self.args and not self.options.grains_run and not self.options.doc:
             self.print_help()
-            self.exit(os.EX_USAGE)
+            self.exit(salt.exitcodes.EX_USAGE)
 
         elif len(self.args) >= 1:
             if self.options.grains_run:
@@ -2418,7 +2419,7 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
     def _mixin_after_parsed(self):
         if not self.args:
             self.print_help()
-            self.exit(os.EX_USAGE)
+            self.exit(salt.exitcodes.EX_USAGE)
 
         if self.options.list:
             if ',' in self.args[0]:
@@ -2431,7 +2432,7 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
         self.config['argv'] = self.args[1:]
         if not self.config['argv'] or not self.config['tgt']:
             self.print_help()
-            self.exit(os.EX_USAGE)
+            self.exit(salt.exitcodes.EX_USAGE)
 
         if self.options.ssh_askpass:
             self.options.ssh_passwd = getpass.getpass('Password: ')
@@ -2465,7 +2466,7 @@ class SaltCloudParser(six.with_metaclass(OptionParserMeta,
     def print_versions_report(self, file=sys.stdout):
         print('\n'.join(version.versions_report(include_salt_cloud=True)),
               file=file)
-        self.exit(os.EX_OK)
+        self.exit(salt.exitcodes.EX_OK)
 
     def parse_args(self, args=None, values=None):
         try:
@@ -2482,7 +2483,7 @@ class SaltCloudParser(six.with_metaclass(OptionParserMeta,
 
             print('Salt cloud configuration dump(INCLUDES SENSIBLE DATA):')
             pprint.pprint(self.config)
-            self.exit(os.EX_OK)
+            self.exit(salt.exitcodes.EX_OK)
 
         if self.args:
             self.config['names'] = self.args

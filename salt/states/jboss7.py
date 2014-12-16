@@ -224,14 +224,14 @@ def __format_ds_changes(keys, old_dict, new_dict):
     return changes
 
 
-def __get_ds_value(_dict, key):
+def __get_ds_value(dct, key):
     log.debug("__get_value(dict, {0})".format(key))
     if key == "password":
         return "***"
-    elif _dict[key] is None:
+    elif dct[key] is None:
         return 'undefined'
     else:
-        return str(_dict[key])
+        return str(dct[key])
 
 
 def bindings_exist(name, jboss_config, bindings):
@@ -293,13 +293,13 @@ def bindings_exist(name, jboss_config, bindings):
     return ret
 
 
-def __log_binding_change(changes, _type, key, new, old=None):
-    if _type not in changes:
-        changes[_type] = ''
+def __log_binding_change(changes, type_, key, new, old=None):
+    if type_ not in changes:
+        changes[type_] = ''
     if old is None:
-        changes[_type] += key + ':' + new + '\n'
+        changes[type_] += key + ':' + new + '\n'
     else:
-        changes[_type] += key + ':' + old + '->' + new + '\n'
+        changes[type_] += key + ':' + old + '->' + new + '\n'
 
 
 def deployed(name, jboss_config, artifact=None, salt_source=None):
@@ -332,7 +332,7 @@ def deployed(name, jboss_config, artifact=None, salt_source=None):
     * Undeploy the artifact if it is already deployed
     * Deploy the new artifact
 
-    Examples::
+    Examples:
 
     Deployment of a file from Salt file system:
 
@@ -719,9 +719,9 @@ def reloaded(name, jboss_config, timeout=60, interval=5):
     return ret
 
 
-def __check_dict_contains(_dict, dict_name, keys, comment='', result=True):
+def __check_dict_contains(dct, dict_name, keys, comment='', result=True):
     for key in keys:
-        if key not in six.iterkeys(_dict):
+        if key not in six.iterkeys(dct):
             result = False
             comment = __append_comment("Missing {0} in {1}".format(key, dict_name), comment)
     return result, comment

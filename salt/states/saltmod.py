@@ -9,7 +9,7 @@ modules. These state functions wrap Salt's :ref:`Python API <python-api>`.
 
 .. seealso:: More Orchestrate documentation
 
-    * :ref:`Full Orchestrate Tutorial <orchestrate-tutorial>`
+    * :ref:`Full Orchestrate Tutorial <orchestrate-runner>`
     * :py:func:`The Orchestrate runner <salt.runners.state.orchestrate>`
 '''
 from __future__ import absolute_import
@@ -336,15 +336,19 @@ def function(
     ssh
         Set to `True` to use the ssh client instaed of the standard salt client
     '''
-    if kwarg is None:
-        kwarg = {}
-
-    cmd_kw = {'arg': arg or [], 'kwarg': kwarg, 'ret': ret, 'timeout': timeout}
-
     ret = {'name': name,
            'changes': {},
            'comment': '',
            'result': True}
+    if kwarg is None:
+        kwarg = {}
+    if isinstance(arg, str):
+        ret['warnings'] = ['Please specify \'arg\' as a list, not a string. '
+                           'Modifying in place, but please update SLS file '
+                           'to remove this warning.']
+        arg = arg.split()
+
+    cmd_kw = {'arg': arg or [], 'kwarg': kwarg, 'ret': ret, 'timeout': timeout}
 
     if expr_form and tgt_type:
         ret['warnings'] = [

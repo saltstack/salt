@@ -14,11 +14,13 @@ from keyservers.  Sign, encrypt and sign & encrypt text and files.
 from __future__ import absolute_import
 import distutils.version  # pylint: disable=import-error,no-name-in-module
 import logging
+import os
 import re
 import time
 
 # Import salt libs
 import salt.utils
+import salt.syspaths
 from salt.exceptions import SaltInvocationError
 
 # Import 3rd-party libs
@@ -105,7 +107,7 @@ def _create_gpg(user=None):
         user = __salt__['config.option']('user')
 
     if user == 'salt':
-        homeDir = '/etc/salt/gpg'
+        homeDir = os.path.join(salt.syspaths.CONFIG_DIR, 'gpgkeys')
     else:
         userinfo = __salt__['user.info'](user)
         if userinfo:

@@ -103,7 +103,7 @@ def latest(name,
         a fetch to occur. Only applies when rev is set. (Default: False)
 
     identity
-        A path to a private key to use over SSH
+        A path on the minion server to a private key to use over SSH
 
     https_user
         HTTP Basic Auth username for HTTPS (only) clones

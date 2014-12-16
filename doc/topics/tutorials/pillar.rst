@@ -100,7 +100,7 @@ To ensure that the minions have the new pillar data, issue a command
 to them asking that they fetch their pillars from the master:
 
 .. code-block:: bash
-    
+
     salt '*' saltutil.refresh_pillar
 
 Now that the minions have the new pillar, it can be retrieved:

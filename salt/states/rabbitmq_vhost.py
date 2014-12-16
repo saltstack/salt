@@ -46,6 +46,7 @@ def present(name,
         VHost name
     user
         Initial user permission to set on the VHost, if present
+
         .. deprecated:: Beryllium
     owner
         Initial owner permission to set on the VHost, if present
@@ -59,6 +60,7 @@ def present(name,
         Defaults to .*
     runas
         Name of the user to run the command
+
         .. deprecated:: Beryllium
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
@@ -155,6 +157,7 @@ def absent(name,
         Name of the Virtual Host to remove
     runas
         User to run the command
+
         .. deprecated:: Beryllium
     '''
     if runas:

@@ -419,6 +419,8 @@ class Schedule(object):
                 log.warning('schedule: The metadata parameter must be '
                             'specified as a dictionary.  Ignoring.')
 
+        salt.utils.appendproctitle(ret['jid'])
+
         proc_fn = os.path.join(
             salt.minion.get_proc_dir(self.opts['cachedir']),
             ret['jid']
@@ -749,7 +751,7 @@ class Schedule(object):
                 continue
 
             # Check if the seconds variable is lower than current lowest
-            # loop interval needed. If it is lower then overwrite variable
+            # loop interval needed. If it is lower than overwrite variable
             # external loops using can then check this variable for how often
             # they need to reschedule themselves
             # Not used with 'when' parameter, causes run away jobs and CPU

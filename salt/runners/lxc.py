@@ -72,9 +72,9 @@ def _do_names(names, fun):
                     timeout=60))
     for cmd in cmds:
         data = next(cmd)
-        data = data.get(host, {}).get('ret', None)
+        data = data.get(id_, {}).get('ret', None)
         if data:
-            ret.update({host: data})
+            ret.update({id_: data})
     return ret
 
 
@@ -252,7 +252,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
                 host, 'lxc.cloud_init_interface', args + [kw],
                 expr_form='list', timeout=600).get(host, {})
         name = kw.pop('name', name)
-        # be sure not to seed an alrady seeded host
+        # be sure not to seed an already seeded host
         kw['seed'] = seeds[name]
         if not kw['seed']:
             kw.pop('seed_cmd', '')

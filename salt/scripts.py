@@ -17,6 +17,7 @@ from random import randint
 # Import salt libs
 import salt
 import salt.cli
+import salt.defaults.exitcodes
 from salt.exceptions import SaltSystemExit, SaltClientError, SaltReqTimeoutError
 
 log = logging.getLogger(__name__)
@@ -299,7 +300,7 @@ def salt_cloud():
 
     if not has_saltcloud:
         print('salt-cloud is not available in this system')
-        sys.exit(os.EX_UNAVAILABLE)
+        sys.exit(salt.defaults.exitcodes.EX_UNAVAILABLE)
 
     client = None
     try:

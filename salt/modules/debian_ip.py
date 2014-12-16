@@ -1089,6 +1089,8 @@ def _parse_bridge_opts(opts, iface):
     config = {}
 
     if 'ports' in opts:
+        if isinstance(opts['ports'], list):
+            opts['ports'] = ','.join(opts['ports'])
         config.update({'ports': opts['ports']})
 
     for opt in ['ageing', 'fd', 'gcint', 'hello', 'maxage']:
@@ -1525,6 +1527,7 @@ def build_interface(iface, iface_type, enabled, **settings):
 
     elif iface_type == 'vlan':
         settings['vlan'] = 'yes'
+        __salt__['pkg.install']('vlan')
 
     elif iface_type == 'pppoe':
         settings['pppoe'] = 'yes'
@@ -1539,7 +1542,7 @@ def build_interface(iface, iface_type, enabled, **settings):
 
     elif iface_type == 'bridge':
         if 'ports' not in settings:
-            msg = 'ports is a required setting for bridge interfaces'
+            msg = 'ports is a required setting for bridge interfaces on Debian or Ubuntu based systems'
             log.error(msg)
             raise AttributeError(msg)
         __salt__['pkg.install']('bridge-utils')

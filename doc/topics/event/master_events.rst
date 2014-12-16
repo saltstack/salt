@@ -128,7 +128,7 @@ Minion-triggered events.
 
     :var event: description of the event.
     :var location: the location of the VM being requested.
-    :var kwargs: options available as the VM is being requested: 
+    :var kwargs: options available as the VM is being requested:
         ``Action``, ``ImageId``, ``InstanceType``, ``KeyName``, ``MaxCount``,
         ``MinCount``, ``SecurityGroup.1``
 

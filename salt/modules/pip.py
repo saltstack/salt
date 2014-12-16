@@ -911,6 +911,8 @@ def upgrade_available(pkg,
                       runas=None,
                       cwd=None):
     '''
+    .. versionadded:: Lithium
+
     Check whether or not an upgrade is available for a given package
 
     CLI Example:
@@ -928,6 +930,8 @@ def upgrade(bin_env=None,
             cwd=None,
             use_vt=False):
     '''
+    .. versionadded:: Lithium
+
     Upgrades outdated pip packages
 
     Returns a dict containing the changes.

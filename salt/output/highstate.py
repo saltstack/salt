@@ -35,7 +35,9 @@ state_tabular:
     output format.  If you wish to use a custom format, this can be set to a
     string.
 
-Example output::
+Example output:
+
+.. code-block:: text
 
     myminion:
     ----------

@@ -112,7 +112,7 @@ files, and more via the shared pillar :ref:`dict <python2:typesmapping>`:
 Finally, the above states can utilize the values provided to them via Pillar.
 All pillar values targeted to a minion are available via the 'pillar'
 dictionary. As seen in the above example, Jinja substitution can then be
-utilized to access the keys and values in the Pillar dictionary. 
+utilized to access the keys and values in the Pillar dictionary.
 
 Note that you cannot just list key/value-information in ``top.sls``. Instead,
 target a minion to a pillar file and then list the keys and values in the

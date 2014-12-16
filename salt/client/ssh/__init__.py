@@ -166,18 +166,30 @@ class SSH(object):
         self.opts['_ssh_version'] = ssh_version()
         self.tgt_type = self.opts['selected_target_option'] \
                 if self.opts['selected_target_option'] else 'glob'
-        self.roster = salt.roster.Roster(opts, opts.get('roster'))
+        self.roster = salt.roster.Roster(opts, opts.get('roster', 'flat'))
         self.targets = self.roster.targets(
                 self.opts['tgt'],
                 self.tgt_type)
-        priv = self.opts.get(
-                'ssh_priv',
-                os.path.join(
-                    self.opts['pki_dir'],
-                    'ssh',
-                    'salt-ssh.rsa'
+        # If we're in a wfunc, we need to get the ssh key location from the
+        # top level opts, stored in __master_opts__
+        if '__master_opts__' in self.opts:
+            priv = self.opts['__master_opts__'].get(
+                    'ssh_priv',
+                    os.path.join(
+                        self.opts['__master_opts__']['pki_dir'],
+                        'ssh',
+                        'salt-ssh.rsa'
+                        )
                     )
-                )
+        else:
+            priv = self.opts.get(
+                    'ssh_priv',
+                    os.path.join(
+                        self.opts['pki_dir'],
+                        'ssh',
+                        'salt-ssh.rsa'
+                        )
+                    )
         if not os.path.isfile(priv):
             try:
                 salt.client.ssh.shell.gen_key(priv)
@@ -301,7 +313,7 @@ class SSH(object):
                 if stderr:
                     return {host: stderr}
                 return {host: 'Bad Return'}
-        if os.EX_OK != retcode:
+        if salt.exitcodes.EX_OK != retcode:
             return {host: stderr}
         return {host: stdout}
 
@@ -400,7 +412,40 @@ class SSH(object):
         '''
         Execute and yield returns as they come in, do not print to the display
         '''
+        fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
+        jid = self.returners[fstr]()
+
+        # Save the invocation information
+        argv = self.opts['argv']
+
+        if self.opts['raw_shell']:
+            fun = 'ssh._raw'
+            args = argv
+        else:
+            fun = argv[0] if argv else ''
+            args = argv[1:]
+
+        job_load = {
+            'jid': jid,
+            'tgt_type': self.tgt_type,
+            'tgt': self.opts['tgt'],
+            'user': self.opts['user'],
+            'fun': fun,
+            'arg': args,
+            }
+
+        # save load to the master job cache
+        self.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load)
+
         for ret in self.handle_ssh():
+            host = next(ret.iterkeys())
+            self.cache_job(jid, host, ret[host])
+            if self.event:
+                self.event.fire_event(
+                        ret,
+                        salt.utils.event.tagify(
+                            [jid, 'ret', host],
+                            'job'))
             yield ret
 
     def cache_job(self, jid, id_, ret):
@@ -413,7 +458,7 @@ class SSH(object):
 
     def run(self):
         '''
-        Execute the overall routine
+        Execute the overall routine, print results via outputters
         '''
         fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
         jid = self.returners[fstr]()
@@ -496,7 +541,7 @@ class Single(object):
             port=None,
             passwd=None,
             priv=None,
-            timeout=None,
+            timeout=30,
             sudo=False,
             tty=False,
             mods=None,
@@ -680,7 +725,9 @@ class Single(object):
             opts_pkg['file_roots'] = self.opts['file_roots']
             opts_pkg['pillar_roots'] = self.opts['pillar_roots']
             opts_pkg['ext_pillar'] = self.opts['ext_pillar']
+            opts_pkg['extension_modules'] = self.opts['extension_modules']
             opts_pkg['_ssh_version'] = self.opts['_ssh_version']
+            opts_pkg['__master_opts__'] = self.context['master_opts']
             if '_caller_cachedir' in self.opts:
                 opts_pkg['_caller_cachedir'] = self.opts['_caller_cachedir']
             else:
@@ -758,7 +805,9 @@ class Single(object):
             cachedir = self.opts['cachedir']
         thin_sum = salt.utils.thin.thin_sum(cachedir, 'sha1')
         debug = ''
-        if salt.log.LOG_LEVELS['debug'] >= salt.log.LOG_LEVELS[self.opts['log_level']]:
+        if not self.opts.get('log_level'):
+            self.opts['log_level'] = 'info'
+        if salt.log.LOG_LEVELS['debug'] >= salt.log.LOG_LEVELS[self.opts.get('log_level', 'info')]:
             debug = '1'
         arg_str = '''
 OPTIONS = OBJ()
@@ -913,7 +962,7 @@ ARGS = {8}\n'''.format(self.minion_config,
                 'The salt thin transfer was corrupted'
             ),
             (
-                (os.EX_CANTCREAT,),
+                (salt.exitcodes.EX_CANTCREAT,),
                 'salt path .* exists but is not a directory',
                 'A necessary path for salt thin unexpectedly exists:\n ' + stderr,
             ),
@@ -938,7 +987,7 @@ ARGS = {8}\n'''.format(self.minion_config,
                 perm_error_fmt.format(stderr)
             ),
             (
-                (os.EX_SOFTWARE,),
+                (salt.exitcodes.EX_SOFTWARE,),
                 'exists but is not',
                 'An internal error occurred with the shim, please investigate:\n ' + stderr,
             ),

@@ -8,19 +8,14 @@ from __future__ import absolute_import, print_function
 import logging
 import os
 import sys
-from glob import glob
 
 # Import salt libs
-import salt.cli.caller
-import salt.cli.cp
-import salt.cli.batch
 import salt.client
 import salt.client.ssh
 import salt.client.netapi
+import salt.defaults.exitcodes
 import salt.output
-import salt.runner
-import salt.auth
-import salt.key
+import salt.client.ssh
 from salt.config import _expand_glob_path
 
 from salt.utils import parsers, print_cli
@@ -46,6 +41,8 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         '''
         Execute the salt command line
         '''
+        import salt.auth
+        import salt.cli.batch
         self.parse_args()
 
         if self.config['verify_env']:
@@ -324,6 +321,7 @@ class SaltCP(parsers.SaltCPOptionParser):
         '''
         Execute salt-cp
         '''
+        import salt.cli.cp
         self.parse_args()
 
         if self.config['verify_env']:
@@ -352,6 +350,8 @@ class SaltKey(parsers.SaltKeyOptionParser):
         '''
         Execute salt-key
         '''
+
+        import salt.key
         self.parse_args()
 
         if self.config['verify_env']:
@@ -398,6 +398,7 @@ class SaltCall(parsers.SaltCallOptionParser):
     '''
     Used to locally execute a salt command
     '''
+    import salt.cli.caller
 
     def run(self):
         '''
@@ -445,11 +446,11 @@ class SaltCall(parsers.SaltCallOptionParser):
 
         if self.options.doc:
             caller.print_docs()
-            self.exit(os.EX_OK)
+            self.exit(salt.defaults.exitcodes.EX_OK)
 
         if self.options.grains_run:
             caller.print_grains()
-            self.exit(os.EX_OK)
+            self.exit(salt.defaults.exitcodes.EX_OK)
 
         caller.run()
 
@@ -458,10 +459,12 @@ class SaltRun(parsers.SaltRunOptionParser):
     '''
     Used to execute Salt runners
     '''
+
     def run(self):
         '''
         Execute salt-run
         '''
+        import salt.runner
         self.parse_args()
 
         if self.config['verify_env']:
@@ -487,8 +490,8 @@ class SaltRun(parsers.SaltRunOptionParser):
 
         runner = salt.runner.Runner(self.config)
         if self.options.doc:
-            runner.print_docs()
-            self.exit(os.EX_OK)
+            runner._print_docs()
+            self.exit(salt.defaults.exitcodes.EX_OK)
 
         # Run this here so SystemExit isn't raised anywhere else when
         # someone tries to use the runners via the python API
@@ -503,6 +506,7 @@ class SaltSSH(parsers.SaltSSHOptionParser):
     '''
     Used to Execute the salt ssh routine
     '''
+
     def run(self):
         self.parse_args()
 
@@ -532,6 +536,7 @@ class SaltAPI(six.with_metaclass(parsers.OptionParserMeta,  # pylint: disable=W0
         '''
         Run the api
         '''
+        import salt.client.netapi
         self.parse_args()
         try:
             if self.config['verify_env']:

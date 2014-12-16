@@ -38,6 +38,7 @@ import salt.utils.event
 import salt.utils.verify
 import salt.utils.minions
 import salt.utils.gzip_util
+import salt.utils.jid
 from salt.pillar import git_pillar
 from salt.utils.event import tagify
 from salt.exceptions import SaltMasterError
@@ -139,6 +140,23 @@ def clean_expired_tokens(opts):
                         os.remove(token_path)
                     except (IOError, OSError):
                         pass
+
+
+def clean_pub_auth(opts):
+    try:
+        auth_cache = os.path.join(opts['cachedir'], 'publish_auth')
+        if not os.path.exists(auth_cache):
+            return
+        else:
+            for (dirpath, dirnames, filenames) in os.walkpath(auth_cache):
+                for auth_file in filenames:
+                    auth_file_path = os.path.join(dirpath, auth_file)
+                    if not os.path.isfile(auth_file_path):
+                        continue
+                    if os.path.getmtime(auth_file_path) - time.time() > opts['keep_jobs']:
+                        os.remove(auth_file_path)
+    except (IOError, OSError):
+        log.error('Unable to delete pub auth file')
 
 
 def clean_old_jobs(opts):
@@ -859,7 +877,7 @@ class RemoteFuncs(object):
             fp_.write(load['id'])
         return ret
 
-    def minion_publish(self, load, skip_verify=False):
+    def minion_publish(self, load):
         '''
         Publish a command initiated from a minion, this method executes minion
         restrictions so that the minion publication will only work if it is
@@ -1121,7 +1139,7 @@ class LocalFuncs(object):
                 return dict(error=dict(name='TokenAuthenticationError',
                                        message=msg))
 
-            jid = salt.utils.gen_jid()
+            jid = salt.utils.jid.gen_jid()
             fun = load.pop('fun')
             tag = tagify(jid, prefix='wheel')
             data = {'fun': "wheel.{0}".format(fun),
@@ -1191,7 +1209,7 @@ class LocalFuncs(object):
                 return dict(error=dict(name='EauthAuthenticationError',
                                        message=msg))
 
-            jid = salt.utils.gen_jid()
+            jid = salt.utils.jid.gen_jid()
             fun = load.pop('fun')
             tag = tagify(jid, prefix='wheel')
             data = {'fun': "wheel.{0}".format(fun),

@@ -41,7 +41,7 @@ Supported Operating Systems
 
     In the event you do not see your distribution or version available please
     review the develop branch on Github as it main contain updates that are
-    not present in the stable release: 
+    not present in the stable release:
     https://github.com/saltstack/salt-bootstrap/tree/develop
 
 
@@ -49,7 +49,7 @@ Supported Operating Systems
 Example Usage
 ~~~~~~~~~~~~~
 
-If you're looking for the *one-liner* to install salt, please scroll to the 
+If you're looking for the *one-liner* to install salt, please scroll to the
 bottom and use the instructions for `Installing via an Insecure One-Liner`_
 
 .. note::
@@ -96,7 +96,7 @@ All python versions should support the following one liner:
   sudo sh install_salt.sh git develop
 
 
-On a FreeBSD base system you usually don't have either of the above binaries available. You **do** 
+On a FreeBSD base system you usually don't have either of the above binaries available. You **do**
 have ``fetch`` available though:
 
 .. code-block:: bash
@@ -237,14 +237,14 @@ Here's a summary of the command line options:
 .. code-block:: bash
 
     $ sh bootstrap-salt.sh -h
-    
+
       Usage :  bootstrap-salt.sh [options] <install-type> <install-type-args>
-    
+
       Installation types:
         - stable (default)
         - daily  (ubuntu specific)
         - git
-    
+
       Examples:
         $ bootstrap-salt.sh
         $ bootstrap-salt.sh stable
@@ -253,7 +253,7 @@ Here's a summary of the command line options:
         $ bootstrap-salt.sh git develop
         $ bootstrap-salt.sh git v0.17.0
         $ bootstrap-salt.sh git 8c3fadf15ec183e5ce8c63739850d543617e4357
-    
+
       Options:
       -h  Display this message
       -v  Display script version

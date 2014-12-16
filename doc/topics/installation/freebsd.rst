@@ -3,7 +3,7 @@ FreeBSD
 =======
 
 Salt was added to the FreeBSD ports tree Dec 26th, 2011 by Christer Edwards
-<christer.edwards@gmail.com>. It has been tested on FreeBSD 7.4, 8.2, 9.0 and 9.1
+<christer.edwards@gmail.com>. It has been tested on FreeBSD 7.4, 8.2, 9.0, and 9.1
 releases.
 
 Salt is dependent on the following additional ports. These will be installed as
@@ -86,4 +86,3 @@ Start the Salt Minion as follows:
    service salt_minion start
 
 Now go to the :doc:`Configuring Salt</ref/configuration/index>` page.
-

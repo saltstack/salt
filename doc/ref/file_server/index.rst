@@ -21,7 +21,7 @@ The cp Module
 -------------
 
 The cp module is the home of minion side file server operations. The cp module
-is used by the Salt state system, salt-cp and can be used to distribute files
+is used by the Salt state system, salt-cp, and can be used to distribute files
 presented by the Salt file server.
 
 Environments
@@ -147,5 +147,3 @@ data is not available, it needs to be generated:
         client = salt.minion.FileClient(opts)
         # Call get_file
         return client.get_file(path, dest, False, env)
-
-

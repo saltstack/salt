@@ -22,13 +22,9 @@ The data structure needs to be:
 from __future__ import absolute_import, print_function
 import os
 import time
-import copy
 import errno
 import logging
 from datetime import datetime
-
-# Import 3rd-party libs
-
 
 # Import salt libs
 import salt.config
@@ -79,6 +75,7 @@ def get_local_client(
     if mopts:
         opts = mopts
     else:
+        # Late import to prevent circular import
         import salt.config
         opts = salt.config.client_config(c_path)
     if opts['transport'] == 'raet':
@@ -1400,12 +1397,12 @@ class LocalClient(object):
 
         master_uri = 'tcp://' + salt.utils.ip_bracket(self.opts['interface']) + \
                      ':' + str(self.opts['ret_port'])
-        sreq = salt.transport.Channel.factory(self.opts,
-                                              crypt='clear',
-                                              master_uri=master_uri)
+        channel = salt.transport.Channel.factory(self.opts,
+                                                 crypt='clear',
+                                                 master_uri=master_uri)
 
         try:
-            payload = sreq.send(payload_kwargs, timeout=timeout)
+            payload = channel.send(payload_kwargs, timeout=timeout)
         except SaltReqTimeoutError:
             log.error(
                 'Salt request timed out. If this error persists, '
@@ -1421,12 +1418,12 @@ class LocalClient(object):
                 return payload
             self.key = key
             payload_kwargs['key'] = self.key
-            payload = sreq.send(payload_kwargs)
+            payload = channel.send(payload_kwargs)
             if not payload:
                 return payload
 
-        # We have the payload, let's get rid of SREQ fast(GC'ed faster)
-        del sreq
+        # We have the payload, let's get rid of the channel fast(GC'ed faster)
+        del channel
 
         return {'jid': payload['load']['jid'],
                 'minions': payload['load']['minions']}
@@ -1438,100 +1435,6 @@ class LocalClient(object):
         if hasattr(self, 'event'):
             # The call bellow will take care of calling 'self.event.destroy()'
             del self.event
-
-
-class SSHClient(object):
-    '''
-    Create a client object for executing routines via the salt-ssh backend
-    '''
-    def __init__(self,
-                 c_path=os.path.join(syspaths.CONFIG_DIR, 'master'),
-                 mopts=None):
-        if mopts:
-            self.opts = mopts
-        else:
-            if os.path.isdir(c_path):
-                log.warning(
-                    '{0} expects a file path not a directory path({1}) to '
-                    'it\'s \'c_path\' keyword argument'.format(
-                        self.__class__.__name__, c_path
-                    )
-                )
-            self.opts = salt.config.client_config(c_path)
-
-    def _prep_ssh(
-            self,
-            tgt,
-            fun,
-            arg=(),
-            timeout=None,
-            expr_form='glob',
-            kwarg=None,
-            **kwargs):
-        '''
-        Prepare the arguments
-        '''
-        opts = copy.deepcopy(self.opts)
-        opts.update(kwargs)
-        if timeout:
-            opts['timeout'] = timeout
-        arg = salt.utils.args.condition_input(arg, kwarg)
-        opts['argv'] = [fun] + arg
-        opts['selected_target_option'] = expr_form
-        opts['tgt'] = tgt
-        opts['arg'] = arg
-        return salt.client.ssh.SSH(opts)
-
-    def cmd_iter(
-            self,
-            tgt,
-            fun,
-            arg=(),
-            timeout=None,
-            expr_form='glob',
-            ret='',
-            kwarg=None,
-            **kwargs):
-        '''
-        Execute a single command via the salt-ssh subsystem and return a
-        generator
-        '''
-        ssh = self._prep_ssh(
-                tgt,
-                fun,
-                arg,
-                timeout,
-                expr_form,
-                kwarg,
-                **kwargs)
-        for ret in ssh.run_iter():
-            yield ret
-
-    def cmd(
-            self,
-            tgt,
-            fun,
-            arg=(),
-            timeout=None,
-            expr_form='glob',
-            kwarg=None,
-            **kwargs):
-        '''
-        Execute a single command via the salt-ssh subsystem and return all
-        routines at once
-        '''
-        ssh = self._prep_ssh(
-                tgt,
-                fun,
-                arg,
-                timeout,
-                expr_form,
-                kwarg,
-                **kwargs)
-        final = {}
-        for ret in ssh.run_iter():
-            final.update(ret)
-        return final
 
 
 class FunctionWrapper(dict):

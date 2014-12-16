@@ -764,7 +764,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
     def test_that_when_associating_an_existing_dhcp_options_set_to_a_non_existent_vpc_the_associate_dhcp_options_method_returns_false(
             self):
         '''
-        Tests associating existing dhcp options to non-existance vpc
+        Tests associating existing dhcp options to non-existence vpc
         '''
         dhcp_options = self._create_dhcp_options()
 
@@ -820,7 +820,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
     def test_that_when_creating_and_associating_dhcp_options_set_to_a_non_existent_vpc_the_dhcp_options_the_associate_new_dhcp_options_method_returns_false(
             self):
         '''
-        Tests creation/association of dhcp options to non-existant vpc
+        Tests creation/association of dhcp options to non-existent vpc
         '''
         dhcp_creation_and_association_result = boto_vpc.associate_new_dhcp_options_to_vpc('fake',
                                                                                           **dhcp_options_parameters)
@@ -905,7 +905,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
     def test_that_when_creating_network_acl_for_a_non_existent_vpc_the_create_network_acl_method_returns_false(self):
         '''
-        Tests creation of network acl with a non-existant vpc
+        Tests creation of network acl with a non-existent vpc
         '''
         network_acl_creation_result = boto_vpc.create_network_acl('fake', **conn_parameters)
 

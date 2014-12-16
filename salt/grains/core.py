@@ -671,6 +671,8 @@ def _virtual(osdata):
                 grains['virtual'] = 'xen'
             if maker.startswith('Microsoft') and product.startswith('Virtual'):
                 grains['virtual'] = 'VirtualPC'
+            if maker.startswith('OpenStack'):
+                grains['virtual'] = 'OpenStack'
         if sysctl:
             model = __salt__['cmd.run']('{0} hw.model'.format(sysctl))
             jail = __salt__['cmd.run'](
@@ -772,8 +774,17 @@ def _windows_platform_data():
         biosinfo = wmi_c.Win32_BIOS()[0]
         # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394498(v=vs.85).aspx
         timeinfo = wmi_c.Win32_TimeZone()[0]
+
         # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394072(v=vs.85).aspx
-        motherboardinfo = wmi_c.Win32_BaseBoard()[0]
+        motherboard = {}
+        motherboard['product'] = None
+        motherboard['serial'] = None
+        try:
+            motherboardinfo = wmi_c.Win32_BaseBoard()[0]
+            motherboard['product'] = motherboardinfo.Product
+            motherboard['serial'] = motherboardinfo.SerialNumber
+        except IndexError:
+            log.debug('Motherboard info not available on this sytem')
 
         # the name of the OS comes with a bunch of other data about the install
         # location. For example:
@@ -793,8 +804,8 @@ def _windows_platform_data():
             'timezone': timeinfo.Description,
             'windowsdomain': systeminfo.Domain,
             'motherboard': {
-                'productname': motherboardinfo.Product,
-                'serialnumber': motherboardinfo.SerialNumber
+                'productname': motherboard['product'],
+                'serialnumber': motherboard['serial']
             }
         }
 
@@ -947,9 +958,9 @@ def os_data():
         # Add SELinux grain, if you have it
         if _linux_bin_exists('selinuxenabled'):
             grains['selinux'] = {}
-            grains['selinux']['enabled'] = __salt__['cmd.run'](
-                'selinuxenabled; echo $?'
-            ).strip() == '0'
+            grains['selinux']['enabled'] = __salt__['cmd.retcode'](
+                'selinuxenabled'
+            ) == 0
             if _linux_bin_exists('getenforce'):
                 grains['selinux']['enforced'] = __salt__['cmd.run'](
                     'getenforce'
@@ -1679,7 +1690,7 @@ def _smartos_zone_data():
         grains['pkgsrcpath'] = 'Unknown'
 
     grains['zonename'] = __salt__['cmd.run']('zonename')
-    grains['zoneid'] = __salt__['cmd.run']('zoneadm list -p | awk -F: \'{ print $1 }\'')
+    grains['zoneid'] = __salt__['cmd.run']('zoneadm list -p').split()[1]
     grains['hypervisor_uuid'] = __salt__['cmd.run']('mdata-get sdc:server_uuid')
     grains['datacenter'] = __salt__['cmd.run']('mdata-get sdc:datacenter_name')
     if "FAILURE" in grains['datacenter'] or "No metadata" in grains['datacenter']:

@@ -7,3 +7,5 @@ Salt SSH
 
 Additional configuration options and command line flags have been added to
 configure the scan roster on the fly
+
+Added support for ``state.single`` in ``salt-ssh``

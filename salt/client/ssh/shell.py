@@ -13,6 +13,7 @@ import logging
 import subprocess
 
 # Import salt libs
+import salt.defaults.exitcodes
 import salt.utils
 import salt.utils.nb_popen
 import salt.utils.vt
@@ -93,7 +94,7 @@ class Shell(object):
             options.append('PasswordAuthentication=yes')
         else:
             options.append('PasswordAuthentication=no')
-        if self.opts['_ssh_version'] > '4.9':
+        if self.opts.get('_ssh_version', '') > '4.9':
             options.append('GSSAPIAuthentication=no')
         options.append('ConnectTimeout={0}'.format(self.timeout))
         if self.opts.get('ignore_host_keys'):
@@ -186,7 +187,7 @@ class Shell(object):
         Execute ssh-copy-id to plant the id file on the target
         '''
         stdout, stderr, retcode = self._run_cmd(self._copy_id_str_old())
-        if os.EX_OK != retcode and stderr.startswith('Usage'):
+        if salt.defaults.exitcodes.EX_OK != retcode and stderr.startswith('Usage'):
             stdout, stderr, retcode = self._run_cmd(self._copy_id_str_new())
         return stdout, stderr, retcode
 
@@ -198,6 +199,7 @@ class Shell(object):
         # TODO: if tty, then our SSH_SHIM cannot be supplied from STDIN Will
         # need to deliver the SHIM to the remote host and execute it there
 
+        opts = ''
         if self.passwd:
             opts = self._passwd_opts()
         if self.priv:

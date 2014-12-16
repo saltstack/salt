@@ -32,6 +32,7 @@ def __virtual__():
 def extracted(name,
               source,
               archive_format,
+              archive_user=None,
               tar_options=None,
               source_hash=None,
               if_missing=None,
@@ -85,6 +86,9 @@ def extracted(name,
 
     archive_format
         tar, zip or rar
+
+    archive_user:
+        user to extract files as
 
     if_missing
         Some archives, such as tar, extract themselves in a subfolder.
@@ -189,7 +193,8 @@ def extracted(name,
     if archive_format in ('zip', 'rar'):
         log.debug('Extract {0} in {1}'.format(filename, name))
         files = __salt__['archive.un{0}'.format(archive_format)](filename,
-                                                                 name)
+                                                                 name,
+                                                                 runas=archive_user)
     else:
         if tar_options is None:
             with closing(tarfile.open(filename, 'r')) as tar:
@@ -199,7 +204,7 @@ def extracted(name,
             log.debug('Untar {0} in {1}'.format(filename, name))
 
             results = __salt__['cmd.run_all']('tar x{0} -f {1!r}'.format(
-                tar_options, filename), cwd=name)
+                tar_options, filename), cwd=name, runas=archive_user)
             if results['retcode'] != 0:
                 ret['result'] = False
                 ret['changes'] = results

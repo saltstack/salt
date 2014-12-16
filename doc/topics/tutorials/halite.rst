@@ -140,8 +140,7 @@ Configuring Halite Settings
 ===========================
 
 Once you've configured the permissions for Halite, you'll need to set up the
-Halite settings in the /etc/salt/master file. Halite supports CherryPy, Paste
-and Gevent out of the box.
+Halite settings in the /etc/salt/master file. Halite supports CherryPy, Paste, and Gevent out of the box.
 
 To configure cherrypy, add the following to the bottom of your /etc/salt/master file:
 

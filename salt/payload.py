@@ -11,7 +11,6 @@ import logging
 
 # Import salt libs
 import salt.log
-import salt.crypt
 from salt.exceptions import SaltReqTimeoutError
 
 # Import third party libs

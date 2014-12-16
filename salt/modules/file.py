@@ -1184,22 +1184,36 @@ def replace(path,
 
     # Avoid TypeErrors by forcing repl to be a string
     repl = str(repl)
+
+    found = False
+
+    # First check the whole file, whether the replacement has already been made
+    try:
+        # open the file read-only and inplace=False, otherwise the result
+        # will be an empty file after iterating over it just for searching
+        fi_file = fileinput.input(path,
+                        inplace=False,
+                        bufsize=bufsize,
+                        mode='r')
+
+        for line in fi_file:
+            result = re.search(repl, line)
+            if result:
+                if search_only:
+                    return True
+                found = True
+    finally:
+        fi_file.close()
+
     try:
         fi_file = fileinput.input(path,
-                        inplace=not dry_run,
+                        inplace=not (dry_run or search_only),
                         backup=False if dry_run else backup,
                         bufsize=bufsize,
-                        mode='rb')
-        found = False
-        for line in fi_file:
+                        mode='r' if (dry_run or search_only) else 'rb')
 
-            if search_only:
-                # Just search; bail as early as a match is found
-                result = re.search(cpattern, line)
-
-                if result:
-                    return True  # `finally` block handles file closure
-            else:
+        if not found:
+            for line in fi_file:
                 result, nrepl = re.subn(cpattern, repl, line, count)
 
                 # found anything? (even if no change)
@@ -4309,7 +4323,7 @@ def move(src, dst):
 
 def diskusage(path):
     '''
-    Recursivly calculate diskusage of path and return it
+    Recursively calculate disk usage of path and return it
     in bytes
 
     CLI Example:
@@ -4322,7 +4336,8 @@ def diskusage(path):
     total_size = 0
     seen = set()
     if os.path.isfile(path):
-        ret = stat.st_size
+        stat_structure = os.stat(path)
+        ret = stat_structure.st_size
         return ret
 
     for dirpath, dirnames, filenames in os.walk(path):
@@ -4330,16 +4345,16 @@ def diskusage(path):
             fp = os.path.join(dirpath, f)
 
             try:
-                stat = os.stat(fp)
+                stat_structure = os.stat(fp)
             except OSError:
                 continue
 
-            if stat.st_ino in seen:
+            if stat_structure.st_ino in seen:
                 continue
 
-            seen.add(stat.st_ino)
+            seen.add(stat_structure.st_ino)
 
-            total_size += stat.st_size
+            total_size += stat_structure.st_size
 
     ret = total_size
     return ret
