@@ -10,7 +10,6 @@ import logging
 import hashlib
 import os
 import shutil
-import time
 import requests
 
 # Import salt libs
