@@ -1270,8 +1270,12 @@ class LocalClient(object):
                 break
             if 'minions' in raw.get('data', {}):
                 continue
-            found.add(raw['id'])
-            ret = {raw['id']: {'ret': raw['return']}}
+            try:
+                found.add(raw['id'])
+                ret = {raw['id']: {'ret': raw['return']}}
+            except KeyError:
+                # Ignore other erroneous messages
+                continue
             if 'out' in raw:
                 ret[raw['id']]['out'] = raw['out']
             yield ret
