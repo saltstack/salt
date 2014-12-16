@@ -261,28 +261,25 @@ class Authorize(object):
         '''
         Determine what type of authentication is being requested and pass
         authorization
+
+        Note: this will check that the user has at least one right that will let
+        him execute "load", this does not deal with conflicting rules
         '''
-        adata = self.auth_data
-        good = False
         if load.get('token', False):
-            good = False
-            for sub_auth in self.token(adata, load):
+            for sub_auth in self.token(self.auth_data, load):
                 if sub_auth:
                     if self.rights_check(
                             form,
-                            adata[sub_auth['token']['eauth']],
+                            self.auth_data[sub_auth['token']['eauth']],
                             sub_auth['token']['name'],
                             load,
                             sub_auth['token']['eauth']):
-                        good = True
-            if not good:
-                log.warning(
-                    'Authentication failure of type "token" occurred.'
-                )
-                return False
+                        return True
+            log.warning(
+                'Authentication failure of type "token" occurred.'
+            )
         elif load.get('eauth'):
-            good = False
-            for sub_auth in self.eauth(adata, load):
+            for sub_auth in self.eauth(self.auth_data, load):
                 if sub_auth:
                     if self.rights_check(
                             form,
@@ -290,13 +287,11 @@ class Authorize(object):
                             sub_auth['name'],
                             load,
                             load['eauth']):
-                        good = True
-            if not good:
-                log.warning(
-                    'Authentication failure of type "eauth" occurred.'
-                )
-                return False
-        return good
+                        return True
+            log.warning(
+                'Authentication failure of type "eauth" occurred.'
+            )
+        return False
 
 
 class Resolver(object):
