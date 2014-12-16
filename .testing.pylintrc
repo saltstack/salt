@@ -14,7 +14,10 @@ init-hook="
 # Pickle collected data for later comparisons.
 persistent=no
 
-load-plugins=salttesting.pylintplugins.pep8,salttesting.pylintplugins.pep263,salttesting.pylintplugins.strings
+load-plugins=salttesting.pylintplugins.pep8,
+  salttesting.pylintplugins.pep263,
+  salttesting.pylintplugins.strings,
+  salttesting.pylintplugins.fileperms
 
 [MESSAGES CONTROL]
 

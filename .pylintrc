@@ -27,7 +27,10 @@ persistent=yes
 
 # List of plugins (as comma separated values of python modules names) to load,
 # usually to register additional checkers.
-load-plugins=salttesting.pylintplugins.pep8,salttesting.pylintplugins.pep263,salttesting.pylintplugins.strings
+load-plugins=salttesting.pylintplugins.pep8,
+  salttesting.pylintplugins.pep263,
+  salttesting.pylintplugins.strings,
+  salttesting.pylintplugins.fileperms
 
 
 [MESSAGES CONTROL]
