@@ -97,7 +97,6 @@ from salt.defaults import DEFAULT_TARGET_DELIM
 import salt.defaults.exitcodes
 import salt.log
 import salt.version
-import salt.defaults.exitcodes
 from salt.utils.decorators import memoize as real_memoize
 from salt.exceptions import (
     CommandExecutionError, SaltClientError,
