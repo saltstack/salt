@@ -145,7 +145,7 @@ def clean_pub_auth(opts):
         if not os.path.exists(auth_cache):
             return
         else:
-            for (dirpath, dirnames, filenames) in os.walkpath(auth_cache):
+            for (dirpath, dirnames, filenames) in os.walk(auth_cache):
                 for auth_file in filenames:
                     auth_file_path = os.path.join(dirpath, auth_file)
                     if not os.path.isfile(auth_file_path):

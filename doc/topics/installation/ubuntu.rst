@@ -91,15 +91,14 @@ the minion:
 .. code-block:: yaml
 
     update_zmq:
-      pkg:
-        - latest
+      pkg.latest:
         - pkgs:
           - zeromq
           - python-zmq
         - order: last
-      cmd:
-        - wait
-        - name: echo service salt-minion restart | at now + 1 minute
+      cmd.wait:
+        - name: |
+            echo service salt-minion restart | at now + 1 minute
         - watch:
           - pkg: update_zmq
 

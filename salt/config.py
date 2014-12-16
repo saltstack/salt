@@ -221,6 +221,8 @@ VALID_OPTS = {
     'publish_session': int,
     'reactor': list,
     'reactor_refresh_interval': int,
+    'reactor_worker_threads': int,
+    'reactor_worker_hwm': int,
     'serial': str,
     'search': str,
     'search_index_interval': int,

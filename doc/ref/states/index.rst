@@ -113,19 +113,17 @@ Here is an example of a Salt State:
 .. code-block:: yaml
 
     vim:
-      pkg:
-        - installed
+      pkg.installed: []
 
     salt:
-      pkg:
-        - latest
+      pkg.latest:
+        - name: salt
       service.running:
-        - require:
-          - file: /etc/salt/minion
-          - pkg: salt
         - names:
           - salt-master
           - salt-minion
+        - require:
+          - pkg: salt
         - watch:
           - file: /etc/salt/minion
 
@@ -196,15 +194,15 @@ the following state file which we'll call ``pep8.sls``:
 .. code-block:: yaml
 
     python-pip:
-      cmd:
-        - run
+      cmd.run:
+        - name: |
+            easy_install --script-dir=/usr/bin -U pip
         - cwd: /
-        - name: easy_install --script-dir=/usr/bin -U pip
 
     pep8:
-      pip.installed
-      requires:
-        - cmd: python-pip
+      pip.installed:
+        - require:
+          - cmd: python-pip
 
 
 The above example installs `pip`_ using ``easy_install`` from `setuptools`_ and
@@ -276,16 +274,16 @@ The modified state file would now be:
 .. code-block:: yaml
 
     python-pip:
-      cmd:
-        - run
+      cmd.run:
+        - name: |
+            easy_install --script-dir=/usr/bin -U pip
         - cwd: /
-        - name: easy_install --script-dir=/usr/bin -U pip
         - reload_modules: true
 
     pep8:
-      pip.installed
-      requires:
-        - cmd: python-pip
+      pip.installed:
+        - require:
+          - cmd: python-pip
 
 
 Let's run it, once:

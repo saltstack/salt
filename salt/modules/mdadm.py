@@ -49,7 +49,8 @@ def list_():
     '''
     ret = {}
     for line in (__salt__['cmd.run_stdout']
-                    ('mdadm --detail --scan', python_shell=False).splitlines()):
+                    (['mdadm', '--detail', '--scan'],
+                     python_shell=False).splitlines()):
         if ' ' not in line:
             continue
         comps = line.split()
@@ -124,12 +125,13 @@ def destroy(device):
     except CommandExecutionError:
         return False
 
-    stop_cmd = 'mdadm --stop {0}'.format(device)
-    zero_cmd = 'mdadm --zero-superblock {0}'
+    stop_cmd = ['mdadm', '--stop', device]
+    zero_cmd = ['mdadm', '--zero-superblock']
 
     if __salt__['cmd.retcode'](stop_cmd):
         for number in details['members']:
-            __salt__['cmd.retcode'](zero_cmd.format(number['device']))
+            zero_cmd.append(number['device'])
+        __salt__['cmd.retcode'](zero_cmd)
 
     # Remove entry from config file:
     if __grains__.get('os_family') == 'Debian':
