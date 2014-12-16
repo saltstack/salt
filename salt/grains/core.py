@@ -670,6 +670,8 @@ def _virtual(osdata):
                 grains['virtual'] = 'xen'
             if maker.startswith('Microsoft') and product.startswith('Virtual'):
                 grains['virtual'] = 'VirtualPC'
+            if maker.startswith('OpenStack'):
+                grains['virtual'] = 'OpenStack'
         if sysctl:
             model = __salt__['cmd.run']('{0} hw.model'.format(sysctl))
             jail = __salt__['cmd.run'](

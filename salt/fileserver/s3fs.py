@@ -424,6 +424,22 @@ def _refresh_buckets_cache_file(cache_file):
                 # grab only the files/dirs
                 bucket_files[bucket_name] = [k for k in s3_meta if 'Key' in k]
 
+                # check to see if we added any keys, otherwise investigate possible error conditions
+                if len(bucket_files[bucket_name]) == 0:
+                    meta_response = {}
+                    for k in s3_meta:
+                        if 'Code' in k or 'Message' in k:
+                            # assumes no duplicate keys, consisdent with current erro response.
+                            meta_response.update(k)
+                    # attempt use of human readable output first.
+                    try:
+                        log.warning("'{0}' response for bucket '{1}'".format(meta_response['Message'], bucket_name))
+                        continue
+                    except KeyError:
+                        # no human readable error message provided
+                        log.warning("'{0}' response for bucket '{1}'".format(meta_response['Code'], bucket_name))
+                        continue
+
             metadata[saltenv] = bucket_files
 
     else:
@@ -437,6 +453,23 @@ def _refresh_buckets_cache_file(cache_file):
 
             # pull out the environment dirs (e.g. the root dirs)
             files = [k for k in s3_meta if 'Key' in k]
+
+            # check to see if we added any keys, otherwise investigate possible error conditions
+            if len(files) == 0:
+                meta_response = {}
+                for k in s3_meta:
+                    if 'Code' in k or 'Message' in k:
+                        # assumes no duplicate keys, consisdent with current erro response.
+                        meta_response.update(k)
+                # attempt use of human readable output first.
+                try:
+                    log.warning("'{0}' response for bucket '{1}'".format(meta_response['Message'], bucket_name))
+                    continue
+                except KeyError:
+                    # no human readable error message provided
+                    log.warning("'{0}' response for bucket '{1}'".format(meta_response['Code'], bucket_name))
+                    continue
+
             environments = [(os.path.dirname(k['Key']).split('/', 1))[0] for k in files]
             environments = set(environments)
 

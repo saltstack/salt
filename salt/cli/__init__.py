@@ -9,10 +9,12 @@ from __future__ import absolute_import
 import logging
 import os
 import sys
-from glob import glob
 
 # Import salt libs
 import salt.client
+import salt.client.ssh
+import salt.client.netapi
+import salt.defaults.exitcodes
 import salt.output
 import salt.client.ssh
 from salt.config import _expand_glob_path
@@ -443,11 +445,11 @@ class SaltCall(parsers.SaltCallOptionParser):
 
         if self.options.doc:
             caller.print_docs()
-            self.exit(os.EX_OK)
+            self.exit(salt.defaults.exitcodes.EX_OK)
 
         if self.options.grains_run:
             caller.print_grains()
-            self.exit(os.EX_OK)
+            self.exit(salt.defaults.exitcodes.EX_OK)
 
         caller.run()
 
@@ -487,8 +489,8 @@ class SaltRun(parsers.SaltRunOptionParser):
 
         runner = salt.runner.Runner(self.config)
         if self.options.doc:
-            runner.print_docs()
-            self.exit(os.EX_OK)
+            runner._print_docs()
+            self.exit(salt.defaults.exitcodes.EX_OK)
 
         # Run this here so SystemExit isn't raised anywhere else when
         # someone tries to use the runners via the python API

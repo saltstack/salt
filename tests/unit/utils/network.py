@@ -84,6 +84,11 @@ vpn0: flags=120002200850<POINTOPOINT,RUNNING,MULTICAST,NONUD,IPv6,PHYSRUNNING> m
         inet6 ::/0 --> fe80::b2d6:7c10
 '''
 
+FREEBSD_SOCKSTAT = '''\
+USER    COMMAND     PID     FD  PROTO  LOCAL ADDRESS    FOREIGN ADDRESS
+root    python2.7   1294    41  tcp4   127.0.0.1:61115  127.0.0.1:4506
+'''
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class NetworkTestCase(TestCase):
@@ -166,6 +171,14 @@ class NetworkTestCase(TestCase):
                                                   'prefixlen': '0'}],
                                        'up': True}}
             )
+
+    def test_freebsd_remotes_on(self):
+        with patch('salt.utils.is_sunos', lambda: False):
+            with patch('salt.utils.is_freebsd', lambda: True):
+                with patch('subprocess.check_output',
+                           return_value=FREEBSD_SOCKSTAT):
+                    remotes = network._freebsd_remotes_on('4506', 'remote')
+                    self.assertEqual(remotes, set(['127.0.0.1']))
 
 
 if __name__ == '__main__':
