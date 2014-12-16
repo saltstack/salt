@@ -183,16 +183,12 @@ class Authorize(object):
         else:
             self.loadauth = loadauth
 
+    @property
     def auth_data(self):
         '''
         Gather and create the authorization data sets
         '''
-        auth_data = self.opts['external_auth']
-        #for auth_back in self.opts.get('external_auth_sources', []):
-        #    fstr = '{0}.perms'.format(auth_back)
-        #    if fstr in self.loadauth.auth:
-        #        auth_data.append(getattr(self.loadauth.auth)())
-        return auth_data
+        return self.opts['external_auth']
 
     def token(self, adata, load):
         '''
@@ -266,7 +262,7 @@ class Authorize(object):
         Determine what type of authentication is being requested and pass
         authorization
         '''
-        adata = self.auth_data()
+        adata = self.auth_data
         good = False
         if load.get('token', False):
             good = False
