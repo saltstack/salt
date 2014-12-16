@@ -1511,7 +1511,8 @@ def clone(name,
         Name of the original container to be cloned
 
     clone_from
-        Name of the original container to be cloned
+        Name of the original container to be cloned (added for consistency,
+        does the same thing as ``orig``)
 
         .. versionadded:: Lithium
 
@@ -1538,8 +1539,8 @@ def clone(name,
 
     .. code-block:: bash
 
-        salt '*' lxc.clone myclone clone_from=orig_container
-        salt '*' lxc.clone myclone clone_from=orig_container snapshot=True
+        salt '*' lxc.clone myclone orig=orig_container
+        salt '*' lxc.clone myclone orig=orig_container snapshot=True
     '''
     if exists(name):
         raise CommandExecutionError(
@@ -1547,8 +1548,8 @@ def clone(name,
         )
 
     if clone_from and orig:
-        log.warning('Both \'clone_from\' and \'orig\' were passed, using '
-                    'ignoring \'orig\'')
+        log.warning('Both \'clone_from\' and \'orig\' were passed, ignoring '
+                    '\'orig\'')
     elif orig and not clone_from:
         clone_from = orig
 
