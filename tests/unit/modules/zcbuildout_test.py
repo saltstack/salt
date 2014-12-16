@@ -55,6 +55,7 @@ def download_to(url, dest):
             urllib2.urlopen(url, timeout=10).read()
         )
 
+
 @skipIf(True, 'These tests are not running reliably')
 class Base(TestCase):
     @classmethod
@@ -111,6 +112,7 @@ class Base(TestCase):
             shutil.rmtree(self.tdir)
 
 
+@skipIf(True, 'These tests are not running reliably')
 @skipIf(salt.utils.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
         'The \'virtualenv\' packaged needs to be installed')
 @skip_if_binaries_missing(['tar'])
