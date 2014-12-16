@@ -202,9 +202,9 @@ def get(key, default=''):
     '''
     .. versionadded: 0.14.0
 
-    Attempt to retrieve the named value from opts, pillar, grains or the master
-    config, if the named value is not available return the passed default.
-    The default return is an empty string.
+    Attempt to retrieve the named value from the minion config file, pillar,
+    grains or the master config. If the named value is not available, return the
+    value specified by ``default``. The default return value is an empty string.
 
     The value can also represent a value in a nested dict using a ":" delimiter
     for the dict. This means that if a dict looks like this::
@@ -216,12 +216,12 @@ def get(key, default=''):
 
         pkg:apache
 
-    This routine traverses these data stores in this order:
+    This function traverses these data stores in this order:
 
-    - Local minion config (opts)
+    - Minion config file
     - Minion's grains
     - Minion's pillar
-    - Master config
+    - Master config file
 
     CLI Example:
 
