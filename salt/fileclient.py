@@ -979,17 +979,11 @@ class RemoteClient(Client):
                     return False
             fn_ = salt.utils.fopen(dest, 'wb+')
         while True:
-            init_retries = 10
             if not fn_:
                 load['loc'] = 0
             else:
                 load['loc'] = fn_.tell()
             data = self.channel.send(load)
-            if not data:
-                if init_retries:
-                    init_retries -= 1
-                    time.sleep(0.02)
-                    continue
             if 'data' not in data:
                 log.error('Data is {0}'.format(data))
             if not data['data']:
