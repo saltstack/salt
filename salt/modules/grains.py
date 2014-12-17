@@ -371,11 +371,9 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default', bas
         }, default='Debian') %}
 
         myapache:
-          pkg:
-            - installed
+          pkg.installed:
             - name: {{ apache.pkg }}
-          service:
-            - running
+          service.running:
             - name: {{ apache.srv }}
 
     Values in the lookup table may be overridden by values in Pillar. An

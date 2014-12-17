@@ -15,27 +15,23 @@ to use a YAML 'explicit key', as demonstrated in the second example below.
 .. code-block:: yaml
 
     AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyY==:
-      ssh_auth:
-        - present
+      ssh_auth.present:
         - user: root
         - enc: ssh-dss
 
     ? AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyY==...
     :
-      ssh_auth:
-        - present
+      ssh_auth.present:
         - user: root
         - enc: ssh-dss
 
     thatch:
-      ssh_auth:
-        - present
+      ssh_auth.present:
         - user: root
         - source: salt://ssh_keys/thatch.id_rsa.pub
 
     sshkeys:
-      ssh_auth:
-        - present
+      ssh_auth.present:
         - user: root
         - enc: ssh-rsa
         - options:

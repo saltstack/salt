@@ -147,17 +147,14 @@ executed when the state it is watching changes. Example:
 .. code-block:: yaml
 
     /usr/local/bin/postinstall.sh:
-      cmd:
-        - wait
+      cmd.wait:
         - watch:
           - pkg: mycustompkg
-      file:
-        - managed
+      file.managed:
         - source: salt://utils/scripts/postinstall.sh
 
     mycustompkg:
-      pkg:
-        - installed
+      pkg.installed:
         - require:
           - file: /usr/local/bin/postinstall.sh
 

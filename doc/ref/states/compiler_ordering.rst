@@ -57,16 +57,17 @@ As an example, a state written thusly:
 .. code-block:: yaml
 
     apache:
-      pkg:
-        - installed
-      service:
-        - running
+      pkg.installed:
+        - name: httpd
+      service.running:
+        - name: httpd
         - watch:
-          - file: /etc/httpd/conf.d/httpd.conf
+          - file: apache_conf
           - pkg: apache
-    /etc/httpd/conf.d/httpd.conf:
-      file:
-        - managed
+
+    apache_conf:
+      file.managed:
+        - name: /etc/httpd/conf.d/httpd.conf
         - source: salt://apache/httpd.conf
 
 Will have High Data which looks like this represented in json:
@@ -76,41 +77,50 @@ Will have High Data which looks like this represented in json:
     {
         "apache": {
             "pkg": [
+                {
+                    "name": "httpd"
+                },
                 "installed",
                 {
                     "order": 10000
                 }
             ],
             "service": [
-                "running",
+                {
+                    "name": "httpd"
+                },
                 {
                     "watch": [
                         {
-                            "file": "/etc/httpd/conf.d/httpd.conf"
+                            "file": "apache_conf"
                         },
                         {
                             "pkg": "apache"
                         }
                     ]
                 },
+                "running",
                 {
                     "order": 10001
                 }
             ],
-            "__sls__": "apache",
+            "__sls__": "blah",
             "__env__": "base"
         },
-        "/etc/httpd/conf.d/httpd.conf": {
+        "apache_conf": {
             "file": [
-                "managed",
+                {
+                    "name": "/etc/httpd/conf.d/httpd.conf"
+                },
                 {
                     "source": "salt://apache/httpd.conf"
                 },
+                "managed",
                 {
                     "order": 10002
                 }
             ],
-            "__sls__": "apache",
+            "__sls__": "blah",
             "__env__": "base"
         }
     }
@@ -121,19 +131,19 @@ The subsequent Low Data will look like this:
 
     [
         {
-            "name": "apache",
+            "name": "httpd",
             "state": "pkg",
             "__id__": "apache",
             "fun": "installed",
             "__env__": "base",
-            "__sls__": "apache",
+            "__sls__": "blah",
             "order": 10000
         },
         {
-            "name": "apache",
+            "name": "httpd",
             "watch": [
                 {
-                    "file": "/etc/httpd/conf.d/httpd.conf"
+                    "file": "apache_conf"
                 },
                 {
                     "pkg": "apache"
@@ -143,21 +153,20 @@ The subsequent Low Data will look like this:
             "__id__": "apache",
             "fun": "running",
             "__env__": "base",
-            "__sls__": "apache",
+            "__sls__": "blah",
             "order": 10001
         },
         {
             "name": "/etc/httpd/conf.d/httpd.conf",
             "source": "salt://apache/httpd.conf",
             "state": "file",
-            "__id__": "/etc/httpd/conf.d/httpd.conf",
+            "__id__": "apache_conf",
             "fun": "managed",
             "__env__": "base",
-            "__sls__": "apache",
+            "__sls__": "blah",
             "order": 10002
         }
     ]
-
 
 This tutorial discusses the Low Data evaluation and the state runtime.
 
@@ -235,8 +244,8 @@ ordering can be explicitly overridden using the `order` flag in states:
 .. code-block:: yaml
 
     apache:
-      pkg:
-        - installed
+      pkg.installed:
+        - name: httpd
         - order: 1
 
 This order flag will over ride the definition order, this makes it very

@@ -20,7 +20,7 @@ the targeting state.  The following example demonstrates a direct requisite:
 .. code-block:: yaml
 
     vim:
-      pkg.installed
+      pkg.installed: []
 
     /etc/vimrc:
       file.managed:
@@ -258,15 +258,13 @@ The ``onfail`` requisite is applied in the same way as ``require`` as ``watch``:
 .. code-block:: yaml
 
     primary_mount:
-      mount:
-        - mounted
+      mount.mounted:
         - name: /mnt/share
         - device: 10.0.0.45:/share
         - fstype: nfs
 
     backup_mount:
-      mount:
-        - mounted
+      mount.mounted:
         - name: /mnt/share
         - device: 192.168.40.34:/share
         - fstype: nfs
@@ -338,10 +336,8 @@ Using ``require``
 .. code-block:: yaml
 
     httpd:
-      pkg:
-        - installed
-      service:
-        - running
+      pkg.installed: []
+      service.running:
         - require:
           - pkg: httpd
 
@@ -350,12 +346,10 @@ Using ``require_in``
 .. code-block:: yaml
 
     httpd:
-      pkg:
-        - installed
+      pkg.installed:
         - require_in:
           - service: httpd
-      service:
-        - running
+      service.running: []
 
 The ``require_in`` statement is particularly useful when assigning a require
 in a separate sls file. For instance it may be common for httpd to require
@@ -367,10 +361,8 @@ http.sls
 .. code-block:: yaml
 
     httpd:
-      pkg:
-        - installed
-      service:
-        - running
+      pkg.installed: []
+      service.running:
         - require:
           - pkg: httpd
 
@@ -382,8 +374,7 @@ php.sls
       - http
 
     php:
-      pkg:
-        - installed
+      pkg.installed:
         - require_in:
           - service: httpd
 
@@ -395,8 +386,7 @@ mod_python.sls
       - http
 
     mod_python:
-      pkg:
-        - installed
+      pkg.installed:
         - require_in:
           - service: httpd
 
