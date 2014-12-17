@@ -793,7 +793,8 @@ class LocalClient(object):
     def get_returns_no_block(
             self,
             jid,
-            event=None):
+            event=None,
+            gather_errors=False):
         '''
         Raw function to just return events of jid excluding timeout logic
 
@@ -806,10 +807,14 @@ class LocalClient(object):
             if HAS_ZMQ:
                 try:
                     raw = event.get_event_noblock()
-                    if raw and raw.get('tag', '').startswith(jid_tag):
-                        yield raw
+                    if gather_errors:
+                        if raw and raw.get('tag', '').startswith('_salt_error') or raw.get('tag', '').startswith(jid_tag):
+                            yield raw
                     else:
-                        yield None
+                        if raw and raw.get('tag', '').startswith(jid_tag):
+                            yield raw
+                        else:
+                            yield None
                 except zmq.ZMQError as ex:
                     if ex.errno == errno.EAGAIN or ex.errno == errno.EINTR:
                         yield None
@@ -830,6 +835,7 @@ class LocalClient(object):
             tgt='*',
             tgt_type='glob',
             expect_minions=False,
+            gather_errors=True,
             **kwargs):
         '''
         Watch the event system and return job data as it comes in
@@ -860,7 +866,7 @@ class LocalClient(object):
         syndic_wait = 0
         last_time = False
         # iterator for this job's return
-        ret_iter = self.get_returns_no_block(jid)
+        ret_iter = self.get_returns_no_block(jid, gather_errors=gather_errors)
         # iterator for the info of this job
         jinfo_iter = []
         timeout_at = time.time() + timeout
@@ -878,7 +884,10 @@ class LocalClient(object):
                 # if we got None, then there were no events
                 if raw is None:
                     break
-
+                if gather_errors:
+                    if raw['tag'] == '_salt_error':
+                        ret = {raw['data']['id']: raw['data']['data']}
+                        yield ret
                 if 'minions' in raw.get('data', {}):
                     minions.update(raw['data']['minions'])
                     continue
