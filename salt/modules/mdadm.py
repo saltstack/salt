@@ -182,7 +182,7 @@ def create(name,
 
     .. code-block:: bash
 
-        salt '*' raid.create /dev/md0 level=1 chunk=256 ['/dev/xvdd', '/dev/xvde'] test_mode=True
+        salt '*' raid.create /dev/md0 level=1 chunk=256 devices="['/dev/xvdd', '/dev/xvde']" test_mode=True
 
     .. note::
 
@@ -227,14 +227,16 @@ def create(name,
         if not key.startswith('__'):
             opts.append('--{0}'.format(key))
             if kwargs[key] is not True:
-                opts.append(kwargs[key])
+                opts.append(str(kwargs[key]))
 
     cmd = ['mdadm',
            '-C', name,
            '-v'] + opts + [
-           '-l', level,
+           '-l', str(level),
            '-e', metadata,
-           '-n', len(devices)] + devices
+           '-n', str(len(devices))] + devices
+
+    cmd = ' '.join(cmd)
 
     if test_mode is True:
         return cmd
