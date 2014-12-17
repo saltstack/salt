@@ -179,6 +179,8 @@ class ThreadPool(object):
             except Queue.Empty:
                 continue
             try:
+                log.debug('ThreadPool executing func: {0} with args:{1}'
+                          ' kwargs{2}'.format(func, args, kwargs))
                 func(*args, **kwargs)
             except Exception as err:
                 log.debug(err, exc_info=True)
