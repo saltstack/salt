@@ -105,8 +105,8 @@ def latest(name,
 
     depth
         Defines depth in history when git a clone is needed in order to ensure
-        latest. E.g. ``depth: 0`` is usefull when deploying from a repository
-        with a long history. (Default: ``None``)
+        latest. E.g. ``depth: 1`` is usefull when deploying from a repository
+        with a long history. Use rev to specify branch. This is not compatible with tags or revision IDs.(Default: ``None``)
 
     identity
         A path on the minion server to a private key to use over SSH
@@ -369,6 +369,8 @@ def latest(name,
             # if depth is given add --depth <depth> to opts
             if depth is not None:
                 opts += ' --depth {0}'.format(depth)
+                if rev is not None:
+                    opts += ' --branch {0}'.format(rev)
 
             # do the clone
             __salt__['git.clone'](target,
