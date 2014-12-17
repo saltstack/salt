@@ -405,7 +405,7 @@ def latest(name,
     return ret
 
 
-def present(name, bare=True, user=None, force=False):
+def present(name, bare=True, user=None, force=False, shared=None):
     '''
     Make sure the repository is present in the given directory
 
@@ -423,6 +423,11 @@ def present(name, bare=True, user=None, force=False):
     force
         Force-create a new repository into an pre-existing non-git directory
         (deletes contents)
+
+    shared
+        Specify the permission for sharing, see git-init for details (Default: None)
+
+       .. versionadded:: XXXX
     '''
     name = os.path.expanduser(name)
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
@@ -455,6 +460,7 @@ def present(name, bare=True, user=None, force=False):
             shutil.rmtree(name)
 
     opts = '--bare' if bare else ''
+    opts += ' --shared={0}'.format(shared) if shared else ''
     __salt__['git.init'](cwd=name, user=user, opts=opts)
 
     message = 'Initialized repository {0}'.format(name)
