@@ -27,8 +27,15 @@ persistent=yes
 
 # List of plugins (as comma separated values of python modules names) to load,
 # usually to register additional checkers.
-load-plugins=salttesting.pylintplugins.pep8,salttesting.pylintplugins.pep263,salttesting.pylintplugins.strings
+load-plugins=salttesting.pylintplugins.pep8,
+  salttesting.pylintplugins.pep263,
+  salttesting.pylintplugins.strings,
+  salttesting.pylintplugins.fileperms
 
+
+# Fileperms Lint Plugin Settings
+fileperms-default=0644
+fileperms-ignore-paths=tests/runtests.py,tests/jenkins*.py,tests/saltsh.py,tests/buildpackage.py
 
 [MESSAGES CONTROL]
 
