@@ -823,7 +823,7 @@ ARGS = {8}\n'''.format(self.minion_config,
                          self.thin_dir,
                          thin_sum,
                          'sha1',
-                         salt.__version__,
+                         salt.version.__version__,
                          self.mods.get('version', ''),
                          self.wipe,
                          self.argv)
