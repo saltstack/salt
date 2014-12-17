@@ -37,9 +37,9 @@ class MdadmTestCase(TestCase):
             )
             self.assertEqual('salt', ret)
             mock.assert_called_once_with(
-                'mdadm -C /dev/md0 -v --chunk 256 --force
-                 -l 5 -e default -n 3 /dev/sdb1 /dev/sdc1
-                 /dev/sdd1', python_shell=False)
+                'mdadm -C /dev/md0 -v --chunk 256 --force '
+                '-l 5 -e default -n 3 /dev/sdb1 /dev/sdc1 '
+                '/dev/sdd1', python_shell=False)
 
     def test_create_test_mode(self):
         mock = MagicMock()
