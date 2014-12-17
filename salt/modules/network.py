@@ -41,9 +41,9 @@ def wol(mac, bcast='255.255.255.255', destport=9):
 
     .. code-block:: bash
 
-        salt \* network.wol 08-00-27-13-69-77
-        salt \* network.wol 080027136977 255.255.255.255 7
-        salt \* network.wol 08:00:27:13:69:77 255.255.255.255 7
+        salt '*' network.wol 08-00-27-13-69-77
+        salt '*' network.wol 080027136977 255.255.255.255 7
+        salt '*' network.wol 08:00:27:13:69:77 255.255.255.255 7
     '''
     if len(mac) == 12:
         pass
