@@ -496,6 +496,7 @@
 
 # The level of messages to send to the log file.
 # One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
+# If using 'log_granular_levels' this must be set to the highest desired level.
 # Default: 'warning'
 #log_level_logfile:
 

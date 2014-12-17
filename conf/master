@@ -599,6 +599,7 @@
 
 # The level of messages to send to the log file.
 # One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
+# If using 'log_granular_levels' this must be set to the highest desired level.
 #log_level_logfile: warning
 
 # The date and time format used in log messages. Allowed date/time formating
