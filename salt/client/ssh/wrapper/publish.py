@@ -231,4 +231,3 @@ def runner(fun, arg=None, timeout=5):
     # Create and run the runner
     runner = salt.runner.RunnerClient(__opts__['__master_opts__'])
     return runner.cmd(fun, arg)
-
