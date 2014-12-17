@@ -105,7 +105,7 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods=''):
                     os.remove(thintar)
                 except OSError:
                     pass
-            elif fh_.read() == salt.__version__:
+            elif fh_.read() == salt.version.__version__:
                 return thintar
     tops = [
             os.path.dirname(salt.__file__),
@@ -181,7 +181,7 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods=''):
     os.chdir(thindir)
     tfp.add('salt-call')
     with salt.utils.fopen(thinver, 'w+') as fp_:
-        fp_.write(salt.__version__)
+        fp_.write(salt.version.__version__)
     os.chdir(os.path.dirname(thinver))
     tfp.add('version')
     os.chdir(start_dir)
