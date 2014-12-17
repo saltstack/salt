@@ -501,6 +501,7 @@ class Single(object):
             thin=None,
             **kwargs):
         self.opts = opts
+        self.tty = tty
         if kwargs.get('wipe'):
             self.wipe = 'False'
         else:
@@ -768,7 +769,8 @@ OPTIONS.hashfunc = '{4}'
 OPTIONS.version = '{5}'
 OPTIONS.ext_mods = '{6}'
 OPTIONS.wipe = {7}
-ARGS = {8}\n'''.format(self.minion_config,
+OPTIONS.tty = {8}
+ARGS = {9}\n'''.format(self.minion_config,
                          RSTR,
                          self.thin_dir,
                          thin_sum,
@@ -776,6 +778,7 @@ ARGS = {8}\n'''.format(self.minion_config,
                          salt.__version__,
                          self.mods.get('version', ''),
                          self.wipe,
+                         self.tty,
                          self.argv)
         py_code = SSH_PY_SHIM.replace('#%%OPTS', arg_str)
         py_code_enc = py_code.encode('base64')
@@ -859,11 +862,19 @@ ARGS = {8}\n'''.format(self.minion_config,
                 self.deploy()
                 stdout, stderr, retcode = self.shell.exec_cmd(cmd_str)
                 if not re.search(RSTR_RE, stdout) or not re.search(RSTR_RE, stderr):
-                    # If RSTR is not seen in both stdout and stderr then there
-                    # was a thin deployment problem.
-                    return 'ERROR: Failure deploying thin: {0}\n{1}'.format(stdout, stderr), stderr, retcode
+                    if not self.tty:
+                        # If RSTR is not seen in both stdout and stderr then there
+                        # was a thin deployment problem.
+                        return 'ERROR: Failure deploying thin: {0}\n{1}'.format(stdout, stderr), stderr, retcode
+                    elif not re.search(RSTR_RE, stdout):
+                        # If RSTR is not seen in stdout with tty, then there
+                        # was a thin deployment problem.
+                        return 'ERROR: Failure deploying thin: {0}\n{1}'.format(stdout, stderr), stderr, retcode
                 stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
-                stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
+                if self.tty:
+                    stderr = ''
+                else:
+                    stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
             elif 'ext_mods' == shim_command:
                 self.deploy_ext()
                 stdout, stderr, retcode = self.shell.exec_cmd(cmd_str)
