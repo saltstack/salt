@@ -794,21 +794,21 @@ class ReactWrap(object):
 
     cmd = local
 
-    def runner(self, **kwargs):
+    def runner(self, fun, **kwargs):
         '''
         Wrap RunnerClient for executing :ref:`runner modules <all-salt.runners>`
         '''
         if 'runner' not in self.client_cache:
             self.client_cache['runner'] = salt.runner.RunnerClient(self.opts)
-        self.pool.fire_async(self.client_cache['runner'].low, kwargs)
+        self.pool.fire_async(self.client_cache['runner'].low, args=(fun, kwargs))
 
-    def wheel(self, **kwargs):
+    def wheel(self, fun, **kwargs):
         '''
         Wrap Wheel to enable executing :ref:`wheel modules <all-salt.wheel>`
         '''
         if 'wheel' not in self.client_cache:
             self.client_cache['wheel'] = salt.wheel.Wheel(self.opts)
-        self.pool.fire_async(self.client_cache['wheel'].low, kwargs)
+        self.pool.fire_async(self.client_cache['wheel'].low, args=(fun, kwargs))
 
 
 class StateFire(object):
