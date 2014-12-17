@@ -1308,6 +1308,26 @@ def images(dist=None):
     return ret
 
 
+def templates():
+    '''
+    .. versionadded:: Lithium
+
+    List the available LXC template scripts installed on the minion
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt myminion lxc.templates
+    '''
+    try:
+        template_scripts = os.listdir('/usr/share/lxc/templates')
+    except OSError:
+        return []
+    else:
+        return [x[4:] for x in template_scripts if x.startswith('lxc-')]
+
+
 def create(name,
            config=None,
            profile=None,
