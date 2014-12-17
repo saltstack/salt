@@ -13,9 +13,6 @@ PKGUTIL = "/usr/sbin/pkgutil"
 
 
 def __virtual__():
-    '''
-    Set the virtual pkg module if the os is Solaris
-    '''
     if __grains__['os'] == 'MacOS':
         return 'darwin_pkgutil'
     return False
@@ -24,6 +21,12 @@ def __virtual__():
 def list():
     '''
     List the installed packages.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' darwin_pkgutil.list
     '''
     cmd = PKGUTIL + ' --pkgs'
     return __salt__['cmd.run_stdout'](cmd)
@@ -32,6 +35,12 @@ def list():
 def is_installed(package_id):
     '''
     Returns whether a given package id is installed.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' darwin_pkgutil.is_installed com.apple.pkg.gcc4.2Leo
     '''
     def has_package_id(lines):
         for line in lines:
@@ -56,6 +65,13 @@ def _install_from_path(path):
 def install(source, package_id=None):
     '''
     Install a .pkg from an URI or an absolute path.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' darwin_pkgutil.install source=/vagrant/build_essentials.pkg \
+            package_id=com.apple.pkg.gcc4.2Leo
     '''
     if package_id is not None and is_installed(package_id):
         return ''
