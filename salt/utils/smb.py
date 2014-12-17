@@ -15,16 +15,22 @@ except ImportError:
     HAS_IMPACKET = False
 
 
-class StrHandle:
+class StrHandle(object):
     '''
     Fakes a file handle, so that raw strings may be uploaded instead of having
     to write files first. Used by put_str()
     '''
     def __init__(self, content):
+        '''
+        Init
+        '''
         self.content = content
         self.finished = False
 
     def string(self, writesize=None):
+        '''
+        Looks like a file handle
+        '''
         if not self.finished:
             self.finished = True
             return self.content
