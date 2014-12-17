@@ -28,9 +28,7 @@ class MdadmTestCase(TestCase):
         with patch.dict(mdadm.__salt__, {'cmd.run': mock}):
             ret = mdadm.create(
                     '/dev/md0', 5,
-                    devices="['/dev/sdb1',
-                     '/dev/sdc1',
-                     '/dev/sdd1']",
+                    devices=['/dev/sdb1', '/dev/sdc1', '/dev/sdd1'],
                     test_mode=False,
                     force=True,
                     chunk=256
@@ -46,16 +44,14 @@ class MdadmTestCase(TestCase):
         with patch.dict(mdadm.__salt__, {'cmd.run': mock}):
             ret = mdadm.create(
                     '/dev/md0', 5,
-                    devices="['/dev/sdb1',
-                     '/dev/sdc1',
-                     '/dev/sdd1']",
+                    devices=['/dev/sdb1', '/dev/sdc1', '/dev/sdd1'],
                     force=True,
                     chunk=256,
                     test_mode=True
             )
-            self.assertEqual(['mdadm -C /dev/md0 -v --chunk 256 '
+            self.assertEqual('mdadm -C /dev/md0 -v --chunk 256 '
                               '--force -l 5 -e default -n 3 '
-                              '/dev/sdb1 /dev/sdc1 /dev/sdd1'], ret)
+                              '/dev/sdb1 /dev/sdc1 /dev/sdd1', ret)
             assert not mock.called, 'test mode failed, cmd.run called'
 
 if __name__ == '__main__':
