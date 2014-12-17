@@ -62,9 +62,11 @@ def add(name,
         salt '*' user.add name password
     '''
     if password:
-        ret = __salt__['cmd.run_all']('net user {0} {1} /add /y'.format(name, password))
+        cmd = ['net', 'user', name, password, '/add', '/y']
+        ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     else:
-        ret = __salt__['cmd.run_all']('net user {0} /add'.format(name))
+        cmd = ['net', 'user', name, '/add']
+        ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     if groups:
         chgroups(name, groups)
     if fullname:
@@ -90,7 +92,8 @@ def delete(name,
 
         salt '*' user.delete name
     '''
-    ret = __salt__['cmd.run_all']('net user {0} /delete'.format(name))
+    cmd = ['net', 'user', name, '/delete']
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     return ret['retcode'] == 0
 
 
@@ -105,7 +108,9 @@ def setpassword(name, password):
         salt '*' user.setpassword name password
     '''
     ret = __salt__['cmd.run_all'](
-        'net user {0} {1}'.format(name, password), output_loglevel='quiet'
+        ['net', 'user', name, password],
+        output_loglevel='quiet',
+        python_shell=False
     )
     return ret['retcode'] == 0
 
@@ -126,7 +131,8 @@ def addgroup(name, group):
     if group in user['groups']:
         return True
     ret = __salt__['cmd.run_all'](
-        'net localgroup {0} {1} /add'.format(group, name)
+        ['net', 'localgroup', group, name, '/add'],
+        python_shell=False
     )
     return ret['retcode'] == 0
 
@@ -150,7 +156,8 @@ def removegroup(name, group):
         return True
 
     ret = __salt__['cmd.run_all'](
-        'net localgroup {0} {1} /delete'.format(group, name)
+        ['net', 'localgroup', group, name, '/delete'],
+        python_shell=False
     )
     return ret['retcode'] == 0
 
@@ -173,8 +180,8 @@ def chhome(name, home):
     if home == pre_info['home']:
         return True
 
-    if __salt__['cmd.retcode']('net user {0} /homedir:{1}'.format(
-            name, home)) != 0:
+    cmd = ['net', 'user', name, '/homedir:{0}'.format(home)]
+    if __salt__['cmd.retcode'](cmd, python_shell=False) != 0:
         return False
 
     post_info = info(name)
@@ -201,8 +208,8 @@ def chprofile(name, profile):
 
     if profile == pre_info['profile']:
         return True
-    if __salt__['cmd.retcode']('net user {0} /profilepath:{1}'.format(
-            name, profile)) != 0:
+    cmd = ['net', 'user', name, '/profilepath:{0}'.format(profile)]
+    if __salt__['cmd.retcode'](cmd, python_shell=False) != 0:
         return False
 
     post_info = info(name)
@@ -229,8 +236,8 @@ def chfullname(name, fullname):
 
     if fullname == pre_info['fullname']:
         return True
-    if __salt__['cmd.retcode']('net user {0} /fullname:"{1}"'.format(
-            name, fullname)) != 0:
+    cmd = ['net', 'user', name, '/fullname:{0}'.format(fullname)]
+    if __salt__['cmd.retcode'](cmd, python_shell=False) != 0:
         return False
 
     post_info = info(name)
@@ -262,14 +269,14 @@ def chgroups(name, groups, append=False):
     if not append:
         for group in ugrps:
             if group not in groups:
-                __salt__['cmd.retcode'](
-                        'net localgroup {0} {1} /delete'.format(group, name))
+                cmd = ['net', 'localgroup', group, name, '/delete']
+                __salt__['cmd.retcode'](cmd, python_shell=False)
 
     for group in groups:
         if group in ugrps:
             continue
-        __salt__['cmd.retcode'](
-                'net localgroup {0} {1} /add'.format(group, name))
+        cmd = ['net', 'localgroup', group, name, '/add']
+        __salt__['cmd.retcode'](cmd, python_shell=False)
     agrps = set(list_groups(name))
     return len(ugrps - agrps) == 0
 
