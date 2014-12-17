@@ -15,6 +15,22 @@ except ImportError:
     HAS_IMPACKET = False
 
 
+class StrHandle:
+    '''
+    Fakes a file handle, so that raw strings may be uploaded instead of having
+    to write files first. Used by put_str()
+    '''
+    def __init__(self, content):
+        self.content = content
+        self.finished = False
+
+    def string(self, writesize=None):
+        if not self.finished:
+            self.finished = True
+            return self.content
+        return ''
+
+
 def get_conn(host=None, username=None, password=None):
     '''
     Get an SMB connection
@@ -27,7 +43,7 @@ def get_conn(host=None, username=None, password=None):
     return conn
 
 
-def mkdirs_smb(path, share='C$', conn=None, host=None, username=None, password=None):
+def mkdirs(path, share='C$', conn=None, host=None, username=None, password=None):
     '''
     Recursively create a directory structure on an SMB share
 
@@ -46,3 +62,15 @@ def mkdirs_smb(path, share='C$', conn=None, host=None, username=None, password=N
         except SessionError:
             conn.createDirectory(share, cwd)
         pos += 1
+
+
+def put_str(content, path, share='C$', conn=None, host=None, username=None, password=None):
+    '''
+    Wrapper around impacket.smbconnection.putFile() that allows a string to be
+    uploaded, without first writing it as a local file
+    '''
+    if conn is None:
+        conn = get_conn(host, username, password)
+
+    fh_ = StrHandle(content)
+    conn.putFile(share, path, fh_.string)
