@@ -1922,6 +1922,7 @@ def wait_for_instance(
                     # be generated for at least 4 minutes
                     time.sleep(60)
                 else:
+                    vm_['win_password'] = win_passwd
                     break
 
         if not salt.utils.cloud.wait_for_port(ip_address,

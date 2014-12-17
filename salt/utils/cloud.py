@@ -37,6 +37,12 @@ except ImportError:
         # because that will cause issues under windows at install time.
         raise
 
+try:
+    import salt.utils.smb
+    HAS_SMB = True
+except ImportError:
+    HAS_SMB = False
+
 # Import salt libs
 import salt.crypt
 import salt.client
@@ -820,41 +826,41 @@ def deploy_windows(host,
             )
         )
         newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
+
+        smb_conn = salt.utils.smb.get_conn(host, username, password)
+
         creds = '-U {0}%{1} //{2}'.format(
             username, password, host)
-        # Shell out to smbclient to create C:\salttmp\
-        win_cmd('smbclient {0}/c$ -c "mkdir salttemp; exit;"'.format(creds))
-        # Shell out to smbclient to create C:\salt\conf\pki\minion
-        win_cmd('smbclient {0}/c$ -c "mkdir salt; mkdir salt\\conf; mkdir salt\\conf\\pki; mkdir salt\\conf\\pki\\minion; exit;"'.format(creds))
-        # Shell out to smbclient to copy over minion keys
+
+        salt.utils.smb.mkdirs('salttemp', conn=smb_conn)
+        salt.utils.smb.mkdirs('salt/conf/pki/minion', conn=smb_conn)
         ## minion_pub, minion_pem
         kwargs = {'hostname': host,
                   'creds': creds}
 
         if minion_pub:
-            smb_file('salt\\conf\\pki\\minion\\minion.pub', minion_pub, kwargs)
+            salt.utils.smb.put_str(minion_pub, 'salt\\conf\\pki\\minion\\minion.pub', conn=smb_conn)
 
         if minion_pem:
-            smb_file('salt\\conf\\pki\\minion\\minion.pem', minion_pem, kwargs)
+            salt.utils.smb.put_str(minion_pem, 'salt\\conf\\pki\\minion\\minion.pem', conn=smb_conn)
 
-        # Shell out to smbclient to copy over win_installer
+        # Copy over win_installer
         ## win_installer refers to a file such as:
         ## /root/Salt-Minion-0.17.0-win32-Setup.exe
         ## ..which exists on the same machine as salt-cloud
         comps = win_installer.split('/')
         local_path = '/'.join(comps[:-1])
         installer = comps[-1]
-        win_cmd('smbclient {0}/c$ -c "cd salttemp; prompt; lcd {1}; mput {2}; exit;"'.format(
-            creds, local_path, installer
-        ))
+        with salt.utils.fopen(win_installer, 'rb') as inst_fh:
+            smb_conn.putFile('C$', 'salttemp/{0}'.format(installer), inst_fh.read)
         # Shell out to winexe to execute win_installer
         ## We don't actually need to set the master and the minion here since
-        ## the minion config file will be set next via smb_file
+        ## the minion config file will be set next via impacket
         win_cmd('winexe {0} "c:\\salttemp\\{1} /S /master={2} /minion-name={3}"'.format(
             creds, installer, master, name
         ))
 
-        # Shell out to smbclient to copy over minion_conf
+        # Copy over minion_conf
         if minion_conf:
             if not isinstance(minion_conf, dict):
                 # Let's not just fail regarding this change, specially
@@ -866,10 +872,10 @@ def deploy_windows(host,
                 )
             minion_grains = minion_conf.pop('grains', {})
             if minion_grains:
-                smb_file(
-                    'salt\\conf\\grains',
+                salt.utils.smb.put_str(
                     salt_config_to_yaml(minion_grains, line_break='\r\n'),
-                    kwargs
+                    'salt\\conf\\grains',
+                    conn=smb_conn
                 )
             # Add special windows minion configuration
             # that must be in the minion config file
@@ -880,21 +886,16 @@ def deploy_windows(host,
                 'multiprocessing': False,
             }
             minion_conf = dict(minion_conf, **windows_minion_conf)
-            smb_file(
-                'salt\\conf\\minion',
+            salt.utils.smb.put_str(
                 salt_config_to_yaml(minion_conf, line_break='\r\n'),
-                kwargs
+                'salt\\conf\\minion',
+                conn=smb_conn
             )
-        # Shell out to smbclient to delete C:\salttmp\ and installer file
-        ## Unless keep_tmp is True
+        # Delete C:\salttmp\ and installer file
+        # Unless keep_tmp is True
         if not keep_tmp:
-            win_cmd('smbclient {0}/c$ -c "del salttemp\\{1}; prompt; exit;"'.format(
-                creds,
-                installer,
-            ))
-            win_cmd('smbclient {0}/c$ -c "rmdir salttemp; prompt; exit;"'.format(
-                creds,
-            ))
+            smb_conn.deleteFile('C$', 'salttemp/{0}'.format(installer))
+            smb_conn.deleteDirectory('C$', 'salttemp')
         # Shell out to winexe to ensure salt-minion service started
         win_cmd('winexe {0} "sc stop salt-minion"'.format(
             creds,
@@ -1518,32 +1519,6 @@ def scp_file(dest_path, contents, kwargs):
                             password_retries=3,
                             **kwargs)
     return retcode
-
-
-def smb_file(dest_path, contents, kwargs):
-    '''
-    Use smbclient to copy a file to a server
-    '''
-    tmpfh, tmppath = tempfile.mkstemp()
-    with salt.utils.fopen(tmppath, 'w') as tmpfile:
-        tmpfile.write(contents)
-
-    log.debug('Uploading {0} to {1} (smbclient)'.format(
-        dest_path, kwargs['hostname'])
-    )
-
-    # Shell out to smbclient
-    comps = tmppath.split('/')
-    src_dir = '/'.join(comps[:-1])
-    src_file = comps[-1]
-    comps = dest_path.split('\\')
-    dest_dir = '\\'.join(comps[:-1])
-    dest_file = comps[-1]
-    cmd = 'smbclient {0}/c$ -c "cd {3}; prompt; lcd {1}; del {4}; mput {2}; rename {2} {4}; exit;"'.format(
-        kwargs['creds'], src_dir, src_file, dest_dir, dest_file
-    )
-    log.debug('SMB command: {0!r}'.format(cmd))
-    win_cmd(cmd)
 
 
 def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
