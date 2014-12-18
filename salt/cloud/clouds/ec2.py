@@ -2880,7 +2880,7 @@ def _vm_provider_driver(vm_):
 
 
 def _extract_name_tag(item):
-    if 'tagSet' in item:
+    if 'tagSet' in item and item['tagSet'] is not None:
         tagset = item['tagSet']
         if isinstance(tagset['item'], list):
             for tag in tagset['item']:
