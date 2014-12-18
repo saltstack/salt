@@ -314,8 +314,11 @@ def query(params=None, setname=None, requesturl=None, location=None,
             )
 
             requesturl = 'https://{0}/'.format(endpoint)
+            endpoint = urlparse.urlparse(requesturl).netloc
+            endpoint_path = urlparse.urlparse(requesturl).path
         else:
             endpoint = _urlparse(requesturl).netloc
+            endpoint_path = urlparse.urlparse(requesturl).path
             if endpoint == '':
                 endpoint_err = (
                         'Could not find a valid endpoint in the '
@@ -347,9 +350,10 @@ def query(params=None, setname=None, requesturl=None, location=None,
         # %20, however urlencode uses '+'. So replace pluses with %20.
         querystring = querystring.replace('+', '%20')
 
-        uri = '{0}\n{1}\n/\n{2}'.format(method.encode('utf-8'),
-                                        endpoint.encode('utf-8'),
-                                        querystring.encode('utf-8'))
+        uri = '{0}\n{1}\n{2}\n{3}'.format(method.encode('utf-8'),
+                                          endpoint.encode('utf-8'),
+                                          endpoint_path.encode('utf-8'),
+                                          querystring.encode('utf-8'))
 
         hashed = hmac.new(provider['key'], uri, hashlib.sha256)
         sig = binascii.b2a_base64(hashed.digest())
