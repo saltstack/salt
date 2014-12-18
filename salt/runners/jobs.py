@@ -65,6 +65,7 @@ def lookup_jid(jid, ext_source=None, missing=False):
     returner = _get_returner((__opts__['ext_job_cache'], ext_source, __opts__['master_job_cache']))
 
     data = mminion.returners['{0}.get_jid'.format(returner)](jid)
+    out = None
     for minion in data:
         if u'return' in data[minion]:
             ret[minion] = data[minion].get(u'return')
@@ -78,7 +79,7 @@ def lookup_jid(jid, ext_source=None, missing=False):
         for minion_id in exp:
             if minion_id not in data:
                 ret[minion_id] = 'Minion did not return'
-    salt.output.display_output(ret, opts=__opts__)
+    salt.output.display_output(ret, out=out, opts=__opts__)
     return ret
 
 
