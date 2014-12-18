@@ -3838,6 +3838,13 @@ def serialize(name,
                 'result': False
                 }
 
+    if __opts__['test']:
+        ret['comment'] = (
+            'Dataset will be serialized and stored into {0}'
+        ).format(name)
+        ret['result'] = None
+        return ret
+
     return __salt__['file.manage_file'](name=name,
                                         sfn='',
                                         ret=ret,
