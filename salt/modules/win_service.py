@@ -5,7 +5,6 @@ Windows Service module.
 
 # Import python libs
 import salt.utils
-from subprocess import list2cmdline
 import time
 import logging
 try:
