@@ -48,7 +48,7 @@ def set_servers(*servers):
 
     for cmd in server_cmd, reliable_cmd, update_cmd:
         ret = __salt__['cmd.run'](cmd, python_shell=False)
-        if not 'command completed successfully' in ret:
+        if 'command completed successfully' not in ret:
             return False
 
     __salt__['service.restart'](service_name)
