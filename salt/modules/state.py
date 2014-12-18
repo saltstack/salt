@@ -491,6 +491,9 @@ def highstate(test=None,
             kwargs.get('terse'):
         ret = _filter_running(ret)
 
+    serial = salt.payload.Serial(__opts__)
+    cache_file = os.path.join(__opts__['cachedir'], 'highstate.p')
+
     # Not 100% if this should be fatal or not,
     # but I'm guessing it likely should not be.
     cumask = os.umask(077)
