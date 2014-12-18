@@ -4,47 +4,43 @@
 '''
 
 # Import Salt Testing libs
-from salttesting import TestCase, skipIf
+from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, call, Mock
-import psutil
-from defer import return_value
+from salttesting.mock import MagicMock, patch
 ensure_in_syspath('../../')
-import salt.modules.cmdmod
 
 from salt.modules import disk
-import salt.config
 #usage_size = {'filesystem': None,'1K-blocks':10000,'used':10000,'available':10000,'capacity':10000}
 
 STUB_DISK_USAGE = {
-                   '/':{'filesystem': None,'1K-blocks':10000,'used':10000,'available':10000,'capacity':10000},
-                   '/dev':{'filesystem': None,'1K-blocks':10000,'used':10000,'available':10000,'capacity':10000},
-                   '/run':{'filesystem': None,'1K-blocks':10000,'used':10000,'available':10000,'capacity':10000},
-                   '/run/lock':{'filesystem': None,'1K-blocks':10000,'used':10000,'available':10000,'capacity':10000},
-                   '/run/shm':{'filesystem': None,'1K-blocks':10000,'used':10000,'available':10000,'capacity':10000},
-                   '/run/user':{'filesystem': None,'1K-blocks':10000,'used':10000,'available':10000,'capacity':10000},
-                   '/sys/fs/cgroup':{'filesystem': None,'1K-blocks':10000,'used':10000,'available':10000,'capacity':10000}
+                   '/': {'filesystem': None, '1K-blocks': 10000, 'used': 10000, 'available': 10000, 'capacity': 10000},
+                   '/dev': {'filesystem': None, '1K-blocks': 10000, 'used': 10000, 'available': 10000, 'capacity': 10000},
+                   '/run': {'filesystem': None, '1K-blocks': 10000, 'used': 10000, 'available': 10000, 'capacity': 10000},
+                   '/run/lock': {'filesystem': None, '1K-blocks': 10000,'used': 10000, 'available': 10000, 'capacity': 10000},
+                   '/run/shm': {'filesystem': None, '1K-blocks': 10000, 'used': 10000, 'available': 10000, 'capacity': 10000},
+                   '/run/user': {'filesystem': None, '1K-blocks': 10000, 'used': 10000, 'available': 10000, 'capacity': 10000},
+                   '/sys/fs/cgroup': {'filesystem': None, '1K-blocks': 10000, 'used': 10000, 'available': 10000, 'capacity': 10000}
                    }
 
 
 STUB_DISK_INODEUSAGE = {
-                   '/':{'inodes': 10000,'used': 10000,'free': 10000,'use': 10000,'filesystem': None},
-                   '/dev':{'inodes': 10000,'used': 10000,'free': 10000,'use': 10000,'filesystem': None},
-                   '/run':{'inodes': 10000,'used': 10000,'free': 10000,'use': 10000,'filesystem': None},
-                   '/run/lock':{'inodes': 10000,'used': 10000,'free': 10000,'use': 10000,'filesystem': None},
-                   '/run/shm':{'inodes': 10000,'used': 10000,'free': 10000,'use': 10000,'filesystem': None},
-                   '/run/user':{'inodes': 10000,'used': 10000,'free': 10000,'use': 10000,'filesystem': None},
-                   '/sys/fs/cgroup':{'inodes': 10000,'used': 10000,'free': 10000,'use': 10000,'filesystem': None}
+                   '/': {'inodes': 10000,'used': 10000, 'free': 10000, 'use': 10000, 'filesystem': None},
+                   '/dev': {'inodes': 10000, 'used': 10000, 'free': 10000, 'use': 10000, 'filesystem': None},
+                   '/run': {'inodes': 10000, 'used': 10000, 'free': 10000, 'use': 10000, 'filesystem': None},
+                   '/run/lock': {'inodes': 10000, 'used': 10000, 'free': 10000, 'use': 10000, 'filesystem': None},
+                   '/run/shm': {'inodes': 10000, 'used': 10000, 'free': 10000, 'use': 10000, 'filesystem': None},
+                   '/run/user': {'inodes': 10000, 'used': 10000, 'free': 10000, 'use': 10000, 'filesystem': None},
+                   '/sys/fs/cgroup': {'inodes': 10000, 'used': 10000, 'free': 10000, 'use': 10000, 'filesystem': None}
                    }
 
 STUB_DISK_PERCENT = {
-                   '/':50,
-                   '/dev':10,
-                   '/run':10,
-                   '/run/lock':10,
-                   '/run/shm':10,
-                   '/run/user':10,
-                   '/sys/fs/cgroup':10
+                   '/': 50,
+                   '/dev': 10,
+                   '/run': 10,
+                   '/run/lock': 10,
+                   '/run/shm': 10,
+                   '/run/user': 10,
+                   '/sys/fs/cgroup': 10
                    }
 
 STUB_DISK_BLKID = {
