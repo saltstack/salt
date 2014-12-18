@@ -22,7 +22,7 @@ linux_lvm.__salt__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class AtTestCase(TestCase):
+class LinuxLVMTestCase(TestCase):
     '''
     TestCase for the salt.modules.linux_lvm module
     '''
@@ -228,4 +228,4 @@ class AtTestCase(TestCase):
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(AtTestCase, needs_daemon=False)
+    run_tests(LinuxLVMTestCase, needs_daemon=False)
