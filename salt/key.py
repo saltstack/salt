@@ -550,7 +550,7 @@ class Key(object):
         cur_keys = self.list_keys()
         for status, keys in match_dict.items():
             for key in salt.utils.isorted(keys):
-                for keydir in (self.ACC, self.PRE, self.REJ, self.DEN):
+                for keydir in (self.ACC, self.PEND, self.REJ, self.DEN):
                     if keydir and fnmatch.filter(cur_keys.get(keydir, []), key):
                         ret.setdefault(keydir, []).append(key)
         return ret
@@ -670,7 +670,7 @@ class Key(object):
             matches = match_dict
         else:
             matches = {}
-        keydirs = [self.PRE]
+        keydirs = [self.PEND]
         if include_rejected:
             keydirs.append(self.REJ)
         for keydir in keydirs:
@@ -702,12 +702,12 @@ class Key(object):
         Accept all keys in pre
         '''
         keys = self.list_keys()
-        for key in keys[self.PRE]:
+        for key in keys[self.PEND]:
             try:
                 shutil.move(
                         os.path.join(
                             self.opts['pki_dir'],
-                            self.PRE,
+                            self.PEND,
                             key),
                         os.path.join(
                             self.opts['pki_dir'],
@@ -781,7 +781,7 @@ class Key(object):
             matches = match_dict
         else:
             matches = {}
-        keydirs = [self.PRE]
+        keydirs = [self.PEND]
         if include_accepted:
             keydirs.append(self.ACC)
         for keydir in keydirs:
@@ -816,12 +816,12 @@ class Key(object):
         Reject all keys in pre
         '''
         keys = self.list_keys()
-        for key in keys[self.PRE]:
+        for key in keys[self.PEND]:
             try:
                 shutil.move(
                         os.path.join(
                             self.opts['pki_dir'],
-                            self.PRE,
+                            self.PEND,
                             key),
                         os.path.join(
                             self.opts['pki_dir'],
