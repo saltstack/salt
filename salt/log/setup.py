@@ -699,11 +699,6 @@ def __remove_temp_logging_handler():
         logging.captureWarnings(True)
 
 
-# Let's setup a global exception hook handler which will log all exceptions
-# Store a reference to the original handler
-__GLOBAL_EXCEPTION_HANDLER = sys.excepthook
-
-
 def __global_logging_exception_handler(exc_type, exc_value, exc_traceback):
     '''
     This function will log all python exceptions.
@@ -720,7 +715,7 @@ def __global_logging_exception_handler(exc_type, exc_value, exc_traceback):
         )
     )
     # Call the original sys.excepthook
-    __GLOBAL_EXCEPTION_HANDLER(exc_type, exc_value, exc_traceback)
+    sys.__excepthook__(exc_type, exc_value, exc_traceback)
 
 
 # Set our own exception handler as the one to use

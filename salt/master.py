@@ -1252,7 +1252,7 @@ class AESFuncs(object):
         if load.get('tag', '') == '_salt_error':
             log.error('Received minion error from [{minion}]: '
                       '{data}'.format(minion=load['id'],
-                                      data=load['data']['exception']))
+                                      data=load['data']['message']))
 
     def _return(self, load):
         '''
