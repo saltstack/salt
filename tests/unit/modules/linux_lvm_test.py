@@ -218,11 +218,11 @@ class AtTestCase(TestCase):
         '''
         Test to return information about the logical volume(s)
         '''
-        mock = MagicMock(return_value={'retcode':1})
+        mock = MagicMock(return_value={'retcode': 1})
         with patch.dict(linux_lvm.__salt__, {'cmd.run_all': mock}):
             self.assertDictEqual(linux_lvm.lvresize(1, 'a'), {})
 
-        mock = MagicMock(return_value={'retcode':0})
+        mock = MagicMock(return_value={'retcode': 0})
         with patch.dict(linux_lvm.__salt__, {'cmd.run_all': mock}):
             self.assertDictEqual(linux_lvm.lvresize(1, 'a'), {})
 
