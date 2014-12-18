@@ -27,9 +27,10 @@ def present(name,
             vgname=None,
             lvname=None):
     '''
-    .. versionchanged:: 2014.7.1
-        The ``lxc.created`` state has been renamed to ``lxc.present``, and the
-        ``lxc.cloned`` state has been merged into this state.
+    .. versionchanged:: Lithium
+        The :mod:`lxc.created <salt.states.lxc.created>` state has been renamed
+        to ``lxc.present``, and the :mod:`lxc.cloned <salt.states.lxc.cloned>`
+        state has been merged into this state.
 
     Create the named container if it does not exist
 
@@ -42,7 +43,7 @@ def present(name,
         * If ``None``, do nothing with regards to the running state of the
           container
 
-        .. versionadded:: 2014.7.1
+        .. versionadded:: Lithium
 
     clone_from
         Create named container as a clone of the specified container
@@ -74,7 +75,7 @@ def present(name,
             <salt.modules.lxc.images>` function.
 
     options
-        .. versionadded:: 2014.7.1
+        .. versionadded:: Lithium
 
         Template-specific options to pass to the lxc-create command. These
         correspond to the long options (ones beginning with two dashes) that
@@ -326,8 +327,9 @@ def absent(name):
 
 def running(name, restart=False):
     '''
-    .. versionchanged:: 2014.7.1
-        The ``lxc.started`` state has been renamed to ``lxc.running``
+    .. versionchanged:: Lithium
+        The :mod:`lxc.started <salt.states.lxc.started>` state has been renamed
+        to ``lxc.running``
 
     Ensure that a container is running
 
@@ -419,7 +421,7 @@ def running(name, restart=False):
 
 def frozen(name, start=True):
     '''
-    .. versionadded:: 2014.7.1
+    .. versionadded:: Lithium
 
     Ensure that a container is frozen
 
@@ -499,7 +501,7 @@ def frozen(name, start=True):
 
 def stopped(name, kill=False):
     '''
-    Ensure that a container is running
+    Ensure that a container is stopped
 
     .. note::
 
@@ -518,7 +520,7 @@ def stopped(name, kill=False):
         Older LXC versions will stop containers like this irrespective of this
         argument.
 
-        .. versionadded:: 2014.7.1
+        .. versionadded:: Lithium
 
     .. code-block:: yaml
 
@@ -573,7 +575,8 @@ def stopped(name, kill=False):
 # Deprecated states
 def created(name, **kwargs):
     '''
-    State has been renamed, show deprecation notice
+    .. deprecated:: Lithium
+        Use :mod:`lxc.present <salt.states.lxc.present>`
     '''
     salt.utils.warn_until(
         'Boron',
@@ -581,6 +584,19 @@ def created(name, **kwargs):
         'lxc.present'
     )
     return present(name, **kwargs)
+
+
+def started(name, restart=False):
+    '''
+    .. deprecated:: Lithium
+        Use :mod:`lxc.running <salt.states.lxc.running>`
+    '''
+    salt.utils.warn_until(
+        'Boron',
+        'The lxc.started state has been renamed to lxc.running, please use '
+        'lxc.running'
+    )
+    return running(name, restart=restart)
 
 
 def cloned(name, orig, **kwargs):
