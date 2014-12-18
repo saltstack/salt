@@ -1137,7 +1137,7 @@ def replace(path,
 
             line = line.strip()
 
-            if ( prepend_if_not_found or append_if_not_found ) and not_found_content:
+            if (prepend_if_not_found or append_if_not_found) and not_found_content:
                 if line == not_found_content:
                     if search_only:
                         return True
