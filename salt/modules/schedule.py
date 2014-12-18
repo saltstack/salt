@@ -95,7 +95,7 @@ def list_(show_all=False, return_yaml=True):
         else:
             return schedule
     else:
-        return None
+        return {'schedule': {}}
 
 
 def purge(**kwargs):

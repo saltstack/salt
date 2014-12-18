@@ -183,16 +183,12 @@ class Authorize(object):
         else:
             self.loadauth = loadauth
 
+    @property
     def auth_data(self):
         '''
         Gather and create the authorization data sets
         '''
-        auth_data = self.opts['external_auth']
-        #for auth_back in self.opts.get('external_auth_sources', []):
-        #    fstr = '{0}.perms'.format(auth_back)
-        #    if fstr in self.loadauth.auth:
-        #        auth_data.append(getattr(self.loadauth.auth)())
-        return auth_data
+        return self.opts['external_auth']
 
     def token(self, adata, load):
         '''
@@ -265,28 +261,25 @@ class Authorize(object):
         '''
         Determine what type of authentication is being requested and pass
         authorization
+
+        Note: this will check that the user has at least one right that will let
+        him execute "load", this does not deal with conflicting rules
         '''
-        adata = self.auth_data()
-        good = False
         if load.get('token', False):
-            good = False
-            for sub_auth in self.token(adata, load):
+            for sub_auth in self.token(self.auth_data, load):
                 if sub_auth:
                     if self.rights_check(
                             form,
-                            adata[sub_auth['token']['eauth']],
+                            self.auth_data[sub_auth['token']['eauth']],
                             sub_auth['token']['name'],
                             load,
                             sub_auth['token']['eauth']):
-                        good = True
-            if not good:
-                log.warning(
-                    'Authentication failure of type "token" occurred.'
-                )
-                return False
+                        return True
+            log.warning(
+                'Authentication failure of type "token" occurred.'
+            )
         elif load.get('eauth'):
-            good = False
-            for sub_auth in self.eauth(adata, load):
+            for sub_auth in self.eauth(self.auth_data, load):
                 if sub_auth:
                     if self.rights_check(
                             form,
@@ -294,13 +287,11 @@ class Authorize(object):
                             sub_auth['name'],
                             load,
                             load['eauth']):
-                        good = True
-            if not good:
-                log.warning(
-                    'Authentication failure of type "eauth" occurred.'
-                )
-                return False
-        return good
+                        return True
+            log.warning(
+                'Authentication failure of type "eauth" occurred.'
+            )
+        return False
 
 
 class Resolver(object):

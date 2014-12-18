@@ -20,6 +20,7 @@ import salt.utils
 
 # Globals
 at.__grains__ = {}
+at.__salt__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -135,6 +136,65 @@ class AtTestCase(TestCase):
                                         'tag': '',
                                         'time': '19:48:47',
                                         'user': 'B'}]})
+
+    @patch('salt.modules.at.atq', MagicMock(return_value=atq_output))
+    def test_at(self):
+        """
+        Tests for add a job to the queue.
+        """
+        self.assertDictEqual(at.at(), {'jobs': []})
+
+        with patch.object(salt.utils, 'which', return_value=None):
+            self.assertEqual(at.at('12:05am', '/sbin/reboot', tag='reboot'),
+                             "'at.at' is not available.")
+
+        with patch.object(salt.utils, 'which', return_value=True):
+            with patch.dict(at.__grains__, {'os_family': 'RedHat'}):
+                mock = MagicMock(return_value=None)
+                with patch.dict(at.__salt__, {'cmd.run': mock}):
+                    self.assertEqual(at.at('12:05am', '/sbin/reboot',
+                                           tag='reboot'),
+                                     "'at.at' is not available.")
+
+                mock = MagicMock(return_value='Garbled time')
+                with patch.dict(at.__salt__, {'cmd.run': mock}):
+                    self.assertDictEqual(at.at('12:05am', '/sbin/reboot',
+                                               tag='reboot'),
+                                         {'jobs': [],
+                                          'error': 'invalid timespec'})
+
+                mock = MagicMock(return_value='warning: commands\nA B')
+                with patch.dict(at.__salt__, {'cmd.run': mock}):
+                    with patch.dict(at.__grains__, {'os': 'OpenBSD'}):
+                        self.assertDictEqual(at.at('12:05am', '/sbin/reboot',
+                                                   tag='reboot'),
+                                             {'jobs': [{'date': '2014-12-11',
+                                                        'job': 101,
+                                                        'queue': 'A',
+                                                        'tag': '',
+                                                        'time': '19:48:47',
+                                                        'user': 'B'}]})
+
+            with patch.dict(at.__grains__, {'os_family': ''}):
+                mock = MagicMock(return_value=None)
+                with patch.dict(at.__salt__, {'cmd.run': mock}):
+                    self.assertEqual(at.at('12:05am', '/sbin/reboot',
+                                           tag='reboot'),
+                                     "'at.at' is not available.")
+
+    def test_atc(self):
+        """
+            Tests for atc
+        """
+        with patch.object(at, '_cmd', return_value=None):
+            self.assertEqual(at.atc(101), '\'at.atc\' is not available.')
+
+        with patch.object(at, '_cmd', return_value=''):
+            self.assertDictEqual(at.atc(101), {'error': 'invalid job id 101'})
+
+        with patch.object(at, '_cmd',
+                          return_value='101\tThu Dec 11 19:48:47 2014 A B'):
+            self.assertEqual(at.atc(101), '101\tThu Dec 11 19:48:47 2014 A B')
 
 if __name__ == '__main__':
     from integration import run_tests

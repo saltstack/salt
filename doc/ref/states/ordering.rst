@@ -61,8 +61,7 @@ These requisite statements are applied to a specific state declaration:
 .. code-block:: yaml
 
     httpd:
-      pkg:
-        - installed
+      pkg.installed: []
       file.managed:
         - name: /etc/httpd/conf/httpd.conf
         - source: salt://httpd/httpd.conf
@@ -91,10 +90,8 @@ the discrete states are split or groups into separate sls files:
       - network
 
     httpd:
-      pkg:
-        - installed
-      service:
-        - running
+      pkg.installed: []
+      service.running:
         - require:
           - pkg: httpd
           - sls: network
@@ -121,8 +118,7 @@ more requisites. Both requisite types can also be separately declared:
 .. code-block:: yaml
 
     httpd:
-      pkg:
-        - installed
+      pkg.installed: []
       service.running:
         - enable: True
         - watch:
@@ -136,10 +132,8 @@ more requisites. Both requisite types can also be separately declared:
         - source: salt://httpd/httpd.conf
         - require:
           - pkg: httpd
-      user:
-        - present
-      group:
-        - present
+      user.present: []
+      group.present: []
 
 In this example, the httpd service is only going to be started if the package,
 user, group, and file are executed successfully.

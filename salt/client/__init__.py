@@ -895,6 +895,8 @@ class LocalClient(object):
                     ret = {raw['data']['id']: {'ret': raw['data']['return']}}
                     if 'out' in raw['data']:
                         ret[raw['data']['id']]['out'] = raw['data']['out']
+                    if 'retcode' in raw['data']:
+                        ret[raw['data']['id']]['retcode'] = raw['data']['retcode']
                     if kwargs.get('_cmd_meta', False):
                         ret[raw['data']['id']].update(raw['data'])
                     log.debug('jid {0} return from {1}'.format(jid, raw['data']['id']))
@@ -1270,8 +1272,12 @@ class LocalClient(object):
                 break
             if 'minions' in raw.get('data', {}):
                 continue
-            found.add(raw['id'])
-            ret = {raw['id']: {'ret': raw['return']}}
+            try:
+                found.add(raw['id'])
+                ret = {raw['id']: {'ret': raw['return']}}
+            except KeyError:
+                # Ignore other erroneous messages
+                continue
             if 'out' in raw:
                 ret[raw['id']]['out'] = raw['out']
             yield ret

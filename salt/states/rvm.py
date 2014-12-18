@@ -15,8 +15,7 @@ configuration could look like:
 .. code-block:: yaml
 
     rvm:
-      group:
-        - present
+      group.present: []
       user.present:
         - gid: rvm
         - home: /home/rvm
@@ -25,7 +24,7 @@ configuration could look like:
 
     rvm-deps:
       pkg.installed:
-        - names:
+        - pkgs:
           - bash
           - coreutils
           - gzip
@@ -38,7 +37,7 @@ configuration could look like:
 
     mri-deps:
       pkg.installed:
-        - names:
+        - pkgs:
           - build-essential
           - openssl
           - libreadline6
@@ -65,7 +64,7 @@ configuration could look like:
 
     jruby-deps:
       pkg.installed:
-        - names:
+        - pkgs:
           - curl
           - g++
           - openjdk-6-jre-headless

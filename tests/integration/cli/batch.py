@@ -27,11 +27,15 @@ class BatchTest(integration.ShellCase):
                "Executing run on ['sub_minion']",
                '',
                'sub_minion:',
+               'retcode:',
+               '    0',
                '    batch testing',
                '',
                "Executing run on ['minion']",
                '',
                'minion:',
+               'retcode:',
+               '    0',
                '    batch testing']
         ret = sorted(ret)
         cmd = sorted(self.run_salt('\'*\' test.echo \'batch testing\' -b 50%'))

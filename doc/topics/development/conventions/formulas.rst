@@ -117,8 +117,7 @@ package until after the EPEL repository has also been installed:
       - epel
 
     python26:
-      pkg:
-        - installed
+      pkg.installed:
         - require:
           - pkg: epel
 
@@ -220,19 +219,513 @@ on GitHub.
     manage which repositories they are subscribed to on GitHub's watching page:
     https://github.com/watching.
 
-Abstracting platform-specific data
-----------------------------------
+Style
+-----
 
-It is useful to have a single source for platform-specific or other static
-information that can be reused throughout a Formula. Such a file should be
-named :file:`map.jinja` and live alongside the state files.
+Maintainability, readability, and reusability are all marks of a good Salt sls
+file. This section contains several suggestions and examples.
 
-The following is an example from the MySQL Formula. It is a simple dictionary
-that serves as a lookup table (sometimes called a hash map or a dictionary).
+.. code-block:: yaml
+
+    # Deploy the stable master branch unless version overridden by passing
+    # Pillar at the CLI or via the Reactor.
+
+    deploy_myapp:
+      git.latest:
+        - name: git@github.com/myco/myapp.git
+        - version: {{ salt.pillar.get('myapp:version', 'master') }}
+
+Use a descriptive State ID
+``````````````````````````
+
+The ID of a state is used as a unique identifier that may be referenced via
+other states in :ref:`requisites <requisites>`. It must be unique across the
+whole state tree (:ref:`it is a key in a dictionary <id-declaration>`, after
+all).
+
+In addition a state ID should be descriptive and serve as a high-level hint of
+what it will do, or manage, or change. For example, ``deploy_webapp``, or
+``apache``, or ``reload_firewall``.
+
+Use ``module.function`` notation
+````````````````````````````````
+
+So-called "short-declaration" notation is preferred for referencing state
+modules and state functions. It provides a consistent pattern of
+``module.function`` shared between Salt States, the Reactor, Overstate, Salt
+Mine, the Scheduler, as well as with the CLI.
+
+.. code-block:: yaml
+
+    # Do
+    apache:
+      pkg.installed:
+        - name: httpd
+
+    # Don't
+    apache:
+      pkg:
+        - installed
+        - name: httpd
+
+Salt's state compiler will transform "short-decs" into the longer format
+:ref:`when compiling the human-friendly highstate structure into the
+machine-friendly lowstate structure <state-layers>`.
+
+Specify the ``name`` parameter
+``````````````````````````````
+
+Use a unique and permanent identifier for the state ID and reserve ``name`` for
+data with variability.
+
+The :ref:`name declaration <name-declaration>` is a required parameter for all
+state functions. The state ID will implicitly be used as ``name`` if it is not
+explicitly set in the state.
+
+In many state functions the ``name`` parameter is used for data that varies
+such as OS-specific package names, OS-specific file system paths, repository
+addresses, etc. Any time the ID of a state changes all references to that ID
+must also be changed. Use a permanent ID when writing a state the first time to
+future-proof that state and allow for easier refactors down the road.
+
+Comment state files
+```````````````````
+
+YAML allows comments at varying indentation levels. It is a good practice to
+comment state files. Use vertical whitespace to visually separate different
+concepts or actions.
+
+.. code-block:: yaml
+
+    # Start with a high-level description of the current sls file.
+    # Explain the scope of what it will do or manage.
+
+    # Comment individual states as necessary.
+    update_a_config_file:
+      # Provide details on why an unusual choice was made. For example:
+      #
+      # This template is fetched from a third-party and does not fit our
+      # company norm of using Jinja. This must be processed using Mako.
+      file.managed:
+        - name: /path/to/file.cfg
+        - source: salt://path/to/file.cfg.template
+        - template: mako
+
+      # Provide a description or explanation that did not fit within the state
+      # ID. For example:
+      #
+      # Update the application's last-deployed timestamp.
+      # This is a workaround until Bob configures Jenkins to automate RPM
+      # builds of the app.
+      cmd.run:
+        # FIXME: Joe needs this to run on Windows by next quarter. Switch these
+        # from shell commands to Salt's file.managed and file.replace state
+        # modules.
+        - name: |
+            touch /path/to/file_last_updated
+            sed -e 's/foo/bar/g' /path/to/file_environment
+        - onchanges:
+          - file: a_config_file
+
+Be careful to use Jinja comments for commenting Jinja code and YAML comments
+for commenting YAML code.
+
+.. code-block:: jinja
+
+    # BAD EXAMPLE
+    # The Jinja in this YAML comment is still executed!
+    # {% set apache_is_installed = 'apache' in salt.pkg.list_pkgs() %}
+
+    # GOOD EXAMPLE
+    # The Jinja in this Jinja comment will not be executed.
+    {# {% set apache_is_installed = 'apache' in salt.pkg.list_pkgs() %} #}
+
+Easy on the Jinja!
+------------------
+
+Jinja templating provides vast flexibility and power when building Salt sls
+files. It can also create an unmaintainable tangle of logic and data. Speaking
+broadly, Jinja is best used when kept apart from the states (as much as is
+possible).
+
+Below are guidelines and examples of how Jinja can be used effectively.
+
+Know the evaluation and execution order
+```````````````````````````````````````
+
+High-level knowledge of how Salt states are compiled and run is useful when
+writing states.
+
+The default :conf_minion:`renderer` setting in Salt is Jinja piped to YAML.
+Each is a separate step. Each step is not aware of the previous or following
+step. Jinja is not YAML aware, YAML is not Jinja aware; they cannot share
+variables or interact.
+
+* Whatever the Jinja step produces must be valid YAML.
+* Whatever the YAML step produces must be a valid :ref:`highstate data
+  structure <states-highstate-example>`. (This is also true of the final step
+  for :ref:`any of the alternate renderers <all-salt.renderers>` in Salt.)
+* Highstate can be thought of as a human-friendly data structure; easy to write
+  and easy to read.
+* Salt's state compiler validates the highstate and compiles it to low state.
+* Low state can be thought of as a machine-friendly data structure. It is a
+  list of dictionaries that each map directly to a function call.
+* Salt's state system finally starts and executes on each "chunk" in the low
+  state. Remember that requisites are evaluated at runtime.
+* The return for each function call is added to the "running" dictionary which
+  is the final output at the end of the state run.
+
+The full evaluation and execution order::
+
+    Jinja -> YAML -> Highstate -> low state -> execution
+
+Avoid changing the underlying system with Jinja
+```````````````````````````````````````````````
+
+Avoid calling commands from Jinja that change the underlying system. Commands
+run via Jinja do not respect Salt's dry-run mode (``test=True``)! This is
+usually in conflict with the idempotent nature of Salt states unless the
+command being run is also idempotent.
+
+Inspect the local system
+````````````````````````
+
+A common use for Jinja in Salt states is to gather information about the
+underlying system. The ``grains`` dictionary available in the Jinja context is
+a great example of common data points that Salt itself has already gathered.
+Less common values are often found by running commands. For example:
+
+.. code-block:: jinja
+
+    {% set is_selinux_enabled = salt.cmd.run('sestatus') == '1' %}
+
+This is usually best done with a variable assignment in order to separate the
+data from the state that will make use of the data.
+
+Gather external data
+````````````````````
+
+One of the most common uses for Jinja is to pull external data into the state
+file. External data can come from anywhere like API calls or database queries,
+but it most commonly comes from flat files on the file system or Pillar data
+from the Salt Master. For example:
+
+.. code-block:: jinja
+
+    {% set some_data = salt.pillar.get('some_data', {'sane default': True}) %}
+
+    {# or #}
+
+    {% load_json 'path/to/file.json' as some_data %}
+
+    {# or #}
+
+    {% load_text 'path/to/ssh_key.pub' as ssh_pub_key %}
+
+    {# or #}
+
+    {% from 'path/to/other_file.jinja' import some_data with context %}
+
+This is usually best done with a variable assignment in order to separate the
+data from the state that will make use of the data.
+
+Light conditionals and looping
+``````````````````````````````
+
+Jinja is extremely powerful for programatically generating Salt states. It is
+also easy to overuse. As a rule of thumb, if it is hard to read it will be hard
+to maintain!
+
+Separate Jinja control-flow statements from the states as much as is possible
+to create readable states. Limit Jinja within states to simple variable
+lookups.
+
+Below is a simple example of a readable loop:
+
+.. code-block:: yaml
+
+    {% for user in salt.pillar.get('list_of_users', []) %}
+
+    {# Ensure unique state IDs when looping. #}
+    {{ user.name }}-{{ loop.index }}:
+      user.present:
+        - name: {{ user.name }}
+        - shell: {{ user.shell }}
+
+    {% endfor %}
+
+Avoid putting a Jinja conditionals within Salt states where possible.
+Readability suffers and the correct YAML indentation is difficult to see in the
+surrounding visual noise. Parameterization (discussed below) and variables are
+both useful techniques to avoid this. For example:
+
+.. code-block:: yaml
+
+    {# ---- Bad example ---- #}
+
+    apache:
+      pkg.installed:
+        {% if grains.os_family == 'RedHat' %}
+        - name: httpd
+        {% elif grains.os_family == 'Debian' %}
+        - name: apache2
+        {% endif %}
+
+    {# ---- Better example ---- #}
+
+    {% if grains.os_family == 'RedHat' %}
+    {% set name = 'httpd' %}
+    {% elif grains.os_family == 'Debian' %}
+    {% set name = 'apache2' %}
+    {% endif %}
+
+     apache:
+      pkg.installed:
+        - name: {{ name }}
+
+    {# ---- Good example ---- #}
+
+    {% set name = {
+        'RedHat': 'httpd',
+        'Debian': 'apache2',
+    }.get(grains.os_family) %}
+
+     apache:
+      pkg.installed:
+        - name: {{ name }}
+
+Dictionaries are useful to effectively "namespace" a collection of variables.
+This is useful with parameterization (discussed below). Dictionaries are also
+easily combined and merged. And they can be directly serialized into YAML which
+is often easier than trying to create valid YAML through templating. For
+example:
+
+.. code-block:: yaml
+
+    {# ---- Bad example ---- #}
+
+    haproxy_conf:
+      file.managed:
+        - name: /etc/haproxy/haproxy.cfg
+        - template: jinja
+        {% if 'external_loadbalancer' in grains.roles %}
+        - source: salt://haproxy/external_haproxy.cfg
+        {% elif 'internal_loadbalancer' in grains.roles %}
+        - source: salt://haproxy/internal_haproxy.cfg
+        {% endif %}
+        - context:
+            {% if 'external_loadbalancer' in grains.roles %}
+            ssl_termination: True
+            {% elif 'internal_loadbalancer' in grains.roles %}
+            ssl_termination: False
+            {% endif %}
+
+    {# ---- Better example ---- #}
+
+    {% load_yaml as haproxy_defaults %}
+    common_settings:
+      bind_port: 80
+
+    internal_loadbalancer:
+      source: salt://haproxy/internal_haproxy.cfg
+      settings:
+        bind_port: 8080
+        ssl_termination: False
+
+    external_loadbalancer:
+      source: salt://haproxy/external_haproxy.cfg
+      settings:
+        ssl_termination: True
+    {% endload %}
+
+    {% if 'external_loadbalancer' in grains.roles %}
+    {% set haproxy = haproxy_defaults['external_loadbalancer'] %}
+    {% elif 'internal_loadbalancer' in grains.roles %}
+    {% set haproxy = haproxy_defaults['internal_loadbalancer'] %}
+    {% endif %}
+
+    {% do haproxy.settings.update(haproxy_defaults.common_settings) %}
+
+    haproxy_conf:
+      file.managed:
+        - name: /etc/haproxy/haproxy.cfg
+        - template: jinja
+        - source: {{ haproxy.source }}
+        - context: {{ haproxy.settings | yaml() }}
+
+There is still room for improvement in the above example. For example,
+extracting into an external file or replacing the if-elif conditional with a
+function call to filter the correct data more succinctly. However, the state
+itself is simple and legible, the data is separate and also simple and legible.
+And those suggested improvements can be made at some future date without
+altering the state at all!
+
+Avoid heavy logic and programming
+`````````````````````````````````
+
+Jinja is not Python. It was made by Python programmers and shares many
+semantics and some syntax but it does not allow for abitrary Python function
+calls or Python imports. Jinja is a fast and efficient templating language but
+the syntax can be verbose and visually noisy.
+
+Once Jinja use within an sls file becomes slightly complicated -- long chains
+of if-elif-elif-else statements, nested conditionals, complicated dictionary
+merges, wanting to use sets -- instead consider using a different Salt
+renderer, such as the Python renderer. As a rule of thumb, if it is hard to
+read it will be hard to maintain -- switch to a format that is easier to read.
+
+Using alternate renderers is very simple to do using Salt's "she-bang" syntax
+at the top of the file. The Python renderer must simply return the correct
+:ref:`highstate data structure <states-highstate-example>`. The following
+example is a state tree of two sls files, one simple and one complicated. 
+
+``/srv/salt/top.sls``:
+
+.. code-block:: yaml
+
+    base:
+      '*':
+        - common_configuration
+        - roles_configuration
+
+``/srv/salt/common_configuration.sls``:
+
+.. code-block:: yaml
+
+    common_users:
+      user.present:
+        - names: [larry, curly, moe]
+
+``/srv/salt/roles_configuration``:
+
+.. code-block:: python
+
+    #!py
+    def run():
+        list_of_roles = set()
+
+        # This example has the minion id in the form 'web-03-dev'.
+        # Easily access the grains dictionary:
+        try:
+            app, instance_number, environment = __grains__['id'].split('-')
+            instance_number = int(instance_number)
+        except ValueError:
+            app, instance_number, environment = ['Unknown', 0, 'dev']
+
+        list_of_roles.add(app)
+
+        if app == 'web' and environment == 'dev':
+            list_of_roles.add('primary')
+            list_of_roles.add('secondary')
+        elif app == 'web' and environment == 'staging':
+            if instance_number == 0:
+                list_of_roles.add('primary')
+            else:
+                list_of_roles.add('secondary')
+
+        # Easily cross-call Salt execution modules:
+        if __salt__['myutils.query_valid_ec2_instance']():
+            list_of_roles.add('is_ec2_instance')
+
+        return {
+            'set_roles_grains': {
+                'grains.present': [
+                    {'name': 'roles'},
+                    {'value': list(list_of_roles)},
+                ],
+            },
+        }
+
+Jinja Macros
+````````````
+
+In Salt sls files Jinja macros are useful for one thing and one thing only:
+creating mini templates that can be reused and rendered on demand. Do not fall
+into the trap of thinking of macros as functions; Jinja is not Python (see
+above).
+
+Macros are useful for creating reusable, parameterized states. For example:
+
+.. code-block:: yaml
+
+    {% macro user_state(state_id, user_name, shell='/bin/bash', groups=[]) %}
+    {{ state_id }}:
+      user.present:
+        - name: {{ user_name }}
+        - shell: {{ shell }}
+        - groups: {{ groups | json() }}
+    {% endmacro %}
+
+    {% for user_info in salt.pillar.get('my_users', []) %}
+    {{ user_state('user_number_' ~ loop.index, **user_info) }}
+    {% endfor %}
+
+Macros are also useful for creating one-off "serializers" that can accept a
+data structure and write that out as a domain-specific configuration file. For
+example, the following macro could be used to write a php.ini config file:
+
+``/srv/salt/php.sls``:
+
+.. code-block:: yaml
+
+    php_ini:
+      file.managed:
+        - name: /etc/php.ini
+        - source: salt://php.ini.tmpl
+        - template: jinja
+        - context:
+            php_ini_settings: {{ salt.pillar.get('php_ini', {}) | json() }}
+
+``/srv/pillar/php.sls``:
+
+.. code-block:: yaml
+
+    PHP:
+      engine: 'On'
+      short_open_tag: 'Off'
+      error_reporting: 'E_ALL & ~E_DEPRECATED & ~E_STRICT'
+
+``/srv/salt/php.ini.tmpl``:
+
+.. code-block:: jinja
+
+    {% macro php_ini_serializer(data) %}
+    {% for section_name, name_val_pairs in data.items() %}
+    [{{ section }}]
+    {% for name, val in name_val_pairs.items() %}
+    {{ name }} = "{{ val }}"
+    {% endfor %}
+    {% endfor %}
+    {% endmacro %}
+
+    ; File managed by Salt at <{{ source }}>.
+    ; Your changes will be overwritten.
+
+    {{ php_ini_serializer(php_ini_settings) }}
+
+Abstracting static defaults into a lookup table
+-----------------------------------------------
+
+Separate data that a state uses from the state itself to increases the
+flexibility and reusability of a state.
+
+An obvious and common example of this is platform-specific package names and
+file system paths. Another example is sane defaults for an application, or
+common settings within a company or organization. Organizing such data as a
+dictionary (aka hash map, lookup table, associative array) often provides a
+lightweight namespacing and allows for quick and easy lookups. In addition,
+using a dictionary allows for easily merging and overriding static values
+within a lookup table with dynamic values fetched from Pillar.
+
+A strong convention in Salt Formulas is to place platform-specific data, such
+as package names and file system paths, into a file named :file:`map.jinja`
+that is placed alongside the state files.
+
+The following is an example from the MySQL Formula.
 The :py:func:`grains.filter_by <salt.modules.grains.filter_by>` function
 performs a lookup on that table using the ``os_family`` grain (by default).
 
-The result is that the ``mysql`` variable is assigned to one of *subsets* of
+The result is that the ``mysql`` variable is assigned to a *subset* of
 the lookup table for the current platform. This allows states to reference, for
 example, the name of a package without worrying about the underlying OS. The
 syntax for referencing a value is a normal dictionary lookup in Jinja, such as
@@ -274,11 +767,9 @@ state file using the following syntax:
     {% from "mysql/map.jinja" import mysql with context %}
 
     mysql-server:
-      pkg:
-        - installed
+      pkg.installed:
         - name: {{ mysql.server }}
-      service:
-        - running
+      service.running:
         - name: {{ mysql.service }}
 
 Collecting common values
@@ -321,11 +812,13 @@ different from the base must be specified of the alternates:
 Overriding values in the lookup table
 `````````````````````````````````````
 
-Any value in the lookup table may be overridden using Pillar.
+Allow static values within lookup tables to be overridden. This is a simple
+pattern which once again increases flexibility and reusability for state files.
 
-The ``merge`` keyword specifies the location of a dictionary in Pillar that can
-be used to override values returned from the lookup table. If the value exists
-in Pillar it will take precedence.
+The ``merge`` argument in :py:func:`filter_by <salt.modules.grains.filter_by>`
+specifies the location of a dictionary in Pillar that can be used to override
+values returned from the lookup table. If the value exists in Pillar it will
+take precedence.
 
 This is useful when software or configuration files is installed to
 non-standard locations or on unsupported platforms. For example, the following
@@ -369,6 +862,159 @@ Pillar would replace the ``config`` value from the call above.
       zap: "The word of the day is \"salty\"."
       zip: "\"The quick brown fox . . .\""
 
+The :py:func:`filter_by <salt.modules.grains.filter_by>` function performs a
+simple dictionary lookup but also allows for fetching data from Pillar and
+overriding data stored in the lookup table. That same workflow can be easily
+performed without using ``filter_by``; other dictionaries besides data from
+Pillar can also be used.
+
+.. code-block:: jinja
+
+    {% set lookup_table = {...} %}
+    {% do lookup_table.update(salt.pillar.get('my:custom:data')) %}
+
+When to use lookup tables
+`````````````````````````
+
+The ``map.jinja`` file is only a convention within Salt Formulas. This greater
+pattern is useful for a wide variety of data in a wide variety of workflows.
+This pattern is not limited to pulling data from a single file or data source.
+This pattern is useful in States, Pillar, the Reactor, and Overstate as well.
+
+Working with a data structure instead of, say, a config file allows the data to
+be cobbled together from multiple sources (local files, remote Pillar, database
+queries, etc), combined, overridden, and searched.
+
+Below are a few examples of what lookup tables may be useful for and how they
+may be used and represented.
+
+Platform-specific information
+.............................
+
+An obvious pattern and one used heavily in Salt Formulas is extracting
+platform-specific information such as package names and file system paths in
+a file named ``map.jinja``. The pattern is explained in detail above.
+
+Sane defaults
+.............
+
+Application settings can be a good fit for this pattern. Store default
+settings along with the states themselves and keep overrides and sensitive
+settings in Pillar. Combine both into a single dictionary and then write the
+application config or settings file.
+
+The example below stores most of the Apache Tomcat ``server.xml`` file
+alongside the Tomcat states and then allows values to be updated or augmented
+via Pillar. (This example uses the BadgerFish format for transforming JSON to
+XML.)
+
+``/srv/salt/tomcat/defaults.yaml``:
+
+.. code-block:: yaml
+
+    Server:
+      '@port': '8005'
+      '@shutdown': SHUTDOWN
+      GlobalNamingResources:
+        Resource:
+          '@auth': Container
+          '@description': User database that can be updated and saved
+          '@factory': org.apache.catalina.users.MemoryUserDatabaseFactory
+          '@name': UserDatabase
+          '@pathname': conf/tomcat-users.xml
+          '@type': org.apache.catalina.UserDatabase
+      # <...snip...>
+
+``/srv/pillar/tomcat.sls``:
+
+.. code-block:: yaml
+
+    appX:
+      server_xml_overrides:
+        Server:
+          Service:
+            '@name': Catalina
+            Connector:
+              '@port': '8009'
+              '@protocol': AJP/1.3
+              '@redirectPort': '8443'
+              # <...snip...>
+
+``/srv/salt/tomcat/server_xml.sls``:
+
+.. code-block:: yaml
+
+    {% load_yaml 'tomcat/defaults.yaml' as server_xml_defaults %}
+    {% set server_xml_final_values = salt.pillar.get(
+        'appX:server_xml_overrides', 
+        default=server_xml_defaults,
+        merge=True)
+    %}
+
+    appX_server_xml:
+      file.serialize:
+        - name: /etc/tomcat/server.xml
+        - dataset: {{ server_xml_final_values | json() }}
+        - formatter: xml_badgerfish
+
+The :py:func:`file.serialize <salt.states.file.serialize>` state can provide a
+shorthand for creating some files from data structures. There are also many
+examples within Salt Formulas of creating one-off "serializers" (often as Jinja
+macros) that reformat a data structure to a specific config file format. For
+example, `Nginx vhosts`__ or the `php.ini`__
+
+__: https://github.com/saltstack-formulas/nginx-formula/blob/5cad4512/nginx/ng/vhosts_config.sls
+__: https://github.com/saltstack-formulas/php-formula/blob/82e2cd3a/php/ng/files/php.ini
+
+Environment specific information
+................................
+
+A single state can be reused when it is parameterized as described in the
+section below, by separating the data the state will use from the state that
+performs the work. This can be the difference between deploying *Application X*
+and *Application Y*, or the difference between production and development. For
+example:
+
+``/srv/salt/app/deploy.sls``:
+
+.. code-block:: yaml
+
+    {# Load the map file. #}
+    {% load_yaml 'app/defaults.yaml' as app_defaults %}
+
+    {# Extract the relevant subset for the app configured on the current
+       machine (configured via a grain in this example). #}
+    {% app = app_defaults.get(salt.grains.get('role') %}
+
+    {# Allow values from Pillar to (optionally) update values from the lookup
+       table. #}
+    {% do app_defaults.update(salt.pillar.get('myapp', {}) %}
+
+    deploy_application:
+      git.latest:
+        - name: {{ app.repo_url }}
+        - version: {{ app.version }}
+        - target: {{ app.deploy_dir }}
+
+    myco/myapp/deployed:
+      event.send:
+        - data:
+            version: {{ app.version }}
+        - onchanges:
+          - git: deploy_application
+
+``/srv/salt/app/defaults.yaml``:
+
+.. code-block:: yaml
+
+    appX:
+      repo_url: git@github.com/myco/appX.git
+      target: /var/www/appX
+      version: master
+    appY:
+      repo_url: git@github.com/myco/appY.git
+      target: /var/www/appY
+      version: v1.2.3.4
 
 Single-purpose SLS files
 ------------------------
@@ -394,11 +1040,9 @@ skips platform-specific options for brevity. See the full
 
     # apache/init.sls
     apache:
-      pkg:
-        - installed
+      pkg.installed:
         [...]
-      service:
-        - running
+      service.running:
         [...]
 
     # apache/mod_wsgi.sls
@@ -406,8 +1050,7 @@ skips platform-specific options for brevity. See the full
       - apache
 
     mod_wsgi:
-      pkg:
-        - installed
+      pkg.installed:
         [...]
         - require:
           - pkg: apache
@@ -417,8 +1060,7 @@ skips platform-specific options for brevity. See the full
       - apache
 
     apache_conf:
-      file:
-        - managed
+      file.managed:
         [...]
         - watch_in:
           - service: apache
@@ -509,8 +1151,7 @@ thousands of function calls across a large state tree.
     {% set settings = salt['pillar.get']('apache', {}) %}
 
     mod_status:
-      file:
-        - managed
+      file.managed:
         - name: {{ apache.conf_dir }}
         - source: {{ settings.get('mod_status_conf', 'salt://apache/mod_status.conf') }}
         - template: {{ settings.get('template_engine', 'jinja') }}

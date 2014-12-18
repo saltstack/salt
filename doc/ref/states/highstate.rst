@@ -103,8 +103,8 @@ declaration that will restart Apache whenever the Apache configuration file,
             - file: mywebsite
 
     mywebsite:
-      file:
-        - managed
+      file.managed:
+        - name: /var/www/mysite
 
 .. seealso:: watch_in and require_in
 
@@ -168,10 +168,10 @@ For example, the following state declaration calls the :mod:`installed
 .. code-block:: yaml
 
     httpd:
-      pkg.installed
+      pkg.installed: []
 
-The function can be declared inline with the state as a shortcut, but
-the actual data structure is better referenced in this form:
+The function can be declared inline with the state as a shortcut.
+The actual data structure is compiled to this form:
 
 .. code-block:: yaml
 
@@ -203,10 +203,8 @@ VALID:
 .. code-block:: yaml
 
     httpd:
-      pkg:
-        - installed
-      service:
-        - running
+      pkg.installed: []
+      service.running: []
 
 Occurs as the only index in the :ref:`state-declaration` list.
 
@@ -280,8 +278,7 @@ easier to specify ``mywebsite`` than to specify
           - file: mywebsite
 
     apache2:
-      service:
-        - running
+      service.running:
         - watch:
           - file: mywebsite
 

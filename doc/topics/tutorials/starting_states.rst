@@ -67,10 +67,8 @@ A typical SLS file will often look like this in YAML:
 .. code-block:: yaml
 
     apache:
-      pkg:
-        - installed
-      service:
-        - running
+      pkg.installed: []
+      service.running:
         - require:
           - pkg: apache
 
@@ -107,10 +105,8 @@ and a user and group may need to be set up.
 .. code-block:: yaml
 
     apache:
-      pkg:
-        - installed
-      service:
-        - running
+      pkg.installed: []
+      service.running:
         - watch:
           - pkg: apache
           - file: /etc/httpd/conf/httpd.conf
@@ -455,11 +451,9 @@ a MooseFS distributed filesystem chunkserver:
           - pkg: mfs-chunkserver
 
     mfs-chunkserver:
-      pkg:
-        - installed
+      pkg.installed: []
     mfschunkserver:
-      service:
-        - running
+      service.running:
         - require:
     {% for mnt in salt['cmd.run']('ls /dev/data/moose*') %}
           - mount: /mnt/moose{{ mnt[-1] }}
