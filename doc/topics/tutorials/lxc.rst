@@ -27,9 +27,8 @@ packaged:
 - RHEL/CentOS 6 and later (via EPEL_)
 - Fedora (All non-EOL releases)
 - Debian 8.0 (Jessie) (not yet released)
-- Ubuntu 14.04 LTS and later
-  - LXC templates packaged separately (as **lxc-templates**), it is recommended
-    to also install this package.
+- Ubuntu 14.04 LTS and later (LXC templates are packaged separately as
+  **lxc-templates**, it is recommended to also install this package)
 - openSUSE 13.2 and later
 
 .. _EPEL: https://fedoraproject.org/wiki/EPEL
@@ -200,9 +199,10 @@ instance, the ``ubuntu`` template uses deb_bootstrap, the ``centos`` template
 uses yum, etc., making these templates impractical when a container from a
 different OS is desired.
 
-To create a CentOS container named ``container1`` on a CentOS minion named
-``mycentosminion``, using the ``centos`` LXC template, one can simply run the
-following command:
+The :mod:`lxc.create <salt.modules.lxc.create>` function is used to create
+containers using a template script. To create a CentOS container named
+``container1`` on a CentOS minion named ``mycentosminion``, using the
+``centos`` LXC template, one can simply run the following command:
 
 .. code-block:: bash
 
@@ -241,7 +241,7 @@ container, the following command can be used:
 
     .. code-block:: yaml
 
-        lxc.container_profile.centos:
+        lxc.container_profile.cent6:
           template: download
           options:
             dist: centos
@@ -251,3 +251,47 @@ container, the following command can be used:
     The ``options`` parameter is not supported in profiles for the 2014.7.x
     release cycle and earlier, so it would still need to be provided on the
     command-line.
+
+
+Cloning an Existing Container
+-----------------------------
+
+To clone a container, use the :mod:`lxc.clone <salt.modules.lxc.clone>`
+function:
+
+.. code-block:: bash
+
+    salt myminion lxc.clone container2 orig=container1
+
+
+Using a Container Image
+-----------------------
+
+While cloning is a good way to create new containers from a common base
+container, the source container that is being cloned needs to already exist on
+the minion. This makes deploying a common container across minions difficult.
+For this reason, Salt's :mod:`lxc.create <salt.modules.lxc.create>` is capable
+of installing a container from a tar archive of another container's rootfs. To
+create an image of a container named ``cent6``, run the following command as
+root:
+
+.. code-block:: bash
+
+    tar czf cent6.tar.gz -C /var/lib/lxc/cent6 rootfs
+
+The resulting tarball can then be placed alongside the files in the salt
+fileserver and referenced using a ``salt://`` URL. To create a container using
+an image, use the ``image`` parameter with :mod:`lxc.create
+<salt.modules.lxc.create>`:
+
+.. code-block:: bash
+
+    salt myminion lxc.create new-cent6 image=salt://path/to/cent6.tar.gz
+
+
+Container Management Using States
+=================================
+
+Several states are being renamed for the next feature release. The information
+in this tutorial refers to the new states. For 2014.7.x and earlier, please
+refer to the :mod:`documentation for the LXC states <salt.states.lxc>`.
