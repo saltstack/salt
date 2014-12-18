@@ -1129,7 +1129,7 @@ def replace(path,
         # will be an empty file after iterating over it just for searching
         fi_file = fileinput.input(path,
                         inplace=False,
-                        backup=False if (dry_run or search_only) else backup,
+                        backup=False,
                         bufsize=bufsize,
                         mode='r')
 
@@ -1144,7 +1144,7 @@ def replace(path,
                     found = True
                     break
 
-            if ( prepend_if_not_found or append_if_not_found ) and not not_found_content:
+            else:
                 if line == repl:
                     if search_only:
                         return True
@@ -1157,9 +1157,9 @@ def replace(path,
     try:
         fi_file = fileinput.input(path,
                         inplace=not (dry_run or search_only),
-                        backup=False if (dry_run or search_only) else backup,
+                        backup=False if (dry_run or search_only or found) else backup,
                         bufsize=bufsize,
-                        mode='r' if (dry_run or search_only) else 'rb')
+                        mode='r' if (dry_run or search_only or found) else 'rb')
 
         if not found:
             for line in fi_file:
