@@ -737,7 +737,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         finally:
             os.remove(path_test)
 
-    def test_replace_issue_18841(self):
+    def test_replace_issue_18841_no_changes(self):
         '''
         Test the (mis-)behaviour of file.replace as described in #18841:
 
@@ -746,12 +746,13 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
         # Case description
 
-        The tested file contains some irrelevant lines
+        The tested file contains multiple lines
+        The tested file contains a line already matching the replacement (no change needed)
         The tested file's content shouldn't change at all
         The tested file's mtime shouldn't change at all
-        There should be no corresponding backup file created
+        No backup file should be created
         '''
-        test_name = 'test_replace_issue_18841'
+        test_name = 'test_replace_issue_18841_no_changes'
         path_in = os.path.join(
             integration.FILES, 'file.replace', '{0}.in'.format(test_name)
         )
@@ -770,7 +771,72 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         os.utime(path_test, (fstats_orig.st_mtime-age, fstats_orig.st_atime-age))
 
         ret = self.run_state('file.replace',
-            name=path_test, pattern='^hello world$', repl='goodbye world', search_only=True)
+            name=path_test,
+            pattern='^hello world$',
+            repl='goodbye world',
+            show_changes=True,
+            flags=['IGNORECASE'],
+            backup=False
+        )
+
+        # get (m|a)time of file
+        fstats_post = os.stat(path_test)
+
+        try:
+            # ensure, the file content didn't change
+            self.assertTrue(filecmp.cmp(path_in, path_test))
+
+            # ensure no backup file was created
+            self.assertFalse(os.path.exists(path_test + '.bak'))
+
+            # ensure the file's mtime didn't change
+            self.assertTrue(fstats_post.st_mtime, fstats_orig.st_mtime-age)
+
+            # ensure, all 'file.replace' runs reported success
+            self.assertSaltTrueReturn(ret)
+        finally:
+            os.remove(path_test)
+
+    def test_replace_issue_18841_omit_backup(self):
+        '''
+        Test the (mis-)behaviour of file.replace as described in #18841:
+
+        Using file.replace in a way which shouldn't modify the file at all
+        results in changed mtime of the original file and a backup file being created.
+
+        # Case description
+
+        The tested file contains multiple lines
+        The tested file contains a line already matching the replacement (no change needed)
+        The tested file's content shouldn't change at all
+        The tested file's mtime shouldn't change at all
+        No backup file should be created, although backup=False isn't explicitely defined
+        '''
+        test_name = 'test_replace_issue_18841_omit_backup'
+        path_in = os.path.join(
+            integration.FILES, 'file.replace', '{0}.in'.format(test_name)
+        )
+        path_test = os.path.join(integration.TMP, test_name)
+
+        # create test file based on initial template
+        shutil.copyfile(path_in, path_test)
+
+        # get (m|a)time of file
+        fstats_orig = os.stat(path_test)
+
+        # define how far we predate the file
+        age = 5*24*60*60
+
+        # set (m|a)time of file 5 days into the past
+        os.utime(path_test, (fstats_orig.st_mtime-age, fstats_orig.st_atime-age))
+
+        ret = self.run_state('file.replace',
+            name=path_test,
+            pattern='^hello world$',
+            repl='goodbye world',
+            show_changes=True,
+            flags=['IGNORECASE']
+        )
 
         # get (m|a)time of file
         fstats_post = os.stat(path_test)
