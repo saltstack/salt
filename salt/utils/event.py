@@ -56,6 +56,7 @@ import errno
 import logging
 import time
 import datetime
+import re
 import multiprocessing
 from collections import MutableMapping
 
@@ -288,20 +289,24 @@ class SaltEvent(object):
         :type pending_tags: list[str]
         :return:
         """
+        if isinstance(tag, basestring):
+            tag = re.compile('^{0}'.format(tag))
         old_events = self.pending_events
         self.pending_events = []
         ret = None
         for evt in old_events:
-            if evt['tag'].startswith(tag):
+            if re_tag.search(evt['tag']):
                 if ret is None:
                     ret = evt
                 else:
                     self.pending_events.append(evt)
-            elif any(evt['tag'].startswith(ptag) for ptag in pending_tags):
+            elif any(ptag.search(evt['tag']) for ptag in pending_tags):
                 self.pending_events.append(evt)
         return ret
 
     def _get_event(self, wait, tag, pending_tags):
+        if isinstance(tag, basestring):
+            tag = re.compile('^{0}'.format(tag))
         start = time.time()
         timeout_at = start + wait
         while not wait or time.time() <= timeout_at:
@@ -320,8 +325,8 @@ class SaltEvent(object):
                 else:
                     raise
 
-            if not ret['tag'].startswith(tag):  # tag not match
-                if any(ret['tag'].startswith(ptag) for ptag in pending_tags):
+            if not tag.search(ret['tag']):  # tag not match
+                if any(ptag.search(ret['tag']) for ptag in pending_tags):
                     self.pending_events.append(ret)
                 if wait:  # only update the wait timeout if we had one
                     wait = timeout_at - time.time()
@@ -357,8 +362,14 @@ class SaltEvent(object):
 
         if pending_tags is None:
             pending_tags = []
+        else:
+            pending_tags = list([
+                re.compile('^{0}'.format(ptag))
+                if isinstance(ptag, basestring) else ptag
+                for ptag in pending_tags
+            ])
         if use_pending:
-            pending_tags = ['']
+            pending_tags = [re.compile('.*')]
 
         ret = self._check_pending(tag, pending_tags)
         if ret is None:
