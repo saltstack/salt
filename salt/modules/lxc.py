@@ -2343,24 +2343,24 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset):
                             dest_lxc_conf.append(line)
                         else:
                             changes['removed'].append(opt)
-        else:
-            dest_lxc_conf = lines
-        conf = ''
-        for key, val in dest_lxc_conf:
-            if not val:
-                conf += '{0}\n'.format(key)
             else:
-                conf += '{0} = {1}\n'.format(key.strip(), val.strip())
-        conf_changed = conf != orig_config
-        chrono = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-        if conf_changed:
-            path = '.'.join((lxc_conf_p, chrono))
-            with salt.utils.fopen(path, 'w') as wfic:
-                wfic.write(conf)
-            with salt.utils.fopen(lxc_conf_p, 'w') as wfic:
-                wfic.write(conf)
-            ret['comment'] = 'Updated'
-            ret['result'] = True
+                dest_lxc_conf = lines
+            conf = ''
+            for key, val in dest_lxc_conf:
+                if not val:
+                    conf += '{0}\n'.format(key)
+                else:
+                    conf += '{0} = {1}\n'.format(key.strip(), val.strip())
+            conf_changed = conf != orig_config
+            chrono = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+            if conf_changed:
+                path = '.'.join((lxc_conf_p, chrono))
+                with salt.utils.fopen(path, 'w') as wfic:
+                    wfic.write(conf)
+                with salt.utils.fopen(lxc_conf_p, 'w') as wfic:
+                    wfic.write(conf)
+                ret['comment'] = 'Updated'
+                ret['result'] = True
 
     if not any(changes[x] for x in changes):
         # Ensure an empty changes dict if nothing was modified
