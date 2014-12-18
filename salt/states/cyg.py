@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
+'''
 Installation of Cygwin packages.
 
 A state module to manage cygwin packages. Packages can be installed
@@ -9,7 +9,7 @@ or removed.
 
     dos2unix:
       cyg.installed
-"""
+'''
 from __future__ import absolute_import
 import logging
 
@@ -17,14 +17,16 @@ LOG = logging.getLogger(__name__)
 
 
 def __virtual__():
-    """Only load if cyg module is available in __salt__."""
+    '''
+    Only load if cyg module is available in __salt__.
+    '''
     return 'cyg.list' in __salt__
 
 
 def installed(name,
               cyg_arch='x86_64',
               mirrors=None):
-    """
+    '''
     Make sure that a package is installed.
 
     name
@@ -37,7 +39,7 @@ def installed(name,
     mirrors : None
         List of mirrors to check.
         None will use a default mirror (kernel.org)
-    """
+    '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     if cyg_arch not in ['x86', 'x86_64']:
@@ -80,7 +82,7 @@ def installed(name,
 
 
 def removed(name, cyg_arch='x86_64', mirrors=None):
-    """
+    '''
     Make sure that a package is not installed.
 
     name
@@ -93,7 +95,7 @@ def removed(name, cyg_arch='x86_64', mirrors=None):
     mirrors : None
         List of mirrors to check.
         None will use a default mirror (kernel.org)
-    """
+    '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     if cyg_arch not in ['x86', 'x86_64']:
@@ -128,7 +130,7 @@ def removed(name, cyg_arch='x86_64', mirrors=None):
 
 
 def updated(name=None, cyg_arch='x86_64', mirrors=None):
-    """
+    '''
     Make sure all packages are up to date.
 
     name : None
@@ -141,7 +143,7 @@ def updated(name=None, cyg_arch='x86_64', mirrors=None):
     mirrors : None
         List of mirrors to check.
         None will use a default mirror (kernel.org)
-    """
+    '''
     ret = {'name': 'cyg.updated', 'result': None, 'comment': '', 'changes': {}}
 
     if cyg_arch not in ['x86', 'x86_64']:
@@ -183,18 +185,18 @@ def updated(name=None, cyg_arch='x86_64', mirrors=None):
 
 
 class DictDiffer(object):
-
-    """
+    '''
     Calculate the difference between two dictionaries.
 
     (1) items added
     (2) items removed
     (3) keys same in both but changed values
     (4) keys same in both and unchanged values
-    """
-
+    '''
     def __init__(self, current_dict, past_dict):
-        """Iitialize the differ."""
+        '''
+        Iitialize the differ.
+        '''
         self.current_dict, self.past_dict = current_dict, past_dict
         self.current_keys, self.past_keys = [
             set(d.keys()) for d in (current_dict, past_dict)
@@ -202,23 +204,33 @@ class DictDiffer(object):
         self.intersect = self.current_keys.intersection(self.past_keys)
 
     def same(self):
-        """True if the two dicts are the same."""
+        '''
+        True if the two dicts are the same.
+        '''
         return self.current_dict == self.past_dict
 
     def added(self):
-        """Return a set of additions to past_dict."""
+        '''
+        Return a set of additions to past_dict.
+        '''
         return self.current_keys - self.intersect
 
     def removed(self):
-        """Return a set of things removed from past_dict."""
+        '''
+        Return a set of things removed from past_dict.
+        '''
         return self.past_keys - self.intersect
 
     def changed(self):
-        """Return a set of the keys with changed values."""
+        '''
+        Return a set of the keys with changed values.
+        '''
         return set(o for o in self.intersect
                    if self.past_dict[o] != self.current_dict[o])
 
     def unchanged(self):
-        """Return a set of the keys with unchanged values."""
+        '''
+        Return a set of the keys with unchanged values.
+        '''
         return set(o for o in self.intersect
                    if self.past_dict[o] == self.current_dict[o])
