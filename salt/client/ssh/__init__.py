@@ -961,7 +961,7 @@ ARGS = {8}\n'''.format(self.minion_config,
                 'The salt thin transfer was corrupted'
             ),
             (
-                (salt.exitcodes.EX_CANTCREAT,),
+                (salt.defaults.exitcodes.EX_CANTCREAT,),
                 'salt path .* exists but is not a directory',
                 'A necessary path for salt thin unexpectedly exists:\n ' + stderr,
             ),
@@ -986,7 +986,7 @@ ARGS = {8}\n'''.format(self.minion_config,
                 perm_error_fmt.format(stderr)
             ),
             (
-                (salt.exitcodes.EX_SOFTWARE,),
+                (salt.defaults.exitcodes.EX_SOFTWARE,),
                 'exists but is not',
                 'An internal error occurred with the shim, please investigate:\n ' + stderr,
             ),
