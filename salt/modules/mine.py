@@ -97,10 +97,6 @@ def update(clear=False):
     }
     if __opts__.get('transport', '') == 'zeromq':
         load['tok'] = _auth().gen_token('salt')
-    # Changed for transport plugin
-    # sreq = salt.payload.SREQ(__opts__['master_uri'])
-    # ret = sreq.send('aes', auth.crypticle.dumps(load))
-    # return auth.crypticle.loads(ret)
     sreq = salt.transport.Channel.factory(__opts__)
     ret = sreq.send(load)
     return ret
@@ -153,10 +149,6 @@ def send(func, *args, **kwargs):
     }
     if __opts__.get('transport', '') == 'zeromq':
         load['tok'] = _auth().gen_token('salt')
-    # Changed for transport plugin
-    # sreq = salt.payload.SREQ(__opts__['master_uri'])
-    # ret = sreq.send('aes', auth.crypticle.dumps(load))
-    # return auth.crypticle.loads(ret)
     sreq = salt.transport.Channel.factory(__opts__)
     ret = sreq.send(load)
     return ret
@@ -212,10 +204,6 @@ def get(tgt, fun, expr_form='glob'):
     }
     if __opts__.get('transport', '') == 'zeromq':
         load['tok'] = _auth().gen_token('salt')
-    # Changed for transport plugin
-    # sreq = salt.payload.SREQ(__opts__['master_uri'])
-    # ret = sreq.send('aes', auth.crypticle.dumps(load))
-    # return auth.crypticle.loads(ret)
     sreq = salt.transport.Channel.factory(__opts__)
     ret = sreq.send(load)
     return ret
@@ -243,10 +231,6 @@ def delete(fun):
     }
     if __opts__.get('transport', '') == 'zeromq':
         load['tok'] = _auth().gen_token('salt')
-    # Changed for transport plugin
-    # sreq = salt.payload.SREQ(__opts__['master_uri'])
-    # ret = sreq.send('aes', auth.crypticle.dumps(load))
-    # return auth.crypticle.loads(ret)
     sreq = salt.transport.Channel.factory(__opts__)
     ret = sreq.send(load)
     return ret
@@ -270,10 +254,6 @@ def flush():
     }
     if __opts__.get('transport', '') == 'zeromq':
         load['tok'] = _auth().gen_token('salt')
-    # Changed for transport plugin
-    # sreq = salt.payload.SREQ(__opts__['master_uri'])
-    # ret = sreq.send('aes', auth.crypticle.dumps(load))
-    # return auth.crypticle.loads(ret)
     sreq = salt.transport.Channel.factory(__opts__)
     ret = sreq.send(load)
     return ret
