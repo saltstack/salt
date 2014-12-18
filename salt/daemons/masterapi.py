@@ -954,8 +954,11 @@ class RemoteFuncs(object):
         '''
         if 'id' not in load:
             return False
+        import pudb; pu.db
         keyapi = salt.key.Key(self.opts)
-        keyapi.delete_key(load['id'])
+        keyapi.delete_key(load['id'],
+                          preserve_minions=load.get('preserve_minion_cache',
+                                                         False))
         return True
 
 
