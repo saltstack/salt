@@ -1052,7 +1052,7 @@ def replace(path,
 
         .. versionadded:: 2014.7.0
     :param prepend_if_not_found: If pattern is not found and set to ``True``
-        then, the content will be appended to the file.
+        then, the content will be prepended to the file.
 
         .. versionadded:: 2014.7.0
     :param not_found_content: Content to use for append/prepend if not found. If
@@ -1086,8 +1086,8 @@ def replace(path,
 
     .. code-block:: bash
 
-        salt '*' file.replace /etc/httpd/httpd.conf 'LogLevel warn' 'LogLevel info'
-        salt '*' file.replace /some/file 'before' 'after' flags='[MULTILINE, IGNORECASE]'
+        salt '*' file.replace /etc/httpd/httpd.conf pattern='LogLevel warn' repl='LogLevel info'
+        salt '*' file.replace /some/file pattern='before' repl='after' flags='[MULTILINE, IGNORECASE]'
     '''
     if not os.path.exists(path):
         raise SaltInvocationError('File not found: {0}'.format(path))
@@ -1129,24 +1129,37 @@ def replace(path,
         # will be an empty file after iterating over it just for searching
         fi_file = fileinput.input(path,
                         inplace=False,
+                        backup=False,
                         bufsize=bufsize,
                         mode='r')
 
         for line in fi_file:
-            result = re.search(repl, line)
-            if result:
-                if search_only:
-                    return True
-                found = True
+
+            line = line.strip()
+
+            if (prepend_if_not_found or append_if_not_found) and not_found_content:
+                if line == not_found_content:
+                    if search_only:
+                        return True
+                    found = True
+                    break
+
+            else:
+                if line == repl:
+                    if search_only:
+                        return True
+                    found = True
+                    break
+
     finally:
         fi_file.close()
 
     try:
         fi_file = fileinput.input(path,
                         inplace=not (dry_run or search_only),
-                        backup=False if dry_run else backup,
+                        backup=False if (dry_run or search_only or found) else backup,
                         bufsize=bufsize,
-                        mode='r' if (dry_run or search_only) else 'rb')
+                        mode='r' if (dry_run or search_only or found) else 'rb')
 
         if not found:
             for line in fi_file:
