@@ -28,10 +28,10 @@ Management of the Salt scheduler
     job1:
       schedule.present:
         - function: state.sls
-        - args:
+        - job_args:
           - httpd
-        - kwargs:
-          test: True
+        - job_kwargs:
+            test: True
         - when:
             - Monday 5:00pm
             - Tuesday 3:00pm
@@ -46,10 +46,10 @@ Management of the Salt scheduler
     job1:
       schedule.present:
         - function: state.sls
-        - args:
+        - job_args:
           - httpd
-        - kwargs:
-          test: True
+        - job_kwargs:
+            test: True
         - cron: '*/5 * * * *'
 
     Scheduled jobs can also be specified using the format used by cron.  This will

@@ -179,7 +179,14 @@ def main(argv):  # pylint: disable=W0613
     sys.stdout.flush()
     sys.stderr.write(OPTIONS.delimiter + '\n')
     sys.stderr.flush()
-    if OPTIONS.wipe:
+    if OPTIONS.tty:
+        import subprocess
+        stdout, stderr = subprocess.Popen(salt_argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
+        sys.stdout.write(stdout)
+        sys.stdout.flush()
+        if OPTIONS.wipe:
+            shutil.rmtree(OPTIONS.saltdir)
+    elif OPTIONS.wipe:
         import subprocess
         subprocess.call(salt_argv)
         shutil.rmtree(OPTIONS.saltdir)

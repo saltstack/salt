@@ -1855,7 +1855,7 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset):
             if conf_changed:
                 with salt.utils.fopen('{0}.{1}'.format(lxc_conf_p, chrono), 'w') as wfic:
                     wfic.write(conf)
-                with salt.utils.fopen(lxc_conf_p, 'w') as wific:
+                with salt.utils.fopen(lxc_conf_p, 'w') as wfic:
                     wfic.write(conf)
                 ret['comment'] = 'Updated'
                 ret['result'] = True
