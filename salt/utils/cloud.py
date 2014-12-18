@@ -108,6 +108,9 @@ def os_script(os_, vm_=None, opts=None, minion=''):
     '''
     Return the script as a string for the specific os
     '''
+    if minion:
+        minion = salt_config_to_yaml(minion)
+
     if os.path.isabs(os_):
         # The user provided an absolute path to the deploy script, let's use it
         return __render_script(os_, vm_, opts, minion)
@@ -316,11 +319,12 @@ def bootstrap(vm_, opts):
 
     ret = {}
 
+    minion_conf = salt.utils.cloud.minion_config(opts, vm_)
     deploy_script_code = os_script(
         salt.config.get_cloud_config_value(
             'os', vm_, opts, default='bootstrap-salt'
         ),
-        vm_, opts
+        vm_, opts, minion_conf
     )
 
     ssh_username = salt.config.get_cloud_config_value(
@@ -368,7 +372,7 @@ def bootstrap(vm_, opts):
         'script_env': salt.config.get_cloud_config_value(
             'script_env', vm_, opts
         ),
-        'minion_conf': salt.utils.cloud.minion_config(opts, vm_),
+        'minion_conf': minion_conf,
         'preseed_minion_keys': vm_.get('preseed_minion_keys', None),
         'display_ssh_output': salt.config.get_cloud_config_value(
             'display_ssh_output', vm_, opts, default=True
