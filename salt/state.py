@@ -865,8 +865,7 @@ class State(object):
             for req in data[reqdec]:
                 reqfirst = next(iter(req))
                 if data['state'] == reqfirst:
-                    if (fnmatch.fnmatch(data['name'], req[reqfirst])
-                            or fnmatch.fnmatch(data['__id__'], req[reqfirst])):
+                    if fnmatch.fnmatch(data['__id__'], req[reqfirst]):
                         err = ('Recursive require detected in SLS {0} for'
                                ' require {1} in ID {2}').format(
                                    data['__sls__'],
@@ -1672,16 +1671,15 @@ class State(object):
                         req_val = req[req_key]
                         if req_val is None:
                             continue
-                        if (fnmatch.fnmatch(chunk['name'], req_val) or
-                            fnmatch.fnmatch(chunk['__id__'], req_val)):
-                            if chunk['state'] == req_key:
-                                found = True
-                                reqs[r_state].append(chunk)
-                        elif req_key == 'sls':
+                        if (req_key == chunk['state']
+                                and req_val == chunk['__id__']):
+                            found = True
+                            reqs[r_state].append(chunk)
+                        elif (req_key == 'sls'
+                                and req_val == chunk['__sls__']):
                             # Allow requisite tracking of entire sls files
-                            if fnmatch.fnmatch(chunk['__sls__'], req_val):
-                                found = True
-                                reqs[r_state].append(chunk)
+                            found = True
+                            reqs[r_state].append(chunk)
                     if not found:
                         return 'unmet', ()
         fun_stats = set()
@@ -1781,22 +1779,21 @@ class State(object):
                         req_val = req[req_key]
                         if req_val is None:
                             continue
-                        if (fnmatch.fnmatch(chunk['name'], req_val) or
-                            fnmatch.fnmatch(chunk['__id__'], req_val)):
-                            if chunk['state'] == req_key:
-                                if requisite == 'prereq':
-                                    chunk['__prereq__'] = True
-                                elif requisite == 'prerequired':
-                                    chunk['__prerequired__'] = True
-                                reqs.append(chunk)
-                                found = True
-                        elif req_key == 'sls':
-                            # Allow requisite tracking of entire sls files
-                            if fnmatch.fnmatch(chunk['__sls__'], req_val):
-                                if requisite == 'prereq':
-                                    chunk['__prereq__'] = True
-                                reqs.append(chunk)
-                                found = True
+                        if (req_key == chunk['state']
+                                and req_val == chunk['__id__']):
+                            if requisite == 'prereq':
+                                chunk['__prereq__'] = True
+                            elif requisite == 'prerequired':
+                                chunk['__prerequired__'] = True
+                            reqs.append(chunk)
+                            found = True
+                        # Allow requisite tracking of entire sls files
+                        elif (req_key == 'sls'
+                                and req_val == chunk['__sls__']):
+                            if requisite == 'prereq':
+                                chunk['__prereq__'] = True
+                            reqs.append(chunk)
+                            found = True
                     if not found:
                         lost[requisite].append(req)
             if lost['require'] or lost['watch'] or lost['prereq'] or lost['onfail'] or lost['onchanges'] or lost.get('prerequired'):
