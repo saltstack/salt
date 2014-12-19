@@ -155,6 +155,8 @@ version = salt.version.__version__
 #release = '.'.join(map(str, salt.version.__version_info__))
 release = '2014.1.13'
 
+needs_sphinx = '1.3'
+
 spelling_lang = 'en_US'
 language = 'en'
 locale_dirs = [
