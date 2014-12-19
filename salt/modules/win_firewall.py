@@ -62,6 +62,20 @@ def disable():
     return __salt__['cmd.run'](cmd, python_shell=False) == 'Ok.'
 
 
+def enable():
+    '''
+    Enable all the firewall profiles
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' firewall.enable
+    '''
+    cmd = ['netsh', 'advfirewall', 'set', 'allprofiles', 'state', 'on']
+    return __salt__['cmd.run'](cmd, python_shell=False) == 'Ok.'
+
+
 def get_rule(name="all"):
     '''
     Get firewall rule(s) info
