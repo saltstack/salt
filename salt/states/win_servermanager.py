@@ -68,3 +68,44 @@ def installed(name, recurse=False, force=False):
         ret['comment'] = 'failed to install the feature: {0}'.format(ret['changes']['feature']['ExitCode'])
 
     return ret
+
+
+def removed(name):
+    '''
+    Remove the windows feature
+    name:
+        short name of the feature (the right column in win_servermanager.list_available)
+    Note:
+    Some features require a reboot after uninstallation. If so the feature will not be completly uninstalled until
+    the server is restarted.
+    Example:
+    Run ``salt MinionName win_servermanager.list_installed`` to get a list of all features installed. Use the top
+    name listed for each feature, not the indented one. Do not use the role or feature names mentioned in the
+    PKGMGR documentation.
+    .. code-block:: yaml
+        ISWebserverRole:
+          win_servermanager.removed:
+            - name: Web-Server
+    '''
+    ret = {'name': name,
+           'result': True,
+           'changes': {},
+           'comment': ''}
+    # Determine if the feature is installed
+    if name in __salt__['win_servermanager.list_installed']():
+        ret['changes'] = {'feature': '{0} will be removed'.format(name)}
+    else:
+        ret['comment'] = 'The feature {0} is not installed'.format(name)
+        return ret
+
+    if __opts__['test']:
+        ret['result'] = None
+        return ret
+
+    # Remove the features
+    ret['changes'] = {'feature': __salt__['win_servermanager.remove'](name)}
+    ret['result'] = ret['changes']['feature']['Success'] == 'True'
+    if not ret['result']:
+        ret['comment'] = 'Failed to uninstall the feature {0}'.format(ret['changes']['feature']['ExitCode'])
+
+    return ret
