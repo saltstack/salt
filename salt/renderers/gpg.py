@@ -71,8 +71,10 @@ Now you can include your ciphers in your pillar data like so:
 '''
 from __future__ import absolute_import
 
+import os
 import re
 import salt.utils
+import salt.syspaths
 try:
     import gnupg
     HAS_GPG = True
@@ -86,7 +88,7 @@ from salt.exceptions import SaltRenderError
 
 log = logging.getLogger(__name__)
 GPG_HEADER = re.compile(r'-----BEGIN PGP MESSAGE-----')
-DEFAULT_GPG_KEYDIR = '/etc/salt/gpgkeys'
+DEFAULT_GPG_KEYDIR = os.path.join(salt.syspaths.CONFIG_DIR, 'gpgkeys')
 
 
 def decrypt_ciphertext(c, gpg):

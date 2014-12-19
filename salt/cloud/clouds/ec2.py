@@ -1922,6 +1922,7 @@ def wait_for_instance(
                     # be generated for at least 4 minutes
                     time.sleep(60)
                 else:
+                    vm_['win_password'] = win_passwd
                     break
 
         if not salt.utils.cloud.wait_for_port(ip_address,
@@ -3295,7 +3296,10 @@ def _toggle_delvol(name=None, instance_id=None, device=None, volume_id=None,
               opts=__opts__,
               sigver='4')
 
-    return _get_node(instance_id=instance_id)
+    kwargs = {'instance_id': instance_id,
+              'device': device,
+              'volume_id': volume_id}
+    return show_delvol_on_destroy(name, kwargs, call='action')
 
 
 def create_volume(kwargs=None, call=None, wait_to_finish=False):

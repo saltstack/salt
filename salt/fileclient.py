@@ -10,7 +10,6 @@ import logging
 import hashlib
 import os
 import shutil
-import time
 import requests
 
 # Import salt libs
@@ -912,14 +911,6 @@ class RemoteClient(Client):
         else:
             self.auth = ''
 
-    def _get_channel(self):
-        '''
-        Return the right channel
-        '''
-        if self.auth:
-            return self.channel
-        return salt.transport.Channel.factory(self.opts)
-
     def get_file(self,
                  path,
                  dest='',
@@ -987,18 +978,11 @@ class RemoteClient(Client):
                     return False
             fn_ = salt.utils.fopen(dest, 'wb+')
         while True:
-            init_retries = 10
             if not fn_:
                 load['loc'] = 0
             else:
                 load['loc'] = fn_.tell()
-            channel = self._get_channel()
-            data = channel.send(load)
-            if not data:
-                if init_retries:
-                    init_retries -= 1
-                    time.sleep(0.02)
-                    continue
+            data = self.channel.send(load)
             if 'data' not in data:
                 log.error('Data is {0}'.format(data))
             if not data['data']:
@@ -1058,8 +1042,7 @@ class RemoteClient(Client):
                 'prefix': prefix,
                 'cmd': '_file_list'}
 
-        channel = self._get_channel()
-        return channel.send(load)
+        return self.channel.send(load)
 
     def file_list_emptydirs(self, saltenv='base', prefix='', env=None):
         '''
@@ -1078,8 +1061,7 @@ class RemoteClient(Client):
         load = {'saltenv': saltenv,
                 'prefix': prefix,
                 'cmd': '_file_list_emptydirs'}
-        channel = self._get_channel()
-        channel.send(load)
+        self.channel.send(load)
 
     def dir_list(self, saltenv='base', prefix='', env=None):
         '''
@@ -1098,8 +1080,7 @@ class RemoteClient(Client):
         load = {'saltenv': saltenv,
                 'prefix': prefix,
                 'cmd': '_dir_list'}
-        channel = self._get_channel()
-        return channel.send(load)
+        return self.channel.send(load)
 
     def symlink_list(self, saltenv='base', prefix='', env=None):
         '''
@@ -1108,8 +1089,7 @@ class RemoteClient(Client):
         load = {'saltenv': saltenv,
                 'prefix': prefix,
                 'cmd': '_symlink_list'}
-        channel = self._get_channel()
-        return channel.send(load)
+        return self.channel.send(load)
 
     def hash_file(self, path, saltenv='base', env=None):
         '''
@@ -1144,8 +1124,7 @@ class RemoteClient(Client):
         load = {'path': path,
                 'saltenv': saltenv,
                 'cmd': '_file_hash'}
-        channel = self._get_channel()
-        return channel.send(load)
+        return self.channel.send(load)
 
     def list_env(self, saltenv='base', env=None):
         '''
@@ -1163,24 +1142,21 @@ class RemoteClient(Client):
 
         load = {'saltenv': saltenv,
                 'cmd': '_file_list'}
-        channel = self._get_channel()
-        return channel.send(load)
+        return self.channel.send(load)
 
     def envs(self):
         '''
         Return a list of available environments
         '''
         load = {'cmd': '_file_envs'}
-        channel = self._get_channel()
-        return channel.send(load)
+        return self.channel.send(load)
 
     def master_opts(self):
         '''
         Return the master opts data
         '''
         load = {'cmd': '_master_opts'}
-        channel = self._get_channel()
-        return channel.send(load)
+        return self.channel.send(load)
 
     def ext_nodes(self):
         '''
@@ -1192,8 +1168,7 @@ class RemoteClient(Client):
                 'opts': self.opts}
         if self.auth:
             load['tok'] = self.auth.gen_token('salt')
-        channel = self._get_channel()
-        return channel.send(load)
+        return self.channel.send(load)
 
 
 class FSClient(RemoteClient):

@@ -11,12 +11,10 @@ description.
 .. code-block:: yaml
 
     ERIK-WORKSTATION:
-      system:
-        - computer_name
+      system.computer_name: []
 
     This is Erik's computer, don't touch!:
-      system:
-        - computer_desc
+      system.computer_desc: []
 '''
 
 from __future__ import absolute_import

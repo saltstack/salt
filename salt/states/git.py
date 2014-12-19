@@ -47,6 +47,7 @@ def latest(name,
            bare=False,
            remote_name='origin',
            always_fetch=False,
+           depth=None,
            identity=None,
            https_user=None,
            https_pass=None,
@@ -101,6 +102,11 @@ def latest(name,
         If a tag or branch name is used as the rev a fetch will not occur
         until the tag or branch name changes. Setting this to true will force
         a fetch to occur. Only applies when rev is set. (Default: False)
+
+    depth
+        Defines depth in history when git a clone is needed in order to ensure
+        latest. E.g. ``depth: 1`` is usefull when deploying from a repository
+        with a long history. Use rev to specify branch. This is not compatible with tags or revision IDs.(Default: ``None``)
 
     identity
         A path on the minion server to a private key to use over SSH
@@ -359,6 +365,13 @@ def latest(name,
             # if remote_name is not origin add --origin <name> to opts
             if remote_name != 'origin':
                 opts += ' --origin {0}'.format(remote_name)
+
+            # if depth is given add --depth <depth> to opts
+            if depth is not None:
+                opts += ' --depth {0}'.format(depth)
+                if rev is not None:
+                    opts += ' --branch {0}'.format(rev)
+
             # do the clone
             __salt__['git.clone'](target,
                                   name,
@@ -394,7 +407,7 @@ def latest(name,
     return ret
 
 
-def present(name, bare=True, user=None, force=False):
+def present(name, bare=True, user=None, force=False, shared=None):
     '''
     Make sure the repository is present in the given directory
 
@@ -412,6 +425,11 @@ def present(name, bare=True, user=None, force=False):
     force
         Force-create a new repository into an pre-existing non-git directory
         (deletes contents)
+
+    shared
+        Specify the permission for sharing, see git-init for details (Default: None)
+
+       .. versionadded:: XXXX
     '''
     name = os.path.expanduser(name)
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
@@ -444,6 +462,7 @@ def present(name, bare=True, user=None, force=False):
             shutil.rmtree(name)
 
     opts = '--bare' if bare else ''
+    opts += ' --shared={0}'.format(shared) if shared else ''
     __salt__['git.init'](cwd=name, user=user, opts=opts)
 
     message = 'Initialized repository {0}'.format(name)

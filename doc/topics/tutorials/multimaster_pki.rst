@@ -74,7 +74,7 @@ A custom name can be set for the signing key-pair by setting
 
 .. code-block:: yaml
 
-    master_key_sign_name: <name_without_suffix>
+    master_sign_key_name: <name_without_suffix>
 
 The master will then generate that key-pair upon restart and use it for
 creating the public keys signature attached to the auth-reply.

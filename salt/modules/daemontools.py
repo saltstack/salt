@@ -9,8 +9,7 @@ so it can be used to maintain services using the ``provider`` argument:
 .. code-block:: yaml
 
     myservice:
-      service:
-        - running
+      service.running:
         - provider: daemontools
 '''
 from __future__ import absolute_import

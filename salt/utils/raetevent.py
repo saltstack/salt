@@ -273,3 +273,21 @@ class RunnerEvent(MasterEvent):
         progress_event = {'data': data,
                           'outputter': outputter}
         self.fire_event(progress_event, salt.utils.event.tagify([self.jid, 'progress'], 'runner'))
+
+
+class PresenceEvent(MasterEvent):
+
+    def connect_pub(self):
+        '''
+        Establish the publish connection
+        '''
+        if not self.connected and self.listen:
+            try:
+                route = {'dst': (None, self.ryn, 'presence_req'),
+                         'src': (None, self.stack.local.name, None)}
+                msg = {'route': route}
+                self.stack.transmit(msg, self.stack.nameRemotes[self.ryn].uid)
+                self.stack.serviceAll()
+                self.connected = True
+            except Exception:
+                pass

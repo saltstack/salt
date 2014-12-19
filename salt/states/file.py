@@ -1504,6 +1504,7 @@ def directory(name,
               follow_symlinks=False,
               force=False,
               backupname=None,
+              allow_symlink=True,
               **kwargs):
     '''
     Ensure that a named directory is present and has the right perms
@@ -1620,6 +1621,14 @@ def directory(name,
 
         .. versionadded:: 2014.7.0
 
+    allow_symlink : True
+        If allow_symlink is True and the specified path is a symlink, it will be
+        allowed to remain if it points to a directory. If allow_symlink is False
+        then the state will fail, unless force is also set to True, in which case
+        it will be removed or renamed, depending on the value of the backupname
+        argument.
+
+        .. versionadded:: 2014.7.0
     '''
     name = os.path.expanduser(name)
     ret = {'name': name,
@@ -1658,7 +1667,7 @@ def directory(name,
     if not os.path.isabs(name):
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
-    if os.path.isfile(name):
+    if os.path.isfile(name) or (not allow_symlink and os.path.islink(name)):
         if backupname is not None:
             # Make a backup first
             if os.path.lexists(backupname):
@@ -1667,6 +1676,8 @@ def directory(name,
                         'File exists where the backup target {0} should go'
                     ).format(backupname)))
                 elif os.path.isfile(backupname):
+                    os.remove(backupname)
+                elif os.path.islink(backupname):
                     os.remove(backupname)
                 elif os.path.isdir(backupname):
                     shutil.rmtree(backupname)
@@ -1681,11 +1692,19 @@ def directory(name,
             if os.path.isfile(name):
                 os.remove(name)
                 ret['changes']['forced'] = 'File was forcibly replaced'
+            elif os.path.islink(name):
+                os.remove(name)
+                ret['changes']['forced'] = 'Symlink was forcibly replaced'
             else:
                 shutil.rmtree(name)
         else:
-            return _error(
-                ret, 'Specified location {0} exists and is a file'.format(name))
+            if os.path.isfile(name):
+                return _error(
+                    ret, 'Specified location {0} exists and is a file'.format(name))
+            elif os.path.islink(name):
+                return _error(
+                     ret, 'Specified location {0} exists and is a symlink'.format(name))
+
     if __opts__['test']:
         ret['result'], ret['comment'] = _check_directory(
             name,
@@ -3936,6 +3955,13 @@ def serialize(name,
                 'name': name,
                 'result': False
                 }
+
+    if __opts__['test']:
+        ret['comment'] = (
+            'Dataset will be serialized and stored into {0}'
+        ).format(name)
+        ret['result'] = None
+        return ret
 
     return __salt__['file.manage_file'](name=name,
                                         sfn='',

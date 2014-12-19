@@ -674,7 +674,7 @@ def find(path, options):
 def _main():
     if len(sys.argv) < 2:
         sys.stderr.write('usage: {0} path [options]\n'.format(sys.argv[0]))
-        sys.exit(os.EX_USAGE)
+        sys.exit(salt.defaults.exitcodes.EX_USAGE)
 
     path = sys.argv[1]
     criteria = {}

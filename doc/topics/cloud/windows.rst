@@ -9,11 +9,20 @@ Windows images.
 
 Requirements
 ============
-Salt Cloud makes use of `smbclient` and `winexe` to set up the Windows Salt
-Minion installer. `smbclient` may be part of either the `samba` package, or its
-own `smbclient` package, depending on the distribution. `winexe` is less
-commonly available in distribution-specific repositories. However, it is
-currently being built for various distributions in 3rd party channels:
+Salt Cloud makes use of `impacket` and `winexe` to set up the Windows Salt
+Minion installer.
+
+`impacket` is usually available as either the `impacket` or the
+`python-impacket` package, depending on the distribution. More information on
+`impacket` can be found at the project home:
+
+* `impacket project home`__
+
+.. __: https://code.google.com/p/impacket/
+
+`winexe` is less commonly available in distribution-specific repositories.
+However, it is currently being built for various distributions in 3rd party
+channels:
 
 * `RPMs at pbone.net`__
 

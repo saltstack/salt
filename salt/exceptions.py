@@ -17,6 +17,13 @@ class SaltException(Exception):
         super(SaltException, self).__init__(message)
         self.strerror = message
 
+    def pack(self):
+        '''
+        Pack this exception into a serializable dictionary that is safe for
+        transport via msgpack
+        '''
+        return dict(message=self.__unicode__(), args=self.args)
+
 
 class SaltClientError(SaltException):
     '''

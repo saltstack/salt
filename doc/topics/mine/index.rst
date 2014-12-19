@@ -96,8 +96,7 @@ to add them to the pool of load balanced servers.
 .. code-block:: yaml
 
     haproxy_config:
-      file:
-        - managed
+      file.managed:
         - name: /etc/haproxy/config
         - source: salt://haproxy_config
         - template: jinja

@@ -98,15 +98,13 @@ files, and more via the shared pillar :ref:`dict <python2:typesmapping>`:
 .. code-block:: yaml
 
     apache:
-      pkg:
-        - installed
+      pkg.installed:
         - name: {{ pillar['apache'] }}
 
 .. code-block:: yaml
 
     git:
-      pkg:
-        - installed
+      pkg.installed:
         - name: {{ pillar['git'] }}
 
 Finally, the above states can utilize the values provided to them via Pillar.

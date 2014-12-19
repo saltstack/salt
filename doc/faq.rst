@@ -209,16 +209,15 @@ Linux/Unix
 .. code-block:: yaml
 
     salt-minion:
-      pkg:
-        - installed
+      pkg.installed:
+        - name: salt-minion
         - version: 2014.1.7-3.el6
         - order: last
-      service:
-        - running
+      service.running:
+        - name: salt-minion
         - require:
           - pkg: salt-minion
-      cmd:
-        - wait
+      cmd.wait:
         - name: echo service salt-minion restart | at now + 1 minute
         - watch:
           - pkg: salt-minion
@@ -230,10 +229,9 @@ distro the minion is running, in case they differ from the example below.
 .. code-block:: yaml
 
     at:
-      pkg:
-        - installed
-      service:
-        - running
+      pkg.installed:
+        - name: at
+      service.running:
         - name: atd
         - enable: True
 
@@ -258,8 +256,7 @@ adding the following state:
 .. code-block:: yaml
 
     schedule-start:
-      cmd:
-        - run
+      cmd.run:
         - name: 'start powershell "Restart-Service -Name salt-minion"'
         - order: last
 
