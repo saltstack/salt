@@ -316,7 +316,7 @@ class SSH(object):
             return {host: stderr}
         return {host: stdout}
 
-    def handle_routine(self, que, opts, host, target):
+    def handle_routine(self, que, opts, host, target, mine=False):
         '''
         Run the routine in a "Thread", put a dict on the queue
         '''
@@ -328,6 +328,7 @@ class SSH(object):
                 mods=self.mods,
                 fsclient=self.fsclient,
                 thin=self.thin,
+                mine=mine,
                 **target)
         ret = {'id': single.id}
         stdout, stderr, retcode = single.run()
@@ -350,7 +351,7 @@ class SSH(object):
             }
         que.put(ret)
 
-    def handle_ssh(self):
+    def handle_ssh(self, mine=False):
         '''
         Spin up the needed threads or processes and execute the subsequent
         routines
@@ -378,6 +379,7 @@ class SSH(object):
                         self.opts,
                         host,
                         self.targets[host],
+                        mine,
                         )
                 routine = multiprocessing.Process(
                                 target=self.handle_routine,
@@ -407,9 +409,14 @@ class SSH(object):
             if len(rets) >= len(self.targets):
                 break
 
-    def run_iter(self):
+    def run_iter(self, mine=False):
         '''
         Execute and yield returns as they come in, do not print to the display
+
+        mine
+            The Single objects will use mine_functions defined in the roster,
+            pillar, or master config (they will be checked in that order) and
+            will modify the argv with the arguments from mine_functions
         '''
         fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
         jid = self.returners[fstr]()
@@ -436,7 +443,7 @@ class SSH(object):
         # save load to the master job cache
         self.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load)
 
-        for ret in self.handle_ssh():
+        for ret in self.handle_ssh(mine=mine):
             host = next(ret.iterkeys())
             self.cache_job(jid, host, ret[host])
             if self.event:
@@ -546,6 +553,7 @@ class Single(object):
             mods=None,
             fsclient=None,
             thin=None,
+            mine=False,
             **kwargs):
         self.opts = opts
         if kwargs.get('wipe'):
