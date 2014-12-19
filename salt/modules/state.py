@@ -491,19 +491,9 @@ def highstate(test=None,
             kwargs.get('terse'):
         ret = _filter_running(ret)
 
-    # Not 100% if this should be fatal or not,
-    # but I'm guessing it likely should not be.
-    cumask = os.umask(077)
-    try:
-        if salt.utils.is_windows():
-            # Make sure cache file isn't read-only
-            __salt__['cmd.run'](['attrib', '-R', cache_file], python_shell=False)
-        with salt.utils.fopen(cache_file, 'w+b') as fp_:
-            serial.dump(ret, fp_)
-    except (IOError, OSError):
-        msg = 'Unable to write to "state.highstate" cache file {0}'
-        log.error(msg.format(cache_file))
-    os.umask(cumask)
+    serial = salt.payload.Serial(__opts__)
+    cache_file = os.path.join(__opts__['cachedir'], 'highstate.p')
+
     _set_retcode(ret)
     # Work around Windows multiprocessing bug, set __opts__['test'] back to
     # value from before this function was run.

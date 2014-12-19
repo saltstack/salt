@@ -13,6 +13,7 @@ except ImportError:
 
 # Import salt libs
 import salt.exceptions
+import salt.utils.event
 
 
 def raise_error(name=None, args=None, message=''):

@@ -117,7 +117,7 @@ def edited_conf(name, lxc_conf=None, lxc_conf_unset=None):
             - name: ubuntu
             - lxc_conf:
                 - network.ipv4.ip: 10.0.3.6
-        - lxc_conf_unset:
+            - lxc_conf_unset:
                 - lxc.utsname
     '''
     if __opts__['test']:

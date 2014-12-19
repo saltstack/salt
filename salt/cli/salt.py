@@ -152,6 +152,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             retcodes = []
             try:
                 # local will be None when there was an error
+                errors = []
                 if local:
                     if self.options.subset:
                         cmd_func = local.cmd_subset
@@ -188,16 +189,20 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                             kwargs['verbose'] = True
                         ret = {}
                         for full_ret in cmd_func(**kwargs):
-                            ret_, out, retcode = self._format_ret(full_ret)
-                            retcodes.append(retcode)
-                            self._output_ret(ret_, out)
-                            ret.update(ret_)
+                            try:
+                                ret_, out, retcode = self._format_ret(full_ret)
+                                retcodes.append(retcode)
+                                self._output_ret(ret_, out)
+                                ret.update(ret_)
+                            except KeyError:
+                                errors.append(full_ret)
 
                     # Returns summary
                     if self.config['cli_summary'] is True:
                         if self.config['fun'] != 'sys.doc':
                             if self.options.output is None:
                                 self._print_returns_summary(ret)
+                                self._print_errors_summary(errors)
 
                     # NOTE: Return code is set here based on if all minions
                     # returned 'ok' with a retcode of 0.
@@ -210,6 +215,15 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 ret = str(exc)
                 out = ''
                 self._output_ret(ret, out)
+
+    def _print_errors_summary(self, errors):
+        if errors:
+            print_cli('\n')
+            print_cli('---------------------------')
+            print_cli('Errors')
+            print_cli('---------------------------')
+            for minion in errors:
+                print_cli(self._format_error(minion))
 
     def _print_returns_summary(self, ret):
         '''
@@ -277,6 +291,11 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             if 'retcode' in data:
                 retcode = data['retcode']
         return ret, out, retcode
+
+    def _format_error(self, minion_error):
+        for minion, error_doc in minion_error.items():
+            error = 'Minion [{0}] encountered exception \'{1}\''.format(minion, error_doc['message'])
+        return error
 
     def _print_docs(self, ret):
         '''

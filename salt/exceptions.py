@@ -14,6 +14,13 @@ class SaltException(Exception):
     Base exception class; all Salt-specific exceptions should subclass this
     '''
 
+    def pack(self):
+        '''
+        Pack this exception into a serializable dictionary that is safe for
+        transport via msgpack
+        '''
+        return dict(message=self.__unicode__(), args=self.args)
+
 
 class SaltClientError(SaltException):
     '''
