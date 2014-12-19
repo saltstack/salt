@@ -555,6 +555,10 @@ class Single(object):
             thin=None,
             mine=False,
             **kwargs):
+        # Get mine setting and mine_functions if defined in kwargs (from roster)
+        self.mine = mine
+        self.mine_functions = kwargs.get('mine_functions')
+
         self.opts = opts
         if kwargs.get('wipe'):
             self.wipe = 'False'
@@ -682,7 +686,7 @@ class Single(object):
             cmd_str = ' '.join([self._escape_arg(arg) for arg in self.argv])
             stdout, stderr, retcode = self.shell.exec_cmd(cmd_str)
 
-        elif self.fun in self.wfuncs:
+        elif self.fun in self.wfuncs or self.mine:
             stdout = self.run_wfunc()
 
         else:
@@ -787,6 +791,26 @@ class Single(object):
             **self.target)
         self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper, self.context)
         wrapper.wfuncs = self.wfuncs
+
+        # We're running in the mind, need to fetch the arguments from the
+        # roster, pillar, master config (in that order)
+        if self.mine:
+            mine_args = None
+            if self.mine_functions and self.fun in mine_functions:
+                mine_args = self.mine_functions[self.fun]
+            elif opts['pillar'] and self.fun in opts['pillar'].get('mine_functions', {}):
+                mine_args = opts['pillar']['mine_functions'][self.fun]
+            elif self.fun in self.context['master_opts'].get('mine_functions', {}):
+                mine_args = self.context['master_opts']['mine_functions'][self.fun]
+
+            # If we found mine_args, replace our command's args
+            if isinstance(mine_args, dict):
+                self.args = []
+                self.kwargs = mine_args
+            elif isinstance(mine_args, list):
+                self.args = mine_args
+                self.kwargs = {}
+
         try:
             result = self.wfuncs[self.fun](*self.args, **self.kwargs)
         except TypeError as exc:
