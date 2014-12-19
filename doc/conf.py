@@ -216,7 +216,7 @@ gettext_compact = False
 ### HTML options
 html_theme = 'saltstack'
 html_theme_path = ['_themes']
-html_title = None
+html_title = u''
 html_short_title = 'Salt'
 
 html_static_path = ['_static']
