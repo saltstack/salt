@@ -45,14 +45,24 @@ class ZfsTestCase(TestCase):
             self.assertEqual(zfs.exists('myzpool/mydataset'), True)
 
     @patch('os.path.exists', MagicMock(return_value=False))
-    def test_exists_failure(self):
+    def test_exists_failure_not_exists(self):
         '''
-        Tests unsuccessful return of exists function
+        Tests unsuccessful return of exists function if dataset does not exist
         '''
         ret = "cannot open 'myzpool/mydataset': dataset does not exist"
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run': mock_cmd}):
             self.assertEqual(zfs.exists('myzpool/mydataset'), False)
+
+    @patch('os.path.exists', MagicMock(return_value=False))
+    def test_exists_failure_invalid_name(self):
+        '''
+        Tests unsuccessful return of exists function if dataset name is invalid
+        '''
+        ret = "cannot open 'myzpool/': invalid dataset name"
+        mock_cmd = MagicMock(return_value=ret)
+        with patch.dict(zfs.__salt__, {'cmd.run': mock_cmd}):
+            self.assertEqual(zfs.exists('myzpool/'), False)
 
 if __name__ == '__main__':
     from integration import run_tests
