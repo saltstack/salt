@@ -64,6 +64,16 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run': mock_cmd}):
             self.assertEqual(zfs.exists('myzpool/'), False)
 
+    @patch('os.path.exists', MagicMock(return_value=True))
+    def test_create_success(self):
+        '''
+        Tests successful return of create function if ZFS file system is created
+        '''
+        ret = {'myzpool/mydataset': 'created'}
+        mock_cmd = MagicMock(return_value="")
+        with patch.dict(zfs.__salt__, {'cmd.run': mock_cmd}):
+            self.assertEqual(zfs.create('myzpool/mydataset'), ret)
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(ZfsTestCase, needs_daemon=False)
