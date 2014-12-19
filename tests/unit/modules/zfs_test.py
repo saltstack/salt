@@ -34,7 +34,7 @@ class ZfsTestCase(TestCase):
     This class contains a set of functions that test salt.modules.zfs module
     '''
 
-    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_exists_success(self):
         '''
         Tests successful return of exists function
@@ -44,7 +44,7 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run': mock_cmd}):
             self.assertTrue(zfs.exists('myzpool/mydataset'))
 
-    @patch('os.path.exists', MagicMock(return_value=False))
+    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_exists_failure_not_exists(self):
         '''
         Tests unsuccessful return of exists function if dataset does not exist
@@ -54,7 +54,7 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run': mock_cmd}):
             self.assertFalse(zfs.exists('myzpool/mydataset'))
 
-    @patch('os.path.exists', MagicMock(return_value=False))
+    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_exists_failure_invalid_name(self):
         '''
         Tests unsuccessful return of exists function if dataset name is invalid
@@ -64,7 +64,7 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run': mock_cmd}):
             self.assertFalse(zfs.exists('myzpool/'))
 
-    @patch('os.path.exists', MagicMock(return_value=True))
+    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_create_success(self):
         '''
         Tests successful return of create function if ZFS file system is created
