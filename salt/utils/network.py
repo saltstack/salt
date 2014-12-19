@@ -795,9 +795,9 @@ def ip_in_subnet(ip_addr, cidr):
     '''
     Returns True if given IP is within specified subnet, otherwise False
     '''
-    ipaddr = int(''.join([ '%02x' % int(x) for x in ip_addr.split('.') ]), 16)
+    ipaddr = int(''.join(['%02x' % int(x) for x in ip_addr.split('.')]), 16)  # pylint: disable=E1321
     netstr, bits = cidr.split('/')
-    netaddr = int(''.join([ '%02x' % int(x) for x in netstr.split('.') ]), 16)
+    netaddr = int(''.join(['%02x' % int(x) for x in netstr.split('.')]), 16)  # pylint: disable=E1321
     mask = (0xffffffff << (32 - int(bits))) & 0xffffffff
     return (ipaddr & mask) == (netaddr & mask)
 
