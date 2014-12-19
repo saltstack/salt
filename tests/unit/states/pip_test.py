@@ -130,13 +130,15 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
 
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         pip_list = MagicMock(return_value={'pep8': '1.3.3'})
+        pip_install = MagicMock(return_value={'retcode': 0})
         with patch.dict(pip_state.__salt__, {'cmd.run_all': mock,
-                                             'pip.list': pip_list}):
+                                             'pip.list': pip_list,
+                                             'pip.install': pip_install}):
             with patch.dict(pip_state.__opts__, {'test': True}):
                 ret = pip_state.installed('pep8>=1.3.2')
                 self.assertSaltTrueReturn({'test': ret})
                 self.assertInSaltComment(
-                    'Python package pep8>=1.3.2 already installed',
+                    'Python package pep8>=1.3.2 was already installed',
                     {'test': ret}
                 )
 
@@ -154,25 +156,29 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
 
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         pip_list = MagicMock(return_value={'pep8': '1.3.2'})
+        pip_install = MagicMock(return_value={'retcode': 0})
         with patch.dict(pip_state.__salt__, {'cmd.run_all': mock,
-                                             'pip.list': pip_list}):
+                                             'pip.list': pip_list,
+                                             'pip.install': pip_install}):
             with patch.dict(pip_state.__opts__, {'test': True}):
                 ret = pip_state.installed('pep8>1.3.1,<1.3.3')
                 self.assertSaltTrueReturn({'test': ret})
                 self.assertInSaltComment(
-                    'Python package pep8>1.3.1;<1.3.3 already installed',
+                    'Python package pep8>1.3.1,<1.3.3 was already installed',
                     {'test': ret}
                 )
 
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         pip_list = MagicMock(return_value={'pep8': '1.3.1'})
+        pip_install = MagicMock(return_value={'retcode': 0})
         with patch.dict(pip_state.__salt__, {'cmd.run_all': mock,
-                                             'pip.list': pip_list}):
+                                             'pip.list': pip_list,
+                                             'pip.install': pip_install}):
             with patch.dict(pip_state.__opts__, {'test': True}):
                 ret = pip_state.installed('pep8>1.3.1,<1.3.3')
                 self.assertSaltNoneReturn({'test': ret})
                 self.assertInSaltComment(
-                    'Python package pep8>1.3.1;<1.3.3 is set to be installed',
+                    'Python package pep8>1.3.1,<1.3.3 is set to be installed',
                     {'test': ret}
                 )
 
@@ -248,11 +254,7 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
                 '#md5=e6760af92b7165f8be53b5763e40bc24'
             )
             self.assertSaltTrueReturn({'test': ret})
-            self.assertInSaltComment(
-                'There was no error installing package '
-                '\'https://pypi.python.org/packages/source/S/SaltTesting/'
-                'SaltTesting-0.5.0.tar.gz#md5=e6760af92b7165f8be53b5763e40bc24\' '
-                'although it does not show when calling \'pip.freeze\'.',
+            self.assertInSaltComment('All packages were successfully installed',
                 {'test': ret}
             )
             self.assertInSaltReturn(
@@ -264,7 +266,7 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
             )
 
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        pip_list = MagicMock(return_value={'pep8': '1.3.1'})
+        pip_list = MagicMock(return_value={'SaltTesting': '0.5.0'})
         pip_install = MagicMock(return_value={
             'retcode': 0,
             'stderr': '',
@@ -279,7 +281,7 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
                 )
                 self.assertSaltTrueReturn({'test': ret})
                 self.assertInSaltComment(
-                    'Package was successfully installed',
+                    'successfully installed',
                     {'test': ret}
                 )
 
@@ -298,7 +300,7 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
 
         # Test VCS installations using git+git://
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        pip_list = MagicMock(return_value={'pep8': '1.3.1'})
+        pip_list = MagicMock(return_value={'SaltTesting': '0.5.0'})
         pip_install = MagicMock(return_value={
             'retcode': 0,
             'stderr': '',
@@ -313,7 +315,7 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
                 )
                 self.assertSaltTrueReturn({'test': ret})
                 self.assertInSaltComment(
-                    'Package was successfully installed',
+                    'were successfully installed',
                     {'test': ret}
                 )
 
@@ -330,7 +332,7 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
             pass
 
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        pip_list = MagicMock(return_value={'pep8': '1.3.1'})
+        pip_list = MagicMock(return_value={'SaltTesting': '0.5.0'})
         pip_install = MagicMock(return_value={
             'retcode': 0,
             'stderr': '',
@@ -345,7 +347,7 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
                 )
                 self.assertSaltTrueReturn({'test': ret})
                 self.assertInSaltComment(
-                    'Package was successfully installed',
+                    'were successfully installed',
                     {'test': ret}
                 )
 
