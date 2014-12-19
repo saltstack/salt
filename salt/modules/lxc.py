@@ -2741,7 +2741,7 @@ def run_cmd(name,
             keep_env='http_proxy,https_proxy,no_proxy'):
     '''
     .. deprecated:: Lithium
-        Use :mod:`lxc.cmd_run <salt.module.lxc.cmd_run>` instead
+        Use :mod:`lxc.cmd_run <salt.modules.lxc.cmd_run>` instead
     '''
     salt.utils.warn_until(
         'Boron',
