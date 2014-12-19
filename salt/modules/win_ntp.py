@@ -40,13 +40,19 @@ def set_servers(*servers):
     if not __salt__['service.status'](service_name):
         if not __salt__['service.start'](service_name):
             return False
-    ret = __salt__['cmd.run'](
-        'W32tm /config /syncfromflags:manual /manualpeerlist:"{0}" &&'
-        'W32tm /config /reliable:yes && W32tm /config /update'
-        .format(' '.join(servers))
-    )
+
+    server_cmd = ['W32tm', '/config', '/syncfromflags:manual',
+                  '/manualpeerlist:{0}'.format(' '.join(servers))]
+    reliable_cmd = ['W32tm', '/config', '/reliable:yes']
+    update_cmd = ['W32tm', '/config', '/update']
+
+    for cmd in server_cmd, reliable_cmd, update_cmd:
+        ret = __salt__['cmd.run'](cmd, python_shell=False)
+        if 'command completed successfully' not in ret:
+            return False
+
     __salt__['service.restart'](service_name)
-    return 'command completed successfully' in ret
+    return True
 
 
 def get_servers():
@@ -59,8 +65,8 @@ def get_servers():
 
         salt '*' ntp.get_servers
     '''
-    cmd = 'w32tm /query /configuration'
-    lines = __salt__['cmd.run'](cmd).splitlines()
+    cmd = ['w32tm', '/query', '/configuration']
+    lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     for line in lines:
         if 'NtpServer' in line:
             _, ntpsvrs = line.rstrip(' (Local)').split(':', 1)

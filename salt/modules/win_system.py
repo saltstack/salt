@@ -6,6 +6,11 @@ Support for reboot, shutdown, etc
 # Import python libs
 import logging
 import re
+import datetime
+try:
+    from shlex import quote as _cmd_quote  # pylint: disable=E0611
+except ImportError:
+    from pipes import quote as _cmd_quote
 
 # Import salt libs
 import salt.utils
@@ -49,8 +54,8 @@ def init(runlevel):
 
         salt '*' system.init 3
     '''
-    #cmd = 'init {0}'.format(runlevel)
-    #ret = __salt__['cmd.run'](cmd)
+    #cmd = ['init', runlevel]
+    #ret = __salt__['cmd.run'](cmd, python_shell=False)
     #return ret
 
     # TODO: Create a mapping of runlevels to
@@ -82,8 +87,8 @@ def reboot(timeout=5):
 
         salt '*' system.reboot
     '''
-    cmd = 'shutdown /r /t {0}'.format(timeout)
-    ret = __salt__['cmd.run'](cmd)
+    cmd = ['shutdown', '/r', '/t', '{0}'.format(timeout)]
+    ret = __salt__['cmd.run'](cmd, python_shell=False)
     return ret
 
 
@@ -97,8 +102,8 @@ def shutdown(timeout=5):
 
         salt '*' system.shutdown
     '''
-    cmd = 'shutdown /s /t {0}'.format(timeout)
-    ret = __salt__['cmd.run'](cmd)
+    cmd = ['shutdown', '/s', '/t', '{0}'.format(timeout)]
+    ret = __salt__['cmd.run'](cmd, python_shell=False)
     return ret
 
 
@@ -112,8 +117,8 @@ def shutdown_hard():
 
         salt '*' system.shutdown_hard
     '''
-    cmd = 'shutdown /p /f'
-    ret = __salt__['cmd.run'](cmd)
+    cmd = ['shutdown', '/p', '/f']
+    ret = __salt__['cmd.run'](cmd, python_shell=False)
     return ret
 
 
@@ -128,9 +133,8 @@ def set_computer_name(name):
         salt 'minion-id' system.set_computer_name 'DavesComputer'
     '''
     cmd = ('wmic computersystem where name="%COMPUTERNAME%"'
-           ' call rename name="{0}"')
-    log.debug('Attempting to change computer name. Cmd is: '.format(cmd))
-    ret = __salt__['cmd.run'](cmd.format(name))
+           ' call rename name="{0}"'.format(name))
+    ret = __salt__['cmd.run'](cmd, python_shell=True)
     if 'ReturnValue = 0;' in ret:
         ret = {'Computer Name': {'Current': get_computer_name()}}
         pending = get_pending_computer_name()
@@ -155,9 +159,10 @@ def get_pending_computer_name():
         salt 'minion-id' system.get_pending_computer_name
     '''
     current = get_computer_name()
-    cmd = ('reg query HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control'
-           '\\ComputerName\\ComputerName /v ComputerName')
-    output = __salt__['cmd.run'](cmd)
+    cmd = ['reg', 'query',
+           'HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\ComputerName\\ComputerName',
+           '/v', 'ComputerName']
+    output = __salt__['cmd.run'](cmd, python_shell=False)
     pending = None
     for line in output.splitlines():
         try:
@@ -187,8 +192,8 @@ def get_computer_name():
 
         salt 'minion-id' system.get_computer_name
     '''
-    cmd = 'net config server'
-    lines = __salt__['cmd.run'](cmd).splitlines()
+    cmd = ['net', 'config', 'server']
+    lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     for line in lines:
         if 'Server Name' in line:
             _, srv_name = line.split('Server Name', 1)
@@ -206,8 +211,8 @@ def set_computer_desc(desc):
 
         salt 'minion-id' system.set_computer_desc 'This computer belongs to Dave!'
     '''
-    cmd = u'net config server /srvcomment:"{0}"'.format(salt.utils.sdecode(desc))
-    __salt__['cmd.run'](cmd)
+    cmd = ['net', 'config', 'server', u'/srvcomment:{0}'.format(salt.utils.sdecode(desc))]
+    __salt__['cmd.run'](cmd, python_shell=False)
     return {'Computer Description': get_computer_desc()}
 
 set_computer_description = set_computer_desc
@@ -223,8 +228,8 @@ def get_computer_desc():
 
         salt 'minion-id' system.get_computer_desc
     '''
-    cmd = 'net config server'
-    lines = __salt__['cmd.run'](cmd).splitlines()
+    cmd = ['net', 'config', 'server']
+    lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     for line in lines:
         if 'Server Comment' in line:
             _, desc = line.split('Server Comment', 1)
@@ -287,8 +292,12 @@ def join_domain(
         join_options = 1
     cmd = ('wmic /interactive:off ComputerSystem Where '
            'name="%computername%" call JoinDomainOrWorkgroup FJoinOptions={0} '
-           'Name="{1}" UserName="{2}" Password="{3}"'
-           ).format(join_options, domain, username, password)
+           'Name={1} UserName={2} Password={3}'
+           ).format(
+               join_options,
+               _cmd_quote(domain),
+               _cmd_quote(username),
+               _cmd_quote(password))
     if account_ou:
         # contrary to RFC#2253, 2.1, 'wmic' requires a ; as a RDN separator
         # for the DN
@@ -296,7 +305,7 @@ def join_domain(
         add_ou = ' AccountOU="{0}"'.format(account_ou)
         cmd = cmd + add_ou
 
-    ret = __salt__['cmd.run'](cmd)
+    ret = __salt__['cmd.run'](cmd, python_shell=True)
     if 'ReturnValue = 0;' in ret:
         return {'Domain': domain}
     return_values = {
@@ -316,6 +325,45 @@ def join_domain(
     return False
 
 
+def _validate_datetime(newdatetime, valid_formats):
+    '''
+    Validate `newdatetime` against list of date/time formats understood by
+    windows.
+    '''
+    for dt_format in valid_formats:
+        try:
+            datetime.datetime.strptime(newdatetime, dt_format)
+            return True
+        except ValueError:
+            continue
+    return False
+
+
+def _validate_time(newtime):
+    '''
+    Validate `newtime` against list of time formats understood by windows.
+    '''
+    valid_time_formats = [
+        '%I:%M:%S %p',
+        '%I:%M %p',
+        '%H:%M:%S',
+        '%H:%M'
+    ]
+    return _validate_datetime(newtime, valid_time_formats)
+
+
+def _validate_date(newdate):
+    '''
+    Validate `newdate` against list of date formats understood by windows.
+    '''
+    valid_date_formats = [
+        '%Y-%m-%d',
+        '%m/%d/%y',
+        '%y/%m/%d'
+    ]
+    return _validate_datetime(newdate, valid_date_formats)
+
+
 def get_system_time():
     '''
     Get the Windows system time
@@ -327,7 +375,7 @@ def get_system_time():
         salt '*' system.get_system_time
     '''
     cmd = 'time /T'
-    return __salt__['cmd.run'](cmd)
+    return __salt__['cmd.run'](cmd, python_shell=True)
 
 
 def set_system_time(newtime):
@@ -340,8 +388,10 @@ def set_system_time(newtime):
 
         salt '*' system.set_system_time '11:31:15 AM'
     '''
+    if not _validate_time(newtime):
+        return False
     cmd = 'time {0}'.format(newtime)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=True)
 
 
 def get_system_date():
@@ -355,7 +405,7 @@ def get_system_date():
         salt '*' system.get_system_date
     '''
     cmd = 'date /T'
-    return __salt__['cmd.run'](cmd)
+    return __salt__['cmd.run'](cmd, python_shell=True)
 
 
 def set_system_date(newdate):
@@ -368,8 +418,10 @@ def set_system_date(newdate):
 
         salt '*' system.set_system_date '03-28-13'
     '''
+    if not _validate_date(newdate):
+        return False
     cmd = 'date {0}'.format(newdate)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=True)
 
 
 def start_time_service():
