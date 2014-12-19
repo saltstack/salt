@@ -90,11 +90,22 @@ class ZfsTestCase(TestCase):
         '''
         Tests unsuccessful return of create function if trailing slash in name is present
         '''
-        msg = "cannot create 'myzpool': trailing slash in name"
-        ret = {'Error': 'cannot create \'myzpool\': trailing slash in name'}
+        msg = "cannot create 'myzpool/': trailing slash in name"
+        ret = {'Error': 'cannot create \'myzpool/\': trailing slash in name'}
         mock_cmd = MagicMock(return_value=msg)
         with patch.dict(zfs.__salt__, {'cmd.run': mock_cmd}):
             self.assertEqual(zfs.create('myzpool/'), ret)
+
+    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
+    def test_create_error_no_such_pool(self):
+        '''
+        Tests unsuccessful return of create function if the pool is not present
+        '''
+        msg = "cannot create 'myzpool/mydataset': no such pool 'myzpool'"
+        ret = {'Error': 'cannot create \'myzpool/mydataset\': no such pool \'myzpool\''}
+        mock_cmd = MagicMock(return_value=msg)
+        with patch.dict(zfs.__salt__, {'cmd.run': mock_cmd}):
+            self.assertEqual(zfs.create('myzpool/mydataset'), ret)
 
 if __name__ == '__main__':
     from integration import run_tests
