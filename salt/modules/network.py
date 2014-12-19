@@ -930,6 +930,19 @@ def is_loopback(ip_addr):
     return salt.utils.network.IPv4Address(ip_addr).is_loopback
 
 
+def reverse_ip(cidr):
+    '''
+    Returns the reversed IP address
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.reverse_ip 172.17.0.4
+    '''
+    return salt.utils.network.IPv4Address(ip_addr).reverse_pointer
+
+
 def _get_bufsize_linux(iface):
     '''
     Return network interface buffer information using ethtool
