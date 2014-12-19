@@ -169,7 +169,7 @@ class VTTestCase(TestCase):
             term.close(terminate=True, kill=True)
 
         expected_data = 'Alive!\nAlive!\n'
-        term = vt.Terminal('echo "Alive!"; sleep 1; echo "Alive!"', shell=True, stream_stdout=False, stream_stderr=False)
+        term = vt.Terminal('echo "Alive!"; sleep 5; echo "Alive!"', shell=True, stream_stdout=False, stream_stderr=False)
         buffer_o = buffer_e = ''
         try:
             while term.has_unread_data:
