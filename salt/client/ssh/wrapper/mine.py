@@ -8,8 +8,11 @@ def get(tgt, fun, expr_form='glob', roster='flat'):
     '''
     Get data from the mine based on the target, function and expr_form
 
-    This is basically a wrapper around publish.publish, as salt-ssh clients
-    can't update the mine themselves.
+    This will actually run the function on all targeted minions (like
+    publish.publish), as salt-ssh clients can't update the mine themselves.
+
+    We will look for mine_functions in the roster, pillar, and master config,
+    in that order, looking for a match for the defined function
 
     Targets can be matched based on any standard matching system that can be
     matched on the defined roster (in salt-ssh) via these keywords::
