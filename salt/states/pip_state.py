@@ -719,7 +719,7 @@ def installed(name,
             # Set comments
             aicomms = '\n'.join(already_installed_comments)
             succ_comm = 'All packages were successfully installed'\
-                        if not pkg_404_comms else ''
+                        if not pkg_404_comms else '\n'.join(pkg_404_comms)
             ret['comment'] = aicomms + ('\n' if aicomms else '') + succ_comm
 
             return ret
