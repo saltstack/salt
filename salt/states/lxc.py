@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
-lxc / Spin up and control LXC containers
-=========================================
+Manage Linux Containers
+=======================
 '''
 
 from __future__ import absolute_import
 __docformat__ = 'restructuredtext en'
-import traceback
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -623,3 +622,29 @@ def cloned(name,
                    size=size,
                    vgname=vgname,
                    profile=profile)
+
+
+def set_pass(name, **kwargs):  # pylint: disable=W0613
+    '''
+    .. deprecated:: 2015.2.0
+
+    This state function has been disabled, as it did not conform to design
+    guidelines. Specifically, due to the fact that :mod:`lxc.set_password
+    <salt.modules.lxc.set_password>` uses ``chpasswd(8)`` to set the password,
+    there was no method to make this action idempotent (in other words, the
+    password would be changed every time). This makes this state redundant,
+    since the following state will do the same thing:
+
+    .. code-block:: yaml
+
+        setpass:
+          module.run:
+            - name: set_pass
+            - m_name: root
+            - password: secret
+    '''
+    return {'name': name,
+            'comment': 'The lxc.set_pass state is no longer supported. Please '
+                       'see the documentation for further information.'
+            'result': False,
+            'changes': {}}
