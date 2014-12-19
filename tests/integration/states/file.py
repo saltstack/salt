@@ -856,40 +856,6 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         finally:
             os.remove(path_test)
 
-    def test_sed(self):
-        '''
-        file.sed
-        '''
-        name = os.path.join(integration.TMP, 'sed_test')
-        with salt.utils.fopen(name, 'w+') as fp_:
-            fp_.write('change_me')
-        ret = self.run_state(
-            'file.sed', name=name, before='change', after='salt'
-        )
-        try:
-            with salt.utils.fopen(name, 'r') as fp_:
-                self.assertIn('salt', fp_.read())
-            self.assertSaltTrueReturn(ret)
-        finally:
-            os.remove(name)
-
-    def test_test_sed(self):
-        '''
-        file.sed test integration
-        '''
-        name = os.path.join(integration.TMP, 'sed_test_test')
-        with salt.utils.fopen(name, 'w+') as fp_:
-            fp_.write('change_me')
-        ret = self.run_state(
-            'file.sed', test=True, name=name, before='change', after='salt'
-        )
-        try:
-            with salt.utils.fopen(name, 'r') as fp_:
-                self.assertIn('change', fp_.read())
-            self.assertSaltNoneReturn(ret)
-        finally:
-            os.remove(name)
-
     def test_comment(self):
         '''
         file.comment
