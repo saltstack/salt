@@ -125,13 +125,13 @@ def destroy(device):
     except CommandExecutionError:
         return False
 
-    stop_cmd = ' '.join(['mdadm', '--stop', device])
-    zero_cmd = ' '.join(['mdadm', '--zero-superblock'])
+    stop_cmd = ['mdadm', '--stop', device]
+    zero_cmd = ['mdadm', '--zero-superblock']
 
-    if __salt__['cmd.retcode'](stop_cmd):
+    if __salt__['cmd.retcode'](stop_cmd, python_shell=False):
         for number in details['members']:
             zero_cmd.append(details['members'][number]['device'])
-        __salt__['cmd.retcode'](zero_cmd)
+        __salt__['cmd.retcode'](zero_cmd, python_shell=False)
 
     # Remove entry from config file:
     if __grains__.get('os_family') == 'Debian':
