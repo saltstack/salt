@@ -930,7 +930,7 @@ def is_loopback(ip_addr):
     return salt.utils.network.IPv4Address(ip_addr).is_loopback
 
 
-def reverse_ip(cidr):
+def reverse_ip(ip_addr):
     '''
     Returns the reversed IP address
 
