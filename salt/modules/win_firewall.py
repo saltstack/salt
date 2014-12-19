@@ -106,7 +106,7 @@ def add_rule(name, localport, protocol="tcp", action="allow", dir="in"):
 
     .. code-block:: bash
 
-        salt '*' firewall.add_rule "test" "tcp" "8080"
+        salt '*' firewall.add_rule "test" "8080" "tcp"
     '''
     cmd = ['netsh', 'advfirewall', 'firewall', 'add', 'rule',
            'name={0}'.format(name),
@@ -114,4 +114,22 @@ def add_rule(name, localport, protocol="tcp", action="allow", dir="in"):
            'dir={0}'.format(dir),
            'localport={0}'.format(localport),
            'action={0}'.format(action)]
+    return __salt__['cmd.run'](cmd, python_shell=False) == 'Ok.'
+
+
+def delete_rule(name, localport, protocol, dir):
+    '''
+    Delete an existing firewall rule
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' firewall.delete_rule "test" "8080" "tcp" "in"
+    '''
+    cmd = ['netsh', 'advfirewall', 'firewall', 'delete', 'rule',
+           'name={0}'.format(name),
+           'protocol={0}'.format(protocol),
+           'dir={0}'.format(dir),
+           'localport={0}'.format(localport)]
     return __salt__['cmd.run'](cmd, python_shell=False) == 'Ok.'
