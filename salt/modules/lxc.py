@@ -2734,6 +2734,8 @@ def run_cmd(name,
             no_start=False,
             preserve_state=True,
             stdin=None,
+            stdout=True,
+            stderr=False,
             python_shell=True,
             output_loglevel='debug',
             use_vt=False,
@@ -2745,11 +2747,20 @@ def run_cmd(name,
     '''
     salt.utils.warn_until(
         'Boron',
-        'lxc.run_cmd has been renamed to lxc.cmd_run, please use lxc.cmd_run'
+        'lxc.run_cmd has been deprecated, please use one of the lxc.cmd_run* '
+        'functions. See the documentation for more information.'
     )
+    if stdout and stderr:
+        output = 'all'
+    elif stdout:
+        output = 'stdout'
+    elif stderr:
+        output = 'stderr'
+    else:
+        output = 'retcode'
     return _run(name,
                 cmd,
-                output=None,
+                output=output,
                 no_start=no_start,
                 preserve_state=preserve_state,
                 stdin=stdin,
