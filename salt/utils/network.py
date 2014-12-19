@@ -1183,3 +1183,10 @@ class IPv4Address(object):
         :return: True if the address is a loopback address. Otherwise False.
         '''
         return 127 == self.dotted_quad[0]
+
+    @property
+    def reverse_pointer(self):
+        '''
+        :return: Reversed IP address
+        '''
+        return '.'.join(reversed(self.dotted_quad)) + '.in-addr.arpa.'
