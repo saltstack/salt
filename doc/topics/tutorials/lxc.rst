@@ -12,8 +12,8 @@ LXC Management with Salt
 .. warning::
 
     Some features are only currently available in the ``develop`` branch, and
-    will not be available in an official Salt release until the next feature
-    release (codenamed "Lithium"). These new features will be clearly labeled.
+    are new in the upcoming 2015.2.0 release. These new features will be
+    clearly labeled.
     
 
 Dependencies
@@ -78,8 +78,8 @@ defined underneath the ``lxc.profile`` config option:
 However, due to the way that :mod:`config.get <salt.modules.config.get>` works,
 this means that if a ``lxc.profile`` key is defined in both the master config
 file and in a specific minion's config file, that will cause all profiles to be
-overwritten for that minion. For greater flexibility, in the next feature
-release each container profile should be configured in its own key, in the
+overwritten for that minion. For greater flexibility, starting in version
+2015.2.0 each container profile should be configured in its own key, in the
 format ``lxc.container_profile.profile_name``. For example:
 
 .. code-block:: yaml
@@ -102,22 +102,23 @@ without also removing the ``centos`` profile. The legacy usage will still be
 supported for a couple release cycles, to allow for some time to update
 configurations.
 
-Additionally, in the next feature release, container profiles have been
-expanded to support passing template-specific CLI options. Below is a table
-describing the parameters which can be configured in container profiles:
+Additionally, in version 2015.2.0 container profiles have been expanded to
+support passing template-specific CLI options to :mod:`lxc.create
+<salt.modules.lxc.create>`. Below is a table describing the parameters which
+can be configured in container profiles:
 
-================== ===================================== ====================
-Parameter          Develop Branch (Next Feature Release) 2014.7.x and Earlier
-================== ===================================== ====================
-*template*:sup:`1` Yes                                   Yes
-*options*:sup:`1`  Yes                                   No
-*image*:sup:`1`    Yes                                   Yes
-*backing*          Yes                                   Yes
-*snapshot*:sup:`2` Yes                                   Yes
-*lvname*:sup:`1`   Yes                                   Yes
-*fstype*:sup:`1`   Yes                                   Yes
-*size*             Yes                                   Yes
-================== ===================================== ====================
+================== ================== ====================
+Parameter          2015.2.0 and Newer 2014.7.x and Earlier
+================== ================== ====================
+*template*:sup:`1` Yes                Yes
+*options*:sup:`1`  Yes                No
+*image*:sup:`1`    Yes                Yes
+*backing*          Yes                Yes
+*snapshot*:sup:`2` Yes                Yes
+*lvname*:sup:`1`   Yes                Yes
+*fstype*:sup:`1`   Yes                Yes
+*size*             Yes                Yes
+================== ================== ====================
 
 1. Parameter is only supported for container creation, and will be ignored if
    the profile is used when cloning a container.
@@ -149,8 +150,8 @@ defined underneath the ``lxc.nic`` config option:
 However, due to the way that :mod:`config.get <salt.modules.config.get>` works,
 this means that if a ``lxc.nic`` key is defined in both the master config file
 and in a specific minion's config file, that will cause all network profiles to
-be overwritten for that minion. For greater flexibility, in the next feature
-release each container profile should be configured in its own key, in the
+be overwritten for that minion. For greater flexibility, starting with version
+2015.2.0 each network profile should be configured in its own key, in the
 format ``lxc.network_profile.profile_name``. For example:
 
 .. code-block:: yaml
@@ -218,10 +219,10 @@ container, with three values:
 2. **release** - the release name/version (i.e. ``trusty`` or ``6``)
 3. **arch** - CPU architecture (i.e. ``amd64`` or ``i386``)
 
-The :mod:`lxc.images <salt.modules.lxc.images>` function (new in the next
-feature release) can be used to list the available images. Alternatively, the
-releases can be viewed on http://images.linuxcontainers.org/images/. The images
-are organized in such a way that the dist, release, and arch can be determined
+The :mod:`lxc.images <salt.modules.lxc.images>` function (new in version
+2015.2.0) can be used to list the available images. Alternatively, the releases
+can be viewed on http://images.linuxcontainers.org/images/. The images are
+organized in such a way that the dist, release, and arch can be determined
 using the following URL format:
 ``http://images.linuxcontainers.org/images/dist/release/arch``. For example,
 ``http://images.linuxcontainers.org/images/centos/6/amd64`` would correspond to
@@ -352,12 +353,12 @@ Running Commands Within a Container
 For containers which are not running their own Minion, commands can be run
 within the container in a manner similar to using (:mod:`cmd.run
 <salt.modules.cmdmod.run`). The means of doing this have been changed
-significantly in the new feature release (though the deprecated behavior will
-still be supported for a couple releases). Both the old and new usage are
-documented below.
+significantly in version 2015.2.0 (though the deprecated behavior will still be
+supported for a few releases). Both the old and new usage are documented
+below.
 
-Develop Branch (Next Feature Release)
--------------------------------------
+2015.2.0 and Newer
+------------------
 
 New functions have been added to mimic the behavior of the functions in the
 :mod:`cmd <salt.modules.cmdmod>` module. Below is a table with the :mod:`cmd
@@ -412,8 +413,8 @@ To run a command and return all information:
 Container Management Using States
 =================================
 
-Several states are being renamed or otherwise modified for the next feature
-release. The information in this tutorial refers to the new states. For
+Several states are being renamed or otherwise modified in version 2015.2.0. The
+information in this tutorial refers to the new states. For
 2014.7.x and earlier, please refer to the :mod:`documentation for the LXC
 states <salt.states.lxc>`.
 
