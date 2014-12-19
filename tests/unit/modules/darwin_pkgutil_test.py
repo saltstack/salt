@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from salt.modules import darwin_pkgutil
 
 from salttesting import TestCase, skipIf
