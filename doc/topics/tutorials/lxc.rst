@@ -222,8 +222,8 @@ container, with three values:
 The :mod:`lxc.images <salt.modules.lxc.images>` function (new in version
 2015.2.0) can be used to list the available images. Alternatively, the releases
 can be viewed on http://images.linuxcontainers.org/images/. The images are
-organized in such a way that the dist, release, and arch can be determined
-using the following URL format:
+organized in such a way that the **dist**, **release**, and **arch** can be
+determined using the following URL format:
 ``http://images.linuxcontainers.org/images/dist/release/arch``. For example,
 ``http://images.linuxcontainers.org/images/centos/6/amd64`` would correspond to
 a **dist** of ``centos``, a **release** of ``6``, and an **arch** of ``amd64``.
