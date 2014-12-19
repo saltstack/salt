@@ -107,6 +107,17 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run': mock_cmd}):
             self.assertEqual(zfs.create('myzpool/mydataset'), ret)
 
+    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
+    def test_create_error_missing_parent(self):
+        '''
+        Tests unsuccessful return of create function if the parent datasets do not exist
+        '''
+        msg = "cannot create 'myzpool/mydataset/mysubdataset': parent does not exist"
+        ret = {'Error': 'cannot create \'myzpool/mydataset/mysubdataset\': parent does not exist'}
+        mock_cmd = MagicMock(return_value=msg)
+        with patch.dict(zfs.__salt__, {'cmd.run': mock_cmd}):
+            self.assertEqual(zfs.create('myzpool/mydataset/mysubdataset'), ret)
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(ZfsTestCase, needs_daemon=False)
