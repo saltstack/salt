@@ -4,6 +4,13 @@ Wrapper function for mine operations for salt-ssh
 .. versionadded:: Lithium
 '''
 
+# Import python libs
+import copy
+
+# Import salt libs
+import salt.client.ssh
+
+
 def get(tgt, fun, expr_form='glob', roster='flat'):
     '''
     Get data from the mine based on the target, function and expr_form
