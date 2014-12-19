@@ -696,6 +696,19 @@ def in_subnet(cidr):
     return salt.utils.network.in_subnet(cidr)
 
 
+def ip_in_subnet(ip_addr, cidr):
+    '''
+    Returns True if given IP is within specified subnet, otherwise False.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.ip_in_subnet 172.17.0.4 172.16.0.0/12
+    '''
+    return salt.utils.network.ip_in_subnet(ip_addr, cidr)
+
+
 def ip_addrs(interface=None, include_loopback=False, cidr=None):
     '''
     Returns a list of IPv4 addresses assigned to the host. 127.0.0.1 is
