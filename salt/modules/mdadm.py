@@ -233,15 +233,16 @@ def create(name,
 
     cmd = ['mdadm',
            '-C', name,
+           '-R',
            '-v'] + opts + [
            '-l', str(level),
            '-e', metadata,
            '-n', str(len(devices))] + devices
 
-    cmd = ' '.join(cmd)
+    cmd_str = ' '.join(cmd)
 
     if test_mode is True:
-        return cmd
+        return cmd_str
     elif test_mode is False:
         return __salt__['cmd.run'](cmd, python_shell=False)
 
