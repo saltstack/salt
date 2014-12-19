@@ -498,7 +498,7 @@ class Client(object):
         ret.sort()
         return ret
 
-    def get_url(self, url, dest, makedirs=False, saltenv='base', env=None):
+    def get_url(self, url, dest, makedirs=False, saltenv='base', env=None, no_cache=False):
         '''
         Get a single file from a URL.
         '''
@@ -531,7 +531,7 @@ class Client(object):
                     os.makedirs(destdir)
                 else:
                     return ''
-        else:
+        elif not no_cache:
             if salt.utils.is_windows():
                 netloc = salt.utils.sanitize_win_path_string(url_data.netloc)
             else:
@@ -595,10 +595,13 @@ class Client(object):
             else:
                 get_kwargs['stream'] = True
             response = requests.get(fixed_url, **get_kwargs)
-            with salt.utils.fopen(dest, 'wb') as destfp:
-                for chunk in response.iter_content(chunk_size=32*1024):
-                    destfp.write(chunk)
-            return dest
+            if not no_cache:
+                with salt.utils.fopen(dest, 'wb') as destfp:
+                    for chunk in response.iter_content(chunk_size=32*1024):
+                        destfp.write(chunk)
+                return dest
+            else:
+                return response.text
         except HTTPError as exc:
             raise MinionError('HTTP error {0} reading {1}: {3}'.format(
                 exc.code,
