@@ -12,6 +12,7 @@ import traceback
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 
+# Container existence/non-existence
 def present(name,
             running=None,
             clone_from=None,
@@ -53,8 +54,8 @@ def present(name,
 
     profile
         Profile to use in container creation (see the :ref:`LXC Tutorial
-        <lxc-tutorial-profiles>` for more information). Values in a profile
-        will be overridden by the parameters listed below.
+        <tutorial-lxc-profiles-container>` for more information). Values in a
+        profile will be overridden by the parameters listed below.
 
     **Container Creation Arguments**
 
@@ -325,6 +326,7 @@ def absent(name):
     return ret
 
 
+# Container state (running/frozen/stopped)
 def running(name, restart=False):
     '''
     .. versionchanged:: Lithium
@@ -599,9 +601,15 @@ def started(name, restart=False):
     return running(name, restart=restart)
 
 
-def cloned(name, orig, **kwargs):
+def cloned(name,
+           orig,
+           snapshot=True,
+           size=None,
+           vgname=None,
+           profile=None):
     '''
-    State has been renamed, show deprecation notice
+    .. deprecated:: Lithium
+        Use :mod:`lxc.present <salt.states.lxc.present>`
     '''
     salt.utils.warn_until(
         'Boron',
@@ -609,4 +617,9 @@ def cloned(name, orig, **kwargs):
         'Please update your states to use lxc.present, with the '
         '\'clone_from\' argument set to the name of the clone source.'
     )
-    return present(name, clone_from=orig, **kwargs)
+    return present(name,
+                   clone_from=orig,
+                   snapshot=snapshot,
+                   size=size,
+                   vgname=vgname,
+                   profile=profile)
