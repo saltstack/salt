@@ -27,13 +27,15 @@ class SaltExternalAuthModel(models.Model):
   minion_matcher = models.CharField()
   minion_fn = models.CharField()
 
-The contents of this table is loaded and merged with whatever external_auth
-definition is in the master config file.  This enables fallback in case the
-django database is in an inconsistent state.
+Then, in the master's config file the external_auth clause should look like
 
-This external auth module requires that a particular schema be loaded.
-It also needs to
+external_auth:
+  django:
+    ^model: <fully-qualified reference to model class>
 
+When a user attempts to authenticate via Django, Salt will import the package
+indicated via the keyword '^model'.  That model must have the fields
+indicated above, though the model DOES NOT have to be named 'SaltExternalAuthModel'.
 
 :depends:   - Django Web Framework
 '''
@@ -43,100 +45,18 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
+import salt.utils.dictupdate
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
 
-# Import third party libs
-from jinja2 import Environment
 try:
     import django
+    import django.conf
     import django.contrib.auth
     HAS_DJANGO = True
 except ImportError:
     HAS_DJANGO = False
-
-# Defaults, override in master config
-__defopts__ = {'auth.ldap.uri': '',
-               'auth.ldap.server': 'localhost',
-               'auth.ldap.port': '389',
-               'auth.ldap.tls': False,
-               'auth.ldap.no_verify': False,
-               'auth.ldap.anonymous': False,
-               'auth.ldap.scope': 2,
-               'auth.ldap.groupou': 'Groups'
-               }
-
-
-def _config(key, mandatory=True):
-    '''
-    Return a value for 'name' from master config file options or defaults.
-    '''
-    try:
-        value = __opts__['auth.ldap.{0}'.format(key)]
-    except KeyError:
-        try:
-            value = __defopts__['auth.ldap.{0}'.format(key)]
-        except KeyError:
-            if mandatory:
-                msg = 'missing auth.ldap.{0} in master config'.format(key)
-                raise SaltInvocationError(msg)
-            return False
-    return value
-
-
-def _render_template(param, username):
-    '''
-    Render config template, substituting username where found.
-    '''
-    env = Environment()
-    template = env.from_string(param)
-    variables = {'username': username}
-    return template.render(variables)
-
-
-class _LDAPConnection(object):
-    '''
-    Setup an LDAP connection.
-    '''
-
-    def __init__(self, uri, server, port, tls, no_verify, binddn, bindpw,
-                 anonymous):
-        '''
-        Bind to an LDAP directory using passed credentials.
-        '''
-        self.uri = uri
-        self.server = server
-        self.port = port
-        self.tls = tls
-        schema = 'ldaps' if tls else 'ldap'
-        self.binddn = binddn
-        self.bindpw = bindpw
-        if not HAS_LDAP:
-            raise CommandExecutionError('Failed to connect to LDAP, module '
-                                        'not loaded')
-        if self.uri == '':
-            self.uri = '{0}://{1}:{2}'.format(schema, self.server, self.port)
-
-        try:
-            if no_verify:
-                ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT,
-                                ldap.OPT_X_TLS_NEVER)
-
-            self.ldap = ldap.initialize(
-                '{0}'.format(self.uri)
-            )
-            self.ldap.protocol_version = 3  # ldap.VERSION3
-            self.ldap.set_option(ldap.OPT_REFERRALS, 0)  # Needed for AD
-
-            if not anonymous:
-                self.ldap.simple_bind_s(self.binddn, self.bindpw)
-        except Exception as ldap_error:
-            raise CommandExecutionError(
-                'Failed to bind to LDAP server {0} as {1}: {2}'.format(
-                    self.uri, self.binddn, ldap_error
-                )
-            )
 
 
 def auth(username, password):
@@ -148,37 +68,88 @@ def auth(username, password):
     # they are needed.  When using framework facilities outside the
     # web application container we need to run django.setup() to
     # get the model definitions cached.
-    if django.VERSION >= (1,7):
+    if '^model' in __opts__['external_auth']['django']:
+        django_model_fullname = __opts__['external_auth']['django']['^model']
+        django_model_name = django_model_fullname.split('.')[-1]
+        django_module_name = '.'.join(django_model_fullname.split('.')[0:-1])
+
+        django_auth_module = __import__(django_module_name, globals(), locals(), 'SaltExternalAuthModel')
+        django_auth_class_str = 'django_auth_module.{0}'.format(django_model_name)
+        django_auth_class = eval(django_auth_class_str)
+
+    if django.VERSION >= (1, 7):
         django.setup()
     user = django.contrib.auth.authenticate(username=username, password=password)
     if user is not None:
         if user.is_active:
             log.debug('Django authentication successful')
+
+            auth_dict_from_db = retrieve_auth_entries(django_auth_class, username)[username]
+            if auth_dict_from_db is not None:
+                __opts__['external_auth']['django'][username] = auth_dict_from_db
+
             return True
         else:
             log.debug('Django authentication: the password is valid but the account is disabled.')
 
     return False
 
-
-def groups(username, **kwargs):
+def retrieve_auth_entries(django_auth_class, u=None):
     '''
-    Authenticate against an LDAP group
 
-    Uses groupou and basedn specified in group to filter
-    group search
+    :param django_auth_class: Reference to the django model class for auth
+    :param u: Username to filter for
+    :return: Dictionary that can be slotted into the __opts__ structure for eauth that designates the
+             user and his or her ACL
+
+    username     minion_or_fn_matcher     minion_fn
+    fred                                  test.ping
+    fred         server1                  network.interfaces
+    fred         server1                  raid.list
+    fred         server2                  .*
+    guru         .*
+    smartadmin   server1                  .*
+
+    Should result in
+    fred:
+      - test.ping
+      - server1:
+          - network.interfaces
+          - raid.list
+      - server2:
+          - .*
+    guru:
+      - .*
+    smartadmin:
+      - server1:
+        - .*
+
     '''
-    group_list = []
-    bind = _bind(username, kwargs['password'])
-    if bind:
-        search_results = bind.search_s('ou={0},{1}'.format(_config('groupou'), _config('basedn')),
-                                       ldap.SCOPE_SUBTREE,
-                                       '(&(memberUid={0})(objectClass=posixGroup))'.format(username),
-                                       ['memberUid', 'cn'])
+
+    if u is None:
+        db_records = django_auth_class.objects.all()
     else:
-        return False
-    for _, entry in search_results:
-        if entry['memberUid'][0] == username:
-            group_list.append(entry['cn'][0])
-    log.debug('User {0} is a member of groups: {1}'.format(username, group_list))
-    return group_list
+        db_records = django_auth_class.objects.filter(user_fk__username=u)
+    auth_dict = {}
+
+    for a in db_records:
+        if a.user_fk.username not in auth_dict:
+            auth_dict[a.user_fk.username] = []
+
+        if not a.minion_or_fn_matcher and a.minion_fn:
+            auth_dict[a.user_fk.username].append(a.minion_fn)
+        elif a.minion_or_fn_matcher and not a.minion_fn:
+            auth_dict[a.user_fk.username].append(a.minion_or_fn_matcher)
+        else:
+            found = False
+            for d in auth_dict[a.user_fk.username]:
+                if isinstance(d, dict):
+                    if a.minion_or_fn_matcher in d.keys():
+                        auth_dict[a.user_fk.username][a.minion_or_fn_matcher].append(a.minion_fn)
+                        found = True
+            if not found:
+                auth_dict[a.user_fk.username].append({a.minion_or_fn_matcher: [a.minion_fn]})
+
+    log.debug('django auth_dict is {0}'.format(repr(auth_dict)))
+    return auth_dict
+
