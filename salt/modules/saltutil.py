@@ -618,11 +618,14 @@ def regen_keys():
     channel = salt.transport.Channel.factory(__opts__)
 
 
-def revoke_auth():
+def revoke_auth(preserve_minion_cache=False):
     '''
     The minion sends a request to the master to revoke its own key.
     Note that the minion session will be revoked and the minion may
     not be able to return the result of this command back to the master.
+
+    If the 'preserve_minion_cache' flag is set to True, the master
+    cache for this minion will not be removed.
 
     CLI Example:
 
@@ -634,7 +637,8 @@ def revoke_auth():
     tok = channel.auth.gen_token('salt')
     load = {'cmd': 'revoke_auth',
             'id': __opts__['id'],
-            'tok': tok}
+            'tok': tok,
+            'preserve_minion_cache': preserve_minion_cache}
 
     try:
         return channel.send(load)
