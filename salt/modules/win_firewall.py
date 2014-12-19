@@ -125,7 +125,7 @@ def delete_rule(name, localport, protocol, dir):
 
         salt '*' firewall.delete_rule "test" "8080" "tcp" "in"
     '''
-    cmd = ['netsh', 'advfirewall', 'firewall', 'add', 'rule',
+    cmd = ['netsh', 'advfirewall', 'firewall', 'delete', 'rule',
            'name={0}'.format(name),
            'protocol={0}'.format(protocol),
            'dir={0}'.format(dir),
