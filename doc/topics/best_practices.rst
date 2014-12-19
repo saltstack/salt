@@ -27,7 +27,7 @@ directory structure. A proper directory structure clearly defines the
 functionality of each state to the user via visual inspection of the state's
 name. 
 
-Reviewing the :formula:`MySQL Salt Formula <mysql-formula>`
+Reviewing the :formula_url:`MySQL Salt Formula <mysql-formula>`
 it is clear to see the benefits to the end-user when reviewing a sample of the
 available states:
 
@@ -54,7 +54,7 @@ file in the following way:
 This clear definition ensures that the user is properly informed of what each
 state will do.
 
-Another example comes from the :formula:`vim-formula`:
+Another example comes from the :formula_url:`vim-formula`:
 
 .. code-block:: bash
 
