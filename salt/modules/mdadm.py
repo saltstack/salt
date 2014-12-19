@@ -125,8 +125,8 @@ def destroy(device):
     except CommandExecutionError:
         return False
 
-    stop_cmd = ['mdadm', '--stop', device]
-    zero_cmd = ['mdadm', '--zero-superblock']
+    stop_cmd = ' '.join(['mdadm', '--stop', device])
+    zero_cmd = ' '.join(['mdadm', '--zero-superblock'])
 
     if __salt__['cmd.retcode'](stop_cmd):
         for number in details['members']:
@@ -139,7 +139,10 @@ def destroy(device):
     else:
         cfg_file = '/etc/mdadm.conf'
 
-    __salt__['file.replace'](cfg_file, 'ARRAY {0} .*'.format(device), '')
+    try:
+        __salt__['file.replace'](cfg_file, 'ARRAY {0} .*'.format(device), '')
+    except SaltInvocationError:
+        pass
 
     if __salt__['raid.list']().get(device) is None:
         return True
