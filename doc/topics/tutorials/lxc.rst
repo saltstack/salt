@@ -312,6 +312,17 @@ an image, use the ``image`` parameter with :mod:`lxc.create
         tar czf cent6.tar.gz -C /var/lib/lxc/cent6 rootfs
         umount /var/lib/lxc/cent6/rootfs
 
+.. warning::
+
+    One caveat of using this method of container creation is that
+    ``/etc/hosts`` is left unmodified.  This could cause confusion for some
+    distros if salt-minion is later installed on the container, as the
+    functions that determine the hostname take ``/etc/hosts`` into account.
+
+    Additionally, when creating an rootfs image, be sure to remove
+    ``/etc/salt/minion_id`` and make sure that ``id`` is not defined in
+    ``/etc/salt/minion``, as this will cause similar issues.
+
 
 Initializing a New Container as a Salt Minion
 =============================================
