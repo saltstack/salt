@@ -25,7 +25,27 @@ def get(tgt, fun, expr_form='glob', roster='flat'):
         salt-ssh '*' mine.get 'myminion' network.interfaces roster=flat
         salt-ssh '*' mine.get '192.168.5.0' network.ipaddrs roster=scan
     '''
-    return __salt__['publish.publish'](tgt,
-                                       fun,
-                                       expr_form=expr_form,
-                                       roster=roster)
+    # Set up opts for the SSH object
+    opts = copy.deepcopy(__opts__)
+    if roster:
+        opts['roster'] = roster
+    opts['argv'] = [fun]
+    opts['selected_target_option'] = expr_form
+    opts['tgt'] = tgt
+    opts['arg'] = []
+
+    # Create the SSH object to handle the actual call
+    ssh = salt.client.ssh.SSH(opts)
+
+    # Run salt-ssh to get the minion returns
+    rets = {}
+    for ret in ssh.run_iter(mine=True):
+        rets.update(ret)
+
+    cret = {}
+    for host in rets:
+        if 'return' in rets[host]:
+            cret[host] = rets[host]['return']
+        else:
+            cret[host] = rets[host]
+    return cret
