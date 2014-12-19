@@ -499,7 +499,7 @@ class Key(object):
         minions = []
         for key, val in keys.items():
             minions.extend(val)
-        if not self.opts.get('preserve_minion_cache', False) or not preserve_minion_cache:
+        if not self.opts.get('preserve_minion_cache', False) or not preserve_minions:
             for minion in os.listdir(m_cache):
                 if minion not in minions and minion not in preserve_minions:
                     shutil.rmtree(os.path.join(m_cache, minion))
@@ -1149,7 +1149,7 @@ class RaetKey(Key):
                 pass
         return self.list_keys()
 
-    def delete_key(self, match=None, match_dict=None):
+    def delete_key(self, match=None, match_dict=None, preserve_minions=False):
         '''
         Delete public keys. If "match" is passed, it is evaluated as a glob.
         Pre-gathered matches can also be passed via "match_dict".
@@ -1166,7 +1166,7 @@ class RaetKey(Key):
                     os.remove(os.path.join(self.opts['pki_dir'], status, key))
                 except (OSError, IOError):
                     pass
-        self.check_minion_cache()
+        self.check_minion_cache(preserve_minions=matches.get('minions', []))
         return (
             self.name_match(match) if match is not None
             else self.dict_match(matches)
