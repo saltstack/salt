@@ -3,4 +3,3 @@ msgpack-python > 0.3
 PyYAML
 MarkupSafe
 requests >= 1.0.0
-six
