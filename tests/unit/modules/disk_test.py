@@ -176,6 +176,7 @@ class DiskTestCase(TestCase):
             mock_cmd = MagicMock(return_value=1)
             with patch.dict(disk.__salt__, {'cmd.run': mock_cmd}):
                 self.assertDictEqual(STUB_DISK_USAGE, disk.usage(args=None))
+
         with patch.dict(disk.__grains__, {'kernel': 'OpenBSD'}):
             mock_cmd = MagicMock(return_value=1)
             with patch.dict(disk.__salt__, {'cmd.run': mock_cmd}):
