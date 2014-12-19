@@ -212,7 +212,7 @@ def signal(signal=None):
     else:
         arguments = ' {0}'.format(signal)
     cmd = _detect_os() + arguments
-    out = __salt__['cmd.run_all'](cmd)
+    out = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     # A non-zero return code means fail
     if out['retcode'] and out['stderr']:
