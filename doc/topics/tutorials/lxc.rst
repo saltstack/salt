@@ -279,6 +279,10 @@ root:
 
     tar czf cent6.tar.gz -C /var/lib/lxc/cent6 rootfs
 
+.. note::
+
+    Before doing this, it is recommended that the container is stopped.
+
 The resulting tarball can then be placed alongside the files in the salt
 fileserver and referenced using a ``salt://`` URL. To create a container using
 an image, use the ``image`` parameter with :mod:`lxc.create
@@ -288,10 +292,229 @@ an image, use the ``image`` parameter with :mod:`lxc.create
 
     salt myminion lxc.create new-cent6 image=salt://path/to/cent6.tar.gz
 
+.. note:: Making images of containers with LVM backing
+
+    For containers with LVM backing, the rootfs is not mounted, so it is
+    necessary to mount it first before creating the tar archive. When a
+    container is created using LVM backing, an empty ``rootfs`` dir is handily
+    created within ``/var/lib/lxc/container_name``, so this can be used as the
+    mountpoint. The location of the logical volume for the container will be
+    ``/dev/vgname/lvname``, where ``vgname`` is the name of the volume group,
+    and ``lvname`` is the name of the logical volume. Therefore, assuming a
+    volume group of ``vg1``, a logical volume of ``lxc-cent6``, and a container
+    name of ``cent6``, the following commands can be used to create a tar
+    archive of the rootfs:
+
+    .. code-block:: bash
+
+        mount /dev/vg1/lxc-cent6 /var/lib/lxc/cent6/rootfs
+        tar czf cent6.tar.gz -C /var/lib/lxc/cent6 rootfs
+        umount /var/lib/lxc/cent6/rootfs
+
+
+Initializing a New Container as a Salt Minion
+=============================================
+
+The above examples illustrate a few ways to create containers on the CLI, but
+often it is desirable to also have the new container run as a Minion. To do
+this, the :mod:`lxc.init <salt.modules.lxc.init>` function can be used. This
+function will do the following:
+
+1. Create a new container
+2. Optionally set password and/or DNS
+3. Bootstrap the minion (using either salt-bootstrap_ or a custom command)
+
+.. _salt-bootstrap: https://github.com/saltstack/salt-bootstrap
+
+By default, the new container will be pointed at the same Salt Master as the
+host machine on which the container was created. It will then request to
+authenticate with the Master like any other bootstrapped Minion, at which point
+it can be accepted.
+
+.. code-block:: bash
+
+    salt myminion lxc.init test1 profile=centos
+    salt-key -a test1
+
+For even greater convenience, the :mod:`LXC runner <salt.runners.lxc>` contains
+a runner function of the same name (:mod:`lxc.init <salt.runners.lxc.init>`),
+which creates a keypair, seeds the new minion with it, and pre-accepts the key,
+allowing for the new Minion to be created and authorized in a single step:
+
+.. code-block:: bash
+
+    salt-run lxc.init test1 host=myminion profile=centos
+
+
+Running Commands Within a Container
+===================================
+
+For containers which are not running their own Minion, commands can be run
+within the container in a manner similar to using (:mod:`cmd.run
+<salt.modules.cmdmod.run`). The means of doing this have been changed
+significantly in the new feature release (though the deprecated behavior will
+still be supported for a couple releases). Both the old and new usage are
+documented below.
+
+Develop Branch (Next Feature Release)
+-------------------------------------
+
+New functions have been added to mimic the behavior of the functions in the
+:mod:`cmd <salt.modules.cmdmod>` module. Below is a table with the :mod:`cmd
+<salt.modules.cmdmod>` functions and their :mod:`lxc <salt.modules.lxc>` module
+equivalents:
+
+
+======================================= ====================================================== ===========================================================
+Description                             :mod:`cmd <salt.modules.cmdmod>` module                :mod:`lxc <salt.modules.lxc>` module
+======================================= ====================================================== ===========================================================
+Run a command and get all output        :mod:`cmd.run <salt.modules.cmdmod.run>`               :mod:`lxc.cmd_run <salt.modules.lxc.cmd_run>`
+Run a command and get just stdout       :mod:`cmd.run_stdout <salt.modules.cmdmod.run_stdout>` :mod:`lxc.cmd_run_stdout <salt.modules.lxc.cmd_run_stdout>`
+Run a command and get just stderr       :mod:`cmd.run_stderr <salt.modules.cmdmod.run_stderr>` :mod:`lxc.cmd_run_stderr <salt.modules.lxc.cmd_run_stderr>`
+Run a command and get just the retcode  :mod:`cmd.retcode <salt.modules.cmdmod.retcode>`       :mod:`lxc.cmd_retcode <salt.modules.lxc.cmd_retcode>`
+Run a command and get all information   :mod:`cmd.run_all <salt.modules.cmdmod.run_all>`       :mod:`lxc.cmd_run_all <salt.modules.lxc.cmd_run_all>`
+======================================= ====================================================== ===========================================================
+
+
+2014.7.x and Earlier
+--------------------
+
+Earlier Salt releases use a single function (:mod:`lxc.run_cmd
+<salt.modules.lxc.run_cmd>`) to run commands within containers. Whether stdout,
+stderr, etc. are returned depends on how the function is invoked.
+
+
+To run a command and return the stdout:
+
+.. code-block:: bash
+
+    salt myminion lxc.run_cmd web1 'tail /var/log/messages'
+
+To run a command and return the stderr:
+
+.. code-block:: bash
+
+    salt myminion lxc.run_cmd web1 'tail /var/log/messages' stdout=False stderr=True
+
+To run a command and return the retcode:
+
+.. code-block:: bash
+
+    salt myminion lxc.run_cmd web1 'tail /var/log/messages' stdout=False stderr=False
+
+To run a command and return all information:
+
+.. code-block:: bash
+
+    salt myminion lxc.run_cmd web1 'tail /var/log/messages' stdout=True stderr=True
+
 
 Container Management Using States
 =================================
 
-Several states are being renamed for the next feature release. The information
-in this tutorial refers to the new states. For 2014.7.x and earlier, please
-refer to the :mod:`documentation for the LXC states <salt.states.lxc>`.
+Several states are being renamed or otherwise modified for the next feature
+release. The information in this tutorial refers to the new states. For
+2014.7.x and earlier, please refer to the :mod:`documentation for the LXC
+states <salt.states.lxc>`.
+
+
+Ensuring a Container Is Present
+-------------------------------
+
+To ensure the existence of a named container, use the :mod:`lxc.present
+<salt.states.lxc.present>` state. Here are some examples:
+
+.. code-block:: yaml
+
+    # Using a template
+    web1:
+      lxc.present:
+        - template: download
+        - options:
+            dist: centos
+            release: 6
+            arch: amd64
+
+    # Cloning
+    web2:
+      lxc.present:
+        - clone_from: web-base
+
+    # Using a rootfs image
+    web3:
+      lxc.present:
+        - image: salt://path/to/cent6.tar.gz
+
+    # Using profiles
+    web4:
+      lxc.present:
+        - profile: centos_web
+        - network_profile: centos
+
+.. warning::
+
+    The :mod:`lxc.present <salt.states.lxc.present>` state will not modify an
+    existing container (in other words, it will not re-create the container).
+    If an :mod:`lxc.present <salt.states.lxc.present>` state is run on an
+    existing container, there will be no change and the state will return a
+    ``True`` result.
+
+The :mod:`lxc.present <salt.states.lxc.present>` state also includes an
+optional ``running`` parameter which can be used to ensure that a container is
+running/stopped. Note that there are standalone :mod:`lxc.running
+<salt.states.lxc.running>` and :mod:`lxc.stopped <salt.states.lxc.stopped>`
+states which can be used for this purpose.
+
+
+Ensuring a Container Does Not Exist
+-----------------------------------
+
+To ensure that a named container is not present, use the :mod:`lxc.absent
+<salt.states.lxc.absent>` state. For example:
+
+.. code-block:: yaml
+
+    web1:
+      lxc.absent
+
+
+Ensuring a Container is Running/Stopped/Frozen
+----------------------------------------------
+
+Containers can be in one of three states:
+
+- **running** - Container is running and active
+- **frozen** - Container is running, but all process are blocked and the
+  container is essentially non-active until the container is "unfrozen"
+- **stopped** - Container is not running
+
+Salt has three states (:mod:`lxc.running <salt.states.lxc.running>`,
+:mod:`lxc.frozen <salt.states.lxc.frozen>`, and :mod:`lxc.stopped
+<salt.states.lxc.stopped>`) which can be used to ensure a container is in one
+of these states:
+
+.. code-block:: yaml
+
+    web1:
+      lxc.running
+
+    # Restart the container if it was already running
+    web2:
+      lxc.running:
+        - restart: True
+
+    web3:
+      lxc.stopped
+
+    # Explicitly kill all tasks in container instead of gracefully stopping
+    web4:
+      lxc.stopped:
+        - kill: True
+
+    web5:
+      lxc.frozen
+
+    # If container is stopped, do not start it (in which case the state will fail)
+    web6:
+      lxc.frozen:
+        - start: False
