@@ -75,6 +75,16 @@ class ZfsTestCase(TestCase):
             self.assertEqual(zfs.create('myzpool/mydataset'), ret)
 
     @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
+    def test_create_success_with_create_parent(self):
+        '''
+        Tests successful return of create function when ``create_parent=True``
+        '''
+        ret = {'myzpool/mydataset/mysubdataset': 'created'}
+        mock_cmd = MagicMock(return_value="")
+        with patch.dict(zfs.__salt__, {'cmd.run': mock_cmd}):
+            self.assertEqual(zfs.create('myzpool/mydataset/mysubdataset'), ret)
+
+    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_create_success_with_properties(self):
         '''
         Tests successful return of create function on ZFS file system creation (with properties)
@@ -133,16 +143,6 @@ class ZfsTestCase(TestCase):
         msg = "cannot create 'myzpool/mydataset/mysubdataset': parent does not exist"
         ret = {'Error': 'cannot create \'myzpool/mydataset/mysubdataset\': parent does not exist'}
         mock_cmd = MagicMock(return_value=msg)
-        with patch.dict(zfs.__salt__, {'cmd.run': mock_cmd}):
-            self.assertEqual(zfs.create('myzpool/mydataset/mysubdataset'), ret)
-
-    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
-    def test_create_success_with_create_parent(self):
-        '''
-        Tests successful return of create function when ``create_parent=True``
-        '''
-        ret = {'myzpool/mydataset/mysubdataset': 'created'}
-        mock_cmd = MagicMock(return_value="")
         with patch.dict(zfs.__salt__, {'cmd.run': mock_cmd}):
             self.assertEqual(zfs.create('myzpool/mydataset/mysubdataset'), ret)
 
