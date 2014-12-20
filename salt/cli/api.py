@@ -1,13 +1,21 @@
 # -*- coding: utf-8 -*-
+'''
+    salt.cli.api
+    ~~~~~~~~~~~~~
+
+    Salt's api cli parser.
+
+'''
 from __future__ import print_function
 from __future__ import absolute_import
 
 import six
 import sys
+import os.path
 import logging
-
 import salt.utils.parsers as parsers
 import salt.version
+import salt.syspaths as syspaths
 
 log = logging.getLogger(__name__)
 
@@ -25,7 +33,7 @@ class SaltAPI(six.with_metaclass(parsers.OptionParserMeta,  # pylint: disable=W0
     # ConfigDirMixIn config filename attribute
     _config_filename_ = 'master'
     # LogLevelMixIn attributes
-    _default_logging_logfile_ = '/var/log/salt/api'
+    _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'api')
 
     def setup_config(self):
         return salt.config.api_config(self.get_config_file_path())

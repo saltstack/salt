@@ -302,7 +302,8 @@ def salt_cloud():
     try:
         import salt.cloud.cli
         has_saltcloud = True
-    except ImportError:
+    except ImportError as e:
+        log.error("Error importing salt cloud {0}".format(e))
         # No salt cloud on Windows
         has_saltcloud = False
     if '' in sys.path:
