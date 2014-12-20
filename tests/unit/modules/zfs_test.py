@@ -82,7 +82,15 @@ class ZfsTestCase(TestCase):
         ret = {'myzpool/mydataset': 'created'}
         mock_cmd = MagicMock(return_value="")
         with patch.dict(zfs.__salt__, {'cmd.run': mock_cmd}):
-            self.assertEqual(zfs.create('myzpool/mydataset', properties={'mountpoint': '/export/zfs', 'sharenfs': 'on'}), ret)
+            self.assertEqual(
+                zfs.create(
+                    'myzpool/mydataset',
+                    properties={
+                        'mountpoint': '/export/zfs',
+                        'sharenfs': 'on'
+                    }
+                ), ret
+            )
 
     @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_create_error_missing_dataset(self):
