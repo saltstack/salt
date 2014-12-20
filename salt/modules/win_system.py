@@ -251,12 +251,12 @@ def join_domain(
 
     domain
         The domain to which the computer should be joined, e.g.
-        `my-company.com`
+        ``my-company.com``
 
     username
         Username of an account which is authorized to join computers to the
         specified domain. Need to be either fully qualified like
-        `user@domain.tld` or simply `user`
+        ``user@domain.tld`` or simply ``user``
 
     password
         Password of the specified user
@@ -264,19 +264,19 @@ def join_domain(
     account_ou : None
         The DN of the OU below which the account for this computer should be
         created when joining the domain, e.g.
-        `ou=computers,ou=departm_432,dc=my-company,dc=com`
+        ``ou=computers,ou=departm_432,dc=my-company,dc=com``
 
     account_exists : False
-        Needs to be set to `True` to allow re-using an existing account
+        Needs to be set to ``True`` to allow re-using an existing account
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt 'minion-id' system.join_domain domain='domain.tld' \
-             username='joinuser' password='joinpassword' \
-             account_ou='ou=clients,ou=org,dc=domain,dc=tld' \
-             account_exists=False
+        salt 'minion-id' system.join_domain domain='domain.tld' \\
+                         username='joinuser' password='joinpassword' \\
+                         account_ou='ou=clients,ou=org,dc=domain,dc=tld' \\
+                         account_exists=False
     '''
 
     if '@' not in username:
