@@ -281,7 +281,7 @@ class SMinion(object):
             self.opts,
             self.opts['grains'],
             self.opts['id'],
-            self.opts['environment'],
+            self.opts['environment']
         ).compile_pillar()
         self.functions = salt.loader.minion_mods(self.opts, include_errors=True)
         self.function_errors = self.functions['_errors']
@@ -619,14 +619,13 @@ class Minion(MinionBase):
                                           timeout,
                                           safe)
 
-        self.functions, self.returners, self.function_errors = self._load_modules()
         self.opts['pillar'] = salt.pillar.get_pillar(
             opts,
             opts['grains'],
             opts['id'],
-            opts['environment'],
-            funcs=self.functions
+            opts['environment']
         ).compile_pillar()
+        self.functions, self.returners, self.function_errors = self._load_modules()
         self.serial = salt.payload.Serial(self.opts)
         self.mod_opts = self._prep_mod_opts()
         self.matcher = Matcher(self.opts, self.functions)
@@ -2673,14 +2672,13 @@ class ProxyMinion(Minion):
         opts.update(resolve_dns(opts))
         self.opts = opts
         self.authenticate(timeout, safe)
-        self.functions, self.returners, self.function_errors = self._load_modules()
         self.opts['pillar'] = salt.pillar.get_pillar(
             opts,
             opts['grains'],
             opts['id'],
-            opts['environment'],
-            funcs=self.functions
+            opts['environment']
         ).compile_pillar()
+        self.functions, self.returners, self.function_errors = self._load_modules()
         self.serial = salt.payload.Serial(self.opts)
         self.mod_opts = self._prep_mod_opts()
         self.matcher = Matcher(self.opts, self.functions)
