@@ -26,7 +26,7 @@ packaged:
 
 - RHEL/CentOS 6 and later (via EPEL_)
 - Fedora (All non-EOL releases)
-- Debian 8.0 (Jessie) (not yet released)
+- Debian 8.0 (Jessie)
 - Ubuntu 14.04 LTS and later (LXC templates are packaged separately as
   **lxc-templates**, it is recommended to also install this package)
 - openSUSE 13.2 and later
