@@ -162,10 +162,13 @@ def get_color_theme(theme):
     try:
         with fopen(theme, 'rb') as fp_:
             colors = yaml.safe_load(fp_.read())
+            ret = {}
+            for color in colors:
+                ret[color] = '\033{0}'.format(colors[color])
             if not isinstance(colors, dict):
                 log.warning('The theme file {0} is not a dict'.format(theme))
                 return {}
-            return colors
+            return ret
     except Exception:
         log.warning('Failed to read the color theme {0}'.format(theme))
         return {}
