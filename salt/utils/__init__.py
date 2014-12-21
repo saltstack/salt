@@ -164,7 +164,7 @@ def get_color_theme(theme):
             colors = yaml.safe_load(fp_.read())
             ret = {}
             for color in colors:
-                ret[color] = '\033{0}'.format(colors[color])
+                ret[color] = '\033[{0}m'.format(colors[color])
             if not isinstance(colors, dict):
                 log.warning('The theme file {0} is not a dict'.format(theme))
                 return {}
