@@ -6,9 +6,6 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-# Import Salt Execution module to test
-from salt.modules import zfs
-
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
@@ -22,6 +19,9 @@ from salttesting.mock import (
 )
 
 ensure_in_syspath('../../')
+
+# Import Salt Execution module to test
+from salt.modules import zfs
 
 # Globals
 zfs.__salt__ = {}
