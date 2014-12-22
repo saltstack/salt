@@ -45,8 +45,6 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
-import salt.utils.dictupdate
-from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
 
@@ -58,11 +56,9 @@ try:
 except ImportError:
     HAS_DJANGO = False
 
+django_auth_class = None
 
-def auth(username, password):
-    '''
-    Simple Django auth
-    '''
+def django_auth_setup():
 
     # Versions 1.7 and later of Django don't pull models until
     # they are needed.  When using framework facilities outside the
@@ -79,12 +75,24 @@ def auth(username, password):
 
     if django.VERSION >= (1, 7):
         django.setup()
+
+    return django_auth_class
+
+def auth(username, password):
+    '''
+    Simple Django auth
+    '''
+
+    global django_auth_class
+
+    if not django_auth_class:
+        django_auth_class = django_auth_setup()
     user = django.contrib.auth.authenticate(username=username, password=password)
     if user is not None:
         if user.is_active:
             log.debug('Django authentication successful')
 
-            auth_dict_from_db = retrieve_auth_entries(django_auth_class, username)[username]
+            auth_dict_from_db = retrieve_auth_entries(username)[username]
             if auth_dict_from_db is not None:
                 __opts__['external_auth']['django'][username] = auth_dict_from_db
 
@@ -94,7 +102,7 @@ def auth(username, password):
 
     return False
 
-def retrieve_auth_entries(django_auth_class, u=None):
+def retrieve_auth_entries(u=None):
     '''
 
     :param django_auth_class: Reference to the django model class for auth
@@ -125,6 +133,9 @@ def retrieve_auth_entries(django_auth_class, u=None):
         - .*
 
     '''
+    global django_auth_class
+    if not django_auth_class:
+        django_auth_class = django_auth_setup()
 
     if u is None:
         db_records = django_auth_class.objects.all()
