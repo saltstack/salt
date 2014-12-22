@@ -820,7 +820,7 @@ ARGS = {9}\n'''.format(self.minion_config,
             return self.shell.exec_cmd(cmd_str)
 
         # Write the shim to a file
-        shim_dir = os.path.join(self.opts['cache_dir'], 'ssh_shim')
+        shim_dir = os.path.join(self.opts['cachedir'], 'ssh_shim')
         if not os.path.exists(shim_dir):
             os.makedirs(shim_dir)
         fp_ = None
