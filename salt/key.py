@@ -901,7 +901,7 @@ class RaetKey(Key):
         rejected = os.path.join(self.opts['pki_dir'], self.REJ)
         return accepted, pre, rejected
 
-    def check_minion_cache(self, preserve_minion_cache=False):
+    def check_minion_cache(self, preserve_minions=False):
         '''
         Check the minion cache to make sure that old minion data is cleared
         '''
