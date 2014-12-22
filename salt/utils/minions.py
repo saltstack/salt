@@ -14,6 +14,7 @@ import logging
 import salt.payload
 import salt.utils
 from salt.exceptions import CommandExecutionError
+from salt._compat import string_types
 
 HAS_RANGE = False
 try:
@@ -126,7 +127,7 @@ class CkMinions(object):
         '''
         Return the minions found by looking via a list
         '''
-        if isinstance(expr, str):
+        if isinstance(expr, string_types):
             expr = [m for m in expr.split(',') if m]
         ret = []
         for fn_ in os.listdir(os.path.join(self.opts['pki_dir'], self.acc)):
@@ -603,7 +604,7 @@ class CkMinions(object):
         try:
             for fun in funs:
                 for ind in auth_list:
-                    if isinstance(ind, str):
+                    if isinstance(ind, string_types):
                         # Allowed for all minions
                         if self.match_check(ind, fun):
                             return True
@@ -618,7 +619,7 @@ class CkMinions(object):
                                 tgt,
                                 tgt_type):
                             # Minions are allowed, verify function in allowed list
-                            if isinstance(ind[valid], str):
+                            if isinstance(ind[valid], string_types):
                                 if self.match_check(ind[valid], fun):
                                     return True
                             elif isinstance(ind[valid], list):
@@ -658,7 +659,7 @@ class CkMinions(object):
         mod = comps[0]
         fun = comps[1]
         for ind in auth_list:
-            if isinstance(ind, str):
+            if isinstance(ind, string_types):
                 if ind.startswith('@') and ind[1:] == mod:
                     return True
                 if ind == '@wheel':
@@ -670,7 +671,7 @@ class CkMinions(object):
                     continue
                 valid = ind.iterkeys().next()
                 if valid.startswith('@') and valid[1:] == mod:
-                    if isinstance(ind[valid], str):
+                    if isinstance(ind[valid], string_types):
                         if self.match_check(ind[valid], fun):
                             return True
                     elif isinstance(ind[valid], list):
@@ -689,7 +690,7 @@ class CkMinions(object):
         mod = comps[0]
         fun = comps[1]
         for ind in auth_list:
-            if isinstance(ind, str):
+            if isinstance(ind, string_types):
                 if ind.startswith('@') and ind[1:] == mod:
                     return True
                 if ind == '@runners':
@@ -701,7 +702,7 @@ class CkMinions(object):
                     continue
                 valid = ind.iterkeys().next()
                 if valid.startswith('@') and valid[1:] == mod:
-                    if isinstance(ind[valid], str):
+                    if isinstance(ind[valid], string_types):
                         if self.match_check(ind[valid], fun):
                             return True
                     elif isinstance(ind[valid], list):
@@ -723,7 +724,7 @@ class CkMinions(object):
         else:
             mod = fun
         for ind in auth_list:
-            if isinstance(ind, str):
+            if isinstance(ind, string_types):
                 if ind.startswith('@') and ind[1:] == mod:
                     return True
                 if ind == '@{0}'.format(form):
@@ -735,7 +736,7 @@ class CkMinions(object):
                     continue
                 valid = ind.iterkeys().next()
                 if valid.startswith('@') and valid[1:] == mod:
-                    if isinstance(ind[valid], str):
+                    if isinstance(ind[valid], string_types):
                         if self.match_check(ind[valid], fun):
                             return True
                     elif isinstance(ind[valid], list):
