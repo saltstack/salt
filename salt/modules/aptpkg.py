@@ -843,7 +843,7 @@ def _consolidate_repo_sources(sources):
             combined_comps = set(r.comps).union(set(combined.comps))
             consolidated[key].comps = list(combined_comps)
         else:
-            consolidated[key] = sourceslist.SourceEntry(_strip_uri(repo.line))
+            consolidated[key] = sourceslist.SourceEntry(_strip_uri(r.line))
 
         if r.file != base_file:
             delete_files.add(r.file)
