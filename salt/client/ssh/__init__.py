@@ -812,7 +812,10 @@ class Single(object):
                 self.kwargs = {}
 
         try:
-            result = self.wfuncs[self.fun](*self.args, **self.kwargs)
+            if self.mine:
+                result = wrapper[self.fun](*self.args, **self.kwargs)
+            else:
+                result = self.wfuncs[self.fun](*self.args, **self.kwargs)
         except TypeError as exc:
             result = 'TypeError encountered executing {0}: {1}'.format(self.fun, exc)
         except Exception as exc:
