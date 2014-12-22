@@ -804,7 +804,7 @@ class LocalClient(object):
             event = self.event
         jid_tag = 'salt/job/{0}'.format(jid)
         while True:
-            if HAS_ZMQ:
+            if self.opts.get('transport') == 'zeromq':
                 try:
                     raw = event.get_event_noblock()
                     if gather_errors:
