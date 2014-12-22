@@ -796,7 +796,7 @@ class Single(object):
         # roster, pillar, master config (in that order)
         if self.mine:
             mine_args = None
-            if self.mine_functions and self.fun in mine_functions:
+            if self.mine_functions and self.fun in self.mine_functions:
                 mine_args = self.mine_functions[self.fun]
             elif opts['pillar'] and self.fun in opts['pillar'].get('mine_functions', {}):
                 mine_args = opts['pillar']['mine_functions'][self.fun]
