@@ -19,12 +19,14 @@ from salt.ext.six import string_types
 __proxyenabled__ = ['*']
 
 
-def get(key, default='', merge=False, delimiter=DEFAULT_TARGET_DELIM):
+def get(key, default=KeyError, merge=False, delimiter=DEFAULT_TARGET_DELIM):
     '''
     .. versionadded:: 0.14
 
     Attempt to retrieve the named value from pillar, if the named value is not
-    available return the passed default. The default return is an empty string.
+    available return the passed default. The default return is an empty string
+    except __opts__['PILLAR_RAISE_ON_MISSING'] is set to True, in which case a
+    KeyError will be raised.
 
     If the merge parameter is set to ``True``, the default will be recursively
     merged into the returned pillar data.
@@ -56,16 +58,24 @@ def get(key, default='', merge=False, delimiter=DEFAULT_TARGET_DELIM):
 
         salt '*' pillar.get pkg:apache
     '''
+    if not __opts__.get('pillar_raise_on_missing'):
+        if default is KeyError:
+            default = ''
+
     if merge:
         ret = salt.utils.traverse_dict_and_list(__pillar__, key, {}, delimiter)
         if isinstance(ret, collections.Mapping) and \
                 isinstance(default, collections.Mapping):
             return salt.utils.dictupdate.update(default, ret)
 
-    return salt.utils.traverse_dict_and_list(__pillar__,
-                                             key,
-                                             default,
-                                             delimiter)
+    ret = salt.utils.traverse_dict_and_list(__pillar__,
+                                            key,
+                                            default,
+                                            delimiter)
+    if ret is KeyError:
+        raise KeyError("Pillar key not found %s" % key)
+
+    return ret
 
 
 def items(*args):
