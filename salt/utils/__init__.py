@@ -153,6 +153,7 @@ def is_empty(filename):
         # Non-existent file or permission denied to the parent dir
         return False
 
+
 def get_color_theme(theme):
     '''
     Return the color theme to use
