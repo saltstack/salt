@@ -77,6 +77,7 @@ import logging
 # Import salt libs
 import salt.utils.dictupdate as dictupdate
 from salt.exceptions import SaltInvocationError
+from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 
@@ -184,6 +185,39 @@ def _security_group_present(
     return ret
 
 
+def _split_rules(rules):
+    '''
+    Split rules with lists into individual rules.
+
+    We accept some attributes as lists or strings. The data we get back from
+    the execution module lists rules as individual rules. We need to split the
+    provided rules into individual rules to compare them.
+    '''
+    split = []
+    for rule in rules:
+        cidr_ip = rule.get('cidr_ip')
+        group_name = rule.get('source_group_name')
+        group_id = rule.get('source_group_group_id')
+        if cidr_ip and not isinstance(cidr_ip, string_types):
+            for ip in cidr_ip:
+                _rule = rule.copy()
+                _rule['cidr_ip'] = ip
+                split.append(_rule)
+        elif group_name and not isinstance(group_name, string_types):
+            for name in group_name:
+                _rule = rule.copy()
+                _rule['source_group_name'] = name
+                split.append(_rule)
+        elif group_id and not isinstance(group_id, string_types):
+            for _id in group_id:
+                _rule = rule.copy()
+                _rule['source_group_group_id'] = _id
+                split.append(_rule)
+        else:
+            split.append(rule)
+    return split
+
+
 def _check_rule(rule, _rule):
     '''
     Check to see if two rules are the same. Needed to compare rules fetched
@@ -265,6 +299,8 @@ def _get_rule_changes(rules, _rules):
             # entries, it doesn't matter which we pick.
             _rule.pop('source_group_name', None)
             to_delete.append(_rule)
+    log.debug('Rules to be deleted: {0}'.format(to_delete))
+    log.debug('Rules to be created: {0}'.format(to_create))
     return (to_delete, to_create)
 
 
@@ -290,6 +326,7 @@ def _rules_present(
         ret['comment'] = msg.format(name)
         ret['result'] = False
         return ret
+    rules = _split_rules(rules)
     if vpc_id:
         for rule in rules:
             _source_group_name = rule.get('source_group_name', None)
