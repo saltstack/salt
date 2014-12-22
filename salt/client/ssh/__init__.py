@@ -823,23 +823,19 @@ ARGS = {9}\n'''.format(self.minion_config,
         shim_dir = os.path.join(self.opts['cachedir'], 'ssh_shim')
         if not os.path.exists(shim_dir):
             os.makedirs(shim_dir)
-        fp_ = None
-        try:
-            fp_, shim_tmp_file = tempfile.mkstemp(prefix='shim_',
-                                                  dir=shim_dir,
-                                                  text=True)
-            fp_.write(cmd_str)
-        finally:
-            if fp_:
-                fp_.close()
+        with tempfile.NamedTemporaryFile(mode='w',
+                                         prefix='shim_',
+                                         dir=shim_dir,
+                                         delete=False) as shim_tmp_file:
+            shim_tmp_file.write(cmd_str)
 
         # Copy shim to target system, under $HOME/.<randomized name>
         target_shim_file = '.{0}'.format(uuid.uuid4().hex[:6])
-        self.shell.send(shim_tmp_file, target_shim_file)
+        self.shell.send(shim_tmp_file.name, target_shim_file)
 
         # Remove our shim file
         try:
-            os.remove(shim_tmp_file)
+            os.remove(shim_tmp_file.name)
         except IOError:
             pass
 
