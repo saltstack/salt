@@ -58,7 +58,7 @@ def get(key, default=KeyError, merge=False, delimiter=DEFAULT_TARGET_DELIM):
 
         salt '*' pillar.get pkg:apache
     '''
-    if not __opts__.get('PILLAR_RAISE_ON_MISSING'):
+    if not __opts__.get('pillar_raise_on_missing'):
         if default is KeyError:
             default = ''
 
