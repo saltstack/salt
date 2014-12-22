@@ -36,8 +36,8 @@ def get_config():
     profiles = {}
     curr = None
 
-    cmd = 'netsh advfirewall show allprofiles'
-    for line in __salt__['cmd.run'](cmd).splitlines():
+    cmd = ['netsh', 'advfirewall', 'show', 'allprofiles']
+    for line in __salt__['cmd.run'](cmd, python_shell=False).splitlines():
         if not curr:
             tmp = re.search('(.*) Profile Settings:', line)
             if tmp:
@@ -59,9 +59,8 @@ def disable(profile='allprofiles'):
 
         salt '*' firewall.disable
     '''
-    return __salt__['cmd.run'](
-            'netsh advfirewall set {0} state off'.format(profile)
-            ) == 'Ok.'
+    cmd = ['netsh', 'advfirewall', 'set', 'allprofiles', 'state', 'off']
+    return __salt__['cmd.run'](cmd, python_shell=False) == 'Ok.'
 
 
 def enable(profile='allprofiles'):
@@ -90,8 +89,8 @@ def get_rule(name="all"):
         salt '*' firewall.get_rule "MyAppPort"
     '''
     ret = {}
-    cmd = 'netsh advfirewall firewall show rule name="{0}"'.format(name)
-    ret[name] = __salt__['cmd.run'](cmd)
+    cmd = ['netsh', 'advfirewall', 'firewall', 'show', 'rule', 'name={0}'.format(name)]
+    ret[name] = __salt__['cmd.run'](cmd, python_shell=False)
 
     if ret[name].strip() == "No rules match the specified criteria.":
         ret = False
@@ -109,5 +108,10 @@ def add_rule(name, localport, protocol="tcp", action="allow", dir="in"):
 
         salt '*' firewall.add_rule "test" "tcp" "8080"
     '''
-    cmd = 'netsh advfirewall firewall add rule name="{0}" protocol={1} dir={2} localport={3} action={4}'.format(name, protocol, dir, localport, action)
-    return __salt__['cmd.run'](cmd) == 'Ok.'
+    cmd = ['netsh', 'advfirewall', 'firewall', 'add', 'rule',
+           'name={0}'.format(name),
+           'protocol={0}'.format(protocol),
+           'dir={0}'.format(dir),
+           'localport={0}'.format(localport),
+           'action={0}'.format(action)]
+    return __salt__['cmd.run'](cmd, python_shell=False) == 'Ok.'
