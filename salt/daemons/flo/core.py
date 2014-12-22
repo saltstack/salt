@@ -921,8 +921,6 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
         msg is message body dict
         sender is unique name  of remote that sent the message
         '''
-        import wingdbstub
-
         try:
             s_estate, s_yard, s_share = msg['route']['src']
             d_estate, d_yard, d_share = msg['route']['dst']
