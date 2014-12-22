@@ -18,6 +18,7 @@ import time
 import yaml
 import uuid
 import tempfile
+import binascii
 
 # Import salt libs
 import salt.client.ssh.shell
@@ -830,7 +831,7 @@ ARGS = {9}\n'''.format(self.minion_config,
             shim_tmp_file.write(cmd_str)
 
         # Copy shim to target system, under $HOME/.<randomized name>
-        target_shim_file = '.{0}'.format(uuid.uuid4().hex[:6])
+        target_shim_file = '.{0}'.format(binascii.hexlify(os.urandom(6)))
         self.shell.send(shim_tmp_file.name, target_shim_file)
 
         # Remove our shim file
