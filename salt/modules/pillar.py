@@ -73,7 +73,7 @@ def get(key, default=KeyError, merge=False, delimiter=DEFAULT_TARGET_DELIM):
                                             default,
                                             delimiter)
     if ret is KeyError:
-        raise KeyError("Pillar key not found %s" % key)
+        raise KeyError("Pillar key not found: {0}".format(key))
 
     return ret
 
