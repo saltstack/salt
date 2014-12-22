@@ -46,7 +46,8 @@ def _nodetool(cmd):
     '''
     nodetool = __salt__['config.option']('cassandra.nodetool')
     host = __salt__['config.option']('cassandra.host')
-    return __salt__['cmd.run_stdout']('{0} -h {1} {2}'.format(nodetool, host, cmd))
+    return __salt__['cmd.run_stdout']('{0} -h {1} {2}'.format(nodetool, host, cmd),
+                                      python_shell=False)
 
 
 def _sys_mgr():
