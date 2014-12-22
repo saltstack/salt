@@ -846,8 +846,9 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
                'publish': '.salt.var.publish',
                'fun': '.salt.var.fun',
                'event': '.salt.event.events',
-               'event_req': '.salt.event.event_req',
-               'presence_req': '.salt.presence.event_req',
+               'event_req': '.salt.event.event_req',  # deque
+               'presence_req': '.salt.presence.event_req',  # deque
+               'availables': '.salt.var.presence.availables',  # set()
                'workers': '.salt.track.workers',
                'worker_verify': '.salt.var.worker_verify',
                'lane_stack': '.salt.lane.manor.stack',
@@ -920,6 +921,8 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
         msg is message body dict
         sender is unique name  of remote that sent the message
         '''
+        import wingdbstub
+
         try:
             s_estate, s_yard, s_share = msg['route']['src']
             d_estate, d_yard, d_share = msg['route']['dst']
@@ -951,6 +954,8 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
             return
 
         if d_share == 'pub_ret':
+            # only publish to available minions
+            msg['return']['ret']['minions'] = self._availablize(msg['return']['ret']['minions'])
             if msg.get('__worker_verify') == self.worker_verify.value:
                 self.publish.value.append(msg)
 
@@ -1021,6 +1026,16 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
         self.master_estate_name.value = master.name if master else ''
 
         return self.master_estate_name.value
+
+    def _availablize(self, minions):
+        '''
+        Return set that is intersection of associated minion estates for
+        roles in minions and the set of available minion estates.
+        '''
+        suffix = '_{0}'.format(kinds.APPL_KIND_NAMES[kinds.applKinds.minion])
+        return list(set(minions) &
+                    set((name.rstrip(suffix) for name in self.availables.value)))
+
 
     def action(self):
         '''
@@ -1106,10 +1121,9 @@ class SaltRaetPresenter(ioflo.base.deeding.Deed):
     Ioinits = {'opts': '.salt.opts',
                'presence_req': '.salt.presence.event_req',
                'lane_stack': '.salt.lane.manor.stack',
-               'aliveds': {'ipath': '.salt.var.presence.aliveds',
-                           'ival': odict()},
-               'availables': {'ipath': '.salt.var.presence.availables',
-                              'ival': set()}, }
+               'aliveds': '.salt.var.presence.aliveds', # odict
+               'availables': '.salt.var.presence.availables', # set
+              }
 
     def _send_presence(self, msg):
         '''
@@ -1156,8 +1170,8 @@ class SaltRaetPublisher(ioflo.base.deeding.Deed):
     Ioinits = {'opts': '.salt.opts',
                'publish': '.salt.var.publish',
                'stack': '.salt.road.manor.stack',
-               'availables': {'ipath': '.salt.var.presence.availables',
-                              'ival': set()}, }
+               'availables': '.salt.var.presence.availables',
+            }
 
     def _publish(self, pub_msg):
         '''
