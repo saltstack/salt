@@ -17,6 +17,7 @@ def update(dest, upd):
             dest[key] = upd[key]
     return dest
 
+
 def merge(d1, d2):
     md = {}
     for k, v in d1.iteritems():
@@ -25,4 +26,3 @@ def merge(d1, d2):
         else:
             md[k] = v
     return md
-
