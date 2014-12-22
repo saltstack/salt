@@ -808,7 +808,9 @@ class LocalClient(object):
                 try:
                     raw = event.get_event_noblock()
                     if gather_errors:
-                        if raw and raw.get('tag', '').startswith('_salt_error') or raw.get('tag', '').startswith(jid_tag):
+                        if (raw and
+                               (raw.get('tag', '').startswith('_salt_error') or
+                                raw.get('tag', '').startswith(jid_tag))):
                             yield raw
                     else:
                         if raw and raw.get('tag', '').startswith(jid_tag):
