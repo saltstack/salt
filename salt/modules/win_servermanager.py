@@ -89,7 +89,7 @@ def install(feature, recurse=False):
     .. code-block:: bash
 
         salt '*' win_servermanager.install Telnet-Client
-        salt '*' win_servermanager.install SNMP-Services True
+        salt '*' win_servermanager.install SNMP-Service True
     '''
     sub = ''
     if recurse:
