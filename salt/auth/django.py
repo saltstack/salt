@@ -58,6 +58,7 @@ except ImportError:
 
 django_auth_class = None
 
+
 def django_auth_setup():
 
     # Versions 1.7 and later of Django don't pull models until
@@ -77,6 +78,7 @@ def django_auth_setup():
         django.setup()
 
     return django_auth_class
+
 
 def auth(username, password):
     '''
@@ -101,6 +103,7 @@ def auth(username, password):
             log.debug('Django authentication: the password is valid but the account is disabled.')
 
     return False
+
 
 def retrieve_auth_entries(u=None):
     '''
@@ -163,4 +166,3 @@ def retrieve_auth_entries(u=None):
 
     log.debug('django auth_dict is {0}'.format(repr(auth_dict)))
     return auth_dict
-
