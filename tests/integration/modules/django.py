@@ -142,7 +142,7 @@ class DjangoModuleTest(integration.ModuleCase):
                 'django-admin.py collectstatic --settings=settings.py '
                 '--noinput --no-post-process --dry-run --clear --link '
                 '--no-default-ignore --ignore=something',
-                python_shel=False,
+                python_shell=False,
                 env=None
             )
 
