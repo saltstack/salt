@@ -1034,7 +1034,6 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
         return list(set(minions) &
                     set((name.rstrip(suffix) for name in self.availables.value)))
 
-
     def action(self):
         '''
         Process the messages!
@@ -1119,8 +1118,8 @@ class SaltRaetPresenter(ioflo.base.deeding.Deed):
     Ioinits = {'opts': '.salt.opts',
                'presence_req': '.salt.presence.event_req',
                'lane_stack': '.salt.lane.manor.stack',
-               'aliveds': '.salt.var.presence.aliveds', # odict
-               'availables': '.salt.var.presence.availables', # set
+               'aliveds': '.salt.var.presence.aliveds',  # odict
+               'availables': '.salt.var.presence.availables',  # set
               }
 
     def _send_presence(self, msg):

@@ -28,11 +28,10 @@ from __future__ import absolute_import
 
 import json
 import logging
-import salt.utils
 
 
 try:
-    from kafka import KafkaClient, SimpleProducer, SimpleConsumer
+    from kafka import KafkaClient, SimpleProducer
     HAS_KAFKA = True
 except ImportError:
     HAS_KAFKA = False
@@ -82,4 +81,3 @@ def returner(ret):
         _close_conn(conn)
     else:
         log.error('Unable to find kafka returner config option: topic')
-

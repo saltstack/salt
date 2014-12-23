@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 '''
 Wrapper function for mine operations for salt-ssh
 
