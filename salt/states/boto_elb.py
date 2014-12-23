@@ -124,7 +124,8 @@ Overriding the attribute values on the resource:
             - profile: myelbprofile
 
 It's possible to specify cloudwatch alarms that will be setup along with the
-ELB:
+ELB. Note the alarm name will be defined by the name attribute provided, plus
+the ELB resource name.
 
 .. code-block:: yaml
 
