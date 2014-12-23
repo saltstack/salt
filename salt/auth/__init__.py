@@ -188,7 +188,17 @@ class Authorize(object):
         '''
         Gather and create the authorization data sets
         '''
-        return self.opts['external_auth']
+        auth_data = self.opts['external_auth']
+
+        if 'django' in auth_data and '^model' in auth_data['django']:
+            auth_from_django = salt.auth.django.retrieve_auth_entries()
+            auth_data = salt.utils.dictupdate.merge(auth_data, auth_from_django)
+
+        #for auth_back in self.opts.get('external_auth_sources', []):
+        #    fstr = '{0}.perms'.format(auth_back)
+        #    if fstr in self.loadauth.auth:
+        #        auth_data.append(getattr(self.loadauth.auth)())
+        return auth_data
 
     def token(self, adata, load):
         '''
@@ -265,6 +275,9 @@ class Authorize(object):
         Note: this will check that the user has at least one right that will let
         him execute "load", this does not deal with conflicting rules
         '''
+
+        adata = self.auth_data()
+        good = False
         if load.get('token', False):
             for sub_auth in self.token(self.auth_data, load):
                 if sub_auth:
