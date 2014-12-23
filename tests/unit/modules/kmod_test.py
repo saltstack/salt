@@ -30,6 +30,7 @@ class KmodTestCase(TestCase):
 
     # 'check_available' function tests: 1
 
+    @patch('salt.modules.kmod.available', MagicMock(return_value=['kvm']))
     def test_check_available(self):
         '''
         Tests if the specified kernel module is available
@@ -50,16 +51,16 @@ class KmodTestCase(TestCase):
 
     # 'mod_list' function tests: 1
 
-    @patch('salt.modules.kmod._get_modules_conf',
-           MagicMock(return_value='/etc/modules'))
-    @patch('salt.modules.kmod._strip_module_name',
-           MagicMock(return_value='lp'))
     @patch('os.path.exists', MagicMock(return_value=True))
     def test_mod_list(self):
         '''
         Tests return a list of the loaded module names
         '''
-        self.assertListEqual(['lp'], kmod.mod_list(True))
+        with patch('salt.modules.kmod._get_modules_conf',
+                   MagicMock(return_value='/etc/modules')):
+            with patch('salt.modules.kmod._strip_module_name',
+                       MagicMock(return_value='lp')):
+                self.assertListEqual(['lp'], kmod.mod_list(True))
 
         mock_ret = [{'size': 100, 'module': None, 'depcount': 10, 'deps': None}]
         with patch('salt.modules.kmod.lsmod', MagicMock(return_value=mock_ret)):
