@@ -50,7 +50,7 @@ def getfacl(*args):
     cmd = 'getfacl -p'
     for dentry in args:
         cmd += ' {0}'.format(dentry)
-    out = __salt__['cmd.run'](cmd).splitlines()
+    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     dentry = ''
     for line in out:
         if not line:
@@ -156,7 +156,7 @@ def wipefacls(*args):
     cmd = 'setfacl -b'
     for dentry in args:
         cmd += ' {0}'.format(dentry)
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd, python_shell=False)
     return True
 
 
@@ -188,7 +188,7 @@ def modfacl(acl_type, acl_name, perms, *args):
 
     for dentry in args:
         cmd += ' {0}'.format(dentry)
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd, python_shell=False)
     return True
 
 
@@ -220,5 +220,5 @@ def delfacl(acl_type, acl_name, *args):
 
     for dentry in args:
         cmd += ' {0}'.format(dentry)
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd, pyhton_shell=False)
     return True
