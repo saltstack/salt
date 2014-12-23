@@ -649,3 +649,49 @@ def set_pass(name, **kwargs):  # pylint: disable=W0613
                        'information.',
             'result': False,
             'changes': {}}
+
+
+def edited_conf(name, lxc_conf=None, lxc_conf_unset=None):
+    '''
+    .. warning::
+
+        This state is unsuitable for setting parameters that appear more than
+        once in an LXC config file, or parameters which must appear in a
+        certain order (such as when configuring more than one network
+        interface). It is slated to be replaced, and as of version 2015.2.0 it
+        is deprecated.
+
+    Edit LXC configuration options
+
+    .. code-block:: bash
+
+        setconf:
+          lxc.edited_conf:
+            - name: ubuntu
+            - lxc_conf:
+                - network.ipv4.ip: 10.0.3.6
+            - lxc_conf_unset:
+                - lxc.utsname
+    '''
+    salt.utils.warn_until(
+        'Boron',
+        'This state is unsuitable for setting parameters that appear more '
+        'than once in an LXC config file, or parameters which must appear in '
+        'a certain order (such as when configuring more than one network '
+        'interface). It is slated to be replaced, and as of version 2015.2.0 '
+        'it is deprecated.'
+    )
+    if __opts__['test']:
+        return {'name': name,
+                'comment': '{0} lxc.conf will be edited'.format(name),
+                'result': True,
+                'changes': {}}
+    if not lxc_conf_unset:
+        lxc_conf_unset = {}
+    if not lxc_conf:
+        lxc_conf = {}
+    cret = __salt__['lxc.update_lxc_conf'](name,
+                                           lxc_conf=lxc_conf,
+                                           lxc_conf_unset=lxc_conf_unset)
+    cret['name'] = name
+    return cret
