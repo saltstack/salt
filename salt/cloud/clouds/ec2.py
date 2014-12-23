@@ -314,11 +314,11 @@ def query(params=None, setname=None, requesturl=None, location=None,
             )
 
             requesturl = 'https://{0}/'.format(endpoint)
-            endpoint = urlparse.urlparse(requesturl).netloc
-            endpoint_path = urlparse.urlparse(requesturl).path
+            endpoint = _urlparse(requesturl).netloc
+            endpoint_path = _urlparse(requesturl).path
         else:
             endpoint = _urlparse(requesturl).netloc
-            endpoint_path = urlparse.urlparse(requesturl).path
+            endpoint_path = _urlparse(requesturl).path
             if endpoint == '':
                 endpoint_err = (
                         'Could not find a valid endpoint in the '
