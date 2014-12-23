@@ -9,7 +9,7 @@ import logging
 
 # Import salt libs
 import salt.utils
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # Set up logger
 log = logging.getLogger(__name__)
