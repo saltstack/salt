@@ -428,8 +428,9 @@ def create(vm_):
     conn = get_conn()
 
     label = vm_.get('label', vm_['name'])
+    service_name = vm_.get('service_name', vm_['name'])
     service_kwargs = {
-        'service_name': vm_['name'],
+        'service_name': service_name,
         'label': label,
         'description': vm_.get('desc', vm_['name']),
         'location': vm_['location'],
@@ -460,7 +461,7 @@ def create(vm_):
     os_hd = azure.servicemanagement.OSVirtualHardDisk(vm_['image'], media_link)
 
     vm_kwargs = {
-        'service_name': vm_['name'],
+        'service_name': service_name,
         'deployment_name': vm_['name'],
         'deployment_slot': vm_['slot'],
         'label': label,
@@ -681,9 +682,14 @@ def create(vm_):
     return ret
 
 
-def destroy(name, conn=None, call=None):
+def destroy(name, conn=None, call=None, kwargs=None):
     '''
     Destroy a VM
+
+    CLI Examples::
+
+        salt-cloud -d myminion
+        salt-cloud -a destroy myminion service_name=myservice
     '''
     if call == 'function':
         raise SaltCloudSystemExit(
@@ -694,10 +700,12 @@ def destroy(name, conn=None, call=None):
     if not conn:
         conn = get_conn()
 
+    service_name = kwargs.get('service_name', name)
+
     ret = {}
     # TODO: Add the ability to delete or not delete a hosted service when
     # deleting a VM
-    del_vm = conn.delete_deployment(service_name=name, deployment_name=name)
+    del_vm = conn.delete_deployment(service_name=service_name, deployment_name=name)
     del_service = conn.delete_hosted_service
     ret[name] = {
         'request_id': del_vm.request_id,

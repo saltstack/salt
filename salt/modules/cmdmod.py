@@ -308,7 +308,8 @@ def _run(cmd,
             env.setdefault('LC_ALL', 'C')
         else:
             # On Windows set the codepage to US English.
-            cmd = 'chcp 437 > nul & ' + cmd
+            if python_shell:
+                cmd = 'chcp 437 > nul & ' + cmd
 
     if clean_env:
         run_env = env
