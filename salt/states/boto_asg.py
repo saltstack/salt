@@ -101,6 +101,92 @@ as a passed in dict, or as a string to pull from pillars or minion config:
         - name: myasg
         # If instances exist, we must force the deletion of the asg.
         - force: True
+
+It's possible to specify cloudwatch alarms that will be setup along with the
+ASG. Note the alarm name will be the name attribute defined, plus the ASG
+resource name.
+
+.. code-block:: yaml
+
+    Ensure myasg exists:
+      boto_asg.present:
+        - name: myasg
+        - launch_config_name: mylc
+        - availability_zones:
+          - us-east-1a
+          - us-east-1b
+        - min_size: 1
+        - max_size: 1
+        - desired_capacity: 1
+        - load_balancers:
+          - myelb
+        - profile: myprofile
+        - alarms:
+            CPU:
+              name: 'ASG CPU **MANAGED BY SALT**'
+              attributes:
+                metric: CPUUtilization
+                namespace: AWS/EC2
+                statistic: Average
+                comparison: '>='
+                threshold: 65.0
+                period: 60
+                evaluation_periods: 30
+                unit: null
+                description: 'ASG CPU'
+                alarm_actions: [ 'arn:aws:sns:us-east-1:12345:myalarm' ]
+                insufficient_data_actions: []
+                ok_actions: [ 'arn:aws:sns:us-east-1:12345:myalarm' ]
+
+You can also use alarms from pillars, and override values from the pillar
+alarms by setting overrides on the resource. Note that 'boto_asg_alarms'
+will be used as a default value for all resources, if defined and can be
+used to ensure alarms are always set for an ASG resource.
+
+Setting the alarms in a pillar:
+
+.. code-block:: yaml
+
+    my_asg_alarm:
+      CPU:
+        name: 'ASG CPU **MANAGED BY SALT**'
+        attributes:
+          metric: CPUUtilization
+          namespace: AWS/EC2
+          statistic: Average
+          comparison: '>='
+          threshold: 65.0
+          period: 60
+          evaluation_periods: 30
+          unit: null
+          description: 'ASG CPU'
+          alarm_actions: [ 'arn:aws:sns:us-east-1:12345:myalarm' ]
+          insufficient_data_actions: []
+          ok_actions: [ 'arn:aws:sns:us-east-1:12345:myalarm' ]
+
+Overriding the alarm values on the resource:
+
+.. code-block:: yaml
+
+    Ensure myasg exists:
+      boto_asg.present:
+        - name: myasg
+        - launch_config_name: mylc
+        - availability_zones:
+          - us-east-1a
+          - us-east-1b
+        - min_size: 1
+        - max_size: 1
+        - desired_capacity: 1
+        - load_balancers:
+          - myelb
+        - profile: myprofile
+        - alarms_from_pillar: my_asg_alarm
+        # override CPU:attributes:threshold
+        - alarms:
+            CPU:
+              attributes:
+                threshold: 50.0
 '''
 from __future__ import absolute_import
 
