@@ -2270,7 +2270,7 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset):
 
     .. code-block:: bash
 
-        salt-call -lall lxc.update_lxc_conf ubuntu \\
+        salt myminion lxc.update_lxc_conf ubuntu \\
                 lxc_conf="[{'network.ipv4.ip':'10.0.3.5'}]" \\
                 lxc_conf_unset="['lxc.utsname']"
 
