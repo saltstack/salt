@@ -15,7 +15,7 @@ import salt.utils
 import salt.utils.cache
 import salt.utils.event
 import salt.utils.process
-from salt.ext.six import string_types
+from salt.ext.six import string_types, iterkeys
 from salt._compat import string_types
 log = logging.getLogger(__name__)
 
@@ -85,7 +85,7 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
                 continue
             if len(ropt) != 1:
                 continue
-            key = ropt.iterkeys().next()
+            key = next(iterkeys(ropt))
             val = ropt[key]
             if fnmatch.fnmatch(tag, key):
                 if isinstance(val, string_types):
