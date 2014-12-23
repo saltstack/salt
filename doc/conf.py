@@ -155,6 +155,8 @@ version = salt.version.__version__
 #release = '.'.join(map(str, salt.version.__version_info__))
 release = '2014.7.0'
 
+needs_sphinx = '1.3'
+
 spelling_lang = 'en_US'
 language = 'en'
 locale_dirs = [
@@ -201,7 +203,7 @@ extlinks = {
     'blob': ('https://github.com/saltstack/salt/blob/%s/%%s' % 'develop', None),
     'download': ('https://cloud.github.com/downloads/saltstack/salt/%s', None),
     'issue': ('https://github.com/saltstack/salt/issues/%s', 'issue '),
-    'formula': ('https://github.com/saltstack-formulas/%s', ''),
+    'formula_url': ('https://github.com/saltstack-formulas/%s', ''),
 }
 
 
@@ -214,7 +216,7 @@ gettext_compact = False
 ### HTML options
 html_theme = 'saltstack'
 html_theme_path = ['_themes']
-html_title = None
+html_title = u''
 html_short_title = 'Salt'
 
 html_static_path = ['_static']
