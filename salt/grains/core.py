@@ -343,7 +343,7 @@ def _sunos_cpudata():
 
     grains['cpuarch'] = __salt__['cmd.run']('uname -p')
     psrinfo = '/usr/sbin/psrinfo 2>/dev/null'
-    grains['num_cpus'] = len(__salt__['cmd.run'](psrinfo).splitlines())
+    grains['num_cpus'] = len(__salt__['cmd.run'](psrinfo, python_shell=True).splitlines())
     kstat_info = 'kstat -p cpu_info:0:*:brand'
     for line in __salt__['cmd.run'](kstat_info).splitlines():
         match = re.match(r'(\w+:\d+:\w+\d+:\w+)\s+(.+)', line)
@@ -389,7 +389,7 @@ def _memdata(osdata):
             grains['mem_total'] = int(mem) / 1024 / 1024
     elif osdata['kernel'] == 'SunOS':
         prtconf = '/usr/sbin/prtconf 2>/dev/null'
-        for line in __salt__['cmd.run'](prtconf).splitlines():
+        for line in __salt__['cmd.run'](prtconf, python_shell=True).splitlines():
             comps = line.split(' ')
             if comps[0].strip() == 'Memory' and comps[1].strip() == 'size:':
                 grains['mem_total'] = int(comps[2].strip())
