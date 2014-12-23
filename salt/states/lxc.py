@@ -646,6 +646,6 @@ def set_pass(name, **kwargs):  # pylint: disable=W0613
     return {'name': name,
             'comment': 'The lxc.set_pass state is no longer supported. Please '
                        'see the LXC states documentation for further '
-                       'information.'
+                       'information.',
             'result': False,
             'changes': {}}
