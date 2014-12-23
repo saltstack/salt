@@ -312,7 +312,7 @@ class SSH(object):
                 if stderr:
                     return {host: stderr}
                 return {host: 'Bad Return'}
-        if salt.exitcodes.EX_OK != retcode:
+        if salt.defaults.exitcodes.EX_OK != retcode:
             return {host: stderr}
         return {host: stdout}
 
