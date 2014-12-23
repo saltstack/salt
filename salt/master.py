@@ -2222,11 +2222,17 @@ class ClearFuncs(object):
                 # If a group_auth_match is set it means only that we have a user which matches at least one or more
                 # of the groups defined in the configuration file.
 
+                external_auth_in_db = False
+                for d in self.opts['external_auth'][extra['eauth']]:
+                    if d.startswith('^'):
+                        external_auth_in_db = True
+
                 # If neither a catchall, a named membership or a group membership is found, there is no need
                 # to continue. Simply deny the user access.
                 if not ((name in self.opts['external_auth'][extra['eauth']]) |
                         ('*' in self.opts['external_auth'][extra['eauth']]) |
-                        group_auth_match):
+                        group_auth_match | external_auth_in_db):
+
                         # A group def is defined and the user is a member
                         #[group for groups in ['external_auth'][extra['eauth']]]):
                     # Auth successful, but no matching user found in config
