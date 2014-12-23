@@ -3,11 +3,11 @@
 Managing Ruby installations with rbenv
 ======================================
 
-This module is used to install and manage ruby installations with rbenv and the 
-ruby-build plugin. Different versions of ruby can be installed, and uninstalled. 
-Rbenv will be installed automatically the first time it is needed and can be 
+This module is used to install and manage ruby installations with rbenv and the
+ruby-build plugin. Different versions of ruby can be installed, and uninstalled.
+Rbenv will be installed automatically the first time it is needed and can be
 updated later. This module will *not* automatically install packages which rbenv
-will need to compile the versions of ruby. If your version of ruby fails to 
+will need to compile the versions of ruby. If your version of ruby fails to
 install, refer to the ruby-build documentation to verify you are not missing any
 dependencies: https://github.com/sstephenson/ruby-build/wiki
 
@@ -18,7 +18,7 @@ directories to the users PATH. If you are installing as root and want other
 users to be able to access rbenv then you will need to add RBENV_ROOT to
 their environment.
 
-The following state configuration demonstrates how to install Ruby 1.9.x 
+The following state configuration demonstrates how to install Ruby 1.9.x
 and 2.x using rbenv on Ubuntu/Debian:
 
 .. code-block:: yaml
@@ -32,13 +32,13 @@ and 2.x using rbenv on Ubuntu/Debian:
           - libssl-dev
           - make
           - curl
-          - autoconf 
-          - bison 
-          - build-essential 
-          - libssl-dev 
-          - libyaml-dev 
-          - libreadline6-dev 
-          - zlib1g-dev 
+          - autoconf
+          - bison
+          - build-essential
+          - libssl-dev
+          - libyaml-dev
+          - libreadline6-dev
+          - zlib1g-dev
           - libncurses5-dev
 
     ruby-1.9.3-p429:
