@@ -86,6 +86,111 @@ passed in as a dict, or as a string to pull from pillars or minion config:
             - profile:
                 keyid: GKTADJGHEIQSXMKKRBJ08H
                 key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+
+It's possible to specify attributes from pillars by specifying a pillar. You
+can override the values defined in the pillard by setting the attributes on the
+resource. The module will use the default pillar key 'boto_elb_attributes',
+which allows you to set default attributes for all ELB resources.
+
+Setting the attributes pillar:
+
+.. code-block:: yaml
+
+    my_elb_attributes:
+      cross_zone_load_balancing:
+        enabled: true
+      connection_draining:
+        enabled: true
+        timeout: 20
+      access_log:
+        enabled: true
+        s3_bucket_name: 'mybucket'
+        s3_bucket_prefix: 'my-logs'
+        emit_interval: 5
+
+Overriding the attribute values on the resource:
+
+.. code-block:: yaml
+
+    Ensure myelb ELB exists:
+        boto_elb.present:
+            - name: myelb
+            - region: us-east-1
+            - attributes_from_pillar: my_elb_attributes
+            # override cross_zone_load_balancing:enabled
+            - attributes:
+                cross_zone_load_balancing:
+                  enabled: false
+            - profile: myelbprofile
+
+It's possible to specify cloudwatch alarms that will be setup along with the
+ELB:
+
+.. code-block:: yaml
+
+    Ensure myelb ELB exists:
+        boto_elb.present:
+            - name: myelb
+            - region: us-east-1
+            - profile: myelbprofile
+            - alarms:
+                UnHealthyHostCount:
+                  name: 'ELB UnHealthyHostCount **MANAGED BY SALT**'
+                  attributes:
+                    metric: UnHealthyHostCount
+                    namespace: AWS/ELB
+                    statistic: Average
+                    comparison: '>='
+                    threshold: 1.0
+                    period: 600
+                    evaluation_periods: 6
+                    unit: null
+                    description: ELB UnHealthyHostCount
+                    alarm_actions: ['arn:aws:sns:us-east-1:12345:myalarm']
+                    insufficient_data_actions: []
+                    ok_actions: ['arn:aws:sns:us-east-1:12345:myalarm']
+
+You can also use alarms from pillars, and override values from the pillar
+alarms by setting overrides on the resource. Note that 'boto_elb_alarms'
+will be used as a default value for all resources, if defined and can be
+used to ensure alarms are always set for a resource.
+
+Setting the alarms in a pillar:
+
+.. code-block:: yaml
+
+    my_elb_alarm:
+      UnHealthyHostCount:
+        name: 'ELB UnHealthyHostCount **MANAGED BY SALT**'
+        attributes:
+          metric: UnHealthyHostCount
+          namespace: AWS/ELB
+          statistic: Average
+          comparison: '>='
+          threshold: 1.0
+          period: 600
+          evaluation_periods: 6
+          unit: null
+          description: ELB UnHealthyHostCount
+          alarm_actions: ['arn:aws:sns:us-east-1:12345:myalarm']
+          insufficient_data_actions: []
+          ok_actions: ['arn:aws:sns:us-east-1:12345:myalarm']
+
+Overriding the alarm values on the resource:
+
+.. code-block:: yaml
+
+    Ensure myelb ELB exists:
+        boto_elb.present:
+            - name: myelb
+            - region: us-east-1
+            - profile: myelbprofile
+            - alarms_from_pillar: my_elb_alarm
+            # override UnHealthyHostCount:attributes:threshold
+            - alarms:
+                UnHealthyHostCount:
+                  attributes:
+                    threshold: 2.0
 '''
 from __future__ import absolute_import
 import salt.utils.dictupdate as dictupdate
