@@ -72,7 +72,7 @@ def django_auth_setup():
 
         django_auth_module = __import__(django_module_name, globals(), locals(), 'SaltExternalAuthModel')
         django_auth_class_str = 'django_auth_module.{0}'.format(django_model_name)
-        django_auth_class = eval(django_auth_class_str) #pylint: disable=W0123
+        django_auth_class = eval(django_auth_class_str)  # pylint: disable=W0123
 
     if django.VERSION >= (1, 7):
         django.setup()
