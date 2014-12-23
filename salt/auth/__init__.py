@@ -183,9 +183,14 @@ class Authorize(object):
 
     def auth_data(self):
         '''
-        Gather and create the autorization data sets
+        Gather and create the authorization data sets
         '''
         auth_data = self.opts['external_auth']
+
+        if 'django' in auth_data and '^model' in auth_data['django']:
+            auth_from_django = salt.auth.django.retrieve_auth_entries()
+            auth_data = salt.utils.dictupdate.merge(auth_data, auth_from_django)
+
         #for auth_back in self.opts.get('external_auth_sources', []):
         #    fstr = '{0}.perms'.format(auth_back)
         #    if fstr in self.loadauth.auth:
@@ -264,6 +269,7 @@ class Authorize(object):
         Determine what type of authentication is being requested and pass
         authorization
         '''
+
         adata = self.auth_data()
         good = False
         if load.get('token', False):
