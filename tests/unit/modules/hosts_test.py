@@ -129,7 +129,7 @@ class HostsTestCase(TestCase):
         '''
         self.assertTrue(hosts.rm_host('10.10.10.10', 'Salt1'))
 
-    # 'add_host' function tests: 2
+    # 'add_host' function tests: 3
 
     @patch('salt.modules.hosts.__get_hosts_filename',
            MagicMock(return_value='/etc/hosts'))
