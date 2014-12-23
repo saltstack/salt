@@ -154,7 +154,9 @@ def install(name, clean=True):
         deinstall(name)
     result = __salt__['cmd.run_all'](
         'make install{0} BATCH=yes'.format(' clean' if clean else ''),
-        cwd=portpath, reset_system_locale=False
+        cwd=portpath,
+        reset_system_locale=False,
+        python_shell=False
     )
     if result['retcode'] != 0:
         __context__['ports.install_error'] = result['stderr']
@@ -175,7 +177,9 @@ def deinstall(name):
     '''
     portpath = _check_portname(name)
     old = __salt__['pkg.list_pkgs']()
-    __salt__['cmd.run']('make deinstall BATCH=yes', cwd=portpath)
+    __salt__['cmd.run']('make deinstall BATCH=yes',
+                        cwd=portpath,
+                        python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = __salt__['pkg.list_pkgs']()
     return salt.utils.compare_dicts(old, new)
@@ -195,7 +199,9 @@ def rmconfig(name):
         salt '*' ports.rmconfig security/nmap
     '''
     portpath = _check_portname(name)
-    return __salt__['cmd.run']('make rmconfig', cwd=portpath)
+    return __salt__['cmd.run']('make rmconfig',
+                               cwd=portpath,
+                               python_shell=False)
 
 
 def showconfig(name, default=False, dict_return=False):
@@ -230,7 +236,9 @@ def showconfig(name, default=False, dict_return=False):
         return default_config
 
     try:
-        result = __salt__['cmd.run_all']('make showconfig', cwd=portpath)
+        result = __salt__['cmd.run_all']('make showconfig',
+                                         cwd=portpath,
+                                         python_shell=False)
         output = result['stdout'].splitlines()
         if result['retcode'] != 0:
             error = result['stderr']
