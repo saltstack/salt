@@ -1,0 +1,27 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="build">
+  <PropertyGroup>
+    <Configuration  Condition="'$(Configuration)'==''">Release</Configuration>
+    <DisplayVersion Condition="'$(DisplayVersion)'==''">2014.7.0</DisplayVersion>
+    <TargetPlatform Condition="'$(TargetPlatform)'==''">win32</TargetPlatform>
+    <BUILD_NUMBER Condition="'$(BUILD_NUMBER)'==''">0</BUILD_NUMBER>
+    <InternalVersion Condition="'$(InternalVersion)'==''">14.7.0.$(BUILD_NUMBER)</InternalVersion>
+    <SolutionProperties>Configuration=$(Configuration);InternalVersion=$(InternalVersion);DisplayVersion=$(DisplayVersion);TargetPlatform=$(TargetPlatform)</SolutionProperties>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Salt Include="$(MSBuildProjectDirectory)\Salt.sln" />
+  </ItemGroup>
+
+  <Target Name="restore">
+    <Exec Command="$(MSBuildProjectDirectory)/.nuget/NuGet.exe restore" />
+  </Target>
+
+  <Target Name="build" DependsOnTargets="restore">
+    <MSBuild Projects="%(Salt.Identity)" Properties="$(SolutionProperties)" />
+  </Target>
+
+  <Target Name="rebuild" DependsOnTargets="restore">
+    <MSBuild Projects="%(Salt.Identity)" Properties="$(SolutionProperties)" Targets="rebuild" />
+  </Target>
+
+</Project>

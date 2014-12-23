@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" >
+  <Product Id="*" Name="Salt Minion" Language="1033" Version="$(var.InternalVersion)" Manufacturer="SaltStack, Inc" UpgradeCode="{FC6FB3A2-65DE-41A9-AD91-D10A402BD641}">
+    <Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
+
+    <MajorUpgrade
+      DowngradeErrorMessage="A newer version of [ProductName] is already installed."
+      AllowSameVersionUpgrades="yes" />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Feature Id="ProductFeature" Title="Minion" Level="1">
+      <ComponentGroupRef Id="ProductComponents" />
+    </Feature>
+
+    <Icon Id="icon" SourceFile="buildenv\salt.ico" />
+    <WixVariable Id="WixUILicenseRtf" Value="LICENSE.rtf" />
+
+    <WixVariable Id="dist" Value="dist" />
+
+    <Property Id="ARPPRODUCTICON"                       Value="icon"                 />
+    <Property Id="ARPURLINFOABOUT"                      Value="http://saltstack.org" />
+    <Property Id="MASTER_HOSTNAME"                      Value="salt"                 />
+    <Property Id="MINION_HOSTNAME"                      Value="$(env.COMPUTERNAME)"  />
+    <Property Id="WIXUI_INSTALLDIR"                     Value="INSTALLFOLDER"        />
+    <Property Id="MINION_ROOT"                          Value="INSTALLFOLDER"        />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Start salt-minion service now" />
+
+    <Property Id="QtExecCmdLine" Value="&quot;net.exe&quot; start salt-minion" />
+    <CustomAction Id="StartMinion" BinaryKey="WixCA" DllEntry="CAQuietExec" Execute="immediate" Return="check" />
+
+    <InstallExecuteSequence>
+      <Custom Action='SetMaster'   After='InstallFinalize'>NOT Installed</Custom>
+      <Custom Action='SetMinionId' After='SetMaster'>NOT Installed</Custom>
+      <Custom Action='SetRootDir'  After='SetMinionId'>NOT Installed</Custom>
+      <Custom Action='StartMinion' After='SetMinionId'>START_MINION_SERVICE = 1 AND NOT Installed</Custom>
+    </InstallExecuteSequence>
+
+    <UIRef Id="WixUI_Minion" />
+  </Product>
+
+  <Fragment>
+    <Directory Id="TARGETDIR" Name="SourceDir">
+        <Directory Id="INSTALLFOLDER" Name="salt" />
+    </Directory>
+  </Fragment>
+
+  <Fragment>
+    <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+      <ComponentGroupRef Id="buildenv" />
+      <ComponentGroupRef Id="dist" />
+    </ComponentGroup>
+  </Fragment>
+</Wix>
