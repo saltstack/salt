@@ -316,7 +316,7 @@ class SSH(object):
             return {host: stderr}
         return {host: stdout}
 
-    def handle_routine(self, que, opts, host, target):
+    def handle_routine(self, que, opts, host, target, mine=False):
         '''
         Run the routine in a "Thread", put a dict on the queue
         '''
@@ -328,6 +328,7 @@ class SSH(object):
                 mods=self.mods,
                 fsclient=self.fsclient,
                 thin=self.thin,
+                mine=mine,
                 **target)
         ret = {'id': single.id}
         stdout, stderr, retcode = single.run()
@@ -350,7 +351,7 @@ class SSH(object):
             }
         que.put(ret)
 
-    def handle_ssh(self):
+    def handle_ssh(self, mine=False):
         '''
         Spin up the needed threads or processes and execute the subsequent
         routines
@@ -378,6 +379,7 @@ class SSH(object):
                         self.opts,
                         host,
                         self.targets[host],
+                        mine,
                         )
                 routine = multiprocessing.Process(
                                 target=self.handle_routine,
@@ -407,9 +409,14 @@ class SSH(object):
             if len(rets) >= len(self.targets):
                 break
 
-    def run_iter(self):
+    def run_iter(self, mine=False):
         '''
         Execute and yield returns as they come in, do not print to the display
+
+        mine
+            The Single objects will use mine_functions defined in the roster,
+            pillar, or master config (they will be checked in that order) and
+            will modify the argv with the arguments from mine_functions
         '''
         fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
         jid = self.returners[fstr]()
@@ -436,7 +443,7 @@ class SSH(object):
         # save load to the master job cache
         self.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load)
 
-        for ret in self.handle_ssh():
+        for ret in self.handle_ssh(mine=mine):
             host = next(ret.iterkeys())
             self.cache_job(jid, host, ret[host])
             if self.event:
@@ -546,7 +553,12 @@ class Single(object):
             mods=None,
             fsclient=None,
             thin=None,
+            mine=False,
             **kwargs):
+        # Get mine setting and mine_functions if defined in kwargs (from roster)
+        self.mine = mine
+        self.mine_functions = kwargs.get('mine_functions')
+
         self.opts = opts
         self.tty = tty
         if kwargs.get('wipe'):
@@ -675,7 +687,7 @@ class Single(object):
             cmd_str = ' '.join([self._escape_arg(arg) for arg in self.argv])
             stdout, stderr, retcode = self.shell.exec_cmd(cmd_str)
 
-        elif self.fun in self.wfuncs:
+        elif self.fun in self.wfuncs or self.mine:
             stdout = self.run_wfunc()
 
         else:
@@ -780,8 +792,31 @@ class Single(object):
             **self.target)
         self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper, self.context)
         wrapper.wfuncs = self.wfuncs
+
+        # We're running in the mind, need to fetch the arguments from the
+        # roster, pillar, master config (in that order)
+        if self.mine:
+            mine_args = None
+            if self.mine_functions and self.fun in self.mine_functions:
+                mine_args = self.mine_functions[self.fun]
+            elif opts['pillar'] and self.fun in opts['pillar'].get('mine_functions', {}):
+                mine_args = opts['pillar']['mine_functions'][self.fun]
+            elif self.fun in self.context['master_opts'].get('mine_functions', {}):
+                mine_args = self.context['master_opts']['mine_functions'][self.fun]
+
+            # If we found mine_args, replace our command's args
+            if isinstance(mine_args, dict):
+                self.args = []
+                self.kwargs = mine_args
+            elif isinstance(mine_args, list):
+                self.args = mine_args
+                self.kwargs = {}
+
         try:
-            result = self.wfuncs[self.fun](*self.args, **self.kwargs)
+            if self.mine:
+                result = wrapper[self.fun](*self.args, **self.kwargs)
+            else:
+                result = self.wfuncs[self.fun](*self.args, **self.kwargs)
         except TypeError as exc:
             result = 'TypeError encountered executing {0}: {1}'.format(self.fun, exc)
         except Exception as exc:
