@@ -110,8 +110,8 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         load = kwargs
         load['cmd'] = 'runner'
         channel = salt.transport.Channel.factory(self.opts,
-                                              crypt='clear',
-                                              usage='master_call')
+                                                 crypt='clear',
+                                                 usage='master_call')
         ret = channel.send(load)
         if isinstance(ret, collections.Mapping):
             if 'error' in ret:
@@ -263,7 +263,7 @@ class Runner(RunnerClient):
                 tag_parts = raw['tag'].split('/')
                 if tag_parts[3] == 'progress':
                     last_progress_timestamp = time.time()
-                    yield {'data': raw['data']['data'], 'outputter': raw['data']['outputter']}
+                    yield raw['data']
                 elif tag_parts[3] == 'ret':
                     yield raw['data']['return']
                     break
