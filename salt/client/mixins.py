@@ -7,7 +7,6 @@ from __future__ import absolute_import
 import datetime
 import logging
 import multiprocessing
-import sys
 
 import salt.utils
 import salt.utils.event
@@ -71,7 +70,7 @@ class SyncClientMixin(object):
                         }
         # Inject some useful globals to the funciton's global namespace
         for global_key, value in func_globals.iteritems():
-            setattr(sys.modules[self.functions[fun].__module__], global_key, value)
+            self.functions[fun].func_globals[global_key] = value
         try:
             self._verify_fun(fun)
             l_fun = self.functions[fun]
@@ -91,7 +90,7 @@ class SyncClientMixin(object):
         # if we fired an event, make sure to delete the event object.
         # This will ensure that we call destroy, which will do the 0MQ linger
         del event
-        return data['success']
+        return data['return']
 
     def get_docs(self, arg=None):
         '''
