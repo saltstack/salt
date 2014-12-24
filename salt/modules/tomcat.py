@@ -65,6 +65,7 @@ import hashlib
 import tempfile
 import os
 import re
+import logging
 
 # Import 3rd-party libs
 # pylint: disable=no-name-in-module,import-error
