@@ -58,6 +58,14 @@ class SyncClientMixin(object):
                         '__tag__': tag,
                         '__jid_event__': salt.utils.event.NamespacedEvent(event, tag),
                         }
+
+        # TODO: some other way? This seems like a slippery slope of convenience functions
+        def fire_progress(data, outputter='pprint'):
+            progress_event = {'data': data,
+                              'outputter': outputter}
+            func_globals['__jid_event__'].fire_event(progress_event, 'progress')
+        func_globals['__progress__'] = fire_progress
+
         # Inject some useful globals to the funciton's global namespace
         for global_key, value in func_globals.iteritems():
             self.functions[fun].func_globals[global_key] = value
