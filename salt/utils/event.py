@@ -573,7 +573,12 @@ class SaltEvent(object):
                     pass
 
     def __del__(self):
-        self.destroy()
+        # skip exceptions in destroy-- since destroy() doesn't cover interpreter
+        # shutdown-- where globals start going missing
+        try:
+            self.destroy()
+        except:
+            pass
 
 
 class MasterEvent(SaltEvent):
