@@ -595,6 +595,18 @@ class LocalClientEvent(MasterEvent):
     '''
 
 
+class NamespacedEvent(object):
+    '''
+    A wrapper for sending events within a specific base namespace
+    '''
+    def __init__(self, event, base):
+        self.event = event
+        self.base = base
+
+    def fire_event(self, data, tag):
+        self.event.fire_event(data, tagify(tag, base=self.base))
+
+
 class RunnerEvent(MasterEvent):
     '''
     Warning! Use the get_runner_event function or the code will not be
