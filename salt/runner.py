@@ -233,25 +233,22 @@ class Runner(RunnerClient):
             self.print_docs()
         else:
             try:
+                low = {'fun': self.opts['fun'],
+                       'args': self.opts['arg'],
+                       'kwargs': self.opts}
+                async_pub = super(Runner, self).async(
+                    self.opts['fun'], low)
                 # Run the runner!
                 if self.opts.get('async', False):
-                    low = {'fun': self.opts['fun'],
-                           'args': self.opts['arg'],
-                           'kwargs': self.opts}
-                    async_pub = super(Runner, self).async(
-                        self.opts['fun'], low)
                     log.info('Running in async mode. Results of this execution may '
                              'be collected by attaching to the master event bus or '
                              'by examing the master job cache, if configured. '
                              'This execution is under tag {0}'.format(async_pub['tag']))
-                    rets = self.get_runner_returns(async_pub['tag'])
-                else:
-                    ret = super(Runner, self).cmd(
-                        self.opts['fun'], self.opts['arg'], self.opts)
-                    rets = [ret]
-                # Gather the returns
+                    exit(0)  # TODO: return or something? Don't like exiting...
+
+                # output rets if you have some
                 if not self.opts.get('quiet', False):
-                    for ret in rets:
+                    for ret in self.get_runner_returns(async_pub['tag']):
                         if isinstance(ret, dict) and 'outputter' in ret and ret['outputter'] is not None:
                             print(self.outputters[ret['outputter']](ret['data']))
                         else:
@@ -275,6 +272,7 @@ class Runner(RunnerClient):
         timeout_at = time.time() + timeout
         last_progress_timestamp = time.time()
 
+        # no need to have a sleep, get_event has one inside
         while True:
             raw = self.event.get_event(timeout, tag=tag, full=True)
             # If we saw no events in the event bus timeout
@@ -294,11 +292,5 @@ class Runner(RunnerClient):
                 elif tag_parts[3] == 'ret':
                     yield raw['data']['return']
                     break
-                # Handle a findjob that might have been kicked off under the covers
-                elif raw['data']['fun'] == 'saltutil.findjob':
-                    timeout_at = timeout_at + 10
-                    continue
             except (IndexError, KeyError):
                 continue
-            # if you get to the end, sleep
-            time.sleep(0.1)
