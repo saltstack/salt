@@ -394,11 +394,8 @@ class CkMinions(object):
                     # subexpression
                     if results:
                         if match == 'not':
-                            if results[-1] == '&':
-                                pass
-                            elif results[-1] == '|':
-                                pass
-                            else:
+                            result_suffix = results[-1]
+                            if not (result_suffix == '&' or result_suffix == '|'):
                                 results.append('&')
                             results.append('(')
                             results.append(str(set(minions)))
