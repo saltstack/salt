@@ -14,32 +14,34 @@ Old style event messages were comprised of two parts delimited
 at the 20 char point. The first 20 characters are used for the zeromq
 subscriber to match publications and 20 characters was chosen because it was at
 the time a few more characters than the length of a jid (Job ID).
-Any tags of length less than 20 characters were padded with "|" chars out to 20 characters.
-Although not explicit, the data for an event comprised a python dict that was serialized by
-msgpack.
+Any tags of length less than 20 characters were padded with "|" chars out to
+20 characters. Although not explicit, the data for an event comprised a
+python dict that was serialized by msgpack.
 
-New style event messages support event tags longer than 20 characters while still
-being backwards compatible with old style tags.
+New style event messages support event tags longer than 20 characters while
+still being backwards compatible with old style tags.
 The longer tags better enable name spaced event tags which tend to be longer.
-Moreover, the constraint that the event data be a python dict is now an explicit
-constraint and fire-event will now raise a ValueError if not. Tags must be
-ascii safe strings, that is, have values less than 0x80
+Moreover, the constraint that the event data be a python dict is now an
+explicit constraint and fire-event will now raise a ValueError if not. Tags
+must be ascii safe strings, that is, have values less than 0x80
 
-Since the msgpack dict (map) indicators have values greater than or equal to 0x80
-it can be unambiguously determined if the start of data is at char 21 or not.
+Since the msgpack dict (map) indicators have values greater than or equal to
+0x80 it can be unambiguously determined if the start of data is at char 21
+or not.
 
 In the new style:
-When the tag is longer than 20 characters, an end of tag string
-is appended to the tag given by the string constant TAGEND, that is, two line feeds '\n\n'.
+When the tag is longer than 20 characters, an end of tag string is appended to
+the tag given by the string constant TAGEND, that is, two line feeds '\n\n'.
 When the tag is less than 20 characters then the tag is padded with pipes
 "|" out to 20 characters as before.
 When the tag is exactly 20 characters no padded is done.
 
-The get_event method intelligently figures out if the tag is longer than 20 characters.
+The get_event method intelligently figures out if the tag is longer than
+20 characters.
 
 
-The convention for namespacing is to use dot characters "." as the name space delimiter.
-The name space "salt" is reserved by SaltStack for internal events.
+The convention for namespacing is to use dot characters "." as the name space
+delimiter. The name space "salt" is reserved by SaltStack for internal events.
 
 For example:
 Namespaced tag
@@ -79,9 +81,9 @@ log = logging.getLogger(__name__)
 # The SUB_EVENT set is for functions that require events fired based on
 # component executions, like the state system
 SUB_EVENT = set([
-            'state.highstate',
-            'state.sls',
-            ])
+    'state.highstate',
+    'state.sls',
+])
 
 TAGEND = '\n\n'  # long tag delimiter
 TAGPARTER = '/'  # name spaced tag delimiter
@@ -91,8 +93,10 @@ TAGS = {
     'auth': 'auth',  # prefix for all salt/auth events
     'job': 'job',  # prefix for all salt/job events (minion jobs)
     'key': 'key',  # prefix for all salt/key events
-    'minion': 'minion',  # prefix for all salt/minion events (minion sourced events)
-    'syndic': 'syndic',  # prefix for all salt/syndic events (syndic minion sourced events)
+    'minion': 'minion',  # prefix for all salt/minion events
+                         # (minion sourced events)
+    'syndic': 'syndic',  # prefix for all salt/syndic events
+                         # (syndic minion sourced events)
     'run': 'run',  # prefix for all salt/run events (salt runners)
     'wheel': 'wheel',  # prefix for all salt/wheel events
     'cloud': 'cloud',  # prefix for all salt/cloud events
@@ -125,7 +129,8 @@ def get_master_event(opts, sock_dir, listen=True):
         return MasterEvent(sock_dir)
     elif opts['transport'] == 'raet':
         import salt.utils.raetevent
-        return salt.utils.raetevent.MasterEvent(opts=opts, sock_dir=sock_dir, listen=listen)
+        return salt.utils.raetevent.MasterEvent(
+            opts=opts, sock_dir=sock_dir, listen=listen)
 
 
 def get_runner_event(opts, jid, listen=True):
@@ -191,33 +196,33 @@ class SaltEvent(object):
         id_hash = hash_type(self.opts.get('id', '')).hexdigest()[:10]
         if node == 'master':
             puburi = 'ipc://{0}'.format(os.path.join(
-                    sock_dir,
-                    'master_event_pub.ipc'
-                    ))
+                sock_dir,
+                'master_event_pub.ipc'
+            ))
             salt.utils.zeromq.check_ipc_path_max_len(puburi)
             pulluri = 'ipc://{0}'.format(os.path.join(
-                    sock_dir,
-                    'master_event_pull.ipc'
-                    ))
+                sock_dir,
+                'master_event_pull.ipc'
+            ))
             salt.utils.zeromq.check_ipc_path_max_len(pulluri)
         else:
             if self.opts.get('ipc_mode', '') == 'tcp':
                 puburi = 'tcp://127.0.0.1:{0}'.format(
-                        self.opts.get('tcp_pub_port', 4510)
-                        )
+                    self.opts.get('tcp_pub_port', 4510)
+                )
                 pulluri = 'tcp://127.0.0.1:{0}'.format(
-                        self.opts.get('tcp_pull_port', 4511)
-                        )
+                    self.opts.get('tcp_pull_port', 4511)
+                )
             else:
                 puburi = 'ipc://{0}'.format(os.path.join(
-                        sock_dir,
-                        'minion_event_{0}_pub.ipc'.format(id_hash)
-                        ))
+                    sock_dir,
+                    'minion_event_{0}_pub.ipc'.format(id_hash)
+                ))
                 salt.utils.zeromq.check_ipc_path_max_len(puburi)
                 pulluri = 'ipc://{0}'.format(os.path.join(
-                        sock_dir,
-                        'minion_event_{0}_pull.ipc'.format(id_hash)
-                        ))
+                    sock_dir,
+                    'minion_event_{0}_pull.ipc'.format(id_hash)
+                ))
                 salt.utils.zeromq.check_ipc_path_max_len(pulluri)
         log.debug(
             '{0} PUB socket URI: {1}'.format(self.__class__.__name__, puburi)
@@ -310,8 +315,8 @@ class SaltEvent(object):
                 continue
 
             try:
-                # Please do not use non-blocking mode here.
-                # Reliability is more important than pure speed on the event bus.
+                # Please do not use non-blocking mode here. Reliability is
+                # more important than pure speed on the event bus.
                 ret = self.get_event_block()
             except zmq.ZMQError as ex:
                 if ex.errno == errno.EAGAIN or ex.errno == errno.EINTR:
@@ -331,7 +336,8 @@ class SaltEvent(object):
 
         return None
 
-    def get_event(self, wait=5, tag='', full=False, use_pending=False, pending_tags=None):
+    def get_event(self, wait=5, tag='', full=False, use_pending=False,
+                  pending_tags=None):
         '''
         Get a single publication.
         IF no publication available THEN block for up to wait seconds
@@ -397,8 +403,8 @@ class SaltEvent(object):
 
     def fire_event(self, data, tag, timeout=1000):
         '''
-        Send a single event into the publisher with payload dict "data" and event
-        identifier "tag"
+        Send a single event into the publisher with payload dict "data" and
+        event identifier "tag"
 
         The default is 1000 ms
         Note the linger timeout must be at least as long as this timeout
@@ -415,10 +421,11 @@ class SaltEvent(object):
         data['_stamp'] = datetime.datetime.now().isoformat()
 
         tagend = TAGEND
-        serialized_data = salt.utils.dicttrim.trim_dict(self.serial.dumps(data),
-                self.opts.get('max_event_size', 1048576),
-                is_msgpacked=True
-                )
+        serialized_data = salt.utils.dicttrim.trim_dict(
+            self.serial.dumps(data),
+            self.opts.get('max_event_size', 1048576),
+            is_msgpacked=True,
+        )
         log.debug('Sending event - data = {0}'.format(data))
         event = '{0}{1}{2}'.format(tag, tagend, serialized_data)
         try:
@@ -477,12 +484,14 @@ class SaltEvent(object):
                         tags = tag.split('_|-')
                         if data.get('result') is False:
                             self.fire_event(
-                                    data,
-                                    '{0}.{1}'.format(tags[0], tags[-1]))  # old dup event
+                                data,
+                                '{0}.{1}'.format(tags[0], tags[-1])
+                            )  # old dup event
                             data['jid'] = load['jid']
                             data['id'] = load['id']
                             data['success'] = False
-                            data['return'] = 'Error: {0}.{1}'.format(tags[0], tags[-1])
+                            data['return'] = 'Error: {0}.{1}'.format(
+                                tags[0], tags[-1])
                             data['fun'] = load['fun']
                             data['user'] = load['user']
                             self.fire_event(
@@ -534,7 +543,8 @@ class RunnerEvent(MasterEvent):
     def fire_progress(self, data, outputter='pprint'):
         progress_event = {'data': data,
                           'outputter': outputter}
-        self.fire_event(progress_event, tagify([self.jid, 'progress'], 'runner'))
+        self.fire_event(
+            progress_event, tagify([self.jid, 'progress'], 'runner'))
 
 
 class MinionEvent(SaltEvent):
@@ -544,7 +554,8 @@ class MinionEvent(SaltEvent):
     Create a master event management object
     '''
     def __init__(self, opts):
-        super(MinionEvent, self).__init__('minion', sock_dir=opts.get('sock_dir', None), opts=opts)
+        super(MinionEvent, self).__init__(
+            'minion', sock_dir=opts.get('sock_dir', None), opts=opts)
 
 
 class EventPublisher(multiprocessing.Process):
@@ -567,14 +578,14 @@ class EventPublisher(multiprocessing.Process):
         # Prepare the master event publisher
         self.epub_sock = self.context.socket(zmq.PUB)
         epub_uri = 'ipc://{0}'.format(
-                os.path.join(self.opts['sock_dir'], 'master_event_pub.ipc')
-                )
+            os.path.join(self.opts['sock_dir'], 'master_event_pub.ipc')
+        )
         salt.utils.zeromq.check_ipc_path_max_len(epub_uri)
         # Prepare master event pull socket
         self.epull_sock = self.context.socket(zmq.PULL)
         epull_uri = 'ipc://{0}'.format(
-                os.path.join(self.opts['sock_dir'], 'master_event_pull.ipc')
-                )
+            os.path.join(self.opts['sock_dir'], 'master_event_pull.ipc')
+        )
         salt.utils.zeromq.check_ipc_path_max_len(epull_uri)
 
         # Start the master event publisher
@@ -583,11 +594,8 @@ class EventPublisher(multiprocessing.Process):
             self.epull_sock.bind(epull_uri)
             self.epub_sock.bind(epub_uri)
             if self.opts.get('client_acl') or self.opts.get('external_auth'):
-                os.chmod(
-                        os.path.join(self.opts['sock_dir'],
-                            'master_event_pub.ipc'),
-                        0o666
-                        )
+                os.chmod(os.path.join(
+                    self.opts['sock_dir'], 'master_event_pub.ipc'), 0o666)
         finally:
             os.umask(old_umask)
         try:
@@ -645,11 +653,15 @@ class EventReturn(multiprocessing.Process):
                 if self._filter(event):
                     event_queue.append(event)
                 if len(event_queue) >= self.event_return_queue:
-                    self.minion.returners['{0}.event_return'.format(self.opts['event_return'])](event_queue)
+                    self.minion.returners[
+                        '{0}.event_return'.format(self.opts['event_return'])
+                    ](event_queue)
                     event_queue = []
         except KeyError:
-            log.error('Could not store return for events {0}. Returner {1} '
-                      'not found.'.format(events, self.opts.get('event_return', None)))
+            log.error((
+                'Could not store return for events {0}. Returner {1} '
+                'not found.'
+            ).format(events, self.opts.get('event_return', None)))
 
     def _filter(self, event):
         '''
@@ -696,11 +708,13 @@ class StateFire(object):
         if preload:
             load.update(preload)
 
-        load.update({'id': self.opts['id'],
-                    'tag': tag,
-                    'data': data,
-                    'cmd': '_minion_event',
-                    'tok': self.auth.gen_token('salt')})
+        load.update({
+            'id': self.opts['id'],
+            'tag': tag,
+            'data': data,
+            'cmd': '_minion_event',
+            'tok': self.auth.gen_token('salt'),
+        })
 
         channel = salt.transport.Channel.factory(self.opts)
         try:
@@ -726,12 +740,12 @@ class StateFire(object):
             if running[stag]['result'] and not running[stag]['changes']:
                 continue
             tag = 'state_{0}_{1}'.format(
-                    str(running[stag]['result']),
-                    'True' if running[stag]['changes'] else 'False')
-            load['events'].append(
-                    {'tag': tag,
-                     'data': running[stag]}
-                    )
+                str(running[stag]['result']),
+                'True' if running[stag]['changes'] else 'False')
+            load['events'].append({
+                'tag': tag,
+                'data': running[stag],
+            })
         channel = salt.transport.Channel.factory(self.opts)
         try:
             channel.send(load)
