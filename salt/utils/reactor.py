@@ -130,6 +130,9 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         self.wrap = ReactWrap(self.opts)
 
         for data in self.event.iter_events(full=True):
+            # skip all events fired by ourselves
+            if data['data'].get('user') == self.wrap.event_user:
+                continue
             reactors = self.list_reactors(data['tag'])
             if not reactors:
                 continue
@@ -144,6 +147,7 @@ class ReactWrap(object):
     '''
     # class-wide cache of clients
     client_cache = None
+    event_user = 'Reactor'
 
     def __init__(self, opts):
         self.opts = opts
@@ -163,7 +167,13 @@ class ReactWrap(object):
         l_fun = getattr(self, low['state'])
         try:
             f_call = salt.utils.format_call(l_fun, low)
-            l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
+            kwargs = f_call.get('kwargs', {})
+
+            # TODO: pick one...
+            kwargs['__user__'] = self.event_user
+            kwargs['user'] = self.event_user
+
+            l_fun(*f_call.get('args', ()), **kwargs)
         except Exception:
             log.error(
                     'Failed to execute {0}: {1}\n'.format(low['state'], l_fun),
