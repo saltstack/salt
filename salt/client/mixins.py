@@ -4,7 +4,6 @@ A collection of mixins useful for the various *Client interfaces
 '''
 from __future__ import print_function
 from __future__ import absolute_import
-import datetime
 import logging
 import multiprocessing
 
@@ -62,6 +61,7 @@ class SyncClientMixin(object):
                 listen=False)
         event.fire_event(data, tagify('new', base=tag))
 
+        # TODO: document these, and test that they exist
         # TODO: Other things to inject??
         func_globals = {'__jid__': jid,
                         '__user__': data['user'],
@@ -133,7 +133,7 @@ class AsyncClientMixin(object):
         Execute the function in a multiprocess and return the event tag to use
         to watch for the return
         '''
-        jid = '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
+        jid = salt.utils.jid.gen_jid()
         tag = tagify(jid, prefix=self.tag_prefix)
 
         proc = multiprocessing.Process(
