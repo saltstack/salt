@@ -81,6 +81,8 @@ from salt.ext.six.moves.urllib.request import (
 # Import Salt libs
 import salt.utils
 
+log = logging.getLogger(__name__)
+
 __func_alias__ = {
     'reload_': 'reload'
 }
@@ -724,6 +726,6 @@ if __name__ == '__main__':
     new_format_creds = _get_credentials()
 
     if old_format_creds == new_format_creds:
-        print 'Config backwards compatible'
+        log.info('Config backwards compatible')
     else:
-        print 'Config not backwards compatible'
+        log.ifno('Config not backwards compatible')
