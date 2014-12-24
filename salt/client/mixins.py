@@ -7,9 +7,11 @@ from __future__ import absolute_import
 import datetime
 import logging
 import multiprocessing
+import sys
 
 import salt.utils
 import salt.utils.event
+import salt.utils.jid
 from salt.utils.event import tagify
 from salt.utils.doc import strip_rst as _strip_rst
 
@@ -47,11 +49,49 @@ class SyncClientMixin(object):
         '''
         Execute a function from low data
         '''
-        self._verify_fun(fun)
-        l_fun = self.functions[fun]
-        f_call = salt.utils.format_call(l_fun, low, expected_extra_kws=CLIENT_INTERNAL_KEYWORDS)
-        ret = l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
-        return ret
+        jid = low.get('__jid__', salt.utils.jid.gen_jid())
+        tag = low.get('__tag__', tagify(jid, prefix=self.tag_prefix))
+        data = {'fun': '{0}.{1}'.format(self.client, fun),
+                'jid': jid,
+                'user': low.get('__user__', 'UNKNOWN'),
+                }
+        event = salt.utils.event.get_event(
+                'master',
+                self.opts['sock_dir'],
+                self.opts['transport'],
+                opts=self.opts,
+                listen=False)
+        event.fire_event(data, tagify('new', base=tag))
+
+        # TODO: Other things to inject??
+        func_globals = {'__jid__': jid,
+                        '__user__': data['user'],
+                        '__tag__': tag,
+                        '__jid_event__': salt.utils.event.NamespacedEvent(event, tag),
+                        }
+        # Inject some useful globals to the funciton's global namespace
+        for global_key, value in func_globals.iteritems():
+            setattr(sys.modules[self.functions[fun].__module__], global_key, value)
+        try:
+            self._verify_fun(fun)
+            l_fun = self.functions[fun]
+            f_call = salt.utils.format_call(l_fun, low)
+            data['return'] = l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
+            data['success'] = True
+        except Exception as exc:
+            data['return'] = 'Exception occurred in {0} {1}: {2}: {3}'.format(
+                            self.client,
+                            fun,
+                            exc.__class__.__name__,
+                            exc,
+                            )
+            data['success'] = False
+
+        event.fire_event(data, tagify('ret', base=tag))
+        # if we fired an event, make sure to delete the event object.
+        # This will ensure that we call destroy, which will do the 0MQ linger
+        del event
+        return data['success']
 
     def get_docs(self, arg=None):
         '''
@@ -82,35 +122,12 @@ class AsyncClientMixin(object):
         multiprocess and fire the return data on the event bus
         '''
         salt.utils.daemonize()
-        data = {'fun': '{0}.{1}'.format(self.client, fun),
-                'jid': jid,
-                'user': user,
-                }
-        event = salt.utils.event.get_event(
-                'master',
-                self.opts['sock_dir'],
-                self.opts['transport'],
-                opts=self.opts,
-                listen=False)
-        event.fire_event(data, tagify('new', base=tag))
+        # pack a few things into low
+        low['__jid__'] = jid
+        low['__user__'] = user
+        low['__tag__'] = tag
 
-        try:
-            data['return'] = self.low(fun, low)
-            data['success'] = True
-        except Exception as exc:
-            data['return'] = 'Exception occurred in {0} {1}: {2}: {3}'.format(
-                            self.client,
-                            fun,
-                            exc.__class__.__name__,
-                            exc,
-                            )
-            data['success'] = False
-        data['user'] = user
-
-        event.fire_event(data, tagify('ret', base=tag))
-        # if we fired an event, make sure to delete the event object.
-        # This will ensure that we call destroy, which will do the 0MQ linger
-        del event
+        self.low(fun, low)
 
     def async(self, fun, low, user='UNKNOWN'):
         '''
