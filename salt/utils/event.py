@@ -566,8 +566,8 @@ class SaltEvent(object):
         # shutdown-- where globals start going missing
         try:
             self.destroy()
-        except:
-            pass
+        except Exception as ex:
+            log.debug(ex)
 
 
 class MasterEvent(SaltEvent):

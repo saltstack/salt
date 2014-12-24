@@ -9,8 +9,6 @@ from __future__ import absolute_import
 import collections
 import logging
 import time
-import sys
-import multiprocessing
 
 # Import salt libs
 import salt.exceptions
@@ -23,7 +21,6 @@ from salt.client import mixins
 from salt.output import display_output
 from salt.utils.error import raise_error
 from salt.utils.event import tagify
-import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
