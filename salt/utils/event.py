@@ -128,17 +128,6 @@ def get_master_event(opts, sock_dir, listen=True):
         return salt.utils.raetevent.MasterEvent(opts=opts, sock_dir=sock_dir, listen=listen)
 
 
-def get_runner_event(opts, jid, listen=True):
-    '''
-    Return an event object suitable for the named transport
-    '''
-    if opts['transport'] == 'zeromq':
-        return RunnerEvent(opts, jid)
-    elif opts['transport'] == 'raet':
-        import salt.utils.raetevent
-        return salt.utils.raetevent.RunnerEvent(opts, jid, listen=listen)
-
-
 def tagify(suffix='', prefix='', base=SALT):
     '''
     convenience function to build a namespaced event tag string
@@ -534,24 +523,6 @@ class NamespacedEvent(object):
 
     def fire_event(self, data, tag):
         self.event.fire_event(data, tagify(tag, base=self.base))
-
-
-class RunnerEvent(MasterEvent):
-    '''
-    Warning! Use the get_runner_event function or the code will not be
-    RAET compatible
-    This is used to send progress and return events from runners.
-    It extends MasterEvent to include information about how to
-    display events to the user as a runner progresses.
-    '''
-    def __init__(self, opts, jid):
-        super(RunnerEvent, self).__init__(opts['sock_dir'])
-        self.jid = str(jid)
-
-    def fire_progress(self, data, outputter='pprint'):
-        progress_event = {'data': data,
-                          'outputter': outputter}
-        self.fire_event(progress_event, tagify([self.jid, 'progress'], 'run'))
 
 
 class MinionEvent(SaltEvent):
