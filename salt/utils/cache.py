@@ -3,6 +3,7 @@
 from __future__ import print_function
 from __future__ import absolute_import
 import os
+import re
 import time
 
 # Import salt libs
@@ -99,9 +100,69 @@ class CacheCli(object):
         min_list = self.serial.loads(self.creq_out.recv())
         return min_list
 
-# test code for the CacheCli
+
+class CacheRegex(object):
+    '''
+    Create a regular expression object cache for the most frequently
+    used patterns to minimize compilation of the same patterns over
+    and over again
+    '''
+    def __init__(self, prepend='', append='', size=1000,
+                 keep_fraction=0.8, max_age=3600):
+        self.prepend = prepend
+        self.append = append
+        self.size = size
+        self.clear_size = int(size - size * (keep_fraction))
+        if self.clear_size >= size:
+            self.clear_size = int(size/2) + 1
+            if self.clear_size > size:
+                self.clear_size = size
+        self.max_age = max_age
+        self.cache = {}
+        self.timestamp = time.time()
+
+    def clear(self):
+        '''
+        Clear the cache
+        '''
+        self.cache.clear()
+
+    def sweep(self):
+        '''
+        Sweep the cache and remove the outdated or least frequently
+        used entries
+        '''
+        if self.max_age < time.time() - self.timestamp:
+            self.clear()
+            self.timestamp = time.time()
+        else:
+            paterns = self.cache.values()
+            paterns.sort()
+            for i in xrange(self.clear_size):
+                del(self.cache[paterns[i][2]])
+
+    def get(self, pattern):
+        '''
+        Get a compiled regular expression object based on pattern and
+        cache it when it is not in the cache already
+        '''
+        try:
+            self.cache[pattern][0] += 1
+            return self.cache[pattern][1]
+        except KeyError:
+            pass
+        if len(self.cache) > self.size:
+            self.sweep()
+        regex = re.compile('{}{}{}'.format(
+            self.prepend, pattern, self.append))
+        self.cache[pattern] = [1, regex, pattern, time.time()]
+        return regex
+
+
+# test code
 if __name__ == '__main__':
 
+    # test code for the CacheCli
     opts = salt.config.master_config('/etc/salt/master')
 
     ccli = CacheCli(opts)
@@ -111,3 +172,43 @@ if __name__ == '__main__':
     ccli.put_cache(['test18'])
     ccli.put_cache(['test21'])
     print('minions: {0}'.format(ccli.get_cached()))
+
+    # test code for CacheRegex
+
+    def test_regex(pattern):
+        assert cregex.get(pattern).search(pattern) is not None
+
+    cregex = CacheRegex(size=100)
+    t0 = time.time()
+    for n in range(1000):
+        for i in xrange(80):
+            test_regex(str(i) * 10)
+    print(time.time() - t0)
+    t0 = time.time()
+    for n in range(1000):
+        for i in xrange(140):
+            test_regex(str(i) * 10)
+    print(time.time() - t0)
+    cregex.clear()
+    t0 = time.time()
+    for n in range(1000):
+        for i in xrange(140):
+            test_regex(str(i) * 10)
+    print(time.time() - t0)
+    # This will make sure we'll clear the cache
+    # about 50 times due to max_age
+    max_age = (time.time() - t0) / 50
+    cregex = CacheRegex(size=100, max_age=max_age)
+    t0 = time.time()
+    for n in range(1000):
+        for i in xrange(140):
+            test_regex(str(i) * 10)
+    print(time.time() - t0)
+    cregex = CacheRegex(size=100)
+    max_age = (time.time() - t0) / 10
+    t0 = time.time()
+    for n in range(1000):
+        cregex.clear()
+        for i in xrange(140):
+            test_regex(str(i) * 10)
+    print(time.time() - t0)

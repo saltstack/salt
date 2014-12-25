@@ -184,6 +184,19 @@ class SaltEvent(object):
         self.puburi, self.pulluri = self.__load_uri(sock_dir, node)
         self.subscribe()
         self.pending_events = []
+        self.__load_cache_regex()
+
+    @classmethod
+    def __load_cache_regex(cls):
+        '''
+        Initialize the regular expression cache and put it in the
+        class namespace. The regex search strings will be prepend with '^'
+        '''
+        # This is in the class namespace, to minimize cache memory
+        # usage and maximize cache hits
+        # The prepend='^' is to reduce differences in behavior between
+        # the default 'startswith' and the optional 'regex' match_type
+        cls.cache_regex = salt.utils.cache.CacheRegex(prepend='^')
 
     def __load_uri(self, sock_dir, node):
         '''
@@ -283,7 +296,12 @@ class SaltEvent(object):
         data = serial.loads(mdata)
         return mtag, data
 
-    def _check_pending(self, tag, pending_tags):
+    def _get_match_func(self, match_type=None):
+        if match_type is None:
+            match_type = self.opts.get('event_match_type', 'startswith')
+        return getattr(self, '_match_tag_{0}'.format(match_type), None)
+
+    def _check_pending(self, tag, pending_tags, match_func=None):
         """Check the pending_events list for events that match the tag
 
         :param tag: The tag to search for
@@ -292,20 +310,56 @@ class SaltEvent(object):
         :type pending_tags: list[str]
         :return:
         """
+        if match_func is None:
+            match_func = self._get_match_func()
         old_events = self.pending_events
         self.pending_events = []
         ret = None
         for evt in old_events:
-            if evt['tag'].startswith(tag):
+            if match_func(evt['tag'], tag):
                 if ret is None:
                     ret = evt
                 else:
                     self.pending_events.append(evt)
-            elif any(evt['tag'].startswith(ptag) for ptag in pending_tags):
+            elif any(match_func(evt['tag'], ptag) for ptag in pending_tags):
                 self.pending_events.append(evt)
         return ret
 
-    def _get_event(self, wait, tag, pending_tags):
+    def _match_tag_startswith(self, event_tag, search_tag):
+        '''
+        Check if the event_tag matches the search check.
+        Uses startswith to check.
+        Return True (matches) or False (no match)
+        '''
+        return event_tag.startswith(search_tag)
+
+    def _match_tag_endswith(self, event_tag, search_tag):
+        '''
+        Check if the event_tag matches the search check.
+        Uses endswith to check.
+        Return True (matches) or False (no match)
+        '''
+        return event_tag.endswith(search_tag)
+
+    def _match_tag_find(self, event_tag, search_tag):
+        '''
+        Check if the event_tag matches the search check.
+        Uses find to check.
+        Return True (matches) or False (no match)
+        '''
+        return (event_tag.find(search_tag) >= 0)
+
+    def _match_tag_regex(self, event_tag, search_tag):
+        '''
+        Check if the event_tag matches the search check.
+        Uses regular expression search to check.
+        Return True (matches) or False (no match)
+        '''
+        return self.cache_regex.get(search_tag).search(event_tag) is not None
+
+    def _get_event(self, wait, tag, pending_tags, match_func=None):
+        if match_func is None:
+            match_func = self._get_match_func()
         start = time.time()
         timeout_at = start + wait
         while not wait or time.time() <= timeout_at:
@@ -324,8 +378,8 @@ class SaltEvent(object):
                 else:
                     raise
 
-            if not ret['tag'].startswith(tag):  # tag not match
-                if any(ret['tag'].startswith(ptag) for ptag in pending_tags):
+            if not match_func(ret['tag'], tag):     # tag not match
+                if any(match_func(ret['tag'], ptag) for ptag in pending_tags):
                     self.pending_events.append(ret)
                 if wait:  # only update the wait timeout if we had one
                     wait = timeout_at - time.time()
@@ -337,7 +391,7 @@ class SaltEvent(object):
         return None
 
     def get_event(self, wait=5, tag='', full=False, use_pending=False,
-                  pending_tags=None):
+                  pending_tags=None, match_type=None):
         '''
         Get a single publication.
         IF no publication available THEN block for up to wait seconds
@@ -346,6 +400,8 @@ class SaltEvent(object):
         IF wait is 0 then block forever.
 
         New in Boron always checks the list of pending events
+
+        New in @TBD optionally set match_type
 
         use_pending
             Defines whether to keep all unconsumed events in a pending_events
@@ -358,16 +414,27 @@ class SaltEvent(object):
             assuming you later get_event for the tags you've listed here
 
             New in Boron
+
+        match_type
+            Set the function to match the search tag with event tags.
+             - 'startswith' : search for event tags that start with tag
+             - 'endswith' : search for event tags that end with tag
+             - 'find' : search for event tags that contain tag
+             - 'regex' : regex search '^' + tag event tags
+            Default is opts['event_match_type'] or 'startswith'
+
+            New in @TBD
         '''
 
-        if pending_tags is None:
-            pending_tags = []
+        match_func = self._get_match_func(match_type)
         if use_pending:
             pending_tags = ['']
+        elif pending_tags is None:
+            pending_tags = []
 
-        ret = self._check_pending(tag, pending_tags)
+        ret = self._check_pending(tag, pending_tags, match_func)
         if ret is None:
-            ret = self._get_event(wait, tag, pending_tags)
+            ret = self._get_event(wait, tag, pending_tags, match_func)
 
         if ret is None or full:
             return ret
@@ -391,12 +458,12 @@ class SaltEvent(object):
         mtag, data = self.unpack(raw, self.serial)
         return {'data': data, 'tag': mtag}
 
-    def iter_events(self, tag='', full=False):
+    def iter_events(self, tag='', full=False, match_type=None):
         '''
         Creates a generator that continuously listens for events
         '''
         while True:
-            data = self.get_event(tag=tag, full=full)
+            data = self.get_event(tag=tag, full=full, match_type=match_type)
             if data is None:
                 continue
             yield data
