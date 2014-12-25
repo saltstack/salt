@@ -1,0 +1,27 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!-- Called from MinionEXE.wixproj to stage the correct vcredist for compile -->
+
+  <PropertyGroup>
+    <PackagesDir Condition="'$(PackagesDir)'==''">$(MSBuildProjectDirectory)\..\..\packages</PackagesDir>
+  </PropertyGroup>
+
+  <UsingTask AssemblyFile="$(PackagesDir)\MSBuildTasks.1.4.0.88\tools\MSBuild.Community.Tasks.dll" TaskName="MSBuild.Community.Tasks.WebDownload" />
+
+  <Target Name="VCRedistProperties" BeforeTargets="DownloadVCRedist">
+    <Error Condition="'$(TargetPlatform)'==''" Text="TargetPlatform not found, cannot determine vcredist to download." />
+    <ItemGroup>
+      <VCRedistURI Condition="'$(TargetPlatform)'=='win32'" Include="http://download.microsoft.com/download/d/d/9/dd9a82d0-52ef-40db-8dab-795376989c03/vcredist_x86.exe">
+        <DestinationFileName>vcredist_x86.exe</DestinationFileName>
+      </VCRedistURI>
+      <VCRedistURI Condition="'$(TargetPlatform)'=='amd64'" Include="http://download.microsoft.com/download/2/d/6/2d61c766-107b-409d-8fba-c39e61ca08e8/vcredist_x64.exe">
+        <DestinationFileName>vcredist_x64.exe</DestinationFileName>
+      </VCRedistURI>
+    </ItemGroup>
+  </Target>
+
+  <Target Name="DownloadVCRedist" BeforeTargets="Compile" Outputs="%(VCRedistURI.DestinationFileName)">
+    <WebDownload FileUri="%(VCRedistURI.Identity)" FileName="%(DestinationFileName)" />
+  </Target>
+
+</Project>

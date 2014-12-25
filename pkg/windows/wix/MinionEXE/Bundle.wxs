@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Bundle
+    Name="Salt Minion"
+    Version="$(var.InternalVersion)"
+    Manufacturer="SaltStack, Inc"
+    UpgradeCode="{FC6FB3A2-65DE-41A9-AD91-D10A402BD642}"
+    AboutUrl="http://saltstack.org"
+    IconSourceFile="$(var.buildenv)\salt.ico"
+    DisableModify="yes">
+    <BootstrapperApplicationRef Id="WixStandardBootstrapperApplication.HyperlinkLicense">
+      <bal:WixStandardBootstrapperApplication
+        LicenseUrl=""
+        xmlns:bal="http://schemas.microsoft.com/wix/BalExtension" />
+    </BootstrapperApplicationRef>
+
+		<Chain>
+      <ExePackage
+        Id="vcredist"
+        DisplayName="Visual Studio 2008 C++ Redistributable (x86)"
+        SourceFile="vcredist_x86.exe"
+        Compressed="no"
+        DownloadUrl="http://download.microsoft.com/download/d/d/9/dd9a82d0-52ef-40db-8dab-795376989c03/vcredist_x86.exe"
+        InstallCommand="/q"
+        PerMachine="yes"
+        Permanent="yes"
+        Cache="no"
+        />
+
+      <RollbackBoundary />
+
+      <MsiPackage
+        Id="MainPackage"
+        DisplayInternalUI="yes"
+        SourceFile="$(var.MinionMSI.TargetPath)"
+        Vital="yes"
+        Compressed="yes"
+        Cache="no"
+        />
+		</Chain>
+	</Bundle>
+</Wix>

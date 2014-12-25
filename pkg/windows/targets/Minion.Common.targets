@@ -1,0 +1,33 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!-- Called from both MinionMSI.wixproj and msbuild.proj to stage the
+       correct distribution for the compile. Called from both places to
+       support WiX and NSIS compiles -->
+
+  <UsingTask AssemblyFile="$(PackagesDir)\MSBuildTasks.1.4.0.88\tools\MSBuild.Community.Tasks.dll" TaskName="MSBuild.Community.Tasks.Unzip" />
+
+  <Target Name="StageDistZip" Inputs="$(DistDir)\salt-$(DisplayVersion).$(TargetPlatform).zip" Outputs="$(ExtractDir)">
+    <ItemGroup>
+      <DistFile Include="$(DistDir)\salt-$(DisplayVersion).$(TargetPlatform).zip" />
+    </ItemGroup>
+    <Error Condition="'%(DistFile.Identity)'==''" Text="No distfile found, nothing to do" />
+    <Unzip ZipFileName="%(DistFile.Identity)" TargetDirectory="$(ExtractDir)" Quiet="true" />
+  </Target>
+
+  <Target Name="BuildDistFragments" DependsOnTargets="StageDistZip" BeforeTargets="Compile">
+    <HeatDirectory
+      NoLogo="true"
+      GenerateGuidsNow="true"
+      OutputFile="dist.wxs"
+      ComponentGroupName="dist"
+      DirectoryRefId="INSTALLFOLDER"
+      Directory="$(ExtractDir)"
+      KeepEmptyDirectories="true"
+      PreProcessorVariable="var.dist"
+      ToolPath="$(WixToolPath)"
+      SuppressRootDirectory="true"
+      SuppressSpecificWarnings="5150"
+      />
+  </Target>
+
+</Project>
