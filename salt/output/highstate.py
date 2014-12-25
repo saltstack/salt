@@ -96,7 +96,7 @@ def _format_host(host, data):
         hcolor = colors['CYAN']  # Print the minion name in cyan
     if isinstance(data, list):
         # Errors have been detected, list them in RED!
-        hcolor = colors['RED_BOLD']
+        hcolor = colors['LIGHT_RED']
         hstrs.append((u'    {0}Data failed to compile:{1[ENDC]}'
                       .format(hcolor, colors)))
         for err in data:
@@ -141,8 +141,8 @@ def _format_host(host, data):
                 hcolor = colors['RED']
                 tcolor = colors['RED']
             if ret['result'] is None:
-                hcolor = colors['YELLOW']
-                tcolor = colors['YELLOW']
+                hcolor = colors['LIGHT_YELLOW']
+                tcolor = colors['LIGHT_YELLOW']
             comps = tname.split('_|-')
             if __opts__.get('state_output', 'full').lower() == 'filter':
                 # By default, full data is shown for all types. However, return
@@ -276,7 +276,7 @@ def _format_host(host, data):
             # test=True states
             changestats.append(
                 colorfmt.format(
-                    colors['YELLOW'],
+                    colors['LIGHT_YELLOW'],
                     u'unchanged={0}'.format(rcounts.get(None, 0)),
                     colors
                 )
