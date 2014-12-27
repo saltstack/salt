@@ -49,7 +49,7 @@ def run(command):
         hashes.add(has)
     if len(hashes) > 1:
         print('{0}Command: {1} gave inconsistent returns{2}'.format(
-            colors['LIGHT_RED']
+            colors['LIGHT_RED'],
             command,
             colors['ENDC']
             ))

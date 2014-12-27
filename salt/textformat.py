@@ -145,10 +145,11 @@ class TextFormat(object):
 
         def qualify_int(i):
             if isinstance(i, int):
-                return i%256  # set i to unit element of its equivalence class
+                return i % 256  # set i to base element of its equivalence class
+
         def qualify_triple_int(t):
             if isinstance(t, (list, tuple)) and len(t) == 3:
-                return qualify_int(i)
+                return qualify_int(t[0]), qualify_int(t[1]), qualify_int(t[2])
 
         if kwargs.get('x', None) is not None:
             self.codes.extend((codes['extended'], '5', qualify_int(kwargs['x'])))
@@ -166,7 +167,6 @@ class TextFormat(object):
                 p=graph_prefix,
                 c=';'.join(self.codes),
                 s=graph_suffix)
-
 
     def __call__(self, text, reset=True):
         '''
