@@ -12,6 +12,7 @@ from salt.utils import get_colors
 
 colors = get_colors()
 
+
 def parse():
     '''
     Parse command line options
