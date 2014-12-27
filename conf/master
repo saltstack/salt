@@ -645,6 +645,12 @@
 
 # The format of the console logging messages. Allowed formatting options can
 # be seen here: http://docs.python.org/library/logging.html#logrecord-attributes
+#
+# Console log colors are specified by these special log formatters:
+# %(colorlevel), %(colorname), %(colorprocess), %(colormsg).
+# Because text decoding happens in logging.Formatter, not logging.LogRecord, it
+# is currently not possible to both decode log messages and display those
+# messages in color.
 #log_fmt_console: '[%(levelname)-8s] %(message)s'
 #log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
 
