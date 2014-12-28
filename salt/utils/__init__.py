@@ -104,6 +104,8 @@ from salt.exceptions import (
     SaltInvocationError
 )
 
+# Import third party libs
+import yaml
 
 # Do not use these color declarations, use get_colors()
 # These color declarations will be removed in the future
@@ -152,7 +154,28 @@ def is_empty(filename):
         return False
 
 
-def get_colors(use=True):
+def get_color_theme(theme):
+    '''
+    Return the color theme to use
+    '''
+    if not os.path.isfile(theme):
+        log.warning('The named theme {0} if not available'.format(theme))
+    try:
+        with fopen(theme, 'rb') as fp_:
+            colors = yaml.safe_load(fp_.read())
+            ret = {}
+            for color in colors:
+                ret[color] = '\033[{0}m'.format(colors[color])
+            if not isinstance(colors, dict):
+                log.warning('The theme file {0} is not a dict'.format(theme))
+                return {}
+            return ret
+    except Exception:
+        log.warning('Failed to read the color theme {0}'.format(theme))
+        return {}
+
+
+def get_colors(use=True, theme=None):
     '''
     Return the colors as an easy to use dict, pass False to return the colors
     as empty strings so that they will not be applied
@@ -178,6 +201,8 @@ def get_colors(use=True):
         'RED_BOLD': '\033[01;31m',
         'ENDC': '\033[0m',
     }
+    if theme:
+        colors.update(get_color_theme(theme))
 
     if not use:
         for color in colors:

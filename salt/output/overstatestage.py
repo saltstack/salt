@@ -23,7 +23,9 @@ def output(data):
     '''
     Format the data for printing stage information from the overstate system
     '''
-    colors = salt.utils.get_colors(__opts__.get('color'))
+    colors = salt.utils.get_colors(
+            __opts__.get('color'),
+            __opts__.get('color_theme'))
     ostr = ''
     for comp in data:
         for name, stage in comp.items():
