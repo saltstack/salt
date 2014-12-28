@@ -56,18 +56,18 @@ def setenv(name,
         current salt subprocess.
         Default: False
 
-    CLI Example:
+    Example:
 
     .. code-block:: yaml
 
         a_string_env:
-           environ.set:
+           environ.setenv:
              - name: foo
              - value: bar
              - update_minion: True
 
         a_dict_env:
-           environ.set:
+           environ.setenv:
              - name: does_not_matter
              - value:
                  foo: bar
