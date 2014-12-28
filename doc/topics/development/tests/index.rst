@@ -8,8 +8,8 @@ the lines below, depending on the relevant Python version:
 
 .. code-block:: bash
 
-    pip install -r dev_requirements_python26.txt
-    pip install -r dev_requirements_python27.txt
+    pip install -r requirements/dev_python26.txt
+    pip install -r requirements/dev_python27.txt
 
 .. note::
 
