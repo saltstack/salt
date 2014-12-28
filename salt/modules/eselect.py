@@ -29,7 +29,8 @@ def exec_action(module, action, parameter='', state_only=False):
     out = __salt__['cmd.run'](
         'eselect --brief --colour=no {0} {1} {2}'.format(
             module, action, parameter
-        )
+        ),
+        python_shell=False
     )
     out = out.strip().split('\n')
 
