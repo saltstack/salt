@@ -10,7 +10,6 @@ from __future__ import absolute_import
 import os
 import sys
 import logging
-import datetime
 import traceback
 import multiprocessing
 import time
@@ -23,6 +22,7 @@ import salt.output
 import salt.payload
 import salt.transport
 import salt.utils.args
+import salt.utils.jid
 import salt.defaults.exitcodes
 from salt.ext.six import string_types
 from salt.log import LOG_LEVELS
@@ -99,7 +99,7 @@ class ZeroMQCaller(object):
         '''
         ret = {}
         fun = self.opts['fun']
-        ret['jid'] = '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
+        ret['jid'] = salt.utils.jid.gen_jid()
         proc_fn = os.path.join(
             salt.minion.get_proc_dir(self.opts['cachedir']),
             ret['jid']
