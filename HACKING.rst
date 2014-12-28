@@ -163,7 +163,7 @@ ZeroMQ Transport:
 
 .. code-block:: bash
 
-    pip install -r zeromq-requirements.txt
+    pip install -r requirements/zeromq.txt
     pip install psutil
     pip install -e .
 
@@ -180,7 +180,7 @@ RAET Transport:
 
 .. code-block:: bash
 
-    pip install -r raet-requirements.txt
+    pip install -r requirements/raet.txt
     pip install psutil
     pip install -e .
 
@@ -279,9 +279,9 @@ If it is less than 2047, you should increase it with::
 Running the tests
 ~~~~~~~~~~~~~~~~~
 
-For running tests, you'll also need to install ``dev_requirements_python2x.txt``::
+For running tests, you'll also need to install ``requirements/dev_python2x.txt``::
 
-    pip install -r dev_requirements_python2x.txt
+    pip install -r requirements/dev_python2x.txt
 
 Finally you use setup.py to run the tests with the following command::
 
