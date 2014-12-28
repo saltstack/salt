@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Manage Autoscale Groups
+=======================
 
 .. versionadded:: 2014.7.0
 
@@ -100,6 +101,92 @@ as a passed in dict, or as a string to pull from pillars or minion config:
         - name: myasg
         # If instances exist, we must force the deletion of the asg.
         - force: True
+
+It's possible to specify cloudwatch alarms that will be setup along with the
+ASG. Note the alarm name will be the name attribute defined, plus the ASG
+resource name.
+
+.. code-block:: yaml
+
+    Ensure myasg exists:
+      boto_asg.present:
+        - name: myasg
+        - launch_config_name: mylc
+        - availability_zones:
+          - us-east-1a
+          - us-east-1b
+        - min_size: 1
+        - max_size: 1
+        - desired_capacity: 1
+        - load_balancers:
+          - myelb
+        - profile: myprofile
+        - alarms:
+            CPU:
+              name: 'ASG CPU **MANAGED BY SALT**'
+              attributes:
+                metric: CPUUtilization
+                namespace: AWS/EC2
+                statistic: Average
+                comparison: '>='
+                threshold: 65.0
+                period: 60
+                evaluation_periods: 30
+                unit: null
+                description: 'ASG CPU'
+                alarm_actions: [ 'arn:aws:sns:us-east-1:12345:myalarm' ]
+                insufficient_data_actions: []
+                ok_actions: [ 'arn:aws:sns:us-east-1:12345:myalarm' ]
+
+You can also use alarms from pillars, and override values from the pillar
+alarms by setting overrides on the resource. Note that 'boto_asg_alarms'
+will be used as a default value for all resources, if defined and can be
+used to ensure alarms are always set for an ASG resource.
+
+Setting the alarms in a pillar:
+
+.. code-block:: yaml
+
+    my_asg_alarm:
+      CPU:
+        name: 'ASG CPU **MANAGED BY SALT**'
+        attributes:
+          metric: CPUUtilization
+          namespace: AWS/EC2
+          statistic: Average
+          comparison: '>='
+          threshold: 65.0
+          period: 60
+          evaluation_periods: 30
+          unit: null
+          description: 'ASG CPU'
+          alarm_actions: [ 'arn:aws:sns:us-east-1:12345:myalarm' ]
+          insufficient_data_actions: []
+          ok_actions: [ 'arn:aws:sns:us-east-1:12345:myalarm' ]
+
+Overriding the alarm values on the resource:
+
+.. code-block:: yaml
+
+    Ensure myasg exists:
+      boto_asg.present:
+        - name: myasg
+        - launch_config_name: mylc
+        - availability_zones:
+          - us-east-1a
+          - us-east-1b
+        - min_size: 1
+        - max_size: 1
+        - desired_capacity: 1
+        - load_balancers:
+          - myelb
+        - profile: myprofile
+        - alarms_from_pillar: my_asg_alarm
+        # override CPU:attributes:threshold
+        - alarms:
+            CPU:
+              attributes:
+                threshold: 50.0
 '''
 from __future__ import absolute_import
 
@@ -108,6 +195,7 @@ import hashlib
 import logging
 import salt.ext.six as six
 from salt.ext.six.moves import zip
+import salt.utils.dictupdate as dictupdate
 
 log = logging.getLogger(__name__)
 
@@ -137,6 +225,8 @@ def present(
         termination_policies=None,
         suspended_processes=None,
         scaling_policies=None,
+        alarms=None,
+        alarms_from_pillar="boto_asg_alarms",
         region=None,
         key=None,
         keyid=None,
@@ -215,6 +305,16 @@ def present(
         List of scaling policies.  Each policy is a dict of key-values described by
         http://boto.readthedocs.org/en/latest/ref/autoscale.html#boto.ec2.autoscale.policy.ScalingPolicy
 
+    alarms:
+        a dictionary of name->boto_cloudwatch_alarm sections to be associated with this ASG.
+        All attributes should be specified except for dimension which will be
+        automatically set to this ASG.
+        See the boto_cloudwatch_alarm state for information about these attributes.
+
+    alarms_from_pillar:
+        name of pillar dict that contains alarm settings.   Alarms defined for this specific
+        state will override those from pillar.
+
     region
         The region to connect to.
 
@@ -243,7 +343,7 @@ def present(
     if launch_config:
         launch_config_name = launch_config_name + "-" + hashlib.md5(str(launch_config)).hexdigest()
         args = {
-            'name':  launch_config_name,
+            'name': launch_config_name,
             'region': region,
             'key': key,
             'keyid': keyid,
@@ -358,18 +458,18 @@ def present(
                 ret['result'] = None
                 return ret
             updated, msg = __salt__['boto_asg.update'](name, launch_config_name,
-                                                  availability_zones, min_size,
-                                                  max_size, desired_capacity,
-                                                  load_balancers,
-                                                  default_cooldown,
-                                                  health_check_type,
-                                                  health_check_period,
-                                                  placement_group,
-                                                  vpc_zone_identifier, tags,
-                                                  termination_policies,
-                                                  suspended_processes,
-                                                  scaling_policies, region,
-                                                  key, keyid, profile)
+                                                       availability_zones, min_size,
+                                                       max_size, desired_capacity,
+                                                       load_balancers,
+                                                       default_cooldown,
+                                                       health_check_type,
+                                                       health_check_period,
+                                                       placement_group,
+                                                       vpc_zone_identifier, tags,
+                                                       termination_policies,
+                                                       suspended_processes,
+                                                       scaling_policies, region,
+                                                       key, keyid, profile)
             if asg["launch_config_name"] != launch_config_name:
                 # delete the old launch_config_name
                 deleted = __salt__['boto_asg.delete_launch_configuration'](asg["launch_config_name"], region, key, keyid, profile)
@@ -388,7 +488,46 @@ def present(
                 ret['comment'] = msg
         else:
             ret['comment'] = 'Autoscale group present.'
+    # add in alarms
+    _ret = _alarms_present(name, alarms, alarms_from_pillar, region, key, keyid, profile)
+    ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+    ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     return ret
+
+
+def _alarms_present(name, alarms, alarms_from_pillar, region, key, keyid, profile):
+    '''helper method for present.  ensure that cloudwatch_alarms are set'''
+    # load data from alarms_from_pillar
+    tmp = __salt__['config.option'](alarms_from_pillar, {})
+    # merge with data from alarms
+    if alarms:
+        tmp = dictupdate.update(tmp, alarms)
+    # set alarms, using boto_cloudwatch_alarm.present
+    merged_return_value = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    for _, info in tmp.items():
+        # add asg to name and description
+        info["name"] = name + " " + info["name"]
+        info["attributes"]["description"] = name + " " + info["attributes"]["description"]
+        # add dimension attribute
+        info["attributes"]["dimensions"] = {"AutoScalingGroupName": [name]}
+        # set alarm
+        kwargs = {
+            "name": info["name"],
+            "attributes": info["attributes"],
+            "region": region,
+            "key": key,
+            "keyid": keyid,
+            "profile": profile,
+        }
+        ret = __salt__["state.single"]('boto_cloudwatch_alarm.present', **kwargs)
+        results = ret.values()[0]
+        if not results["result"]:
+            merged_return_value["result"] = False
+        if results.get("changes", {}) != {}:
+            merged_return_value["changes"][info["name"]] = results["changes"]
+        if "comment" in results:
+            merged_return_value["comment"] += results["comment"]
+    return merged_return_value
 
 
 def _recursive_compare(v1, v2):
