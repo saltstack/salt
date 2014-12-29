@@ -7,9 +7,12 @@ from __future__ import absolute_import
 # Import python libs
 import os
 import re
+import logging
 
 # Import salt libs
 import salt.utils
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -191,12 +194,15 @@ def mod_list(only_persist=False):
     if only_persist:
         conf = _get_modules_conf()
         if os.path.exists(conf):
-            with salt.utils.fopen(conf, 'r') as modules_file:
-                for line in modules_file:
-                    line = line.strip()
-                    mod_name = _strip_module_name(line)
-                    if not line.startswith('#') and mod_name:
-                        mods.add(mod_name)
+            try:
+                with salt.utils.fopen(conf, 'r') as modules_file:
+                    for line in modules_file:
+                        line = line.strip()
+                        mod_name = _strip_module_name(line)
+                        if not line.startswith('#') and mod_name:
+                            mods.add(mod_name)
+            except IOError:
+                log.error('kmod module could not open modules file at {0}'.format(conf))
     else:
         for mod in lsmod():
             mods.add(mod['module'])

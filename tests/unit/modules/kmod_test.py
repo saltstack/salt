@@ -51,7 +51,6 @@ class KmodTestCase(TestCase):
 
     # 'mod_list' function tests: 1
 
-    @patch('os.path.exists', MagicMock(return_value=True))
     def test_mod_list(self):
         '''
         Tests return a list of the loaded module names
