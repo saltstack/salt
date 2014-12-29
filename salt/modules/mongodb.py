@@ -18,6 +18,7 @@ from __future__ import absolute_import
 # Import python libs
 import logging
 import json
+from distutils.version import StrictVersion
 
 # Import salt libs
 from salt.ext.six import string_types
@@ -144,7 +145,7 @@ def user_list(user=None, password=None, host=None, port=None, database='admin'):
 
     .. code-block:: bash
 
-        salt '*' mongodb.user_list <name> <user> <password> <host> <port> <database>
+        salt '*' mongodb.user_list <user> <password> <host> <port> <database>
     '''
     conn = _connect(user, password, host, port)
     if not conn:
@@ -155,12 +156,20 @@ def user_list(user=None, password=None, host=None, port=None, database='admin'):
         mdb = pymongo.database.Database(conn, database)
 
         output = []
+        mongodb_version = mdb.eval('db.version()')
 
-        for user in mdb.system.users.find():
-            output.append([
-                ('user', user['user']),
-                ('readOnly', user.get('readOnly', 'None'))
-            ])
+        if StrictVersion(mongodb_version) >= StrictVersion('2.6'):
+            for user in mdb.eval('db.getUsers()'):
+                output.append([
+                    ('user', user['user']),
+                    ('roles', user['roles'])
+                ])
+        else:
+            for user in mdb.eval('db.getUsers()'):
+                output.append([
+                    ('user', user['user']),
+                    ('readOnly', user.get('readOnly', 'None'))
+                ])
         return output
 
     except pymongo.errors.PyMongoError as err:
