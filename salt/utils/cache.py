@@ -153,7 +153,7 @@ class CacheRegex(object):
             pass
         if len(self.cache) > self.size:
             self.sweep()
-        regex = re.compile('{}{}{}'.format(
+        regex = re.compile('{0}{1}{2}'.format(
             self.prepend, pattern, self.append))
         self.cache[pattern] = [1, regex, pattern, time.time()]
         return regex
