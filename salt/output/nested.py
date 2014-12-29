@@ -68,7 +68,7 @@ class NestDisplay(object):
         if ret is None or ret is True or ret is False:
             out += self.ustring(
                 ' ' * indent,
-                self.colors['YELLOW'],
+                self.colors['LIGHT_YELLOW'],
                 ret,
                 prefix=prefix)
         # Number includes all python numbers types
@@ -76,7 +76,7 @@ class NestDisplay(object):
         elif isinstance(ret, Number):
             out += self.ustring(
                 ' ' * indent,
-                self.colors['YELLOW'],
+                self.colors['LIGHT_YELLOW'],
                 ret,
                 prefix=prefix)
         elif isinstance(ret, string_types):

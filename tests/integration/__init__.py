@@ -666,7 +666,7 @@ class TestDaemon(object):
         wait_minion_connections.terminate()
         if wait_minion_connections.exitcode > 0:
             print(
-                '\n {RED_BOLD}*{ENDC} ERROR: Minions failed to connect'.format(
+                '\n {LIGHT_RED}*{ENDC} ERROR: Minions failed to connect'.format(
                     **self.colors
                 )
             )
@@ -788,7 +788,7 @@ class TestDaemon(object):
 
             if job_finished is False:
                 sys.stdout.write(
-                    '   * {YELLOW}[Quit in {0}]{ENDC} Waiting for {1}'.format(
+                    '   * {LIGHT_YELLOW}[Quit in {0}]{ENDC} Waiting for {1}'.format(
                         '{0}'.format(expire - now).rsplit('.', 1)[0],
                         ', '.join(running),
                         **self.colors
@@ -799,7 +799,7 @@ class TestDaemon(object):
             now = datetime.now()
         else:  # pylint: disable=W0120
             sys.stdout.write(
-                '\n {RED_BOLD}*{ENDC} ERROR: Failed to get information '
+                '\n {LIGHT_RED}*{ENDC} ERROR: Failed to get information '
                 'back\n'.format(**self.colors)
             )
             sys.stdout.flush()
@@ -835,7 +835,7 @@ class TestDaemon(object):
                 )
             )
             sys.stdout.write(
-                ' * {YELLOW}[Quit in {0}]{ENDC} Waiting for {1}'.format(
+                ' * {LIGHT_YELLOW}[Quit in {0}]{ENDC} Waiting for {1}'.format(
                     '{0}'.format(expire - now).rsplit('.', 1)[0],
                     ', '.join(expected_connections),
                     **self.colors
@@ -871,7 +871,7 @@ class TestDaemon(object):
             now = datetime.now()
         else:  # pylint: disable=W0120
             print(
-                '\n {RED_BOLD}*{ENDC} WARNING: Minions failed to connect '
+                '\n {LIGHT_RED}*{ENDC} WARNING: Minions failed to connect '
                 'back. Tests requiring them WILL fail'.format(**self.colors)
             )
             try:
@@ -905,7 +905,7 @@ class TestDaemon(object):
 
         if self.wait_for_jid(targets, jid_info['jid'], timeout) is False:
             print(
-                ' {RED_BOLD}*{ENDC} WARNING: Minions failed to sync {0}. '
+                ' {LIGHT_RED}*{ENDC} WARNING: Minions failed to sync {0}. '
                 'Tests requiring these {0} WILL fail'.format(
                     modules_kind, **self.colors)
             )
@@ -923,7 +923,7 @@ class TestDaemon(object):
                     if isinstance(output['ret'], string_types):
                         # An errors has occurred
                         print(
-                            ' {RED_BOLD}*{ENDC} {0} Failed to sync {2}: '
+                            ' {LIGHT_RED}*{ENDC} {0} Failed to sync {2}: '
                             '{1}'.format(
                                 name, output['ret'],
                                 modules_kind,
@@ -944,7 +944,7 @@ class TestDaemon(object):
                         syncing.remove(name)
                     except KeyError:
                         print(
-                            ' {RED_BOLD}*{ENDC} {0} already synced??? '
+                            ' {LIGHT_RED}*{ENDC} {0} already synced??? '
                             '{1}'.format(name, output, **self.colors)
                         )
         return True

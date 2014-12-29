@@ -29,9 +29,9 @@ def output(data):
 
         cmap = {pend: color['RED'],
                 acc: color['GREEN'],
-                den: color['PURPLE'],
+                den: color['MAGENTA'],
                 rej: color['BLUE'],
-                'local': color['PURPLE']}
+                'local': color['MAGENTA']}
 
         trans = {pend: u'{0}Unaccepted Keys:{1}'.format(
                                     color['LIGHT_RED'],
@@ -40,13 +40,13 @@ def output(data):
                                     color['LIGHT_GREEN'],
                                     color['ENDC']),
                  den: u'{0}Denied Keys:{1}'.format(
-                                    color['LIGHT_PURPLE'],
+                                    color['LIGHT_MAGENTA'],
                                     color['ENDC']),
                  rej: u'{0}Rejected Keys:{1}'.format(
                                     color['LIGHT_BLUE'],
                                     color['ENDC']),
                  'local': u'{0}Local Keys:{1}'.format(
-                                    color['LIGHT_PURPLE'],
+                                    color['LIGHT_MAGENTA'],
                                     color['ENDC'])}
     else:
         acc = 'accepted'
@@ -56,7 +56,7 @@ def output(data):
         cmap = {pend: color['RED'],
                 acc: color['GREEN'],
                 rej: color['BLUE'],
-                'local': color['PURPLE']}
+                'local': color['MAGENTA']}
 
         trans = {pend: u'{0}Unaccepted Keys:{1}'.format(
                                     color['LIGHT_RED'],
@@ -68,7 +68,7 @@ def output(data):
                                     color['LIGHT_BLUE'],
                                     color['ENDC']),
                  'local': u'{0}Local Keys:{1}'.format(
-                                    color['LIGHT_PURPLE'],
+                                    color['LIGHT_MAGENTA'],
                                     color['ENDC'])}
 
     ret = ''
