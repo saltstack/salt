@@ -81,7 +81,7 @@ def output(data):
 def _format_host(host, data):
     colors = salt.utils.get_colors(
             __opts__.get('color'),
-            __opts__('color_theme'))
+            __opts__.get('color_theme'))
     tabular = __opts__.get('state_tabular', False)
     rcounts = {}
     hcolor = colors['GREEN']
