@@ -991,17 +991,26 @@ def install(name=None,
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
+
+    versionName = pkgname
     ret = salt.utils.compare_dicts(old, new)
+
+    if sources is not None:
+        versionName = pkgname + '-' + new.get(pkgname, '')
+        if pkgname in ret:
+            ret[versionName] = ret.pop(pkgname)
     for pkgname in to_reinstall:
-        if not pkgname not in old:
-            ret.update({pkgname: {'old': old.get(pkgname, ''),
+        if not versionName not in old:
+            ret.update({versionName: {'old': old.get(pkgname, ''),
                                   'new': new.get(pkgname, '')}})
         else:
-            if pkgname not in ret:
-                ret.update({pkgname: {'old': old.get(pkgname, ''),
+            if versionName not in ret:
+                ret.update({versionName: {'old': old.get(pkgname, ''),
                                       'new': new.get(pkgname, '')}})
     if ret:
         __context__.pop('pkg._avail', None)
+    elif sources is not None:
+        ret = {versionName: {}}
     return ret
 
 
