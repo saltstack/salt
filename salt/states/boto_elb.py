@@ -86,6 +86,112 @@ passed in as a dict, or as a string to pull from pillars or minion config:
             - profile:
                 keyid: GKTADJGHEIQSXMKKRBJ08H
                 key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+
+It's possible to specify attributes from pillars by specifying a pillar. You
+can override the values defined in the pillard by setting the attributes on the
+resource. The module will use the default pillar key 'boto_elb_attributes',
+which allows you to set default attributes for all ELB resources.
+
+Setting the attributes pillar:
+
+.. code-block:: yaml
+
+    my_elb_attributes:
+      cross_zone_load_balancing:
+        enabled: true
+      connection_draining:
+        enabled: true
+        timeout: 20
+      access_log:
+        enabled: true
+        s3_bucket_name: 'mybucket'
+        s3_bucket_prefix: 'my-logs'
+        emit_interval: 5
+
+Overriding the attribute values on the resource:
+
+.. code-block:: yaml
+
+    Ensure myelb ELB exists:
+        boto_elb.present:
+            - name: myelb
+            - region: us-east-1
+            - attributes_from_pillar: my_elb_attributes
+            # override cross_zone_load_balancing:enabled
+            - attributes:
+                cross_zone_load_balancing:
+                  enabled: false
+            - profile: myelbprofile
+
+It's possible to specify cloudwatch alarms that will be setup along with the
+ELB. Note the alarm name will be defined by the name attribute provided, plus
+the ELB resource name.
+
+.. code-block:: yaml
+
+    Ensure myelb ELB exists:
+        boto_elb.present:
+            - name: myelb
+            - region: us-east-1
+            - profile: myelbprofile
+            - alarms:
+                UnHealthyHostCount:
+                  name: 'ELB UnHealthyHostCount **MANAGED BY SALT**'
+                  attributes:
+                    metric: UnHealthyHostCount
+                    namespace: AWS/ELB
+                    statistic: Average
+                    comparison: '>='
+                    threshold: 1.0
+                    period: 600
+                    evaluation_periods: 6
+                    unit: null
+                    description: ELB UnHealthyHostCount
+                    alarm_actions: ['arn:aws:sns:us-east-1:12345:myalarm']
+                    insufficient_data_actions: []
+                    ok_actions: ['arn:aws:sns:us-east-1:12345:myalarm']
+
+You can also use alarms from pillars, and override values from the pillar
+alarms by setting overrides on the resource. Note that 'boto_elb_alarms'
+will be used as a default value for all resources, if defined and can be
+used to ensure alarms are always set for a resource.
+
+Setting the alarms in a pillar:
+
+.. code-block:: yaml
+
+    my_elb_alarm:
+      UnHealthyHostCount:
+        name: 'ELB UnHealthyHostCount **MANAGED BY SALT**'
+        attributes:
+          metric: UnHealthyHostCount
+          namespace: AWS/ELB
+          statistic: Average
+          comparison: '>='
+          threshold: 1.0
+          period: 600
+          evaluation_periods: 6
+          unit: null
+          description: ELB UnHealthyHostCount
+          alarm_actions: ['arn:aws:sns:us-east-1:12345:myalarm']
+          insufficient_data_actions: []
+          ok_actions: ['arn:aws:sns:us-east-1:12345:myalarm']
+
+Overriding the alarm values on the resource:
+
+.. code-block:: yaml
+
+    Ensure myelb ELB exists:
+        boto_elb.present:
+            - name: myelb
+            - region: us-east-1
+            - profile: myelbprofile
+            - alarms_from_pillar: my_elb_alarm
+            # override UnHealthyHostCount:attributes:threshold
+            - alarms:
+                UnHealthyHostCount:
+                  attributes:
+                    threshold: 2.0
 '''
 from __future__ import absolute_import
 import salt.utils.dictupdate as dictupdate
@@ -109,7 +215,10 @@ def present(
         scheme='internet-facing',
         health_check=None,
         attributes=None,
+        attributes_from_pillar="boto_elb_attributes",
         cnames=None,
+        alarms=None,
+        alarms_from_pillar="boto_elb_alarms",
         region=None,
         key=None,
         keyid=None,
@@ -124,7 +233,11 @@ def present(
         A list of availability zones for this ELB.
 
     listeners
-        A list of listener lists; example: [['443', 'HTTPS', 'arn:aws:iam::1111111:server-certificate/mycert'], ['8443', '80', 'HTTPS', 'HTTP', 'arn:aws:iam::1111111:server-certificate/mycert']]
+        A list of listener lists; example:
+            [
+                ['443', 'HTTPS', 'arn:aws:iam::1111111:server-certificate/mycert'],
+                ['8443', '80', 'HTTPS', 'HTTP', 'arn:aws:iam::1111111:server-certificate/mycert']
+            ]
 
     subnets
         A list of subnet IDs in your VPC to attach to your LoadBalancer.
@@ -141,9 +254,23 @@ def present(
     attributes
         A dict defining the attributes to set on this ELB.
 
+    attributes_from_pillar
+        name of pillar dict that contains attributes.   Attributes defined for this specific
+        state will override those from pillar.
+
     cnames
         A list of cname dicts with attributes: name, zone, ttl, and identifier.
         See the boto_route53 state for information about these attributes.
+
+    alarms:
+        a dictionary of name->boto_cloudwatch_alarm sections to be associated with this ELB.
+        All attributes should be specified except for dimension which will be
+        automatically set to this ELB.
+        See the boto_cloudwatch_alarm state for information about these attributes.
+
+    alarms_from_pillar:
+        name of pillar dict that contains alarm settings.   Alarms defined for this specific
+        state will override those from pillar.
 
     region
         Region to connect to.
@@ -158,6 +285,14 @@ def present(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
     '''
+
+    # load data from attributes_from_pillar and merge with attributes
+    tmp = __salt__['config.option'](attributes_from_pillar, {})
+    if attributes:
+        attributes = dictupdate.update(tmp, attributes)
+    else:
+        attributes = tmp
+
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     _ret = _elb_present(name, availability_zones, listeners, subnets,
                         security_groups, scheme, region, key, keyid, profile)
@@ -183,6 +318,13 @@ def present(
         if ret['result'] is False:
             return ret
     _ret = _cnames_present(name, cnames, region, key, keyid, profile)
+    ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+    ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+    if not _ret['result']:
+        ret['result'] = _ret['result']
+        if ret['result'] is False:
+            return ret
+    _ret = _alarms_present(name, alarms, alarms_from_pillar, region, key, keyid, profile)
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     if not _ret['result']:
@@ -699,6 +841,41 @@ def _cnames_present(
         msg = 'cnames already set on ELB {0}.'.format(name)
         ret['comment'] = msg
     return ret
+
+
+def _alarms_present(name, alarms, alarms_from_pillar, region, key, keyid, profile):
+    '''helper method for present.  ensure that cloudwatch_alarms are set'''
+    # load data from alarms_from_pillar
+    tmp = __salt__['config.option'](alarms_from_pillar, {})
+    # merge with data from alarms
+    if alarms:
+        tmp = dictupdate.update(tmp, alarms)
+    # set alarms, using boto_cloudwatch_alarm.present
+    merged_return_value = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    for _, info in tmp.items():
+        # add elb to name and description
+        info["name"] = name + " " + info["name"]
+        info["attributes"]["description"] = name + " " + info["attributes"]["description"]
+        # add dimension attribute
+        info["attributes"]["dimensions"] = {"LoadBalancerName": [name]}
+        # set alarm
+        kwargs = {
+            "name": info["name"],
+            "attributes": info["attributes"],
+            "region": region,
+            "key": key,
+            "keyid": keyid,
+            "profile": profile,
+        }
+        ret = __salt__["state.single"]('boto_cloudwatch_alarm.present', **kwargs)
+        results = ret.values()[0]
+        if not results["result"]:
+            merged_return_value["result"] = False
+        if results.get("changes", {}) != {}:
+            merged_return_value["changes"][info["name"]] = results["changes"]
+        if "comment" in results:
+            merged_return_value["comment"] += results["comment"]
+    return merged_return_value
 
 
 def absent(
