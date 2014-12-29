@@ -276,7 +276,7 @@ class Authorize(object):
         him execute "load", this does not deal with conflicting rules
         '''
 
-        adata = self.auth_data()
+        adata = self.auth_data
         good = False
         if load.get('token', False):
             for sub_auth in self.token(self.auth_data, load):
