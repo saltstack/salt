@@ -163,7 +163,7 @@ def user_list(user=None, password=None, host=None, port=None, database='admin'):
                     ('roles', user['roles'])
                 ])
         else:
-            for user in mdb.eval('db.getUsers()'):
+            for user in mdb.system.users.find():
                 output.append([
                     ('user', user['user']),
                     ('readOnly', user.get('readOnly', 'None'))
