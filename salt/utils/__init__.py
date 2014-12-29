@@ -98,6 +98,7 @@ import salt.defaults.exitcodes
 import salt.log
 import salt.version
 from salt.utils.decorators import memoize as real_memoize
+from salt.textformat import TextFormat
 from salt.exceptions import (
     CommandExecutionError, SaltClientError,
     CommandNotFoundError, SaltSystemExit,
@@ -106,28 +107,6 @@ from salt.exceptions import (
 
 # Import third party libs
 import yaml
-
-# Do not use these color declarations, use get_colors()
-# These color declarations will be removed in the future
-BLACK = '\033[0;30m'
-DARK_GRAY = '\033[1;30m'
-LIGHT_GRAY = '\033[0;37m'
-BLUE = '\033[0;34m'
-LIGHT_BLUE = '\033[1;34m'
-GREEN = '\033[0;32m'
-LIGHT_GREEN = '\033[1;32m'
-CYAN = '\033[0;36m'
-LIGHT_CYAN = '\033[1;36m'
-RED = '\033[0;31m'
-LIGHT_RED = '\033[1;31m'
-PURPLE = '\033[0;35m'
-LIGHT_PURPLE = '\033[1;35m'
-BROWN = '\033[0;33m'
-YELLOW = '\033[1;33m'
-WHITE = '\033[1;37m'
-DEFAULT_COLOR = '\033[00m'
-RED_BOLD = '\033[01;31m'
-ENDC = '\033[0m'
 
 log = logging.getLogger(__name__)
 _empty = object()
@@ -177,29 +156,36 @@ def get_color_theme(theme):
 
 def get_colors(use=True, theme=None):
     '''
-    Return the colors as an easy to use dict, pass False to return the colors
-    as empty strings so that they will not be applied
+    Return the colors as an easy to use dict.  Pass `False` to deactivate all
+    colors by setting them to empty strings.  Pass a string containing only the
+    name of a single color to be used in place of all colors.  Examples:
+
+    .. code-block:: python
+
+        colors = get_colors()  # enable all colors
+        no_colors = get_colors(False)  # disable all colors
+        red_colors = get_colors('RED')  # set all colors to red
     '''
+
     colors = {
-        'BLACK': '\033[0;30m',
-        'DARK_GRAY': '\033[1;30m',
-        'LIGHT_GRAY': '\033[0;37m',
-        'BLUE': '\033[0;34m',
-        'LIGHT_BLUE': '\033[1;34m',
-        'GREEN': '\033[0;32m',
-        'LIGHT_GREEN': '\033[1;32m',
-        'CYAN': '\033[0;36m',
-        'LIGHT_CYAN': '\033[1;36m',
-        'RED': '\033[0;31m',
-        'LIGHT_RED': '\033[1;31m',
-        'PURPLE': '\033[0;35m',
-        'LIGHT_PURPLE': '\033[1;35m',
-        'BROWN': '\033[0;33m',
-        'YELLOW': '\033[1;33m',
-        'WHITE': '\033[1;37m',
-        'DEFAULT_COLOR': '\033[00m',
-        'RED_BOLD': '\033[01;31m',
-        'ENDC': '\033[0m',
+        'BLACK': TextFormat('black'),
+        'DARK_GRAY': TextFormat('bold', 'black'),
+        'RED': TextFormat('red'),
+        'LIGHT_RED': TextFormat('bold', 'red'),
+        'GREEN': TextFormat('green'),
+        'LIGHT_GREEN': TextFormat('bold', 'green'),
+        'YELLOW': TextFormat('yellow'),
+        'LIGHT_YELLOW': TextFormat('bold', 'yellow'),
+        'BLUE': TextFormat('blue'),
+        'LIGHT_BLUE': TextFormat('bold', 'blue'),
+        'MAGENTA': TextFormat('magenta'),
+        'LIGHT_MAGENTA': TextFormat('bold', 'magenta'),
+        'CYAN': TextFormat('cyan'),
+        'LIGHT_CYAN': TextFormat('bold', 'cyan'),
+        'LIGHT_GRAY': TextFormat('white'),
+        'WHITE': TextFormat('bold', 'white'),
+        'DEFAULT_COLOR': TextFormat('default'),
+        'ENDC': TextFormat('reset'),
     }
     if theme:
         colors.update(get_color_theme(theme))
@@ -211,6 +197,9 @@ def get_colors(use=True, theme=None):
         # Try to set all of the colors to the passed color
         if use in colors:
             for color in colors:
+                # except for color reset
+                if color == 'ENDC':
+                    continue
                 colors[color] = colors[use]
 
     return colors
