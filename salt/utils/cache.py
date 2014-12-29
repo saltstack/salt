@@ -159,10 +159,9 @@ class CacheRegex(object):
         return regex
 
 
-# test code
+# test code for the CacheCli
 if __name__ == '__main__':
 
-    # test code for the CacheCli
     opts = salt.config.master_config('/etc/salt/master')
 
     ccli = CacheCli(opts)
@@ -172,43 +171,3 @@ if __name__ == '__main__':
     ccli.put_cache(['test18'])
     ccli.put_cache(['test21'])
     print('minions: {0}'.format(ccli.get_cached()))
-
-    # test code for CacheRegex
-
-    def test_regex(pattern):
-        assert cregex.get(pattern).search(pattern) is not None
-
-    cregex = CacheRegex(size=100)
-    t0 = time.time()
-    for n in range(1000):
-        for i in xrange(80):
-            test_regex(str(i) * 10)
-    print(time.time() - t0)
-    t0 = time.time()
-    for n in range(1000):
-        for i in xrange(140):
-            test_regex(str(i) * 10)
-    print(time.time() - t0)
-    cregex.clear()
-    t0 = time.time()
-    for n in range(1000):
-        for i in xrange(140):
-            test_regex(str(i) * 10)
-    print(time.time() - t0)
-    # This will make sure we'll clear the cache
-    # about 50 times due to max_age
-    max_age = (time.time() - t0) / 50
-    cregex = CacheRegex(size=100, max_age=max_age)
-    t0 = time.time()
-    for n in range(1000):
-        for i in xrange(140):
-            test_regex(str(i) * 10)
-    print(time.time() - t0)
-    cregex = CacheRegex(size=100)
-    max_age = (time.time() - t0) / 10
-    t0 = time.time()
-    for n in range(1000):
-        cregex.clear()
-        for i in xrange(140):
-            test_regex(str(i) * 10)
-    print(time.time() - t0)
