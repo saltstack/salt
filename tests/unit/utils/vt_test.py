@@ -14,6 +14,7 @@ import os
 import sys
 import random
 import subprocess
+import time
 
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
@@ -184,6 +185,8 @@ class VTTestCase(TestCase):
 
                 if buffer_o != expected_data:
                     self.assertTrue(term.isalive())
+                # Don't spin
+                time.sleep(0.1)  
 
             # term should be dead now
             self.assertEqual(buffer_o, expected_data)
