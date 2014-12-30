@@ -48,7 +48,6 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 # Import python libs
-import os
 import logging
 import logging.handlers
 import time
@@ -68,6 +67,8 @@ try:
     import simplejson as json
 except ImportError:
     import json
+
+log = logging.getLogger(__name__)
 
 try:
     # Attempt to import msgpack
@@ -89,8 +90,6 @@ except ImportError:
         # Don't exit if msgpack is not available, this is to make local mode
         # work without msgpack
         #sys.exit(salt.exitcodes.EX_GENERIC)
-
-log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'fluent'
