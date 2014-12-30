@@ -48,7 +48,7 @@ def present(name, profile="splunk", **kwargs):
     target = __salt__['splunk_search.get'](name, profile=profile)
     if target:
         if __opts__['test']:
-            ret['comment'] = "Would update {}".format(name)
+            ret['comment'] = "Would update {0}".format(name)
             return ret
         # found a search... updating
         result = __salt__['splunk_search.update'](
@@ -67,7 +67,7 @@ def present(name, profile="splunk", **kwargs):
             ret['changes']['new'] = newvalues
     else:
         if __opts__['test']:
-            ret['comment'] = "Would create {}".format(name)
+            ret['comment'] = "Would create {0}".format(name)
             return ret
         # creating a new search
         result = __salt__['splunk_search.create'](
@@ -96,7 +96,7 @@ def absent(name, profile="splunk"):
     if __opts__['test']:
         ret = {}
         ret["name"] = name
-        ret['comment'] = "Would delete {}".format(name)
+        ret['comment'] = "Would delete {0}".format(name)
         return ret
 
     result = __salt__['splunk_search.delete'](name, profile=profile)
