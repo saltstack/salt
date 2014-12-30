@@ -34,7 +34,12 @@ class Batch(object):
         Return a list of minions to use for the batch run
         '''
         ckminions = salt.utils.minions.CkMinions(self.opts)
-        return ckminions.check_minions(self.opts['tgt'])
+        selected_target_option = self.opts.get('selected_target_option', None)
+        if selected_target_option is not None:
+            expr_form = selected_target_option
+        else:
+            expr_form = self.opts.get('expr_form', 'glob')
+        return ckminions.check_minions(self.opts['tgt'], expr_form=expr_form)
 
     def get_bnum(self):
         '''
