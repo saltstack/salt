@@ -259,6 +259,74 @@ def user_remove(name, user=None, password=None, host=None, port=None,
     return True
 
 
+def user_roles_exists(name, roles, database, user=None, password=None, host=None,
+                      port=None):
+    '''
+    Checks if a user of a Mongodb database has specified roles
+    '''
+    pass
+
+
+def user_grant_roles(name, roles, database, user=None, password=None, host=None,
+                     port=None):
+    '''
+    Grant one or many roles to a Mongodb user
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' mongodb.user_grant_roles johndoe '["readWrite"]' dbname admin adminpwd localhost 27017
+        salt '*' mongodb.user_grant_roles janedoe '[{role:"readWrite", db:"dbname" }, {role:"read", db:"otherdb"}]' dbname admin adminpwd localhost 27017
+    '''
+    conn = _connect(user, password, host, port)
+    if not conn:
+        return 'Failed to connect to mongo database'
+
+    try:
+        log.info('Granting roles {0} to user {1}'.format(roles, name))
+        mdb = pymongo.database.Database(conn, database)
+        mdb.eval("db.grantRolesToUser('{0}', {1})".format(name, roles))
+    except pymongo.errors.PyMongoError as err:
+        log.error(
+            'Granting roles {0} to user {1} failed with error: {2}'.format(
+                roles, name, str(err)
+            )
+        )
+        return False
+
+    return True
+
+
+def user_revoke_roles(name, roles, database, user=None, password=None, host=None,
+                      port=None):
+    '''
+    Revoke one or many roles to a Mongodb user
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' mongodb.user_revoke_roles johndoe '["readWrite"]' dbname admin adminpwd localhost 27017
+        salt '*' mongodb.user_revoke_roles janedoe '[{role:"readWrite", db:"dbname" }, {role:"read", db:"otherdb"}]' dbname admin adminpwd localhost 27017
+    '''
+    conn = _connect(user, password, host, port)
+    if not conn:
+        return 'Failed to connect to mongo database'
+
+    try:
+        log.info('Revoking roles {0} from user {1}'.format(roles, name))
+        mdb = pymongo.database.Database(conn, database)
+        mdb.eval("db.revokeRolesFromUser('{0}', {1})".format(name, roles))
+    except pymongo.errors.PyMongoError as err:
+        log.error(
+            'Revoking roles {0} from user {1} failed with error: {2}'.format(
+                roles, name, str(err)
+            )
+        )
+        return False
+
+    return True
+
+
 def _to_dict(objects):
     """
     Potentially interprets a string as JSON for usage with mongo
