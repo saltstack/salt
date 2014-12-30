@@ -4,13 +4,14 @@
 '''
 
 # Import Salt Testing Libs
-from salttesting import TestCase
-from salttesting.mock import MagicMock, patch
+from salttesting import TestCase, skipIf
+from salttesting.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 
 # Import Salt Libs
 from salt.modules import extfs
 
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ExtfsTestCase(TestCase):
     '''
     TestCase for salt.modules.extfs
@@ -27,7 +28,6 @@ class ExtfsTestCase(TestCase):
         with patch.dict(extfs.__salt__, {'cmd.run': mock}):
             self.assertListEqual([], extfs.mkfs('/dev/sda1', 'ext4'))
 
-
     # 'tune' function tests: 1
 
     @patch('salt.modules.extfs.tune', MagicMock(return_value=''))
@@ -38,7 +38,6 @@ class ExtfsTestCase(TestCase):
         mock = MagicMock()
         with patch.dict(extfs.__salt__, {'cmd.run': mock}):
             self.assertEqual('', extfs.tune('/dev/sda1'))
-
 
     # 'dump' function tests: 1
 
@@ -61,7 +60,6 @@ class ExtfsTestCase(TestCase):
         '''
         self.assertEqual({}, extfs.attributes('/dev/sda1'))
 
-
     # 'blocks' function tests: 1
 
     @patch('salt.modules.extfs.dump',
@@ -71,7 +69,6 @@ class ExtfsTestCase(TestCase):
         Tests if specified group was added
         '''
         self.assertEqual({}, extfs.blocks('/dev/sda1'))
-
 
 if __name__ == '__main__':
     from integration import run_tests
