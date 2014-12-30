@@ -139,7 +139,7 @@ class CacheRegex(object):
             paterns = self.cache.values()
             paterns.sort()
             for i in xrange(self.clear_size):
-                del(self.cache[paterns[i][2]])
+                del self.cache[paterns[i][2]]
 
     def get(self, pattern):
         '''

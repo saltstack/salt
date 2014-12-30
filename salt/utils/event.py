@@ -347,7 +347,7 @@ class SaltEvent(object):
         Uses find to check.
         Return True (matches) or False (no match)
         '''
-        return (event_tag.find(search_tag) >= 0)
+        return event_tag.find(search_tag) >= 0
 
     def _match_tag_regex(self, event_tag, search_tag):
         '''
