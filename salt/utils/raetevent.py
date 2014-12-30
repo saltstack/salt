@@ -277,6 +277,10 @@ class RunnerEvent(MasterEvent):
 
 class PresenceEvent(MasterEvent):
 
+    def __init__(self, opts, sock_dir, listen=True, state=None):
+        self.state = state
+        super(PresenceEvent, self).__init__(opts=opts, sock_dir=sock_dir, listen=listen)
+
     def connect_pub(self):
         '''
         Establish the publish connection
@@ -286,6 +290,8 @@ class PresenceEvent(MasterEvent):
                 route = {'dst': (None, self.ryn, 'presence_req'),
                          'src': (None, self.stack.local.name, None)}
                 msg = {'route': route}
+                if self.state:
+                    msg['data'] = {'state': self.state}
                 self.stack.transmit(msg, self.stack.nameRemotes[self.ryn].uid)
                 self.stack.serviceAll()
                 self.connected = True
