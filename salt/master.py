@@ -924,9 +924,6 @@ class AESFuncs(object):
         # If the command will make a recursive publish don't run
         if re.match('publish.*', clear_load['fun']):
             return False
-        # Don't allow pillar or compound matching
-        if clear_load.get('tgt_type', 'glob').lower() in ('pillar', 'compound'):
-            return False
         # Check the permissions for this minion
         if not self.__verify_minion(clear_load['id'], clear_load['tok']):
             # The minion is not who it says it is!
@@ -956,7 +953,8 @@ class AESFuncs(object):
                 perms,
                 clear_load['fun'],
                 clear_load['tgt'],
-                clear_load.get('tgt_type', 'glob'))
+                clear_load.get('tgt_type', 'glob'),
+                publish_validate=True)
         if not good:
             return False
         return True
@@ -1041,9 +1039,6 @@ class AESFuncs(object):
         '''
         Gathers the data from the specified minions' mine
         '''
-        # Don't allow matching by pillar or compound
-        if load.get('expr_form', 'glob').lower() in ('pillar', 'compound'):
-            return {}
         if any(key not in load for key in ('id', 'tgt', 'fun')):
             return {}
         if 'tok' not in load:
@@ -1079,10 +1074,15 @@ class AESFuncs(object):
         ret = {}
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return ret
+        match_type = load.get('expr_form', 'glob')
+        if match_type.lower() == 'pillar':
+            match_type = 'pillar_exact'
+        if match_type.lower() == 'compound':
+            match_type = 'compound_pillar_exact'
         checker = salt.utils.minions.CkMinions(self.opts)
         minions = checker.check_minions(
                 load['tgt'],
-                load.get('expr_form', 'glob')
+                match_type
                 )
         for minion in minions:
             mine = os.path.join(

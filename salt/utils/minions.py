@@ -181,7 +181,7 @@ class CkMinions(object):
                     minions.remove(id_)
         return list(minions)
 
-    def _check_pillar_minions(self, expr):
+    def _check_pillar_minions(self, expr, exact_match=False):
         '''
         Return the minions found by looking via pillar
         '''
@@ -201,9 +201,17 @@ class CkMinions(object):
                 pillar = self.serial.load(
                     salt.utils.fopen(datap, 'rb')
                 ).get('pillar')
-                if not salt.utils.subdict_match(pillar, expr):
+                if not salt.utils.subdict_match(pillar,
+                                                expr,
+                                                exact_match=exact_match):
                     minions.remove(id_)
         return list(minions)
+
+    def _check_pillar_exact_minions(self, expr):
+        '''
+        Return the minions found by looking via pillar
+        '''
+        return self._check_pillar_minions(expr, exact_match=True)
 
     def _check_ipcidr_minions(self, expr):
         '''
@@ -286,7 +294,15 @@ class CkMinions(object):
                     minions.remove(id_)
         return list(minions)
 
-    def _check_compound_minions(self, expr):
+    def _check_compound_pillar_exact_minions(self, expr):
+        '''
+        Return the minions found by looking via compound matcher
+
+        Disable pillar glob matching
+        '''
+        return self._check_compound_minions(expr, pillar_exact=True)
+
+    def _check_compound_minions(self, expr, pillar_exact=False):
         '''
         Return the minions found by looking via compound matcher
         '''
@@ -301,6 +317,8 @@ class CkMinions(object):
                    'S': self._check_ipcidr_minions,
                    'E': self._check_pcre_minions,
                    'R': self._all_minions}
+            if pillar_exact:
+                ref['I'] = self._check_pillar_exact_minions
             results = []
             unmatched = []
             opers = ['and', 'or', 'not', '(', ')']
@@ -440,6 +458,8 @@ class CkMinions(object):
                        'compound': self._check_compound_minions,
                        'ipcidr': self._check_ipcidr_minions,
                        'range': self._check_range_minions,
+                       'pillar_exact': self._check_pillar_exact_minions,
+                       'compound_pillar_exact': self._check_compound_pillar_exact_minions,
                        }[expr_form](expr)
         except Exception:
             log.exception(
@@ -522,12 +542,30 @@ class CkMinions(object):
                 fun,
                 form)
 
-    def auth_check(self, auth_list, funs, tgt, tgt_type='glob'):
+    def auth_check(self,
+                   auth_list,
+                   funs,
+                   tgt,
+                   tgt_type='glob',
+                   publish_validate=False):
         '''
         Returns a bool which defines if the requested function is authorized.
         Used to evaluate the standard structure under external master
         authentication interfaces, like eauth, peer, peer_run, etc.
         '''
+        if publish_validate:
+            v_tgt_type = tgt_type
+            if tgt_type.lower() == 'pillar':
+                v_tgt_type = 'pillar_exact'
+            elif tgt_type.lower() == 'compound':
+                v_tgt_type = 'compound_pillar_exact'
+            v_minions = set(self.check_minions(tgt, v_tgt_type))
+            minions = set(self.check_minions(tgt, tgt_type))
+            mismatch = bool(minions.difference(v_minions))
+            # If the non-exact match gets more minions than the exact match
+            # then pillar globbing is being used, and we have a problem
+            if mismatch:
+                return False
         # compound commands will come in a list so treat everything as a list
         if not isinstance(funs, list):
             funs = [funs]
