@@ -18,6 +18,10 @@ Install Salt stable releases from the Arch Linux Official repositories as follow
 
     pacman -S salt
 
+.. note:: transports
+
+    Unlike other linux distributions, please be aware that Arch Linux's package manager pacman defaults to RAET as the Salt transport. If you want to use ZeroMQ instead, make sure to enter the associated number for the salt-zmq repository when prompted.
+
 Tracking develop
 ----------------
 
