@@ -18,7 +18,7 @@ from __future__ import absolute_import
 # Import python libs
 import logging
 import json
-from distutils.version import StrictVersion
+from distutils.version import StrictVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import salt libs
 from salt.ext.six import string_types
