@@ -56,11 +56,14 @@ def present(name, profile="splunk", **kwargs):
         )
         if not result:
             # no update
+            ret['result'] = True
             ret['comment'] = "No changes"
         else:
             (newvalues, diffs) = result
             old_content = dict(target.content)
-            old_changes = {x: old_content.get(x, None) for x in newvalues}
+            old_changes = {}
+            for x in newvalues:
+                old_changes[x] = old_content.get(x, None)
             ret['result'] = True
             ret['changes']['diff'] = diffs
             ret['changes']['old'] = old_changes
@@ -73,9 +76,13 @@ def present(name, profile="splunk", **kwargs):
         result = __salt__['splunk_search.create'](
             name, profile=profile, **kwargs
         )
-        ret['result'] = True
-        ret['changes']['old'] = False
-        ret['changes']['new'] = kwargs
+        if result:
+            ret['result'] = True
+            ret['changes']['old'] = False
+            ret['changes']['new'] = kwargs
+        else:
+            ret['result'] = False
+            ret['comment'] = 'Failed to create {0}'.format(name)
     return ret
 
 
@@ -93,22 +100,26 @@ def absent(name, profile="splunk"):
     name
         This is the name of the search in splunk
     '''
-    if __opts__['test']:
-        ret = {}
-        ret["name"] = name
-        ret['comment'] = "Would delete {0}".format(name)
-        return ret
-
-    result = __salt__['splunk_search.delete'](name, profile=profile)
-
     ret = {
         'name': name,
         'changes': {},
-        'result': None,
-        'comment': ''
+        'result': True,
+        'comment': '{0} is absent.'.format(name)
     }
 
-    if result:
-        ret['comment'] = '{0} was deleted'.format(name)
-        ret['result'] = True
+    target = __salt__['splunk_search.get'](name, profile=profile)
+    if target:
+        if __opts__['test']:
+            ret = {}
+            ret["name"] = name
+            ret['comment'] = "Would delete {0}".format(name)
+            ret['result'] = None
+            return ret
+
+        result = __salt__['splunk_search.delete'](name, profile=profile)
+        if result:
+            ret['comment'] = '{0} was deleted'.format(name)
+        else:
+            ret['comment'] = 'Failed to delete {0}'.format(name)
+            ret['result'] = False
     return ret
