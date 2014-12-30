@@ -284,13 +284,12 @@ def user_roles_exists(name, roles, database, user=None, password=None, host=None
         salt '*' mongodb.user_roles_exists johndoe '["readWrite"]' dbname admin adminpwd localhost 27017
         salt '*' mongodb.user_roles_exists johndoe '[{"role": "readWrite", "db": "dbname" }, {"role": "read", "db": "otherdb"}]' dbname admin adminpwd localhost 27017
     '''
-    output = user_list(user, password, host, port, database)
-
     try:
         roles = _to_dict(roles)
     except Exception, err:
         return 'Roles provided in wrong format'
 
+    output = user_list(user, password, host, port, database)
     # an ugly temporary solution, the error handler need to be refactored
     if output == 'Failed to connect to mongo database':
         log.error(output)
