@@ -880,9 +880,7 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
                                             self.lane_stack.value.local.name,
                                             msg))
 
-        if d_estate is None:
-            pass
-        elif d_estate != self.road_stack.value.local.name:
+        if d_estate is not None and d_estate != self.road_stack.value.local.name:
             log.error(
                     'Road Router Received message for wrong estate: {0}'.format(d_estate))
             return

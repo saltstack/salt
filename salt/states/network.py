@@ -267,8 +267,6 @@ def managed(name, type, enabled=True, **kwargs):
             old = __salt__['ip.get_bond'](name)
             new = __salt__['ip.build_bond'](name, **kwargs)
             if kwargs['test']:
-                if old == new:
-                    pass
                 if not old and new:
                     ret['result'] = None
                     ret['comment'] = 'Bond interface {0} is set to be ' \
