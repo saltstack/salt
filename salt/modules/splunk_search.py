@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Module for interop with the Splunk API
 
@@ -245,7 +246,7 @@ def list_all(prefix=None, app=None, owner=None, description_contains=None,
     name = "splunk_search.list_all get defaults"
     try:
         client.saved_searches.delete(name)
-    except:
+    except Exception:
         pass
     search = client.saved_searches.create(name, search="nothing")
     defaults = dict(search.content)
