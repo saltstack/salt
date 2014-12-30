@@ -17,7 +17,6 @@ from salt.modules import useradd
 from salt.exceptions import CommandExecutionError
 import pwd
 
-
 # Globals
 useradd.__grains__ = {}
 useradd.__salt__ = {}
