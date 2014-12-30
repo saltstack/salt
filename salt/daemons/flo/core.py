@@ -1118,7 +1118,9 @@ class SaltRaetPresenter(ioflo.base.deeding.Deed):
     Ioinits = {'opts': '.salt.opts',
                'presence_req': '.salt.presence.event_req',
                'lane_stack': '.salt.lane.manor.stack',
+               'alloweds': '.salt.var.presence.alloweds',  # odict
                'aliveds': '.salt.var.presence.aliveds',  # odict
+               'reapeds': '.salt.var.presence.reapeds',  # odict
                'availables': '.salt.var.presence.availables',  # set
               }
 
@@ -1131,12 +1133,43 @@ class SaltRaetPresenter(ioflo.base.deeding.Deed):
         if y_name not in self.lane_stack.value.nameRemotes:  # subscriber not a remote
             pass  # drop msg don't answer
         else:
+            if 'data' in msg and 'state' in msg['data']:
+                state = msg['data']['state']
+            else:
+                state = None
             # create answer message
-            present = odict()
-            for name in self.availables.value:
-                minion = self.aliveds.value[name]
-                present[name] = minion.ha[0] if minion else None
-            data = {'present': present}
+            if state is None or state == 'available' or state == 'present':
+                present = odict()
+                for name in self.availables.value:
+                    minion = self.aliveds.value[name]
+                    present[name] = minion.ha[0] if minion else None
+                data = {'present': present}
+            elif state == 'joined':
+                joined = odict()
+                # For now use alloweds here.
+                # TODO: update to really return joineds
+                for name in self.alloweds.value:
+                    joined[name] = self.alloweds.value[name].ha[0]
+                data = {'joined': joined}
+            elif state == 'allowed':
+                allowed = odict()
+                for name in self.alloweds.value:
+                    allowed[name] = self.alloweds.value[name].ha[0]
+                data = {'allowed': allowed}
+            elif state == 'alived':
+                alived = odict()
+                for name in self.aliveds.value:
+                    alived[name] = self.aliveds.value[name].ha[0]
+                data = {'alived': alived}
+            elif state == 'reaped':
+                reaped = odict()
+                for name in self.reapeds.value:
+                    reaped[name] = self.reapeds.value[name].ha[0]
+                data = {'reaped': reaped}
+            else:
+                # error: wrong/unknown state requested
+                log.error('Lane Router Received invalid message: {0}'.format(msg))
+                return
             tag = tagify('present', 'presence')
             route = {'dst': (None, None, 'event_fire'),
                     'src': (None, self.lane_stack.value.local.name, None)}
