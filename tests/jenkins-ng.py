@@ -541,7 +541,7 @@ def prepare_ssh_access(options):
     print('Generating temporary SSH Key')
     ssh_key_path = os.path.join(options.workspace, 'jenkins_ssh_key_test')
     subprocess.call(
-        'ssh-keygen -t ecdsa -b 521 -C "$(whoami)@$(hostname)-$(date --rfc-3339=seconds)" '
+        'ssh-keygen -b 2048 -C "$(whoami)@$(hostname)-$(date --rfc-3339=seconds)" '
         '-f {0} -N \'\' -V -10m:+1h'.format(ssh_key_path),
         shell=True,
     )
