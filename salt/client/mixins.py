@@ -5,6 +5,7 @@ A collection of mixins useful for the various *Client interfaces
 from __future__ import print_function
 from __future__ import absolute_import
 import logging
+import time
 import multiprocessing
 
 import salt.utils
@@ -150,3 +151,42 @@ class AsyncClientMixin(object):
         proc.start()
         proc.join()  # MUST join, otherwise we leave zombies all over
         return {'tag': tag, 'jid': jid}
+
+    def get_async_returns(self, tag, timeout=None):
+        '''
+        Yield all events from a given tag until "ret" is recieved or timeout is
+        reached.
+
+        Note: "data" of each event will be yielded until the last iteration (ret),
+        where data["return"] will be returned
+        '''
+        if timeout is None:
+            timeout = self.opts['timeout'] * 2
+
+        timeout_at = time.time() + timeout
+        last_progress_timestamp = time.time()
+
+        # no need to have a sleep, get_event has one inside
+        while True:
+            raw = self.event.get_event(timeout, tag=tag, full=True)
+            # If we saw no events in the event bus timeout
+            # OR
+            # we have reached the total timeout
+            # AND
+            # have not seen any progress events for the length of the timeout.
+            now = time.time()
+            if raw is None and (now > timeout_at and
+                                now - last_progress_timestamp > timeout):
+                # Timeout reached
+                break
+            try:
+                tag_parts = raw['tag'].split('/')
+                suffix = raw['tag'].replace(tag + '/', '')
+                if tag_parts[3] == 'ret':
+                    yield suffix, raw['data']['return']
+                    raise StopIteration()  # we are done, we got return
+                else:
+                    last_progress_timestamp = time.time()
+                    yield suffix, raw['data']
+            except (IndexError, KeyError):
+                continue
