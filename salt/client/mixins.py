@@ -155,6 +155,7 @@ class AsyncClientMixin(object):
 
         timeout_at = time.time() + timeout
         last_progress_timestamp = time.time()
+        basetag_depth = tag.count('/') + 1
 
         # no need to have a sleep, get_event has one inside
         while True:
@@ -171,7 +172,7 @@ class AsyncClientMixin(object):
                 break
             try:
                 tag_parts = raw['tag'].split('/')
-                suffix = raw['tag'].replace(tag + '/', '')
+                suffix = '/'.join(tag_parts[basetag_depth:])
                 if tag_parts[3] == 'ret':
                     yield suffix, raw['data']['return']
                     raise StopIteration()  # we are done, we got return
