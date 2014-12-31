@@ -215,7 +215,7 @@ class Runner(RunnerClient):
                     log.info('Running in async mode. Results of this execution may '
                              'be collected by attaching to the master event bus or '
                              'by examing the master job cache, if configured. '
-                             'This execution is under tag {0}'.format(async_pub['tag']))
+                             'This execution is running in pid {pid} under tag {tag}'.format(**async_pub))
                     exit(0)  # TODO: return or something? Don't like exiting...
 
                 # output rets if you have some
