@@ -303,7 +303,7 @@ def user_roles_exists(name, roles, database, user=None, password=None, host=None
             for role in roles:
                 # if the role was provided in the shortened form, we convert it to a long form
                 if not isinstance(role, dict):
-                     role = {'role': role, 'db': database}
+                    role = {'role': role, 'db': database}
                 if role not in dict(user).get('roles', []):
                     return False
             return True

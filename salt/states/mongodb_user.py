@@ -79,7 +79,7 @@ def present(name,
 
     # check if user exists
     user_exists = __salt__['mongodb.user_exists'](name, user, password, host, port, database)
-    if user_exists == True:
+    if user_exists is True:
         return ret
     elif not isinstance(user_exists, bool):
         ret['comment'] = user_exists
@@ -137,7 +137,7 @@ def absent(name,
 
     #check if user exists and remove it
     user_exists = __salt__['mongodb.user_exists'](name, user, password, host, port, database=database)
-    if user_exists == True:
+    if user_exists is True:
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = ('User {0} is present and needs to be removed'
