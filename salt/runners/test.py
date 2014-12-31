@@ -3,6 +3,7 @@
 This runner is used only for test purposes and servers no production purpose
 '''
 from __future__ import absolute_import
+from __future__ import print_function
 # Import python libs
 import time
 import salt.ext.six as six
@@ -36,12 +37,17 @@ def raw_arg(*args, **kwargs):
     return ret
 
 
+def stdout_print():
+    print ('foo')
+    return 'bar'
+
 def stream():
     '''
     Return True
     '''
     ret = True
     for i in range(1, 100):
-        __progress__('Runner is {0}% done'.format(i), outputter='pprint')
+        # __progress__('Runner is {0}% done'.format(i), outputter='pprint')
+        __jid_event__.fire_event({'data': 'Runner is {0}% done'.format(i), 'outputter': 'pprint'}, 'progress')
         time.sleep(0.1)
     return ret
