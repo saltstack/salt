@@ -81,7 +81,10 @@ def present(name,
     user_exists = __salt__['mongodb.user_exists'](name, user, password, host, port, database)
     if user_exists is True:
         return ret
-    elif not isinstance(user_exists, bool):
+
+    # if the check does not return a boolean, return an error
+    # this may be the case if there is a database connection error
+    if not isinstance(user_exists, bool):
         ret['comment'] = user_exists
         ret['result'] = False
         return ret
@@ -147,7 +150,10 @@ def absent(name,
             ret['comment'] = 'User {0} has been removed'.format(name)
             ret['changes'][name] = 'Absent'
             return ret
-    elif not isinstance(user_exists, bool):
+
+    # if the check does not return a boolean, return an error
+    # this may be the case if there is a database connection error
+    if not isinstance(user_exists, bool):
         ret['comment'] = user_exists
         ret['result'] = False
         return ret
