@@ -13,7 +13,7 @@ Documentation
 =============
 
 Installation instructions, getting started guides, and in-depth API
-documention.
+documentation.
 
 http://docs.saltstack.com
 
