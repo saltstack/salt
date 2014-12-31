@@ -20,7 +20,6 @@ import salt.utils.event
 from salt.client import mixins
 from salt.output import display_output
 from salt.utils.error import raise_error
-from salt.utils.event import tagify
 
 log = logging.getLogger(__name__)
 
@@ -169,7 +168,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         '''
         reformatted_low = self._reformat_low(low)
         job = self.master_call(**reformatted_low)
-        ret_tag = tagify('ret', base=job['tag'])
+        ret_tag = salt.utils.event.tagify('ret', base=job['tag'])
 
         if timeout is None:
             timeout = 300
@@ -218,50 +217,22 @@ class Runner(RunnerClient):
                     exit(0)  # TODO: return or something? Don't like exiting...
 
                 # output rets if you have some
+
                 if not self.opts.get('quiet', False):
-                    for ret in self.get_runner_returns(async_pub['tag']):
+                    for suffix, ret in self.get_async_returns(async_pub['tag']):
+                        # skip "new" events
+                        if suffix == 'new':
+                            continue
                         if isinstance(ret, dict) and 'outputter' in ret and ret['outputter'] is not None:
                             print(self.outputters[ret['outputter']](ret['data']))
                         else:
                             salt.output.display_output(ret, '', self.opts)
 
+
             except salt.exceptions.SaltException as exc:
                 ret = str(exc)
-                print(ret)
+                if not self.opts.get('quiet', False):
+                    print(ret)
                 return ret
             log.debug('Runner return: {0}'.format(ret))
             return ret
-
-    def get_runner_returns(self, tag, timeout=None):
-        '''
-        Gather the return data from the event system, break hard when timeout
-        is reached.
-        '''
-        if timeout is None:
-            timeout = self.opts['timeout'] * 2
-
-        timeout_at = time.time() + timeout
-        last_progress_timestamp = time.time()
-
-        # no need to have a sleep, get_event has one inside
-        while True:
-            raw = self.event.get_event(timeout, tag=tag, full=True)
-            # If we saw no events in the event bus timeout
-            # OR
-            # we have reached the total timeout
-            # AND
-            # have not seen any progress events for the length of the timeout.
-            if raw is None and (time.time() > timeout_at and
-                                time.time() - last_progress_timestamp > timeout):
-                # Timeout reached
-                break
-            try:
-                tag_parts = raw['tag'].split('/')
-                if tag_parts[3] == 'progress':
-                    last_progress_timestamp = time.time()
-                    yield raw['data']
-                elif tag_parts[3] == 'ret':
-                    yield raw['data']['return']
-                    break
-            except (IndexError, KeyError):
-                continue
