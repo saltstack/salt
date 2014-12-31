@@ -38,6 +38,9 @@ def raw_arg(*args, **kwargs):
 
 
 def stdout_print():
+    '''
+    Print 'foo' and return 'bar'
+    '''
     print ('foo')
     return 'bar'
 
