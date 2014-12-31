@@ -207,6 +207,10 @@ def user_exists(name, user=None, password=None, host=None, port=None,
         salt '*' mongodb.user_exists <name> <user> <password> <host> <port> <database>
     '''
     users = user_list(user, password, host, port, database)
+
+    if isinstance(users, string_types):
+        return 'Failed to connect to mongo database'
+
     for user in users:
         if name == dict(user).get('user'):
             return True
@@ -286,16 +290,15 @@ def user_roles_exists(name, roles, database, user=None, password=None, host=None
     '''
     try:
         roles = _to_dict(roles)
-    except Exception, err:
+    except Exception:
         return 'Roles provided in wrong format'
 
-    output = user_list(user, password, host, port, database)
-    # an ugly temporary solution, the error handler need to be refactored
-    if output == 'Failed to connect to mongo database':
-        log.error(output)
-        return output
+    users = user_list(user, password, host, port, database)
 
-    for user in output:
+    if isinstance(users, string_types):
+        return 'Failed to connect to mongo database'
+
+    for user in users:
         if name == dict(user).get('user'):
             for role in roles:
                 # if the role was provided in the shortened form, we convert it to a long form
@@ -325,7 +328,7 @@ def user_grant_roles(name, roles, database, user=None, password=None, host=None,
 
     try:
         roles = _to_dict(roles)
-    except Exception, err:
+    except Exception:
         return 'Roles provided in wrong format'
 
     try:
@@ -360,7 +363,7 @@ def user_revoke_roles(name, roles, database, user=None, password=None, host=None
 
     try:
         roles = _to_dict(roles)
-    except Exception, err:
+    except Exception:
         return 'Roles provided in wrong format'
 
     try:
