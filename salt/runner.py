@@ -208,8 +208,7 @@ class Runner(RunnerClient):
                 low = {'fun': self.opts['fun'],
                        'args': self.opts['arg'],
                        'kwargs': self.opts}
-                async_pub = super(Runner, self).async(
-                    self.opts['fun'], low)
+                async_pub = super(Runner, self).async(self.opts['fun'], low)
                 # Run the runner!
                 if self.opts.get('async', False):
                     log.info('Running in async mode. Results of this execution may '
