@@ -67,6 +67,13 @@ class SyncClientMixin(object):
             func_globals['__jid_event__'].fire_event(progress_event, 'progress')
         func_globals['__progress__'] = fire_progress
 
+        # overload the print function (assuming the module did `from __future__ import print_function`)
+        def over_print(output):
+            print_event = {'data': output,
+                           'outputter': 'pprint'}
+            func_globals['__jid_event__'].fire_event(print_event, 'stdout')
+        func_globals['print'] = over_print
+
         # Inject some useful globals to the funciton's global namespace
         for global_key, value in func_globals.iteritems():
             self.functions[fun].func_globals[global_key] = value
@@ -173,11 +180,9 @@ class AsyncClientMixin(object):
             try:
                 tag_parts = raw['tag'].split('/')
                 suffix = '/'.join(tag_parts[basetag_depth:])
+                last_progress_timestamp = now
+                yield suffix, raw['data']
                 if tag_parts[3] == 'ret':
-                    yield suffix, raw['data']['return']
                     raise StopIteration()  # we are done, we got return
-                else:
-                    last_progress_timestamp = time.time()
-                    yield suffix, raw['data']
             except (IndexError, KeyError):
                 continue

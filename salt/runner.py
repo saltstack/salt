@@ -220,11 +220,17 @@ class Runner(RunnerClient):
 
                 if not self.opts.get('quiet', False):
                     for suffix, ret in self.get_async_returns(async_pub['tag']):
-                        # skip "new" events
-                        if suffix == 'new':
+                        # TODO: clean up this event print out. We probably want something
+                        # more general, since this will get *really* messy as
+                        # people use more events that don't quite fit into this mold
+                        if suffix == 'new':  # skip "new" events
                             continue
-                        if isinstance(ret, dict) and 'outputter' in ret and ret['outputter'] is not None:
+                        elif suffix == 'ret':  # for "ret" just print out return
+                            salt.output.display_output(ret['return'], '', self.opts)
+                        # otherwise, if it specified an outputter, we assume it has "data" to print out
+                        elif isinstance(ret, dict) and 'outputter' in ret and ret['outputter'] is not None:
                             print(self.outputters[ret['outputter']](ret['data']))
+                        # and if all else fails, just use the outputter
                         else:
                             salt.output.display_output(ret, '', self.opts)
 
