@@ -88,7 +88,7 @@ class SyncClientMixin(object):
             # TODO: either require them to be parsed or not, this is a hack
             # format call, in case it wasn't passed in to us
             if 'args' not in low or 'kwargs' not in low:
-                f_call = salt.utils.format_call(l_fun, low)
+                f_call = salt.utils.format_call(self.functions[fun], low)
                 args = f_call.get('args', ())
                 kwargs = f_call.get('kwargs', {})
             else:
