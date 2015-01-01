@@ -44,6 +44,15 @@ def stdout_print():
     print ('foo')
     return 'bar'
 
+
+def sleep(s_time=10):
+    '''
+    Sleep t seconds, then return True
+    '''
+    print (s_time)
+    time.sleep(s_time)
+    return True
+
 def stream():
     '''
     Return True
