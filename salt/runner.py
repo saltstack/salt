@@ -77,7 +77,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         '''
         reformatted_low = self._reformat_low(low)
 
-        return mixins.AsyncClientMixin.cmd_async(**reformatted_low)
+        return mixins.AsyncClientMixin.cmd_async(self, reformatted_low)
 
     def cmd_sync(self, low, timeout=None):
         '''
@@ -96,7 +96,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
             })
         '''
         reformatted_low = self._reformat_low(low)
-        return mixins.SyncClientMixin.cmd_sync(**reformatted_low)
+        return mixins.SyncClientMixin.cmd_sync(self, reformatted_low)
 
 
 class Runner(RunnerClient):
