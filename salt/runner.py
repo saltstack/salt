@@ -103,7 +103,7 @@ class Runner(RunnerClient):
     '''
     Execute the salt runner interface
     '''
-    def __init__(self):
+    def __init__(self, opts):
         super(Runner, self).__init__(opts)
         self.returners = salt.loader.returners(opts, self.functions)
         self.outputters = salt.loader.outputters(opts)
@@ -136,7 +136,7 @@ class Runner(RunnerClient):
                 low['args'] = args
                 low['kwargs'] = kwargs
 
-                async_pub = super(Runner, self).async(self.opts['fun'], low)
+                async_pub = self.async(self.opts['fun'], low)
                 # Run the runner!
                 if self.opts.get('async', False):
                     log.info('Running in async mode. Results of this execution may '
