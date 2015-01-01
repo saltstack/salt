@@ -300,20 +300,16 @@ class AsyncClientMixin(object):
         '''
         Print all of the events with the prefix 'tag'
         '''
-        for suffix, ret in self.get_async_returns(tag, timeout=timeout):
+        for suffix, event in self.get_async_returns(tag, timeout=timeout):
             # TODO: clean up this event print out. We probably want something
             # more general, since this will get *really* messy as
             # people use more events that don't quite fit into this mold
-            if suffix == 'new':  # skip "new" events
-                continue
-            elif suffix == 'ret':  # for "ret" just print out return
-                salt.output.display_output(ret['return'], '', self.opts)
-            # otherwise, if it specified an outputter, we assume it has "data" to print out
-            elif isinstance(ret, dict) and 'outputter' in ret and ret['outputter'] is not None:
-                print(self.outputters[ret['outputter']](ret['data']))
-            # and if all else fails, just use the outputter
+            if isinstance(event, dict) and 'outputter' in event and event['outputter'] is not None:
+                print(self.outputters[event['outputter']](event['data']))
             else:
-                salt.output.display_output(ret, '', self.opts)
+                event.pop('_stamp')
+                print ('{tag}: {event}'.format(tag=suffix,
+                                               event=event))
 
     def get_async_returns(self, tag, timeout=None):
         '''
