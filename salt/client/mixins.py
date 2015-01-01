@@ -331,7 +331,7 @@ class AsyncClientMixin(object):
                 print(self.outputters[event['outputter']](event['data']))
             # otherwise fall back on basic printing
             else:
-                event.pop('_stamp')
+                event.pop('_stamp')  # remove the timestamp before printing
                 print('{tag}: {event}'.format(tag=suffix,
                                               event=event))
 
@@ -339,9 +339,6 @@ class AsyncClientMixin(object):
         '''
         Yield all events from a given tag until "ret" is recieved or timeout is
         reached.
-
-        Note: "data" of each event will be yielded until the last iteration (ret),
-        where data["return"] will be returned
         '''
         if timeout is None:
             timeout = self.opts['timeout'] * 2
