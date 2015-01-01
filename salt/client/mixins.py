@@ -13,6 +13,7 @@ import salt.exceptions
 import salt.utils
 import salt.utils.event
 import salt.utils.jid
+import salt.transport
 from salt.utils.event import tagify
 from salt.utils.doc import strip_rst as _strip_rst
 
