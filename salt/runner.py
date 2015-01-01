@@ -14,7 +14,6 @@ import time
 import salt.exceptions
 import salt.loader
 import salt.minion
-import salt.utils
 import salt.utils.args
 import salt.utils.event
 from salt.client import mixins
@@ -43,11 +42,10 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
     tag_prefix = 'run'
 
     def __init__(self, opts):
-        self.opts = opts
+        super(RunnerClient, self).__init__(opts)
         self.functions = salt.loader.runner(opts)  # Must be self.functions for mixin to work correctly :-/
         self.returners = salt.loader.returners(opts, self.functions)
         self.outputters = salt.loader.outputters(opts)
-        self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'])
 
 
     def _reformat_low(self, low):
@@ -121,6 +119,7 @@ class Runner(RunnerClient):
             display_output('{0}:'.format(fun), 'text', self.opts)
             print(docs[fun])
 
+    # TODO: move to mixin whenever we want a salt-wheel cli
     def run(self):
         '''
         Execute the runner sequence
