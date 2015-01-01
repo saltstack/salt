@@ -150,6 +150,15 @@ class SyncClientMixin(object):
     def low(self, fun, low):
         '''
         Execute a function from low data
+        Low data includes:
+            required:
+                - fun: the name of the function to run
+            optional:
+                - args: a list of args to pass to fun
+                - kwargs: kwargs for fun
+                - __user__: user who is running the command
+                - __jid__: jid to run under
+                - __tag__: tag to run under
         '''
         jid = low.get('__jid__', salt.utils.jid.gen_jid())
         tag = low.get('__tag__', tagify(jid, prefix=self.tag_prefix))
