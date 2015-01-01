@@ -9,6 +9,7 @@ import logging
 import time
 import multiprocessing
 
+import salt.exceptions
 import salt.utils
 import salt.utils.event
 import salt.utils.jid
@@ -34,6 +35,112 @@ class SyncClientMixin(object):
         if fun not in self.functions:
             err = 'Function {0!r} is unavailable'.format(fun)
             raise salt.exceptions.CommandExecutionError(err)
+
+    def master_call(self, **kwargs):
+        '''
+        Execute a function through the master network interface.
+        '''
+        load = kwargs
+        load['cmd'] = self.client
+        channel = salt.transport.Channel.factory(self.opts,
+                                                 crypt='clear',
+                                                 usage='master_call')
+        ret = channel.send(load)
+        if isinstance(ret, collections.Mapping):
+            if 'error' in ret:
+                raise_error(**ret['error'])
+        return ret
+
+    def cmd_sync(self, low, timeout=None):
+        '''
+        Execute a runner function synchronously; eauth is respected
+
+        This function requires that :conf_master:`external_auth` is configured
+        and the user is authorized to execute runner functions: (``@runner``).
+
+        .. code-block:: python
+
+            runner.eauth_sync({
+                'fun': 'jobs.list_jobs',
+                'username': 'saltdev',
+                'password': 'saltdev',
+                'eauth': 'pam',
+            })
+        '''
+        job = self.master_call(**low)
+        ret_tag = salt.utils.event.tagify('ret', base=job['tag'])
+
+        timelimit = time.time() + (timeout or 300)
+        while True:
+            ret = self.event.get_event(tag=ret_tag, full=True, wait=timelimit)
+            if ret is None:
+                raise salt.exceptions.SaltClientTimeout(
+                    "RunnerClient job '{0}' timed out".format(job['jid']),
+                    jid=job['jid'])
+
+            return ret['data']['return']
+
+    def cmd(self, fun, arg=None, pub_data=None, kwarg=None):
+        '''
+        Execute a function
+
+        .. code-block:: python
+
+            >>> opts = salt.config.master_config('/etc/salt/master')
+            >>> runner = salt.runner.RunnerClient(opts)
+            >>> runner.cmd('jobs.list_jobs', [])
+            {
+                '20131219215650131543': {
+                    'Arguments': [300],
+                    'Function': 'test.sleep',
+                    'StartTime': '2013, Dec 19 21:56:50.131543',
+                    'Target': '*',
+                    'Target-type': 'glob',
+                    'User': 'saltdev'
+                },
+                '20131219215921857715': {
+                    'Arguments': [300],
+                    'Function': 'test.sleep',
+                    'StartTime': '2013, Dec 19 21:59:21.857715',
+                    'Target': '*',
+                    'Target-type': 'glob',
+                    'User': 'saltdev'
+                },
+            }
+
+        '''
+        if arg is None:
+            arg = tuple()
+        if not isinstance(arg, list) and not isinstance(arg, tuple):
+            raise salt.exceptions.SaltInvocationError(
+                'arg must be formatted as a list/tuple'
+            )
+        if pub_data is None:
+            pub_data = {}
+        if not isinstance(pub_data, dict):
+            raise salt.exceptions.SaltInvocationError(
+                'pub_data must be formatted as a dictionary'
+            )
+        if kwarg is None:
+            kwarg = {}
+        if not isinstance(kwarg, dict):
+            raise salt.exceptions.SaltInvocationError(
+                'kwarg must be formatted as a dictionary'
+            )
+        arglist = salt.utils.args.parse_input(arg)
+
+        # if you were passed kwarg, add it to arglist
+        if kwarg:
+            kwarg['__kwarg__'] = True
+            arglist.append(kwarg)
+
+        args, kwargs = salt.minion.load_args_and_kwargs(
+            self.functions[fun], arglist, pub_data
+        )
+        low = {'fun': fun,
+               'args': args,
+               'kwargs': kwargs}
+        return self.low(fun, low)
 
     def low(self, fun, low):
         '''
@@ -138,6 +245,26 @@ class AsyncClientMixin(object):
 
         self.low(fun, low)
 
+    def cmd_async(self, low):
+        '''
+        Execute a function asynchronously; eauth is respected
+
+        This function requires that :conf_master:`external_auth` is configured
+        and the user is authorized
+
+        .. code-block:: python
+
+            >>> wheel.cmd_async({
+                'fun': 'key.finger',
+                'match': 'jerry',
+                'eauth': 'auto',
+                'username': 'saltdev',
+                'password': 'saltdev',
+            })
+            {'jid': '20131219224744416681', 'tag': 'salt/wheel/20131219224744416681'}
+        '''
+        return self.master_call(**low)
+
     def async(self, fun, low, user='UNKNOWN'):
         '''
         Execute the function in a multiprocess and return the event tag to use
@@ -152,6 +279,25 @@ class AsyncClientMixin(object):
         proc.start()
         proc.join()  # MUST join, otherwise we leave zombies all over
         return {'tag': tag, 'jid': jid}
+
+    def print_async_returns(self, tag, timeout=None):
+        '''
+        Print all of the events with the prefix 'tag'
+        '''
+        for suffix, ret in self.get_async_returns(tag, timeout=timeout):
+            # TODO: clean up this event print out. We probably want something
+            # more general, since this will get *really* messy as
+            # people use more events that don't quite fit into this mold
+            if suffix == 'new':  # skip "new" events
+                continue
+            elif suffix == 'ret':  # for "ret" just print out return
+                salt.output.display_output(ret['return'], '', self.opts)
+            # otherwise, if it specified an outputter, we assume it has "data" to print out
+            elif isinstance(ret, dict) and 'outputter' in ret and ret['outputter'] is not None:
+                print(self.outputters[ret['outputter']](ret['data']))
+            # and if all else fails, just use the outputter
+            else:
+                salt.output.display_output(ret, '', self.opts)
 
     def get_async_returns(self, tag, timeout=None):
         '''
