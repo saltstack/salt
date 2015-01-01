@@ -4,6 +4,7 @@ A collection of mixins useful for the various *Client interfaces
 '''
 from __future__ import print_function
 from __future__ import absolute_import
+import __builtin__
 import logging
 import time
 import multiprocessing
@@ -69,9 +70,13 @@ class SyncClientMixin(object):
 
         # overload the print function (assuming the module did `from __future__ import print_function`)
         def over_print(output):
+            '''
+            Print and duplicate the print to an event
+            '''
             print_event = {'data': output,
                            'outputter': 'pprint'}
-            func_globals['__jid_event__'].fire_event(print_event, 'stdout')
+            func_globals['__jid_event__'].fire_event(print_event, 'print')
+            __builtins__['print'](output)  # and do the old style printout
         func_globals['print'] = over_print
 
         # Inject some useful globals to the funciton's global namespace
@@ -79,9 +84,18 @@ class SyncClientMixin(object):
             self.functions[fun].func_globals[global_key] = value
         try:
             self._verify_fun(fun)
-            l_fun = self.functions[fun]
-            f_call = salt.utils.format_call(l_fun, low)
-            data['return'] = l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
+
+            # TODO: either require them to be parsed or not, this is a hack
+            # format call, in case it wasn't passed in to us
+            if 'args' not in low or 'kwargs' not in low:
+                f_call = salt.utils.format_call(l_fun, low)
+                args = f_call.get('args', ())
+                kwargs = f_call.get('kwargs', {})
+            else:
+                args = low['args']
+                kwargs = low['kwargs']
+
+            data['return'] = self.functions[fun](*args, **kwargs)
             data['success'] = True
         except Exception as exc:
             data['return'] = 'Exception occurred in {0} {1}: {2}: {3}'.format(
