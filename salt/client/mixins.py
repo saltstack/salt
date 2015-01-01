@@ -207,7 +207,7 @@ class SyncClientMixin(object):
             print_event = {'data': output,
                            'outputter': 'pprint'}
             func_globals['__jid_event__'].fire_event(print_event, 'print')
-            __builtins__['print'](output)  # and do the old style printout
+            __builtin__['print'](output)  # and do the old style printout
         func_globals['print'] = over_print
 
         # Inject some useful globals to the funciton's global namespace
