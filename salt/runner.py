@@ -6,9 +6,7 @@ Execute salt convenience routines
 # Import python libs
 from __future__ import print_function
 from __future__ import absolute_import
-import collections
 import logging
-import time
 
 # Import salt libs
 import salt.exceptions
@@ -18,7 +16,6 @@ import salt.utils.args
 import salt.utils.event
 from salt.client import mixins
 from salt.output import display_output
-from salt.utils.error import raise_error
 
 log = logging.getLogger(__name__)
 

@@ -5,6 +5,7 @@ A collection of mixins useful for the various *Client interfaces
 from __future__ import print_function
 from __future__ import absolute_import
 import __builtin__
+import collections
 import logging
 import time
 import multiprocessing
@@ -14,6 +15,7 @@ import salt.utils
 import salt.utils.event
 import salt.utils.jid
 import salt.transport
+from salt.utils.error import raise_error
 from salt.utils.event import tagify
 from salt.utils.doc import strip_rst as _strip_rst
 
