@@ -41,8 +41,6 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
     def __init__(self, opts):
         super(RunnerClient, self).__init__(opts)
         self.functions = salt.loader.runner(opts)  # Must be self.functions for mixin to work correctly :-/
-        self.returners = salt.loader.returners(opts, self.functions)
-        self.outputters = salt.loader.outputters(opts)
 
     def _reformat_low(self, low):
         '''
@@ -105,6 +103,11 @@ class Runner(RunnerClient):
     '''
     Execute the salt runner interface
     '''
+    def __init__(self):
+        super(Runner, self).__init__(opts)
+        self.returners = salt.loader.returners(opts, self.functions)
+        self.outputters = salt.loader.outputters(opts)
+
     def print_docs(self):
         '''
         Print out the documentation!
