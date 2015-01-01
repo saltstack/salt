@@ -60,6 +60,6 @@ def stream():
     '''
     ret = True
     for i in range(1, 100):
-        __jid_event__.fire_event({'data': 'Runner is {0}% done'.format(i)}, 'progress')
+        __jid_event__.fire_event({'message': 'Runner is {0}% done'.format(i)}, 'progress')
         time.sleep(0.1)
     return ret
