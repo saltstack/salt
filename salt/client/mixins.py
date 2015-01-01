@@ -218,8 +218,15 @@ class SyncClientMixin(object):
             # from that since the caller knows what is an arg vs a kwarg, but
             # while we make the transition we will load "kwargs" using format_call
             # if there are no kwargs in the low object passed in
-            if 'kwargs' not in low:
+            f_call = None
+            if 'args' not in low:
                 f_call = salt.utils.format_call(self.functions[fun], low)
+                args = f_call.get('args', ())
+            else:
+                args = low['args']
+            if 'kwargs' not in low:
+                if f_call is None:
+                    f_call = salt.utils.format_call(self.functions[fun], low)
                 kwargs = f_call.get('kwargs', {})
 
                 # throw a warning for the badly formed low data if we found
@@ -232,7 +239,7 @@ class SyncClientMixin(object):
             else:
                 kwargs = low['kwargs']
 
-            data['return'] = self.functions[fun](*low.get('args', ()), **kwargs)
+            data['return'] = self.functions[fun](*args, **kwargs)
             data['success'] = True
         except Exception as exc:
             data['return'] = 'Exception occurred in {0} {1}: {2}: {3}'.format(
