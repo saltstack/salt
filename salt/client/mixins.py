@@ -95,8 +95,7 @@ class SyncClientMixin(object):
         try:
             self._verify_fun(fun)
 
-            f_call = salt.utils.format_call(self.functions[fun], low)
-            data['return'] = self.functions[fun](*f_call.get('args', ()), **f_call.get('kwargs', {}))
+            data['return'] = self.functions[fun](*low.get('args', ()), **low.get('kwargs', {}))
             data['success'] = True
         except Exception as exc:
             data['return'] = 'Exception occurred in {0} {1}: {2}: {3}'.format(
