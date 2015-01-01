@@ -101,8 +101,8 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
             self.functions[fun], arglist, pub_data
         )
         low = {'fun': fun,
-               'args': args}
-        low.update(kwargs)
+               'args': args,
+               'kwargs': kwargs}
         return self.low(fun, low)
 
     def master_call(self, **kwargs):
@@ -216,7 +216,7 @@ class Runner(RunnerClient):
                     salt.utils.args.parse_input(self.opts['arg']),
                 )
                 low['args'] = args
-                low.update(kwargs)
+                low['kwargs'] = kwargs
 
                 async_pub = super(Runner, self).async(self.opts['fun'], low)
                 # Run the runner!
