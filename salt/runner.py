@@ -47,7 +47,6 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         self.returners = salt.loader.returners(opts, self.functions)
         self.outputters = salt.loader.outputters(opts)
 
-
     def _reformat_low(self, low):
         '''
         Format the low data for RunnerClient()'s master_call() function
@@ -147,7 +146,6 @@ class Runner(RunnerClient):
                     exit(0)  # TODO: return or something? Don't like exiting...
 
                 # output rets if you have some
-
                 if not self.opts.get('quiet', False):
                     self.print_async_returns(async_pub['tag'])
 
