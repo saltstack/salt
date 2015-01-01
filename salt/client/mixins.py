@@ -210,7 +210,29 @@ class SyncClientMixin(object):
         try:
             self._verify_fun(fun)
 
-            data['return'] = self.functions[fun](*low.get('args', ()), **low.get('kwargs', {}))
+            # There are some descrepencies of what a "low" structure is
+            # in the publisher world it is a dict including stuff such as jid,
+            # fun, arg (a list of args, with kwargs packed in). Historically
+            # this particular one has had no "arg" and just has had all the
+            # kwargs packed into the top level object. The plan is to move away
+            # from that since the caller knows what is an arg vs a kwarg, but
+            # while we make the transition we will load "kwargs" using format_call
+            # if there are no kwargs in the low object passed in
+            if 'kwargs' not in low:
+                f_call = salt.utils.format_call(self.functions[fun], low)
+                kwargs = f_call.get('kwargs', {})
+
+                # throw a warning for the badly formed low data if we found
+                # kwargs using the old mechanism
+                if kwargs:
+                    salt.utils.warn_until(
+                        'Boron',
+                        'kwargs must be passed inside the low under "kwargs"'
+                    )
+            else:
+                kwargs = low['kwargs']
+
+            data['return'] = self.functions[fun](*low.get('args', ()), **kwargs)
             data['success'] = True
         except Exception as exc:
             data['return'] = 'Exception occurred in {0} {1}: {2}: {3}'.format(
