@@ -91,12 +91,37 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
                 'kwarg must be formatted as a dictionary'
             )
         arglist = salt.utils.args.parse_input(arg)
+        def _append_kwarg(arglist, kwarg):
+            '''
+            Append the kwarg dict to the arglist
+            '''
+            kwarg['__kwarg__'] = True
+            arglist.append(kwarg)
+
+        if kwarg:
+            try:
+                if isinstance(arglist[-1], dict) \
+                    and '__kwarg__' in arglist[-1]:
+                    for key, val in six.iteritems(kwarg):
+                        if key in arglist[-1]:
+                            log.warning(
+                                'Overriding keyword argument {0!r}'.format(key)
+                            )
+                        arglist[-1][key] = val
+                else:
+                    # No kwargs yet present in arglist
+                    _append_kwarg(arglist, kwarg)
+            except IndexError:
+                # arglist is empty, just append
+                _append_kwarg(arglist, kwarg)
+
+        self._verify_fun(fun)
         args, kwargs = salt.minion.load_args_and_kwargs(
             self.functions[fun], arglist, pub_data
         )
         low = {'fun': fun,
-               'args': args,
-               'kwargs': kwargs}
+               'args': args}
+        low.update(kwargs)
         return self.low(fun, low)
 
     def master_call(self, **kwargs):
@@ -204,9 +229,14 @@ class Runner(RunnerClient):
             self.print_docs()
         else:
             try:
-                low = {'fun': self.opts['fun'],
-                       'args': self.opts['arg'],
-                       'kwargs': self.opts}
+                low = {'fun': self.opts['fun']}
+                arglist = salt.utils.args.parse_input(self.opts['arg'])
+                args, kwargs = salt.minion.load_args_and_kwargs(
+                    self.functions[low['fun']], arglist
+                )
+                low['args'] = args
+                low.update(kwargs)
+
                 async_pub = super(Runner, self).async(self.opts['fun'], low)
                 # Run the runner!
                 if self.opts.get('async', False):
