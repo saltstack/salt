@@ -184,14 +184,6 @@ class SyncClientMixin(object):
                         '__jid_event__': salt.utils.event.NamespacedEvent(event, tag),
                         }
 
-        # TODO: some other way? This seems like a slippery slope of convenience functions
-        def fire_progress(data, outputter='pprint'):
-            progress_event = {'data': data,
-                              'outputter': outputter}
-            func_globals['__jid_event__'].fire_event(progress_event, 'progress')
-        func_globals['__progress__'] = fire_progress
-
-        # overload the print function (assuming the module did `from __future__ import print_function`)
         def over_print(output):
             '''
             Print and duplicate the print to an event
