@@ -304,12 +304,15 @@ class AsyncClientMixin(object):
             # TODO: clean up this event print out. We probably want something
             # more general, since this will get *really* messy as
             # people use more events that don't quite fit into this mold
-            if isinstance(event, dict) and 'outputter' in event and event['outputter'] is not None:
+            if suffix == 'ret':  # for "ret" just print out return
+                salt.output.display_output(event['return'], '', self.opts)
+            elif isinstance(event, dict) and 'outputter' in event and event['outputter'] is not None:
                 print(self.outputters[event['outputter']](event['data']))
+            # otherwise fall back on basic printing
             else:
                 event.pop('_stamp')
-                print ('{tag}: {event}'.format(tag=suffix,
-                                               event=event))
+                print('{tag}: {event}'.format(tag=suffix,
+                                              event=event))
 
     def get_async_returns(self, tag, timeout=None):
         '''
