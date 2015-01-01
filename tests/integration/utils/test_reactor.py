@@ -12,7 +12,8 @@ import integration
 from salt.utils.process import clean_proc
 from salt.utils import event
 
-from salttesting.mock import MagicMock, patch
+from salttesting.mock import patch
+
 
 @contextmanager
 def reactor_process(opts, reactor):
