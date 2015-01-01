@@ -95,17 +95,8 @@ class SyncClientMixin(object):
         try:
             self._verify_fun(fun)
 
-            # TODO: either require them to be parsed or not, this is a hack
-            # format call, in case it wasn't passed in to us
-            if 'args' not in low or 'kwargs' not in low:
-                f_call = salt.utils.format_call(self.functions[fun], low)
-                args = f_call.get('args', ())
-                kwargs = f_call.get('kwargs', {})
-            else:
-                args = low['args']
-                kwargs = low['kwargs']
-
-            data['return'] = self.functions[fun](*args, **kwargs)
+            f_call = salt.utils.format_call(self.functions[fun], low)
+            data['return'] = self.functions[fun](*f_call.get('args', ()), **f_call.get('kwargs', {}))
             data['success'] = True
         except Exception as exc:
             data['return'] = 'Exception occurred in {0} {1}: {2}: {3}'.format(
