@@ -213,6 +213,7 @@ class ZeroMQChannel(Channel):
     # the sreq is the zmq connection, since those are relatively expensive to
     # set up, we are going to reuse them as much as possible.
     sreq_cache = defaultdict(dict)
+    auth_cache = defaultdict(dict)
 
     @property
     def sreq_key(self):
@@ -223,6 +224,19 @@ class ZeroMQChannel(Channel):
                 os.getpid(),                      # per process
                 threading.current_thread().name,  # per per-thread
                 )
+
+    # TODO: change SAuth to return a singleton, so we don't have to do this
+    @property
+    def auth(self):
+        '''
+        Return the appropriate "auth" for this channel
+
+        Note: auth is only cached keyed by master_uri, this means we assume that
+              a given master_uri has ONE auth mechanism (which seems reasonable enough)
+        '''
+        if self.master_uri not in ZeroMQChannel.auth_cache:
+            ZeroMQChannel.auth_cache[self.master_uri] = salt.crypt.SAuth(self.opts)
+        return ZeroMQChannel.auth_cache[self.master_uri]
 
     @property
     def sreq(self):
@@ -253,15 +267,14 @@ class ZeroMQChannel(Channel):
         # crypt defaults to 'aes'
         self.crypt = kwargs.get('crypt', 'aes')
 
-        if self.crypt != 'clear':
-            if 'auth' in kwargs:
-                self.auth = kwargs['auth']
-            else:
-                self.auth = salt.crypt.SAuth(opts)
         if 'master_uri' in kwargs:
             self.master_uri = kwargs['master_uri']
         else:
             self.master_uri = opts['master_uri']
+
+        if self.crypt != 'clear':
+            if 'auth' in kwargs and self.master_uri not in self.auth_cache:
+                self.auth_cache[self.master_uri] = kwargs['auth']
 
     def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
         ret = self.sreq.send('aes', self.auth.crypticle.dumps(load), tries, timeout)
