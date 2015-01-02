@@ -204,9 +204,12 @@ def _format_host(host, data):
                 u'    {tcolor}Function: {comps[0]}.{comps[3]}{colors[ENDC]}',
                 u'    {tcolor}  Result: {ret[result]!s}{colors[ENDC]}',
                 u'    {tcolor} Comment: {comment}{colors[ENDC]}',
-                u'    {tcolor} Started: {ret[start_time]!s}{colors[ENDC]}',
-                u'    {tcolor}Duration: {ret[duration]!s}{colors[ENDC]}'
             ]
+            if __opts__.get('state_output_profile', True):
+                state_lines.extend([
+                    u'    {tcolor} Started: {ret[start_time]!s}{colors[ENDC]}',
+                    u'    {tcolor}Duration: {ret[duration]!s}{colors[ENDC]}',
+                ])
             # This isn't the prettiest way of doing this, but it's readable.
             if comps[1] != comps[2]:
                 state_lines.insert(
