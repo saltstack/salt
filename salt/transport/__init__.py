@@ -306,7 +306,7 @@ class ZeroMQChannel(Channel):
         try:
             return _do_transfer()
         except salt.crypt.AuthenticationError:
-            self.auth = salt.crypt.SAuth(self.opts)
+            del ZeroMQChannel.auth_cache[self.master_uri]
             return _do_transfer()
 
     def _uncrypted_transfer(self, load, tries=3, timeout=60):
