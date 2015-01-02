@@ -32,7 +32,6 @@ import re
 
 # Import salt libs
 from salt._compat import string_types
-from salt.exceptions import SaltInvocationError
 
 
 def mounted(name,
@@ -163,7 +162,7 @@ def mounted(name,
             if uuid_device and uuid_device not in device_list:
                 device_list.append(uuid_device)
             if opts:
-                mount_invisible_options = ['defaults', 'comment', 'nobootwait', 'reconnect', 'delay_connect']
+                mount_invisible_options = ['defaults', 'comment', 'nobootwait', 'reconnect', 'delay_connect', 'nofail', 'password']
                 for opt in opts:
                     comment_option = opt.split('=')[0]
                     if comment_option == 'comment':
@@ -184,7 +183,9 @@ def mounted(name,
                                     mount_result = __salt__['mount.mount'](real_name, device, mkmnt=mkmnt, fstype=fstype, opts=opts)
                                     ret['result'] = mount_result
                                 else:
-                                    raise SaltInvocationError('Unable to unmount {0}: {1}.'.format(real_name, unmount_result))
+                                    ret['result'] = False
+                                    ret['comment'] = 'Unable to unmount {0}: {1}.'.format(real_name, unmount_result)
+                                    return ret
                             else:
                                 ret['changes']['umount'] = "Forced remount because " \
                                                             + "options ({0}) changed".format(opt)
