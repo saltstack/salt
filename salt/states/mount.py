@@ -32,7 +32,6 @@ import re
 
 # Import salt libs
 from salt._compat import string_types
-from salt.exceptions import SaltInvocationError
 
 
 def mounted(name,
