@@ -205,7 +205,7 @@ def _format_host(host, data):
                 u'    {tcolor}  Result: {ret[result]!s}{colors[ENDC]}',
                 u'    {tcolor} Comment: {comment}{colors[ENDC]}',
             ]
-            if __opts__.get('state_output_profile', False):
+            if __opts__.get('state_output_profile', True):
                 state_lines.extend([
                     u'    {tcolor} Started: {ret[start_time]!s}{colors[ENDC]}',
                     u'    {tcolor}Duration: {ret[duration]!s}{colors[ENDC]}',
