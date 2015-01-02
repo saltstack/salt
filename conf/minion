@@ -461,7 +461,7 @@
 #state_output_diff: False
 
 # The state_output_profile setting changes whether profile information
-# will be shown for each statei run.
+# will be shown for each state run.
 #state_output_profile: False
 
 # Fingerprint of the master public key to double verify the master is valid,
