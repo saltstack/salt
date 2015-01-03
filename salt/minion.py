@@ -984,6 +984,7 @@ class Minion(MinionBase):
             log.info('fire_master failed: {0}'.format(traceback.format_exc()))
             return False
 
+    # TODO: kill this off
     def _handle_payload(self, payload):
         '''
         Takes a payload from the master publisher and does whatever the
@@ -992,69 +993,7 @@ class Minion(MinionBase):
         {'aes': self._handle_aes,
          'pub': self._handle_pub,
          'clear': self._handle_clear}[payload['enc']](payload['load'],
-                                                      payload['sig'] if 'sig' in payload else None)
-
-    def _handle_aes(self, load, sig=None):
-        '''
-        Takes the AES encrypted load, checks the signature if pub signatures
-        are turned on, decrypts it, and runs the encapsulated instructions
-        '''
-        # Verify that the signature is valid
-        master_pubkey_path = os.path.join(self.opts['pki_dir'], 'minion_master.pub')
-
-        if sig and self.functions['config.get']('sign_pub_messages'):
-            if not salt.crypt.verify_signature(master_pubkey_path, load, sig):
-                raise AuthenticationError('Message signature failed to validate.')
-
-        try:
-            data = self.crypticle.loads(load)
-        except AuthenticationError:
-            # decryption of the payload failed, try to re-auth
-            self.authenticate()
-            data = self.crypticle.loads(load)
-
-        # Verify that the publication is valid
-        if 'tgt' not in data or 'jid' not in data or 'fun' not in data \
-           or 'arg' not in data:
-            return
-        # Verify that the publication applies to this minion
-
-        # It's important to note that the master does some pre-processing
-        # to determine which minions to send a request to. So for example,
-        # a "salt -G 'grain_key:grain_val' test.ping" will invoke some
-        # pre-processing on the master and this minion should not see the
-        # publication if the master does not determine that it should.
-
-        if 'tgt_type' in data:
-            match_func = getattr(self.matcher,
-                                 '{0}_match'.format(data['tgt_type']), None)
-            if match_func is None:
-                return
-            if data['tgt_type'] in ('grain', 'grain_pcre', 'pillar'):
-                delimiter = data.get('delimiter', DEFAULT_TARGET_DELIM)
-                if not match_func(data['tgt'], delimiter=delimiter):
-                    return
-            elif not match_func(data['tgt']):
-                return
-        else:
-            if not self.matcher.glob_match(data['tgt']):
-                return
-        # If the minion does not have the function, don't execute,
-        # this prevents minions that could not load a minion module
-        # from returning a predictable exception
-        #if data['fun'] not in self.functions:
-        #    return
-        if 'user' in data:
-            log.info(
-                    'User {0[user]} Executing command {0[fun]} with jid '  # pylint: disable=W1307
-                '{0[jid]}'.format(data)
-            )
-        else:
-            log.info(
-                'Executing command {0[fun]} with jid {0[jid]}'.format(data)  # pylint: disable=W1307
-            )
-        log.debug('Command details {0}'.format(data))
-        self._handle_decoded_payload(data)
+                                                      payload.get('sig'))
 
     def _handle_pub(self, load):
         '''
@@ -1073,6 +1012,17 @@ class Minion(MinionBase):
         Override this method if you wish to handle the decoded data
         differently.
         '''
+        if 'user' in data:
+            log.info(
+                'User {0[user]} Executing command {0[fun]} with jid '
+                '{0[jid]}'.format(data)
+            )
+        else:
+            log.info(
+                'Executing command {0[fun]} with jid {0[jid]}'.format(data)
+            )
+        log.debug('Command details {0}'.format(data))
+
         if isinstance(data['fun'], six.string_types):
             if data['fun'] == 'sys.reload_modules':
                 self.functions, self.returners, self.function_errors = self._load_modules()
@@ -1806,14 +1756,8 @@ class Minion(MinionBase):
 
         self._prepare_minion_event_system()
 
-        self.socket = self.context.socket(zmq.SUB)
+        self.sub_channel = salt.transport.channel.PubChannel.factory(self.opts)
 
-        self._set_reconnect_ivl()
-        self._setsockopts()
-        self._set_monitor_socket()
-
-        self.socket.connect(self.master_pub)
-        self.poller.register(self.socket, zmq.POLLIN)
         self.poller.register(self.epull_sock, zmq.POLLIN)
 
         self._fire_master_minion_start()
@@ -1948,22 +1892,8 @@ class Minion(MinionBase):
             multiprocessing.active_children()
 
     def _do_socket_recv(self, socks):
-        if socks.get(self.socket) == zmq.POLLIN:
-            # topic filtering is done at the zmq level, so we just strip it
-            messages = self.socket.recv_multipart(zmq.NOBLOCK)
-            messages_len = len(messages)
-            # if it was one message, then its old style
-            if messages_len == 1:
-                payload = self.serial.loads(messages[0])
-            # 2 includes a header which says who should do it
-            elif messages_len == 2:
-                payload = self.serial.loads(messages[1])
-            else:
-                raise Exception(('Invalid number of messages ({0}) in zeromq pub'
-                                 'message from master').format(len(messages_len)))
-
-            log.trace('Handling payload')
-            self._handle_payload(payload)
+        payload = self.sub_channel.recv()
+        self._handle_decoded_payload(payload['load'])
 
     def destroy(self):
         '''
