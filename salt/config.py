@@ -2056,8 +2056,6 @@ def apply_master_config(overrides=None, defaults=None):
     if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
         opts['sock_dir'] = os.path.join(opts['cachedir'], '.salt-unix')
 
-    opts['aes'] = salt.crypt.Crypticle.generate_key_string()
-
     opts['extension_modules'] = (
         opts.get('extension_modules') or
         os.path.join(opts['cachedir'], 'extmods')
