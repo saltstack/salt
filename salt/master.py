@@ -15,6 +15,7 @@ import hashlib
 import resource
 import multiprocessing
 import sys
+import tempfile
 
 # Import third party libs
 import zmq
@@ -1100,12 +1101,15 @@ class AESFuncs(object):
             if not os.path.isdir(cdir):
                 os.makedirs(cdir)
             datap = os.path.join(cdir, 'data.p')
-            with salt.utils.fopen(datap, 'w+b') as fp_:
+            tmpfh, tmpfname = tempfile.mkstemp(dir=cdir)
+            os.close(tmpfh)
+            with salt.utils.fopen(tmpfname, 'w+b') as fp_:
                 fp_.write(
                     self.serial.dumps(
                         {'grains': load['grains'],
                          'pillar': data})
                     )
+            os.rename(tmpfname, datap)
         for mod in mods:
             sys.modules[mod].__grains__ = self.opts['grains']
         return data
