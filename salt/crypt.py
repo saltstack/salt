@@ -40,7 +40,7 @@ from salt.exceptions import (
 log = logging.getLogger(__name__)
 
 
-def dropfile(cachedir, user=None, sock_dir=None):
+def dropfile(cachedir, user=None):
     '''
     Set an AES dropfile to request the master update the publish session key
     '''
@@ -61,9 +61,6 @@ def dropfile(cachedir, user=None, sock_dir=None):
                 pass
     finally:
         os.umask(mask)  # restore original umask
-    if sock_dir:
-        # TODO: deprecation warning
-        pass
 
 
 def gen_keys(keydir, keyname, keysize, user=None):
