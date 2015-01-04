@@ -43,7 +43,7 @@ class CMDModuleTest(integration.ModuleCase):
         self.assertEqual(
             self.run_function('cmd.run',
                               ['echo $SHELL',
-                               'shell={0}'.format(shell)], python_shell=True).rstrip(), shell )
+                               'shell={0}'.format(shell)], python_shell=True).rstrip(), shell)
 
     @patch('pwd.getpwnam')
     @patch('subprocess.Popen')
@@ -204,7 +204,7 @@ sys.stdout.write('cheese')
         '''
         cmd.run trigger timeout
         '''
-        out = self.run_function( 'cmd.run', ['sleep 2 && echo hello', 'timeout=1'])
+        out = self.run_function('cmd.run', ['sleep 2 && echo hello', 'timeout=1'])
 
         self.assertTrue(
             'Timed out' in self.run_function(
