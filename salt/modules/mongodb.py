@@ -18,7 +18,7 @@ from __future__ import absolute_import
 # Import python libs
 import logging
 import json
-import distutils.version
+from distutils.version import StrictVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import salt libs
 from salt.ext.six import string_types
@@ -158,7 +158,7 @@ def user_list(user=None, password=None, host=None, port=None, database='admin'):
         output = []
         mongodb_version = mdb.eval('db.version()')
 
-        if distutils.version.StrictVersion(mongodb_version) >= distutils.version.StrictVersion('2.6'):
+        if StrictVersion(mongodb_version) >= StrictVersion('2.6'):
             for user in mdb.eval('db.getUsers()'):
                 output.append([
                     ('user', user['user']),
