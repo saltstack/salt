@@ -560,7 +560,7 @@ class Client(object):
                                     service_url=self.opts.get('s3.service_url',
                                                               None),
                                     verify_ssl=self.opts.get('s3.verify_ssl',
-                                                              True))
+                                                             True))
                 return dest
             except Exception:
                 raise MinionError('Could not fetch from {0}'.format(url))
@@ -568,9 +568,9 @@ class Client(object):
         if url_data.scheme == 'swift':
             try:
                 swift_conn = SaltSwift(self.opts.get('keystone.user', None),
-                                             self.opts.get('keystone.tenant', None),
-                                             self.opts.get('keystone.auth_url', None),
-                                             self.opts.get('keystone.password', None))
+                                       self.opts.get('keystone.tenant', None),
+                                       self.opts.get('keystone.auth_url', None),
+                                       self.opts.get('keystone.password', None))
                 swift_conn.get_object(url_data.netloc,
                                       url_data.path[1:],
                                       dest)
@@ -597,7 +597,7 @@ class Client(object):
             response = requests.get(fixed_url, **get_kwargs)
             if not no_cache:
                 with salt.utils.fopen(dest, 'wb') as destfp:
-                    for chunk in response.iter_content(chunk_size=32*1024):
+                    for chunk in response.iter_content(chunk_size=32 * 1024):
                         destfp.write(chunk)
                 return dest
             else:
@@ -942,8 +942,20 @@ class RemoteClient(Client):
         dest2check = dest
         if not dest2check:
             rel_path = self._check_proto(path)
+
+            log.debug(
+                'In saltenv {0!r}, looking at rel_path {1!r} to resolve {2!r}'.format(
+                    saltenv, rel_path, path
+                )
+            )
             with self._cache_loc(rel_path, saltenv) as cache_dest:
                 dest2check = cache_dest
+
+        log.debug(
+            'In saltenv {0!r}, ** considering ** path {1!r} to resolve {2!r}'.format(
+                saltenv, dest2check, path
+            )
+        )
 
         if dest2check and os.path.isfile(dest2check):
             hash_local = self.hash_file(dest2check, saltenv)
@@ -980,6 +992,9 @@ class RemoteClient(Client):
                 else:
                     return False
             fn_ = salt.utils.fopen(dest, 'wb+')
+        else:
+            log.debug('No dest file found {0}'.format(dest))
+
         while True:
             if not fn_:
                 load['loc'] = 0
@@ -1025,6 +1040,13 @@ class RemoteClient(Client):
                     saltenv, path
                 )
             )
+        else:
+            log.debug(
+                'In env {0!r}, we are ** missing ** the file {1!r}'.format(
+                    saltenv, path
+                )
+            )
+
         return dest
 
     def file_list(self, saltenv='base', prefix='', env=None):

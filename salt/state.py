@@ -261,8 +261,8 @@ class Compiler(object):
                             # Merge the comps
                             comps[1] = '.'.join(comps[1:len(comps)])
                         high[name] = {
-                            #'__sls__': template,
-                            #'__env__': None,
+                            # '__sls__': template,
+                            # '__env__': None,
                             comps[0]: [comps[1]]
                         }
                         continue
@@ -1960,10 +1960,12 @@ class State(object):
                     for lkey, lval in listen_to.items():
                         if (lkey, lval) not in crefs:
                             rerror = {_l_tag(lkey, lval):
-                                         {'comment': 'Referenced state {0}: {1} does not exist'.format(lkey, lval),
+                                      {
+                                          'comment': 'Referenced state {0}: {1} does not exist'.format(lkey, lval),
                                           'name': 'listen_{0}:{1}'.format(lkey, lval),
                                           'result': False,
-                                          'changes': {}}}
+                                          'changes': {}
+                                      }}
                             errors.update(rerror)
                             continue
                         to_tag = _gen_tag(crefs[(lkey, lval)])
@@ -2072,8 +2074,8 @@ class State(object):
                     if '.' in high[name]:
                         comps = high[name].split('.')
                         high[name] = {
-                            #'__sls__': template,
-                            #'__env__': None,
+                            # '__sls__': template,
+                            # '__env__': None,
                             comps[0]: [comps[1]]
                         }
                         continue
@@ -2206,8 +2208,8 @@ class BaseHighState(object):
                 opts['state_top'] = os.path.join('salt://', mopts['state_top'])
             opts['nodegroups'] = mopts.get('nodegroups', {})
             opts['state_auto_order'] = mopts.get(
-                    'state_auto_order',
-                    opts['state_auto_order'])
+                'state_auto_order',
+                opts['state_auto_order'])
             opts['file_roots'] = mopts['file_roots']
             opts['state_events'] = mopts.get('state_events')
             opts['state_aggregate'] = mopts.get('state_aggregate', opts.get('state_aggregate', False))
@@ -2231,32 +2233,46 @@ class BaseHighState(object):
         tops = DefaultOrderedDict(list)
         include = DefaultOrderedDict(list)
         done = DefaultOrderedDict(list)
+        found = 0  # did we find any contents in the top files?
         # Gather initial top files
         if self.opts['environment']:
+            contents = self.client.cache_file(
+                self.opts['state_top'],
+                self.opts['environment']
+            )
+            if contents:
+                found = 1
             tops[self.opts['environment']] = [
+                compile_template(
+                    contents,
+                    self.state.rend,
+                    self.state.opts['renderer'],
+                    env=self.opts['environment']
+                )
+            ]
+        else:
+            found = 0
+            for saltenv in self._get_envs():
+                contents = self.client.cache_file(
+                    self.opts['state_top'],
+                    saltenv
+                )
+                if contents:
+                    found = found + 1
+                else:
+                    log.debug('No contents loaded for env: {0}'.format(saltenv))
+
+                tops[saltenv].append(
                     compile_template(
-                        self.client.cache_file(
-                            self.opts['state_top'],
-                            self.opts['environment']
-                            ),
+                        contents,
                         self.state.rend,
                         self.state.opts['renderer'],
-                        env=self.opts['environment']
-                        )
-                    ]
-        else:
-            for saltenv in self._get_envs():
-                tops[saltenv].append(
-                        compile_template(
-                            self.client.cache_file(
-                                self.opts['state_top'],
-                                saltenv
-                                ),
-                            self.state.rend,
-                            self.state.opts['renderer'],
-                            saltenv=saltenv
-                            )
-                        )
+                        saltenv=saltenv
+                    )
+                )
+
+        if found == 0:
+            log.error('No contents found in top file')
 
         # Search initial top files for includes
         for saltenv, ctops in tops.items():
@@ -2278,16 +2294,16 @@ class BaseHighState(object):
                         if sls in done[saltenv]:
                             continue
                         tops[saltenv].append(
-                                compile_template(
-                                    self.client.get_state(
-                                        sls,
-                                        saltenv
-                                        ).get('dest', False),
-                                    self.state.rend,
-                                    self.state.opts['renderer'],
-                                    saltenv=saltenv
-                                    )
-                                )
+                            compile_template(
+                                self.client.get_state(
+                                    sls,
+                                    saltenv
+                                ).get('dest', False),
+                                self.state.rend,
+                                self.state.opts['renderer'],
+                                saltenv=saltenv
+                            )
+                        )
                         done[saltenv].append(sls)
             for saltenv in pops:
                 if saltenv in include:
