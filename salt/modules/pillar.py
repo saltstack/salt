@@ -25,7 +25,7 @@ def get(key, default=KeyError, merge=False, delimiter=DEFAULT_TARGET_DELIM):
 
     Attempt to retrieve the named value from pillar, if the named value is not
     available return the passed default. The default return is an empty string
-    except __opts__['PILLAR_RAISE_ON_MISSING'] is set to True, in which case a
+    except __opts__['pillar_raise_on_missing'] is set to True, in which case a
     KeyError will be raised.
 
     If the merge parameter is set to ``True``, the default will be recursively
