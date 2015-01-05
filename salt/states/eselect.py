@@ -12,7 +12,6 @@ A state module to manage Gentoo configuration via eselect
             target: hardened/linux/amd64
 '''
 
-import salt.utils
 
 # Define a function alias in order not to shadow built-in's
 __func_alias__ = {
@@ -27,7 +26,7 @@ def __virtual__():
     return 'eselect' if 'eselect.exec_action' in __salt__ else False
 
 
-def set_(name, target, parameter=None, module_parameter=None, action_parameter=None):
+def set_(name, target, module_parameter=None, action_parameter=None):
     '''
     Verify that the given module is set to the given target
 
@@ -43,25 +42,11 @@ def set_(name, target, parameter=None, module_parameter=None, action_parameter=N
     action_parameter
         additional params passed to the defined action
 
-    parameter
-        additional params passed to the defined action
-
-        .. deprecated:: Lithium
-
     '''
     ret = {'changes': {},
            'comment': '',
            'name': name,
            'result': True}
-
-    if parameter:
-        salt.utils.warn_until(
-            'Lithium',
-            'The \'parameter\' option is deprecated and will be removed in the '
-            '\'Lithium\' Salt release. Please use either \'module_parameter\' or '
-            '\'action_parameter\' instead.'
-        )
-        action_parameter = parameter
 
     old_target = __salt__['eselect.get_current_target'](name, module_parameter=module_parameter, action_parameter=action_parameter)
 
