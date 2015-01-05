@@ -1506,7 +1506,6 @@ class Minion(MinionBase):
                 exc_info=err
             )
 
-
     def _windows_thread_cleanup(self):
         '''
         Cleanup Windows threads
@@ -1518,10 +1517,9 @@ class Minion(MinionBase):
                 thread.join()
                 try:
                     self.win_proc.remove(thread)
-                    del(thread)
+                    del thread
                 except (ValueError, NameError):
                     pass
-
 
     # Main Minion Tune In
     def tune_in(self):
