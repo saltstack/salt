@@ -991,25 +991,25 @@ class Loader(object):
                                         reload(submodule)
                                 except AttributeError:
                                     continue
-                except ImportError:
+                except ImportError as error:
                     if failhard:
                         log.debug(
                             'Failed to import {0} {1}, this is most likely NOT a '
-                            'problem:\n'.format(
-                                self.tag, name
+                            'problem, but the exception was {2}\n'.format(
+                                self.tag, name, error
                             ),
                             exc_info=True
                         )
                     if not failhard:
-                        log.debug('Failed to import {0} {1}. Another attempt will be made to try to resolve dependencies.'.format(
-                            self.tag, name))
+                        log.debug('Failed to import {0} {1}. The exeception was {2}. Another attempt will be made to try to resolve dependencies.'.format(
+                            self.tag, name, error))
                         failed_loads[name] = path
                     continue
-                except Exception:
+                except Exception as error:
                     log.warning(
                         'Failed to import {0} {1}, this is due most likely to a '
-                        'syntax error. Traceback raised:\n'.format(
-                            self.tag, name
+                        'syntax error. The exception is {2}. Traceback raised:\n'.format(
+                            self.tag, name, error
                         ),
                         exc_info=True
                     )
