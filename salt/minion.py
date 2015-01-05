@@ -1507,7 +1507,7 @@ class Minion(MinionBase):
             )
 
 
-    def  _windows_thread_cleanup(self):
+    def _windows_thread_cleanup(self):
         '''
         Cleanup Windows threads
         '''
