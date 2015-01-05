@@ -198,6 +198,11 @@ class ZeroMQChannel(Channel):
 
     @property
     def sreq(self):
+        # When using threading, like on Windows, don't cache.
+        # The following block prevents thread leaks.
+        if not self.opts.get('multiprocessing'):
+            return salt.payload.SREQ(self.master_uri)
+
         key = self.sreq_key
 
         if key not in ZeroMQChannel.sreq_cache:
