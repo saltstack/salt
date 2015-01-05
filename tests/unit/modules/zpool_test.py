@@ -34,7 +34,7 @@ class ZpoolTestCase(TestCase):
     This class contains a set of functions that test salt.modules.zpool module
     '''
 
-    @patch('salt.modules.zfs._check_zpool', MagicMock(return_value='/sbin/zpool'))
+    @patch('salt.modules.zpool._check_zpool', MagicMock(return_value='/sbin/zpool'))
     def test_exists_success(self):
         '''
         Tests successful return of exists function
