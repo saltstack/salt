@@ -53,13 +53,21 @@ try:
     import django.conf
     import django.contrib.auth
     HAS_DJANGO = True
-except ImportError:
+except Exception as exc:
+    '''
+    If Django is installed and is not detected, uncommend
+    the following line to display additional information
+    '''
+    #log.warning('Could not load Django auth module. Found exception: {0}'.format(exc))
     HAS_DJANGO = False
 
 django_auth_class = None
 
 
 def django_auth_setup():
+    '''
+    Prepare the connection to the Django authentication framework
+    '''
 
     # Versions 1.7 and later of Django don't pull models until
     # they are needed.  When using framework facilities outside the
@@ -70,7 +78,7 @@ def django_auth_setup():
         django_model_name = django_model_fullname.split('.')[-1]
         django_module_name = '.'.join(django_model_fullname.split('.')[0:-1])
 
-        django_auth_module = __import__(django_module_name, globals(), locals(), 'SaltExternalAuthModel')
+        __import__(django_module_name, globals(), locals(), 'SaltExternalAuthModel')
         django_auth_class_str = 'django_auth_module.{0}'.format(django_model_name)
         django_auth_class = eval(django_auth_class_str)  # pylint: disable=W0123
 
