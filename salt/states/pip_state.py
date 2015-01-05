@@ -222,7 +222,6 @@ def installed(name,
               install_options=None,
               global_options=None,
               user=None,
-              runas=None,
               no_chown=False,
               cwd=None,
               activate=False,
@@ -512,28 +511,6 @@ def installed(name,
         ret.setdefault('warnings', []).append(msg)
         name = repo
 
-    # Deprecation warning regarding the use of runas.
-    # Setup of the variable `user` to the provided runas value.
-    if runas is not None:
-        # The user is using a deprecated argument, warn!
-        msg = ('The \'runas\' argument to pip.installed is deprecated, and '
-               'will be removed in Salt {version}. Please use \'user\' '
-               'instead.'.format(
-                   version=_SaltStackVersion.from_name('Lithium').formatted_version
-               ))
-        salt.utils.warn_until('Lithium', msg)
-        ret.setdefault('warnings', []).append(msg)
-
-        # "There can only be one"
-        if user:
-            raise CommandExecutionError(
-                'The \'runas\' and \'user\' arguments are mutually exclusive. '
-                'Please use \'user\' as \'runas\' is being deprecated.'
-            )
-        # Support deprecated 'runas' arg
-        else:
-            user = runas
-
     # Get the packages parsed name and version from the pip library.
     # This only is done when there is no requirements parameter.
     pkgs_details = []
@@ -762,7 +739,6 @@ def removed(name,
             proxy=None,
             timeout=None,
             user=None,
-            runas=None,
             cwd=None,
             use_vt=False):
     '''
@@ -778,26 +754,6 @@ def removed(name,
         Use VT terminal emulation (see ouptut while installing)
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
-
-    if runas is not None:
-        # The user is using a deprecated argument, warn!
-        msg = ('The \'runas\' argument to pip.installed is deprecated, and '
-               'will be removed in Salt {version}. Please use \'user\' '
-               'instead.'.format(
-                   version=_SaltStackVersion.from_name('Lithium').formatted_version
-               ))
-        salt.utils.warn_until('Lithium', msg)
-        ret.setdefault('warnings', []).append(msg)
-
-    # "There can only be one"
-    if runas is not None and user:
-        raise CommandExecutionError(
-            'The \'runas\' and \'user\' arguments are mutually exclusive. '
-            'Please use \'user\' as \'runas\' is being deprecated.'
-        )
-    # Support deprecated 'runas' arg
-    elif runas is not None and not user:
-        user = runas
 
     try:
         pip_list = __salt__['pip.list'](bin_env=bin_env, user=user, cwd=cwd)
@@ -837,7 +793,6 @@ def removed(name,
 def uptodate(name,
              bin_env=None,
              user=None,
-             runas=None,
              cwd=None,
              use_vt=False):
     '''
@@ -861,8 +816,7 @@ def uptodate(name,
            'comment': 'Failed to update.'}
 
     try:
-        packages = __salt__['pip.list_upgrades'](bin_env=bin_env, user=user,
-                                                 runas=runas, cwd=cwd)
+        packages = __salt__['pip.list_upgrades'](bin_env=bin_env, user=user, cwd=cwd)
     except Exception as e:
         ret['comment'] = str(e)
         return ret
@@ -876,7 +830,7 @@ def uptodate(name,
         ret['result'] = None
         return ret
 
-    updated = __salt__['pip.upgrade'](bin_env=bin_env, user=user, runas=runas, cwd=cwd, use_vt=use_vt)
+    updated = __salt__['pip.upgrade'](bin_env=bin_env, user=user, cwd=cwd, use_vt=use_vt)
 
     if updated.get('result') is False:
         ret.update(updated)
