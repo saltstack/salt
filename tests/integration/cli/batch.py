@@ -21,9 +21,7 @@ class BatchTest(integration.ShellCase):
         '''
         Tests executing a simple batch command to help catch regressions
         '''
-        ret = ['sub_minion Detected for this batch run',
-               'minion Detected for this batch run',
-               '',
+        ret = ['',
                "Executing run on ['sub_minion']",
                '',
                'sub_minion:',
