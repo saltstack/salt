@@ -168,16 +168,19 @@ def mounted(name,
                     'comment',
                     'defaults',
                     'delay_connect',
+                    'intr',
                     'nobootwait',
                     'nofail',
                     'password',
                     'reconnect',
-                    'soft'
+                    'retry',
+                    'soft',
                 ]
                 # options which are provided as key=value (e.g. password=Zohp5ohb)
                 mount_invisible_keys = [
                     'comment',
-                    'password'
+                    'password',
+                    'retry',
                 ]
                 for opt in opts:
                     keyval_option = opt.split('=')[0]
