@@ -12,7 +12,6 @@ import os
 import sys
 import time
 import hmac
-import shutil
 import hashlib
 import logging
 import traceback
