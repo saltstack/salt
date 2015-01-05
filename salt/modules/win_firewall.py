@@ -51,7 +51,7 @@ def get_config():
 
 def disable(profile='allprofiles'):
     '''
-    Disable all the firewall profiles
+    Disable firewall profile :param profile: (default: allprofiles)
 
     CLI Example:
 
@@ -59,13 +59,13 @@ def disable(profile='allprofiles'):
 
         salt '*' firewall.disable
     '''
-    cmd = ['netsh', 'advfirewall', 'set', 'allprofiles', 'state', 'off']
+    cmd = ['netsh', 'advfirewall', 'set', profile, 'state', 'off']
     return __salt__['cmd.run'](cmd, python_shell=False) == 'Ok.'
 
 
 def enable(profile='allprofiles'):
     '''
-    Disable all the firewall profiles
+    Enable firewall profile :param profile: (default: allprofiles)
 
     CLI Example:
 
@@ -73,9 +73,8 @@ def enable(profile='allprofiles'):
 
         salt '*' firewall.disable
     '''
-    return __salt__['cmd.run'](
-            'netsh advfirewall set {0} state on'.format(profile)
-            ) == 'Ok.'
+    cmd = ['netsh', 'advfirewall', 'set', profile, 'state', 'on']
+    return __salt__['cmd.run'](cmd, python_shell=False) == 'Ok.'
 
 
 def get_rule(name="all"):
