@@ -134,6 +134,7 @@ def extracted(name,
             files = results['stderr']
         else:
             files = results['stdout']
+
     if len(files) > 0:
         ret['result'] = True
         ret['changes']['directories_created'] = [name]
