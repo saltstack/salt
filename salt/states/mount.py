@@ -164,6 +164,7 @@ def mounted(name,
             if opts:
                 mount_invisible_options = [
                     '_netdev',
+                    'actimeo',
                     'bg',
                     'comment',
                     'defaults',
@@ -178,6 +179,7 @@ def mounted(name,
                 ]
                 # options which are provided as key=value (e.g. password=Zohp5ohb)
                 mount_invisible_keys = [
+                    'actimeo',
                     'comment',
                     'password',
                     'retry',
