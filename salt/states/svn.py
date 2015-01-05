@@ -219,7 +219,7 @@ def export(name,
                 ret,
                 ('{0}').format(out))
 
-    if rev:
+    if not rev:
 	rev = 'HEAD'
 
     if force:
