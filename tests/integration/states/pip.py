@@ -409,8 +409,8 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             )
             self.assertSaltTrueReturn(ret)
             self.assertInSaltComment(
-                'Requirements were already installed.',
-                ret
+                'Successfully processed requirements file '
+                'salt://prod-env-requirements.txt', ret
             )
 
             # We're using the base environment but we're passing the prod
@@ -421,8 +421,8 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             )
             self.assertSaltTrueReturn(ret)
             self.assertInSaltComment(
-                'Successfully processed requirements file '
-                'salt://prod-env-requirements.txt', ret
+                'Requirements were already installed.',
+                ret
             )
         finally:
             if os.path.isdir(venv_dir):
