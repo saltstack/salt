@@ -242,7 +242,6 @@ class Maintenance(multiprocessing.Process):
         except os.error:
             pass
 
-
         if self.opts.get('publish_session'):
             if now - self.rotate >= self.opts['publish_session']:
                 to_rotate = True
