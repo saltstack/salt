@@ -163,15 +163,15 @@ def mounted(name,
                 device_list.append(uuid_device)
             if opts:
                 mount_invisible_options = [
-                    'bg',
-                    'defaults',
-                    'comment',
                     '_netdev',
-                    'nobootwait',
-                    'reconnect',
+                    'bg',
+                    'comment',
+                    'defaults',
                     'delay_connect',
+                    'nobootwait',
                     'nofail',
                     'password',
+                    'reconnect',
                     'soft'
                 ]
                 for opt in opts:
