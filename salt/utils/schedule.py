@@ -771,7 +771,9 @@ def clean_proc_dir(opts):
         with salt.utils.fopen(fn_, 'rb') as fp_:
             job = None
             try:
-                job = salt.payload.Serial(opts).load(fp_)
+                job_data = fp_.read()
+                if job_data:
+                    job = salt.payload.Serial(opts).load(fp_)
             except Exception:  # It's corrupted
                 try:
                     os.unlink(fn_)
