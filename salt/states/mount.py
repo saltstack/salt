@@ -162,7 +162,7 @@ def mounted(name,
             if uuid_device and uuid_device not in device_list:
                 device_list.append(uuid_device)
             if opts:
-                mount_invisible_options = ['bg', 'defaults', 'comment', 'nobootwait', 'reconnect', 'delay_connect', 'nofail', 'password', 'soft']
+                mount_invisible_options = ['bg', 'defaults', 'comment', '_netdev', 'nobootwait', 'reconnect', 'delay_connect', 'nofail', 'password', 'soft']
                 for opt in opts:
                     comment_option = opt.split('=')[0]
                     if comment_option == 'comment':
